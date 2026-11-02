@@ -8,7 +8,9 @@
 
 # jitlink-check: *{8}P = X
 
-# CHECK-ERROR: relocation target {{.*}} (X) is out of range of Pointer8 fixup
+# The fixup address is the address being patched, which is P's block address
+# because the fixup is at offset 0. It must not be the relocation target.
+# CHECK-ERROR: relocation target 0x123 (X) is out of range of Pointer8 fixup at address [[FIXUP:0x[0-9a-f]+]] (P, [[FIXUP]] +
 
 	.text
 	.section	.text.main,"ax",@progbits

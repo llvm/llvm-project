@@ -1,4 +1,4 @@
-# RUN: llc %s -start-before=livedebugvalues -o - | \
+# RUN: llc %s -start-before=live-debug-values -o - | \
 # RUN:     FileCheck %s --implicit-check-not=prologue_end
 #
 ## When picking a "backup" location of the first non-trivial instruction in
@@ -7,7 +7,7 @@
 ## block is liable to be misleading.
 ##
 ## Produced from the C below with "clang -O2 -g -mllvm
-## -stop-before=livedebugvalues", then modified to unrotate and shift early
+## -stop-before=live-debug-values", then modified to unrotate and shift early
 ## insts into the loop block. This means the MIR is meaningless, we only test
 ## whether the scope-line will leak into the loop block or not.
 ##

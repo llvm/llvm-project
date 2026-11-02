@@ -208,6 +208,12 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       writeStringRef(Path, SubOS);
     SubSection.done();
   }
+  if (!Section.TargetArch.empty()) {
+    writeUint8(OS, wasm::WASM_DYLINK_TARGET_ARCH);
+    raw_ostream &SubOS = SubSection.getStream();
+    writeStringRef(Section.TargetArch, SubOS);
+    SubSection.done();
+  }
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
@@ -297,6 +303,14 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
         encodeULEB128(Entry.Index, SubSection.getStream());
       }
     }
+    SubSection.done();
+  }
+
+  // TARGET_ARCH subsection
+  if (!Section.TargetArch.empty()) {
+    writeUint8(OS, wasm::WASM_TARGET_ARCH);
+    raw_ostream &SubOS = SubSection.getStream();
+    writeStringRef(Section.TargetArch, SubOS);
     SubSection.done();
   }
 }

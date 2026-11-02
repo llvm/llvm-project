@@ -1,0 +1,40 @@
+## This test checks the --compress-debug-sections=zstd option.
+
+# REQUIRES: zstd
+
+# RUN: yaml2obj %p/Inputs/common.yaml -o %t.o
+# RUN: llvm-objcopy --compress-debug-sections=zstd %t.o %t.zstd.o
+
+## Check that the linked debug sections are compressed using zstd by default if
+## the input debug sections are compressed using zstd.
+# RUN: llvm-dwarfutil --verify %t.zstd.o %t1
+# RUN: llvm-readelf -t %t1 | FileCheck %s --check-prefix=ZSTD
+# RUN: llvm-dwarfdump --debug-info %t1 | FileCheck %s --check-prefix=DEBUG
+
+## Check --compress-debug-sections=zstd.
+# RUN: llvm-dwarfutil --compress-debug-sections=zstd %t.o %t2
+# RUN: cmp %t1 %t2
+
+## Check that the specified format overrides the format of the input debug
+## sections.
+# RUN: %if zlib %{ llvm-objcopy --compress-debug-sections=zlib %t.o %t.zlib.o %}
+# RUN: %if zlib %{ llvm-dwarfutil --compress-debug-sections=zstd %t.zlib.o %t3 %}
+# RUN: %if zlib %{ cmp %t1 %t3 %}
+# RUN: %if zlib %{ llvm-dwarfutil --compress-debug-sections=zlib %t.zstd.o %t4 %}
+# RUN: %if zlib %{ llvm-readelf -t %t4 | FileCheck %s --check-prefix=ZLIB %}
+
+# ZSTD:      .debug_info
+# ZSTD-NEXT:   PROGBITS
+# ZSTD-NEXT:   [0000000000000800]: COMPRESSED
+# ZSTD-NEXT:   ZSTD,
+
+# ZLIB:      .debug_info
+# ZLIB-NEXT:   PROGBITS
+# ZLIB-NEXT:   [0000000000000800]: COMPRESSED
+# ZLIB-NEXT:   ZLIB,
+
+# DEBUG: .debug_info contents:
+# DEBUG: DW_TAG_compile_unit
+# DEBUG:   DW_AT_name{{.*}}"CU1"
+# DEBUG:   DW_TAG_class_type
+# DEBUG:     DW_AT_name{{.*}}"class1"

@@ -18,7 +18,7 @@
 // The class is declared with objc_class_stub, so LSB of the class pointer
 // must be set to 1.
 //
-// CHECK-LABEL: @"OBJC_CLASSLIST_SUP_REFS_$_.1" = private global ptr getelementptr (i8, ptr @"OBJC_CLASS_$_Derived", i32 1), section "__DATA,__objc_superrefs,regular,no_dead_strip", align 8
+// CHECK-LABEL: @"OBJC_CLASSLIST_SUP_REFS_$_.1" = private global ptr getelementptr (i8, ptr @"OBJC_CLASS_$_Derived", i32 1), align 8
 
 // -- category list for class stubs goes in __objc_catlist2.
 //

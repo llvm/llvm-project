@@ -50,10 +50,6 @@ class LLVM_LIBRARY_VISIBILITY RABasic : public MachineFunctionPass,
                       CompSpillWeight>
       Queue;
 
-  // Scratch space.  Allocated here to avoid repeated malloc calls in
-  // selectOrSplit().
-  BitVector UsableRegs;
-
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_WillShrinkVirtReg(Register) override;
 

@@ -3,25 +3,22 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GFX9-GISEL %s
 
 ; Scalar 16-bit VOP3 ternaries reading and writing the high half of a packed
-; register. On GFX9 v_fma_f16 and v_mad_legacy_f16 both support op_sel, so each
-; of these could be a single instruction, but SelectVOP3OpSel() does not set
-; op_sel yet (see the FIXME in AMDGPUISelDAGToDAG.cpp), so the high halves are
-; extracted and re-inserted with explicit shifts instead.
+; register. On GFX9 v_fma_f16 and v_mad_f16 both support op_sel, so fma cases
+; use a single instruction. v_mad_legacy_f16 is selected for legacy mad, which
+; does not have op_sel, so mad cases still extract the high halves explicitly.
 
 ; Only src0 comes from a high half.
 define half @fma_f16_hi_src0(<2 x half> %a, half %b, half %c) {
 ; GFX9-SDAG-LABEL: fma_f16_hi_src0:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, v1, v2 op_sel:[1,0,0,0]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: fma_f16_hi_src0:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2 op_sel:[1,0,0,0]
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %a1 = extractelement <2 x half> %a, i32 1
   %r = call half @llvm.fma.f16(half %a1, half %b, half %c)
@@ -33,19 +30,13 @@ define half @fma_f16_hi_srcs(<2 x half> %a, <2 x half> %b, <2 x half> %c) {
 ; GFX9-SDAG-LABEL: fma_f16_hi_srcs:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, v1, v2 op_sel:[1,1,1,0]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: fma_f16_hi_srcs:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2 op_sel:[1,1,1,0]
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %a1 = extractelement <2 x half> %a, i32 1
   %b1 = extractelement <2 x half> %b, i32 1
@@ -60,10 +51,7 @@ define <2 x half> @fma_f16_hi_srcs_hi_dst(<2 x half> %a, <2 x half> %b, <2 x hal
 ; GFX9-SDAG-LABEL: fma_f16_hi_srcs_hi_dst:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, v1, v3
+; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, v1, v2 op_sel:[1,1,1,0]
 ; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX9-SDAG-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -71,10 +59,7 @@ define <2 x half> @fma_f16_hi_srcs_hi_dst(<2 x half> %a, <2 x half> %b, <2 x hal
 ; GFX9-GISEL-LABEL: fma_f16_hi_srcs_hi_dst:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v3
+; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2 op_sel:[1,1,1,0]
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 16
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xffff

@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Constants.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -34,14 +36,6 @@
 
 using namespace llvm;
 using namespace PatternMatch;
-
-// As set of temporary options to help migrate how splats are represented.
-static cl::opt<bool> UseConstantIntForFixedLengthSplat(
-    "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantInt's native fixed-length vector splat support."));
-static cl::opt<bool> UseConstantIntForScalableSplat(
-    "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantInt's native scalable vector splat support."));
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -309,19 +303,47 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
+static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return FVTy->getNumElements();
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return STy->getNumElements();
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return ATy->getNumElements();
+  return std::nullopt;
+}
+
+static bool
+containsMatchingElement(const Constant *C,
+                        function_ref<bool(const Constant *)> PredFn) {
+  // Simple pruning for large size array. UndefValue is fine as it is filtered
+  // out by PredFn already.
+  if (isa<ConstantData>(C))
+    return false;
+
+  std::optional<unsigned> NumElts = getNumWalkableElements(C->getType());
+  if (!NumElts)
+    return false;
+
+  for (unsigned I = 0; I != *NumElts; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (Elt && (PredFn(Elt) || containsMatchingElement(Elt, PredFn)))
+      return true;
+  }
+  return false;
+}
+
 static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
-  if (C->getType()->isVectorTy()) {
-    if (HasFn(C))
-      return true;
-    if (isa<ConstantAggregateZero>(C))
-      return false;
+  Type *Ty = C->getType();
+  if (!Ty->isVectorTy() && !Ty->isAggregateType())
+    return false;
 
-    return C->containsMatchingVectorElement(HasFn);
-  }
+  if (HasFn(C))
+    return true;
 
-  return false;
+  return containsMatchingElement(C, HasFn);
 }
 
 bool Constant::containsUndefOrPoisonElement() const {
@@ -344,7 +366,7 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  return containsMatchingVectorElement(IsaPred<ConstantExpr>);
+  return containsMatchingElement(this, IsaPred<ConstantExpr>);
 }
 
 bool Constant::containsMatchingVectorElement(
@@ -1557,7 +1579,9 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = isa<ConstantFP>(C);
-  bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
+  bool isSplatInt =
+      isa<ConstantInt>(C) &&
+      getIROptions(C->getContext()).use_constant_int_for_fixed_length_splat;
   bool isSplatByte = isa<ConstantByte>(C);
   bool isSplatPtrNull = isa<ConstantPointerNull>(C);
 
@@ -1614,7 +1638,8 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
     if (!V->isNullValue()) {
-      if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
+      if (isa<ConstantInt>(V) &&
+          getIROptions(V->getContext()).use_constant_int_for_fixed_length_splat)
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
     }
@@ -1631,7 +1656,8 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   // Maintain special handling of zero.
   if (!V->isNullValue()) {
-    if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
+    if (isa<ConstantInt>(V) &&
+        getIROptions(V->getContext()).use_constant_int_for_scalable_splat)
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
   }
@@ -1692,14 +1718,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   Type *OnlyIfReducedTy = OnlyIfReduced ? Ty : nullptr;
   switch (getOpcode()) {
   case Instruction::Trunc:
-  case Instruction::ZExt:
-  case Instruction::SExt:
-  case Instruction::FPTrunc:
-  case Instruction::FPExt:
-  case Instruction::UIToFP:
-  case Instruction::SIToFP:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
   case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
@@ -1717,9 +1735,11 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::GetElementPtr: {
     auto *GEPO = cast<GEPOperator>(this);
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
         GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   }
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
@@ -1968,6 +1988,44 @@ ConstantRange Constant::toConstantRange() const {
   }
 
   return ConstantRange::getFull(BitWidth);
+}
+
+ConstantFPRange Constant::toConstantFPRange() const {
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return ConstantFPRange(CFP->getValue());
+
+  const fltSemantics &Sem = getType()->getScalarType()->getFltSemantics();
+  if (!getType()->isVectorTy())
+    return ConstantFPRange::getFull(Sem);
+
+  if (auto *CFP =
+          dyn_cast_or_null<ConstantFP>(getSplatValue(/*AllowPoison=*/true)))
+    return ConstantFPRange(CFP->getValue());
+
+  if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
+    ConstantFPRange CR = ConstantFPRange::getEmpty(Sem);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(ConstantFPRange(CDV->getElementAsAPFloat(I)));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(this)) {
+    ConstantFPRange CR = ConstantFPRange::getEmpty(Sem);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = CV->getOperand(I);
+      if (!Elem)
+        return ConstantFPRange::getFull(Sem);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CFP = dyn_cast<ConstantFP>(Elem);
+      if (!CFP)
+        return ConstantFPRange::getFull(Sem);
+      CR = CR.unionWith(ConstantFPRange(CFP->getValue()));
+    }
+    return CR;
+  }
+
+  return ConstantFPRange::getFull(Sem);
 }
 
 //---- ConstantPointerNull::get() implementation.
@@ -2639,9 +2697,11 @@ Constant *ConstantExpr::getSizeOf(Type* Ty) {
   // sizeof is implemented as: (i64) gep (Ty*)null, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Constant *GEPIdx = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   Constant *GEP = getGetElementPtr(
       Ty, Constant::getNullValue(PointerType::getUnqual(Ty->getContext())),
       GEPIdx);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return getPtrToInt(GEP,
                      Type::getInt64Ty(Ty->getContext()));
 }
@@ -2655,7 +2715,9 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
   Constant *Zero = ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0);
   Constant *One = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
   Constant *Indices[2] = {Zero, One};
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   Constant *GEP = getGetElementPtr(AligningTy, NullPtr, Indices);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return getPtrToInt(GEP, Type::getInt64Ty(Ty->getContext()));
 }
 

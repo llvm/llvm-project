@@ -33,6 +33,48 @@ func.func @transfer_read_dims_match_contiguous(
 // CHECK-128B-LABEL: func @transfer_read_dims_match_contiguous
 //       CHECK-128B:   memref.collapse_shape
 
+// Flattening masked transfers is not supported yet.
+
+func.func @negative_transfer_read_dims_match_contiguous_with_mask(
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
+    %mask : vector<5x4x3x2xi1>) -> vector<5x4x3x2xi8> {
+
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst, %mask :
+    memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
+  return %res : vector<5x4x3x2xi8>
+}
+
+// CHECK-LABEL: func @negative_transfer_read_dims_match_contiguous_with_mask(
+// CHECK-NOT: memref.collapse_shape
+// CHECK-NOT: vector.shape_cast
+
+// CHECK-128B-LABEL: func @negative_transfer_read_dims_match_contiguous_with_mask(
+//   CHECK-128B-NOT:   memref.collapse_shape
+
+// Flattening masked transfers is not supported yet.
+
+func.func @negative_transfer_read_dims_match_contiguous_masked(
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
+    %mask : vector<5x4x3x2xi1>) -> vector<5x4x3x2xi8> {
+
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %res = vector.mask %mask {
+    vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
+      memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
+  } : vector<5x4x3x2xi1> -> vector<5x4x3x2xi8>
+  return %res : vector<5x4x3x2xi8>
+}
+
+// CHECK-LABEL: func @negative_transfer_read_dims_match_contiguous_masked(
+// CHECK-NOT: memref.collapse_shape
+// CHECK-NOT: vector.shape_cast
+
+// CHECK-128B-LABEL: func @negative_transfer_read_dims_match_contiguous_masked(
+//   CHECK-128B-NOT:   memref.collapse_shape
+
 func.func @transfer_read_dims_match_contiguous_scalable(
     %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x[2]xi8> {
 
@@ -434,6 +476,46 @@ func.func @transfer_write_dims_match_contiguous(
 
 // CHECK-128B-LABEL: func @transfer_write_dims_match_contiguous(
 //       CHECK-128B:   memref.collapse_shape
+
+// Flattening masked transfers is not supported yet.
+
+func.func @negative_transfer_write_dims_match_contiguous_with_mask(
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
+    %vec : vector<5x4x3x2xi8>, %mask : vector<5x4x3x2xi1>) {
+
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0], %mask :
+    vector<5x4x3x2xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
+  return
+}
+
+// CHECK-LABEL: func @negative_transfer_write_dims_match_contiguous_with_mask(
+// CHECK-NOT: memref.collapse_shape
+// CHECK-NOT: vector.shape_cast
+
+// CHECK-128B-LABEL: func @negative_transfer_write_dims_match_contiguous_with_mask(
+//   CHECK-128B-NOT:   memref.collapse_shape
+
+// Flattening masked transfers is not supported yet.
+
+func.func @negative_transfer_write_dims_match_contiguous_masked(
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,
+    %vec : vector<5x4x3x2xi8>, %mask : vector<5x4x3x2xi1>) {
+
+  %c0 = arith.constant 0 : index
+  vector.mask %mask {
+    vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
+      vector<5x4x3x2xi8>, memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
+  } : vector<5x4x3x2xi1>
+  return
+}
+
+// CHECK-LABEL: func @negative_transfer_write_dims_match_contiguous_masked(
+// CHECK-NOT: memref.collapse_shape
+// CHECK-NOT: vector.shape_cast
+
+// CHECK-128B-LABEL: func @negative_transfer_write_dims_match_contiguous_masked(
+//   CHECK-128B-NOT:   memref.collapse_shape
 
 func.func @transfer_write_dims_match_contiguous_scalable(
     %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>,

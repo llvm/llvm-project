@@ -33,7 +33,7 @@ func.func @iterate_while() {
   %c4_i32 = arith.constant 4 : i32
   %c6_i32 = arith.constant 6 : i32
   %0 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFido3Ej"}
-  %j = fir.declare %0 {uniq_name = "_QFido3Ej"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %j = fir.declare %0 uniq_name("_QFido3Ej") : (!fir.ref<i32>) -> !fir.ref<i32>
   %2 = fir.address_of(@_QQclX16525d77bf698d01a3a03f9bc4435ebe) : !fir.ref<!fir.char<1,45>>
   %3 = fir.convert %2 : (!fir.ref<!fir.char<1,45>>) -> !fir.ref<i8>
   %4 = fir.call @_FortranAioBeginExternalListOutput(%c6_i32, %3, %c4_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
@@ -100,7 +100,7 @@ func.func @normalize(%arg0: !fir.ref<!fir.char<1,?>> {fir.bindc_name = "string"}
   %c6_i32 = arith.constant 6 : i32
   %1 = fir.undefined !fir.dscope
   %2:2 = fir.unboxchar %0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %3 = fir.declare %2#0 typeparams %2#1 dummy_scope %1 {uniq_name = "_QFsub1Estring"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,?>>
+  %3 = fir.declare %2#0 typeparams %2#1 dummy_scope %1 uniq_name("_QFsub1Estring") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,?>>
   %4 = fir.address_of(@_QQclX9c7b903babe9837742def6df4989c6e7) : !fir.ref<!fir.char<1,40>>
   %5 = fir.convert %4 : (!fir.ref<!fir.char<1,40>>) -> !fir.ref<i8>
   %6 = fir.call @_FortranAioBeginExternalListOutput(%c6_i32, %5, %c5_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>

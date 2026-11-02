@@ -316,6 +316,19 @@ struct S {
 };
 } // namespace cwg1824
 
+namespace cwg1825 { // cwg1825: sup P4004R1
+#if __cplusplus >= 201103L
+template <class... T> int f(T *...); // #cwg1825-variadic
+template <class T> int f(const T &); // #cwg1825-nonvariadic
+int g() {
+  return f((int *)0);
+  // since-cxx11-error@-1 {{call to 'f' is ambiguous}}
+  //   since-cxx11-note@#cwg1825-variadic {{candidate function [with T = <int>]}}
+  //   since-cxx11-note@#cwg1825-nonvariadic {{candidate function [with T = int *]}}
+}
+#endif
+} // namespace cwg1825
+
 namespace cwg1832 { // cwg1832: 3.0
 enum E { // #cwg1832-E
   a = static_cast<int>(static_cast<E>(0))

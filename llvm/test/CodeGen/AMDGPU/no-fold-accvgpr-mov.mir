@@ -79,7 +79,7 @@ body:             |
   ; COALESCE-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; COALESCE-NEXT:   S_BITCMP1_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
   ; COALESCE-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 0
-  ; COALESCE-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit killed $scc
+  ; COALESCE-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; COALESCE-NEXT:   undef [[AV_MOV_:%[0-9]+]].sub0:areg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
   ; COALESCE-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B64_]], implicit $exec
   ; COALESCE-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_]], implicit $exec
@@ -92,7 +92,7 @@ body:             |
   ; COALESCE-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[AV_MOV_]].sub0
   ; COALESCE-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 -1
   ; COALESCE-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
-  ; COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit killed $vcc
+  ; COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit $vcc
   ; COALESCE-NEXT:   S_BRANCH %bb.2
   ; COALESCE-NEXT: {{  $}}
   ; COALESCE-NEXT: bb.2:
@@ -115,7 +115,7 @@ body:             |
   ; COALESCE-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_MOV_B64_]], implicit $exec
   ; COALESCE-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_1]], implicit $exec
   ; COALESCE-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_1]], implicit-def dead $scc
-  ; COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+  ; COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; COALESCE-NEXT:   S_BRANCH %bb.4
   ; COALESCE-NEXT: {{  $}}
   ; COALESCE-NEXT: bb.4:
@@ -133,7 +133,7 @@ body:             |
   ; GFX908-COALESCE-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; GFX908-COALESCE-NEXT:   S_BITCMP1_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
   ; GFX908-COALESCE-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 0
-  ; GFX908-COALESCE-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit killed $scc
+  ; GFX908-COALESCE-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; GFX908-COALESCE-NEXT:   undef [[AV_MOV_:%[0-9]+]].sub0:areg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
   ; GFX908-COALESCE-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B64_]], implicit $exec
   ; GFX908-COALESCE-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_]], implicit $exec
@@ -146,7 +146,7 @@ body:             |
   ; GFX908-COALESCE-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[AV_MOV_]].sub0
   ; GFX908-COALESCE-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 -1
   ; GFX908-COALESCE-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
-  ; GFX908-COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit killed $vcc
+  ; GFX908-COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit $vcc
   ; GFX908-COALESCE-NEXT:   S_BRANCH %bb.2
   ; GFX908-COALESCE-NEXT: {{  $}}
   ; GFX908-COALESCE-NEXT: bb.2:
@@ -169,7 +169,7 @@ body:             |
   ; GFX908-COALESCE-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_MOV_B64_]], implicit $exec
   ; GFX908-COALESCE-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_1]], implicit $exec
   ; GFX908-COALESCE-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_1]], implicit-def dead $scc
-  ; GFX908-COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+  ; GFX908-COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GFX908-COALESCE-NEXT:   S_BRANCH %bb.4
   ; GFX908-COALESCE-NEXT: {{  $}}
   ; GFX908-COALESCE-NEXT: bb.4:

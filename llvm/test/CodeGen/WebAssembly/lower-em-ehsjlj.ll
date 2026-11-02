@@ -237,8 +237,8 @@ if.end:                                           ; preds = %entry
 ; noreturn instructions, because they are supposed to return.
 ; CHECK:   if.end:
 ; CHECK-NOT: tail call void @free
-; CHECK-NOT: call cc99 void @__invoke_void_ptr_ptr_ptr(ptr @__cxa_throw, ptr %exception, ptr @_ZTIi, ptr null) #
-; CHECK:     call cc99 void @__invoke_void_ptr_ptr_ptr(ptr @__cxa_throw, ptr %exception, ptr @_ZTIi, ptr null)
+; CHECK-NOT: call wasm_emscripten_invokecc void @__invoke_void_ptr_ptr_ptr(ptr @__cxa_throw, ptr %exception, ptr @_ZTIi, ptr null) #
+; CHECK:     call wasm_emscripten_invokecc void @__invoke_void_ptr_ptr_ptr(ptr @__cxa_throw, ptr %exception, ptr @_ZTIi, ptr null)
 
 lpad:                                             ; preds = %if.end
   %0 = landingpad { ptr, i32 }

@@ -14,17 +14,17 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: inttoptr
-    ; MIPS32: liveins: $a0
-    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: $v0 = COPY [[COPY]]
-    ; MIPS32: RetRA implicit $v0
-    %0:gprb(s32) = COPY $a0
+    ; MIPS32: liveins: $r4
+    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+    ; MIPS32: $r2 = COPY [[COPY]]
+    ; MIPS32: RetRA implicit $r2
+    %0:gprb(s32) = COPY $r4
     %1:gprb(p0) = G_INTTOPTR %0(s32)
-    $v0 = COPY %1(p0)
-    RetRA implicit $v0
+    $r2 = COPY %1(p0)
+    RetRA implicit $r2
 
 ...
 ---
@@ -35,17 +35,17 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: ptrtoint
-    ; MIPS32: liveins: $a0
-    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: $v0 = COPY [[COPY]]
-    ; MIPS32: RetRA implicit $v0
-    %0:gprb(p0) = COPY $a0
+    ; MIPS32: liveins: $r4
+    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+    ; MIPS32: $r2 = COPY [[COPY]]
+    ; MIPS32: RetRA implicit $r2
+    %0:gprb(p0) = COPY $r4
     %1:gprb(s32) = G_PTRTOINT %0(p0)
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...
 

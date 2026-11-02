@@ -4,6 +4,7 @@
 
 """BUILD extensions for MLIR linalg generation."""
 
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 def genlinalg(name, linalggen, src, linalg_outs):
@@ -19,22 +20,17 @@ def genlinalg(name, linalggen, src, linalg_outs):
     """
 
     for (opts, out) in linalg_outs:
-        # All arguments to generate the output except output destination.
-        base_args = [
-            "$(location %s)" % linalggen,
-            "%s" % opts,
-            "$(location %s)" % src,
-        ]
         rule_suffix = "_".join(opts.replace("-", "_").replace("=", "_").split(" "))
-
-        # Rule to generate code using generated shell script.
-        native.genrule(
+        run_binary(
             name = "%s_%s_genrule" % (name, rule_suffix),
             srcs = [src],
             outs = [out],
-            tools = [linalggen],
-            output_to_bindir = 1,
-            cmd = (" ".join(base_args)),
+            # `$@` in opts names the output, as it would in a genrule.
+            args = [
+                opt.replace("$@", "$(execpath %s)" % out)
+                for opt in opts.split(" ")
+            ] + ["$(execpath %s)" % src],
+            tool = linalggen,
         )
 
     hdrs = [f for (opts, f) in linalg_outs]

@@ -132,7 +132,7 @@ stack:
       stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:
-  - { bb: 0, offset: 23, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 23, fwdArgRegs:
       - { arg: 0, reg: '$edi' } }
 constants:       []
 machineFunctionInfo: {}

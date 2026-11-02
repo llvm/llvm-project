@@ -45,4 +45,8 @@ bool SPIRVTypeInst::isPointer() const {
 bool SPIRVTypeInst::isTypePtr() const {
   return MI->getOpcode() == SPIRV::OpTypePointer;
 }
+
+bool SPIRVTypeInst::isTypeUntypedPtr() const {
+  return MI->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+}
 } // namespace llvm

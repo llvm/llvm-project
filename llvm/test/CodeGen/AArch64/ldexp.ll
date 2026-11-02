@@ -363,3 +363,39 @@ entry:
   %0 = tail call fast bfloat @llvm.ldexp.bf16.i32(bfloat %val, i32 %a)
   ret bfloat %0
 }
+
+; The v1f16 result is scalarized but the v1i32 exponent is widened, so the
+; exponent was never scalarized.
+define <1 x half> @test_ldexp_v1f16_v1i32(<1 x half> %val, <1 x i32> %exp) nounwind {
+; SVE-LABEL: test_ldexp_v1f16_v1i32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    fcvt s0, h0
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    fcvt h0, s0
+; SVE-NEXT:    ret
+;
+; GISEL-LABEL: test_ldexp_v1f16_v1i32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISEL-NEXT:    fcvt s0, h0
+; GISEL-NEXT:    fmov w0, s1
+; GISEL-NEXT:    bl ldexpf
+; GISEL-NEXT:    fcvt h0, s0
+; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISEL-NEXT:    ret
+;
+; WINDOWS-LABEL: test_ldexp_v1f16_v1i32:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    fcvt d0, h0
+; WINDOWS-NEXT:    // kill: def $d1 killed $d1 def $q1
+; WINDOWS-NEXT:    fmov w0, s1
+; WINDOWS-NEXT:    bl ldexp
+; WINDOWS-NEXT:    fcvt h0, d0
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+  %result = call <1 x half> @llvm.ldexp.v1f16.v1i32(<1 x half> %val, <1 x i32> %exp)
+  ret <1 x half> %result
+}

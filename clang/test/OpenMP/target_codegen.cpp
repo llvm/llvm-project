@@ -686,35 +686,6 @@ int bar(int n){
 
 // CHECK:       [[IFEND]]
 
-// OMP45: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l{{[0-9]+}}(i[[SZ]] noundef %{{.+}})
-
-// OMP45: define {{.*}}@{{.*}}zee{{.*}}
-
-// OMP45:       [[LOCAL_THIS:%.+]] = alloca ptr
-// OMP45:       [[BP:%.+]] = alloca [2 x ptr]
-// OMP45:       [[P:%.+]] = alloca [2 x ptr]
-// OMP45:       [[LOCAL_THIS1:%.+]] = load ptr, ptr [[LOCAL_THIS]]
-
-// OMP45:       call void @__kmpc_critical(
-// OMP45:       [[ARR_IDX:%.+]] = getelementptr inbounds [[S2]], ptr [[LOCAL_THIS1]], i[[SZ]] 0
-// OMP45:       [[ARR_IDX2:%.+]] = getelementptr inbounds [[S2]], ptr [[LOCAL_THIS1]], i[[SZ]] 0
-
-// OMP45-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 0
-// OMP45-DAG:   [[PADDR0:%.+]] =  getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 0
-// OMP45-DAG:   store ptr [[ARR_IDX]], ptr [[BPADDR0]]
-// OMP45-DAG:   store ptr [[ARR_IDX2]], ptr [[PADDR0]]
-
-// OMP45:       [[BPR:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 0
-// OMP45:       [[PR:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 0
-// OMP45:       [[RET:%.+]] = call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 {{.+}}, i32 {{.+}}, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
-// OMP45-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
-// OMP45-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
-// OMP45:       [[FAIL]]
-// OMP45:       call void [[HVT0:@.+]](ptr [[LOCAL_THIS1]], ptr null)
-// OMP45-NEXT:  br label %[[END]]
-// OMP45:       [[END]]
-// OMP45:       call void @__kmpc_end_critical(
-
 // Check that the offloading functions are emitted and that the arguments are
 // correct and loaded correctly for the target regions of the callees of bar().
 
@@ -776,6 +747,35 @@ int bar(int n){
 // CHECK-32-DAG:   load i32, ptr [[LOCAL_A]]
 // CHECK-DAG:   load i16, ptr [[LOCAL_AA]]
 // CHECK-DAG:   getelementptr inbounds [10 x i32], ptr [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
+
+// OMP45: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l{{[0-9]+}}(i[[SZ]] noundef %{{.+}})
+
+// OMP45: define {{.*}}@{{.*}}zee{{.*}}
+
+// OMP45:       [[LOCAL_THIS:%.+]] = alloca ptr
+// OMP45:       [[BP:%.+]] = alloca [2 x ptr]
+// OMP45:       [[P:%.+]] = alloca [2 x ptr]
+// OMP45:       [[LOCAL_THIS1:%.+]] = load ptr, ptr [[LOCAL_THIS]]
+
+// OMP45:       call void @__kmpc_critical(
+// OMP45:       [[ARR_IDX:%.+]] = getelementptr inbounds [[S2]], ptr [[LOCAL_THIS1]], i[[SZ]] 0
+// OMP45:       [[ARR_IDX2:%.+]] = getelementptr inbounds [[S2]], ptr [[LOCAL_THIS1]], i[[SZ]] 0
+
+// OMP45-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 0
+// OMP45-DAG:   [[PADDR0:%.+]] =  getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 0
+// OMP45-DAG:   store ptr [[ARR_IDX]], ptr [[BPADDR0]]
+// OMP45-DAG:   store ptr [[ARR_IDX2]], ptr [[PADDR0]]
+
+// OMP45:       [[BPR:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 0
+// OMP45:       [[PR:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 0
+// OMP45:       [[RET:%.+]] = call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 {{.+}}, i32 {{.+}}, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
+// OMP45-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// OMP45-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
+// OMP45:       [[FAIL]]
+// OMP45:       call void [[HVT0:@.+]](ptr [[LOCAL_THIS1]], ptr null)
+// OMP45-NEXT:  br label %[[END]]
+// OMP45:       [[END]]
+// OMP45:       call void @__kmpc_end_critical(
 
 // OMP50: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l{{[0-9]+}}(i[[SZ]] noundef %{{.+}})
 

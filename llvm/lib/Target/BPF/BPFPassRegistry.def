@@ -19,6 +19,7 @@
 MODULE_PASS("bpf-asm-printer-begin", BPFAsmPrinterBeginPass())
 MODULE_PASS("bpf-asm-printer-end", BPFAsmPrinterEndPass())
 MODULE_PASS("bpf-check-and-opt-ir", BPFCheckAndAdjustIRPass())
+MODULE_PASS("bpf-func-table", BPFFuncTablePass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS

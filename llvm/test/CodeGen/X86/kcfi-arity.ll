@@ -116,7 +116,7 @@ define void @f6(ptr noundef %x) !kcfi_type !3 {
 define void @f7() {
 ; MIR-LABEL: name: f7
 ; MIR: body:
-; ISEL: TCRETURNmi64 killed %0, 1, $noreg, 0, $noreg, 0, csr_64, implicit $rsp, implicit $ssp, cfi-type 12345678
+; ISEL: TCRETURNmi64 %0, 1, $noreg, 0, $noreg, 0, csr_64, implicit $rsp, implicit $ssp, cfi-type 12345678
 ; KCFI: $r11 = MOV64rm killed renamable $rax, 1, $noreg, 0, $noreg
 ; KCFI-NEXT:  BUNDLE{{.*}} {
 ; KCFI-NEXT:    KCFI_CHECK $r11, 12345678, implicit-def $r10, implicit-def $r11, implicit-def $eflags
@@ -130,7 +130,7 @@ define void @f7() {
 define void @f8() {
 ; MIR-LABEL: name: f8
 ; MIR: body:
-; ISEL: CALL64m killed %0, 1, $noreg, 0, $noreg, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, cfi-type 12345678
+; ISEL: CALL64m %0, 1, $noreg, 0, $noreg, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, cfi-type 12345678
 ; KCFI: $r11 = MOV64rm killed renamable $rax, 1, $noreg, 0, $noreg
 ; KCFI-NEXT:  BUNDLE{{.*}} {
 ; KCFI-NEXT:    KCFI_CHECK $r11, 12345678, implicit-def $r10, implicit-def $r11, implicit-def $eflags

@@ -370,7 +370,7 @@ declare <2 x float> @llvm.masked.load.v2f32.p0(ptr, i32, <2 x i1>, <2 x float>)
 !5 = !{!"ScalarizeMaskedMemIntrin metadata"}
 !6 = !{!7}
 !7 = distinct !{!7, !8, !"scope"}
-!8 = distinct !{!8, !"domain"}
+!8 = distinct !{!8, i1 false, !"domain"}
 !9 = distinct !{}
 !10 = !{!"test", !"relaxed"}
 !11 = !{i32 1}
@@ -410,7 +410,7 @@ declare <2 x float> @llvm.masked.load.v2f32.p0(ptr, i32, <2 x i1>, <2 x float>)
 ; CHECK: [[META8]] = !{}
 ; CHECK: [[META9]] = !{[[META10:![0-9]+]]}
 ; CHECK: [[META10]] = distinct !{[[META10]], [[META11:![0-9]+]], !"scope"}
-; CHECK: [[META11]] = distinct !{[[META11]], !"domain"}
+; CHECK: [[META11]] = distinct !{[[META11]], i1 false, !"domain"}
 ; CHECK: [[META12]] = !{i32 1}
 ; CHECK: [[META13]] = distinct !{}
 ; CHECK: [[META14]] = !{!"test.annotation"}

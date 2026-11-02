@@ -534,8 +534,8 @@ exit:
 ; CHECK-COST: Cost of 7 for VF 8: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST: Cost of 13 for VF 16: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sadd.with.overflow.i32(ir<%val_a>, ir<%val_b>)
-; CHECK-COST: Cost of 4 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
-; CHECK-COST: Cost of 4 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
+; CHECK-COST: Cost of 6 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
+; CHECK-COST: Cost of 6 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 
 ; CHECK-COST-ARMPL-LABEL: sadd_with_overflow_i32
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 1 for VF 1 For instruction:   %call = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %val_a, i32 %val_b)
@@ -544,8 +544,8 @@ exit:
 ; CHECK-COST-ARMPL: Cost of 7 for VF 8: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF 16: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sadd.with.overflow.i32(ir<%val_a>, ir<%val_b>)
-; CHECK-COST-ARMPL: Cost of 4 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
-; CHECK-COST-ARMPL: Cost of 4 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
+; CHECK-COST-ARMPL: Cost of 6 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
+; CHECK-COST-ARMPL: Cost of 6 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 
 define void @sadd_with_overflow_i32(ptr noalias %in_a, ptr noalias %in_b, ptr noalias writeonly %out_result, ptr noalias writeonly %out_overflow) {
 ; CHECK-LABEL: define void @sadd_with_overflow_i32(

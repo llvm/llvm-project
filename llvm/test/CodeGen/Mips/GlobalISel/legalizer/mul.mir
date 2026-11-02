@@ -21,21 +21,21 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: mul_i32
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY]], [[COPY1]]
-    ; MIPS32-NEXT: $v0 = COPY [[MUL]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
+    ; MIPS32-NEXT: $r2 = COPY [[MUL]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_MUL %0, %1
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -44,27 +44,27 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: mul_i8_sext
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY1]], [[COPY]]
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; MIPS32-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[MUL]], [[C]](s32)
     ; MIPS32-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; MIPS32-NEXT: $v0 = COPY [[ASHR]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
-    %2:_(s32) = COPY $a0
+    ; MIPS32-NEXT: $r2 = COPY [[ASHR]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
+    %2:_(s32) = COPY $r4
     %0:_(s8) = G_TRUNC %2(s32)
-    %3:_(s32) = COPY $a1
+    %3:_(s32) = COPY $r5
     %1:_(s8) = G_TRUNC %3(s32)
     %4:_(s8) = G_MUL %1, %0
     %5:_(s32) = G_SEXT %4(s8)
-    $v0 = COPY %5(s32)
-    RetRA implicit $v0
+    $r2 = COPY %5(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -73,26 +73,26 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: mul_i8_zext
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY1]], [[COPY]]
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; MIPS32-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[MUL]], [[C]]
-    ; MIPS32-NEXT: $v0 = COPY [[AND]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
-    %2:_(s32) = COPY $a0
+    ; MIPS32-NEXT: $r2 = COPY [[AND]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
+    %2:_(s32) = COPY $r4
     %0:_(s8) = G_TRUNC %2(s32)
-    %3:_(s32) = COPY $a1
+    %3:_(s32) = COPY $r5
     %1:_(s8) = G_TRUNC %3(s32)
     %4:_(s8) = G_MUL %1, %0
     %5:_(s32) = G_ZEXT %4(s8)
-    $v0 = COPY %5(s32)
-    RetRA implicit $v0
+    $r2 = COPY %5(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -101,24 +101,24 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: mul_i8_aext
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY1]], [[COPY]]
-    ; MIPS32-NEXT: $v0 = COPY [[MUL]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
-    %2:_(s32) = COPY $a0
+    ; MIPS32-NEXT: $r2 = COPY [[MUL]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
+    %2:_(s32) = COPY $r4
     %0:_(s8) = G_TRUNC %2(s32)
-    %3:_(s32) = COPY $a1
+    %3:_(s32) = COPY $r5
     %1:_(s8) = G_TRUNC %3(s32)
     %4:_(s8) = G_MUL %1, %0
     %5:_(s32) = G_ANYEXT %4(s8)
-    $v0 = COPY %5(s32)
-    RetRA implicit $v0
+    $r2 = COPY %5(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -127,27 +127,27 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: mul_i16_sext
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY1]], [[COPY]]
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; MIPS32-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[MUL]], [[C]](s32)
     ; MIPS32-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; MIPS32-NEXT: $v0 = COPY [[ASHR]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
-    %2:_(s32) = COPY $a0
+    ; MIPS32-NEXT: $r2 = COPY [[ASHR]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
+    %2:_(s32) = COPY $r4
     %0:_(s16) = G_TRUNC %2(s32)
-    %3:_(s32) = COPY $a1
+    %3:_(s32) = COPY $r5
     %1:_(s16) = G_TRUNC %3(s32)
     %4:_(s16) = G_MUL %1, %0
     %5:_(s32) = G_SEXT %4(s16)
-    $v0 = COPY %5(s32)
-    RetRA implicit $v0
+    $r2 = COPY %5(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -156,26 +156,26 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: mul_i16_zext
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY1]], [[COPY]]
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; MIPS32-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[MUL]], [[C]]
-    ; MIPS32-NEXT: $v0 = COPY [[AND]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
-    %2:_(s32) = COPY $a0
+    ; MIPS32-NEXT: $r2 = COPY [[AND]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
+    %2:_(s32) = COPY $r4
     %0:_(s16) = G_TRUNC %2(s32)
-    %3:_(s32) = COPY $a1
+    %3:_(s32) = COPY $r5
     %1:_(s16) = G_TRUNC %3(s32)
     %4:_(s16) = G_MUL %1, %0
     %5:_(s32) = G_ZEXT %4(s16)
-    $v0 = COPY %5(s32)
-    RetRA implicit $v0
+    $r2 = COPY %5(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -184,24 +184,24 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: mul_i16_aext
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY1]], [[COPY]]
-    ; MIPS32-NEXT: $v0 = COPY [[MUL]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
-    %2:_(s32) = COPY $a0
+    ; MIPS32-NEXT: $r2 = COPY [[MUL]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
+    %2:_(s32) = COPY $r4
     %0:_(s16) = G_TRUNC %2(s32)
-    %3:_(s32) = COPY $a1
+    %3:_(s32) = COPY $r5
     %1:_(s16) = G_TRUNC %3(s32)
     %4:_(s16) = G_MUL %1, %0
     %5:_(s32) = G_ANYEXT %4(s16)
-    $v0 = COPY %5(s32)
-    RetRA implicit $v0
+    $r2 = COPY %5(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -210,35 +210,35 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1, $a2, $a3
+    liveins: $r4, $r5, $r6, $r7
 
     ; MIPS32-LABEL: name: mul_i64
-    ; MIPS32: liveins: $a0, $a1, $a2, $a3
+    ; MIPS32: liveins: $r4, $r5, $r6, $r7
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY2]], [[COPY]]
     ; MIPS32-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[COPY2]], [[COPY]]
     ; MIPS32-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[COPY2]], [[COPY1]]
     ; MIPS32-NEXT: [[MUL2:%[0-9]+]]:_(s32) = G_MUL [[COPY3]], [[COPY]]
     ; MIPS32-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[UMULH]], [[MUL1]]
     ; MIPS32-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[MUL2]]
-    ; MIPS32-NEXT: $v0 = COPY [[MUL]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[ADD1]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
-    %2:_(s32) = COPY $a0
-    %3:_(s32) = COPY $a1
+    ; MIPS32-NEXT: $r2 = COPY [[MUL]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[ADD1]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
+    %2:_(s32) = COPY $r4
+    %3:_(s32) = COPY $r5
     %0:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
-    %4:_(s32) = COPY $a2
-    %5:_(s32) = COPY $a3
+    %4:_(s32) = COPY $r6
+    %5:_(s32) = COPY $r7
     %1:_(s64) = G_MERGE_VALUES %4(s32), %5(s32)
     %6:_(s64) = G_MUL %1, %0
     %7:_(s32), %8:_(s32) = G_UNMERGE_VALUES %6(s64)
-    $v0 = COPY %7(s32)
-    $v1 = COPY %8(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %7(s32)
+    $r3 = COPY %8(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---
@@ -252,15 +252,15 @@ fixedStack:
   - { id: 3, offset: 16, size: 4, alignment: 8, stack-id: default, isImmutable: true }
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1, $a2, $a3
+    liveins: $r4, $r5, $r6, $r7
 
     ; MIPS32-LABEL: name: mul_i128
-    ; MIPS32: liveins: $a0, $a1, $a2, $a3
+    ; MIPS32: liveins: $r4, $r5, $r6, $r7
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
     ; MIPS32-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
     ; MIPS32-NEXT: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
@@ -318,15 +318,15 @@ body:             |
     ; MIPS32-NEXT: [[ADD16:%[0-9]+]]:_(s32) = G_ADD [[ADD15]], [[MUL8]]
     ; MIPS32-NEXT: [[ADD17:%[0-9]+]]:_(s32) = G_ADD [[ADD16]], [[MUL9]]
     ; MIPS32-NEXT: [[ADD18:%[0-9]+]]:_(s32) = G_ADD [[ADD17]], [[ADD11]]
-    ; MIPS32-NEXT: $v0 = COPY [[MUL]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[COPY5]](s32)
-    ; MIPS32-NEXT: $a0 = COPY [[COPY10]](s32)
-    ; MIPS32-NEXT: $a1 = COPY [[ADD18]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1, implicit $a0, implicit $a1
-    %2:_(s32) = COPY $a0
-    %3:_(s32) = COPY $a1
-    %4:_(s32) = COPY $a2
-    %5:_(s32) = COPY $a3
+    ; MIPS32-NEXT: $r2 = COPY [[MUL]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[COPY5]](s32)
+    ; MIPS32-NEXT: $r4 = COPY [[COPY10]](s32)
+    ; MIPS32-NEXT: $r5 = COPY [[ADD18]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3, implicit $r4, implicit $r5
+    %2:_(s32) = COPY $r4
+    %3:_(s32) = COPY $r5
+    %4:_(s32) = COPY $r6
+    %5:_(s32) = COPY $r7
     %0:_(s128) = G_MERGE_VALUES %2(s32), %3(s32), %4(s32), %5(s32)
     %10:_(p0) = G_FRAME_INDEX %fixed-stack.3
     %6:_(s32) = G_LOAD %10(p0) :: (load (s32) from %fixed-stack.3, align 8)
@@ -339,11 +339,11 @@ body:             |
     %1:_(s128) = G_MERGE_VALUES %6(s32), %7(s32), %8(s32), %9(s32)
     %14:_(s128) = G_MUL %1, %0
     %15:_(s32), %16:_(s32), %17:_(s32), %18:_(s32) = G_UNMERGE_VALUES %14(s128)
-    $v0 = COPY %15(s32)
-    $v1 = COPY %16(s32)
-    $a0 = COPY %17(s32)
-    $a1 = COPY %18(s32)
-    RetRA implicit $v0, implicit $v1, implicit $a0, implicit $a1
+    $r2 = COPY %15(s32)
+    $r3 = COPY %16(s32)
+    $r4 = COPY %17(s32)
+    $r5 = COPY %18(s32)
+    RetRA implicit $r2, implicit $r3, implicit $r4, implicit $r5
 
 ...
 ---
@@ -352,15 +352,15 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1, $a2, $a3
+    liveins: $r4, $r5, $r6, $r7
 
     ; MIPS32-LABEL: name: umulh_i64
-    ; MIPS32: liveins: $a0, $a1, $a2, $a3
+    ; MIPS32: liveins: $r4, $r5, $r6, $r7
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
     ; MIPS32-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[COPY2]], [[COPY]]
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY2]], [[COPY1]]
     ; MIPS32-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[COPY3]], [[COPY]]
@@ -387,20 +387,20 @@ body:             |
     ; MIPS32-NEXT: [[ADD7:%[0-9]+]]:_(s32) = G_ADD [[ADD5]], [[ICMP4]]
     ; MIPS32-NEXT: [[UMULH3:%[0-9]+]]:_(s32) = G_UMULH [[COPY3]], [[COPY1]]
     ; MIPS32-NEXT: [[ADD8:%[0-9]+]]:_(s32) = G_ADD [[UMULH3]], [[ADD7]]
-    ; MIPS32-NEXT: $v0 = COPY [[COPY8]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[ADD8]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
-    %2:_(s32) = COPY $a0
-    %3:_(s32) = COPY $a1
+    ; MIPS32-NEXT: $r2 = COPY [[COPY8]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[ADD8]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
+    %2:_(s32) = COPY $r4
+    %3:_(s32) = COPY $r5
     %0:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
-    %4:_(s32) = COPY $a2
-    %5:_(s32) = COPY $a3
+    %4:_(s32) = COPY $r6
+    %5:_(s32) = COPY $r7
     %1:_(s64) = G_MERGE_VALUES %4(s32), %5(s32)
     %6:_(s64) = G_UMULH %1, %0
     %7:_(s32), %8:_(s32) = G_UNMERGE_VALUES %6(s64)
-    $v0 = COPY %7(s32)
-    $v1 = COPY %8(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %7(s32)
+    $r3 = COPY %8(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---
@@ -409,15 +409,15 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
-    liveins: $a0, $a1, $a2, $a3
+    liveins: $r4, $r5, $r6, $r7
 
     ; MIPS32-LABEL: name: umul_with_overflow
-    ; MIPS32: liveins: $a0, $a1, $a2, $a3
+    ; MIPS32: liveins: $r4, $r5, $r6, $r7
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $a2
-    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(p0) = COPY $a3
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $r6
+    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(p0) = COPY $r7
     ; MIPS32-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[COPY]], [[COPY1]]
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY]], [[COPY1]]
@@ -427,10 +427,10 @@ body:             |
     ; MIPS32-NEXT: G_STORE [[AND]](s32), [[COPY3]](p0) :: (store (s8) into %ir.pcarry_flag)
     ; MIPS32-NEXT: G_STORE [[MUL]](s32), [[COPY2]](p0) :: (store (s32) into %ir.pmul)
     ; MIPS32-NEXT: RetRA
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
-    %2:_(p0) = COPY $a2
-    %3:_(p0) = COPY $a3
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
+    %2:_(p0) = COPY $r6
+    %3:_(p0) = COPY $r7
     %4:_(s32), %5:_(s1) = G_UMULO %0, %1
     G_STORE %5(s1), %3(p0) :: (store (s1) into %ir.pcarry_flag)
     G_STORE %4(s32), %2(p0) :: (store (s32) into %ir.pmul)

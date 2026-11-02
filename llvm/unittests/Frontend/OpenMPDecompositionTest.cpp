@@ -170,6 +170,11 @@ struct Helper {
     return std::nullopt;
   }
   std::optional<Object> getLoopIterVar() { return std::nullopt; }
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) {
+    return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+  }
 };
 
 using Clause = tomp::ClauseT<TypeTy, IdTy, ExprTy>;

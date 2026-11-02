@@ -101,13 +101,16 @@ void SBModuleSpec::SetSymbolFileSpec(const lldb::SBFileSpec &sb_spec) {
 const char *SBModuleSpec::GetObjectName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetObjectName().GetCString();
+  return ConstString(m_opaque_up->GetObjectName()).GetCString();
 }
 
 void SBModuleSpec::SetObjectName(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
-  m_opaque_up->GetObjectName().SetCString(name);
+  if (!name)
+    m_opaque_up->SetObjectName(std::string());
+  else
+    m_opaque_up->SetObjectName(name);
 }
 
 const char *SBModuleSpec::GetTriple() {

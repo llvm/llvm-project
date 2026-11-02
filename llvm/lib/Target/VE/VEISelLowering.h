@@ -261,8 +261,8 @@ public:
   SDValue makeAddress(SDValue Op, SelectionDAG &DAG) const;
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
   /// Returns true if the target allows unaligned memory accesses of the
   /// specified type.
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align A,

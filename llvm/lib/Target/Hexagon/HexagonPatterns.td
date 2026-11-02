@@ -474,14 +474,8 @@ def: Pat<(i64 imm:$v),  (CONST64 imm:$v)>,
 def: Pat<(i64 imm:$v),
          (Combinew (A2_tfrsi (Imm64Hi $v)), (A2_tfrsi (Imm64Lo $v)))>;
 
-def ftoi : SDNodeXForm<fpimm, [{
-  APInt I = N->getValueAPF().bitcastToAPInt();
-  return CurDAG->getTargetConstant(I.getZExtValue(), SDLoc(N),
-                                   MVT::getIntegerVT(I.getBitWidth()));
-}]>;
-
-def: Pat<(f32ImmPred:$f), (A2_tfrsi (ftoi $f))>;
-def: Pat<(f64ImmPred:$f), (CONST64  (ftoi $f))>;
+def: Pat<(f32ImmPred:$f), (A2_tfrsi (bitcast_fpimm_to_i32 $f))>;
+def: Pat<(f64ImmPred:$f), (CONST64  (bitcast_fpimm_to_i64 $f))>;
 
 def ToI32: OutPatFrag<(ops node:$V), (A2_tfrsi $V)>;
 
@@ -1007,9 +1001,9 @@ def: Pat<(select I1:$Pu, v2i32:$Rs, v2i32:$Rt),
                    (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
 
 def: Pat<(select I1:$Pu, F32:$Rs, f32ImmPred:$I),
-         (C2_muxir I1:$Pu, F32:$Rs, (ftoi $I))>;
+         (C2_muxir I1:$Pu, F32:$Rs, (bitcast_fpimm_to_i32 $I))>;
 def: Pat<(select I1:$Pu, f32ImmPred:$I, F32:$Rt),
-         (C2_muxri I1:$Pu, (ftoi $I), F32:$Rt)>;
+         (C2_muxri I1:$Pu, (bitcast_fpimm_to_i32 $I), F32:$Rt)>;
 def: Pat<(select I1:$Pu, F32:$Rs, F32:$Rt),
          (C2_mux I1:$Pu, F32:$Rs, F32:$Rt)>;
 def: Pat<(select I1:$Pu, F64:$Rs, F64:$Rt),
@@ -1022,9 +1016,9 @@ def: Pat<(select (i1 (setult F64:$Ra, F64:$Rb)), F64:$Rs, F64:$Rt),
          (C2_vmux (F2_dfcmpgt F64:$Rb, F64:$Ra), F64:$Rs, F64:$Rt)>;
 
 def: Pat<(select (not I1:$Pu), f32ImmPred:$I, F32:$Rs),
-         (C2_muxir I1:$Pu, F32:$Rs, (ftoi $I))>;
+         (C2_muxir I1:$Pu, F32:$Rs, (bitcast_fpimm_to_i32 $I))>;
 def: Pat<(select (not I1:$Pu), F32:$Rt, f32ImmPred:$I),
-         (C2_muxri I1:$Pu, (ftoi $I), F32:$Rt)>;
+         (C2_muxri I1:$Pu, (bitcast_fpimm_to_i32 $I), F32:$Rt)>;
 
 def: Pat<(vselect V8I1:$Pu, V8I8:$Rs, V8I8:$Rt),
          (C2_vmux V8I1:$Pu, V8I8:$Rs, V8I8:$Rt)>;

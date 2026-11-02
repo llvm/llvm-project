@@ -20,7 +20,8 @@ class SparcELFTargetObjectFile : public TargetLoweringObjectFileELF {
 public:
   SparcELFTargetObjectFile() = default;
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   const MCExpr *getTTypeGlobalReference(const GlobalValue *GV,
                                         unsigned Encoding,

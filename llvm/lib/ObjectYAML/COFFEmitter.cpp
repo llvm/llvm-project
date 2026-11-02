@@ -193,6 +193,22 @@ static bool writeSectionContent(COFFParser &CP, COFFYAML::Section &S,
   bool HasContent = S.SectionData.binary_size() != 0;
   for (const auto &E : S.StructuredData)
     HasContent |= E.size() != 0;
+  // Every BB address map entry encodes at least a version and a feature field.
+  if (S.BBAddrMapEntries && !S.BBAddrMapEntries->empty())
+    HasContent = true;
+
+  // Warn as ELF BBAddrMap does.
+  const std::vector<BBAddrMapYAML::PGOAnalysisMapEntry> *PGOAnalyses = nullptr;
+  if (S.PGOAnalyses) {
+    if (!S.BBAddrMapEntries)
+      WithColor::warning() << "PGOAnalyses should not exist in "
+                              ".llvm_bb_addr_map when Entries does not exist";
+    else if (S.BBAddrMapEntries->size() != S.PGOAnalyses->size())
+      WithColor::warning() << "PGOAnalyses must be the same length as Entries "
+                              "in .llvm_bb_addr_map";
+    else
+      PGOAnalyses = &S.PGOAnalyses.value();
+  }
 
   if (!HasContent) {
     // Leave SizeOfRawData unaltered. For .bss sections in object files, it
@@ -206,6 +222,9 @@ static bool writeSectionContent(COFFParser &CP, COFFYAML::Section &S,
   for (const auto &E : S.StructuredData)
     E.writeAsBinary(CBA);
   CBA.writeAsBinary(S.SectionData);
+  if (S.BBAddrMapEntries)
+    BBAddrMapYAML::encodePayload(*S.BBAddrMapEntries, PGOAnalyses, CBA,
+                                 LittleEndian, CP.is64Bit() ? 8 : 4);
   if (CP.isPE())
     CBA.padToAlignment(CP.getFileAlignment());
   S.Header.SizeOfRawData = CBA.getOffset() - S.Header.PointerToRawData;

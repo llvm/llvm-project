@@ -39,21 +39,21 @@ define i32 @bar(i32 %cond) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[PGOCOUNT1:%.*]] = load i8, ptr getelementptr inbounds ([3 x i8], ptr @__profc_bar, i32 0, i32 1), align 1
+; CHECK-NEXT:    [[PGOCOUNT1:%.*]] = load i8, ptr getelementptr inbounds (i8, ptr @__profc_bar, i64 1), align 1
 ; CHECK-NEXT:    [[PGOCOUNT_IFNONZERO2:%.*]] = icmp ne i8 [[PGOCOUNT1]], 0
 ; CHECK-NEXT:    br i1 [[PGOCOUNT_IFNONZERO2]], label %[[BB3:.*]], label %[[BB4:.*]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    store i8 0, ptr getelementptr inbounds ([3 x i8], ptr @__profc_bar, i32 0, i32 1), align 1
+; CHECK-NEXT:    store i8 0, ptr getelementptr inbounds (i8, ptr @__profc_bar, i64 1), align 1
 ; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    store i32 -1, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[PGOCOUNT3:%.*]] = load i8, ptr getelementptr inbounds ([3 x i8], ptr @__profc_bar, i32 0, i32 2), align 1
+; CHECK-NEXT:    [[PGOCOUNT3:%.*]] = load i8, ptr getelementptr inbounds (i8, ptr @__profc_bar, i64 2), align 1
 ; CHECK-NEXT:    [[PGOCOUNT_IFNONZERO4:%.*]] = icmp ne i8 [[PGOCOUNT3]], 0
 ; CHECK-NEXT:    br i1 [[PGOCOUNT_IFNONZERO4]], label %[[BB5:.*]], label %[[BB6:.*]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    store i8 0, ptr getelementptr inbounds ([3 x i8], ptr @__profc_bar, i32 0, i32 2), align 1
+; CHECK-NEXT:    store i8 0, ptr getelementptr inbounds (i8, ptr @__profc_bar, i64 2), align 1
 ; CHECK-NEXT:    br label %[[BB6]]
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4

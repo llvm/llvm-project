@@ -372,11 +372,13 @@ getFirstCC1CommandLine(ArrayRef<std::string> CommandLine,
   return std::nullopt;
 }
 
-bool DependencyScanningTool::getByNameDependencies(
-    StringRef CWD, ArrayRef<std::string> CommandLine,
-    DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
-    llvm::function_ref<std::optional<std::string>()> getNextName,
-    DependencyConsumer &DepConsumer) {
+/// Set up the overlay VFS and cc1 command line for a by-name query.
+/// \returns std::nullopt if \p CommandLine is ill-formed.
+static std::optional<std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>,
+                               std::vector<std::string>>>
+initByNameScanning(DependencyScanningWorker &Worker, StringRef CWD,
+                   ArrayRef<std::string> CommandLine,
+                   DiagnosticConsumer &DiagConsumer) {
   auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(CommandLine);
   auto FS = Worker.makeEffectiveVFS(CWD, OverlayFS);
   std::vector<std::string> CC1CommandLine;
@@ -391,11 +393,36 @@ bool DependencyScanningTool::getByNameDependencies(
     auto MaybeFirstCC1 = getFirstCC1CommandLine(
         ModifiedCommandLine, *DiagEngine, FS, Worker.getService().getLogger());
     if (!MaybeFirstCC1)
-      return false;
+      return std::nullopt;
     CC1CommandLine.assign(MaybeFirstCC1->begin(), MaybeFirstCC1->end());
   }
+  return std::make_pair(std::move(OverlayFS), std::move(CC1CommandLine));
+}
 
+bool DependencyScanningTool::getByNameDependencies(
+    StringRef CWD, ArrayRef<std::string> CommandLine,
+    DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+    llvm::function_ref<std::optional<std::string>()> getNextName,
+    DependencyConsumer &DepConsumer) {
+  auto Init = initByNameScanning(Worker, CWD, CommandLine, DiagConsumer);
+  if (!Init)
+    return false;
+  auto &[OverlayFS, CC1CommandLine] = *Init;
   return Worker.computeDependenciesByName(CWD, CC1CommandLine,
                                           std::move(OverlayFS), DiagConsumer,
                                           Controller, getNextName, DepConsumer);
+}
+
+std::optional<llvm::StringMap<std::string>>
+DependencyScanningTool::getModuleMapsForModules(
+    StringRef CWD, ArrayRef<std::string> CommandLine,
+    DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+    ArrayRef<StringRef> ModuleNames) {
+  auto Init = initByNameScanning(Worker, CWD, CommandLine, DiagConsumer);
+  if (!Init)
+    return std::nullopt;
+  auto &[OverlayFS, CC1CommandLine] = *Init;
+  return Worker.computeModuleMapsForModules(CWD, CC1CommandLine,
+                                            std::move(OverlayFS), DiagConsumer,
+                                            Controller, ModuleNames);
 }

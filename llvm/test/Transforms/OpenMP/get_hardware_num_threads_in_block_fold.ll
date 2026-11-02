@@ -13,8 +13,8 @@ target triple = "nvptx64"
 
 ;.
 ; CHECK: @G = external global i32
-; CHECK: @kernel0_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
-; CHECK: @kernel1_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @kernel0_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 1, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @kernel1_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 1, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
 ; CHECK: @kernel2_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8

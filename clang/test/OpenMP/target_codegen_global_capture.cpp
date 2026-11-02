@@ -424,7 +424,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[GD:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[GD:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -436,9 +436,9 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[GD]], ptr [[GD_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[SD]], ptr [[SD_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META8:![0-9]+]], !align [[META9:![0-9]+]]
-// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[GD_ADDR]], align 8, !nonnull [[META8]], !align [[META10:![0-9]+]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SD_ADDR]], align 8, !nonnull [[META8]], !align [[META11:![0-9]+]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META9:![0-9]+]], !align [[META10:![0-9]+]]
+// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[GD_ADDR]], align 8, !nonnull [[META9]], !align [[META11:![0-9]+]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SD_ADDR]], align 8, !nonnull [[META9]], !align [[META12:![0-9]+]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP0]], align 2
 // CHECK1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], 1
@@ -494,7 +494,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z3barssss.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[C:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[A:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[C:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -521,10 +521,10 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
-// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
-// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP1]], align 2
 // CHECK1-NEXT:    store i16 [[TMP4]], ptr [[B_CASTED]], align 2
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i64, ptr [[B_CASTED]], align 8
@@ -736,7 +736,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3barssss_l94.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[GD:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[GD:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -748,9 +748,9 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[GD]], ptr [[GD_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[SD]], ptr [[SD_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
-// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[GD_ADDR]], align 8, !nonnull [[META8]], !align [[META10]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SD_ADDR]], align 8, !nonnull [[META8]], !align [[META11]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[GD_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SD_ADDR]], align 8, !nonnull [[META9]], !align [[META12]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP0]], align 2
 // CHECK1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], 1
@@ -825,7 +825,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z4tbarIsEiT_S0_S0_S0_.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[C:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[A:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[C:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -852,10 +852,10 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
-// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
-// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP1]], align 2
 // CHECK1-NEXT:    store i16 [[TMP4]], ptr [[B_CASTED]], align 2
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i64, ptr [[B_CASTED]], align 8
@@ -1067,7 +1067,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4tbarIsEiT_S0_S0_S0__l145.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[GD:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[GD:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1079,9 +1079,9 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[GD]], ptr [[GD_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[SD]], ptr [[SD_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
-// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[GD_ADDR]], align 8, !nonnull [[META8]], !align [[META10]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SD_ADDR]], align 8, !nonnull [[META8]], !align [[META11]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[GD_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SD_ADDR]], align 8, !nonnull [[META9]], !align [[META12]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP0]], align 2
 // CHECK1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], 1
@@ -1356,7 +1356,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[GD:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[GD:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1426,7 +1426,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z3barssss.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[C:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[A:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[C:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1668,7 +1668,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3barssss_l94.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[GD:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[GD:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1757,7 +1757,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z4tbarIsEiT_S0_S0_S0_.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[C:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[A:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[C:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1999,7 +1999,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4tbarIsEiT_S0_S0_S0__l145.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[GD:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[GD:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SD:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4

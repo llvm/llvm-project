@@ -1,0 +1,193 @@
+## Check that the verifier reports subprograms that don't carry any information
+## a consumer could use to identify them: an error for a subprogram with no
+## attributes (DW_AT_sibling doesn't count), and a warning for a subprogram with
+## no name, abstract origin, specification or address range. Subprograms with
+## any one of those are accepted.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: not llvm-dwarfdump -verify %t.o | FileCheck %s \
+# RUN:   --implicit-check-not=error: --implicit-check-not=warning:
+
+# CHECK:      error: Subprogram DIE has no attributes:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x0000004a: DW_TAG_subprogram
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x0000004b:   DW_TAG_structure_type
+# CHECK-NEXT:                 DW_AT_name {{.*}} "Local"
+
+# CHECK:      error: Subprogram DIE has no attributes:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x00000051: DW_TAG_subprogram
+# CHECK-NEXT:               DW_AT_sibling {{.*}} {0x0000005c}
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x00000056:   DW_TAG_variable
+# CHECK-NEXT:                 DW_AT_name {{.*}} "x"
+
+# CHECK:      warning: Subprogram DIE has no name, abstract origin, specification or address range:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x0000005c: DW_TAG_subprogram
+# CHECK-NEXT:               DW_AT_decl_line {{.*}} (3)
+# CHECK-NEXT:               DW_AT_external {{.*}} (0x01)
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x0000005f:   DW_TAG_typedef
+# CHECK-NEXT:                 DW_AT_name {{.*}} "LocalInt"
+
+# CHECK:      error: Aggregated error counts:
+# CHECK-NEXT: error: Subprogram DIE has no attributes occurred 2 time(s).
+# CHECK-NEXT: Errors detected.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_str:
+    - ''
+    - foo
+    - _Z3foov
+    - Local
+    - x
+    - LocalInt
+  debug_abbrev:
+    - Table:
+        - Code:            1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_linkage_name
+              Form:            DW_FORM_strp
+        - Code:            4
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_abstract_origin
+              Form:            DW_FORM_ref4
+        - Code:            5
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref4
+        - Code:            6
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            7
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_entry_pc
+              Form:            DW_FORM_addr
+        - Code:            8
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:      []
+        - Code:            9
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            10
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_sibling
+              Form:            DW_FORM_ref4
+        - Code:            11
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            12
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag
+        - Code:            13
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        ## 0x0b: DW_TAG_compile_unit
+        - AbbrCode:        1
+          Values:
+            - Value:           0x1000
+            - Value:           0x2000
+        ## 0x1c: DW_TAG_subprogram with a name.
+        - AbbrCode:        2
+          Values:
+            - Value:           0x1 # "foo"
+        ## 0x21: DW_TAG_subprogram with a linkage name.
+        - AbbrCode:        3
+          Values:
+            - Value:           0x5 # "_Z3foov"
+        ## 0x26: DW_TAG_subprogram with an abstract origin.
+        - AbbrCode:        4
+          Values:
+            - Value:           0x1c
+        ## 0x2b: DW_TAG_subprogram with a specification.
+        - AbbrCode:        5
+          Values:
+            - Value:           0x1c
+        ## 0x30: DW_TAG_subprogram with an address range.
+        - AbbrCode:        6
+          Values:
+            - Value:           0x1000
+            - Value:           0x1100
+        ## 0x41: DW_TAG_subprogram with an entry address.
+        - AbbrCode:        7
+          Values:
+            - Value:           0x1100
+        ## 0x4a: DW_TAG_subprogram with no attributes.
+        - AbbrCode:        8
+        - AbbrCode:        9
+          Values:
+            - Value:           0xd # "Local"
+        - AbbrCode:        0
+        ## 0x51: DW_TAG_subprogram with DW_AT_sibling only.
+        - AbbrCode:        10
+          Values:
+            - Value:           0x5c
+        - AbbrCode:        11
+          Values:
+            - Value:           0x13 # "x"
+        - AbbrCode:        0
+        ## 0x5c: DW_TAG_subprogram with no identifying attributes.
+        - AbbrCode:        12
+          Values:
+            - Value:           3
+            - Value:           1
+        - AbbrCode:        13
+          Values:
+            - Value:           0x15 # "LocalInt"
+        - AbbrCode:        0
+        - AbbrCode:        0

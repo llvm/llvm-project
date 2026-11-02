@@ -4,11 +4,11 @@
 
 func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.boxchar<1> {fir.bindc_name = "c2"}, %arg2: !fir.boxchar<1> {fir.bindc_name = "c3"}) {
   %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %1:2 = hlfir.declare %0#0 typeparams %0#1 {uniq_name = "_QFmax1Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %1:2 = hlfir.declare %0#0 typeparams %0#1 uniq_name("_QFmax1Ec1") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %3:2 = hlfir.declare %2#0 typeparams %2#1 {uniq_name = "_QFmax1Ec2"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %3:2 = hlfir.declare %2#0 typeparams %2#1 uniq_name("_QFmax1Ec2") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %4:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %5:2 = hlfir.declare %4#0 typeparams %4#1 {uniq_name = "_QFmax1Ec3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %5:2 = hlfir.declare %4#0 typeparams %4#1 uniq_name("_QFmax1Ec3") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %6 = hlfir.char_extremum max, %3#0, %5#0 : (!fir.boxchar<1>, !fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
   hlfir.assign %6 to %1#0 : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
   hlfir.destroy %6 : !hlfir.expr<!fir.char<1,?>>
@@ -17,11 +17,11 @@ func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 
 // CHECK: func.func @_QPmax1(%[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "c1"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c2"}, %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c3"}) {
 // CHECK:   %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 {uniq_name = "_QFmax1Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 uniq_name("_QFmax1Ec1") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "_QFmax1Ec2"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 uniq_name("_QFmax1Ec2") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_4:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 {uniq_name = "_QFmax1Ec3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 uniq_name("_QFmax1Ec3") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_6:.*]] = arith.cmpi uge, %[[VAL_2]]#1, %[[VAL_4]]#1 : index
 // CHECK:   %[[VAL_7:.*]] = arith.select %[[VAL_6]], %[[VAL_2]]#1, %[[VAL_4]]#1 : index
 // CHECK:   %[[VAL_8:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
@@ -53,7 +53,7 @@ func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:     %[[VAL_31:.*]] = fir.coordinate_of %[[VAL_30]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_25:.*]] to %[[VAL_31]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_7]] {uniq_name = ".tmp.char_extremum"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_7]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[FALSE_1:.*]] = arith.constant false
 // CHECK:   %[[VAL_27:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_28:.*]] = fir.insert_value %[[VAL_27]], %[[FALSE_1]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
@@ -64,11 +64,11 @@ func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 
 func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.boxchar<1> {fir.bindc_name = "c2"}, %arg2: !fir.boxchar<1> {fir.bindc_name = "c3"}) {
   %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %1:2 = hlfir.declare %0#0 typeparams %0#1 {uniq_name = "_QFmin1Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %1:2 = hlfir.declare %0#0 typeparams %0#1 uniq_name("_QFmin1Ec1") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %3:2 = hlfir.declare %2#0 typeparams %2#1 {uniq_name = "_QFmin1Ec2"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %3:2 = hlfir.declare %2#0 typeparams %2#1 uniq_name("_QFmin1Ec2") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %4:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %5:2 = hlfir.declare %4#0 typeparams %4#1 {uniq_name = "_QFmin1Ec3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %5:2 = hlfir.declare %4#0 typeparams %4#1 uniq_name("_QFmin1Ec3") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %6 = hlfir.char_extremum min, %3#0, %5#0 : (!fir.boxchar<1>, !fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
   hlfir.assign %6 to %1#0 : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
   hlfir.destroy %6 : !hlfir.expr<!fir.char<1,?>>
@@ -78,11 +78,11 @@ func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK-LABEL: func.func @_QPmin1
 // CHECK-SAME: (%[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "c1"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c2"}, %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c3"}) {
 // CHECK:   %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 {uniq_name = "_QFmin1Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 uniq_name("_QFmin1Ec1") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "_QFmin1Ec2"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 uniq_name("_QFmin1Ec2") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_4:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 {uniq_name = "_QFmin1Ec3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 uniq_name("_QFmin1Ec3") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_6:.*]] = arith.cmpi uge, %[[VAL_2]]#1, %[[VAL_4]]#1 : index
 // CHECK:   %[[VAL_7:.*]] = arith.select %[[VAL_6]], %[[VAL_2]]#1, %[[VAL_4]]#1 : index
 // CHECK:   %[[VAL_8:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
@@ -114,7 +114,7 @@ func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:     %[[VAL_31:.*]] = fir.coordinate_of %[[VAL_30]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_25:.*]] to %[[VAL_31]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_7]] {uniq_name = ".tmp.char_extremum"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_7]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[FALSE_1:.*]] = arith.constant false
 // CHECK:   %[[VAL_27:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_28:.*]] = fir.insert_value %[[VAL_27]], %[[FALSE_1]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
@@ -128,19 +128,19 @@ func.func @_QPmax2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
   %1 = fir.convert %0#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,?>>>
   %c100 = arith.constant 100 : index
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %1(%2) typeparams %0#1 {uniq_name = "_QFmax2Ec1"} : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
+  %3:2 = hlfir.declare %1(%2) typeparams %0#1 uniq_name("_QFmax2Ec1") : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
   %4:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %c10 = arith.constant 10 : index
   %5 = fir.convert %4#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,10>>>
   %c100_0 = arith.constant 100 : index
   %6 = fir.shape %c100_0 : (index) -> !fir.shape<1>
-  %7:2 = hlfir.declare %5(%6) typeparams %c10 {uniq_name = "_QFmax2Ec2"} : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,10>>>)
+  %7:2 = hlfir.declare %5(%6) typeparams %c10 uniq_name("_QFmax2Ec2") : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,10>>>)
   %8:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %c20 = arith.constant 20 : index
   %9 = fir.convert %8#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,20>>>
   %c100_1 = arith.constant 100 : index
   %10 = fir.shape %c100_1 : (index) -> !fir.shape<1>
-  %11:2 = hlfir.declare %9(%10) typeparams %c20 {uniq_name = "_QFmax2Ec3"} : (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>)
+  %11:2 = hlfir.declare %9(%10) typeparams %c20 uniq_name("_QFmax2Ec3") : (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>)
   %c1 = arith.constant 1 : index
   %12 = hlfir.designate %7#0 (%c1)  typeparams %c10 : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, index, index) -> !fir.ref<!fir.char<1,10>>
   %c1_2 = arith.constant 1 : index
@@ -158,19 +158,19 @@ func.func @_QPmax2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_1:.*]] = fir.convert %[[VAL_0]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,?>>>
 // CHECK:   %[[C100:.*]] = arith.constant 100 : index
 // CHECK:   %[[VAL_2:.*]] = fir.shape %[[C100]] : (index) -> !fir.shape<1>
-// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) typeparams %[[VAL_0]]#1 {uniq_name = "_QFmax2Ec1"} : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
+// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) typeparams %[[VAL_0]]#1 uniq_name("_QFmax2Ec1") : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
 // CHECK:   %[[VAL_4:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK:   %[[VAL_5:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,10>>>
 // CHECK:   %[[C100_0:.*]] = arith.constant 100 : index
 // CHECK:   %[[VAL_6:.*]] = fir.shape %[[C100_0]] : (index) -> !fir.shape<1>
-// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) typeparams %[[C10]] {uniq_name = "_QFmax2Ec2"} : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,10>>>)
+// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) typeparams %[[C10]] uniq_name("_QFmax2Ec2") : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,10>>>)
 // CHECK:   %[[VAL_8:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:   %[[C20:.*]] = arith.constant 20 : index
 // CHECK:   %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,20>>>
 // CHECK:   %[[C100_1:.*]] = arith.constant 100 : index
 // CHECK:   %[[VAL_10:.*]] = fir.shape %[[C100_1]] : (index) -> !fir.shape<1>
-// CHECK:   %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) typeparams %[[C20]] {uniq_name = "_QFmax2Ec3"} : (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>)
+// CHECK:   %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) typeparams %[[C20]] uniq_name("_QFmax2Ec3") : (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>)
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_12:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[C1]])  typeparams %[[C1]]0 : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, index, index) -> !fir.ref<!fir.char<1,10>>
 // CHECK:   %[[C1_2:.*]] = arith.constant 1 : index
@@ -209,7 +209,7 @@ func.func @_QPmax2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:     fir.store %[[VAL_35:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
 // CHECK:   %[[VAL_36:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,20>>
-// CHECK:   %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36]] typeparams %[[VAL_15]] {uniq_name = ".tmp.char_extremum"} : (!fir.ref<!fir.char<1,20>>, index) -> (!fir.ref<!fir.char<1,20>>, !fir.ref<!fir.char<1,20>>)
+// CHECK:   %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36]] typeparams %[[VAL_15]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,20>>, index) -> (!fir.ref<!fir.char<1,20>>, !fir.ref<!fir.char<1,20>>)
 // CHECK:   %[[FALSE_5:.*]] = arith.constant false
 // CHECK:   %[[VAL_38:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1,20>>, i1>
 // CHECK:   %[[VAL_39:.*]] = fir.insert_value %[[VAL_38]], %[[FALSE_5]], [1 : index] : (tuple<!fir.ref<!fir.char<1,20>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1,20>>, i1>
@@ -225,19 +225,19 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
   %1 = fir.convert %0#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,?>>>
   %c100 = arith.constant 100 : index
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %1(%2) typeparams %0#1 {uniq_name = "_QFmin2Ec1"} : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
+  %3:2 = hlfir.declare %1(%2) typeparams %0#1 uniq_name("_QFmin2Ec1") : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
   %4:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %c10 = arith.constant 10 : index
   %5 = fir.convert %4#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,10>>>
   %c100_0 = arith.constant 100 : index
   %6 = fir.shape %c100_0 : (index) -> !fir.shape<1>
-  %7:2 = hlfir.declare %5(%6) typeparams %c10 {uniq_name = "_QFmin2Ec2"} : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,10>>>)
+  %7:2 = hlfir.declare %5(%6) typeparams %c10 uniq_name("_QFmin2Ec2") : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,10>>>)
   %8:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %c20 = arith.constant 20 : index
   %9 = fir.convert %8#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,20>>>
   %c100_1 = arith.constant 100 : index
   %10 = fir.shape %c100_1 : (index) -> !fir.shape<1>
-  %11:2 = hlfir.declare %9(%10) typeparams %c20 {uniq_name = "_QFmin2Ec3"} : (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>)
+  %11:2 = hlfir.declare %9(%10) typeparams %c20 uniq_name("_QFmin2Ec3") : (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>)
   %c1 = arith.constant 1 : index
   %12 = hlfir.designate %7#0 (%c1)  typeparams %c10 : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, index, index) -> !fir.ref<!fir.char<1,10>>
   %c1_2 = arith.constant 1 : index
@@ -255,19 +255,19 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_1:.*]] = fir.convert %[[VAL_0]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,?>>>
 // CHECK:   %[[C100:.*]] = arith.constant 100 : index
 // CHECK:   %[[VAL_2:.*]] = fir.shape %[[C100]] : (index) -> !fir.shape<1>
-// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) typeparams %[[VAL_0]]#1 {uniq_name = "_QFmin2Ec1"} : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
+// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) typeparams %[[VAL_0]]#1 uniq_name("_QFmin2Ec1") : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
 // CHECK:   %[[VAL_4:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK:   %[[VAL_5:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,10>>>
 // CHECK:   %[[C100_0:.*]] = arith.constant 100 : index
 // CHECK:   %[[VAL_6:.*]] = fir.shape %[[C100_0]] : (index) -> !fir.shape<1>
-// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) typeparams %[[C10]] {uniq_name = "_QFmin2Ec2"} : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,10>>>)
+// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) typeparams %[[C10]] uniq_name("_QFmin2Ec2") : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,10>>>)
 // CHECK:   %[[VAL_8:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:   %[[C20:.*]] = arith.constant 20 : index
 // CHECK:   %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,20>>>
 // CHECK:   %[[C100_1:.*]] = arith.constant 100 : index
 // CHECK:   %[[VAL_10:.*]] = fir.shape %[[C100_1]] : (index) -> !fir.shape<1>
-// CHECK:   %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) typeparams %[[C20]] {uniq_name = "_QFmin2Ec3"} : (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>)
+// CHECK:   %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) typeparams %[[C20]] uniq_name("_QFmin2Ec3") : (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,20>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>)
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_12:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[C1]])  typeparams %[[C1]]0 : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, index, index) -> !fir.ref<!fir.char<1,10>>
 // CHECK:   %[[C1_2:.*]] = arith.constant 1 : index
@@ -306,7 +306,7 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:     fir.store %[[VAL_35:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
 // CHECK:   %[[VAL_36:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,20>>
-// CHECK:   %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36]] typeparams %[[VAL_15]] {uniq_name = ".tmp.char_extremum"} : (!fir.ref<!fir.char<1,20>>, index) -> (!fir.ref<!fir.char<1,20>>, !fir.ref<!fir.char<1,20>>)
+// CHECK:   %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36]] typeparams %[[VAL_15]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,20>>, index) -> (!fir.ref<!fir.char<1,20>>, !fir.ref<!fir.char<1,20>>)
 // CHECK:   %[[FALSE_5:.*]] = arith.constant false
 // CHECK:   %[[VAL_38:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1,20>>, i1>
 // CHECK:   %[[VAL_39:.*]] = fir.insert_value %[[VAL_38]], %[[FALSE_5]], [1 : index] : (tuple<!fir.ref<!fir.char<1,20>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1,20>>, i1>
@@ -319,13 +319,13 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 
 func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.boxchar<1> {fir.bindc_name = "c2"}, %arg2: !fir.boxchar<1> {fir.bindc_name = "c3"}, %arg3: !fir.boxchar<1> {fir.bindc_name = "c4"}) {
   %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %1:2 = hlfir.declare %0#0 typeparams %0#1 {uniq_name = "_QFmax3Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %1:2 = hlfir.declare %0#0 typeparams %0#1 uniq_name("_QFmax3Ec1") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %3:2 = hlfir.declare %2#0 typeparams %2#1 {uniq_name = "_QFmax3Ec2"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %3:2 = hlfir.declare %2#0 typeparams %2#1 uniq_name("_QFmax3Ec2") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %4:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %5:2 = hlfir.declare %4#0 typeparams %4#1 {uniq_name = "_QFmax3Ec3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %5:2 = hlfir.declare %4#0 typeparams %4#1 uniq_name("_QFmax3Ec3") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %6:2 = fir.unboxchar %arg3 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %7:2 = hlfir.declare %6#0 typeparams %6#1 {uniq_name = "_QFmax3Ec4"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %7:2 = hlfir.declare %6#0 typeparams %6#1 uniq_name("_QFmax3Ec4") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %8 = hlfir.char_extremum max, %3#0, %5#0, %7#0 : (!fir.boxchar<1>, !fir.boxchar<1>, !fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
   hlfir.assign %8 to %1#0 : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
   hlfir.destroy %8 : !hlfir.expr<!fir.char<1,?>>
@@ -334,13 +334,13 @@ func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 
 // CHECK: func.func @_QPmax3(%[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "c1"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c2"}, %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c3"}, %[[ARG3:.*]]: !fir.boxchar<1> {fir.bindc_name = "c4"}) {
 // CHECK:   %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 {uniq_name = "_QFmax3Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 uniq_name("_QFmax3Ec1") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "_QFmax3Ec2"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 uniq_name("_QFmax3Ec2") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_4:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 {uniq_name = "_QFmax3Ec3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 uniq_name("_QFmax3Ec3") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG3]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 {uniq_name = "_QFmax3Ec4"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 uniq_name("_QFmax3Ec4") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_8:.*]] = arith.cmpi uge, %[[VAL_2]]#1, %[[VAL_4]]#1 : index
 // CHECK:   %[[VAL_9:.*]] = arith.select %[[VAL_8]], %[[VAL_2]]#1, %[[VAL_4]]#1 : index
 // CHECK:   %[[VAL_10:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
@@ -383,7 +383,7 @@ func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG4]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_37:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_38:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_19]] {uniq_name = ".tmp.char_extremum"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_38:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_19]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[FALSE_2:.*]] = arith.constant false
 // CHECK:   %[[VAL_39:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_40:.*]] = fir.insert_value %[[VAL_39]], %[[FALSE_2]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
@@ -394,13 +394,13 @@ func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 
 func.func @_QPmin3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.boxchar<1> {fir.bindc_name = "c2"}, %arg2: !fir.boxchar<1> {fir.bindc_name = "c3"}, %arg3: !fir.boxchar<1> {fir.bindc_name = "c4"}) {
   %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %1:2 = hlfir.declare %0#0 typeparams %0#1 {uniq_name = "_QFmin3Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %1:2 = hlfir.declare %0#0 typeparams %0#1 uniq_name("_QFmin3Ec1") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %3:2 = hlfir.declare %2#0 typeparams %2#1 {uniq_name = "_QFmin3Ec2"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %3:2 = hlfir.declare %2#0 typeparams %2#1 uniq_name("_QFmin3Ec2") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %4:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %5:2 = hlfir.declare %4#0 typeparams %4#1 {uniq_name = "_QFmin3Ec3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %5:2 = hlfir.declare %4#0 typeparams %4#1 uniq_name("_QFmin3Ec3") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %6:2 = fir.unboxchar %arg3 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %7:2 = hlfir.declare %6#0 typeparams %6#1 {uniq_name = "_QFmin3Ec4"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %7:2 = hlfir.declare %6#0 typeparams %6#1 uniq_name("_QFmin3Ec4") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %8 = hlfir.char_extremum min, %3#0, %5#0, %7#0 : (!fir.boxchar<1>, !fir.boxchar<1>, !fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
   hlfir.assign %8 to %1#0 : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
   hlfir.destroy %8 : !hlfir.expr<!fir.char<1,?>>
@@ -409,13 +409,13 @@ func.func @_QPmin3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 
 // CHECK: func.func @_QPmin3(%[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "c1"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c2"}, %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c3"}, %[[ARG3:.*]]: !fir.boxchar<1> {fir.bindc_name = "c4"}) {
 // CHECK:   %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 {uniq_name = "_QFmin3Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 uniq_name("_QFmin3Ec1") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "_QFmin3Ec2"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 uniq_name("_QFmin3Ec2") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_4:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 {uniq_name = "_QFmin3Ec3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 uniq_name("_QFmin3Ec3") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG3]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 {uniq_name = "_QFmin3Ec4"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 uniq_name("_QFmin3Ec4") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_8:.*]] = arith.cmpi uge, %[[VAL_2]]#1, %[[VAL_4]]#1 : index
 // CHECK:   %[[VAL_9:.*]] = arith.select %[[VAL_8]], %[[VAL_2]]#1, %[[VAL_4]]#1 : index
 // CHECK:   %[[VAL_10:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
@@ -458,7 +458,7 @@ func.func @_QPmin3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG4]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_37:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_38:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_19]] {uniq_name = ".tmp.char_extremum"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[VAL_38:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_19]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[FALSE_2:.*]] = arith.constant false
 // CHECK:   %[[VAL_39:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_40:.*]] = fir.insert_value %[[VAL_39]], %[[FALSE_2]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>

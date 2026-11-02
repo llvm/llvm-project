@@ -469,7 +469,6 @@ define void @too_many_args_use_workitem_id_x(
 ; GCN-NEXT:    v_and_b32_e32 v31, 0x3ff, v31
 ; GCN-NEXT:    flat_store_dword v[0:1], v31
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v1
@@ -477,6 +476,8 @@ define void @too_many_args_use_workitem_id_x(
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v3
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -532,7 +533,7 @@ define void @too_many_args_use_workitem_id_x(
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v30
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    flat_store_dword v[0:1], v31
+; GCN-NEXT:    flat_store_dword v[0:1], v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
@@ -774,7 +775,6 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GCN-NEXT:    v_and_b32_e32 v31, 0x3ff, v31
 ; GCN-NEXT:    flat_store_dword v[0:1], v31
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v1
@@ -782,6 +782,8 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v3
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -837,7 +839,7 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v30
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    flat_store_dword v[0:1], v31
+; GCN-NEXT:    flat_store_dword v[0:1], v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

@@ -54,8 +54,6 @@ define amdgpu_ps double @s_frexp_mant_f64(double inreg %src) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_frexp_mant_f64_e32 v[0:1], s[0:1]
 ; GFX9-NEXT:    v_add_f64 v[0:1], v[0:1], v[0:1]
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX9-NEXT:    ; return to shader part epilog
   %mant = call double @llvm.amdgcn.frexp.mant.f64(double %src)
   %res = fadd double %mant, %mant
@@ -67,8 +65,6 @@ define amdgpu_ps double @v_frexp_mant_f64(double %src) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_frexp_mant_f64_e32 v[0:1], v[0:1]
 ; GFX9-NEXT:    v_add_f64 v[0:1], v[0:1], v[0:1]
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX9-NEXT:    ; return to shader part epilog
   %mant = call double @llvm.amdgcn.frexp.mant.f64(double %src)
   %res = fadd double %mant, %mant

@@ -143,7 +143,7 @@ void macho::reportUnalignedLdrStr(void *loc, const Relocation &r, uint64_t va,
   uint64_t off = reinterpret_cast<const uint8_t *>(loc) - in.bufferStart;
   const InputSection *isec = offsetToInputSection(&off);
   std::string locStr = isec ? isec->getLocation(off) : "(invalid location)";
-  ::reportUnalignedLdrStr(locStr, va, align, r.referent.dyn_cast<Symbol *>());
+  ::reportUnalignedLdrStr(locStr, va, align, dyn_cast<Symbol *>(r.referent));
 }
 
 void macho::reportUnalignedLdrStr(void *loc, lld::macho::SymbolDiagnostic d,

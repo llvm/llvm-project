@@ -5,7 +5,7 @@
 ! CHECK-SAME: %[[J_ARG:.*]]: !fir.ref<i32> {fir.bindc_name = "j"}) -> i32 {
 function ishft_test(i, j)
 ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ARG]]
-! CHECK-DAG: %[[result:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFishft_testEishft_test"}
+! CHECK-DAG: %[[result:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFishft_testEishft_test")
 ! CHECK-DAG: %[[J:.*]]:2 = hlfir.declare %[[J_ARG]]
 ! CHECK-DAG: %[[iVAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
 ! CHECK-DAG: %[[jVAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>

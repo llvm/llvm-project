@@ -4,7 +4,7 @@
 ; regular function calls in the course of IR transformations.
 ;
 ; Test that the code generator will emit the function call and not consider it
-; an "implausible instruciton". In the past this silently truncated code on
+; an "implausible instruction". In the past this silently truncated code on
 ; exception paths and caused crashes at runtime.
 ;
 ; Reduced IR generated from ObjC++ source:

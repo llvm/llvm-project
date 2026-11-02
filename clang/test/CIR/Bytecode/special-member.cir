@@ -1,0 +1,34 @@
+// RUN: cir-opt %s -verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --emit-bytecode | llvm-strings | FileCheck %s --check-prefix=NATIVE
+
+// The special-member attributes carry an aggregate type, so the fallback
+// embeds its fully expanded printed form per attribute. Encoded, each
+// attribute refers to the type table by index instead.
+//
+// Check the attributes are not string-encoded in the blob.
+// NATIVE-NOT: #cir.cxx_ctor<
+// NATIVE-NOT: #cir.cxx_dtor<
+// NATIVE-NOT: #cir.cxx_assign<
+
+!s32i = !cir.int<s, 32>
+!rec_Marker = !cir.struct<"Marker" {data !s32i}>
+
+module {
+  cir.func private @ctor_default(!cir.ptr<!rec_Marker>) func_info<#cir.cxx_ctor<!rec_Marker, default>>
+  cir.func private @ctor_copy(!cir.ptr<!rec_Marker>, !cir.ptr<!rec_Marker>) func_info<#cir.cxx_ctor<!rec_Marker, copy>>
+  cir.func private @ctor_move_trivial(!cir.ptr<!rec_Marker>, !cir.ptr<!rec_Marker>) func_info<#cir.cxx_ctor<!rec_Marker, move, trivial true>>
+  cir.func private @dtor(!cir.ptr<!rec_Marker>) func_info<#cir.cxx_dtor<!rec_Marker>>
+  cir.func private @dtor_trivial(!cir.ptr<!rec_Marker>) func_info<#cir.cxx_dtor<!rec_Marker, trivial true>>
+  cir.func private @assign_copy(!cir.ptr<!rec_Marker>, !cir.ptr<!rec_Marker>) func_info<#cir.cxx_assign<!rec_Marker, copy>>
+  cir.func private @assign_move_trivial(!cir.ptr<!rec_Marker>, !cir.ptr<!rec_Marker>) func_info<#cir.cxx_assign<!rec_Marker, move, trivial true>>
+}
+
+// Each kind appears: the write side widens a scoped enum to a varint the
+// reader casts back, and getting that wrong silently retargets the kind.
+// CHECK: cir.func private @ctor_default({{.*}}) func_info<#cir.cxx_ctor<!rec_Marker, default>>
+// CHECK: cir.func private @ctor_copy({{.*}}) func_info<#cir.cxx_ctor<!rec_Marker, copy>>
+// CHECK: cir.func private @ctor_move_trivial({{.*}}) func_info<#cir.cxx_ctor<!rec_Marker, move, trivial true>>
+// CHECK: cir.func private @dtor({{.*}}) func_info<#cir.cxx_dtor<!rec_Marker>>
+// CHECK: cir.func private @dtor_trivial({{.*}}) func_info<#cir.cxx_dtor<!rec_Marker, trivial true>>
+// CHECK: cir.func private @assign_copy({{.*}}) func_info<#cir.cxx_assign<!rec_Marker, copy>>
+// CHECK: cir.func private @assign_move_trivial({{.*}}) func_info<#cir.cxx_assign<!rec_Marker, move, trivial true>>

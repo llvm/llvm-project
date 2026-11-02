@@ -328,7 +328,7 @@ define void @atomic_fetch_max64(i64 %x) nounwind {
 ; I486-NEXT:    movl %esp, %ebp
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $72, %esp
+; I486-NEXT:    subl $64, %esp
 ; I486-NEXT:    movl 12(%ebp), %eax
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl 8(%ebp), %eax
@@ -420,7 +420,7 @@ define void @atomic_fetch_min64(i64 %x) nounwind {
 ; I486-NEXT:    movl %esp, %ebp
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $72, %esp
+; I486-NEXT:    subl $64, %esp
 ; I486-NEXT:    movl 12(%ebp), %eax
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl 8(%ebp), %eax
@@ -512,7 +512,7 @@ define void @atomic_fetch_umax64(i64 %x) nounwind {
 ; I486-NEXT:    movl %esp, %ebp
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $72, %esp
+; I486-NEXT:    subl $64, %esp
 ; I486-NEXT:    movl 12(%ebp), %eax
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl 8(%ebp), %eax
@@ -604,7 +604,7 @@ define void @atomic_fetch_umin64(i64 %x) nounwind {
 ; I486-NEXT:    movl %esp, %ebp
 ; I486-NEXT:    pushl %esi
 ; I486-NEXT:    andl $-8, %esp
-; I486-NEXT:    subl $72, %esp
+; I486-NEXT:    subl $64, %esp
 ; I486-NEXT:    movl 12(%ebp), %eax
 ; I486-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; I486-NEXT:    movl 8(%ebp), %eax

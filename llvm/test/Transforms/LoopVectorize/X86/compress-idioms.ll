@@ -2,6 +2,9 @@
 ; RUN: opt < %s -mtriple=x86_64-- -mcpu=x86-64-v4 -passes=loop-vectorize -S | FileCheck %s --check-prefix=CHECK-V4
 ; RUN: opt < %s -mtriple=x86_64-- -mcpu=icelake-server -passes=loop-vectorize -S | FileCheck %s --check-prefix=CHECK-ICELAKE
 ; RUN: opt < %s -mtriple=x86_64-- -mcpu=znver4 -passes=loop-vectorize -S | FileCheck %s --check-prefix=CHECK-ZNVER4
+; RUN: opt < %s -mtriple=x86_64-- -mcpu=x86-64-v4 -passes=loop-vectorize -disable-output -pass-remarks-analysis=loop-vectorize 2>&1 | FileCheck %s -check-prefix=CHECK-REMARK
+
+; CHECK-REMARK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-V4-LABEL: define void @compress_store(
@@ -102,6 +105,8 @@ for.inc:
 exit:
   ret void
 }
+
+; CHECK-REMARK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-V4-LABEL: define void @expand_load(

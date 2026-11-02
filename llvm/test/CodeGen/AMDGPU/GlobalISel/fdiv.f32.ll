@@ -483,7 +483,7 @@ define float @v_fdiv_f32_ulp25(float %a, float %b) #1 {
 ; GFX10-FLUSH-LABEL: v_fdiv_f32_ulp25:
 ; GFX10-FLUSH:       ; %bb.0:
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-FLUSH-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s4
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v1, v1
@@ -510,7 +510,7 @@ define float @v_fdiv_f32_ulp25(float %a, float %b) #1 {
 ; GFX11-FLUSH-LABEL: v_fdiv_f32_ulp25:
 ; GFX11-FLUSH:       ; %bb.0:
 ; GFX11-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-FLUSH-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s0
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v1, v1, v2
@@ -1596,9 +1596,9 @@ define <2 x float> @v_fdiv_v2f32_ulp25(<2 x float> %a, <2 x float> %b) #1 {
 ; GFX10-FLUSH-LABEL: v_fdiv_v2f32_ulp25:
 ; GFX10-FLUSH:       ; %bb.0:
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v2|
+; GFX10-FLUSH-NEXT:    v_cmp_gt_f32_e64 s4, |v2|, 0x6f800000
 ; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v4, 1.0, 0x2f800000, s4
-; GFX10-FLUSH-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v3|
+; GFX10-FLUSH-NEXT:    v_cmp_gt_f32_e64 s4, |v3|, 0x6f800000
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v2, v2, v4
 ; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v5, 1.0, 0x2f800000, s4
 ; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
@@ -1636,10 +1636,10 @@ define <2 x float> @v_fdiv_v2f32_ulp25(<2 x float> %a, <2 x float> %b) #1 {
 ; GFX11-FLUSH-LABEL: v_fdiv_v2f32_ulp25:
 ; GFX11-FLUSH:       ; %bb.0:
 ; GFX11-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v2|
+; GFX11-FLUSH-NEXT:    v_cmp_gt_f32_e64 s0, |v2|, 0x6f800000
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_cndmask_b32_e64 v4, 1.0, 0x2f800000, s0
-; GFX11-FLUSH-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v3|
+; GFX11-FLUSH-NEXT:    v_cmp_gt_f32_e64 s0, |v3|, 0x6f800000
 ; GFX11-FLUSH-NEXT:    v_cndmask_b32_e64 v5, 1.0, 0x2f800000, s0
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_dual_mul_f32 v2, v2, v4 :: v_dual_mul_f32 v3, v3, v5

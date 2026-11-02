@@ -68,7 +68,7 @@ if.then:                                          ; preds = %entry
   %add7 = fadd contract float %a6, %a7
   %add8 = fadd contract float %a5, %add7
   store float %add8, ptr addrspace(1) %add.ptr, align 4
-  %mul9 = tail call noundef i32 asm "s_mul_i32, $0, $1, 3", "=s,s"(i32 %k) #3
+  %mul9 = tail call noundef i32 asm "s_mul_i32 $0, $1, 3", "=s,s"(i32 %k) #3
   store i32 %mul9, ptr addrspace(1) %ret.coerce, align 4
   tail call void @llvm.amdgcn.sched.group.barrier(i32 4, i32 1, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 10, i32 0)
@@ -105,7 +105,8 @@ if.then:                                          ; preds = %entry
   %a22 = load <2 x float>, ptr addrspace(1) %a21, align 16
   %a3 = extractelement <2 x float> %a22, i64 1
   %a4 = extractelement <2 x float> %a2, i64 0
-  %a5 = tail call contract noundef float asm "v_mfma_f64_4x4x4f64 $0, $1, $2, 0", "=a,v,v"(<2 x float> %a2, <2 x float> %a22) #3
+  %a5.v = tail call contract noundef <2 x float> asm "v_mfma_f64_4x4x4f64 $0, $1, $2, 0", "=a,v,v"(<2 x float> %a2, <2 x float> %a22) #3
+  %a5 = extractelement <2 x float> %a5.v, i64 0
   %a6 = extractelement <2 x float> %a2, i64 1
   %a7 = extractelement <2 x float> %a22, i64 0
   %add6 = fadd contract float %a6, %a7

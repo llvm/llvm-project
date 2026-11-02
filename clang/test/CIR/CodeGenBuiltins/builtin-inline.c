@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -disable-llvm-passes %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 typedef unsigned long size_t;
 
@@ -26,15 +26,9 @@ void *test_inline_builtin_memcpy(void *a, const void *b, size_t c) {
 // CIR:         cir.call @memcpy.inline(
 // CIR:       }
 
-// LLVM: define internal ptr @memcpy.inline(ptr{{.*}}, ptr{{.*}}, i64{{.*}}) #{{[0-9]+}}
-
-// LLVM-LABEL: @test_inline_builtin_memcpy(
-// LLVM:         call ptr @memcpy.inline(
-
-// OGCG-LABEL: @test_inline_builtin_memcpy(
-// OGCG:         call ptr @memcpy.inline(
-
-// OGCG: define internal ptr @memcpy.inline(ptr{{.*}} %a, ptr{{.*}} %b, i64{{.*}} %c) #{{[0-9]+}}
+// CIR emits the .inline clone before its caller, OGCG after it.
+// LLVM-DAG: define internal ptr @memcpy.inline(ptr{{.*}}, ptr{{.*}}, i64{{.*}}) #{{[0-9]+}}
+// LLVM-DAG: call ptr @memcpy.inline(ptr noundef
 
 // Shadowing case
 // When a non-inline function definition shadows an inline builtin declaration,
@@ -68,7 +62,7 @@ void *test_shadowed_memmove(void *a, const void *b, size_t c) {
 // CIR-NOT: @memmove.inline
 
 // CIR-LABEL: @test_shadowed_memmove(
-// CIR: cir.call @memmove(
+// CIR: cir.libc.memmove
 // CIR-NOT: @memmove.inline
 // CIR: }
 
@@ -76,16 +70,6 @@ void *test_shadowed_memmove(void *a, const void *b, size_t c) {
 // LLVM-NOT: @memmove.inline
 
 // LLVM-LABEL: @test_shadowed_memmove(
-// TODO - this deviation from OGCG is expected until we implement the nobuiltin
-// attribute. See CIRGenFunction::emitDirectCallee
-// LLVM: call ptr @memmove(
+// LLVM: call void @llvm.memmove.p0.p0.i64(
 // LLVM-NOT: @memmove.inline
 // LLVM: }
-
-// OGCG: define dso_local ptr @memmove(ptr{{.*}} %a, ptr{{.*}} %b, i64{{.*}} %c) #{{[0-9]+}}
-// OGCG-NOT: @memmove.inline
-
-// OGCG-LABEL: @test_shadowed_memmove(
-// OGCG: call void @llvm.memmove.p0.p0.i64(
-// OGCG-NOT: @memmove.inline
-// OGCG: }

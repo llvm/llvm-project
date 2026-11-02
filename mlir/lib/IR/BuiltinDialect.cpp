@@ -103,6 +103,7 @@ private:
 } // namespace
 
 void BuiltinDialect::initialize() {
+  setVersion(BuiltinDialectVersion::getCurrentVersion());
   registerTypes();
   registerAttributes();
   registerLocationAttributes();
@@ -133,6 +134,36 @@ void ModuleOp::build(OpBuilder &builder, OperationState &state,
 ModuleOp ModuleOp::create(Location loc, std::optional<StringRef> name) {
   OpBuilder builder(loc->getContext());
   return ModuleOp::create(builder, loc, name);
+}
+
+LogicalResult ModuleOp::readProperties(DialectBytecodeReader &reader,
+                                       OperationState &state) {
+  auto &properties = state.getOrAddProperties<Properties>();
+  if (failed(reader.readOptionalAttribute(properties.sym_name)) ||
+      failed(reader.readOptionalAttribute(properties.sym_visibility)))
+    return failure();
+
+  FailureOr<const DialectVersion *> maybeVersion =
+      reader.getDialectVersion<BuiltinDialect>();
+  if (failed(maybeVersion) ||
+      static_cast<const BuiltinDialectVersion *>(*maybeVersion)->getVersion() <
+          1)
+    return success();
+  return reader.readOptionalAttribute(properties.dlti);
+}
+
+void ModuleOp::writeProperties(DialectBytecodeWriter &writer) {
+  Properties &properties = getProperties();
+  writer.writeOptionalAttribute(properties.sym_name);
+  writer.writeOptionalAttribute(properties.sym_visibility);
+
+  FailureOr<const DialectVersion *> maybeVersion =
+      writer.getDialectVersion<BuiltinDialect>();
+  if (succeeded(maybeVersion) &&
+      static_cast<const BuiltinDialectVersion *>(*maybeVersion)->getVersion() <
+          1)
+    return;
+  writer.writeOptionalAttribute(properties.dlti);
 }
 
 DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {

@@ -966,7 +966,7 @@ void test_status(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   test_char<CharT>(check, check_exception);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   if (std::same_as<CharT, wchar_t>) // avoid testing twice
     test_char_to_wchar(check, check_exception);
 #endif

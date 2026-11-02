@@ -2,7 +2,7 @@
 
 ; FIXME: This should be handled
 
-; CHECK: LLVM ERROR: Do not know how to widen this operator's operand!
+; CHECK: LLVM ERROR: do not know how to widen this operator's operand!
 
 
 define void @buffer_store_v6bf16(ptr addrspace(8) inreg %rsrc, <6 x bfloat> %data, i32 %offset) {

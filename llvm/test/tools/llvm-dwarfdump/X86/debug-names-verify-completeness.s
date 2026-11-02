@@ -1,4 +1,5 @@
-# RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o - | not llvm-dwarfdump -verify - | FileCheck %s
+# RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o - | not llvm-dwarfdump -verify - \
+# RUN:   | FileCheck %s --implicit-check-not=var_value
 
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_namespace) with name namesp missing.
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_block_addr missing.
@@ -6,6 +7,7 @@
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_loc_addr missing.
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_loc_tls missing.
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_loc_gnu_tls missing.
+# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_mixed_piece missing.
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_subprogram) with name fun_name missing.
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_subprogram) with name _Z8fun_name missing.
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_inlined_subroutine) with name fun_inline missing.
@@ -142,6 +144,41 @@
         .asciz  "var_loc_gnu_tls"       # DW_AT_name
         .byte   1                       # DW_AT_location
         .byte   0xe0                    # DW_OP_GNU_push_tls_address
+
+# An address that DW_OP_stack_value turns into the variable's value is not where
+# the variable lives, so it does not call for an index entry...
+        .byte   2                       # Abbrev [2] DW_TAG_variable
+        .asciz  "var_value_addr"        # DW_AT_name
+        .byte   10                      # DW_AT_location
+        .byte   3                       # DW_OP_addr
+        .quad   0x47
+        .byte   0x9f                    # DW_OP_stack_value
+
+        .byte   2                       # Abbrev [2] DW_TAG_variable
+        .asciz  "var_value_addr_piece"  # DW_AT_name
+        .byte   15                      # DW_AT_location
+        .byte   3                       # DW_OP_addr
+        .quad   0x47
+        .byte   0x9f                    # DW_OP_stack_value
+        .byte   0x93                    # DW_OP_piece
+        .byte   8
+        .byte   0x50                    # DW_OP_reg0
+        .byte   0x93                    # DW_OP_piece
+        .byte   8
+
+# ...but a piece that does live at an address does.
+        .byte   2                       # Abbrev [2] DW_TAG_variable
+        .asciz  "var_mixed_piece"       # DW_AT_name
+        .byte   23                      # DW_AT_location
+        .byte   3                       # DW_OP_addr
+        .quad   0x47
+        .byte   0x9f                    # DW_OP_stack_value
+        .byte   0x93                    # DW_OP_piece
+        .byte   8
+        .byte   3                       # DW_OP_addr
+        .quad   0x48
+        .byte   0x93                    # DW_OP_piece
+        .byte   8
 
         .byte   3                       # Abbrev [3] DW_TAG_subprogram
         .asciz  "fun_name"              # DW_AT_name

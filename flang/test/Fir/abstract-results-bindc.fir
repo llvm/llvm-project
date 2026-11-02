@@ -20,7 +20,7 @@ func.func @test_addr_of() -> (() -> !t) {
 }
 
 func.func @test_dispatch(%x: !fir.ref<!t>, %y : !fir.class<!fir.type<somet>>) {
-  %0 = fir.dispatch "bar"(%y : !fir.class<!fir.type<somet>>) (%y : !fir.class<!fir.type<somet>>) -> !t proc_attrs<bind_c> {pass_arg_pos = 0 : i32}
+  %0 = fir.dispatch "bar"(%y : !fir.class<!fir.type<somet>>) (%y : !fir.class<!fir.type<somet>>) -> !t proc_attrs<bind_c> pass_arg_pos(0)
   fir.save_result %0 to %x : !t, !fir.ref<!t>
   return
 }
@@ -47,7 +47,7 @@ func.func @test_return_cptr(%x: !fir.ref<!cptr>) {
 // CHECK-LABEL:   func.func @test_dispatch(
 // CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.type<t{i:f32,j:i32,k:f32}>>,
 // CHECK-SAME:                             %[[VAL_1:.*]]: !fir.class<!fir.type<somet>>) {
-// CHECK:           %[[VAL_2:.*]] = fir.dispatch "bar"(%[[VAL_1]] : !fir.class<!fir.type<somet>>) (%[[VAL_1]] : !fir.class<!fir.type<somet>>) -> !fir.type<t{i:f32,j:i32,k:f32}> proc_attrs <bind_c> {pass_arg_pos = 0 : i32}
+// CHECK:           %[[VAL_2:.*]] = fir.dispatch "bar"(%[[VAL_1]] : !fir.class<!fir.type<somet>>) (%[[VAL_1]] : !fir.class<!fir.type<somet>>) -> !fir.type<t{i:f32,j:i32,k:f32}> proc_attrs <bind_c> pass_arg_pos(0)
 // CHECK:           fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.type<t{i:f32,j:i32,k:f32}>>
 // CHECK:           return
 // CHECK:         }

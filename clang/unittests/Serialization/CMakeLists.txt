@@ -5,6 +5,7 @@ add_clang_unittest(SerializationTests
   NamespaceLookupTest.cpp
   CommentsTest.cpp
   PreambleInNamedModulesTest.cpp
+  ResolveImportedPathTest.cpp
   LoadSpecLazilyTest.cpp
   SourceLocationEncodingTest.cpp
   VarDeclConstantInitTest.cpp

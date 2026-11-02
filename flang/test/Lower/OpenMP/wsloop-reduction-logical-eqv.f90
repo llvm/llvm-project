@@ -18,12 +18,12 @@
 ! CHECK-LABEL:   func.func @_QPsimple_reduction(
 ! CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.ref<!fir.array<100x!fir.logical<4>>> {fir.bindc_name = "y"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_reductionEi"}>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFsimple_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFsimple_reductionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "x", uniq_name = "_QFsimple_reductionEx"}>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFsimple_reductionEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFsimple_reductionEx") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 100 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimple_reductionEy"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFsimple_reductionEy") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant true
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_4]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
@@ -33,8 +33,8 @@
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_10:.*]] : !fir.ref<i32>) reduction(@eqv_reduction_l32 %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
-! CHECK:                 %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reductionEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFsimple_reductionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] uniq_name("_QFsimple_reductionEx") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[VAL_11]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:                 %[[VAL_19:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
@@ -62,12 +62,12 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPsimple_reduction_switch_order(
 ! CHECK-SAME:                                                %[[VAL_0:.*]]: !fir.ref<!fir.array<100x!fir.logical<4>>> {fir.bindc_name = "y"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_reduction_switch_orderEi"}>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFsimple_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFsimple_reduction_switch_orderEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "x", uniq_name = "_QFsimple_reduction_switch_orderEx"}>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFsimple_reduction_switch_orderEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFsimple_reduction_switch_orderEx") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 100 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimple_reduction_switch_orderEy"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFsimple_reduction_switch_orderEy") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant true
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_4]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
@@ -77,8 +77,8 @@ end subroutine
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_10:.*]] : !fir.ref<i32>) reduction(@eqv_reduction_l32 %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
-! CHECK:                 %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reduction_switch_orderEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFsimple_reduction_switch_orderEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] uniq_name("_QFsimple_reduction_switch_orderEx") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[VAL_11]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i32) -> i64
@@ -106,16 +106,16 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPmultiple_reductions(
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.array<100x!fir.logical<4>>> {fir.bindc_name = "w"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_reductionsEi"}>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFmultiple_reductionsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFmultiple_reductionsEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmultiple_reductionsEw"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFmultiple_reductionsEw") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "x", uniq_name = "_QFmultiple_reductionsEx"}>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFmultiple_reductionsEx") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "y", uniq_name = "_QFmultiple_reductionsEy"}>
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] uniq_name("_QFmultiple_reductionsEy") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "z", uniq_name = "_QFmultiple_reductionsEz"}>
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFmultiple_reductionsEz"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFmultiple_reductionsEz") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant true
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_7]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
@@ -131,10 +131,10 @@ end subroutine
 ! CHECK:             %[[VAL_22:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_18:.*]] : !fir.ref<i32>) reduction(@eqv_reduction_l32 %[[VAL_7]]#0 -> %[[VAL_23:.*]], @eqv_reduction_l32 %[[VAL_9]]#0 -> %[[VAL_24:.*]], @eqv_reduction_l32 %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_26:.*]]) : i32 = (%[[VAL_20]]) to (%[[VAL_21]]) inclusive step (%[[VAL_22]]) {
-! CHECK:                 %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFmultiple_reductionsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_24]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:                 %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFmultiple_reductionsEz"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] uniq_name("_QFmultiple_reductionsEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_23]] uniq_name("_QFmultiple_reductionsEx") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_24]] uniq_name("_QFmultiple_reductionsEy") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_25]] uniq_name("_QFmultiple_reductionsEz") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_30:.*]] = fir.load %[[VAL_27]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:                 %[[VAL_31:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>

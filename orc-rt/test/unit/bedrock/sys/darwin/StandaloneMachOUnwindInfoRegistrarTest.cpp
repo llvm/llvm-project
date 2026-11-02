@@ -15,9 +15,11 @@
 
 #include "orc-rt-internal/bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrar.h"
 
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace {
 
@@ -49,71 +51,73 @@ protected:
 
 TEST_F(UnwindInfoMapTest, RegisterAndDeregisterSucceeds) {
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()));
-  cantFail(Map.deregisterRanges({range(0x100, 0x200)}));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()),
+                    Succeeded());
+  ASSERT_THAT_ERROR(Map.deregisterRanges({range(0x100, 0x200)}), Succeeded());
 }
 
 TEST_F(UnwindInfoMapTest, DeregisterUnregisteredFails) {
   UnwindInfoMap Map;
-  auto E = Map.deregisterRanges({range(0x100, 0x200)});
-  ASSERT_TRUE(static_cast<bool>(E));
-  EXPECT_EQ(toString(std::move(E)),
-            "No unwind-info sections registered for range");
+  EXPECT_THAT_ERROR(
+      Map.deregisterRanges({range(0x100, 0x200)}),
+      FailedWithMessage("No unwind-info sections registered for range"));
 }
 
 TEST_F(UnwindInfoMapTest, OverlappingRegistrationRejected) {
   // [0x100, 0x300) then [0x200, 0x400): second starts inside the first.
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x300)}, sampleInfo()));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x300)}, sampleInfo()),
+                    Succeeded());
 
-  auto E = Map.registerRanges({range(0x200, 0x400)}, sampleInfo());
-  ASSERT_TRUE(static_cast<bool>(E));
-  EXPECT_EQ(toString(std::move(E)),
-            "Code-range for unwind-info registration overlaps an existing "
-            "range");
+  EXPECT_THAT_ERROR(
+      Map.registerRanges({range(0x200, 0x400)}, sampleInfo()),
+      FailedWithMessage("Code-range for unwind-info registration overlaps an "
+                        "existing range"));
 }
 
 TEST_F(UnwindInfoMapTest, ContainedRegistrationRejected) {
   // [0x100, 0x400) then [0x200, 0x300): second sits entirely inside the first.
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x400)}, sampleInfo()));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x400)}, sampleInfo()),
+                    Succeeded());
 
-  auto E = Map.registerRanges({range(0x200, 0x300)}, sampleInfo());
-  ASSERT_TRUE(static_cast<bool>(E));
-  EXPECT_EQ(toString(std::move(E)),
-            "Code-range for unwind-info registration overlaps an existing "
-            "range");
+  EXPECT_THAT_ERROR(
+      Map.registerRanges({range(0x200, 0x300)}, sampleInfo()),
+      FailedWithMessage("Code-range for unwind-info registration overlaps an "
+                        "existing range"));
 }
 
 TEST_F(UnwindInfoMapTest, ExactDuplicateRegistrationRejected) {
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()),
+                    Succeeded());
 
-  auto E = Map.registerRanges({range(0x100, 0x200)}, sampleInfo());
-  ASSERT_TRUE(static_cast<bool>(E));
-  EXPECT_EQ(toString(std::move(E)),
-            "Code-range for unwind-info registration overlaps an existing "
-            "range");
+  EXPECT_THAT_ERROR(
+      Map.registerRanges({range(0x100, 0x200)}, sampleInfo()),
+      FailedWithMessage("Code-range for unwind-info registration overlaps an "
+                        "existing range"));
 }
 
 TEST_F(UnwindInfoMapTest, EmptyRangeIgnored) {
   // Registering an empty range should succeed but produce no entry, so a
   // subsequent deregister of the same range fails.
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x100)}, sampleInfo()));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x100)}, sampleInfo()),
+                    Succeeded());
 
-  auto E = Map.deregisterRanges({range(0x100, 0x100)});
-  ASSERT_TRUE(static_cast<bool>(E));
-  EXPECT_EQ(toString(std::move(E)),
-            "No unwind-info sections registered for range");
+  EXPECT_THAT_ERROR(
+      Map.deregisterRanges({range(0x100, 0x100)}),
+      FailedWithMessage("No unwind-info sections registered for range"));
 }
 
 TEST_F(UnwindInfoMapTest, AdjacentRangesAccepted) {
   // [0x100, 0x200) and [0x200, 0x300) touch at the boundary but don't
   // overlap.
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()));
-  cantFail(Map.registerRanges({range(0x200, 0x300)}, sampleInfo()));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()),
+                    Succeeded());
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x200, 0x300)}, sampleInfo()),
+                    Succeeded());
 }
 
 TEST_F(UnwindInfoMapTest, PartialFailureLeavesEarlierRangesRegistered) {
@@ -121,21 +125,23 @@ TEST_F(UnwindInfoMapTest, PartialFailureLeavesEarlierRangesRegistered) {
   // already-registered range. The first range in the failing call should
   // remain registered, and the pre-existing range is untouched.
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()),
+                    Succeeded());
 
-  auto E = Map.registerRanges({range(0x300, 0x400), range(0x150, 0x250)},
-                              sampleInfo());
-  ASSERT_TRUE(static_cast<bool>(E));
-  consumeError(std::move(E));
+  ASSERT_THAT_ERROR(
+      Map.registerRanges({range(0x300, 0x400), range(0x150, 0x250)},
+                         sampleInfo()),
+      Failed());
 
-  cantFail(Map.deregisterRanges({range(0x300, 0x400)}));
-  cantFail(Map.deregisterRanges({range(0x100, 0x200)}));
+  ASSERT_THAT_ERROR(Map.deregisterRanges({range(0x300, 0x400)}), Succeeded());
+  ASSERT_THAT_ERROR(Map.deregisterRanges({range(0x100, 0x200)}), Succeeded());
 }
 
 TEST_F(UnwindInfoMapTest, LookupInsideRegisteredRange) {
   UnwindInfoMap Map;
   DynamicUnwindSections Info{0x1000, 0x2000, 64, 0x3000, 32};
-  cantFail(Map.registerRanges({range(0x100, 0x200)}, Info));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x200)}, Info),
+                    Succeeded());
 
   // Lookups at Start, midway, and just-below-End should all hit.
   for (uintptr_t Addr :
@@ -152,7 +158,8 @@ TEST_F(UnwindInfoMapTest, LookupInsideRegisteredRange) {
 
 TEST_F(UnwindInfoMapTest, LookupOutsideRegisteredRangeReturnsNullopt) {
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()),
+                    Succeeded());
 
   // Below any registered range.
   EXPECT_FALSE(Map.lookup(0x0).has_value());
@@ -175,8 +182,10 @@ TEST_F(UnwindInfoMapTest, LookupBetweenRegisteredRangesReturnsNullopt) {
   // Two non-adjacent ranges; lookup in the gap must miss rather than return
   // the lower range (regression guard for the upper_bound - 1 logic).
   UnwindInfoMap Map;
-  cantFail(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()));
-  cantFail(Map.registerRanges({range(0x300, 0x400)}, sampleInfo()));
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x100, 0x200)}, sampleInfo()),
+                    Succeeded());
+  ASSERT_THAT_ERROR(Map.registerRanges({range(0x300, 0x400)}, sampleInfo()),
+                    Succeeded());
 
   EXPECT_FALSE(Map.lookup(0x200).has_value());
   EXPECT_FALSE(Map.lookup(0x250).has_value());

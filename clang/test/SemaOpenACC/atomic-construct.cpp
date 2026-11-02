@@ -1881,3 +1881,13 @@ void AtomicCaptureCompound(int LHS, int RHS) {
   }
 
 }
+
+namespace gh226905 {
+template<class T> T &foo();
+template<class T> void bar(T baz) {
+  // expected-error@+2{{statement associated with OpenACC 'atomic' directive is invalid}}
+  // expected-note@+2{{right operand to compound assignment expression must be of scalar type (was '<overloaded function type>')}}
+#pragma acc atomic
+  baz = baz << foo;
+}
+}

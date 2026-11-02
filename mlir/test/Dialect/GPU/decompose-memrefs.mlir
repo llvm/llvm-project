@@ -88,7 +88,8 @@ func.func @decompose_load(%arg0 : memref<?x?x?xf32>) {
 //  CHECK-SAME:  threads(%[[TX:.*]], %[[TY:.*]], %[[TZ:.*]]) in
 //       CHECK:  %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[TX]], %[[STRIDES]]#0, %[[TY]], %[[STRIDES]]#1, %[[TZ]]]
 //       CHECK:  %[[PTR:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[IDX]]], sizes: [%{{.*}}, %{{.*}}, %{{.*}}], strides: [%[[STRIDES]]#0, %[[STRIDES]]#1, 1]
-//       CHECK:  "test.test"(%[[PTR]]) : (memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>) -> ()
+//       CHECK:  %[[CAST:.*]] = memref.cast %[[PTR]] : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+//       CHECK:  "test.test"(%[[CAST]]) : (memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>) -> ()
 func.func @decompose_subview(%arg0 : memref<?x?x?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

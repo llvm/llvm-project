@@ -6,6 +6,19 @@
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_python//python:defs.bzl", _py_test = "py_test")
 
+# rules_python 1.9.0 made `--enable_runfiles=true` the default for every
+# py_binary/py_test on Windows, applied through a per-target transition. For
+# lit that is pure cost: the test still executes out of the self-extracting
+# zip, so the copied runfiles tree Bazel materializes beside it -- ~3400 files
+# and ~180 MB per test, most of it the CPython toolchain -- is never read, and
+# multiplied across the suite it exhausts the disk. The transition also gives
+# every lit test an `-ST-<hash>` output directory, and the 16 characters that
+# costs push the deepest MLIR tests past the 258-character cwd limit that
+# CreateProcessW enforces. `INHERIT` leaves the setting at whatever the
+# command line says, so the transition is a no-op and the tests run under the
+# platform default; on Linux and macOS nothing changes.
+_ENABLE_RUNFILES = Label("@rules_python//command_line_option:enable_runfiles")
+
 # Python helper that resolves a path against the .cfg file's own location.
 # Injected into rendered lit.site.cfg files so that dirname substitutions
 # (which lit_expand_template renders as cfg-relative paths) resolve to absolute
@@ -210,6 +223,7 @@ def lit_test(
         args = args + ["-v"] + ["$(rootpath %s)" % src for src in srcs],
         data = data + srcs,
         legacy_create_init = False,
+        config_settings = {_ENABLE_RUNFILES: "INHERIT"},
         deps = deps + [Label("//llvm/utils/lit")],
         **kwargs
     )

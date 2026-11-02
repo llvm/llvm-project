@@ -31,18 +31,23 @@ end program
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_mapper' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.private' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: LowerHLFIROrderedAssignments
 ! ALL-NEXT: LowerHLFIRIntrinsics
 ! ALL-NEXT: BufferizeHLFIR
@@ -107,7 +112,7 @@ end program
 ! ALL-NEXT:     StackReclaim
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT: SCFToControlFlow
-! ALL-NEXT: Canonicalizer
+! ALL-NEXT: O0CanonicalizerPass
 ! ALL-NEXT: SimplifyRegionLite
 ! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE

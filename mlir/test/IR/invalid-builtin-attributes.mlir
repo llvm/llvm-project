@@ -693,3 +693,10 @@ func.func @negative_elements_literal_without_signed_repr() {
   %0 = arith.constant dense<[1.000000e+00, -2.000000e+00]> : tensor<2xf8E8M0FNU>
   return
 }
+
+// -----
+
+func.func @string_in_int_tensor() {
+  // expected-error @+1 {{expected integer elements, but parsed string}}
+  "foo"() {bar = dense<["oops"]> : tensor<1xi1>} : () -> ()
+}

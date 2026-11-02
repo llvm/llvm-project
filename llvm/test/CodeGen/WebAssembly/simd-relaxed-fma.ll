@@ -1189,77 +1189,77 @@ define <4 x float> @fma_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; RELAXED-LABEL: fma_4xf32:
 ; RELAXED:         .functype fma_4xf32 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f32x4.extract_lane $push2=, $0, 0
-; RELAXED-NEXT:    f32x4.extract_lane $push1=, $1, 0
-; RELAXED-NEXT:    f32x4.extract_lane $push0=, $2, 0
-; RELAXED-NEXT:    call $push3=, fmaf, $pop2, $pop1, $pop0
-; RELAXED-NEXT:    f32x4.splat $push4=, $pop3
-; RELAXED-NEXT:    f32x4.extract_lane $push7=, $0, 1
-; RELAXED-NEXT:    f32x4.extract_lane $push6=, $1, 1
-; RELAXED-NEXT:    f32x4.extract_lane $push5=, $2, 1
-; RELAXED-NEXT:    call $push8=, fmaf, $pop7, $pop6, $pop5
-; RELAXED-NEXT:    f32x4.replace_lane $push9=, $pop4, 1, $pop8
-; RELAXED-NEXT:    f32x4.extract_lane $push12=, $0, 2
-; RELAXED-NEXT:    f32x4.extract_lane $push11=, $1, 2
-; RELAXED-NEXT:    f32x4.extract_lane $push10=, $2, 2
-; RELAXED-NEXT:    call $push13=, fmaf, $pop12, $pop11, $pop10
-; RELAXED-NEXT:    f32x4.replace_lane $push14=, $pop9, 2, $pop13
-; RELAXED-NEXT:    f32x4.extract_lane $push17=, $0, 3
-; RELAXED-NEXT:    f32x4.extract_lane $push16=, $1, 3
-; RELAXED-NEXT:    f32x4.extract_lane $push15=, $2, 3
-; RELAXED-NEXT:    call $push18=, fmaf, $pop17, $pop16, $pop15
-; RELAXED-NEXT:    f32x4.replace_lane $push19=, $pop14, 3, $pop18
-; RELAXED-NEXT:    return $pop19
+; RELAXED-NEXT:    f32x4.extract_lane $push2=, $0, 1
+; RELAXED-NEXT:    f32x4.extract_lane $push1=, $1, 1
+; RELAXED-NEXT:    f32x4.extract_lane $push0=, $2, 1
+; RELAXED-NEXT:    call $3=, fmaf, $pop2, $pop1, $pop0
+; RELAXED-NEXT:    f32x4.extract_lane $push5=, $0, 0
+; RELAXED-NEXT:    f32x4.extract_lane $push4=, $1, 0
+; RELAXED-NEXT:    f32x4.extract_lane $push3=, $2, 0
+; RELAXED-NEXT:    call $push6=, fmaf, $pop5, $pop4, $pop3
+; RELAXED-NEXT:    f32x4.splat $push7=, $pop6
+; RELAXED-NEXT:    f32x4.replace_lane $push8=, $pop7, 1, $3
+; RELAXED-NEXT:    f32x4.extract_lane $push11=, $0, 2
+; RELAXED-NEXT:    f32x4.extract_lane $push10=, $1, 2
+; RELAXED-NEXT:    f32x4.extract_lane $push9=, $2, 2
+; RELAXED-NEXT:    call $push12=, fmaf, $pop11, $pop10, $pop9
+; RELAXED-NEXT:    f32x4.replace_lane $push13=, $pop8, 2, $pop12
+; RELAXED-NEXT:    f32x4.extract_lane $push16=, $0, 3
+; RELAXED-NEXT:    f32x4.extract_lane $push15=, $1, 3
+; RELAXED-NEXT:    f32x4.extract_lane $push14=, $2, 3
+; RELAXED-NEXT:    call $push17=, fmaf, $pop16, $pop15, $pop14
+; RELAXED-NEXT:    f32x4.replace_lane $push18=, $pop13, 3, $pop17
+; RELAXED-NEXT:    return $pop18
 ;
 ; STRICT-LABEL: fma_4xf32:
 ; STRICT:         .functype fma_4xf32 (v128, v128, v128) -> (v128)
 ; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f32x4.extract_lane $push2=, $0, 0
-; STRICT-NEXT:    f32x4.extract_lane $push1=, $1, 0
-; STRICT-NEXT:    f32x4.extract_lane $push0=, $2, 0
-; STRICT-NEXT:    call $push3=, fmaf, $pop2, $pop1, $pop0
-; STRICT-NEXT:    f32x4.splat $push4=, $pop3
-; STRICT-NEXT:    f32x4.extract_lane $push7=, $0, 1
-; STRICT-NEXT:    f32x4.extract_lane $push6=, $1, 1
-; STRICT-NEXT:    f32x4.extract_lane $push5=, $2, 1
-; STRICT-NEXT:    call $push8=, fmaf, $pop7, $pop6, $pop5
-; STRICT-NEXT:    f32x4.replace_lane $push9=, $pop4, 1, $pop8
-; STRICT-NEXT:    f32x4.extract_lane $push12=, $0, 2
-; STRICT-NEXT:    f32x4.extract_lane $push11=, $1, 2
-; STRICT-NEXT:    f32x4.extract_lane $push10=, $2, 2
-; STRICT-NEXT:    call $push13=, fmaf, $pop12, $pop11, $pop10
-; STRICT-NEXT:    f32x4.replace_lane $push14=, $pop9, 2, $pop13
-; STRICT-NEXT:    f32x4.extract_lane $push17=, $0, 3
-; STRICT-NEXT:    f32x4.extract_lane $push16=, $1, 3
-; STRICT-NEXT:    f32x4.extract_lane $push15=, $2, 3
-; STRICT-NEXT:    call $push18=, fmaf, $pop17, $pop16, $pop15
-; STRICT-NEXT:    f32x4.replace_lane $push19=, $pop14, 3, $pop18
-; STRICT-NEXT:    return $pop19
+; STRICT-NEXT:    f32x4.extract_lane $push2=, $0, 1
+; STRICT-NEXT:    f32x4.extract_lane $push1=, $1, 1
+; STRICT-NEXT:    f32x4.extract_lane $push0=, $2, 1
+; STRICT-NEXT:    call $3=, fmaf, $pop2, $pop1, $pop0
+; STRICT-NEXT:    f32x4.extract_lane $push5=, $0, 0
+; STRICT-NEXT:    f32x4.extract_lane $push4=, $1, 0
+; STRICT-NEXT:    f32x4.extract_lane $push3=, $2, 0
+; STRICT-NEXT:    call $push6=, fmaf, $pop5, $pop4, $pop3
+; STRICT-NEXT:    f32x4.splat $push7=, $pop6
+; STRICT-NEXT:    f32x4.replace_lane $push8=, $pop7, 1, $3
+; STRICT-NEXT:    f32x4.extract_lane $push11=, $0, 2
+; STRICT-NEXT:    f32x4.extract_lane $push10=, $1, 2
+; STRICT-NEXT:    f32x4.extract_lane $push9=, $2, 2
+; STRICT-NEXT:    call $push12=, fmaf, $pop11, $pop10, $pop9
+; STRICT-NEXT:    f32x4.replace_lane $push13=, $pop8, 2, $pop12
+; STRICT-NEXT:    f32x4.extract_lane $push16=, $0, 3
+; STRICT-NEXT:    f32x4.extract_lane $push15=, $1, 3
+; STRICT-NEXT:    f32x4.extract_lane $push14=, $2, 3
+; STRICT-NEXT:    call $push17=, fmaf, $pop16, $pop15, $pop14
+; STRICT-NEXT:    f32x4.replace_lane $push18=, $pop13, 3, $pop17
+; STRICT-NEXT:    return $pop18
 ;
 ; NOFP16-LABEL: fma_4xf32:
 ; NOFP16:         .functype fma_4xf32 (v128, v128, v128) -> (v128)
 ; NOFP16-NEXT:  # %bb.0:
-; NOFP16-NEXT:    f32x4.extract_lane $push2=, $0, 0
-; NOFP16-NEXT:    f32x4.extract_lane $push1=, $1, 0
-; NOFP16-NEXT:    f32x4.extract_lane $push0=, $2, 0
-; NOFP16-NEXT:    call $push3=, fmaf, $pop2, $pop1, $pop0
-; NOFP16-NEXT:    f32x4.splat $push4=, $pop3
-; NOFP16-NEXT:    f32x4.extract_lane $push7=, $0, 1
-; NOFP16-NEXT:    f32x4.extract_lane $push6=, $1, 1
-; NOFP16-NEXT:    f32x4.extract_lane $push5=, $2, 1
-; NOFP16-NEXT:    call $push8=, fmaf, $pop7, $pop6, $pop5
-; NOFP16-NEXT:    f32x4.replace_lane $push9=, $pop4, 1, $pop8
-; NOFP16-NEXT:    f32x4.extract_lane $push12=, $0, 2
-; NOFP16-NEXT:    f32x4.extract_lane $push11=, $1, 2
-; NOFP16-NEXT:    f32x4.extract_lane $push10=, $2, 2
-; NOFP16-NEXT:    call $push13=, fmaf, $pop12, $pop11, $pop10
-; NOFP16-NEXT:    f32x4.replace_lane $push14=, $pop9, 2, $pop13
-; NOFP16-NEXT:    f32x4.extract_lane $push17=, $0, 3
-; NOFP16-NEXT:    f32x4.extract_lane $push16=, $1, 3
-; NOFP16-NEXT:    f32x4.extract_lane $push15=, $2, 3
-; NOFP16-NEXT:    call $push18=, fmaf, $pop17, $pop16, $pop15
-; NOFP16-NEXT:    f32x4.replace_lane $push19=, $pop14, 3, $pop18
-; NOFP16-NEXT:    return $pop19
+; NOFP16-NEXT:    f32x4.extract_lane $push2=, $0, 1
+; NOFP16-NEXT:    f32x4.extract_lane $push1=, $1, 1
+; NOFP16-NEXT:    f32x4.extract_lane $push0=, $2, 1
+; NOFP16-NEXT:    call $3=, fmaf, $pop2, $pop1, $pop0
+; NOFP16-NEXT:    f32x4.extract_lane $push5=, $0, 0
+; NOFP16-NEXT:    f32x4.extract_lane $push4=, $1, 0
+; NOFP16-NEXT:    f32x4.extract_lane $push3=, $2, 0
+; NOFP16-NEXT:    call $push6=, fmaf, $pop5, $pop4, $pop3
+; NOFP16-NEXT:    f32x4.splat $push7=, $pop6
+; NOFP16-NEXT:    f32x4.replace_lane $push8=, $pop7, 1, $3
+; NOFP16-NEXT:    f32x4.extract_lane $push11=, $0, 2
+; NOFP16-NEXT:    f32x4.extract_lane $push10=, $1, 2
+; NOFP16-NEXT:    f32x4.extract_lane $push9=, $2, 2
+; NOFP16-NEXT:    call $push12=, fmaf, $pop11, $pop10, $pop9
+; NOFP16-NEXT:    f32x4.replace_lane $push13=, $pop8, 2, $pop12
+; NOFP16-NEXT:    f32x4.extract_lane $push16=, $0, 3
+; NOFP16-NEXT:    f32x4.extract_lane $push15=, $1, 3
+; NOFP16-NEXT:    f32x4.extract_lane $push14=, $2, 3
+; NOFP16-NEXT:    call $push17=, fmaf, $pop16, $pop15, $pop14
+; NOFP16-NEXT:    f32x4.replace_lane $push18=, $pop13, 3, $pop17
+; NOFP16-NEXT:    return $pop18
 ;
 ; NOSIMD-LABEL: fma_4xf32:
 ; NOSIMD:         .functype fma_4xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()

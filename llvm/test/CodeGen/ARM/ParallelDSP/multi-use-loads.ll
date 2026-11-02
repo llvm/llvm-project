@@ -34,35 +34,34 @@ define i32 @add_user(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture reado
 ;
 ; CHECK-BE-LABEL: add_user:
 ; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    cmp r0, #1
 ; CHECK-BE-NEXT:    blt .LBB0_4
 ; CHECK-BE-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-BE-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    subs r3, #2
 ; CHECK-BE-NEXT:    subs r2, #2
 ; CHECK-BE-NEXT:    mov.w r12, #0
-; CHECK-BE-NEXT:    movs r1, #0
+; CHECK-BE-NEXT:    mov.w lr, #0
 ; CHECK-BE-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrsh lr, [r3, #2]!
+; CHECK-BE-NEXT:    ldrsh r1, [r3, #2]!
 ; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    ldrsh r4, [r2, #2]!
-; CHECK-BE-NEXT:    add r1, lr
+; CHECK-BE-NEXT:    add lr, r1
 ; CHECK-BE-NEXT:    ldrsh.w r5, [r2, #2]
-; CHECK-BE-NEXT:    smlabb r12, r4, lr, r12
+; CHECK-BE-NEXT:    smlabb r12, r4, r1, r12
 ; CHECK-BE-NEXT:    ldrsh.w r4, [r3, #2]
 ; CHECK-BE-NEXT:    smlabb r12, r5, r4, r12
 ; CHECK-BE-NEXT:    bne .LBB0_2
-; CHECK-BE-NEXT:  @ %bb.3:
-; CHECK-BE-NEXT:    pop.w {r4, r5, r7, lr}
-; CHECK-BE-NEXT:    add.w r0, r12, r1
-; CHECK-BE-NEXT:    bx lr
+; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-BE-NEXT:    add.w r0, r12, lr
+; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-BE-NEXT:  .LBB0_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
-; CHECK-BE-NEXT:    movs r1, #0
-; CHECK-BE-NEXT:    add.w r0, r12, r1
-; CHECK-BE-NEXT:    bx lr
+; CHECK-BE-NEXT:    mov.w lr, #0
+; CHECK-BE-NEXT:    add.w r0, r12, lr
+; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %cmp24 = icmp sgt i32 %arg, 0
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
@@ -137,35 +136,34 @@ define i32 @mul_bottom_user(i32 %arg, ptr nocapture readnone %arg1, ptr nocaptur
 ;
 ; CHECK-BE-LABEL: mul_bottom_user:
 ; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    cmp r0, #1
 ; CHECK-BE-NEXT:    blt .LBB1_4
 ; CHECK-BE-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-BE-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    subs r3, #2
 ; CHECK-BE-NEXT:    subs r2, #2
 ; CHECK-BE-NEXT:    mov.w r12, #0
-; CHECK-BE-NEXT:    movs r1, #0
+; CHECK-BE-NEXT:    mov.w lr, #0
 ; CHECK-BE-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrsh lr, [r3, #2]!
+; CHECK-BE-NEXT:    ldrsh r1, [r3, #2]!
 ; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    ldrsh r4, [r2, #2]!
 ; CHECK-BE-NEXT:    ldrsh.w r5, [r2, #2]
-; CHECK-BE-NEXT:    mul r1, lr, r1
-; CHECK-BE-NEXT:    smlabb r12, r4, lr, r12
+; CHECK-BE-NEXT:    mul lr, r1, lr
+; CHECK-BE-NEXT:    smlabb r12, r4, r1, r12
 ; CHECK-BE-NEXT:    ldrsh.w r4, [r3, #2]
 ; CHECK-BE-NEXT:    smlabb r12, r5, r4, r12
 ; CHECK-BE-NEXT:    bne .LBB1_2
-; CHECK-BE-NEXT:  @ %bb.3:
-; CHECK-BE-NEXT:    pop.w {r4, r5, r7, lr}
-; CHECK-BE-NEXT:    add.w r0, r12, r1
-; CHECK-BE-NEXT:    bx lr
+; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-BE-NEXT:    add.w r0, r12, lr
+; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-BE-NEXT:  .LBB1_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
-; CHECK-BE-NEXT:    movs r1, #0
-; CHECK-BE-NEXT:    add.w r0, r12, r1
-; CHECK-BE-NEXT:    bx lr
+; CHECK-BE-NEXT:    mov.w lr, #0
+; CHECK-BE-NEXT:    add.w r0, r12, lr
+; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %cmp24 = icmp sgt i32 %arg, 0
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
@@ -343,35 +341,34 @@ define i32 @and_user(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture reado
 ;
 ; CHECK-BE-LABEL: and_user:
 ; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    cmp r0, #1
 ; CHECK-BE-NEXT:    blt .LBB3_4
 ; CHECK-BE-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-BE-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-BE-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-BE-NEXT:    subs r3, #2
 ; CHECK-BE-NEXT:    subs r2, #2
 ; CHECK-BE-NEXT:    mov.w r12, #0
-; CHECK-BE-NEXT:    movs r1, #0
+; CHECK-BE-NEXT:    mov.w lr, #0
 ; CHECK-BE-NEXT:  .LBB3_2: @ %for.body
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldrh lr, [r3, #2]!
+; CHECK-BE-NEXT:    ldrh r1, [r3, #2]!
 ; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    ldrsh r4, [r2, #2]!
 ; CHECK-BE-NEXT:    ldrsh.w r5, [r2, #2]
-; CHECK-BE-NEXT:    mul r1, lr, r1
-; CHECK-BE-NEXT:    smlabb r12, r4, lr, r12
+; CHECK-BE-NEXT:    mul lr, r1, lr
+; CHECK-BE-NEXT:    smlabb r12, r4, r1, r12
 ; CHECK-BE-NEXT:    ldrsh.w r4, [r3, #2]
 ; CHECK-BE-NEXT:    smlabb r12, r5, r4, r12
 ; CHECK-BE-NEXT:    bne .LBB3_2
-; CHECK-BE-NEXT:  @ %bb.3:
-; CHECK-BE-NEXT:    pop.w {r4, r5, r7, lr}
-; CHECK-BE-NEXT:    add.w r0, r12, r1
-; CHECK-BE-NEXT:    bx lr
+; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-BE-NEXT:    add.w r0, r12, lr
+; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-BE-NEXT:  .LBB3_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
-; CHECK-BE-NEXT:    movs r1, #0
-; CHECK-BE-NEXT:    add.w r0, r12, r1
-; CHECK-BE-NEXT:    bx lr
+; CHECK-BE-NEXT:    mov.w lr, #0
+; CHECK-BE-NEXT:    add.w r0, r12, lr
+; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %cmp24 = icmp sgt i32 %arg, 0
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup

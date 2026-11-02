@@ -322,10 +322,14 @@ fir::AllocMemOp fir::createAllocMemFromAlloca(mlir::OpBuilder &builder,
       return *opt;
     return {};
   };
-  return fir::AllocMemOp::create(builder, alloca.getLoc(), alloca.getInType(),
-                                 unpackName(alloca.getUniqName()),
-                                 unpackName(alloca.getBindcName()),
-                                 alloca.getTypeparams(), alloca.getShape());
+  auto heap = fir::AllocMemOp::create(
+      builder, alloca.getLoc(), alloca.getInType(),
+      unpackName(alloca.getUniqName()), unpackName(alloca.getBindcName()),
+      alloca.getTypeparams(), alloca.getShape());
+  // Keep a requested alignment across the stack-to-heap conversion.
+  if (std::optional<std::int64_t> alignment = alloca.getAlignment())
+    heap.setAlignment(*alignment);
+  return heap;
 }
 
 /// Device code keeps its stack allocations: the unified/managed entry points

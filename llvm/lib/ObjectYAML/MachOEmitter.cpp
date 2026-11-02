@@ -71,13 +71,14 @@ private:
   void writeDyldExportsTrie(raw_ostream &OS);
   void writeDataInCode(raw_ostream &OS);
 
-  void dumpExportEntry(raw_ostream &OS, MachOYAML::ExportEntry &Entry);
+  Error buildExportTrie();
   void ZeroToOffset(raw_ostream &OS, size_t offset);
 
   MachOYAML::Object &Obj;
   bool is64Bit;
   uint64_t fileStart;
   MachO::mach_header_64 Header;
+  SmallString<128> ExportTrieData;
 
   // Old PPC Object Files didn't have __LINKEDIT segments, the data was just
   // stuck at the end of the file.
@@ -86,6 +87,8 @@ private:
 
 Error MachOWriter::writeMachO(raw_ostream &OS) {
   fileStart = OS.tell();
+  if (Error Err = buildExportTrie())
+    return Err;
   writeHeader(OS);
   writeLoadCommands(OS);
   if (Error Err = writeSectionData(OS))
@@ -477,8 +480,9 @@ void MachOWriter::writeBindOpcodes(
   }
 }
 
-void MachOWriter::dumpExportEntry(raw_ostream &OS,
-                                  MachOYAML::ExportEntry &Entry) {
+// Writes a trie node, without the nodes of its children.
+static void writeExportNode(raw_ostream &OS,
+                            const MachOYAML::ExportEntry &Entry) {
   encodeULEB128(Entry.TerminalSize, OS);
   if (Entry.TerminalSize > 0) {
     encodeULEB128(Entry.Flags, OS);
@@ -498,13 +502,40 @@ void MachOWriter::dumpExportEntry(raw_ostream &OS,
     OS.write('\0');
     encodeULEB128(EE.NodeOffset, OS);
   }
-  for (auto EE : Entry.Children)
-    dumpExportEntry(OS, EE);
 }
 
-void MachOWriter::writeExportTrie(raw_ostream &OS) {
-  dumpExportEntry(OS, Obj.LinkEdit.ExportTrie);
+static void collectExportNodes(
+    const MachOYAML::ExportEntry &Entry,
+    std::vector<std::pair<uint64_t, const MachOYAML::ExportEntry *>> &Nodes) {
+  for (const auto &EE : Entry.Children) {
+    Nodes.emplace_back(EE.NodeOffset, &EE);
+    collectExportNodes(EE, Nodes);
+  }
 }
+
+Error MachOWriter::buildExportTrie() {
+  // Put each node at the offset its parent refers to. Linkers don't
+  // necessarily write the nodes in preorder.
+  std::vector<std::pair<uint64_t, const MachOYAML::ExportEntry *>> Nodes;
+  Nodes.emplace_back(0, &Obj.LinkEdit.ExportTrie);
+  collectExportNodes(Obj.LinkEdit.ExportTrie, Nodes);
+  llvm::stable_sort(Nodes, llvm::less_first());
+
+  raw_svector_ostream OS(ExportTrieData);
+  for (const auto &[Offset, Entry] : Nodes) {
+    if (Offset < ExportTrieData.size())
+      return createStringError(
+          errc::invalid_argument,
+          "export trie node '%s' at offset %" PRIu64
+          " overlaps the previous node, which ends at offset %zu",
+          Entry->Name.c_str(), Offset, ExportTrieData.size());
+    OS.write_zeros(Offset - ExportTrieData.size());
+    writeExportNode(OS, *Entry);
+  }
+  return Error::success();
+}
+
+void MachOWriter::writeExportTrie(raw_ostream &OS) { OS << ExportTrieData; }
 
 template <typename NListType>
 void writeNListEntry(MachOYAML::NListEntry &NLE, raw_ostream &OS,
@@ -666,9 +697,7 @@ void MachOWriter::writeChainedFixups(raw_ostream &OS) {
              Obj.LinkEdit.ChainedFixups.size());
 }
 
-void MachOWriter::writeDyldExportsTrie(raw_ostream &OS) {
-  dumpExportEntry(OS, Obj.LinkEdit.ExportTrie);
-}
+void MachOWriter::writeDyldExportsTrie(raw_ostream &OS) { writeExportTrie(OS); }
 
 class UniversalWriter {
 public:

@@ -72,7 +72,9 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd
         DESTINATION ${_ompd_gdb_plugin_dest}
         COMPONENT openmp
         PATTERN ompdModule.so EXCLUDE)
-install(TARGETS ompdModule
-        LIBRARY DESTINATION ${_ompd_gdb_plugin_dest}/ompd
-        COMPONENT openmp)
+if(NOT OPENMP_LIBDIR_SUBDIR)
+  install(TARGETS ompdModule
+          LIBRARY DESTINATION ${_ompd_gdb_plugin_dest}/ompd
+          COMPONENT openmp)
+endif()
 

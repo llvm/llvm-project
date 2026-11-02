@@ -17,11 +17,11 @@ contains
     !$omp declare reduction(.AND.:type(logicalwrapper):omp_out%b=omp_out%b .AND. omp_in%b) initializer(omp_priv%b=.true.)
 !CHECK: op.AND: UserReductionDetails TYPE(logicalwrapper)
 !CHECK OtherConstruct scope
-!CHECK: omp_in size=4 offset=0: ObjectEntity type: TYPE(logicalwrapper)
-!CHECK: omp_out size=4 offset=4: ObjectEntity type: TYPE(logicalwrapper)
+!CHECK: omp_in (OmpInVar) size=4 offset=0: ObjectEntity type: TYPE(logicalwrapper)
+!CHECK: omp_out (OmpOutVar) size=4 offset=4: ObjectEntity type: TYPE(logicalwrapper)
 !CHECK OtherConstruct scope
-!CHECK: omp_orig size=4 offset=0: ObjectEntity type: TYPE(logicalwrapper)
-!CHECK: omp_priv size=4 offset=4: ObjectEntity type: TYPE(logicalwrapper)
+!CHECK: omp_orig (OmpOrigVar) size=4 offset=0: ObjectEntity type: TYPE(logicalwrapper)
+!CHECK: omp_priv (OmpPrivVar) size=4 offset=4: ObjectEntity type: TYPE(logicalwrapper)
 
     !$omp simd reduction(.AND.:res)
     do i=1,n

@@ -781,7 +781,7 @@ public:
           if (str.empty()) {
             return std::make_pair(Operand(), osi);
           } else {
-            ret.m_register = ConstString(str);
+            ret.m_register = str;
             return std::make_pair(ret, osi);
           }
         case '%':
@@ -794,7 +794,7 @@ public:
       ++osi;
     }
 
-    ret.m_register = ConstString(str);
+    ret.m_register = str;
     return std::make_pair(ret, osi);
   }
 
@@ -1082,7 +1082,7 @@ public:
       s.PutCString(")");
       break;
     case Operand::Type::Register:
-      s.PutCString(op.m_register.GetStringRef());
+      s.PutCString(op.m_register);
       break;
     case Operand::Type::Sum:
       s.PutCString("(");

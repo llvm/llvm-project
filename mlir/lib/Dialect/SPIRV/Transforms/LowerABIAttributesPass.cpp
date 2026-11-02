@@ -260,7 +260,7 @@ public:
 class ProcessGraphInterfaceVarABI final
     : public OpConversionPattern<spirv::GraphARMOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(spirv::GraphARMOp graphOp, OpAdaptor adaptor,

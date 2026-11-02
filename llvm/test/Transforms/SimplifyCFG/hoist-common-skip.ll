@@ -1150,3 +1150,68 @@ j:
   %p = phi ptr [ %call, %t ], [ %call2, %e ]
   ret ptr %p
 }
+
+declare void @map(i64) nounwind willreturn
+declare i32 @pure(i32) memory(none) nounwind willreturn
+declare i32 @pure_speculatable(i32) memory(none) nounwind willreturn speculatable
+
+; The skipped calls may write memory, but noundef does not depend on it.
+define i32 @hoist_noundef_past_call(i1 %c, i64 %i, i32 %x) {
+; CHECK-LABEL: @hoist_noundef_past_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call noundef i32 @pure(i32 noundef [[X:%.*]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @map(i64 [[I:%.*]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @map(i64 0)
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  br i1 %c, label %if, label %else
+if:
+  call void @map(i64 %i)
+  %a = call noundef i32 @pure(i32 noundef %x)
+  br label %end
+else:
+  call void @map(i64 0)
+  %b = call noundef i32 @pure(i32 noundef %x)
+  br label %end
+end:
+  %r = phi i32 [ %a, %if ], [ %b, %else ]
+  ret i32 %r
+}
+
+; The skipped calls may throw, so the hoisted call is speculated and noundef
+; may not hold.
+define i32 @hoist_noundef_past_throwing_call(i1 %c, i32 %x) {
+; CHECK-LABEL: @hoist_noundef_past_throwing_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call i32 @pure_speculatable(i32 [[X:%.*]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @side_effects0()
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @side_effects1()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  br i1 %c, label %if, label %else
+if:
+  call void @side_effects0()
+  %a = call noundef i32 @pure_speculatable(i32 noundef %x)
+  br label %end
+else:
+  call void @side_effects1()
+  %b = call noundef i32 @pure_speculatable(i32 noundef %x)
+  br label %end
+end:
+  %r = phi i32 [ %a, %if ], [ %b, %else ]
+  ret i32 %r
+}

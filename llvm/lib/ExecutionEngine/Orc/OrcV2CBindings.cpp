@@ -728,7 +728,7 @@ LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
 }
 
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void) {
-  return wrap(new ThreadSafeContext(std::make_unique<LLVMContext>()));
+  return LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextCreate());
 }
 
 LLVMOrcThreadSafeContextRef

@@ -302,7 +302,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 };
 
 class NSArray1SyntheticFrontEnd : public SyntheticChildrenFrontEnd {
@@ -317,7 +317,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 };
 } // namespace formatters
 } // namespace lldb_private
@@ -676,7 +676,7 @@ lldb_private::formatters::NSArray0SyntheticFrontEnd::NSArray0SyntheticFrontEnd(
 
 llvm::Expected<size_t>
 lldb_private::formatters::NSArray0SyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+    llvm::StringRef name) {
   return UINT32_MAX;
 }
 
@@ -706,7 +706,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::NSArray1SyntheticFrontEnd(
 
 llvm::Expected<size_t>
 lldb_private::formatters::NSArray1SyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+    llvm::StringRef name) {
   static constexpr llvm::StringLiteral g_zero("[0]");
 
   if (name == g_zero)

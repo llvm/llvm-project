@@ -129,8 +129,6 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   if (!CheckOk)
     return false;
 
-  MCInst OrigMCB = MCB;
-
   // Examine the packet and convert pairs of instructions to compound
   // instructions when possible.
   if (!HexagonDisableCompound)

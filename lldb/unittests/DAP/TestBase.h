@@ -98,6 +98,42 @@ inline auto Output(llvm::StringRef o, llvm::StringRef cat = "console") {
                      llvm::json::Object{{"category", cat}, {"output", o}})));
 }
 
+/// Matches a response to the request with sequence number `seq`.
+MATCHER_P(HasSeq, seq, "request_seq is " + testing::PrintToString(seq)) {
+  if (seq <= 0)
+    return false;
+  return arg.request_seq == (lldb_dap::protocol::Id)seq;
+}
+
+/// Matches a response to `command`.
+MATCHER_P(HasCommand, command,
+          "command is " + testing::PrintToString(command)) {
+  return arg.command == command;
+}
+
+/// Matches a successful response that also matches all of `fields`.
+template <typename... Fields>
+inline testing::Matcher<const lldb_dap::protocol::Response &>
+SuccessResponse(Fields &&...fields) {
+  return testing::AllOf(
+      testing::Field("success", &lldb_dap::protocol::Response::success, true),
+      std::forward<Fields>(fields)...);
+}
+
+/// Matches a 'cancelled' response that also matches all of `fields`.
+template <typename... Fields>
+inline testing::Matcher<const lldb_dap::protocol::Response &>
+CancelledResponse(Fields &&...fields) {
+  return testing::AllOf(
+      testing::Field("success", &lldb_dap::protocol::Response::success, false),
+      testing::Field(
+          "message", &lldb_dap::protocol::Response::message,
+          testing::Optional(
+              testing::VariantWith<lldb_dap::protocol::ResponseMessage>(
+                  lldb_dap::protocol::eResponseMessageCancelled))),
+      std::forward<Fields>(fields)...);
+}
+
 /// A base class for tests that interact with a `lldb_dap::DAP` instance.
 class DAPTestBase : public TransportBase {
 protected:

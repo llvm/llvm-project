@@ -34,8 +34,8 @@ body:             |
     ; CHECK-LABEL: name: delete_add_undef
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: $x0 = COPY [[DEF]](i64)
+    ; CHECK-NEXT: %add:_(i64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY %add(i64)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(i64) = COPY $x0
     %1:_(i64) = G_IMPLICIT_DEF

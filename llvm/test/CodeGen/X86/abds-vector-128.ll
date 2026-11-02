@@ -846,6 +846,72 @@ define <8 x i16> @abd_cmp_v8i16_multiuse_sub(<8 x i16> %a, <8 x i16> %b) nounwin
   ret <8 x i16> %res
 }
 
+define <2 x i32> @PR235263(<2 x i32> %x) {
+; SSE2-LABEL: PR235263:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = [5,2147483648,0,0]
+; SSE2-NEXT:    paddd %xmm0, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm1
+; SSE2-NEXT:    movq {{.*#+}} xmm3 = [4294967291,2147483648,0,0]
+; SSE2-NEXT:    psubd %xmm0, %xmm3
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    pandn %xmm3, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: PR235263:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movq {{.*#+}} xmm3 = [5,2147483648,0,0]
+; SSE42-NEXT:    paddd %xmm0, %xmm3
+; SSE42-NEXT:    pxor %xmm2, %xmm2
+; SSE42-NEXT:    movdqa %xmm3, %xmm1
+; SSE42-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE42-NEXT:    movq {{.*#+}} xmm2 = [4294967291,2147483648,0,0]
+; SSE42-NEXT:    psubd %xmm0, %xmm2
+; SSE42-NEXT:    movdqa %xmm1, %xmm0
+; SSE42-NEXT:    blendvps %xmm0, %xmm3, %xmm2
+; SSE42-NEXT:    movaps %xmm2, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: PR235263:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [5,2147483648,u,u]
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vmovq {{.*#+}} xmm3 = [4294967291,2147483648,0,0]
+; AVX1-NEXT:    vpsubd %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR235263:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [5,2147483648,u,u]
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vmovq {{.*#+}} xmm3 = [4294967291,2147483648,0,0]
+; AVX2-NEXT:    vpsubd %xmm0, %xmm3, %xmm0
+; AVX2-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR235263:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [5,2147483648,u,u]
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpled %xmm2, %xmm1, %k1
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = [4294967291,2147483648,0,0]
+; AVX512-NEXT:    vpsubd %xmm0, %xmm2, %xmm1 {%k1}
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %add = add nsw <2 x i32> %x, <i32 5, i32 -2147483648>
+  %cmp = icmp sgt <2 x i32> %add, zeroinitializer
+  %sub = sub <2 x i32> <i32 -5, i32 -2147483648>, %x
+  %sel = select <2 x i1> %cmp, <2 x i32> %add, <2 x i32> %sub
+  ret <2 x i32> %sel
+}
+
 declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 declare <8 x i16> @llvm.abs.v8i16(<8 x i16>, i1)
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)

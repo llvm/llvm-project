@@ -1,0 +1,31 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// Void has no layout, so it cannot be a member, element or padding.
+
+!s32i = !cir.int<s, 32>
+// expected-error @below {{record member at index 1 cannot be void}}
+!rec_S = !cir.struct<"S" {data !s32i, data !cir.void}>
+
+module {}
+
+// -----
+
+// expected-error @below {{record member at index 0 cannot be void}}
+!rec_U = !cir.union<"U" {data !cir.void}>
+
+module {}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+// expected-error @below {{union padding must be !u8i or an array of !u8i}}
+!rec_U = !cir.union<"U" {data !s32i}, padding = {!cir.void}>
+
+module {}
+
+// -----
+
+// expected-error @below {{failed to verify 'elementType': any CIR type except void}}
+!arr = !cir.array<!cir.void x 4>
+
+module {}

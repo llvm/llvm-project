@@ -23,6 +23,7 @@ class CPPBreakpointCommandsTestCase(TestBase):
         )
         return bkpt
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_cpp_breakpoint_cmds(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()

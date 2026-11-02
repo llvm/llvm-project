@@ -233,8 +233,8 @@ define arm_aapcs_vfpcc <4 x i32> @vhsubu_v4i32_nw(<4 x i32> %x, <4 x i32> %y) {
 define arm_aapcs_vfpcc <16 x i8> @vrhadds_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: vrhadds_v16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i8 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i8 q0, q0, q1
 ; CHECK-NEXT:    vshr.s8 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add <16 x i8> %x, %y
@@ -245,8 +245,8 @@ define arm_aapcs_vfpcc <16 x i8> @vrhadds_v16i8(<16 x i8> %x, <16 x i8> %y) {
 define arm_aapcs_vfpcc <16 x i8> @vrhaddu_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: vrhaddu_v16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i8 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i8 q0, q0, q1
 ; CHECK-NEXT:    vshr.u8 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add <16 x i8> %x, %y
@@ -257,8 +257,8 @@ define arm_aapcs_vfpcc <16 x i8> @vrhaddu_v16i8(<16 x i8> %x, <16 x i8> %y) {
 define arm_aapcs_vfpcc <8 x i16> @vrhadds_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: vrhadds_v8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i16 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i16 q0, q0, q1
 ; CHECK-NEXT:    vshr.s16 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add <8 x i16> %x, %y
@@ -269,8 +269,8 @@ define arm_aapcs_vfpcc <8 x i16> @vrhadds_v8i16(<8 x i16> %x, <8 x i16> %y) {
 define arm_aapcs_vfpcc <8 x i16> @vrhaddu_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: vrhaddu_v8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i16 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i16 q0, q0, q1
 ; CHECK-NEXT:    vshr.u16 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add <8 x i16> %x, %y
@@ -281,8 +281,8 @@ define arm_aapcs_vfpcc <8 x i16> @vrhaddu_v8i16(<8 x i16> %x, <8 x i16> %y) {
 define arm_aapcs_vfpcc <4 x i32> @vrhadds_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vrhadds_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i32 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i32 q0, q0, q1
 ; CHECK-NEXT:    vshr.s32 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add <4 x i32> %x, %y
@@ -293,8 +293,8 @@ define arm_aapcs_vfpcc <4 x i32> @vrhadds_v4i32(<4 x i32> %x, <4 x i32> %y) {
 define arm_aapcs_vfpcc <4 x i32> @vrhaddu_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vrhaddu_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i32 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i32 q0, q0, q1
 ; CHECK-NEXT:    vshr.u32 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add <4 x i32> %x, %y
@@ -305,8 +305,8 @@ define arm_aapcs_vfpcc <4 x i32> @vrhaddu_v4i32(<4 x i32> %x, <4 x i32> %y) {
 define arm_aapcs_vfpcc <16 x i8> @vrhadds_v16i8_nwop(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: vrhadds_v16i8_nwop:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i8 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i8 q0, q0, q1
 ; CHECK-NEXT:    vshr.s8 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add nsw <16 x i8> %x, %y
@@ -317,8 +317,8 @@ define arm_aapcs_vfpcc <16 x i8> @vrhadds_v16i8_nwop(<16 x i8> %x, <16 x i8> %y)
 define arm_aapcs_vfpcc <16 x i8> @vrhaddu_v16i8_nwop(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: vrhaddu_v16i8_nwop:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i8 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i8 q0, q0, q1
 ; CHECK-NEXT:    vshr.u8 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add nuw <16 x i8> %x, %y
@@ -329,8 +329,8 @@ define arm_aapcs_vfpcc <16 x i8> @vrhaddu_v16i8_nwop(<16 x i8> %x, <16 x i8> %y)
 define arm_aapcs_vfpcc <8 x i16> @vrhadds_v8i16_nwop(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: vrhadds_v8i16_nwop:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i16 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i16 q0, q0, q1
 ; CHECK-NEXT:    vshr.s16 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add nsw <8 x i16> %x, %y
@@ -341,8 +341,8 @@ define arm_aapcs_vfpcc <8 x i16> @vrhadds_v8i16_nwop(<8 x i16> %x, <8 x i16> %y)
 define arm_aapcs_vfpcc <8 x i16> @vrhaddu_v8i16_nwop(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: vrhaddu_v8i16_nwop:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i16 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i16 q0, q0, q1
 ; CHECK-NEXT:    vshr.u16 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add nuw <8 x i16> %x, %y
@@ -353,8 +353,8 @@ define arm_aapcs_vfpcc <8 x i16> @vrhaddu_v8i16_nwop(<8 x i16> %x, <8 x i16> %y)
 define arm_aapcs_vfpcc <4 x i32> @vrhadds_v4i32_nwop(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vrhadds_v4i32_nwop:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i32 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i32 q0, q0, q1
 ; CHECK-NEXT:    vshr.s32 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add nsw <4 x i32> %x, %y
@@ -365,8 +365,8 @@ define arm_aapcs_vfpcc <4 x i32> @vrhadds_v4i32_nwop(<4 x i32> %x, <4 x i32> %y)
 define arm_aapcs_vfpcc <4 x i32> @vrhaddu_v4i32_nwop(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vrhaddu_v4i32_nwop:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn q0, q0
-; CHECK-NEXT:    vsub.i32 q0, q1, q0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i32 q0, q0, q1
 ; CHECK-NEXT:    vshr.u32 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %add = add nuw <4 x i32> %x, %y

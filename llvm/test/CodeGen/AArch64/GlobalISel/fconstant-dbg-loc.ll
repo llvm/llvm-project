@@ -1,6 +1,6 @@
 ; Make sure we don't assign debug locations to G_FCONSTANT(s) when lowering.
 
-; RUN: llc -mtriple aarch64 -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck --match-full-lines %s
+; RUN: llc -mtriple aarch64 -O0 -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck --match-full-lines %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios5.0.0"
 

@@ -18,3 +18,13 @@ func.func @pow9(%arg0: complex<f32>) -> complex<f32> {
 }
 // CHECK-LABEL: func.func @pow9(
 // CHECK: complex.powi %{{.*}}, %{{.*}} : complex<f32>, i32
+
+// INT64_MIN has no positive int64_t representation; PowIStrengthReduction
+// must bail out rather than negate it (negating would overflow).
+func.func @powi_int64_min(%arg0: complex<f32>) -> complex<f32> {
+  %cmin = arith.constant -9223372036854775808 : i64
+  %0 = complex.powi %arg0, %cmin : complex<f32>, i64
+  return %0 : complex<f32>
+}
+// CHECK-LABEL: func.func @powi_int64_min(
+// CHECK: complex.powi %{{.*}}, %{{.*}} : complex<f32>, i64

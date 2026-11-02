@@ -13,8 +13,8 @@ define i32 @f1(i32 %a, ptr %bptr) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -240(, %s11)
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB0_4
-; CHECK-NEXT:  # %bb.3: # %entry
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB0_3
+; CHECK-NEXT:  # %bb.4: # %entry
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -23,7 +23,7 @@ define i32 @f1(i32 %a, ptr %bptr) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB0_4: # %entry
+; CHECK-NEXT:  .LBB0_3: # %entry
 ; CHECK-NEXT:    ldl.sx %s1, (, %s1)
 ; CHECK-NEXT:    cmpu.w %s0, %s1, %s0
 ; CHECK-NEXT:    brlt.w 0, %s0, .LBB0_2
@@ -60,8 +60,8 @@ define i32 @f2(i32 %a) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -240(, %s11)
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_4
-; CHECK-NEXT:  # %bb.3: # %entry
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_3
+; CHECK-NEXT:  # %bb.4: # %entry
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -70,7 +70,7 @@ define i32 @f2(i32 %a) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_4: # %entry
+; CHECK-NEXT:  .LBB1_3: # %entry
 ; CHECK-NEXT:    breq.w 0, %s0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    or %s0, 1, (0)1

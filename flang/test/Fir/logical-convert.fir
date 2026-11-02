@@ -564,6 +564,53 @@ func.func @test_neqv_l4(%arg0: !fir.logical<4>, %arg1: !fir.logical<4>) -> !fir.
   return %0 : !fir.logical<4>
 }
 // -----
+// CHECK-LABEL: @test_eqv_vector_i32
+// CHECK: [[ZERO0:%[0-9]*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+// CHECK: [[A:%[0-9]*]] = llvm.icmp "ne" %arg0, [[ZERO0]] : vector<4xi32>
+// CHECK: [[ZERO1:%[0-9]*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+// CHECK: [[B:%[0-9]*]] = llvm.icmp "ne" %arg1, [[ZERO1]] : vector<4xi32>
+// CHECK: [[RES:%[0-9]*]] = llvm.icmp "eq" [[A]], [[B]] : vector<4xi1>
+// CHECK: [[EXT:%[0-9]*]] = llvm.zext [[RES]] : vector<4xi1> to vector<4xi32>
+// CHECK: llvm.return [[EXT]] : vector<4xi32>
+func.func @test_eqv_vector_i32(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vector<4xi32> {
+  %0 = fir.eqv %arg0, %arg1 : vector<4xi32>
+  return %0 : vector<4xi32>
+}
+// -----
+// CHECK-LABEL: @test_neqv_vector_i32
+// CHECK: [[ZERO0:%[0-9]*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+// CHECK: [[A:%[0-9]*]] = llvm.icmp "ne" %arg0, [[ZERO0]] : vector<4xi32>
+// CHECK: [[ZERO1:%[0-9]*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+// CHECK: [[B:%[0-9]*]] = llvm.icmp "ne" %arg1, [[ZERO1]] : vector<4xi32>
+// CHECK: [[RES:%[0-9]*]] = llvm.icmp "ne" [[A]], [[B]] : vector<4xi1>
+// CHECK: [[EXT:%[0-9]*]] = llvm.zext [[RES]] : vector<4xi1> to vector<4xi32>
+// CHECK: llvm.return [[EXT]] : vector<4xi32>
+func.func @test_neqv_vector_i32(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vector<4xi32> {
+  %0 = fir.neqv %arg0, %arg1 : vector<4xi32>
+  return %0 : vector<4xi32>
+}
+// -----
+// CHECK-LABEL: @test_logical_or_vector_i32
+// CHECK: [[ZERO0:%[0-9]*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+// CHECK: [[A:%[0-9]*]] = llvm.icmp "ne" %arg0, [[ZERO0]] : vector<4xi32>
+// CHECK: [[ZERO1:%[0-9]*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+// CHECK: [[B:%[0-9]*]] = llvm.icmp "ne" %arg1, [[ZERO1]] : vector<4xi32>
+// CHECK: [[RES:%[0-9]*]] = llvm.or [[A]], [[B]] : vector<4xi1>
+// CHECK: [[EXT:%[0-9]*]] = llvm.zext [[RES]] : vector<4xi1> to vector<4xi32>
+// CHECK: llvm.return [[EXT]] : vector<4xi32>
+func.func @test_logical_or_vector_i32(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vector<4xi32> {
+  %0 = fir.logical_or %arg0, %arg1 : vector<4xi32>
+  return %0 : vector<4xi32>
+}
+// -----
+// CHECK-LABEL: @test_logical_and_vector_i1
+// CHECK: [[RES:%[0-9]*]] = llvm.and %arg0, %arg1 : vector<4xi1>
+// CHECK: llvm.return [[RES]] : vector<4xi1>
+func.func @test_logical_and_vector_i1(%arg0: vector<4xi1>, %arg1: vector<4xi1>) -> vector<4xi1> {
+  %0 = fir.logical_and %arg0, %arg1 : vector<4xi1>
+  return %0 : vector<4xi1>
+}
+// -----
 // Test on i1 type (from comparisons)
 // CHECK-LABEL: @test_logical_and_i1
 // CHECK: [[RES:%[0-9]*]] = llvm.and %arg0, %arg1 : i1

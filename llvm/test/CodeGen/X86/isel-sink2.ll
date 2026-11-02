@@ -24,3 +24,27 @@ F:
   %V = load i8, ptr %U
   ret i8 %V
 }
+
+define i8 @or_disjoint(ptr %P, i32 %i, i1 %c) nounwind {
+; CHECK-LABEL: or_disjoint:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    je .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %TB
+; CHECK-NEXT:    movb $4, %al
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB1_2: # %F
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzbl 1(%ecx,%eax,4), %eax
+; CHECK-NEXT:    retl
+  %s = shl i32 %i, 2
+  %o = or disjoint i32 %s, 1
+  %Q = getelementptr i8, ptr %P, i32 %o
+  br i1 %c, label %TB, label %F
+TB:
+  ret i8 4
+F:
+  %V = load i8, ptr %Q
+  ret i8 %V
+}

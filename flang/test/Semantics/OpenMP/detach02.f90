@@ -14,7 +14,7 @@ program detach02
        x = x + 1
     !$omp end task
 
-    !ERROR: Clause MERGEABLE is not allowed if clause DETACH appears on the TASK directive
+    !ERROR: DETACH and MERGEABLE clauses are mutually exclusive
     !$omp task detach(event_01) mergeable
         x = x + 1
     !$omp end task

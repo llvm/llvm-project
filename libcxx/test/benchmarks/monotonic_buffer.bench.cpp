@@ -18,10 +18,12 @@ static TEST_ALIGN_BENCHMARK void bm_list(benchmark::State& state) {
   char buffer[16384];
   std::pmr::monotonic_buffer_resource resource(buffer, sizeof(buffer));
   for (auto _ : state) {
-    std::pmr::list<int> l(&resource);
-    for (int64_t i = 0; i != state.range(); ++i) {
-      l.push_back(1);
-      benchmark::DoNotOptimize(l);
+    {
+      std::pmr::list<int> l(&resource);
+      for (int64_t i = 0; i != state.range(); ++i) {
+        l.push_back(1);
+        benchmark::DoNotOptimize(l);
+      }
     }
     resource.release();
   }

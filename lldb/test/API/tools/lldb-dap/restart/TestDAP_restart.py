@@ -9,7 +9,6 @@ from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 class TestDAP_restart(DAPTestCaseBase):
-    @skipIfWindows
     def test_basic_functionality(self):
         """
         Tests the basic restarting functionality: set two breakpoints in
@@ -47,7 +46,6 @@ class TestDAP_restart(DAPTestCaseBase):
             i_val.value_as_int, 0, "i != 0 after hitting breakpoint A on restart"
         )
 
-    @skipIfWindows
     def test_stopOnEntry(self):
         """
         Check that the stopOnEntry setting is still honored after a restart.
@@ -67,7 +65,6 @@ class TestDAP_restart(DAPTestCaseBase):
         session.restart()
         session.verify_stopped_on_entry(after=bp_stop_event)
 
-    @skipIfWindows
     def test_arguments(self):
         """
         Tests that lldb-dap will use updated launch arguments included

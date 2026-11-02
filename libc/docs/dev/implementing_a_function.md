@@ -41,7 +41,9 @@ Add a CMake target for the new function so it can be compiled.
 
 - **File**: `libc/src/<header>/CMakeLists.txt`
 - Add an `add_entrypoint_object` rule for the new file.
-- List all internal dependencies correctly to ensure proper build order.
+- List all internal dependencies correctly to ensure proper build order. If the
+  function reads or sets `errno`, include both `libc.src.__support.libc_errno`
+  and `libc.src.errno.errno` in `DEPENDS` (see {ref}`setting_errno`).
 
 ### 5. Platform Registration
 
@@ -55,5 +57,7 @@ Register the new entrypoint for the target platforms to include it in the build.
 Create tests to verify the implementation.
 
 - **File**: `libc/test/src/<header>/<func>_test.cpp`
-- Add corresponding tests using the internal testing framework.
+- Add corresponding tests using the internal testing framework. For functions
+  setting `errno`, use `ErrnoCheckingTest` and `ErrnoSetterMatcher`
+  (see {ref}`setting_errno`).
 - Update the `CMakeLists.txt` in the test directory (`libc/test/src/<header>/CMakeLists.txt`) to include the new test target.

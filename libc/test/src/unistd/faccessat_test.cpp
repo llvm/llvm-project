@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
@@ -15,7 +16,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
 #include <unistd.h>
 
 namespace {

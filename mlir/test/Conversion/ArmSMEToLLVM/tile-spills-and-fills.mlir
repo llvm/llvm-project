@@ -85,14 +85,14 @@ func.func @use_too_many_tiles() {
 //
 //  AFTER-LLVM-LOWERING-NOT: scf.for
 
-///     1. The following instruciton corresponds to %0 after tile allocation
+///     1. The following instruction corresponds to %0 after tile allocation
 ///        Note: 17 is the mask for the 32-bit tile 0.
 
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 17 : i32}>
 //
 //  AFTER-LLVM-LOWERING-NOT: scf.for
 
-///     2. The following instruciton corresponds to %1 after tile allocation
+///     2. The following instruction corresponds to %1 after tile allocation
 ///        Note: 34 is the mask for the 32-bit tile 1.
 
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 34 : i32}>
@@ -112,7 +112,7 @@ func.func @use_too_many_tiles() {
 // AFTER-LLVM-LOWERING-NEXT:   vector.store %[[SLICE]], %[[TILE_ALLOCA]]
 // AFTER-LLVM-LOWERING-NEXT: }
 
-///     4. The following instruciton corresponds to %3 after tile allocation
+///     4. The following instruction corresponds to %3 after tile allocation
 ///        Note: 85 is the mask for the 16-bit tile 0.
 
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 85 : i32}>

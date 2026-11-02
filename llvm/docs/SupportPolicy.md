@@ -48,8 +48,7 @@ The core tier is composed of:
     compiler, debugger, linker, libraries, etc, including infrastructure code
     (table-gen, lit, file-check, unit-tests, etc).
   - Build infrastructure that creates releases and buildbots (CMake, scripts).
-  - [Phabricator](https://github.com/llvm/phabricator) and
-    [buildbot](https://github.com/llvm/llvm-zorg) infrastructure.
+  - [Buildbot](https://github.com/llvm/llvm-zorg) infrastructure.
   - The [test-suite](https://github.com/llvm/llvm-test-suite).
 
 ### Requirements

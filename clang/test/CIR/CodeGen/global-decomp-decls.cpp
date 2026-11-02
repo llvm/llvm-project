@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM,LLVMCIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 template<typename T>
 auto getT() {
@@ -38,16 +38,13 @@ const auto & [t11, t12, t13] = getT<Type>();
 // CIR:   %[[GETTCALL:.*]] = cir.call @_Z4getTI4TypeEDav() : () -> !rec_anon_struct
 // CIR:   cir.store %[[GETTCALL]], %[[COERCE]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR:   %[[COERCE_REC:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Type>
-// CIR:   %[[TVAL:.*]] = cir.load %[[COERCE_REC]] : !cir.ptr<!rec_Type>, !rec_Type
-// CIR:   cir.store align(4) %[[TVAL]], %[[SB_REF]] : !rec_Type, !cir.ptr<!rec_Type>
+// CIR:   cir.copy %[[COERCE_REC]] align(8) to %[[SB_REF]] align(4) : !cir.ptr<!rec_Type>
 // CIR:   cir.store align(8) %[[SB_REF]], %[[SB]] : !cir.ptr<!rec_Type>, !cir.ptr<!cir.ptr<!rec_Type>>
 
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
 // LLVM:   %[[GETTCALL:.*]] = call { i64, i32 } @_Z4getTI4TypeEDav()
 // LLVM:   store { i64, i32 } %[[GETTCALL]], ptr %[[COERCED_PTR:.*]], align 8
-// LLVMCIR:   %[[TVAL:.*]] = load %struct.Type, ptr %[[COERCED_PTR]], align 4
-// LLVMCIR:   store %struct.Type %[[TVAL]], ptr @_ZGRDC3t113t123t13E_, align 4
-// OGCG:      call void @llvm.memcpy.p0.p0.i64(ptr align 4 @_ZGRDC3t113t123t13E_, ptr align 8 %[[COERCED_PTR]], i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 @_ZGRDC3t113t123t13E_, ptr align 8 %[[COERCED_PTR]], i64 12, i1 false)
 // LLVM:   store ptr @_ZGRDC3t113t123t13E_, ptr @_ZDC3t113t123t13E, align 8
 
 struct DtorType { int a, b, c; ~DtorType(); };

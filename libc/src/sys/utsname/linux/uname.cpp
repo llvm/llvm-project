@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(int, uname, (struct utsname * name)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_uname, name);
 
   if (ret >= 0)
-    return 1;
+    return 0;
   libc_errno = -ret;
   return -1;
 }

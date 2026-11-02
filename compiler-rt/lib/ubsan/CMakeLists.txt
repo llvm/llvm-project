@@ -213,6 +213,12 @@ else()
       DEFS ${UBSAN_COMMON_DEFINITIONS})
   endif()
 
+  # Thin host interceptors for offloading. Linked with -u to keep it separate
+  # from static runtimes and embedded directly in the shared runtime.
+  if(OS_NAME MATCHES "Linux" AND NOT ANDROID)
+    add_subdirectory(offload)
+  endif()
+
   if(COMPILER_RT_HAS_UBSAN)
     add_compiler_rt_object_libraries(RTUbsan_standalone
       ARCHS ${UBSAN_SUPPORTED_ARCH}
@@ -260,9 +266,17 @@ else()
         CFLAGS ${UBSAN_CFLAGS})
 
       foreach(arch ${UBSAN_SUPPORTED_ARCH})
+        set(UBSAN_OFFLOAD_OBJECT_LIBS)
+        set(UBSAN_OFFLOAD_VERSION_LIBS)
+        if(TARGET RTUbsan_offload.${arch} AND TARGET RTSanitizerOffload.${arch})
+          set(UBSAN_OFFLOAD_OBJECT_LIBS RTUbsan_offload RTSanitizerOffload)
+          set(UBSAN_OFFLOAD_VERSION_LIBS clang_rt.ubsan_offload-${arch})
+        endif()
+
         add_sanitizer_rt_version_list(clang_rt.ubsan_standalone-dynamic-${arch}
                                       LIBS clang_rt.ubsan_standalone-${arch}
                                            clang_rt.ubsan_standalone_cxx-${arch}
+                                           ${UBSAN_OFFLOAD_VERSION_LIBS}
                                       EXTRA ubsan.syms.extra)
         set(VERSION_SCRIPT_FLAG
             -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.ubsan_standalone-dynamic-${arch}.vers)
@@ -288,6 +302,7 @@ else()
                 RTUbsan_cxx
                 RTUbsan_standalone
                 RTInterception
+                ${UBSAN_OFFLOAD_OBJECT_LIBS}
                 RTUbsan_dynamic_version_script_dummy
           CFLAGS ${UBSAN_CFLAGS}
           LINK_FLAGS ${UBSAN_LINK_FLAGS} ${VERSION_SCRIPT_FLAG}
@@ -310,10 +325,5 @@ else()
         PARENT_TARGET ubsan
         EXTRA ubsan.syms.extra)
     endif()
-  endif()
-
-  # Thin host interceptors for offloading. Linked with -u to keep it separate.
-  if(OS_NAME MATCHES "Linux" AND NOT ANDROID)
-    add_subdirectory(offload)
   endif()
 endif()

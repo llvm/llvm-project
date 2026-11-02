@@ -1,7 +1,7 @@
-# RUN: llc -start-after=livedebugvalues --filetype=obj %s -o - \
+# RUN: llc -start-after=live-debug-values --filetype=obj %s -o - \
 # RUN:     | llvm-dwarfdump -v --name local* --regex - | FileCheck %s
 #
-# Generated with opt -sroa, llc -stop-after=livedebugvalues, with some metadata
+# Generated with opt -sroa, llc -stop-after=live-debug-values, with some metadata
 # removed by hand:
 # long a, b, c;
 # long funone() {

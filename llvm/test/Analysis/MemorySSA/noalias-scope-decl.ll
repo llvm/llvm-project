@@ -20,4 +20,4 @@ define i32 @foo(ptr %a, ptr %b, i1 %c) {
 
 !0 = !{ !1 }
 !1 = distinct !{ !1, !2, !"foo: var" }
-!2 = distinct !{ !2, !"foo" }
+!2 = distinct !{!2, i1 false, !"foo"}

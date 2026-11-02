@@ -192,7 +192,7 @@ Constant *SPIRVLegalizeZeroSizeArraysImpl::legalizeConstant(Constant *C) {
 
 void SPIRVLegalizeZeroSizeArraysImpl::visitAllocaInst(AllocaInst &AI) {
   // Check if allocation size is known-zero
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
   std::optional<TypeSize> Size = AI.getAllocationSize(DL);
   if (!Size || !Size->isZero())
     return;

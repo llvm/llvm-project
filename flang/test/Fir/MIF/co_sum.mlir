@@ -5,26 +5,26 @@
     %c2 = arith.constant 2 : index
     %1 = fir.alloca !fir.array<2xf64> {bindc_name = "array_d", uniq_name = "_QFEarray_d"}
     %2 = fir.shape %c2 : (index) -> !fir.shape<1>
-    %3:2 = hlfir.declare %1(%2) {uniq_name = "_QFEarray_d"} : (!fir.ref<!fir.array<2xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
+    %3:2 = hlfir.declare %1(%2) uniq_name("_QFEarray_d") : (!fir.ref<!fir.array<2xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
     %c2_0 = arith.constant 2 : index
     %4 = fir.alloca !fir.array<2xi32> {bindc_name = "array_i", uniq_name = "_QFEarray_i"}
     %5 = fir.shape %c2_0 : (index) -> !fir.shape<1>
-    %6:2 = hlfir.declare %4(%5) {uniq_name = "_QFEarray_i"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
+    %6:2 = hlfir.declare %4(%5) uniq_name("_QFEarray_i") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
     %c2_1 = arith.constant 2 : index
     %7 = fir.alloca !fir.array<2xf32> {bindc_name = "array_r", uniq_name = "_QFEarray_r"}
     %8 = fir.shape %c2_1 : (index) -> !fir.shape<1>
-    %9:2 = hlfir.declare %7(%8) {uniq_name = "_QFEarray_r"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
+    %9:2 = hlfir.declare %7(%8) uniq_name("_QFEarray_r") : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
     %10 = fir.alloca f64 {bindc_name = "d", uniq_name = "_QFEd"}
-    %11:2 = hlfir.declare %10 {uniq_name = "_QFEd"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+    %11:2 = hlfir.declare %10 uniq_name("_QFEd") : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
     %12 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
-    %13:2 = hlfir.declare %12 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %13:2 = hlfir.declare %12 uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %c1 = arith.constant 1 : index
     %14 = fir.alloca !fir.char<1> {bindc_name = "message", uniq_name = "_QFEmessage"}
-    %15:2 = hlfir.declare %14 typeparams %c1 {uniq_name = "_QFEmessage"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %15:2 = hlfir.declare %14 typeparams %c1 uniq_name("_QFEmessage") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     %16 = fir.alloca f32 {bindc_name = "r", uniq_name = "_QFEr"}
-    %17:2 = hlfir.declare %16 {uniq_name = "_QFEr"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+    %17:2 = hlfir.declare %16 uniq_name("_QFEr") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
     %18 = fir.alloca i32 {bindc_name = "status", uniq_name = "_QFEstatus"}
-    %19:2 = hlfir.declare %18 {uniq_name = "_QFEstatus"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %19:2 = hlfir.declare %18 uniq_name("_QFEstatus") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %20 = fir.embox %13#0 : (!fir.ref<i32>) -> !fir.box<i32>
     mif.co_sum %20 : (!fir.box<i32>)
     %21 = fir.embox %11#0 : (!fir.ref<f64>) -> !fir.box<f64>

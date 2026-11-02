@@ -12,11 +12,13 @@
 #include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 
 #include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 namespace llvm {
 class MemoryBuffer;
@@ -50,8 +52,18 @@ struct ModuleCacheEntries {
   std::mutex Mutex;
   llvm::StringMap<std::unique_ptr<ModuleCacheEntry>> Map;
 
+  bool ValidateAgainstInvalidatedPaths = false;
+
+  void addInvalidatedPath(StringRef Path);
+  std::optional<bool> isDirectoryInvalidated(StringRef Directory) const;
+
   /// Flushes all PCMs built in-process to disk.
   void flush();
+
+private:
+  mutable std::mutex InvalidatedPathsMutex;
+  llvm::StringSet<> InvalidatedPaths;
+  std::atomic<bool> AnyInvalidatedPaths = false;
 };
 
 std::shared_ptr<ModuleCache>

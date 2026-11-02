@@ -89,6 +89,7 @@ static_library("LLVMBPFCodeGen") {
     "BPFSubtarget.cpp",
     "BPFTargetLoweringObjectFile.cpp",
     "BPFTargetMachine.cpp",
+    "BPFUnwind.cpp",
     "BTFDebug.cpp",
     "GISel/BPFCallLowering.cpp",
     "GISel/BPFInstructionSelector.cpp",

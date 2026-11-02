@@ -77,48 +77,6 @@ struct ShuffleVectorPseudo {
   ShuffleVectorPseudo() = default;
 };
 
-/// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
-/// sources of the shuffle are different.
-std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
-                                                    unsigned NumElts) {
-  // Look for the first non-undef element.
-  auto FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
-  if (FirstRealElt == M.end())
-    return std::nullopt;
-
-  // Use APInt to handle overflow when calculating expected element.
-  unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
-  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, false, true);
-
-  // The following shuffle indices must be the successive elements after the
-  // first real element.
-  if (any_of(
-          make_range(std::next(FirstRealElt), M.end()),
-          [&ExpectedElt](int Elt) { return Elt != ExpectedElt++ && Elt >= 0; }))
-    return std::nullopt;
-
-  // The index of an EXT is the first element if it is not UNDEF.
-  // Watch out for the beginning UNDEFs. The EXT index should be the expected
-  // value of the first element.  E.g.
-  // <-1, -1, 3, ...> is treated as <1, 2, 3, ...>.
-  // <-1, -1, 0, 1, ...> is treated as <2*NumElts-2, 2*NumElts-1, 0, 1, ...>.
-  // ExpectedElt is the last mask index plus 1.
-  uint64_t Imm = ExpectedElt.getZExtValue();
-  bool ReverseExt = false;
-
-  // There are two difference cases requiring to reverse input vectors.
-  // For example, for vector <4 x i32> we have the following cases,
-  // Case 1: shufflevector(<4 x i32>,<4 x i32>,<-1, -1, -1, 0>)
-  // Case 2: shufflevector(<4 x i32>,<4 x i32>,<-1, -1, 7, 0>)
-  // For both cases, we finally use mask <5, 6, 7, 0>, which requires
-  // to reverse two input vectors.
-  if (Imm < NumElts)
-    ReverseExt = true;
-  else
-    Imm -= NumElts;
-  return std::make_pair(ReverseExt, Imm);
-}
-
 /// Helper function for matchINS.
 ///
 /// \returns a value when \p M is an ins mask for \p NumInputElements.
@@ -265,7 +223,7 @@ bool matchDupFromInsertVectorElt(int Lane, MachineInstr &MI,
   // %zerovec(<2 x s32>)
   //
   // ...into:
-  // %splat = G_DUP %scalar
+  // %splat = G_SPLAT_VECTOR %scalar
 
   // Begin matching the insert.
   auto *InsMI = getOpcodeDef(TargetOpcode::G_INSERT_VECTOR_ELT,
@@ -281,7 +239,8 @@ bool matchDupFromInsertVectorElt(int Lane, MachineInstr &MI,
   if (!mi_match(InsMI->getOperand(3).getReg(), MRI, m_ZeroInt()))
     return false;
 
-  MatchInfo = ShuffleVectorPseudo(AArch64::G_DUP, MI.getOperand(0).getReg(),
+  MatchInfo = ShuffleVectorPseudo(TargetOpcode::G_SPLAT_VECTOR,
+                                  MI.getOperand(0).getReg(),
                                   {InsMI->getOperand(2).getReg()});
   return true;
 }
@@ -304,8 +263,8 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
   if (!BuildVecMI)
     return false;
   Register Reg = BuildVecMI->getOperand(Lane + 1).getReg();
-  MatchInfo =
-      ShuffleVectorPseudo(AArch64::G_DUP, MI.getOperand(0).getReg(), {Reg});
+  MatchInfo = ShuffleVectorPseudo(TargetOpcode::G_SPLAT_VECTOR,
+                                  MI.getOperand(0).getReg(), {Reg});
   return true;
 }
 
@@ -326,35 +285,6 @@ bool matchDup(MachineInstr &MI, MachineRegisterInfo &MRI,
   return false;
 }
 
-// Check if an EXT instruction can handle the shuffle mask when the vector
-// sources of the shuffle are the same.
-bool isSingletonExtMask(ArrayRef<int> M, LLT Ty) {
-  unsigned NumElts = Ty.getNumElements();
-
-  // Assume that the first shuffle index is not UNDEF.  Fail if it is.
-  if (M[0] < 0)
-    return false;
-
-  // If this is a VEXT shuffle, the immediate value is the index of the first
-  // element.  The other shuffle indices must be the successive elements after
-  // the first one.
-  unsigned ExpectedElt = M[0];
-  for (unsigned I = 1; I < NumElts; ++I) {
-    // Increment the expected index.  If it wraps around, just follow it
-    // back to index zero and keep going.
-    ++ExpectedElt;
-    if (ExpectedElt == NumElts)
-      ExpectedElt = 0;
-
-    if (M[I] < 0)
-      continue; // Ignore UNDEF indices.
-    if (ExpectedElt != static_cast<unsigned>(M[I]))
-      return false;
-  }
-
-  return true;
-}
-
 bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
@@ -363,25 +293,26 @@ bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register V1 = MI.getOperand(1).getReg();
   Register V2 = MI.getOperand(2).getReg();
   auto Mask = MI.getOperand(3).getShuffleMask();
-  uint64_t Imm;
-  auto ExtInfo = getExtMask(Mask, DstTy.getNumElements());
   uint64_t ExtFactor = MRI.getType(V1).getScalarSizeInBits() / 8;
 
-  if (!ExtInfo) {
-    if (!getOpcodeDef<GImplicitDef>(V2, MRI) ||
-        !isSingletonExtMask(Mask, DstTy))
-      return false;
-
-    Imm = Mask[0] * ExtFactor;
-    MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V1, Imm});
+  unsigned Imm;
+  bool ReverseExt;
+  if (isEXTMask(Mask, DstTy.getNumElements(), ReverseExt, Imm)) {
+    if (ReverseExt)
+      std::swap(V1, V2);
+    Imm *= ExtFactor;
+    MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst,
+                                    {V1, V2, static_cast<uint64_t>(Imm)});
     return true;
   }
-  bool ReverseExt;
-  std::tie(ReverseExt, Imm) = *ExtInfo;
-  if (ReverseExt)
-    std::swap(V1, V2);
-  Imm *= ExtFactor;
-  MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V2, Imm});
+
+  if (!getOpcodeDef<GImplicitDef>(V2, MRI) ||
+      !isSingletonEXTMask(Mask, DstTy.getNumElements(), Imm))
+    return false;
+
+  Imm = Mask[0] * ExtFactor;
+  MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst,
+                                  {V1, V1, static_cast<uint64_t>(Imm)});
   return true;
 }
 
@@ -423,6 +354,23 @@ void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
                           {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
   }
   MI.eraseFromParent();
+}
+
+static bool preferTBLToMultiInstrShuffle(MachineBasicBlock *MBB) {
+  if (MBB->getParent()->getFunction().hasOptSize())
+    return false;
+  // Look for a simple single block loop.
+  return is_contained(successors(MBB), MBB);
+}
+
+bool matchFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  if (preferTBLToMultiInstrShuffle(MI.getParent()))
+    return false;
+
+  auto &Shuf = cast<GShuffleVector>(MI);
+  ArrayRef<int> Mask = Shuf.getMask();
+  return mi_match(Shuf.getSrc2Reg(), MRI, m_GImplicitDef()) &&
+         ShuffleVectorInst::isReverseMask(Mask, Mask.size());
 }
 
 void applyFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
@@ -544,18 +492,189 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+/// Match perfect shuffle entries
+bool matchPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         SmallVector<ShuffleEntry> &Entries) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  assert(Ty.getSizeInBits() == 64 || Ty.getSizeInBits() == 128);
+  if (Ty.getNumElements() != 4)
+    return false;
+  if (!generatePerfectShuffle(MI.getOperand(3).getShuffleMask(), 4, Entries))
+    return false;
+  return Entries.size() == 1 || !preferTBLToMultiInstrShuffle(MI.getParent());
+}
+
+void applyPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &MIB,
+                         SmallVector<ShuffleEntry> &Entries) {
+  SmallVector<Register> Vals;
+  auto getValue = [](unsigned Idx, Register LHS, Register RHS,
+                     SmallVector<Register> &Vals) {
+    if (Idx == ShuffleEntry::LHS)
+      return LHS;
+    if (Idx == ShuffleEntry::RHS)
+      return RHS;
+    assert(Idx < Vals.size());
+    return Vals[Idx];
+  };
+
+  Register V1 = MI.getOperand(1).getReg();
+  Register V2 = MI.getOperand(2).getReg();
+  LLT VT = MRI.getType(MI.getOperand(0).getReg());
+
+  for (const ShuffleEntry &Entry : Entries) {
+    Register OpLHS = getValue(Entry.LHSID, V1, V2, Vals);
+
+    switch (Entry.Op) {
+    case ShuffleEntry::OP_COPY:
+    case ShuffleEntry::OP_MOVLANE:
+      llvm_unreachable("Did not expect a OP_COPY or OP_MOVLANE");
+    case ShuffleEntry::OP_MOVLANE64: {
+      unsigned ExtLane = (Entry.RHSID >> 8) & 0xff;
+      unsigned ToLane = Entry.RHSID & 0xff;
+      bool Input2 = Entry.RHSID >> 16;
+
+      Register Input = Input2 ? V2 : V1;
+      assert(
+          (VT.getScalarSizeInBits() == 16 || VT.getScalarSizeInBits() == 32) &&
+          "Expected 16 or 32 bit shuffle elements");
+      LLT ExtTy = VT.getScalarSizeInBits() == 16
+                      ? LLT::fixed_vector(2, LLT::float32())
+                      : LLT::fixed_vector(2, LLT::float64());
+
+      Input = MIB.buildBitcast(ExtTy, Input).getReg(0);
+      OpLHS = MIB.buildBitcast(ExtTy, OpLHS).getReg(0);
+      auto Ext = MIB.buildExtractVectorElementConstant(ExtTy.getScalarType(),
+                                                       Input, ExtLane);
+      auto Ins = MIB.buildInsertVectorElement(
+          ExtTy, OpLHS, Ext, MIB.buildConstant(LLT::integer(64), ToLane));
+      Vals.push_back(MIB.buildBitcast(VT, Ins).getReg(0));
+      break;
+    }
+    case ShuffleEntry::OP_MOVLANE32: {
+      unsigned ExtLane = (Entry.RHSID >> 8) & 0xff;
+      unsigned ToLane = Entry.RHSID & 0xff;
+      bool Input2 = Entry.RHSID >> 16;
+
+      Register Input = Input2 ? V2 : V1;
+      auto Ext = MIB.buildExtractVectorElementConstant(VT.getScalarType(),
+                                                       Input, ExtLane);
+      Vals.push_back(
+          MIB.buildInsertVectorElement(
+                 VT, OpLHS, Ext, MIB.buildConstant(LLT::integer(64), ToLane))
+              .getReg(0));
+      break;
+    }
+    case ShuffleEntry::OP_VREV: {
+      // VREV divides the vector in half and swaps within the half.
+      assert(VT.getScalarSizeInBits() == 32 || VT.getScalarSizeInBits() == 16);
+      if (VT.getScalarSizeInBits() == 32) {
+        Vals.push_back(
+            MIB.buildInstr(AArch64::G_REV64, {VT}, {OpLHS}).getReg(0));
+      } else {
+        Vals.push_back(
+            MIB.buildInstr(AArch64::G_REV32, {VT}, {OpLHS}).getReg(0));
+      }
+      break;
+    }
+    case ShuffleEntry::OP_VDUP0:
+    case ShuffleEntry::OP_VDUP1:
+    case ShuffleEntry::OP_VDUP2:
+    case ShuffleEntry::OP_VDUP3: {
+      unsigned Opcode;
+      if (VT.getScalarSizeInBits() == 8)
+        Opcode = AArch64::G_DUPLANE8;
+      else if (VT.getScalarSizeInBits() == 16)
+        Opcode = AArch64::G_DUPLANE16;
+      else if (VT.getScalarSizeInBits() == 32)
+        Opcode = AArch64::G_DUPLANE32;
+      else if (VT.getScalarSizeInBits() == 64)
+        Opcode = AArch64::G_DUPLANE64;
+      else
+        llvm_unreachable("Invalid vector element type?");
+
+      if (VT.getSizeInBits() == 64) {
+        auto Undef = MIB.buildUndef(VT);
+        OpLHS = MIB.buildConcatVectors(VT.multiplyElements(2),
+                                       {OpLHS, Undef.getReg(0)})
+                    .getReg(0);
+      }
+      auto Lane = MIB.buildConstant(LLT::integer(64),
+                                    Entry.Op - ShuffleEntry::OP_VDUP0);
+      Vals.push_back(MIB.buildInstr(Opcode, {VT}, {OpLHS, Lane}).getReg(0));
+      break;
+    }
+    case ShuffleEntry::OP_VEXT1:
+    case ShuffleEntry::OP_VEXT2:
+    case ShuffleEntry::OP_VEXT3: {
+      unsigned ExtFactor = VT.getScalarSizeInBits() / 8;
+      unsigned Imm = (Entry.Op - ShuffleEntry::OP_VEXT1 + 1) * ExtFactor;
+      Vals.push_back(MIB.buildInstr(AArch64::G_EXT, {VT},
+                                    {OpLHS, getValue(Entry.RHSID, V1, V2, Vals),
+                                     MIB.buildConstant(LLT::integer(32), Imm)})
+                         .getReg(0));
+      break;
+    }
+    case ShuffleEntry::OP_VUZPL:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_UZP1, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VUZPR:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_UZP2, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VZIPL:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_ZIP1, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VZIPR:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_ZIP2, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VTRNL:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_TRN1, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VTRNR:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_TRN2, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    }
+  }
+  assert(Vals.size() == Entries.size());
+  MRI.replaceRegWith(MI.getOperand(0).getReg(), Vals.back());
+  MI.eraseFromParent();
+}
+
 /// isVShiftRImm - Check if this is a valid vector for the immediate
 /// operand of a vector shift right operation. The value must be in the range:
 ///   1 <= Value <= ElementBits for a right shift.
 bool isVShiftRImm(Register Reg, MachineRegisterInfo &MRI, LLT Ty,
                   int64_t &Cnt) {
   assert(Ty.isVector() && "vector shift count is not a vector type");
-  MachineInstr *MI = MRI.getVRegDef(Reg);
-  auto Cst = getAArch64VectorSplatScalar(*MI, MRI);
-  if (!Cst)
-    return false;
-  Cnt = *Cst;
   int64_t ElementBits = Ty.getScalarSizeInBits();
+  assert(ElementBits <= 64 && "expected <= 64bit shift type");
+  MachineInstr *MI = MRI.getVRegDef(Reg);
+  std::optional<Register> Splat = getVectorSplat(*MI, MRI);
+  if (!Splat)
+    return false;
+  std::optional<APInt> C = getIConstantVRegVal(*Splat, MRI);
+  if (!C)
+    return false;
+  Cnt = C->getSExtValue();
   return Cnt >= 1 && Cnt <= ElementBits;
 }
 
@@ -917,7 +1036,72 @@ bool matchBuildVectorToDup(MachineInstr &MI, Register &Src,
 void applyBuildVectorToDup(MachineInstr &MI, Register Src,
                            MachineRegisterInfo &MRI, MachineIRBuilder &B) {
   B.setInstrAndDebugLoc(MI);
-  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()}, {Src});
+  B.buildInstr(TargetOpcode::G_SPLAT_VECTOR, {MI.getOperand(0).getReg()},
+               {Src});
+  MI.eraseFromParent();
+}
+
+bool matchBuildVectorToHalfDup(MachineInstr &MI,
+                               std::pair<Register, Register> &Srcs,
+                               MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (Ty.getSizeInBits() != 128 || isConstantOrConstantVector(MI, MRI))
+    return false;
+
+  // Later, during selection, we'll try to match imported patterns using
+  // immAllOnesV and immAllZerosV. These require G_BUILD_VECTOR. Don't lower
+  // G_BUILD_VECTORs which could match those patterns.
+  if (isBuildVectorAllZeros(MI, MRI) || isBuildVectorAllOnes(MI, MRI))
+    return false;
+
+  // Find buildvector which always uses the same register or undef in the first
+  // and second halves of the register.
+  Register Reg1;
+  Register Reg2;
+  unsigned NumOps = MI.getNumOperands() - 1;
+  if (NumOps <= 2 || NumOps % 2 != 0)
+    return false;
+
+  unsigned NumNonUndef1 = 0, NumNonUndef2 = 0;
+  for (unsigned I = 0; I < NumOps / 2; I++) {
+    Register Src1 = MI.getOperand(I + 1).getReg();
+    if (!getOpcodeDef<GImplicitDef>(Src1, MRI)) {
+      if (!Reg1)
+        Reg1 = Src1;
+      else if (Src1 != Reg1)
+        return false;
+      NumNonUndef1++;
+    }
+
+    Register Src2 = MI.getOperand(NumOps / 2 + I + 1).getReg();
+    if (!getOpcodeDef<GImplicitDef>(Src2, MRI)) {
+      if (!Reg2)
+        Reg2 = Src2;
+      else if (Src2 != Reg2)
+        return false;
+      NumNonUndef2++;
+    }
+  }
+
+  Srcs = {Reg1, Reg2};
+  return NumNonUndef1 >= 1 && NumNonUndef2 >= 1 &&
+         NumNonUndef1 + NumNonUndef2 >= 3 && Reg1 != Reg2;
+}
+
+void applyBuildVectorToHalfDup(MachineInstr &MI,
+                               std::pair<Register, Register> &Srcs,
+                               MachineRegisterInfo &MRI, MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  LLT HalfTy = Ty.divide(2);
+  auto D1 = Srcs.first
+                ? B.buildInstr(AArch64::G_SPLAT_VECTOR, {HalfTy}, {Srcs.first})
+                : B.buildUndef(HalfTy);
+  auto D2 = Srcs.second
+                ? B.buildInstr(AArch64::G_SPLAT_VECTOR, {HalfTy}, {Srcs.second})
+                : B.buildUndef(HalfTy);
+  B.buildConcatVectors(MI.getOperand(0), {D1.getReg(0), D2.getReg(0)});
   MI.eraseFromParent();
 }
 
@@ -1165,6 +1349,73 @@ void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
   B.buildCopy(GBuildVec->getReg(0), DstReg);
   GBuildVec->eraseFromParent();
+}
+
+// Detect vector constants that cannot be natively represent, but can be
+// represented as fneg(constant). For example the constant
+// <0x800000000000000, 0x800000000000000> can be represented as fneg(<0, 0>).
+bool matchConstBuildVectorToFNeg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 const AArch64Subtarget &ST,
+                                 std::pair<APInt, unsigned> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  if (!ST.isNeonAvailable())
+    return false;
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  // Limit to fneg of v2f32, v4f32, f64, v2f64 or v4f16 and v8f16 with fullfp16.
+  if (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 128)
+    return false;
+  unsigned EltSize = Ty.getScalarSizeInBits();
+
+  APInt Imm(Ty.getSizeInBits(), 0);
+  for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx++) {
+    auto C =
+        getAnyConstantVRegValWithLookThrough(MI.getOperand(Idx).getReg(), MRI);
+    if (!C)
+      return false;
+    Imm |= C->Value.trunc(EltSize)
+               .zext(Ty.getSizeInBits())
+               .shl((Idx - 1) * EltSize);
+  }
+
+  SmallVector<AArch64_IMM::ImmInsnModel> Insns;
+  if (AArch64_IMM::expandVectorMOVImm(Imm, Insns, ST))
+    return false;
+
+  auto Check = [&](APInt &Imm, unsigned Size) {
+    APInt NImm = Imm ^ APInt::getSplat(Imm.getBitWidth(),
+                                       APInt::getHighBitsSet(Size, 1));
+    SmallVector<AArch64_IMM::ImmInsnModel> Insns;
+    MatchInfo.first = NImm;
+    MatchInfo.second = Size;
+    return AArch64_IMM::expandVectorMOVImm(NImm, Insns, ST);
+  };
+
+  return Check(Imm, 64) || Check(Imm, 32) ||
+         (ST.hasFullFP16() && Check(Imm, 16));
+}
+
+void applyConstBuildVectorToFNeg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B,
+                                 std::pair<APInt, unsigned> &MatchInfo) {
+  B.setInstrAndDebugLoc(MI);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  // Extract the Immediate into chunks of size EltSize
+  unsigned EltSize = MatchInfo.second;
+  unsigned NumLanes = Ty.getSizeInBits() / EltSize;
+  LLT VTy = NumLanes == 1
+                ? LLT::floatIEEE(EltSize)
+                : LLT::fixed_vector(NumLanes, LLT::floatIEEE(EltSize));
+  SmallVector<APInt> Imms;
+  for (unsigned I = 0; I < NumLanes; I++)
+    Imms.push_back(MatchInfo.first.extractBits(EltSize, I * EltSize));
+  // Build the new BV and FNeg of it.
+  auto BV = NumLanes == 1 ? B.buildFConstant(VTy, APFloat(APFloat::IEEEdouble(),
+                                                          MatchInfo.first))
+                          : B.buildBuildVectorConstant(VTy, Imms);
+  auto FNeg = B.buildFNeg(Ty == VTy ? DstOp(MI.getOperand(0)) : DstOp(VTy), BV);
+  if (Ty != VTy)
+    B.buildBitcast(MI.getOperand(0), FNeg);
+  MI.eraseFromParent();
 }
 
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,

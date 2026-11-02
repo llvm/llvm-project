@@ -553,7 +553,7 @@ body:             |
     ; CHECK-NEXT: [[PTR:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[VAL:%[0-9]+]]:gpr64common = COPY $x1
     ; CHECK-NEXT: [[GPR:%[0-9]+]]:gpr64 = COPY [[VAL]]
-    ; CHECK-NEXT: [[FMOV:%[0-9]+]]:fpr64 = FMOVXDr killed [[GPR]]
+    ; CHECK-NEXT: [[FMOV:%[0-9]+]]:fpr64 = FMOVXDr [[GPR]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_LOW:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[FMOV]], %subreg.dsub
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0

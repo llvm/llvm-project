@@ -1,10 +1,7 @@
-add_mlir_conversion_library(MLIRArithAttrToLLVMConversion
-  AttrToLLVMConverter.cpp
-
-  LINK_COMPONENTS
-  Core
+add_mlir_conversion_library(MLIRArithCommonConversion
+  CeilFloorDivExpansion.cpp
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
-  MLIRLLVMDialect
+  MLIRIR
   )

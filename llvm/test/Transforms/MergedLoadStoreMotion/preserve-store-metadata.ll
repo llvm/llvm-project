@@ -88,7 +88,7 @@ return:
 !8 = !{!"any pointer", !2, i64 0}
 !9 = !{!10}
 !10 = distinct !{!10, !11}
-!11 = distinct !{!11}
+!11 = distinct !{!11, i1 false}
 !12 = distinct !{!10}
 !13 = distinct !{}
 !14 = distinct !{}
@@ -101,7 +101,7 @@ return:
 ; CHECK: [[META5]] = !{!"long", [[META2]]}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]]}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false}
 ; CHECK: [[ACC_GRP9]] = distinct !{}
 ; CHECK: [[_FOOPTR_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0, i64 0}
 ; CHECK: [[META11]] = !{!"p2 _Foo", [[META12:![0-9]+]]}

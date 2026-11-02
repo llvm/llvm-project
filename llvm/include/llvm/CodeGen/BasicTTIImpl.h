@@ -68,7 +68,8 @@ class ScalarEvolution;
 class SCEV;
 class TargetMachine;
 
-extern LLVM_ABI cl::opt<unsigned> PartialUnrollingThreshold;
+/// Returns -partial-unrolling-threshold if specified.
+LLVM_ABI std::optional<unsigned> getPartialUnrollingThreshold();
 
 /// Base class which can be used to help build a TTI implementation.
 ///
@@ -330,7 +331,8 @@ private:
     }
 
     // Find associated libcall.
-    RTLIB::LibcallImpl LibcallImpl = getTLI()->getLibcallImpl(LC);
+    RTLIB::LibcallImpl LibcallImpl =
+        getTLI()->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC);
     if (LibcallImpl == RTLIB::Unsupported)
       return std::nullopt;
 
@@ -443,7 +445,7 @@ public:
   }
 
   bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
-    return getTLI()->getTargetMachine().isNoopAddrSpaceCast(FromAS, ToAS);
+    return getTLI()->getTargetMachine().isNoopAddrSpaceCast(DL, FromAS, ToAS);
   }
 
   unsigned getAssumedAddrSpace(const Value *V) const override {
@@ -678,21 +680,6 @@ public:
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
   }
 
-  bool haveFastClmul(IntegerType *Ty) const override {
-    // FIXME: clmul should really be Promote for any bitwidth under the largest
-    // legal bitwidth for clmul. Using IndexTy instead of Ty is a hack to get
-    // around that shortcoming.
-    const DataLayout &DL = thisT()->DL;
-    IntegerType *IndexTy =
-        DL.getIndexType(Ty->getContext(), DL.getAllocaAddrSpace());
-    if (Ty->getBitWidth() > IndexTy->getBitWidth())
-      return false;
-
-    const TargetLoweringBase *TLI = getTLI();
-    EVT VT = TLI->getValueType(DL, IndexTy);
-    return TLI->isOperationLegalOrCustom(ISD::CLMUL, VT);
-  }
-
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
 
   InstructionCost getFPOpCost(Type *Ty) const override {
@@ -763,8 +750,8 @@ public:
 
     unsigned MaxOps;
     const TargetSubtargetInfo *ST = getST();
-    if (PartialUnrollingThreshold.getNumOccurrences() > 0)
-      MaxOps = PartialUnrollingThreshold;
+    if (std::optional<unsigned> Threshold = getPartialUnrollingThreshold())
+      MaxOps = *Threshold;
     else if (ST->getSchedModel().LoopMicroOpBufferSize > 0)
       MaxOps = ST->getSchedModel().LoopMicroOpBufferSize;
     else
@@ -1333,7 +1320,7 @@ public:
       }
       break;
     case Instruction::AddrSpaceCast:
-      if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
+      if (TLI->isFreeAddrSpaceCast(DL, Src->getPointerAddressSpace(),
                                    Dst->getPointerAddressSpace()))
         return 0;
       break;
@@ -2200,6 +2187,7 @@ public:
       return Cost;
     }
     case Intrinsic::get_active_lane_mask:
+    case Intrinsic::mask_beforefirst:
     case Intrinsic::experimental_vector_match:
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
@@ -2523,6 +2511,13 @@ public:
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(IID, Ty, TyAlign, 0), CostKind);
     }
+    case Intrinsic::speculative_load: {
+      const IntrinsicInst *I = ICA.getInst();
+      Align Alignment = I ? I->getParamAlign(0).valueOrOne() : Align(1);
+      unsigned AS = Tys[0]->getPointerAddressSpace();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, RetTy, Alignment, AS), CostKind);
+    }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
       Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
@@ -2565,6 +2560,37 @@ public:
     case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
+    case Intrinsic::vector_partial_reduce_add:
+    case Intrinsic::vector_partial_reduce_fadd: {
+      VectorType *AccTy = cast<VectorType>(ICA.getArgTypes()[0]);
+      VectorType *InTy = cast<VectorType>(ICA.getArgTypes()[1]);
+      // TODO: See if something better can be done for scalable-to-fixed
+      //       partial reductions.
+      if (AccTy->isScalableTy() != InTy->isScalableTy())
+        return InstructionCost::getInvalid();
+
+      unsigned Opcode = 0;
+      switch (IID) {
+      default:
+        llvm_unreachable("Unexpected partial reduction");
+        break;
+      case Intrinsic::vector_partial_reduce_add:
+        Opcode = Instruction::Add;
+        break;
+      case Intrinsic::vector_partial_reduce_fadd:
+        Opcode = Instruction::FAdd;
+        break;
+      }
+
+      // TODO: Factor in subvector extract costs if the types are different
+      //       sizes. We get some ridiculously high costs for vector_extract
+      //       at present, so fix that first.
+      // For a type-only query, model as (possibly multiple) basic instructions
+      // for the accumulator type.
+      return InTy->getElementCount().getKnownScalarFactor(
+                 AccTy->getElementCount()) *
+             thisT()->getArithmeticInstrCost(Opcode, AccTy, CostKind);
+    }
     case Intrinsic::experimental_vector_match: {
       auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
@@ -2657,6 +2683,34 @@ public:
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
                                           CmpInst::ICMP_ULT, CostKind);
       return Cost;
+    }
+    case Intrinsic::mask_beforefirst: {
+      ISD = ISD::MASK_BEFOREFIRST;
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
+      if (!getTLI()->isOperationExpand(ISD, LT.second))
+        break;
+
+      // Scalar types are lowered as a not.
+      if (!LT.second.isVector())
+        return LT.first *
+               thisT()->getArithmeticInstrCost(
+                   Instruction::Xor, RetTy->getScalarType(), CostKind);
+
+      // Expansion via (get_active_lane_mask 0, (cttz.elts mask))
+      RetTy = VectorType::get(RetTy->getScalarType(),
+                              LT.second.getVectorElementCount());
+      Type *IdxTy =
+          IntegerType::get(RetTy->getContext(),
+                           getTLI()->getVectorIdxTy(DL).getFixedSizeInBits());
+      IntrinsicCostAttributes CttzEltsAttrs(Intrinsic::experimental_cttz_elts,
+                                            IdxTy, RetTy, FMF);
+      InstructionCost Cost =
+          thisT()->getIntrinsicInstrCost(CttzEltsAttrs, CostKind);
+
+      IntrinsicCostAttributes ActiveLaneMaskAttrs(
+          Intrinsic::get_active_lane_mask, RetTy, {IdxTy, IdxTy}, FMF);
+      Cost += thisT()->getIntrinsicInstrCost(ActiveLaneMaskAttrs, CostKind);
+      return Cost * LT.first;
     }
     case Intrinsic::experimental_memset_pattern:
       // This cost is set to match the cost of the memset_pattern16 libcall.
@@ -2751,6 +2805,12 @@ public:
     case Intrinsic::bitreverse:
       ISD = ISD::BITREVERSE;
       break;
+    case Intrinsic::pdep:
+      ISD = ISD::PDEP;
+      break;
+    case Intrinsic::pext:
+      ISD = ISD::PEXT;
+      break;
     case Intrinsic::ucmp:
       ISD = ISD::UCMP;
       break;
@@ -2814,7 +2874,11 @@ public:
 
     const TargetLoweringBase *TLI = getTLI();
 
-    if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
+    // pdep/pext span the full scalar width; multi-register scalars can't split
+    bool BitManipSplit = (ISD == ISD::PDEP || ISD == ISD::PEXT) &&
+                         LT.first > 1 && !LT.second.isVector();
+
+    if (!BitManipSplit && TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
           TLI->isFAbsFree(LT.second)) {
         return 0;
@@ -2828,7 +2892,7 @@ public:
         return (LT.first * 2);
       else
         return (LT.first * 1);
-    } else if (TLI->isOperationCustom(ISD, LT.second)) {
+    } else if (!BitManipSplit && TLI->isOperationCustom(ISD, LT.second)) {
       // If the operation is custom lowered then assume
       // that the code is twice as expensive.
       return (LT.first * 2);
@@ -3134,12 +3198,28 @@ public:
       InstructionCost MulCost =
           thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
 
-      // When the multiplication with holes approach is used, that emits 16
-      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
-      if (BW >= 32 && BW <= 64 &&
+      // When the multiplication with holes approach is used, it splits the
+      // operands into S phases (the smallest stride with ceil(BW/S) <= 2^S) and
+      // emits S*S MULs, 3*S ANDs, S*(S-1) XORs and S-1 ORs.
+      //
+      // * BW <= 8 uses S = 2
+      // * BW <= 24 uses S = 3
+      // * BW <= 64 uses S = 4
+      // * BW <= 160 uses S = 5
+      // * BW <= 384 uses S = 6
+      unsigned S = 1;
+      while (S < 32 && divideCeil(BW, S) > (1u << S))
+        ++S;
+
+      // The naive algorithm usually uses AND+MUL+XOR per bit.
+      unsigned NaiveCost = 3 * BW;
+      unsigned HolesCost = S * S + 3 * S + S * (S - 1) + (S - 1);
+
+      if (HolesCost < NaiveCost &&
           TLI->isOperationLegalOrCustom(ISD::MUL,
                                         TLI->getValueType(DL, RetTy))) {
-        return 16 * MulCost + 12 * AndCost + 12 * XorCost + 3 * OrCost;
+        return S * S * MulCost + 3 * S * AndCost + S * (S - 1) * XorCost +
+               (S - 1) * OrCost;
       }
 
       InstructionCost PerBitCostMul = AndCost + MulCost + XorCost;
@@ -3169,6 +3249,35 @@ public:
           {TTI::OK_UniformConstantValue, TTI::OP_None});
       Cost += thisT()->getCastInstrCost(Instruction::Trunc, RetTy, WideTy,
                                         TTI::CastContextHint::None, CostKind);
+      return Cost;
+    }
+    case Intrinsic::pdep:
+    case Intrinsic::pext: {
+      if (RetTy->isVectorTy())
+        break;
+      // Based on Hacker's Delight §7-5: Expand, or Generalized Insert.
+      // Below cost is accurate for pext, pdep will be similar.
+      unsigned BW = RetTy->getScalarSizeInBits();
+      InstructionCost AndCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+      InstructionCost ShiftCost =
+          thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind);
+      InstructionCost OrCost =
+          thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+      InstructionCost XorCost =
+          thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      IntrinsicCostAttributes ClmulAttrs(Intrinsic::clmul, RetTy,
+                                         {RetTy, RetTy});
+      int Iterations = Log2_32_Ceil(BW);
+      // Expansion of CLMUL(Mk, ~0) is lot cheaper
+      InstructionCost GenericClmulCost =
+          thisT()->getIntrinsicInstrCost(ClmulAttrs, CostKind);
+      InstructionCost AllOnesClmulCost = Iterations * (ShiftCost + XorCost);
+      InstructionCost MulCost = std::min(GenericClmulCost, AllOnesClmulCost);
+
+      InstructionCost Cost = AndCost + ShiftCost; // Prefix cost
+      Cost += Iterations *
+              (MulCost + 2 * AndCost + 2 * ShiftCost + OrCost + 2 * XorCost);
       return Cost;
     }
     default:
@@ -3279,6 +3388,10 @@ public:
     }
     case Intrinsic::vp_load_ff:
       return InstructionCost::getInvalid();
+    case Intrinsic::speculative_load:
+      // Speculative loads are lowered to regular loads of the full type.
+      return thisT()->getMemoryOpCost(Instruction::Load, DataTy, Alignment,
+                                      MICA.getAddressSpace(), CostKind);
     default:
       llvm_unreachable("unexpected intrinsic");
     }

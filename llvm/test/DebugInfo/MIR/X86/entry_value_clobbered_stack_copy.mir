@@ -1,4 +1,4 @@
-# RUN: llc --run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc --run-pass=live-debug-values -o - %s | FileCheck %s
 # REQUIRES: x86-registered-target
 
 # This test covers the scenario that saves a register on the stack, uses this register as an entry value DBG_VALUE location, and then clobbers it.

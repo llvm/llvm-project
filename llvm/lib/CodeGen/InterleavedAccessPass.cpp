@@ -490,7 +490,7 @@ bool InterleavedAccessImpl::tryReplaceExtracts(
   }
 
   // Finally, perform the replacements.
-  IRBuilder<> Builder(Extracts[0]->getContext());
+  IRBuilder<> Builder(*Extracts[0]->getModule());
   for (auto &Replacement : ReplacementMap) {
     auto *Extract = Replacement.first;
     auto *Vector = Replacement.second.first;

@@ -1074,6 +1074,37 @@ exit:
   ret void
 }
 
+define void @remove_dead_switches_unknown(i32 %x) nounwind {
+; CHECK-LABEL: @remove_dead_switches_unknown(
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I]], 24
+; CHECK-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[A:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       a:
+; CHECK-NEXT:    call void @helper(i32 0) #[[ATTR1]]
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       c:
+; CHECK-NEXT:    call void @helper(i32 2) #[[ATTR1]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %i = shl i32 %x, 1
+  switch i32 %i, label %a [
+  i32 21, label %b
+  i32 24, label %c
+  ], !prof !21
+
+a:
+  call void @helper(i32 0) nounwind
+  ret void
+b:
+  call void @helper(i32 1) nounwind
+  ret void
+c:
+  call void @helper(i32 2) nounwind
+  ret void
+}
+
 
 !0 = !{!"branch_weights", i32 3, i32 5}
 !1 = !{!"branch_weights", i32 1, i32 1}
@@ -1095,6 +1126,7 @@ exit:
 !18 = !{!"branch_weights", i32 1, i32 98}
 !19 = !{!"branch_weights", i32 0, i32 0}
 !20 = !{}
+!21 = !{!"unknown", !"simple-loopunswitch"}
 
 ; .
 ; .

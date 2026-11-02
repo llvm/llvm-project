@@ -1,18 +1,19 @@
 // RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 // CHECK-LABEL:   wasmssa.func @func_0(
-// CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>) -> i32 {
+// CHECK-SAME:      %[[ARG0:.*]]: !wasmssa<local ref to i32>) -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.local_get %[[ARG0]] :  ref to i32
 // CHECK:           wasmssa.if %[[VAL_0]] : {
 // CHECK:             %[[VAL_1:.*]] = wasmssa.const 5.000000e-01 : f32
 // CHECK:             wasmssa.block_return %[[VAL_1]] : f32
-// CHECK:           } "else "{
+// CHECK:           } else {
 // CHECK:             %[[VAL_2:.*]] = wasmssa.const 2.500000e-01 : f32
 // CHECK:             wasmssa.block_return %[[VAL_2]] : f32
 // CHECK:           }> ^bb1
 // CHECK:         ^bb1(%[[VAL_3:.*]]: f32):
 // CHECK:           wasmssa.return %[[VAL_3]] : f32
-wasmssa.func @func_0(%arg0 : !wasmssa<local ref to i32>) -> i32 {
+wasmssa.func @func_0(%arg0 : !wasmssa<local ref to i32>) -> f32 {
   %cond = wasmssa.local_get %arg0 : ref to i32
   wasmssa.if %cond : {
     %c0 = wasmssa.const 0.5 : f32

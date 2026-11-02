@@ -1008,6 +1008,25 @@ func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2
 
 // -----
 
+// Integer to float conversions with a result type that has no LLVM equivalent
+// are not converted. sitofp used to be lowered to an invalid `llvm.sitofp` with
+// an integer result.
+
+// CHECK-LABEL: func @unsupported_fp_type_int_to_fp
+//       CHECK:   arith.sitofp {{.*}} : i32 to f8E4M3FN
+//       CHECK:   arith.sitofp {{.*}} : vector<4xi32> to vector<4xf8E5M2>
+//       CHECK:   arith.sitofp {{.*}} : vector<2x4xi32> to vector<2x4xf8E8M0FNU>
+//       CHECK:   arith.uitofp {{.*}} : i32 to f8E4M3FN
+func.func @unsupported_fp_type_int_to_fp(%arg0: i32, %arg1: vector<4xi32>, %arg2: vector<2x4xi32>) -> (f8E4M3FN, vector<4xf8E5M2>, vector<2x4xf8E8M0FNU>, f8E4M3FN) {
+  %0 = arith.sitofp %arg0 : i32 to f8E4M3FN
+  %1 = arith.sitofp %arg1 : vector<4xi32> to vector<4xf8E5M2>
+  %2 = arith.sitofp %arg2 : vector<2x4xi32> to vector<2x4xf8E8M0FNU>
+  %3 = arith.uitofp %arg0 : i32 to f8E4M3FN
+  return %0, %1, %2, %3 : f8E4M3FN, vector<4xf8E5M2>, vector<2x4xf8E8M0FNU>, f8E4M3FN
+}
+
+// -----
+
 // CHECK-LABEL: func @supported_fp_type
 //       CHECK:   llvm.fadd {{.*}} : f32
 //       CHECK:   llvm.fadd {{.*}} : vector<4xf32>

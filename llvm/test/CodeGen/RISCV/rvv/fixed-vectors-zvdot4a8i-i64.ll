@@ -24,12 +24,11 @@ define <2 x i64> @vdot4a_v2i64(<2 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; NODOT32-NEXT:    addi a0, a0, 16
 ; NODOT32-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; NODOT32-NEXT:    li a0, 1
-; NODOT32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v16, v9
-; NODOT32-NEXT:    vsext.vf4 v20, v10
-; NODOT32-NEXT:    vwmul.vv v8, v16, v20
-; NODOT32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; NODOT32-NEXT:    vmul.vx v16, v8, a0
+; NODOT32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; NODOT32-NEXT:    vwmul.vv v12, v9, v10
+; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT32-NEXT:    vsext.vf2 v8, v12
+; NODOT32-NEXT:    vwmul.vx v16, v8, a0
 ; NODOT32-NEXT:    vsetivli zero, 2, e64, m8, ta, ma
 ; NODOT32-NEXT:    vslidedown.vi v8, v16, 14
 ; NODOT32-NEXT:    addi a0, sp, 16
@@ -81,10 +80,10 @@ define <2 x i64> @vdot4a_v2i64(<2 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; NODOT64-NEXT:    add a0, sp, a0
 ; NODOT64-NEXT:    addi a0, a0, 16
 ; NODOT64-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; NODOT64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; NODOT64-NEXT:    vsext.vf4 v12, v9
-; NODOT64-NEXT:    vsext.vf4 v24, v10
-; NODOT64-NEXT:    vwmul.vv v16, v12, v24
+; NODOT64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; NODOT64-NEXT:    vwmul.vv v12, v9, v10
+; NODOT64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; NODOT64-NEXT:    vsext.vf4 v16, v12
 ; NODOT64-NEXT:    vsetivli zero, 2, e64, m8, ta, ma
 ; NODOT64-NEXT:    vslidedown.vi v8, v16, 14
 ; NODOT64-NEXT:    addi a0, sp, 16
@@ -329,12 +328,11 @@ define <2 x i64> @vdot4asu_v2i64(<2 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; NODOT32-NEXT:    addi a0, a0, 16
 ; NODOT32-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; NODOT32-NEXT:    li a0, 1
-; NODOT32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v16, v9
-; NODOT32-NEXT:    vzext.vf4 v20, v10
-; NODOT32-NEXT:    vwmulsu.vv v8, v16, v20
-; NODOT32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; NODOT32-NEXT:    vmul.vx v16, v8, a0
+; NODOT32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; NODOT32-NEXT:    vwmulsu.vv v12, v9, v10
+; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT32-NEXT:    vsext.vf2 v8, v12
+; NODOT32-NEXT:    vwmul.vx v16, v8, a0
 ; NODOT32-NEXT:    vsetivli zero, 2, e64, m8, ta, ma
 ; NODOT32-NEXT:    vslidedown.vi v8, v16, 14
 ; NODOT32-NEXT:    addi a0, sp, 16
@@ -386,10 +384,10 @@ define <2 x i64> @vdot4asu_v2i64(<2 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; NODOT64-NEXT:    add a0, sp, a0
 ; NODOT64-NEXT:    addi a0, a0, 16
 ; NODOT64-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; NODOT64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; NODOT64-NEXT:    vsext.vf4 v12, v9
-; NODOT64-NEXT:    vzext.vf4 v24, v10
-; NODOT64-NEXT:    vwmulsu.vv v16, v12, v24
+; NODOT64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; NODOT64-NEXT:    vwmulsu.vv v12, v9, v10
+; NODOT64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; NODOT64-NEXT:    vsext.vf4 v16, v12
 ; NODOT64-NEXT:    vsetivli zero, 2, e64, m8, ta, ma
 ; NODOT64-NEXT:    vslidedown.vi v8, v16, 14
 ; NODOT64-NEXT:    addi a0, sp, 16

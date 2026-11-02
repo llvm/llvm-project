@@ -17,17 +17,17 @@ define float @fdiv_f32(float %a, float %b) #0 {
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1065353216
   ; GCN-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN-NEXT:   S_SETREG_B32_mode killed [[S_MOV_B32_]], 2305, implicit-def $mode, implicit $mode
-  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_F32_e64 1, [[V_DIV_SCALE_F32_e64_2]], 0, [[V_RCP_F32_e64_]], 0, killed [[S_MOV_B32_1]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_F32_e64 0, killed [[V_FMA_F32_e64_]], 0, [[V_RCP_F32_e64_]], 0, [[V_RCP_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   S_SETREG_B32_mode [[S_MOV_B32_]], 2305, implicit-def $mode, implicit $mode
+  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_F32_e64 1, [[V_DIV_SCALE_F32_e64_2]], 0, [[V_RCP_F32_e64_]], 0, [[S_MOV_B32_1]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_F32_e64 0, [[V_FMA_F32_e64_]], 0, [[V_RCP_F32_e64_]], 0, [[V_RCP_F32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, [[V_DIV_SCALE_F32_e64_]], 0, [[V_FMA_F32_e64_1]], 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_FMA_F32_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_F32_e64 1, [[V_DIV_SCALE_F32_e64_2]], 0, [[V_MUL_F32_e64_]], 0, [[V_DIV_SCALE_F32_e64_]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[V_FMA_F32_e64_3:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_F32_e64 0, killed [[V_FMA_F32_e64_2]], 0, [[V_FMA_F32_e64_1]], 0, [[V_MUL_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_FMA_F32_e64_3:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_F32_e64 0, [[V_FMA_F32_e64_2]], 0, [[V_FMA_F32_e64_1]], 0, [[V_MUL_F32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_FMA_F32_e64_4:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_F32_e64 1, [[V_DIV_SCALE_F32_e64_2]], 0, [[V_FMA_F32_e64_3]], 0, [[V_DIV_SCALE_F32_e64_]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   S_SETREG_B32_mode killed [[S_MOV_B32_2]], 2305, implicit-def dead $mode, implicit $mode
+  ; GCN-NEXT:   S_SETREG_B32_mode [[S_MOV_B32_2]], 2305, implicit-def dead $mode, implicit $mode
   ; GCN-NEXT:   $vcc = COPY [[V_DIV_SCALE_F32_e64_1]]
-  ; GCN-NEXT:   [[V_DIV_FMAS_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_DIV_FMAS_F32_e64 0, killed [[V_FMA_F32_e64_4]], 0, [[V_FMA_F32_e64_1]], 0, [[V_FMA_F32_e64_3]], 0, 0, implicit $mode, implicit $vcc, implicit $exec
-  ; GCN-NEXT:   [[V_DIV_FIXUP_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_DIV_FIXUP_F32_e64 0, killed [[V_DIV_FMAS_F32_e64_]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_DIV_FMAS_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_DIV_FMAS_F32_e64 0, [[V_FMA_F32_e64_4]], 0, [[V_FMA_F32_e64_1]], 0, [[V_FMA_F32_e64_3]], 0, 0, implicit $mode, implicit $vcc, implicit $exec
+  ; GCN-NEXT:   [[V_DIV_FIXUP_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_DIV_FIXUP_F32_e64 0, [[V_DIV_FMAS_F32_e64_]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   $vgpr0 = COPY [[V_DIV_FIXUP_F32_e64_]]
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0
 entry:
@@ -48,17 +48,17 @@ define float @fdiv_nnan_f32(float %a, float %b) #0 {
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1065353216
   ; GCN-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN-NEXT:   S_SETREG_B32_mode killed [[S_MOV_B32_]], 2305, implicit-def $mode, implicit $mode
-  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_FMA_F32_e64 1, [[V_DIV_SCALE_F32_e64_2]], 0, [[V_RCP_F32_e64_]], 0, killed [[S_MOV_B32_1]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_FMA_F32_e64 0, killed [[V_FMA_F32_e64_]], 0, [[V_RCP_F32_e64_]], 0, [[V_RCP_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   S_SETREG_B32_mode [[S_MOV_B32_]], 2305, implicit-def $mode, implicit $mode
+  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_FMA_F32_e64 1, [[V_DIV_SCALE_F32_e64_2]], 0, [[V_RCP_F32_e64_]], 0, [[S_MOV_B32_1]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_FMA_F32_e64 0, [[V_FMA_F32_e64_]], 0, [[V_RCP_F32_e64_]], 0, [[V_RCP_F32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_MUL_F32_e64 0, [[V_DIV_SCALE_F32_e64_]], 0, [[V_FMA_F32_e64_1]], 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_FMA_F32_e64_2:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_FMA_F32_e64 1, [[V_DIV_SCALE_F32_e64_2]], 0, [[V_MUL_F32_e64_]], 0, [[V_DIV_SCALE_F32_e64_]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[V_FMA_F32_e64_3:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_FMA_F32_e64 0, killed [[V_FMA_F32_e64_2]], 0, [[V_FMA_F32_e64_1]], 0, [[V_MUL_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_FMA_F32_e64_3:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_FMA_F32_e64 0, [[V_FMA_F32_e64_2]], 0, [[V_FMA_F32_e64_1]], 0, [[V_MUL_F32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_FMA_F32_e64_4:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_FMA_F32_e64 1, [[V_DIV_SCALE_F32_e64_2]], 0, [[V_FMA_F32_e64_3]], 0, [[V_DIV_SCALE_F32_e64_]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   S_SETREG_B32_mode killed [[S_MOV_B32_2]], 2305, implicit-def dead $mode, implicit $mode
+  ; GCN-NEXT:   S_SETREG_B32_mode [[S_MOV_B32_2]], 2305, implicit-def dead $mode, implicit $mode
   ; GCN-NEXT:   $vcc = COPY [[V_DIV_SCALE_F32_e64_1]]
-  ; GCN-NEXT:   [[V_DIV_FMAS_F32_e64_:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_DIV_FMAS_F32_e64 0, killed [[V_FMA_F32_e64_4]], 0, [[V_FMA_F32_e64_1]], 0, [[V_FMA_F32_e64_3]], 0, 0, implicit $mode, implicit $vcc, implicit $exec
-  ; GCN-NEXT:   [[V_DIV_FIXUP_F32_e64_:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_DIV_FIXUP_F32_e64 0, killed [[V_DIV_FMAS_F32_e64_]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_DIV_FMAS_F32_e64_:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_DIV_FMAS_F32_e64 0, [[V_FMA_F32_e64_4]], 0, [[V_FMA_F32_e64_1]], 0, [[V_FMA_F32_e64_3]], 0, 0, implicit $mode, implicit $vcc, implicit $exec
+  ; GCN-NEXT:   [[V_DIV_FIXUP_F32_e64_:%[0-9]+]]:vgpr_32 = nnan nofpexcept V_DIV_FIXUP_F32_e64 0, [[V_DIV_FMAS_F32_e64_]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   $vgpr0 = COPY [[V_DIV_FIXUP_F32_e64_]]
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0
 entry:

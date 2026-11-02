@@ -52,7 +52,7 @@ template <Direction DIR, template <Direction> class STATE, typename... A>
 RT_API_ATTRS Cookie BeginExternalListIO(
     int unitNumber, const char *sourceFile, int sourceLine, A &&...xs) {
   Terminator terminator{sourceFile, sourceLine};
-#if defined(RT_CUDA_THIN_IO)
+#if defined(RT_THIN_IO)
   if constexpr (DIR == Direction::Output) {
     Cookie errorCookie{nullptr};
     ExternalFileUnit *unit{GetOrCreateUnit(

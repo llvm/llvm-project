@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass performs checking to signal errors for certain illegal usages at
-// MachineInstruction layer. Specially, the result of XADD{32,64} insn should
-// not be used. The pass is done at the PreEmit pass right before the
-// machine code is emitted at which point the register liveness information
+// MachineInstruction layer. Specially, the result of the locked atomic insns
+// (XADD, XAND, XOR and XXOR, 32 and 64 bit) should not be used, since they do
+// not return the old value. The pass is done at the PreEmit pass right before
+// the machine code is emitted at which point the register liveness information
 // is still available.
 //
 //===----------------------------------------------------------------------===//
@@ -131,18 +132,35 @@ static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
 
 } // namespace
 
+// The locked atomic insns do not return the old value, so a live result is a
+// selection bug regardless of the cpu version: for v1/v2 there is no fetching
+// insn, and for v3+ instruction selection must pick the atomic_fetch_*() insn
+// whenever the result is used.
+static bool isLockedAtomicInsn(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+  case BPF::XADDW:
+  case BPF::XADDD:
+  case BPF::XANDD:
+  case BPF::XORD:
+  case BPF::XXORD:
+  case BPF::XADDW32:
+  case BPF::XANDW32:
+  case BPF::XORW32:
+  case BPF::XXORW32:
+    return true;
+  }
+}
+
 static void processAtomicInsts(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "*** BPF PreEmit checking pass ***\n\n");
 
-  if (MF.getSubtarget<BPFSubtarget>().getHasJmp32())
-    return;
-
   const BPFRegisterInfo *TRI =
       MF.getSubtarget<BPFSubtarget>().getRegisterInfo();
-  // Only check for cpu version 1 and 2.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() != BPF::XADDW && MI.getOpcode() != BPF::XADDD)
+      if (!isLockedAtomicInsn(MI.getOpcode()))
         continue;
 
       LLVM_DEBUG(MI.dump());

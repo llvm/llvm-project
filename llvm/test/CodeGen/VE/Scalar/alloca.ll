@@ -1,11 +1,11 @@
-; RUN: llc < %s -mtriple=ve-unknown-unknown | FileCheck %s
+; RUN: llc < %s -mtriple=ve-unknown-unknown -verify-machineinstrs | FileCheck %s
 
 declare void @bar(ptr, i64)
 
 ; Function Attrs: nounwind
 define void @test(i64 %n) {
 ; CHECK-LABEL: test:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0

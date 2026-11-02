@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -DALIGN_BUILTIN=__builtin_align_down -DRETURNS_BOOL=0 %s -fsyntax-only -verify -Wpedantic
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -DALIGN_BUILTIN=__builtin_align_up   -DRETURNS_BOOL=0 %s -fsyntax-only -verify -Wpedantic
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -DALIGN_BUILTIN=__builtin_is_aligned -DRETURNS_BOOL=1 %s -fsyntax-only -verify -Wpedantic
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -DALIGN_BUILTIN=__builtin_align_down -DRETURNS_BOOL=0 %s -fsyntax-only -verify -Wpedantic -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -DALIGN_BUILTIN=__builtin_align_up   -DRETURNS_BOOL=0 %s -fsyntax-only -verify -Wpedantic -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -DALIGN_BUILTIN=__builtin_is_aligned -DRETURNS_BOOL=1 %s -fsyntax-only -verify -Wpedantic -fexperimental-new-constant-interpreter
 
 struct Aggregate {
   int i;
@@ -115,6 +118,12 @@ void constant_expression(int x) {
   _Static_assert(!__builtin_is_aligned(256, 512ULL), "");
   _Static_assert(__builtin_align_up(33, 32) == 64, "");
   _Static_assert(__builtin_align_down(33, 32) == 32, "");
+  _Static_assert(__builtin_is_aligned((void *)0, 1), "");    // expected-warning {{checking whether a value is aligned to 1 byte is always true}}
+  _Static_assert(__builtin_is_aligned((void *)0, 32), "");
+  _Static_assert(__builtin_is_aligned((void *)32, 32), "");  // expected-error {{static assertion expression is not an integral constant expression}}
+  // expected-note@-1 {{cannot constant evaluate whether run-time alignment is at least 32}}
+  _Static_assert(!__builtin_is_aligned((void *)32, 64), ""); // expected-error {{static assertion expression is not an integral constant expression}}
+  // expected-note@-1 {{cannot constant evaluate whether run-time alignment is at least 64}}
 
   // But not if one of the arguments isn't constant:
   _Static_assert(ALIGN_BUILTIN(33, x) != 100, ""); // expected-error {{static assertion expression is not an integral constant expression}}
@@ -125,6 +134,21 @@ void constant_expression(int x) {
 int global1 = __builtin_align_down(33, 8);
 int global2 = __builtin_align_up(33, 8);
 _Bool global3 = __builtin_is_aligned(33, 8);
+_Bool global4 = __builtin_is_aligned((void *)33, 8);  // expected-error {{initializer element is not a compile-time constant}}
+_Bool global5 = __builtin_is_aligned((void *)32, 32); // expected-error {{initializer element is not a compile-time constant}}
+_Bool global6 = __builtin_is_aligned((void *)32, 64); // expected-error {{initializer element is not a compile-time constant}}
+
+// Zero-valued null pointers are already aligned and should remain unchanged.
+void *null_align_up_1 = __builtin_align_up((void *)0, 1);     // expected-warning {{aligning a value to 1 byte is a no-op}}
+void *null_align_up_32 = __builtin_align_up((void *)0, 32);
+void *null_align_down_1 = __builtin_align_down((void *)0, 1); // expected-warning {{aligning a value to 1 byte is a no-op}}
+void *null_align_down_32 = __builtin_align_down((void *)0, 32);
+
+// Check alignment builtins with non-zero integer-derived pointers.
+void *num_align_up_32 = __builtin_align_up((void *)32, 32);     // expected-error {{initializer element is not a compile-time constant}}
+void *num_align_up_64 = __builtin_align_up((void *)32, 64);     // expected-error {{initializer element is not a compile-time constant}}
+void *num_align_down_32 = __builtin_align_down((void *)32, 32); // expected-error {{initializer element is not a compile-time constant}}
+void *num_align_down_64 = __builtin_align_down((void *)32, 64); // expected-error {{initializer element is not a compile-time constant}}
 
 extern void test_ptr(char *c);
 char *test_array_and_fnptr(void) {

@@ -115,6 +115,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
+; DATA_AND_CONTROL-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP5]])
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_AND_CONTROL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -123,10 +124,10 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
 ; DATA_AND_CONTROL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP10]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP5]]
-; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT2]], i64 [[UMAX]])
+; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; DATA_AND_CONTROL-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
+; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP5]]
 ; DATA_AND_CONTROL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_AND_CONTROL:       middle.block:
 ; DATA_AND_CONTROL-NEXT:    br label [[WHILE_BODY:%.*]]

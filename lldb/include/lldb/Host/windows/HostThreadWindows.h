@@ -31,6 +31,8 @@ public:
   void Reset() override;
   bool EqualsThread(lldb::thread_t thread) const override;
 
+  StructuredData::ObjectSP GetExtendedInfo() const override;
+
   lldb::tid_t GetThreadId() const;
 
 private:

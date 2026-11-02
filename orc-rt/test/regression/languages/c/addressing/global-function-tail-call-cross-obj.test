@@ -1,0 +1,32 @@
+# Check that JIT'd code can tail-call a global function defined in another
+# object.
+#
+# Stresses: fixups for tail calls (branches rather than calls) to functions
+# defined in another object, which the JIT linker may route through a stub.
+#
+# Only runs at -O2: an unoptimized build may not emit tail calls.
+
+RUN: rm -rf %t && split-file %s %t
+RUN: %{cc} -O2 -c -o %t/def.o %t/def.c
+RUN: %{cc} -O2 -c -o %t/main.o %t/main.c
+RUN: %{obj-jit} -show-jit-result %t/main.o %t/def.o | FileCheck %s
+
+CHECK: JIT result: 0
+
+#--- def.c
+int addOne(int X) { return X + 1; }
+
+#--- main.c
+int addOne(int X);
+
+// noinline, to prevent inlining into main, where the tail call would become a
+// plain call.
+__attribute__((noinline)) static int tailCallAddOne(int X) {
+  return addOne(X);
+}
+
+int main(void) {
+  if (tailCallAddOne(41) != 42)
+    return 1;
+  return 0;
+}

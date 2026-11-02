@@ -6,17 +6,17 @@
 // RUN:   FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX512
 #include <stdarg.h>
 
-// CHECK-LABEL: define{{.*}} signext i8 @f0()
+// CHECK-LABEL: define dso_local i8 @f0()
 char f0(void) {
   return 0;
 }
 
-// CHECK-LABEL: define{{.*}} signext i16 @f1()
+// CHECK-LABEL: define dso_local i16 @f1()
 short f1(void) {
   return 0;
 }
 
-// CHECK-LABEL: define{{.*}} i32 @f2()
+// CHECK-LABEL: define dso_local i32 @f2()
 int f2(void) {
   return 0;
 }

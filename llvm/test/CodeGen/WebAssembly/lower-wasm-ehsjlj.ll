@@ -1,5 +1,5 @@
 ; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s
-; RUN: llc < %s -wasm-enable-sjlj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs
+; RUN: llc < %s -wasm-enable-sjlj -mattr=+exception-handling -verify-machineinstrs
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -312,3 +312,6 @@ attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
 attributes #3 = { noreturn nounwind }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"wasm"}

@@ -89,7 +89,7 @@ def hlfir_DeclareOp
       %c20 = arith.constant 20 : index
       %1 = fir.load %ag1 : fir.ref<i64>
       %2 = fir.shape_shift %c10, %1, %c20, %1 : (index, index, index, index) -> !fir.shapeshift<2>
-      %3 = hfir.declare %arg0(%2) typeparams %1 {uniq_name = "c"} (fir.ref<!fir.array<?x?x!fir.char<1,?>>>, fir.shapeshift<2>, index) -> (fir.box<!fir.array<?x?x!fir.char<1,?>>>, fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
+      %3 = hlfir.declare %arg0(%2) typeparams %1 uniq_name("c") (fir.ref<!fir.array<?x?x!fir.char<1,?>>>, fir.shapeshift<2>, index) -> (fir.box<!fir.array<?x?x!fir.char<1,?>>>, fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
       // ... uses %3#0 as "c"
     }
    ```
@@ -113,6 +113,9 @@ def hlfir_DeclareOp
     (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
     (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
     (`skip_rebox` $skip_rebox^)?
+    `uniq_name` `(` $uniq_name `)`
+    (`fortran_attrs` `` $fortran_attrs^)?
+    (`data_attr` `(` qualified($data_attr)^ `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -277,6 +280,7 @@ def hlfir_DesignateOp
     (`substr` $substring^)?
     custom<DesignatorComplexPart>($complex_part)
     (`shape` $shape^)? (`typeparams` $typeparams^)?
+    (`fortran_attrs` `` $fortran_attrs^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -519,7 +523,7 @@ def hlfir_MaxvalOp : hlfir_Op<"maxval", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -546,7 +550,7 @@ def hlfir_MinvalOp : hlfir_Op<"minval", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -572,7 +576,7 @@ def hlfir_MinlocOp : hlfir_Op<"minloc", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -598,7 +602,7 @@ def hlfir_MaxlocOp : hlfir_Op<"maxloc", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -624,7 +628,7 @@ def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -689,7 +693,7 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -713,7 +717,8 @@ def hlfir_DotProductOp : hlfir_Op<"dot_product",
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $lhs $rhs attr-dict `:` functional-type(operands, results)
+    $lhs $rhs (`fastmath` `(` enum($fastmath)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -737,7 +742,8 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
   let results = (outs hlfir_ExprType);
 
   let assemblyFormat = [{
-    $lhs $rhs attr-dict `:` functional-type(operands, results)
+    $lhs $rhs (`fastmath` `(` enum($fastmath)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   // MATMUL(TRANSPOSE(...), ...) => hlfir.matmul_transpose
@@ -782,7 +788,8 @@ def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
   let results = (outs hlfir_ExprType);
 
   let assemblyFormat = [{
-    $lhs $rhs attr-dict `:` functional-type(operands, results)
+    $lhs $rhs (`fastmath` `(` enum($fastmath)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -890,6 +897,8 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
 
   let assemblyFormat = [{
     $source (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
+     (`uniq_name` `(` $uniq_name^ `)`)?
+     (`fortran_attrs` `` $fortran_attrs^)?
      attr-dict `:` functional-type(operands, results)
   }];
 
@@ -1379,7 +1388,7 @@ def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
   let hasVerifier = 1;
 
   let assemblyFormat = [{
-    $shape attr-dict `:` functional-type(operands, results)
+    $shape `dim` `(` $dim `)` attr-dict `:` functional-type(operands, results)
   }];
 
   let builders = [OpBuilder<(ins "mlir::Value":$shape, "unsigned":$dim)>];

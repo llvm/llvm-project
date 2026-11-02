@@ -233,12 +233,11 @@ private:
 
   /// Extract instruction ranges for each lexical scopes
   /// for the given machine function.
-  void extractLexicalScopes(SmallVectorImpl<InsnRange> &MIRanges,
-                            DenseMap<const MachineInstr *, LexicalScope *> &M);
+  void extractLexicalScopes(
+      SmallVectorImpl<std::pair<InsnRange, LexicalScope *>> &MIRanges);
   void constructScopeNest(LexicalScope *Scope);
-  void
-  assignInstructionRanges(SmallVectorImpl<InsnRange> &MIRanges,
-                          DenseMap<const MachineInstr *, LexicalScope *> &M);
+  void assignInstructionRanges(
+      ArrayRef<std::pair<InsnRange, LexicalScope *>> MIRanges);
 
   const MachineFunction *MF = nullptr;
 

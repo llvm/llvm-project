@@ -112,6 +112,18 @@ public:
     return Reader->readInteger(Value);
   }
 
+  template <typename Trunc, typename T>
+  Error mapTruncInteger(T &Value, const Twine &Comment = "") {
+    static_assert(sizeof(Trunc) <= sizeof(T));
+
+    Trunc Truncated = static_cast<Trunc>(Value);
+    auto EC = mapInteger(Truncated, Comment);
+    if (!EC && isReading())
+      Value = Truncated;
+
+    return EC;
+  }
+
   template <typename T> Error mapEnum(T &Value, const Twine &Comment = "") {
     if (!isStreaming() && sizeof(Value) > maxFieldLength())
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);

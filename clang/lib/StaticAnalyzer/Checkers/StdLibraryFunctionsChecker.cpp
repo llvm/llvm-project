@@ -1323,7 +1323,7 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
         NegatedConstraint->apply(NewState, Call, Summary, C);
     // The argument constraint is not satisfied.
     if (FailureSt && !SuccessSt) {
-      if (ExplodedNode *N = C.generateErrorNode(State, NewNode))
+      if (ExplodedNode *N = C.addSink(State, NewNode))
         reportBug(Call, N, Constraint.get(), NegatedConstraint.get(), Summary,
                   C);
       break;

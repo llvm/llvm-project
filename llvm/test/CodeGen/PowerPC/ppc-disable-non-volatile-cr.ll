@@ -1,5 +1,5 @@
 ; Note: Test option to disable use of non-volatile CR to avoid CR spilling in prologue.
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -ppc-disable-non-volatile-cr\
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -ppc-non-volatile-cr=false\
 ; RUN:     -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck --check-prefix=CHECK-DISABLE %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu\
 ; RUN:     -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck --check-prefix=CHECK-ENABLE %s

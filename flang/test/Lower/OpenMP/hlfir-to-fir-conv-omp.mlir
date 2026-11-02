@@ -10,7 +10,7 @@ func.func @_QPfoo() {
   %host_alloc = fir.alloca !fir.array<1xi32> {bindc_name = "arr", uniq_name = "_QFfooEarr"}
 
   %1 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %host_decl:2 = hlfir.declare %host_alloc(%1) {uniq_name = "_QFfooEarr"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
+  %host_decl:2 = hlfir.declare %host_alloc(%1) uniq_name("_QFfooEarr") : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
   %map_info = omp.map.info var_ptr(%host_decl#1 : !fir.ref<!fir.array<1xi32>>, !fir.array<1xi32>) map_clauses(implicit, tofrom) capture(ByRef) name("arr") -> !fir.ref<!fir.array<1xi32>>
 
   %c1_3 = arith.constant 1 : i32
@@ -22,7 +22,7 @@ func.func @_QPfoo() {
     %21 = fir.shape %c1_2 : (index) -> !fir.shape<1>
 
     // CHECK: %[[TARGET_DECL:.*]] = fir.declare
-    %target_decl:2 = hlfir.declare %arg1(%21) {uniq_name = "_QFfooEarr"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
+    %target_decl:2 = hlfir.declare %arg1(%21) uniq_name("_QFfooEarr") : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 
     // CHECK: omp.teams
     omp.teams {
@@ -38,7 +38,7 @@ func.func @_QPfoo() {
             omp.loop_nest (%arg2) : i32 = (%constarg0) to (%constarg1) inclusive step (%constarg0) {
               %25 = fir.address_of(@_QQro.1xi4.0) : !fir.ref<!fir.array<1xi32>>
               %26 = fir.shape %c1_2 : (index) -> !fir.shape<1>
-              %27:2 = hlfir.declare %25(%26) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.1xi4.0"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
+              %27:2 = hlfir.declare %25(%26) uniq_name("_QQro.1xi4.0") fortran_attrs<parameter> : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 
 
               // CHECK: %[[EMBOX:.*]] = fir.embox %[[TARGET_DECL]]

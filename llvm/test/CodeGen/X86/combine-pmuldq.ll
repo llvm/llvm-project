@@ -727,3 +727,30 @@ loop:
 end:
 	ret <8 x i32> %nextsum
 }
+
+; PR235913 - ensure soft-float targets don't fold to PMULDQ/PMULUDQ
+define <2 x i64> @PR235913(<2 x i64> %a) #0 {
+; SSE-LABEL: PR235913:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andl $3, %esi
+; SSE-NEXT:    andl $3, %edi
+; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    shlq $3, %rax
+; SSE-NEXT:    subq %rdi, %rax
+; SSE-NEXT:    leal (,%rsi,8), %edx
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR235913:
+; AVX:       # %bb.0:
+; AVX-NEXT:    andl $3, %esi
+; AVX-NEXT:    andl $3, %edi
+; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    shlq $3, %rax
+; AVX-NEXT:    subq %rdi, %rax
+; AVX-NEXT:    leal (,%rsi,8), %edx
+; AVX-NEXT:    retq
+  %m = and <2 x i64> %a, <i64 3, i64 3>
+  %r = mul <2 x i64> %m, <i64 7, i64 8>
+  ret <2 x i64> %r
+}
+attributes #0 = { "use-soft-float"="true" }

@@ -1,0 +1,14 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!void = !cir.void
+#false = #cir.bool<false> : !cir.bool
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @test_coro_done() {
+    %0 = cir.const #cir.ptr<null> : !cir.ptr<!void>
+    %1 = cir.coro.intrinsic.done(%0) : (!cir.ptr<!void>) -> !cir.bool
+    // CHECK: cir.coro.intrinsic.done(%0) : (!cir.ptr<!void>) -> !cir.bool
+    cir.return
+  }
+}

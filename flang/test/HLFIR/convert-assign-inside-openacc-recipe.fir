@@ -9,7 +9,7 @@ acc.reduction.recipe @reduction_add_box_heap_Uxi32 : !fir.box<!fir.heap<!fir.arr
   %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %1 = fir.shape %0#1 : (index) -> !fir.shape<1>
   %2 = fir.allocmem !fir.array<?xi32>, %0#1 {bindc_name = ".tmp", uniq_name = ""}
-  %3:2 = hlfir.declare %2(%1) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+  %3:2 = hlfir.declare %2(%1) uniq_name(".tmp") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
   hlfir.assign %c0_i32 to %3#0 : i32, !fir.box<!fir.array<?xi32>>
   acc.yield %3#0 : !fir.box<!fir.array<?xi32>>
 } combiner {
@@ -25,7 +25,7 @@ acc.reduction.recipe @reduction_add_box_heap_Uxi32 : !fir.box<!fir.heap<!fir.arr
   %6 = hlfir.designate %arg0 (%arg2:%arg3:%arg4)  shape %5 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   %7 = hlfir.designate %arg1 (%arg2:%arg3:%arg4)  shape %5 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   %8 = fir.allocmem !fir.array<?xi32>, %4 {bindc_name = ".tmp.array", uniq_name = ""}
-  %9:2 = hlfir.declare %8(%5) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+  %9:2 = hlfir.declare %8(%5) uniq_name(".tmp.array") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
   %true = arith.constant true
   %c1_0 = arith.constant 1 : index
   fir.do_loop %arg5 = %c1_0 to %4 step %c1_0 unordered {

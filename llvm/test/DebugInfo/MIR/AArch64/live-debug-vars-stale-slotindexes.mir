@@ -1,0 +1,335 @@
+# RUN: llc -mtriple=aarch64-unknown-linux-gnu -start-before=register-coalescer \
+# RUN:   -stop-after=virt-reg-rewriter %s -o - \
+# RUN:   | FileCheck %s --implicit-check-not=DBG_VALUE
+
+# LiveDebugVariables records SlotIndexes during register allocation and uses
+# them afterwards to re-insert debug instructions. Passes in between can erase
+# the instructions those indexes name, and canonicalizeIndexes() repairs such
+# stale indexes to the closest preceding live instruction. Each function below
+# reaches it by a different route. Check that each debug instruction still comes
+# out once, in the right place.
+#
+# The input starts before the register coalescer rather than at register
+# allocation because the allocator's decisions depend on the gaps the coalescer
+# leaves in the SlotIndex numbering, which MIR does not preserve.
+#
+# See also DebugInfo/MIR/X86/live-debug-vars-stale-slotindexes.mir.
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  target triple = "aarch64-unknown-linux-gnu"
+
+  define i32 @update(ptr %db, ptr %mode, i1 %c1, ptr %p0, i1 %c2, ptr %p1, ptr %p2, ptr %p3, i1 %c3) !dbg !5 {
+  entry:
+    %pw = getelementptr i8, ptr %mode, i64 72
+    br label %loop.outer
+
+  loop.outer:                                       ; preds = %latch, %entry
+      #dbg_value(ptr %pw, !8, !DIExpression(), !11)
+    call void @llvm.memset.p0.i64(ptr align 1 %mode, i8 0, i64 1, i1 false)
+    br i1 %c3, label %for.cond.preheader, label %common.ret
+
+  for.cond.preheader:                               ; preds = %loop.outer
+    br label %for.cond
+
+  common.ret:                                       ; preds = %loop.outer, %for.body
+    ret i32 0
+
+  for.cond:                                         ; preds = %for.cond.preheader, %for.end
+    br i1 %c1, label %for.body, label %latch
+
+  for.body:                                         ; preds = %for.cond
+    %v = load volatile ptr, ptr null, align 8
+    br i1 %c2, label %for.end, label %common.ret
+
+  for.end:                                          ; preds = %for.body
+    %call = call ptr @allocate(i64 0)
+    store i64 4, ptr %p1, align 8
+    store ptr %p2, ptr %p0, align 8
+    store i64 1, ptr %p3, align 8
+    store volatile i32 0, ptr null, align 4
+    store i32 0, ptr %db, align 4
+    br label %for.cond
+
+  latch:                                            ; preds = %for.cond
+    store volatile i32 0, ptr null, align 4
+    br label %loop.outer
+  }
+
+  declare ptr @allocate(i64)
+
+  define ptr @map_index(ptr %this, ptr %k, ptr %p0, ptr %x.addr.1, ptr %p1, i64 %n, i1 %cmp.i) !dbg !14 {
+  entry:
+      #dbg_value(ptr %this, !18, !DIExpression(), !23)
+    %add.ptr = getelementptr i8, ptr %this, i64 8, !dbg !29
+    br label %while.body
+
+  while.body:                                       ; preds = %while.body, %entry
+    %x.addr.011 = phi ptr [ null, %entry ], [ %x.addr.1, %while.body ]
+    %call = call i32 @cmp(ptr %p1)
+    %sub = sub i64 0, %n
+    %spec.select = tail call i64 @llvm.smax.i64(i64 %sub, i64 1)
+    %retval.07 = tail call i64 @llvm.smin.i64(i64 %spec.select, i64 2147483647)
+    br i1 %cmp.i, label %lower_bound.exit, label %while.body
+
+  lower_bound.exit:                                 ; preds = %while.body
+    %retval.0.i12 = trunc i64 %retval.07 to i32
+    %cmp.i3 = icmp slt i32 %retval.0.i12, 0
+    %y.addr.1 = select i1 %cmp.i3, ptr null, ptr %x.addr.011
+    %cmp = icmp eq ptr %y.addr.1, %add.ptr
+    br i1 %cmp, label %if.then, label %common.ret
+
+  common.ret:                                       ; preds = %if.then, %lower_bound.exit
+    ret ptr null
+
+  if.then:                                          ; preds = %lower_bound.exit
+    store ptr %k, ptr %p0, align 8
+    %call12 = load volatile ptr, ptr %this, align 8
+    br label %common.ret
+  }
+
+  declare i32 @cmp(ptr)
+
+  !llvm.dbg.cu = !{!0, !2}
+  !llvm.module.flags = !{!4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "7zUpdate.cpp", directory: "/")
+  !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !3, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !3 = !DIFile(filename: "InputFile.cc", directory: "/")
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "Update", scope: !1, file: !1, line: 714, type: !6, scopeLine: 728, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{}
+  !8 = !DILocalVariable(name: "this", arg: 1, scope: !9, type: !10)
+  !9 = distinct !DISubprogram(name: "CStringBase", scope: !1, file: !1, line: 182, type: !6, scopeLine: 182, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+  !11 = !DILocation(line: 0, scope: !9, inlinedAt: !12)
+  !12 = !DILocation(line: 41, column: 3, scope: !13)
+  !13 = distinct !DISubprogram(name: "CCompressionMethodMode", scope: !1, file: !1, line: 41, type: !6, scopeLine: 45, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !14 = distinct !DISubprogram(name: "operator[]", scope: !16, file: !15, line: 504, type: !6, scopeLine: 505, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+  !15 = !DIFile(filename: "stl_map.h", directory: "/")
+  !16 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "map", scope: !17, file: !15, line: 102, size: 384, elements: !7)
+  !17 = !DINamespace(name: "std", scope: null)
+  !18 = !DILocalVariable(name: "this", arg: 1, scope: !19, type: !22)
+  !19 = distinct !DISubprogram(name: "_M_end", scope: !21, file: !20, line: 747, type: !6, scopeLine: 748, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+  !20 = !DIFile(filename: "stl_tree.h", directory: "/")
+  !21 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "_Rb_tree", scope: !17, file: !20, line: 423, size: 384, elements: !7)
+  !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
+  !23 = !DILocation(line: 0, scope: !19, inlinedAt: !24)
+  !24 = !DILocation(line: 1267, column: 43, scope: !25, inlinedAt: !26)
+  !25 = distinct !DISubprogram(name: "lower_bound", scope: !21, file: !20, line: 1266, type: !6, scopeLine: 1267, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+  !26 = !DILocation(line: 1308, column: 21, scope: !27, inlinedAt: !28)
+  !27 = distinct !DISubprogram(name: "lower_bound", scope: !16, file: !15, line: 1307, type: !6, scopeLine: 1308, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+  !28 = !DILocation(line: 509, column: 17, scope: !14)
+  !29 = !DILocation(line: 748, column: 17, scope: !19, inlinedAt: !24)
+...
+# The DBG_VALUE of %1 at the start of bb.1.loop.outer. Greedy splits %1 at the
+# top of bb.1 and spills the part after the split, so the DBG_VALUE gets two
+# intervals in locInts: in $x1 up to the spill, and in %stack.0 after it.
+# HoistSpillHelper::hoistAllSpills then erases that spill in favour of one in
+# bb.0.entry. Check that the boundary between the intervals is canonicalized to
+# the start of bb.1, leaving the $x1 interval empty, so that a single DBG_VALUE
+# of %stack.0 is emitted at the start of bb.1.
+#
+# Reduced from MultiSource/Benchmarks/7zip 7zUpdate.cpp built at -O2 -g.
+
+# CHECK-LABEL: name: update
+# CHECK:       bb.0.entry:
+# CHECK:       STRXui renamable $x1, %stack.0, 0
+# CHECK:       bb.1.loop.outer:
+# CHECK:       liveins:
+# CHECK-NEXT:  {{^ *$}}
+# CHECK-NEXT:  DBG_VALUE %stack.0, 0, !{{[0-9]+}}, !DIExpression(DW_OP_plus_uconst, 72, DW_OP_stack_value)
+# CHECK-NEXT:  STRBBui $wzr, killed renamable $x1, 0
+
+---
+name:            update
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+  - { reg: '$w2', virtual-reg: '%2' }
+  - { reg: '$x3', virtual-reg: '%3' }
+  - { reg: '$w4', virtual-reg: '%4' }
+  - { reg: '$x5', virtual-reg: '%5' }
+  - { reg: '$x6', virtual-reg: '%6' }
+  - { reg: '$x7', virtual-reg: '%7' }
+frameInfo:
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  framePointerPolicy: none
+  maxCallFrameSize: 0
+fixedStack:
+  - { id: 0, size: 1, alignment: 16, isImmutable: true }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $w2, $x3, $w4, $x5, $x6, $x7
+
+    %7:gpr64common = COPY $x7
+    %6:gpr64 = COPY $x6
+    %5:gpr64common = COPY $x5
+    %4:gpr32 = COPY $w4
+    %3:gpr64common = COPY $x3
+    %2:gpr32 = COPY $w2
+    %1:gpr64common = COPY $x1
+    %0:gpr64common = COPY $x0
+    %11:gpr32 = LDRBBui %fixed-stack.0, 0 :: (load (s8) from %fixed-stack.0, align 16)
+    %10:gpr32 = COPY %11
+    %9:gpr32 = COPY %4
+    %8:gpr32 = COPY %2
+    %12:gpr32 = COPY $wzr
+    %20:gpr32 = MOVi32imm 4
+    %21:gpr64 = SUBREG_TO_REG %20, %subreg.sub_32
+    %22:gpr32 = MOVi32imm 1
+    %23:gpr64 = SUBREG_TO_REG %22, %subreg.sub_32
+
+  bb.1.loop.outer:
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+
+    DBG_VALUE %1, $noreg, !8, !DIExpression(DW_OP_plus_uconst, 72, DW_OP_stack_value), debug-location !11
+    STRBBui %12, %1, 0 :: (store (s8) into %ir.mode)
+    TBZW %10, 0, %bb.2
+    B %bb.3
+
+  bb.2.common.ret:
+    %17:gpr32all = COPY $wzr
+    $w0 = COPY %17
+    RET_ReallyLR implicit $w0
+
+  bb.3.for.cond:
+    successors: %bb.4(0x7c000000), %bb.6(0x04000000)
+
+    TBZW %8, 0, %bb.6
+    B %bb.4
+
+  bb.4.for.body:
+    successors: %bb.5(0x7c000000), %bb.2(0x04000000)
+
+    %15:gpr64sp = COPY $xzr
+    dead $xzr = LDRXui %15, 0 :: (volatile load (s64) from `ptr null`)
+    TBZW %9, 0, %bb.2
+    B %bb.5
+
+  bb.5.for.end:
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %18:gpr64sp = COPY $xzr
+    $x0 = COPY %18
+    BL @allocate, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def dead $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    STRXui %21, %5, 0 :: (store (s64) into %ir.p1)
+    STRXui %6, %3, 0 :: (store (s64) into %ir.p0)
+    STRXui %23, %7, 0 :: (store (s64) into %ir.p3)
+    STRWui %12, %18, 0 :: (volatile store (s32) into `ptr null`)
+    STRWui %12, %0, 0 :: (store (s32) into %ir.db)
+    B %bb.3
+
+  bb.6.latch:
+    %13:gpr64sp = COPY $xzr
+    STRWui %12, %13, 0 :: (volatile store (s32) into `ptr null`)
+    B %bb.1
+...
+# The DBG_VALUE of %3 in bb.0.entry. The variable's lexical scope covers only
+# the ADDXri, so computeIntervals trims the start of its interval to the ADDXri
+# and records that in trimmedDefs, which tells emitDebugValues to insert the
+# DBG_VALUE before the start rather than after it. Greedy rematerializes the
+# ADDXri next to its use in bb.2.lower_bound.exit and erases the original.
+# Check that the interval start and the trimmed def are both canonicalized to
+# the instruction before the ADDXri, which by then is the SUBXrr, and still
+# match, so that the DBG_VALUE is inserted before the SUBXrr.
+#
+# Reduced from MultiSource/Benchmarks/DOE-ProxyApps-C++/PENNANT built at -O2 -g.
+
+# CHECK-LABEL: name: map_index
+# CHECK:       bb.0.entry:
+# CHECK:       liveins:
+# CHECK-NEXT:  {{^ *$}}
+# CHECK-NEXT:  DBG_VALUE $x0, $noreg, ![[VAR:[0-9]+]], !DIExpression()
+# CHECK:       renamable $x[[THIS:[0-9]+]] = COPY $x0
+# CHECK-NEXT:  renamable $x8 = COPY $xzr
+# CHECK-NEXT:  DBG_VALUE $x[[THIS]], $noreg, ![[VAR]], !DIExpression()
+# CHECK-NEXT:  SUBXrr $xzr
+
+---
+name:            map_index
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%3' }
+  - { reg: '$x1', virtual-reg: '%4' }
+  - { reg: '$x2', virtual-reg: '%5' }
+  - { reg: '$x3', virtual-reg: '%6' }
+  - { reg: '$x4', virtual-reg: '%7' }
+  - { reg: '$x5', virtual-reg: '%8' }
+  - { reg: '$w6', virtual-reg: '%9' }
+frameInfo:
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  framePointerPolicy: none
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $w6
+
+    DBG_VALUE $x0, $noreg, !18, !DIExpression(), debug-location !23
+    %9:gpr32 = COPY $w6
+    %8:gpr64 = COPY $x5
+    %7:gpr64 = COPY $x4
+    %6:gpr64 = COPY $x3
+    %5:gpr64common = COPY $x2
+    %4:gpr64 = COPY $x1
+    %3:gpr64common = COPY $x0
+    DBG_VALUE %3, $noreg, !18, !DIExpression(), debug-location !23
+    %10:gpr32 = COPY %9
+    %12:gpr64common = ADDXri %3, 8, 0, debug-location !29
+    %13:gpr64 = COPY $xzr
+    %11:gpr64all = COPY %13
+    %16:gpr64common = SUBXrr %13, %8
+    %18:gpr32 = MOVi32imm 1
+    %19:gpr64 = SUBREG_TO_REG %18, %subreg.sub_32
+    %21:gpr32 = MOVi32imm 2147483647
+    %22:gpr64 = SUBREG_TO_REG %21, %subreg.sub_32
+    %32:gpr64 = COPY %11
+
+  bb.1.while.body:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    %1:gpr64 = COPY %32
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %7
+    BL @cmp, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def dead $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    dead $xzr = SUBSXri %16, 1, 0, implicit-def $nzcv
+    %20:gpr64 = CSNEGXr %19, %8, 13, implicit $nzcv
+    dead $xzr = SUBSXrr %20, %22, implicit-def $nzcv
+    %24:gpr64 = CSELXr %20, %22, 11, implicit $nzcv
+    %32:gpr64 = COPY %6
+    TBZW %10, 0, %bb.1
+    B %bb.2
+
+  bb.2.lower_bound.exit:
+    successors: %bb.4(0x30000000), %bb.3(0x50000000)
+
+    %25:gpr32sp = COPY %24.sub_32
+    dead $wzr = SUBSWri %25, 0, 0, implicit-def $nzcv
+    %27:gpr64 = COPY $xzr
+    %28:gpr64 = CSELXr %27, %1, 4, implicit $nzcv
+    dead $xzr = SUBSXrr %28, %12, implicit-def $nzcv
+    Bcc 0, %bb.4, implicit $nzcv
+    B %bb.3
+
+  bb.3.common.ret:
+    %31:gpr64all = COPY $xzr
+    $x0 = COPY %31
+    RET_ReallyLR implicit $x0
+
+  bb.4.if.then:
+    STRXui %4, %5, 0 :: (store (s64) into %ir.p0)
+    dead $xzr = LDRXui %3, 0 :: (volatile load (s64) from %ir.this)
+    B %bb.3
+...

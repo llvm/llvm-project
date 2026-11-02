@@ -33,7 +33,7 @@
 ; Function Attrs: nounwind readnone
 define float @fsqrt_float_var(float %0) {
 ; CHECK-LABEL: fsqrt_float_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, sqrtf@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, sqrtf@hi(, %s1)
@@ -49,7 +49,7 @@ declare float @llvm.sqrt.f32(float)
 ; Function Attrs: nounwind readnone
 define double @fsqrt_double_var(double %0) {
 ; CHECK-LABEL: fsqrt_double_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, sqrt@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, sqrt@hi(, %s1)
@@ -65,7 +65,7 @@ declare double @llvm.sqrt.f64(double)
 ; Function Attrs: nounwind readnone
 define fp128 @fsqrt_quad_var(fp128 %0) {
 ; CHECK-LABEL: fsqrt_quad_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, sqrtl@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, sqrtl@hi(, %s2)
@@ -99,7 +99,7 @@ define double @fsqrt_double_zero() {
 ; Function Attrs: nounwind readnone
 define fp128 @fsqrt_quad_zero() {
 ; CHECK-LABEL: fsqrt_quad_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s0)
@@ -135,7 +135,7 @@ define double @fsqrt_double_const() {
 ; Function Attrs: nounwind readnone
 define fp128 @fsqrt_quad_const() {
 ; CHECK-LABEL: fsqrt_quad_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s0)

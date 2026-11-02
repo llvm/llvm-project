@@ -18,7 +18,7 @@
 // CHECK:           %[[VAL_8:.*]] = fir.zero_bits !fir.heap<!fir.char<1,?>>
 // CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_8]] typeparams %[[VAL_4]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
 // CHECK:           fir.store %[[VAL_9]] to %[[VAL_7]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_7]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest1Ew"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFtest1Ew") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
 // CHECK:           %[[VAL_11:.*]] = fir.zero_bits !fir.heap<!fir.array<1x!fir.char<1,?>>>
 // CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_13:.*]] = fir.embox %[[VAL_11]](%[[VAL_12]]) typeparams %[[VAL_4]] : (!fir.heap<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>
@@ -52,7 +52,7 @@
 // CHECK:           %[[VAL_39:.*]] = fir.box_elesize %[[VAL_35]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> index
 // CHECK:           %[[VAL_40:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_41:.*]] = fir.allocmem !fir.array<1x!fir.char<1,?>>(%[[VAL_39]] : index) <{bindc_name = ".tmp.array", uniq_name = ""}>
-// CHECK:           %[[VAL_42:.*]]:2 = hlfir.declare %[[VAL_41]](%[[VAL_40]]) typeparams %[[VAL_39]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.heap<!fir.array<1x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_42:.*]]:2 = hlfir.declare %[[VAL_41]](%[[VAL_40]]) typeparams %[[VAL_39]] uniq_name(".tmp.array") : (!fir.heap<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.heap<!fir.array<1x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_43:.*]] = arith.constant true
 // CHECK:           %[[VAL_44:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_45:.*]] = %[[VAL_44]] to %[[VAL_3]] step %[[VAL_44]] {
@@ -74,7 +74,7 @@
 // CHECK:           %[[VAL_59:.*]] = fir.insert_value %[[VAL_58]], %[[VAL_42]]#0, [0 : index] : (tuple<!fir.box<!fir.array<1x!fir.char<1,?>>>, i1>, !fir.box<!fir.array<1x!fir.char<1,?>>>) -> tuple<!fir.box<!fir.array<1x!fir.char<1,?>>>, i1>
 // CHECK:           %[[VAL_60:.*]] = fir.convert %[[VAL_42]]#1 : (!fir.heap<!fir.array<1x!fir.char<1,?>>>) -> !fir.ref<!fir.array<1x!fir.char<1,?>>>
 // CHECK:           %[[VAL_61:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_62:.*]]:2 = hlfir.declare %[[VAL_60]](%[[VAL_61]]) typeparams %[[VAL_39]] {uniq_name = "_QFtest1Ey"} : (!fir.ref<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.array<1x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_62:.*]]:2 = hlfir.declare %[[VAL_60]](%[[VAL_61]]) typeparams %[[VAL_39]] uniq_name("_QFtest1Ey") : (!fir.ref<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.array<1x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_63:.*]] = fir.convert %[[VAL_60]] : (!fir.ref<!fir.array<1x!fir.char<1,?>>>) -> !fir.heap<!fir.array<1x!fir.char<1,?>>>
 // CHECK:           fir.freemem %[[VAL_63]] : !fir.heap<!fir.array<1x!fir.char<1,?>>>
 // CHECK:           %[[VAL_64:.*]] = fir.box_addr %[[REBOX]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<1x!fir.char<1,?>>>
@@ -93,7 +93,7 @@ func.func @_QPtest1() {
   %3 = fir.zero_bits !fir.heap<!fir.char<1,?>>
   %4 = fir.embox %3 typeparams %c0 : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
   fir.store %4 to %2 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
-  %5:2 = hlfir.declare %2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest1Ew"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
+  %5:2 = hlfir.declare %2 uniq_name("_QFtest1Ew") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
   %6 = fir.zero_bits !fir.heap<!fir.array<1x!fir.char<1,?>>>
   %7 = fir.shape %c1 : (index) -> !fir.shape<1>
   %8 = fir.embox %6(%7) typeparams %c0 : (!fir.heap<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>
@@ -130,9 +130,9 @@ func.func @_QPtest1() {
     %40 = hlfir.no_reassoc %39 : !hlfir.expr<!fir.char<1,?>>
     hlfir.yield_element %40 : !hlfir.expr<!fir.char<1,?>>
   }
-  %35:3 = hlfir.associate %34(%33) typeparams %32 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<1x!fir.char<1,?>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.array<1x!fir.char<1,?>>>, i1)
+  %35:3 = hlfir.associate %34(%33) typeparams %32 uniq_name("adapt.valuebyref") : (!hlfir.expr<1x!fir.char<1,?>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.array<1x!fir.char<1,?>>>, i1)
   %36 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %37:2 = hlfir.declare %35#1(%36) typeparams %32 {uniq_name = "_QFtest1Ey"} : (!fir.ref<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.array<1x!fir.char<1,?>>>)
+  %37:2 = hlfir.declare %35#1(%36) typeparams %32 uniq_name("_QFtest1Ey") : (!fir.ref<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.array<1x!fir.char<1,?>>>)
   hlfir.end_associate %35#1, %35#2 : !fir.ref<!fir.array<1x!fir.char<1,?>>>, i1
   hlfir.destroy %34 : !hlfir.expr<1x!fir.char<1,?>>
   hlfir.destroy %31 : !hlfir.expr<1x!fir.char<1,?>>

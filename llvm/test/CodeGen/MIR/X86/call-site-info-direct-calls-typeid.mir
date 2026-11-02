@@ -35,8 +35,8 @@
 ---
 name:            bar
 callSites:
-  - { bb: 0, offset: 0, fwdArgRegs: [] }
-  - { bb: 0, offset: 1, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 0, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 1, fwdArgRegs: [] }
 body:             |
   bb.0.entry:
     CALL64pcrel32 target-flags(x86-plt) @buzz, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
@@ -46,7 +46,7 @@ body:             |
 ---
 name:            foo
 callSites:
-  - { bb: 0, offset: 0, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 0, fwdArgRegs: [] }
 body:             |
   bb.0.entry:
     CALL64pcrel32 target-flags(x86-plt) @bar, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax

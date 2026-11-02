@@ -38,7 +38,7 @@ void test(int *p) {
 // The kernel functor's operator() reads the captured pointer, which is a
 // generic-address-space pointer, and stores through it.
 // CIR-LABEL: cir.func {{.*}}@_ZZ4testPiENKUlvE_clEv
-// CIR:         cir.get_member {{.*}} -> !cir.ptr<!cir.ptr<!s32i, target_address_space(4)>>
+// CIR:         cir.get_member {{.*}} -> !cir.ptr<!cir.ptr<!s32i, target_address_space(4)>, target_address_space(4)>
 // CIR:         cir.store {{.*}} : !s32i, !cir.ptr<!s32i, target_address_space(4)>
 
 // The captured pointer field and the store through it use address space 4,

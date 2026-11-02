@@ -1,6 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=2 2>&1 | FileCheck %s --check-prefix=THR2
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=3 2>&1 | FileCheck %s --check-prefix=THR3
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=3 -enable-store-sequencing 2>&1 | FileCheck %s --check-prefix=SS
 
 define void @test_barrier(ptr %p) {
 entry:
@@ -58,3 +59,6 @@ entry:
 ; %p30 is not a barrier. no successors
 ; THR3:      SU({{.*}}):   STRWui {{.*}} :: (store (s32) into %ir.p30)
 ; THR3:      # succs left       : 0
+
+; Check that store-sequencing disables the `--dag-maps-huge-region` threshold.
+; SS-NOT: Creating barrier chain and clearing maps.

@@ -91,6 +91,8 @@ convertToNVVMReductionKind(gpu::AllReduceOperation mode) {
     return NVVM::ReductionKind::XOR;
   case gpu::AllReduceOperation::MINIMUMF:
   case gpu::AllReduceOperation::MAXIMUMF:
+  case gpu::AllReduceOperation::MINIMUMNUMF:
+  case gpu::AllReduceOperation::MAXIMUMNUMF:
     return std::nullopt;
   }
   return std::nullopt;

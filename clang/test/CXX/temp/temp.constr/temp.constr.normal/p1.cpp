@@ -7,10 +7,9 @@ template<typename T> concept Bar = Foo<T&>;  // #Bar
 template<typename T> requires Bar<T> struct S { }; // #S
 template<typename T> requires Bar<T> && true struct S<T> { }; // #SpecS
 // expected-error@-1 {{class template partial specialization is not more specialized than the primary template}}
-// expected-error@#Foo 2{{'type name' declared as a pointer to a reference of type 'T &'}}
+// expected-error@#Foo {{'type name' declared as a pointer to a reference of type 'T &'}}
 // expected-note@#SpecS {{while substituting into concept arguments here}}
-// expected-note@#S {{while substituting into concept arguments here}}
-// expected-note@#Bar 2{{while substituting into concept arguments here}}
+// expected-note@#Bar {{while substituting into concept arguments here}}
 // expected-note@#S {{template is declared here}}
 
 
@@ -86,11 +85,9 @@ requires true struct S3; // expected-note {{template is declared here}}
 template <True T, True U>
 requires true struct S3<T, U>;
 // expected-error@-1 {{class template partial specialization is not more specialized than the primary template}}
-// expected-error@#Foo2 2{{'type name' declared as a pointer to a reference of type 'T &'}}
-// expected-note@#SpecS2_1 {{while substituting into concept arguments here}}
+// expected-error@#Foo2 {{'type name' declared as a pointer to a reference of type 'T &'}}
 // expected-note@#SpecS2_2 {{while substituting into concept arguments here}}
 // expected-note@#S3_Header {{while substituting into concept arguments here}}
-// expected-note@#Bar2 {{while substituting into concept arguments here}}
 
 
 // Same as above, for the second position (but this was already working).
@@ -102,8 +99,6 @@ requires true struct S4<T, U>; // #S4-spec
 // expected-error@#Foo2 {{'type name' declared as a pointer to a reference of type 'U &'}}
 // expected-note@#S4_Header {{while substituting into concept arguments here}}
 // expected-note@#S4 {{template is declared here}}
-// expected-note@#S4 {{similar constraint expressions not considered equivalent}}
-// expected-note@#S4-spec {{similar constraint expression here}}
 
 
 

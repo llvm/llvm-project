@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CachePruning.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <map>
@@ -146,6 +147,7 @@ struct Configuration {
   bool printSearchPaths = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::cl::LibraryOptionsContext libraryOptions;
   std::vector<std::string> natvisFiles;
   llvm::StringMap<std::string> namedStreams;
   llvm::SmallString<128> pdbAltPath;

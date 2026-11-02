@@ -693,6 +693,16 @@ LLVM_ABI bool isMustProgress(const Loop *L);
 /// iterations.
 LLVM_ABI bool isFinite(const Loop *L);
 
+/// Return true if every cycle in the loop nest rooted at \p L is finite.
+/// This holds if \p L is finite by assumption, or if the nest has no
+/// irreducible cycles and every loop is either finite by assumption or
+/// has a computable constant max backedge-taken count.
+///
+/// This does not guarantee termination, as a call within the nest may
+/// never return.
+LLVM_ABI bool isLoopNestFinite(Loop *L, ScalarEvolution &SE,
+                               const LoopInfo &LI);
+
 /// Return whether an MDNode might represent an access group.
 ///
 /// Access group metadata nodes have to be distinct and empty. Being

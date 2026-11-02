@@ -94,17 +94,6 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
       if (!II->isLifetimeStartOrEnd() && !II->isDroppable() &&
           II->getIntrinsicID() != Intrinsic::fake_use)
         return false;
-    } else if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
-      if (!onlyUsedByLifetimeMarkersOrDroppableInsts(BCI))
-        return false;
-    } else if (const GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U)) {
-      if (!GEPI->hasAllZeroIndices())
-        return false;
-      if (!onlyUsedByLifetimeMarkersOrDroppableInsts(GEPI))
-        return false;
-    } else if (const AddrSpaceCastInst *ASCI = dyn_cast<AddrSpaceCastInst>(U)) {
-      if (!onlyUsedByLifetimeMarkers(ASCI))
-        return false;
     } else {
       return false;
     }
@@ -550,25 +539,8 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
       continue;
     }
 
-    if (!I->getType()->isVoidTy()) {
-      // Follow the use/def chain to erase users of this instruction now
-      // instead of leaving it for dead code elimination later.
-      for (Use &UU : llvm::make_early_inc_range(I->uses())) {
-        Instruction *Inst = cast<Instruction>(UU.getUser());
-
-        // Drop the use of I in droppable instructions.
-        if (Inst->isDroppable()) {
-          Inst->dropDroppableUse(UU);
-          continue;
-        }
-
-        Inst->eraseFromParent();
-      }
-    }
-
-    // Same as above for lifetime intrinsics directly on the alloca. If the
-    // alloca has no load/store users, PromotedType is null and the alloca will
-    // be deleted as dead, so no store is needed.
+    // If the alloca has no load/store users, PromotedType is null and the
+    // alloca will be deleted as dead, so no store is needed.
     if (PromotedType)
       if (auto *II = dyn_cast<IntrinsicInst>(I))
         if (II->isLifetimeStartOrEnd()) {

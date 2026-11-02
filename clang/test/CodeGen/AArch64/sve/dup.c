@@ -13,6 +13,8 @@
 // RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o -        %s | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
 // RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM
 
+// RUN:                   %clang_cc1_cg_arm64_sme                        -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+
 //=============================================================================
 // NOTES
 //
@@ -730,9 +732,9 @@ svuint32_t test_svdup_n_u32_x(svbool_t pg, uint32_t op) MODE_ATTR
 // CIR-SAME:   (!cir.vector<[4] x !u32i>, !cir.vector<[4] x !cir.int<u, 1>>, !u32i) -> !cir.vector<[4] x !u32i>
 
 // LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
-// CPP-LLVM:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-LLVM:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[TMP0]], i32 [[OP:%.*]])
-// CPP-LLVM:    ret <vscale x 4 x i32> [[TMP1]]
+// LLVM:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// LLVM:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[TMP0]], i32 [[OP:%.*]])
+// LLVM:    ret <vscale x 4 x i32> [[TMP1]]
   return SVE_ACLE_FUNC(svdup,_n,_u32_x,)(pg, op);
 }
 

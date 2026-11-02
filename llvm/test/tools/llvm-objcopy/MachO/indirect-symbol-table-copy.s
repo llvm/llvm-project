@@ -6,6 +6,13 @@
 # RUN: llvm-readobj --symbols --macho-indirect-symbols %t.copy \
 # RUN:   | FileCheck %s
 
+## Local symbols referenced by the indirect symbol table must be preserved.
+# RUN: llvm-objcopy -x %t %t.discard
+# RUN: llvm-readobj --symbols --macho-indirect-symbols %t.discard \
+# RUN:   | FileCheck %s --check-prefix=DISCARD
+# RUN: llvm-strip -x %t -o %t.strip
+# RUN: cmp %t.discard %t.strip
+
 # __DATA,__nl_symbol_ptr
 .non_lazy_symbol_pointer
 bar:
@@ -64,3 +71,17 @@ foo:
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
 # CHECK-NEXT: }
+
+# DISCARD:      Symbols [
+# DISCARD-NEXT:   Symbol {
+# DISCARD-NEXT:     Name: foo
+# DISCARD-NEXT:     Type: Section (0xE)
+# DISCARD-NEXT:     Section: __la_symbol_ptr (0x3)
+# DISCARD-NEXT:     RefType: UndefinedNonLazy (0x0)
+# DISCARD-NEXT:     Flags [ (0x0)
+# DISCARD-NEXT:     ]
+# DISCARD-NEXT:     Value: 0x8
+# DISCARD-NEXT:   }
+# DISCARD-NEXT: ]
+# DISCARD:        Symbol Index: 0x80000000
+# DISCARD:        Symbol Index: 0x0

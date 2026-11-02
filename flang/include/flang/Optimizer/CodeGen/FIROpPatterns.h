@@ -12,6 +12,8 @@
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/SymbolTable.h"
+#include <type_traits>
 
 namespace fir {
 
@@ -19,12 +21,105 @@ struct FIRToLLVMPassOptions;
 
 static constexpr unsigned defaultAddressSpace = 0u;
 
+/// Symbol lookups in the FIR to LLVM conversion.
+///
+/// The conversion patterns resolve `fir.address_of`, derived type descriptor
+/// globals, comdat selectors and runtime declarations by name.
+/// `mlir::SymbolTable::lookupSymbolIn` walks every operation of the symbol
+/// table operation, so resolving each reference that way costs O(#symbols),
+/// and converting a module with N derived types (about 25 runtime type info
+/// globals each) takes O(N^2). When the driver provides a
+/// `mlir::SymbolTableCollection`, these helpers resolve names through it in
+/// O(1) and keep it current while the conversion replaces symbol operations;
+/// without one they fall back to the linear walk.
+///
+/// A driver that provides a collection must:
+///  - build the tables with `buildSymbolTables` before applying the conversion.
+///    With pattern rollback enabled (the default), a replaced `fir.global` is
+///    erased only when the conversion finishes, so a table constructed lazily
+///    in the middle of the conversion would see both the `fir.global` and the
+///    `llvm.mlir.global` of the same name and silently keep the first one;
+///  - pass the same collection to every pattern set of the conversion that
+///    looks up or declares symbols the FIR patterns also use, in particular
+///    `mlir::populateFuncToLLVMConversionPatterns` (so that `func.func`
+///    replacements are reflected: the allocator helpers and
+///    `getDependentTypeMemSizeFn` look functions up by name) and, where used,
+///    `mlir::populateFinalizeMemRefToLLVMConversionPatterns` (which declares
+///    malloc/free itself). A declaration made behind the collection's back is
+///    invisible to the FIR patterns, which would then add a second one.
+///
+/// Symbol operations replaced by other pattern sets of the same conversion
+/// (OpenMP region ops, for instance) stay in the collection as stale entries.
+/// Nothing in the FIR patterns looks those up, and the collection does not
+/// outlive the conversion.
+///
+/// Registering an operation created through the rewriter is only valid if the
+/// pattern cannot be rolled back afterwards: the pattern must not fail after
+/// registering, and every operation it creates or modifies in place must be
+/// legalizable, since a failed legalization of those rolls the pattern back
+/// and erases what it created, leaving a dangling entry. This holds for the
+/// sites below that register rewriter-created symbols (GlobalOpConversion,
+/// genSourceFile, the external type descriptor declaration in
+/// getTypeDescriptor): they create LLVM dialect operations only, after their
+/// last failure path.
+
+/// Look up the symbol `name` in `symbolTableOp`, returning null if there is no
+/// such symbol or it is not an `OpTy`. `name` is a string (`StringRef` or
+/// anything convertible to it), a `StringAttr`, or a `SymbolRefAttr`; a nested
+/// reference is resolved through the nested symbol tables.
+template <typename OpTy, typename NameT>
+OpTy lookupSymbolIn(mlir::Operation *symbolTableOp, NameT name,
+                    mlir::SymbolTableCollection *symbolTables) {
+  if (!symbolTables)
+    return mlir::dyn_cast_or_null<OpTy>(
+        mlir::SymbolTable::lookupSymbolIn(symbolTableOp, name));
+  OpTy op;
+  if constexpr (std::is_same_v<NameT, mlir::SymbolRefAttr>)
+    op = symbolTables->lookupSymbolIn<OpTy>(symbolTableOp, name);
+  else
+    op = symbolTables->getSymbolTable(symbolTableOp).lookup<OpTy>(name);
+#ifdef EXPENSIVE_CHECKS
+  // A replacement is always inserted before the operation it replaces, so on
+  // a hit the linear walk must find the same operation.
+  assert((!op ||
+          op == mlir::dyn_cast_or_null<OpTy>(
+                    mlir::SymbolTable::lookupSymbolIn(symbolTableOp, name))) &&
+         "symbol tables and module out of sync");
+#endif
+  return op;
+}
+
+/// Record `symbol`, a symbol operation just created inside `symbolTableOp`, in
+/// the symbol tables. No-op without a collection.
+void registerSymbol(mlir::SymbolTableCollection *symbolTables,
+                    mlir::Operation *symbolTableOp, mlir::Operation *symbol);
+
+/// Record that `newSymbol` replaces `oldSymbol` (both children of
+/// `symbolTableOp`, with the same name). Must be called before the rewriter
+/// erases `oldSymbol`. No-op without a collection.
+void replaceSymbol(mlir::SymbolTableCollection *symbolTables,
+                   mlir::Operation *symbolTableOp, mlir::Operation *oldSymbol,
+                   mlir::Operation *newSymbol);
+
+/// Forget `symbol`, which is about to be erased. No-op without a collection.
+void unregisterSymbol(mlir::SymbolTableCollection *symbolTables,
+                      mlir::Operation *symbolTableOp, mlir::Operation *symbol);
+
+/// Build the symbol tables of `root` and of every symbol table operation
+/// nested in it (gpu modules, comdats). See the note above on why this must
+/// run before the conversion. A pass instance scheduled on a nested symbol
+/// table operation (a `gpu.module`) must pass that operation, not the parent
+/// module: sibling operations may be converted concurrently.
+void buildSymbolTables(mlir::SymbolTableCollection &symbolTables,
+                       mlir::Operation *root);
+
 class ConvertFIRToLLVMPattern : public mlir::ConvertToLLVMPattern {
 public:
   ConvertFIRToLLVMPattern(llvm::StringRef rootOpName,
                           mlir::MLIRContext *context,
                           const fir::LLVMTypeConverter &typeConverter,
                           const fir::FIRToLLVMPassOptions &options,
+                          mlir::SymbolTableCollection *symbolTables = nullptr,
                           mlir::PatternBenefit benefit = 1);
 
 protected:
@@ -194,6 +289,11 @@ protected:
 
   const fir::FIRToLLVMPassOptions &options;
 
+  /// Symbol tables of the module being converted, maintained by the patterns
+  /// as they replace symbol operations (see `fir::lookupSymbolIn`). Null when
+  /// the driver did not provide any; lookups then fall back to a linear walk.
+  mlir::SymbolTableCollection *symbolTables;
+
   using ConvertToLLVMPattern::matchAndRewrite;
 };
 
@@ -206,10 +306,11 @@ public:
 
   explicit FIROpConversion(const LLVMTypeConverter &typeConverter,
                            const fir::FIRToLLVMPassOptions &options,
+                           mlir::SymbolTableCollection *symbolTables = nullptr,
                            mlir::PatternBenefit benefit = 1)
       : ConvertFIRToLLVMPattern(SourceOp::getOperationName(),
                                 &typeConverter.getContext(), typeConverter,
-                                options, benefit) {}
+                                options, symbolTables, benefit) {}
 
   /// Wrappers around the RewritePattern methods that pass the derived op type.
   llvm::LogicalResult

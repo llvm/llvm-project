@@ -75,7 +75,6 @@ class MIREmbedder;
 class SymbolicMIREmbedder;
 
 LLVM_ABI extern llvm::cl::OptionCategory MIR2VecCategory;
-LLVM_ABI extern cl::opt<float> OpcWeight, CommonOperandWeight, RegOperandWeight;
 
 using Embedding = ir2vec::Embedding;
 using MachineInstEmbeddingsMap = DenseMap<const MachineInstr *, Embedding>;
@@ -307,11 +306,7 @@ protected:
   /// Weight for opcode embeddings
   const float OpcWeight, CommonOperandWeight, RegOperandWeight;
 
-  MIREmbedder(const MachineFunction &MF, const MIRVocabulary &Vocab)
-      : MF(MF), Vocab(Vocab), Dimension(Vocab.getDimension()),
-        OpcWeight(mir2vec::OpcWeight),
-        CommonOperandWeight(mir2vec::CommonOperandWeight),
-        RegOperandWeight(mir2vec::RegOperandWeight) {}
+  LLVM_ABI MIREmbedder(const MachineFunction &MF, const MIRVocabulary &Vocab);
 
   /// Function to compute embeddings.
   LLVM_ABI Embedding computeEmbeddings() const;

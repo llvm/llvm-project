@@ -16,7 +16,7 @@ regBankSelected: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: loadgotauth_implicit_defs
-    ; CHECK: [[LOADgotAUTH:%[0-9]+]]:gpr64common = LOADgotAUTH target-flags(aarch64-got) @var_got, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+    ; CHECK: [[LOADgotAUTH:%[0-9]+]]:gpr64common = LOADgotAUTH target-flags(aarch64-got) @var_got, implicit-def dead $x16, implicit-def dead $x17, implicit-def dead $nzcv
     ; CHECK-NEXT: $x0 = COPY [[LOADgotAUTH]]
     %0:gpr(p0) = G_GLOBAL_VALUE @var_got
     $x0 = COPY %0(p0)

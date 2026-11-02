@@ -1,6 +1,10 @@
 // clang-format off
 // REQUIRES: lld, target-windows
 
+// Flaky on the Windows on Arm bot
+// https://github.com/llvm/llvm-project/issues/234109.
+// UNSUPPORTED: system-windows, target-aarch64
+
 // RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
 // RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/stack_unwinding01.lldbinit 2>&1 | FileCheck %s

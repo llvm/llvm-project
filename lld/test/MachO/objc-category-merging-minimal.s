@@ -12,11 +12,12 @@
 ## Create our main testing dylib - linking against the fake dylib above
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal.o merge_cat_minimal.s
 # RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_no_merge.dylib a64_fakedylib.dylib merge_cat_minimal.o
-# RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging a64_fakedylib.dylib merge_cat_minimal.o
+# RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging -map merge_cat_minimal.map a64_fakedylib.dylib merge_cat_minimal.o
 
 ## Now verify that the flag caused category merging to happen appropriatelly
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_no_merge.dylib | FileCheck %s --check-prefixes=NO_MERGE_CATS
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_merge.dylib | FileCheck %s --check-prefixes=MERGE_CATS
+# RUN: FileCheck %s --check-prefix=CATEGORY_MAP < merge_cat_minimal.map
 
 ############ Test merging multiple categories into the base class ############
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_base_class_minimal.o merge_base_class_minimal.s
@@ -83,6 +84,14 @@ MERGE_CATS-NEXT:    imp {{.*}} -[MyBaseClass(Category02) cat02_InstanceMethod]
 MERGE_CATS-NEXT:         classMethods 0x0
 MERGE_CATS-NEXT:            protocols 0x0
 MERGE_CATS-NEXT:   instanceProperties 0x0
+
+## Erased method lists must not get output addresses or appear among live map
+## symbols. Only the merged two-method list remains.
+# CATEGORY_MAP: 0x{{[0-9A-F]+}} 0x00000020 __TEXT __objc_methlist
+# CATEGORY_MAP: # Symbols:
+# CATEGORY_MAP-NOT: __OBJC_$_CATEGORY_INSTANCE_METHODS_MyBaseClass_$_Category
+# CATEGORY_MAP: __OBJC_$_INSTANCE_METHODS_MyBaseClass(Category01|Category02)
+# CATEGORY_MAP-NOT: __OBJC_$_CATEGORY_INSTANCE_METHODS_MyBaseClass_$_Category
 
 #### Check merge categories disabled ###
 # Check that the merged category is not there

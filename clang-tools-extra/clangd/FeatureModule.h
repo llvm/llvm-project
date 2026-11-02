@@ -108,6 +108,17 @@ public:
     /// Listeners are destroyed once the AST is built.
     virtual ~ASTListener() = default;
 
+    /// Called for a main-file build immediately before BeginSourceFile(). Not
+    /// called for preamble builds. The virtual filesystem, diagnostics, target,
+    /// and file manager are available. The source manager, preprocessor, AST
+    /// context, and AST consumer are not set up yet.
+    /// Use this to configure diagnostics emitted during frontend
+    /// initialization, including loading precompiled modules. Normal diagnostic
+    /// filtering still applies. Do not change the frontend inputs or options
+    /// affecting compilation semantics (e.g. macro definitions): they must
+    /// remain consistent with the preamble, which may already have been built.
+    virtual void beforeBeginSourceFile(CompilerInstance &CI) {}
+
     /// Called before every AST build, after the Preprocessor and ASTConsumer
     /// are set up, but before clangd installs its include and macro collectors.
     /// Modules should only use this when their PPCallbacks must observe

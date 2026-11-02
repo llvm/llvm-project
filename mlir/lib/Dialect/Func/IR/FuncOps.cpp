@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
@@ -30,11 +31,34 @@
 using namespace mlir;
 using namespace mlir::func;
 
+namespace {
+struct FuncDialectBytecodeInterface : BytecodeDialectInterface {
+  using BytecodeDialectInterface::BytecodeDialectInterface;
+
+  void writeVersion(DialectBytecodeWriter &writer) const override {
+    writer.writeVarInt(1);
+  }
+
+  std::unique_ptr<DialectVersion>
+  readVersion(DialectBytecodeReader &reader) const override {
+    uint64_t version;
+    if (failed(reader.readVarInt(version)))
+      return nullptr;
+    if (version != 1) {
+      reader.emitError("unsupported func dialect bytecode version");
+      return nullptr;
+    }
+    return std::make_unique<DialectVersion>();
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // FuncDialect
 //===----------------------------------------------------------------------===//
 
 void FuncDialect::initialize() {
+  addInterfaces<FuncDialectBytecodeInterface>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
@@ -138,6 +162,35 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
 //===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult FuncOp::readProperties(DialectBytecodeReader &reader,
+                                     OperationState &state) {
+  auto &properties = state.getOrAddProperties<Properties>();
+  // Preserve the pre-DLTI field order for unversioned bytecode.
+  if (failed(reader.readOptionalAttribute(properties.arg_attrs)) ||
+      failed(reader.readAttribute(properties.function_type)) ||
+      failed(reader.readOptionalAttribute(properties.no_inline)) ||
+      failed(reader.readOptionalAttribute(properties.res_attrs)) ||
+      failed(reader.readAttribute(properties.sym_name)) ||
+      failed(reader.readOptionalAttribute(properties.sym_visibility)))
+    return failure();
+
+  if (failed(reader.getDialectVersion<FuncDialect>()))
+    return success();
+  return reader.readOptionalAttribute(properties.dlti);
+}
+
+void FuncOp::writeProperties(DialectBytecodeWriter &writer) {
+  Properties &properties = getProperties();
+  writer.writeOptionalAttribute(properties.arg_attrs);
+  writer.writeAttribute(properties.function_type);
+  writer.writeOptionalAttribute(properties.no_inline);
+  writer.writeOptionalAttribute(properties.res_attrs);
+  writer.writeAttribute(properties.sym_name);
+  writer.writeOptionalAttribute(properties.sym_visibility);
+  if (writer.getBytecodeVersion() >= bytecode::kDialectVersioning)
+    writer.writeOptionalAttribute(properties.dlti);
+}
 
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs) {

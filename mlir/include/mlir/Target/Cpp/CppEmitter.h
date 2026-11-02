@@ -30,6 +30,10 @@ LogicalResult translateToCpp(Operation *op, raw_ostream &os,
                              bool declareVariablesAtTop = false,
                              StringRef fileId = {});
 } // namespace emitc
+
+/// Registers the C++ emitter translation with MLIR.
+void registerToCppTranslation();
+
 } // namespace mlir
 
 #endif // MLIR_TARGET_CPP_CPPEMITTER_H

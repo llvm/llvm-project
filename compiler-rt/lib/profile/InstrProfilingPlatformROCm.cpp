@@ -1165,15 +1165,22 @@ static int isHipAvailable(void) {
 /*  Collect device-side profile data                                          */
 /* -------------------------------------------------------------------------- */
 
-/* Host-shadow drain: static-linked kernels (host __hipRegisterVar shadows) and
- * intercepted dynamic modules. The caller gates this on
- * (NumShadowVariables || NumDynamicModules) && isHipAvailable(); pure
- * device-linked programs (RCCL) are handled by the supplemental HSA pass. */
+/* Host-shadow drain: static-linked kernels on Windows, or if HSA loader
+ * introspection is unavailable on Linux, plus intercepted dynamic modules.
+ * The Linux HSA pass normally drains resident static images without loading
+ * images that were only registered by the host. */
 static int collectHostShadowData(void) {
   int Ret = 0;
 
-  /* Shadow variables (static-linked kernels): drain from every device. */
-  if (NumShadowVariables > 0) {
+  /* On Linux, use host shadows only if HSA cannot enumerate resident images.
+   * Looking up every shadow otherwise loads unused static images. */
+#if defined(__linux__) && !defined(_WIN32)
+  const bool CollectStaticShadows =
+      NumShadowVariables != 0 && !hsaRuntimeAvailable();
+#else
+  constexpr bool CollectStaticShadows = true;
+#endif
+  if (CollectStaticShadows && NumShadowVariables > 0) {
     int OrigDevice = -1;
     hipGetDevice(&OrigDevice);
 
@@ -1250,7 +1257,7 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
     Ret = -1;
 
 #if defined(__linux__) && !defined(_WIN32)
-  /* Supplemental HSA-introspection drain */
+  /* Drain resident device images through HSA. */
   if (drainDevicesViaHsa() != 0)
     Ret = -1;
 #endif

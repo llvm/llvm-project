@@ -58,7 +58,7 @@ void PutenvStackArrayChecker::checkPostCall(const CallEvent &Call,
 
   StringRef ErrorMsg = "The 'putenv' function should not be called with "
                        "arrays that have automatic storage";
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   auto Report = std::make_unique<PathSensitiveBugReport>(BT, ErrorMsg, N);
 
   // Track the argument.

@@ -343,6 +343,18 @@ namespace placement_new_delete {
     void operator delete(DestroyingDelete*, std::destroying_delete_t);
   };
   struct alignas(64) Overaligned {};
+  struct NothrowByValue {
+    void *operator new(std::size_t, std::nothrow_t) noexcept;
+    void *operator new[](std::size_t, std::nothrow_t) noexcept;
+  };
+
+  // Constant-folding the new-expression used to assume the (std::nothrow)
+  // placement argument was an lvalue and assert on the prvalue produced when a
+  // user-declared allocation function takes std::nothrow_t by value.
+  void nothrow_by_value_fold(NothrowByValue *p) {
+    p = (1 ? new (std::nothrow) NothrowByValue[1] : nullptr);
+    p = (1 ? new (std::nothrow) NothrowByValue : nullptr);
+  }
 
   constexpr bool ok() {
     delete new Overaligned;
@@ -376,6 +388,10 @@ namespace placement_new_delete {
       // unreasonable to expect implementations to support this.
       delete new (std::align_val_t{64}) Overaligned; // both-note {{this placement new expression is not supported in constant expressions}}
       break;
+
+    case 5:
+      delete new (std::nothrow) NothrowByValue; // both-note {{call to class-specific 'operator new'}}
+      break;
     }
 
     return true;
@@ -387,6 +403,7 @@ namespace placement_new_delete {
   static_assert(bad(3)); // both-error {{constant expression}} both-note {{in call}}
   static_assert(bad(4)); // both-error {{constant expression}} \
                          // both-note {{in call}}
+  static_assert(bad(5)); // both-error {{constant expression}} both-note {{in call}}
 }
 
 
@@ -1137,7 +1154,7 @@ namespace NewNegSizeNothrow {
 
   constexpr bool test_nothrow_neg_size() {
     int x = get_neg_size();
-    int* p = new (std::nothrow) int[x]; 
+    int* p = new (std::nothrow) int[x];
     return p == nullptr;
   }
 
@@ -1274,13 +1291,13 @@ namespace FreeNonBlockPointer {
   extern int f();
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
-  constexpr int foo() {
+  constexpr int foo() { // expected-error {{constexpr function never produces a constant expression}}
     int *p;
     p = fold((int*)(void*)f);
-    delete p;
+    delete p; // expected-note 2 {{delete of pointer '&f' that does not point to a heap-allocated object}}
     return 10;
   }
-  static_assert(foo() == 10); // both-error {{not an integral constant expression}}
+  static_assert(foo() == 10); // both-error {{not an integral constant expression}} expected-note {{in call to 'foo()'}}
 }
 
 namespace NonPrimitiveImplicitValueInitExpr {

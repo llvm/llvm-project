@@ -327,3 +327,258 @@ define void @selects(ptr noalias %out, ptr addrspace(11) %a, ptr addrspace(11) %
   store i16 %s4, ptr %o4, align 2
   ret void
 }
+
+define <2 x i1> @trunc_as_icmp_ne_and(i8 %x) {
+; CHECK-LABEL: define <2 x i1> @trunc_as_icmp_ne_and(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> poison, i8 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i8> [[TMP2]], <i8 1, i8 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP4]]
+;
+  %c1 = trunc i8 %x to i1
+  %m2 = and i8 %x, 2
+  %c2 = icmp ne i8 %m2, 0
+  %i1 = insertelement <2 x i1> poison, i1 %c1, i32 0
+  %i2 = insertelement <2 x i1> %i1, i1 %c2, i32 1
+  ret <2 x i1> %i2
+}
+
+define <4 x i1> @trunc_as_icmp_ne_and_mixed_preds(i8 %x) {
+; CHECK-LABEL: define <4 x i1> @trunc_as_icmp_ne_and_mixed_preds(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i8> [[TMP2]], <i8 1, i8 2, i8 12, i8 48>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[TMP4]]
+;
+  %c1 = trunc i8 %x to i1
+  %m2 = and i8 %x, 2
+  %c2 = icmp ne i8 %m2, 0
+  %m3 = and i8 %x, 12
+  %c3 = icmp ugt i8 %m3, 0
+  %m4 = and i8 %x, 48
+  %c4 = icmp uge i8 %m4, 1
+  %i1 = insertelement <4 x i1> poison, i1 %c1, i32 0
+  %i2 = insertelement <4 x i1> %i1, i1 %c2, i32 1
+  %i3 = insertelement <4 x i1> %i2, i1 %c3, i32 2
+  %i4 = insertelement <4 x i1> %i3, i1 %c4, i32 3
+  ret <4 x i1> %i4
+}
+
+define void @trunc_as_icmp_ne_and_reused_operand(i16 %x, ptr %out) {
+; CHECK-LABEL: define void @trunc_as_icmp_ne_and_reused_operand(
+; CHECK-SAME: i16 [[X:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[C1:%.*]] = trunc i16 [[X]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i16> [[TMP2]], <i16 2, i16 4>
+; CHECK-NEXT:    [[M4:%.*]] = and i16 [[X]], 8
+; CHECK-NEXT:    [[C4:%.*]] = icmp ne i16 [[M4]], 0
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i16 [[X]], i16 7
+; CHECK-NEXT:    [[S4:%.*]] = select i1 [[C4]], i16 [[M4]], i16 13
+; CHECK-NEXT:    store i16 [[S1]], ptr [[OUT]], align 2
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i16, ptr [[OUT]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i16> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i16> [[TMP3]], <2 x i16> <i16 9, i16 11>
+; CHECK-NEXT:    store <2 x i16> [[TMP5]], ptr [[P2]], align 2
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i16, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store i16 [[S4]], ptr [[P4]], align 2
+; CHECK-NEXT:    ret void
+;
+  %c1 = trunc i16 %x to i1
+  %m2 = and i16 %x, 2
+  %c2 = icmp ne i16 %m2, 0
+  %m3 = and i16 %x, 4
+  %c3 = icmp ne i16 %m3, 0
+  %m4 = and i16 %x, 8
+  %c4 = icmp ne i16 %m4, 0
+  %s1 = select i1 %c1, i16 %x, i16 7
+  %s2 = select i1 %c2, i16 %m2, i16 9
+  %s3 = select i1 %c3, i16 %m3, i16 11
+  %s4 = select i1 %c4, i16 %m4, i16 13
+  store i16 %s1, ptr %out, align 2
+  %p2 = getelementptr inbounds i16, ptr %out, i64 1
+  store i16 %s2, ptr %p2, align 2
+  %p3 = getelementptr inbounds i16, ptr %out, i64 2
+  store i16 %s3, ptr %p3, align 2
+  %p4 = getelementptr inbounds i16, ptr %out, i64 3
+  store i16 %s4, ptr %p4, align 2
+  ret void
+}
+
+define <4 x i1> @trunc_as_icmp_ne_and_commuted_operands(i8 %x, i1 %a, i1 %b, i1 %c, i1 %d) {
+; CHECK-LABEL: define <4 x i1> @trunc_as_icmp_ne_and_commuted_operands(
+; CHECK-SAME: i8 [[X:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i8> [[TMP2]], <i8 1, i8 2, i8 4, i8 8>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i1> poison, i1 [[A]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i1> [[TMP5]], i1 [[B]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> [[TMP6]], i1 [[C]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i1> [[TMP7]], i1 [[D]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    ret <4 x i1> [[TMP9]]
+;
+  %c1 = trunc i8 %x to i1
+  %o1 = or i1 %c1, %a
+  %m2 = and i8 %x, 2
+  %c2 = icmp ne i8 %m2, 0
+  %o2 = or i1 %b, %c2
+  %m3 = and i8 %x, 4
+  %c3 = icmp ne i8 %m3, 0
+  %o3 = or i1 %c, %c3
+  %m4 = and i8 %x, 8
+  %c4 = icmp ne i8 %m4, 0
+  %o4 = or i1 %d, %c4
+  %i1 = insertelement <4 x i1> poison, i1 %o1, i32 0
+  %i2 = insertelement <4 x i1> %i1, i1 %o2, i32 1
+  %i3 = insertelement <4 x i1> %i2, i1 %o3, i32 2
+  %i4 = insertelement <4 x i1> %i3, i1 %o4, i32 3
+  ret <4 x i1> %i4
+}
+
+define <8 x i1> @trunc_as_icmp_ne_and_non_const_rhs(i16 %x, i16 %y, i16 %z) {
+; CHECK-LABEL: define <8 x i1> @trunc_as_icmp_ne_and_non_const_rhs(
+; CHECK-SAME: i16 [[X:%.*]], i16 [[Y:%.*]], i16 [[Z:%.*]]) {
+; CHECK-NEXT:    [[C1:%.*]] = trunc i16 [[X]] to i1
+; CHECK-NEXT:    [[M2:%.*]] = and i16 [[Y]], 2
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i16 [[M2]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[Z]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i16> [[TMP2]], <i16 4, i16 8>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i16> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i16> poison, i16 [[Z]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[TMP5]], <4 x i16> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = and <4 x i16> [[TMP6]], <i16 16, i16 32, i16 64, i16 128>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i16> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <8 x i1> poison, i1 [[C1]], i32 0
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <8 x i1> [[I1]], i1 [[C2]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i1> [[TMP4]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[I42:%.*]] = shufflevector <8 x i1> [[I2]], <8 x i1> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP8]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i1> [[I42]], <8 x i1> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    ret <8 x i1> [[TMP7]]
+;
+  %c1 = trunc i16 %x to i1
+  %m2 = and i16 %y, 2
+  %c2 = icmp ne i16 %m2, %x
+  %m3 = and i16 %z, 4
+  %c3 = icmp ne i16 %m3, 0
+  %m4 = and i16 %z, 8
+  %c4 = icmp ne i16 %m4, 0
+  %m5 = and i16 %z, 16
+  %c5 = icmp ne i16 %m5, 0
+  %m6 = and i16 %z, 32
+  %c6 = icmp ne i16 %m6, 0
+  %m7 = and i16 %z, 64
+  %c7 = icmp ne i16 %m7, 0
+  %m8 = and i16 %z, 128
+  %c8 = icmp ne i16 %m8, 0
+  %i1 = insertelement <8 x i1> poison, i1 %c1, i32 0
+  %i2 = insertelement <8 x i1> %i1, i1 %c2, i32 1
+  %i3 = insertelement <8 x i1> %i2, i1 %c3, i32 2
+  %i4 = insertelement <8 x i1> %i3, i1 %c4, i32 3
+  %i5 = insertelement <8 x i1> %i4, i1 %c5, i32 4
+  %i6 = insertelement <8 x i1> %i5, i1 %c6, i32 5
+  %i7 = insertelement <8 x i1> %i6, i1 %c7, i32 6
+  %i8 = insertelement <8 x i1> %i7, i1 %c8, i32 7
+  ret <8 x i1> %i8
+}
+
+define <8 x i1> @trunc_as_icmp_ne_and_split_preds(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: define <8 x i1> @trunc_as_icmp_ne_and_split_preds(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
+; CHECK-NEXT:    [[C1:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[Y]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i8> [[TMP2]], <i8 64, i8 16, i8 8, i8 2>
+; CHECK-NEXT:    [[M3:%.*]] = and i8 [[Z]], 7
+; CHECK-NEXT:    [[C3:%.*]] = icmp ugt i8 [[M3]], 4
+; CHECK-NEXT:    [[M6:%.*]] = and i8 [[Z]], 56
+; CHECK-NEXT:    [[C6:%.*]] = icmp ugt i8 [[M6]], 40
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[C8:%.*]] = trunc i8 [[Z]] to i1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <8 x i1> poison, i1 [[C1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP4]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i1> [[I1]], <8 x i1> [[TMP5]], <8 x i32> <i32 0, i32 11, i32 poison, i32 10, i32 9, i32 poison, i32 8, i32 poison>
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <8 x i1> [[TMP6]], i1 [[C3]], i32 2
+; CHECK-NEXT:    [[I6:%.*]] = insertelement <8 x i1> [[I3]], i1 [[C6]], i32 5
+; CHECK-NEXT:    [[I8:%.*]] = insertelement <8 x i1> [[I6]], i1 [[C8]], i32 7
+; CHECK-NEXT:    ret <8 x i1> [[I8]]
+;
+  %c1 = trunc i8 %x to i1
+  %m2 = and i8 %y, 2
+  %c2 = icmp ne i8 %m2, 0
+  %m3 = and i8 %z, 7
+  %c3 = icmp ugt i8 %m3, 4
+  %m4 = and i8 %y, 8
+  %c4 = icmp ne i8 %m4, 0
+  %m5 = and i8 %y, 16
+  %c5 = icmp ne i8 %m5, 0
+  %m6 = and i8 %z, 56
+  %c6 = icmp ugt i8 %m6, 40
+  %m7 = and i8 %y, 64
+  %c7 = icmp ne i8 %m7, 0
+  %c8 = trunc i8 %z to i1
+  %i1 = insertelement <8 x i1> poison, i1 %c1, i32 0
+  %i2 = insertelement <8 x i1> %i1, i1 %c2, i32 1
+  %i3 = insertelement <8 x i1> %i2, i1 %c3, i32 2
+  %i4 = insertelement <8 x i1> %i3, i1 %c4, i32 3
+  %i5 = insertelement <8 x i1> %i4, i1 %c5, i32 4
+  %i6 = insertelement <8 x i1> %i5, i1 %c6, i32 5
+  %i7 = insertelement <8 x i1> %i6, i1 %c7, i32 6
+  %i8 = insertelement <8 x i1> %i7, i1 %c8, i32 7
+  ret <8 x i1> %i8
+}
+
+define <4 x i1> @trunc_as_icmp_ne_and_inst_operand(i8 %x, i8 %y) {
+; CHECK-LABEL: define <4 x i1> @trunc_as_icmp_ne_and_inst_operand(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i8> [[TMP2]], <i8 1, i8 2, i8 4, i8 8>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[TMP4]]
+;
+  %a = add i8 %x, %y
+  %c1 = trunc i8 %a to i1
+  %m2 = and i8 %a, 2
+  %c2 = icmp ne i8 %m2, 0
+  %m3 = and i8 %a, 4
+  %c3 = icmp ne i8 %m3, 0
+  %m4 = and i8 %a, 8
+  %c4 = icmp ne i8 %m4, 0
+  %i1 = insertelement <4 x i1> poison, i1 %c1, i32 0
+  %i2 = insertelement <4 x i1> %i1, i1 %c2, i32 1
+  %i3 = insertelement <4 x i1> %i2, i1 %c3, i32 2
+  %i4 = insertelement <4 x i1> %i3, i1 %c4, i32 3
+  ret <4 x i1> %i4
+}
+
+define <4 x i1> @trunc_as_icmp_eq_and(i8 %x) {
+; CHECK-LABEL: define <4 x i1> @trunc_as_icmp_eq_and(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i8> [[TMP2]], <i8 1, i8 2, i8 4, i8 8>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i8> [[TMP3]], <i8 1, i8 0, i8 0, i8 0>
+; CHECK-NEXT:    ret <4 x i1> [[TMP4]]
+;
+  %c1 = trunc i8 %x to i1
+  %m2 = and i8 %x, 2
+  %c2 = icmp eq i8 %m2, 0
+  %m3 = and i8 %x, 4
+  %c3 = icmp eq i8 %m3, 0
+  %m4 = and i8 %x, 8
+  %c4 = icmp ult i8 %m4, 1
+  %i1 = insertelement <4 x i1> poison, i1 %c1, i32 0
+  %i2 = insertelement <4 x i1> %i1, i1 %c2, i32 1
+  %i3 = insertelement <4 x i1> %i2, i1 %c3, i32 2
+  %i4 = insertelement <4 x i1> %i3, i1 %c4, i32 3
+  ret <4 x i1> %i4
+}

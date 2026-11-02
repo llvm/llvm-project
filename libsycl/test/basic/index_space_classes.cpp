@@ -1,26 +1,36 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
-// RUN: %clangxx -fsycl %s -o %t.out
+// RUN: %clangxx -fsycl -Wno-error=deprecated-declarations %s -o %t.out
 // RUN: %t.out
 //
 // Unified test for sycl::range and sycl::id covering all operators defined in
 // theirs base class, plus class-specific behaviour for each type.
 
-#include <cassert>
 #include <sycl/sycl.hpp>
+
+#include <cassert>
 #include <type_traits>
+#include <utility>
 
 using sycl::detail::Builder;
 
 // Helper to create values for any dimension from three components.
 // Only uses the required number of values based on dimension.
 template <template <int> class T, int Dim>
-T<Dim> makeValue(std::size_t a, std::size_t b = 0, std::size_t c = 0) {
+T<Dim> makeValue(std::size_t A, std::size_t B = 0, std::size_t C = 0) {
   if constexpr (Dim == 1)
-    return T<1>(a);
+    return T<1>(A);
   else if constexpr (Dim == 2)
-    return T<2>(a, b);
+    return T<2>(A, B);
   else
-    return T<3>(a, b, c);
+    return T<3>(A, B, C);
 }
 
 // Tests binary and compound operators for a specific dimension.
@@ -277,8 +287,45 @@ void testId() {
   assert(static_cast<short>(9) != ConstId);
 }
 
+// Tests the deprecated conversion from an item without an offset to an item
+// with an offset, which must produce an all-zeros offset and keep the range,
+// the id and the linear id.
+template <int Dim> void testItemOffsetConversionForDim() {
+  const sycl::range<Dim> Extent = makeValue<sycl::range, Dim>(4, 8, 16);
+  const sycl::id<Dim> Index = makeValue<sycl::id, Dim>(2, 3, 5);
+
+  const sycl::item<Dim, false> NoOffset =
+      Builder::createItem<Dim, false>(Extent, Index);
+  const sycl::item<Dim, true> WithOffset = NoOffset;
+
+  assert(WithOffset.get_range() == Extent);
+  assert(WithOffset.get_id() == Index);
+  assert(WithOffset.get_offset() == sycl::id<Dim>{});
+  assert(WithOffset.get_linear_id() == NoOffset.get_linear_id());
+  assert((WithOffset ==
+          Builder::createItem<Dim, true>(Extent, Index, sycl::id<Dim>{})));
+}
+
+void testItem() {
+  testItemOffsetConversionForDim<1>();
+  testItemOffsetConversionForDim<2>();
+  testItemOffsetConversionForDim<3>();
+
+  // The conversion is only available on items without an offset.
+  static_assert(
+      (std::is_convertible_v<sycl::item<1, false>, sycl::item<1, true>>));
+  static_assert(
+      (!std::is_convertible_v<sycl::item<1, true>, sycl::item<1, false>>));
+
+  // An item with an offset reports the linear id relative to the offset.
+  const sycl::item<2, true> Offsetted =
+      Builder::createItem<2, true>({4, 8}, {3, 5}, {1, 1});
+  assert(Offsetted.get_linear_id() == 2 * 8 + 4);
+}
+
 int main() {
   testRange();
   testId();
+  testItem();
   return 0;
 }

@@ -1,5 +1,4 @@
-//===-- Language.h ---------------------------------------------------*- C++
-//-*-===//
+//===-- Language.h --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,11 +11,14 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
@@ -166,6 +168,10 @@ public:
 
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
+
+  /// Returns the Language that handles names mangled with \p scheme, or a
+  /// nullptr if there is none.
+  static Language *FindPluginForManglingScheme(Mangled::ManglingScheme scheme);
 
   static llvm::Expected<lldb::LanguageType>
   GetExceptionLanguageForLanguage(llvm::StringRef lang_name);
@@ -322,6 +328,52 @@ public:
   /// that the name actually belongs to this language.
   virtual bool SymbolNameFitsToLanguage(const Mangled &name) const {
     return false;
+  }
+
+  /// Returns true if this language handles the names mangled with \p scheme.
+  virtual bool HandlesManglingScheme(Mangled::ManglingScheme scheme) const {
+    return false;
+  }
+
+  /// How to demangle a name in DemangleSymbol().
+  struct DemangleOptions {
+    /// Whether to compute the \c DemangledNameInfo too.
+    bool want_info = false;
+  };
+
+  /// A demangled name and, if requested, where its parts begin and end.
+  struct DemangledName {
+    /// Empty if the name couldn't be demangled.
+    std::string name;
+    /// Only computed if DemangleOptions::want_info is true.
+    std::optional<DemangledNameInfo> info;
+  };
+
+  /// Demangle \p mangled, a name mangled with \p scheme, a scheme that this
+  /// language handles.
+  virtual DemangledName DemangleSymbol(ConstString mangled,
+                                       Mangled::ManglingScheme scheme,
+                                       const DemangleOptions &options) const {
+    return {};
+  }
+
+  /// Parses mangled function names.
+  class MangledNameParser {
+  public:
+    virtual ~MangledNameParser() = default;
+
+    /// Parse a function name. Returns std::nullopt if \p mangled isn't a
+    /// function name that this parser understands.
+    virtual std::optional<Mangled::FunctionNameParts>
+    Parse(const Mangled &mangled) = 0;
+  };
+
+  /// Returns a parser for the names mangled with \p scheme, a scheme that this
+  /// language handles, or a nullptr if the symbol table should index them by
+  /// their demangled names.
+  virtual std::unique_ptr<MangledNameParser>
+  CreateMangledNameParser(Mangled::ManglingScheme scheme) const {
+    return nullptr;
   }
 
   /// An individual data formatter may apply to several types and cross language

@@ -194,3 +194,14 @@ namespace InitListBaseInit {
   static_assert(b.a.m == 43);
   static_assert(b.i == 0);
 }
+
+namespace NonCastExprInvalidCast {
+  struct S1 {
+    volatile unsigned int x : 16;
+    volatile unsigned int y : 16;
+  };
+  void fS1() {
+    S1 s1;
+    auto [a, b] = s1;
+  }
+}

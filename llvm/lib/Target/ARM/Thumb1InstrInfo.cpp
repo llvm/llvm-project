@@ -83,7 +83,7 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BitVector Allocatable = RegInfo->getAllocatableSet(
         MF, RegInfo->getRegClass(ARM::hGPRRegClassID));
 
-    Register TmpReg = ARM::NoRegister;
+    Register TmpReg;
     // Prefer R12 as it is known to not be preserved anyway
     if (UsedRegs.available(ARM::R12) && Allocatable.test(ARM::R12)) {
       TmpReg = ARM::R12;

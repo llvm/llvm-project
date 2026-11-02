@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
 // A small condensed version of a problem requiring constant alloca raising in
 // Target Region Entries for user injected code, found in an issue in the Flang
@@ -42,3 +42,38 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 
 // CHECK: user_code.entry:                                  ; preds = %entry
 // CHECK-NEXT:  %[[MAP_ARG_ALLOC:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+
+// -----
+
+// The same raising is required for the host fallback copy of a target region,
+// where the user allocations are injected into a separate block in the same
+// way.
+
+module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_target_device = false} {
+  llvm.func @_QQmain() {
+    %1 = llvm.mlir.constant(1 : i64) : i64
+    %2 = llvm.alloca %1 x !llvm.struct<(ptr)> : (i64) -> !llvm.ptr
+    %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.struct<(ptr)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%3 -> %arg0 : !llvm.ptr) {
+      %4 = llvm.mlir.constant(1 : i32) : i32
+      %5 = llvm.alloca %4 x !llvm.struct<(ptr)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+      %6 = llvm.mlir.constant(50 : i32) : i32
+      %7 = llvm.mlir.constant(1 : i64) : i64
+      %8 = llvm.alloca %7 x i32 : (i64) -> !llvm.ptr
+      llvm.store %6, %8 : i32, !llvm.ptr
+      %9 = llvm.mlir.undef : !llvm.struct<(ptr)>
+      %10 = llvm.insertvalue %8, %9[0] : !llvm.struct<(ptr)>
+      llvm.store %10, %5 : !llvm.struct<(ptr)>, !llvm.ptr
+      %11 = llvm.call @_ExternalCall(%arg0, %5) : (!llvm.ptr, !llvm.ptr) -> !llvm.struct<()>
+      omp.terminator
+    }
+    llvm.return
+  }
+  llvm.func @_ExternalCall(!llvm.ptr, !llvm.ptr) -> !llvm.struct<()>
+}
+
+// CHECK:      define internal void @{{.*}}QQmain_l{{[0-9]+}}(ptr {{.*}}, ptr {{.*}}) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:  %[[HOST_MOVED_ALLOCA1:.*]] = alloca { ptr }, align 8
+// CHECK-NEXT:  %[[HOST_MOVED_ALLOCA2:.*]] = alloca i32, i64 1, align 4
+// CHECK-NEXT:  br label %omp.region.after_alloca

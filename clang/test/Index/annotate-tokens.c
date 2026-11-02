@@ -106,7 +106,7 @@ void test() {
 // CHECK: Identifier: "ptr" [8:14 - 8:17] DeclRefExpr=ptr:3:14
 // CHECK: Punctuation: "?" [8:18 - 8:19] UnexposedExpr=
 // CHECK: Punctuation: ":" [8:20 - 8:21] UnexposedExpr=
-// CHECK: Punctuation: "&" [8:22 - 8:23] UnaryOperator=
+// CHECK: Punctuation: "&" [8:22 - 8:23] UnaryOperator=&
 // CHECK: Identifier: "x" [8:23 - 8:24] DeclRefExpr=x:7:12
 // CHECK: Punctuation: ";" [8:24 - 8:25] DeclStmt=
 // CHECK: Keyword: "const" [9:3 - 9:8] VarDecl=hello:9:16 (Definition)
@@ -130,7 +130,7 @@ void test() {
 // CHECK: Identifier: "x" [20:5 - 20:6] DeclRefExpr=x:18:12
 // CHECK: Punctuation: "." [20:6 - 20:7] MemberRefExpr=a:2:16
 // CHECK: Identifier: "a" [20:7 - 20:8] MemberRefExpr=a:2:16
-// CHECK: Punctuation: "++" [20:8 - 20:10] UnaryOperator=
+// CHECK: Punctuation: "++" [20:8 - 20:10] UnaryOperator=++
 // CHECK: Punctuation: ";" [20:10 - 20:11] CompoundStmt=
 // CHECK: Punctuation: "}" [21:3 - 21:4] CompoundStmt=
 // CHECK: Keyword: "while" [21:5 - 21:10] DoStmt=

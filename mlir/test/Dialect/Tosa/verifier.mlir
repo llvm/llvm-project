@@ -205,56 +205,6 @@ func.func @test_scalar_slice(%arg0: tensor<f32>) -> tensor<f32> {
 
 // -----
 
-func.func @test_slice_invalid_start_values(%arg0: tensor<4x31x31xf32>) {
-  %start = tosa.const_shape values(dense<[-2, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 1, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op start values must be non-negative, got [-2, 0, 0]}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x1xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_invalid_size_values(%arg0: tensor<4x31x31xf32>) {
-  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op size values must be > 0, got [1, 0, 1]}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_output_shape_mismatch(%arg0: tensor<4x5x6xf32>) {
-  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 2, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op expected output shape to match size values, got 'tensor<1x2x4xf32>' vs [1, 2, 3]}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<4x5x6xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x2x4xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_invalid_start_plus_size(%arg0: tensor<?x2xf32>) {
-  %start = tosa.const_shape values(dense<[-1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  %size = tosa.const_shape values(dense<[3, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=1, size=2 vs input dim size=2 at dimension 1}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<?x2xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x2xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_output_shape_mismatch_dynamic(%arg0: tensor<?x5x6xf32>) {
-  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 2, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op expected output shape to match size values, got 'tensor<?x2x4xf32>' vs [1, 2, 3]}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<?x5x6xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x2x4xf32>
-  return
-}
-
-// -----
-
 func.func @test_conv2d_mxfp_invalid_weight_zp(%arg0: tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg2: tensor<8xf16>) -> tensor<1x4x4x8xf16> {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
@@ -343,6 +293,26 @@ func.func @test_depthwise_conv2d_invalid_bias_size(%arg0: tensor<1x4x4x4xf32>, %
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(f32) local_bound(true)
     : (tensor<1x4x4x4xf32>, tensor<1x1x8x4xf32>, tensor<7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
   return %0 : tensor<1x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp_input_zp_type(%input: tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %weight: tensor<8x1x1x1x32xf32>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf16>) : () -> tensor<1xf16>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op expect block scaled input to have fp32 zero point}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32xf32>, tensor<8xf32>, tensor<1xf16>, tensor<1xf32>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp_weight_zp_type(%input: tensor<1x4x4x4x32xf32>, %weight: tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf16>) : () -> tensor<1xf16>
+  // expected-error@+1 {{'tosa.conv3d' op expect block scaled weight to have fp32 zero point}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32xf32>, tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf32>, tensor<1xf32>, tensor<1xf16>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
 }
 
 // -----
@@ -668,19 +638,11 @@ func.func @test_pad_invalid_padding_rank(%arg0: tensor<13x21xf32>) {
 }
 
 // -----
-func.func @test_pad_output_mismatch(%arg0: tensor<13x21x3xi8>, %arg1: tensor<1xi8>) -> tensor<13x21x3xi8> {
-  %0 = tosa.const_shape values(dense<[0, 0, 0, 1, 0, 1]> : tensor<6xindex>) : () -> !tosa.shape<6>
-  // expected-error@+1 {{mismatch in output shape at dimension 1: expected 21 + 0 + 1 = 22, but got 21}}
-  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<13x21x3xi8>, !tosa.shape<6>, tensor<1xi8>) -> tensor<13x21x3xi8>
-  return %1 : tensor<13x21x3xi8>
-}
-
-// -----
-func.func @test_pad_invalid_padding_value(%arg0: tensor<10xi8>, %arg1: tensor<1xi8>) -> tensor<10xi8> {
-  %0 = tosa.const_shape values(dense<[-2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  // expected-error@+1 {{invalid padding values at dimension 0: values must be non-negative or -1 for dynamic padding, got [-2, 2]}}
-  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<10xi8>, !tosa.shape<2>, tensor<1xi8>) -> tensor<10xi8>
-  return %1 : tensor<10xi8>
+func.func @test_pad_computed_padding_rank(%arg0: tensor<13x21x3xf32>, %arg1: tensor<1xf32>) {
+  %0 = tosa.dim %arg0 axis(0) : (tensor<13x21x3xf32>) -> !tosa.shape<1>
+  // expected-error@+1 {{'tosa.pad' op padding tensor must have 3 * 2 = 6 elements, but got 1}}
+  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<13x21x3xf32>, !tosa.shape<1>, tensor<1xf32>) -> tensor<13x21x3xf32>
+  return
 }
 
 // -----
@@ -1342,10 +1304,64 @@ func.func @scatter_invalid_K_W(%arg0 : tensor<2x4x5xi32>, %arg1 : tensor<2x6xi32
 
 // -----
 
+func.func @test_matmul_a_rank_too_low(%arg0: tensor<4xf32>, %arg1: tensor<4x5xf32>) -> tensor<1x5xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op operand #0 must be tosa-conformant tensor of at least rank 2 of number values, but got 'tensor<4xf32>'}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x5xf32>
+  return %0 : tensor<1x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_b_rank_too_low(%arg0: tensor<3x4xf32>, %arg1: tensor<4xf32>) -> tensor<3x1xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op operand #1 must be tosa-conformant tensor of at least rank 2 of number values, but got 'tensor<4xf32>'}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<3x4xf32>, tensor<4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x1xf32>
+  return %0 : tensor<3x1xf32>
+}
+
+// -----
+
+func.func @test_matmul_output_rank_too_low(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) -> tensor<5xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op result #0 must be tosa-conformant tensor of at least rank 2 of number values, but got 'tensor<5xf32>'}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<3x4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<5xf32>
+  return %0 : tensor<5xf32>
+}
+
+// -----
+
+func.func @test_matmul_batch_mismatch_rank4(%arg0: tensor<2x3x4x7xf32>, %arg1: tensor<5x4x7x6xf32>) -> tensor<2x3x4x6xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected batch dimensions of a and b to be broadcast compatible, got a=[2, 3] and b=[5, 4]}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<2x3x4x7xf32>, tensor<5x4x7x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x4x6xf32>
+  return %0 : tensor<2x3x4x6xf32>
+}
+
+// -----
+
+func.func @test_matmul_channel_mismatch_rank4(%arg0: tensor<2x3x4x7xf32>, %arg1: tensor<2x3x8x6xf32>) -> tensor<2x3x4x6xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected channels of b to match size 7, got 8}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<2x3x4x7xf32>, tensor<2x3x8x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x4x6xf32>
+  return %0 : tensor<2x3x4x6xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_output_shape_mismatch_rank5(%arg0: tensor<2x1x3x4x7xf32>, %arg1: tensor<5x3x6x7xf32>) -> tensor<2x5x3x4x8xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op expected output shape 2, 5, 3, 4, 8 to be compatible with inferred shape 2, 5, 3, 4, 6}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<2x1x3x4x7xf32>, tensor<5x3x6x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x5x3x4x8xf32>
+  return %0 : tensor<2x5x3x4x8xf32>
+}
+
+// -----
+
 func.func @test_matmul_output_batch_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: tensor<5x4x6xf32>) -> tensor<2x3x6xf32> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // expected-error@+1 {{'tosa.matmul' op expected batch of b to match size 2, got 5}}
+  // expected-error@+1 {{'tosa.matmul' op expected batch dimensions of a and b to be broadcast compatible, got a=[2] and b=[5]}}
   %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4xf32>, tensor<5x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x6xf32>
   return %0 : tensor<2x3x6xf32>
 }
@@ -1376,7 +1392,7 @@ func.func @test_matmul_output_shape_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: te
 func.func @test_matmul_dynamic_batch_mismatch(%arg0: tensor<2x?x4xf32>, %arg1: tensor<5x4x6xf32>) -> tensor<2x?x6xf32> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // expected-error@+1 {{'tosa.matmul' op expected batch of b to match size 2, got 5}}
+  // expected-error@+1 {{'tosa.matmul' op expected batch dimensions of a and b to be broadcast compatible, got a=[2] and b=[5]}}
   %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x?x4xf32>, tensor<5x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x?x6xf32>
   return %0 : tensor<2x?x6xf32>
 }
@@ -1403,7 +1419,6 @@ func.func @test_matmul_dynamic_output_shape_mismatch(%arg0: tensor<?x3x4xf32>, %
 
 // -----
 
-
 func.func @test_matmul_unranked_b_output_shape_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: tensor<*xf32>) -> tensor<2x5x?xf32> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
@@ -1414,6 +1429,35 @@ func.func @test_matmul_unranked_b_output_shape_mismatch(%arg0: tensor<2x3x4xf32>
 
 // -----
 
+func.func @test_matmul_unranked_b_output_batch_mismatch(%arg0: tensor<2x3x4x7xf32>, %arg1: tensor<*xf32>) -> tensor<5x3x4x?xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected output shape 5, 3, 4, ? to be compatible with inferred shape 2, 3, 4, ?}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4x7xf32>, tensor<*xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<5x3x4x?xf32>
+  return %0 : tensor<5x3x4x?xf32>
+}
+
+// -----
+
+func.func @test_matmul_unranked_b_output_rank_too_low(%arg0: tensor<2x3x4x7xf32>, %arg1: tensor<*xf32>) -> tensor<3x4x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected output rank of at least 4, got 3}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4x7xf32>, tensor<*xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x4x5xf32>
+  return %0 : tensor<3x4x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_output_rank_too_high(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) -> tensor<1x3x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected output shape 1, 3, 5 to be compatible with inferred shape 3, 5}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<3x4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x3x5xf32>
+  return %0 : tensor<1x3x5xf32>
+}
+
+// -----
 
 func.func @test_matmul_quantized_mixed_operands(%arg0: tensor<2x3x4x!quant.uniform<i8:f32, 0.125>>, %arg1: tensor<2x4x6xf32>) -> tensor<2x3x6xi32> {
   %azp0 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
@@ -1512,7 +1556,7 @@ func.func @test_matmul_t_channel_mismatch(%arg0: tensor<1x14x19xf32>, %arg1: ten
 func.func @test_matmul_t_batch_mismatch(%arg0: tensor<4x14x19xf32>, %arg1: tensor<2x28x19xf32>) -> tensor<4x14x28xf32> {
 %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-// expected-error@+1 {{'tosa.matmul_t' op expect B matrix batch size to be broadcast compatible with A, got D=2 vs N=4}}
+// expected-error@+1 {{'tosa.matmul_t' op expected batch dimensions of a and b to be broadcast compatible, got a=[4] and b=[2]}}
 %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<4x14x19xf32>, tensor<2x28x19xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<4x14x28xf32>
   return %0 : tensor<4x14x28xf32>
 }
@@ -2436,16 +2480,6 @@ func.func @test_transpose_block_scaled_illegal_perms(%input: tensor<29x12x32x96x
   // expected-error@+1 {{expected no-op permutation on innermost dimension for block scaled input}}
   %transpose = tosa.transpose %input perms([3, 0, 1, 2]) : (tensor<29x12x32x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
   return %transpose : tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
-}
-
-// -----
-
-func.func @test_slice_block_scaled_invalid_block_size(%arg0: tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
-  %start = tosa.const_shape values(dense<[0, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 1, 32]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op expected start innermost block size to match data type for block scaled input, got start block=1, scale block=32}}
-  %0 = tosa.slice %arg0, %start, %size {input_unsigned = false} : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
-  return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
 // -----

@@ -206,6 +206,37 @@ void foo() {
 }
 } // namespace ReturnTypeRequirementInLambda
 
+namespace GH236286 {
+template <class T, class U>
+concept DecaysTo = __is_same(__decay(T), U);
+
+template <class T, auto Constraint>
+concept Satisfies = requires { Constraint.template operator()<T>(); };
+
+static_assert(requires(int i) {
+  { i } -> Satisfies<[]<DecaysTo<int>> {}>;
+});
+static_assert(!requires(int i) {
+  { i } -> Satisfies<[]<DecaysTo<double>> {}>;
+});
+} // namespace GH236286
+
+namespace LambdaTypeConstraintSubstitution {
+template <class T, class U>
+concept DecaysTo = __is_same(__decay(T), U);
+
+template <class T, auto Constraint>
+concept Satisfies = requires { Constraint.template operator()<T>(); };
+
+template <class T, class Expected>
+concept Matches = requires(T t) {
+  { t } -> Satisfies<[]<class U> requires DecaysTo<Expected, int> {}>;
+};
+
+static_assert(Matches<int, int>);
+static_assert(!Matches<int, double>);
+} // namespace LambdaTypeConstraintSubstitution
+
 namespace GH73418 {
 void foo() {
   int x;

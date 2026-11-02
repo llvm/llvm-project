@@ -8,7 +8,7 @@ subroutine test()
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}} {{.*}}Ec_deferred
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_6:.*]] {{.*}}Ec_longer
 ! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_11:.*]] {{.*}}Ec_shorter
-! CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_16:.*]] {{{.*}}Ec_source
+! CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_16:.*]] {{.*}}Ec_source
   character(5) :: c_source = "hello"
   character(2), allocatable :: c_shorter
   character(:), allocatable :: c_deferred

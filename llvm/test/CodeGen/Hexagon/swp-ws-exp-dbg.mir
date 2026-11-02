@@ -230,24 +230,24 @@ body:             |
     DBG_VALUE float 0x3F56C16C20000000, $noreg, !41, !DIExpression(), debug-location !69
     DBG_VALUE 0, $noreg, !42, !DIExpression(), debug-location !70
     %3:predregs = C2_cmpeqi %2, 0, debug-location !71
-    J2_jumpt killed %3, %bb.2, implicit-def dead $pc, debug-location !72
+    J2_jumpt %3, %bb.2, implicit-def dead $pc, debug-location !72
     J2_jump %bb.1, implicit-def dead $pc, debug-location !72
   
   bb.1.for.body.lr.ph:
     successors: %bb.3(0x80000000)
   
     %4:intregs = A2_tfrsi 1065353216
-    %5:hvxvr = V6_lvsplatw killed %4
+    %5:hvxvr = V6_lvsplatw %4
     %6:intregs = A2_tfrsi 1056964608
-    %7:hvxvr = V6_lvsplatw killed %6
+    %7:hvxvr = V6_lvsplatw %6
     %8:intregs = A2_tfrsi 1042983595
-    %9:hvxvr = V6_lvsplatw killed %8
+    %9:hvxvr = V6_lvsplatw %8
     %10:intregs = A2_tfrsi 1026206379
-    %11:hvxvr = V6_lvsplatw killed %10
+    %11:hvxvr = V6_lvsplatw %10
     %12:intregs = A2_tfrsi 1007192201
-    %13:hvxvr = V6_lvsplatw killed %12
+    %13:hvxvr = V6_lvsplatw %12
     %14:intregs = A2_tfrsi 985008993
-    %15:hvxvr = V6_lvsplatw killed %14
+    %15:hvxvr = V6_lvsplatw %14
     %16:intregs = A2_addi %2, 31, debug-location !72
     %17:intregs = S2_lsr_i_r %16, 5, debug-location !72
     %18:intregs = COPY %17, debug-location !72
@@ -289,21 +289,21 @@ body:             |
     DBG_VALUE %32, $noreg, !60, !DIExpression(), debug-location !75
     %33:hvxvr = V6_vmpyowh_rnd %13, %28, debug-location !84
     DBG_VALUE %33, $noreg, !61, !DIExpression(), debug-location !75
-    %34:hvxvr = V6_vmpyowh_rnd %15, killed %29, debug-location !85
+    %34:hvxvr = V6_vmpyowh_rnd %15, %29, debug-location !85
     DBG_VALUE %34, $noreg, !62, !DIExpression(), debug-location !75
     %35:hvxvr = V6_vaddw %5, %24, debug-location !86
     DBG_VALUE %35, $noreg, !63, !DIExpression(), debug-location !75
-    %36:hvxvr = V6_vaddw killed %35, killed %30, debug-location !87
+    %36:hvxvr = V6_vaddw %35, %30, debug-location !87
     DBG_VALUE %36, $noreg, !64, !DIExpression(), debug-location !75
-    %37:hvxvr = V6_vaddw killed %36, killed %31, debug-location !88
+    %37:hvxvr = V6_vaddw %36, %31, debug-location !88
     DBG_VALUE %37, $noreg, !65, !DIExpression(), debug-location !75
-    %38:hvxvr = V6_vaddw killed %37, killed %32, debug-location !89
+    %38:hvxvr = V6_vaddw %37, %32, debug-location !89
     DBG_VALUE %38, $noreg, !66, !DIExpression(), debug-location !75
-    %39:hvxvr = V6_vaddw killed %38, killed %33, debug-location !90
+    %39:hvxvr = V6_vaddw %38, %33, debug-location !90
     DBG_VALUE %39, $noreg, !67, !DIExpression(), debug-location !75
-    %40:hvxvr = V6_vaddw killed %39, killed %34, debug-location !91
+    %40:hvxvr = V6_vaddw %39, %34, debug-location !91
     DBG_VALUE %40, $noreg, !68, !DIExpression(), debug-location !75
-    %22:intregs = V6_vS32b_pi %21, 128, killed %40, debug-location !92 :: (store (s1024) into %ir.lsr.iv)
+    %22:intregs = V6_vS32b_pi %21, 128, %40, debug-location !92 :: (store (s1024) into %ir.lsr.iv)
     DBG_VALUE $noreg, $noreg, !42, !DIExpression(), debug-location !70
     ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0, debug-location !72
     J2_jump %bb.2, implicit-def dead $pc, debug-location !72

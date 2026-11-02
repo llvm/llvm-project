@@ -45,21 +45,21 @@ define i64 @loopif(ptr nocapture readonly %x, i32 %y, i32 %n) {
 ; CHECK-NEXT:    dls lr, r2
 ; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r2, [r12], #4
-; CHECK-NEXT:    smlal r0, r3, r2, r1
+; CHECK-NEXT:    ldr r3, [r12], #4
+; CHECK-NEXT:    smlal r0, r2, r3, r1
 ; CHECK-NEXT:    le lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp7 = icmp sgt i32 %n, 0

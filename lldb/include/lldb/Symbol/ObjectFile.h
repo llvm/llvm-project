@@ -207,9 +207,10 @@ public:
   ///     and \a archive_file and \a archive_object are modified,
   ///     \b false otherwise and \a archive_file and \a archive_object
   ///     are guaranteed to be remain unchanged.
-  static bool SplitArchivePathWithObject(
-      llvm::StringRef path_with_object, lldb_private::FileSpec &archive_file,
-      lldb_private::ConstString &archive_object, bool must_exist);
+  static bool SplitArchivePathWithObject(llvm::StringRef path_with_object,
+                                         lldb_private::FileSpec &archive_file,
+                                         llvm::StringRef &archive_object,
+                                         bool must_exist);
 
   // LLVM RTTI support
   static char ID;
@@ -259,6 +260,9 @@ public:
   /// \return
   ///     \b true if it is, \b false otherwise.
   virtual bool IsExecutable() const = 0;
+
+  /// Tells whether this object file is part of a shared cache.
+  virtual bool IsSharedCacheBinary() const { return false; }
 
   /// Returns the offset into a file at which this object resides.
   ///

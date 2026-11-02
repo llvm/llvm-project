@@ -354,7 +354,7 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
   let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
-    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getIterationShapeToUnroll();
   }];
 }
 
@@ -407,7 +407,7 @@ def Arith_SubUIExtendedOp : Arith_Op<"subui_extended", [Pure,
   let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
-    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getIterationShapeToUnroll();
   }];
 }
 
@@ -543,7 +543,7 @@ def Arith_MulSIExtendedOp : Arith_Op<"mulsi_extended", [Pure, Commutative,
   let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
-    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getIterationShapeToUnroll();
   }];
 }
 
@@ -586,7 +586,7 @@ def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
   let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
-    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getIterationShapeToUnroll();
   }];
 }
 
@@ -746,7 +746,8 @@ def Arith_CeilDivSIOp : Arith_IntBinaryOp<"ceildivsi",
 // FloorDivSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_FloorDivSIOp : Arith_TotalIntBinaryOp<"floordivsi"> {
+def Arith_FloorDivSIOp
+    : Arith_IntBinaryOp<"floordivsi", [ConditionallySpeculatable]> {
   let summary = "signed floor integer division operation";
   let description = [{
     Signed integer division. Rounds towards negative infinity, i.e. `5 / -2 = -3`.
@@ -763,6 +764,10 @@ def Arith_FloorDivSIOp : Arith_TotalIntBinaryOp<"floordivsi"> {
     %a = arith.floordivsi %b, %c : i64
 
     ```
+  }];
+  let extraClassDeclaration = [{
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
   }];
   let hasFolder = 1;
 }

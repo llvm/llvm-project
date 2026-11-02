@@ -112,7 +112,7 @@ define i1 @load1(ptr %p) {
 define i16 @load16(i1 %i, ptr %p) {
 ; COMBINE_LOAD_PTR-LABEL: define i16 @load16(
 ; COMBINE_LOAD_PTR-SAME: i1 [[I:%.*]], ptr [[P:%.*]]) {
-; COMBINE_LOAD_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; COMBINE_LOAD_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; COMBINE_LOAD_PTR-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; COMBINE_LOAD_PTR-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; COMBINE_LOAD_PTR-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080

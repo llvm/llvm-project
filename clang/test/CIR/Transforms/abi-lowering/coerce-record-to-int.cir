@@ -33,9 +33,8 @@ module attributes {
   // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!s64i>
   // CHECK:        cir.store %[[ARG]], %[[SLOT]] : !s64i, !cir.ptr<!s64i>
   // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!s64i> -> !cir.ptr<!rec_Pair>
-  // CHECK:        %[[REC:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
   // CHECK:        %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Pair>
-  // CHECK:        cir.store %[[REC]], %[[P]] : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK:        cir.copy %[[CAST]] align(8) to %[[P]] align(4) : !cir.ptr<!rec_Pair>
 
   cir.func @caller()
       attributes { test_classify = #caller_no_args } {
@@ -47,10 +46,9 @@ module attributes {
 
   // Call site coerces the !rec_Pair operand to !s64i through memory.
   // CHECK:      cir.func{{.*}} @caller()
-  // CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_Pair>, !rec_Pair
-  // CHECK:        cir.store %[[VAL]], %{{.*}} : !rec_Pair, !cir.ptr<!rec_Pair>
-  // CHECK:        %[[ARGCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s64i>
-  // CHECK:        %[[ARGINT:.*]] = cir.load %[[ARGCAST]] : !cir.ptr<!s64i>, !s64i
+  // CHECK:        %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:        %[[ARGCAST:.*]] = cir.cast bitcast %[[P]] : !cir.ptr<!rec_Pair> -> !cir.ptr<!s64i>
+  // CHECK:        %[[ARGINT:.*]] = cir.load align(4) %[[ARGCAST]] : !cir.ptr<!s64i>, !s64i
   // CHECK:        cir.call @takes_pair(%[[ARGINT]]) : (!s64i) -> ()
 
 }

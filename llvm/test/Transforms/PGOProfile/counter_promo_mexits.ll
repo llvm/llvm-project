@@ -42,15 +42,15 @@ bb14:                                             ; preds = %bb11
 ; PROMO:  %pgocount.promoted{{.*}} = load i64, ptr @__profc_foo, align 4
 ; PROMO-NEXT: add 
 ; PROMO-NEXT: store i64 %3, ptr @__profc_foo, align 4
-; PROMO-NEXT:  %pgocount.promoted{{.*}} = load i64, ptr getelementptr inbounds ([5 x i64], ptr @__profc_foo, i32 0, i32 1), align 4
+; PROMO-NEXT:  %pgocount.promoted{{.*}} = load i64, ptr getelementptr inbounds (i8, ptr @__profc_foo, i64 8), align 4
 ; PROMO-NEXT: add 
-; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}1)
-; PROMO-NEXT:  %pgocount.promoted{{.*}} = load i64, ptr getelementptr inbounds ([5 x i64], ptr @__profc_foo, i32 0, i32 2), align 4
+; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}} 8)
+; PROMO-NEXT:  %pgocount.promoted{{.*}} = load i64, ptr getelementptr inbounds (i8, ptr @__profc_foo, i64 16), align 4
 ; PROMO-NEXT: add 
-; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}2)
-; PROMO-NEXT:  %pgocount{{.*}} = load i64, ptr getelementptr inbounds ([5 x i64], ptr @__profc_foo, i32 0, i32 3), align 4
+; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}} 16)
+; PROMO-NEXT:  %pgocount{{.*}} = load i64, ptr getelementptr inbounds (i8, ptr @__profc_foo, i64 24), align 4
 ; PROMO-NEXT: add 
-; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}3)
+; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}} 24)
 
 
 bb15_0:                                             ; preds = %bb11
@@ -59,15 +59,15 @@ bb15_0:                                             ; preds = %bb11
 ; PROMO:  %pgocount.promoted{{.*}} = load i64, ptr @__profc_foo, align 4
 ; PROMO-NEXT: add 
 ; PROMO-NEXT: store {{.*}} @__profc_foo, align 4
-; PROMO-NEXT:  %pgocount.promoted{{.*}} = load i64, ptr getelementptr inbounds ([5 x i64], ptr @__profc_foo, i32 0, i32 1), align 4
+; PROMO-NEXT:  %pgocount.promoted{{.*}} = load i64, ptr getelementptr inbounds (i8, ptr @__profc_foo, i64 8), align 4
 ; PROMO-NEXT: add 
-; PROMO-NEXT: store {{.*}} ptr getelementptr inbounds ([5 x i64], ptr @__profc_foo, i32 0, i32 1), align 4
-; PROMO-NEXT:  %pgocount.promoted{{.*}} = load i64, ptr getelementptr inbounds ([5 x i64], ptr @__profc_foo, i32 0, i32 2), align 4
+; PROMO-NEXT: store {{.*}} ptr getelementptr inbounds (i8, ptr @__profc_foo, i64 8), align 4
+; PROMO-NEXT:  %pgocount.promoted{{.*}} = load i64, ptr getelementptr inbounds (i8, ptr @__profc_foo, i64 16), align 4
 ; PROMO-NEXT: add 
-; PROMO-NEXT: store {{.*}} ptr getelementptr inbounds ([5 x i64], ptr @__profc_foo, i32 0, i32 2), align 4
-; PROMO-NEXT:  %pgocount{{.*}} = load {{.*}} @__profc_foo{{.*}} 4)
+; PROMO-NEXT: store {{.*}} ptr getelementptr inbounds (i8, ptr @__profc_foo, i64 16), align 4
+; PROMO-NEXT:  %pgocount{{.*}} = load {{.*}} @__profc_foo{{.*}} 32)
 ; PROMO-NEXT: add 
-; PROMO-NEXT: store {{.*}} ptr getelementptr inbounds ([5 x i64], ptr @__profc_foo, i32 0, i32 4), align 4
+; PROMO-NEXT: store {{.*}} ptr getelementptr inbounds (i8, ptr @__profc_foo, i64 32), align 4
 ; PROMO-NOT: @__profc_foo{{.*}})
 
 

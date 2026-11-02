@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 class NestedExpressions(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_enum_in_nested_structs(self):
         """
         Test expressions that references an enumeration in nested structs.
@@ -50,6 +51,7 @@ class NestedExpressions(TestBase):
             result_value="Eleven",
         )
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_enum_in_nested_namespaces(self):
         """
         Test expressions that references an enumeration in nested namespaces.

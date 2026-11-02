@@ -1,0 +1,47 @@
+name: "[libc] libc++ integration conformance tests"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+     - 'libc/**'
+     - '.github/workflows/libc-libcxx-conformance-tests.yml'
+
+jobs:
+  libcxx-libc-integration:
+    if: github.repository_owner == 'llvm'
+    runs-on: llvm-premerge-linux-32-runners
+    container:
+      image: ghcr.io/llvm/libcxx-linux-builder:5e1edea790610e7ef8c5e06b6e5185fe5dd1c830
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
+      - name: generic-llvm-libc
+        shell: bash
+        run: |
+          python3 -m venv --system-site-packages .venv
+          source .venv/bin/activate
+          pip install -r libcxx/test/requirements.txt
+          libcxx/utils/ci/run-buildbot generic-llvm-libc
+        env:
+          CC: clang-23
+          CXX: clang++-23
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: generic-llvm-libc-results
+          path: |
+            **/test-results.xml
+            **/*.abilist
+            **/CMakeConfigureLog.yaml
+            **/CMakeError.log
+            **/CMakeOutput.log
+            **/crash_diagnostics/*

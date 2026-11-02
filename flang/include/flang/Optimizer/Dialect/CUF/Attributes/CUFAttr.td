@@ -77,6 +77,29 @@ def cuf_ClusterDimsAttr : cuf_Attr<"ClusterDims"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def cuf_LaunchConfigAttr : cuf_Attr<"LaunchConfig"> {
+  let mnemonic = "launch_config";
+  let summary = "Launch configuration of a kernel directive as written";
+  let description = [{
+    Records how a `cuf.kernel` directive spelled its launch configuration so
+    that later stages can report it: the number of dimensions the directive
+    names, and each grid dimension as written. A grid dimension left to the
+    compiler is spelled `*`, a constant by its value, and a variable by its
+    name.
+
+    ```mlir
+    #cuf.launch_config<dims = 2 : i64, grid = ["*", "*"]>
+    ```
+  }];
+
+  let parameters = (ins
+    "mlir::IntegerAttr":$dims,
+    "mlir::ArrayAttr":$grid
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 def cuf_DataTransferKind : I32EnumAttr<
     "DataTransferKind", "CUDA Fortran data transfer kind",
     [

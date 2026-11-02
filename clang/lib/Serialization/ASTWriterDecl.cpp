@@ -626,7 +626,7 @@ void ASTDeclWriter::VisitTypeAliasDecl(TypeAliasDecl *D) {
 }
 
 void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
-  static_assert(DeclContext::NumTagDeclBits == 23,
+  static_assert(DeclContext::NumTagDeclBits == 22,
                 "You need to update the serializer after you change the "
                 "TagDeclBits");
 
@@ -656,7 +656,7 @@ void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
 }
 
 void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
-  static_assert(DeclContext::NumEnumDeclBits == 43,
+  static_assert(DeclContext::NumEnumDeclBits == 42,
                 "You need to update the serializer after you change the "
                 "EnumDeclBits");
 
@@ -699,7 +699,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
 }
 
 void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
-  static_assert(DeclContext::NumRecordDeclBits == 64,
+  static_assert(DeclContext::NumRecordDeclBits == 63,
                 "You need to update the serializer after you change the "
                 "RecordDeclBits");
 
@@ -771,7 +771,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 45,
+  static_assert(DeclContext::NumFunctionDeclBits == 44,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -954,7 +954,7 @@ void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
-  static_assert(DeclContext::NumObjCMethodDeclBits == 37,
+  static_assert(DeclContext::NumObjCMethodDeclBits == 36,
                 "You need to update the serializer after you change the "
                 "ObjCMethodDeclBits");
 
@@ -1509,7 +1509,7 @@ void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
 }
 
 void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
-  static_assert(DeclContext::NumLinkageSpecDeclBits == 17,
+  static_assert(DeclContext::NumLinkageSpecDeclBits == 16,
                 "You need to update the serializer after you change the"
                 "LinkageSpecDeclBits");
 
@@ -1767,7 +1767,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  static_assert(DeclContext::NumCXXConstructorDeclBits == 64,
+  static_assert(DeclContext::NumCXXConstructorDeclBits == 63,
                 "You need to update the serializer after you change the "
                 "CXXConstructorDeclBits");
 
@@ -2252,7 +2252,7 @@ void ASTDeclWriter::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
 
 /// Emit the DeclContext part of a declaration context decl.
 void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
-  static_assert(DeclContext::NumDeclContextBits == 13,
+  static_assert(DeclContext::NumDeclContextBits == 12,
                 "You need to update the serializer after you change the "
                 "DeclContextBits");
   LookupBlockOffsets Offsets;
@@ -2378,7 +2378,7 @@ void ASTDeclWriter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
 }
 
 void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
-  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 15,
+  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 14,
                 "You need to update the serializer after you change the "
                 "NumOMPDeclareReductionDeclBits");
 

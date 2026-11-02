@@ -164,6 +164,19 @@ function(add_llvm_symbol_exports target_name export_file)
     set(native_export_file "${export_file}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-bE:${export_file}")
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    # wasm-ld uses explicit exports, not ELF version scripts. These also
+    # pull the exported API definitions out of static dependency archives.
+    set(native_export_file "${target_name}.exports")
+    add_custom_command(OUTPUT ${native_export_file}
+      COMMAND sed -e "s/^/-Wl,--export=/" < ${export_file} > ${native_export_file}
+      DEPENDS ${export_file}
+      VERBATIM
+      COMMENT "Creating export file for ${target_name}")
+    # Forward each response-file entry through the Emscripten driver.
+    set_property(TARGET ${target_name} APPEND PROPERTY
+                 LINK_OPTIONS "-Wl,--no-export-dynamic"
+                              "@${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}")
   elseif(LLVM_HAVE_LINK_VERSION_SCRIPT)
     # Gold and BFD ld require a version script rather than a plain list.
     set(native_export_file "${target_name}.exports")
@@ -365,14 +378,11 @@ function(add_link_opts target_name)
       # and teaching the linker to select machine code from .o files, see
       # https://lists.llvm.org/pipermail/llvm-dev/2021-April/149843.html
       if((UNIX OR MINGW) AND LINKER_IS_LLD)
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--lto-O0")
+        target_link_options(${target_name} PRIVATE "LINKER:--lto-O0")
       elseif(LINKER_IS_LLD_LINK)
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " /opt:lldlto=0")
+        target_link_options(${target_name} PRIVATE "LINKER:/opt:lldlto=0")
       elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,-mllvm,-O0")
+        target_link_options(${target_name} PRIVATE "LINKER:-mllvm,-O0")
       endif()
     endif()
   endif()
@@ -383,37 +393,31 @@ function(add_link_opts target_name)
     if(NOT LLVM_NO_DEAD_STRIP)
       if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
         # ld64's implementation of -dead_strip breaks tools that use plugins.
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,-dead_strip")
+        target_link_options(${target_name} PRIVATE "LINKER:-dead_strip")
       elseif("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
         # Solaris 11.4.  GNU ld ignores it, but warns every time.
         check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
-          set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                       LINK_FLAGS " -Wl,-z,discard-unused=sections")
+          target_link_options(${target_name} PRIVATE "LINKER:-z,discard-unused=sections")
         endif()
       elseif(NOT MSVC AND NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC" AND NOT CMAKE_SYSTEM_NAME MATCHES "AIX|OS390")
         # TODO Revisit this later on z/OS.
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,--gc-sections")
+        target_link_options(${target_name} PRIVATE "LINKER:--gc-sections")
       endif()
     else() #LLVM_NO_DEAD_STRIP
       if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,-bnogc")
+        target_link_options(${target_name} PRIVATE "LINKER:-bnogc")
       endif()
     endif()
   endif()
 
   if(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
-    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                 LINK_FLAGS " -Wl,-no_warn_duplicate_libraries")
+    target_link_options(${target_name} PRIVATE "LINKER:-no_warn_duplicate_libraries")
   endif()
 
   if(ARG_SUPPORT_PLUGINS AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                 LINK_FLAGS " -Wl,-brtl")
+    target_link_options(${target_name} PRIVATE "LINKER:-brtl")
   endif()
 
   # Check for existence of symbolic functions flag. Not supported
@@ -737,23 +741,24 @@ function(llvm_add_library name)
   ## class members from being dllexport'ed to reduce compile time.
   ## This will also keep us below the 64k exported symbol limit
   ## https://blog.llvm.org/2018/11/30-faster-windows-builds-with-clang-cl_14.html
-  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND
-     MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
-    target_compile_options(${name} PUBLIC /Zc:dllexportInlines-)
+  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)
+    target_compile_options(${name} PUBLIC
+      "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
     if(TARGET ${obj_name})
-      target_compile_options(${obj_name} PUBLIC /Zc:dllexportInlines-)
+      target_compile_options(${obj_name} PUBLIC
+        "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
     endif()
   endif()
 
   if(ARG_COMPONENT_LIB)
     set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
     if(LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS)
-      target_compile_definitions(${name} PRIVATE LLVM_EXPORTS)
+      target_compile_definitions(${name} PRIVATE LLVM_EXPORTS LLVM_C_EXPORTS)
     endif()
 
     # When building shared objects for each target there are some internal APIs
     # that are used across shared objects which we can't hide.
-    if (LLVM_BUILD_LLVM_DYLIB_VIS AND NOT BUILD_SHARED_LIBS AND NOT APPLE AND
+    if (LLVM_BUILD_LLVM_DYLIB_VIS AND NOT BUILD_SHARED_LIBS AND
         (NOT (WIN32 OR CYGWIN) OR ((MINGW OR CYGWIN) AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")) AND
         NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX") AND
         NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET)
@@ -1280,10 +1285,10 @@ macro(add_llvm_executable name)
     target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
   endif()
 
-  if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND
-     MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
+  if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)
     # This has to match how the libraries the executable is linked to are built or there be linker errors.
-    target_compile_options(${name} PRIVATE /Zc:dllexportInlines-)
+    target_compile_options(${name} PRIVATE
+      "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
   endif()
 endmacro(add_llvm_executable name)
 

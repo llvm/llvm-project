@@ -227,8 +227,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-NEXT:    s_cmp_ge_i32 s4, 0
 ; CHECK-NEXT:    s_cselect_b32 s5, 1, 0
 ; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; CHECK-NEXT:    s_and_b64 s[6:7], exec, exec
-; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], s[6:7]
+; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], exec
 ; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB5_1
 ; CHECK-NEXT:  ; %bb.3: ; %bb4
@@ -237,8 +236,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
 ; CHECK-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; CHECK-NEXT:    s_and_b64 s[6:7], exec, vcc
-; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], s[6:7]
+; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], vcc
 ; CHECK-NEXT:    s_branch .LBB5_1
 ; CHECK-NEXT:  .LBB5_4: ; %bb9
 ; CHECK-NEXT:    s_endpgm

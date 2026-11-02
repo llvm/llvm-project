@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -target-feature +sse2 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,LATEST
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -target-feature +sse2 -fclang-abi-compat=23 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,COMPAT23
 
 __attribute__((regparm(3))) void f1(int a, int b, int c, int d);
 // CHECK: declare void @f1(i32 inreg noundef, i32 inreg noundef, i32 inreg noundef, i32 noundef)
@@ -175,3 +176,89 @@ void g18(void) {
   struct s13 x = {{41}};
   f18(x, 42, 43, 44);
 }
+
+__attribute__((regparm(3))) void pass_f16(_Float16 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_f16(half noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_f16(half inreg noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)
+
+__attribute__((regparm(3))) void pass_bf16(__bf16 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_bf16(bfloat noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_bf16(bfloat inreg noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)
+
+__attribute__((regparm(3))) void pass_f80(long double a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_f80(x86_fp80 noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_f80(x86_fp80 inreg noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d)
+
+__attribute__((regparm(3))) void pass_f128(__float128 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_f128(fp128 noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_f128(fp128 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d)
+
+struct s14 {
+  _Float16 x1;
+};
+__attribute__((regparm(3))) void pass_wrapped_f16(struct s14 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_wrapped_f16(ptr noundef byval(%struct.s14) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_wrapped_f16(i32 inreg %a.coerce, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)
+
+struct s15 {
+  __float128 x1;
+};
+__attribute__((regparm(3))) void pass_wrapped_f128(struct s15 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_wrapped_f128(ptr noundef byval(%struct.s15) align 4 {{%[^,]*}}, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_wrapped_f128(ptr noundef byval(%struct.s15) align 4 {{%[^,]*}}, i32 noundef %b, i32 noundef %c, i32 noundef %d)
+
+__attribute__((regparm(3))) void pass_complex_float(_Complex float a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_complex_float(ptr noundef byval({ float, float }) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_complex_float(i32 inreg noundef %a.coerce0, i32 inreg noundef %a.coerce1, i32 inreg noundef %b, i32 noundef %c, i32 noundef %d)
+
+__attribute__((regparm(3))) void pass_complex_int(int a, _Complex int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_complex_int(i32 inreg noundef %a, ptr noundef byval({ i32, i32 }) align 4 %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_complex_int(i32 inreg noundef %a, i32 inreg noundef %b.coerce0, i32 inreg noundef %b.coerce1, i32 noundef %c, i32 noundef %d)
+
+struct s16 {
+  _Complex float x1;
+};
+__attribute__((regparm(3))) void pass_wrapped_complex_float(struct s16 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_wrapped_complex_float(float %a.0, float %a.1, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_wrapped_complex_float(i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg noundef %b, i32 noundef %c, i32 noundef %d)
+
+struct s17 {
+  _Complex int x1[1];
+};
+__attribute__((regparm(3))) void pass_wrapped_complex_int(struct s17 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_wrapped_complex_int(ptr noundef byval(%struct.s17) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_wrapped_complex_int(i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg noundef %b, i32 noundef %c, i32 noundef %d)
+
+struct s18 {
+  float x1[1];
+};
+__attribute__((regparm(3))) void pass_struct_singleton_array_float(struct s18 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_struct_singleton_array_float(ptr noundef byval(%struct.s18) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+// Unions are passed like integers.
+union u1 {
+  float x1;
+};
+__attribute__((regparm(3))) void pass_union_float(union u1 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_union_float(i32 inreg %a.coerce, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_union_float(float %a.0, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+union u2 {
+  struct s5 x1;
+};
+__attribute__((regparm(3))) void pass_union_struct_float(union u2 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_union_struct_float(i32 inreg %a.coerce, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_union_struct_float(ptr noundef byval(%union.u2) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+union u3 {
+  _Complex float x1;
+};
+__attribute__((regparm(3))) void pass_union_complex_float(union u3 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_union_complex_float(i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg noundef %b, i32 noundef %c, i32 noundef %d)
+
+struct s19 {
+  union u1 x1;
+};
+__attribute__((regparm(3))) void pass_nested_union_float(struct s19 a, int b, int c, int d) {}
+// LATEST-LABEL: define{{.*}} void @pass_nested_union_float(i32 inreg %a.coerce, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)
+// COMPAT23-LABEL: define{{.*}} void @pass_nested_union_float(ptr noundef byval(%struct.s19) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)

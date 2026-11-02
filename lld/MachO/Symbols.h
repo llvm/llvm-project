@@ -183,6 +183,9 @@ public:
   // symbol table of input object files.
   bool cold : 1;
 
+  // Whether this symbol represents a synthesized branch-extension thunk.
+  bool branchExtensionThunk : 1;
+
 private:
   const bool weakDef : 1;
   const bool external : 1;

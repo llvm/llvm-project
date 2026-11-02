@@ -288,8 +288,6 @@ def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
 def XLenVecI32VT : ValueTypeByHwMode<[RV64],
                                      [v2i32]>;
 
-def XLenVecQAccVT : ValueTypeByHwMode<[RV32, RV64],
-                                      [v2i16, v2i32]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -430,21 +428,9 @@ def XLenPairRI : RegInfoByHwMode<
       [RV32,                RV64],
       [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
 
-// Dummy zero register for use in the register pair containing X0 (as X1 is
-// not read to or written when the X0 register pair is used).
-def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
-
-// Must add DUMMY_REG_PAIR_WITH_X0 to a separate register class to prevent the
-// register's existence from changing codegen (due to the regPressureSetLimit
-// for the GPR register class being altered).
-def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
-
 let RegAltNameIndices = [ABIRegAltName] in {
-  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName,
-                                    [X0, DUMMY_REG_PAIR_WITH_X0],
-                                    X0.AltNames> {
-    let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
-    let CoveredBySubRegs = 1;
+  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName, [X0], X0.AltNames> {
+    let SubRegIndices = [sub_gpr_even];
   }
   foreach I = 1-15 in {
     defvar Index = !shl(I, 1);

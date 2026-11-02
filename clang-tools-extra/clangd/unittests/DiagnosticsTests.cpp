@@ -8,6 +8,7 @@
 
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "Annotations.h"
+#include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
 #include "Feature.h"
@@ -32,6 +33,9 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendOptions.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -822,6 +826,86 @@ TEST(DiagnosticTest, ClangTidyEnablesClangWarning) {
   TU.ExtraArgs = {"-Wno-unused"};
   TU.ClangTidyProvider = addClangArgs({"-Wunused"}, {"-*, clang-diagnostic-*"});
   EXPECT_THAT(TU.build().getDiagnostics(), SizeIs(1));
+}
+
+TEST(DiagnosticTest, ClangTidyCompilerWarningsWithoutChecks) {
+  auto TU = TestTU::withCode("static void foo() {}");
+  TU.ClangTidyProvider = [](tidy::ClangTidyOptions &Opts, llvm::StringRef) {
+    Opts.Checks = "-*,clang-diagnostic-*";
+    Opts.ExtraArgs = {"-Wunused-function"};
+    Opts.WarningsAsErrors = "clang-diagnostic-unused-function";
+  };
+  auto Warning = AllOf(diagName("-Wunused-function"), diagSource(Diag::Clang),
+                       diagSeverity(DiagnosticsEngine::Warning));
+  EXPECT_THAT(TU.build().getDiagnostics(), ElementsAre(Warning));
+
+  // Without tidy checks, NOLINT and WarningsAsErrors don't affect warnings.
+  TU.Code = "static void foo() {} // NOLINT(clang-diagnostic-unused-function)";
+  EXPECT_THAT(TU.build().getDiagnostics(), ElementsAre(Warning));
+}
+
+TEST(DiagnosticTest, ClangTidyWarningOptionsBeforeBeginSourceFile) {
+  auto Build = [](bool Suppress, bool ExtraArgsBefore) {
+    auto TU = TestTU::withCode("int value;");
+    TU.ClangTidyProvider = [=](tidy::ClangTidyOptions &Opts, llvm::StringRef) {
+      Opts.Checks = "-*";
+      if (Suppress) {
+        auto &Args = ExtraArgsBefore ? Opts.ExtraArgsBefore : Opts.ExtraArgs;
+        Args = {"-Wno-incomplete-umbrella"};
+      }
+    };
+    TU.ExtraArgs = {"-fmodules",
+                    "-fmodule-map-file=" + testPath("module.modulemap")};
+    TU.AdditionalFiles["module.modulemap"] =
+        R"(module M { umbrella "missing" })";
+
+    // Don't build a PCH; count warnings from module-map loading directly.
+    MockFS FS;
+    auto Inputs = TU.inputs(FS);
+    IgnoringDiagConsumer Diags;
+    auto CI = buildCompilerInvocation(Inputs, Diags);
+    ASSERT_TRUE(CI);
+    auto AST = ParsedAST::build(testPath(TU.Filename), Inputs, std::move(CI),
+                                {}, nullptr);
+    ASSERT_TRUE(AST);
+    EXPECT_EQ(AST->getPreprocessor().getDiagnostics().getNumWarnings(),
+              Suppress ? 0u : 1u);
+  };
+  Build(false, false);
+  Build(true, false);
+  Build(true, true);
+}
+
+TEST(DiagnosticTest, ClangTidyRelativeInput) {
+  if (!CLANGD_TIDY_CHECKS)
+    GTEST_SKIP() << "Requires clang-tidy checks";
+  MockFS FS;
+  auto TU = TestTU::withCode("int *p = 0;");
+  TU.Filename = "project/src/test.cpp";
+  TU.AdditionalFiles["project/src/.clang-tidy"] =
+      "Checks: '-*,modernize-use-nullptr'";
+  auto Provider = provideClangTidyFiles(FS);
+  TU.ClangTidyProvider = [&](tidy::ClangTidyOptions &Opts,
+                             llvm::StringRef Filename) {
+    EXPECT_EQ(Filename, testPath(TU.Filename));
+    Provider(Opts, Filename);
+  };
+  auto Inputs = TU.inputs(FS);
+  Inputs.CompileCommand.Directory = testPath("project");
+  // Configuration lookup must use the requested file, not the frontend input.
+  for (const auto *InputFile : {"src/./test.cpp", "../other/test.cpp"}) {
+    SCOPED_TRACE(InputFile);
+    IgnoringDiagConsumer Diags;
+    auto CI = buildCompilerInvocation(Inputs, Diags);
+    ASSERT_TRUE(CI);
+    auto Kind = CI->getFrontendOpts().Inputs.front().getKind();
+    CI->getFrontendOpts().Inputs = {FrontendInputFile(InputFile, Kind)};
+    auto AST = ParsedAST::build(testPath(TU.Filename), Inputs, std::move(CI),
+                                {}, nullptr);
+    ASSERT_TRUE(AST);
+    ASSERT_THAT(AST->getDiagnostics(), SizeIs(1));
+    EXPECT_EQ(AST->getDiagnostics().front().Name, "modernize-use-nullptr");
+  }
 }
 
 TEST(DiagnosticTest, LongFixMessages) {

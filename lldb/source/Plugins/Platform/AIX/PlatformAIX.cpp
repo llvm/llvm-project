@@ -132,11 +132,6 @@ void PlatformAIX::GetStatus(Stream &strm) {
 
 void PlatformAIX::CalculateTrapHandlerSymbolNames() {}
 
-lldb::UnwindPlanSP PlatformAIX::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
-                                                         ConstString name) {
-  return {};
-}
-
 MmapArgList PlatformAIX::GetMmapArgumentList(const ArchSpec &arch, addr_t addr,
                                              addr_t length, unsigned prot,
                                              unsigned flags, addr_t fd,

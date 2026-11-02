@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace Fortran::frontend {
@@ -289,8 +290,9 @@ struct FrontendOptions {
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults;
 
   // The column after which characters are ignored in fixed form lines in the
-  // source file.
-  int fixedFormColumns = 72;
+  // source file. std::nullopt means there is no limit
+  // (-ffixed-line-length=none or -ffixed-line-length=0).
+  std::optional<int> fixedFormColumns = 72;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.

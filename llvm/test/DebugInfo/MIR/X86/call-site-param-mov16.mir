@@ -49,7 +49,7 @@
 name:            b
 alignment:       16
 callSites:
-  - { bb: 0, offset: 1, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 1, fwdArgRegs:
       - { arg: 0, reg: '$cx' } }
 body:             |
   bb.0.entry:

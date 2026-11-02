@@ -132,7 +132,11 @@ public:
   /// Get a reference to the kind map.
   const fir::KindMapping &getKindMap() { return kindMap; }
 
-  /// Get func.func/fir.global symbol table attached to this builder if any.
+  /// Get the func.func/fir.global/fir.type_info symbol table attached to this
+  /// builder if any. The lookups below trust it, so it must contain every
+  /// symbol operation of the module: creating symbols through this builder
+  /// (createFunction, createGlobal, createTypeInfoOp) keeps it complete, any
+  /// other creation must call fir::registerSymbol.
   mlir::SymbolTable *getMLIRSymbolTable() { return symbolTable; }
 
   /// Get the default integer type
@@ -194,6 +198,13 @@ public:
   /// than 64 bits.
   mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
                                     std::int64_t i);
+
+  /// Create an integer constant of \p integerType with value \p value. The
+  /// bit width of \p value must match the width of \p integerType. Use this
+  /// for values that do not fit in std::int64_t, such as the limits of
+  /// 128-bit integers.
+  mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
+                                    const llvm::APInt &value);
 
   /// Create an integer of \p integerType where all the bits have been set to
   /// ones. Safe to use regardless of integerType bitwidth.
@@ -411,7 +422,8 @@ public:
   }
 
   /// Get a function by name. If the function exists in the current module, it
-  /// is returned. Otherwise, a null FuncOp is returned.
+  /// is returned. Otherwise, a null FuncOp is returned. When a symbol table is
+  /// available, the answer comes from it alone (see getMLIRSymbolTable).
   mlir::func::FuncOp getNamedFunction(llvm::StringRef name) {
     return getNamedFunction(getModule(), getMLIRSymbolTable(), name);
   }
@@ -680,8 +692,10 @@ public:
     return fpMaxminBehavior;
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
+#endif
 
   /// FirOpBuilder hook for creating new operation.
   void notifyOperationInserted(mlir::Operation *op,

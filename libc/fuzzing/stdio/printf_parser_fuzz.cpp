@@ -46,7 +46,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   int section_percent_count = 0;
 
-  for (printf_core::FormatSection cur_section = parser.get_next_section();
+  for (printf_core::FormatSection<char> cur_section = parser.get_next_section();
        !cur_section.raw_string.empty();
        cur_section = parser.get_next_section()) {
     if (cur_section.has_conv) {

@@ -18,6 +18,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/math/exp2f_double_eval.h"
 #include "src/__support/math/exp2f_float_eval.h"
+#include "src/__support/math/exp2f_integer_eval.h"
 #include "src/math/exp2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -25,28 +26,35 @@
 class Exp2fTest : public LIBC_NAMESPACE::testing::FPTest<float> {
 public:
   void test_special_numbers(float (*func)(float),
-                            bool check_snan_invalid = false) {
+                            bool check_snan_invalid = false,
+                            bool check_errno = true) {
     if (check_snan_invalid) {
       EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(sNaN), FE_INVALID);
     } else {
       EXPECT_FP_EQ(aNaN, func(sNaN));
     }
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, func(aNaN));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(inf, func(inf));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(0.0f, func(neg_inf));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(1.0f, func(0.0f));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(1.0f, func(-0.0f));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(2.0f, func(1.0f));
     EXPECT_FP_EQ_ALL_ROUNDING(0.5f, func(-1.0f));
@@ -98,16 +106,34 @@ public:
 #define LIST_EXP2F_FTZ_DAZ_TESTS(suffix, func)
 #endif // LIBC_TEST_FTZ_DAZ
 
-#define LIST_EXP2F_TESTS(suffix, func, check_snan_invalid)                     \
+#define LIST_EXP2F_TESTS(suffix, func, check_snan_invalid,                     \
+                         check_exception_and_errno, check_errno)               \
   using LlvmLibcExp2fTest##suffix = Exp2fTest;                                 \
   TEST_F(LlvmLibcExp2fTest##suffix, SpecialNumbers) {                          \
-    test_special_numbers(&func, check_snan_invalid);                           \
+    test_special_numbers(&func, check_snan_invalid, check_errno);              \
   }                                                                            \
-  TEST_F(LlvmLibcExp2fTest##suffix, Overflow) { test_overflow(&func); }        \
+  TEST_F(LlvmLibcExp2fTest##suffix, Overflow) {                                \
+    test_overflow(&func, check_exception_and_errno);                           \
+  }                                                                            \
   LIST_EXP2F_FTZ_DAZ_TESTS(suffix, func)
 
-LIST_EXP2F_TESTS(Default, LIBC_NAMESPACE::exp2f, /*check_snan_invalid=*/true)
+LIST_EXP2F_TESTS(Default, LIBC_NAMESPACE::exp2f, /*check_snan_invalid=*/true,
+                 /*check_exception_and_errno=*/true, /*check_errno=*/true)
 LIST_EXP2F_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::exp2f,
-                 /*check_snan_invalid=*/false)
+                 /*check_snan_invalid=*/false,
+                 /*check_exception_and_errno=*/true, /*check_errno=*/true)
 LIST_EXP2F_TESTS(FloatEval, LIBC_NAMESPACE::math::float_eval::exp2f,
-                 /*check_snan_invalid=*/false)
+                 /*check_snan_invalid=*/false,
+                 /*check_exception_and_errno=*/true, /*check_errno=*/true)
+LIST_EXP2F_TESTS(IntegerEval, LIBC_NAMESPACE::math::integer_eval::exp2f,
+                 /*check_snan_invalid=*/false,
+                 /*check_exception_and_errno=*/false, /*check_errno=*/false)
+
+static float exp2f_static_rounding(float x) {
+  return LIBC_NAMESPACE::math::static_rounding::exp2f(
+      x, LIBC_NAMESPACE::fputil::quick_get_round());
+}
+
+LIST_EXP2F_TESTS(StaticRounding, exp2f_static_rounding,
+                 /*check_snan_invalid=*/false,
+                 /*check_exception_and_errno=*/false, /*check_errno=*/false)

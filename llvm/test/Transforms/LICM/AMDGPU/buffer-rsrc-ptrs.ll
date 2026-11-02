@@ -104,7 +104,7 @@ loop:
 tail:
   ret void
 }
-!0 = !{!0, !"hoisting"}
+!0 = !{!0, i1 false, !"hoisting"}
 !1 = !{!1, !0, !"p"}
 !2 = !{!2, !0, !"q"}
 

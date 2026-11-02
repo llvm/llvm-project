@@ -1,5 +1,5 @@
 # RUN: llc -mcpu=pwr10 -enable-subreg-liveness -filetype=null  \
-# RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virtregrewriter \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virt-reg-rewriter \
 # RUN:   -debug-only=regalloc -o - %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 

@@ -45,3 +45,9 @@ subroutine f05
 !ERROR: 'context-selector' modifier is required
   !$omp & when(nothing)
 end
+
+subroutine f06
+  !$omp metadirective &
+!ERROR: OTHERWISE should be the last clause
+  !$omp & otherwise(nothing) when(user={condition(.true.)}: nothing)
+end

@@ -36,7 +36,7 @@
 # RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
 
 # STARTUP-FUNC-ORDER: Ordered 4 sections ([[#]] bytes) using balanced partitioning
-# STARTUP-FUNC-ORDER: Total area under the page fault curve: 4.
+# STARTUP-FUNC-ORDER: Average area under the page fault curve: 4.
 
 # RUN: ld.lld -o out.s a.o --irpgo-profile=a.profdata --bp-startup-sort=function
 # RUN: llvm-nm -jn out.s | tr '\n' , | FileCheck %s --check-prefix=STARTUP

@@ -72,9 +72,10 @@ public:
   LLVM_ABI void logUnifiedOnDiskCacheCollectGarbage(StringRef Path);
   LLVM_ABI void logUnifiedOnDiskCacheValidateIfNeeded(
       StringRef Path, uint64_t BootTime, uint64_t ValidationTime,
-      bool CheckHash, bool AllowRecovery, bool Force,
-      std::optional<StringRef> LLVMCas, StringRef ValidationError, bool Skipped,
-      bool Recovered);
+      bool CheckHash, bool Force, StringRef ValidationError, bool Skipped);
+  LLVM_ABI void logUnifiedOnDiskCacheRecover(StringRef Path, uint64_t BootTime,
+                                             StringRef RecoveryError,
+                                             bool Skipped);
   LLVM_ABI void logTempFileCreate(StringRef Name);
   LLVM_ABI void logTempFileKeep(StringRef TmpName, StringRef Name,
                                 std::error_code EC);

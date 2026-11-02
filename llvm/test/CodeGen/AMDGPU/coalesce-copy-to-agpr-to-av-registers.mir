@@ -1144,10 +1144,10 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
 
-    ; CHECK-LABEL: name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96
+    ; CHECK-LABEL: name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_shuffle_both_sub
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub0:vreg_96 = COPY $vgpr0
+    ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0:vreg_96 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub1_sub2:vreg_96 = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: undef [[COPY2:%[0-9]+]].sub0:areg_96 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]].sub1_sub2:areg_96 = COPY [[COPY1]]

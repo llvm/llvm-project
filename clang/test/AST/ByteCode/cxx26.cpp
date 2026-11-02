@@ -159,3 +159,12 @@ namespace TrivialAssignment {
                                   // both-note {{in call to}}
 
 }
+
+namespace TrivialInheritedCtor {
+  struct S {};
+  template<typename T> struct D : S {
+    D() requires (sizeof(T) > sizeof(char));
+    using S::S;
+  };
+  D<char> d;
+}

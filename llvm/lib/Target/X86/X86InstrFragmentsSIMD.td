@@ -466,12 +466,13 @@ def X86pmuldq  : SDNode<"X86ISD::PMULDQ",
 
 // SSE4A Extraction and Insertion.
 def X86extrqi : SDNode<"X86ISD::EXTRQI",
-                  SDTypeProfile<1, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0,1>,
-                                       SDTCisVT<2, i8>, SDTCisVT<3, i8>]>>;
+                  SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<0>,
+                                       SDTCisSameAs<0,1>, SDTCisVT<2, i8>,
+                                       SDTCisVT<3, i8>]>>;
 def X86insertqi : SDNode<"X86ISD::INSERTQI",
-                    SDTypeProfile<1, 4, [SDTCisVT<0, v2i64>, SDTCisSameAs<0,1>,
-                                         SDTCisSameAs<1,2>, SDTCisVT<3, i8>,
-                                         SDTCisVT<4, i8>]>>;
+                    SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisInt<0>,
+                                         SDTCisSameAs<0,1>, SDTCisSameAs<1,2>,
+                                         SDTCisVT<3, i8>, SDTCisVT<4, i8>]>>;
 
 // Specific shuffle nodes - At some point ISD::VECTOR_SHUFFLE will always get
 // translated into one of the target nodes below during lowering.
@@ -832,15 +833,19 @@ def X86rsqrt14s  : SDNode<"X86ISD::RSQRT14S", SDTFPBinOp>;
 def X86rcp14     : SDNode<"X86ISD::RCP14",    SDTFPUnaryOp>;
 def X86rcp14s    : SDNode<"X86ISD::RCP14S",   SDTFPBinOp>;
 
-// VNNI
-def SDTVnni : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
-                                   SDTCisSameAs<1,2>, SDTCisSameAs<1,3>]>;
+// VNNI dot products of i8 or i16 elements accumulated into i32 elements.
+def SDTVnniB : SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i32>, SDTCisSameAs<0,1>,
+                                    SDTCVecEltisVT<2, i8>, SDTCisSameSizeAs<0,2>,
+                                    SDTCisSameAs<2,3>]>;
+def SDTVnniW : SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i32>, SDTCisSameAs<0,1>,
+                                    SDTCVecEltisVT<2, i16>, SDTCisSameSizeAs<0,2>,
+                                    SDTCisSameAs<2,3>]>;
 
 // VNNI
-def X86Vpdpbusd  : SDNode<"X86ISD::VPDPBUSD", SDTVnni>;
-def X86Vpdpbusds : SDNode<"X86ISD::VPDPBUSDS", SDTVnni>;
-def X86Vpdpwssd  : SDNode<"X86ISD::VPDPWSSD", SDTVnni>;
-def X86Vpdpwssds : SDNode<"X86ISD::VPDPWSSDS", SDTVnni>;
+def X86Vpdpbusd  : SDNode<"X86ISD::VPDPBUSD", SDTVnniB>;
+def X86Vpdpbusds : SDNode<"X86ISD::VPDPBUSDS", SDTVnniB>;
+def X86Vpdpwssd  : SDNode<"X86ISD::VPDPWSSD", SDTVnniW>;
+def X86Vpdpwssds : SDNode<"X86ISD::VPDPWSSDS", SDTVnniW>;
 
 // Compress and expand.
 def X86compress: SDNode<"X86ISD::COMPRESS", SDTypeProfile<1, 3,
@@ -1093,19 +1098,19 @@ def SDTX86MaskedStore: SDTypeProfile<0, 3, [       // masked store
   SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 
-def X86vpdpbssd  : SDNode<"X86ISD::VPDPBSSD",  SDTVnni>;
-def X86vpdpbssds : SDNode<"X86ISD::VPDPBSSDS", SDTVnni>;
-def X86vpdpbsud  : SDNode<"X86ISD::VPDPBSUD",  SDTVnni>;
-def X86vpdpbsuds : SDNode<"X86ISD::VPDPBSUDS", SDTVnni>;
-def X86vpdpbuud  : SDNode<"X86ISD::VPDPBUUD",  SDTVnni>;
-def X86vpdpbuuds : SDNode<"X86ISD::VPDPBUUDS", SDTVnni>;
+def X86vpdpbssd  : SDNode<"X86ISD::VPDPBSSD",  SDTVnniB>;
+def X86vpdpbssds : SDNode<"X86ISD::VPDPBSSDS", SDTVnniB>;
+def X86vpdpbsud  : SDNode<"X86ISD::VPDPBSUD",  SDTVnniB>;
+def X86vpdpbsuds : SDNode<"X86ISD::VPDPBSUDS", SDTVnniB>;
+def X86vpdpbuud  : SDNode<"X86ISD::VPDPBUUD",  SDTVnniB>;
+def X86vpdpbuuds : SDNode<"X86ISD::VPDPBUUDS", SDTVnniB>;
 
-def X86vpdpwsud  : SDNode<"X86ISD::VPDPWSUD",  SDTVnni>;
-def X86vpdpwsuds : SDNode<"X86ISD::VPDPWSUDS", SDTVnni>;
-def X86vpdpwusd  : SDNode<"X86ISD::VPDPWUSD",  SDTVnni>;
-def X86vpdpwusds : SDNode<"X86ISD::VPDPWUSDS", SDTVnni>;
-def X86vpdpwuud  : SDNode<"X86ISD::VPDPWUUD",  SDTVnni>;
-def X86vpdpwuuds : SDNode<"X86ISD::VPDPWUUDS", SDTVnni>;
+def X86vpdpwsud  : SDNode<"X86ISD::VPDPWSUD",  SDTVnniW>;
+def X86vpdpwsuds : SDNode<"X86ISD::VPDPWSUDS", SDTVnniW>;
+def X86vpdpwusd  : SDNode<"X86ISD::VPDPWUSD",  SDTVnniW>;
+def X86vpdpwusds : SDNode<"X86ISD::VPDPWUSDS", SDTVnniW>;
+def X86vpdpwuud  : SDNode<"X86ISD::VPDPWUUD",  SDTVnniW>;
+def X86vpdpwuuds : SDNode<"X86ISD::VPDPWUUDS", SDTVnniW>;
 
 def X86Vmpsadbw : SDNode<"X86ISD::MPSADBW", SDTX86PSADBW>;
 
@@ -1862,5 +1867,7 @@ def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
 }]>;
 
 // BMM matrix multiplication operations
-def x86vbmacor  : SDNode<"X86ISD::VBMACOR",  SDTVnni>;
-def x86vbmacxor : SDNode<"X86ISD::VBMACXOR", SDTVnni>;
+def SDTBmac : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
+                                   SDTCisSameAs<1,2>, SDTCisSameAs<1,3>]>;
+def x86vbmacor  : SDNode<"X86ISD::VBMACOR",  SDTBmac>;
+def x86vbmacxor : SDNode<"X86ISD::VBMACXOR", SDTBmac>;

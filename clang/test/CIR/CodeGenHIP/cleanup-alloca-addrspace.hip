@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: cir-opt --cir-flatten-cfg %t.cir -o %t-flat.cir
 // RUN: FileCheck --input-file=%t-flat.cir %s --check-prefix=CIR-FLAT
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 
 // Check that alloca created for cleanup destination slot for a function has
 // correct address space after flatten cfg. This is important for address-space

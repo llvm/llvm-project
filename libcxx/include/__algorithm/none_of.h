@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Predicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 none_of(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
   __identity __proj;
   return !std::__any_of(__first, __last, __pred, __proj);

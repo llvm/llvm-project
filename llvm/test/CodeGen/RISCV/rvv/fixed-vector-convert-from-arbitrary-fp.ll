@@ -172,11 +172,11 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    slli a5, a4, 57
 ; CHECK-NEXT:    andi a3, a4, 3
 ; CHECK-NEXT:    srli a5, a5, 59
-; CHECK-NEXT:    snez a2, a3
-; CHECK-NEXT:    seqz a1, a5
-; CHECK-NEXT:    and a6, a1, a2
+; CHECK-NEXT:    snez a1, a3
+; CHECK-NEXT:    seqz a2, a5
+; CHECK-NEXT:    and a6, a2, a1
 ; CHECK-NEXT:    and a4, a4, a0
-; CHECK-NEXT:    li a1, 174
+; CHECK-NEXT:    li a2, 174
 ; CHECK-NEXT:    bnez a6, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    addi a6, a5, 112
@@ -186,7 +186,7 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    j .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    clz a6, a3
-; CHECK-NEXT:    sub a7, a1, a6
+; CHECK-NEXT:    sub a7, a2, a6
 ; CHECK-NEXT:    not t0, a6
 ; CHECK-NEXT:    slli a7, a7, 23
 ; CHECK-NEXT:    binv t0, a3, t0
@@ -210,8 +210,8 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    or a6, a4, a3
 ; CHECK-NEXT:  .LBB1_7:
-; CHECK-NEXT:    and a5, a5, a2
-; CHECK-NEXT:    lui a2, 523264
+; CHECK-NEXT:    and a5, a5, a1
+; CHECK-NEXT:    lui a1, 523264
 ; CHECK-NEXT:    lui t0, 523264
 ; CHECK-NEXT:    bnez a5, .LBB1_9
 ; CHECK-NEXT:  # %bb.8:
@@ -237,7 +237,7 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    j .LBB1_12
 ; CHECK-NEXT:  .LBB1_11:
 ; CHECK-NEXT:    clz t0, a5
-; CHECK-NEXT:    sub t1, a1, t0
+; CHECK-NEXT:    sub t1, a2, t0
 ; CHECK-NEXT:    not t2, t0
 ; CHECK-NEXT:    slli t1, t1, 23
 ; CHECK-NEXT:    binv t2, a5, t2
@@ -285,7 +285,7 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    j .LBB1_21
 ; CHECK-NEXT:  .LBB1_20:
 ; CHECK-NEXT:    clz t0, a5
-; CHECK-NEXT:    sub t1, a1, t0
+; CHECK-NEXT:    sub t1, a2, t0
 ; CHECK-NEXT:    not t2, t0
 ; CHECK-NEXT:    slli t1, t1, 23
 ; CHECK-NEXT:    binv t2, a5, t2
@@ -334,7 +334,7 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    j .LBB1_30
 ; CHECK-NEXT:  .LBB1_29:
 ; CHECK-NEXT:    clz t0, a5
-; CHECK-NEXT:    sub t1, a1, t0
+; CHECK-NEXT:    sub t1, a2, t0
 ; CHECK-NEXT:    not t2, t0
 ; CHECK-NEXT:    slli t1, t1, 23
 ; CHECK-NEXT:    binv t2, a5, t2
@@ -382,7 +382,7 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    j .LBB1_39
 ; CHECK-NEXT:  .LBB1_38:
 ; CHECK-NEXT:    clz t0, a5
-; CHECK-NEXT:    sub t1, a1, t0
+; CHECK-NEXT:    sub t1, a2, t0
 ; CHECK-NEXT:    not t2, t0
 ; CHECK-NEXT:    slli t1, t1, 23
 ; CHECK-NEXT:    binv t2, a5, t2
@@ -431,7 +431,7 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    j .LBB1_48
 ; CHECK-NEXT:  .LBB1_47:
 ; CHECK-NEXT:    clz t0, a5
-; CHECK-NEXT:    sub t1, a1, t0
+; CHECK-NEXT:    sub t1, a2, t0
 ; CHECK-NEXT:    not t2, t0
 ; CHECK-NEXT:    slli t1, t1, 23
 ; CHECK-NEXT:    binv t2, a5, t2
@@ -479,7 +479,7 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    j .LBB1_57
 ; CHECK-NEXT:  .LBB1_56:
 ; CHECK-NEXT:    clz t0, a5
-; CHECK-NEXT:    sub t1, a1, t0
+; CHECK-NEXT:    sub t1, a2, t0
 ; CHECK-NEXT:    not t2, t0
 ; CHECK-NEXT:    slli t1, t1, 23
 ; CHECK-NEXT:    binv t2, a5, t2
@@ -519,28 +519,28 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    and a0, t0, a0
 ; CHECK-NEXT:    bnez t1, .LBB1_65
 ; CHECK-NEXT:  # %bb.64:
-; CHECK-NEXT:    addi a1, a6, 112
+; CHECK-NEXT:    addi a2, a6, 112
 ; CHECK-NEXT:    slli a7, a5, 21
-; CHECK-NEXT:    slli a1, a1, 23
+; CHECK-NEXT:    slli a2, a2, 23
 ; CHECK-NEXT:    or a7, a0, a7
-; CHECK-NEXT:    or a7, a7, a1
+; CHECK-NEXT:    or a7, a7, a2
 ; CHECK-NEXT:    j .LBB1_66
 ; CHECK-NEXT:  .LBB1_65:
 ; CHECK-NEXT:    clz a7, a5
-; CHECK-NEXT:    sub a1, a1, a7
+; CHECK-NEXT:    sub a2, a2, a7
 ; CHECK-NEXT:    not t0, a7
-; CHECK-NEXT:    slli a1, a1, 23
+; CHECK-NEXT:    slli a2, a2, 23
 ; CHECK-NEXT:    binv t0, a5, t0
 ; CHECK-NEXT:    addi a7, a7, -40
-; CHECK-NEXT:    or a1, a0, a1
+; CHECK-NEXT:    or a2, a0, a2
 ; CHECK-NEXT:    sll a7, t0, a7
-; CHECK-NEXT:    or a7, a1, a7
+; CHECK-NEXT:    or a7, a2, a7
 ; CHECK-NEXT:  .LBB1_66:
 ; CHECK-NEXT:    or t0, a6, a5
-; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    beqz t0, .LBB1_68
 ; CHECK-NEXT:  # %bb.67:
-; CHECK-NEXT:    mv a1, a7
+; CHECK-NEXT:    mv a2, a7
 ; CHECK-NEXT:  .LBB1_68:
 ; CHECK-NEXT:    addi a6, a6, -31
 ; CHECK-NEXT:    seqz a7, a5
@@ -548,14 +548,14 @@ define <8 x bfloat> @v8fp8e5m2_to_v8bf16(<8 x i8> %x) nounwind {
 ; CHECK-NEXT:    and a6, a5, a7
 ; CHECK-NEXT:    beqz a6, .LBB1_70
 ; CHECK-NEXT:  # %bb.69:
-; CHECK-NEXT:    or a1, a0, a3
+; CHECK-NEXT:    or a2, a0, a3
 ; CHECK-NEXT:  .LBB1_70:
 ; CHECK-NEXT:    and a4, a5, a4
 ; CHECK-NEXT:    bnez a4, .LBB1_72
 ; CHECK-NEXT:  # %bb.71:
-; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB1_72:
-; CHECK-NEXT:    sw a2, 32(sp)
+; CHECK-NEXT:    sw a1, 32(sp)
 ; CHECK-NEXT:    flw fa0, 16(sp)
 ; CHECK-NEXT:    call __truncsfbf2
 ; CHECK-NEXT:    fmv.s fs0, fa0

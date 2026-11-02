@@ -487,7 +487,7 @@ ReprocessLoop:
     if (BB == L->getHeader())
       continue;
 
-    SmallPtrSet<BasicBlock*, 4> BadPreds;
+    SmallSetVector<BasicBlock *, 4> BadPreds;
     for (BasicBlock *P : predecessors(BB))
       if (!L->contains(P))
         BadPreds.insert(P);

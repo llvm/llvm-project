@@ -13,23 +13,8 @@ define <4 x i32> @dup_trunc_sext_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x,
 ; CHECK-GI-LABEL: dup_trunc_sext_v4i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v0.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[3], w10
-; CHECK-GI-NEXT:    dup v0.8b, v0.b[2]
-; CHECK-GI-NEXT:    umov w8, v0.b[0]
-; CHECK-GI-NEXT:    umov w9, v0.b[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    umov w8, v0.b[2]
-; CHECK-GI-NEXT:    mov v1.s[1], w9
-; CHECK-GI-NEXT:    umov w9, v0.b[3]
-; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    mov v1.s[3], w9
-; CHECK-GI-NEXT:    shl v0.4s, v1.4s, #31
-; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-GI-NEXT:    mov s0, v0.s[2]
+; CHECK-GI-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %cmp = icmp slt <4 x i32> %a, %b
@@ -39,29 +24,12 @@ define <4 x i32> @dup_trunc_sext_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x,
 }
 
 define <2 x i64> @dup_trunc_sext_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %x, <2 x i64> %y) {
-; CHECK-SD-LABEL: dup_trunc_sext_v2i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v0.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    dup v0.2d, v0.d[0]
-; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: dup_trunc_sext_v2i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmgt v0.2d, v1.2d, v0.2d
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    fmov s0, w9
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
-; CHECK-GI-NEXT:    umov w8, v0.b[0]
-; CHECK-GI-NEXT:    umov w9, v0.b[1]
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    cmlt v0.2d, v0.2d, #0
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: dup_trunc_sext_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    dup v0.2d, v0.d[0]
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
   %cmp = icmp slt <2 x i64> %a, %b
   %splat = shufflevector <2 x i1> %cmp, <2 x i1> poison, <2 x i32> <i32 0, i32 0>
   %sel = select <2 x i1> %splat, <2 x i64> %x, <2 x i64> %y
@@ -79,23 +47,8 @@ define <4 x float> @dup_trunc_sext_v4f32(<4 x float> %a, <4 x float> %b, <4 x fl
 ; CHECK-GI-LABEL: dup_trunc_sext_v4f32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcmge v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v0.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[3], w10
-; CHECK-GI-NEXT:    dup v0.8b, v0.b[3]
-; CHECK-GI-NEXT:    umov w8, v0.b[0]
-; CHECK-GI-NEXT:    umov w9, v0.b[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    umov w8, v0.b[2]
-; CHECK-GI-NEXT:    mov v1.s[1], w9
-; CHECK-GI-NEXT:    umov w9, v0.b[3]
-; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    mov v1.s[3], w9
-; CHECK-GI-NEXT:    shl v0.4s, v1.4s, #31
-; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-GI-NEXT:    mov s0, v0.s[3]
+; CHECK-GI-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %cmp = fcmp ole <4 x float> %a, %b
@@ -115,17 +68,8 @@ define <2 x double> @dup_trunc_sext_v2f64(<2 x double> %a, <2 x double> %b, <2 x
 ; CHECK-GI-LABEL: dup_trunc_sext_v2f64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcmge v0.2d, v1.2d, v0.2d
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    fmov s0, w9
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    dup v0.8b, v0.b[1]
-; CHECK-GI-NEXT:    umov w8, v0.b[0]
-; CHECK-GI-NEXT:    umov w9, v0.b[1]
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %cmp = fcmp ole <2 x double> %a, %b
@@ -135,35 +79,12 @@ define <2 x double> @dup_trunc_sext_v2f64(<2 x double> %a, <2 x double> %b, <2 x
 }
 
 define <4 x i32> @dup_trunc_sext_v4i32_idx0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4 x i32> %y) {
-; CHECK-SD-LABEL: dup_trunc_sext_v4i32_idx0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: dup_trunc_sext_v4i32_idx0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v0.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[3], w10
-; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
-; CHECK-GI-NEXT:    umov w8, v0.b[0]
-; CHECK-GI-NEXT:    umov w9, v0.b[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    umov w8, v0.b[2]
-; CHECK-GI-NEXT:    mov v1.s[1], w9
-; CHECK-GI-NEXT:    umov w9, v0.b[3]
-; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    mov v1.s[3], w9
-; CHECK-GI-NEXT:    shl v0.4s, v1.4s, #31
-; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: dup_trunc_sext_v4i32_idx0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
   %cmp = icmp slt <4 x i32> %a, %b
   %splat = shufflevector <4 x i1> %cmp, <4 x i1> poison, <4 x i32> zeroinitializer
   %sel = select <4 x i1> %splat, <4 x i32> %x, <4 x i32> %y

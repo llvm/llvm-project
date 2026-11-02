@@ -219,15 +219,15 @@ program main
   end do
   !$cuf kernel do <<< 1, 2 >>>
   do j = 1, 10
-    !ERROR: 'foo' may not be called in device code
+    !ERROR: 'foo', a procedure with the HOST attribute, may not be called from device code
     call foo
-    !ERROR: 'bar' may not be called in device code
+    !ERROR: 'bar', a procedure with the HOST attribute, may not be called from device code
     x = bar()
-    !ERROR: 'ifunc' may not be called in device code
+    !ERROR: 'ifunc', a procedure with the HOST attribute, may not be called from device code
     if (ifunc() /= 0) continue
-    !ERROR: 'ifunc' may not be called in device code
+    !ERROR: 'ifunc', a procedure with the HOST attribute, may not be called from device code
     if (ifunc() /= 0) then
-    !ERROR: 'ifunc' may not be called in device code
+    !ERROR: 'ifunc', a procedure with the HOST attribute, may not be called from device code
     else if (ifunc() /= 1) then
     end if
   end do
@@ -256,7 +256,7 @@ subroutine host1()
   !$cuf kernel do(1) <<<*,32>>>
   do i = 1, 32
     a(i) = a(i) * 2.0
-    !ERROR: 'syncthreads' may not be called in device code
+    !ERROR: 'syncthreads', a procedure with the HOST attribute, may not be called from device code
     call syncthreads() ! missing explicit use cudadevice
     a(i) = a(i) + a(j) - 34.0
   end do

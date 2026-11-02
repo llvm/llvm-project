@@ -126,8 +126,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0, $q0, $q1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %ptr:_(p0) = COPY $x0
-  ; CHECK-NEXT:   %cmp:_(i1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_BRCOND %cmp(i1), %bb.2
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   G_BRCOND [[DEF]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

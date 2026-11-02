@@ -10,7 +10,6 @@ define void @test(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr [[TMP2:%.*]], ptr [[TMP3:%.*]], ptr [[TMP4:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]], ptr [[TMP7:%.*]], ptr [[_QMSHARED_COMMON_DATAEP2TH:%.*]], double [[TMP8:%.*]], double [[TMP9:%.*]], double [[TMP10:%.*]], double [[TMP11:%.*]], double [[TMP12:%.*]], ptr [[_QMSHARED_COMMON_DATAEPONE:%.*]], double [[TMP13:%.*]], double [[TMP14:%.*]], double [[TMP15:%.*]], ptr [[TMP16:%.*]], double [[TMP17:%.*]], double [[TMP18:%.*]], double [[TMP19:%.*]], double [[TMP20:%.*]], double [[TMP21:%.*]], double [[TMP22:%.*]], double [[TMP23:%.*]], double [[TMP24:%.*]], double [[TMP25:%.*]], ptr [[_QMSHARED_COMMON_DATAEPTWO:%.*]], ptr [[_QMSHARED_COMMON_DATAEPTHR:%.*]], ptr [[_QMSHARED_COMMON_DATAEP72TH:%.*]], ptr [[TMP26:%.*]], double [[TMP27:%.*]], double [[TMP28:%.*]], double [[TMP29:%.*]], double [[TMP30:%.*]], double [[TMP31:%.*]], double [[TMP32:%.*]], double [[TMP33:%.*]], double [[TMP34:%.*]], double [[TMP35:%.*]], double [[TMP36:%.*]], double [[TMP37:%.*]], double [[TMP38:%.*]], double [[TMP39:%.*]], double [[TMP40:%.*]], double [[TMP41:%.*]], double [[TMP42:%.*]], double [[TMP43:%.*]], double [[TMP44:%.*]], double [[TMP45:%.*]], double [[TMP46:%.*]], double [[TMP47:%.*]], double [[TMP48:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[_PREHEADER4179_PREHEADER:.*:]]
-; CHECK-NEXT:    [[TMP52:%.*]] = fneg reassoc nnan ninf nsz arcp afn double [[TMP25]]
 ; CHECK-NEXT:    store double 1.000000e+00, ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[TMP56:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[TMP38]], 1.000000e+00
 ; CHECK-NEXT:    [[TMP51:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[TMP42]], 1.000000e+00
@@ -19,6 +18,7 @@ define void @test(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7
 ; CHECK-NEXT:    [[TMP50:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[TMP13]], [[TMP49]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[TMP13]], [[TMP50]]
+; CHECK-NEXT:    [[TMP52:%.*]] = fneg reassoc nnan ninf nsz arcp afn double [[TMP25]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[TMP50]], 1.000000e+00
 ; CHECK-NEXT:    [[TMP57:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[TMP39]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP82:%.*]] = fsub reassoc nnan ninf nsz arcp afn double [[TMP56]], [[TMP57]]
@@ -52,7 +52,7 @@ define void @test(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7
 ; CHECK-NEXT:    [[TMP88:%.*]] = shufflevector <8 x double> [[TMP86]], <8 x double> [[TMP87]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP89:%.*]] = insertelement <8 x double> <double 1.000000e+00, double poison, double 1.000000e+00, double poison, double 1.000000e+00, double 1.000000e+00, double poison, double poison>, double [[TMP27]], i64 1
 ; CHECK-NEXT:    [[TMP90:%.*]] = shufflevector <8 x double> [[TMP89]], <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 1, i32 4, i32 5, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP91:%.*]] = fmul reassoc nsz arcp afn <8 x double> [[TMP88]], [[TMP90]]
+; CHECK-NEXT:    [[TMP91:%.*]] = fmul reassoc arcp afn <8 x double> [[TMP88]], [[TMP90]]
 ; CHECK-NEXT:    store <8 x double> [[TMP91]], ptr getelementptr inbounds nuw (i8, ptr @hexsh_, i64 136), align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -2,7 +2,7 @@
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @test_codegen(%arg0: i32) {
-    fir.declare_value %arg0 {uniq_name = "test"} : i32 loc(#loc1)
+    fir.declare_value %arg0 uniq_name("test") : i32 loc(#loc1)
     return
   }
 }

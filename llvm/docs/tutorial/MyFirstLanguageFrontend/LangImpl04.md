@@ -181,7 +181,7 @@ Next, we register the analysis passes used by the transform passes.
 
 ```c++
   // Register analysis passes used in these transform passes.
-  PassBuilder PB;
+  PassBuilder PB(*TheContext);
   PB.registerModuleAnalyses(*TheMAM);
   PB.registerFunctionAnalyses(*TheFAM);
   PB.crossRegisterProxies(*TheLAM, *TheFAM, *TheCGAM, *TheMAM);

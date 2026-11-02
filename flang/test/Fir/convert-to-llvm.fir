@@ -449,7 +449,7 @@ func.func @test_call_return_val() -> i32 {
 // result: (x + x') + i(y + y')
 
 func.func @fir_complex_add(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.addc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.addc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -474,7 +474,7 @@ func.func @fir_complex_add(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: (x - x') + i(y - y')
 
 func.func @fir_complex_sub(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.subc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.subc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -499,7 +499,7 @@ func.func @fir_complex_sub(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: (xx'-yy')+i(xy'+yx')
 
 func.func @fir_complex_mul(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.mulc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.mulc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -528,7 +528,7 @@ func.func @fir_complex_mul(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
 
 func.func @fir_complex_div(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.divc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.divc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -1112,6 +1112,55 @@ func.func @alloca_several() -> !fir.ref<i32> {
 // AMDGPU: [[AA:%.*]] = llvm.alloca [[TOTAL]] x i32 : (i64) -> !llvm.ptr<5>
 // AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK: llvm.return [[A]] : !llvm.ptr
+
+// -----
+
+// Test fir.alloca with a requested alignment
+
+func.func @alloca_aligned() -> !fir.ref<!fir.array<10xf32>> {
+  %1 = fir.alloca !fir.array<10xf32> {alignment = 64 : i64}
+  return %1 : !fir.ref<!fir.array<10xf32>>
+}
+
+// CHECK-LABEL: llvm.func @alloca_aligned() -> !llvm.ptr
+// CHECK: [[N:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC: [[A:%.*]] = llvm.alloca [[N]] x !llvm.array<10 x f32> {alignment = 64 : i64}
+// AMDGPU: [[AA:%.*]] = llvm.alloca [[N]] x !llvm.array<10 x f32> {alignment = 64 : i64} : (i64) -> !llvm.ptr<5>
+// AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK: llvm.return [[A]] : !llvm.ptr
+
+// -----
+
+// A requested alignment below the ABI alignment of the type is raised to it.
+
+func.func @alloca_underaligned() -> !fir.ref<i32> {
+  %1 = fir.alloca i32 {alignment = 2 : i64}
+  return %1 : !fir.ref<i32>
+}
+
+// CHECK-LABEL: llvm.func @alloca_underaligned() -> !llvm.ptr
+// CHECK: [[N:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC: [[A:%.*]] = llvm.alloca [[N]] x i32 {alignment = 4 : i64}
+// AMDGPU: [[AA:%.*]] = llvm.alloca [[N]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr<5>
+// AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK: llvm.return [[A]] : !llvm.ptr
+
+// -----
+
+// Test fir.global with a requested alignment
+
+fir.global @g_aligned {alignment = 64 : i64} : !fir.array<16xi32>
+
+// CHECK: llvm.mlir.global external @g_aligned() {{.*}}alignment = 64 : i64{{.*}} : !llvm.array<16 x i32>
+
+// -----
+
+// A requested global alignment below the ABI alignment of the type is raised
+// to it.
+
+fir.global @g_underaligned {alignment = 2 : i64} : i32
+
+// CHECK: llvm.mlir.global external @g_underaligned() {{.*}}alignment = 4 : i64{{.*}} : i32
 
 // -----
 

@@ -40,11 +40,11 @@ void foo() {
   float _Complex c = a * b;
 }
 
-// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
+// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.fmul {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
 
-// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
+// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.fmul {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
+// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.fmul {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
 
 // CIR-AFTER-MUL-COMBINED: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER-MUL-COMBINED: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -105,7 +105,7 @@ void foo() {
 // OGCG-MUL-COMBINED: store float %[[C_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-MUL-COMBINED: store float %[[C_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-FULL: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
+// CIR-BEFORE-FULL: %{{.*}} = cir.complex.fmul {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
 
 // CIR-AFTER-FULL: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER-FULL: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -217,13 +217,13 @@ void foo1() {
   int _Complex c = a * b;
 }
 
-// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(basic) : !cir.complex<!s32i>
+// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(improved) : !cir.complex<!s32i>
+// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(promoted) : !cir.complex<!s32i>
+// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-FULL: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} range(full) : !cir.complex<!s32i>
+// CIR-BEFORE-FULL: %{{.*}} = cir.complex.mul {{.*}}, {{.*}} : !cir.complex<!s32i>
 
 // CIR-AFTER-INT: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
 // CIR-AFTER-INT: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
@@ -336,7 +336,7 @@ void foo3() {
   float _Complex c = a / b;
 }
 
-// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
+// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.fdiv {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
 
 // CIR-AFTER-BASIC: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER-BASIC: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -412,7 +412,7 @@ void foo3() {
 // OGCG-BASIC: store float %[[RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-BASIC: store float %[[RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
+// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.fdiv {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
 
 // CIR-AFTER-IMPROVED: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER-IMPROVED: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -543,7 +543,7 @@ void foo3() {
 // OGCG-IMPROVED:  store float %[[RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-IMPROVED:  store float %[[RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
+// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.fdiv {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
 
 // CIR-AFTER-PROMOTED: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER-PROMOTED: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -642,7 +642,7 @@ void foo3() {
 // OGCG-PROMOTED: store float %[[UNPROMOTION_RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-PROMOTED: store float %[[UNPROMOTION_RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-FULL: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
+// CIR-BEFORE-FULL: %{{.*}} = cir.complex.fdiv {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
 
 // CIR-AFTER-FULL: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER-FULL: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -702,13 +702,13 @@ void foo4() {
   int _Complex c = a / b;
 }
 
-// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(basic) : !cir.complex<!s32i>
+// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.div {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(improved) : !cir.complex<!s32i>
+// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(promoted) : !cir.complex<!s32i>
+// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-FULL: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(full) : !cir.complex<!s32i>
+// CIR-BEFORE-FULL: %{{.*}} = cir.complex.div {{.*}}, {{.*}} : !cir.complex<!s32i>
 
 // CIR-COMBINED: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
 // CIR-COMBINED: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
@@ -836,7 +836,7 @@ void foo6() {
   float _Complex c = a / b;
 }
 
-// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
+// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.fdiv {{.*}}, {{.*}} range(basic) : !cir.complex<!cir.float>
 
 // CIR-AFTER-BASIC: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.float>
 // CIR-AFTER-BASIC: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -911,7 +911,7 @@ void foo6() {
 // OGCG-BASIC: store float %[[RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-BASIC: store float %[[RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
+// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.fdiv {{.*}}, {{.*}} range(improved) : !cir.complex<!cir.float>
 
 // CIR-AFTER-IMPROVED: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.float>
 // CIR-AFTER-IMPROVED: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -1041,7 +1041,7 @@ void foo6() {
 // OGCG-IMPROVED:  store float %[[RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-IMPROVED:  store float %[[RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
+// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.fdiv {{.*}}, {{.*}} range(promoted) : !cir.complex<!cir.float>
 
 // CIR-AFTER-PROMOTED: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.float>
 // CIR-AFTER-PROMOTED: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -1137,7 +1137,7 @@ void foo6() {
 // OGCG-PROMOTED: store float %[[UNPROMOTION_RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-PROMOTED: store float %[[UNPROMOTION_RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4
 
-// CIR-BEFORE-FULL: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
+// CIR-BEFORE-FULL: %{{.*}} = cir.complex.fdiv {{.*}}, {{.*}} range(full) : !cir.complex<!cir.float>
 
 // CIR-AFTER-FULL: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.float>
 // CIR-AFTER-FULL: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
@@ -1196,13 +1196,13 @@ void foo7() {
   int _Complex c = a / b;
 }
 
-// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(basic) : !cir.complex<!s32i>
+// CIR-BEFORE-BASIC: %{{.*}} = cir.complex.div {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(improved) : !cir.complex<!s32i>
+// CIR-BEFORE-IMPROVED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(promoted) : !cir.complex<!s32i>
+// CIR-BEFORE-PROMOTED: %{{.*}} = cir.complex.div {{.*}}, {{.*}} : !cir.complex<!s32i>
 
-// CIR-BEFORE-FULL: %{{.*}} = cir.complex.div {{.*}}, {{.*}} range(full) : !cir.complex<!s32i>
+// CIR-BEFORE-FULL: %{{.*}} = cir.complex.div {{.*}}, {{.*}} : !cir.complex<!s32i>
 
 // CIR-COMBINED: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
 // CIR-COMBINED: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!s32i>

@@ -38,7 +38,7 @@ v_cvt_f16_u16_e64 v5, 0.6
 // GFX9ERR: :[[@LINE-1]]:23: error: literal operands are not supported
 
 v_cvt_u32_f64 v5, v[0:1] quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
-// GFX9ERR: :[[@LINE-1]]:19: error: invalid operand for instruction
+// GFX9ERR: :[[@LINE-1]]:26: error: not a valid operand.
 
 v_subrev_u16_e64 v5, v1, -4.2
 // GFX9ERR: :[[@LINE-1]]:26: error: literal operands are not supported

@@ -66,7 +66,7 @@
 // CUDA-PTH: cir.call @cudaLaunchKernel_ptsz
 
 //
-// HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.ptr<!cir.func<(!s32i, !cir.float)>> {alignment = 8 : i64}
+// HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.ptr<!cir.func<(!s32i, !cir.float)>> align(8)
 // HIP-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelif
 // HIP-NEW: cir.alloca "stream" {{.*}} : !cir.ptr<!cir.ptr<!rec_hipStream>>
 // HIP-NEW: cir.call @__hipPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_hipStream>>) -> !s32i
@@ -118,13 +118,13 @@ int main(void) {
   // CUDA-NEW: } else {
   // CUDA-NEW:   cir.const #cir.int<42> : !s32i
   // CUDA-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">, uniform_work_group_size} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
+  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {uniform_work_group_size} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
   // CUDA-NEW: }
   // HIP-NEW: cir.if %{{.*}} {
   // HIP-NEW: } else {
   // HIP-NEW:   cir.const #cir.int<42> : !s32i
   // HIP-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">, uniform_work_group_size} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
+  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {uniform_work_group_size} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
   // HIP-NEW: }
   kernel<<<1, 1>>>(42, 1.0f);
 }

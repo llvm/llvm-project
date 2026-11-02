@@ -625,3 +625,54 @@ TEST(ArchSpecTest, TripleComponentsWereSpecified) {
     ASSERT_TRUE(D.TripleEnvironmentWasSpecified());
   }
 }
+
+TEST(ArchSpecTest, ARM64EX1Variants) {
+  // Test arm64e.x1 architecture.
+  {
+    ArchSpec AS("arm64e.x1");
+    ASSERT_TRUE(AS.IsValid());
+    EXPECT_EQ(ArchSpec::eCore_arm_arm64ex1, AS.GetCore());
+    EXPECT_EQ(llvm::Triple::aarch64, AS.GetTriple().getArch());
+    EXPECT_STREQ("arm64e.x1", AS.GetArchitectureName());
+    EXPECT_EQ(8u, AS.GetAddressByteSize());
+    EXPECT_EQ(4u, AS.GetMinimumOpcodeByteSize());
+    EXPECT_EQ(4u, AS.GetMaximumOpcodeByteSize());
+  }
+
+  // Test MachO CPU types for x1 variants.
+  {
+    ArchSpec AS;
+    EXPECT_TRUE(AS.SetTriple("arm64e.x1-apple-macosx"));
+    EXPECT_EQ(uint32_t(llvm::MachO::CPU_TYPE_ARM64), AS.GetMachOCPUType());
+    EXPECT_EQ(uint32_t(llvm::MachO::CPU_SUBTYPE_ARM64E_X1),
+              AS.GetMachOCPUSubType());
+  }
+}
+
+TEST(ArchSpecTest, ARM64EX1Compatibility) {
+  // Test compatibility between arm64e.x1 and other arm64e variants.
+  {
+    ArchSpec A("arm64e.x1");
+    ArchSpec B("arm64e");
+    ASSERT_TRUE(A.IsValid());
+    ASSERT_TRUE(B.IsValid());
+
+    EXPECT_FALSE(A.IsExactMatch(B));
+    EXPECT_TRUE(A.IsCompatibleMatch(B));
+    EXPECT_FALSE(B.IsExactMatch(A));
+    EXPECT_TRUE(B.IsCompatibleMatch(A));
+  }
+
+  // Test compatibility with aarch64.
+  {
+    ArchSpec A("arm64e.x1");
+    ArchSpec B("aarch64");
+    ASSERT_TRUE(A.IsValid());
+    ASSERT_TRUE(B.IsValid());
+
+    EXPECT_FALSE(A.IsExactMatch(B));
+    EXPECT_TRUE(A.IsCompatibleMatch(B));
+    EXPECT_FALSE(B.IsExactMatch(A));
+    EXPECT_TRUE(B.IsCompatibleMatch(A));
+  }
+}

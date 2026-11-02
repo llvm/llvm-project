@@ -453,9 +453,9 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 
 public:
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor(BufferFatPtrToIntTypeMap *TypeMap,
-                                           const DataLayout &DL,
-                                           LLVMContext &Ctx)
-      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)), DL(DL) {}
+                                           Module &M)
+      : TypeMap(TypeMap), IRB(M, InstSimplifyFolder(M.getDataLayout())),
+        DL(M.getDataLayout()) {}
   bool processFunction(Function &F, const TargetTransformInfo *TTI,
                        ScalarEvolution *SE);
 
@@ -832,9 +832,9 @@ class LegalizeBufferContentTypesVisitor
   bool visitAddrSpaceCastInst(AddrSpaceCastInst &ASCI);
 
 public:
-  LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx,
-                                    const TargetMachine *TM)
-      : IRB(Ctx, InstSimplifyFolder(DL)), DL(DL), TM(TM) {}
+  LegalizeBufferContentTypesVisitor(Module &M, const TargetMachine *TM)
+      : IRB(M, InstSimplifyFolder(M.getDataLayout())), DL(M.getDataLayout()),
+        TM(TM) {}
   bool processFunction(Function &F, ScalarEvolution *SE);
 };
 } // namespace
@@ -1305,9 +1305,10 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     for (auto [I, ElemTy, Offset] :
          llvm::enumerate(ST->elements(), Layout->getMemberOffsets())) {
       AggIdxs.push_back(I);
-      Changed |= std::get<0>(visitStoreImpl(OrigSI, ElemTy, AggIdxs,
-                                            AggByteOff + Offset.getFixedValue(),
-                                            Name + "." + Twine(I)));
+      Changed |= visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                                AggByteOff + Offset.getFixedValue(),
+                                Name + "." + Twine(I))
+                     .first;
       AggIdxs.pop_back();
     }
     return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1321,9 +1322,11 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
-        Changed |= std::get<0>(visitStoreImpl(
-            OrigSI, ElemTy, AggIdxs,
-            AggByteOff + I * ElemAllocSize.getFixedValue(), Name + Twine(I)));
+        Changed |=
+            visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                           AggByteOff + I * ElemAllocSize.getFixedValue(),
+                           Name + Twine(I))
+                .first;
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1603,9 +1606,8 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
                           bool IsVolatile, SyncScope::ID SSID);
 
 public:
-  SplitPtrStructs(const DataLayout &DL, LLVMContext &Ctx,
-                  const TargetMachine *TM)
-      : TM(TM), IRB(Ctx, InstSimplifyFolder(DL)) {}
+  SplitPtrStructs(Module &M, const TargetMachine *TM)
+      : TM(TM), IRB(M, InstSimplifyFolder(M.getDataLayout())) {}
 
   void processFunction(Function &F);
 
@@ -1760,7 +1762,7 @@ void SplitPtrStructs::processConditionals() {
           // Handle the case where previous loops already looked through
           // an addrspacecast.
           if (isSplitFatPtr(RootVal->getType()))
-            MaybeRsrc = std::get<0>(getPtrParts(RootVal));
+            MaybeRsrc = getPtrParts(RootVal).first;
           else
             MaybeRsrc = RootVal;
         }
@@ -1779,7 +1781,7 @@ void SplitPtrStructs::processConditionals() {
         auto *RsrcPHI = IRB.CreatePHI(RsrcTy, PHI->getNumIncomingValues());
         RsrcPHI->takeName(Rsrc);
         for (auto [V, BB] : llvm::zip(PHI->incoming_values(), PHI->blocks())) {
-          Value *VRsrc = std::get<0>(getPtrParts(V));
+          Value *VRsrc = getPtrParts(V).first;
           RsrcPHI->addIncoming(VRsrc, BB);
         }
         copyMetadata(RsrcPHI, PHI);
@@ -1791,7 +1793,7 @@ void SplitPtrStructs::processConditionals() {
       NewOff->takeName(Off);
       for (auto [V, BB] : llvm::zip(PHI->incoming_values(), PHI->blocks())) {
         assert(OffParts.count(V) && "An offset part had to be created by now");
-        Value *VOff = std::get<1>(getPtrParts(V));
+        Value *VOff = getPtrParts(V).second;
         NewOff->addIncoming(VOff, BB);
       }
       copyMetadata(NewOff, PHI);
@@ -2587,6 +2589,36 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     I.replaceAllUsesWith(NewLoad);
     return {nullptr, nullptr};
   }
+  case Intrinsic::prefetch: {
+    Value *Ptr = I.getArgOperand(0);
+    if (!isSplitFatPtr(Ptr->getType()))
+      return {nullptr, nullptr};
+    // s_buffer_prefetch_data only takes an immediate offset, so only a data
+    // prefetch at a constant offset can use it. Drop the others: a prefetch is
+    // only a hint.
+    if (ST->hasSafeSmemPrefetch() &&
+        cast<ConstantInt>(I.getArgOperand(3))->isOne()) {
+      IRB.SetInsertPoint(&I);
+      auto [Rsrc, Off] = getPtrParts(Ptr);
+      auto *ConstOff = dyn_cast<ConstantInt>(Off);
+      if (ConstOff && AMDGPU::isLegalSMRDEncodedSignedOffset(
+                          *ST, ConstOff->getZExtValue(), /*IsBuffer=*/true)) {
+        Value *NewPrefetch =
+            IRB.CreateIntrinsic(Intrinsic::amdgcn_s_buffer_prefetch_data, {},
+                                {Rsrc, ConstOff, IRB.getInt32(0)});
+        copyMetadata(NewPrefetch, &I);
+      }
+    }
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
+  }
+  case Intrinsic::amdgcn_s_prefetch_data:
+  case Intrinsic::amdgcn_s_prefetch_inst:
+    if (!isSplitFatPtr(I.getArgOperand(0)->getType()))
+      return {nullptr, nullptr};
+    // Instruction selection drops these for every other non-global pointer.
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
   }
   return {nullptr, nullptr};
 }
@@ -2789,10 +2821,8 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
         /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
   }
 
-  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, DL,
-                                                         M.getContext());
-  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(
-      DL, M.getContext(), &TM);
+  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, M);
+  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(M, &TM);
   for (Function &F : M.functions()) {
     bool InterfaceChange = hasFatPointerInterface(F, &StructTM);
     bool BodyChanges = containsBufferFatPointers(F, &StructTM);
@@ -2837,7 +2867,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
   IntTM.clear();
   CloneMap.clear();
 
-  SplitPtrStructs Splitter(DL, M.getContext(), &TM);
+  SplitPtrStructs Splitter(M, &TM);
   for (Function *F : NeedsPostProcess)
     Splitter.processFunction(*F);
   for (Function *F : Intrinsics) {

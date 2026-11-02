@@ -33,3 +33,42 @@ llvm.func @invalid_call_debug_locs() {
   llvm.call @missing_debug_loc() : () -> () loc(#loc)
   llvm.return
 } loc(#loc4)
+
+// -----
+
+#di_file = #llvm.di_file<"file.cpp" in "/folder/">
+#di_compile_unit = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C_plus_plus_14,
+  file = #di_file, isOptimized = true, emissionKind = Full
+>
+#di_subprogram = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit, scope = #di_file,
+  name = "missing_debug_loc", file = #di_file,
+  subprogramFlags = "Definition|Optimized"
+>
+#di_subprogram1 = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit, scope = #di_file,
+  name = "invalid_invoke_debug_locs", file = #di_file,
+  subprogramFlags = "Definition|Optimized"
+>
+#loc = loc(unknown)
+#loc1 = loc("file.cpp":24:0)
+#loc2 = loc(fused<#di_subprogram>[#loc1])
+#loc3 = loc("file.cpp":42:0)
+#loc4 = loc(fused<#di_subprogram1>[#loc3])
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @missing_debug_loc() {
+  llvm.return
+} loc(#loc2)
+
+llvm.func @invalid_invoke_debug_locs() attributes { personality = @__gxx_personality_v0 } {
+// CHECK: <unknown>:0: error: inlinable function call in a function with a DISubprogram location must have a debug location
+  llvm.invoke @missing_debug_loc() to ^bb1 unwind ^bb2 : () -> () loc(#loc)
+^bb1:
+  llvm.return
+^bb2:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+} loc(#loc4)

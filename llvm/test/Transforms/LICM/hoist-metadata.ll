@@ -125,7 +125,7 @@ exit:
 !3 = !{!"Simple C/C++ TBAA"}
 !4 = !{!5}
 !5 = distinct !{!5, !6}
-!6 = distinct !{!6}
+!6 = distinct !{!6, i1 false}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
 ;.

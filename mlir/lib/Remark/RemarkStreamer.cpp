@@ -1,6 +1,8 @@
 #include "mlir/Remark/RemarkStreamer.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Remarks.h"
+#include "mlir/Support/FileUtilities.h"
 
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Remarks/RemarkStreamer.h"
@@ -9,22 +11,17 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 namespace mlir::remark::detail {
-
-FailureOr<std::unique_ptr<MLIRRemarkStreamerBase>>
+llvm::Expected<std::unique_ptr<MLIRRemarkStreamerBase>>
 LLVMRemarkStreamer::createToFile(llvm::StringRef path,
                                  llvm::remarks::Format fmt) {
-  std::error_code ec;
-  // Use error_code ctor; YAML is text. (Bitstream also works fine here.)
-  auto f =
-      std::make_unique<llvm::ToolOutputFile>(path, ec, llvm::sys::fs::OF_Text);
-  if (ec)
-    return failure();
+  std::string errorMessage;
+  std::unique_ptr<llvm::ToolOutputFile> f = openOutputFile(path, &errorMessage);
+  if (!f)
+    return llvm::createStringError(errorMessage);
 
   auto serOr = llvm::remarks::createRemarkSerializer(fmt, f->os());
-  if (!serOr) {
-    llvm::consumeError(serOr.takeError());
-    return failure();
-  }
+  if (!serOr)
+    return llvm::createFileError(path, serOr.takeError());
 
   auto rs =
       std::make_unique<llvm::remarks::RemarkStreamer>(std::move(*serOr), path);
@@ -63,10 +60,10 @@ LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
     const RemarkCategories &cat, bool printAsEmitRemarks) {
 
-  FailureOr<std::unique_ptr<detail::MLIRRemarkStreamerBase>> sOr =
+  llvm::Expected<std::unique_ptr<detail::MLIRRemarkStreamerBase>> sOr =
       detail::LLVMRemarkStreamer::createToFile(path, fmt);
-  if (failed(sOr))
-    return failure();
+  if (!sOr)
+    return emitError(UnknownLoc::get(&ctx)) << llvm::toString(sOr.takeError());
 
   return remark::enableOptimizationRemarks(ctx, std::move(*sOr),
                                            std::move(remarkEmittingPolicy), cat,

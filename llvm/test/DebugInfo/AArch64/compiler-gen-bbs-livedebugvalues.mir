@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -O0 -regalloc=fast -run-pass=livedebugvalues | \
+# RUN: llc -o - %s -O0 -regalloc=fast -run-pass=live-debug-values | \
 # RUN:   FileCheck %s -implicit-check-not=DBG_VALUE
 
 # RUN: llc -o - %s -O0 -regalloc=fast -passes=live-debug-values | \

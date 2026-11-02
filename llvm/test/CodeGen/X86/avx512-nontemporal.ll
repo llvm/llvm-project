@@ -32,6 +32,7 @@ define i32 @f(<16 x float> %A, <16 x float> %AA, ptr %B, <8 x double> %C, <8 x d
 ; CHECK-NEXT:    addl (%rsi), %eax
 ; CHECK-NEXT:    vmovntdq %zmm0, (%rdi)
 ; CHECK-NEXT:    addl (%rsi), %eax
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8

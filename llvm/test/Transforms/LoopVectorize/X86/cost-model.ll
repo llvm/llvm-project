@@ -473,10 +473,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 8
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[B]], i64 1)
-; CHECK-NEXT:    [[TMP16:%.*]] = freeze i64 [[TMP15]]
-; CHECK-NEXT:    [[UMIN4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP16]], i64 [[A]])
-; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[UMIN4]], 3
+; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[UMIN10]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 8
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC_1]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
@@ -1029,6 +1026,8 @@ exit:
 @dst.arr.a = external global [10 x double]
 @dst.arr.b = external global [15 x double]
 
+; Force VF 4, as extracting the mask for the replicated store makes
+; vectorization unprofitable otherwise.
 define void @known_deref_load_tail_folding() #4 {
 ; CHECK-LABEL: define void @known_deref_load_tail_folding(
 ; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
@@ -1100,7 +1099,7 @@ loop:
   store double 0.000000e+00, ptr %dst.select, align 8
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 12
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !4
 
 exit:
   ret void
@@ -1117,3 +1116,5 @@ attributes #4 = { "target-cpu"="haswell" }
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
 !2 = !{!"llvm.loop.vectorize.scalable.disable"}
 !3 = !{!"llvm.loop.vectorize.enable"}
+!4 = distinct !{!4, !5}
+!5 = !{!"llvm.loop.vectorize.width", i32 4}

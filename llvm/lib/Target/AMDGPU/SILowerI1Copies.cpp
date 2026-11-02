@@ -573,10 +573,8 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
     mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
     Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
-    if (NewReg != DstReg) {
-      replaceDstReg(NewReg, DstReg, &MBB);
-      MI->eraseFromParent();
-    }
+    replaceDstReg(NewReg, DstReg, &MBB);
+    MI->eraseFromParent();
 
     Incomings.clear();
   }

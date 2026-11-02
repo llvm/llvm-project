@@ -183,6 +183,8 @@ func.func @int_unary(%arg0: i32) {
   %0 = math.absi %arg0 : i32
   // CHECK: spirv.CL.clz %{{.*}} : i32
   %1 = math.ctlz %arg0 : i32
+  // CHECK: spirv.CL.ctz %{{.*}} : i32
+  %2 = math.cttz %arg0 : i32
   return
 }
 
@@ -190,7 +192,45 @@ func.func @int_unary(%arg0: i32) {
 func.func @int_unary_vector(%arg0: vector<2xi32>) {
   // CHECK: spirv.CL.clz %{{.*}} : vector<2xi32>
   %0 = math.ctlz %arg0 : vector<2xi32>
+  // CHECK: spirv.CL.ctz %{{.*}} : vector<2xi32>
+  %1 = math.cttz %arg0 : vector<2xi32>
   return
+}
+
+// CHECK-LABEL: @cttz_i1
+func.func @cttz_i1(%arg0: i1) -> i1 {
+  // CHECK: [[RESULT:%.*]] = spirv.LogicalNot %arg0 : i1
+  // CHECK: return [[RESULT]] : i1
+  %0 = math.cttz %arg0 : i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @cttz_i1_vector
+func.func @cttz_i1_vector(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // CHECK: [[RESULT:%.*]] = spirv.LogicalNot %arg0 : vector<2xi1>
+  // CHECK: return [[RESULT]] : vector<2xi1>
+  %0 = math.cttz %arg0 : vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// CHECK-LABEL: @cttz_index
+func.func @cttz_index(%arg0: index) -> index {
+  // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : index to i32
+  // CHECK: [[RESULT:%.*]] = spirv.CL.ctz [[INPUT]] : i32
+  // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast [[RESULT]] : i32 to index
+  // CHECK: return [[CAST]] : index
+  %0 = math.cttz %arg0 : index
+  return %0 : index
+}
+
+// CHECK-LABEL: @cttz_index_vector
+func.func @cttz_index_vector(%arg0: vector<2xindex>) -> vector<2xindex> {
+  // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : vector<2xindex> to vector<2xi32>
+  // CHECK: [[RESULT:%.*]] = spirv.CL.ctz [[INPUT]] : vector<2xi32>
+  // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast [[RESULT]] : vector<2xi32> to vector<2xindex>
+  // CHECK: return [[CAST]] : vector<2xindex>
+  %0 = math.cttz %arg0 : vector<2xindex>
+  return %0 : vector<2xindex>
 }
 
 } // end module
@@ -268,3 +308,42 @@ func.func @sincos_vector(%arg0: vector<3xf32>) {
 }
 
 } // end module
+
+// -----
+
+// Emulating narrow types must preserve cttz(0) == source bit width.
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>> } {
+  // CHECK-LABEL: @cttz_emulated_i8
+  func.func @cttz_emulated_i8(%arg0: i8) -> i8 {
+    // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : i8 to i32
+    // CHECK: [[SENTINEL:%.*]] = spirv.Constant 256 : i32
+    // CHECK: [[BOUNDED:%.*]] = spirv.BitwiseOr [[INPUT]], [[SENTINEL]] : i32
+    // CHECK: spirv.CL.ctz [[BOUNDED]] : i32
+    %0 = math.cttz %arg0 : i8
+    return %0 : i8
+  }
+  // CHECK-LABEL: @cttz_emulated_vector
+  func.func @cttz_emulated_vector(%arg0: vector<2xi16>) -> vector<2xi16> {
+    // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : vector<2xi16> to vector<2xi32>
+    // CHECK: [[SENTINEL:%.*]] = spirv.Constant dense<65536> : vector<2xi32>
+    // CHECK: [[BOUNDED:%.*]] = spirv.BitwiseOr [[INPUT]], [[SENTINEL]] : vector<2xi32>
+    // CHECK: spirv.CL.ctz [[BOUNDED]] : vector<2xi32>
+    %0 = math.cttz %arg0 : vector<2xi16>
+    return %0 : vector<2xi16>
+  }
+}
+
+// -----
+
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel, Int8, Int16, Int64], []>, #spirv.resource_limits<>> } {
+  // CHECK-LABEL: @cttz_native_widths
+  func.func @cttz_native_widths(%a: i8, %b: vector<2xi16>, %c: i64) {
+    // CHECK: spirv.CL.ctz %{{.*}} : i8
+    %0 = math.cttz %a : i8
+    // CHECK: spirv.CL.ctz %{{.*}} : vector<2xi16>
+    %1 = math.cttz %b : vector<2xi16>
+    // CHECK: spirv.CL.ctz %{{.*}} : i64
+    %2 = math.cttz %c : i64
+    return
+  }
+}

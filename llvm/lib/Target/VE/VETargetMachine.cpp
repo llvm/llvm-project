@@ -41,8 +41,9 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 
 namespace {
 class VEELFTargetObjectFile : public TargetLoweringObjectFileELF {
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override {
-    TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override {
+    TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
     InitializeELF(TM.Options.UseInitArray);
   }
 };
@@ -109,11 +110,11 @@ void VEPassConfig::addIRPasses() {
 }
 
 bool VEPassConfig::addInstSelector() {
-  addPass(createVEISelDag(getVETargetMachine()));
+  addPass(createVEDAGToDAGISelLegacyPass(getVETargetMachine()));
   return false;
 }
 
 void VEPassConfig::addPreEmitPass() {
   // LVLGen should be called after scheduling and register allocation
-  addPass(createLVLGenPass());
+  addPass(createVELVLGenLegacyPass());
 }

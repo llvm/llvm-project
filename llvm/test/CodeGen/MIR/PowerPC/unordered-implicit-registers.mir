@@ -36,8 +36,8 @@ body: |
     %0 = COPY $x3
     %1 = LWZ 0, %0 :: (load (s32) from %ir.p)
     %2 = LI 0
-    %3 = RLWIMI %2, killed %1, 0, 0, 31
-    %4 = EXTSW_32_64 killed %3
+    %3 = RLWIMI %2, %1, 0, 0, 31
+    %4 = EXTSW_32_64 %3
     $x3 = COPY %4
   ; CHECK: BLR8 implicit $lr8, implicit $rm, implicit $x3
     BLR8 implicit $lr8, implicit $rm, implicit $x3

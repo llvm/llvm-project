@@ -19,7 +19,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolLookupSetSPS.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 
 #include <cstdint>
@@ -47,7 +47,7 @@ struct DylibMgrResolve {
   using SPSSig = shared::SPSExpected<
       shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorAddr>>>(
       shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-      shared::SPSRemoteSymbolLookupSet);
+      shared::SPSSymbolLookupSet);
 };
 
 } // namespace llvm::orc::rt::sps_ci

@@ -469,12 +469,6 @@ public:
     return true;
   }
 
-  unsigned countNonConstantIndices() const {
-    return count_if(indices(), [](const Use& use) {
-        return !isa<ConstantInt>(*use);
-      });
-  }
-
   /// Compute the maximum alignment that this GEP is garranteed to preserve.
   LLVM_ABI Align getMaxPreservedAlignment(const DataLayout &DL) const;
 
@@ -557,7 +551,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToIntOperator, Value)
 
 class PtrToAddrOperator
     : public ConcreteOperator<Operator, Instruction::PtrToAddr> {
-  friend class PtrToAddr;
   friend class ConstantExpr;
 
 public:

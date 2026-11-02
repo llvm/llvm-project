@@ -316,6 +316,40 @@ def testApplyLinalgSwapExtractSliceWithFillPattern(module: Module):
 
 
 @run
+def testApplyLinalgEraseUnusedOperandsAndResultsPattern(module: Module):
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
+            structured.apply_patterns_linalg_erase_unused_operands_and_results()
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testApplyLinalgEraseUnusedOperandsAndResultsPattern
+    # CHECK: transform.apply_patterns.linalg.erase_unused_operands_and_results
+
+
+@run
+def testApplyLinalgFoldReshapeOpsByExpansionPattern(module: Module):
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
+            structured.apply_patterns_linalg_fold_reshape_ops_by_expansion()
+            structured.apply_patterns_linalg_fold_reshape_ops_by_expansion(
+                fold_single_use_only=False
+            )
+            structured.apply_patterns_linalg_fold_reshape_ops_by_expansion(
+                fold_single_use_only=True
+            )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testApplyLinalgFoldReshapeOpsByExpansionPattern
+    # CHECK: transform.apply_patterns.linalg.fold_reshape_ops_by_expansion{{$}}
+    # CHECK-NEXT: transform.apply_patterns.linalg.fold_reshape_ops_by_expansion{{$}}
+    # CHECK-NEXT: transform.apply_patterns.linalg.fold_reshape_ops_by_expansion fold_single_use_only = true
+
+
+@run
 def testReplicateOp(module: Module):
     with_pdl = transform_pdl.WithPDLPatternsOp(transform.AnyOpType.get())
     with InsertionPoint(with_pdl.body):

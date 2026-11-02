@@ -2238,14 +2238,14 @@ define i16 @mul_udiv_zext_uneq(i8 %x) {
 
 
 ; (shl  X, C1) * (select cond, C2, C3) --> X * (select cond, C2<<C1, C3<<C1)
-define i16 @shl_select_mul(i16 %x, i1 %cond) {
+define i16 @shl_select_mul(i16 %x, i1 %cond) !prof !0 {
 ; CHECK-LABEL: @shl_select_mul(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 20, i16 12
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 20, i16 12, !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[MUL]]
 ;
   %shl = shl  i16 %x, 2
-  %sel = select i1 %cond, i16 5, i16 3
+  %sel = select i1 %cond, i16 5, i16 3, !prof !1
   %mul = mul  i16 %shl, %sel
   ret i16 %mul
 }
@@ -2520,6 +2520,7 @@ define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
 }
 
 !0 = !{!"function_entry_count", i64 1000}
+!1 = !{!"branch_weights", i32 2, i32 3}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
@@ -2527,4 +2528,5 @@ define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 2, i32 3}
 ;.

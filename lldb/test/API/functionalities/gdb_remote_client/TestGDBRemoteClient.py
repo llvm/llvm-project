@@ -724,3 +724,44 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             "_reason._fault._trapno": 12,
         }
         self.do_siginfo_test("remote-freebsd", "basic_eh_frame.yaml", data, expected)
+
+    def test_siginfo_multiple_threads(self):
+        """Test that we read the siginfo of the right thread."""
+
+        class MyResponder(MockGDBServerResponder):
+            current_thread = None
+
+            def qSupported(self, client_supported):
+                return "PacketSize=3fff;QStartNoAckMode+;qXfer:siginfo:read+"
+
+            def qfThreadInfo(self):
+                return "m1,2"
+
+            def haltReason(self):
+                return "T02thread:1;"
+
+            def selectThread(self, op, thread_id):
+                if op == "g":
+                    self.current_thread = thread_id
+                return "OK"
+
+            def qXferRead(self, obj, annex, offset, length):
+                if obj == "siginfo" and self.current_thread is not None:
+                    # Make si_signo equal to the thread id.
+                    return chr(self.current_thread) + "\x00" * 127, False
+                return None, False
+
+        self.server.responder = MyResponder()
+
+        self.runCmd("platform select remote-linux")
+        target = self.createTarget("basic_eh_frame.yaml")
+        process = self.connect(target)
+
+        self.assertEqual(process.GetNumThreads(), 2)
+        for thread in process.threads:
+            siginfo = thread.GetSiginfo()
+            self.assertSuccess(siginfo.GetError())
+            self.assertEqual(
+                siginfo.GetValueForExpressionPath(".si_signo").GetValueAsUnsigned(),
+                thread.GetThreadID(),
+            )

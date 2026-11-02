@@ -11,6 +11,8 @@
 // CIR-DAG: ![[I64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !u64i}>
 // CIR-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.double, data !cir.double}>
 // CIR-DAG: ![[F32X2PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.vector<2 x !cir.float>, data !cir.vector<2 x !cir.float>}>
+// CIR-DAG: ![[I64PTR:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !cir.ptr<!void>}>
+// CIR-DAG: ![[I64I32:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !s32i}>
 
 typedef struct { int x; int y; } Pair2;
 typedef struct { long a; long b; } Pair16;
@@ -27,14 +29,14 @@ typedef union { char c[32]; } __attribute__((aligned(32))) UBigOverAligned;
 // Narrow signed integer sign-extended in a register.
 signed char ext_schar(signed char c) { return c; }
 
-// CIR: cir.func {{.*}}@ext_schar(%arg0: !s8i {{.*}}llvm.signext{{.*}}) -> (!s8i {{.*}}llvm.signext
-// LLVM: define dso_local signext i8 @ext_schar(i8 noundef signext %{{.+}})
+// CIR: cir.func {{.*}}@ext_schar(%arg0: !s8i {{.*}}llvm.signext{{.*}}) -> !s8i
+// LLVM: define dso_local i8 @ext_schar(i8 noundef signext %{{.+}})
 
 // Narrow unsigned integer zero-extended in a register.
 unsigned char ext_uchar(unsigned char c) { return c; }
 
-// CIR: cir.func {{.*}}@ext_uchar(%arg0: !u8i {{.*}}llvm.zeroext{{.*}}) -> (!u8i {{.*}}llvm.zeroext
-// LLVM: define dso_local zeroext i8 @ext_uchar(i8 noundef zeroext %{{.+}})
+// CIR: cir.func {{.*}}@ext_uchar(%arg0: !u8i {{.*}}llvm.zeroext{{.*}}) -> !u8i
+// LLVM: define dso_local i8 @ext_uchar(i8 noundef zeroext %{{.+}})
 
 // Floating-point scalar passed/returned in an SSE register.
 double sse_double(double d) { return d; }
@@ -47,6 +49,11 @@ Pair2 ret_pair2(int a) { Pair2 p = {a, a}; return p; }
 
 // CIR: cir.func {{.*}}@ret_pair2(%arg0: !s32i {{.*}}) -> !u64i
 // LLVM: define dso_local i64 @ret_pair2(i32 noundef %{{.+}})
+// LLVM:        %[[P:.*]] = alloca %struct.Pair2, align 4
+// LLVM:        %[[Y:.*]] = getelementptr inbounds nuw %struct.Pair2, ptr %[[P]], i32 0, i32 1
+// LLVM:        store i32 %{{.*}}, ptr %[[Y]], align 4
+// LLVM-NEXT:   %[[RES:.*]] = load i64, ptr %[[P]], align 4
+// LLVM-NEXT:   ret i64 %[[RES]]
 
 // 16-byte struct flattened into two integer registers.
 void take_pair16(Pair16 p) { (void)p; }
@@ -115,6 +122,67 @@ UIntFloat ret_union(int a) { UIntFloat u; u.i = a; return u; }
 
 // CIR: cir.func {{.*}}@ret_union(%arg0: !s32i {{.*}}) -> !s32i
 // LLVM: define dso_local i32 @ret_union(i32 noundef %{{.+}})
+
+// The pair fits the union, so it is read in place, with y.b (padding in x).
+struct IntPtr { int a; void *p; };
+struct IntIntPtr { int a, b; void *p; };
+typedef union { struct IntPtr x; struct IntIntPtr y; } UPadded;
+UPadded ret_union_padded(int b) {
+  UPadded u;
+  u.y.a = 1;
+  u.y.b = b;
+  u.y.p = 0;
+  return u;
+}
+
+// CIR: cir.func {{.*}}@ret_union_padded(%arg0: !s32i {llvm.noundef}{{.*}}) -> ![[I64PTR]]
+// CIR:   %[[U:.+]] = cir.alloca "__retval" align(8) : !cir.ptr<!rec_UPadded>
+// CIR:   %[[P:.+]] = cir.get_member %{{.+}}[2] {name = "p"} : !cir.ptr<!rec_IntIntPtr> -> !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT:   cir.store align(8) %{{.+}}, %[[P]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT:   %[[VIEW:.+]] = cir.cast bitcast %[[U]] : !cir.ptr<!rec_UPadded> -> !cir.ptr<![[I64PTR]]>
+// CIR-NEXT:   %[[RET:.+]] = cir.load align(8) %[[VIEW]] : !cir.ptr<![[I64PTR]]>, ![[I64PTR]]
+// CIR-NEXT:   cir.return %[[RET]] : ![[I64PTR]]
+
+// LLVM: define dso_local { i64, ptr } @ret_union_padded(i32 noundef %{{.+}})
+// LLVM:   %[[B:.+]] = getelementptr inbounds nuw %struct.IntIntPtr, ptr %[[U:.+]], i32 0, i32 1
+// LLVM-NEXT:   store i32 %{{.+}}, ptr %[[B]], align 4
+// LLVM:   %[[P:.+]] = getelementptr inbounds nuw %struct.IntIntPtr, ptr %[[U]], i32 0, i32 2
+// LLVM-NEXT:   store ptr null, ptr %[[P]], align 8
+// LLVM-CIR-NEXT:   %[[RET:.+]] = load { i64, ptr }, ptr %[[U]], align 8
+// LLVM-OGCG-NEXT:  %[[DIVE:.+]] = getelementptr inbounds nuw %union.UPadded, ptr %[[U]], i32 0, i32 0
+// LLVM-OGCG-NEXT:  %[[RET:.+]] = load { i64, ptr }, ptr %[[DIVE]], align 8
+// LLVM-NEXT:   ret { i64, ptr } %[[RET]]
+
+// The pair is wider than the union, so the union's bytes are copied first.
+struct CharIntInt { char a; int b, c; };
+struct TwoChars { char a, b; };
+typedef union { struct CharIntInt s; struct TwoChars p; } UBytes12;
+UBytes12 ret_union_bytes(char c) {
+  UBytes12 u;
+  u.s.a = 0;
+  u.s.b = 0;
+  u.s.c = 0;
+  u.p.b = c;
+  return u;
+}
+
+// CIR: cir.func {{.*}}@ret_union_bytes(%arg0: !s8i {llvm.noundef, llvm.signext}{{.*}}) -> ![[I64I32]]
+// CIR:   %[[SLOT:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<![[I64I32]]>
+// CIR:   %[[U:.+]] = cir.alloca "__retval" align(4) : !cir.ptr<!rec_UBytes12>
+// CIR:   %[[SLOT_U:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[I64I32]]> -> !cir.ptr<!rec_UBytes12>
+// CIR-NEXT:   cir.copy %[[U]] align(4) to %[[SLOT_U]] align(8) : !cir.ptr<!rec_UBytes12>
+// CIR-NEXT:   %[[RET:.+]] = cir.load align(8) %[[SLOT]] : !cir.ptr<![[I64I32]]>, ![[I64I32]]
+// CIR-NEXT:   cir.return %[[RET]] : ![[I64I32]]
+
+// LLVM: define dso_local { i64, i32 } @ret_union_bytes(i8 noundef signext %{{.+}})
+// LLVM:   getelementptr inbounds nuw %struct.CharIntInt, ptr %[[U:.+]], i32 0, i32 0
+// LLVM:   %[[B1:.+]] = getelementptr inbounds nuw %struct.TwoChars, ptr %[[U]], i32 0, i32 1
+// LLVM-NEXT:   store i8 %{{.+}}, ptr %[[B1]], align 1
+// LLVM-CIR-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[C:.+]], ptr align 4 %[[U]], i64 12, i1 false)
+// LLVM-OGCG-NEXT:  %[[DIVE:.+]] = getelementptr inbounds nuw %union.UBytes12, ptr %[[U]], i32 0, i32 0
+// LLVM-OGCG-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[C:.+]], ptr align 4 %[[DIVE]], i64 12, i1 false)
+// LLVM-NEXT:   %[[RET:.+]] = load { i64, i32 }, ptr %[[C]], align 8
+// LLVM-NEXT:   ret { i64, i32 } %[[RET]]
 
 // A union too large for registers is passed byval.
 void take_union_big(UBig u) { (void)u; }
@@ -218,12 +286,10 @@ _Complex float complex_float(_Complex float c) { return c; }
 // LLVM: define dso_local <2 x float> @complex_float(<2 x float> noundef %{{.+}})
 
 // _Complex double needs two SSE eightbytes, so it flattens into a pair.
-// Flattening drops the parameter's noundef, which classic keeps on each half.
 _Complex double complex_double(_Complex double c) { return c; }
 
-// CIR: cir.func {{.*}}@complex_double(%arg0: !cir.double{{.*}}, %arg1: !cir.double{{.*}}) -> ![[F64PAIR]]
-// LLVM-CIR: define dso_local { double, double } @complex_double(double %{{[^,)]+}}, double %{{[^,)]+}})
-// LLVM-OGCG: define dso_local { double, double } @complex_double(double noundef %{{[^,)]+}}, double noundef %{{[^,)]+}})
+// CIR: cir.func {{.*}}@complex_double(%arg0: !cir.double {llvm.noundef} loc({{.+}}), %arg1: !cir.double {llvm.noundef} loc({{.+}})) -> ![[F64PAIR]]
+// LLVM: define dso_local { double, double } @complex_double(double noundef %{{[^,)]+}}, double noundef %{{[^,)]+}})
 
 // A _Complex of integers packs both halves into one INTEGER eightbyte.
 _Complex int complex_int(_Complex int c) { return c; }
@@ -248,9 +314,8 @@ _Complex _Float16 complex_half(_Complex _Float16 c) { return c; }
 // into a register pair instead of coercing to one value.
 _Complex long long complex_longlong(_Complex long long c) { return c; }
 
-// CIR: cir.func {{.*}}@complex_longlong(%arg0: !u64i {{.*}}, %arg1: !u64i {{.*}}) -> ![[I64PAIR]]
-// LLVM-CIR: define dso_local { i64, i64 } @complex_longlong(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
-// LLVM-OGCG: define dso_local { i64, i64 } @complex_longlong(i64 noundef %{{[^,)]+}}, i64 noundef %{{[^,)]+}})
+// CIR: cir.func {{.*}}@complex_longlong(%arg0: !u64i {llvm.noundef} loc({{.+}}), %arg1: !u64i {llvm.noundef} loc({{.+}})) -> ![[I64PAIR]]
+// LLVM: define dso_local { i64, i64 } @complex_longlong(i64 noundef %{{[^,)]+}}, i64 noundef %{{[^,)]+}})
 
 // A 128-bit vector fills one xmm register and passes in its own type.
 typedef float v4f __attribute__((vector_size(16)));
@@ -348,6 +413,9 @@ TwoFloats two_floats(TwoFloats s) { return s; }
 
 // CIR: cir.func {{.*}}@two_floats(%arg0: !cir.vector<2 x !cir.float> {{.*}}) -> !cir.vector<2 x !cir.float>
 // LLVM: define dso_local <2 x float> @two_floats(<2 x float> %{{[^,)]+}})
+// LLVM:        call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RET:.*]], ptr align 4 %{{.+}}, i64 8, i1 false)
+// LLVM-NEXT:   %[[RES:.*]] = load <2 x float>, ptr %[[RET]], align 4
+// LLVM-NEXT:   ret <2 x float> %[[RES]]
 
 // The same holds for an array of floats inside a struct.
 typedef struct { float a[2]; } FloatArray;

@@ -442,7 +442,3 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   ++NumOutArgumentFunctionsReplaced;
   return true;
 }
-
-FunctionPass *llvm::createAMDGPURewriteOutArgumentsPass() {
-  return new AMDGPURewriteOutArguments();
-}

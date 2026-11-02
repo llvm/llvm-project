@@ -93,6 +93,8 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS;
   lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS;
 
+  lldb::ValueObjectSP error_backstop_result_sp;
+
   if (m_can_interpret) {
     llvm::Module *module = m_execution_unit_sp->GetModule();
     llvm::Function *function = m_execution_unit_sp->GetFunction();
@@ -237,6 +239,14 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       return execution_result;
     }
 
+    if (execution_result == lldb::eExpressionCompleted &&
+        user_expression_plan->HitErrorBackstop()) {
+      lldb::ValueObjectSP error_sp =
+          user_expression_plan->GetReturnValueObject();
+      if (error_sp && error_sp->GetError().Success())
+        error_backstop_result_sp = error_sp;
+    }
+
     if (execution_result == lldb::eExpressionThreadVanished) {
       diagnostic_manager.Printf(lldb::eSeverityError,
                                 "Couldn't execute expression: the thread on "
@@ -252,6 +262,18 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
                                 toString(execution_result).c_str());
       return execution_result;
     }
+  }
+
+  if (error_backstop_result_sp) {
+    Target *target = exe_ctx.GetTargetPtr();
+    PersistentExpressionState *expression_state =
+        target->GetPersistentExpressionStateForLanguage(
+            Language().AsLanguageType());
+    if (expression_state)
+      result_sp =
+          expression_state->CreatePersistentVariable(error_backstop_result_sp);
+
+    return lldb::eExpressionCompleted;
   }
 
   if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result_sp,

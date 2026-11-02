@@ -649,3 +649,129 @@ body:             |
     $q0 = COPY %7:_(<16 x i8>)
     RET_ReallyLR implicit $q0
 ...
+---
+name:            umulh_v8s32
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1, $q2, $q3
+
+    ; CHECK-LABEL: name: umulh_v8s32
+    ; CHECK: liveins: $q0, $q1, $q2, $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a0:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: %a1:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: %b0:_(<4 x i32>) = COPY $q2
+    ; CHECK-NEXT: %b1:_(<4 x i32>) = COPY $q3
+    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(<4 x i32>) = G_UMULH %a0, %b0
+    ; CHECK-NEXT: [[UMULH1:%[0-9]+]]:_(<4 x i32>) = G_UMULH %a1, %b1
+    ; CHECK-NEXT: $q0 = COPY [[UMULH]](<4 x i32>)
+    ; CHECK-NEXT: $q1 = COPY [[UMULH1]](<4 x i32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
+    %a0:_(<4 x i32>) = COPY $q0
+    %a1:_(<4 x i32>) = COPY $q1
+    %b0:_(<4 x i32>) = COPY $q2
+    %b1:_(<4 x i32>) = COPY $q3
+    %a:_(<8 x i32>) = G_CONCAT_VECTORS %a0(<4 x i32>), %a1(<4 x i32>)
+    %b:_(<8 x i32>) = G_CONCAT_VECTORS %b0(<4 x i32>), %b1(<4 x i32>)
+    %mul:_(<8 x i32>) = G_UMULH %a, %b
+    %lo:_(<4 x i32>), %hi:_(<4 x i32>) = G_UNMERGE_VALUES %mul(<8 x i32>)
+    $q0 = COPY %lo(<4 x i32>)
+    $q1 = COPY %hi(<4 x i32>)
+    RET_ReallyLR implicit $q0, implicit $q1
+
+...
+---
+name:            smulh_v8s32
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1, $q2, $q3
+
+    ; CHECK-LABEL: name: smulh_v8s32
+    ; CHECK: liveins: $q0, $q1, $q2, $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a0:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: %a1:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: %b0:_(<4 x i32>) = COPY $q2
+    ; CHECK-NEXT: %b1:_(<4 x i32>) = COPY $q3
+    ; CHECK-NEXT: [[SMULH:%[0-9]+]]:_(<4 x i32>) = G_SMULH %a0, %b0
+    ; CHECK-NEXT: [[SMULH1:%[0-9]+]]:_(<4 x i32>) = G_SMULH %a1, %b1
+    ; CHECK-NEXT: $q0 = COPY [[SMULH]](<4 x i32>)
+    ; CHECK-NEXT: $q1 = COPY [[SMULH1]](<4 x i32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
+    %a0:_(<4 x i32>) = COPY $q0
+    %a1:_(<4 x i32>) = COPY $q1
+    %b0:_(<4 x i32>) = COPY $q2
+    %b1:_(<4 x i32>) = COPY $q3
+    %a:_(<8 x i32>) = G_CONCAT_VECTORS %a0(<4 x i32>), %a1(<4 x i32>)
+    %b:_(<8 x i32>) = G_CONCAT_VECTORS %b0(<4 x i32>), %b1(<4 x i32>)
+    %mul:_(<8 x i32>) = G_SMULH %a, %b
+    %lo:_(<4 x i32>), %hi:_(<4 x i32>) = G_UNMERGE_VALUES %mul(<8 x i32>)
+    $q0 = COPY %lo(<4 x i32>)
+    $q1 = COPY %hi(<4 x i32>)
+    RET_ReallyLR implicit $q0, implicit $q1
+
+...
+---
+name:            umulh_v16s16
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1, $q2, $q3
+
+    ; CHECK-LABEL: name: umulh_v16s16
+    ; CHECK: liveins: $q0, $q1, $q2, $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a0:_(<8 x i16>) = COPY $q0
+    ; CHECK-NEXT: %a1:_(<8 x i16>) = COPY $q1
+    ; CHECK-NEXT: %b0:_(<8 x i16>) = COPY $q2
+    ; CHECK-NEXT: %b1:_(<8 x i16>) = COPY $q3
+    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(<8 x i16>) = G_UMULH %a0, %b0
+    ; CHECK-NEXT: [[UMULH1:%[0-9]+]]:_(<8 x i16>) = G_UMULH %a1, %b1
+    ; CHECK-NEXT: $q0 = COPY [[UMULH]](<8 x i16>)
+    ; CHECK-NEXT: $q1 = COPY [[UMULH1]](<8 x i16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
+    %a0:_(<8 x i16>) = COPY $q0
+    %a1:_(<8 x i16>) = COPY $q1
+    %b0:_(<8 x i16>) = COPY $q2
+    %b1:_(<8 x i16>) = COPY $q3
+    %a:_(<16 x i16>) = G_CONCAT_VECTORS %a0(<8 x i16>), %a1(<8 x i16>)
+    %b:_(<16 x i16>) = G_CONCAT_VECTORS %b0(<8 x i16>), %b1(<8 x i16>)
+    %mul:_(<16 x i16>) = G_UMULH %a, %b
+    %lo:_(<8 x i16>), %hi:_(<8 x i16>) = G_UNMERGE_VALUES %mul(<16 x i16>)
+    $q0 = COPY %lo(<8 x i16>)
+    $q1 = COPY %hi(<8 x i16>)
+    RET_ReallyLR implicit $q0, implicit $q1
+
+...
+---
+name:            smulh_v32s8
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1, $q2, $q3
+
+    ; CHECK-LABEL: name: smulh_v32s8
+    ; CHECK: liveins: $q0, $q1, $q2, $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a0:_(<16 x i8>) = COPY $q0
+    ; CHECK-NEXT: %a1:_(<16 x i8>) = COPY $q1
+    ; CHECK-NEXT: %b0:_(<16 x i8>) = COPY $q2
+    ; CHECK-NEXT: %b1:_(<16 x i8>) = COPY $q3
+    ; CHECK-NEXT: [[SMULH:%[0-9]+]]:_(<16 x i8>) = G_SMULH %a0, %b0
+    ; CHECK-NEXT: [[SMULH1:%[0-9]+]]:_(<16 x i8>) = G_SMULH %a1, %b1
+    ; CHECK-NEXT: $q0 = COPY [[SMULH]](<16 x i8>)
+    ; CHECK-NEXT: $q1 = COPY [[SMULH1]](<16 x i8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
+    %a0:_(<16 x i8>) = COPY $q0
+    %a1:_(<16 x i8>) = COPY $q1
+    %b0:_(<16 x i8>) = COPY $q2
+    %b1:_(<16 x i8>) = COPY $q3
+    %a:_(<32 x i8>) = G_CONCAT_VECTORS %a0(<16 x i8>), %a1(<16 x i8>)
+    %b:_(<32 x i8>) = G_CONCAT_VECTORS %b0(<16 x i8>), %b1(<16 x i8>)
+    %mul:_(<32 x i8>) = G_SMULH %a, %b
+    %lo:_(<16 x i8>), %hi:_(<16 x i8>) = G_UNMERGE_VALUES %mul(<32 x i8>)
+    $q0 = COPY %lo(<16 x i8>)
+    $q1 = COPY %hi(<16 x i8>)
+    RET_ReallyLR implicit $q0, implicit $q1

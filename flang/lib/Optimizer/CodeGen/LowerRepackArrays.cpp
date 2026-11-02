@@ -21,8 +21,8 @@
 ///
 /// A fir.unpack_array operations is converted into a check
 /// of whether the original and the temporary arrays are different
-/// memory. When the check passes, the temporary array might be
-/// shallow-copied into the original array, and then the temporary
+/// memory. When the check passes, the modified elements of the temporary
+/// array might be copied into the original array, and then the temporary
 /// array is deallocated (if it was allocated in stack memory,
 /// then there is no explicit deallocation).
 //===----------------------------------------------------------------------===//
@@ -33,6 +33,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
+#include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Transformational.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -344,10 +345,19 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
                                            tempAddr, originalAddr);
     builder.genIfThen(loc, isNotSame)
         .genThen([&]() {
-          // Copy from temporary to the original.
-          if (!op.getNoCopy())
-            fir::runtime::genShallowCopy(builder, loc, originalBox, tempBox,
-                                         /*resultIsAllocated=*/true);
+          // Copy from temporary to the original. The temporary was
+          // created as a bitwise copy of the original, so use the same
+          // copy-out runtime as the caller-side copy-out: it does not store
+          // the data that the callee did not modify. This keeps the copy
+          // from writing into read-only storage when the original is not
+          // definable (e.g., a named constant) and was not modified.
+          if (!op.getNoCopy()) {
+            mlir::Value tempBoxAddr =
+                builder.createTemporary(loc, tempBox.getType());
+            fir::StoreOp::create(builder, loc, tempBox, tempBoxAddr);
+            fir::runtime::genCopyOutAssignDirect(builder, loc, originalBox,
+                                                 tempBoxAddr);
+          }
 
           // Deallocate, if it was allocated in heap.
           // Note that the stack attribute does not always mean

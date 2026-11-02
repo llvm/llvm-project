@@ -164,3 +164,21 @@ body:            |
   bb.1:
     S_ENDPGM 0
 ...
+
+# GCN-LABEL: name: no_hazard_vcmpx_debug_use_exec
+# GCN:        $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT:   DBG_VALUE $exec, $noreg
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
+---
+name:            no_hazard_vcmpx_debug_use_exec
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    DBG_VALUE $exec, $noreg
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...

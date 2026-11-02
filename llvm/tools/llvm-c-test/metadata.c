@@ -34,7 +34,8 @@ int llvm_add_named_metadata_operand(void) {
 
 int llvm_set_metadata(void) {
   LLVMContextRef C = LLVMContextCreate();
-  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(C);
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext("Mod", C);
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
 
   // This used to trigger an assertion
   LLVMValueRef Return = LLVMBuildRetVoid(Builder);
@@ -45,6 +46,7 @@ int llvm_set_metadata(void) {
                   LLVMMDNodeInContext(C, &Int, 1));
 
   LLVMDisposeBuilder(Builder);
+  LLVMDisposeModule(M);
   LLVMDeleteInstruction(Return);
   LLVMContextDispose(C);
 

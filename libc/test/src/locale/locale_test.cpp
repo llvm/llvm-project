@@ -1,14 +1,20 @@
-//===-- Unittests for locale ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for locale.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/locale_macros.h"
 #include "src/locale/freelocale.h"
 #include "src/locale/newlocale.h"
+#include "src/locale/setlocale.h"
 #include "src/locale/uselocale.h"
 #include "test/UnitTest/Test.h"
 
@@ -44,4 +50,21 @@ TEST(LlvmLibcLocale, NewLocaleValidation) {
   // Invalid locale name is rejected.
   loc = LIBC_NAMESPACE::newlocale(LC_ALL_MASK, "does-not-exist", nullptr);
   EXPECT_EQ(loc, static_cast<locale_t>(nullptr));
+}
+
+TEST(LlvmLibcLocale, SetLocale) {
+  // Setting a "C" or default locale.
+  EXPECT_STREQ(LIBC_NAMESPACE::setlocale(LC_ALL, "C"), "C");
+  EXPECT_STREQ(LIBC_NAMESPACE::setlocale(LC_CTYPE, ""), "C");
+  // Querying the current locale.
+  EXPECT_STREQ(LIBC_NAMESPACE::setlocale(LC_ALL, nullptr), "C");
+  EXPECT_STREQ(LIBC_NAMESPACE::setlocale(LC_NUMERIC, nullptr), "C");
+
+  // Unsupporter categories or non-C locales.
+  EXPECT_EQ(LIBC_NAMESPACE::setlocale(LC_ALL + 1, "C"),
+            static_cast<char *>(nullptr));
+  EXPECT_EQ(LIBC_NAMESPACE::setlocale(LC_ALL + 1, nullptr),
+            static_cast<char *>(nullptr));
+  EXPECT_EQ(LIBC_NAMESPACE::setlocale(LC_ALL, "does-not-exist"),
+            static_cast<char *>(nullptr));
 }

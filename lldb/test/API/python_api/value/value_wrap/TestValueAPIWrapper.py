@@ -3,11 +3,13 @@ Test the lldb.value wrapper.
 """
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
 class ValueAPIWrapper(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_accessors(self):
         """Test non-modifying operators (e.g. __getitem__, __add__)."""
         self.build()

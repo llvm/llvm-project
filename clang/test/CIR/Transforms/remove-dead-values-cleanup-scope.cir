@@ -1,0 +1,33 @@
+// RUN: cir-opt %s -remove-dead-values -o - | FileCheck %s
+
+// The EH cleanup runs only when @may_throw unwinds, which is not a region
+// branch point. The cleanup region must still count as reachable, or generic
+// passes such as -remove-dead-values erase it.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func private @may_throw()
+
+  cir.func @eh_cleanup(%p : !cir.ptr<!s32i>) {
+    cir.cleanup.scope {
+      cir.call @may_throw() : () -> ()
+      cir.yield
+    } cleanup eh {
+      %c = cir.const #cir.int<7> : !s32i
+      cir.store %c, %p : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @eh_cleanup
+  // CHECK:         cir.cleanup.scope {
+  // CHECK-NEXT:      cir.call @may_throw() : () -> ()
+  // CHECK-NEXT:      cir.yield
+  // CHECK-NEXT:    } cleanup eh {
+  // CHECK-NEXT:      %[[C:.*]] = cir.const #cir.int<7> : !s32i
+  // CHECK-NEXT:      cir.store %[[C]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:      cir.yield
+  // CHECK-NEXT:    }
+}

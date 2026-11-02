@@ -350,6 +350,8 @@ bool Declarator::isDeclarationOfFunction() const {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case TST_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
       return false;
 
     case TST_decltype_auto:
@@ -585,6 +587,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_##Name:                                                   \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case DeclSpec::TST_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/HLSLPackedTypes.def"
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");
@@ -768,15 +774,6 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   TSTLoc = TagKwLoc;
   TSTNameLoc = TagNameLoc;
   TypeSpecOwned = false;
-
-  if (T == TST_typename_pack_indexing) {
-    // we got there from a an annotation. Reconstruct the type
-    // Ugly...
-    QualType QT = Rep.get();
-    const PackIndexingType *LIT = cast<PackIndexingType>(QT);
-    TypeRep = ParsedType::make(LIT->getPattern());
-    PackIndexingExpr = LIT->getIndexExpr();
-  }
   return false;
 }
 
@@ -908,6 +905,7 @@ bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
 
   if (isPipe) {
     TypeSpecPipe = static_cast<unsigned>(TypeSpecifiersPipe::Pipe);
+    TQ_pipeLoc = Loc;
   }
   return false;
 }

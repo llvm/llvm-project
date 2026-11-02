@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns -split-input-file | FileCheck %s --check-prefixes=CHECK,ALL
+// RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns=allow-fast-math-flag-loss=false -split-input-file | FileCheck %s --check-prefixes=KEEP-FLAGS,ALL
 
 // TODO: Separate tests for vector.multi_reduction -> vector.contract and
 //  * pre-op + vector.contract -> vector.contract,
@@ -35,6 +36,69 @@ func.func @multidimreduction_contract_int(
   %0 = arith.muli %arg0, %arg1 : vector<8x32x16xi32>
   %1 = vector.multi_reduction <add>, %0, %acc [1] : vector<8x32x16xi32> to vector<8x16xi32>
   return %1 : vector<8x16xi32>
+}
+
+// -----
+
+// The flags of a vector.contract apply to both its multiply and its combining
+// op. By default (CHECK), the contract keeps only the flags that both the mulf
+// and the multi_reduction carry. With allow-fast-math-flag-loss=false
+// (KEEP-FLAGS), a mulf and a multi_reduction with different flags are not
+// converted.
+
+// ALL-LABEL: multidimreduction_contract_fastmath
+//  ALL-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan,contract>,
+//  ALL-SAME:   kind = #vector.kind<add>}
+func.func @multidimreduction_contract_fastmath(
+  %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 fastmath<nnan,contract> : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc fastmath<nnan,contract> [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// -----
+
+// ALL-LABEL: multidimreduction_contract_fastmath_intersect
+//   KEEP-FLAGS-NOT:   vector.contract
+//       KEEP-FLAGS:   arith.mulf
+//  KEEP-FLAGS-NEXT:   vector.multi_reduction
+//       CHECK-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan>,
+//       CHECK-SAME:   kind = #vector.kind<add>}
+func.func @multidimreduction_contract_fastmath_intersect(
+  %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 fastmath<nnan,contract> : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc fastmath<nnan,nsz> [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// -----
+
+// ALL-LABEL: multidimreduction_contract_fastmath_strict_mul
+//   KEEP-FLAGS-NOT:   vector.contract
+//       KEEP-FLAGS:   arith.mulf
+//  KEEP-FLAGS-NEXT:   vector.multi_reduction
+//       CHECK-NEXT:   vector.contract {indexing_maps =
+//        CHECK-NOT:   fastmath
+func.func @multidimreduction_contract_fastmath_strict_mul(
+  %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc fastmath<fast> [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// -----
+
+// ALL-LABEL: multidimreduction_contract_fastmath_strict_reduction
+//   KEEP-FLAGS-NOT:   vector.contract
+//       KEEP-FLAGS:   arith.mulf
+//  KEEP-FLAGS-NEXT:   vector.multi_reduction
+//       CHECK-NEXT:   vector.contract {indexing_maps =
+//        CHECK-NOT:   fastmath
+func.func @multidimreduction_contract_fastmath_strict_reduction(
+  %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 fastmath<fast> : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
 }
 
 // -----
@@ -493,6 +557,38 @@ func.func @contract_broadcast_would_have_no_reduction_dim_pair(%arg0 : vector<1x
   return %result : vector<1xf32>
 }
 
+// -----
+
+// Test that CombineContractBroadcast is not combining this case, as that would
+// result in the reduction iterators of the other operand becoming unpaired and
+// produce an invalid scalar-result vector.contract.
+
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> ()>
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> ()>
+
+// CHECK-LABEL: negative_contract_broadcast_one_sided_unit_dim_reduction
+//  CHECK-SAME: (%[[ARG0:.+]]: vector<2xbf16>, %[[ARG1:.+]]: bf16)
+//  CHECK: %[[CST:.+]] = arith.constant 0.0{{.*}}: bf16
+//  CHECK: %[[LHS:.+]] = vector.shape_cast %[[ARG0]] : vector<2xbf16> to vector<1x1x2xbf16>
+//  CHECK: %[[RHS:.+]] = vector.broadcast %[[ARG1]] : bf16 to vector<1x1x2xbf16>
+//  CHECK: vector.contract
+//  CHECK-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP1]]]
+//  CHECK-SAME: iterator_types = ["reduction", "reduction", "reduction"]
+//  CHECK-SAME: %[[LHS]], %[[RHS]], %[[CST]] : vector<1x1x2xbf16>, vector<1x1x2xbf16> into bf16
+func.func @negative_contract_broadcast_one_sided_unit_dim_reduction(%arg0 : vector<2xbf16>, %arg1 : bf16) -> bf16 {
+  %zero = arith.constant 0.0 : bf16
+  %lhs = vector.shape_cast %arg0 : vector<2xbf16> to vector<1x1x2xbf16>
+  %rhs = vector.broadcast %arg1 : bf16 to vector<1x1x2xbf16>
+  %result = vector.contract {
+    indexing_maps = [#map0, #map0, #map1],
+    iterator_types = ["reduction", "reduction", "reduction"],
+    kind = #vector.kind<add>
+  } %lhs, %rhs, %zero : vector<1x1x2xbf16>, vector<1x1x2xbf16> into bf16
+  return %result : bf16
+}
 
 // -----
 

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-pc-linux %s -dwarf-version=5 -start-after=livedebugvalues -filetype=obj -o %t
+# RUN: llc -mtriple=x86_64-pc-linux %s -dwarf-version=5 -start-after=live-debug-values -filetype=obj -o %t
 # RUN: llvm-dwarfdump -v %t | FileCheck %s
 #
 # CHECK: DW_AT_location {{.*}} (DW_OP_entry_value

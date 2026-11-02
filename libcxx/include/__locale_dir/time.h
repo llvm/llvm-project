@@ -15,6 +15,7 @@
 #include <__locale_dir/ctype_base.h>
 #include <__locale_dir/locale.h>
 #include <__locale_dir/scan_keyword.h>
+#include <ctime>
 #include <ios>
 
 #if _LIBCPP_HAS_LOCALIZATION

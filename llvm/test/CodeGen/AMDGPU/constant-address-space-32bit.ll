@@ -2484,7 +2484,6 @@ define amdgpu_vs <2 x bfloat> @load_v2bf16(ptr addrspace(6) inreg %p0, ptr addrs
 ; GFX67-NEXT:    v_add_f32_e32 v0, s3, v0
 ; GFX67-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX67-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; GFX67-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX67-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_v2bf16:

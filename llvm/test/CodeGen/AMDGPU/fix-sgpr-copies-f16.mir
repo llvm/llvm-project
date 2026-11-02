@@ -64,3 +64,32 @@ body:             |
     %2:sreg_32 = COPY %1:vgpr_32
     %3:sreg_32 = nofpexcept S_FLOOR_F16 killed %2:sreg_32, implicit $mode
 ...
+
+---
+name:            fmac_f16_sgpr_src2
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0, $sgpr1
+    ; REAL16-LABEL: name: fmac_f16_sgpr_src2
+    ; REAL16: liveins: $vgpr0, $sgpr0, $sgpr1
+    ; REAL16-NEXT: {{  $}}
+    ; REAL16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; REAL16-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; REAL16-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; REAL16-NEXT: [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY2]]
+    ; REAL16-NEXT: [[V_FMAC_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FMAC_F16_t16_e64 0, [[COPY]].lo16, 0, [[COPY1]], 0, [[COPY3]], 0, 0, 0, implicit $mode, implicit $exec
+    ;
+    ; FAKE16-LABEL: name: fmac_f16_sgpr_src2
+    ; FAKE16: liveins: $vgpr0, $sgpr0, $sgpr1
+    ; FAKE16-NEXT: {{  $}}
+    ; FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; FAKE16-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; FAKE16-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; FAKE16-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
+    ; FAKE16-NEXT: [[V_FMAC_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMAC_F16_fake16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_32 = COPY $sgpr0
+    %2:sreg_32 = COPY $sgpr1
+    %3:sreg_32 = COPY %0:vgpr_32
+    %4:sreg_32 = nofpexcept S_FMAC_F16 %3:sreg_32, %1:sreg_32, %2:sreg_32, implicit $mode
+...

@@ -476,7 +476,7 @@ protected:
 
   void CreateOldFunctionBodyAndDI() {
     DIBuilder DBuilder(*M);
-    IRBuilder<> IBuilder(C);
+    IRBuilder<> IBuilder(*M);
 
     // Function DI
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
@@ -1115,7 +1115,7 @@ protected:
     }
 
     DIBuilder DBuilder(*OldM);
-    IRBuilder<> IBuilder(C);
+    IRBuilder<> IBuilder(*OldM);
 
     auto *FuncType = FunctionType::get(Type::getVoidTy(C), false);
     auto *PersFn = Function::Create(FuncType, GlobalValue::ExternalLinkage,

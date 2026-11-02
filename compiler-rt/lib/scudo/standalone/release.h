@@ -156,7 +156,7 @@ public:
 
     Buf.Data = &RawBuffer[Index * StaticBufferNumElements];
     Buf.BufferIndex = Index;
-    memset(Buf.Data, 0, StaticBufferNumElements * sizeof(uptr));
+    memset(Buf.Data, 0, NumElements * sizeof(uptr));
     return true;
   }
 

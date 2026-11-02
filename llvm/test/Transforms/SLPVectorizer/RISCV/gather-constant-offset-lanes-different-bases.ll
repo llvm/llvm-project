@@ -8,27 +8,41 @@ define i64 @aos_xy_runtime_stride(ptr %p, i32 %S) {
 ; CHECK-LABEL: define i64 @aos_xy_runtime_stride(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[Y0:%.*]] = load i32, ptr [[Y]], align 4
 ; CHECK-NEXT:    [[MUL_1:%.*]] = zext i32 [[S]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[P]], i64 [[MUL_1]]
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[Y_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_1]], i64 4
+; CHECK-NEXT:    [[Y1:%.*]] = load i32, ptr [[Y_1]], align 4
 ; CHECK-NEXT:    [[MUL_2:%.*]] = shl i32 [[S]], 1
 ; CHECK-NEXT:    [[IDXPROM_2:%.*]] = zext i32 [[MUL_2]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[P]], i64 [[IDXPROM_2]]
+; CHECK-NEXT:    [[X2:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[Y_2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_2]], i64 4
+; CHECK-NEXT:    [[Y2:%.*]] = load i32, ptr [[Y_2]], align 4
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul i32 [[S]], 3
 ; CHECK-NEXT:    [[IDXPROM_3:%.*]] = zext i32 [[MUL_3]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[P]], i64 [[IDXPROM_3]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
-; CHECK-NEXT:    [[TMP11:%.*]] = sext <8 x i32> [[TMP10]] to <8 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP11]])
+; CHECK-NEXT:    [[X3:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[Y_3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_3]], i64 4
+; CHECK-NEXT:    [[Y3:%.*]] = load i32, ptr [[Y_3]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = sext i32 [[X0]] to i64
+; CHECK-NEXT:    [[C1:%.*]] = sext i32 [[Y0]] to i64
+; CHECK-NEXT:    [[C2:%.*]] = sext i32 [[X1]] to i64
+; CHECK-NEXT:    [[C3:%.*]] = sext i32 [[Y1]] to i64
+; CHECK-NEXT:    [[C4:%.*]] = sext i32 [[X2]] to i64
+; CHECK-NEXT:    [[C5:%.*]] = sext i32 [[Y2]] to i64
+; CHECK-NEXT:    [[C6:%.*]] = sext i32 [[X3]] to i64
+; CHECK-NEXT:    [[C7:%.*]] = sext i32 [[Y3]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = add i64 [[C0]], [[C1]]
+; CHECK-NEXT:    [[A2:%.*]] = add i64 [[A1]], [[C2]]
+; CHECK-NEXT:    [[A3:%.*]] = add i64 [[A2]], [[C3]]
+; CHECK-NEXT:    [[A4:%.*]] = add i64 [[A3]], [[C4]]
+; CHECK-NEXT:    [[A5:%.*]] = add i64 [[A4]], [[C5]]
+; CHECK-NEXT:    [[A6:%.*]] = add i64 [[A5]], [[C6]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[A6]], [[C7]]
 ; CHECK-NEXT:    ret i64 [[TMP12]]
 ;
 entry:

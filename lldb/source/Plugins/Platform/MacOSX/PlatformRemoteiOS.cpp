@@ -148,8 +148,9 @@ bool PlatformRemoteiOS::CheckLocalSharedCache() const {
   return true;
 }
 
-llvm::StringRef PlatformRemoteiOS::GetDeviceSupportDirectoryName() {
-  return "iOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformRemoteiOS::GetDeviceSupportDirectoryNames() {
+  return {"iOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformRemoteiOS::GetPlatformName() {

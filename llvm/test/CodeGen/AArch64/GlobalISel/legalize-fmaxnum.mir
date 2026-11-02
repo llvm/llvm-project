@@ -109,7 +109,7 @@ body:             |
     ; FP16-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; FP16-NEXT: $q0 = COPY %a(f128)
     ; FP16-NEXT: $q1 = COPY %b(f128)
-    ; FP16-NEXT: BL &fmaxl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
+    ; FP16-NEXT: BL &fmaxl, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
     ; FP16-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; FP16-NEXT: %maxnum:_(f128) = COPY $q0
     ; FP16-NEXT: $q0 = COPY %maxnum(f128)
@@ -123,7 +123,7 @@ body:             |
     ; NO-FP16-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; NO-FP16-NEXT: $q0 = COPY %a(f128)
     ; NO-FP16-NEXT: $q1 = COPY %b(f128)
-    ; NO-FP16-NEXT: BL &fmaxl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
+    ; NO-FP16-NEXT: BL &fmaxl, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
     ; NO-FP16-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; NO-FP16-NEXT: %maxnum:_(f128) = COPY $q0
     ; NO-FP16-NEXT: $q0 = COPY %maxnum(f128)

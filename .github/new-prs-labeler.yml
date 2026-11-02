@@ -887,6 +887,22 @@ llvm:instcombine:
       - llvm/test/Transforms/InstCombine/**
       - llvm/test/Transforms/InstSimplify/**
 
+llvm:loop-unroll:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/include/llvm/Analysis/LoopUnrollAnalyzer.h
+      - llvm/include/llvm/Transforms/Scalar/LoopUnroll*.h
+      - llvm/include/llvm/Transforms/Utils/LoopPeel.h
+      - llvm/include/llvm/Transforms/Utils/UnrollLoop.h
+      - llvm/lib/Analysis/LoopUnrollAnalyzer.cpp
+      - llvm/lib/Transforms/Scalar/LoopUnroll*.cpp
+      - llvm/lib/Transforms/Utils/LoopPeel.cpp
+      - llvm/lib/Transforms/Utils/LoopUnroll*.cpp
+      - llvm/test/Transforms/LoopUnroll/**
+      - llvm/test/Transforms/LoopUnrollAndJam/**
+      - llvm/unittests/Analysis/UnrollAnalyzerTest.cpp
+      - llvm/unittests/Transforms/Utils/UnrollLoopTest.cpp
+
 llvm:vectorcombine:
   - changed-files:
     - any-glob-to-any-file:

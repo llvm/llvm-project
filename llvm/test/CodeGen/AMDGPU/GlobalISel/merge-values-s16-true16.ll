@@ -34,7 +34,7 @@ define amdgpu_kernel void @store_i136_divergent(ptr %p) {
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX1150-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
 ; GFX1150-NEXT:    v_mov_b16_e32 v0.h, 0
-; GFX1150-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; GFX1150-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX1150-NEXT:    v_lshlrev_b16 v4.l, 8, v1.l
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1150-NEXT:    v_perm_b32 v1, v0, v0, 0x7060302

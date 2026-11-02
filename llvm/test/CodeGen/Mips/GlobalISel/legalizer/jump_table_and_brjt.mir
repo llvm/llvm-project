@@ -71,9 +71,9 @@ body:             |
   ; MIPS32-LABEL: name: mod4_0_to_11
   ; MIPS32: bb.0.entry:
   ; MIPS32-NEXT:   successors: %bb.6(0x40000000), %bb.1(0x40000000)
-  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT:   liveins: $r4
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
   ; MIPS32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
   ; MIPS32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
@@ -94,20 +94,20 @@ body:             |
   ; MIPS32-NEXT:   G_BRJT [[JUMP_TABLE]](p0), %jump-table.0, [[COPY1]](s32)
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.2.sw.bb:
-  ; MIPS32-NEXT:   $v0 = COPY [[C4]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C4]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.3.sw.bb1:
-  ; MIPS32-NEXT:   $v0 = COPY [[C3]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C3]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.4.sw.bb2:
-  ; MIPS32-NEXT:   $v0 = COPY [[C2]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C2]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.5.sw.bb3:
-  ; MIPS32-NEXT:   $v0 = COPY [[C1]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C1]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.6.sw.default:
   ; MIPS32-NEXT:   successors: %bb.7(0x80000000)
@@ -129,28 +129,28 @@ body:             |
   ; MIPS32-NEXT:   G_BRJT [[JUMP_TABLE1]](p0), %jump-table.1, [[COPY3]](s32)
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.9.sw.bb4:
-  ; MIPS32-NEXT:   $v0 = COPY [[C4]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C4]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.10.sw.bb5:
-  ; MIPS32-NEXT:   $v0 = COPY [[C3]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C3]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.11.sw.bb6:
-  ; MIPS32-NEXT:   $v0 = COPY [[C2]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C2]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.12.sw.bb7:
-  ; MIPS32-NEXT:   $v0 = COPY [[C1]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C1]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.13.sw.default8:
-  ; MIPS32-NEXT:   $v0 = COPY [[C5]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[C5]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %4:_(s32) = G_CONSTANT i32 7
     %8:_(s32) = G_CONSTANT i32 3
     %9:_(s32) = G_CONSTANT i32 2
@@ -171,20 +171,20 @@ body:             |
     G_BRJT %7(p0), %jump-table.0, %3(s32)
 
   bb.2.sw.bb:
-    $v0 = COPY %11(s32)
-    RetRA implicit $v0
+    $r2 = COPY %11(s32)
+    RetRA implicit $r2
 
   bb.3.sw.bb1:
-    $v0 = COPY %10(s32)
-    RetRA implicit $v0
+    $r2 = COPY %10(s32)
+    RetRA implicit $r2
 
   bb.4.sw.bb2:
-    $v0 = COPY %9(s32)
-    RetRA implicit $v0
+    $r2 = COPY %9(s32)
+    RetRA implicit $r2
 
   bb.5.sw.bb3:
-    $v0 = COPY %8(s32)
-    RetRA implicit $v0
+    $r2 = COPY %8(s32)
+    RetRA implicit $r2
 
   bb.6.sw.default:
 
@@ -203,23 +203,23 @@ body:             |
     G_BRJT %17(p0), %jump-table.1, %14(s32)
 
   bb.8.sw.bb4:
-    $v0 = COPY %11(s32)
-    RetRA implicit $v0
+    $r2 = COPY %11(s32)
+    RetRA implicit $r2
 
   bb.9.sw.bb5:
-    $v0 = COPY %10(s32)
-    RetRA implicit $v0
+    $r2 = COPY %10(s32)
+    RetRA implicit $r2
 
   bb.10.sw.bb6:
-    $v0 = COPY %9(s32)
-    RetRA implicit $v0
+    $r2 = COPY %9(s32)
+    RetRA implicit $r2
 
   bb.11.sw.bb7:
-    $v0 = COPY %8(s32)
-    RetRA implicit $v0
+    $r2 = COPY %8(s32)
+    RetRA implicit $r2
 
   bb.12.sw.default8:
-    $v0 = COPY %18(s32)
-    RetRA implicit $v0
+    $r2 = COPY %18(s32)
+    RetRA implicit $r2
 
 ...

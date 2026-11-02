@@ -16,6 +16,7 @@
 #include "TargetInfo.h"
 #include "clang/Basic/AArch64CodeGenUtils.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
@@ -2066,6 +2067,31 @@ static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
                             Ops);
 }
 
+static void AttachAtomicHintMetadata(CodeGenFunction &CGF, const CallExpr *E,
+                                     Instruction *Atomic, unsigned PtrOperand) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  LLVMContext &Ctx = CGF.CGM.getLLVMContext();
+  Expr::EvalResult Result;
+  if (!E->getArg(3)->EvaluateAsInt(Result, CGF.getContext()))
+    llvm_unreachable(
+        "Expected integer hint argument to atomic operation with hint.");
+  unsigned HintArg = Result.Val.getInt().getExtValue();
+
+  auto MemoryHint = toAArch64MemoryHint(HintArg);
+  if (MemoryHint == AArch64MemoryHint::NONE ||
+      (isa<AtomicRMWInst>(Atomic) && MemoryHint != AArch64MemoryHint::SHUH &&
+       MemoryHint != AArch64MemoryHint::SHUH_PH))
+    return;
+
+  MDNode *MemHint = MDNode::get(
+      Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
+            llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
+  MDNode *HintNode = MDNode::get(
+      Ctx,
+      {llvm::ConstantAsMetadata::get(Builder.getInt32(PtrOperand)), MemHint});
+  Atomic->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
+}
+
 static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
                                              unsigned BuiltinID,
                                              const CallExpr *E) {
@@ -2105,58 +2131,53 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
     break;
   }
   Store->setAtomic(Ordering);
-
-  if (!E->getArg(3)->EvaluateAsInt(Result, CGM.getContext()))
-    llvm_unreachable(
-        "Expected integer hint argument to atomic store with hint.");
-  unsigned HintArg = Result.Val.getInt().getExtValue();
-
-  // Attach the hint if valid
-  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::NONE) {
-    LLVMContext &Ctx = CGM.getLLVMContext();
-    MDNode *MemHint = MDNode::get(
-        Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
-              llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
-    MDNode *HintNode = MDNode::get(
-        CGM.getLLVMContext(),
-        {llvm::ConstantAsMetadata::get(Builder.getInt32(1)), MemHint});
-
-    Store->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
-  }
-
+  AttachAtomicHintMetadata(CGF, E, Store, 1);
   return Store;
 }
 
-/// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
-/// argument that specifies the vector type. The additional argument is meant
-/// for Sema checking (see `CheckNeonBuiltinFunctionCall`) and this function
-/// should be kept consistent with the logic in Sema.
-/// TODO: Make this return false for SISD builtins.
-static bool HasExtraNeonArgument(unsigned BuiltinID) {
-  // Required by the headers included below, but not in this particular
-  // function.
-  [[maybe_unused]] int PtrArgNum = -1;
-  [[maybe_unused]] bool HasConstPtr = false;
+static Value *EmitAtomicFetchWithHintBuiltin(CodeGenFunction &CGF,
+                                             const CallExpr *E,
+                                             AtomicRMWInst::BinOp Op) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  Expr::EvalResult Result;
+  if (!E->getArg(2)->EvaluateAsInt(Result, CGF.getContext()))
+    llvm_unreachable(
+        "Expected integer policy argument to atomic fetch with hint.");
 
-  // The mask encodes the type. We don't care about the actual value. Instead,
-  // we just check whether its been set.
-  uint64_t mask = 0;
-  switch (BuiltinID) {
-#define GET_NEON_OVERLOAD_CHECK
-#include "clang/Basic/arm_fp16.inc"
-#include "clang/Basic/arm_neon.inc"
-#undef GET_NEON_OVERLOAD_CHECK
-  // Non-neon builtins for controling VFP that take extra argument for
-  // discriminating the type.
-  case ARM::BI__builtin_arm_vcvtr_f:
-  case ARM::BI__builtin_arm_vcvtr_d:
-    mask = 1;
+  AtomicOrdering Ordering;
+  unsigned OrderingArg = Result.Val.getInt().getExtValue();
+  assert(isValidAtomicOrderingCABI(OrderingArg) && "Invalid atomic ordering");
+
+  switch (static_cast<AtomicOrderingCABI>(OrderingArg)) {
+  case AtomicOrderingCABI::relaxed:
+    Ordering = AtomicOrdering::Monotonic;
+    break;
+  case AtomicOrderingCABI::consume:
+  case AtomicOrderingCABI::acquire:
+    Ordering = AtomicOrdering::Acquire;
+    break;
+  case AtomicOrderingCABI::release:
+    Ordering = AtomicOrdering::Release;
+    break;
+  case AtomicOrderingCABI::acq_rel:
+    Ordering = AtomicOrdering::AcquireRelease;
+    break;
+  case AtomicOrderingCABI::seq_cst:
+    Ordering = AtomicOrdering::SequentiallyConsistent;
+    break;
   }
 
-  if (mask)
-    return true;
+  const Expr *Ptr = E->getArg(0);
+  Address Addr = CGF.EmitPointerWithAlignment(Ptr);
+  Addr = Addr.withElementType(
+      CGF.ConvertTypeForMem(Ptr->getType()->getPointeeType()));
+  const Expr *Data = E->getArg(1);
+  Value *DataVal = CGF.EmitToMemory(CGF.EmitScalarExpr(Data), Data->getType());
 
-  return false;
+  AtomicRMWInst *RMW = Builder.CreateAtomicRMW(Op, Addr, DataVal, Ordering);
+  RMW->setVolatile(Ptr->getType()->getPointeeType().isVolatileQualified());
+  AttachAtomicHintMetadata(CGF, E, RMW, 0);
+  return CGF.EmitFromMemory(RMW, E->getType());
 }
 
 Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
@@ -2538,7 +2559,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   Address PtrOp0 = Address::invalid();
   Address PtrOp1 = Address::invalid();
   SmallVector<Value*, 4> Ops;
-  bool HasExtraArg = HasExtraNeonArgument(BuiltinID);
+  bool HasExtraArg = CodeGenUtils::hasExtraNeonArgument(BuiltinID);
   unsigned NumArgs = E->getNumArgs() - (HasExtraArg ? 1 : 0);
   for (unsigned i = 0, e = NumArgs; i != e; i++) {
     if (i == 0) {
@@ -4902,8 +4923,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x)
     return EmitRangePrefetchBuiltin(*this, BuiltinID, E);
 
-  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_hint)
+  switch (BuiltinID) {
+  default:
+    break;
+  case AArch64::BI__builtin_arm_atomic_store_with_hint:
     return EmitAtomicStoreWithHintBuiltin(*this, BuiltinID, E);
+  case AArch64::BI__builtin_arm_atomic_fetch_add_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Add);
+  case AArch64::BI__builtin_arm_atomic_fetch_sub_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Sub);
+  case AArch64::BI__builtin_arm_atomic_fetch_and_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::And);
+  case AArch64::BI__builtin_arm_atomic_fetch_xor_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Xor);
+  case AArch64::BI__builtin_arm_atomic_fetch_or_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Or);
+  }
 
   // Memory Tagging Extensions (MTE) Intrinsics
   Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;
@@ -4920,6 +4955,37 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     MTEIntrinsicID = Intrinsic::aarch64_stg; break;
   case clang::AArch64::BI__builtin_arm_subp:
     MTEIntrinsicID = Intrinsic::aarch64_subp; break;
+  }
+
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_lscale) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0x7f));
+
+    Value *MaskedFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0x7f0000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(16));
+
+    return Builder.CreateOr(MaskedFPM, ShiftedScale);
+  }
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_nscale) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0xff));
+
+    Value *MaskedFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0xff000000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(24));
+
+    return Builder.CreateOr(MaskedFPM, ShiftedScale);
+  }
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_lscale2) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0x3f));
+
+    Value *LowFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0x3f00000000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(32));
+
+    return Builder.CreateOr(LowFPM, ShiftedScale);
   }
 
   if (MTEIntrinsicID != Intrinsic::not_intrinsic) {
@@ -5370,7 +5436,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   // Note the assumption that SISD intrinsics do not contain extra arguments.
   // TODO: Fold this into a single function call instead of, effectively, two
   // separate checks.
-  bool HasExtraArg = !IsSISD && HasExtraNeonArgument(BuiltinID);
+  bool HasExtraArg = !IsSISD && CodeGenUtils::hasExtraNeonArgument(BuiltinID);
   unsigned NumArgs = E->getNumArgs() - (HasExtraArg ? 1 : 0);
   for (unsigned i = 0, e = NumArgs; i != e; i++) {
     if (i == 0) {
@@ -7248,12 +7314,17 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
                         : EmitLValue(Arg).emitRawPointer(*this);
     }
 
-    // Enable underlying preserve_*_access_index() generation.
+    // Enable underlying preserve_*_access_index() generation. Field info
+    // never dereferences the field, so skip preserve_static_offset markers:
+    // the backend would replace the access indices under them with plain GEPs.
     bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
+    bool OldIsInPreserveFieldInfo = IsInPreserveFieldInfo;
     IsInPreservedAIRegion = true;
+    IsInPreserveFieldInfo = true;
     Value *FieldAddr = IsBitField ? EmitLValue(Arg).getRawBitFieldPointer(*this)
                                   : EmitLValue(Arg).emitRawPointer(*this);
     IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+    IsInPreserveFieldInfo = OldIsInPreserveFieldInfo;
 
     ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
     Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());

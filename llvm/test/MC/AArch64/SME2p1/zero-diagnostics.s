@@ -24,17 +24,17 @@ zero za.d[w11, 5:8, vgx2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 zero za.d[w11, 0:4, vgx4]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: zero za.d[w11, 0:4, vgx4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 zero za.d[w11, 0:4, vgx2]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: zero za.d[w11, 0:4, vgx2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 zero za.d[w11, 11:15]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: zero za.d[w11, 11:15]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

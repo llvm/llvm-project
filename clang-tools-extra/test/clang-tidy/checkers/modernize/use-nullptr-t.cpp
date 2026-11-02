@@ -18,3 +18,15 @@ template<class T=decltype(nullptr)>
 struct bar {};
 // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: use std::nullptr_t instead
 // CHECK-FIXES: template<class T=std::nullptr_t>
+
+typedef decltype(nullptr) nullptr_t;
+
+namespace std {
+inline namespace __1 {
+using nullptr_t = decltype(nullptr);
+} // namespace __1
+} // namespace std
+
+using my_nullptr_t = decltype(nullptr);
+// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: use std::nullptr_t instead
+// CHECK-FIXES: using my_nullptr_t = std::nullptr_t;

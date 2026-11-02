@@ -36,6 +36,8 @@ flang_module_target(libomp-mod PUBLIC)
 
 install(FILES
   "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h"
+  "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.mod"
+  "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib_kinds.mod"
   DESTINATION "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}"
   COMPONENT libomp-mod
   EXCLUDE_FROM_ALL

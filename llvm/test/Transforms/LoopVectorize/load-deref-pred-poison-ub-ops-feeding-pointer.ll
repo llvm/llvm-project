@@ -286,7 +286,7 @@ define void @ptr_depends_on_noundef_load(ptr noalias %dst) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @src, align 1, !noundef [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @src, align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i16 9, [[TMP3]]

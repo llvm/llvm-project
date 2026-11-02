@@ -1,22 +1,29 @@
+#if defined(__x86_64__) || defined(__i386__)
+#define BRANCH_FWD "jmp 1f\n"
+#elif defined(__aarch64__) || defined(__arm__) || defined(__powerpc64__) ||    \
+    defined(__powerpc__) || defined(__s390x__) || defined(__loongarch__)
+#define BRANCH_FWD "b 1f\n"
+#elif defined(__riscv)
+#define BRANCH_FWD "j 1f\n"
+#else
+#error Do not know unconditional branch mnemonic for this architecture.
+#endif
+
 volatile int always_false;
 
 int foo() {
-  // This nop is deliberately dead code so that we have an instruction
-  // immediately prior to the breakpoint that we are allowed to corrupt.
-  if (always_false) {
-    // This dead code must be at least 4 bytes even on an architecture where
-    // nop is 1 byte.
-    asm volatile("nop\n"
-                 "nop\n"
-                 "nop\n"
-                 "nop\n");
-  }
-  // We are assuming that there are no instructions placed between the dead code
-  // above and the assembly below. This is not guaranteed but it's safer than
-  // assuming that this function will have no prologue instructions or breaking
-  // in the very first instruction of foo and hoping whatever comes before is
-  // not important.
-  asm volatile(".globl place_break_here\n"
+  asm volatile(BRANCH_FWD
+               // This is dead code that we are allowed to corrupt.
+               // There are 4 so that even if nop is 1 byte, we have 4 bytes
+               // we can overwrite safely.
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               // No live code should be between the dead code above
+               // and the breakpoint location below.
+               "1:\n"
+               ".globl place_break_here\n"
                "place_break_here:\n"
                // The test will repeatedly add and remove a breakpoint here.
                "nop");

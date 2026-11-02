@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=print-machine-cycles -o - %s 2>&1 | FileCheck %s --check-prefixes=LEGACY,CHECK
 
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes="machine-function(print,print<machine-cycles>)" -o - %s 2>&1 | FileCheck %s --check-prefixes=NPM,CHECK
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes="machine-function(print,verify<machine-cycles>,print<machine-cycles>)" -o - %s 2>&1 | FileCheck %s --check-prefixes=NPM,CHECK
 
 ...
 ---

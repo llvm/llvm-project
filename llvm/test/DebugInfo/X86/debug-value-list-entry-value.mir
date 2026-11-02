@@ -1,4 +1,4 @@
-# RUN: llc %s --start-after=livedebugvalues --filetype=obj -o - \
+# RUN: llc %s --start-after=live-debug-values --filetype=obj -o - \
 # RUN:     | llvm-dwarfdump - --name=test-var -o - | FileCheck %s
 
 # Test that when an entry value expression appears in a DBG_VALUE_LIST, we are

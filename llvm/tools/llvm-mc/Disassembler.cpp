@@ -173,7 +173,8 @@ int Disassembler::disassemble(const Target &T, MCSubtargetInfo &STI,
   std::unique_ptr<const MCDisassembler> DisAsm(
     T.createMCDisassembler(STI, Ctx));
   if (!DisAsm) {
-    errs() << "error: no disassembler for target " << TheTriple.str() << '\n';
+    SM.PrintMessage(SMLoc(), SourceMgr::DK_Error,
+                    "no disassembler for target " + TheTriple.str());
     return -1;
   }
 

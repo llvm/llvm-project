@@ -15,16 +15,19 @@
 #define _LIBSYCL___IMPL_GROUP_BARRIER_HPP
 
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/group.hpp>
 #include <sycl/__impl/memory_enums.hpp>
 #include <sycl/__impl/sub_group.hpp>
-#include <sycl/__spirv/spirv_types.hpp>
+#include <sycl/__spirv/types.hpp>
 
 #include <cstdint>
 #include <type_traits>
 
+#ifdef __SYCL_DEVICE_ONLY__
 void __spirv_ControlBarrier(std::uint32_t Execution, std::uint32_t Memory,
                             std::uint32_t Semantics);
+#endif
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -42,7 +45,7 @@ inline constexpr bool is_group_v = is_group<std::decay_t<T>>::value;
 
 namespace detail {
 
-static constexpr __spirv::Scope getScope(memory_scope Scope) {
+inline constexpr __spirv::Scope getScope(memory_scope Scope) {
   switch (Scope) {
   case memory_scope::work_item:
     return __spirv::Scope::Invocation;
@@ -57,13 +60,13 @@ static constexpr __spirv::Scope getScope(memory_scope Scope) {
   }
 }
 
-template <typename Group> struct group_scope {};
+template <typename Group> struct GroupScope {};
 
-template <int Dimensions> struct group_scope<group<Dimensions>> {
+template <int Dimensions> struct GroupScope<group<Dimensions>> {
   static constexpr __spirv::Scope value = __spirv::Scope::Workgroup;
 };
 
-template <> struct group_scope<::sycl::sub_group> {
+template <> struct GroupScope<::sycl::sub_group> {
   static constexpr __spirv::Scope value = __spirv::Scope::Subgroup;
 };
 
@@ -73,12 +76,19 @@ template <> struct group_scope<::sycl::sub_group> {
 /// point.
 template <typename Group>
 std::enable_if_t<is_group_v<Group>>
-group_barrier(Group /*G*/, memory_scope FenceScope = Group::fence_scope) {
-  __spirv_ControlBarrier(detail::group_scope<Group>::value,
-                         detail::getScope(FenceScope),
+group_barrier(Group /*g*/,
+              [[maybe_unused]] memory_scope fence_scope = Group::fence_scope) {
+#ifdef __SYCL_DEVICE_ONLY__
+  __spirv_ControlBarrier(detail::GroupScope<Group>::value,
+                         detail::getScope(fence_scope),
                          __spirv::MemorySemanticsMask::SequentiallyConsistent |
                              __spirv::MemorySemanticsMask::SubgroupMemory |
                              __spirv::MemorySemanticsMask::WorkgroupMemory);
+#else
+  throw sycl::exception(
+      sycl::make_error_code(sycl::errc::feature_not_supported),
+      "Barriers are not supported on host");
+#endif
 }
 
 _LIBSYCL_END_NAMESPACE_SYCL

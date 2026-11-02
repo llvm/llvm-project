@@ -8,15 +8,16 @@
 define void @shuffle_to_concat_vector(<2 x i64> %a, <2 x i64> %b) {
   ; CHECK-LABEL: name: shuffle_to_concat_vector
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $q0, $q1
-  ; CHECK:   [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-  ; CHECK:   [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   $q0 = COPY [[COPY]]
-  ; CHECK:   $q1 = COPY [[COPY1]]
-  ; CHECK:   BL @bar, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1
-  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $q0, $q1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   $q0 = COPY [[COPY]]
+  ; CHECK-NEXT:   $q1 = COPY [[COPY1]]
+  ; CHECK-NEXT:   BL @bar, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $q0, implicit $q1
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   RET_ReallyLR
   %vec = shufflevector <2 x i64> %a, <2 x i64> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void @bar(<4 x i64> %vec)
   ret void

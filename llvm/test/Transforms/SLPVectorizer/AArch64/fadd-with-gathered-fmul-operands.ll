@@ -22,13 +22,21 @@ define void @fadd_with_gathered_fmul_operands(double %a0, double %b0, double %a1
 ; CHECK-NEXT:    br label %[[MUL3:.*]]
 ; CHECK:       [[MUL3]]:
 ; CHECK-NEXT:    [[M3:%.*]] = fmul contract double [[A3]], [[B3]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[M0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[M1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[M2]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[M3]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd contract <4 x double> [[TMP4]], [[TMP0]]
-; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 2
+; CHECK-NEXT:    [[X2:%.*]] = load double, ptr [[X2P]], align 8
+; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load double, ptr [[X3P]], align 8
+; CHECK-NEXT:    [[S2:%.*]] = fadd contract double [[M2]], [[X2]]
+; CHECK-NEXT:    [[S3:%.*]] = fadd contract double [[M3]], [[X3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[M0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[M1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract <2 x double> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[O2:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    store double [[S2]], ptr [[O2]], align 8
+; CHECK-NEXT:    [[O3:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store double [[S3]], ptr [[O3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

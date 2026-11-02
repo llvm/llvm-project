@@ -125,7 +125,7 @@ static bool isUndelimitedCommaBitEnumParam(const ParameterElement *el) {
   if (!enumAttr)
     return false;
   EnumInfo enumInfo(enumAttr->getValueAsDef("enum"));
-  return enumInfo.isBitEnum() && !enumInfo.printBitEnumQuoted() &&
+  return enumInfo.isNewStyleBitEnum() &&
          enumInfo.getDef().getValueAsString("separator").trim() == ",";
 }
 

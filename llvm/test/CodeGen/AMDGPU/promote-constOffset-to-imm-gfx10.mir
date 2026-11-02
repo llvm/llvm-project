@@ -49,7 +49,7 @@ body:             |
 # GFX11: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11200
 
 # GCN: [[BASE_LO:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_5:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %{{[0-9]+}}, [[S_MOV_B32_1]]
-# GCN: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_32_xm0_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, killed [[V_ADD_CO_U32_e64_5]]
+# GCN: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_32_xm0_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, [[V_ADD_CO_U32_e64_5]]
 # GCN: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BASE_LO]], %subreg.sub0, [[BASE_HI]], %subreg.sub1
 # GFX10: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], 1600, 0
 # GFX11: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], -3200, 0
@@ -116,7 +116,7 @@ body:             |
 # GFX10: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 8192
 # GFX11: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 10240
 # GCN: [[BASE_LO:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_5:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %{{[0-9]+}}, [[S_MOV_B32_1]]
-# GCN: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_32_xm0_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, killed [[V_ADD_CO_U32_e64_5]]
+# GCN: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_32_xm0_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, [[V_ADD_CO_U32_e64_5]]
 # GCN: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BASE_LO]], %subreg.sub0, [[BASE_HI]], %subreg.sub1
 # GFX10: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], -2048, 0
 # GFX11: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], -4096, 0

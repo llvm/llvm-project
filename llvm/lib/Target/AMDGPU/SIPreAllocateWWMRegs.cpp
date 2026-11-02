@@ -96,10 +96,6 @@ char SIPreAllocateWWMRegsLegacy::ID = 0;
 
 char &llvm::SIPreAllocateWWMRegsLegacyID = SIPreAllocateWWMRegsLegacy::ID;
 
-FunctionPass *llvm::createSIPreAllocateWWMRegsLegacyPass() {
-  return new SIPreAllocateWWMRegsLegacy();
-}
-
 bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   Register Reg = MO.getReg();
   if (Reg.isPhysical())

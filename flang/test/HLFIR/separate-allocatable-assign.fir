@@ -9,8 +9,8 @@ func.func @test_expr_rhs(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
 
-  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  %c:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %c:2 = hlfir.declare %arg1 uniq_name("_QFEc") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
 
   %a_box = fir.load %a#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   %dims:3 = fir.box_dims %a_box, %c0 : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> (index, index, index)
@@ -44,8 +44,8 @@ func.func @test_var_rhs(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>,
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
 
-  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) uniq_name("_QFEb") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
 
   hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   return
@@ -63,7 +63,7 @@ func.func @test_nontrivial(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
 
-  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>)
 
   %elemental = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.char<1,10>> {
   ^bb0(%i: index):
@@ -85,8 +85,8 @@ func.func @test_non_allocatable(%arg0: !fir.ref<!fir.array<10xf64>>, %arg1: !fir
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
 
-  %a:2 = hlfir.declare %arg0(%shape) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
-  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  %a:2 = hlfir.declare %arg0(%shape) uniq_name("_QFEa") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  %b:2 = hlfir.declare %arg1(%shape) uniq_name("_QFEb") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
 
   hlfir.assign %b#0 to %a#0 : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>
   return
@@ -104,7 +104,7 @@ func.func @test_self_alias(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>
   %c1 = arith.constant 1 : index
   %c5 = arith.constant 5 : index
 
-  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   %a_box = fir.load %a#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %dims:3 = fir.box_dims %a_box, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 
@@ -130,7 +130,7 @@ func.func @test_self_alias_expr(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x
   %c5 = arith.constant 5 : index
   %one_i32 = arith.constant 1 : i32
 
-  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   %a_box = fir.load %a#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %shape = fir.shape %c5 : (index) -> !fir.shape<1>
 
@@ -163,8 +163,8 @@ func.func @test_lower_bounds(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32
   %c3 = arith.constant 3 : index
   %shapeshift = fir.shape_shift %c10, %c3 : (index, index) -> !fir.shapeshift<1>
 
-  %dest:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEdest"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-  %source:2 = hlfir.declare %arg1(%shapeshift) {uniq_name = "_QFEsource"} : (!fir.ref<!fir.array<3xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+  %dest:2 = hlfir.declare %arg0 uniq_name("_QFEdest") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %source:2 = hlfir.declare %arg1(%shapeshift) uniq_name("_QFEsource") : (!fir.ref<!fir.array<3xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
 
   hlfir.assign %source#0 to %dest#0 realloc : !fir.box<!fir.array<3xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   return
@@ -187,19 +187,19 @@ func.func @test_lower_bounds(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32
 func.func @test_pinned_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %arg1: !fir.ref<!fir.array<10xf64>>) {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %a:2 = hlfir.declare %arg0 {data_attr = #cuf.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<pinned>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) uniq_name("_QFEb") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
   hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   return
 }
 // CHECK-LABEL: func.func @test_pinned_allocator
 // CHECK-NOT: hlfir.assign{{.*}}realloc
 // CHECK-NOT: fir.allocmem
-// CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr = #cuf.cuda<pinned>
-// CHECK: cuf.free %{{.*}} {data_attr = #cuf.cuda<pinned>}
+// CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr(pinned)
+// CHECK: cuf.free %{{.*}} data_attr(pinned)
 // The descriptor must keep the pinned allocator, otherwise the runtime frees
 // the new storage with the default allocator.
-// CHECK: fir.embox {{.*}} {allocator_idx = 1 : i32}
+// CHECK: fir.embox {{.*}} allocator_idx(1)
 // CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK: hlfir.assign %{{.*}} to %[[BOX]] : !fir.ref<!fir.array<10xf64>>, !fir.box<!fir.heap<!fir.array<?xf64>>>
 
@@ -207,39 +207,39 @@ func.func @test_pinned_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?
 func.func @test_managed_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %arg1: !fir.ref<!fir.array<10xf64>>) {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %a:2 = hlfir.declare %arg0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<managed>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) uniq_name("_QFEb") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
   hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   return
 }
 // CHECK-LABEL: func.func @test_managed_allocator
 // CHECK-NOT: hlfir.assign{{.*}}realloc
 // CHECK-NOT: fir.allocmem
-// CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr = #cuf.cuda<managed>
-// CHECK: cuf.free %{{.*}} {data_attr = #cuf.cuda<managed>}
-// CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+// CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr(managed)
+// CHECK: cuf.free %{{.*}} data_attr(managed)
+// CHECK: fir.embox {{.*}} allocator_idx(3)
 
 // Test: same for a unified allocatable.
 func.func @test_unified_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %arg1: !fir.ref<!fir.array<10xf64>>) {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %a:2 = hlfir.declare %arg0 {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<unified>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) uniq_name("_QFEb") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
   hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   return
 }
 // CHECK-LABEL: func.func @test_unified_allocator
-// CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr = #cuf.cuda<unified>
-// CHECK: cuf.free %{{.*}} {data_attr = #cuf.cuda<unified>}
-// CHECK: fir.embox {{.*}} {allocator_idx = 4 : i32}
+// CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr(unified)
+// CHECK: cuf.free %{{.*}} data_attr(unified)
+// CHECK: fir.embox {{.*}} allocator_idx(4)
 
 // Test: an allocatable in device memory must NOT be separated: the plain
 // hlfir.assign left behind would copy the elements on the host.
 func.func @test_device_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %arg1: !fir.ref<!fir.array<10xf64>>) {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %a:2 = hlfir.declare %arg0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) uniq_name("_QFEb") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
   hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   return
 }

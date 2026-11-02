@@ -6,8 +6,9 @@ define void @test(ptr %dest, ptr %p) {
 ; CHECK-SAME: ptr [[DEST:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> <i16 -1, i16 poison, i16 1, i16 1>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i16> [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> <i16 -1, i16 poison, i16 1, i16 1>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[DEST]], align 4
 ; CHECK-NEXT:    ret void
 ;

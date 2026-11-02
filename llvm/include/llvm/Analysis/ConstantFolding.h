@@ -129,6 +129,20 @@ LLVM_ABI Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C,
 LLVM_ABI Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy,
                                            bool IsSigned, const DataLayout &DL);
 
+/// Attempt to constant fold a bitinsert instruction with the specified
+/// operands. The constant result is returned if successful. Otherwise, null is
+/// returned.
+LLVM_ABI Constant *ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
+                                                 Constant *Offset,
+                                                 const DataLayout &DL);
+
+/// Attempt to constant fold a bitextract instruction with the specified result
+/// type and operands. The constant result is returned if successful.
+/// Otherwise, null is returned.
+LLVM_ABI Constant *ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
+                                                  Constant *Offset,
+                                                  const DataLayout &DL);
+
 /// Extract value of C at the given Offset reinterpreted as Ty. If bits past
 /// the end of C are accessed, they are assumed to be poison.
 LLVM_ABI Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,

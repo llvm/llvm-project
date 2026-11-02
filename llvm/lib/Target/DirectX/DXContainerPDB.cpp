@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectX.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/DXContainer.h"
@@ -21,11 +22,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
-
-extern cl::opt<bool> PdbInPrivate;
 
 namespace {
 
@@ -59,6 +59,8 @@ public:
 bool DXContainerPDB::shouldSkipSection(StringRef SectionName,
                                        size_t SectionSize) {
   if (MCDXContainerBaseWriter::shouldSkipSection(SectionName, SectionSize))
+    return true;
+  if (dxil::SlimDebug && SectionName == "ILDB")
     return true;
 
   // Skip sections that are irrelevant for debug info.
@@ -120,7 +122,7 @@ bool DXContainerPDB::runOnModule(Module &M) {
   }
 
   // PDB emission was not requested.
-  if (DebugFileName.empty() && !PdbInPrivate)
+  if (DebugFileName.empty() && !dxil::PdbInPrivate)
     return false;
   if (ModuleHash.empty())
     report_fatal_error("Module hash for PDB not found");
@@ -174,18 +176,22 @@ bool DXContainerPDB::runOnModule(Module &M) {
   write(OS, M.getTargetTriple());
 
   // Write PDB file.
-  // FIXME(sandboxing): Remove this by routing PDB output through the VFS.
-  auto BypassSandbox = sys::sandbox::scopedDisable();
   codeview::GUID IgnoredOutGuid;
-  if (Error Err = Builder.commit(DebugFileName, &IgnoredOutGuid))
-    reportFatalUsageError("Couldn't write to PDB file: " +
-                          Twine(toString(std::move(Err))));
+  {
+    // FIXME(sandboxing): Remove this by routing output through OutputBackend.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    if (Error Err = Builder.commit(DebugFileName, &IgnoredOutGuid))
+      reportFatalUsageError("Couldn't write to PDB file: " +
+                            Twine(toString(std::move(Err))));
+  }
 
-  if (!PdbInPrivate)
+  if (!dxil::PdbInPrivate)
     return false;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
-      DebugFileName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+      M.getContext().getVirtualFileSystem().getBufferForFile(
+          DebugFileName, /*FileSize=*/-1, /*RequiresNullTerminator=*/false,
+          /*IsVolatile=*/false, /*IsText=*/false);
   if (!Buf)
     reportFatalInternalError("Failed to read PDB for PRIV embedding");
 

@@ -100,13 +100,17 @@ public:
         // are also not subject to inlining.
         func.setInlineKind(cir::InlineKind::NoInline);
         if (fd->hasAttr<CUDAGlobalAttr>()) {
-          func.setCallingConv(cir::CallingConv::PTXKernel);
+          func.setCallingConv(getDeviceKernelCallingConv());
           assert(!cir::MissingFeatures::opFuncParameterAttributes());
         }
         if (const auto *attr = fd->getAttr<CUDALaunchBoundsAttr>())
           handleCUDALaunchBoundsAttr(attr, func, cgm, cgm.getBuilder());
       }
     }
+  }
+
+  cir::CallingConv getDeviceKernelCallingConv() const override {
+    return cir::CallingConv::PTXKernel;
   }
 
   mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const override {

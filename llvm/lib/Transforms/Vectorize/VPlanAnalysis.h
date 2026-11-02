@@ -21,6 +21,7 @@ namespace llvm {
 
 class VPRecipeBase;
 class VPlan;
+class VPDominatorTree;
 class TargetTransformInfo;
 class InstructionCost;
 
@@ -29,6 +30,12 @@ struct VPCostContext;
 // Collect a VPlan's ephemeral recipes (those used only by an assume).
 void collectEphemeralRecipesForVPlan(VPlan &Plan,
                                      DenseSet<VPRecipeBase *> &EphRecipes);
+
+/// Returns true if the memory accesses in outer loop plain CFG \p Plan can be
+/// vectorized.
+bool proveOuterLoopMemorySafety(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                AAResults &AA, const VPDominatorTree &VPDT,
+                                const Loop *OuterLoop);
 
 /// A struct that represents some properties of the register usage
 /// of a loop.

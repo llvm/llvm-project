@@ -22,6 +22,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, setuid, (uid_t uid)) {
+  // TODO: Implement setxid propagation across threads.
   auto ret = linux_syscalls::setuid(uid);
   if (!ret) {
     libc_errno = ret.error();

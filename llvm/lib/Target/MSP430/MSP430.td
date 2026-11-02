@@ -22,15 +22,15 @@ def FeatureX
                     "Enable MSP430-X extensions">;
 
 def FeatureHWMult16
- : SubtargetFeature<"hwmult16", "HWMultMode", "HWMult16",
+ : SubtargetFeature<"hwmult16", "HWMultMode", "MSP430::HWMult::HW16",
                     "Enable 16-bit hardware multiplier">;
 
 def FeatureHWMult32
- : SubtargetFeature<"hwmult32", "HWMultMode", "HWMult32",
+ : SubtargetFeature<"hwmult32", "HWMultMode", "MSP430::HWMult::HW32",
                     "Enable 32-bit hardware multiplier">;
 
 def FeatureHWMultF5
- : SubtargetFeature<"hwmultf5", "HWMultMode", "HWMultF5",
+ : SubtargetFeature<"hwmultf5", "HWMultMode", "MSP430::HWMult::F5",
                     "Enable F5 series hardware multiplier">;
 
 //===----------------------------------------------------------------------===//

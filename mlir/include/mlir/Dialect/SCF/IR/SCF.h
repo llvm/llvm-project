@@ -58,7 +58,9 @@ ForallOp getForallOpThreadIndexOwner(Value val);
 bool insideMutuallyExclusiveBranches(Operation *a, Operation *b);
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
-void promote(RewriterBase &rewriter, scf::ForallOp forallOp);
+/// Only tensor.parallel_insert_slice combining ops are supported.
+/// Returns failure without modifying the IR if a combining op is unsupported.
+LogicalResult promote(RewriterBase &rewriter, scf::ForallOp forallOp);
 
 /// An owning vector of values, handy to return from functions.
 using ValueVector = SmallVector<Value>;

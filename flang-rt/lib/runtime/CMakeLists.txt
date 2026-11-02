@@ -193,6 +193,7 @@ set(gpu_sources
   type-info.cpp
   utf.cpp
   work-queue.cpp
+  stl-overrides.cpp
   complex-powi.cpp
   reduce.cpp
   reduction.cpp
@@ -314,7 +315,7 @@ if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
   return ()
 endif ()
 
-if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${supported_sources})

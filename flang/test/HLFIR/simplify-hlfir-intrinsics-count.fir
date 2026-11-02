@@ -10,8 +10,8 @@ func.func @test_total_expr(%arg0: !hlfir.expr<?x?x!fir.logical<4>>) -> i32 {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?x!fir.logical<4>>) -> !fir.shape<2>
-// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// CHECK:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_7:.*]] = fir.do_loop %[[VAL_8:.*]] = %[[VAL_2]] to %[[VAL_6]] step %[[VAL_2]] unordered iter_args(%[[VAL_9:.*]] = %[[VAL_3]]) -> (i32) {
 // CHECK:             %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_2]] to %[[VAL_5]] step %[[VAL_2]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_9]]) -> (i32) {
 // CHECK:               %[[VAL_13:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_11]], %[[VAL_8]] : (!hlfir.expr<?x?x!fir.logical<4>>, index, index) -> !fir.logical<4>
@@ -36,9 +36,9 @@ func.func @test_partial_expr(%arg0: !hlfir.expr<?x?x?x!fir.logical<1>>) -> !hlfi
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i16
 // CHECK:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?x?x!fir.logical<1>>) -> !fir.shape<3>
-// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<3>) -> index
-// CHECK:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<3>) -> index
-// CHECK:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 2 : index} : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_4]] dim(2) : (!fir.shape<3>) -> index
 // CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_5]], %[[VAL_7]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_9:.*]] = hlfir.elemental %[[VAL_8]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi16> {
 // CHECK:           ^bb0(%[[VAL_10:.*]]: index, %[[VAL_11:.*]]: index):

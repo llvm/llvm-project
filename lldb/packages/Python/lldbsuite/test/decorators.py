@@ -1322,6 +1322,16 @@ def requireClang(func):
     )(func)
 
 
+def requireMinidumpSave(func):
+    """Mark the item as requiring the ability to save a Minidump file. Which
+    is not implemented for all architectures."""
+    arch = lldbplatformutil.getArchitecture()
+    return unittest.skipUnless(
+        arch in ["aarch64", "x86_64", "arm64", "arm64e"],
+        UnsupportedReason(f"Minidump saving is not implemented for {arch}"),
+    )(func)
+
+
 def skipIfTargetDoesNotSupportSharedLibraries():
     """Skip tests that require shared library (dylib/so) support."""
     platform = lldbplatformutil.getPlatform()

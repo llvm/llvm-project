@@ -26,12 +26,12 @@ define void @callee(i128, i128, ptr) {
 define ptx_kernel void @caller_kernel(i128, i128, ptr) {
 start:
   ; CHECK-DAG: ld.param.v2.b64 {%[[REG0:rd[0-9]+]], %[[REG1:rd[0-9]+]]}, [caller_kernel_param_0];
-  ; CHECK-DAG: ld.param.v2.b64 {%[[REG2:rd[0-9]+]], %[[REG3:rd[0-9]+]]}, [caller_kernel_param_1];
 
   ; CHECK:      { // callseq [[CALLSEQ_ID:[0-9]]], 0
   ; CHECK-DAG:  .param .align 16 .b8 param0[16];
   ; CHECK-DAG:  .param .align 16 .b8 param1[16];
   ; CHECK-DAG: st.param.v2.b64 	[param0], {%[[REG0]], %[[REG1]]}
+  ; CHECK-DAG: ld.param.v2.b64 {%[[REG2:rd[0-9]+]], %[[REG3:rd[0-9]+]]}, [caller_kernel_param_1];
   ; CHECK-DAG: st.param.v2.b64 	[param1], {%[[REG2]], %[[REG3]]}
   ; CHECK:      } // callseq [[CALLSEQ_ID]]
   call void @callee(i128 %0, i128 %1, ptr %2)
@@ -45,12 +45,12 @@ start:
 define void @caller_func(i128, i128, ptr) {
 start:
   ; CHECK-DAG: ld.param.v2.b64 {%[[REG0:rd[0-9]+]], %[[REG1:rd[0-9]+]]}, [caller_func_param_0]
-  ; CHECK-DAG: ld.param.v2.b64 {%[[REG2:rd[0-9]+]], %[[REG3:rd[0-9]+]]}, [caller_func_param_1]
 
   ; CHECK: { // callseq [[CALLSEQ_ID:[0-9]]], 0
   ; CHECK-DAG: .param .align 16 .b8 param0[16];
   ; CHECK-DAG: .param .align 16 .b8 param1[16];
   ; CHECK-DAG: st.param.v2.b64 	[param0], {%[[REG0]], %[[REG1]]}
+  ; CHECK-DAG: ld.param.v2.b64 {%[[REG2:rd[0-9]+]], %[[REG3:rd[0-9]+]]}, [caller_func_param_1]
   ; CHECK-DAG: st.param.v2.b64 	[param1], {%[[REG2]], %[[REG3]]}
   ; CHECK: } // callseq [[CALLSEQ_ID]]
   call void @callee(i128 %0, i128 %1, ptr %2)

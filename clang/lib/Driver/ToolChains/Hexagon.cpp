@@ -218,6 +218,9 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
+  if (std::get<0>(ParsePICArgs(HTC, Args)) == llvm::Reloc::PIC_)
+    CmdArgs.push_back("-position-independent");
+
   addSanitizerRuntimes(HTC, Args, CmdArgs, C);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
@@ -299,7 +302,9 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseLLD = false;
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
-  UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
+  StringRef LinkerName = llvm::sys::path::filename(Exec);
+  UseLLD = UseLLD || LinkerName.starts_with("ld.lld") ||
+           LinkerName.ends_with("ld.lld") ||
            llvm::sys::path::stem(Exec).ends_with("ld.lld");
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);

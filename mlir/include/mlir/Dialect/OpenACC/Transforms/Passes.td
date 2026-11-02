@@ -27,6 +27,12 @@ def AccDeviceTypeOption : Option<"deviceType", "device-type",
        clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
     }]>;
 
+// Runtime `acc_device_t` values for which `acc.on_device` is true on the
+// target device. These values are the integers carried by `acc.on_device`.
+def AccTheDeviceTypesOption : ListOption<"theDeviceTypes", "the-device-types",
+    "int64_t",
+    "Runtime acc_device_t values for which acc.on_device is true on the target">;
+
 //===----------------------------------------------------------------------===//
 // Pass definitions
 //===----------------------------------------------------------------------===//
@@ -144,7 +150,7 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
        implicit routine operations for function calls within these routines,
        while avoiding infinite recursion through proper tracking.
   }];
-  let options = [ AccDeviceTypeOption ];
+  let options = [ AccDeviceTypeOption, AccTheDeviceTypesOption ];
 }
 
 def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mlir::ModuleOp"> {
@@ -317,10 +323,7 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
     - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
                   (folded if known): acc.on_device
   }];
-  let options = [
-    ListOption<"theDeviceTypes", "the-device-types", "int64_t",
-               "List of integers which represent the device we are specializing for">
-  ];
+  let options = [ AccTheDeviceTypesOption ];
 }
 
 def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {
@@ -570,6 +573,19 @@ def ACCRoutineToGPUFunc : Pass<"acc-routine-to-gpu-func", "mlir::ModuleOp"> {
   let options = [ AccDeviceTypeOption ];
 }
 
+def ACCMaterializeRoutineBindTargets
+    : Pass<"acc-materialize-routine-bind-targets"> {
+  let summary = "Materialize string-bound ACC routine call targets";
+  let description = [{
+    Materialize declarations for string-valued `acc routine bind` targets in
+    the current symbol table. This parent-level pass must run before
+    `acc-bind-routine`, which can then rewrite calls in parallel without
+    mutating a parent operation.
+  }];
+  let dependentDialects = ["mlir::func::FuncDialect"];
+  let options = [ AccDeviceTypeOption ];
+}
+
 def ACCBindRoutine
     : InterfacePass<"acc-bind-routine", "mlir::FunctionOpInterface"> {
   let summary = "Apply bind clause to function calls in ACC compute regions";
@@ -577,7 +593,8 @@ def ACCBindRoutine
     For calls inside offload regions that target a function with an
     `acc routine` directive and a `bind(name)` clause, rewrite the
     call to use the bound symbol so device code calls the correct
-    call target.
+    call target. String-valued bind targets must first be created by
+    `acc-materialize-routine-bind-targets`.
   }];
   let options = [ AccDeviceTypeOption ];
 }

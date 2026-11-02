@@ -192,6 +192,24 @@ class ExampleClass1 {
   pair<ExampleItemMap::iterator, int> entry;
   pair<bar, int> foobar; // expected-error {{template argument for template type parameter must be a type}}
 };
+
+#if __cplusplus >= 201103L
+namespace GH75248 {
+
+template <typename... Ts> struct S;
+
+template <typename... Ts>
+using U2 = S<Ts::Type...>;
+#ifdef MSVC
+// expected-warning@-2 {{must be a type; omitted 'typename' is a Microsoft extension}}
+#else
+// expected-error@-4 {{must be a type; did you forget 'typename'?}}
+#endif
+// expected-note@-9 {{declared here}}
+
+}
+#endif
+
 } // namespace missing_typename
 
 namespace missing_typename_and_base {

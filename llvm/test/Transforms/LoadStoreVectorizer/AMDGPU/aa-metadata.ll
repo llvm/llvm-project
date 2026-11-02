@@ -34,4 +34,4 @@ attributes #0 = { nounwind }
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"some scope"}
-!2 = distinct !{!2, !"some domain"}
+!2 = distinct !{!2, i1 false, !"some domain"}

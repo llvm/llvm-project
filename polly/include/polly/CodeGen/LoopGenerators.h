@@ -135,9 +135,8 @@ public:
   ParallelLoopGenerator(PollyIRBuilder &Builder, const DataLayout &DL)
       : Builder(Builder), LongType(Type::getIntNTy(Builder.getContext(),
                                                    DL.getPointerSizeInBits())),
-        M(Builder.GetInsertBlock()->getParent()->getParent()),
-        DLGenerated(createDebugLocForGeneratedCode(
-            Builder.GetInsertBlock()->getParent())) {}
+        M(Builder.getModule()), DLGenerated(createDebugLocForGeneratedCode(
+                                    Builder.GetInsertBlock()->getParent())) {}
 
   virtual ~ParallelLoopGenerator() {}
 

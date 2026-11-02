@@ -39,17 +39,17 @@
 ; CHECK: name: fn2
 ; CHECK: callSites:
 ; CHECK-NEXT: bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; CHECK-NEXT:   arg: 0, reg: '$a0'
-; CHECK-NEXT:   arg: 1, reg: '$a1'
-; CHECK-NEXT:   arg: 2, reg: '$a2'
+; CHECK-NEXT:   arg: 0, reg: '$r4'
+; CHECK-NEXT:   arg: 1, reg: '$r5'
+; CHECK-NEXT:   arg: 2, reg: '$r6'
 
 ;; Test mips64 and mips64el:
 ; CHECK64: name: fn2
 ; CHECK64: callSites:
 ; CHECK64-NEXT: bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; CHECK64-NEXT:   arg: 0, reg: '$a0_64'
-; CHECK64-NEXT:   arg: 1, reg: '$a1_64'
-; CHECK64-NEXT:   arg: 2, reg: '$a2_64'
+; CHECK64-NEXT:   arg: 0, reg: '$r4_64'
+; CHECK64-NEXT:   arg: 1, reg: '$r5_64'
+; CHECK64-NEXT:   arg: 2, reg: '$r6_64'
 
 ; ModuleID = 'test/CodeGen/Mips/call-site-info-output.c'
 source_filename = "test/CodeGen/Mips/call-site-info-output.c"

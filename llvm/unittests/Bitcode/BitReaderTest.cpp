@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitReaderTestCode.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/AsmParser/Parser.h"
@@ -22,6 +23,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
@@ -438,6 +440,105 @@ TEST(BitReaderTest, AccessMetadataTypeInfo) {
   EXPECT_EQ(mdToString(M->getNamedMetadata("md2")->getOperand(0)),
             "!{!{ptr, !{!'function', !{0, i8}, !{2, !{0, i32}}}}, !{ptr, !{0, "
             "!{0, i32}}}}");
+}
+
+// A distributed ThinLTO index must not depend on the insertion order of the
+// per-module summary maps it is written from. That order follows the import
+// discovery order, which can change with unrelated modules in the link.
+TEST(BitWriterTest, DistributedIndexIgnoresSummaryInsertionOrder) {
+  // Pick GUIDs that collide in a DenseMap so that their iteration order
+  // depends on insertion order.
+  SmallVector<GlobalValue::GUID, 32> GUIDs;
+  for (uint64_t Candidate = 1; GUIDs.size() != 32; ++Candidate)
+    if ((DenseMapInfo<GlobalValue::GUID>::getHashValue(Candidate) & 255) == 0)
+      GUIDs.push_back(Candidate);
+
+  // GUIDs[0] calls GUIDs[1] and references the variable GUIDs[2]. GUIDs[3]
+  // aliases GUIDs[4]. GUIDs[5] and GUIDs[6] have callsites with different
+  // stack ids, so the stack id table also depends on the summary order.
+  std::string Assembly =
+      "^0 = module: (path: \"m.o\", hash: (0, 0, 0, 0, 0))\n";
+  auto AddGV = [&](unsigned I, StringRef Summary) {
+    Assembly += "^" + std::to_string(I + 1) +
+                " = gv: (guid: " + std::to_string(GUIDs[I]) + ", summaries: (" +
+                Summary.str() + "))\n";
+  };
+  auto Function = [](StringRef Extra = "") {
+    return "function: (module: ^0, flags: (linkage: external), insts: 1" +
+           Extra.str() + ")";
+  };
+  AddGV(0, Function(", calls: ((callee: ^2)), refs: (^3)"));
+  AddGV(1, Function());
+  AddGV(2, "variable: (module: ^0, flags: (linkage: external), varFlags: "
+           "(readonly: 1))");
+  AddGV(3, "alias: (module: ^0, flags: (linkage: external), aliasee: ^5)");
+  AddGV(4, Function());
+  AddGV(5, Function(", calls: ((callee: ^2)), callsites: ((callee: ^2, "
+                    "clones: (0), stackIds: (101))))"));
+  AddGV(6, Function(", calls: ((callee: ^2)), callsites: ((callee: ^2, "
+                    "clones: (0), stackIds: (202))))"));
+  for (unsigned I = 7; I != GUIDs.size(); ++I)
+    AddGV(I, Function());
+
+  SMDiagnostic Err;
+  std::unique_ptr<ModuleSummaryIndex> Index =
+      parseSummaryIndexAssemblyString(Assembly, Err);
+  ASSERT_TRUE(Index) << Err.getMessage().str();
+
+  SmallVector<SmallVector<GlobalValue::GUID, 32>, 3> InsertionOrders;
+  InsertionOrders.push_back(GUIDs);
+  InsertionOrders.emplace_back(GUIDs.rbegin(), GUIDs.rend());
+  auto &Strided = InsertionOrders.emplace_back();
+  for (unsigned I = 0; I != GUIDs.size(); ++I)
+    Strided.push_back(GUIDs[(I * 7 + 3) % GUIDs.size()]);
+
+  SmallVector<SmallVector<GlobalValue::GUID, 32>, 3> IterationOrders;
+  SmallVector<SmallString<0>, 3> Bitcodes;
+  for (ArrayRef<GlobalValue::GUID> Order : InsertionOrders) {
+    ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
+    GVSummaryMapTy &Summaries = ModuleToSummariesForIndex["m.o"];
+    for (GlobalValue::GUID GUID : Order)
+      Summaries[GUID] = Index->getGlobalValueSummary(GUID);
+    IterationOrders.emplace_back(make_first_range(Summaries));
+
+    raw_svector_ostream OS(Bitcodes.emplace_back());
+    writeIndexToFile(*Index, OS, &ModuleToSummariesForIndex);
+  }
+
+  // Make sure the inputs really iterate in different orders.
+  EXPECT_TRUE(any_of(drop_begin(IterationOrders), [&](const auto &Order) {
+    return Order != IterationOrders.front();
+  }));
+  for (const SmallString<0> &Bitcode : drop_begin(Bitcodes))
+    EXPECT_TRUE(Bitcode == Bitcodes.front())
+        << "index bytes depend on summary insertion order";
+
+  // The written index still has the expected edges.
+  Expected<std::unique_ptr<ModuleSummaryIndex>> Written =
+      getModuleSummaryIndex(MemoryBufferRef(Bitcodes.front(), "index"));
+  if (!Written)
+    FAIL() << toString(Written.takeError());
+  auto *Caller =
+      dyn_cast<FunctionSummary>((*Written)->getGlobalValueSummary(GUIDs[0]));
+  ASSERT_NE(Caller, nullptr);
+  ASSERT_EQ(Caller->calls().size(), 1u);
+  EXPECT_EQ(Caller->calls().front().first.getGUID(), GUIDs[1]);
+  ASSERT_EQ(Caller->refs().size(), 1u);
+  EXPECT_EQ(Caller->refs().front().getGUID(), GUIDs[2]);
+  auto *Alias =
+      dyn_cast<AliasSummary>((*Written)->getGlobalValueSummary(GUIDs[3]));
+  ASSERT_NE(Alias, nullptr);
+  EXPECT_EQ(Alias->getAliaseeGUID(), GUIDs[4]);
+  for (auto [I, StackId] : {std::pair<unsigned, uint64_t>{5, 101}, {6, 202}}) {
+    auto *FS =
+        dyn_cast<FunctionSummary>((*Written)->getGlobalValueSummary(GUIDs[I]));
+    ASSERT_NE(FS, nullptr);
+    ASSERT_EQ(FS->callsites().size(), 1u);
+    ASSERT_EQ(FS->callsites().front().StackIdIndices.size(), 1u);
+    EXPECT_EQ((*Written)->getStackIdAtIndex(
+                  FS->callsites().front().StackIdIndices.front()),
+              StackId);
+  }
 }
 
 // Counts calls to the given debug intrinsic in F.

@@ -1,5 +1,6 @@
 #include "orc-rt-internal/bedrock/sys/CPUFeatures.h"
 
+#include <cstdint>
 #include <intrin.h>
 #include <windows.h>
 

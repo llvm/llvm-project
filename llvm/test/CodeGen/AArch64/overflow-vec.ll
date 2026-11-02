@@ -1311,14 +1311,14 @@ define <32 x i8> @umul_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: umul_v32i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull v4.8h, v0.8b, v2.8b
-; CHECK-GI-NEXT:    umull2 v5.8h, v0.16b, v2.16b
-; CHECK-GI-NEXT:    umull v6.8h, v1.8b, v3.8b
-; CHECK-GI-NEXT:    umull2 v7.8h, v1.16b, v3.16b
+; CHECK-GI-NEXT:    umull2 v4.8h, v0.16b, v2.16b
+; CHECK-GI-NEXT:    umull v5.8h, v0.8b, v2.8b
+; CHECK-GI-NEXT:    umull2 v6.8h, v1.16b, v3.16b
+; CHECK-GI-NEXT:    umull v7.8h, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mul v2.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v3.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    uzp2 v4.16b, v4.16b, v5.16b
-; CHECK-GI-NEXT:    uzp2 v5.16b, v6.16b, v7.16b
+; CHECK-GI-NEXT:    uzp2 v4.16b, v5.16b, v4.16b
+; CHECK-GI-NEXT:    uzp2 v5.16b, v7.16b, v6.16b
 ; CHECK-GI-NEXT:    cmtst v4.16b, v4.16b, v4.16b
 ; CHECK-GI-NEXT:    cmtst v5.16b, v5.16b, v5.16b
 ; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
@@ -1353,20 +1353,18 @@ define <32 x i8> @smul_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-GI-LABEL: smul_v32i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v4.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    smull v5.8h, v0.8b, v2.8b
-; CHECK-GI-NEXT:    smull v6.8h, v1.8b, v3.8b
-; CHECK-GI-NEXT:    smull2 v7.8h, v0.16b, v2.16b
+; CHECK-GI-NEXT:    smull2 v5.8h, v0.16b, v2.16b
+; CHECK-GI-NEXT:    smull v6.8h, v0.8b, v2.8b
+; CHECK-GI-NEXT:    smull2 v7.8h, v1.16b, v3.16b
+; CHECK-GI-NEXT:    smull v16.8h, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mul v2.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    smull2 v16.8h, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    mul v3.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    neg v4.16b, v4.16b
-; CHECK-GI-NEXT:    shrn v5.8b, v5.8h, #8
-; CHECK-GI-NEXT:    shrn v6.8b, v6.8h, #8
-; CHECK-GI-NEXT:    sshl v17.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    uzp2 v5.16b, v6.16b, v5.16b
+; CHECK-GI-NEXT:    uzp2 v6.16b, v16.16b, v7.16b
+; CHECK-GI-NEXT:    sshl v7.16b, v2.16b, v4.16b
 ; CHECK-GI-NEXT:    sshl v4.16b, v3.16b, v4.16b
-; CHECK-GI-NEXT:    shrn2 v5.16b, v7.8h, #8
-; CHECK-GI-NEXT:    shrn2 v6.16b, v16.8h, #8
-; CHECK-GI-NEXT:    cmeq v5.16b, v5.16b, v17.16b
+; CHECK-GI-NEXT:    cmeq v5.16b, v5.16b, v7.16b
 ; CHECK-GI-NEXT:    cmeq v4.16b, v6.16b, v4.16b
 ; CHECK-GI-NEXT:    mvn v5.16b, v5.16b
 ; CHECK-GI-NEXT:    mvn v4.16b, v4.16b
@@ -2244,14 +2242,14 @@ define <16 x i16> @umul_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: umul_v16i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull v4.4s, v0.4h, v2.4h
-; CHECK-GI-NEXT:    umull2 v5.4s, v0.8h, v2.8h
-; CHECK-GI-NEXT:    umull v6.4s, v1.4h, v3.4h
-; CHECK-GI-NEXT:    umull2 v7.4s, v1.8h, v3.8h
+; CHECK-GI-NEXT:    umull2 v4.4s, v0.8h, v2.8h
+; CHECK-GI-NEXT:    umull v5.4s, v0.4h, v2.4h
+; CHECK-GI-NEXT:    umull2 v6.4s, v1.8h, v3.8h
+; CHECK-GI-NEXT:    umull v7.4s, v1.4h, v3.4h
 ; CHECK-GI-NEXT:    mul v2.8h, v0.8h, v2.8h
 ; CHECK-GI-NEXT:    mul v3.8h, v1.8h, v3.8h
-; CHECK-GI-NEXT:    uzp2 v4.8h, v4.8h, v5.8h
-; CHECK-GI-NEXT:    uzp2 v5.8h, v6.8h, v7.8h
+; CHECK-GI-NEXT:    uzp2 v4.8h, v5.8h, v4.8h
+; CHECK-GI-NEXT:    uzp2 v5.8h, v7.8h, v6.8h
 ; CHECK-GI-NEXT:    cmtst v4.8h, v4.8h, v4.8h
 ; CHECK-GI-NEXT:    cmtst v5.8h, v5.8h, v5.8h
 ; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
@@ -2286,20 +2284,18 @@ define <16 x i16> @smul_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-GI-LABEL: smul_v16i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v4.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    smull v5.4s, v0.4h, v2.4h
-; CHECK-GI-NEXT:    smull v6.4s, v1.4h, v3.4h
-; CHECK-GI-NEXT:    smull2 v7.4s, v0.8h, v2.8h
+; CHECK-GI-NEXT:    smull2 v5.4s, v0.8h, v2.8h
+; CHECK-GI-NEXT:    smull v6.4s, v0.4h, v2.4h
+; CHECK-GI-NEXT:    smull2 v7.4s, v1.8h, v3.8h
+; CHECK-GI-NEXT:    smull v16.4s, v1.4h, v3.4h
 ; CHECK-GI-NEXT:    mul v2.8h, v0.8h, v2.8h
-; CHECK-GI-NEXT:    smull2 v16.4s, v1.8h, v3.8h
 ; CHECK-GI-NEXT:    mul v3.8h, v1.8h, v3.8h
 ; CHECK-GI-NEXT:    neg v4.8h, v4.8h
-; CHECK-GI-NEXT:    shrn v5.4h, v5.4s, #16
-; CHECK-GI-NEXT:    shrn v6.4h, v6.4s, #16
-; CHECK-GI-NEXT:    sshl v17.8h, v2.8h, v4.8h
+; CHECK-GI-NEXT:    uzp2 v5.8h, v6.8h, v5.8h
+; CHECK-GI-NEXT:    uzp2 v6.8h, v16.8h, v7.8h
+; CHECK-GI-NEXT:    sshl v7.8h, v2.8h, v4.8h
 ; CHECK-GI-NEXT:    sshl v4.8h, v3.8h, v4.8h
-; CHECK-GI-NEXT:    shrn2 v5.8h, v7.4s, #16
-; CHECK-GI-NEXT:    shrn2 v6.8h, v16.4s, #16
-; CHECK-GI-NEXT:    cmeq v5.8h, v5.8h, v17.8h
+; CHECK-GI-NEXT:    cmeq v5.8h, v5.8h, v7.8h
 ; CHECK-GI-NEXT:    cmeq v4.8h, v6.8h, v4.8h
 ; CHECK-GI-NEXT:    mvn v5.16b, v5.16b
 ; CHECK-GI-NEXT:    mvn v4.16b, v4.16b
@@ -2959,14 +2955,14 @@ define <8 x i32> @umul_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: umul_v8i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull v4.2d, v0.2s, v2.2s
-; CHECK-GI-NEXT:    umull2 v5.2d, v0.4s, v2.4s
-; CHECK-GI-NEXT:    umull v6.2d, v1.2s, v3.2s
-; CHECK-GI-NEXT:    umull2 v7.2d, v1.4s, v3.4s
+; CHECK-GI-NEXT:    umull2 v4.2d, v0.4s, v2.4s
+; CHECK-GI-NEXT:    umull v5.2d, v0.2s, v2.2s
+; CHECK-GI-NEXT:    umull2 v6.2d, v1.4s, v3.4s
+; CHECK-GI-NEXT:    umull v7.2d, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    mul v2.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    mul v3.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    uzp2 v4.4s, v4.4s, v5.4s
-; CHECK-GI-NEXT:    uzp2 v5.4s, v6.4s, v7.4s
+; CHECK-GI-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
+; CHECK-GI-NEXT:    uzp2 v5.4s, v7.4s, v6.4s
 ; CHECK-GI-NEXT:    cmtst v4.4s, v4.4s, v4.4s
 ; CHECK-GI-NEXT:    cmtst v5.4s, v5.4s, v5.4s
 ; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
@@ -3001,20 +2997,18 @@ define <8 x i32> @smul_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-GI-LABEL: smul_v8i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v4.2d, #0x0000ff000000ff
-; CHECK-GI-NEXT:    smull v5.2d, v0.2s, v2.2s
-; CHECK-GI-NEXT:    smull v6.2d, v1.2s, v3.2s
-; CHECK-GI-NEXT:    smull2 v7.2d, v0.4s, v2.4s
+; CHECK-GI-NEXT:    smull2 v5.2d, v0.4s, v2.4s
+; CHECK-GI-NEXT:    smull v6.2d, v0.2s, v2.2s
+; CHECK-GI-NEXT:    smull2 v7.2d, v1.4s, v3.4s
+; CHECK-GI-NEXT:    smull v16.2d, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    mul v2.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    smull2 v16.2d, v1.4s, v3.4s
 ; CHECK-GI-NEXT:    mul v3.4s, v1.4s, v3.4s
 ; CHECK-GI-NEXT:    neg v4.4s, v4.4s
-; CHECK-GI-NEXT:    shrn v5.2s, v5.2d, #32
-; CHECK-GI-NEXT:    shrn v6.2s, v6.2d, #32
-; CHECK-GI-NEXT:    sshl v17.4s, v2.4s, v4.4s
+; CHECK-GI-NEXT:    uzp2 v5.4s, v6.4s, v5.4s
+; CHECK-GI-NEXT:    uzp2 v6.4s, v16.4s, v7.4s
+; CHECK-GI-NEXT:    sshl v7.4s, v2.4s, v4.4s
 ; CHECK-GI-NEXT:    sshl v4.4s, v3.4s, v4.4s
-; CHECK-GI-NEXT:    shrn2 v5.4s, v7.2d, #32
-; CHECK-GI-NEXT:    shrn2 v6.4s, v16.2d, #32
-; CHECK-GI-NEXT:    cmeq v5.4s, v5.4s, v17.4s
+; CHECK-GI-NEXT:    cmeq v5.4s, v5.4s, v7.4s
 ; CHECK-GI-NEXT:    cmeq v4.4s, v6.4s, v4.4s
 ; CHECK-GI-NEXT:    mvn v5.16b, v5.16b
 ; CHECK-GI-NEXT:    mvn v4.16b, v4.16b

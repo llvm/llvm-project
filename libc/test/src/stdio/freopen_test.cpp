@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/scope.h"
 #include "src/fcntl/fcntl.h"
 #include "src/stdio/clearerr.h"
 #include "src/stdio/fclose.h"
@@ -87,6 +88,40 @@ TEST_F(LlvmLibcFreopenTest, ReopenFile) {
   // Step 5: Verify file B content.
   verify_file_content(FILENAME_B, CONTENT_B);
 }
+
+#ifdef LIBC_TARGET_OS_IS_LINUX
+TEST_F(LlvmLibcFreopenTest, CloseOnExec) {
+  const auto FILENAME =
+      libc_make_test_file_path("freopen_close_on_exec_enabled.test");
+
+  ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
+  ASSERT_NE(file, nullptr);
+  LIBC_NAMESPACE::cpp::scope_exit close_file(
+      [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
+  ASSERT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
+              Succeeds(0));
+
+  ASSERT_EQ(LIBC_NAMESPACE::freopen(FILENAME, "we", file), file);
+  EXPECT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
+              Succeeds(FD_CLOEXEC));
+}
+
+TEST_F(LlvmLibcFreopenTest, ClearCloseOnExec) {
+  const auto FILENAME =
+      libc_make_test_file_path("freopen_close_on_exec_cleared.test");
+
+  ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "we");
+  ASSERT_NE(file, nullptr);
+  LIBC_NAMESPACE::cpp::scope_exit close_file(
+      [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
+  ASSERT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
+              Succeeds(FD_CLOEXEC));
+
+  ASSERT_EQ(LIBC_NAMESPACE::freopen(FILENAME, "w", file), file);
+  EXPECT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
+              Succeeds(0));
+}
+#endif
 
 TEST_F(LlvmLibcFreopenTest, NullFilenameModeChange) {
   const auto FILENAME = libc_make_test_file_path("freopen_null_filename.test");

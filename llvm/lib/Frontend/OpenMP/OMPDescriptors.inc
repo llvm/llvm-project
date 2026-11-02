@@ -66,8 +66,8 @@
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}, {}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}, {}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_task_iteration}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_task_iteration}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}, {}}},
       }
     ),
   },
@@ -180,6 +180,20 @@
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
         {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_cancellation_construct_type,
+    descriptor::Clause(
+      "cancellation_construct_type",
+      {
+        {Version(45), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, "cancellation_construct_type", {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, "cancellation_construct_type", {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, "cancellation_construct_type", {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, "cancellation_construct_type", {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, "cancellation_construct_type", {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, "cancellation_construct_type", {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -312,8 +326,8 @@
     descriptor::Clause(
       "default-variant",
       {
-        {Version(50), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
-        {Version(51), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
       }
     ),
   },
@@ -340,8 +354,8 @@
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "depend", {Directive::OMPD_depobj, Directive::OMPD_ordered_standalone, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType, Modifier::Iterator, Modifier::TaskDependenceType}, {ModifierSet::DependModifierSet1}}},
         {Version(51), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable}}, "depend", {Directive::OMPD_depobj, Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_ordered_standalone, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType, Modifier::Iterator, Modifier::TaskDependenceType}, {ModifierSet::DependModifierSet1}}},
         {Version(52), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable}}, "depend", {Directive::OMPD_depobj, Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator, Modifier::TaskDependenceType}, {}}},
-        {Version(60), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited, Property::TaskgraphAltering}}, "depend", {Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::TaskDependenceType}, {}}},
-        {Version(61), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited, Property::TaskSynchronizing, Property::TaskgraphAltering}}, "depend", {Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::TaskDependenceType}, {ModifierSet::DependListType, ModifierSet::DependModifierSet1}}},
+        {Version(60), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited, Property::TaskgraphAltering}}, "depend", {Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_task_iteration, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::TaskDependenceType}, {}}},
+        {Version(61), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited, Property::TaskSynchronizing, Property::TaskgraphAltering}}, "depend", {Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_task_iteration, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::TaskDependenceType}, {ModifierSet::DependListType, ModifierSet::DependModifierSet1}}},
       }
     ),
   },
@@ -647,8 +661,8 @@
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskgraph, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskgraph, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_task_iteration, Directive::OMPD_taskgraph, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_task_iteration, Directive::OMPD_taskgraph, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -751,6 +765,7 @@
     descriptor::Clause(
       "initializer",
       {
+        {Version(45), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
@@ -1024,7 +1039,7 @@
     descriptor::Clause(
       "nowait",
       {
-        {Version(45), {{{Property::Compatible, Property::EndClause, Property::Free, Property::Optional, Property::OutermostLeaf, Property::Unique}}, "nowait", {Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(45), {{{Property::Compatible, Property::EndClause, Property::Free, Property::Optional, Property::OutermostLeaf, Property::Unique}}, "nowait", {Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_workshare}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(50), {{{Property::Compatible, Property::EndClause, Property::Free, Property::Optional, Property::OutermostLeaf, Property::Unique}}, "nowait", {Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_taskwait, Directive::OMPD_workshare}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(51), {{{Property::Compatible, Property::DispatchRequirement, Property::EndClause, Property::Free, Property::Optional, Property::OutermostLeaf, Property::Unique}}, "nowait", {Directive::OMPD_dispatch, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_interop, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_taskwait, Directive::OMPD_workshare}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(52), {{{Property::Compatible, Property::DispatchRequirement, Property::EndClause, Property::Free, Property::Optional, Property::OutermostLeaf, Property::Unique}}, "nowait", {Directive::OMPD_dispatch, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_interop, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_taskwait, Directive::OMPD_workshare}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
@@ -1076,6 +1091,20 @@
     ),
   },
   {
+    Clause::OMPC_ompx_bare,
+    descriptor::Clause(
+      "ompx_bare",
+      {
+        {Version(45), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "ompx_bare", {Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "ompx_bare", {Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "ompx_bare", {Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "ompx_bare", {Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "ompx_bare", {Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "ompx_bare", {Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_order,
     descriptor::Clause(
       "order",
@@ -1107,9 +1136,9 @@
     descriptor::Clause(
       "otherwise",
       {
-        {Version(52), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(52), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -1625,11 +1654,11 @@
     descriptor::Clause(
       "when",
       {
-        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -1648,6 +1677,1151 @@
     ),
   },
 #endif // GEN_OMP_CLAUSE_DESCRIPTORS
+#ifdef GEN_OMP_CLAUSE_GROUP_DESCRIPTORS
+  {
+    ClauseSet::Assumption,
+    descriptor::ClauseSet(
+      "assumption",
+      {
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_absent, Clause::OMPC_contains, Clause::OMPC_holds, Clause::OMPC_no_openmp, Clause::OMPC_no_openmp_routines, Clause::OMPC_no_parallelism}, {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_absent, Clause::OMPC_contains, Clause::OMPC_holds, Clause::OMPC_no_openmp, Clause::OMPC_no_openmp_routines, Clause::OMPC_no_parallelism}, {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_absent, Clause::OMPC_contains, Clause::OMPC_holds, Clause::OMPC_no_openmp, Clause::OMPC_no_openmp_constructs, Clause::OMPC_no_openmp_routines, Clause::OMPC_no_parallelism}, {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_absent, Clause::OMPC_contains, Clause::OMPC_holds, Clause::OMPC_no_openmp, Clause::OMPC_no_openmp_constructs, Clause::OMPC_no_openmp_routines, Clause::OMPC_no_parallelism}, {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::Atomic,
+    descriptor::ClauseSet(
+      "atomic",
+      {
+        {Version(45), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_read, Clause::OMPC_update, Clause::OMPC_write}, {Directive::OMPD_atomic}}},
+        {Version(50), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_read, Clause::OMPC_update, Clause::OMPC_write}, {Directive::OMPD_atomic}}},
+        {Version(51), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_read, Clause::OMPC_update, Clause::OMPC_write}, {Directive::OMPD_atomic}}},
+        {Version(52), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_read, Clause::OMPC_update, Clause::OMPC_write}, {Directive::OMPD_atomic}}},
+        {Version(60), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_read, Clause::OMPC_update, Clause::OMPC_write}, {Directive::OMPD_atomic}}},
+        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_read, Clause::OMPC_update, Clause::OMPC_write}, {Directive::OMPD_atomic}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::Branch,
+    descriptor::ClauseSet(
+      "branch",
+      {
+        {Version(45), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_inbranch, Clause::OMPC_notinbranch}, {Directive::OMPD_declare_simd}}},
+        {Version(50), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_inbranch, Clause::OMPC_notinbranch}, {Directive::OMPD_declare_simd}}},
+        {Version(51), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_inbranch, Clause::OMPC_notinbranch}, {Directive::OMPD_declare_simd}}},
+        {Version(52), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_inbranch, Clause::OMPC_notinbranch}, {Directive::OMPD_declare_simd}}},
+        {Version(60), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_inbranch, Clause::OMPC_notinbranch}, {Directive::OMPD_declare_simd}}},
+        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_inbranch, Clause::OMPC_notinbranch}, {Directive::OMPD_declare_simd}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::CancelDirectiveName,
+    descriptor::ClauseSet(
+      "cancel-directive-name",
+      {
+        {Version(50), {{{Property::Exclusive, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_cancellation_construct_type}, {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}}},
+        {Version(51), {{{Property::Exclusive, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_cancellation_construct_type}, {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}}},
+        {Version(52), {{{Property::Exclusive, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_cancellation_construct_type}, {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}}},
+        {Version(60), {{{Property::Exclusive, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_cancellation_construct_type}, {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}}},
+        {Version(61), {{{Property::Exclusive, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_cancellation_construct_type}, {Directive::OMPD_cancel, Directive::OMPD_cancellation_point}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::ExtendedAtomic,
+    descriptor::ClauseSet(
+      "extended-atomic",
+      {
+        {Version(45), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_capture}, {Directive::OMPD_atomic}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_capture}, {Directive::OMPD_atomic}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_capture, Clause::OMPC_compare, Clause::OMPC_fail, Clause::OMPC_weak}, {Directive::OMPD_atomic}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_capture, Clause::OMPC_compare, Clause::OMPC_fail, Clause::OMPC_weak}, {Directive::OMPD_atomic}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_capture, Clause::OMPC_compare, Clause::OMPC_fail, Clause::OMPC_weak}, {Directive::OMPD_atomic}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_capture, Clause::OMPC_compare, Clause::OMPC_fail, Clause::OMPC_weak}, {Directive::OMPD_atomic}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::MemoryOrder,
+    descriptor::ClauseSet(
+      "memory-order",
+      {
+        {Version(45), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_seq_cst}, {Directive::OMPD_atomic}}},
+        {Version(50), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_seq_cst}, {Directive::OMPD_atomic, Directive::OMPD_flush}}},
+        {Version(51), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_seq_cst}, {Directive::OMPD_atomic, Directive::OMPD_flush}}},
+        {Version(52), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_seq_cst}, {Directive::OMPD_atomic, Directive::OMPD_flush}}},
+        {Version(60), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_seq_cst}, {Directive::OMPD_atomic, Directive::OMPD_flush}}},
+        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_seq_cst}, {Directive::OMPD_atomic, Directive::OMPD_flush}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::ParallelizationLevel,
+    descriptor::ClauseSet(
+      "parallelization-level",
+      {
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_simd, Clause::OMPC_threads}, {Directive::OMPD_ordered_blockassoc}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_simd, Clause::OMPC_threads}, {Directive::OMPD_ordered_blockassoc}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_simd, Clause::OMPC_threads}, {Directive::OMPD_ordered_blockassoc}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_simd, Clause::OMPC_threads}, {Directive::OMPD_ordered_blockassoc}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_simd, Clause::OMPC_threads}, {Directive::OMPD_ordered_blockassoc}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::Requirement,
+    descriptor::ClauseSet(
+      "requirement",
+      {
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_atomic_default_mem_order, Clause::OMPC_dynamic_allocators, Clause::OMPC_reverse_offload, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory}, {Directive::OMPD_requires}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_atomic_default_mem_order, Clause::OMPC_dynamic_allocators, Clause::OMPC_reverse_offload, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory}, {Directive::OMPD_requires}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_atomic_default_mem_order, Clause::OMPC_dynamic_allocators, Clause::OMPC_reverse_offload, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory}, {Directive::OMPD_requires}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_atomic_default_mem_order, Clause::OMPC_device_safesync, Clause::OMPC_dynamic_allocators, Clause::OMPC_reverse_offload, Clause::OMPC_self_maps, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory}, {Directive::OMPD_requires}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Required, Property::Unique}}, {Clause::OMPC_atomic_default_mem_order, Clause::OMPC_device_safesync, Clause::OMPC_dynamic_allocators, Clause::OMPC_reverse_offload, Clause::OMPC_self_maps, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory}, {Directive::OMPD_requires}}},
+      }
+    ),
+  },
+#endif // GEN_OMP_CLAUSE_GROUP_DESCRIPTORS
+#ifdef GEN_OMP_CLAUSE_SET_DESCRIPTORS
+  {
+    ClauseSet::ActionClause,
+    descriptor::ClauseSet(
+      "action-clause",
+      {
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_destroy, Clause::OMPC_init, Clause::OMPC_use}, {Directive::OMPD_interop}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_destroy, Clause::OMPC_init, Clause::OMPC_use}, {Directive::OMPD_interop}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_destroy, Clause::OMPC_init, Clause::OMPC_use}, {Directive::OMPD_interop}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_destroy, Clause::OMPC_init, Clause::OMPC_use}, {Directive::OMPD_interop}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::DataEnvironmentClause,
+    descriptor::ClauseSet(
+      "data-environment-clause",
+      {
+        {Version(50), {{{Property::Required}}, {Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {Directive::OMPD_target_data}}},
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {Directive::OMPD_target_data}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {Directive::OMPD_target_data}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {Directive::OMPD_target_data}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {Directive::OMPD_target_data}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::DeclareMapperClauseSet1,
+    descriptor::ClauseSet(
+      "declare_mapper_clause_set_1",
+      {
+        {Version(50), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::DepobjClauseSet1,
+    descriptor::ClauseSet(
+      "depobj_clause_set_1",
+      {
+        {Version(50), {{{Property::Exclusive, Property::Required, Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_update_depend_objects}, {Directive::OMPD_depobj}}},
+        {Version(51), {{{Property::Exclusive, Property::Required, Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_update_depend_objects}, {Directive::OMPD_depobj}}},
+        {Version(52), {{{Property::Exclusive, Property::Required, Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_update_depend_objects}, {Directive::OMPD_depobj}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_destroy, Clause::OMPC_init, Clause::OMPC_update_depend_objects}, {Directive::OMPD_depobj}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_destroy, Clause::OMPC_init, Clause::OMPC_update_depend_objects}, {Directive::OMPD_depobj}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::GranularityClause,
+    descriptor::ClauseSet(
+      "granularity-clause",
+      {
+        {Version(45), {{{Property::Exclusive}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}, {Directive::OMPD_taskloop}}},
+        {Version(50), {{{Property::Exclusive}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}, {Directive::OMPD_taskloop}}},
+        {Version(51), {{{Property::Exclusive}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}, {Directive::OMPD_taskloop}}},
+        {Version(52), {{{Property::Exclusive}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}, {Directive::OMPD_taskloop}}},
+        {Version(60), {{{Property::Exclusive}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}, {Directive::OMPD_taskloop}}},
+        {Version(61), {{{Property::Exclusive}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}, {Directive::OMPD_taskloop}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::ScanClauseSet1,
+    descriptor::ClauseSet(
+      "scan_clause_set_1",
+      {
+        {Version(50), {{{Property::Exclusive, Property::Required, Property::Unique}}, {Clause::OMPC_exclusive, Clause::OMPC_inclusive}, {Directive::OMPD_scan}}},
+        {Version(51), {{{Property::Exclusive, Property::Required, Property::Unique}}, {Clause::OMPC_exclusive, Clause::OMPC_inclusive}, {Directive::OMPD_scan}}},
+        {Version(52), {{{Property::Exclusive, Property::Required, Property::Unique}}, {Clause::OMPC_exclusive, Clause::OMPC_inclusive}, {Directive::OMPD_scan}}},
+        {Version(60), {{{Property::Exclusive, Property::Required, Property::Unique}}, {Clause::OMPC_exclusive, Clause::OMPC_inclusive, Clause::OMPC_init_complete}, {Directive::OMPD_scan}}},
+        {Version(61), {{{Property::Exclusive, Property::Required, Property::Unique}}, {Clause::OMPC_exclusive, Clause::OMPC_inclusive, Clause::OMPC_init_complete}, {Directive::OMPD_scan}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::SingleClauseSet1,
+    descriptor::ClauseSet(
+      "single_clause_set_1",
+      {
+        {Version(45), {{{Property::Exclusive}}, {Clause::OMPC_copyprivate, Clause::OMPC_nowait}, {Directive::OMPD_single}}},
+        {Version(50), {{{Property::Exclusive}}, {Clause::OMPC_copyprivate, Clause::OMPC_nowait}, {Directive::OMPD_single}}},
+        {Version(51), {{{Property::Exclusive}}, {Clause::OMPC_copyprivate, Clause::OMPC_nowait}, {Directive::OMPD_single}}},
+        {Version(52), {{{Property::Exclusive}}, {Clause::OMPC_copyprivate, Clause::OMPC_nowait}, {Directive::OMPD_single}}},
+        {Version(60), {{{Property::Exclusive}}, {Clause::OMPC_copyprivate, Clause::OMPC_nowait}, {Directive::OMPD_single}}},
+        {Version(61), {{{Property::Exclusive}}, {Clause::OMPC_copyprivate, Clause::OMPC_nowait}, {Directive::OMPD_single}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::SynchronizationClause,
+    descriptor::ClauseSet(
+      "synchronization-clause",
+      {
+        {Version(50), {{{Property::Exclusive}}, {Clause::OMPC_nogroup, Clause::OMPC_reduction}, {Directive::OMPD_taskloop}}},
+        {Version(51), {{{Property::Exclusive}}, {Clause::OMPC_nogroup, Clause::OMPC_reduction}, {Directive::OMPD_taskloop}}},
+        {Version(52), {{{Property::Exclusive}}, {Clause::OMPC_nogroup, Clause::OMPC_reduction}, {Directive::OMPD_taskloop}}},
+        {Version(60), {{{Property::Exclusive}}, {Clause::OMPC_nogroup, Clause::OMPC_reduction}, {Directive::OMPD_taskloop}}},
+        {Version(61), {{{Property::Exclusive}}, {Clause::OMPC_nogroup, Clause::OMPC_reduction}, {Directive::OMPD_taskloop}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::TargetDataClauseSet1,
+    descriptor::ClauseSet(
+      "target_data_clause_set_1",
+      {
+        {Version(45), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_data}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::TargetEnterDataClauseSet1,
+    descriptor::ClauseSet(
+      "target_enter_data_clause_set_1",
+      {
+        {Version(45), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_enter_data}}},
+        {Version(50), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_enter_data}}},
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_enter_data}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_enter_data}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_enter_data}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_enter_data}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::TargetExitDataClauseSet1,
+    descriptor::ClauseSet(
+      "target_exit_data_clause_set_1",
+      {
+        {Version(45), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_exit_data}}},
+        {Version(50), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_exit_data}}},
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_exit_data}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_exit_data}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_exit_data}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_target_exit_data}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::TargetUpdateClauseSet1,
+    descriptor::ClauseSet(
+      "target_update_clause_set_1",
+      {
+        {Version(45), {{{Property::Required}}, {Clause::OMPC_from, Clause::OMPC_to}, {Directive::OMPD_target_update}}},
+        {Version(50), {{{Property::Required}}, {Clause::OMPC_from, Clause::OMPC_to}, {Directive::OMPD_target_update}}},
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_from, Clause::OMPC_to}, {Directive::OMPD_target_update}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_from, Clause::OMPC_to}, {Directive::OMPD_target_update}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_from, Clause::OMPC_to}, {Directive::OMPD_target_update}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_from, Clause::OMPC_to}, {Directive::OMPD_target_update}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::TaskClauseSet1,
+    descriptor::ClauseSet(
+      "task_clause_set_1",
+      {
+        {Version(50), {{{Property::Exclusive}}, {Clause::OMPC_detach, Clause::OMPC_mergeable}, {Directive::OMPD_task}}},
+        {Version(51), {{{Property::Exclusive}}, {Clause::OMPC_detach, Clause::OMPC_mergeable}, {Directive::OMPD_task}}},
+        {Version(52), {{{Property::Exclusive}}, {Clause::OMPC_detach, Clause::OMPC_mergeable}, {Directive::OMPD_task}}},
+        {Version(60), {{{Property::Exclusive}}, {Clause::OMPC_detach, Clause::OMPC_mergeable}, {Directive::OMPD_task}}},
+        {Version(61), {{{Property::Exclusive}}, {Clause::OMPC_detach, Clause::OMPC_mergeable}, {Directive::OMPD_task}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::UnrollClauseSet1,
+    descriptor::ClauseSet(
+      "unroll_clause_set_1",
+      {
+        {Version(51), {{{Property::Exclusive}}, {Clause::OMPC_full, Clause::OMPC_partial}, {Directive::OMPD_unroll}}},
+        {Version(52), {{{Property::Exclusive}}, {Clause::OMPC_full, Clause::OMPC_partial}, {Directive::OMPD_unroll}}},
+        {Version(60), {{{Property::Exclusive}}, {Clause::OMPC_full, Clause::OMPC_partial}, {Directive::OMPD_unroll}}},
+        {Version(61), {{{Property::Exclusive}}, {Clause::OMPC_full, Clause::OMPC_partial}, {Directive::OMPD_unroll}}},
+      }
+    ),
+  },
+#endif // GEN_OMP_CLAUSE_SET_DESCRIPTORS
+#ifdef GEN_OMP_DIRECTIVE_DESCRIPTORS
+  {
+    Directive::OMPD_allocate,
+    descriptor::Directive(
+      "allocate",
+      {
+        {Version(50), {{{Property::Pure}}, "allocate", Association::Explicit, Category::Declarative, {Clause::OMPC_allocator}, {}}},
+        {Version(51), {{{Property::Pure}}, "allocate", Association::Explicit, Category::Declarative, {Clause::OMPC_align, Clause::OMPC_allocator}, {}}},
+        {Version(52), {{{Property::Pure}}, "allocate", Association::Explicit, Category::Declarative, {Clause::OMPC_align, Clause::OMPC_allocator}, {}}},
+        {Version(60), {{{Property::Pure}}, "allocate", Association::Explicit, Category::Declarative, {Clause::OMPC_align, Clause::OMPC_allocator}, {}}},
+        {Version(61), {{{Property::Pure}}, "allocate", Association::Explicit, Category::Declarative, {Clause::OMPC_align, Clause::OMPC_allocator}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_allocators,
+    descriptor::Directive(
+      "allocators",
+      {
+        {Version(52), {{{}}, "allocators", Association::Block, Category::Executable, {Clause::OMPC_allocate}, {}}},
+        {Version(60), {{{}}, "allocators", Association::Block, Category::Executable, {Clause::OMPC_allocate}, {}}},
+        {Version(61), {{{}}, "allocators", Association::Block, Category::Executable, {Clause::OMPC_allocate}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_assume,
+    descriptor::Directive(
+      "assume",
+      {
+        {Version(51), {{{Property::Pure}}, "assume", Association::Block, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(52), {{{Property::Pure}}, "assume", Association::Block, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(60), {{{Property::Pure}}, "assume", Association::Block, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(61), {{{Property::Pure}}, "assume", Association::Block, Category::Informational, {}, {ClauseSet::Assumption}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_assumes,
+    descriptor::Directive(
+      "assumes",
+      {
+        {Version(51), {{{Property::Pure}}, "assumes", Association::Unassociated, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(52), {{{Property::Pure}}, "assumes", Association::Unassociated, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(60), {{{Property::Pure}}, "assumes", Association::Unassociated, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(61), {{{Property::Pure}}, "assumes", Association::Unassociated, Category::Informational, {}, {ClauseSet::Assumption}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_atomic,
+    descriptor::Directive(
+      "atomic",
+      {
+        {Version(45), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitStrongFlush, Property::ImplicitStrongFlushAtEntry, Property::ImplicitStrongFlushAtExit, Property::MutualExclusion, Property::OrderConcurrentNestable, Property::Simdizable}}, "atomic", Association::Block, Category::Executable, {}, {ClauseSet::Atomic, ClauseSet::ExtendedAtomic, ClauseSet::MemoryOrder}}},
+        {Version(50), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitStrongFlush, Property::ImplicitStrongFlushAtEntry, Property::ImplicitStrongFlushAtExit, Property::MutualExclusion, Property::OrderConcurrentNestable, Property::Simdizable}}, "atomic", Association::Block, Category::Executable, {Clause::OMPC_hint}, {ClauseSet::Atomic, ClauseSet::ExtendedAtomic, ClauseSet::MemoryOrder}}},
+        {Version(51), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitStrongFlush, Property::ImplicitStrongFlushAtEntry, Property::ImplicitStrongFlushAtExit, Property::MutualExclusion, Property::OrderConcurrentNestable, Property::Simdizable}}, "atomic", Association::Block, Category::Executable, {Clause::OMPC_hint}, {ClauseSet::Atomic, ClauseSet::ExtendedAtomic, ClauseSet::MemoryOrder}}},
+        {Version(52), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitStrongFlush, Property::ImplicitStrongFlushAtEntry, Property::ImplicitStrongFlushAtExit, Property::MutualExclusion, Property::OrderConcurrentNestable, Property::Simdizable}}, "atomic", Association::Block, Category::Executable, {Clause::OMPC_hint}, {ClauseSet::Atomic, ClauseSet::ExtendedAtomic, ClauseSet::MemoryOrder}}},
+        {Version(60), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitStrongFlush, Property::ImplicitStrongFlushAtEntry, Property::ImplicitStrongFlushAtExit, Property::MutualExclusion, Property::OrderConcurrentNestable, Property::Simdizable}}, "atomic", Association::Block, Category::Executable, {Clause::OMPC_hint, Clause::OMPC_memscope}, {ClauseSet::Atomic, ClauseSet::ExtendedAtomic, ClauseSet::MemoryOrder}}},
+        {Version(61), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitStrongFlush, Property::ImplicitStrongFlushAtEntry, Property::ImplicitStrongFlushAtExit, Property::MutualExclusion, Property::OrderConcurrentNestable, Property::Simdizable}}, "atomic", Association::Block, Category::Executable, {Clause::OMPC_hint, Clause::OMPC_memscope}, {ClauseSet::Atomic, ClauseSet::ExtendedAtomic, ClauseSet::MemoryOrder}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_barrier,
+    descriptor::Directive(
+      "barrier",
+      {
+        {Version(45), {{{Property::CancellationPoint, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtEntry, Property::TeamExecuted}}, "barrier", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(50), {{{Property::CancellationPoint, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtEntry, Property::TeamExecuted}}, "barrier", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(51), {{{Property::CancellationPoint, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtEntry, Property::TeamExecuted}}, "barrier", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(52), {{{Property::CancellationPoint, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtEntry, Property::TeamExecuted}}, "barrier", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(60), {{{Property::CancellationPoint, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtEntry, Property::TeamExecuted}}, "barrier", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(61), {{{Property::CancellationPoint, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtEntry, Property::TaskSynchronizing, Property::TeamExecuted}}, "barrier", Association::Unassociated, Category::Executable, {}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_begin_assumes,
+    descriptor::Directive(
+      "begin_assumes",
+      {
+        {Version(51), {{{}}, "begin assumes", Association::Delimited, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(52), {{{}}, "begin assumes", Association::Delimited, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(60), {{{}}, "begin assumes", Association::Delimited, Category::Informational, {}, {ClauseSet::Assumption}}},
+        {Version(61), {{{}}, "begin assumes", Association::Delimited, Category::Informational, {}, {ClauseSet::Assumption}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_begin_declare_target,
+    descriptor::Directive(
+      "begin_declare_target",
+      {
+        {Version(51), {{{Property::DeclareTarget, Property::Device, Property::VariantGenerating}}, "begin declare target", Association::Delimited, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_indirect}, {}}},
+        {Version(52), {{{Property::DeclareTarget, Property::Device, Property::VariantGenerating}}, "begin declare target", Association::Delimited, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_indirect}, {}}},
+        {Version(60), {{{Property::DeclareTarget, Property::Device, Property::VariantGenerating}}, "begin declare_target", Association::Delimited, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_indirect}, {}}},
+        {Version(61), {{{Property::DeclareTarget, Property::Device, Property::VariantGenerating}}, "begin declare_target", Association::Delimited, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_indirect}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_begin_declare_variant,
+    descriptor::Directive(
+      "begin_declare_variant",
+      {
+        {Version(51), {{{}}, "begin declare variant", Association::Delimited, Category::Declarative, {Clause::OMPC_match}, {}}},
+        {Version(52), {{{}}, "begin declare variant", Association::Delimited, Category::Declarative, {Clause::OMPC_match}, {}}},
+        {Version(60), {{{}}, "begin declare_variant", Association::Delimited, Category::Declarative, {Clause::OMPC_match}, {}}},
+        {Version(61), {{{}}, "begin declare_variant", Association::Delimited, Category::Declarative, {Clause::OMPC_match}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_begin_metadirective,
+    descriptor::Directive(
+      "begin_metadirective",
+      {
+        {Version(50), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_default_variant, Clause::OMPC_when}, {}}},
+        {Version(51), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_default_variant, Clause::OMPC_when}, {}}},
+        {Version(52), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+        {Version(60), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+        {Version(61), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_cancel,
+    descriptor::Directive(
+      "cancel",
+      {
+        {Version(45), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancel", Association::Unassociated, Category::Executable, {Clause::OMPC_cancellation_construct_type, Clause::OMPC_if}, {}}},
+        {Version(50), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancel", Association::Unassociated, Category::Executable, {Clause::OMPC_if}, {ClauseSet::CancelDirectiveName}}},
+        {Version(51), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancel", Association::Unassociated, Category::Executable, {Clause::OMPC_if}, {ClauseSet::CancelDirectiveName}}},
+        {Version(52), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancel", Association::Unassociated, Category::Executable, {Clause::OMPC_if}, {ClauseSet::CancelDirectiveName}}},
+        {Version(60), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancel", Association::Unassociated, Category::Executable, {Clause::OMPC_if}, {ClauseSet::CancelDirectiveName}}},
+        {Version(61), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancel", Association::Unassociated, Category::Executable, {Clause::OMPC_if}, {ClauseSet::CancelDirectiveName}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_cancellation_point,
+    descriptor::Directive(
+      "cancellation_point",
+      {
+        {Version(45), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancellation point", Association::Unassociated, Category::Executable, {Clause::OMPC_cancellation_construct_type}, {}}},
+        {Version(50), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancellation point", Association::Unassociated, Category::Executable, {}, {ClauseSet::CancelDirectiveName}}},
+        {Version(51), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancellation point", Association::Unassociated, Category::Executable, {}, {ClauseSet::CancelDirectiveName}}},
+        {Version(52), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancellation point", Association::Unassociated, Category::Executable, {}, {ClauseSet::CancelDirectiveName}}},
+        {Version(60), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancellation_point", Association::Unassociated, Category::Executable, {}, {ClauseSet::CancelDirectiveName}}},
+        {Version(61), {{{Property::CancellationPoint, Property::ImplicitFlush}}, "cancellation_point", Association::Unassociated, Category::Executable, {}, {ClauseSet::CancelDirectiveName}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_critical,
+    descriptor::Directive(
+      "critical",
+      {
+        {Version(45), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::ThreadExclusive, Property::ThreadLimiting}}, "critical", Association::Block, Category::Executable, {Clause::OMPC_hint}, {}}},
+        {Version(50), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::ThreadExclusive, Property::ThreadLimiting}}, "critical", Association::Block, Category::Executable, {Clause::OMPC_hint}, {}}},
+        {Version(51), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::ThreadExclusive, Property::ThreadLimiting}}, "critical", Association::Block, Category::Executable, {Clause::OMPC_hint}, {}}},
+        {Version(52), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::ThreadExclusive, Property::ThreadLimiting}}, "critical", Association::Block, Category::Executable, {Clause::OMPC_hint}, {}}},
+        {Version(60), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::ThreadExclusive, Property::ThreadLimiting}}, "critical", Association::Block, Category::Executable, {Clause::OMPC_hint}, {}}},
+        {Version(61), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::ThreadExclusive, Property::ThreadLimiting}}, "critical", Association::Block, Category::Executable, {Clause::OMPC_hint}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_declare_induction,
+    descriptor::Directive(
+      "declare_induction",
+      {
+        {Version(60), {{{Property::Pure}}, "declare_induction", Association::Unassociated, Category::Declarative, {Clause::OMPC_collector, Clause::OMPC_inductor}, {}}},
+        {Version(61), {{{Property::Pure}}, "declare_induction", Association::Unassociated, Category::Declarative, {Clause::OMPC_collector, Clause::OMPC_inductor}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_declare_mapper,
+    descriptor::Directive(
+      "declare_mapper",
+      {
+        {Version(50), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(51), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(52), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(60), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(61), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_declare_reduction,
+    descriptor::Directive(
+      "declare_reduction",
+      {
+        {Version(45), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
+        {Version(50), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
+        {Version(51), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
+        {Version(52), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
+        {Version(60), {{{Property::Pure}}, "declare_reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_combiner, Clause::OMPC_initializer}, {}}},
+        {Version(61), {{{Property::Pure}}, "declare_reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_combiner, Clause::OMPC_initializer, Clause::OMPC_reduction_kind}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_declare_simd,
+    descriptor::Directive(
+      "declare_simd",
+      {
+        {Version(45), {{{Property::Pure, Property::VariantGenerating}}, "declare simd", Association::Declaration, Category::Declarative, {Clause::OMPC_aligned, Clause::OMPC_linear, Clause::OMPC_simdlen, Clause::OMPC_uniform}, {ClauseSet::Branch}}},
+        {Version(50), {{{Property::Pure, Property::VariantGenerating}}, "declare simd", Association::Declaration, Category::Declarative, {Clause::OMPC_aligned, Clause::OMPC_linear, Clause::OMPC_simdlen, Clause::OMPC_uniform}, {ClauseSet::Branch}}},
+        {Version(51), {{{Property::Pure, Property::VariantGenerating}}, "declare simd", Association::Declaration, Category::Declarative, {Clause::OMPC_aligned, Clause::OMPC_linear, Clause::OMPC_simdlen, Clause::OMPC_uniform}, {ClauseSet::Branch}}},
+        {Version(52), {{{Property::Pure, Property::VariantGenerating}}, "declare simd", Association::Declaration, Category::Declarative, {Clause::OMPC_aligned, Clause::OMPC_linear, Clause::OMPC_simdlen, Clause::OMPC_uniform}, {ClauseSet::Branch}}},
+        {Version(60), {{{Property::Pure, Property::VariantGenerating}}, "declare_simd", Association::Declaration, Category::Declarative, {Clause::OMPC_aligned, Clause::OMPC_linear, Clause::OMPC_simdlen, Clause::OMPC_uniform}, {ClauseSet::Branch}}},
+        {Version(61), {{{Property::Pure, Property::VariantGenerating}}, "declare_simd", Association::Declaration, Category::Declarative, {Clause::OMPC_aligned, Clause::OMPC_linear, Clause::OMPC_simdlen, Clause::OMPC_uniform}, {ClauseSet::Branch}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_declare_target,
+    descriptor::Directive(
+      "declare_target",
+      {
+        {Version(45), {{{Property::DeclareTarget, Property::Device, Property::Pure, Property::VariantGenerating}}, "declare target", Association::Explicit, Category::Declarative, {Clause::OMPC_link, Clause::OMPC_to}, {}}},
+        {Version(50), {{{Property::DeclareTarget, Property::Device, Property::Pure, Property::VariantGenerating}}, "declare target", Association::Explicit, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_link, Clause::OMPC_to}, {}}},
+        {Version(51), {{{Property::DeclareTarget, Property::Device, Property::Pure, Property::VariantGenerating}}, "declare target", Association::Explicit, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_indirect, Clause::OMPC_link, Clause::OMPC_to}, {}}},
+        {Version(52), {{{Property::DeclareTarget, Property::Device, Property::Pure, Property::VariantGenerating}}, "declare target", Association::Explicit, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_enter, Clause::OMPC_indirect, Clause::OMPC_link}, {}}},
+        {Version(60), {{{Property::DeclareTarget, Property::Device, Property::Pure, Property::VariantGenerating}}, "declare_target", Association::Explicit, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_enter, Clause::OMPC_indirect, Clause::OMPC_link, Clause::OMPC_local}, {}}},
+        {Version(61), {{{Property::DeclareTarget, Property::Device, Property::Pure, Property::VariantGenerating}}, "declare_target", Association::Explicit, Category::Declarative, {Clause::OMPC_device_type, Clause::OMPC_enter, Clause::OMPC_indirect, Clause::OMPC_link, Clause::OMPC_local}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_declare_variant,
+    descriptor::Directive(
+      "declare_variant",
+      {
+        {Version(50), {{{Property::Pure}}, "declare variant", Association::Declaration, Category::Declarative, {Clause::OMPC_match}, {}}},
+        {Version(51), {{{Property::Pure}}, "declare variant", Association::Declaration, Category::Declarative, {Clause::OMPC_adjust_args, Clause::OMPC_append_args, Clause::OMPC_match}, {}}},
+        {Version(52), {{{Property::Pure}}, "declare variant", Association::Declaration, Category::Declarative, {Clause::OMPC_adjust_args, Clause::OMPC_append_args, Clause::OMPC_match}, {}}},
+        {Version(60), {{{Property::Pure}}, "declare_variant", Association::Declaration, Category::Declarative, {Clause::OMPC_adjust_args, Clause::OMPC_append_args, Clause::OMPC_match}, {}}},
+        {Version(61), {{{Property::Pure}}, "declare_variant", Association::Declaration, Category::Declarative, {Clause::OMPC_adjust_args, Clause::OMPC_append_args, Clause::OMPC_match}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_depobj,
+    descriptor::Directive(
+      "depobj",
+      {
+        {Version(50), {{{}}, "depobj", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_update_depend_objects}, {ClauseSet::DepobjClauseSet1}}},
+        {Version(51), {{{}}, "depobj", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_update_depend_objects}, {ClauseSet::DepobjClauseSet1}}},
+        {Version(52), {{{}}, "depobj", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_update_depend_objects}, {ClauseSet::DepobjClauseSet1}}},
+        {Version(60), {{{}}, "depobj", Association::Unassociated, Category::Executable, {Clause::OMPC_destroy, Clause::OMPC_init, Clause::OMPC_update_depend_objects}, {ClauseSet::DepobjClauseSet1}}},
+        {Version(61), {{{}}, "depobj", Association::Unassociated, Category::Executable, {Clause::OMPC_destroy, Clause::OMPC_init, Clause::OMPC_update_depend_objects}, {ClauseSet::DepobjClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_dispatch,
+    descriptor::Directive(
+      "dispatch",
+      {
+        {Version(51), {{{Property::ContextMatching, Property::ImplicitTaskwait}}, "dispatch", Association::Block, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_is_device_ptr, Clause::OMPC_nocontext, Clause::OMPC_novariants, Clause::OMPC_nowait}, {}}},
+        {Version(52), {{{Property::ContextMatching, Property::ImplicitTaskwait}}, "dispatch", Association::Block, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_is_device_ptr, Clause::OMPC_nocontext, Clause::OMPC_novariants, Clause::OMPC_nowait}, {}}},
+        {Version(60), {{{Property::ContextMatching, Property::ImplicitTaskwait}}, "dispatch", Association::Block, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_has_device_addr, Clause::OMPC_interop, Clause::OMPC_is_device_ptr, Clause::OMPC_nocontext, Clause::OMPC_novariants, Clause::OMPC_nowait}, {}}},
+        {Version(61), {{{Property::ContextMatching, Property::ImplicitTaskwait, Property::TaskSynchronizing}}, "dispatch", Association::Block, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_has_device_addr, Clause::OMPC_interop, Clause::OMPC_is_device_ptr, Clause::OMPC_nocontext, Clause::OMPC_novariants, Clause::OMPC_nowait}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_distribute,
+    descriptor::Directive(
+      "distribute",
+      {
+        {Version(45), {{{Property::Partitioned, Property::SimdPartitionable, Property::TeamsNestable, Property::WorkDistribution}}, "distribute", Association::LoopNest, Category::Executable, {Clause::OMPC_collapse, Clause::OMPC_dist_schedule, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_private}, {}}},
+        {Version(50), {{{Property::Partitioned, Property::SimdPartitionable, Property::TeamsNestable, Property::WorkDistribution}}, "distribute", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_dist_schedule, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private}, {}}},
+        {Version(51), {{{Property::Partitioned, Property::SimdPartitionable, Property::TeamsNestable, Property::WorkDistribution}}, "distribute", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_dist_schedule, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private}, {}}},
+        {Version(52), {{{Property::Partitioned, Property::SimdPartitionable, Property::TeamsNestable, Property::WorkDistribution}}, "distribute", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_dist_schedule, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private}, {}}},
+        {Version(60), {{{Property::Partitioned, Property::SimdPartitionable, Property::TeamsNestable, Property::WorkDistribution}}, "distribute", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_dist_schedule, Clause::OMPC_firstprivate, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private}, {}}},
+        {Version(61), {{{Property::Partitioned, Property::SimdPartitionable, Property::TeamsNestable, Property::WorkDistribution}}, "distribute", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_dist_schedule, Clause::OMPC_firstprivate, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_do,
+    descriptor::Directive(
+      "do",
+      {
+        {Version(45), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "do", Association::LoopNest, Category::Executable, {Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(50), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "do", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(51), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "do", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(52), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "do", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(60), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "do", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(61), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TaskSynchronizing, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "do", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_error,
+    descriptor::Directive(
+      "error",
+      {
+        {Version(51), {{{Property::Pure}}, "error", Association::Unassociated, Category::Utility, {Clause::OMPC_at, Clause::OMPC_message, Clause::OMPC_severity}, {}}},
+        {Version(52), {{{Property::Pure}}, "error", Association::Unassociated, Category::Utility, {Clause::OMPC_at, Clause::OMPC_message, Clause::OMPC_severity}, {}}},
+        {Version(60), {{{Property::Pure}}, "error", Association::Unassociated, Category::Utility, {Clause::OMPC_at, Clause::OMPC_message, Clause::OMPC_severity}, {}}},
+        {Version(61), {{{Property::Pure}}, "error", Association::Unassociated, Category::Utility, {Clause::OMPC_at, Clause::OMPC_message, Clause::OMPC_severity}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_flatten,
+    descriptor::Directive(
+      "flatten",
+      {
+        {Version(61), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "flatten", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_depth}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_flush,
+    descriptor::Directive(
+      "flush",
+      {
+        {Version(45), {{{}}, "flush", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(50), {{{}}, "flush", Association::Unassociated, Category::Executable, {}, {ClauseSet::MemoryOrder}}},
+        {Version(51), {{{}}, "flush", Association::Unassociated, Category::Executable, {}, {ClauseSet::MemoryOrder}}},
+        {Version(52), {{{}}, "flush", Association::Unassociated, Category::Executable, {}, {ClauseSet::MemoryOrder}}},
+        {Version(60), {{{}}, "flush", Association::Unassociated, Category::Executable, {Clause::OMPC_memscope}, {ClauseSet::MemoryOrder}}},
+        {Version(61), {{{}}, "flush", Association::Unassociated, Category::Executable, {Clause::OMPC_memscope}, {ClauseSet::MemoryOrder}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_for,
+    descriptor::Directive(
+      "for",
+      {
+        {Version(45), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "for", Association::LoopNest, Category::Executable, {Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(50), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "for", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(51), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "for", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(52), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "for", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(60), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "for", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+        {Version(61), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::SimdPartitionable, Property::TaskSynchronizing, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing, Property::WorksharingLoop}}, "for", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_firstprivate, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nowait, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_schedule}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_fuse,
+    descriptor::Directive(
+      "fuse",
+      {
+        {Version(60), {{{Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "fuse", Association::LoopSequence, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_looprange}, {}}},
+        {Version(61), {{{Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "fuse", Association::LoopSequence, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_depth, Clause::OMPC_looprange}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_groupprivate,
+    descriptor::Directive(
+      "groupprivate",
+      {
+        {Version(60), {{{Property::Pure}}, "groupprivate", Association::Explicit, Category::Declarative, {Clause::OMPC_device_type}, {}}},
+        {Version(61), {{{Property::Pure}}, "groupprivate", Association::Explicit, Category::Declarative, {Clause::OMPC_device_type}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_interchange,
+    descriptor::Directive(
+      "interchange",
+      {
+        {Version(60), {{{Property::LoopTransforming, Property::NonrectangularCompatible, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "interchange", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_permutation}, {}}},
+        {Version(61), {{{Property::LoopTransforming, Property::NonrectangularCompatible, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "interchange", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_permutation}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_interop,
+    descriptor::Directive(
+      "interop",
+      {
+        {Version(51), {{{Property::Device}}, "interop", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_device, Clause::OMPC_init, Clause::OMPC_nowait, Clause::OMPC_use}, {ClauseSet::ActionClause}}},
+        {Version(52), {{{Property::Device}}, "interop", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_device, Clause::OMPC_init, Clause::OMPC_nowait, Clause::OMPC_use}, {ClauseSet::ActionClause}}},
+        {Version(60), {{{Property::Device}}, "interop", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_device, Clause::OMPC_init, Clause::OMPC_nowait, Clause::OMPC_use}, {ClauseSet::ActionClause}}},
+        {Version(61), {{{Property::Device, Property::TaskSynchronizing}}, "interop", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_device, Clause::OMPC_init, Clause::OMPC_nowait, Clause::OMPC_use}, {ClauseSet::ActionClause}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_loop,
+    descriptor::Directive(
+      "loop",
+      {
+        {Version(50), {{{Property::OrderConcurrentNestable, Property::Partitioned, Property::SequentiallyOrderable, Property::Simdizable, Property::TeamExecuted, Property::TeamsNestable, Property::WorkDistribution, Property::Worksharing}}, "loop", Association::LoopNest, Category::Executable, {Clause::OMPC_bind, Clause::OMPC_collapse, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(51), {{{Property::OrderConcurrentNestable, Property::Partitioned, Property::SequentiallyOrderable, Property::Simdizable, Property::TeamExecuted, Property::TeamsNestable, Property::WorkDistribution, Property::Worksharing}}, "loop", Association::LoopNest, Category::Executable, {Clause::OMPC_bind, Clause::OMPC_collapse, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(52), {{{Property::OrderConcurrentNestable, Property::Partitioned, Property::SequentiallyOrderable, Property::Simdizable, Property::TeamExecuted, Property::TeamsNestable, Property::WorkDistribution, Property::Worksharing}}, "loop", Association::LoopNest, Category::Executable, {Clause::OMPC_bind, Clause::OMPC_collapse, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(60), {{{Property::OrderConcurrentNestable, Property::Partitioned, Property::SequentiallyOrderable, Property::Simdizable, Property::TeamExecuted, Property::TeamsNestable, Property::WorkDistribution, Property::Worksharing}}, "loop", Association::LoopNest, Category::Executable, {Clause::OMPC_bind, Clause::OMPC_collapse, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(61), {{{Property::OrderConcurrentNestable, Property::Partitioned, Property::SequentiallyOrderable, Property::Simdizable, Property::TeamExecuted, Property::TeamsNestable, Property::WorkDistribution, Property::Worksharing}}, "loop", Association::LoopNest, Category::Executable, {Clause::OMPC_bind, Clause::OMPC_collapse, Clause::OMPC_lastprivate, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_masked,
+    descriptor::Directive(
+      "masked",
+      {
+        {Version(51), {{{Property::ThreadLimiting, Property::ThreadSelecting}}, "masked", Association::Block, Category::Executable, {Clause::OMPC_filter}, {}}},
+        {Version(52), {{{Property::ThreadLimiting, Property::ThreadSelecting}}, "masked", Association::Block, Category::Executable, {Clause::OMPC_filter}, {}}},
+        {Version(60), {{{Property::ThreadLimiting, Property::ThreadSelecting}}, "masked", Association::Block, Category::Executable, {Clause::OMPC_filter}, {}}},
+        {Version(61), {{{Property::ThreadLimiting, Property::ThreadSelecting}}, "masked", Association::Block, Category::Executable, {Clause::OMPC_filter}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_master,
+    descriptor::Directive(
+      "master",
+      {
+        {Version(45), {{{Property::ThreadLimiting}}, "master", Association::Block, Category::Executable, {}, {}}},
+        {Version(50), {{{Property::ThreadLimiting, Property::ThreadSelecting}}, "master", Association::Block, Category::Executable, {}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_metadirective,
+    descriptor::Directive(
+      "metadirective",
+      {
+        {Version(50), {{{Property::Pure}}, "metadirective", Association::Unassociated, Category::Meta, {Clause::OMPC_default_variant, Clause::OMPC_when}, {}}},
+        {Version(51), {{{Property::Pure}}, "metadirective", Association::Unassociated, Category::Meta, {Clause::OMPC_default_variant, Clause::OMPC_when}, {}}},
+        {Version(52), {{{Property::Pure}}, "metadirective", Association::Unassociated, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+        {Version(60), {{{Property::Pure}}, "metadirective", Association::Unassociated, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+        {Version(61), {{{Property::Pure}}, "metadirective", Association::Unassociated, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_nothing,
+    descriptor::Directive(
+      "nothing",
+      {
+        {Version(51), {{{Property::LoopTransforming, Property::Pure}}, "nothing", Association::Unassociated, Category::Utility, {}, {}}},
+        {Version(52), {{{Property::LoopTransforming, Property::Pure}}, "nothing", Association::Unassociated, Category::Utility, {}, {}}},
+        {Version(60), {{{Property::LoopTransforming, Property::Pure}}, "nothing", Association::Unassociated, Category::Utility, {Clause::OMPC_apply}, {}}},
+        {Version(61), {{{Property::LoopTransforming, Property::Pure}}, "nothing", Association::Unassociated, Category::Utility, {Clause::OMPC_apply}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_ordered_blockassoc,
+    descriptor::Directive(
+      "ordered-blockassoc",
+      {
+        {Version(45), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::Simdizable, Property::ThreadExclusive, Property::ThreadLimiting}}, "ordered", Association::Block, Category::Executable, {Clause::OMPC_simd, Clause::OMPC_threads}, {}}},
+        {Version(50), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::Simdizable, Property::ThreadExclusive, Property::ThreadLimiting}}, "ordered", Association::Block, Category::Executable, {}, {ClauseSet::ParallelizationLevel}}},
+        {Version(51), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::Simdizable, Property::ThreadExclusive, Property::ThreadLimiting}}, "ordered", Association::Block, Category::Executable, {}, {ClauseSet::ParallelizationLevel}}},
+        {Version(52), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::Simdizable, Property::ThreadExclusive, Property::ThreadLimiting}}, "ordered", Association::Block, Category::Executable, {}, {ClauseSet::ParallelizationLevel}}},
+        {Version(60), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::Simdizable, Property::ThreadExclusive, Property::ThreadLimiting}}, "ordered", Association::Block, Category::Executable, {}, {ClauseSet::ParallelizationLevel}}},
+        {Version(61), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtExit, Property::MutualExclusion, Property::Simdizable, Property::ThreadExclusive, Property::ThreadLimiting}}, "ordered", Association::Block, Category::Executable, {}, {ClauseSet::ParallelizationLevel}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_ordered_standalone,
+    descriptor::Directive(
+      "ordered-standalone",
+      {
+        {Version(45), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::MutualExclusion}}, "ordered", Association::Unassociated, Category::Executable, {Clause::OMPC_depend}, {}}},
+        {Version(50), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::MutualExclusion}}, "ordered", Association::Unassociated, Category::Executable, {Clause::OMPC_depend}, {}}},
+        {Version(51), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::MutualExclusion}}, "ordered", Association::Unassociated, Category::Executable, {Clause::OMPC_depend}, {}}},
+        {Version(52), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::MutualExclusion}}, "ordered", Association::Unassociated, Category::Executable, {Clause::OMPC_doacross}, {}}},
+        {Version(60), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::MutualExclusion}}, "ordered", Association::Unassociated, Category::Executable, {Clause::OMPC_doacross}, {}}},
+        {Version(61), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::MutualExclusion}}, "ordered", Association::Unassociated, Category::Executable, {Clause::OMPC_doacross}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_parallel,
+    descriptor::Directive(
+      "parallel",
+      {
+        {Version(45), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsNestable, Property::ThreadLimiting, Property::ThreadsOrderable}}, "parallel", Association::Block, Category::Executable, {Clause::OMPC_copyin, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_num_threads, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_reduction, Clause::OMPC_shared}, {}}},
+        {Version(50), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsNestable, Property::ThreadLimiting, Property::ThreadsOrderable}}, "parallel", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyin, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_num_threads, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_reduction, Clause::OMPC_shared}, {}}},
+        {Version(51), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsNestable, Property::ThreadLimiting, Property::ThreadsOrderable}}, "parallel", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyin, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_num_threads, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_reduction, Clause::OMPC_shared}, {}}},
+        {Version(52), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsNestable, Property::ThreadLimiting, Property::ThreadsOrderable}}, "parallel", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyin, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_num_threads, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_reduction, Clause::OMPC_shared}, {}}},
+        {Version(60), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsNestable, Property::ThreadLimiting, Property::ThreadsOrderable}}, "parallel", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyin, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_message, Clause::OMPC_num_threads, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_reduction, Clause::OMPC_safesync, Clause::OMPC_severity, Clause::OMPC_shared}, {}}},
+        {Version(61), {{{Property::Cancellable, Property::CancellationPoint, Property::ContextMatching, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSynchronizing, Property::TeamGenerating, Property::TeamsNestable, Property::ThreadLimiting, Property::ThreadsOrderable}}, "parallel", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyin, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_message, Clause::OMPC_num_threads, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_reduction, Clause::OMPC_safesync, Clause::OMPC_severity, Clause::OMPC_shared}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_requires,
+    descriptor::Directive(
+      "requires",
+      {
+        {Version(50), {{{}}, "requires", Association::Unassociated, Category::Informational, {}, {ClauseSet::Requirement}}},
+        {Version(51), {{{}}, "requires", Association::Unassociated, Category::Informational, {}, {ClauseSet::Requirement}}},
+        {Version(52), {{{}}, "requires", Association::Unassociated, Category::Informational, {}, {ClauseSet::Requirement}}},
+        {Version(60), {{{}}, "requires", Association::Unassociated, Category::Informational, {}, {ClauseSet::Requirement}}},
+        {Version(61), {{{}}, "requires", Association::Unassociated, Category::Informational, {}, {ClauseSet::Requirement}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_reverse,
+    descriptor::Directive(
+      "reverse",
+      {
+        {Version(60), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "reverse", Association::LoopNest, Category::Executable, {Clause::OMPC_apply}, {}}},
+        {Version(61), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "reverse", Association::LoopNest, Category::Executable, {Clause::OMPC_apply}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_scan,
+    descriptor::Directive(
+      "scan",
+      {
+        {Version(50), {{{Property::Pure}}, "scan", Association::Separating, Category::Subsidiary, {Clause::OMPC_exclusive, Clause::OMPC_inclusive}, {ClauseSet::ScanClauseSet1}}},
+        {Version(51), {{{Property::Pure}}, "scan", Association::Separating, Category::Subsidiary, {Clause::OMPC_exclusive, Clause::OMPC_inclusive}, {ClauseSet::ScanClauseSet1}}},
+        {Version(52), {{{Property::Pure}}, "scan", Association::Separating, Category::Subsidiary, {Clause::OMPC_exclusive, Clause::OMPC_inclusive}, {ClauseSet::ScanClauseSet1}}},
+        {Version(60), {{{Property::Pure}}, "scan", Association::Separating, Category::Subsidiary, {Clause::OMPC_exclusive, Clause::OMPC_inclusive, Clause::OMPC_init_complete}, {ClauseSet::ScanClauseSet1}}},
+        {Version(61), {{{Property::Pure}}, "scan", Association::Separating, Category::Subsidiary, {Clause::OMPC_exclusive, Clause::OMPC_inclusive, Clause::OMPC_init_complete}, {ClauseSet::ScanClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_scope,
+    descriptor::Directive(
+      "scope",
+      {
+        {Version(51), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadsOrderable, Property::WorkDistribution, Property::Worksharing}}, "scope", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(52), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadsOrderable, Property::WorkDistribution, Property::Worksharing}}, "scope", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(60), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadsOrderable, Property::WorkDistribution, Property::Worksharing}}, "scope", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(61), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::TaskSynchronizing, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadsOrderable, Property::WorkDistribution, Property::Worksharing}}, "scope", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_section,
+    descriptor::Directive(
+      "section",
+      {
+        {Version(45), {{{}}, "section", Association::Separating, Category::Subsidiary, {}, {}}},
+        {Version(50), {{{}}, "section", Association::Separating, Category::Subsidiary, {}, {}}},
+        {Version(51), {{{}}, "section", Association::Separating, Category::Subsidiary, {}, {}}},
+        {Version(52), {{{}}, "section", Association::Separating, Category::Subsidiary, {}, {}}},
+        {Version(60), {{{}}, "section", Association::Separating, Category::Subsidiary, {}, {}}},
+        {Version(61), {{{}}, "section", Association::Separating, Category::Subsidiary, {}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_sections,
+    descriptor::Directive(
+      "sections",
+      {
+        {Version(45), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::TeamExecuted, Property::ThreadLimiting, Property::WorkDistribution, Property::Worksharing}}, "sections", Association::Block, Category::Executable, {Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(50), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::TeamExecuted, Property::ThreadLimiting, Property::WorkDistribution, Property::Worksharing}}, "sections", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(51), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::TeamExecuted, Property::ThreadLimiting, Property::WorkDistribution, Property::Worksharing}}, "sections", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(52), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::TeamExecuted, Property::ThreadLimiting, Property::WorkDistribution, Property::Worksharing}}, "sections", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(60), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::TeamExecuted, Property::ThreadLimiting, Property::WorkDistribution, Property::Worksharing}}, "sections", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+        {Version(61), {{{Property::Cancellable, Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::SequentiallyOrderable, Property::TaskSynchronizing, Property::TeamExecuted, Property::ThreadLimiting, Property::WorkDistribution, Property::Worksharing}}, "sections", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate, Clause::OMPC_nowait, Clause::OMPC_private, Clause::OMPC_reduction}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_simd,
+    descriptor::Directive(
+      "simd",
+      {
+        {Version(45), {{{Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::Pure, Property::SequentiallyOrderable, Property::Simdizable}}, "simd", Association::LoopNest, Category::Executable, {Clause::OMPC_aligned, Clause::OMPC_collapse, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_safelen, Clause::OMPC_simdlen}, {}}},
+        {Version(50), {{{Property::ContextMatching, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::Pure, Property::SequentiallyOrderable, Property::Simdizable}}, "simd", Association::LoopNest, Category::Executable, {Clause::OMPC_aligned, Clause::OMPC_collapse, Clause::OMPC_if, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nontemporal, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_safelen, Clause::OMPC_simdlen}, {}}},
+        {Version(51), {{{Property::ContextMatching, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::Pure, Property::SequentiallyOrderable, Property::Simdizable}}, "simd", Association::LoopNest, Category::Executable, {Clause::OMPC_aligned, Clause::OMPC_collapse, Clause::OMPC_if, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nontemporal, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_safelen, Clause::OMPC_simdlen}, {}}},
+        {Version(52), {{{Property::ContextMatching, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::Pure, Property::SequentiallyOrderable, Property::Simdizable}}, "simd", Association::LoopNest, Category::Executable, {Clause::OMPC_aligned, Clause::OMPC_collapse, Clause::OMPC_if, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nontemporal, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_safelen, Clause::OMPC_simdlen}, {}}},
+        {Version(60), {{{Property::ContextMatching, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::Pure, Property::SequentiallyOrderable, Property::Simdizable}}, "simd", Association::LoopNest, Category::Executable, {Clause::OMPC_aligned, Clause::OMPC_collapse, Clause::OMPC_if, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nontemporal, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_safelen, Clause::OMPC_simdlen}, {}}},
+        {Version(61), {{{Property::ContextMatching, Property::OrderConcurrentNestable, Property::ParallelismGenerating, Property::Pure, Property::SequentiallyOrderable, Property::Simdizable, Property::TeamsNestable}}, "simd", Association::LoopNest, Category::Executable, {Clause::OMPC_aligned, Clause::OMPC_collapse, Clause::OMPC_if, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_nontemporal, Clause::OMPC_order, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_safelen, Clause::OMPC_simdlen}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_single,
+    descriptor::Directive(
+      "single",
+      {
+        {Version(45), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadSelecting, Property::WorkDistribution, Property::Worksharing}}, "single", Association::Block, Category::Executable, {Clause::OMPC_copyprivate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private}, {ClauseSet::SingleClauseSet1}}},
+        {Version(50), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadSelecting, Property::WorkDistribution, Property::Worksharing}}, "single", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyprivate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private}, {ClauseSet::SingleClauseSet1}}},
+        {Version(51), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadSelecting, Property::WorkDistribution, Property::Worksharing}}, "single", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyprivate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private}, {ClauseSet::SingleClauseSet1}}},
+        {Version(52), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadSelecting, Property::WorkDistribution, Property::Worksharing}}, "single", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyprivate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private}, {ClauseSet::SingleClauseSet1}}},
+        {Version(60), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadSelecting, Property::WorkDistribution, Property::Worksharing}}, "single", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyprivate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private}, {ClauseSet::SingleClauseSet1}}},
+        {Version(61), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TaskSynchronizing, Property::TeamExecuted, Property::ThreadLimiting, Property::ThreadSelecting, Property::WorkDistribution, Property::Worksharing}}, "single", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_copyprivate, Clause::OMPC_firstprivate, Clause::OMPC_nowait, Clause::OMPC_private}, {ClauseSet::SingleClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_split,
+    descriptor::Directive(
+      "split",
+      {
+        {Version(60), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "split", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_counts}, {}}},
+        {Version(61), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "split", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_counts}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_stripe,
+    descriptor::Directive(
+      "stripe",
+      {
+        {Version(60), {{{Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "stripe", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_sizes}, {}}},
+        {Version(61), {{{Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "stripe", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_sizes}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_target,
+    descriptor::Directive(
+      "target",
+      {
+        {Version(45), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExceptionAborting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TeamGenerating, Property::ThreadLimiting}}, "target", Association::Block, Category::Executable, {Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_is_device_ptr, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_ompx_bare, Clause::OMPC_private}, {}}},
+        {Version(50), {{{Property::ContextMatching, Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExceptionAborting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TeamGenerating, Property::ThreadLimiting}}, "target", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_is_device_ptr, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_thread_limit, Clause::OMPC_uses_allocators}, {}}},
+        {Version(51), {{{Property::ContextMatching, Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExceptionAborting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TeamGenerating, Property::ThreadLimiting}}, "target", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_firstprivate, Clause::OMPC_has_device_addr, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_is_device_ptr, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_thread_limit, Clause::OMPC_uses_allocators}, {}}},
+        {Version(52), {{{Property::ContextMatching, Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExceptionAborting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TeamGenerating, Property::ThreadLimiting}}, "target", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_firstprivate, Clause::OMPC_has_device_addr, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_is_device_ptr, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_thread_limit, Clause::OMPC_uses_allocators}, {}}},
+        {Version(60), {{{Property::ContextMatching, Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExceptionAborting, Property::ExplicitTaskGenerating, Property::GroupprivateInstantiating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TeamGenerating, Property::ThreadLimiting}}, "target", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_device_type, Clause::OMPC_firstprivate, Clause::OMPC_has_device_addr, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_is_device_ptr, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_ompx_bare, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_replayable, Clause::OMPC_thread_limit, Clause::OMPC_uses_allocators}, {}}},
+        {Version(61), {{{Property::ContextMatching, Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExceptionAborting, Property::ExplicitTaskGenerating, Property::GroupprivateInstantiating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing, Property::TeamGenerating, Property::ThreadLimiting}}, "target", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_device_type, Clause::OMPC_dyn_groupprivate, Clause::OMPC_firstprivate, Clause::OMPC_has_device_addr, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_is_device_ptr, Clause::OMPC_map, Clause::OMPC_message, Clause::OMPC_nowait, Clause::OMPC_ompx_bare, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_replayable, Clause::OMPC_severity, Clause::OMPC_thread_limit, Clause::OMPC_uses_allocators}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_target_data,
+    descriptor::Directive(
+      "target_data",
+      {
+        {Version(45), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target data", Association::Block, Category::Executable, {Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_use_device_ptr}, {ClauseSet::TargetDataClauseSet1}}},
+        {Version(50), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target data", Association::Block, Category::Executable, {Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {ClauseSet::DataEnvironmentClause}}},
+        {Version(51), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target data", Association::Block, Category::Executable, {Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {ClauseSet::DataEnvironmentClause}}},
+        {Version(52), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target data", Association::Block, Category::Executable, {Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {ClauseSet::DataEnvironmentClause}}},
+        {Version(60), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskgroup, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::SharingTask, Property::SimpleComposite, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target_data", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_device, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_map, Clause::OMPC_mergeable, Clause::OMPC_nogroup, Clause::OMPC_nowait, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_shared, Clause::OMPC_transparent, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {ClauseSet::DataEnvironmentClause}}},
+        {Version(61), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskgroup, Property::MapEntering, Property::MapExiting, Property::ParallelismGenerating, Property::SharingTask, Property::SimpleComposite, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing}}, "target_data", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_device, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_map, Clause::OMPC_mergeable, Clause::OMPC_nogroup, Clause::OMPC_nowait, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_shared, Clause::OMPC_transparent, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {ClauseSet::DataEnvironmentClause}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_target_enter_data,
+    descriptor::Directive(
+      "target_enter_data",
+      {
+        {Version(45), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target enter data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait}, {ClauseSet::TargetEnterDataClauseSet1}}},
+        {Version(50), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target enter data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait}, {ClauseSet::TargetEnterDataClauseSet1}}},
+        {Version(51), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target enter data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait}, {ClauseSet::TargetEnterDataClauseSet1}}},
+        {Version(52), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target enter data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait}, {ClauseSet::TargetEnterDataClauseSet1}}},
+        {Version(60), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target_enter_data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_priority, Clause::OMPC_replayable}, {ClauseSet::TargetEnterDataClauseSet1}}},
+        {Version(61), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapEntering, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing}}, "target_enter_data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_priority, Clause::OMPC_replayable}, {ClauseSet::TargetEnterDataClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_target_exit_data,
+    descriptor::Directive(
+      "target_exit_data",
+      {
+        {Version(45), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target exit data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait}, {ClauseSet::TargetExitDataClauseSet1}}},
+        {Version(50), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target exit data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait}, {ClauseSet::TargetExitDataClauseSet1}}},
+        {Version(51), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target exit data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait}, {ClauseSet::TargetExitDataClauseSet1}}},
+        {Version(52), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target exit data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait}, {ClauseSet::TargetExitDataClauseSet1}}},
+        {Version(60), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target_exit_data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_priority, Clause::OMPC_replayable}, {ClauseSet::TargetExitDataClauseSet1}}},
+        {Version(61), {{{Property::DataMapping, Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::MapExiting, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing}}, "target_exit_data", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_if, Clause::OMPC_map, Clause::OMPC_nowait, Clause::OMPC_priority, Clause::OMPC_replayable}, {ClauseSet::TargetExitDataClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_target_update,
+    descriptor::Directive(
+      "target_update",
+      {
+        {Version(45), {{{Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target update", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_from, Clause::OMPC_if, Clause::OMPC_nowait, Clause::OMPC_to}, {ClauseSet::TargetUpdateClauseSet1}}},
+        {Version(50), {{{Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target update", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_from, Clause::OMPC_if, Clause::OMPC_nowait, Clause::OMPC_to}, {ClauseSet::TargetUpdateClauseSet1}}},
+        {Version(51), {{{Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target update", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_from, Clause::OMPC_if, Clause::OMPC_nowait, Clause::OMPC_to}, {ClauseSet::TargetUpdateClauseSet1}}},
+        {Version(52), {{{Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target update", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_from, Clause::OMPC_if, Clause::OMPC_nowait, Clause::OMPC_to}, {ClauseSet::TargetUpdateClauseSet1}}},
+        {Version(60), {{{Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "target_update", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_from, Clause::OMPC_if, Clause::OMPC_nowait, Clause::OMPC_priority, Clause::OMPC_replayable, Clause::OMPC_to}, {ClauseSet::TargetUpdateClauseSet1}}},
+        {Version(61), {{{Property::Device, Property::DeviceAffecting, Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing}}, "target_update", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_device, Clause::OMPC_from, Clause::OMPC_if, Clause::OMPC_nowait, Clause::OMPC_priority, Clause::OMPC_replayable, Clause::OMPC_to}, {ClauseSet::TargetUpdateClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_task,
+    descriptor::Directive(
+      "task",
+      {
+        {Version(45), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_shared, Clause::OMPC_untied}, {}}},
+        {Version(50), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_shared, Clause::OMPC_untied}, {ClauseSet::TaskClauseSet1}}},
+        {Version(51), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_shared, Clause::OMPC_untied}, {ClauseSet::TaskClauseSet1}}},
+        {Version(52), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_shared, Clause::OMPC_untied}, {ClauseSet::TaskClauseSet1}}},
+        {Version(60), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_replayable, Clause::OMPC_shared, Clause::OMPC_threadset, Clause::OMPC_transparent, Clause::OMPC_untied}, {ClauseSet::TaskClauseSet1}}},
+        {Version(61), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing, Property::TeamsNestable, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_replayable, Clause::OMPC_shared, Clause::OMPC_threadset, Clause::OMPC_transparent, Clause::OMPC_untied}, {ClauseSet::TaskClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_task_iteration,
+    descriptor::Directive(
+      "task_iteration",
+      {
+        {Version(60), {{{}}, "task_iteration", Association::Unassociated, Category::Subsidiary, {Clause::OMPC_affinity, Clause::OMPC_depend, Clause::OMPC_if}, {}}},
+        {Version(61), {{{Property::TaskSynchronizing}}, "task_iteration", Association::Unassociated, Category::Subsidiary, {Clause::OMPC_affinity, Clause::OMPC_depend, Clause::OMPC_if}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_taskgraph,
+    descriptor::Directive(
+      "taskgraph",
+      {
+        {Version(60), {{{Property::ImplicitTaskgroup, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskgraph", Association::Block, Category::Executable, {Clause::OMPC_graph_id, Clause::OMPC_graph_reset, Clause::OMPC_if, Clause::OMPC_nogroup, Clause::OMPC_priority}, {}}},
+        {Version(61), {{{Property::ImplicitTaskgroup, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing}}, "taskgraph", Association::Block, Category::Executable, {Clause::OMPC_graph_id, Clause::OMPC_graph_reset, Clause::OMPC_if, Clause::OMPC_nogroup, Clause::OMPC_priority}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_taskgroup,
+    descriptor::Directive(
+      "taskgroup",
+      {
+        {Version(45), {{{Property::Cancellable, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskgroup", Association::Block, Category::Executable, {}, {}}},
+        {Version(50), {{{Property::Cancellable, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskgroup", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_task_reduction}, {}}},
+        {Version(51), {{{Property::Cancellable, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskgroup", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_task_reduction}, {}}},
+        {Version(52), {{{Property::Cancellable, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskgroup", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_task_reduction}, {}}},
+        {Version(60), {{{Property::Cancellable, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskgroup", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_task_reduction}, {}}},
+        {Version(61), {{{Property::Cancellable, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing, Property::TeamsNestable}}, "taskgroup", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_task_reduction}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_taskloop,
+    descriptor::Directive(
+      "taskloop",
+      {
+        {Version(45), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskgroup, Property::ParallelismGenerating, Property::SimdPartitionable, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskloop", Association::LoopNest, Category::Executable, {Clause::OMPC_collapse, Clause::OMPC_default, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_grainsize, Clause::OMPC_if, Clause::OMPC_lastprivate, Clause::OMPC_mergeable, Clause::OMPC_nogroup, Clause::OMPC_num_tasks, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_shared, Clause::OMPC_untied}, {ClauseSet::GranularityClause}}},
+        {Version(50), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskgroup, Property::ParallelismGenerating, Property::SimdPartitionable, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskloop", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_default, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_grainsize, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_lastprivate, Clause::OMPC_mergeable, Clause::OMPC_nogroup, Clause::OMPC_num_tasks, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_shared, Clause::OMPC_untied}, {ClauseSet::GranularityClause, ClauseSet::SynchronizationClause}}},
+        {Version(51), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskgroup, Property::ParallelismGenerating, Property::SimdPartitionable, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskloop", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_default, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_grainsize, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_lastprivate, Clause::OMPC_mergeable, Clause::OMPC_nogroup, Clause::OMPC_num_tasks, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_shared, Clause::OMPC_untied}, {ClauseSet::GranularityClause, ClauseSet::SynchronizationClause}}},
+        {Version(52), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskgroup, Property::ParallelismGenerating, Property::SimdPartitionable, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskloop", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_default, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_grainsize, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_lastprivate, Clause::OMPC_mergeable, Clause::OMPC_nogroup, Clause::OMPC_num_tasks, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_shared, Clause::OMPC_untied}, {ClauseSet::GranularityClause, ClauseSet::SynchronizationClause}}},
+        {Version(60), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskgroup, Property::ParallelismGenerating, Property::SimdPartitionable, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskloop", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_default, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_grainsize, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_mergeable, Clause::OMPC_nogroup, Clause::OMPC_num_tasks, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_replayable, Clause::OMPC_shared, Clause::OMPC_threadset, Clause::OMPC_transparent, Clause::OMPC_untied}, {ClauseSet::GranularityClause, ClauseSet::SynchronizationClause}}},
+        {Version(61), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskgroup, Property::ParallelismGenerating, Property::SimdPartitionable, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing, Property::TeamsNestable}}, "taskloop", Association::LoopNest, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_collapse, Clause::OMPC_default, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_grainsize, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_induction, Clause::OMPC_lastprivate, Clause::OMPC_mergeable, Clause::OMPC_nogroup, Clause::OMPC_num_tasks, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_replayable, Clause::OMPC_shared, Clause::OMPC_threadset, Clause::OMPC_transparent, Clause::OMPC_untied}, {ClauseSet::GranularityClause, ClauseSet::SynchronizationClause}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_taskwait,
+    descriptor::Directive(
+      "taskwait",
+      {
+        {Version(45), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskwait", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(50), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskwait", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_nowait}, {}}},
+        {Version(51), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskwait", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_nowait}, {}}},
+        {Version(52), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskwait", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_nowait}, {}}},
+        {Version(60), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit}}, "taskwait", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_nowait, Clause::OMPC_replayable}, {}}},
+        {Version(61), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing, Property::TeamsNestable}}, "taskwait", Association::Unassociated, Category::Executable, {Clause::OMPC_depend, Clause::OMPC_nowait, Clause::OMPC_replayable}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_taskyield,
+    descriptor::Directive(
+      "taskyield",
+      {
+        {Version(45), {{{Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskyield", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(50), {{{Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskyield", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(51), {{{Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskyield", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(52), {{{Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskyield", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(60), {{{Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit}}, "taskyield", Association::Unassociated, Category::Executable, {}, {}}},
+        {Version(61), {{{Property::TaskSchedulingPoint, Property::TaskSchedulingPointAtExit, Property::TeamsNestable}}, "taskyield", Association::Unassociated, Category::Executable, {}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_teams,
+    descriptor::Directive(
+      "teams",
+      {
+        {Version(45), {{{Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::LeagueGenerating, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsOrderable, Property::ThreadLimiting}}, "teams", Association::Block, Category::Executable, {Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_num_teams, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_shared, Clause::OMPC_thread_limit}, {}}},
+        {Version(50), {{{Property::ContextMatching, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::LeagueGenerating, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsOrderable, Property::ThreadLimiting}}, "teams", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_num_teams, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_shared, Clause::OMPC_thread_limit}, {}}},
+        {Version(51), {{{Property::ContextMatching, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::LeagueGenerating, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsOrderable, Property::ThreadLimiting}}, "teams", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_num_teams, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_shared, Clause::OMPC_thread_limit}, {}}},
+        {Version(52), {{{Property::ContextMatching, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::LeagueGenerating, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsOrderable, Property::ThreadLimiting}}, "teams", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_num_teams, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_shared, Clause::OMPC_thread_limit}, {}}},
+        {Version(60), {{{Property::ContextMatching, Property::GroupprivateInstantiating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::LeagueGenerating, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsOrderable, Property::ThreadLimiting}}, "teams", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_num_teams, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_shared, Clause::OMPC_thread_limit}, {}}},
+        {Version(61), {{{Property::ContextMatching, Property::GroupprivateInstantiating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ImplicitTaskGenerating, Property::LeagueGenerating, Property::ParallelismGenerating, Property::TaskGenerating, Property::TeamGenerating, Property::TeamsOrderable, Property::ThreadLimiting}}, "teams", Association::Block, Category::Executable, {Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_dyn_groupprivate, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_message, Clause::OMPC_num_teams, Clause::OMPC_ompx_bare, Clause::OMPC_private, Clause::OMPC_reduction, Clause::OMPC_severity, Clause::OMPC_shared, Clause::OMPC_thread_limit}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_threadprivate,
+    descriptor::Directive(
+      "threadprivate",
+      {
+        {Version(45), {{{Property::Pure}}, "threadprivate", Association::Explicit, Category::Declarative, {}, {}}},
+        {Version(50), {{{Property::Pure}}, "threadprivate", Association::Explicit, Category::Declarative, {}, {}}},
+        {Version(51), {{{Property::Pure}}, "threadprivate", Association::Explicit, Category::Declarative, {}, {}}},
+        {Version(52), {{{Property::Pure}}, "threadprivate", Association::Explicit, Category::Declarative, {}, {}}},
+        {Version(60), {{{Property::Pure}}, "threadprivate", Association::Explicit, Category::Declarative, {}, {}}},
+        {Version(61), {{{Property::Pure}}, "threadprivate", Association::Explicit, Category::Declarative, {}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_tile,
+    descriptor::Directive(
+      "tile",
+      {
+        {Version(51), {{{Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "tile", Association::LoopNest, Category::Executable, {Clause::OMPC_sizes}, {}}},
+        {Version(52), {{{Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "tile", Association::LoopNest, Category::Executable, {Clause::OMPC_sizes}, {}}},
+        {Version(60), {{{Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "tile", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_sizes}, {}}},
+        {Version(61), {{{Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "tile", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_shift, Clause::OMPC_sizes}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_unroll,
+    descriptor::Directive(
+      "unroll",
+      {
+        {Version(51), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "unroll", Association::LoopNest, Category::Executable, {Clause::OMPC_full, Clause::OMPC_partial}, {ClauseSet::UnrollClauseSet1}}},
+        {Version(52), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "unroll", Association::LoopNest, Category::Executable, {Clause::OMPC_full, Clause::OMPC_partial}, {ClauseSet::UnrollClauseSet1}}},
+        {Version(60), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "unroll", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_full, Clause::OMPC_partial}, {ClauseSet::UnrollClauseSet1}}},
+        {Version(61), {{{Property::GenerallyComposable, Property::LoopTransforming, Property::OrderConcurrentNestable, Property::Pure, Property::Simdizable, Property::TeamsNestable}}, "unroll", Association::LoopNest, Category::Executable, {Clause::OMPC_apply, Clause::OMPC_full, Clause::OMPC_partial}, {ClauseSet::UnrollClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_workdistribute,
+    descriptor::Directive(
+      "workdistribute",
+      {
+        {Version(60), {{{Property::Partitioned, Property::WorkDistribution}}, "workdistribute", Association::Block, Category::Executable, {}, {}}},
+        {Version(61), {{{Property::Partitioned, Property::TeamsNestable, Property::WorkDistribution}}, "workdistribute", Association::Block, Category::Executable, {}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_workshare,
+    descriptor::Directive(
+      "workshare",
+      {
+        {Version(45), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing}}, "workshare", Association::Block, Category::Executable, {Clause::OMPC_nowait}, {}}},
+        {Version(50), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing}}, "workshare", Association::Block, Category::Executable, {Clause::OMPC_nowait}, {}}},
+        {Version(51), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing}}, "workshare", Association::Block, Category::Executable, {Clause::OMPC_nowait}, {}}},
+        {Version(52), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing}}, "workshare", Association::Block, Category::Executable, {Clause::OMPC_nowait}, {}}},
+        {Version(60), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing}}, "workshare", Association::Block, Category::Executable, {Clause::OMPC_nowait}, {}}},
+        {Version(61), {{{Property::CancellationPoint, Property::ImplicitBarrier, Property::ImplicitBarrierFlushes, Property::ImplicitFlush, Property::Partitioned, Property::TaskSynchronizing, Property::TeamExecuted, Property::WorkDistribution, Property::Worksharing}}, "workshare", Association::Block, Category::Executable, {Clause::OMPC_nowait}, {}}},
+      }
+    ),
+  },
+#endif // GEN_OMP_DIRECTIVE_DESCRIPTORS
 #ifdef GEN_OMP_MODIFIER_DESCRIPTORS
   {
     Modifier::AccessGroup,
@@ -1868,8 +3042,8 @@
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_if}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_if}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_if}}},
-        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_absent, Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_adjust_args, Clause::OMPC_affinity, Clause::OMPC_align, Clause::OMPC_aligned, Clause::OMPC_allocate, Clause::OMPC_allocator, Clause::OMPC_append_args, Clause::OMPC_apply, Clause::OMPC_at, Clause::OMPC_atomic_default_mem_order, Clause::OMPC_bind, Clause::OMPC_capture, Clause::OMPC_collapse, Clause::OMPC_collector, Clause::OMPC_combiner, Clause::OMPC_compare, Clause::OMPC_contains, Clause::OMPC_copyin, Clause::OMPC_copyprivate, Clause::OMPC_counts, Clause::OMPC_default, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_detach, Clause::OMPC_device, Clause::OMPC_device_safesync, Clause::OMPC_device_type, Clause::OMPC_dist_schedule, Clause::OMPC_doacross, Clause::OMPC_dynamic_allocators, Clause::OMPC_enter, Clause::OMPC_exclusive, Clause::OMPC_fail, Clause::OMPC_filter, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_from, Clause::OMPC_full, Clause::OMPC_grainsize, Clause::OMPC_graph_id, Clause::OMPC_graph_reset, Clause::OMPC_has_device_addr, Clause::OMPC_hint, Clause::OMPC_holds, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_inbranch, Clause::OMPC_inclusive, Clause::OMPC_indirect, Clause::OMPC_induction, Clause::OMPC_inductor, Clause::OMPC_init, Clause::OMPC_init_complete, Clause::OMPC_initializer, Clause::OMPC_interop, Clause::OMPC_is_device_ptr, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_link, Clause::OMPC_local, Clause::OMPC_looprange, Clause::OMPC_map, Clause::OMPC_match, Clause::OMPC_memscope, Clause::OMPC_mergeable, Clause::OMPC_message, Clause::OMPC_no_openmp, Clause::OMPC_no_openmp_constructs, Clause::OMPC_no_openmp_routines, Clause::OMPC_no_parallelism, Clause::OMPC_nocontext, Clause::OMPC_nogroup, Clause::OMPC_nontemporal, Clause::OMPC_notinbranch, Clause::OMPC_novariants, Clause::OMPC_nowait, Clause::OMPC_num_tasks, Clause::OMPC_num_teams, Clause::OMPC_num_threads, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_otherwise, Clause::OMPC_partial, Clause::OMPC_permutation, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_read, Clause::OMPC_reduction, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_replayable, Clause::OMPC_reverse_offload, Clause::OMPC_safelen, Clause::OMPC_safesync, Clause::OMPC_schedule, Clause::OMPC_self_maps, Clause::OMPC_seq_cst, Clause::OMPC_severity, Clause::OMPC_shared, Clause::OMPC_simd, Clause::OMPC_simdlen, Clause::OMPC_sizes, Clause::OMPC_task_reduction, Clause::OMPC_thread_limit, Clause::OMPC_threads, Clause::OMPC_threadset, Clause::OMPC_to, Clause::OMPC_transparent, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory, Clause::OMPC_uniform, Clause::OMPC_untied, Clause::OMPC_update, Clause::OMPC_update_depend_objects, Clause::OMPC_use, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr, Clause::OMPC_uses_allocators, Clause::OMPC_weak, Clause::OMPC_when, Clause::OMPC_write}}},
-        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_absent, Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_adjust_args, Clause::OMPC_affinity, Clause::OMPC_align, Clause::OMPC_aligned, Clause::OMPC_allocate, Clause::OMPC_allocator, Clause::OMPC_append_args, Clause::OMPC_apply, Clause::OMPC_at, Clause::OMPC_atomic_default_mem_order, Clause::OMPC_bind, Clause::OMPC_capture, Clause::OMPC_collapse, Clause::OMPC_collector, Clause::OMPC_combiner, Clause::OMPC_compare, Clause::OMPC_contains, Clause::OMPC_copyin, Clause::OMPC_copyprivate, Clause::OMPC_counts, Clause::OMPC_default, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_depth, Clause::OMPC_destroy, Clause::OMPC_detach, Clause::OMPC_device, Clause::OMPC_device_safesync, Clause::OMPC_device_type, Clause::OMPC_dist_schedule, Clause::OMPC_doacross, Clause::OMPC_dyn_groupprivate, Clause::OMPC_dynamic_allocators, Clause::OMPC_enter, Clause::OMPC_exclusive, Clause::OMPC_fail, Clause::OMPC_filter, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_from, Clause::OMPC_full, Clause::OMPC_grainsize, Clause::OMPC_graph_id, Clause::OMPC_graph_reset, Clause::OMPC_has_device_addr, Clause::OMPC_hint, Clause::OMPC_holds, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_inbranch, Clause::OMPC_inclusive, Clause::OMPC_indirect, Clause::OMPC_induction, Clause::OMPC_inductor, Clause::OMPC_init, Clause::OMPC_init_complete, Clause::OMPC_initializer, Clause::OMPC_interop, Clause::OMPC_is_device_ptr, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_link, Clause::OMPC_local, Clause::OMPC_looprange, Clause::OMPC_map, Clause::OMPC_match, Clause::OMPC_memscope, Clause::OMPC_mergeable, Clause::OMPC_message, Clause::OMPC_no_openmp, Clause::OMPC_no_openmp_constructs, Clause::OMPC_no_openmp_routines, Clause::OMPC_no_parallelism, Clause::OMPC_nocontext, Clause::OMPC_nogroup, Clause::OMPC_nontemporal, Clause::OMPC_notinbranch, Clause::OMPC_novariants, Clause::OMPC_nowait, Clause::OMPC_num_tasks, Clause::OMPC_num_teams, Clause::OMPC_num_threads, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_otherwise, Clause::OMPC_partial, Clause::OMPC_permutation, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_read, Clause::OMPC_reduction, Clause::OMPC_reduction_kind, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_replayable, Clause::OMPC_reverse_offload, Clause::OMPC_safelen, Clause::OMPC_safesync, Clause::OMPC_schedule, Clause::OMPC_self_maps, Clause::OMPC_seq_cst, Clause::OMPC_severity, Clause::OMPC_shared, Clause::OMPC_shift, Clause::OMPC_simd, Clause::OMPC_simdlen, Clause::OMPC_sizes, Clause::OMPC_task_reduction, Clause::OMPC_thread_limit, Clause::OMPC_threads, Clause::OMPC_threadset, Clause::OMPC_to, Clause::OMPC_transparent, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory, Clause::OMPC_uniform, Clause::OMPC_untied, Clause::OMPC_update, Clause::OMPC_update_depend_objects, Clause::OMPC_use, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr, Clause::OMPC_uses_allocators, Clause::OMPC_weak, Clause::OMPC_when, Clause::OMPC_write}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_absent, Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_adjust_args, Clause::OMPC_affinity, Clause::OMPC_align, Clause::OMPC_aligned, Clause::OMPC_allocate, Clause::OMPC_allocator, Clause::OMPC_append_args, Clause::OMPC_apply, Clause::OMPC_at, Clause::OMPC_atomic_default_mem_order, Clause::OMPC_bind, Clause::OMPC_cancellation_construct_type, Clause::OMPC_capture, Clause::OMPC_collapse, Clause::OMPC_collector, Clause::OMPC_combiner, Clause::OMPC_compare, Clause::OMPC_contains, Clause::OMPC_copyin, Clause::OMPC_copyprivate, Clause::OMPC_counts, Clause::OMPC_default, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_destroy, Clause::OMPC_detach, Clause::OMPC_device, Clause::OMPC_device_safesync, Clause::OMPC_device_type, Clause::OMPC_dist_schedule, Clause::OMPC_doacross, Clause::OMPC_dynamic_allocators, Clause::OMPC_enter, Clause::OMPC_exclusive, Clause::OMPC_fail, Clause::OMPC_filter, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_from, Clause::OMPC_full, Clause::OMPC_grainsize, Clause::OMPC_graph_id, Clause::OMPC_graph_reset, Clause::OMPC_has_device_addr, Clause::OMPC_hint, Clause::OMPC_holds, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_inbranch, Clause::OMPC_inclusive, Clause::OMPC_indirect, Clause::OMPC_induction, Clause::OMPC_inductor, Clause::OMPC_init, Clause::OMPC_init_complete, Clause::OMPC_initializer, Clause::OMPC_interop, Clause::OMPC_is_device_ptr, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_link, Clause::OMPC_local, Clause::OMPC_looprange, Clause::OMPC_map, Clause::OMPC_match, Clause::OMPC_memscope, Clause::OMPC_mergeable, Clause::OMPC_message, Clause::OMPC_no_openmp, Clause::OMPC_no_openmp_constructs, Clause::OMPC_no_openmp_routines, Clause::OMPC_no_parallelism, Clause::OMPC_nocontext, Clause::OMPC_nogroup, Clause::OMPC_nontemporal, Clause::OMPC_notinbranch, Clause::OMPC_novariants, Clause::OMPC_nowait, Clause::OMPC_num_tasks, Clause::OMPC_num_teams, Clause::OMPC_num_threads, Clause::OMPC_ompx_bare, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_otherwise, Clause::OMPC_partial, Clause::OMPC_permutation, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_read, Clause::OMPC_reduction, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_replayable, Clause::OMPC_reverse_offload, Clause::OMPC_safelen, Clause::OMPC_safesync, Clause::OMPC_schedule, Clause::OMPC_self_maps, Clause::OMPC_seq_cst, Clause::OMPC_severity, Clause::OMPC_shared, Clause::OMPC_simd, Clause::OMPC_simdlen, Clause::OMPC_sizes, Clause::OMPC_task_reduction, Clause::OMPC_thread_limit, Clause::OMPC_threads, Clause::OMPC_threadset, Clause::OMPC_to, Clause::OMPC_transparent, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory, Clause::OMPC_uniform, Clause::OMPC_untied, Clause::OMPC_update, Clause::OMPC_update_depend_objects, Clause::OMPC_use, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr, Clause::OMPC_uses_allocators, Clause::OMPC_weak, Clause::OMPC_when, Clause::OMPC_write}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_absent, Clause::OMPC_acq_rel, Clause::OMPC_acquire, Clause::OMPC_adjust_args, Clause::OMPC_affinity, Clause::OMPC_align, Clause::OMPC_aligned, Clause::OMPC_allocate, Clause::OMPC_allocator, Clause::OMPC_append_args, Clause::OMPC_apply, Clause::OMPC_at, Clause::OMPC_atomic_default_mem_order, Clause::OMPC_bind, Clause::OMPC_cancellation_construct_type, Clause::OMPC_capture, Clause::OMPC_collapse, Clause::OMPC_collector, Clause::OMPC_combiner, Clause::OMPC_compare, Clause::OMPC_contains, Clause::OMPC_copyin, Clause::OMPC_copyprivate, Clause::OMPC_counts, Clause::OMPC_default, Clause::OMPC_defaultmap, Clause::OMPC_depend, Clause::OMPC_depth, Clause::OMPC_destroy, Clause::OMPC_detach, Clause::OMPC_device, Clause::OMPC_device_safesync, Clause::OMPC_device_type, Clause::OMPC_dist_schedule, Clause::OMPC_doacross, Clause::OMPC_dyn_groupprivate, Clause::OMPC_dynamic_allocators, Clause::OMPC_enter, Clause::OMPC_exclusive, Clause::OMPC_fail, Clause::OMPC_filter, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_from, Clause::OMPC_full, Clause::OMPC_grainsize, Clause::OMPC_graph_id, Clause::OMPC_graph_reset, Clause::OMPC_has_device_addr, Clause::OMPC_hint, Clause::OMPC_holds, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_inbranch, Clause::OMPC_inclusive, Clause::OMPC_indirect, Clause::OMPC_induction, Clause::OMPC_inductor, Clause::OMPC_init, Clause::OMPC_init_complete, Clause::OMPC_initializer, Clause::OMPC_interop, Clause::OMPC_is_device_ptr, Clause::OMPC_lastprivate, Clause::OMPC_linear, Clause::OMPC_link, Clause::OMPC_local, Clause::OMPC_looprange, Clause::OMPC_map, Clause::OMPC_match, Clause::OMPC_memscope, Clause::OMPC_mergeable, Clause::OMPC_message, Clause::OMPC_no_openmp, Clause::OMPC_no_openmp_constructs, Clause::OMPC_no_openmp_routines, Clause::OMPC_no_parallelism, Clause::OMPC_nocontext, Clause::OMPC_nogroup, Clause::OMPC_nontemporal, Clause::OMPC_notinbranch, Clause::OMPC_novariants, Clause::OMPC_nowait, Clause::OMPC_num_tasks, Clause::OMPC_num_teams, Clause::OMPC_num_threads, Clause::OMPC_ompx_bare, Clause::OMPC_order, Clause::OMPC_ordered, Clause::OMPC_otherwise, Clause::OMPC_partial, Clause::OMPC_permutation, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_proc_bind, Clause::OMPC_read, Clause::OMPC_reduction, Clause::OMPC_reduction_kind, Clause::OMPC_relaxed, Clause::OMPC_release, Clause::OMPC_replayable, Clause::OMPC_reverse_offload, Clause::OMPC_safelen, Clause::OMPC_safesync, Clause::OMPC_schedule, Clause::OMPC_self_maps, Clause::OMPC_seq_cst, Clause::OMPC_severity, Clause::OMPC_shared, Clause::OMPC_shift, Clause::OMPC_simd, Clause::OMPC_simdlen, Clause::OMPC_sizes, Clause::OMPC_task_reduction, Clause::OMPC_thread_limit, Clause::OMPC_threads, Clause::OMPC_threadset, Clause::OMPC_to, Clause::OMPC_transparent, Clause::OMPC_unified_address, Clause::OMPC_unified_shared_memory, Clause::OMPC_uniform, Clause::OMPC_untied, Clause::OMPC_update, Clause::OMPC_update_depend_objects, Clause::OMPC_use, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr, Clause::OMPC_uses_allocators, Clause::OMPC_weak, Clause::OMPC_when, Clause::OMPC_write}}},
       }
     ),
   },
@@ -2123,12 +3297,12 @@
     descriptor::Modifier(
       "ompx-hold-modifier",
       {
-        {Version(45), {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {Version(50), {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {Version(51), {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {Version(52), {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {Version(60), {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {Version(61), {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {Version(45), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_map}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_map}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_map}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_map}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_map}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, {Clause::OMPC_map}}},
       }
     ),
   },
@@ -2465,7 +3639,7 @@
         {Version(45), {{{Property::Exclusive, Property::Required}}, {Modifier::DependenceType, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
         {Version(50), {{{Property::Exclusive, Property::Required}}, {Modifier::DependenceType, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
         {Version(51), {{{Property::Exclusive, Property::Required}}, {Modifier::DependenceType, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
-        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Modifier::DepobjModifier, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
+        {Version(61), {{{Property::Exclusive}}, {Modifier::DepobjModifier, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
       }
     ),
   },
@@ -2474,7 +3648,7 @@
     descriptor::ModifierSet(
       "num_teams_modifier_set_1",
       {
-        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Modifier::DimsModifier, Modifier::LowerBound}, {Clause::OMPC_num_teams}}},
+        {Version(61), {{{Property::Exclusive}}, {Modifier::DimsModifier, Modifier::LowerBound}, {Clause::OMPC_num_teams}}},
       }
     ),
   },
@@ -2483,7 +3657,7 @@
     descriptor::ModifierSet(
       "reduction_modifier_set_1",
       {
-        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Modifier::InscanModifier, Modifier::NoncommutativeModifier, Modifier::PerThreadModifier}, {Clause::OMPC_reduction}}},
+        {Version(61), {{{Property::Exclusive}}, {Modifier::InscanModifier, Modifier::NoncommutativeModifier, Modifier::PerThreadModifier}, {Clause::OMPC_reduction}}},
       }
     ),
   },

@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Operator.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
@@ -213,6 +214,31 @@ LegalityAnalysis::getHowToCollectValues(BndlRef<Value *> Bndl) const {
   return CollectDescr(std::move(Vec));
 }
 
+template <typename ValueT>
+bool LegalityAnalysis::isAlignmentSupported(BndlRef<ValueT *> Values) const {
+  Value *V0 = Values[0];
+  if (!isa<LoadInst>(V0) && !isa<StoreInst>(V0))
+    return true;
+  Instruction *I0 = cast<Instruction>(V0);
+  // If the target is not set, just return true. This helps simplify
+  // target-independent lit tests.
+  if (I0->getParent()->getParent()->getParent()->getTargetTriple().empty())
+    return true;
+  Align Alignment = getLoadStoreAlignment(I0);
+  unsigned VecSizeBits =
+      Utils::getNumBits(Utils::getExpectedType(I0), DL) * Values.size();
+  unsigned AS = getLoadStoreAddressSpace(I0);
+  unsigned Fast = 0;
+  bool Supported = Utils::TTIAllowsMisalignedMemoryAccesses(
+      TTI, I0->getContext(), VecSizeBits, AS, Alignment, &Fast);
+  return Supported;
+}
+
+template bool
+LegalityAnalysis::isAlignmentSupported(BndlRef<Instruction *> Values) const;
+template bool
+LegalityAnalysis::isAlignmentSupported(BndlRef<Value *> Values) const;
+
 const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
                                                      bool SkipScheduling) {
   // If Bndl contains values other than instructions, we need to Pack.
@@ -224,6 +250,9 @@ const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
   // Pack if instructions repeat, i.e., require some sort of broadcast.
   if (!LegalityAnalysis::areUnique(Bndl))
     return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
+  // Check if the target supports the alignment of the generated vector.
+  if (!isAlignmentSupported(Bndl))
+    return createLegalityResult<Pack>(ResultReason::AlignmentNotSupported);
 
   auto CollectDescrs = getHowToCollectValues(Bndl);
   if (CollectDescrs.hasVectorInputs()) {
@@ -249,6 +278,35 @@ const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
     if (!Sched.trySchedule(IBndl))
       return createLegalityResult<Pack>(ResultReason::CantSchedule);
   }
+
+  return createLegalityResult<Widen>();
+}
+
+const LegalityResult &
+LegalityAnalysis::canVectorizeLSV(BndlRef<Instruction *> Bndl) {
+  // Check if in the same BB.
+  if (LegalityAnalysis::differentBlock(Bndl))
+    return createLegalityResult<Pack>(ResultReason::DiffBBs);
+
+  // Check if instructions repeat.
+  if (!LegalityAnalysis::areUnique(Bndl))
+    return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
+
+  // Check if the target supports the alignment of the generated vector.
+  if (!isAlignmentSupported(Bndl))
+    return createLegalityResult<Pack>(ResultReason::AlignmentNotSupported);
+
+  // Check if the loads or stores access consecutive memory.
+  bool Consecutive =
+      isa<StoreInst>(Bndl[0])
+          ? VecUtils::areConsecutive<StoreInst, Instruction>(Bndl, SE, DL)
+          : VecUtils::areConsecutive<LoadInst, Instruction>(Bndl, SE, DL);
+  if (!Consecutive)
+    return createLegalityResult<Pack>(ResultReason::NotConsecutive);
+
+  // Check scheduling.
+  if (!Sched.trySchedule(Bndl))
+    return createLegalityResult<Pack>(ResultReason::CantSchedule);
 
   return createLegalityResult<Widen>();
 }

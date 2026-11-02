@@ -22,7 +22,7 @@ static_assert(sizeof(void *) != 8 || sizeof(Relocation) == 24,
               "Try to minimize Reloc's size; we create many instances");
 
 InputSection *Relocation::getReferentInputSection() const {
-  if (const auto *sym = referent.dyn_cast<Symbol *>()) {
+  if (const auto *sym = dyn_cast<Symbol *>(referent)) {
     if (const auto *d = dyn_cast<Defined>(sym))
       return d->isec();
     return nullptr;
@@ -35,14 +35,14 @@ StringRef Relocation::getReferentString() const {
   if (auto *isec = dyn_cast<InputSection *>(referent)) {
     const auto *cisec = dyn_cast<CStringInputSection>(isec);
     assert(cisec && "referent must be a CStringInputSection");
-    return cisec->getStringRefAtOffset(addend);
+    return cisec->getStringRefAtOffset(getAddend());
   }
 
   auto *sym = dyn_cast<Defined>(cast<Symbol *>(referent));
   assert(sym && "referent must be a Defined symbol");
 
   auto *symIsec = sym->isec();
-  auto symOffset = sym->value + addend;
+  auto symOffset = sym->value + getAddend();
 
   if (auto *s = dyn_cast_or_null<CStringInputSection>(symIsec))
     return s->getStringRefAtOffset(symOffset);

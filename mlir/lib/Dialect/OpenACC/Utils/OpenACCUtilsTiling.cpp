@@ -196,7 +196,10 @@ mlir::acc::tileACCLoops(mlir::acc::LoopOp tileLoop,
     }
   }
 
-  // Compute the element-loop upper bounds min(origUB, origIV + scaledStep).
+  // Compute each element-loop upper bound by clamping the tile's far edge,
+  // origIV + scaledStep, to origUB. An ascending loop takes
+  // min(origUB, edge - 1), a descending one max(origUB, edge + 1). The -1 and
+  // +1 apply in the presence of inclusive bounds and are omitted otherwise.
   rewriter.setInsertionPoint(tileLoop.getBody().getTerminator());
   llvm::SmallVector<mlir::Value, 3> elemLBs, elemUBs, elemSteps;
   llvm::SmallVector<mlir::Type, 3> elemIVTypes;
@@ -204,16 +207,43 @@ mlir::acc::tileACCLoops(mlir::acc::LoopOp tileLoop,
   for (unsigned i = 0; i < tileCount; ++i) {
     mlir::Value stepped =
         mlir::arith::AddIOp::create(rewriter, loc, origIVs[i], scaledSteps[i]);
-    mlir::Value newUB = stepped;
-    if (inclusiveUBs[i]) {
-      // Inclusive UB: min(origUB, origIV + (scaledStep - 1)).
+    mlir::Type stepTy = scaledSteps[i].getType();
+    std::optional<int64_t> constStep = mlir::getConstantIntValue(origSteps[i]);
+
+    // The inclusive edge is one iteration short of the next tile's start, in
+    // whichever direction the loop runs.
+    auto inclusiveEdge = [&](bool descending) -> mlir::Value {
+      if (!inclusiveUBs[i])
+        return stepped;
       mlir::Value c1 = mlir::arith::ConstantOp::create(
-          rewriter, loc, scaledSteps[i].getType(),
-          rewriter.getIntegerAttr(scaledSteps[i].getType(), 1));
-      newUB = mlir::arith::SubIOp::create(rewriter, loc, stepped, c1);
+          rewriter, loc, stepTy, rewriter.getIntegerAttr(stepTy, 1));
+      if (descending)
+        return mlir::arith::AddIOp::create(rewriter, loc, stepped, c1);
+      return mlir::arith::SubIOp::create(rewriter, loc, stepped, c1);
+    };
+
+    mlir::Value elemUB;
+    if (constStep && *constStep < 0) {
+      elemUB = mlir::arith::MaxSIOp::create(rewriter, loc, origUBs[i],
+                                            inclusiveEdge(/*descending=*/true));
+    } else if (constStep) {
+      elemUB = mlir::arith::MinSIOp::create(
+          rewriter, loc, origUBs[i], inclusiveEdge(/*descending=*/false));
+    } else {
+      // The sign is only known at run time, so compute both and select.
+      mlir::Type origStepTy = origSteps[i].getType();
+      mlir::Value zero = mlir::arith::ConstantOp::create(
+          rewriter, loc, origStepTy, rewriter.getIntegerAttr(origStepTy, 0));
+      mlir::Value isDescending = mlir::arith::CmpIOp::create(
+          rewriter, loc, mlir::arith::CmpIPredicate::slt, origSteps[i], zero);
+      mlir::Value descUB = mlir::arith::MaxSIOp::create(
+          rewriter, loc, origUBs[i], inclusiveEdge(/*descending=*/true));
+      mlir::Value ascUB = mlir::arith::MinSIOp::create(
+          rewriter, loc, origUBs[i], inclusiveEdge(/*descending=*/false));
+      elemUB = mlir::arith::SelectOp::create(rewriter, loc, isDescending,
+                                             descUB, ascUB);
     }
-    elemUBs.push_back(
-        mlir::arith::MinSIOp::create(rewriter, loc, origUBs[i], newUB));
+    elemUBs.push_back(elemUB);
     elemLBs.push_back(origIVs[i]);
     elemSteps.push_back(origSteps[i]);
     elemIVTypes.push_back(origIVs[i].getType());

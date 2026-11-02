@@ -23,6 +23,7 @@
 #include <memory>
 
 namespace clang {
+class Decl;
 class DeclGroupRef;
 class DiagnosticsEngine;
 namespace CIRGen {
@@ -93,6 +94,11 @@ public:
   const mlir::MLIRContext &getMLIRContext() const { return *mlirContext; };
 
   bool verifyModule() const;
+
+  /// Return the Decl that generated the given mangled name, if known. Used
+  /// to recover a source location for backend diagnostics (e.g. frame-size
+  /// or resource-limit warnings) that lack debug info.
+  const clang::Decl *getDeclForMangledName(llvm::StringRef mangledName);
 
   void emitDeferredDecls();
 };

@@ -409,9 +409,48 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
 ConstantRange ConstantRange::makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
                                                    const APInt &Other,
                                                    unsigned NoWrapKind) {
-  // makeGuaranteedNoWrapRegion() is exact for single-element ranges, as
-  // "for all" and "for any" coincide in this case.
-  return makeGuaranteedNoWrapRegion(BinOp, ConstantRange(Other), NoWrapKind);
+  using OBO = OverflowingBinaryOperator;
+
+  assert(
+      (NoWrapKind == OBO::NoSignedWrap || NoWrapKind == OBO::NoUnsignedWrap) &&
+      "NoWrapKind invalid!");
+
+  bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
+  unsigned BitWidth = Other.getBitWidth();
+  switch (BinOp) {
+  case Instruction::Add: {
+    if (Unsigned)
+      return getNonEmpty(APInt::getZero(BitWidth), -Other);
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    return Other.isNegative() ? getNonEmpty(SignedMinVal - Other, SignedMinVal)
+                              : getNonEmpty(SignedMinVal, SignedMinVal - Other);
+  }
+
+  case Instruction::Sub: {
+    if (Unsigned)
+      return getNonEmpty(Other, APInt::getZero(BitWidth));
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    return Other.isNegative() ? getNonEmpty(SignedMinVal, SignedMinVal + Other)
+                              : getNonEmpty(SignedMinVal + Other, SignedMinVal);
+  }
+
+  case Instruction::Mul:
+    return Unsigned ? makeExactMulNUWRegion(Other)
+                    : makeExactMulNSWRegion(Other);
+
+  case Instruction::Shl:
+    // Shift amounts >= BitWidth always produce poison.
+    if (Other.uge(BitWidth))
+      return getFull(BitWidth);
+    if (Unsigned)
+      return getNonEmpty(APInt::getZero(BitWidth),
+                         APInt::getMaxValue(BitWidth).lshr(Other) + 1);
+    return getNonEmpty(APInt::getSignedMinValue(BitWidth).ashr(Other),
+                       APInt::getSignedMaxValue(BitWidth).ashr(Other) + 1);
+
+  default:
+    llvm_unreachable("Unsupported binary op");
+  }
 }
 
 ConstantRange ConstantRange::makeMaskNotEqualRange(const APInt &Mask,

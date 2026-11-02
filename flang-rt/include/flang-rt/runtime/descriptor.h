@@ -418,12 +418,7 @@ public:
     if (!pointer) {
       return CFI_ERROR_BASE_ADDR_NULL;
     } else {
-      int allocIndex{MapAllocIdx()};
-      if (allocIndex == kDefaultAllocator) {
-        std::free(pointer);
-      } else {
-        allocatorRegistry.GetDeallocator(MapAllocIdx())(pointer);
-      }
+      allocatorRegistry.Deallocate(MapAllocIdx(), pointer);
       descriptor.base_addr = nullptr;
       return CFI_SUCCESS;
     }

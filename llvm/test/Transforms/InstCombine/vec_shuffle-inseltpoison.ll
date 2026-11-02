@@ -1060,7 +1060,7 @@ entry:
 define <4 x i16> @and_constant_mask_poison_3(<4 x i16> %add) {
 ; CHECK-LABEL: @and_constant_mask_poison_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i16> <i16 0, i16 0, i16 0, i16 undef>
+; CHECK-NEXT:    ret <4 x i16> <i16 0, i16 0, i16 0, i16 poison>
 ;
 entry:
   %shuffle = shufflevector <4 x i16> %add, <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 undef>
@@ -1123,7 +1123,7 @@ entry:
 define <4 x i16> @or_constant_mask_poison_3(<4 x i16> %in) {
 ; CHECK-LABEL: @or_constant_mask_poison_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i16> <i16 undef, i16 -1, i16 -1, i16 undef>
+; CHECK-NEXT:    ret <4 x i16> <i16 poison, i16 -1, i16 -1, i16 poison>
 ;
 entry:
   %shuffle = shufflevector <4 x i16> %in, <4 x i16> poison, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>

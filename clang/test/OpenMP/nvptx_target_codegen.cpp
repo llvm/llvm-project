@@ -283,7 +283,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[ADD9:%.*]] = fadd double [[CONV8]], 1.000000e+00
 // CHECK1-NEXT:    [[CONV10:%.*]] = fptrunc double [[ADD9]] to float
 // CHECK1-NEXT:    store float [[CONV10]], ptr [[ARRAYIDX7]], align 4
-// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[TMP3]], i64 0, i64 1
+// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr [5 x [10 x double]], ptr [[TMP3]], i64 0, i64 1
 // CHECK1-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX11]], i64 0, i64 2
 // CHECK1-NEXT:    [[TMP12:%.*]] = load double, ptr [[ARRAYIDX12]], align 8
 // CHECK1-NEXT:    [[ADD13:%.*]] = fadd double [[TMP12]], 1.000000e+00
@@ -669,7 +669,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[ADD9:%.*]] = fadd double [[CONV8]], 1.000000e+00
 // CHECK2-NEXT:    [[CONV10:%.*]] = fptrunc double [[ADD9]] to float
 // CHECK2-NEXT:    store float [[CONV10]], ptr [[ARRAYIDX7]], align 4
-// CHECK2-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[TMP3]], i32 0, i32 1
+// CHECK2-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr [5 x [10 x double]], ptr [[TMP3]], i32 0, i32 1
 // CHECK2-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX11]], i32 0, i32 2
 // CHECK2-NEXT:    [[TMP12:%.*]] = load double, ptr [[ARRAYIDX12]], align 8
 // CHECK2-NEXT:    [[ADD13:%.*]] = fadd double [[TMP12]], 1.000000e+00

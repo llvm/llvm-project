@@ -29,7 +29,7 @@ func.func @where_self_overlap(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref<
 // CHECK-NOT:       fir.alloca index
 // CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.where", uniq_name = ""}>
 // CHECK:           %[[SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
-// CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.where"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+// CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) uniq_name(".tmp.where") : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // First loop: save the RHS values, addressed by the loop induction variable.
 // CHECK:           fir.do_loop %[[IV0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:             fir.if %{{.*}} {
@@ -59,7 +59,7 @@ func.func @nested_forall_2d(%arr: !fir.box<!fir.array<?x?xi32>>) {
   %c3_i32 = arith.constant 3 : i32
   %c7_i32 = arith.constant 7 : i32
   %c1_i32 = arith.constant 1 : i32
-  %0:2 = hlfir.declare %arr {uniq_name = "x"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+  %0:2 = hlfir.declare %arr uniq_name("x") : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
   hlfir.forall lb {
     hlfir.yield %c2_i32 : i32
   } ub {
@@ -94,7 +94,7 @@ func.func @nested_forall_2d(%arr: !fir.box<!fir.array<?x?xi32>>) {
 // CHECK-NOT:       fir.alloca index
 // CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?x?xi32>, %{{.*}}, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index, index) -> !fir.shapeshift<2>
-// CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?x?xi32>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.heap<!fir.array<?x?xi32>>)
+// CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) uniq_name(".tmp.forall") : (!fir.heap<!fir.array<?x?xi32>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.heap<!fir.array<?x?xi32>>)
 // CHECK:           fir.do_loop %[[I0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:             fir.do_loop %[[J0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:               %[[ADDR0:.*]] = hlfir.designate %[[DECL]]#0 (%[[J0]], %[[I0]])  : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
@@ -122,7 +122,7 @@ func.func @forall_negative_step(%arg0: !fir.ref<!fir.array<10xi32>>) {
   %c10 = arith.constant 10 : index
   %c11 = arith.constant 11 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "x"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("x") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   hlfir.forall lb {
     hlfir.yield %c10 : index
   } ub {
@@ -152,7 +152,7 @@ func.func @forall_negative_step(%arg0: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:           %[[C10:.*]] = arith.constant 10 : index
 // CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[SHAPE:.*]] = fir.shape_shift %[[C1]], %{{.*}} : (index, index) -> !fir.shapeshift<1>
-// CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+// CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) uniq_name(".tmp.forall") : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // CHECK:           fir.do_loop %[[IV0:.*]] = %[[C10]] to %[[C1]] step %[[C_NEG1]] {
 // CHECK:             %[[ADDR0:.*]] = hlfir.designate %[[DECL]]#0 (%[[IV0]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             hlfir.assign %{{.*}} to %[[ADDR0]] : i32, !fir.ref<i32>
@@ -175,7 +175,7 @@ func.func @forall_non_unit_step(%arg0: !fir.ref<!fir.array<10xi32>>) {
   %c9 = arith.constant 9 : index
   %c11 = arith.constant 11 : index
   %0 = fir.shape %c9 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "x"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("x") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   hlfir.forall lb {
     hlfir.yield %c1 : index
   } ub {
@@ -201,7 +201,7 @@ func.func @forall_non_unit_step(%arg0: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:           %[[CTR:.*]] = fir.alloca index
 // CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-// CHECK:           hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+// CHECK:           hlfir.declare %[[ALLOC]](%[[SHAPE]]) uniq_name(".tmp.forall") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // CHECK:           fir.load %[[CTR]] : !fir.ref<index>
 // CHECK:           arith.addi %{{.*}}, %{{.*}} : index
 // CHECK:           fir.store %{{.*}} to %[[CTR]] : !fir.ref<index>

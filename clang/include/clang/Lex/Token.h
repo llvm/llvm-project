@@ -192,6 +192,34 @@ public:
     Loc = SourceLocation().getRawEncoding();
   }
 
+  static Token create(tok::TokenKind Kind, SourceLocation Loc,
+                      unsigned Length = 0) {
+    Token Tok;
+    Tok.startToken();
+    Tok.setKind(Kind);
+    Tok.setLocation(Loc);
+    Tok.setLength(Length);
+    return Tok;
+  }
+
+  static Token createAnnotation(tok::TokenKind Kind, SourceRange Range,
+                                void *Value = nullptr) {
+    assert(tok::isAnnotation(Kind) && "Expected an annotation token kind");
+    Token Tok;
+    Tok.startToken();
+    Tok.setKind(Kind);
+    Tok.setAnnotationRange(Range);
+    Tok.setAnnotationValue(Value);
+    return Tok;
+  }
+
+  static Token createEof(SourceLocation Loc = SourceLocation(),
+                         const void *Data = nullptr) {
+    Token Tok = create(tok::eof, Loc);
+    Tok.setEofData(Data);
+    return Tok;
+  }
+
   bool hasPtrData() const { return PtrData != nullptr; }
 
   IdentifierInfo *getIdentifierInfo() const {

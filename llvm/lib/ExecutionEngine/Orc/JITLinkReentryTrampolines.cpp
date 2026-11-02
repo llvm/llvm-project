@@ -129,7 +129,8 @@ void JITLinkReentryTrampolines::emit(ResourceTrackerSP RT,
 
   auto G = std::make_unique<jitlink::LinkGraph>(
       (*ReentryGraphSym).str(), ES.getSymbolStringPool(), ES.getTargetTriple(),
-      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
+      ES.getTargetTriple().getArchPointerBitWidth() / 8, SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
 
   auto &ReentryFnSym = G->addExternalSymbol(ReentryFnName, 0, false);
 

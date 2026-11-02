@@ -40,7 +40,7 @@ define signext i32 @clmul32h(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBC-ZBKC-NEXT:    slli a1, a1, 32
 ; RV64ZBC-ZBKC-NEXT:    slli a0, a0, 32
 ; RV64ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
-; RV64ZBC-ZBKC-NEXT:    srai a0, a0, 32
+; RV64ZBC-ZBKC-NEXT:    srli a0, a0, 32
 ; RV64ZBC-ZBKC-NEXT:    ret
   %tmp = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
   ret i32 %tmp
@@ -51,10 +51,8 @@ define signext i32 @clmul32h(i32 signext %a, i32 signext %b) nounwind {
 define signext i32 @clmul32h_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
 ; RV64ZBC-ZBKC-LABEL: clmul32h_zext:
 ; RV64ZBC-ZBKC:       # %bb.0:
-; RV64ZBC-ZBKC-NEXT:    slli a1, a1, 32
-; RV64ZBC-ZBKC-NEXT:    slli a0, a0, 32
-; RV64ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
-; RV64ZBC-ZBKC-NEXT:    srai a0, a0, 32
+; RV64ZBC-ZBKC-NEXT:    clmul a0, a0, a1
+; RV64ZBC-ZBKC-NEXT:    srli a0, a0, 32
 ; RV64ZBC-ZBKC-NEXT:    ret
   %tmp = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
   ret i32 %tmp

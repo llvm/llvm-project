@@ -2421,6 +2421,22 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+bool isMainParam(const Decl *D) {
+  if (const auto *PVD = dyn_cast_or_null<ParmVarDecl>(D))
+    if (const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext()))
+      return FD->isMain();
+  return false;
+}
+
+bool refersMainParam(const Expr *E) {
+  if (!E)
+    return false;
+  if (const auto *DRE = dyn_cast_or_null<DeclRefExpr>(E->IgnoreParenImpCasts()))
+    return isMainParam(DRE->getDecl());
+  return false;
+}
+
 class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
   Sema &S;
   bool SuggestSuggestions;  // Recommend -fsafe-buffer-usage-suggestions?
@@ -2470,20 +2486,24 @@ public:
     SourceRange Range;
     unsigned MsgParam = 0;
     NamedDecl *D = nullptr;
+    const Expr *BufferOperand = nullptr;
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Operation)) {
-      Loc = ASE->getBase()->getExprLoc();
-      Range = ASE->getBase()->getSourceRange();
+      BufferOperand = ASE->getBase();
+      Loc = BufferOperand->getExprLoc();
+      Range = BufferOperand->getSourceRange();
       MsgParam = 2;
     } else if (const auto *BO = dyn_cast<BinaryOperator>(Operation)) {
       BinaryOperator::Opcode Op = BO->getOpcode();
       if (Op == BO_Add || Op == BO_AddAssign || Op == BO_Sub ||
           Op == BO_SubAssign) {
         if (BO->getRHS()->getType()->isIntegerType()) {
-          Loc = BO->getLHS()->getExprLoc();
-          Range = BO->getLHS()->getSourceRange();
+          BufferOperand = BO->getLHS();
+          Loc = BufferOperand->getExprLoc();
+          Range = BufferOperand->getSourceRange();
         } else {
-          Loc = BO->getRHS()->getExprLoc();
-          Range = BO->getRHS()->getSourceRange();
+          BufferOperand = BO->getRHS();
+          Loc = BufferOperand->getExprLoc();
+          Range = BufferOperand->getSourceRange();
         }
         MsgParam = 1;
       }
@@ -2491,8 +2511,9 @@ public:
       UnaryOperator::Opcode Op = UO->getOpcode();
       if (Op == UO_PreInc || Op == UO_PreDec || Op == UO_PostInc ||
           Op == UO_PostDec) {
-        Loc = UO->getSubExpr()->getExprLoc();
-        Range = UO->getSubExpr()->getSourceRange();
+        BufferOperand = UO->getSubExpr();
+        Loc = BufferOperand->getExprLoc();
+        Range = BufferOperand->getSourceRange();
         MsgParam = 1;
       }
     } else {
@@ -2550,12 +2571,14 @@ public:
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
     } else {
-      if (D) {
-        S.Diag(Loc, diag::warn_unsafe_buffer_operation)
-            << MsgParam << D << Range;
-      } else {
-        S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
-      }
+      unsigned DiagID = refersMainParam(BufferOperand)
+                            ? diag::warn_unsafe_buffer_operation_main_argv
+                            : diag::warn_unsafe_buffer_operation;
+
+      if (D)
+        S.Diag(Loc, DiagID) << MsgParam << D << Range;
+      else
+        S.Diag(Loc, DiagID) << MsgParam << Range;
       if (SuggestSuggestions) {
         S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
       }
@@ -2590,18 +2613,26 @@ public:
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
+    std::string ContainerName = "container";
 
-    const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
-    Loc = CtorExpr->getLocation();
-    Range = CtorExpr->getSourceRange();
-
-    std::string ContainerName = "std::span";
-    if (auto *TD = CtorExpr->getConstructor()->getParent()) {
-      // This will provide "std::span" if it's in the std namespace
-      ContainerName = TD->getQualifiedNameAsString();
+    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+      Loc = CtorExpr->getLocation();
+      Range = CtorExpr->getSourceRange();
+      if (auto *TD = CtorExpr->getConstructor()->getParent()) {
+        ContainerName = TD->getQualifiedNameAsString();
+      }
+    } else if (const auto *Call = dyn_cast<CallExpr>(Operation)) {
+      Loc = Call->getExprLoc();
+      Range = Call->getSourceRange();
+      if (const auto *FD = Call->getDirectCallee()) {
+        ContainerName = FD->getQualifiedNameAsString();
+      }
+    } else {
+      Loc = Operation->getBeginLoc();
+      Range = Operation->getSourceRange();
     }
 
-    // FIX: Pass the container name to fill the %0 parameter
+    // Pass the container name to fill the %0 parameter
     S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container) << ContainerName;
 
     if (IsRelatedToDecl) {
@@ -2640,7 +2671,12 @@ public:
                                  const FixitStrategy &VarTargetTypes) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
-    S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
+
+    unsigned DiagID = isMainParam(Variable)
+                          ? diag::warn_unsafe_buffer_variable_main_argv
+                          : diag::warn_unsafe_buffer_variable;
+
+    S.Diag(Variable->getLocation(), DiagID)
         << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
         << Variable->getSourceRange();
     if (!Fixes.empty()) {
@@ -2802,9 +2838,7 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   unsigned SysIdx = 0;
   if (Cacheable) {
     StateKey = D.getDiagStateKeyForLoc(Loc);
-    const SourceManager &SM = D.getSourceManager();
-    SysIdx = (SM.isInSystemHeader(SM.getExpansionLoc(Loc)) ? 2u : 0u) |
-             (SM.isInSystemMacro(Loc) ? 1u : 0u);
+    SysIdx = static_cast<unsigned>(D.getDiagStateSystemClassForLoc(Loc));
     auto It = PolicyCache[SysIdx].find(StateKey);
     if (It != PolicyCache[SysIdx].end()) {
       Policy P = It->second;

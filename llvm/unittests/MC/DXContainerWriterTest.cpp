@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/Support/Error.h"
@@ -68,6 +69,38 @@ TEST(MCDXContainerWriterTest, PrivUnaligned) {
   EXPECT_EQ(
       *C.getPrivateData(),
       StringRef(reinterpret_cast<const char *>(PrivData), sizeof(PrivData)));
+}
+
+TEST(MCDXContainerWriterTest, SignaturePadding) {
+  for (bool PadToDword : {false, true}) {
+    mcdxbc::Signature Sig;
+    Sig.addParam(0, "A", 0, dxbc::D3DSystemValue::Undefined,
+                 dxbc::SigComponentType::Float32, 0, 1, 14,
+                 dxbc::SigMinPrecision::Default);
+    std::string SigData;
+    raw_string_ostream OS(SigData);
+    Sig.write(OS, PadToDword);
+    EXPECT_EQ(SigData.size(), PadToDword ? 44u : 42u);
+
+    for (StringRef Name : {"ISG1", "OSG1", "PSG1"}) {
+      TestDXContainerWriter Writer;
+      Writer.addPart(Name, {reinterpret_cast<const uint8_t *>(SigData.data()),
+                            SigData.size()});
+      const uint8_t Flags[] = {0, 0, 0, 0, 0, 0, 0, 0};
+      Writer.addPart("SFI0", Flags);
+      std::string Buffer = writeContainer(Writer);
+      DXContainer C = parseContainer(Buffer);
+      auto Part = C.begin();
+      EXPECT_EQ(Part->Part.Size, SigData.size());
+      uint32_t NextOffset =
+          Part->Offset + sizeof(dxbc::PartHeader) + Part->Part.Size;
+      ++Part;
+      EXPECT_EQ(Part->Offset, NextOffset);
+      EXPECT_EQ(Part->Part.Size, sizeof(Flags));
+      EXPECT_EQ(C.getHeader().FileSize,
+                Part->Offset + sizeof(dxbc::PartHeader) + sizeof(Flags));
+    }
+  }
 }
 
 TEST(MCDXContainerWriterTest, PrivMustBeLast) {

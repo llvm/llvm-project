@@ -18,6 +18,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/ValueObject/DILAST.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -420,6 +421,8 @@ private:
   lldb::BreakpointSiteSP m_bp_site_sp;
   ///< The compiled expression to use in testing our condition.
   lldb::UserExpressionSP m_user_expression_sp;
+  ///< The expression parsed by Data Inspection Language (DIL).
+  dil::ASTNodeUP m_dil_expr_tree;
   ///< Guards parsing and evaluation of the condition, which could be evaluated
   /// by multiple processes.
   std::mutex m_condition_mutex;

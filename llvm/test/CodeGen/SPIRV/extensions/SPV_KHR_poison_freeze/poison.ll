@@ -1,7 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_poison_freeze %s -o - | FileCheck %s --check-prefixes=CHECK,OCL
-; RUN: llc -O0 -mtriple=spirv-vulkan-unknown --spirv-ext=+SPV_KHR_poison_freeze %s -o - | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_poison_freeze %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_poison_freeze %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown --spirv-ext=+SPV_KHR_poison_freeze %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability PoisonFreezeKHR
 ; CHECK-DAG: OpExtension "SPV_KHR_poison_freeze"
@@ -41,10 +39,8 @@
 ; CHECK: OpFunction
 ; CHECK: OpFAdd %[[#F32]] %[[#]] %[[#PF]]
 
-; OpPhi survives only on the OpenCL flow. The Vulkan path structurizes the
-; CFG and folds phi(%v, poison) to %v before lowering.
-; OCL: OpFunction
-; OCL: OpPhi %[[#V4F]] %[[#]] %[[#]] %[[#PVF]] %[[#]]
+; CHECK: OpFunction
+; CHECK: OpPhi %[[#V4F]] %[[#]] %[[#]] %[[#PVF]] %[[#]]
 
 %arr = type [4 x i32]
 

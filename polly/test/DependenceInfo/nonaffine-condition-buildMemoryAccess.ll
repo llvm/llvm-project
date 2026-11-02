@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-allow-nonaffine-loops -polly-allow-nonaffine -debug-only=polly-dependence < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-allow-nonaffine-loops -plugin-arg=Polly,-polly-allow-nonaffine -debug-only=polly-dependence < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK:        MayWriteAccess :=   [Reduction Type: NONE] [Scalar: 0]

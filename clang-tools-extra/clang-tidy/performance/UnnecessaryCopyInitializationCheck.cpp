@@ -17,6 +17,7 @@
 #include <optional>
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::performance {
 using utils::decl_ref_expr::allDeclRefExprs;
@@ -102,8 +103,6 @@ AST_MATCHER_FUNCTION_P(StatementMatcher,
             cxxOperatorCallExpr(callee(MethodDecl), hasArgument(0, OnExpr),
                                 hasArgument(0, hasType(ReceiverType)))));
 }
-
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
 
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
   // Only allow initialization of a const reference from a free function or

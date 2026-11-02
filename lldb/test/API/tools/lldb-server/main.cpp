@@ -286,6 +286,16 @@ int main(int argc, char **argv) {
       std::this_thread::sleep_for(
           std::chrono::seconds(sleep_seconds_remaining));
 
+    } else if (consume_front(arg, "waitfile:")) {
+      // Wait for the test framework to create this file. Attach tests use it
+      // to keep the process alive until the debugger has attached, because a
+      // fixed sleep can run out before the debugger gets there. Give up after
+      // 5 minutes so that a process whose test was killed still exits.
+      auto deadline =
+          std::chrono::steady_clock::now() + std::chrono::minutes(5);
+      while (!std::ifstream(arg) && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
     } else if (consume_front(arg, "set-message:")) {
       // Copy the contents after "set-message:" to the g_message buffer.
       // Used for reading inferior memory and verifying contents match

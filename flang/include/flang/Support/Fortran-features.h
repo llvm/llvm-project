@@ -61,9 +61,9 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     MultipleProgramUnitsOnSameLine, AllocatedForAssociated,
     OpenMPThreadprivateEquivalence, RelaxedCLocChecks, CudaPinned,
     CUDAImplicitDataAttrSpelling, OpenAccDefaultNoneScalarsStrict,
-    OpenACCMultipleNamesInRoutine, EnumerationType, CUDAInit,
+    OpenACCMultipleNamesInRoutine, CUDAInit,
     PreferIntrinsicModuleUseAssociation, MultipleCommonBlockInit,
-    OutOfBoundsSubscripts)
+    OutOfBoundsSubscripts, ImplicitModulePrefix, RankOneBoundsOnFunctionResult)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -90,7 +90,8 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     UsedUndefinedVariable, BadValueInDeadCode, AssumedTypeSizeDummy,
     MisplacedIgnoreTKR, NamelistParameter, ImpureFinalInPure,
     IgnoredNoReallocateLHS, ExperimentalOption, IoImpliedDoIndexConflict,
-    BOZLiteralTruncation, IntentInActualForDefaultIntent)
+    BOZLiteralTruncation, IntentInActualForDefaultIntent, BindCArrayDescriptor,
+    OpenMPDeprecated, OpenMPFuture)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

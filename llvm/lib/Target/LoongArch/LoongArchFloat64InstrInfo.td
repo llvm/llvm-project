@@ -33,113 +33,196 @@ def loongarch_movgr2fr_d_lo_hi
 let Predicates = [HasBasicD] in {
 
 // Arithmetic Operation Instructions
-def FADD_D : FP_ALU_3R<0x01010000, FPR64>;
-def FSUB_D : FP_ALU_3R<0x01030000, FPR64>;
-def FMUL_D : FP_ALU_3R<0x01050000, FPR64>;
-def FDIV_D : FP_ALU_3R<0x01070000, FPR64>;
-def FMADD_D  : FP_ALU_4R<0x08200000, FPR64>;
-def FMSUB_D  : FP_ALU_4R<0x08600000, FPR64>;
-def FNMADD_D : FP_ALU_4R<0x08a00000, FPR64>;
-def FNMSUB_D : FP_ALU_4R<0x08e00000, FPR64>;
-def FMAX_D  : FP_ALU_3R<0x01090000, FPR64>;
-def FMIN_D  : FP_ALU_3R<0x010b0000, FPR64>;
-def FMAXA_D : FP_ALU_3R<0x010d0000, FPR64>;
-def FMINA_D : FP_ALU_3R<0x010f0000, FPR64>;
-def FABS_D   : FP_ALU_2R<0x01140800, FPR64>;
-def FNEG_D   : FP_ALU_2R<0x01141800, FPR64>;
-def FSQRT_D  : FP_ALU_2R<0x01144800, FPR64>;
-def FRECIP_D : FP_ALU_2R<0x01145800, FPR64>;
-def FRSQRT_D : FP_ALU_2R<0x01146800, FPR64>;
-def FRECIPE_D : FP_ALU_2R<0x01147800, FPR64>;
-def FRSQRTE_D : FP_ALU_2R<0x01148800, FPR64>;
-def FSCALEB_D : FP_ALU_3R<0x01110000, FPR64>;
-def FLOGB_D   : FP_ALU_2R<0x01142800, FPR64>;
-def FCOPYSIGN_D : FP_ALU_3R<0x01130000, FPR64>;
-def FCLASS_D  : FP_ALU_2R<0x01143800, FPR64>;
+def FADD_D : FP_ALU_3R<0x01010000, FPR64>,
+             Sched<[WriteFADD, ReadFADD, ReadFADD]>;
+def FSUB_D : FP_ALU_3R<0x01030000, FPR64>,
+             Sched<[WriteFADD, ReadFADD, ReadFADD]>;
+def FMUL_D : FP_ALU_3R<0x01050000, FPR64>,
+             Sched<[WriteFMUL, ReadFMUL, ReadFMUL]>;
+def FDIV_D : FP_ALU_3R<0x01070000, FPR64>,
+             Sched<[WriteFDIV, ReadFDIV, ReadFDIV]>;
+def FMADD_D  : FP_ALU_4R<0x08200000, FPR64>,
+               Sched<[WriteFMADD, ReadFMADD, ReadFMADD, ReadFMADD]>;
+def FMSUB_D  : FP_ALU_4R<0x08600000, FPR64>,
+               Sched<[WriteFMADD, ReadFMADD, ReadFMADD, ReadFMADD]>;
+def FNMADD_D : FP_ALU_4R<0x08a00000, FPR64>,
+               Sched<[WriteFMADD, ReadFMADD, ReadFMADD, ReadFMADD]>;
+def FNMSUB_D : FP_ALU_4R<0x08e00000, FPR64>,
+               Sched<[WriteFMADD, ReadFMADD, ReadFMADD, ReadFMADD]>;
+def FMAX_D  : FP_ALU_3R<0x01090000, FPR64>,
+              Sched<[WriteFMinMax, ReadFMinMax, ReadFMinMax]>;
+def FMIN_D  : FP_ALU_3R<0x010b0000, FPR64>,
+              Sched<[WriteFMinMax, ReadFMinMax, ReadFMinMax]>;
+def FMAXA_D : FP_ALU_3R<0x010d0000, FPR64>,
+              Sched<[WriteFMinMax, ReadFMinMax, ReadFMinMax]>;
+def FMINA_D : FP_ALU_3R<0x010f0000, FPR64>,
+              Sched<[WriteFMinMax, ReadFMinMax, ReadFMinMax]>;
+def FABS_D   : FP_ALU_2R<0x01140800, FPR64>,
+               Sched<[WriteFABS, ReadFABS]>;
+def FNEG_D   : FP_ALU_2R<0x01141800, FPR64>,
+               Sched<[WriteFNEG, ReadFNEG]>;
+def FSQRT_D  : FP_ALU_2R<0x01144800, FPR64>,
+               Sched<[WriteFSQRT, ReadFSQRT]>;
+def FRECIP_D : FP_ALU_2R<0x01145800, FPR64>,
+               Sched<[WriteFRECIP, ReadFRECIP]>;
+def FRSQRT_D : FP_ALU_2R<0x01146800, FPR64>,
+               Sched<[WriteFRSQRT, ReadFRSQRT]>;
+def FRECIPE_D : FP_ALU_2R<0x01147800, FPR64>,
+                Sched<[WriteFRECIPE, ReadFRECIPE]>;
+def FRSQRTE_D : FP_ALU_2R<0x01148800, FPR64>,
+                Sched<[WriteFRSQRTE, ReadFRSQRTE]>;
+def FSCALEB_D : FP_ALU_3R<0x01110000, FPR64>,
+                Sched<[WriteFSCALEB, ReadFSCALEB, ReadFSCALEB]>;
+def FLOGB_D   : FP_ALU_2R<0x01142800, FPR64>,
+                Sched<[WriteFLOGB, ReadFLOGB]>;
+def FCOPYSIGN_D : FP_ALU_3R<0x01130000, FPR64>,
+                  Sched<[WriteFCOPYSIGN, ReadFCOPYSIGN, ReadFCOPYSIGN]>;
+def FCLASS_D  : FP_ALU_2R<0x01143800, FPR64>,
+                Sched<[WriteFCLASS, ReadFCLASS]>;
 
 // Comparison Instructions
-def FCMP_CAF_D  : FP_CMP<0x0c200000, FPR64>;
-def FCMP_CUN_D  : FP_CMP<0x0c240000, FPR64>;
-def FCMP_CEQ_D  : FP_CMP<0x0c220000, FPR64>;
-def FCMP_CUEQ_D : FP_CMP<0x0c260000, FPR64>;
-def FCMP_CLT_D  : FP_CMP<0x0c210000, FPR64>;
-def FCMP_CULT_D : FP_CMP<0x0c250000, FPR64>;
-def FCMP_CLE_D  : FP_CMP<0x0c230000, FPR64>;
-def FCMP_CULE_D : FP_CMP<0x0c270000, FPR64>;
-def FCMP_CNE_D  : FP_CMP<0x0c280000, FPR64>;
-def FCMP_COR_D  : FP_CMP<0x0c2a0000, FPR64>;
-def FCMP_CUNE_D : FP_CMP<0x0c2c0000, FPR64>;
-def FCMP_SAF_D  : FP_CMP<0x0c208000, FPR64>;
-def FCMP_SUN_D  : FP_CMP<0x0c248000, FPR64>;
-def FCMP_SEQ_D  : FP_CMP<0x0c228000, FPR64>;
-def FCMP_SUEQ_D : FP_CMP<0x0c268000, FPR64>;
-def FCMP_SLT_D  : FP_CMP<0x0c218000, FPR64>;
-def FCMP_SULT_D : FP_CMP<0x0c258000, FPR64>;
-def FCMP_SLE_D  : FP_CMP<0x0c238000, FPR64>;
-def FCMP_SULE_D : FP_CMP<0x0c278000, FPR64>;
-def FCMP_SNE_D  : FP_CMP<0x0c288000, FPR64>;
-def FCMP_SOR_D  : FP_CMP<0x0c2a8000, FPR64>;
-def FCMP_SUNE_D : FP_CMP<0x0c2c8000, FPR64>;
+def FCMP_CAF_D  : FP_CMP<0x0c200000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CUN_D  : FP_CMP<0x0c240000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CEQ_D  : FP_CMP<0x0c220000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CUEQ_D : FP_CMP<0x0c260000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CLT_D  : FP_CMP<0x0c210000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CULT_D : FP_CMP<0x0c250000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CLE_D  : FP_CMP<0x0c230000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CULE_D : FP_CMP<0x0c270000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CNE_D  : FP_CMP<0x0c280000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_COR_D  : FP_CMP<0x0c2a0000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CUNE_D : FP_CMP<0x0c2c0000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SAF_D  : FP_CMP<0x0c208000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SUN_D  : FP_CMP<0x0c248000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SEQ_D  : FP_CMP<0x0c228000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SUEQ_D : FP_CMP<0x0c268000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SLT_D  : FP_CMP<0x0c218000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SULT_D : FP_CMP<0x0c258000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SLE_D  : FP_CMP<0x0c238000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SULE_D : FP_CMP<0x0c278000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SNE_D  : FP_CMP<0x0c288000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SOR_D  : FP_CMP<0x0c2a8000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SUNE_D : FP_CMP<0x0c2c8000, FPR64>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
 
 // Conversion Instructions
-def FFINT_S_L : FP_CONV<0x011d1800, FPR32, FPR64>;
-def FTINT_L_S : FP_CONV<0x011b2400, FPR64, FPR32>;
-def FTINTRM_L_S : FP_CONV<0x011a2400, FPR64, FPR32>;
-def FTINTRP_L_S : FP_CONV<0x011a6400, FPR64, FPR32>;
-def FTINTRZ_L_S : FP_CONV<0x011aa400, FPR64, FPR32>;
-def FTINTRNE_L_S : FP_CONV<0x011ae400, FPR64, FPR32>;
-def FCVT_S_D : FP_CONV<0x01191800, FPR32, FPR64>;
-def FCVT_D_S : FP_CONV<0x01192400, FPR64, FPR32>;
-def FFINT_D_W : FP_CONV<0x011d2000, FPR64, FPR32>;
-def FFINT_D_L : FP_CONV<0x011d2800, FPR64, FPR64>;
-def FTINT_W_D : FP_CONV<0x011b0800, FPR32, FPR64>;
-def FTINT_L_D : FP_CONV<0x011b2800, FPR64, FPR64>;
-def FTINTRM_W_D : FP_CONV<0x011a0800, FPR32, FPR64>;
-def FTINTRM_L_D : FP_CONV<0x011a2800, FPR64, FPR64>;
-def FTINTRP_W_D : FP_CONV<0x011a4800, FPR32, FPR64>;
-def FTINTRP_L_D : FP_CONV<0x011a6800, FPR64, FPR64>;
-def FTINTRZ_W_D : FP_CONV<0x011a8800, FPR32, FPR64>;
-def FTINTRZ_L_D : FP_CONV<0x011aa800, FPR64, FPR64>;
-def FTINTRNE_W_D : FP_CONV<0x011ac800, FPR32, FPR64>;
-def FTINTRNE_L_D : FP_CONV<0x011ae800, FPR64, FPR64>;
-def FRINT_D : FP_CONV<0x011e4800, FPR64, FPR64>;
+def FFINT_S_L : FP_CONV<0x011d1800, FPR32, FPR64>,
+                Sched<[WriteFCvtStoL, ReadFCvtStoL]>;
+def FTINT_L_S : FP_CONV<0x011b2400, FPR64, FPR32>,
+                Sched<[WriteFCvtLtoS, ReadFCvtLtoS]>;
+def FTINTRM_L_S : FP_CONV<0x011a2400, FPR64, FPR32>,
+                  Sched<[WriteFCvtLtoS_RM, ReadFCvtLtoS_RM]>;
+def FTINTRP_L_S : FP_CONV<0x011a6400, FPR64, FPR32>,
+                  Sched<[WriteFCvtLtoS_RP, ReadFCvtLtoS_RP]>;
+def FTINTRZ_L_S : FP_CONV<0x011aa400, FPR64, FPR32>,
+                  Sched<[WriteFCvtLtoS_RZ, ReadFCvtLtoS_RZ]>;
+def FTINTRNE_L_S : FP_CONV<0x011ae400, FPR64, FPR32>,
+                   Sched<[WriteFCvtLtoS_RNE, ReadFCvtLtoS_RNE]>;
+def FCVT_S_D : FP_CONV<0x01191800, FPR32, FPR64>,
+               Sched<[WriteFCvtStoD, ReadFCvtStoD]>;
+def FCVT_D_S : FP_CONV<0x01192400, FPR64, FPR32>,
+               Sched<[WriteFCvtDtoS, ReadFCvtDtoS]>;
+def FFINT_D_W : FP_CONV<0x011d2000, FPR64, FPR32>,
+                Sched<[WriteFCvtDtoW, ReadFCvtDtoW]>;
+def FFINT_D_L : FP_CONV<0x011d2800, FPR64, FPR64>,
+                Sched<[WriteFCvtDtoL, ReadFCvtDtoL]>;
+def FTINT_W_D : FP_CONV<0x011b0800, FPR32, FPR64>,
+                Sched<[WriteFCvtWtoD, ReadFCvtWtoD]>;
+def FTINT_L_D : FP_CONV<0x011b2800, FPR64, FPR64>,
+                Sched<[WriteFCvtLtoD, ReadFCvtLtoD]>;
+def FTINTRM_W_D : FP_CONV<0x011a0800, FPR32, FPR64>,
+                  Sched<[WriteFCvtWtoD_RM, ReadFCvtWtoD_RM]>;
+def FTINTRM_L_D : FP_CONV<0x011a2800, FPR64, FPR64>,
+                  Sched<[WriteFCvtLtoD_RM, ReadFCvtLtoD_RM]>;
+def FTINTRP_W_D : FP_CONV<0x011a4800, FPR32, FPR64>,
+                  Sched<[WriteFCvtWtoD_RP, ReadFCvtWtoD_RP]>;
+def FTINTRP_L_D : FP_CONV<0x011a6800, FPR64, FPR64>,
+                  Sched<[WriteFCvtLtoD_RP, ReadFCvtLtoD_RP]>;
+def FTINTRZ_W_D : FP_CONV<0x011a8800, FPR32, FPR64>,
+                  Sched<[WriteFCvtWtoD_RZ, ReadFCvtWtoD_RZ]>;
+def FTINTRZ_L_D : FP_CONV<0x011aa800, FPR64, FPR64>,
+                  Sched<[WriteFCvtLtoD_RZ, ReadFCvtLtoD_RZ]>;
+def FTINTRNE_W_D : FP_CONV<0x011ac800, FPR32, FPR64>,
+                   Sched<[WriteFCvtWtoD_RNE, ReadFCvtWtoD_RNE]>;
+def FTINTRNE_L_D : FP_CONV<0x011ae800, FPR64, FPR64>,
+                   Sched<[WriteFCvtLtoD_RNE, ReadFCvtLtoD_RNE]>;
+def FRINT_D : FP_CONV<0x011e4800, FPR64, FPR64>,
+              Sched<[WriteFCvtFDtoID, ReadFCvtFDtoID]>;
+
 
 // Move Instructions
-def FMOV_D        : FP_MOV<0x01149800, FPR64, FPR64>;
-def MOVFRH2GR_S   : FP_MOV<0x0114bc00, GPR, FPR64>;
+def FMOV_D        : FP_MOV<0x01149800, FPR64, FPR64>, 
+                    Sched<[WriteFMovD, ReadFMovD]>;
+def MOVFRH2GR_S   : FP_MOV<0x0114bc00, GPR, FPR64>,
+                    Sched<[WriteFMovFRHtoGRS, ReadFMovFRHtoGRS]>;
 let isCodeGenOnly = 1 in {
-def MOVFR2GR_S_64 : FP_MOV<0x0114b400, GPR, FPR64>;
-def FSEL_xD : FP_SEL<0x0d000000, FPR64>;
+def MOVFR2GR_S_64 : FP_MOV<0x0114b400, GPR, FPR64>,
+                    Sched<[WriteFMovFRtoGRS, ReadFMovFRtoGRS]>;
+def FSEL_xD : FP_SEL<0x0d000000, FPR64>,
+              Sched<[WriteFSEL, ReadFSEL, ReadFSEL, ReadFSEL]>;
 } // isCodeGenOnly = 1
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Constraints = "$dst = $out" in {
 def MOVGR2FRH_W : FPFmtMOV<0x0114ac00, (outs FPR64:$out),
                            (ins FPR64:$dst, GPR:$src),
-                           "$dst, $src">;
+                           "$dst, $src">,
+                  Sched<[WriteFMovGRtoFRHW, ReadFMovGRtoFRHW]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, Constraints = "$dst = $out"
 
 // Common Memory Access Instructions
-def FLD_D : FP_LOAD_2RI12<0x2b800000, FPR64>;
-def FST_D : FP_STORE_2RI12<0x2bc00000, FPR64>;
-def FLDX_D : FP_LOAD_3R<0x38340000, FPR64>;
-def FSTX_D : FP_STORE_3R<0x383c0000, FPR64>;
+def FLD_D : FP_LOAD_2RI12<0x2b800000, FPR64>,
+            Sched<[WriteFLD, ReadFMemBase]>;
+def FST_D : FP_STORE_2RI12<0x2bc00000, FPR64>,
+            Sched<[WriteFST, ReadFSTData, ReadFMemBase]>;
+def FLDX_D : FP_LOAD_3R<0x38340000, FPR64>,
+             Sched<[WriteFLDX, ReadFMemBase, ReadFMemOffset]>;
+def FSTX_D : FP_STORE_3R<0x383c0000, FPR64>,
+             Sched<[WriteFSTX, ReadFSTData, ReadFMemBase, ReadFMemOffset]>;
 
 // Bound Check Memory Access Instructions
-def FLDGT_D : FP_LOAD_3R<0x38748000, FPR64>;
-def FLDLE_D : FP_LOAD_3R<0x38758000, FPR64>;
-def FSTGT_D : FP_STORE_3R<0x38768000, FPR64>;
-def FSTLE_D : FP_STORE_3R<0x38778000, FPR64>;
+def FLDGT_D : FP_LOAD_3R<0x38748000, FPR64>,
+              Sched<[WriteFLDGT, ReadFMemBase, ReadFMemCmp]>;
+def FLDLE_D : FP_LOAD_3R<0x38758000, FPR64>, 
+              Sched<[WriteFLDLE, ReadFMemBase, ReadFMemCmp]>;
+def FSTGT_D : FP_STORE_3R<0x38768000, FPR64>,
+              Sched<[WriteFSTGT, ReadFSTData, ReadFMemBase, ReadFMemCmp]>;
+def FSTLE_D : FP_STORE_3R<0x38778000, FPR64>,
+              Sched<[WriteFSTLE, ReadFSTData, ReadFMemBase, ReadFMemCmp]>;
 
 } // Predicates = [HasBasicD]
 
 // Instructions only available on LA64
 let Predicates = [HasBasicD, IsLA64] in {
-def MOVGR2FR_D  : FP_MOV<0x0114a800, FPR64, GPR>;
-def MOVFR2GR_D  : FP_MOV<0x0114b800, GPR, FPR64>;
+def MOVGR2FR_D  : FP_MOV<0x0114a800, FPR64, GPR>,
+                  Sched<[WriteFMovGRtoFRD, ReadFMovGRtoFRD]>;
+def MOVFR2GR_D  : FP_MOV<0x0114b800, GPR, FPR64>,
+                  Sched<[WriteFMovFRtoGRD, ReadFMovFRtoGRD]>;
 } // Predicates = [HasBasicD, IsLA64]
 
 // Instructions only available on LA32
 let Predicates = [HasBasicD, IsLA32], isCodeGenOnly = 1 in {
-def MOVGR2FR_W_64 : FP_MOV<0x0114a400, FPR64, GPR>;
+def MOVGR2FR_W_64 : FP_MOV<0x0114a400, FPR64, GPR>,
+                    Sched<[WriteFMovGRtoFRW, ReadFMovGRtoFRW]>;
 } // Predicates = [HasBasicD, IsLA32], isCodeGenOnly = 1
 
 //===----------------------------------------------------------------------===//

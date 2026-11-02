@@ -129,7 +129,7 @@ body:             |
   ; CHECK:   [[COPY6:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK:   [[COPY7:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK:   [[COPY8:%[0-9]+]]:gr8 = COPY [[COPY7]].sub_8bit
-  ; CHECK:   TEST8ri killed [[COPY8]], 1, implicit-def $eflags
+  ; CHECK:   TEST8ri [[COPY8]], 1, implicit-def $eflags
   ; CHECK:   JCC_1 %bb.2, 4, implicit $eflags
   ; CHECK:   JMP_1 %bb.1
   ; CHECK: bb.1.if:
@@ -150,9 +150,9 @@ body:             |
   ; CHECK:   [[COPY14:%[0-9]+]]:vk1wm = COPY [[COPY13]]
   ; CHECK:   [[COPY15:%[0-9]+]]:vr128x = COPY [[COPY4]]
   ; CHECK:   [[DEF1:%[0-9]+]]:vr128 = IMPLICIT_DEF
-  ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF1]], [[COPY5]]
+  ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], [[COPY14]], [[DEF1]], [[COPY5]]
   ; CHECK:   [[COPY16:%[0-9]+]]:fr32x = COPY [[VMOVSSZrrk]]
-  ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, killed [[COPY16]] :: (store (s32) into %ir.fptr)
+  ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, [[COPY16]] :: (store (s32) into %ir.fptr)
   ; CHECK:   RET 0
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -167,7 +167,7 @@ body:             |
     %4 = COPY $rsi
     %3 = COPY $edi
     %11 = COPY %3.sub_8bit
-    TEST8ri killed %11, 1, implicit-def $eflags
+    TEST8ri %11, 1, implicit-def $eflags
     JCC_1 %bb.2, 4, implicit $eflags
     JMP_1 %bb.1
 
@@ -201,9 +201,9 @@ body:             |
     %18 = COPY %16
     %19 = COPY %6
     %21 = IMPLICIT_DEF
-    %20 = VMOVSSZrrk %19, killed %18, killed %21, %5
+    %20 = VMOVSSZrrk %19, %18, %21, %5
     %22 = COPY %20
-    VMOVSSZmr %4, 1, $noreg, 0, $noreg, killed %22 :: (store (s32) into %ir.fptr)
+    VMOVSSZmr %4, 1, $noreg, 0, $noreg, %22 :: (store (s32) into %ir.fptr)
     RET 0
 
 ...
@@ -284,8 +284,8 @@ body:             |
   ; CHECK:   [[DEF:%[0-9]+]]:vk32 = IMPLICIT_DEF
   ; CHECK:   [[COPY7:%[0-9]+]]:vk32 = COPY [[KADDBkk]]
   ; CHECK:   [[COPY8:%[0-9]+]]:vk8wm = COPY [[COPY7]]
-  ; CHECK:   [[VMOVAPDZrrk:%[0-9]+]]:vr512 = VMOVAPDZrrk [[COPY2]], killed [[COPY8]], [[COPY1]]
-  ; CHECK:   VMOVAPDZmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVAPDZrrk]]
+  ; CHECK:   [[VMOVAPDZrrk:%[0-9]+]]:vr512 = VMOVAPDZrrk [[COPY2]], [[COPY8]], [[COPY1]]
+  ; CHECK:   VMOVAPDZmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVAPDZrrk]]
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
@@ -314,8 +314,8 @@ body:             |
     %8 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %8, %18, %subreg.sub_8bit_hi
     %10 = COPY %9
-    %11 = VMOVAPDZrrk %2, killed %10, %1
-    VMOVAPDZmr %0, 1, $noreg, 0, $noreg, killed %11
+    %11 = VMOVAPDZrrk %2, %10, %1
+    VMOVAPDZmr %0, 1, $noreg, 0, $noreg, %11
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
     ; TEST8rr %18, %18, implicit-def $eflags
@@ -403,8 +403,8 @@ body:             |
   ; CHECK:   [[DEF:%[0-9]+]]:vk32 = IMPLICIT_DEF
   ; CHECK:   [[COPY7:%[0-9]+]]:vk32 = COPY [[KXORWkk]]
   ; CHECK:   [[COPY8:%[0-9]+]]:vk16wm = COPY [[COPY7]]
-  ; CHECK:   [[VMOVAPSZrrk:%[0-9]+]]:vr512 = VMOVAPSZrrk [[COPY2]], killed [[COPY8]], [[COPY1]]
-  ; CHECK:   VMOVAPSZmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVAPSZrrk]]
+  ; CHECK:   [[VMOVAPSZrrk:%[0-9]+]]:vr512 = VMOVAPSZrrk [[COPY2]], [[COPY8]], [[COPY1]]
+  ; CHECK:   VMOVAPSZmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVAPSZrrk]]
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
@@ -432,8 +432,8 @@ body:             |
     %8 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %8, %17, %subreg.sub_16bit
     %10 = COPY %9
-    %11 = VMOVAPSZrrk %2, killed %10, %1
-    VMOVAPSZmr %0, 1, $noreg, 0, $noreg, killed %11
+    %11 = VMOVAPSZrrk %2, %10, %1
+    VMOVAPSZmr %0, 1, $noreg, 0, $noreg, %11
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
     ; FIXME TEST16rr %17, %17, implicit-def $eflags
@@ -511,8 +511,8 @@ body:             |
   ; CHECK:   [[KANDNDkk:%[0-9]+]]:vk32 = KANDNDkk [[KXORDkk]], [[KORDkk]]
   ; CHECK:   [[KADDDkk:%[0-9]+]]:vk32 = KADDDkk [[KANDNDkk]], [[KXORDkk]]
   ; CHECK:   [[COPY3:%[0-9]+]]:vk32wm = COPY [[KADDDkk]]
-  ; CHECK:   [[VMOVDQU16Zrrk:%[0-9]+]]:vr512 = VMOVDQU16Zrrk [[COPY2]], killed [[COPY3]], [[COPY1]]
-  ; CHECK:   VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVDQU16Zrrk]]
+  ; CHECK:   [[VMOVDQU16Zrrk:%[0-9]+]]:vr512 = VMOVDQU16Zrrk [[COPY2]], [[COPY3]], [[COPY1]]
+  ; CHECK:   VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVDQU16Zrrk]]
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
@@ -535,8 +535,8 @@ body:             |
     %13 = ADD32rr %12, %11, implicit-def dead $eflags
 
     %3 = COPY %13
-    %4 = VMOVDQU16Zrrk %2, killed %3, %1
-    VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
+    %4 = VMOVDQU16Zrrk %2, %3, %1
+    VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, %4
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
     ; FIXME TEST32rr %13, %13, implicit-def $eflags
@@ -614,8 +614,8 @@ body:             |
   ; CHECK:   [[KANDNQkk:%[0-9]+]]:vk64 = KANDNQkk [[KXORQkk]], [[KORQkk]]
   ; CHECK:   [[KADDQkk:%[0-9]+]]:vk64 = KADDQkk [[KANDNQkk]], [[KXORQkk]]
   ; CHECK:   [[COPY3:%[0-9]+]]:vk64wm = COPY [[KADDQkk]]
-  ; CHECK:   [[VMOVDQU8Zrrk:%[0-9]+]]:vr512 = VMOVDQU8Zrrk [[COPY2]], killed [[COPY3]], [[COPY1]]
-  ; CHECK:   VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVDQU8Zrrk]]
+  ; CHECK:   [[VMOVDQU8Zrrk:%[0-9]+]]:vr512 = VMOVDQU8Zrrk [[COPY2]], [[COPY3]], [[COPY1]]
+  ; CHECK:   VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVDQU8Zrrk]]
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
@@ -638,8 +638,8 @@ body:             |
     %13 = ADD64rr %12, %11, implicit-def dead $eflags
 
     %3 = COPY %13
-    %4 = VMOVDQU8Zrrk %2, killed %3, %1
-    VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
+    %4 = VMOVDQU8Zrrk %2, %3, %1
+    VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, %4
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
     ; FIXME TEST64rr %13, %13, implicit-def $eflags
@@ -705,8 +705,8 @@ body:             |
     ; CHECK: [[COPY3:%[0-9]+]]:vk16 = COPY [[KMOVBkm]]
     ; CHECK: [[KNOTWkk:%[0-9]+]]:vk16 = KNOTWkk [[COPY3]]
     ; CHECK: [[COPY4:%[0-9]+]]:vk16wm = COPY [[KNOTWkk]]
-    ; CHECK: [[VMOVAPSZrrk:%[0-9]+]]:vr512 = VMOVAPSZrrk [[COPY2]], killed [[COPY4]], [[COPY1]]
-    ; CHECK: VMOVAPSZmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVAPSZrrk]]
+    ; CHECK: [[VMOVAPSZrrk:%[0-9]+]]:vr512 = VMOVAPSZrrk [[COPY2]], [[COPY4]], [[COPY1]]
+    ; CHECK: VMOVAPSZmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVAPSZrrk]]
     ; CHECK: RET 0
     %0 = COPY $rdi
     %1 = COPY $zmm0
@@ -716,8 +716,8 @@ body:             |
     %6 = NOT16r %5
 
     %3 = COPY %6
-    %4 = VMOVAPSZrrk %2, killed %3, %1
-    VMOVAPSZmr %0, 1, $noreg, 0, $noreg, killed %4
+    %4 = VMOVAPSZrrk %2, %3, %1
+    VMOVAPSZmr %0, 1, $noreg, 0, $noreg, %4
     RET 0
 
 ...
@@ -777,8 +777,8 @@ body:             |
     ; CHECK: [[COPY4:%[0-9]+]]:vk32 = COPY [[KMOVWkm]]
     ; CHECK: [[KADDDkk:%[0-9]+]]:vk32 = KADDDkk [[COPY3]], [[COPY4]]
     ; CHECK: [[COPY5:%[0-9]+]]:vk64wm = COPY [[KADDDkk]]
-    ; CHECK: [[VMOVDQU16Zrrk:%[0-9]+]]:vr512 = VMOVDQU16Zrrk [[COPY2]], killed [[COPY5]], [[COPY1]]
-    ; CHECK: VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVDQU16Zrrk]]
+    ; CHECK: [[VMOVDQU16Zrrk:%[0-9]+]]:vr512 = VMOVDQU16Zrrk [[COPY2]], [[COPY5]], [[COPY1]]
+    ; CHECK: VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVDQU16Zrrk]]
     ; CHECK: RET 0
     %0 = COPY $rdi
     %1 = COPY $zmm0
@@ -789,8 +789,8 @@ body:             |
     %7 = ADD32rr %5, %6, implicit-def dead $eflags
 
     %3 = COPY %7
-    %4 = VMOVDQU16Zrrk %2, killed %3, %1
-    VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
+    %4 = VMOVDQU16Zrrk %2, %3, %1
+    VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, %4
     RET 0
 
 ...
@@ -850,8 +850,8 @@ body:             |
     ; CHECK: [[COPY4:%[0-9]+]]:vk64 = COPY [[KMOVWkm]]
     ; CHECK: [[KADDQkk:%[0-9]+]]:vk64 = KADDQkk [[COPY3]], [[COPY4]]
     ; CHECK: [[COPY5:%[0-9]+]]:vk64wm = COPY [[KADDQkk]]
-    ; CHECK: [[VMOVDQU8Zrrk:%[0-9]+]]:vr512 = VMOVDQU8Zrrk [[COPY2]], killed [[COPY5]], [[COPY1]]
-    ; CHECK: VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, killed [[VMOVDQU8Zrrk]]
+    ; CHECK: [[VMOVDQU8Zrrk:%[0-9]+]]:vr512 = VMOVDQU8Zrrk [[COPY2]], [[COPY5]], [[COPY1]]
+    ; CHECK: VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVDQU8Zrrk]]
     ; CHECK: RET 0
     %0 = COPY $rdi
     %1 = COPY $zmm0
@@ -862,8 +862,8 @@ body:             |
     %7 = ADD64rr %5, %6, implicit-def dead $eflags
 
     %3 = COPY %7
-    %4 = VMOVDQU8Zrrk %2, killed %3, %1
-    VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, killed %4
+    %4 = VMOVDQU8Zrrk %2, %3, %1
+    VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, %4
     RET 0
 
 ...

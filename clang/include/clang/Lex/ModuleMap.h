@@ -517,14 +517,25 @@ public:
   bool isHeaderUnavailableInModule(FileEntryRef Header,
                                    const Module *RequestingModule) const;
 
-  /// Retrieve a module with the given name.
+  /// Retrieve an already loaded module with the given name.
   ///
   /// \param Name The name of the module to look up.
   ///
-  /// \returns The named module, if known; otherwise, returns null.
+  /// \returns The named module, if loaded; otherwise, returns null.
   Module *findModule(StringRef Name) const;
 
   Module *findOrLoadModule(StringRef Name);
+
+  /// Determine if a top-level module named \p Name was loaded or parsed.
+  bool isModuleKnown(StringRef Name) const {
+    return Modules.contains(Name) || ParsedModules.contains(Name);
+  }
+
+  /// Find the module map that defines the top-level module \p Name, without
+  /// loading it.
+  /// For an inferred module, this is the module map that allows inferring it
+  /// and requires loading.
+  OptionalFileEntryRef getModuleMapFileForName(StringRef Name) const;
 
   Module *findOrInferSubmodule(Module *Parent, StringRef Name);
 
@@ -731,6 +742,14 @@ public:
                              const Twine &NameAsWritten,
                              const Twine &PathRelativeToRootModuleDirectory,
                              SourceLocation Loc = SourceLocation());
+
+  /// Record that \p Mod depends on the listing of \p Dir. \p Dir is a VFS path.
+  void recordDirectoryDependencies(Module *Mod, StringRef Dir);
+
+  /// Spell \p Path the way directory dependencies are recorded: absolute, with
+  /// dots removed.
+  static void canonicalizeDirectoryDependency(const FileManager &FileMgr,
+                                              SmallVectorImpl<char> &Path);
 
   /// Sets the umbrella directory of the given module to the given directory.
   void setUmbrellaDirAsWritten(Module *Mod, DirectoryEntryRef UmbrellaDir,

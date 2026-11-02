@@ -23,19 +23,19 @@ body: |
     ; CHECK-NEXT: [[MOVsi:%[0-9]+]]:gpr = MOVsi [[COPY1]], 27, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: [[ORRrsi:%[0-9]+]]:gpr = ORRrsi [[MOVsi]], [[COPY1]], 234, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: [[MOVsi1:%[0-9]+]]:gpr = MOVsi [[COPY1]], 155, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK-NEXT: [[ORRrsi1:%[0-9]+]]:gprnopc = ORRrsi killed [[MOVsi1]], killed [[MOVsi]], 106, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[ORRrsi1:%[0-9]+]]:gprnopc = ORRrsi [[MOVsi1]], [[MOVsi]], 106, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: TSTri [[COPY1]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-    ; CHECK-NEXT: [[UXTH:%[0-9]+]]:gprnopc = UXTH killed [[ORRrsi1]], 0, 0 /* CC::eq */, $cpsr, implicit [[ORRrsi]](tied-def 0)
-    ; CHECK-NEXT: $r0 = COPY killed [[UXTH]]
+    ; CHECK-NEXT: [[UXTH:%[0-9]+]]:gprnopc = UXTH [[ORRrsi1]], 0, 0 /* CC::eq */, $cpsr, implicit [[ORRrsi]](tied-def 0)
+    ; CHECK-NEXT: $r0 = COPY [[UXTH]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gpr = COPY $r0
     %1:gpr = COPY $r1
     %2:gpr = MOVsi %1:gpr, 27, 14, $noreg, $noreg
     %3:gpr = ORRrsi %2:gpr, %1:gpr, 234, 14, $noreg, $noreg
     %4:gpr = MOVsi %1:gpr, 155, 14, $noreg, $noreg
-    %5:gprnopc = ORRrsi killed %4:gpr, killed %2:gpr, 106, 14, $noreg, $noreg
-    %6:gprnopc = UXTH killed %5:gprnopc, 0, 14, $noreg
+    %5:gprnopc = ORRrsi %4:gpr, %2:gpr, 106, 14, $noreg, $noreg
+    %6:gprnopc = UXTH %5:gprnopc, 0, 14, $noreg
     TSTri %1:gpr, 1, 14, $noreg, implicit-def $cpsr
-    %7:gpr = MOVCCr %3:gpr, killed %6:gprnopc, 0, $cpsr
-    $r0 = COPY killed %7
+    %7:gpr = MOVCCr %3:gpr, %6:gprnopc, 0, $cpsr
+    $r0 = COPY %7
     BX_RET 14, $noreg, implicit $r0

@@ -8,6 +8,8 @@
 //
 // UNSUPPORTED: no-threads, c++03
 
+// UNSUPPORTED: libcpp-abi-compact-locale-id
+
 // <mutex>
 
 // Check the ABI of std::locale::id

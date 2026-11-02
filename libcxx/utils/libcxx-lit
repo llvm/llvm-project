@@ -50,7 +50,7 @@ fi
 
 if [[ "${type}" == "runtimes" ]]; then
         echo "N.B.: In a bootstrap build, lit needs a prefix to work correctly;"
-        echo "      See libcxx/docs/Testinglibcxx.rst for more information."
+        echo "      See libcxx/docs/TestingLibcxx.md for more information."
 fi
 "${CMAKE}" --build "${build_dir}" --target ${type}-test-depends
 "${build_dir}/bin/llvm-lit" ${@}

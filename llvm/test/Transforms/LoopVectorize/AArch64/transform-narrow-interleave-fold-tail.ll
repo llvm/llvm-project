@@ -66,6 +66,7 @@ define void @load_store_interleave_group(ptr noalias %data, i64 %n) {
 ; SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; SVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; SVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
+; SVE-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVE:       [[VECTOR_BODY]]:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -80,10 +81,10 @@ define void @load_store_interleave_group(ptr noalias %data, i64 %n) {
 ; SVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> [[TMP4]], <vscale x 2 x i64> [[TMP5]])
 ; SVE-NEXT:    [[INTERLEAVED_MASK1:%.*]] = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; SVE-NEXT:    call void @llvm.masked.store.nxv4i64.p0(<vscale x 4 x i64> [[INTERLEAVED_VEC]], ptr align 8 [[TMP3]], <vscale x 4 x i1> [[INTERLEAVED_MASK1]])
-; SVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; SVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
+; SVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; SVE-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; SVE-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
+; SVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
 ; SVE-NEXT:    br label %[[EXIT:.*]]

@@ -458,7 +458,7 @@ protected:
 
 #if __SIZEOF_POINTER__ == 8
 static_assert(
-    sizeof(lldb_private::Symbol) == 80,
+    sizeof(lldb_private::Symbol) == 72,
     "Symbol is a high volume data type, size must be increased with care");
 #endif
 

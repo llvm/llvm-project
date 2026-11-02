@@ -44,6 +44,36 @@ llvm.func @convert_f32x2_to_f8x2_vector_return(%srcA : f32, %srcB : f32) {
   llvm.return
 }
 
+// CHECK-LABEL: @convert_f32x2_to_f8x2_rz_pzo
+llvm.func @convert_f32x2_to_f8x2_rz_pzo(%srcA : f32, %srcB : f32) {
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e4m3x2.rz(float %{{.*}}, float %{{.*}}, i1 false)
+  %res1 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rz> sat = <satfinite> : i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e4m3x2.rz.relu(float %{{.*}}, float %{{.*}}, i1 false)
+  %res2 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rz> sat = <satfinite> relu = true : i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e4m3x2.rn(float %{{.*}}, float %{{.*}}, i1 true)
+  %res3 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rn> sat = <satfinite> pzo = true : i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e4m3x2.rn.relu(float %{{.*}}, float %{{.*}}, i1 true)
+  %res4 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rn> sat = <satfinite> relu = true pzo = true : i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e4m3x2.rz(float %{{.*}}, float %{{.*}}, i1 true)
+  %res5 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rz> sat = <satfinite> pzo = true : i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e4m3x2.rz.relu(float %{{.*}}, float %{{.*}}, i1 true)
+  %res6 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rz> sat = <satfinite> relu = true pzo = true : i16 (f8E4M3FN)
+
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e5m2x2.rz(float %{{.*}}, float %{{.*}}, i1 false)
+  %res7 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rz> sat = <satfinite> : i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e5m2x2.rz.relu(float %{{.*}}, float %{{.*}}, i1 false)
+  %res8 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rz> sat = <satfinite> relu = true : i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e5m2x2.rn(float %{{.*}}, float %{{.*}}, i1 true)
+  %res9 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rn> sat = <satfinite> pzo = true : i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e5m2x2.rn.relu(float %{{.*}}, float %{{.*}}, i1 true)
+  %res10 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rn> sat = <satfinite> relu = true pzo = true : i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e5m2x2.rz(float %{{.*}}, float %{{.*}}, i1 true)
+  %res11 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rz> sat = <satfinite> pzo = true : i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.ff.to.e5m2x2.rz.relu(float %{{.*}}, float %{{.*}}, i1 true)
+  %res12 = nvvm.convert.f32x2.to.f8x2 %srcA, %srcB rnd = <rz> sat = <satfinite> relu = true pzo = true : i16 (f8E5M2)
+  llvm.return
+}
+
 // -----
 
 // CHECK-LABEL: @convert_f16x2_to_f8x2_e4m3
@@ -72,6 +102,36 @@ llvm.func @convert_f16x2_to_f8x2_vector_return(%src : vector<2xf16>) {
   // CHECK: %[[res2:.*]] = call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn(<2 x half> %{{.*}}, i1 false)
   // CHECK-NEXT: %{{.*}} = bitcast i16 %[[res2]] to <2 x i8>
   %res2 = nvvm.convert.f16x2.to.f8x2 %src : vector<2xf16> -> vector<2xi8> (f8E5M2)
+  llvm.return
+}
+
+// CHECK-LABEL: @convert_f16x2_to_f8x2_rz_pzo
+llvm.func @convert_f16x2_to_f8x2_rz_pzo(%src : vector<2xf16>) {
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e4m3x2.rz(<2 x half> %{{.*}}, i1 false)
+  %res1 = nvvm.convert.f16x2.to.f8x2 %src rnd = <rz> : vector<2xf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e4m3x2.rz.relu(<2 x half> %{{.*}}, i1 false)
+  %res2 = nvvm.convert.f16x2.to.f8x2 %src rnd = <rz> relu = true : vector<2xf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn(<2 x half> %{{.*}}, i1 true)
+  %res3 = nvvm.convert.f16x2.to.f8x2 %src pzo = true : vector<2xf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn.relu(<2 x half> %{{.*}}, i1 true)
+  %res4 = nvvm.convert.f16x2.to.f8x2 %src relu = true pzo = true : vector<2xf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e4m3x2.rz(<2 x half> %{{.*}}, i1 true)
+  %res5 = nvvm.convert.f16x2.to.f8x2 %src rnd = <rz> pzo = true : vector<2xf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e4m3x2.rz.relu(<2 x half> %{{.*}}, i1 true)
+  %res6 = nvvm.convert.f16x2.to.f8x2 %src rnd = <rz> relu = true pzo = true : vector<2xf16> -> i16 (f8E4M3FN)
+
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e5m2x2.rz(<2 x half> %{{.*}}, i1 false)
+  %res7 = nvvm.convert.f16x2.to.f8x2 %src rnd = <rz> : vector<2xf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e5m2x2.rz.relu(<2 x half> %{{.*}}, i1 false)
+  %res8 = nvvm.convert.f16x2.to.f8x2 %src rnd = <rz> relu = true : vector<2xf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn(<2 x half> %{{.*}}, i1 true)
+  %res9 = nvvm.convert.f16x2.to.f8x2 %src pzo = true : vector<2xf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn.relu(<2 x half> %{{.*}}, i1 true)
+  %res10 = nvvm.convert.f16x2.to.f8x2 %src relu = true pzo = true : vector<2xf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e5m2x2.rz(<2 x half> %{{.*}}, i1 true)
+  %res11 = nvvm.convert.f16x2.to.f8x2 %src rnd = <rz> pzo = true : vector<2xf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.f16x2.to.e5m2x2.rz.relu(<2 x half> %{{.*}}, i1 true)
+  %res12 = nvvm.convert.f16x2.to.f8x2 %src rnd = <rz> relu = true pzo = true : vector<2xf16> -> i16 (f8E5M2)
   llvm.return
 }
 
@@ -123,6 +183,36 @@ llvm.func @convert_bf16x2_to_f8x2_vector_return(%src : vector<2xbf16>) {
   // CHECK: %[[res4:.*]] = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rn.relu.satfinite(<2 x bfloat> %{{.*}}, i1 false)
   // CHECK-NEXT: %{{.*}} = bitcast i16 %[[res4]] to <2 x i8>
   %res4 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rn> sat = <satfinite> relu = true : vector<2xbf16> -> vector<2xi8> (f8E5M2)
+  llvm.return
+}
+
+// CHECK-LABEL: @convert_bf16x2_to_f8x2_rz_pzo
+llvm.func @convert_bf16x2_to_f8x2_rz_pzo(%src : vector<2xbf16>) {
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rz.satfinite(<2 x bfloat> %{{.*}}, i1 false)
+  %res1 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rz> sat = <satfinite> : vector<2xbf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rz.relu.satfinite(<2 x bfloat> %{{.*}}, i1 false)
+  %res2 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rz> sat = <satfinite> relu = true : vector<2xbf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rn.satfinite(<2 x bfloat> %{{.*}}, i1 true)
+  %res3 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rn> sat = <satfinite> pzo = true : vector<2xbf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rn.relu.satfinite(<2 x bfloat> %{{.*}}, i1 true)
+  %res4 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rn> sat = <satfinite> relu = true pzo = true : vector<2xbf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rz.satfinite(<2 x bfloat> %{{.*}}, i1 true)
+  %res5 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rz> sat = <satfinite> pzo = true : vector<2xbf16> -> i16 (f8E4M3FN)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rz.relu.satfinite(<2 x bfloat> %{{.*}}, i1 true)
+  %res6 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rz> sat = <satfinite> relu = true pzo = true : vector<2xbf16> -> i16 (f8E4M3FN)
+
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rz.satfinite(<2 x bfloat> %{{.*}}, i1 false)
+  %res7 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rz> sat = <satfinite> : vector<2xbf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rz.relu.satfinite(<2 x bfloat> %{{.*}}, i1 false)
+  %res8 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rz> sat = <satfinite> relu = true : vector<2xbf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rn.satfinite(<2 x bfloat> %{{.*}}, i1 true)
+  %res9 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rn> sat = <satfinite> pzo = true : vector<2xbf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rn.relu.satfinite(<2 x bfloat> %{{.*}}, i1 true)
+  %res10 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rn> sat = <satfinite> relu = true pzo = true : vector<2xbf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rz.satfinite(<2 x bfloat> %{{.*}}, i1 true)
+  %res11 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rz> sat = <satfinite> pzo = true : vector<2xbf16> -> i16 (f8E5M2)
+  // CHECK: %{{.*}} = call i16 @llvm.nvvm.bf16x2.to.e5m2x2.rz.relu.satfinite(<2 x bfloat> %{{.*}}, i1 true)
+  %res12 = nvvm.convert.bf16x2.to.f8x2 %src rnd = <rz> sat = <satfinite> relu = true pzo = true : vector<2xbf16> -> i16 (f8E5M2)
   llvm.return
 }
 

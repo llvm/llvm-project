@@ -42,9 +42,11 @@ void shouldGenerateUnionAccess(union U u) {
 // CIR:   cir.store{{.*}} %{{.+}}, %[[#BASE]] : !cir.double, !cir.ptr<!cir.double>
 // CIR:   %[[#BASE:]] = cir.get_member %[[U]][4] {name = "d"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.double>
 
-// LLVM: define {{.*}}shouldGenerateUnionAccess1U(i64 %{{[^,)]+}})
-// LLVM:   %[[BASE:.*]] = alloca %union.U
-// LLVM:   store %union.U %{{.*}}, ptr %[[BASE]]
+// LLVM: define {{.*}}shouldGenerateUnionAccess1U(i64 %[[ARG:[^,)]+]])
+// LLVM:   %[[SLOT:.*]] = alloca i64, align 8
+// LLVM:   store i64 %[[ARG]], ptr %[[SLOT]], align 8
+// LLVM:   %[[BASE:.*]] = alloca %union.U, align 8
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[BASE]], ptr align 8 %[[SLOT]], i64 8, i1 false)
 // LLVM:   store i8 1, ptr %[[BASE]]
 // LLVM:   store i32 1, ptr %[[BASE]]
 // LLVM:   store float 1.000000e-01, ptr %[[BASE]]

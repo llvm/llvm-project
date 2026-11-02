@@ -6,6 +6,30 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @sve-itofp() {
 ; CHECK-LABEL: 'sve-itofp'
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si8_to_f16 = sitofp <vscale x 1 x i8> poison to <vscale x 1 x half>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui8_to_f16 = uitofp <vscale x 1 x i8> poison to <vscale x 1 x half>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si16_to_f16 = sitofp <vscale x 1 x i16> poison to <vscale x 1 x half>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui16_to_f16 = uitofp <vscale x 1 x i16> poison to <vscale x 1 x half>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si32_to_f16 = sitofp <vscale x 1 x i32> poison to <vscale x 1 x half>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui32_to_f16 = uitofp <vscale x 1 x i32> poison to <vscale x 1 x half>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si64_to_f16 = sitofp <vscale x 1 x i64> poison to <vscale x 1 x half>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui64_to_f16 = uitofp <vscale x 1 x i64> poison to <vscale x 1 x half>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si8_to_f32 = sitofp <vscale x 1 x i8> poison to <vscale x 1 x float>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui8_to_f32 = uitofp <vscale x 1 x i8> poison to <vscale x 1 x float>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si16_to_f32 = sitofp <vscale x 1 x i16> poison to <vscale x 1 x float>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui16_to_f32 = uitofp <vscale x 1 x i16> poison to <vscale x 1 x float>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si32_to_f32 = sitofp <vscale x 1 x i32> poison to <vscale x 1 x float>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui32_to_f32 = uitofp <vscale x 1 x i32> poison to <vscale x 1 x float>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si64_to_f32 = sitofp <vscale x 1 x i64> poison to <vscale x 1 x float>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui64_to_f32 = uitofp <vscale x 1 x i64> poison to <vscale x 1 x float>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si8_to_f64 = sitofp <vscale x 1 x i8> poison to <vscale x 1 x double>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui8_to_f64 = uitofp <vscale x 1 x i8> poison to <vscale x 1 x double>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si16_to_f64 = sitofp <vscale x 1 x i16> poison to <vscale x 1 x double>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui16_to_f64 = uitofp <vscale x 1 x i16> poison to <vscale x 1 x double>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si32_to_f64 = sitofp <vscale x 1 x i32> poison to <vscale x 1 x double>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui32_to_f64 = uitofp <vscale x 1 x i32> poison to <vscale x 1 x double>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1si64_to_f64 = sitofp <vscale x 1 x i64> poison to <vscale x 1 x double>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nv1ui64_to_f64 = uitofp <vscale x 1 x i64> poison to <vscale x 1 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nv2si8_to_f16 = sitofp <vscale x 2 x i8> poison to <vscale x 2 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nv2ui8_to_f16 = uitofp <vscale x 2 x i8> poison to <vscale x 2 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nv2si16_to_f16 = sitofp <vscale x 2 x i16> poison to <vscale x 2 x half>
@@ -104,6 +128,33 @@ define void @sve-itofp() {
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %nv16ui64_to_f64 = uitofp <vscale x 16 x i64> poison to <vscale x 16 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+
+  %nv1si8_to_f16  = sitofp <vscale x 1 x i8> poison to <vscale x 1 x half>
+  %nv1ui8_to_f16  = uitofp <vscale x 1 x i8> poison to <vscale x 1 x half>
+  %nv1si16_to_f16 = sitofp <vscale x 1 x i16> poison to <vscale x 1 x half>
+  %nv1ui16_to_f16 = uitofp <vscale x 1 x i16> poison to <vscale x 1 x half>
+  %nv1si32_to_f16 = sitofp <vscale x 1 x i32> poison to <vscale x 1 x half>
+  %nv1ui32_to_f16 = uitofp <vscale x 1 x i32> poison to <vscale x 1 x half>
+  %nv1si64_to_f16 = sitofp <vscale x 1 x i64> poison to <vscale x 1 x half>
+  %nv1ui64_to_f16 = uitofp <vscale x 1 x i64> poison to <vscale x 1 x half>
+
+  %nv1si8_to_f32  = sitofp <vscale x 1 x i8> poison to <vscale x 1 x float>
+  %nv1ui8_to_f32  = uitofp <vscale x 1 x i8> poison to <vscale x 1 x float>
+  %nv1si16_to_f32 = sitofp <vscale x 1 x i16> poison to <vscale x 1 x float>
+  %nv1ui16_to_f32 = uitofp <vscale x 1 x i16> poison to <vscale x 1 x float>
+  %nv1si32_to_f32 = sitofp <vscale x 1 x i32> poison to <vscale x 1 x float>
+  %nv1ui32_to_f32 = uitofp <vscale x 1 x i32> poison to <vscale x 1 x float>
+  %nv1si64_to_f32 = sitofp <vscale x 1 x i64> poison to <vscale x 1 x float>
+  %nv1ui64_to_f32 = uitofp <vscale x 1 x i64> poison to <vscale x 1 x float>
+
+  %nv1si8_to_f64  = sitofp <vscale x 1 x i8> poison to <vscale x 1 x double>
+  %nv1ui8_to_f64  = uitofp <vscale x 1 x i8> poison to <vscale x 1 x double>
+  %nv1si16_to_f64 = sitofp <vscale x 1 x i16> poison to <vscale x 1 x double>
+  %nv1ui16_to_f64 = uitofp <vscale x 1 x i16> poison to <vscale x 1 x double>
+  %nv1si32_to_f64 = sitofp <vscale x 1 x i32> poison to <vscale x 1 x double>
+  %nv1ui32_to_f64 = uitofp <vscale x 1 x i32> poison to <vscale x 1 x double>
+  %nv1si64_to_f64 = sitofp <vscale x 1 x i64> poison to <vscale x 1 x double>
+  %nv1ui64_to_f64 = uitofp <vscale x 1 x i64> poison to <vscale x 1 x double>
 
   %nv2si8_to_f16  = sitofp <vscale x 2 x i8> poison to <vscale x 2 x half>
   %nv2ui8_to_f16  = uitofp <vscale x 2 x i8> poison to <vscale x 2 x half>

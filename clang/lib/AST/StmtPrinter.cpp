@@ -507,7 +507,7 @@ void StmtPrinter::VisitIndirectGotoStmt(IndirectGotoStmt *Node) {
 
 void StmtPrinter::VisitContinueStmt(ContinueStmt *Node) {
   Indent();
-  if (Node->hasLabelTarget())
+  if (Node->isNamed())
     OS << "continue " << Node->getLabelDecl()->getIdentifier()->getName()
        << ';';
   else
@@ -517,7 +517,7 @@ void StmtPrinter::VisitContinueStmt(ContinueStmt *Node) {
 
 void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
   Indent();
-  if (Node->hasLabelTarget())
+  if (Node->isNamed())
     OS << "break " << Node->getLabelDecl()->getIdentifier()->getName() << ';';
   else
     OS << "break;";
@@ -2676,8 +2676,17 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
 }
 
 void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): add support for the remaining reflection kinds.
+  OS << "^^";
+  switch (S->getKind()) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    break;
+  case ReflectionKind::Type:
+    S->getTypeSourceInfo()->getType().print(OS, Policy);
+    break;
+  }
 }
 
 void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {

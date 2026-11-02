@@ -13,6 +13,9 @@ tablegen(LLVM MSP430GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM MSP430GenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM MSP430GenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS MSP430Options.td)
+tablegen(LLVM MSP430Options.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(MSP430CommonTableGen)
 
 add_llvm_target(MSP430CodeGen
@@ -38,6 +41,7 @@ add_llvm_target(MSP430CodeGen
   MC
   MSP430Desc
   MSP430Info
+  Option
   Passes
   SelectionDAG
   Support

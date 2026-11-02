@@ -86,9 +86,7 @@ public:
   SPIRVEnvType getEnv() const { return Env; }
   bool isKernel() const { return getEnv() == Kernel; }
   bool isShader() const { return getEnv() == Shader; }
-  bool isLogicalSPIRV() const {
-    return TargetTriple.getArch() == Triple::spirv;
-  }
+  bool isLogicalSPIRV() const { return TargetTriple.isSPIRVLogical(); }
   bool isPhysicalSPIRV() const {
     return TargetTriple.getArch() == Triple::spirv32 ||
            TargetTriple.getArch() == Triple::spirv64;
@@ -139,13 +137,6 @@ public:
   static bool classof(const TargetSubtargetInfo *ST) {
     return ST->getTargetTriple().isSPIRV();
   }
-
-  static constexpr unsigned MaxLegalAddressSpace = 6;
-
-  // Adds known SPIR-V extensions to the global list of allowed extensions that
-  // SPIRVSubtarget module owns as
-  // cl::opt<ExtensionSet, ...> global variable.
-  static void addExtensionsToClOpt(const ExtensionSet &AllowList);
 };
 } // namespace llvm
 

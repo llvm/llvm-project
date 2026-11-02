@@ -1,0 +1,15 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!void = !cir.void
+#false = #cir.bool<false> : !cir.bool
+!s8i = !cir.int<s, 8>
+
+module {
+  cir.func @test_coro_noop() {
+    %0 = cir.token.none
+    %1 = cir.const #false
+    %2 = cir.coro.intrinsic.suspend(%0, %1) : (token, !cir.bool) -> !s8i
+    // CHECK: cir.coro.intrinsic.suspend(%0, %1) : (token, !cir.bool) -> !s8i
+    cir.return
+  }
+}

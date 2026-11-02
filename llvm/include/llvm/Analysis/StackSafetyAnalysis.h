@@ -20,6 +20,9 @@
 namespace llvm {
 
 class AllocaInst;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 class ScalarEvolution;
 
 /// Interface to access stack safety analysis results for single function.
@@ -168,7 +171,11 @@ public:
 
 LLVM_ABI bool needsParamAccessSummary(const Module &M);
 
-LLVM_ABI void generateParamAccessSummary(ModuleSummaryIndex &Index);
+/// Reads -stack-safety-max-iterations from LibraryOptions, or its global value
+/// if null.
+LLVM_ABI void
+generateParamAccessSummary(const cl::LibraryOptionsContext *LibraryOptions,
+                           ModuleSummaryIndex &Index);
 
 } // end namespace llvm
 

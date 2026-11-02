@@ -16,7 +16,7 @@
 
 func.func @test_call_effects(%arg0: !fir.ref<f32>) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 arg 1 {test.ptr = "x", uniq_name = "_QFtestEx"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtestEx") {test.ptr = "x"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   fir.call @test_pure_call() {test.ptr = "pure_call"} : () -> ()
   fir.call @test_impure_call() {test.ptr = "impure_call"} : () -> ()
   return

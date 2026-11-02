@@ -21,11 +21,14 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
   void clinger_fast_path_test(const StorageType inputMantissa,
                               const int32_t inputExp10,
                               const StorageType expectedOutputMantissa,
-                              const uint32_t expectedOutputExp2) {
+                              const uint32_t expectedOutputExp2,
+                              const internal::RoundDirection round =
+                                  internal::RoundDirection::Nearest) {
     StorageType actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
 
-    auto result = internal::clinger_fast_path<T>({inputMantissa, inputExp10});
+    auto result =
+        internal::clinger_fast_path<T>({inputMantissa, inputExp10}, round);
 
     ASSERT_TRUE(result.has_value());
 
@@ -37,9 +40,12 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
   }
 
   void clinger_fast_path_fails_test(const StorageType inputMantissa,
-                                    const int32_t inputExp10) {
-    ASSERT_FALSE(internal::clinger_fast_path<T>({inputMantissa, inputExp10})
-                     .has_value());
+                                    const int32_t inputExp10,
+                                    const internal::RoundDirection round =
+                                        internal::RoundDirection::Nearest) {
+    ASSERT_FALSE(
+        internal::clinger_fast_path<T>({inputMantissa, inputExp10}, round)
+            .has_value());
   }
 
   void eisel_lemire_test(const StorageType inputMantissa,

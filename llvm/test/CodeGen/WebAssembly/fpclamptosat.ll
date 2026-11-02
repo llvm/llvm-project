@@ -1068,6 +1068,19 @@ entry:
   ret i32 %conv6
 }
 
+; A zero clamp is not saturation bound, so umin(fptoui(x), 0) should fold to 0.
+define i32 @utest_f32i32_zero(float %x) {
+; CHECK-LABEL: utest_f32i32_zero:
+; CHECK:         .functype utest_f32i32_zero (f32) -> (i32)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %conv = fptoui float %x to i32
+  %spec.store.select = call i32 @llvm.umin.i32(i32 %conv, i32 0)
+  ret i32 %spec.store.select
+}
+
 define i32 @ustest_f32i32_mm(float %x) {
 ; CHECK-LABEL: ustest_f32i32_mm:
 ; CHECK:         .functype ustest_f32i32_mm (f32) -> (i32)

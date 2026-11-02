@@ -57,6 +57,16 @@ std::optional<Attribute> EnumInfo::asEnumAttr() const {
 
 bool EnumInfo::isBitEnum() const { return isSubClassOf("BitEnumBase"); }
 
+bool EnumInfo::isNewStyleBitEnum() const {
+  return isBitEnum() && !printBitEnumQuoted();
+}
+
+bool EnumInfo::hasParserPrinter() const {
+  std::optional<Attribute> enumAttrInfo = asEnumAttr();
+  return !getUnderlyingType().empty() &&
+         (!enumAttrInfo || !enumAttrInfo->getConstBuilderTemplate().empty());
+}
+
 StringRef EnumInfo::getEnumClassName() const {
   return def->getValueAsString("className");
 }
@@ -71,6 +81,10 @@ StringRef EnumInfo::getDescription() const {
 
 StringRef EnumInfo::getCppNamespace() const {
   return def->getValueAsString("cppNamespace");
+}
+
+std::string EnumInfo::getQualifiedName() const {
+  return (getCppNamespace() + "::" + getEnumClassName()).str();
 }
 
 int64_t EnumInfo::getBitwidth() const { return def->getValueAsInt("bitwidth"); }

@@ -122,10 +122,6 @@ protected:
     return HSAMetadataDoc->getRoot().getMap(/*Convert=*/true)[Key];
   }
 
-  msgpack::DocNode &getHSAMetadataRoot() {
-    return HSAMetadataDoc->getRoot();
-  }
-
 public:
   MetadataStreamerMsgPackV4() = default;
   ~MetadataStreamerMsgPackV4() override = default;

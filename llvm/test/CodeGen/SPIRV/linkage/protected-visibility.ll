@@ -7,8 +7,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %t/opencl.ll -o - -filetype=obj | spirv-val %}
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3-compute %t/vulkan.ll -o - | FileCheck %s
-; FIXME: re-enable validator check when spirv-val allows Linkage in vulkan env.
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %t/vulkan.ll -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %t/vulkan.ll -o - -filetype=obj | spirv-val %}
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-library %t/vulkan-lib.ll -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-library %t/vulkan-lib.ll -o - -filetype=obj | spirv-val %}

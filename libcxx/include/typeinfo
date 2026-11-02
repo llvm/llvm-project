@@ -195,10 +195,6 @@ struct __string_impl_base {
   __type_name_to_string(__type_name_t __v) _NOEXCEPT {
     return __v;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR static __type_name_t
-  __string_to_type_name(const char* __v) _NOEXCEPT {
-    return __v;
-  }
 };
 
 struct __unique_impl : __string_impl_base {
@@ -233,9 +229,6 @@ struct __non_unique_arm_rtti_bit_impl {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static const char* __type_name_to_string(__type_name_t __v) _NOEXCEPT {
     return reinterpret_cast<const char*>(__v & ~__non_unique_rtti_bit::value);
-  }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static __type_name_t __string_to_type_name(const char* __v) _NOEXCEPT {
-    return reinterpret_cast<__type_name_t>(__v);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static size_t __hash(__type_name_t __v) _NOEXCEPT {
@@ -303,8 +296,6 @@ protected:
   typedef __type_info_implementations::__impl __impl;
 
   _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION __impl::__type_name_t __type_name;
-
-  _LIBCPP_HIDE_FROM_ABI explicit type_info(const char* __n) : __type_name(__impl::__string_to_type_name(__n)) {}
 
 public:
   virtual ~type_info();

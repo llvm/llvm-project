@@ -119,6 +119,15 @@ private:
   bool GetRegisterValue(const lldb_private::RegisterInfo &reg_info,
                         lldb_private::RegisterValue &reg_value);
 
+  /// The sentinel value for a given register, which is used to determine
+  /// whether a register contains the same value it did at function entry.
+  static uint64_t GetSentinelFor(const lldb_private::RegisterInfo &reg_info);
+
+  /// Whether \a reg_info currently holds its sentinel value. This is not the
+  /// same as the register being unwritten: a register that was overwritten and
+  /// then restored (e.g. through a move from another register) holds it again.
+  bool RegisterHoldsEntryValue(const lldb_private::RegisterInfo &reg_info);
+
   typedef std::map<uint64_t, lldb_private::RegisterValue> RegisterValueMap;
   struct UnwindState {
     lldb_private::UnwindPlan::Row row = {};

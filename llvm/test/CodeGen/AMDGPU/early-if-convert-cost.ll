@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgpu6.01 < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgpu7.00 < %s | FileCheck -check-prefixes=GCN,GCNX3 %s
+; RUN: llc -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgpu6.01 < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgpu7.00 < %s | FileCheck -check-prefixes=GCN,GCNX3 %s
 
 ; FIXME: Most of these cases that don't trigger because of broken cost
 ; heuristics. Should not need -stress-early-ifcvt
@@ -13,7 +13,7 @@
 ; GCN: buffer_store_dwordx2 v[[[RESULT_LO]]:[[RESULT_HI]]]
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %v = load double, ptr addrspace(1) %in
+  %v = load volatile double, ptr addrspace(1) %in
   %cc = fcmp oeq double %v, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -66,7 +66,7 @@ endif:
 ; GCNX3: buffer_store_dwordx3
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle96(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) #0 {
 entry:
-  %v = load <3 x i32>, ptr addrspace(1) %in
+  %v = load volatile <3 x i32>, ptr addrspace(1) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -97,7 +97,7 @@ endif:
 ; GCN: buffer_store_dwordx4
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle128(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) #0 {
 entry:
-  %v = load <4 x i32>, ptr addrspace(1) %in
+  %v = load volatile <4 x i32>, ptr addrspace(1) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
   br i1 %cc, label %if, label %endif
 

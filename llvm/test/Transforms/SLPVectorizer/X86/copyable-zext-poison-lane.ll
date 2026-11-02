@@ -6,11 +6,9 @@
 define void @zext_lanes_with_poison_and_constant(ptr %p, i8 %a, i8 %b, i32 %x) {
 ; CHECK-LABEL: define void @zext_lanes_with_poison_and_constant(
 ; CHECK-SAME: ptr [[P:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> poison, i8 [[A]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[B]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 poison, i32 poison, i32 poison, i32 200>, <4 x i32> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 poison, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> <i8 poison, i8 poison, i8 poison, i8 -56>, i8 [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP3]], [[TMP5]]

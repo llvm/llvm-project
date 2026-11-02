@@ -500,7 +500,7 @@ define i1 @workitem_workgroup_nonzero() {
 ; GISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
 ; GISEL-GFX12-NEXT:    v_bfe_u32 v1, v31, 20, 10
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    v_and_or_b32 v2, 0x3ff, v31, s0
+; GISEL-GFX12-NEXT:    v_and_or_b32 v2, v31, 0x3ff, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX12-NEXT:    v_or3_b32 v0, v2, v0, v1
 ; GISEL-GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0

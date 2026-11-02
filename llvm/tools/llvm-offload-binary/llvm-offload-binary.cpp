@@ -20,6 +20,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -54,6 +55,23 @@ static cl::opt<bool>
                   cl::desc("Write extracted files to a static archive"),
                   cl::cat(OffloadBinaryCategory));
 
+static cl::opt<bool> Compress("compress",
+                              cl::desc("Compress the packaged offload binary"),
+                              cl::cat(OffloadBinaryCategory));
+
+static cl::opt<compression::Format> CompressionFormat(
+    "compression-format", cl::desc("Format used with --compress"),
+    cl::values(
+        clEnumValN(compression::Format::Zstd, "zstd", "Zstandard compression"),
+        clEnumValN(compression::Format::Zlib, "zlib", "zlib compression")),
+    cl::init(compression::Format::Zstd), cl::cat(OffloadBinaryCategory));
+
+static cl::opt<int>
+    CompressionLevel("compression-level",
+                     cl::desc("Compression level used with --compress. "
+                              "Requires --compression-format"),
+                     cl::init(-1), cl::cat(OffloadBinaryCategory));
+
 /// Path of the current binary.
 static const char *PackagerExecutable;
 
@@ -72,6 +90,31 @@ static DenseMap<StringRef, StringRef> getImageArguments(StringRef Image,
   return Args;
 }
 
+static constexpr int ZlibMinCompressionLevel = -1;
+static constexpr int ZstdMinCompressionLevel = -131072;
+static constexpr int ZstdMaxCompressionLevel = 22;
+
+static Error checkCompressionLevel(compression::Format Format, int Level) {
+  int Lo, Hi;
+  const char *Name;
+  if (Format == compression::Format::Zlib) {
+    Lo = ZlibMinCompressionLevel;
+    Hi = compression::zlib::BestSizeCompression;
+    Name = "zlib";
+  } else {
+    Lo = ZstdMinCompressionLevel;
+    Hi = ZstdMaxCompressionLevel;
+    Name = "zstd";
+  }
+  if (Level < Lo || Level > Hi)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "invalid %s compression level %d; expected a value "
+        "in [%d, %d]",
+        Name, Level, Lo, Hi);
+  return Error::success();
+}
+
 static Error writeFile(StringRef Filename, StringRef Data) {
   Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
       FileOutputBuffer::create(Filename, Data.size());
@@ -86,9 +129,9 @@ static Error writeFile(StringRef Filename, StringRef Data) {
 
 static Error bundleImages() {
   SmallVector<OffloadBinary::OffloadingImage> AllImages;
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
   for (StringRef Image : DeviceImages) {
-    BumpPtrAllocator Alloc;
-    StringSaver Saver(Alloc);
     DenseMap<StringRef, StringRef> Args = getImageArguments(Image, Saver);
 
     if (!Args.count("file"))
@@ -124,7 +167,32 @@ static Error bundleImages() {
     }
   }
 
-  SmallString<0> Buffer = OffloadBinary::write(AllImages);
+  SmallString<0> Buffer;
+  if (Compress) {
+    compression::Format Format = CompressionFormat;
+    if (!CompressionFormat.getNumOccurrences() &&
+        !compression::zstd::isAvailable())
+      Format = compression::Format::Zlib;
+    if (const char *Reason = compression::getReasonIfUnsupported(Format))
+      return createStringError(inconvertibleErrorCode(), Reason);
+    compression::Params Params(Format);
+    if (CompressionLevel.getNumOccurrences()) {
+      if (!CompressionFormat.getNumOccurrences())
+        return createStringError(
+            inconvertibleErrorCode(),
+            "--compression-level requires --compression-format");
+      if (Error E = checkCompressionLevel(Format, CompressionLevel))
+        return E;
+      Params.level = CompressionLevel;
+    }
+    Expected<SmallString<0>> CompressedOrErr =
+        OffloadBinary::write(AllImages, Params);
+    if (!CompressedOrErr)
+      return CompressedOrErr.takeError();
+    Buffer = std::move(*CompressedOrErr);
+  } else {
+    Buffer = OffloadBinary::write(AllImages);
+  }
   if (Buffer.size() % OffloadBinary::getAlignment() != 0)
     return createStringError(inconvertibleErrorCode(),
                              "Offload binary has invalid size alignment");

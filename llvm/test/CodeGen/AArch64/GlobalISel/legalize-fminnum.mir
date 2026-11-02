@@ -91,7 +91,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $q0 = COPY %a(f128)
     ; CHECK-NEXT: $q1 = COPY %b(f128)
-    ; CHECK-NEXT: BL &fminl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
+    ; CHECK-NEXT: BL &fminl, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: %minnum:_(f128) = COPY $q0
     ; CHECK-NEXT: $q0 = COPY %minnum(f128)

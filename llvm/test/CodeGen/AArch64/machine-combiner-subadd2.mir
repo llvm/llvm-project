@@ -8,8 +8,8 @@
 # 32 bit.
 
 # CHECK-LABEL: name: test1
-# CHECK:       [[TMP:%[0-9]+]]:gpr32 = SUBWrr killed %3, %4
-# CHECK-NEXT:  %7:gpr32 = SUBWrr killed [[TMP]], %5
+# CHECK:       [[TMP:%[0-9]+]]:gpr32 = SUBWrr %3, %4
+# CHECK-NEXT:  %7:gpr32 = SUBWrr [[TMP]], %5
 
 name:            test1
 registers:
@@ -41,8 +41,8 @@ body:              |
 # 64 bit.
 
 # CHECK-LABEL: name: test2
-# CHECK:       [[TMP:%[0-9]+]]:gpr64 = SUBXrr killed %3, %4
-# CHECK-NEXT:  %7:gpr64 = SUBXrr killed [[TMP]], %5
+# CHECK:       [[TMP:%[0-9]+]]:gpr64 = SUBXrr %3, %4
+# CHECK-NEXT:  %7:gpr64 = SUBXrr [[TMP]], %5
 
 name:            test2
 registers:
@@ -107,8 +107,8 @@ body:              |
 # Dead define of flag registers should not block transformation.
 
 # CHECK-LABEL: name: test4
-# CHECK:       [[TMP:%[0-9]+]]:gpr64 = SUBXrr killed %3, %4
-# CHECK-NEXT:  %7:gpr64 = SUBXrr killed [[TMP]], %5
+# CHECK:       [[TMP:%[0-9]+]]:gpr64 = SUBXrr %3, %4
+# CHECK-NEXT:  %7:gpr64 = SUBXrr [[TMP]], %5
 
 name:            test4
 registers:
@@ -242,7 +242,7 @@ body:              |
 
 # CHECK-LABEL: name: test8
 # CHECK:       [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr %1, %0
-# CHECK-NEXT:  %4:gpr64common = SUBXrr killed [[SUBXrr]], killed %2
+# CHECK-NEXT:  %4:gpr64common = SUBXrr [[SUBXrr]], %2
 
 name:            test8
 registers:
@@ -268,8 +268,8 @@ body:              |
 # WZR use
 
 # CHECK-LABEL: name: wzr
-# CHECK:       [[TMP:%[0-9]+]]:gpr32 = SUBWrr killed $wzr, %4
-# CHECK-NEXT:  %7:gpr32 = SUBWrr killed [[TMP]], %5
+# CHECK:       [[TMP:%[0-9]+]]:gpr32 = SUBWrr $wzr, %4
+# CHECK-NEXT:  %7:gpr32 = SUBWrr [[TMP]], %5
 
 name:            wzr
 registers:

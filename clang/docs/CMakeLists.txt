@@ -107,7 +107,10 @@ if (LLVM_ENABLE_SPHINX)
       DiagnosticsReference.md
       AMDGPUBuiltinReference.rst
       ClangCommandLineReference.md
-      analyzer/user-docs/Options.rst)
+      analyzer/user-docs/Options.rst
+      CIR/_raw/CIRDialect.md
+      CIR/_raw/CIRPasses.md
+      CIR/CIRDialect.md)
     add_sphinx_source_sync_target(copy-clang-rst-docs
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
       PRESERVE_DOCS ${clang_generated_docs})

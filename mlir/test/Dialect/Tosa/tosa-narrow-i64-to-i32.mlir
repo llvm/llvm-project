@@ -15,9 +15,21 @@ func.func @test_i64_argmax(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xi
 
 // -----
 
+// CHECK-LABEL: test_i64_argmin
+func.func @test_i64_argmin(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xi64> {
+  // COMMON: %[[ARGMIN:.*]] = tosa.argmin %arg0 axis(3) : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi32>
+  %0 = tosa.argmin %arg0 axis(3) : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi64>
+
+  // DEFAULT: %[[CAST:.*]] = tosa.cast %[[ARGMIN]] input_unsigned(false) : (tensor<1x513x513xi32>) -> tensor<1x513x513xi64>
+  // FUNCBOUND: return %[[ARGMIN]] : tensor<1x513x513xi32>
+  return %0 : tensor<1x513x513xi64>
+}
+
+// -----
+
 // CHECK-LABEL: test_i64_const
 func.func @test_i64_const() -> tensor<2xi64> {
-  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi32>}> : () -> tensor<2xi32>
+  // COMMON: %[[CONST:.*]] = tosa.const values(dense<[1, 2]> : tensor<2xi32>) : () -> tensor<2xi32>
   %0 = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi64>}> : () -> tensor<2xi64>
   // DEFAULT: %[[OUT:.*]] = tosa.cast %[[CONST]] input_unsigned(false) : (tensor<2xi32>) -> tensor<2xi64>
   // DEFAULT: return %[[OUT]] : tensor<2xi64>
@@ -38,10 +50,30 @@ func.func @test_i64_argmax_cast(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x
 
 // -----
 
+// CHECK-LABEL: test_i64_argmin_cast
+func.func @test_i64_argmin_cast(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xf32> {
+  // COMMON: %[[ARGMIN:.*]] = tosa.argmin %arg0 axis(3) : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi32>
+  %0 = tosa.argmin %arg0 axis(3) : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi64>
+  // COMMON: tosa.cast %[[ARGMIN]] {test.marker = "keep"} : (tensor<1x513x513xi32>) -> tensor<1x513x513xf32>
+  %1 = tosa.cast %0 {test.marker = "keep"} : (tensor<1x513x513xi64>) -> tensor<1x513x513xf32>
+  return %1 : tensor<1x513x513xf32>
+}
+
+// -----
+
 // CHECK-LABEL: test_i64_argmax_large_axis_dim
 func.func @test_i64_argmax_large_axis_dim(%arg0: tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64> {
   // expected-error @+1 {{failed to legalize operation 'tosa.argmax'}}
   %0 = tosa.argmax %arg0 axis(3) : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64>
+  return %0 : tensor<1x513x513xi64>
+}
+
+// -----
+
+// CHECK-LABEL: test_i64_argmin_large_axis_dim
+func.func @test_i64_argmin_large_axis_dim(%arg0: tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64> {
+  // expected-error @+1 {{failed to legalize operation 'tosa.argmin'}}
+  %0 = tosa.argmin %arg0 axis(3) : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64>
   return %0 : tensor<1x513x513xi64>
 }
 
@@ -75,10 +107,29 @@ func.func @test_regions(%arg0: tensor<1x2xi32>, %arg1: tensor<1xi32>, %arg2: ten
 
 // -----
 
+// CHECK-LABEL: test_regions
+func.func @test_regions(%arg0: tensor<1x2xi32>, %arg1: tensor<1xi32>, %arg2: tensor<i1>) -> tensor<1xi32> {
+  // COMMON: %[[IF_RESULT:.*]] = tosa.cond_if %arg2 : tensor<i1> -> tensor<1xi32>
+  %0 = tosa.cond_if %arg2 : tensor<i1> -> tensor<1xi32> {
+    // COMMON: %[[ARGMIN:.*]] = tosa.argmin %arg0 axis(1) : (tensor<1x2xi32>) -> tensor<1xi32>
+    %1 = tosa.argmin %arg0 axis(1) : (tensor<1x2xi32>) -> tensor<1xi64>
+    // COMMON: %[[CAST:.*]] = tosa.cast %[[ARGMIN]] : (tensor<1xi32>) -> tensor<1xi32>
+    %2 = tosa.cast %1 : (tensor<1xi64>) -> tensor<1xi32>
+    // COMMON: tosa.yield %[[CAST]] : tensor<1xi32>
+    tosa.yield %2 : tensor<1xi32>
+  } else {
+    tosa.yield %arg1 : tensor<1xi32>
+  }
+  // COMMON: return %[[IF_RESULT]] : tensor<1xi32>
+  return %0 : tensor<1xi32>
+}
+
+// -----
+
 // CHECK-LABEL: test_cond_if_i64_yield_with_call
 module {
-  func.func @m0() -> () {
-    return
+  func.func @m0(%arg0: tensor<4xi64>) -> tensor<4xi64> {
+    return %arg0 : tensor<4xi64>
   }
   func.func @test_cond_if_i64_yield_with_call(%arg0: tensor<1xi1>, %arg1: tensor<4xi64>, %arg2: tensor<4xi64>) -> () {
     %0 = tosa.cond_if %arg0 (%arg3 = %arg1) : tensor<1xi1> (tensor<4xi64>) -> tensor<4xi64> {
@@ -89,7 +140,7 @@ module {
       tosa.yield %arg3 : tensor<4xi64>
     }
     // expected-error @+1 {{failed to legalize operation 'func.call'}}
-    call @m0() : () -> ()
+    %1 = call @m0(%arg1) : (tensor<4xi64>) -> tensor<4xi64>
     return
   }
 }
@@ -239,7 +290,7 @@ func.func @test_clamp_min_outside_i32_range(%arg0: tensor<100xi64>) -> tensor<10
 
 // CHECK-LABEL: test_dense_ressource_i64
 func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
-  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi32>}> : () -> tensor<1x2xi32>
+  // COMMON: %[[CONST:.*]] = tosa.const values(dense_resource<resource> : tensor<1x2xi32>) : () -> tensor<1x2xi32>
   %1 = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi64>}> : () -> tensor<1x2xi64>
   // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] input_unsigned(false) : (tensor<1x2xi32>) -> tensor<1x2xi64>
   // DEFAULT: return %[[OUT_CAST]] : tensor<1x2xi64>
@@ -254,3 +305,12 @@ func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
     }
   }
 #-}
+
+// -----
+
+// CHECK-LABEL: test_preserve_unknown_dialect_op
+func.func @test_preserve_unknown_dialect_op() -> i32 {
+  // COMMON: arith.constant 1 : i32
+  %0 = arith.constant 1 : i32
+  return %0 : i32
+}

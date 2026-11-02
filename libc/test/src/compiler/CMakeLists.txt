@@ -1,9 +1,13 @@
-add_custom_target(libc_stack_chk_guard_unittests)
+add_libc_testsuite(libc-stack-chk-guard-tests)
+
+if(LIBC_TARGET_OS_IS_BAREMETAL)
+  return()
+endif()
 
 add_libc_test(
   stack_chk_guard_test
   SUITE
-    libc_stack_chk_guard_unittests
+    libc-stack-chk-guard-tests
   SRCS
     stack_chk_guard_test.cpp
   DEPENDS

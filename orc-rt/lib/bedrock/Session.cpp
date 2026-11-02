@@ -52,7 +52,7 @@ private:
 Session::ControllerAccess::~ControllerAccess() = default;
 
 Session::Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
-                 ErrorReporterFn ReportError)
+                 ErrorReporterFn ReportError) noexcept
     : EPI(std::move(EPI)), Dispatch(std::move(Dispatch)),
       ReportError(std::move(ReportError)),
       Notifiers(createService<NotificationService>()) {
@@ -69,6 +69,12 @@ Session::~Session() {
     return CurrentState == State::Shutdown && TargetState == State::None;
   });
   ORC_RT_LOG(Info, Session, "Session %p destructor complete", this);
+}
+
+SymbolLookupResult
+Session::lookupInstanceSymbols(const SymbolLookupSet &LS) const noexcept {
+  std::scoped_lock<std::mutex> Lock(M);
+  return InstanceSymbols.lookup(LS);
 }
 
 void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {

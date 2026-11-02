@@ -206,7 +206,7 @@ void InProcessEPC::callJITDispatch(uint64_t CallId, void *HandlerTag,
   LLVM_DEBUG(dbgs() << "InProcessEPC: JIT-dispatch call id " << CallId << " to "
                     << HandlerTag << "\n");
 
-  getExecutionSession().runJITDispatchHandler(
+  getExecutionSession().runCallControllerHandler(
       [this, CallId](shared::WrapperFunctionBuffer ResultBytes) {
         LLVM_DEBUG(dbgs() << "InProcessEPC: Returning JIT-dispatch result for "
                              "call id "

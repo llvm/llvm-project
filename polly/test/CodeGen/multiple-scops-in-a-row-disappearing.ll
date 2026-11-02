@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly -disable-output -polly-debug < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly -disable-output -plugin-arg=Polly,-polly-debug < %s 2>&1 | FileCheck %s
 
 ; optimizing region1 as invalidates region2's SCoP.
 ; It is not recognized as a SCoP anymore because of aliasing.

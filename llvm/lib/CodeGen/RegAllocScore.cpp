@@ -24,18 +24,16 @@
 
 using namespace llvm;
 
-namespace llvm {
-LLVM_ABI cl::opt<double> CopyWeight("regalloc-copy-weight", cl::init(0.2),
-                                    cl::Hidden);
-LLVM_ABI cl::opt<double> LoadWeight("regalloc-load-weight", cl::init(4.0),
-                                    cl::Hidden);
-LLVM_ABI cl::opt<double> StoreWeight("regalloc-store-weight", cl::init(1.0),
-                                     cl::Hidden);
-LLVM_ABI cl::opt<double> CheapRematWeight("regalloc-cheap-remat-weight",
-                                          cl::init(0.2), cl::Hidden);
-LLVM_ABI cl::opt<double> ExpensiveRematWeight("regalloc-expensive-remat-weight",
-                                              cl::init(1.0), cl::Hidden);
-} // end namespace llvm
+static cl::opt<double> CopyWeight("regalloc-copy-weight", cl::init(0.2),
+                                  cl::Hidden);
+static cl::opt<double> LoadWeight("regalloc-load-weight", cl::init(4.0),
+                                  cl::Hidden);
+static cl::opt<double> StoreWeight("regalloc-store-weight", cl::init(1.0),
+                                   cl::Hidden);
+static cl::opt<double> CheapRematWeight("regalloc-cheap-remat-weight",
+                                        cl::init(0.2), cl::Hidden);
+static cl::opt<double> ExpensiveRematWeight("regalloc-expensive-remat-weight",
+                                            cl::init(1.0), cl::Hidden);
 
 #define DEBUG_TYPE "regalloc-score"
 

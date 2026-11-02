@@ -210,19 +210,19 @@ define <4 x i64> @urem_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,2,3,3]
 ; SSE2-NEXT:    pslld $31, %xmm6
 ; SSE2-NEXT:    psrad $31, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,1,1]
-; SSE2-NEXT:    pslld $31, %xmm4
-; SSE2-NEXT:    psrad $31, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [1,1]
-; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pandn %xmm7, %xmm4
-; SSE2-NEXT:    por %xmm2, %xmm4
-; SSE2-NEXT:    movq %xmm4, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm4[0,0,1,1]
+; SSE2-NEXT:    pslld $31, %xmm7
+; SSE2-NEXT:    psrad $31, %xmm7
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
+; SSE2-NEXT:    pand %xmm7, %xmm2
+; SSE2-NEXT:    pandn %xmm4, %xmm7
+; SSE2-NEXT:    por %xmm2, %xmm7
+; SSE2-NEXT:    movq %xmm7, %rcx
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divq %rcx
 ; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[2,3,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm2, %rcx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm5[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm2, %rax
@@ -231,7 +231,7 @@ define <4 x i64> @urem_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; SSE2-NEXT:    movq %rdx, %xmm2
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    pand %xmm6, %xmm3
-; SSE2-NEXT:    pandn %xmm7, %xmm6
+; SSE2-NEXT:    pandn %xmm4, %xmm6
 ; SSE2-NEXT:    por %xmm3, %xmm6
 ; SSE2-NEXT:    movq %xmm6, %rcx
 ; SSE2-NEXT:    movq %xmm1, %rax

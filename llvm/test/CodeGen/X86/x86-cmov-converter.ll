@@ -451,29 +451,29 @@ define i32 @MaxValue(i32 %n, ptr nocapture readonly %a) #0 {
 ;
 ; CHECK-FORCEALL-LABEL: MaxValue:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
-; CHECK-FORCEALL-NEXT:    movl (%rsi), %r8d
+; CHECK-FORCEALL-NEXT:    movl (%rsi), %edx
 ; CHECK-FORCEALL-NEXT:    cmpl $2, %edi
 ; CHECK-FORCEALL-NEXT:    jge .LBB4_3
 ; CHECK-FORCEALL-NEXT:  # %bb.1:
-; CHECK-FORCEALL-NEXT:    movl %r8d, %eax
+; CHECK-FORCEALL-NEXT:    movl %edx, %eax
 ; CHECK-FORCEALL-NEXT:  .LBB4_2: # %for.cond.cleanup
 ; CHECK-FORCEALL-NEXT:    retq
 ; CHECK-FORCEALL-NEXT:  .LBB4_3: # %for.body.preheader
 ; CHECK-FORCEALL-NEXT:    movl %edi, %ecx
-; CHECK-FORCEALL-NEXT:    movl $1, %edx
+; CHECK-FORCEALL-NEXT:    movl $1, %edi
 ; CHECK-FORCEALL-NEXT:  .LBB4_4: # %for.body
 ; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdx,4), %eax
-; CHECK-FORCEALL-NEXT:    cmpl %r8d, %eax
+; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdi,4), %eax
+; CHECK-FORCEALL-NEXT:    cmpl %edx, %eax
 ; CHECK-FORCEALL-NEXT:    jg .LBB4_6
 ; CHECK-FORCEALL-NEXT:  # %bb.5: # %for.body
 ; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB4_4 Depth=1
-; CHECK-FORCEALL-NEXT:    movl %r8d, %eax
+; CHECK-FORCEALL-NEXT:    movl %edx, %eax
 ; CHECK-FORCEALL-NEXT:  .LBB4_6: # %for.body
 ; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB4_4 Depth=1
-; CHECK-FORCEALL-NEXT:    addq $1, %rdx
-; CHECK-FORCEALL-NEXT:    movl %eax, %r8d
-; CHECK-FORCEALL-NEXT:    cmpq %rdx, %rcx
+; CHECK-FORCEALL-NEXT:    addq $1, %rdi
+; CHECK-FORCEALL-NEXT:    movl %eax, %edx
+; CHECK-FORCEALL-NEXT:    cmpq %rdi, %rcx
 ; CHECK-FORCEALL-NEXT:    je .LBB4_2
 ; CHECK-FORCEALL-NEXT:    jmp .LBB4_4
 entry:

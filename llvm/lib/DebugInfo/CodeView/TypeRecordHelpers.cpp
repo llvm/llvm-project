@@ -30,12 +30,16 @@ bool llvm::codeview::isUdtForwardRef(CVType CVT) {
   case LF_STRUCTURE:
   case LF_CLASS:
   case LF_INTERFACE:
+  case LF_STRUCTURE2:
+  case LF_CLASS2:
+  case LF_INTERFACE2:
     UdtOptions = getUdtOptions<ClassRecord>(std::move(CVT));
     break;
   case LF_ENUM:
     UdtOptions = getUdtOptions<EnumRecord>(std::move(CVT));
     break;
   case LF_UNION:
+  case LF_UNION2:
     UdtOptions = getUdtOptions<UnionRecord>(std::move(CVT));
     break;
   default:
@@ -173,8 +177,12 @@ uint64_t llvm::codeview::getSizeInBytesForTypeRecord(CVType CVT) {
   case LF_STRUCTURE:
   case LF_CLASS:
   case LF_INTERFACE:
+  case LF_STRUCTURE2:
+  case LF_CLASS2:
+  case LF_INTERFACE2:
     return getUdtSize<ClassRecord>(std::move(CVT));
   case LF_UNION:
+  case LF_UNION2:
     return getUdtSize<UnionRecord>(std::move(CVT));
   default:
     assert(false && "not an aggregate");

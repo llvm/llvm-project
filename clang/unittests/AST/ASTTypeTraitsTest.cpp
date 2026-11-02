@@ -126,6 +126,7 @@ TEST(ASTNodeKind, ConstexprHasPointerIdentity) {
   EXPECT_TRUE(HasPointerIdentity<Stmt>);
   EXPECT_FALSE(HasPointerIdentity<TypeLoc>);
   EXPECT_FALSE(HasPointerIdentity<QualType>);
+  EXPECT_FALSE(HasPointerIdentity<NestedNameSpecifier>);
   EXPECT_FALSE(HasPointerIdentity<Foo>);
 
   constexpr bool DefaultConstructedHasPointerIdentity =
@@ -241,6 +242,29 @@ TEST(DynTypedNode, QualType) {
   DynTypedNode Node = DynTypedNode::create(Q);
   EXPECT_TRUE(Node == Node);
   EXPECT_FALSE(Node < Node);
+}
+
+TEST(DynTypedNode, NestedNameSpecifier) {
+  std::string code = R"cc(namespace a { struct b {}; } a::b x;)cc";
+  auto AST = clang::tooling::buildASTFromCode(code);
+  auto matches =
+      match(nestedNameSpecifier(specifiesNamespace(hasName("a"))).bind("nns"),
+            AST->getASTContext());
+  ASSERT_EQ(matches.size(), 1u);
+
+  NestedNameSpecifier NNS = *matches[0].getNodeAs<NestedNameSpecifier>("nns");
+  DynTypedNode Node = DynTypedNode::create(NNS);
+  DynTypedNode Copy = DynTypedNode::create(NNS);
+  EXPECT_EQ(Node.getMemoizationData(), nullptr);
+  EXPECT_TRUE(Node == Copy);
+  EXPECT_FALSE(Node < Copy);
+  EXPECT_FALSE(Copy < Node);
+  EXPECT_EQ(DynTypedNode::DenseMapInfo::getHashValue(Node),
+            DynTypedNode::DenseMapInfo::getHashValue(Copy));
+
+  DynTypedNode Global = DynTypedNode::create(NestedNameSpecifier::getGlobal());
+  EXPECT_FALSE(Node == Global);
+  EXPECT_NE(Node < Global, Global < Node);
 }
 
 TEST(DynTypedNode, TypeLoc) {

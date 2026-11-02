@@ -71,6 +71,7 @@ def ol_queue_info_t : Enum {
     TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">,
     TaggedEtor<"CONTEXT", "ol_context_handle_t", "The handle of the context associated with the queue.">,
     TaggedEtor<"EMPTY", "bool", "True if the queue is known to be empty. May be unconditionally false if the device does not support status queries.">,
+    TaggedEtor<"NATIVE_HANDLE", "void *", "The backend-native handle of the queue, reinterpreted as a void pointer.">,
   ];
 }
 

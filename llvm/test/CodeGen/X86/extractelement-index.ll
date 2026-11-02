@@ -454,7 +454,7 @@ define i8 @extractelement_v32i8_var(<32 x i8> %a, i256 %i) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    andl $31, %edi
 ; AVX-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX-NEXT:    movzbl (%rsp,%rdi), %eax
@@ -498,7 +498,7 @@ define i16 @extractelement_v16i16_var(<16 x i16> %a, i256 %i) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    andl $15, %edi
 ; AVX-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX-NEXT:    movzwl (%rsp,%rdi,2), %eax
@@ -542,7 +542,7 @@ define i32 @extractelement_v8i32_var(<8 x i32> %a, i256 %i) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    andl $7, %edi
 ; AVX-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX-NEXT:    movl (%rsp,%rdi,4), %eax
@@ -586,7 +586,7 @@ define i64 @extractelement_v4i64_var(<4 x i64> %a, i256 %i) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    andl $3, %edi
 ; AVX-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX-NEXT:    movq (%rsp,%rdi,8), %rax

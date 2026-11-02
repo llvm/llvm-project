@@ -35,7 +35,7 @@ public:
   ///     the block.
   HTRBlockMetadata(lldb::addr_t first_instruction_load_address,
                    size_t num_instructions,
-                   llvm::DenseMap<ConstString, size_t> &&func_calls)
+                   llvm::StringMap<size_t> &&func_calls)
       : m_first_instruction_load_address(first_instruction_load_address),
         m_num_instructions(num_instructions), m_func_calls(func_calls) {}
 
@@ -77,12 +77,12 @@ public:
   /// \return
   ///     The mapping of function name to the number of times it is called from
   ///     this block.
-  llvm::DenseMap<ConstString, size_t> const &GetFunctionCalls() const;
+  llvm::StringMap<size_t> const &GetFunctionCalls() const;
 
 private:
   lldb::addr_t m_first_instruction_load_address;
   size_t m_num_instructions;
-  llvm::DenseMap<ConstString, size_t> m_func_calls;
+  llvm::StringMap<size_t> m_func_calls;
 };
 
 /// Block structure representing a sequence of trace "units" (ie instructions).
@@ -217,7 +217,7 @@ public:
   ///     The name of the function the 'call' instruction is calling if it can
   ///     be determined, std::nullopt otherwise.
   void AddCallInstructionMetadata(lldb::addr_t load_addr,
-                                  std::optional<ConstString> func_name);
+                                  std::optional<std::string> func_name);
 
   /// Append the load address of an instruction to the dynamic instruction
   /// trace.
@@ -236,7 +236,7 @@ private:
   // This map contains the load address of all the call instructions.
   // load address maps to the name of the function it calls (std::nullopt if
   // function name can't be determined)
-  std::unordered_map<lldb::addr_t, std::optional<ConstString>> m_call_isns;
+  std::unordered_map<lldb::addr_t, std::optional<std::string>> m_call_isns;
 };
 
 /// HTR layer composed of blocks of the trace.

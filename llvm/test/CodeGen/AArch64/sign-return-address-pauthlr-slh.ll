@@ -52,6 +52,7 @@ define i32 @f() #0 {
 ; CHECK-PAUTHLR:       // %bb.0: // %entry
 ; CHECK-PAUTHLR-NEXT:    cmp sp, #0
 ; CHECK-PAUTHLR-NEXT:    csetm x16, ne
+; CHECK-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; CHECK-PAUTHLR-NEXT:  .Ltmp0:
 ; CHECK-PAUTHLR-NEXT:    paciasppc
 ; CHECK-PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
@@ -75,6 +76,7 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-PAUTHLR:       // %bb.0: // %entry
 ; CHECK-PAUTH-PAUTHLR-NEXT:    cmp sp, #0
 ; CHECK-PAUTH-PAUTHLR-NEXT:    csetm x16, ne
+; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; CHECK-PAUTH-PAUTHLR-NEXT:  .Ltmp0:
 ; CHECK-PAUTH-PAUTHLR-NEXT:    paciasppc
 ; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0

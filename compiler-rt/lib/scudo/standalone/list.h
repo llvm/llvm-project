@@ -320,32 +320,27 @@ template <class T> struct DoublyLinkedList : IntrusiveList<T> {
     Size--;
   }
 
-  // The consistency of the adjacent links is aggressively checked in order to
-  // catch potential corruption attempts, that could yield a mirrored
-  // write-{4,8} primitive. nullptr checks are deemed less vital.
+  // Check the endpoints and both adjacent links before modifying the list to
+  // catch corruption that could otherwise cause writes through invalid links.
   void remove(T *X) {
+    CHECK(!empty());
     T *Prev = getPrev(X);
     T *Next = getNext(X);
-    if (Prev) {
+    CHECK_EQ(First == X, Prev == nullptr);
+    CHECK_EQ(Last == X, Next == nullptr);
+    if (Prev)
       CHECK_EQ(getNext(Prev), X);
-      setNext(Prev, Next);
-    }
-    if (Next) {
+    if (Next)
       CHECK_EQ(getPrev(Next), X);
-      setPrev(Next, Prev);
-    }
-    if (First == X) {
-      DCHECK_EQ(Prev, nullptr);
+
+    if (Prev)
+      setNext(Prev, Next);
+    else
       First = Next;
-    } else {
-      DCHECK_NE(Prev, nullptr);
-    }
-    if (Last == X) {
-      DCHECK_EQ(Next, nullptr);
+    if (Next)
+      setPrev(Next, Prev);
+    else
       Last = Prev;
-    } else {
-      DCHECK_NE(Next, nullptr);
-    }
     Size--;
   }
 };

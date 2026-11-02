@@ -68,3 +68,29 @@ template <typename Ret, C Default = S<[] { return Ret(); }>>
 void func2() {}
 
 }
+
+namespace NTTPLambdaDefaultArg {
+
+template <class T>
+concept C = true;
+
+template <class T, class U>
+concept C2 = true;
+
+// Same as PR67235, for a non-type template parameter: don't destroy the
+// annotation 'C' at the end of the lambda body in the default argument; else
+// we'd read freed memory while building the placeholder type 'C auto'.
+template <typename T, C auto Default = [](int) { return T{}; }>
+constexpr auto V = Default;
+
+template <typename T, C2<int> auto Default = [] { return T(); }>
+void func() {}
+
+// The source locations of these diagnostics come from the annotation 'C'.
+template <typename T, const C auto &Default = [] { return T(); }> // expected-error{{constrained placeholder types other than simple 'auto' on non-type template parameters not supported yet}}
+void func2() {}
+
+template <typename T, C decltype(auto) Default = [] { return T(); }> // expected-error{{constrained placeholder types other than simple 'auto' on non-type template parameters not supported yet}}
+void func3() {}
+
+}

@@ -31,31 +31,33 @@
 // before either records it, so each may validate and record it: A's timestamp
 // is written once or twice. B (imported by a single TU) is always written once.
 // The per-module ordering is checked by ASEQ/BSEQ below.
-// RUN: grep -c "timestamp_write:.*A-" %t/scan.log | FileCheck %s --check-prefix=TSA
-// RUN: grep -c "timestamp_write:.*B-" %t/scan.log | FileCheck %s --check-prefix=TSB
+// RUN: grep -c "timestamp_write:.*/A-[^/]*\.pcm" %t/scan.log \
+// RUN:   | FileCheck %s --check-prefix=TSA
+// RUN: grep -c "timestamp_write:.*/B-[^/]*\.pcm" %t/scan.log \
+// RUN:   | FileCheck %s --check-prefix=TSB
 // TSA: {{^[12]$}}
 // TSB: {{^1$}}
 
 // Verify A's pcm is written before B's pcm.
 // RUN: grep "pcm_write:" %t/scan.log | FileCheck %s --check-prefix=WRITEORDER
-// WRITEORDER: pcm_write: {{.*}}A-{{.*}}.pcm
-// WRITEORDER-NEXT: pcm_write: {{.*}}B-{{.*}}.pcm
+// WRITEORDER: pcm_write: {{.*}}/A-{{[^/]*}}.pcm
+// WRITEORDER-NEXT: pcm_write: {{.*}}/B-{{[^/]*}}.pcm
 
 // Check the correct sequence for building module A.
-// RUN: grep "A-" %t/scan.log | FileCheck %s --check-prefix=ASEQ
-// ASEQ: timestamp_read: {{.*}}A-{{.*}}.pcm
-// ASEQ: pcm_write: {{.*}}A-{{.*}}.pcm
-// ASEQ: timestamp_write: {{.*}}A-{{.*}}.pcm
-// ASEQ: pcm_add_built: {{.*}}A-{{.*}}.pcm
-// ASEQ: pcm_finalized: {{.*}}A-{{.*}}.pcm
+// RUN: grep "/A-[^/]*\.pcm" %t/scan.log | FileCheck %s --check-prefix=ASEQ
+// ASEQ: timestamp_read: {{.*}}/A-{{[^/]*}}.pcm
+// ASEQ: pcm_write: {{.*}}/A-{{[^/]*}}.pcm
+// ASEQ: timestamp_write: {{.*}}/A-{{[^/]*}}.pcm
+// ASEQ: pcm_add_built: {{.*}}/A-{{[^/]*}}.pcm
+// ASEQ: pcm_finalized: {{.*}}/A-{{[^/]*}}.pcm
 
 // Check the correct sequence for building module B.
-// RUN: grep "B-" %t/scan.log | FileCheck %s --check-prefix=BSEQ
-// BSEQ: timestamp_read: {{.*}}B-{{.*}}.pcm
-// BSEQ: pcm_write: {{.*}}B-{{.*}}.pcm
-// BSEQ: timestamp_write: {{.*}}B-{{.*}}.pcm
-// BSEQ: pcm_add_built: {{.*}}B-{{.*}}.pcm
-// BSEQ: pcm_finalized: {{.*}}B-{{.*}}.pcm
+// RUN: grep "/B-[^/]*\.pcm" %t/scan.log | FileCheck %s --check-prefix=BSEQ
+// BSEQ: timestamp_read: {{.*}}/B-{{[^/]*}}.pcm
+// BSEQ: pcm_write: {{.*}}/B-{{[^/]*}}.pcm
+// BSEQ: timestamp_write: {{.*}}/B-{{[^/]*}}.pcm
+// BSEQ: pcm_add_built: {{.*}}/B-{{[^/]*}}.pcm
+// BSEQ: pcm_finalized: {{.*}}/B-{{[^/]*}}.pcm
 
 //--- cdb.json.template
 [{

@@ -1,0 +1,64 @@
+# RUN: llc -mtriple=aarch64 -passes='print<gisel-value-tracking>' -filetype=null %s 2>&1 | FileCheck %s
+
+---
+name: scalar
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: @scalar
+    %x:_(i32) = G_IMPLICIT_DEF
+    %s1:_(i32) = G_SEXT_INREG %x, 1
+    %s8:_(i32) = G_SEXT_INREG %x, 8
+    %s16:_(i32) = G_SEXT_INREG %x, 16
+    ; CHECK: %{{.+}}:_ KnownBits:{{.+}} SignBits:16 IsKnownNeverZero:0
+    %s17:_(i32) = G_SEXT_INREG %x, 17
+
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:17 IsKnownNeverZero:0
+    %mul8x8:_(i32) = G_MUL %s8, %s8
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:9 IsKnownNeverZero:0
+    %mul8x16:_(i32) = G_MUL %s8, %s16
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:1 IsKnownNeverZero:0
+    %mul16x16:_(i32) = G_MUL %s16, %s16
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:1 IsKnownNeverZero:0
+    %mul17x16:_(i32) = G_MUL %s17, %s16
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:1 IsKnownNeverZero:0
+    %mul32x8:_(i32) = G_MUL %x, %s8
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:1 IsKnownNeverZero:0
+    %mul8x32:_(i32) = G_MUL %s8, %x
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:31 IsKnownNeverZero:0
+    %mul1x1:_(i32) = G_MUL %s1, %s1
+...
+---
+name: constants
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: @constants
+    %x:_(i32) = G_IMPLICIT_DEF
+    %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK: %{{.+}}:_ KnownBits:{{.+}} SignBits:31 IsKnownNeverZero:1
+    %one:_(i32) = G_CONSTANT i32 1
+
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:32 IsKnownNeverZero:0
+    %mulzero:_(i32) = G_MUL %x, %zero
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:31 IsKnownNeverZero:1
+    %mulone:_(i32) = G_MUL %one, %one
+...
+---
+name: vector
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: @vector
+    %x:_(i32) = G_IMPLICIT_DEF
+    %s8:_(i32) = G_SEXT_INREG %x, 8
+    %s16:_(i32) = G_SEXT_INREG %x, 16
+    %lhs:_(<2 x i32>) = G_BUILD_VECTOR %s8, %s16
+    %zero:_(i64) = G_CONSTANT i64 0
+    ; CHECK: %{{.+}}:_ KnownBits:{{.+}} SignBits:63 IsKnownNeverZero:1
+    %one:_(i64) = G_CONSTANT i64 1
+
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:1 IsKnownNeverZero:0
+    %product:_(<2 x i32>) = G_MUL %lhs, %lhs
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:17 IsKnownNeverZero:0
+    %lane0:_(i32) = G_EXTRACT_VECTOR_ELT %product, %zero
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:{{.+}} SignBits:1 IsKnownNeverZero:0
+    %lane1:_(i32) = G_EXTRACT_VECTOR_ELT %product, %one
+...

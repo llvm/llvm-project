@@ -487,7 +487,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
 // Traits
 //===----------------------------------------------------------------------===//
 
-// Op contains a region with parallel execution semantics
+// Op contains a region that may have parallel execution semantics.
 def HasParallelRegion : NativeOpTrait<"HasParallelRegion">;
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE

@@ -562,8 +562,8 @@ struct StaticLibcallNameMap {
     for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
       if (!RTCI.isAvailable(Impl))
         continue;
-      RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
-      if (Table[LC] != unsupported) {
+      RTLIB::Libcall LC = RTCI.getLibcallFromImpl(Impl);
+      if (LC != RTLIB::UNKNOWN_LIBCALL && Table[LC] != unsupported) {
         StringRef NameLibcall =
             RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Impl);
         // FIXME: Map should be to LibcallImpl

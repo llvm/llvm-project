@@ -42,3 +42,54 @@ loop.header:
 exit:
   ret void
 }
+
+; The overflow bit needs all lanes, so the call is widened to a struct of
+; vectors, while only the first lane of the sum is used. The sum must be
+; extracted from the struct with a wide extractvalue.
+define void @extract_first_lane_from_widened_struct(ptr %p, ptr noalias %q) {
+; CHECK-LABEL: define void @extract_first_lane_from_widened_struct(
+; CHECK-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call { <2 x i64>, <2 x i1> } @llvm.sadd.with.overflow.v2i64(<2 x i64> [[VEC_IND]], <2 x i64> splat (i64 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[Q]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP5]]
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %res = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %iv, i64 1)
+  %iv.next = extractvalue { i64, i1 } %res, 0
+  %ov = extractvalue { i64, i1 } %res, 1
+  %ov.ext = zext i1 %ov to i64
+  %gep.q = getelementptr i64, ptr %q, i64 %iv
+  store i64 %ov.ext, ptr %gep.q, align 8
+  %gep.p = getelementptr i64, ptr %p, i64 %iv.next
+  store i64 0, ptr %gep.p, align 8
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

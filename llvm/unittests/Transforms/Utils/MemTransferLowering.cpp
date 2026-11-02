@@ -41,16 +41,16 @@ struct ForwardingPass : public OptionalPassInfoMixin<ForwardingPass> {
 };
 
 struct MemTransferLowerTest : public testing::Test {
+  LLVMContext Context;
   PassBuilder PB;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
   ModulePassManager MPM;
-  LLVMContext Context;
   std::unique_ptr<Module> M;
 
-  MemTransferLowerTest() {
+  MemTransferLowerTest() : PB(Context) {
     // Register all the basic analyses with the managers.
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
@@ -200,7 +200,7 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyKnownLength) {
         auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
         Instruction *Inst = &MemCpyBB->front();
         assert(isa<AnyMemCpyInst>(Inst) &&
-               "Expecting llvm.memcpy.p0i8.i64 instructon");
+               "Expecting llvm.memcpy.p0i8.i64 instruction");
         AnyMemCpyInst *MemCpyI = cast<AnyMemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);
@@ -246,7 +246,7 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyUnKnownLength) {
         auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
         Instruction *Inst = &MemCpyBB->front();
         assert(isa<AnyMemCpyInst>(Inst) &&
-               "Expecting llvm.memcpy.p0i8.i64 instructon");
+               "Expecting llvm.memcpy.p0i8.i64 instruction");
         auto *MemCpyI = cast<AnyMemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);

@@ -1109,7 +1109,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     return false;
 
   int64_t MForwardOffset = 0;
-  const DataLayout &DL = M->getModule()->getDataLayout();
+  const DataLayout &DL = M->getDataLayout();
   // We can only transforms memcpy's where the dest of one is the source of the
   // other, or they have an offset in a range.
   if (M->getSource() != MDep->getDest()) {
@@ -1429,7 +1429,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   Value *CopySize = MemCpy->getLength();
 
   int64_t MOffset = 0;
-  const DataLayout &DL = MemCpy->getModule()->getDataLayout();
+  const DataLayout &DL = MemCpy->getDataLayout();
   // We can only transforms memcpy's where the dest of one is the source of the
   // other, or they have a known offset.
   if (MemCpy->getSource() != MemSet->getDest()) {

@@ -558,9 +558,9 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr i8, ptr [[SRC]], i64 -8
 ; CHECK-NEXT:    [[TMP21:%.*]] = shl i64 [[N]], 4
-; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP21]], 8
 ; CHECK-NEXT:    [[SMIN11:%.*]] = call i64 @llvm.smin.i64(i64 [[N]], i64 0)
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl i64 [[SMIN11]], 4
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP21]], 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP24]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP23]], [[TMP21]]

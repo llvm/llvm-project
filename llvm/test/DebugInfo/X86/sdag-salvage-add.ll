@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o -\
+; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before live-debug-values %s -o -\
 ; RUN:     -experimental-debug-variable-locations=false \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,DBGVALUE
-; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o -\
+; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before live-debug-values %s -o -\
 ; RUN:     -experimental-debug-variable-locations=true \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,INSTRREF
 ;

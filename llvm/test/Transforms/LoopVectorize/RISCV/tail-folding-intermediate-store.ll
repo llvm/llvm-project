@@ -236,7 +236,7 @@ for.end:
 ;.
 ; IF-EVL-OUTLOOP: [[META0]] = !{[[META1:![0-9]+]]}
 ; IF-EVL-OUTLOOP: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; IF-EVL-OUTLOOP: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
+; IF-EVL-OUTLOOP: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; IF-EVL-OUTLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; IF-EVL-OUTLOOP: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
 ; IF-EVL-OUTLOOP: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
@@ -246,7 +246,7 @@ for.end:
 ;.
 ; IF-EVL-INLOOP: [[META0]] = !{[[META1:![0-9]+]]}
 ; IF-EVL-INLOOP: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; IF-EVL-INLOOP: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
+; IF-EVL-INLOOP: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; IF-EVL-INLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; IF-EVL-INLOOP: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
 ; IF-EVL-INLOOP: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
@@ -256,7 +256,7 @@ for.end:
 ;.
 ; NO-VP-OUTLOOP: [[META0]] = !{[[META1:![0-9]+]]}
 ; NO-VP-OUTLOOP: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; NO-VP-OUTLOOP: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
+; NO-VP-OUTLOOP: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; NO-VP-OUTLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; NO-VP-OUTLOOP: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
 ; NO-VP-OUTLOOP: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
@@ -266,7 +266,7 @@ for.end:
 ;.
 ; NO-VP-INLOOP: [[META0]] = !{[[META1:![0-9]+]]}
 ; NO-VP-INLOOP: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; NO-VP-INLOOP: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
+; NO-VP-INLOOP: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; NO-VP-INLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; NO-VP-INLOOP: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
 ; NO-VP-INLOOP: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}

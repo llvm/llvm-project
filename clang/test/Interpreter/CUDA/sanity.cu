@@ -1,3 +1,4 @@
+// REQUIRES: host-supports-cuda
 // RUN: cat %s | clang-repl --cuda | FileCheck %s
 
 extern "C" int printf(const char*, ...);

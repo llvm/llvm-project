@@ -2280,11 +2280,13 @@ void EasilySwappableParametersCheck::check(
           ExplicitlyPrintCommonType = true;
         }
 
-        const auto Diag =
-            diag(LVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
-            << LTypeStr << RTypeStr;
-        if (ExplicitlyPrintCommonType)
-          Diag << CommonTypeStr;
+        if (!DiagText.empty()) {
+          const auto Diag =
+              diag(LVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
+              << LTypeStr << RTypeStr;
+          if (ExplicitlyPrintCommonType)
+            Diag << CommonTypeStr;
+        }
       }
 
       if ((hasFlag(M.flags(), MixFlags::ReferenceBind) ||

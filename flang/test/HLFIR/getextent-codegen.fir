@@ -3,10 +3,10 @@
 
 func.func @test1(%arg0: i1, %arg1: i32, %arg2: i64, %arg3: index) -> (index, index, index, index) {
   %0 = fir.shape %arg0, %arg1, %arg2, %arg3 : (i1, i32, i64, index) -> !fir.shape<4>
-  %1 = hlfir.get_extent %0 {dim = 0 : index} : (!fir.shape<4>) -> index
-  %2 = hlfir.get_extent %0 {dim = 1 : index} : (!fir.shape<4>) -> index
-  %3 = hlfir.get_extent %0 {dim = 2 : index} : (!fir.shape<4>) -> index
-  %4 = hlfir.get_extent %0 {dim = 3 : index} : (!fir.shape<4>) -> index
+  %1 = hlfir.get_extent %0 dim(0) : (!fir.shape<4>) -> index
+  %2 = hlfir.get_extent %0 dim(1) : (!fir.shape<4>) -> index
+  %3 = hlfir.get_extent %0 dim(2) : (!fir.shape<4>) -> index
+  %4 = hlfir.get_extent %0 dim(3) : (!fir.shape<4>) -> index
   return %1, %2, %3, %4 : index, index, index, index
 }
 // CHECK-LABEL:   func.func @test1(

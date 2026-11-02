@@ -9,7 +9,7 @@
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.1
-# CHECK:      Queue BotQ.A: 6 4
+# CHECK:      Queue BotQ.A: SU(6) SU(4)
 # CHECK-NEXT:   Cand SU(6) FIRST
 # CHECK-NEXT:   Cand SU(4) WEAK
 # CHECK-NEXT: Pick Bot Cand SU(4) WEAK       [pre-RA]

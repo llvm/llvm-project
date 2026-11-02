@@ -57,7 +57,7 @@ S4 f4() {
 
 // Pass and return from instance method called from instance method.
 // CHECK: define {{.*}} void @{{.*}}bar@Q1{{.*}}(ptr {{[^,]*}} %this, ptr dead_on_unwind inreg noalias writable sret(%class.P1) align 1 %agg.result)
-// CHECK: call void {{.*}}foo@P1{{.*}}(ptr noundef{{[^,]*}} %ref.tmp, ptr dead_on_unwind inreg writable sret(%class.P1) align 1 %agg.result, i64 %coerce.val.ii)
+// CHECK: call void {{.*}}foo@P1{{.*}}(ptr noundef{{[^,]*}} %ref.tmp, ptr dead_on_unwind inreg writable sret(%class.P1) align 1 %agg.result, i8 %{{.*}})
 
 class P1 {
 public:
@@ -76,7 +76,7 @@ P1 Q1::bar() {
 
 // Pass and return from instance method called from free function.
 // CHECK: define {{.*}} void {{.*}}bar{{.*}}()
-// CHECK: call void {{.*}}foo@P2{{.*}}(ptr noundef{{[^,]*}} %ref.tmp, ptr dead_on_unwind inreg writable sret(%class.P2) align 1 %retval, i64 %coerce.val.ii)
+// CHECK: call void {{.*}}foo@P2{{.*}}(ptr noundef{{[^,]*}} %ref.tmp, ptr dead_on_unwind inreg writable sret(%class.P2) align 1 %retval, i8 %{{.*}})
 class P2 {
 public:
   P2 foo(P2 x);
@@ -90,7 +90,7 @@ P2 bar() {
 // Pass and return an object with a user-provided constructor (passed directly,
 // returned indirectly)
 // CHECK: define {{.*}} void @{{.*}}f5{{.*}}(ptr dead_on_unwind inreg noalias writable sret(%struct.S5) align 4 %agg.result)
-// CHECK: call void {{.*}}func5{{.*}}(ptr dead_on_unwind inreg writable sret(%struct.S5) align 4 %agg.result, i64 {{.*}})
+// CHECK: call void {{.*}}func5{{.*}}(ptr dead_on_unwind inreg writable sret(%struct.S5) align 4 %agg.result, i32 {{.*}})
 struct S5 {
   S5();
   int x;
@@ -105,7 +105,7 @@ S5 f5() {
 // Pass and return an object with a non-trivial explicitly defaulted constructor
 // (passed directly, returned directly)
 // CHECK: define {{.*}} i8 @"?f6@@YA?AUS6@@XZ"()
-// CHECK: call i8 {{.*}}func6{{.*}}(i64 {{.*}})
+// CHECK: call i8 {{.*}}func6{{.*}}(i8 {{.*}})
 struct S6a {
   S6a();
 };
@@ -124,7 +124,7 @@ S6 f6() {
 // Pass and return an object with a non-trivial implicitly defaulted constructor
 // (passed directly, returned directly)
 // CHECK: define {{.*}} i8 @"?f7@@YA?AUS7@@XZ"()
-// CHECK: call i8 {{.*}}func7{{.*}}(i64 {{.*}})
+// CHECK: call i8 {{.*}}func7{{.*}}(i8 {{.*}})
 struct S7 {
   S6a x;
 };
@@ -158,7 +158,7 @@ S8 f8() {
 // Pass and return an object with a non-trivial copy-assignment operator and
 // a trivial copy constructor (passed directly, returned indirectly)
 // CHECK: define {{.*}} void @"?f9@@YA?AUS9@@XZ"(ptr dead_on_unwind inreg noalias writable sret(%struct.S9) align 4 {{.*}})
-// CHECK: call void {{.*}}func9{{.*}}(ptr dead_on_unwind inreg writable sret(%struct.S9) align 4 {{.*}}, i64 {{.*}})
+// CHECK: call void {{.*}}func9{{.*}}(ptr dead_on_unwind inreg writable sret(%struct.S9) align 4 {{.*}}, i32 {{.*}})
 struct S9 {
   S9& operator=(const S9&);
   int x;
@@ -206,7 +206,7 @@ S11 f11() {
 // Pass and return object with template constructor (pass directly,
 // return indirectly).
 // CHECK: define dso_local void @"?f12@@YA?AUS12@@XZ"(ptr dead_on_unwind inreg noalias writable sret(%struct.S12) align 4 {{.*}})
-// CHECK: call void @"?func12@@YA?AUS12@@U1@@Z"(ptr dead_on_unwind inreg writable sret(%struct.S12) align 4 {{.*}}, i64 {{.*}})
+// CHECK: call void @"?func12@@YA?AUS12@@U1@@Z"(ptr dead_on_unwind inreg writable sret(%struct.S12) align 4 {{.*}}, i32 {{.*}})
 struct S12 {
   template<typename T> S12(T*) {}
   int x;

@@ -98,7 +98,7 @@ class TestDAP_setBreakpointsAssembly(DAPTestCaseBase):
         session.stop()
 
         # Session 2: replay the persisted source and verify the breakpoint hits.
-        adapter = self.create_stdio_debug_adapter()
+        adapter = self.create_debug_adapter()
         session2 = self.create_session(adapter=adapter)
         with session2.configure(LaunchArgs(program)) as ctx:
             response = session2.set_assembly_breakpoints(

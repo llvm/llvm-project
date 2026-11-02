@@ -739,10 +739,10 @@ public:
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Turn AVL operand of physical registers into virtual registers.
     PM.add(exegesis::createRISCVPreprocessingPass());
-    PM.add(createRISCVInsertVSETVLIPass());
+    PM.add(createRISCVInsertVSETVLILegacyPass());
     // Setting up the correct FRM.
-    PM.add(createRISCVInsertReadWriteCSRPass());
-    PM.add(createRISCVInsertWriteVXRMPass());
+    PM.add(createRISCVInsertReadWriteCSRLegacyPass());
+    PM.add(createRISCVInsertWriteVXRMLegacyPass());
     // This will assign physical register to the result of VSETVLI instructions
     // that produce VLMAX.
     PM.add(exegesis::createRISCVPostprocessingPass());

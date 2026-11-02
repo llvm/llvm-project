@@ -109,7 +109,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1:[0-9]+]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1:[0-9]+]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -135,9 +135,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // NORM-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
+// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4:![0-9]+]]
 // NORM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // NORM-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -254,7 +254,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.1
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -280,9 +280,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // NORM-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // NORM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // NORM-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -399,7 +399,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.2
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -425,9 +425,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // NORM-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // NORM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // NORM-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -544,7 +544,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.3
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -570,9 +570,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // NORM-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // NORM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // NORM-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -689,7 +689,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.4
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -715,9 +715,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // NORM-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // NORM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // NORM-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -834,7 +834,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.5
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -860,9 +860,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // NORM-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // NORM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // NORM-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -979,7 +979,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.6
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1005,9 +1005,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // NORM-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // NORM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // NORM-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1124,7 +1124,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.7
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1150,9 +1150,9 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // NORM-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// NORM-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // NORM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // NORM-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1312,7 +1312,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1:[0-9]+]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1:[0-9]+]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1336,9 +1336,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // COMP-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
+// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4:![0-9]+]]
 // COMP-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // COMP-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1448,7 +1448,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.1
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1472,9 +1472,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // COMP-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // COMP-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // COMP-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1584,7 +1584,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.2
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1608,9 +1608,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // COMP-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // COMP-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // COMP-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1720,7 +1720,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.3
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1744,9 +1744,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // COMP-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // COMP-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // COMP-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1856,7 +1856,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.4
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1880,9 +1880,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // COMP-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // COMP-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // COMP-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1992,7 +1992,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.5
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2016,9 +2016,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // COMP-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // COMP-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // COMP-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -2128,7 +2128,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.6
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2154,9 +2154,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // COMP-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // COMP-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // COMP-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -2273,7 +2273,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.7
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2299,9 +2299,9 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // COMP-NEXT:    store ptr [[RED]], ptr [[RED_ADDR]], align 8
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RED_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// COMP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[POINTS_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // COMP-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // COMP-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -2463,7 +2463,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY-NEXT:    [[INC:%.*]] = add i32 [[TMP4]], 1
 // SIMD-ONLY-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
+// SIMD-ONLY-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP1:![0-9]+]]
 // SIMD-ONLY:       for.end:
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I1]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND2:%.*]]
@@ -2481,7 +2481,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[TMP9:%.*]] = load i32, ptr [[I1]], align 4
 // SIMD-ONLY-NEXT:    [[INC6:%.*]] = add i32 [[TMP9]], 1
 // SIMD-ONLY-NEXT:    store i32 [[INC6]], ptr [[I1]], align 4
-// SIMD-ONLY-NEXT:    br label [[FOR_COND2]], !llvm.loop [[LOOP4:![0-9]+]]
+// SIMD-ONLY-NEXT:    br label [[FOR_COND2]], !llvm.loop [[LOOP3:![0-9]+]]
 // SIMD-ONLY:       for.end7:
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I8]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND9:%.*]]
@@ -2499,7 +2499,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[TMP14:%.*]] = load i32, ptr [[I8]], align 4
 // SIMD-ONLY-NEXT:    [[INC13:%.*]] = add i32 [[TMP14]], 1
 // SIMD-ONLY-NEXT:    store i32 [[INC13]], ptr [[I8]], align 4
-// SIMD-ONLY-NEXT:    br label [[FOR_COND9]], !llvm.loop [[LOOP5:![0-9]+]]
+// SIMD-ONLY-NEXT:    br label [[FOR_COND9]], !llvm.loop [[LOOP4:![0-9]+]]
 // SIMD-ONLY:       for.end14:
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I15]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND16:%.*]]
@@ -2517,7 +2517,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[TMP19:%.*]] = load i32, ptr [[I15]], align 4
 // SIMD-ONLY-NEXT:    [[INC20:%.*]] = add i32 [[TMP19]], 1
 // SIMD-ONLY-NEXT:    store i32 [[INC20]], ptr [[I15]], align 4
-// SIMD-ONLY-NEXT:    br label [[FOR_COND16]], !llvm.loop [[LOOP6:![0-9]+]]
+// SIMD-ONLY-NEXT:    br label [[FOR_COND16]], !llvm.loop [[LOOP5:![0-9]+]]
 // SIMD-ONLY:       for.end21:
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I22]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND23:%.*]]
@@ -2535,7 +2535,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[TMP24:%.*]] = load i32, ptr [[I22]], align 4
 // SIMD-ONLY-NEXT:    [[INC27:%.*]] = add i32 [[TMP24]], 1
 // SIMD-ONLY-NEXT:    store i32 [[INC27]], ptr [[I22]], align 4
-// SIMD-ONLY-NEXT:    br label [[FOR_COND23]], !llvm.loop [[LOOP7:![0-9]+]]
+// SIMD-ONLY-NEXT:    br label [[FOR_COND23]], !llvm.loop [[LOOP6:![0-9]+]]
 // SIMD-ONLY:       for.end28:
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I29]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND30:%.*]]
@@ -2553,7 +2553,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[TMP29:%.*]] = load i32, ptr [[I29]], align 4
 // SIMD-ONLY-NEXT:    [[INC34:%.*]] = add i32 [[TMP29]], 1
 // SIMD-ONLY-NEXT:    store i32 [[INC34]], ptr [[I29]], align 4
-// SIMD-ONLY-NEXT:    br label [[FOR_COND30]], !llvm.loop [[LOOP8:![0-9]+]]
+// SIMD-ONLY-NEXT:    br label [[FOR_COND30]], !llvm.loop [[LOOP7:![0-9]+]]
 // SIMD-ONLY:       for.end35:
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I36]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND37:%.*]]
@@ -2571,7 +2571,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[TMP34:%.*]] = load i32, ptr [[I36]], align 4
 // SIMD-ONLY-NEXT:    [[INC41:%.*]] = add i32 [[TMP34]], 1
 // SIMD-ONLY-NEXT:    store i32 [[INC41]], ptr [[I36]], align 4
-// SIMD-ONLY-NEXT:    br label [[FOR_COND37]], !llvm.loop [[LOOP9:![0-9]+]]
+// SIMD-ONLY-NEXT:    br label [[FOR_COND37]], !llvm.loop [[LOOP8:![0-9]+]]
 // SIMD-ONLY:       for.end42:
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I43]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND44:%.*]]
@@ -2589,7 +2589,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[TMP39:%.*]] = load i32, ptr [[I43]], align 4
 // SIMD-ONLY-NEXT:    [[INC48:%.*]] = add i32 [[TMP39]], 1
 // SIMD-ONLY-NEXT:    store i32 [[INC48]], ptr [[I43]], align 4
-// SIMD-ONLY-NEXT:    br label [[FOR_COND44]], !llvm.loop [[LOOP10:![0-9]+]]
+// SIMD-ONLY-NEXT:    br label [[FOR_COND44]], !llvm.loop [[LOOP9:![0-9]+]]
 // SIMD-ONLY:       for.end49:
 // SIMD-ONLY-NEXT:    ret void
 //

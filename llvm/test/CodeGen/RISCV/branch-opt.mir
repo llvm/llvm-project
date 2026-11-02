@@ -104,7 +104,7 @@ body:             |
   ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @bar, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 2
-  ; CHECK-NEXT:   BLTU [[COPY]], killed [[ADDI]], %bb.2
+  ; CHECK-NEXT:   BLTU [[COPY]], [[ADDI]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.3):
@@ -123,7 +123,7 @@ body:             |
     PseudoCALL target-flags(riscv-call) @bar, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
     ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
     %2:gpr = ADDI $x0, 2
-    BLTU %0, killed %2, %bb.2
+    BLTU %0, %2, %bb.2
     PseudoBR %bb.1
 
   bb.1 (%ir-block.3):
@@ -148,9 +148,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 0
-  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW [[ADDI]], [[COPY3]], 0 :: (store (s32))
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, -1
-  ; CHECK-NEXT:   BLTU killed [[ADDI1]], [[COPY2]], %bb.2
+  ; CHECK-NEXT:   BLTU [[ADDI1]], [[COPY2]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -164,7 +164,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 87
-  ; CHECK-NEXT:   SW killed [[ADDI2]], [[COPY]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW [[ADDI2]], [[COPY]], 0 :: (store (s32))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   PseudoRET
@@ -177,9 +177,9 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %5:gpr = ADDI $x0, 0
-    SW killed %5, %0, 0 :: (store (s32))
+    SW %5, %0, 0 :: (store (s32))
     %6:gpr = ADDI $x0, -1
-    BLTU killed %6, %1, %bb.2
+    BLTU %6, %1, %bb.2
     PseudoBR %bb.1
 
   bb.1:
@@ -189,7 +189,7 @@ body:             |
 
   bb.2:
     %7:gpr = ADDI $x0, 87
-    SW killed %7, %3, 0 :: (store (s32))
+    SW %7, %3, 0 :: (store (s32))
 
   bb.3:
     PseudoRET
@@ -208,9 +208,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
-  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW [[ADDI]], [[COPY3]], 0 :: (store (s32))
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-  ; CHECK-NEXT:   BLTU [[COPY2]], killed [[ADDI1]], %bb.2
+  ; CHECK-NEXT:   BLTU [[COPY2]], [[ADDI1]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -224,7 +224,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 87
-  ; CHECK-NEXT:   SW killed [[ADDI2]], [[COPY]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW [[ADDI2]], [[COPY]], 0 :: (store (s32))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   PseudoRET
@@ -237,9 +237,9 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %5:gpr = ADDI $x0, -1
-    SW killed %5, %0, 0 :: (store (s32))
+    SW %5, %0, 0 :: (store (s32))
     %6:gpr = ADDI $x0, 0
-    BLTU %1, killed %6, %bb.2
+    BLTU %1, %6, %bb.2
     PseudoBR %bb.1
 
   bb.1:
@@ -249,7 +249,7 @@ body:             |
 
   bb.2:
     %7:gpr = ADDI $x0, 87
-    SW killed %7, %3, 0 :: (store (s32))
+    SW %7, %3, 0 :: (store (s32))
 
   bb.3:
     PseudoRET
@@ -268,9 +268,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
-  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW [[ADDI]], [[COPY3]], 0 :: (store (s32))
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-  ; CHECK-NEXT:   BLT killed [[ADDI1]], [[COPY2]], %bb.2
+  ; CHECK-NEXT:   BLT [[ADDI1]], [[COPY2]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -284,7 +284,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 87
-  ; CHECK-NEXT:   SW killed [[ADDI2]], [[COPY]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW [[ADDI2]], [[COPY]], 0 :: (store (s32))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   PseudoRET
@@ -297,9 +297,9 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %5:gpr = ADDI $x0, 1
-    SW killed %5, %0, 0 :: (store (s32))
+    SW %5, %0, 0 :: (store (s32))
     %6:gpr = ADDI $x0, 0
-    BLT killed %6, %1, %bb.2
+    BLT %6, %1, %bb.2
     PseudoBR %bb.1
 
   bb.1:
@@ -309,7 +309,7 @@ body:             |
 
   bb.2:
     %7:gpr = ADDI $x0, 87
-    SW killed %7, %3, 0 :: (store (s32))
+    SW %7, %3, 0 :: (store (s32))
 
   bb.3:
     PseudoRET
@@ -328,9 +328,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
-  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW [[ADDI]], [[COPY3]], 0 :: (store (s32))
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-  ; CHECK-NEXT:   BLT [[COPY2]], killed [[ADDI1]], %bb.2
+  ; CHECK-NEXT:   BLT [[COPY2]], [[ADDI1]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -344,7 +344,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 87
-  ; CHECK-NEXT:   SW killed [[ADDI2]], [[COPY]], 0 :: (store (s32))
+  ; CHECK-NEXT:   SW [[ADDI2]], [[COPY]], 0 :: (store (s32))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   PseudoRET
@@ -357,9 +357,9 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %5:gpr = ADDI $x0, -1
-    SW killed %5, %0, 0 :: (store (s32))
+    SW %5, %0, 0 :: (store (s32))
     %6:gpr = ADDI $x0, 0
-    BLT %1, killed %6, %bb.2
+    BLT %1, %6, %bb.2
     PseudoBR %bb.1
 
   bb.1:
@@ -369,7 +369,7 @@ body:             |
 
   bb.2:
     %7:gpr = ADDI $x0, 87
-    SW killed %7, %3, 0 :: (store (s32))
+    SW %7, %3, 0 :: (store (s32))
 
   bb.3:
     PseudoRET

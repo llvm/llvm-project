@@ -46,7 +46,7 @@ entry:
 
 ; CHECK:             .ascii  "r1"                    # string offset=1
 ; CHECK:             .ascii  ".text"                 # string offset=29
-; CHECK:             .ascii  "0:0"                   # string offset=72
+; CHECK:             .ascii  "0:0"                   # string offset=35
 ; CHECK:             .ascii  "0:0:0"                 # string offset=76
 ; CHECK:             .ascii  "0:0:0:0"               # string offset=82
 
@@ -55,7 +55,7 @@ entry:
 ; CHECK-NEXT:        .long   3
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   72
+; CHECK-NEXT:        .long   35
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2

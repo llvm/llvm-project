@@ -600,6 +600,17 @@ func.func @succeededOilistTrivialProperties() {
 
 // -----
 
+// CHECK-LABEL: @succeededOilistOptionalAttr
+func.func @succeededOilistOptionalAttr() {
+  // CHECK: test.oilist_optional_attr keyword nested <nested = <1, !test.smpla, [5, 6]>>
+  test.oilist_optional_attr nested <nested = <1, !test.smpla, [5, 6]>> keyword
+  // CHECK: test.oilist_optional_attr nested <nested = <1, !test.smpla, [5, 6]>>
+  test.oilist_optional_attr nested #test.cmpnd_nested<nested = <1, !test.smpla, [5, 6]>>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @succeededOilistSimple
 func.func @succeededOilistSimple(%arg0 : i32, %arg1 : i32, %arg2 : i32) {
   // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32
@@ -686,6 +697,13 @@ func.func @failedOilistWithMissingSeparator() {
 func.func @failedOilistWithTrailingSeparator() {
   // expected-error@+1 {{expected oilist clause after separator}}
   test.oilist_with_separator keyword,
+}
+
+// -----
+
+func.func @failedOilistOptionalAttrMissingValue() {
+  // expected-error@+1 {{expected '<'}}
+  test.oilist_optional_attr nested
 }
 
 // -----

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -enable-early-exit-vectorization-with-side-effects -force-target-supports-masked-memory-ops -force-vector-width=4 -passes=loop-vectorize -disable-output -pass-remarks-missed=".*" 2>&1 | FileCheck %s
+; RUN: opt < %s -enable-early-exit-vectorization-with-side-effects -force-target-supports-masked-memory-ops -force-vector-width=4 -passes=loop-vectorize -disable-output -pass-remarks-analysis=".*" -pass-remarks-missed=".*" 2>&1 | FileCheck %s
 
 ; CHECK: loop not vectorized
 
@@ -31,7 +31,7 @@ exit:
   ret void
 }
 
-; CHECK: loop not vectorized
+; CHECK: loop not vectorized: Unsupported user of conditional induction found
 
 ; Negative test: Storing the conditionally incremented phi is invalid.
 
@@ -94,11 +94,14 @@ exit:
   ret void
 }
 
-; CHECK: loop not vectorized
+; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 ; Negative test: In this case the %idx is incremented when %cond.val != 0,
 ; but the store occurs when %cond.val > 100. The store mask does not match the
 ; PHI mask, so the loop is not vectorized.
+;
+; Note: This passes basic legality checks, but is rejected in early VPlan
+; transforms.
 define void @compress_mismatched_mask(ptr noalias %dst, ptr noalias %src, ptr noalias %cond, i64 %n) {
 entry:
   br label %for.body
@@ -136,9 +139,10 @@ exit:
   ret void
 }
 
-; CHECK: loop not vectorized
+; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 ; Negative test: Simple early exit loop with a compressstore. This fails in VPlan handling for early exits.
+; Note: The conditional induction is legal (this loop is rejected in early exit VPlan transforms).
 define i32 @compress_store_with_early_exit(ptr dereferenceable(1024) %dst, ptr noalias dereferenceable(1024) %src, ptr noalias dereferenceable(1024) %cond, ptr noalias dereferenceable(1024) %exit_cond) {
 entry:
   br label %for.body
@@ -173,7 +177,7 @@ early.exit:
   ret i32 %ret
 }
 
-; CHECK: loop not vectorized
+; CHECK: loop not vectorized: Unsupported user of conditional induction found
 
 ; Negative test: Using the conditional induction outside the loop is not supported.
 define i64 @out_of_loop_use_of_conditional_induction(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
@@ -204,7 +208,7 @@ exit:
   ret i64 %idx
 }
 
-; CHECK: loop not vectorized
+; CHECK: loop not vectorized: Unsupported user of conditional induction found
 
 ; Negative test: Matching an extended conditional induction index is not supported yet.
 ; Note: We should be able to support this case by using the no-wrap flags on %idx.next.
@@ -237,7 +241,7 @@ exit:
   ret void
 }
 
-; CHECK: loop not vectorized
+; CHECK: loop not vectorized: Unsupported user of conditional induction found
 
 ; Negative test: We can't vectorize an extended conditional induction use without no-wrap flags on the step.
 define void @test_compress_store_with_extended_index(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
@@ -262,6 +266,201 @@ for.inc:
   %idx.1 = phi i8 [ %idx.next, %if.then ], [ %idx, %for.body ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
+
+; Negative test: Lowering unpredicated loads/stores to compresstore/expandload is not supported yet.
+; Note: This passes basic legality checks, but is rejected in early VPlan transforms.
+define void @unpredicated_load_of_conditional_induction(ptr noalias %tab, ptr noalias %cond, ptr noalias %out, ptr noalias %flag, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %tab.ptr = getelementptr inbounds i32, ptr %tab, i64 %idx
+  %tab.val = load i32, ptr %tab.ptr, align 4
+  %out.ptr = getelementptr inbounds i32, ptr %out, i64 %iv
+  store i32 %tab.val, ptr %out.ptr, align 4
+  %cond.ptr = getelementptr inbounds i32, ptr %cond, i64 %iv
+  %cond.val = load i32, ptr %cond.ptr, align 4
+  %cmp = icmp ne i32 %cond.val, 0
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %flag.ptr = getelementptr inbounds i8, ptr %flag, i64 %iv
+  store i8 1, ptr %flag.ptr, align 1
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; CHECK: loop not vectorized: Unsupported user of conditional induction found
+
+; Negative test: Live outs derived from the conditional induction are phi are not support yet.
+define ptr @compress_store_derived_liveout(ptr noalias %dst, ptr noalias %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 8
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  %dst.ptr.lcssa = phi ptr [ %dst.ptr, %for.inc ]
+  ret ptr %dst.ptr.lcssa
+}
+
+; CHECK: loop not vectorized: Unsupported user of conditional induction found
+
+; Negative test: `%dst.ptr` uses an i64 stride for an `i32` store.
+define void @compress_store_mismatched_step_and_access_size(ptr writeonly noalias %dst, ptr readonly %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %dst.ptr = getelementptr inbounds i64, ptr %dst, i64 %idx
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; CHECK: loop not vectorized: Unsupported user of conditional induction found
+
+; Negative test: Compressed load of an irregular type (i4).
+define void @test_expand_load_i4(ptr noalias %dst, ptr readonly %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %iv
+  %load.dst = load i32, ptr %dst.ptr, align 4
+  %cmp = icmp slt i32 %load.dst, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %src.gep = getelementptr inbounds i4, ptr %src, i64 %idx
+  %load.src = load i4, ptr %src.gep, align 1
+  %load.src.ext = zext i4 %load.src to i32
+  store i32 %load.src.ext, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; CHECK: loop not vectorized: read with atomic ordering or volatile read
+
+; Negative test: We can't vectorize volatile compressed load/stores.
+define void @test_volatile_expand_load(ptr noalias %dst, ptr readonly %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %iv
+  %load.dst = load i32, ptr %dst.ptr, align 4
+  %cmp = icmp slt i32 %load.dst, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %idx
+  %load.src = load volatile i32, ptr %src.ptr, align 4
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; CHECK: loop not vectorized: write with atomic ordering or volatile write
+
+; Negative test: We can't vectorize atomic compressed load/stores.
+define void @test_atomic_compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx
+  store atomic i32 %load.src, ptr %dst.ptr unordered, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
   br i1 %exitcond.not, label %exit, label %for.body
 
 exit:

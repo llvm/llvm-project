@@ -153,7 +153,7 @@ mlir::LLVM::LoopAnnotationAttr Fortran::lower::genLoopAnnotationAttr(
   mlir::LLVM::LoopVectorizeAttr va = genLoopVectorizeAttr(
       context, disableVecAttr, scalableEnable, vectorWidth);
   return mlir::LLVM::LoopAnnotationAttr::get(
-      context, {}, /*vectorize=*/va, {}, /*unroll*/ ua,
-      /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {},
+      context, {}, {}, /*vectorize=*/va, {}, /*unroll*/ ua,
+      /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
       /*parallelAccesses*/ aga);
 }

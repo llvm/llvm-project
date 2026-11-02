@@ -137,7 +137,7 @@ static void printLitHelper(ExprAST *litOrNum) {
   llvm::errs() << "[ ";
   llvm::interleaveComma(literal->getValues(), llvm::errs(),
                         [&](auto &elt) { printLitHelper(elt.get()); });
-  llvm::errs() << "]";
+  llvm::errs() << " ]";
 }
 
 /// Print a literal, see the recursive helper above for the implementation.

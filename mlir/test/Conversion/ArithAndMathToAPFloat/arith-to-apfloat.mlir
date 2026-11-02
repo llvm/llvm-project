@@ -22,7 +22,7 @@
 // CHECK:           %[[BITCAST_1:.*]] = arith.bitcast %[[VAL_0]] : f8E4M3FN to i8
 // CHECK:           %[[EXTUI_1:.*]] = arith.extui %[[BITCAST_1]] : i8 to i64
 //                  // fltSemantics semantics for f8E4M3FN
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : i32
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 11 : i32
 // CHECK:           %[[VAL_1:.*]] = call @_mlir_apfloat_add(%[[CONSTANT_1]], %[[EXTUI_0]], %[[EXTUI_1]]) : (i32, i64, i64) -> i64
 // CHECK:           %[[TRUNCI_0:.*]] = arith.trunci %[[VAL_1]] : i64 to i8
 // CHECK:           %[[BITCAST_2:.*]] = arith.bitcast %[[TRUNCI_0]] : i8 to f8E4M3FN
@@ -35,7 +35,7 @@
 // CHECK:           %[[BITCAST_4:.*]] = arith.bitcast %[[VAL_2]] : f6E3M2FN to i6
 // CHECK:           %[[EXTUI_3:.*]] = arith.extui %[[BITCAST_4]] : i6 to i64
 //                  // fltSemantics semantics for f6E3M2FN
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 16 : i32
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 17 : i32
 // CHECK:           %[[VAL_3:.*]] = call @_mlir_apfloat_add(%[[CONSTANT_3]], %[[EXTUI_2]], %[[EXTUI_3]]) : (i32, i64, i64) -> i64
 // CHECK:           %[[TRUNCI_1:.*]] = arith.trunci %[[VAL_3]] : i64 to i6
 // CHECK:           %[[BITCAST_5:.*]] = arith.bitcast %[[TRUNCI_1]] : i6 to f6E3M2FN
@@ -70,7 +70,7 @@ func.func @full_example() {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_add(i32, i64, i64) -> i64
-// CHECK: %[[sem:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem:.*]] = arith.constant 19 : i32
 // CHECK: call @_mlir_apfloat_add(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @addf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.addf %arg0, %arg1 : f4E2M1FN
@@ -90,7 +90,7 @@ func.func @addf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_subtract(i32, i64, i64) -> i64
-// CHECK: %[[sem:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem:.*]] = arith.constant 19 : i32
 // CHECK: call @_mlir_apfloat_subtract(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.subf %arg0, %arg1 : f4E2M1FN
@@ -100,7 +100,7 @@ func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_multiply(i32, i64, i64) -> i64
-// CHECK: %[[sem:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem:.*]] = arith.constant 19 : i32
 // CHECK: call @_mlir_apfloat_multiply(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.mulf %arg0, %arg1 : f4E2M1FN
@@ -110,7 +110,7 @@ func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_divide(i32, i64, i64) -> i64
-// CHECK: %[[sem:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem:.*]] = arith.constant 19 : i32
 // CHECK: call @_mlir_apfloat_divide(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.divf %arg0, %arg1 : f4E2M1FN
@@ -120,7 +120,7 @@ func.func @subf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_remainder(i32, i64, i64) -> i64
-// CHECK: %[[sem:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem:.*]] = arith.constant 19 : i32
 // CHECK: call @_mlir_apfloat_remainder(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
 func.func @remf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.remf %arg0, %arg1 : f4E2M1FN
@@ -130,7 +130,7 @@ func.func @remf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_convert(i32, i32, i64) -> i64
-// CHECK: %[[sem_in:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem_in:.*]] = arith.constant 19 : i32
 // CHECK: %[[sem_out:.*]] = arith.constant 2 : i32
 // CHECK: call @_mlir_apfloat_convert(%[[sem_in]], %[[sem_out]], %{{.*}}) : (i32, i32, i64) -> i64
 func.func @extf(%arg0: f4E2M1FN) {
@@ -142,7 +142,7 @@ func.func @extf(%arg0: f4E2M1FN) {
 
 // CHECK: func.func private @_mlir_apfloat_convert(i32, i32, i64) -> i64
 // CHECK: %[[sem_in:.*]] = arith.constant 1 : i32
-// CHECK: %[[sem_out:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem_out:.*]] = arith.constant 19 : i32
 // CHECK: call @_mlir_apfloat_convert(%[[sem_in]], %[[sem_out]], %{{.*}}) : (i32, i32, i64) -> i64
 func.func @truncf(%arg0: bf16) {
   %0 = arith.truncf %arg0 : bf16 to f4E2M1FN
@@ -178,7 +178,7 @@ func.func @fptoui(%arg0: f16) {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_convert_from_int(i32, i32, i1, i64) -> i64
-// CHECK: %[[sem_out:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem_out:.*]] = arith.constant 19 : i32
 // CHECK: %[[in_width:.*]] = arith.constant 32 : i32
 // CHECK: %[[is_unsigned:.*]] = arith.constant false
 // CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_from_int(%[[sem_out]], %[[in_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
@@ -190,7 +190,7 @@ func.func @sitofp(%arg0: i32) {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_convert_from_int(i32, i32, i1, i64) -> i64
-// CHECK: %[[sem_out:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem_out:.*]] = arith.constant 19 : i32
 // CHECK: %[[in_width:.*]] = arith.constant 32 : i32
 // CHECK: %[[is_unsigned:.*]] = arith.constant true
 // CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_from_int(%[[sem_out]], %[[in_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
@@ -202,7 +202,7 @@ func.func @uitofp(%arg0: i32) {
 // -----
 
 // CHECK: func.func private @_mlir_apfloat_compare(i32, i64, i64) -> i8
-// CHECK: %[[sem:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem:.*]] = arith.constant 19 : i32
 // CHECK: %[[cmp:.*]] = call @_mlir_apfloat_compare(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i8
 // CHECK: %[[c3:.*]] = arith.constant 3 : i8
 // CHECK: %[[is_unordered:.*]] = arith.cmpi eq, %[[cmp]], %[[c3]] : i8
@@ -243,7 +243,7 @@ func.func @flush_denormals(%arg0: f32) {
 
 // CHECK: func.func private @_mlir_apfloat_flush_denormals(i32, i64) -> i64
 // CHECK-LABEL: func.func @flush_denormals_f8
-// CHECK: %[[sem:.*]] = arith.constant 10 : i32
+// CHECK: %[[sem:.*]] = arith.constant 11 : i32
 // CHECK: call @_mlir_apfloat_flush_denormals(%[[sem]], %{{.*}}) : (i32, i64) -> i64
 func.func @flush_denormals_f8(%arg0: f8E4M3FN) {
   %0 = arith.flush_denormals %arg0 : f8E4M3FN

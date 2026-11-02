@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-linux, system-windows
+// UNSUPPORTED: system-linux
 //
 // RUN: %clangxx_host %p/Inputs/objc-cast.cpp -g -o %t
 // RUN: %lldb %t \

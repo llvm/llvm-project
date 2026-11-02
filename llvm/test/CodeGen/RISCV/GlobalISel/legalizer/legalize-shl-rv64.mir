@@ -278,3 +278,26 @@ body:             |
     PseudoRET implicit $x10
 
 ...
+---
+name:            shl_i32_const_nuw_nsw
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: shl_i32_const_nuw_nsw
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $x10 = COPY [[SHL]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s32) = G_TRUNC %0(s64)
+    %2:_(s32) = G_CONSTANT i32 5
+    %3:_(s32) = nuw nsw G_SHL %1, %2(s32)
+    %4:_(s64) = G_ANYEXT %3(s32)
+    $x10 = COPY %4(s64)
+    PseudoRET implicit $x10
+
+...

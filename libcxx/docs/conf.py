@@ -193,7 +193,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("contents", "libc++", "libc++ Documentation", ["LLVM project"], 1)]
+man_pages = [("index", "libc++", "libc++ Documentation", ["LLVM project"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False

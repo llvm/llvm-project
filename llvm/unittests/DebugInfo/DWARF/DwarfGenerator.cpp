@@ -489,8 +489,9 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                    inconvertibleErrorCode());
 
   MC.reset(new MCContext(TheTriple, *MAI, *MRI, *MSTI));
+  M = std::make_unique<Module>("dwarfgen", Context);
   TLOF = TM->getObjFileLowering();
-  TLOF->Initialize(*MC, *TM);
+  TLOF->initialize(*MC, *TM, *M);
   MC->setObjectFileInfo(TLOF);
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MC);

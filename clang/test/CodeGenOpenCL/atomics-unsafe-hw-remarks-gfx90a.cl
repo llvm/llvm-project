@@ -27,9 +27,9 @@ typedef enum memory_scope {
 #endif
 } memory_scope;
 
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope wavefront-one-as due to an unsafe request. [-Rpass=si-lower]
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope agent-one-as due to an unsafe request. [-Rpass=si-lower]
-// GFX90A-HW-REMARK: Hardware instruction generated for atomic fadd operation at memory scope workgroup-one-as due to an unsafe request. [-Rpass=si-lower]
+// GFX90A-HW-REMARK: hardware instruction generated for atomic fadd at wavefront-one-as scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and denormals may be flushed (!atomic.ignore.denormal.mode) [-Rpass=si-lower]
+// GFX90A-HW-REMARK: hardware instruction generated for atomic fadd at agent-one-as scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and denormals may be flushed (!atomic.ignore.denormal.mode) [-Rpass=si-lower]
+// GFX90A-HW-REMARK: hardware instruction generated for atomic fadd at workgroup-one-as scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and denormals may be flushed (!atomic.ignore.denormal.mode) [-Rpass=si-lower]
 
 // GFX90A-HW-REMARK: global_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc
 // GFX90A-HW-REMARK: global_atomic_add_f32 v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc

@@ -12,6 +12,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -43,6 +44,9 @@ static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
 class OpenACCUtilsLoopTest : public ::testing::Test {
 protected:
   OpenACCUtilsLoopTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<acc::OpenACCDialect, affine::AffineDialect,
                         arith::ArithDialect, memref::MemRefDialect,
                         func::FuncDialect, scf::SCFDialect,

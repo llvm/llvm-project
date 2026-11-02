@@ -133,7 +133,7 @@ struct HostTypeHelper<
     Type<TypeCategory::Real, common::RealKindForPrecision(24)>> {
   // IEEE 754 32bits
   using Type = std::conditional_t<sizeof(float) == 4 &&
-          std::numeric_limits<float>::is_iec559,
+          common::numeric_limits<float>::is_iec559,
       float, UnsupportedType>;
 };
 
@@ -142,7 +142,7 @@ struct HostTypeHelper<
     Type<TypeCategory::Real, common::RealKindForPrecision(53)>> {
   // IEEE 754 64bits
   using Type = std::conditional_t<sizeof(double) == 8 &&
-          std::numeric_limits<double>::is_iec559,
+          common::numeric_limits<double>::is_iec559,
       double, UnsupportedType>;
 };
 
@@ -151,8 +151,8 @@ struct HostTypeHelper<
     Type<TypeCategory::Real, common::RealKindForPrecision(64)>> {
   // X87 80bits
   using Type = std::conditional_t<sizeof(long double) >= 10 &&
-          std::numeric_limits<long double>::digits == 64 &&
-          std::numeric_limits<long double>::max_exponent == 16384,
+          common::numeric_limits<long double>::digits == 64 &&
+          common::numeric_limits<long double>::max_exponent == 16384,
       long double, UnsupportedType>;
 };
 
@@ -165,8 +165,8 @@ template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
 template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
   // IEEE 754 128bits
   using Type = std::conditional_t<sizeof(long double) == 16 &&
-          std::numeric_limits<long double>::digits == 113 &&
-          std::numeric_limits<long double>::max_exponent == 16384,
+          common::numeric_limits<long double>::digits == 113 &&
+          common::numeric_limits<long double>::max_exponent == 16384,
       long double, UnsupportedType>;
 };
 #endif

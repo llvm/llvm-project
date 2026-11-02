@@ -67,6 +67,74 @@ define float @test_frem_fabs(float %x) {
   ret float %abs
 }
 
+; nsz on min/max only relaxes the order of -0.0 and +0.0, so it doesn't allow
+; flipping the sign of a zero operand.
+
+define float @test_fadd_zero_minnum_nsz(float %x) {
+; CHECK-LABEL: test_fadd_zero_minnum_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fminnm s0, s0, s1
+; CHECK-NEXT:    ret
+  %add = fadd float %x, 0.0
+  %min = call nsz float @llvm.minnum.f32(float %add, float 1.0)
+  ret float %min
+}
+
+define float @test_fsub_neg_zero_maxnum_nsz(float %x) {
+; CHECK-LABEL: test_fsub_neg_zero_maxnum_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    fmov s1, #-1.00000000
+; CHECK-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NEXT:    ret
+  %sub = fsub float %x, -0.0
+  %max = call nsz float @llvm.maxnum.f32(float %sub, float -1.0)
+  ret float %max
+}
+
+define float @test_zero_fsub_minimum_nsz(float %x) {
+; CHECK-LABEL: test_zero_fsub_minimum_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    fsub s0, s1, s0
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmin s0, s0, s1
+; CHECK-NEXT:    ret
+  %sub = fsub float 0.0, %x
+  %min = call nsz float @llvm.minimum.f32(float %sub, float 1.0)
+  ret float %min
+}
+
+define float @test_sitofp_fptosi_maximumnum_nsz(float %x) {
+; CHECK-LABEL: test_sitofp_fptosi_maximumnum_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    fmov s1, #-1.00000000
+; CHECK-NEXT:    scvtf s0, s0
+; CHECK-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NEXT:    ret
+  %conv = fptosi float %x to i32
+  %fp = sitofp i32 %conv to float
+  %max = call nsz float @llvm.maximumnum.f32(float %fp, float -1.0)
+  ret float %max
+}
+
+; A zero operand is never selected here, so its sign doesn't matter.
+define float @test_fadd_zero_minnum_nsz_neg_const(float %x) {
+; CHECK-LABEL: test_fadd_zero_minnum_nsz_neg_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, #-1.00000000
+; CHECK-NEXT:    fminnm s0, s0, s1
+; CHECK-NEXT:    ret
+  %add = fadd float %x, 0.0
+  %min = call nsz float @llvm.minnum.f32(float %add, float -1.0)
+  ret float %min
+}
+
 declare float @llvm.fabs.f32(float)
 declare float @llvm.copysign.f32(float, float)
 declare float @llvm.sqrt.f32(float)

@@ -23,11 +23,13 @@ class MachineFunction;
 class MachineInstr;
 class MachineOperand;
 
-LLVM_ABI stable_hash stableHashValue(const MachineOperand &MO);
+LLVM_ABI stable_hash stableHashValue(const MachineOperand &MO,
+                                     bool SourceQualifyLocalGlobals = false);
 LLVM_ABI stable_hash stableHashValue(const MachineInstr &MI,
                                      bool HashVRegs = false,
                                      bool HashConstantPoolIndices = false,
-                                     bool HashMemOperands = false);
+                                     bool HashMemOperands = false,
+                                     bool SourceQualifyLocalGlobals = false);
 LLVM_ABI stable_hash stableHashValue(const MachineBasicBlock &MBB);
 LLVM_ABI stable_hash stableHashValue(const MachineFunction &MF);
 

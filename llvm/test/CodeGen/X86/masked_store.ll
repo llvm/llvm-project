@@ -6398,23 +6398,23 @@ define void @widen_masked_store(<3 x i32> %v, ptr %p, <3 x i1> %mask) nounwind {
 ;
 ; AVX1-LABEL: widen_masked_store:
 ; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vmovd %edx, %xmm1
-; AVX1-NEXT:    vmovd %esi, %xmm2
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; AVX1-NEXT:    vmovd %ecx, %xmm2
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX1-NEXT:    vmovd %esi, %xmm1
+; AVX1-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
 ; AVX1-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm2[6,7]
 ; AVX1-NEXT:    vmaskmovps %xmm0, %xmm1, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: widen_masked_store:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vmovd %edx, %xmm1
-; AVX2-NEXT:    vmovd %esi, %xmm2
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; AVX2-NEXT:    vmovd %ecx, %xmm2
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-NEXT:    vmovd %esi, %xmm1
+; AVX2-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3]
 ; AVX2-NEXT:    vpmaskmovd %xmm0, %xmm1, (%rdi)
 ; AVX2-NEXT:    retq
 ;

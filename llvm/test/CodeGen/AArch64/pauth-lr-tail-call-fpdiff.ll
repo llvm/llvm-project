@@ -27,6 +27,7 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp0
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp0:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp0
@@ -109,6 +110,7 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; V83A-NEXT:     pacibsp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp1
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp1:
 ; V9A-NEXT:      pacibsppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp1
@@ -190,6 +192,7 @@ define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp2
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp2:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp2
@@ -253,6 +256,7 @@ define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-
 ; V83A-NEXT:     pacibsp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp3
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp3:
 ; V9A-NEXT:      pacibsppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp3
@@ -315,6 +319,7 @@ define swifttailcc void @indirect_tail_call_fpdiff_a_key(ptr swiftasync %ctx, pt
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp4
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp4:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp4
@@ -398,6 +403,7 @@ define swifttailcc void @indirect_tail_call_fpdiff_b_key(ptr swiftasync %ctx, pt
 ; V83A-NEXT:     pacibsp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp5
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp5:
 ; V9A-NEXT:      pacibsppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp5
@@ -480,6 +486,7 @@ define swifttailcc void @indirect_tail_call_no_fpdiff_a_key(ptr swiftasync %ctx,
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp6
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp6:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp6
@@ -543,6 +550,7 @@ define swifttailcc void @indirect_tail_call_no_fpdiff_b_key(ptr swiftasync %ctx,
 ; V83A-NEXT:     pacibsp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp7
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp7:
 ; V9A-NEXT:      pacibsppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp7

@@ -131,6 +131,7 @@ private:
     NKI_TemplateArgumentLoc,
     NKI_LambdaCapture,
     NKI_TemplateName,
+    NKI_NestedNameSpecifier,
     NKI_NestedNameSpecifierLoc,
     NKI_QualType,
 #define TYPELOC(CLASS, PARENT) NKI_##CLASS##TypeLoc,
@@ -139,7 +140,6 @@ private:
     NKI_LastKindWithoutPointerIdentity = NKI_TypeLoc,
     NKI_CXXBaseSpecifier,
     NKI_CXXCtorInitializer,
-    NKI_NestedNameSpecifier,
     NKI_Decl,
 #define DECL(DERIVED, BASE) NKI_##DERIVED##Decl,
 #include "clang/AST/DeclNodes.inc"
@@ -264,7 +264,7 @@ public:
   /// convertible to \c T.
   ///
   /// For types that have identity via their pointer in the AST
-  /// (like \c Stmt, \c Decl, \c Type and \c NestedNameSpecifier) the returned
+  /// (like \c Stmt, \c Decl and \c Type) the returned
   /// pointer points to the referenced AST node.
   /// For other types (like \c QualType) the value is stored directly
   /// in the \c DynTypedNode, and the returned pointer points at
@@ -308,9 +308,8 @@ public:
   /// @{
   /// Imposes an order on \c DynTypedNode.
   ///
-  /// Supports comparison of nodes that support memoization.
-  /// FIXME: Implement comparison for other node types (currently
-  /// only Stmt, Decl, Type and NestedNameSpecifier return memoization data).
+  /// FIXME: Implement comparison for TemplateName, LambdaCapture,
+  /// TemplateArgument, and TemplateArgumentLoc.
   bool operator<(const DynTypedNode &Other) const {
     if (!NodeKind.isSame(Other.NodeKind))
       return NodeKind < Other.NodeKind;
@@ -338,6 +337,10 @@ public:
                             NNSLB.getOpaqueData());
     }
 
+    if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(NodeKind))
+      return getUnchecked<NestedNameSpecifier>().getAsVoidPointer() <
+             Other.getUnchecked<NestedNameSpecifier>().getAsVoidPointer();
+
     assert(getMemoizationData() && Other.getMemoizationData());
     return getMemoizationData() < Other.getMemoizationData();
   }
@@ -357,6 +360,10 @@ public:
     if (ASTNodeKind::getFromNodeKind<NestedNameSpecifierLoc>().isSame(NodeKind))
       return getUnchecked<NestedNameSpecifierLoc>() ==
              Other.getUnchecked<NestedNameSpecifierLoc>();
+
+    if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(NodeKind))
+      return getUnchecked<NestedNameSpecifier>() ==
+             Other.getUnchecked<NestedNameSpecifier>();
 
     assert(getMemoizationData() && Other.getMemoizationData());
     return getMemoizationData() == Other.getMemoizationData();
@@ -383,6 +390,11 @@ public:
             NNSL.getNestedNameSpecifier().getAsVoidPointer(),
             NNSL.getOpaqueData());
       }
+
+      if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(
+              Val.NodeKind))
+        return llvm::DenseMapInfo<NestedNameSpecifier>::getHashValue(
+            Val.getUnchecked<NestedNameSpecifier>());
 
       assert(Val.getMemoizationData());
       return llvm::hash_value(Val.getMemoizationData());
@@ -482,15 +494,16 @@ private:
 
   /// Stores the data of the node.
   ///
-  /// Note that we can store \c Decls, \c Stmts, \c Types,
-  /// \c NestedNameSpecifiers and \c CXXCtorInitializer by pointer as they are
-  /// guaranteed to be unique pointers pointing to dedicated storage in the AST.
-  /// \c QualTypes, \c NestedNameSpecifierLocs, \c TypeLocs,
-  /// \c TemplateArguments and \c TemplateArgumentLocs on the other hand do not
-  /// have storage or unique pointers and thus need to be stored by value.
-  llvm::AlignedCharArrayUnion<const void *, TemplateArgument,
-                              TemplateArgumentLoc, NestedNameSpecifierLoc,
-                              QualType, TypeLoc, ObjCProtocolLoc>
+  /// Note that we can store \c Decls, \c Stmts, \c Types and
+  /// \c CXXCtorInitializer by pointer as they are guaranteed to be unique
+  /// pointers pointing to dedicated storage in the AST.
+  /// \c QualTypes, \c NestedNameSpecifiers, \c NestedNameSpecifierLocs,
+  /// \c TypeLocs, \c TemplateArguments and \c TemplateArgumentLocs on the other
+  /// hand do not have storage or unique pointers and thus need to be stored by
+  /// value.
+  llvm::AlignedCharArrayUnion<
+      const void *, TemplateArgument, TemplateArgumentLoc, NestedNameSpecifier,
+      NestedNameSpecifierLoc, QualType, TypeLoc, ObjCProtocolLoc>
       Storage;
 };
 

@@ -141,8 +141,9 @@ llvm::StringRef PlatformRemoteMacOSX::GetDescriptionStatic() {
   return "Remote Mac OS X user platform plug-in.";
 }
 
-llvm::StringRef PlatformRemoteMacOSX::GetDeviceSupportDirectoryName() {
-  return "macOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformRemoteMacOSX::GetDeviceSupportDirectoryNames() {
+  return {"macOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformRemoteMacOSX::GetPlatformName() {

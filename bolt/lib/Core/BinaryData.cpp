@@ -62,6 +62,11 @@ bool BinaryData::nameStartsWith(StringRef Prefix) const {
   return false;
 }
 
+bool BinaryData::isVTable() const {
+  return nameStartsWith("_ZTV") || // vtable
+         nameStartsWith("_ZTC");   // construction vtable
+}
+
 StringRef BinaryData::getSectionName() const { return getSection().getName(); }
 
 StringRef BinaryData::getOutputSectionName() const {

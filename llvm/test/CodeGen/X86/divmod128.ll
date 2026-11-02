@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-cygwin | FileCheck %s -check-prefix=WIN64
 ; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s -check-prefix=WIN64
 ; RUN: llc < %s -mtriple=x86_64-mingw32 | FileCheck %s -check-prefix=WIN64
+; RUN: llc < %s -mtriple=x86_64-unknown-uefi | FileCheck %s -check-prefix=WIN64
 
 define i64 @mod128(i128 %x) nounwind {
 ; X86-64-LABEL: mod128:

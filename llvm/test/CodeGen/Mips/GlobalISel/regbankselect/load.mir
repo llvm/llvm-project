@@ -17,19 +17,19 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: load_i32
-    ; MIPS32: liveins: $a0
+    ; MIPS32: liveins: $r4
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.ptr)
-    ; MIPS32-NEXT: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
-    %0:_(p0) = COPY $a0
+    ; MIPS32-NEXT: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
+    %0:_(p0) = COPY $r4
     %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.ptr)
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -39,25 +39,25 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: load_i64
-    ; MIPS32: liveins: $a0
+    ; MIPS32: liveins: $r4
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.ptr, align 8)
     ; MIPS32-NEXT: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
     ; MIPS32-NEXT: [[PTR_ADD:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s32)
     ; MIPS32-NEXT: [[LOAD1:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir.ptr + 4, basealign 8)
-    ; MIPS32-NEXT: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[LOAD1]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
-    %0:_(p0) = COPY $a0
+    ; MIPS32-NEXT: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[LOAD1]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
+    %0:_(p0) = COPY $r4
     %1:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.ptr)
     %2:_(s32), %3:_(s32) = G_UNMERGE_VALUES %1(s64)
-    $v0 = COPY %2(s32)
-    $v1 = COPY %3(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %2(s32)
+    $r3 = COPY %3(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---
@@ -67,18 +67,18 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: load_ambiguous_i64_in_fpr
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $r5
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.i64_ptr_a)
     ; MIPS32-NEXT: G_STORE [[LOAD]](s64), [[COPY1]](p0) :: (store (s64) into %ir.i64_ptr_b)
     ; MIPS32-NEXT: RetRA
-    %0:_(p0) = COPY $a0
-    %1:_(p0) = COPY $a1
+    %0:_(p0) = COPY $r4
+    %1:_(p0) = COPY $r5
     %2:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.i64_ptr_a)
     G_STORE %2(s64), %1(p0) :: (store (s64) into %ir.i64_ptr_b)
     RetRA
@@ -91,16 +91,16 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: load_float
-    ; MIPS32: liveins: $a0
+    ; MIPS32: liveins: $r4
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.ptr)
     ; MIPS32-NEXT: $f0 = COPY [[LOAD]](s32)
     ; MIPS32-NEXT: RetRA implicit $f0
-    %0:_(p0) = COPY $a0
+    %0:_(p0) = COPY $r4
     %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.ptr)
     $f0 = COPY %1(s32)
     RetRA implicit $f0
@@ -113,18 +113,18 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: load_ambiguous_float_in_gpr
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $r5
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.float_ptr_a)
     ; MIPS32-NEXT: G_STORE [[LOAD]](s32), [[COPY1]](p0) :: (store (s32) into %ir.float_ptr_b)
     ; MIPS32-NEXT: RetRA
-    %0:_(p0) = COPY $a0
-    %1:_(p0) = COPY $a1
+    %0:_(p0) = COPY $r4
+    %1:_(p0) = COPY $r5
     %2:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.float_ptr_a)
     G_STORE %2(s32), %1(p0) :: (store (s32) into %ir.float_ptr_b)
     RetRA
@@ -137,16 +137,16 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: load_double
-    ; MIPS32: liveins: $a0
+    ; MIPS32: liveins: $r4
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.ptr)
     ; MIPS32-NEXT: $d0 = COPY [[LOAD]](s64)
     ; MIPS32-NEXT: RetRA implicit $d0
-    %0:_(p0) = COPY $a0
+    %0:_(p0) = COPY $r4
     %1:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.ptr)
     $d0 = COPY %1(s64)
     RetRA implicit $d0

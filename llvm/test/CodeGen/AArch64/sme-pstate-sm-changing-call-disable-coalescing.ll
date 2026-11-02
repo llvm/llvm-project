@@ -459,10 +459,10 @@ define void @dont_coalesce_arg_v1f32(<1 x float> %arg, ptr %ptr) #0 {
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Spill
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Reload
+; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    bl use_v4f32
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    add x8, sp, #16
@@ -1227,9 +1227,9 @@ define void @dont_coalesce_res_v1f32(ptr %ptr) #0 {
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl get_v1f32
-; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Spill
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Reload
+; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    str z0, [x19]

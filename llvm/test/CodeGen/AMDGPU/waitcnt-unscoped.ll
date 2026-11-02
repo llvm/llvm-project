@@ -63,20 +63,20 @@ entry:
 }
 
 ; VMEM alias domain and scope
-!5 = !{!"vmem.domain"}
+!5 = !{!"vmem.domain", i1 false}
 !4 = !{!"vmem.scope", !5}
 !0 = !{!4}
 
 ; LDS alias domains and scopes
-!3 = !{!"lds1.domain"}
+!3 = !{!"lds1.domain", i1 false}
 !2 = !{!"lds1.scope", !3}
 !1 = !{!2}
 
-!8 = !{!"lds2.domain"}
+!8 = !{!"lds2.domain", i1 false}
 !7 = !{!"lds2.scope", !8}
 !6 = !{!7}
 
-!11 = !{!"lds1_off4.domain"}
+!11 = !{!"lds1_off4.domain", i1 false}
 !10 = !{!"lds1_off4.scope", !11}
 !9 = !{!10}
 

@@ -529,6 +529,16 @@ function(get_compiler_rt_install_dir arch install_dir)
   endif()
 endfunction()
 
+# Multi-configuration generators get no per-library install targets, so their
+# libraries are installed with the parent target's component instead.
+function(get_compiler_rt_install_component name parent_target component)
+  if(CMAKE_CONFIGURATION_TYPES AND parent_target)
+    set(${component} ${parent_target} PARENT_SCOPE)
+  else()
+    set(${component} ${name} PARENT_SCOPE)
+  endif()
+endfunction()
+
 function(get_compiler_rt_output_dir arch output_dir)
   # TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)

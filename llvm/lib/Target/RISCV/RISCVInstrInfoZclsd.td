@@ -15,19 +15,6 @@
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
-def GPRPairNoX0RV32Operand : AsmOperandClass {
-  let Name = "GPRPairNoX0RV32";
-  let ParserMethod = "parseGPRPair<false>";
-  let PredicateMethod = "isGPRPairNoX0";
-  let RenderMethod = "addRegOperands";
-  let DiagnosticType = "InvalidGPRPairNoX0RV32";
-  let DiagnosticString = "register pair must start with an even GPR other than x0";
-}
-
-def GPRPairNoX0RV32 : RegisterOperand<GPRPairNoX0> {
-  let ParserMatchClass = GPRPairNoX0RV32Operand;
-}
-
 def GPRPairCRV32Operand : AsmOperandClass {
   let Name = "GPRPairCRV32";
   let ParserMethod = "parseGPRPair<false>";

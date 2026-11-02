@@ -21,14 +21,14 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, [[DEF]], implicit-def dead $scc
   ; GCN-NEXT:   $vcc_lo = COPY [[S_AND_B32_]]
-  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.6, implicit $vcc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.6, implicit $vcc_lo
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, %8, implicit-def dead $scc
-  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit $vcc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit $vcc_lo
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
@@ -37,7 +37,7 @@ body:             |
   ; GCN-NEXT:   $exec_lo = S_OR_B32 $exec_lo, %6, implicit-def $scc
   ; GCN-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 1, %5, implicit $exec
   ; GCN-NEXT:   $vcc_lo = S_AND_B32 $exec_lo, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
-  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.5, implicit $vcc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.5, implicit $vcc_lo
   ; GCN-NEXT:   S_BRANCH %bb.4
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:

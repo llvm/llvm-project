@@ -797,7 +797,8 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   // Cast the runtime-returned pointer to the memref's address space if it
   // isn't there already, so it fits the descriptor's pointer slots.
-  unsigned dstAddrSpace = memRefType.getMemorySpaceAsInt();
+  unsigned dstAddrSpace =
+      *getTypeConverter()->getMemRefAddressSpace(memRefType);
   unsigned srcAddrSpace =
       cast<LLVM::LLVMPointerType>(allocatedPtr.getType()).getAddressSpace();
   if (dstAddrSpace != srcAddrSpace) {
@@ -837,6 +838,10 @@ LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   Value pointer =
       MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
+  // The runtime frees a pointer in the default address space.
+  if (pointer.getType() != llvmPointerType)
+    pointer =
+        LLVM::AddrSpaceCastOp::create(rewriter, loc, llvmPointerType, pointer);
   auto nullPtr = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPointerType);
   Value stream = adaptor.getAsyncDependencies().empty()
                      ? nullPtr

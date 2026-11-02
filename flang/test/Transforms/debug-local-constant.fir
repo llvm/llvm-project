@@ -9,12 +9,12 @@
 module {
   func.func @_QPone() {
     %0 = fir.address_of(@_QFoneECq) : !fir.ref<i32>
-    %1 = fircg.ext_declare %0 {uniq_name = "_QFoneECq"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc2)
+    %1 = fircg.ext_declare %0 uniq_name("_QFoneECq") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc2)
     return
   } loc(#loc1)
   func.func @_QPtwo() {
     %0 = fir.address_of(@_QFtwoECq) : !fir.ref<i32>
-    %1 = fircg.ext_declare %0 {uniq_name = "_QFtwoECq"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc4)
+    %1 = fircg.ext_declare %0 uniq_name("_QFtwoECq") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc4)
     return
   } loc(#loc3)
   fir.global internal @_QFoneECq constant : i32 {

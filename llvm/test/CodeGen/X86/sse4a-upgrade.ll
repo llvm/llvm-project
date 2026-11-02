@@ -9,11 +9,13 @@ define void @test_movntss(ptr %p, <4 x float> %a) nounwind optsize ssp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    movntss %xmm0, (%eax) # encoding: [0xf3,0x0f,0x2b,0x00]
+; X86-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_movntss:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movntss %xmm0, (%rdi) # encoding: [0xf3,0x0f,0x2b,0x07]
+; X64-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-NEXT:    retq # encoding: [0xc3]
   tail call void @llvm.x86.sse4a.movnt.ss(ptr %p, <4 x float> %a) nounwind
   ret void
@@ -26,11 +28,13 @@ define void @test_movntsd(ptr %p, <2 x double> %a) nounwind optsize ssp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    movntsd %xmm0, (%eax) # encoding: [0xf2,0x0f,0x2b,0x00]
+; X86-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_movntsd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movntsd %xmm0, (%rdi) # encoding: [0xf2,0x0f,0x2b,0x07]
+; X64-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-NEXT:    retq # encoding: [0xc3]
   tail call void @llvm.x86.sse4a.movnt.sd(ptr %p, <2 x double> %a) nounwind
   ret void

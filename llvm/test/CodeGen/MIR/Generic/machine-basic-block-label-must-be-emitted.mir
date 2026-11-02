@@ -1,0 +1,25 @@
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -run-pass=none -o - %s | llc -x mir -run-pass=none -o - | FileCheck %s
+
+# Test label-must-be-emitted independently of the address-taken and inline asm
+# target attributes, and in combination with other attributes and IR references.
+
+--- |
+  define void @test() {
+    ret void
+  }
+...
+---
+name: test
+body: |
+  ; CHECK: bb.0:
+  bb.0:
+  ; CHECK: bb.1 (label-must-be-emitted):
+  bb.1 (label-must-be-emitted):
+  ; CHECK: bb.2 (label-must-be-emitted, align 8):
+  bb.2 (align 8, label-must-be-emitted):
+  ; CHECK: bb.3 (machine-block-address-taken, label-must-be-emitted, inlineasm-br-indirect-target):
+  bb.3 (label-must-be-emitted, inlineasm-br-indirect-target, machine-block-address-taken):
+  ; CHECK: bb.4 (%ir-block.0, label-must-be-emitted):
+  bb.4 (label-must-be-emitted, %ir-block.0):
+...

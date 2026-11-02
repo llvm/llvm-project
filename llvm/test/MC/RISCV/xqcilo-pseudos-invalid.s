@@ -74,3 +74,35 @@ qc.e.sh a0, undefined
 # CHECK-ENABLED: [[@LINE+2]]:22: error: too few operands for instruction
 # CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.sw a0, undefined
+
+# CHECK-ENABLED: [[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+qc.e.lb x0, undefined
+
+# CHECK-ENABLED: [[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+qc.e.lbu x0, undefined
+
+# CHECK-ENABLED: [[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+qc.e.lh x0, undefined
+
+# CHECK-ENABLED: [[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+qc.e.lhu x0, undefined
+
+# CHECK-ENABLED: [[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+qc.e.lw x0, undefined
+
+# CHECK-ENABLED: [[@LINE+2]]:24: error: register must be a GPR excluding zero (x0)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+qc.e.sb a0, undefined, x0
+
+# CHECK-ENABLED: [[@LINE+2]]:24: error: register must be a GPR excluding zero (x0)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+qc.e.sh a0, undefined, x0
+
+# CHECK-ENABLED: [[@LINE+2]]:24: error: register must be a GPR excluding zero (x0)
+# CHECK-DISABLED: [[@LINE+1]]:1: error: instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+qc.e.sw a0, undefined, x0

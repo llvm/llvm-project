@@ -67,7 +67,7 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
                                SmallVectorImpl<MVT> &Results) {
   computeLegalValueVTs(ContextFunc, TM, Ty->getReturnType(), Results);
 
-  const DataLayout &DL = ContextFunc.getParent()->getDataLayout();
+  const DataLayout &DL = ContextFunc.getDataLayout();
   MVT PtrVT = MVT::getIntegerVT(DL.getPointerSizeInBits());
   if (!WebAssembly::canLowerReturn(
           Results.size(),

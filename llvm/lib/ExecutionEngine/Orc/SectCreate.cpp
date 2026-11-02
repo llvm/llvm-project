@@ -16,10 +16,10 @@ namespace llvm::orc {
 
 void SectCreateMaterializationUnit::materialize(
     std::unique_ptr<MaterializationResponsibility> R) {
+  auto &ES = ObjLinkingLayer.getExecutionSession();
   auto G = std::make_unique<LinkGraph>(
-      "orc_sectcreate_" + SectName,
-      ObjLinkingLayer.getExecutionSession().getSymbolStringPool(),
-      ObjLinkingLayer.getExecutionSession().getTargetTriple(),
+      "orc_sectcreate_" + SectName, ES.getSymbolStringPool(),
+      ES.getTargetTriple(), ES.getTargetTriple().getArchPointerBitWidth() / 8,
       SubtargetFeatures(), getGenericEdgeKindName);
 
   auto &Sect = G->createSection(SectName, MP);

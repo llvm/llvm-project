@@ -269,6 +269,7 @@ bool ProcessMachCore::LoadBinaryViaLowmemUUID() {
               bin_spec.force_symbol_search = true;
               bin_spec.notify = true;
               bin_spec.set_address_in_target = true;
+              bin_spec.is_main_executable = true;
               llvm::Expected<ModuleSP> module =
                   DynamicLoader::LocateAndLoadBinary(this, bin_spec);
               if (module)
@@ -335,6 +336,7 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (module)
@@ -394,6 +396,7 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (module) {

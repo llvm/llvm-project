@@ -76,6 +76,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -118,7 +119,6 @@ static bool isAtomicConversionDeferred(Operation *op) {
 }
 
 namespace {
-
 // Lower orphan acc.atomic.update by: load from addr, clone region expr with
 // the loaded value, then store the computed result back to addr.
 // Only matches outside compute regions and atomic captures.
@@ -335,6 +335,12 @@ class ACCSpecializeForHost
 public:
   using ACCSpecializeForHostBase<
       ACCSpecializeForHost>::ACCSpecializeForHostBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCSpecializeForHostBase<ACCSpecializeForHost>::getDependentDialects(
+        registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override {
     LLVM_DEBUG(llvm::dbgs() << "Enter ACCSpecializeForHost()\n");

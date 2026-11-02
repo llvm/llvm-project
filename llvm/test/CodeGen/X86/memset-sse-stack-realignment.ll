@@ -39,7 +39,7 @@ define void @test1(i32 %t) nounwind {
 ; SSE-NEXT:    movl %esp, %ebp
 ; SSE-NEXT:    pushl %esi
 ; SSE-NEXT:    andl $-16, %esp
-; SSE-NEXT:    subl $48, %esp
+; SSE-NEXT:    subl $32, %esp
 ; SSE-NEXT:    movl %esp, %esi
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
@@ -62,7 +62,7 @@ define void @test1(i32 %t) nounwind {
 ; AVX-NEXT:    movl %esp, %ebp
 ; AVX-NEXT:    pushl %esi
 ; AVX-NEXT:    andl $-32, %esp
-; AVX-NEXT:    subl $64, %esp
+; AVX-NEXT:    subl $32, %esp
 ; AVX-NEXT:    movl %esp, %esi
 ; AVX-NEXT:    movl 8(%ebp), %eax
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -112,7 +112,7 @@ define void @test2(i32 %t) nounwind {
 ; SSE-NEXT:    movl %esp, %ebp
 ; SSE-NEXT:    pushl %esi
 ; SSE-NEXT:    andl $-16, %esp
-; SSE-NEXT:    subl $32, %esp
+; SSE-NEXT:    subl $16, %esp
 ; SSE-NEXT:    movl %esp, %esi
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
@@ -134,7 +134,7 @@ define void @test2(i32 %t) nounwind {
 ; AVX-NEXT:    movl %esp, %ebp
 ; AVX-NEXT:    pushl %esi
 ; AVX-NEXT:    andl $-16, %esp
-; AVX-NEXT:    subl $32, %esp
+; AVX-NEXT:    subl $16, %esp
 ; AVX-NEXT:    movl %esp, %esi
 ; AVX-NEXT:    movl 8(%ebp), %eax
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0

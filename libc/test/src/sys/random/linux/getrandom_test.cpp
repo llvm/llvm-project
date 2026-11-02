@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/sys-random-macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/math/fabs.h"
 #include "src/sys/random/getrandom.h"
@@ -20,6 +21,18 @@ TEST_F(LlvmLibcGetRandomTest, InvalidFlag) {
   LIBC_NAMESPACE::cpp::array<char, 10> buffer;
   ASSERT_THAT(LIBC_NAMESPACE::getrandom(buffer.data(), buffer.size(), -1),
               Fails<ssize_t>(EINVAL));
+}
+
+TEST_F(LlvmLibcGetRandomTest, FlagValues) {
+  LIBC_NAMESPACE::cpp::array<char, 10> buffer;
+  // The kernel rejects GRND_INSECURE together with GRND_RANDOM, and accepts it
+  // together with GRND_NONBLOCK.
+  ASSERT_THAT(LIBC_NAMESPACE::getrandom(buffer.data(), buffer.size(),
+                                        GRND_INSECURE | GRND_RANDOM),
+              Fails<ssize_t>(EINVAL));
+  ASSERT_EQ(LIBC_NAMESPACE::getrandom(buffer.data(), buffer.size(),
+                                      GRND_INSECURE | GRND_NONBLOCK),
+            static_cast<ssize_t>(buffer.size()));
 }
 
 TEST_F(LlvmLibcGetRandomTest, InvalidBuffer) {

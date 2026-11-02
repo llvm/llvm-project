@@ -4,9 +4,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
   gpu.module @cuda_device_mod {
     gpu.func @_QPdynshared() kernel {
       %0 = fir.assumed_size_extent : index
-      %6 = cuf.shared_memory !fir.array<?xf32>, %0 : index {bindc_name = "r", uniq_name = "_QFdynsharedEr"} -> !fir.ref<!fir.array<?xf32>>
+      %6 = cuf.shared_memory !fir.array<?xf32>, %0 : index uniq_name("_QFdynsharedEr") bindc_name("r") -> !fir.ref<!fir.array<?xf32>>
       %7 = fir.shape %0 : (index) -> !fir.shape<1>
-      %8 = fir.declare %6(%7) {data_attr = #cuf.cuda<shared>, uniq_name = "_QFdynsharedEr"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+      %8 = fir.declare %6(%7) uniq_name("_QFdynsharedEr") data_attr(#cuf.cuda<shared>) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
       gpu.return
     }
   }
@@ -14,7 +14,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: gpu.func @_QPdynshared()
-// CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %{{.*}} : index {bindc_name = "r", uniq_name = "_QFdynsharedEr"} -> !fir.ref<!fir.array<?xf32>>       
+// CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %{{.*}} : index uniq_name("_QFdynsharedEr") bindc_name("r") -> !fir.ref<!fir.array<?xf32>>
 // CHECK: gpu.return
 // CHECK: }
 // CHECK: fir.global external @_QPdynshared__shared_mem__ <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<0xi8>
@@ -24,18 +24,18 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 20.0.0 (https://github.com/llvm/llvm-project.git cae351f3453a0a26ec8eb2ddaf773c24a29d929e)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
   gpu.module @cuda_device_mod {
     gpu.func @_QPshared_static() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
-      %0 = cuf.shared_memory i32 {bindc_name = "a", uniq_name = "_QFshared_staticEa"} -> !fir.ref<i32>
-      %1 = fir.declare %0 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_staticEa"} : (!fir.ref<i32>) -> !fir.ref<i32>
-      %2 = cuf.shared_memory i32 {bindc_name = "b", uniq_name = "_QFshared_staticEb"} -> !fir.ref<i32>
-      %3 = fir.declare %2 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_staticEb"} : (!fir.ref<i32>) -> !fir.ref<i32>
-      %8 = cuf.shared_memory i32 {bindc_name = "c", uniq_name = "_QFshared_staticEc"} -> !fir.ref<i32>
-      %9 = fir.declare %8 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_staticEc"} : (!fir.ref<i32>) -> !fir.ref<i32>
-      %10 = cuf.shared_memory i32 {bindc_name = "d", uniq_name = "_QFshared_staticEd"} -> !fir.ref<i32>
-      %11 = fir.declare %10 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_staticEd"} : (!fir.ref<i32>) -> !fir.ref<i32>
-      %12 = cuf.shared_memory i64 {bindc_name = "e", uniq_name = "_QFshared_staticEe"} -> !fir.ref<i64>
-      %13 = fir.declare %12 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_staticEe"} : (!fir.ref<i64>) -> !fir.ref<i64>
-      %16 = cuf.shared_memory f32 {bindc_name = "r", uniq_name = "_QFshared_staticEr"} -> !fir.ref<f32>
-      %17 = fir.declare %16 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_staticEr"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      %0 = cuf.shared_memory i32 uniq_name("_QFshared_staticEa") bindc_name("a") -> !fir.ref<i32>
+      %1 = fir.declare %0 uniq_name("_QFshared_staticEa") data_attr(#cuf.cuda<shared>) : (!fir.ref<i32>) -> !fir.ref<i32>
+      %2 = cuf.shared_memory i32 uniq_name("_QFshared_staticEb") bindc_name("b") -> !fir.ref<i32>
+      %3 = fir.declare %2 uniq_name("_QFshared_staticEb") data_attr(#cuf.cuda<shared>) : (!fir.ref<i32>) -> !fir.ref<i32>
+      %8 = cuf.shared_memory i32 uniq_name("_QFshared_staticEc") bindc_name("c") -> !fir.ref<i32>
+      %9 = fir.declare %8 uniq_name("_QFshared_staticEc") data_attr(#cuf.cuda<shared>) : (!fir.ref<i32>) -> !fir.ref<i32>
+      %10 = cuf.shared_memory i32 uniq_name("_QFshared_staticEd") bindc_name("d") -> !fir.ref<i32>
+      %11 = fir.declare %10 uniq_name("_QFshared_staticEd") data_attr(#cuf.cuda<shared>) : (!fir.ref<i32>) -> !fir.ref<i32>
+      %12 = cuf.shared_memory i64 uniq_name("_QFshared_staticEe") bindc_name("e") -> !fir.ref<i64>
+      %13 = fir.declare %12 uniq_name("_QFshared_staticEe") data_attr(#cuf.cuda<shared>) : (!fir.ref<i64>) -> !fir.ref<i64>
+      %16 = cuf.shared_memory f32 uniq_name("_QFshared_staticEr") bindc_name("r") -> !fir.ref<f32>
+      %17 = fir.declare %16 uniq_name("_QFshared_staticEr") data_attr(#cuf.cuda<shared>) : (!fir.ref<f32>) -> !fir.ref<f32>
       gpu.return
     }
   }
@@ -43,12 +43,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: gpu.func @_QPshared_static()
-// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "a", isStatic, uniq_name = "_QFshared_staticEa"} -> !fir.ref<i32>      
-// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "b", isStatic, uniq_name = "_QFshared_staticEb"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "c", isStatic, uniq_name = "_QFshared_staticEc"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "d", isStatic, uniq_name = "_QFshared_staticEd"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i64 align 8 {bindc_name = "e", isStatic, uniq_name = "_QFshared_staticEe"} -> !fir.ref<i64>
-// CHECK: cuf.shared_memory[%c0{{.*}} : i32] f32 align 4 {bindc_name = "r", isStatic, uniq_name = "_QFshared_staticEr"} -> !fir.ref<f32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 uniq_name("_QFshared_staticEa") bindc_name("a") static -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 uniq_name("_QFshared_staticEb") bindc_name("b") static -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 uniq_name("_QFshared_staticEc") bindc_name("c") static -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 uniq_name("_QFshared_staticEd") bindc_name("d") static -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i64 align 8 uniq_name("_QFshared_staticEe") bindc_name("e") static -> !fir.ref<i64>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] f32 align 4 uniq_name("_QFshared_staticEr") bindc_name("r") static -> !fir.ref<f32>
 // CHECK: gpu.return
 // CHECK: }
 // CHECK: fir.global internal @_QPshared_static__shared_mem__a <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
@@ -69,9 +69,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
       %c2_i32 = arith.constant 2 : i32
       %c0 = arith.constant 0 : index
       %5 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockdim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
-      %6 = fir.declare %5 {uniq_name = "_QM__fortran_builtinsE__builtin_blockdim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+      %6 = fir.declare %5 uniq_name("_QM__fortran_builtinsE__builtin_blockdim") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
       %15 = fir.alloca i32
-      %16 = fir.declare %15 {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QMmFss1Ek"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      %16 = fir.declare %15 uniq_name("_QMmFss1Ek") fortran_attrs<value> : (!fir.ref<i32>) -> !fir.ref<i32>
       %27 = fir.coordinate_of %6, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
       %28 = fir.load %27 : !fir.ref<i32>
       %29 = fir.convert %28 : (i32) -> i64
@@ -84,9 +84,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
       %36 = fir.convert %35 : (i64) -> index
       %37 = arith.cmpi sgt, %36, %c0 : index
       %38 = arith.select %37, %36, %c0 : index
-      %39 = cuf.shared_memory !fir.array<?x?xi32>, %32, %38 : index, index {bindc_name = "s1", uniq_name = "_QMmFss1Es1"} -> !fir.ref<!fir.array<?x?xi32>>
+      %39 = cuf.shared_memory !fir.array<?x?xi32>, %32, %38 : index, index uniq_name("_QMmFss1Es1") bindc_name("s1") -> !fir.ref<!fir.array<?x?xi32>>
       %40 = fir.shape %32, %38 : (index, index) -> !fir.shape<2>
-      %41 = fir.declare %39(%40) {data_attr = #cuf.cuda<shared>, uniq_name = "_QMmFss1Es1"} : (!fir.ref<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xi32>>
+      %41 = fir.declare %39(%40) uniq_name("_QMmFss1Es1") data_attr(#cuf.cuda<shared>) : (!fir.ref<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xi32>>
       %42 = fir.load %16 : !fir.ref<i32>
       %43 = arith.muli %42, %c2_i32 : i32
       %44 = fir.convert %43 : (i32) -> i64
@@ -98,7 +98,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
       %50 = fir.convert %49 : (i64) -> index
       %51 = arith.cmpi sgt, %50, %c0 : index
       %52 = arith.select %51, %50, %c0 : index
-      %53 = cuf.shared_memory !fir.array<?x?xi32>, %47, %52 : index, index {bindc_name = "s2", uniq_name = "_QMmFss1Es2"} -> !fir.ref<!fir.array<?x?xi32>>
+      %53 = cuf.shared_memory !fir.array<?x?xi32>, %47, %52 : index, index uniq_name("_QMmFss1Es2") bindc_name("s2") -> !fir.ref<!fir.array<?x?xi32>>
       gpu.return
     }
   }
@@ -109,9 +109,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: %[[EXTENT1:.*]] = arith.select 
 // CHECK: %[[SIZE_EXTENT:.*]] = arith.muli %c4{{.*}}, %[[EXTENT0]] : index
 // CHECK: %[[DYNSIZE:.*]] = arith.muli %[[SIZE_EXTENT]], %[[EXTENT1]] : index
-// CHECK: cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?x?xi32>, %9, %15 : index, index {bindc_name = "s1", uniq_name = "_QMmFss1Es1"} -> !fir.ref<!fir.array<?x?xi32>>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?x?xi32>, %9, %15 : index, index uniq_name("_QMmFss1Es1") bindc_name("s1") -> !fir.ref<!fir.array<?x?xi32>>
 // CHECK: %[[CONV_DYNSIZE:.*]] = fir.convert %[[DYNSIZE]] : (index) -> i32
-// CHECK: cuf.shared_memory[%[[CONV_DYNSIZE]] : i32] !fir.array<?x?xi32>, %26, %31 : index, index {bindc_name = "s2", uniq_name = "_QMmFss1Es2"} -> !fir.ref<!fir.array<?x?xi32>>
+// CHECK: cuf.shared_memory[%[[CONV_DYNSIZE]] : i32] !fir.array<?x?xi32>, %26, %31 : index, index uniq_name("_QMmFss1Es2") bindc_name("s2") -> !fir.ref<!fir.array<?x?xi32>>
 
 // -----
 
@@ -134,35 +134,35 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
       %0 = fir.dummy_scope : !fir.dscope
       %a0 = fir.assumed_size_extent : index
       %1 = fir.shape %a0 : (index) -> !fir.shape<1>
-      %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 {data_attr = #cuf.cuda<device>, uniq_name = "_QMmtestsFtestanyEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+      %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 uniq_name("_QMmtestsFtestanyEa") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
       %3 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockdim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
-      %4:2 = hlfir.declare %3 {uniq_name = "_QM__fortran_builtinsE__builtin_blockdim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
+      %4:2 = hlfir.declare %3 uniq_name("_QM__fortran_builtinsE__builtin_blockdim") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
       %5 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
-      %6:2 = hlfir.declare %5 {uniq_name = "_QM__fortran_builtinsE__builtin_blockidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
+      %6:2 = hlfir.declare %5 uniq_name("_QM__fortran_builtinsE__builtin_blockidx") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
       %a2 = fir.assumed_size_extent : index
-      %7 = cuf.shared_memory !fir.array<?xf64>, %a2 : index {bindc_name = "dmasks", uniq_name = "_QMmtestsFtestanyEdmasks"} -> !fir.ref<!fir.array<?xf64>>
+      %7 = cuf.shared_memory !fir.array<?xf64>, %a2 : index uniq_name("_QMmtestsFtestanyEdmasks") bindc_name("dmasks") -> !fir.ref<!fir.array<?xf64>>
       %8 = fir.shape %a2 : (index) -> !fir.shape<1>
-      %9:2 = hlfir.declare %7(%8) {data_attr = #cuf.cuda<shared>, uniq_name = "_QMmtestsFtestanyEdmasks"} : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.array<?xf64>>)
+      %9:2 = hlfir.declare %7(%8) uniq_name("_QMmtestsFtestanyEdmasks") data_attr(#cuf.cuda<shared>) : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.array<?xf64>>)
       %10 = fir.address_of(@_QM__fortran_builtinsE__builtin_griddim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
-      %11:2 = hlfir.declare %10 {uniq_name = "_QM__fortran_builtinsE__builtin_griddim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
+      %11:2 = hlfir.declare %10 uniq_name("_QM__fortran_builtinsE__builtin_griddim") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
       %12 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMmtestsFtestanyEi"}
-      %13:2 = hlfir.declare %12 {uniq_name = "_QMmtestsFtestanyEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      %13:2 = hlfir.declare %12 uniq_name("_QMmtestsFtestanyEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       %14 = fir.alloca i32 {bindc_name = "iam", uniq_name = "_QMmtestsFtestanyEiam"}
-      %15:2 = hlfir.declare %14 {uniq_name = "_QMmtestsFtestanyEiam"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      %15:2 = hlfir.declare %14 uniq_name("_QMmtestsFtestanyEiam") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       %16 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QMmtestsFtestanyEj"}
-      %17:2 = hlfir.declare %16 {uniq_name = "_QMmtestsFtestanyEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      %17:2 = hlfir.declare %16 uniq_name("_QMmtestsFtestanyEj") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       %a3 = fir.assumed_size_extent : index
-      %18 = cuf.shared_memory !fir.array<?xf32>, %a3 : index {bindc_name = "smasks", uniq_name = "_QMmtestsFtestanyEsmasks"} -> !fir.ref<!fir.array<?xf32>>
+      %18 = cuf.shared_memory !fir.array<?xf32>, %a3 : index uniq_name("_QMmtestsFtestanyEsmasks") bindc_name("smasks") -> !fir.ref<!fir.array<?xf32>>
       %19 = fir.shape %a3 : (index) -> !fir.shape<1>
-      %20:2 = hlfir.declare %18(%19) {data_attr = #cuf.cuda<shared>, uniq_name = "_QMmtestsFtestanyEsmasks"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+      %20:2 = hlfir.declare %18(%19) uniq_name("_QMmtestsFtestanyEsmasks") data_attr(#cuf.cuda<shared>) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
       gpu.return
     }
   }
 }
 
 // CHECK-LABEL: gpu.func @_QMmtestsPtestany
-// CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf64>, %{{.*}} : index {bindc_name = "dmasks", uniq_name = "_QMmtestsFtestanyEdmasks"} -> !fir.ref<!fir.array<?xf64>>
-// CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %{{.*}} : index {bindc_name = "smasks", uniq_name = "_QMmtestsFtestanyEsmasks"} -> !fir.ref<!fir.array<?xf32>>
+// CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf64>, %{{.*}} : index uniq_name("_QMmtestsFtestanyEdmasks") bindc_name("dmasks") -> !fir.ref<!fir.array<?xf64>>
+// CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %{{.*}} : index uniq_name("_QMmtestsFtestanyEsmasks") bindc_name("smasks") -> !fir.ref<!fir.array<?xf32>>
 
 // CHECK: fir.global external @_QMmtestsPtestany__shared_mem__ <{alignment = 8 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<0xi8>
 
@@ -178,11 +178,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
       %c0 = arith.constant 0 : index
       %c1 = arith.constant 1 : index
       %c0_i32 = arith.constant 0 : i32
-      %0 = cuf.shared_memory i32 {bindc_name = "_lro_private_0", uniq_name = "_lro_private_0"} -> !fir.ref<i32>
+      %0 = cuf.shared_memory i32 uniq_name("_lro_private_0") bindc_name("_lro_private_0") -> !fir.ref<i32>
       %1 = fir.convert %0 : (!fir.ref<i32>) -> memref<i32>
       memref.store %c0_i32, %1[] : memref<i32>
       %2 = scf.parallel (%iv) = (%c0) to (%arg1) step (%c1) init (%c0_i32) -> i32 {
-        %3 = cuf.shared_memory i32 {bindc_name = "_lro_private_1", uniq_name = "_lro_private_1"} -> !fir.ref<i32>
+        %3 = cuf.shared_memory i32 uniq_name("_lro_private_1") bindc_name("_lro_private_1") -> !fir.ref<i32>
         %4 = fir.convert %3 : (!fir.ref<i32>) -> memref<i32>
         %5 = memref.load %4[] : memref<i32>
         scf.reduce(%5 : i32) {
@@ -197,9 +197,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 }
 
 // CHECK-LABEL: gpu.func @_QPreduce_kernel
-// CHECK:   cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "_lro_private_0", isStatic, uniq_name = "_lro_private_0"} -> !fir.ref<i32>
+// CHECK:   cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 uniq_name("_lro_private_0") bindc_name("_lro_private_0") static -> !fir.ref<i32>
 // CHECK:   scf.parallel
-// CHECK:     cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "_lro_private_1", isStatic, uniq_name = "_lro_private_1"} -> !fir.ref<i32>
+// CHECK:     cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 uniq_name("_lro_private_1") bindc_name("_lro_private_1") static -> !fir.ref<i32>
 // CHECK: fir.global internal @_QPreduce_kernel__shared_mem___lro_private_0 <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
 // CHECK: fir.global internal @_QPreduce_kernel__shared_mem___lro_private_1 <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
 
@@ -211,22 +211,22 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
       %c256 = arith.constant 256 : index
       %0 = fir.dummy_scope : !fir.dscope
       %1 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockdim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
-      %2:2 = hlfir.declare %1 {uniq_name = "_QM__fortran_builtinsE__builtin_blockdim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
+      %2:2 = hlfir.declare %1 uniq_name("_QM__fortran_builtinsE__builtin_blockdim") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
       %3 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
-      %4:2 = hlfir.declare %3 {uniq_name = "_QM__fortran_builtinsE__builtin_blockidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
+      %4:2 = hlfir.declare %3 uniq_name("_QM__fortran_builtinsE__builtin_blockidx") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
       %5 = fir.assumed_size_extent : index
-      %6 = cuf.shared_memory !fir.array<?xf32>, %5 : index {bindc_name = "d", uniq_name = "_QFt1Ed"} -> !fir.ref<!fir.array<?xf32>>
+      %6 = cuf.shared_memory !fir.array<?xf32>, %5 : index uniq_name("_QFt1Ed") bindc_name("d") -> !fir.ref<!fir.array<?xf32>>
       %7 = fir.shape %5 : (index) -> !fir.shape<1>
-      %8:2 = hlfir.declare %6(%7) {data_attr = #cuf.cuda<shared>, uniq_name = "_QFt1Ed"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+      %8:2 = hlfir.declare %6(%7) uniq_name("_QFt1Ed") data_attr(#cuf.cuda<shared>) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
       %9 = fir.address_of(@_QM__fortran_builtinsE__builtin_griddim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
-      %10:2 = hlfir.declare %9 {uniq_name = "_QM__fortran_builtinsE__builtin_griddim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
-      %11 = cuf.shared_memory !fir.array<256xf32> {bindc_name = "s", uniq_name = "_QFt1Es"} -> !fir.ref<!fir.array<256xf32>>
+      %10:2 = hlfir.declare %9 uniq_name("_QM__fortran_builtinsE__builtin_griddim") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
+      %11 = cuf.shared_memory !fir.array<256xf32> uniq_name("_QFt1Es") bindc_name("s") -> !fir.ref<!fir.array<256xf32>>
       %12 = fir.shape %c256 : (index) -> !fir.shape<1>
-      %13:2 = hlfir.declare %11(%12) {data_attr = #cuf.cuda<shared>, uniq_name = "_QFt1Es"} : (!fir.ref<!fir.array<256xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<256xf32>>, !fir.ref<!fir.array<256xf32>>)
+      %13:2 = hlfir.declare %11(%12) uniq_name("_QFt1Es") data_attr(#cuf.cuda<shared>) : (!fir.ref<!fir.array<256xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<256xf32>>, !fir.ref<!fir.array<256xf32>>)
       %14 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
-      %15:2 = hlfir.declare %14 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
+      %15:2 = hlfir.declare %14 uniq_name("_QM__fortran_builtinsE__builtin_threadidx") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>)
       %16 = fir.alloca i32 {bindc_name = "__builtin_warpsize", uniq_name = "_QM__fortran_builtinsEC__builtin_warpsize"}
-      %17:2 = hlfir.declare %16 {uniq_name = "_QM__fortran_builtinsEC__builtin_warpsize"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      %17:2 = hlfir.declare %16 uniq_name("_QM__fortran_builtinsEC__builtin_warpsize") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       gpu.return
     }
   }
@@ -247,8 +247,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
   gpu.module @cuda_device_mod {
     gpu.func @_QPshared_tail_padded() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
-      %0 = cuf.shared_memory !fir.type<tp{a:i32,b:i8}> {bindc_name = "x", uniq_name = "_QFshared_tail_paddedEx"} -> !fir.ref<!fir.type<tp{a:i32,b:i8}>>
-      %1 = fir.declare %0 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_tail_paddedEx"} : (!fir.ref<!fir.type<tp{a:i32,b:i8}>>) -> !fir.ref<!fir.type<tp{a:i32,b:i8}>>
+      %0 = cuf.shared_memory !fir.type<tp{a:i32,b:i8}> uniq_name("_QFshared_tail_paddedEx") bindc_name("x") -> !fir.ref<!fir.type<tp{a:i32,b:i8}>>
+      %1 = fir.declare %0 uniq_name("_QFshared_tail_paddedEx") data_attr(#cuf.cuda<shared>) : (!fir.ref<!fir.type<tp{a:i32,b:i8}>>) -> !fir.ref<!fir.type<tp{a:i32,b:i8}>>
       gpu.return
     }
   }
@@ -268,8 +268,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
   gpu.module @cuda_device_mod {
     gpu.func @_QPshared_packed() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
-      %0 = cuf.shared_memory !fir.type<tp<{i:i32,d:f64}>> {bindc_name = "x", uniq_name = "_QFshared_packedEx"} -> !fir.ref<!fir.type<tp<{i:i32,d:f64}>>>
-      %1 = fir.declare %0 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_packedEx"} : (!fir.ref<!fir.type<tp<{i:i32,d:f64}>>>) -> !fir.ref<!fir.type<tp<{i:i32,d:f64}>>>
+      %0 = cuf.shared_memory !fir.type<tp<{i:i32,d:f64}>> uniq_name("_QFshared_packedEx") bindc_name("x") -> !fir.ref<!fir.type<tp<{i:i32,d:f64}>>>
+      %1 = fir.declare %0 uniq_name("_QFshared_packedEx") data_attr(#cuf.cuda<shared>) : (!fir.ref<!fir.type<tp<{i:i32,d:f64}>>>) -> !fir.ref<!fir.type<tp<{i:i32,d:f64}>>>
       gpu.return
     }
   }

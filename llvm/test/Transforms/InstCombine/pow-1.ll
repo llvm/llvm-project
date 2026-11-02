@@ -904,7 +904,7 @@ define double @pow_libcall_half_no_FMF_noerrno(double %x) {
 ; LIB-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X]])
 ; LIB-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; LIB-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], -inf
-; LIB-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]]
+; LIB-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]], !prof [[PROF0:![0-9]+]]
 ; LIB-NEXT:    ret double [[RETVAL]]
 ;
 ; NOLIB-LABEL: define double @pow_libcall_half_no_FMF_noerrno(
@@ -1340,7 +1340,7 @@ define double @pow_intrinsic_half_no_FMF(double %x) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], -inf
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret double [[RETVAL]]
 ;
   %retval = call double @llvm.pow.f64(double %x, double 0.5)
@@ -1541,3 +1541,16 @@ define <2 x bfloat> @test_pow_10_v2bf16(<2 x bfloat> %x) {
 }
 
 attributes #0 = { nounwind memory(none) }
+;.
+; CHECK-EXP10: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; VC32: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; VC51: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; VC64: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; VC83: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; NOLIB: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.

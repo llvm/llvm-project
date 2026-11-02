@@ -44,10 +44,10 @@ entry:
   %5 = load [2 x i64], ptr %a2, align 8
   %call = call i64 @foo1([2 x i64] %0, i64 %1, i64 %2, i64 %3, i64 %4, [2 x i64] %5)
   ret i64 %call
-; CHECK:             r0 = r3
+; CHECK:             r0 = r5
+; CHECK-NEXT:        r1 += r3
+; CHECK-NEXT:        r0 <<= 2
 ; CHECK-NEXT:        r0 += r1
-; CHECK-NEXT:        r5 <<= 2
-; CHECK-NEXT:        r0 += r5
 ; CHECK-NEXT:        exit
 }
 

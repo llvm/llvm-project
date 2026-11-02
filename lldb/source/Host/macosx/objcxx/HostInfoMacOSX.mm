@@ -818,15 +818,36 @@ SharedCacheInfo::SharedCacheInfo(SymbolSharedCacheUse sc_mode) {
   CreateSharedCacheInfoWithInstrospectionSPIs();
 }
 
+namespace {
 struct segment {
   std::string name;
   uint64_t vmaddr;
   size_t vmsize;
 
   // Mapped into lldb's own address space via libdispatch:
-  const void *data;
-  size_t size;
+  dispatch_data_t mapping = nullptr;
+  const void *data = nullptr;
+  size_t size = 0;
 };
+
+/// An unowned view of an image's segments that keeps their mappings alive.
+class DataBufferDispatchData : public DataBufferUnowned {
+public:
+  DataBufferDispatchData(uint8_t *bytes, lldb::offset_t size,
+                         std::vector<dispatch_data_t> mappings)
+      : DataBufferUnowned(bytes, size), m_mappings(std::move(mappings)) {}
+  DataBufferDispatchData(const DataBufferDispatchData &) = delete;
+  DataBufferDispatchData &operator=(const DataBufferDispatchData &) = delete;
+
+  ~DataBufferDispatchData() override {
+    for (dispatch_data_t mapping : m_mappings)
+      dispatch_release(mapping);
+  }
+
+private:
+  std::vector<dispatch_data_t> m_mappings;
+};
+} // namespace
 
 static DataExtractorSP map_shared_cache_binary_segments(void *image) {
   // dyld_image_segment_data_4HWTrace can't be called on
@@ -848,12 +869,20 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
         seg.vmaddr = vmAddr;
         seg.vmsize = vmSize;
 
-        dispatch_data_t data_from_libdyld =
-            dyld.image_segment_data_4HWTrace(image_copy, segmentName);
-        (void)dispatch_data_create_map(data_from_libdyld, &seg.data, &seg.size);
+        // The segment data is autoreleased. The map is ours to release.
+        @autoreleasepool {
+          dispatch_data_t data_from_libdyld =
+              dyld.image_segment_data_4HWTrace(image_copy, segmentName);
+          // NULL when the cache's backing file is unavailable.
+          if (data_from_libdyld)
+            seg.mapping = dispatch_data_create_map(data_from_libdyld, &seg.data,
+                                                   &seg.size);
+        }
 
         if (seg.size > 0 && seg.data != 0)
           segments.push_back(seg);
+        else if (seg.mapping)
+          dispatch_release(seg.mapping);
       });
 
   if (!segments.size())
@@ -886,8 +915,12 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
         std::max(max_lldb_vm_addr, (uint64_t)seg.data + seg.vmsize);
     min_file_vm_addr = std::min(min_file_vm_addr, (uint64_t)seg.vmaddr);
   }
-  DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
-      (uint8_t *)min_lldb_vm_addr, max_lldb_vm_addr - min_lldb_vm_addr);
+  std::vector<dispatch_data_t> mappings;
+  for (const segment &seg : segments)
+    mappings.push_back(seg.mapping);
+  DataBufferSP data_sp = std::make_shared<DataBufferDispatchData>(
+      (uint8_t *)min_lldb_vm_addr, max_lldb_vm_addr - min_lldb_vm_addr,
+      std::move(mappings));
   VirtualDataExtractor::LookupTable remap_table;
   for (const segment &seg : segments)
     remap_table.Append(VirtualDataExtractor::LookupTable::Entry(

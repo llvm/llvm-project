@@ -58,6 +58,27 @@ def BytecodeDialectInterface : DialectInterface<"BytecodeDialectInterface"> {
       }]
     >,
     InterfaceMethod<[{
+        Parse a target dialect version for bytecode emission from a string, for
+        example from a command-line option. Return null if the version is invalid
+        or unsupported. The dialect defines the syntax of the version string.
+      }],
+      "std::unique_ptr<::mlir::DialectVersion>", "parseVersion",
+      (ins "::llvm::StringRef":$version),
+      [{ return nullptr; }]
+    >,
+    InterfaceMethod<[{
+        Verify that the given operation and its nested IR can be emitted for the
+        requested dialect version without losing information. This hook is
+        invoked before bytecode emission when a target version is explicitly
+        configured. Emit a diagnostic and return failure if the IR cannot be
+        represented in that version.
+      }],
+      "::llvm::LogicalResult", "verifyVersion",
+      (ins "::mlir::Operation *":$topLevelOp,
+           "const ::mlir::DialectVersion &":$version),
+      [{ return ::llvm::success(); }]
+    >,
+    InterfaceMethod<[{
         Write the version of this dialect to the given writer.
       }],
       "void", "writeVersion",

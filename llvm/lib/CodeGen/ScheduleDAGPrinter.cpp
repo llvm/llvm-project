@@ -16,6 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 template <>
 struct llvm::DOTGraphTraits<ScheduleDAG *> : public DefaultDOTGraphTraits {
 
@@ -66,13 +67,14 @@ std::string DOTGraphTraits<ScheduleDAG*>::getNodeLabel(const SUnit *SU,
                                                        const ScheduleDAG *G) {
   return G->getGraphNodeLabel(SU);
 }
+#endif
 
 /// viewGraph - Pop up a ghostview window with the reachable parts of the DAG
 /// rendered using 'dot'.
 ///
 void ScheduleDAG::viewGraph(const Twine &Name, const Twine &Title) {
   // This code is only for debugging!
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   ViewGraph(this, Name, false, Title);
 #else
   errs() << "ScheduleDAG::viewGraph is only available in debug builds on "

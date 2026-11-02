@@ -21,6 +21,7 @@
 #include "src/time/clock_gettime.h"
 #include "src/time/timer_create.h"
 #include "src/time/timer_delete.h"
+#include "src/time/timer_getoverrun.h"
 #include "src/time/timer_gettime.h"
 #include "src/time/timer_settime.h"
 #include "src/unistd/gettid.h"
@@ -226,6 +227,22 @@ TEST_F(LlvmLibcTimerTest, GetTimeNullPointer) {
 
   ASSERT_THAT(LIBC_NAMESPACE::timer_gettime(timerid, nullptr),
               Fails(any_of(EINVAL, EFAULT)));
+
+  ASSERT_THAT(LIBC_NAMESPACE::timer_delete(timerid), Succeeds(0));
+}
+
+TEST_F(LlvmLibcTimerTest, GetOverrunInvalidTimerId) {
+  ASSERT_THAT(LIBC_NAMESPACE::timer_getoverrun(reinterpret_cast<timer_t>(-1)),
+              Fails(EINVAL));
+}
+
+TEST_F(LlvmLibcTimerTest, GetOverrunInitial) {
+  timer_t timerid;
+  ASSERT_THAT(LIBC_NAMESPACE::timer_create(CLOCK_REALTIME, nullptr, &timerid),
+              Succeeds(0));
+
+  int overrun = LIBC_NAMESPACE::timer_getoverrun(timerid);
+  ASSERT_GE(overrun, 0);
 
   ASSERT_THAT(LIBC_NAMESPACE::timer_delete(timerid), Succeeds(0));
 }

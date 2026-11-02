@@ -45,12 +45,12 @@ struct CompilerInstance {
   void setupPlugin() {
     auto PluginPath = libPath();
     ASSERT_NE("", PluginPath);
-    Expected<PassPlugin> Plugin = PassPlugin::Load(PluginPath);
+    Expected<PassPlugin> Plugin = PassPlugin::load(PluginPath);
     ASSERT_TRUE(!!Plugin) << "Plugin path: " << PluginPath;
     Plugin->registerPassBuilderCallbacks(PB);
   }
 
-  CompilerInstance() {
+  CompilerInstance() : PB(Ctx) {
     IP = getInlineParamsFromOptLevel(3);
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);

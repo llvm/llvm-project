@@ -9,12 +9,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenHwModes.h"
+#include "SubtargetFeatureInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <algorithm>
+#include <set>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "codegen-hwmodes"
 
 StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 
@@ -48,6 +53,134 @@ void HwModeSelect::dump() const {
     dbgs() << " (" << P.first << ',' << P.second->getName() << ')';
   dbgs() << " }\n";
 }
+// Helper to represent predicates semantically.
+HwModePredicates::HwModePredicates(ArrayRef<const Record *> Preds) {
+  HasNonAsmPredicates =
+      !getRequiredFeatures(FeaturesSet, AnyOfFeatureSets, Preds);
+}
+
+// DefaultMode is implicitly active only when *none* of the other target
+// HwModes are active.
+//
+// Mathematically: DefaultMode = !(Mode_1 || Mode_2 || ... || Mode_N)
+//                            = !Mode_1 && !Mode_2 && ... && !Mode_N
+//
+// If Mode_1 requires (FeatureA && FeatureB), then !Mode_1 requires
+// (!FeatureA || !FeatureB). We construct these implicit OR-sets for all
+// other modes and add them to DefaultMode's requirements.
+HwModePredicates
+HwModePredicates::createForDefaultMode(const CodeGenHwModes &CGH) {
+  HwModePredicates SP;
+  for (unsigned M = 1; M < CGH.getNumModeIds(); ++M) {
+    const HwMode &Mode = CGH.getMode(M);
+    HwModePredicates ModePreds(Mode.Predicates);
+    if (ModePreds.HasNonAsmPredicates) {
+      LLVM_DEBUG(dbgs().indent(2)
+                 << "Warning: HwMode '" << Mode.Name
+                 << "' has non-assembler predicates. Ignoring for "
+                    "DefaultMode negation.\n");
+      SP.HasNonAsmPredicates = true;
+      continue;
+    }
+
+    // Negate the features in FeaturesSet: !(F1 && F2) = !F1 || !F2
+    std::set<SubtargetFeatureLiteral> NegatedFeatures;
+    for (const auto &Op : ModePreds.FeaturesSet) {
+      NegatedFeatures.insert({Op.Feature, !Op.IsNot});
+    }
+
+    if (ModePreds.AnyOfFeatureSets.empty()) {
+      if (!NegatedFeatures.empty())
+        SP.AnyOfFeatureSets.insert(std::move(NegatedFeatures));
+    } else if (ModePreds.AnyOfFeatureSets.size() == 1) {
+      // Negate a mode with a single OR-set:
+      // !(F1 && F2 && (L1 || L2)) = !F1 || !F2 || (!L1 && !L2)
+      // In CNF: (!F1 || !F2 || !L1) && (!F1 || !F2 || !L2)
+      const auto &OrSet = *ModePreds.AnyOfFeatureSets.begin();
+      for (const auto &Op : OrSet) {
+        std::set<SubtargetFeatureLiteral> NewOrSet = NegatedFeatures;
+        NewOrSet.insert({Op.Feature, !Op.IsNot});
+        SP.AnyOfFeatureSets.insert(std::move(NewOrSet));
+      }
+    } else {
+      LLVM_DEBUG(dbgs().indent(2)
+                 << "Warning: HwMode '" << Mode.Name
+                 << "' has multiple complex predicates. Ignoring for "
+                    "DefaultMode negation.\n");
+    }
+  }
+  return SP;
+}
+
+void HwModePredicates::add(const HwModePredicates &Other) {
+  FeaturesSet.insert(Other.FeaturesSet.begin(), Other.FeaturesSet.end());
+  AnyOfFeatureSets.insert(Other.AnyOfFeatureSets.begin(),
+                          Other.AnyOfFeatureSets.end());
+  HasNonAsmPredicates |= Other.HasNonAsmPredicates;
+}
+
+// Evaluates if the current set of predicates contains a contradiction.
+// Performs unit propagation: if we have a known feature F, we can simplify
+// OR-sets (A || B) containing F or !F.
+// Returns true if the OrSet is satisfied, false otherwise.
+// If not satisfied, fills SimplifiedSet with remaining active literals.
+static bool simplifyOrSet(const std::set<SubtargetFeatureLiteral> &OrSet,
+                          const std::set<SubtargetFeatureLiteral> &FeaturesSet,
+                          std::set<SubtargetFeatureLiteral> &SimplifiedSet) {
+  for (const auto &Lit : OrSet) {
+    if (FeaturesSet.count(Lit))
+      return true; // Satisfied
+    if (!FeaturesSet.count({Lit.Feature, !Lit.IsNot}))
+      SimplifiedSet.insert(Lit);
+  }
+  return false;
+}
+
+// Evaluates if the current set of predicates contains a contradiction.
+// Performs unit propagation: if we have a known feature F, we can simplify
+// OR-sets (A || B) containing F or !F.
+bool HwModePredicates::isSelfContradictory() {
+  // Check for immediate contradictions (e.g. requiring both F and !F).
+  for (const auto &Lit : FeaturesSet) {
+    if (FeaturesSet.count({Lit.Feature, !Lit.IsNot}))
+      return true;
+  }
+
+  std::set<std::set<SubtargetFeatureLiteral>> NewAnyOfs;
+  bool FeaturesChanged = false;
+
+  for (const auto &OrSet : AnyOfFeatureSets) {
+    std::set<SubtargetFeatureLiteral> SimplifiedSet;
+    if (simplifyOrSet(OrSet, FeaturesSet, SimplifiedSet))
+      continue; // Discard satisfied set
+
+    // All literals in this OR-set are false, causing a contradiction.
+    if (SimplifiedSet.empty())
+      return true;
+
+    if (SimplifiedSet.size() == 1) {
+      // Unit clause: only one choice remains, so it must be true.
+      FeaturesSet.insert(*SimplifiedSet.begin());
+      FeaturesChanged = true;
+    } else {
+      NewAnyOfs.insert(std::move(SimplifiedSet));
+    }
+  }
+
+  if (FeaturesChanged) {
+    AnyOfFeatureSets = std::move(NewAnyOfs);
+    return isSelfContradictory();
+  }
+
+  return false;
+}
+
+// Two predicate sets conflict if their union is self-contradictory.
+bool HwModePredicates::conflictsWith(const HwModePredicates &Other) const {
+  HwModePredicates Combined(*this);
+  Combined.add(Other);
+  return Combined.isSelfContradictory();
+}
 
 CodeGenHwModes::CodeGenHwModes(const RecordKeeper &RK) : Records(RK) {
   for (const Record *R : Records.getAllDerivedDefinitions("HwMode")) {
@@ -66,6 +199,18 @@ CodeGenHwModes::CodeGenHwModes(const RecordKeeper &RK) : Records(RK) {
     assert(P.second);
     (void)P;
   }
+}
+
+const HwModePredicates &
+CodeGenHwModes::getModePredicates(unsigned ModeId) const {
+  if (PredicatesByMode.empty()) {
+    PredicatesByMode.resize(getNumModeIds());
+    PredicatesByMode[DefaultMode] =
+        HwModePredicates::createForDefaultMode(*this);
+    for (unsigned M = 1; M < getNumModeIds(); ++M)
+      PredicatesByMode[M] = HwModePredicates(getMode(M).Predicates);
+  }
+  return PredicatesByMode[ModeId];
 }
 
 unsigned CodeGenHwModes::getHwModeId(const Record *R) const {
@@ -102,4 +247,53 @@ void CodeGenHwModes::dump() const {
     P.second.dump();
   }
   dbgs() << "}\n";
+}
+
+// Resolves a HwModeSelect record based on pattern predicates.
+// Returns a unique resolved record if compatible, or nullptr if ambiguous.
+const Record *
+CodeGenHwModes::resolveModeSelect(const Record *SelectRec,
+                                  ArrayRef<const Record *> PatPreds) const {
+  if (!SelectRec->isSubClassOf("HwModeSelect"))
+    return SelectRec;
+
+  LLVM_DEBUG(dbgs() << "Trying to resolve HwModeSelect '"
+                    << SelectRec->getName() << "'\n");
+
+  const HwModeSelect &MS = getHwModeSelect(SelectRec);
+
+  std::set<const Record *> ResolvedObjects;
+
+  // Construct and parse the pattern predicates ONCE here
+  HwModePredicates PatPredsSet(PatPreds);
+
+  for (const auto &[ModeId, Obj] : MS.Items) {
+    const HwModePredicates &ModePreds = getModePredicates(ModeId);
+
+    if (!ModePreds.conflictsWith(PatPredsSet)) {
+      LLVM_DEBUG(dbgs() << "  HwMode '" << getModeName(ModeId, true)
+                        << "' is compatible -> " << Obj->getName() << "\n");
+      ResolvedObjects.insert(Obj);
+    } else {
+      LLVM_DEBUG(dbgs() << "  HwMode '" << getModeName(ModeId, true)
+                        << "' is incompatible due to semantic conflict\n");
+    }
+  }
+
+  if (ResolvedObjects.size() == 1) {
+    const Record *Resolved = *ResolvedObjects.begin();
+    LLVM_DEBUG(dbgs() << "  Resolved to unique object: " << Resolved->getName()
+                      << "\n");
+    return Resolved;
+  }
+
+  if (ResolvedObjects.empty()) {
+    LLVM_DEBUG(dbgs() << "  No active modes resolved for '"
+                      << SelectRec->getName() << "'\n");
+  } else {
+    LLVM_DEBUG(
+        dbgs() << "  Multiple active modes resolved to different objects for '"
+               << SelectRec->getName() << "'\n");
+  }
+  return nullptr;
 }

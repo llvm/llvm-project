@@ -111,7 +111,7 @@ define <8 x i16> @Pmulhuw128(<8 x i16> %a, <8 x i16> %b) nounwind uwtable saniti
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[CALL:%.*]] = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> [[A]], <8 x i16> [[B]])
+; CHECK-NEXT:    [[CALL:%.*]] = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
 ; CHECK-NEXT:    store <8 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[CALL]]
 ;
@@ -127,7 +127,7 @@ define <8 x i16> @Pmulhuw128(<8 x i16> %a, <8 x i16> %b) nounwind uwtable saniti
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
 ; ORIGINS-NEXT:    [[TMP6:%.*]] = icmp ne i128 [[TMP5]], 0
 ; ORIGINS-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 [[TMP4]], i32 [[TMP2]]
-; ORIGINS-NEXT:    [[CALL:%.*]] = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> [[A]], <8 x i16> [[B]])
+; ORIGINS-NEXT:    [[CALL:%.*]] = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
 ; ORIGINS-NEXT:    store <8 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; ORIGINS-NEXT:    store i32 [[TMP7]], ptr @__msan_retval_origin_tls, align 4
 ; ORIGINS-NEXT:    ret <8 x i16> [[CALL]]

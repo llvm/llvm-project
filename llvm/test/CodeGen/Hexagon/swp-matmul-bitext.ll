@@ -9,8 +9,8 @@
 ; CHECK: += mpyi
 ; CHECK: [[REG1:(r[0-9]+)]] = memh
 ; CHECK: = extractu([[REG0:(r[0-9]+)]],
-; CHECK: = extractu([[REG0]],
 ; CHECK: [[REG2:(r[0-9]+)]] = memh
+; CHECK: = extractu([[REG0]],
 ; CHECK: endloop{{[01]}}
 
 %union_h2_sem_t = type { i32 }

@@ -49,10 +49,12 @@ int main(int argc, char **argv) {
 // AST: | |-CXXMethodDecl {{.*}} static_method 'void ()' static
 // AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (){{.*}}'
 // AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (char){{.*}}'
-// AST: | | `-ParmVarDecl {{.*}} 'char'
+// AST: | | |-ParmVarDecl {{.*}} 'char'
+// AST: | | `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}:?overloaded_method@Struct@@QEAAHD@Z"
 // AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (char, int, ...)'
 // AST: | | |-ParmVarDecl {{.*}} 'char'
-// AST: | | `-ParmVarDecl {{.*}} 'int'
+// AST: | | |-ParmVarDecl {{.*}} 'int'
+// AST: | | `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}:?overloaded_method@Struct@@QEAAHDHZZ"
 // AST: | |-CXXMethodDecl {{.*}} const_method 'void () const'
 // AST: | |-CXXMethodDecl {{.*}} volatile_method 'void () volatile'
 // AST: | |-CXXMethodDecl {{.*}} const_volatile_method 'void () const volatile'

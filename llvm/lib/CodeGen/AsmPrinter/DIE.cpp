@@ -187,23 +187,16 @@ uint64_t DIE::getDebugSectionOffset() const {
   return Unit->getDebugSectionOffset() + getOffset();
 }
 
-const DIE *DIE::getUnitDie() const {
-  const DIE *p = this;
-  while (p) {
-    if (p->getTag() == dwarf::DW_TAG_compile_unit ||
-        p->getTag() == dwarf::DW_TAG_skeleton_unit ||
-        p->getTag() == dwarf::DW_TAG_type_unit)
-      return p;
-    p = p->getParent();
-  }
+DIEUnit *DIE::getUnit() const {
+  for (const DIE *P = this; P; P = P->getParent())
+    if (auto *Unit = dyn_cast_if_present<DIEUnit *>(P->Owner))
+      return Unit;
   return nullptr;
 }
 
-DIEUnit *DIE::getUnit() const {
-  const DIE *UnitDie = getUnitDie();
-  if (UnitDie)
-    return dyn_cast_if_present<DIEUnit *>(UnitDie->Owner);
-  return nullptr;
+const DIE *DIE::getUnitDie() const {
+  const DIEUnit *Unit = getUnit();
+  return Unit ? &Unit->getUnitDie() : nullptr;
 }
 
 DIEValue DIE::findAttribute(dwarf::Attribute Attribute) const {
@@ -304,11 +297,7 @@ unsigned DIE::computeOffsetsAndAbbrevs(const dwarf::FormParams &FormParams,
 //===----------------------------------------------------------------------===//
 DIEUnit::DIEUnit(dwarf::Tag UnitTag) : Die(UnitTag) {
   Die.Owner = this;
-  assert((UnitTag == dwarf::DW_TAG_compile_unit ||
-          UnitTag == dwarf::DW_TAG_skeleton_unit ||
-          UnitTag == dwarf::DW_TAG_type_unit ||
-          UnitTag == dwarf::DW_TAG_partial_unit) &&
-         "expected a unit TAG");
+  assert(dwarf::isUnitType(UnitTag) && "expected a unit TAG");
 }
 
 void DIEValue::emitValue(const AsmPrinter *AP) const {

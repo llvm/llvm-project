@@ -186,8 +186,6 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX7-NEXT:    s_cselect_b64 vcc, exec, 0
 ; GFX7-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
-; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX7-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_div_fmas_f64:
@@ -201,8 +199,6 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:    s_cselect_b64 vcc, exec, 0
 ; GFX8-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
-; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10_W32-LABEL: s_div_fmas_f64:
@@ -214,8 +210,6 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX10_W32-NEXT:    s_cmp_eq_u32 s6, 0
 ; GFX10_W32-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GFX10_W32-NEXT:    v_div_fmas_f64 v[0:1], s[0:1], v[0:1], v[2:3]
-; GFX10_W32-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10_W32-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10_W32-NEXT:    ; return to shader part epilog
 ;
 ; GFX10_W64-LABEL: s_div_fmas_f64:
@@ -227,8 +221,6 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX10_W64-NEXT:    s_cmp_eq_u32 s6, 0
 ; GFX10_W64-NEXT:    s_cselect_b64 vcc, exec, 0
 ; GFX10_W64-NEXT:    v_div_fmas_f64 v[0:1], s[0:1], v[0:1], v[2:3]
-; GFX10_W64-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10_W64-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10_W64-NEXT:    ; return to shader part epilog
 ;
 ; GFX11_W32-LABEL: s_div_fmas_f64:
@@ -238,8 +230,6 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX11_W32-NEXT:    s_cmp_eq_u32 s6, 0
 ; GFX11_W32-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GFX11_W32-NEXT:    v_div_fmas_f64 v[0:1], s[0:1], v[0:1], v[2:3]
-; GFX11_W32-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11_W32-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11_W32-NEXT:    ; return to shader part epilog
 ;
 ; GFX11_W64-LABEL: s_div_fmas_f64:
@@ -251,8 +241,6 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX11_W64-NEXT:    s_cmp_eq_u32 s6, 0
 ; GFX11_W64-NEXT:    s_cselect_b64 vcc, exec, 0
 ; GFX11_W64-NEXT:    v_div_fmas_f64 v[0:1], s[0:1], v[0:1], v[2:3]
-; GFX11_W64-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11_W64-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11_W64-NEXT:    ; return to shader part epilog
   %vcc = icmp eq i32 %d, 0
   %result = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 %vcc)

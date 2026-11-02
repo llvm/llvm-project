@@ -19,10 +19,10 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_oeq
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; GISEL-X86-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
-    ; GISEL-X86-NEXT: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; GISEL-X86-NEXT: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def dead $eflags
     ; GISEL-X86-NEXT: $al = COPY [[AND8rr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
     %3:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -49,7 +49,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_ogt
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -77,7 +77,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_oge
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -105,7 +105,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_olt
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m1]], [[LD_Fp64m]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m1]], [[LD_Fp64m]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -133,7 +133,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_ole
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m1]], [[LD_Fp64m]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m1]], [[LD_Fp64m]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -160,7 +160,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_one
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -188,7 +188,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_ord
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -215,7 +215,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_uno
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -243,7 +243,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_ueq
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -272,7 +272,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_ugt
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m1]], [[LD_Fp64m]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m1]], [[LD_Fp64m]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -300,7 +300,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_uge
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m1]], [[LD_Fp64m]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m1]], [[LD_Fp64m]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -329,7 +329,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_ult
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -357,7 +357,7 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_ule
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
     ; GISEL-X86-NEXT: $al = COPY [[SETCCr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
@@ -384,10 +384,10 @@ body:             |
     ; GISEL-X86-LABEL: name: fcmp_double_une
     ; GISEL-X86: [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0)
     ; GISEL-X86-NEXT: [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s64) from %fixed-stack.0 + 8)
-    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def $fpsw, implicit $fpcw
+    ; GISEL-X86-NEXT: UCOM_FpIr64 [[LD_Fp64m]], [[LD_Fp64m1]], implicit-def $eflags, implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-X86-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
     ; GISEL-X86-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
-    ; GISEL-X86-NEXT: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; GISEL-X86-NEXT: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def dead $eflags
     ; GISEL-X86-NEXT: $al = COPY [[OR8rr]]
     ; GISEL-X86-NEXT: RET 0, implicit $al
     %3:_(p0) = G_FRAME_INDEX %fixed-stack.0

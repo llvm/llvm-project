@@ -85,7 +85,8 @@ BT::BitMask HexagonEvaluator::mask(Register Reg, unsigned Sub) const {
   bool IsSubLo = (Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo));
   if (Hexagon::DoubleRegsRegClass.hasSubClassEq(&RC) ||
       Hexagon::HvxWRRegClass.hasSubClassEq(&RC) ||
-      Hexagon::HvxVQRRegClass.hasSubClassEq(&RC))
+      Hexagon::HvxVQRRegClass.hasSubClassEq(&RC) ||
+      Hexagon::CircRegsRegClass.hasSubClassEq(&RC))
     return IsSubLo ? BT::BitMask(0, RW - 1) : BT::BitMask(RW, 2 * RW - 1);
 #ifndef NDEBUG
   dbgs() << printReg(Reg, &TRI, Sub) << " in reg class "
@@ -123,7 +124,8 @@ const TargetRegisterClass &HexagonEvaluator::composeWithSubRegIndex(
   assert(IsSubLo != IsSubHi && "Must refer to either low or high subreg");
 #endif
 
-  if (Hexagon::DoubleRegsRegClass.hasSubClassEq(&RC))
+  if (Hexagon::DoubleRegsRegClass.hasSubClassEq(&RC) ||
+      Hexagon::CircRegsRegClass.hasSubClassEq(&RC))
     return Hexagon::IntRegsRegClass;
   if (Hexagon::HvxWRRegClass.hasSubClassEq(&RC))
     return Hexagon::HvxVRRegClass;

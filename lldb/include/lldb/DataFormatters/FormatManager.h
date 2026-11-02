@@ -50,12 +50,12 @@ public:
   }
 
   void
-  EnableCategory(ConstString category_name,
+  EnableCategory(llvm::StringRef category_name,
                  TypeCategoryMap::Position pos = TypeCategoryMap::Default) {
     EnableCategory(category_name, pos, {});
   }
 
-  void EnableCategory(ConstString category_name,
+  void EnableCategory(llvm::StringRef category_name,
                       TypeCategoryMap::Position pos, lldb::LanguageType lang) {
     lldb::TypeCategoryImplSP category_sp;
     if (m_categories_map.Get(category_name, category_sp) && category_sp) {
@@ -64,7 +64,7 @@ public:
     }
   }
 
-  void DisableCategory(ConstString category_name) {
+  void DisableCategory(llvm::StringRef category_name) {
     m_categories_map.Disable(category_name);
   }
 
@@ -82,7 +82,7 @@ public:
 
   void DisableAllCategories();
 
-  bool DeleteCategory(ConstString category_name) {
+  bool DeleteCategory(llvm::StringRef category_name) {
     return m_categories_map.Delete(category_name);
   }
 
@@ -96,7 +96,7 @@ public:
 
   void ForEachCategory(TypeCategoryMap::ForEachCallback callback);
 
-  lldb::TypeCategoryImplSP GetCategory(ConstString category_name,
+  lldb::TypeCategoryImplSP GetCategory(llvm::StringRef category_name,
                                        bool can_create = true);
 
   lldb::TypeFormatImplSP
@@ -150,7 +150,7 @@ public:
     return matches;
   }
 
-  static ConstString GetTypeForCache(ValueObject &, lldb::DynamicValueType);
+  static llvm::StringRef GetTypeForCache(ValueObject &, lldb::DynamicValueType);
 
   LanguageCategory *GetCategoryForLanguage(lldb::LanguageType lang_type);
 
@@ -173,9 +173,9 @@ private:
   NamedSummariesMap m_named_summaries_map;
   TypeCategoryMap m_categories_map;
 
-  ConstString m_default_category_name;
-  ConstString m_system_category_name;
-  ConstString m_vectortypes_category_name;
+  std::string m_default_category_name;
+  std::string m_system_category_name;
+  std::string m_vectortypes_category_name;
 
   template <typename ImplSP>
   ImplSP Get(ValueObject &valobj, lldb::DynamicValueType use_dynamic);

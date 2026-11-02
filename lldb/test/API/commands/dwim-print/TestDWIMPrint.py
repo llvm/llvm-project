@@ -179,6 +179,7 @@ class TestCase(TestBase):
         self._expect_cmd("dwim-print w.s", "frame variable")
         self._expect_cmd("dwim-print wp->s", "expression")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_direct_child_access(self):
         """Test dwim-print supports accessing members/ivars without qualification."""
         self.build()

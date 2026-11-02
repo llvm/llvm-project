@@ -12,15 +12,18 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_QUEUE_IMPL
-#define _LIBSYCL_QUEUE_IMPL
+#ifndef _LIBSYCL_SRC_DETAIL_QUEUE_IMPL_HPP
+#define _LIBSYCL_SRC_DETAIL_QUEUE_IMPL_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/queue.hpp>
 
 #include <OffloadAPI.h>
 
+#include <cassert>
+#include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -40,22 +43,23 @@ class QueueImpl : public std::enable_shared_from_this<QueueImpl> {
 public:
   ~QueueImpl();
 
-  /// Constructs a SYCL queue from a device using an asyncHandler and
-  /// a propList.
+  /// Constructs a SYCL queue from a device using an AsyncHandler and
+  /// a PropList.
   ///
-  /// \param deviceImpl is a SYCL device that is used to dispatch tasks
+  /// \param Context is a SYCL context the queue is associated with.
+  /// \param Device is a SYCL device that is used to dispatch tasks
   /// submitted to the queue.
-  /// \param asyncHandler is a SYCL asynchronous exception handler.
-  /// \param propList is a list of properties to use for queue construction.
-  explicit QueueImpl(const std::shared_ptr<ContextImpl> &contextImpl,
-                     DeviceImpl &deviceImpl, const async_handler &asyncHandler,
-                     const property_list &propList, PrivateTag);
+  /// \param AsyncHandler is a SYCL asynchronous exception handler.
+  /// \param PropList is a list of properties to use for queue construction.
+  explicit QueueImpl(const std::shared_ptr<ContextImpl> &Context,
+                     DeviceImpl &Device, const async_handler &AsyncHandler,
+                     const property_list &PropList, PrivateTag);
 
   /// Constructs a QueueImpl with the provided arguments. Variadic helper.
   /// Restricts QueueImpl creation to std::shared_ptr allocations.
   template <typename... Ts>
-  static std::shared_ptr<QueueImpl> create(Ts &&...args) {
-    return std::make_shared<QueueImpl>(std::forward<Ts>(args)..., PrivateTag{});
+  static std::shared_ptr<QueueImpl> create(Ts &&...Args) {
+    return std::make_shared<QueueImpl>(std::forward<Ts>(Args)..., PrivateTag{});
   }
 
   /// \return the SYCL backend this queue is associated with.
@@ -72,7 +76,7 @@ public:
   DeviceImpl &getDevice() { return MDevice; }
 
   /// \return true if and only if the queue is in order.
-  bool isInOrder() const { return MIsInorder; }
+  bool isInOrder() const { return MIsInOrder; }
 
   /// Waits for completion of all commands submitted to this queue.
   void wait();
@@ -163,16 +167,16 @@ public:
   /// \param NumBytes is a number of bytes to be prefetched.
   /// \param DepEvents is a vector of dependencies for the operation.
   /// \return an event impl object that represents the status of the operation.
-  EventImplPtr prefetch(void *Ptr, std::size_t NumBytes,
+  EventImplPtr prefetch(const void *Ptr, std::size_t NumBytes,
                         const std::vector<EventImplPtr> &DepEvents);
 
 private:
-  void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
+  void handleEventDependencies(const std::vector<EventImplPtr> &Deps);
   EventImplPtr createEvent(std::vector<EventImplPtr> &&Deps = {});
 
   // Queue features.
   ol_queue_handle_t MOffloadQueue = {};
-  const bool MIsInorder;
+  const bool MIsInOrder;
   const async_handler MAsyncHandler;
   const property_list MPropList;
   DeviceImpl &MDevice;
@@ -193,4 +197,4 @@ private:
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_QUEUE_IMPL
+#endif // _LIBSYCL_SRC_DETAIL_QUEUE_IMPL_HPP

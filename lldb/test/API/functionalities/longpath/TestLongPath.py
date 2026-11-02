@@ -5,6 +5,7 @@ Windows MAX_PATH limit (260 characters).
 
 import os
 import shutil
+import subprocess
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -47,9 +48,9 @@ class LongPathTargetTestCase(TestBase):
                 return mod
         return lldb.SBModule()
 
-    def test_target_with_long_path(self):
-        """CreateTarget, launch and break in an executable located past
-        MAX_PATH, and verify the full path is preserved (not truncated)."""
+    def _copy_exe_to_long_dir(self):
+        """Build the test program, copy it into a directory whose path exceeds
+        MAX_PATH and return the path of the copy."""
         self.build()
         src_exe = self.getBuildArtifact("a.out")
 
@@ -57,16 +58,21 @@ class LongPathTargetTestCase(TestBase):
         if long_dir is None:
             self.skipTest("OS cannot create paths longer than MAX_PATH")
 
-        exe_basename = os.path.basename(src_exe)
-        long_exe = os.path.join(long_dir, exe_basename)
+        long_exe = os.path.join(long_dir, os.path.basename(src_exe))
         shutil.copyfile(src_exe, self._long_path(long_exe))
 
-        long_exe_abs = os.path.abspath(long_exe)
         self.assertGreater(
-            len(long_exe_abs),
+            len(os.path.abspath(long_exe)),
             MAX_PATH,
             "the test executable path must exceed MAX_PATH to be meaningful",
         )
+        return long_exe
+
+    def test_target_with_long_path(self):
+        """CreateTarget, launch and break in an executable located past
+        MAX_PATH, and verify the full path is preserved (not truncated)."""
+        long_exe = self._copy_exe_to_long_dir()
+        exe_basename = os.path.basename(long_exe)
 
         # Creating the target has to open and parse the file at the long path.
         target = self.dbg.CreateTarget(long_exe)
@@ -107,3 +113,40 @@ class LongPathTargetTestCase(TestBase):
         process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
+
+    def test_attach_with_long_path(self):
+        """Attach by pid to a process whose executable is located past
+        MAX_PATH, and verify lldb determines its architecture and stops it."""
+        long_exe = self._copy_exe_to_long_dir()
+
+        token = self.getBuildArtifact("token")
+        # Pass the "\\?\" form so CreateProcessW accepts a path past MAX_PATH.
+        popen = subprocess.Popen(
+            [long_exe, token], executable=self._long_path(long_exe)
+        )
+        self.addTearDownHook(popen.kill)
+        lldbutil.wait_for_file_on_target(self, token)
+
+        # Start from an empty target so the architecture has to come from the
+        # process.
+        target = self.dbg.CreateTarget("")
+        error = lldb.SBError()
+        process = target.AttachToProcessWithID(self.dbg.GetListener(), popen.pid, error)
+        self.assertSuccess(error)
+        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
+        self.assertState(process.GetState(), lldb.eStateStopped)
+
+        triple = target.GetTriple()
+        self.assertTrue(triple, "target has a triple")
+        self.assertNotEqual(triple.split("-")[0], "unknown", "target arch is known")
+        # This reads the image file through Host::GetProcessInfo in lldb.
+        self.assertTrue(
+            process.GetProcessInfo().GetTriple(), "process info has a triple"
+        )
+
+        self.assertGreater(process.GetNumThreads(), 0, "process has threads")
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        self.assertTrue(frame.GetModule().IsValid(), "frame 0 is in a module")
+
+        exe_module = target.FindModule(lldb.SBFileSpec(os.path.basename(long_exe)))
+        self.assertTrue(exe_module.IsValid(), "the executable module is loaded")

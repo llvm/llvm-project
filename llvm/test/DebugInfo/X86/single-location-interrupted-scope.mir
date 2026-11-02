@@ -1,7 +1,7 @@
-# RUN: llc -start-after=livedebugvalues --filetype=obj %s -o - \
+# RUN: llc -start-after=live-debug-values --filetype=obj %s -o - \
 # RUN:     | llvm-dwarfdump -v -name=parama - | FileCheck %s
 #
-# Generated with -O2, llc -stop-after=livedebugvalues, with IR modified from
+# Generated with -O2, llc -stop-after=live-debug-values, with IR modified from
 # this source:
 #
 # int globa, globb;

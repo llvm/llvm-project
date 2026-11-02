@@ -8,13 +8,19 @@
 
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using llvm::unittest::TempDir;
+
+// From TestMain.cpp.
+extern const char *TestMainArgv0;
 
 namespace {
 
@@ -129,6 +135,64 @@ TEST(LockFileManagerTest, NonExistentDirectory) {
   }
 
   // After destruction, lock file should be removed
+  EXPECT_FALSE(sys::fs::exists(FileLock));
+}
+
+static int LockFileManagerTestAnchor;
+
+TEST(LockFileManagerTest, LockOwnedByExitedProcessIsReclaimed) {
+  TempDir LockFileManagerTestDir("LockFileManagerTestDir", /*Unique*/ true);
+
+  SmallString<64> LockedFile(LockFileManagerTestDir.path());
+  sys::path::append(LockedFile, "file");
+
+  SmallString<64> FileLock(LockedFile);
+  FileLock += ".lock";
+
+  // Acquire and release the lock once to find out how this machine identifies
+  // itself in lock files.
+  std::string HostID;
+  {
+    LockFileManager Locked(LockedFile);
+    ASSERT_THAT_EXPECTED(Locked.tryLock(), HasValue(true));
+    ErrorOr<std::unique_ptr<MemoryBuffer>> Contents =
+        MemoryBuffer::getFile(FileLock);
+    ASSERT_TRUE(bool(Contents));
+    HostID = (*Contents)->getBuffer().split(' ').first.str();
+  }
+  ASSERT_FALSE(sys::fs::exists(FileLock));
+
+  // Run a short-lived child process to get the ID of a process that exited.
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &LockFileManagerTestAnchor);
+  StringRef Argv[] = {Executable, "--gtest_list_tests"};
+  std::optional<StringRef> Redirects[] = {StringRef(""), StringRef(""),
+                                          StringRef("")};
+  std::string Error;
+  sys::ProcessInfo Child =
+      sys::ExecuteNoWait(Executable, Argv, /*Env=*/std::nullopt, Redirects,
+                         /*MemoryLimit=*/0, &Error);
+  ASSERT_NE(Child.Pid, sys::ProcessInfo::InvalidPid) << Error;
+  sys::ProcessInfo Result = sys::Wait(Child, /*SecondsToWait=*/std::nullopt);
+  ASSERT_EQ(Result.ReturnCode, 0);
+
+  // Leave behind a lock file owned by that process, as if it had been
+  // terminated while holding the lock.
+  {
+    std::error_code EC;
+    raw_fd_ostream Out(FileLock, EC);
+    ASSERT_FALSE(EC);
+    Out << HostID << ' ' << Child.Pid;
+  }
+
+  {
+    // The owner of the lock file has exited, so we should successfully acquire
+    // the lock.
+    LockFileManager Locked(LockedFile);
+    EXPECT_THAT_EXPECTED(Locked.tryLock(), HasValue(true));
+  }
+
+  // Now that the lock is out of scope, the file should be gone.
   EXPECT_FALSE(sys::fs::exists(FileLock));
 }
 

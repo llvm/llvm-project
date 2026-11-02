@@ -91,3 +91,69 @@ func.func @wrong_total_weight(%cond: i1) {
   ^bb2:
     return
 }
+
+// -----
+
+func.func @switch_i8_unsigned_overflow(%flag: i8) {
+  cf.switch %flag : i8, [
+    default: ^bb1,
+    // expected-error@+1 {{case value is out of range for 'i8'}}
+    256: ^bb1
+  ]
+^bb1:
+  return
+}
+
+// -----
+
+func.func @switch_i8_signed_underflow(%flag: i8) {
+  cf.switch %flag : i8, [
+    default: ^bb1,
+    // expected-error@+1 {{case value is out of range for 'i8'}}
+    -129: ^bb1
+  ]
+^bb1:
+  return
+}
+
+// -----
+
+func.func @switch_i128_unsigned_overflow(%flag: i128) {
+  cf.switch %flag : i128, [
+    default: ^bb1,
+    // expected-error@+1 {{case value is out of range for 'i128'}}
+    340282366920938463463374607431768211456: ^bb1
+  ]
+^bb1:
+  return
+}
+
+// -----
+
+func.func @switch_i128_signed_underflow(%flag: i128) {
+  cf.switch %flag : i128, [
+    default: ^bb1,
+    // expected-error@+1 {{case value is out of range for 'i128'}}
+    -170141183460469231731687303715884105729: ^bb1
+  ]
+^bb1:
+  return
+}
+
+// -----
+
+func.func @switch_signed_flag(%flag: si8) {
+  // expected-error@+1 {{'cf.switch' op operand #0 must be signless integer, but got 'si8'}}
+  cf.switch %flag : si8, [default: ^bb1]
+^bb1:
+  return
+}
+
+// -----
+
+func.func @switch_unsigned_flag(%flag: ui8) {
+  // expected-error@+1 {{'cf.switch' op operand #0 must be signless integer, but got 'ui8'}}
+  cf.switch %flag : ui8, [default: ^bb1]
+^bb1:
+  return
+}

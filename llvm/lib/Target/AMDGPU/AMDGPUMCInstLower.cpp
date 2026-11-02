@@ -451,7 +451,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     if (isVerbose() && (MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
                         (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-                         STI.has1024AddressableVGPRs()))) {
+                         STI.hasVGPRMSBs()))) {
       std::optional<unsigned> V;
       if (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32)
         V = AMDGPU::convertSetRegImmToVgprMSBs(*MI,

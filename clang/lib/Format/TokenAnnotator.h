@@ -57,7 +57,7 @@ public:
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
         InPPDirective(Line.InPPDirective),
         InPragmaDirective(Line.InPragmaDirective),
-        InMacroBody(Line.InMacroBody),
+        InMacroBody(Line.InMacroBody), InMacroExpansion(Line.InMacroExpansion),
         IsModuleOrImportDecl(Line.IsModuleOrImportDecl),
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
@@ -70,6 +70,8 @@ public:
     // Next and Previous for every token, as previous formatting runs might have
     // left them in a different state.
     First->Previous = nullptr;
+    if (First->MacroParent)
+      ContainsMacroCall = true;
     FormatToken *Current = First;
     addChildren(Line.Tokens.front(), Current);
     for (const UnwrappedLineNode &Node : llvm::drop_begin(Line.Tokens)) {
@@ -180,6 +182,7 @@ public:
   bool InPPDirective;
   bool InPragmaDirective;
   bool InMacroBody;
+  bool InMacroExpansion;
   bool IsModuleOrImportDecl;
   bool MustBeDeclaration;
   bool MightBeFunctionDecl;

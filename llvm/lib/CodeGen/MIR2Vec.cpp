@@ -41,14 +41,15 @@ static cl::opt<std::string>
     VocabFile("mir2vec-vocab-path",
               cl::desc("Path to the vocabulary file for MIR2Vec"), cl::init(""),
               cl::cat(MIR2VecCategory));
-cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::init(1.0),
-                         cl::desc("Weight for machine opcode embeddings"),
-                         cl::cat(MIR2VecCategory));
-cl::opt<float>
+static cl::opt<float>
+    OpcWeight("mir2vec-opc-weight", cl::init(1.0),
+              cl::desc("Weight for machine opcode embeddings"),
+              cl::cat(MIR2VecCategory));
+static cl::opt<float>
     CommonOperandWeight("mir2vec-common-operand-weight", cl::init(1.0),
                         cl::desc("Weight for common operand embeddings"),
                         cl::cat(MIR2VecCategory));
-cl::opt<float>
+static cl::opt<float>
     RegOperandWeight("mir2vec-reg-operand-weight", cl::init(1.0),
                      cl::desc("Weight for register operand embeddings"),
                      cl::cat(MIR2VecCategory));
@@ -548,6 +549,12 @@ std::unique_ptr<MIREmbedder> MIREmbedder::create(MIR2VecKind Mode,
   }
   return nullptr;
 }
+
+MIREmbedder::MIREmbedder(const MachineFunction &MF, const MIRVocabulary &Vocab)
+    : MF(MF), Vocab(Vocab), Dimension(Vocab.getDimension()),
+      OpcWeight(mir2vec::OpcWeight),
+      CommonOperandWeight(mir2vec::CommonOperandWeight),
+      RegOperandWeight(mir2vec::RegOperandWeight) {}
 
 Embedding MIREmbedder::computeEmbeddings(const MachineBasicBlock &MBB) const {
   Embedding MBBVector(Dimension, 0);

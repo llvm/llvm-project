@@ -40,25 +40,25 @@ body:             |
   ; CHECK:   t2B %bb.1, 14 /* CC::al */, $noreg
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[COPY]], 15, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri killed [[t2ADDri]], 16, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2LSRri:%[0-9]+]]:gprlr = t2LSRri killed [[t2BICri]], 4, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri [[t2ADDri]], 16, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   [[t2LSRri:%[0-9]+]]:gprlr = t2LSRri [[t2BICri]], 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[COPY3:%[0-9]+]]:rgpr = COPY [[COPY1]]
   ; CHECK:   [[COPY4:%[0-9]+]]:rgpr = COPY [[COPY2]]
   ; CHECK:   [[COPY5:%[0-9]+]]:rgpr = COPY [[COPY]]
-  ; CHECK:   [[t2WhileLoopStartLR:%[0-9]+]]:gprlr = t2WhileLoopStartLR killed [[t2LSRri]], %bb.3, implicit-def dead $cpsr
+  ; CHECK:   [[t2WhileLoopStartLR:%[0-9]+]]:gprlr = t2WhileLoopStartLR [[t2LSRri]], %bb.3, implicit-def dead $cpsr
   ; CHECK: bb.2:
   ; CHECK:   [[COPY6:%[0-9]+]]:rgpr = COPY [[COPY5]]
   ; CHECK:   [[COPY7:%[0-9]+]]:gprlr = COPY [[t2WhileLoopStartLR]]
   ; CHECK:   [[COPY8:%[0-9]+]]:rgpr = COPY [[COPY4]]
   ; CHECK:   [[COPY9:%[0-9]+]]:rgpr = COPY [[COPY3]]
   ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[COPY6]], 0, $noreg, $noreg
-  ; CHECK:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri killed [[COPY6]], 16, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post killed [[COPY9]], 16, 1, [[MVE_VCTP8_]], $noreg
-  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post killed [[MVE_VLDRBU8_post1]], killed [[COPY8]], 16, 1, killed [[MVE_VCTP8_]], $noreg
+  ; CHECK:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[COPY6]], 16, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[COPY9]], 16, 1, [[MVE_VCTP8_]], $noreg
+  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[MVE_VLDRBU8_post1]], [[COPY8]], 16, 1, [[MVE_VCTP8_]], $noreg
   ; CHECK:   [[COPY10:%[0-9]+]]:rgpr = COPY [[MVE_VLDRBU8_post]]
   ; CHECK:   [[COPY10:%[0-9]+]]:rgpr = COPY [[MVE_VSTRBU8_post]]
   ; CHECK:   [[COPY10:%[0-9]+]]:rgpr = COPY [[t2SUBri]]
-  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec killed [[COPY7]], %bb.2, implicit-def dead $cpsr
+  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[COPY7]], %bb.2, implicit-def dead $cpsr
   ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.for.cond.cleanup:
   ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
@@ -77,9 +77,9 @@ body:             |
     successors: %bb.3(0x40000000), %bb.2(0x40000000)
 
     %3:rgpr = t2ADDri %2, 15, 14 /* CC::al */, $noreg, $noreg
-    %4:rgpr = t2BICri killed %3, 16, 14 /* CC::al */, $noreg, $noreg
-    %5:gprlr = t2LSRri killed %4, 4, 14 /* CC::al */, $noreg, $noreg
-    %6:gprlr = t2WhileLoopStartLR killed %5, %bb.3, implicit-def dead $cpsr
+    %4:rgpr = t2BICri %3, 16, 14 /* CC::al */, $noreg, $noreg
+    %5:gprlr = t2LSRri %4, 4, 14 /* CC::al */, $noreg, $noreg
+    %6:gprlr = t2WhileLoopStartLR %5, %bb.3, implicit-def dead $cpsr
 
   bb.2:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
@@ -89,10 +89,10 @@ body:             |
     %11:gprlr = PHI %6, %bb.1, %12, %bb.2
     %13:rgpr = PHI %2, %bb.1, %14, %bb.2
     %15:vccr = MVE_VCTP8 %13, 0, $noreg, $noreg
-    %14:rgpr = t2SUBri killed %13, 16, 14 /* CC::al */, $noreg, $noreg
-    %8:rgpr, %16:mqpr = MVE_VLDRBU8_post killed %7, 16, 1, %15, $noreg
-    %10:rgpr = MVE_VSTRBU8_post killed %16, killed %9, 16, 1, killed %15, $noreg
-    %12:gprlr = t2LoopEndDec killed %11, %bb.2, implicit-def dead $cpsr
+    %14:rgpr = t2SUBri %13, 16, 14 /* CC::al */, $noreg, $noreg
+    %8:rgpr, %16:mqpr = MVE_VLDRBU8_post %7, 16, 1, %15, $noreg
+    %10:rgpr = MVE_VSTRBU8_post %16, %9, 16, 1, %15, $noreg
+    %12:gprlr = t2LoopEndDec %11, %bb.2, implicit-def dead $cpsr
     t2B %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.for.cond.cleanup:

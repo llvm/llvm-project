@@ -350,6 +350,67 @@ body: |
 ...
 
 ---
+# 64-bit VOPC instructions are DP-MACC. A later CS-MACC instruction can
+# complete before them, so overwriting their sources needs VA_VDST == 0.
+name: test_dpmacc_vopc64_csmacc_ooo_completion
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr20
+
+    ; GCN-LABEL: name: test_dpmacc_vopc64_csmacc_ooo_completion
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr20
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GCN-NEXT: S_WAIT_EXPCNT 0
+    ; GCN-NEXT: S_WAIT_SAMPLECNT 0
+    ; GCN-NEXT: S_WAIT_BVHCNT 0
+    ; GCN-NEXT: S_WAIT_KMCNT 0
+    ; GCN-NEXT: $sgpr0 = V_CMP_EQ_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; GCN-NEXT: $vgpr0_vgpr1 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    ; GCN-NEXT: $sgpr0 = V_CMP_EQ_U64_e64 $vgpr2_vgpr3, $vgpr4_vgpr5, implicit $exec
+    ; GCN-NEXT: $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; GCN-NEXT: $vgpr2_vgpr3 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    ; GCN-NEXT: $sgpr0 = V_CMP_CLASS_F64_e64 0, $vgpr4_vgpr5, $vgpr6, implicit $exec
+    ; GCN-NEXT: $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; GCN-NEXT: $vgpr4_vgpr5 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    ; GCN-NEXT: V_CMPX_EQ_F64_nosdst_e64 0, $vgpr6_vgpr7, 0, $vgpr8_vgpr9, 0, implicit-def $exec, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; GCN-NEXT: $vgpr6_vgpr7 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    ; GCN-NEXT: V_CMPX_EQ_U64_nosdst_e64 $vgpr8_vgpr9, $vgpr10_vgpr11, implicit-def $exec, implicit $exec
+    ; GCN-NEXT: $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; GCN-NEXT: $vgpr8_vgpr9 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    ; GCN-NEXT: V_CMPX_CLASS_F64_nosdst_e64 0, $vgpr10_vgpr11, 0, $vgpr12, implicit-def $exec, implicit $exec
+    ; GCN-NEXT: $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; GCN-NEXT: $vgpr10_vgpr11 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    $sgpr0 = V_CMP_EQ_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, implicit $mode, implicit $exec
+    $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    $vgpr0_vgpr1 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    $sgpr0 = V_CMP_EQ_U64_e64 $vgpr2_vgpr3, $vgpr4_vgpr5, implicit $exec
+    $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    $vgpr2_vgpr3 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    $sgpr0 = V_CMP_CLASS_F64_e64 0, $vgpr4_vgpr5, $vgpr6, implicit $exec
+    $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    $vgpr4_vgpr5 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    V_CMPX_EQ_F64_nosdst_e64 0, $vgpr6_vgpr7, 0, $vgpr8_vgpr9, 0, implicit-def $exec, implicit $mode, implicit $exec
+    $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    $vgpr6_vgpr7 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    V_CMPX_EQ_U64_nosdst_e64 $vgpr8_vgpr9, $vgpr10_vgpr11, implicit-def $exec, implicit $exec
+    $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    $vgpr8_vgpr9 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+    V_CMPX_CLASS_F64_nosdst_e64 0, $vgpr10_vgpr11, 0, $vgpr12, implicit-def $exec, implicit $exec
+    $vgpr21 = V_ADD_F32_e32 244, $vgpr20, implicit $exec, implicit $mode
+    $vgpr10_vgpr11 = DS_READ_B64_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s64), addrspace 3)
+...
+
+---
 name: test_trans_csmacc_ooo_completion
 body: |
   bb.0:

@@ -403,9 +403,12 @@ protected:
               /*can_create=*/true, m_options.m_script_language);
           // Special handling for one-liner specified inline.
           if (m_options.m_use_one_liner) {
-            script_interp->SetWatchpointCommandCallback(
-                wp_options, m_options.m_one_liner.c_str(),
-                /*is_callback=*/false);
+            if (llvm::Error error = script_interp->SetWatchpointCommandCallback(
+                    wp_options, m_options.m_one_liner.c_str(),
+                    /*is_callback=*/false)) {
+              result.SetError(std::move(error));
+              return;
+            }
           }
           // Special handling for using a Python function by name instead of
           // extending the watchpoint callback data structures, we just
@@ -414,8 +417,12 @@ protected:
           else if (!m_options.m_function_name.empty()) {
             std::string function_signature = m_options.m_function_name;
             function_signature += "(frame, wp, internal_dict)";
-            script_interp->SetWatchpointCommandCallback(
-                wp_options, function_signature.c_str(), /*is_callback=*/true);
+            if (llvm::Error error = script_interp->SetWatchpointCommandCallback(
+                    wp_options, function_signature.c_str(),
+                    /*is_callback=*/true)) {
+              result.SetError(std::move(error));
+              return;
+            }
           } else {
             script_interp->CollectDataForWatchpointCommandCallback(wp_options,
                                                                    result);

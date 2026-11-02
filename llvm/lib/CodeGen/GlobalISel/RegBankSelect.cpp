@@ -1774,7 +1774,7 @@ bool RegBankSelectLegacy::runOnMachineFunction(MachineFunction &MF) {
 }
 
 RegBankSelectPass::RegBankSelectPass(RegBankSelectMode RunningMode)
-    : OptMode(RunningMode) {}
+    : OptMode(computeOptMode(RunningMode)) {}
 
 PreservedAnalyses RegBankSelectPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {

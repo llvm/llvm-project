@@ -1,3 +1,7 @@
+# RUN: llvm-mc %s -triple=mips64el -mcpu=mips64r2 -target-abi=n32 -show-encoding | \
+# RUN:   FileCheck %s
+# RUN: llvm-mc %s -triple=mips64el -mcpu=mips64r2 -target-abi=n64 -show-encoding | \
+# RUN:   FileCheck %s
 # RUN: llvm-mc %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32r2 | FileCheck %s
 # Check that the assembler can handle the documented syntax
 # for loads and stores.
@@ -42,3 +46,18 @@
       lw      $4, 4($5)
       lw      $7,    ($7)
       lw      $2, 16($sp)
+
+# Omitted offsets, parenthesized expressions, and implicit zero bases.
+# CHECK: lw $2, 0($sp)       # encoding: [0x00,0x00,0xa2,0x8f]
+# CHECK: lw $2, 12($3)       # encoding: [0x0c,0x00,0x62,0x8c]
+# CHECK: lw $2, 12($zero)    # encoding: [0x0c,0x00,0x02,0x8c]
+# CHECK: synci 0($3)         # encoding: [0x00,0x00,0x7f,0x04]
+# CHECK: synci 12($3)        # encoding: [0x0c,0x00,0x7f,0x04]
+# CHECK: synci 12($zero)     # encoding: [0x0c,0x00,0x1f,0x04]
+
+      lw      $2, ($sp)
+      lw      $2, (4 + 8)($3)
+      lw      $2, 12
+      synci   ($3)
+      synci   (4 + 8)($3)
+      synci   12

@@ -24,18 +24,24 @@ class DataLayoutEntryAttrStorage;
 } // namespace mlir
 namespace mlir {
 namespace dlti {
-/// Perform a DLTI-query at `op`, recursively querying each key of `keys` on
-/// query interface-implementing attrs, starting from attr obtained from `op`.
+namespace detail {
+FailureOr<Attribute> queryDlti(Operation *op, DataLayoutEntryKey key);
+LogicalResult setDlti(Operation *op, DataLayoutEntryKey key, Attribute value);
+} // namespace detail
+
+/// Query the first key at `op` or the nearest ancestor that can answer it.
+/// Query later keys recursively on the returned attributes, without searching
+/// operation ancestors again.
 FailureOr<Attribute> query(Operation *op, ArrayRef<DataLayoutEntryKey> keys,
                            bool emitError = false);
 
-/// Perform a DLTI-query at `op` using each string in `keys` as a separate DLTI
-/// entry key, recursively querying on query interface-implementing attrs,
-/// starting from attr obtained from `op`.
+/// As above, using each string in `keys` as a DLTI entry key.
 FailureOr<Attribute> query(Operation *op, ArrayRef<StringRef> keys,
                            bool emitError = false);
 } // namespace dlti
 } // namespace mlir
+
+#include "mlir/Dialect/DLTI/DLTIOpInterfaces.h.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/DLTI/DLTIAttrs.h.inc"

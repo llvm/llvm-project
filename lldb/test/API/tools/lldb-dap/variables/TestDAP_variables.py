@@ -712,6 +712,7 @@ class TestDAP_variables(DAPTestCaseBase):
         # Verify locals.
         top_frame = session.top_frame_from(stop_event)
         gpr_reg_set = top_frame.registers["General Purpose Registers"]
+        self.assertEqual(gpr_reg_set.type, None)
         pc_reg = gpr_reg_set[pc_name].variable
 
         self.assertTrue(pc_reg.value.startswith("0x"))

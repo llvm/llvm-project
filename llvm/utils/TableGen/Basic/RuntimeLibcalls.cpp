@@ -70,6 +70,8 @@ RuntimeLibcalls::RuntimeLibcalls(const RecordKeeper &Records) {
     const RuntimeLibcallImpl &LibCallImpl = RuntimeLibcallImplDefList.back();
     Def2RuntimeLibcallImpl[LibCallImplDef] = &LibCallImpl;
   }
+
+  FuncArgTypeList = Records.getAllDerivedDefinitions("FuncArgType");
 }
 
 void LibcallPredicateExpander::expand(SetTheory &ST, const Record *Def,

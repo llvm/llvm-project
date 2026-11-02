@@ -42,7 +42,7 @@ struct TestHelper<CharT, 4> {
 template <class CharT>
 void TestHelper<CharT, 2>::test() {
   {
-    typedef std::codecvt_utf16<char16_t> C;
+    typedef std::codecvt_utf16<CharT> C;
     C c;
     char n[4] = {char(0xD8), char(0xC0), char(0xDC), char(0x03)};
     std::mbstate_t m;
@@ -65,7 +65,7 @@ void TestHelper<CharT, 2>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char16_t, 0x1000> C;
+    typedef std::codecvt_utf16<CharT, 0x1000> C;
     C c;
     char n[4] = {char(0xD8), char(0xC0), char(0xDC), char(0x03)};
     std::mbstate_t m;
@@ -88,7 +88,7 @@ void TestHelper<CharT, 2>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char16_t, 0x10ffff, std::consume_header> C;
+    typedef std::codecvt_utf16<CharT, 0x10ffff, std::consume_header> C;
     C c;
     char n[6] = {char(0xFE), char(0xFF), char(0xD8), char(0xC0), char(0xDC), char(0x03)};
     std::mbstate_t m;
@@ -111,7 +111,7 @@ void TestHelper<CharT, 2>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char16_t, 0x10ffff, std::little_endian> C;
+    typedef std::codecvt_utf16<CharT, 0x10ffff, std::little_endian> C;
     C c;
     char n[4] = {char(0xC0), char(0xD8), char(0x03), char(0xDC)};
     std::mbstate_t m;
@@ -134,7 +134,7 @@ void TestHelper<CharT, 2>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char16_t, 0x1000, std::little_endian> C;
+    typedef std::codecvt_utf16<CharT, 0x1000, std::little_endian> C;
     C c;
     char n[4] = {char(0xC0), char(0xD8), char(0x03), char(0xDC)};
     std::mbstate_t m;
@@ -157,7 +157,7 @@ void TestHelper<CharT, 2>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char16_t, 0x10ffff, std::codecvt_mode(std::consume_header | std::little_endian)> C;
+    typedef std::codecvt_utf16<CharT, 0x10ffff, std::codecvt_mode(std::consume_header | std::little_endian)> C;
     C c;
     char n[6] = {char(0xFF), char(0xFE), char(0xC0), char(0xD8), char(0x03), char(0xDC)};
     std::mbstate_t m;
@@ -184,7 +184,7 @@ void TestHelper<CharT, 2>::test() {
 template <class CharT>
 void TestHelper<CharT, 4>::test() {
   {
-    typedef std::codecvt_utf16<char32_t> C;
+    typedef std::codecvt_utf16<CharT> C;
     C c;
     char n[4] = {char(0xD8), char(0xC0), char(0xDC), char(0x03)};
     std::mbstate_t m;
@@ -207,7 +207,7 @@ void TestHelper<CharT, 4>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char32_t, 0x1000> C;
+    typedef std::codecvt_utf16<CharT, 0x1000> C;
     C c;
     char n[4] = {char(0xD8), char(0xC0), char(0xDC), char(0x03)};
     std::mbstate_t m;
@@ -230,7 +230,7 @@ void TestHelper<CharT, 4>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char32_t, 0x10ffff, std::consume_header> C;
+    typedef std::codecvt_utf16<CharT, 0x10ffff, std::consume_header> C;
     C c;
     char n[6] = {char(0xFE), char(0xFF), char(0xD8), char(0xC0), char(0xDC), char(0x03)};
     std::mbstate_t m;
@@ -253,7 +253,7 @@ void TestHelper<CharT, 4>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char32_t, 0x10ffff, std::little_endian> C;
+    typedef std::codecvt_utf16<CharT, 0x10ffff, std::little_endian> C;
     C c;
     char n[4] = {char(0xC0), char(0xD8), char(0x03), char(0xDC)};
     std::mbstate_t m;
@@ -276,7 +276,7 @@ void TestHelper<CharT, 4>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char32_t, 0x1000, std::little_endian> C;
+    typedef std::codecvt_utf16<CharT, 0x1000, std::little_endian> C;
     C c;
     char n[4] = {char(0xC0), char(0xD8), char(0x03), char(0xDC)};
     std::mbstate_t m;
@@ -299,7 +299,7 @@ void TestHelper<CharT, 4>::test() {
     assert(r == 2);
   }
   {
-    typedef std::codecvt_utf16<char32_t, 0x10ffff, std::codecvt_mode(std::consume_header | std::little_endian)> C;
+    typedef std::codecvt_utf16<CharT, 0x10ffff, std::codecvt_mode(std::consume_header | std::little_endian)> C;
     C c;
     char n[6] = {char(0xFF), char(0xFE), char(0xC0), char(0xD8), char(0x03), char(0xDC)};
     std::mbstate_t m;
@@ -324,7 +324,9 @@ void TestHelper<CharT, 4>::test() {
 }
 
 int main(int, char**) {
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   TestHelper<wchar_t>::test();
+#endif
   TestHelper<char16_t>::test();
   TestHelper<char32_t>::test();
   return 0;

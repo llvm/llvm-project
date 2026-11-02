@@ -35,13 +35,15 @@
 ;; <PERMODULE_PROFILE> has the format [valueid, flags, instcount, funcflags,
 ;;                                     numrefs, rorefcnt, worefcnt,
 ;;                                     m x valueid,
-;;                                     n x (valueid, hotness+tailcall)]
+;;                                     n x (valueid, hotness+tailcall+indirect)]
 ;; NOTE vtables and functions from Derived class are dropped in the base case
 ;; because `-icp-max-num-vtables` and `-icp-max-prom` are both set to one.
-; SUMMARY-NEXT:   <PERMODULE_PROFILE {{.*}} op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=[[VTABLEBASE]] op8=[[VFUNCBASE]] op9=3
+;; The indirect call is a tail call, so the profiled target edges have the tail
+;; call bit (8) set in addition to the indirect bit (16).
+; SUMMARY-NEXT:   <PERMODULE_PROFILE {{.*}} op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=[[VTABLEBASE]] op8=[[VFUNCBASE]] op9=27
 ;; With -module-summary-max-indirect-edges=2 we do get the Derived class
 ;; function in the summary.
-; SUMMARY2-SAME:  op10=[[VFUNCDER]] op11=2
+; SUMMARY2-SAME:  op10=[[VFUNCDER]] op11=26
 ;; We should have no other ops before the end of the summary record.
 ; SUMMARY-NOT:	  op
 ; SUMMARY-SAME:	  />
@@ -89,8 +91,8 @@ define i32 @_Z4testP4Base(ptr %0) !prof !15 {
 ; DIS:	^[[VTABLEBASE2:[0-9]+]] = gv: (guid: 1960855528937986108)
 ; DIS:	^[[VFUNCBASE2:[0-9]+]] = gv: (guid: 5459407273543877811)
 ; DIS2:	^[[VFUNCDER2:[0-9]+]] = gv: (guid: 6174874150489409711)
-; DIS:	gv: (name: "_Z4testP4Base", {{.*}} calls: ((callee: ^[[VFUNCBASE2]], hotness: hot)
+; DIS:	gv: (name: "_Z4testP4Base", {{.*}} calls: ((callee: ^[[VFUNCBASE2]], hotness: hot, tail: 1, indirect: 1)
 ;; With -module-summary-max-indirect-edges=2 we get the Derived func.
-; DIS2-SAME:	(callee: ^[[VFUNCDER2]], hotness: none)
+; DIS2-SAME:	(callee: ^[[VFUNCDER2]], hotness: none, tail: 1, indirect: 1)
 ; DIS-NOT:	callee
 ; DIS-SAME:	), refs: (readonly ^[[VTABLEBASE2]])

@@ -254,7 +254,9 @@ bool Liveness::isDeadAfter(Value value, Operation *operation) const {
 }
 
 /// Dumps the liveness information in a human readable format.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Liveness::dump() const { print(llvm::errs()); }
+#endif
 
 /// Dumps the liveness information to the given stream.
 void Liveness::print(raw_ostream &os) const {

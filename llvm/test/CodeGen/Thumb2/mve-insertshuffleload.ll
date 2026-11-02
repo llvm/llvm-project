@@ -201,16 +201,16 @@ define <8 x i32> @inserti32_first_multiuse(ptr %p) {
 ;
 ; CHECKBE-LABEL: inserti32_first_multiuse:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrw.u32 q0, [r0, #20]
-; CHECKBE-NEXT:    vldrw.u32 q2, [r0, #4]
-; CHECKBE-NEXT:    vmov.f32 s4, s11
-; CHECKBE-NEXT:    vmov.f32 s5, s0
-; CHECKBE-NEXT:    vmov.f32 s6, s1
-; CHECKBE-NEXT:    vmov.f32 s7, s2
-; CHECKBE-NEXT:    vadd.i32 q0, q0, q1
-; CHECKBE-NEXT:    vrev64.32 q1, q0
-; CHECKBE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKBE-NEXT:    vadd.i32 q2, q2, q0
+; CHECKBE-NEXT:    vldrw.u32 q1, [r0, #20]
+; CHECKBE-NEXT:    vldrw.u32 q0, [r0, #4]
+; CHECKBE-NEXT:    vmov.f32 s8, s3
+; CHECKBE-NEXT:    vmov.f32 s9, s4
+; CHECKBE-NEXT:    vmov.f32 s10, s5
+; CHECKBE-NEXT:    vmov.f32 s11, s6
+; CHECKBE-NEXT:    vadd.i32 q2, q1, q2
+; CHECKBE-NEXT:    vrev64.32 q1, q2
+; CHECKBE-NEXT:    vldrw.u32 q2, [r0]
+; CHECKBE-NEXT:    vadd.i32 q2, q0, q2
 ; CHECKBE-NEXT:    vrev64.32 q0, q2
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 4

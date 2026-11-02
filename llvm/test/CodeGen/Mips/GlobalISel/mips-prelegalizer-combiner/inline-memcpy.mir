@@ -29,20 +29,20 @@ registers:
   - { id: 2, class: _ }
   - { id: 3, class: _ }
 liveins:
-  - { reg: '$a0' }
-  - { reg: '$a1' }
+  - { reg: '$r4' }
+  - { reg: '$r5' }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: test_memcpy_inline
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $r5
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY1]](p0) :: (load (s8) from %ir.1, align 4)
     ; MIPS32-NEXT: G_STORE [[LOAD]](s8), [[COPY]](p0) :: (store (s8) into %ir.0, align 4)
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -51,8 +51,8 @@ body:             |
     ; MIPS32-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s32)
     ; MIPS32-NEXT: G_STORE [[LOAD1]](s8), [[PTR_ADD1]](p0) :: (store (s8) into %ir.0 + 1, basealign 4)
     ; MIPS32-NEXT: RetRA
-    %0:_(p0) = COPY $a0
-    %1:_(p0) = COPY $a1
+    %0:_(p0) = COPY $r4
+    %1:_(p0) = COPY $r5
     %2:_(s64) = G_CONSTANT i64 2
     %3:_(s32) = G_TRUNC %2(s64)
     G_MEMCPY_INLINE %0(p0), %1(p0), %3(s32) :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)

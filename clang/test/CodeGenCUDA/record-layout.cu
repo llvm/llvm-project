@@ -40,7 +40,8 @@ struct C : A, B {
 // AST-NEXT:             | [sizeof=24, align=8,
 // AST-NEXT:             |  nvsize=24, nvalign=8]
 
-// CHECK: %struct.I = type { ptr, i32 }
+// HOST: %struct.I = type { ptr, i32 }
+// DEV: %struct.I = type { ptr addrspace(1), i32 }
 // CHECK: %struct.J = type { %struct.I, i32 }
 
 // HOST: @0 = private constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4J@@6B@", ptr @"?f@J@@UEAAXXZ", ptr null, ptr @"?h@J@@UEAAXXZ"] }, comdat($"??_7J@@6B@")

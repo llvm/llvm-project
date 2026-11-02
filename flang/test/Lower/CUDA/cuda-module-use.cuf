@@ -10,7 +10,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPsub1()
 ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QMcuf_modEmd) : !fir.ref<f32>
-! CHECK: %{{.*}}:2 = hlfir.declare %[[ADDR]] {data_attr = #cuf.cuda<device>, uniq_name = "_QMcuf_modEmd"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ADDR]] uniq_name("_QMcuf_modEmd") data_attr(#cuf.cuda<device>) : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
 attributes(device) subroutine sub2()
   use cuf_mod

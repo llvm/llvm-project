@@ -153,7 +153,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPreordered_common
 ! CHECK: %[[SECOND_R_MAP:.*]] = omp.map.info {{.*}} map_clauses(return_param) {{.*}} {{(\{name = "r"\}|name\("r"\))}}
 ! CHECK: %[[SECOND_S_MAP:.*]] = omp.map.info {{.*}} map_clauses(return_param) {{.*}} {{(\{name = "s"\}|name\("s"\))}}
-! CHECK: %[[PTR_CHILD:.*]] = omp.map.info {{.*}} map_clauses(return_param) {{.*}} {{(\{name = ""\}|name\(""\))}}
+! CHECK: %[[PTR_CHILD:.*]] = omp.map.info {{.*}} map_clauses(return_param) {{.*}} {{(\{name = "ptr"\}|name\("ptr"\))}}
 ! CHECK: %[[PTR_MAP:.*]] = omp.map.info {{.*}} members(%[[PTR_CHILD]] {{.*}}) {{.*}}{{(\{name = "ptr"\}|name\("ptr"\))}}
 ! CHECK: %[[PTR_ATTACH:.*]] = omp.map.info {{.*}} map_clauses(attach, ref_ptr, ref_ptee) {{.*}} {{(\{name = "ptr"\}|name\("ptr"\))}}
 ! CHECK: %[[FIRST_A_MAP:.*]] = omp.map.info {{.*}} map_clauses(return_param) {{.*}} {{(\{name = "a"\}|name\("a"\))}}

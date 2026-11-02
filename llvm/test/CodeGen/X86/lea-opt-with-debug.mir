@@ -105,7 +105,7 @@ body:             |
     %3 = LEA64r %2, 2, %2, 0, $noreg, debug-location !13
     %4 = LEA64r %1, 4, %3, 0, $noreg, debug-location !13
     %5 = COPY %4.sub_32bit, debug-location !13
-    MOV32mr $rip, 1, $noreg, @d, $noreg, killed %5, debug-location !13 :: (store (s32) into @d)
+    MOV32mr $rip, 1, $noreg, @d, $noreg, %5, debug-location !13 :: (store (s32) into @d)
     %0 = LEA64r %1, 4, %3, 8, $noreg, debug-location !14
     DBG_VALUE %0, $noreg, !11, !DIExpression(), debug-location !15
 
@@ -116,7 +116,7 @@ body:             |
     successors: %bb.1(0x80000000)
 
     %6 = MOV32rm %0, 1, $noreg, 0, $noreg, debug-location !17 :: (load (s32) from %ir.7)
-    MOV32mr $rip, 1, $noreg, @d, $noreg, killed %6, debug-location !17 :: (store (s32) into @d)
+    MOV32mr $rip, 1, $noreg, @d, $noreg, %6, debug-location !17 :: (store (s32) into @d)
     JMP_1 %bb.1, debug-location !18
 
 ...

@@ -496,11 +496,10 @@ define float @select_oeq_fmul_nonconst_unknown_fabs_or_fabs_src(float %x, float 
 define float @select_oeq_fmul_nonconst_ppos_fabs_or_fabs_src(float %x, float %y) {
 ; CHECK-LABEL: define float @select_oeq_fmul_nonconst_ppos_fabs_or_fabs_src(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[MUL_FABS_X1:%.*]] = call float @llvm.fabs.f32(float [[TMP1]])
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_ZERO]], float [[MUL_FABS_X1]], float [[FABS_X]]
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[X_IS_ZERO]], float [[TMP1]], float [[X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call float @llvm.fabs.f32(float [[SELECT_V]])
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)

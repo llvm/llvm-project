@@ -52,14 +52,19 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/AtomicScope.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 #include <algorithm>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -811,13 +816,10 @@ struct KernelInfoState : AbstractState {
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractState::isValidState(...)
   bool isValidState() const override { return true; }
 
-  /// See AbstractState::isAtFixpoint(...)
   bool isAtFixpoint() const override { return IsAtFixpoint; }
 
-  /// See AbstractState::indicatePessimisticFixpoint(...)
   ChangeStatus indicatePessimisticFixpoint() override {
     IsAtFixpoint = true;
     ParallelLevels.indicatePessimisticFixpoint();
@@ -829,7 +831,6 @@ struct KernelInfoState : AbstractState {
     return ChangeStatus::CHANGED;
   }
 
-  /// See AbstractState::indicateOptimisticFixpoint(...)
   ChangeStatus indicateOptimisticFixpoint() override {
     IsAtFixpoint = true;
     ParallelLevels.indicateOptimisticFixpoint();
@@ -998,6 +999,32 @@ private:
   }
 };
 
+// Use the max outlined entry count. Instrumentation counts should already
+// match across merged callbacks, but sample profiles can differ. Returns
+// nullopt when no callback entry count is available.
+static std::optional<uint64_t>
+getMergedWrapperEntryCount(ArrayRef<CallInst *> ForkCalls,
+                           unsigned CallbackOpNo) {
+  std::optional<uint64_t> EntryCount;
+  for (CallInst *CI : ForkCalls) {
+    auto *Callback = dyn_cast<Function>(
+        CI->getArgOperand(CallbackOpNo)->stripPointerCasts());
+    if (!Callback)
+      continue;
+    if (std::optional<uint64_t> EC = Callback->getEntryCount())
+      // Each callback runs once per wrapper entry, so the counts should match.
+      // The Sample profiles can disagree slightly, so take the largest.
+      EntryCount = EntryCount ? std::max(*EntryCount, *EC) : *EC;
+  }
+  return EntryCount;
+}
+
+static bool moduleHasSampleProfile(const Module &M) {
+  std::unique_ptr<ProfileSummary> Summary(
+      ProfileSummary::getFromMD(M.getProfileSummary(/*IsCS=*/false)));
+  return Summary && Summary->getKind() == ProfileSummary::PSK_Sample;
+}
+
 struct OpenMPOpt {
 
   using OptimizationRemarkGetter =
@@ -1162,9 +1189,8 @@ private:
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
     auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                          ArrayRef<BasicBlock *> DeallocBlocks) {
-      BasicBlock *CGStartBB = CodeGenIP.getBlock();
-      BasicBlock *CGEndBB =
-          SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
+      BasicBlock *CGStartBB = CodeGenIP.getNodeParent();
+      BasicBlock *CGEndBB = SplitBlock(CGStartBB, &*CodeGenIP, DT, LI);
       assert(StartBB != nullptr && "StartBB should not be null");
       CGStartBB->getTerminator()->setSuccessor(0, StartBB);
       assert(EndBB != nullptr && "EndBB should not be null");
@@ -1203,9 +1229,8 @@ private:
 
       auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                            ArrayRef<BasicBlock *> DeallocBlocks) {
-        BasicBlock *CGStartBB = CodeGenIP.getBlock();
-        BasicBlock *CGEndBB =
-            SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
+        BasicBlock *CGStartBB = CodeGenIP.getNodeParent();
+        BasicBlock *CGEndBB = SplitBlock(CGStartBB, &*CodeGenIP, DT, LI);
         assert(SeqStartBB != nullptr && "SeqStartBB should not be null");
         CGStartBB->getTerminator()->setSuccessor(0, SeqStartBB);
         assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
@@ -1253,14 +1278,13 @@ private:
         }
       }
 
-      OpenMPIRBuilder::LocationDescription Loc(
-          InsertPointTy(ParentBB, ParentBB->end()), DL);
+      OpenMPIRBuilder::LocationDescription Loc(ParentBB->end(), DL);
       OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
       cantFail(OMPInfoCache.OMPBuilder.createBarrier({SeqAfterIP, DL},
                                                      OMPD_parallel));
 
-      UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
+      UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getNodeParent());
 
       LLVM_DEBUG(dbgs() << TAG << "After sequential inlining " << *OuterFn
                         << "\n");
@@ -1323,10 +1347,8 @@ private:
                                NextForkCI->getPrevNode());
       }
 
-      OpenMPIRBuilder::LocationDescription Loc(InsertPointTy(BB, BB->end()),
-                                               DL);
+      OpenMPIRBuilder::LocationDescription Loc(BB->end(), DL);
       IRBuilder<>::InsertPoint AllocaIP(
-          &OriginalFn->getEntryBlock(),
           OriginalFn->getEntryBlock().getFirstInsertionPt());
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
@@ -1335,12 +1357,21 @@ private:
               Loc, AllocaIP, /* DeallocBlocks */ {}, BodyGenCB, PrivCB, FiniCB,
               nullptr, nullptr, OMP_PROC_BIND_default,
               /* IsCancellable */ false));
-      UncondBrInst::Create(AfterBB, AfterIP.getBlock());
+      UncondBrInst::Create(AfterBB, AfterIP.getNodeParent());
 
       // Perform the actual outlining.
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
+      std::optional<uint64_t> WrapperCount =
+          getMergedWrapperEntryCount(MergableCIs, CallbackCalleeOperand);
+      // Leave the wrapper unprofiled when no callback has an entry count.
+      if (WrapperCount)
+        OutlinedFn->setEntryCount(*WrapperCount);
+      // Only sample PGO treats a profiled caller with no callsite weight as
+      // cold. Instrumentation profiles derive that count from the entry count.
+      const bool SampleProfile =
+          moduleHasSampleProfile(*OriginalFn->getParent());
 
       // Replace the __kmpc_fork_call calls with direct calls to the outlined
       // callbacks.
@@ -1359,6 +1390,12 @@ private:
             CallInst::Create(FT, Callee, Args, "", CI->getIterator());
         if (CI->getDebugLoc())
           NewCI->setDebugLoc(CI->getDebugLoc());
+        // Each body runs once per wrapper entry. Without a callsite weight,
+        // sample PGO treats these calls as cold.
+        if (WrapperCount && SampleProfile) {
+          setFittedBranchWeights(*NewCI, {*WrapperCount},
+                                 /*IsExpected=*/false);
+        }
 
         // Forward parameter attributes from the callback to the callee.
         for (unsigned U = CallbackFirstArgOperand, E = CI->arg_size(); U < E;
@@ -1372,9 +1409,7 @@ private:
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
           cantFail(OMPInfoCache.OMPBuilder.createBarrier(
-              {InsertPointTy(NewCI->getParent(),
-                             NewCI->getNextNode()->getIterator()),
-               NewCI->getDebugLoc()},
+              {NewCI->getNextNode()->getIterator(), NewCI->getDebugLoc()},
               OMPD_parallel));
         }
 
@@ -1801,8 +1836,7 @@ private:
     auto &IRBuilder = OMPInfoCache.OMPBuilder;
     Function *F = RuntimeCall.getCaller();
     BasicBlock &Entry = F->getEntryBlock();
-    IRBuilder.Builder.SetInsertPoint(&Entry,
-                                     Entry.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrAlloca());
     Value *Handle = IRBuilder.Builder.CreateAlloca(
         IRBuilder.AsyncInfo, /*ArraySize=*/nullptr, "handle");
     Handle =
@@ -1880,11 +1914,9 @@ private:
       // The IRBuilder uses the insertion block to get to the module, this is
       // unfortunate but we work around it for now. No instruction is emitted
       // here, so there is no debug location to preserve.
-      if (!OMPInfoCache.OMPBuilder.getInsertionPoint().getBlock())
+      if (!OMPInfoCache.OMPBuilder.getInsertionPoint().isValid())
         OMPInfoCache.OMPBuilder.updateToLocation(
-            {OpenMPIRBuilder::InsertPointTy(&F.getEntryBlock(),
-                                            F.getEntryBlock().begin()),
-             DebugLoc()});
+            {F.getEntryBlock().begin(), DebugLoc()});
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
       uint32_t SrcLocStrSize;
@@ -2402,10 +2434,8 @@ struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
   // this array will only grow with time.
   InternalControlVar TrackableICVs[1] = {ICV_nthreads};
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAICVTracker"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AAICVTracker
@@ -2603,8 +2633,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
       // Go through all predecessors and add terminators for analysis.
       for (const BasicBlock *Pred : predecessors(CurrBB))
-        if (const Instruction *Terminator = Pred->getTerminator())
-          Worklist.push_back(Terminator);
+        Worklist.push_back(Pred->getTerminator());
     }
 
     return ReplVal;
@@ -2844,7 +2873,6 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
            " executed by initial thread / aligned";
   }
 
-  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
   ChangeStatus manifest(Attributor &A) override {
@@ -2947,7 +2975,6 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   /// Accumulate information for the entry block in \p EntryBBED.
   bool handleCallees(Attributor &A, ExecutionDomainTy &EntryBBED);
 
-  /// See AbstractAttribute::updateImpl.
   ChangeStatus updateImpl(Attributor &A) override;
 
   /// Query interface, see AAExecutionDomain
@@ -3516,10 +3543,8 @@ struct AAHeapToShared : public StateWrapper<BooleanState, AbstractAttribute> {
   /// callsite to a free operation to be removed.
   virtual bool isAssumedHeapToSharedRemovedFree(CallBase &CB) const = 0;
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAHeapToShared"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -3541,7 +3566,6 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
            " malloc calls eligible.";
   }
 
-  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
   /// This functions finds free calls that will be removed by the
@@ -3742,7 +3766,6 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   /// Statistics are tracked as part of manifest for now.
   void trackStatistics() const override {}
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *) const override {
     if (!isValidState())
       return "<invalid>";
@@ -3772,10 +3795,8 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   /// Create an abstract attribute biew for the position \p IRP.
   static AAKernelInfo &createForPosition(const IRPosition &IRP, Attributor &A);
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAKernelInfo"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AAKernelInfo
@@ -3785,6 +3806,36 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
 
   static const char ID;
 };
+
+// Fences stronger than a workgroup order memory the SPMD barrier does not.
+static bool isStrictFence(const Instruction &I) {
+  const auto *FI = dyn_cast<FenceInst>(&I);
+  if (!FI)
+    return false;
+  SyncScope::ID SS = FI->getSyncScopeID();
+  if (SS == SyncScope::SingleThread)
+    return false;
+  if (SS == SyncScope::System)
+    return true;
+  std::optional<StringRef> Name = FI->getContext().getSyncScopeName(SS);
+  if (!Name)
+    return true;
+  auto Parsed =
+      parseAtomicScopeIRString(FI->getModule()->getTargetTriple(), *Name);
+  if (!Parsed)
+    return true;
+  switch (Parsed->first) {
+  case AtomicScope::Single:
+  case AtomicScope::Wavefront:
+  case AtomicScope::Workgroup:
+    return false;
+  case AtomicScope::Cluster:
+  case AtomicScope::Device:
+  case AtomicScope::System:
+    return true;
+  }
+  return true;
+}
 
 /// The function kernel info abstract attribute, basically, what can we say
 /// about a function with regards to the KernelInfoState.
@@ -3825,7 +3876,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
 #undef KERNEL_ENVIRONMENT_CONFIGURATION_SETTER
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // This is a high-level transform that might change the constant arguments
     // of the init and dinit calls. We need to tell the Attributor about this
@@ -4082,7 +4132,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
       LoopInfo *LI = nullptr;
       DominatorTree *DT = nullptr;
       MemorySSAUpdater *MSU = nullptr;
-      using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
 
       BasicBlock *ParentBB = RegionStartI->getParent();
       Function *Fn = ParentBB->getParent();
@@ -4178,8 +4227,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       // Go to tid check BB in ParentBB.
       const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
       ParentBB->getTerminator()->eraseFromParent();
-      OpenMPIRBuilder::LocationDescription Loc(
-          InsertPointTy(ParentBB, ParentBB->end()), DL);
+      OpenMPIRBuilder::LocationDescription Loc(ParentBB->end(), DL);
       OMPInfoCache.OMPBuilder.updateToLocation(Loc);
       uint32_t SrcLocStrSize;
       auto *SrcLocStr =
@@ -4191,7 +4239,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       // Add check for Tid in RegionCheckTidBB
       RegionCheckTidBB->getTerminator()->eraseFromParent();
       OpenMPIRBuilder::LocationDescription LocRegionCheckTid(
-          InsertPointTy(RegionCheckTidBB, RegionCheckTidBB->end()), DL);
+          RegionCheckTidBB->end(), DL);
       OMPInfoCache.OMPBuilder.updateToLocation(LocRegionCheckTid);
       FunctionCallee HardwareTidFn =
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
@@ -4211,9 +4259,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
               M, OMPRTL___kmpc_barrier_simple_spmd);
       OMPInfoCache.OMPBuilder.updateToLocation(
-          {InsertPointTy(RegionBarrierBB,
-                         RegionBarrierBB->getFirstInsertionPt()),
-           DL});
+          {RegionBarrierBB->getFirstInsertionPt(), DL});
       CallInst *Barrier =
           OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid});
       OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
@@ -4244,7 +4290,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
         Instruction *I = &*IP;
         if (OpenMPOpt::getCallIfRegularCall(*I, &AllocSharedRFI))
           continue;
-        if (!I->user_empty() || !SPMDCompatibilityTracker.contains(I)) {
+        // Nothing tracked is sunk across a strict fence.
+        if (isStrictFence(*I) || !I->user_empty() ||
+            !SPMDCompatibilityTracker.contains(I)) {
           LastEffect = nullptr;
           continue;
         }
@@ -4271,6 +4319,19 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
       Instruction *GuardedRegionStart = nullptr, *GuardedRegionEnd = nullptr;
       for (Instruction &I : *BB) {
+        // A strict fence splits a guarded region so it stays outside it.
+        if (isStrictFence(I)) {
+          if (SPMDCompatibilityTracker.contains(&I))
+            CalleeAAFunction.getGuardedInstructions().insert(&I);
+          if (GuardedRegionStart) {
+            GuardedRegions.push_back(
+                std::make_pair(GuardedRegionStart, GuardedRegionEnd));
+            GuardedRegionStart = nullptr;
+            GuardedRegionEnd = nullptr;
+          }
+          continue;
+        }
+
         // If instruction I needs to be guarded update the guarded region
         // bounds.
         if (SPMDCompatibilityTracker.contains(&I)) {
@@ -4405,11 +4466,15 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Changed = ChangeStatus::CHANGED;
 
     // Do not use instruction guards when no parallel is present inside
-    // the target region.
-    if (mayContainParallelRegion())
+    // the target region. Instead, only the main thread of each team executes
+    // the user code, so there is no need to launch more threads.
+    if (mayContainParallelRegion()) {
       insertInstructionGuardsHelper(A);
-    else
+    } else {
       forceSingleThreadPerWorkgroupHelper(A);
+      setMaxThreadsOfKernelEnvironment(
+          ConstantInt::get(Type::getInt32Ty(Kernel->getContext()), 1));
+    }
 
     // Adjust the global exec mode flag that tells the runtime what mode this
     // kernel is executed in.
@@ -4622,10 +4687,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     WorkFnAI->setDebugLoc(DLoc);
 
     OMPInfoCache.OMPBuilder.updateToLocation(
-        OpenMPIRBuilder::LocationDescription(
-            IRBuilder<>::InsertPoint(StateMachineBeginBB,
-                                     StateMachineBeginBB->end()),
-            DLoc));
+        OpenMPIRBuilder::LocationDescription(StateMachineBeginBB->end(), DLoc));
 
     Value *Ident = KernelInfo::getIdentFromKernelEnvironment(KernelEnvC);
     Value *GTid = KernelInitCB;
@@ -5012,7 +5074,6 @@ struct AAKernelInfoCallSite : AAKernelInfo {
   AAKernelInfoCallSite(const IRPosition &IRP, Attributor &A)
       : AAKernelInfo(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAKernelInfo::initialize(A);
 
@@ -5366,10 +5427,8 @@ struct AAFoldRuntimeCall
   static AAFoldRuntimeCall &createForPosition(const IRPosition &IRP,
                                               Attributor &A);
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAFoldRuntimeCall"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -5385,7 +5444,6 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
   AAFoldRuntimeCallCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAFoldRuntimeCall(IRP, A) {}
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *) const override {
     if (!isValidState())
       return "<invalid>";

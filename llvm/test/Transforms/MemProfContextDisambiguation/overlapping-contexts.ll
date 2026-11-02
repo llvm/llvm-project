@@ -66,6 +66,7 @@
 ; RUN:  --check-prefix=STATS --check-prefix=REMARKS
 
 ; REMARKS: created clone _Z1Ab.memprof.1
+; REMARKS: created clone _Z1Ab.memprof.2
 ; REMARKS: created clone _Z1Xb.memprof.1
 ; REMARKS: created clone _Z1Xb.memprof.2
 ; REMARKS: created clone _Z1Bb.memprof.1
@@ -84,13 +85,20 @@
 ; REMARKS: call in clone _Z1Bb.memprof.2 assigned to call function clone _Z1Xb.memprof.2
 ; REMARKS: call in clone _Z1Xb.memprof.2 assigned to call function clone _Z1Ab.memprof.1
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute cold
+;; The clone of _Z1Cb's call for the cold context via _Z1Gv (and the nodes
+;; cloned below it) have no context reaching the allocation at stack id 10,
+;; since the trimmed cold context ending at _Z1Cb's call stays with the
+;; original node. It applies to the clone as well (it ends at that callsite
+;; whatever the caller), so the clone needs a version of _Z1Ab with both
+;; allocations cold.
 ; REMARKS: call in clone _Z1Bb.memprof.1 assigned to call function clone _Z1Xb.memprof.1
-; REMARKS: call in clone _Z1Xb.memprof.1 assigned to call function clone _Z1Ab
+; REMARKS: call in clone _Z1Xb.memprof.1 assigned to call function clone _Z1Ab.memprof.2
 ; REMARKS: call in clone _Z1Dv assigned to call function clone _Z1Bb
 ; REMARKS: call in clone _Z1Bb assigned to call function clone _Z1Xb
 ; REMARKS: call in clone _Z1Xb assigned to call function clone _Z1Ab
 ; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute notcold
-; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute notcold
 
 
@@ -231,7 +239,7 @@ attributes #7 = { builtin }
 ; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
 
-; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 3 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
-; STATS: 7 memprof-context-disambiguation - Number of function clones created during whole program analysis
+; STATS: 8 memprof-context-disambiguation - Number of function clones created during whole program analysis
 ; STATS: 2 memprof-context-disambiguation - Number of new nodes created during merging

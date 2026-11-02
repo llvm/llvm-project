@@ -13,8 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
-
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"

@@ -35,12 +35,13 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRArithUtils
   MLIRComplexDialect
   MLIROpenACCAnalysis
   MLIROpenACCDialect
+  MLIROpenACCAllExtensions
   MLIROpenACCUtils
   MLIRFuncDialect
   MLIRGPUDialect

@@ -25,6 +25,17 @@
 #include "include/llvm-libc-macros/stdbit-macros.h"
 #include "test/UnitTest/LibcCTest.h"
 
+// The trailing comma in a compound literal must not be treated as a macro
+// argument separator. Also check that the initializer is evaluated only once.
+#define CHECK_COMPOUND_LITERAL(FUNC_NAME, TYPE, VALUE, EXPECTED)               \
+  do {                                                                         \
+    unsigned evaluations = 0;                                                  \
+    EXPECT_TRUE(FUNC_NAME((TYPE){                                              \
+                    (evaluations++, VALUE),                                    \
+                }) == EXPECTED);                                               \
+    EXPECT_TRUE(evaluations == 1);                                             \
+  } while (0)
+
 #define CHECK_FUNCTION(FUNC_NAME, VAL)                                         \
   do {                                                                         \
     EXPECT_TRUE(FUNC_NAME((unsigned char)0U) == VAL##AU);                      \
@@ -32,6 +43,11 @@
     EXPECT_TRUE(FUNC_NAME(0U) == VAL##CU);                                     \
     EXPECT_TRUE(FUNC_NAME(0UL) == VAL##DU);                                    \
     EXPECT_TRUE(FUNC_NAME(0ULL) == VAL##EU);                                   \
+    CHECK_COMPOUND_LITERAL(FUNC_NAME, unsigned char, 0, VAL##AU);              \
+    CHECK_COMPOUND_LITERAL(FUNC_NAME, unsigned short, 0, VAL##BU);             \
+    CHECK_COMPOUND_LITERAL(FUNC_NAME, unsigned int, 0, VAL##CU);               \
+    CHECK_COMPOUND_LITERAL(FUNC_NAME, unsigned long, 0, VAL##DU);              \
+    CHECK_COMPOUND_LITERAL(FUNC_NAME, unsigned long long, 0, VAL##EU);         \
   } while (0)
 
 TEST(stdbit) {
@@ -51,6 +67,11 @@ TEST(stdbit) {
   EXPECT_FALSE(stdc_has_single_bit(1U));
   EXPECT_FALSE(stdc_has_single_bit(1UL));
   EXPECT_FALSE(stdc_has_single_bit(1ULL));
+  CHECK_COMPOUND_LITERAL(stdc_has_single_bit, unsigned char, 0xAU, true);
+  CHECK_COMPOUND_LITERAL(stdc_has_single_bit, unsigned short, 0xBU, true);
+  CHECK_COMPOUND_LITERAL(stdc_has_single_bit, unsigned int, 0xCU, true);
+  CHECK_COMPOUND_LITERAL(stdc_has_single_bit, unsigned long, 0xDU, true);
+  CHECK_COMPOUND_LITERAL(stdc_has_single_bit, unsigned long long, 0xEU, true);
 
   CHECK_FUNCTION(stdc_bit_width, 0x4);
   CHECK_FUNCTION(stdc_bit_floor, 0x5);

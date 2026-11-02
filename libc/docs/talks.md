@@ -1,5 +1,30 @@
 # Talks
 
+## 2026
+
+- A performance improvement of the Payne-Hanek range reduction algorithm - Tue Ly
+
+  - [paper](https://arxiv.org/pdf/2609.35015)
+
+- Sharing LLVM-libc's floating-point routines with compiler-rt (GSoC 2026) - Mohamed Emad
+
+  - [blog](https://blog.llvm.org/posts/2026-08-24-gsoc-sharing-libc-with-compiler-rt/)
+
+- Bringing Correctly Rounded Math to Production with LLVM-libc - Michael Jones, Tue Ly, Cody Miller
+
+  - [blog](https://devblogs.microsoft.com/cppblog/bringing-correctly-rounded-math-to-production-with-llvm-libc/)
+
+- MSVC C++23: constexpr cmath with LLVM libc - Cody Miller
+
+  - [blog](https://devblogs.microsoft.com/cppblog/msvc-c23-constexpr-cmath-with-llvm-libc/)
+
+- Computing hard-to-round Cases of sin, cos, tan in Double Precision ([ARITH 2026](https://www.arith2026.org/program.html)) - Vincent Lefevre, Tue Ly, Paul Zimmermann
+
+  - [slides](https://www.arith2026.org/slides/session_5_3_Ly.pdf)
+  - [paper](https://www.arith2026.org/papers/Computing%20hard-to-round%20cases%20of%20sin_2C%20cos_2C%20tan%20in%20double%20precisio.pdf)
+  - [extended version](https://inria.hal.science/hal-05593313)
+
+
 ## 2025
 
 - From proprietary to fully open-source - Arm Toolchain's adoption of LLVM technology - Peter Smith

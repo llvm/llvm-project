@@ -45,7 +45,7 @@ def HasFPRegs16      : Predicate<"Subtarget->hasFPRegs16()">,
                                  AssemblerPredicate<(all_of FeatureFPRegs16),
                                                     "16-bit fp registers">;
 def HasNoFPRegs16    : Predicate<"!Subtarget->hasFPRegs16()">,
-                                 AssemblerPredicate<(all_of (not FeatureFPRegs16)),
+                                 AssemblerPredicate<(none_of FeatureFPRegs16),
                                                     "16-bit fp registers">;
 def HasFPRegs64      : Predicate<"Subtarget->hasFPRegs64()">,
                                  AssemblerPredicate<(all_of FeatureFPRegs64),
@@ -64,7 +64,7 @@ def HasV7            : Predicate<"Subtarget->hasV7Ops()">,
 def HasV8            : Predicate<"Subtarget->hasV8Ops()">,
                                  AssemblerPredicate<(all_of HasV8Ops), "armv8">;
 def PreV8            : Predicate<"!Subtarget->hasV8Ops()">,
-                                 AssemblerPredicate<(all_of (not HasV8Ops)), "armv7 or earlier">;
+                                 AssemblerPredicate<(none_of HasV8Ops), "armv7 or earlier">;
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
                                  AssemblerPredicate<(all_of HasV8_1aOps), "armv8.1a">;
 def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
@@ -161,10 +161,10 @@ def IsThumb2         : Predicate<"Subtarget->isThumb2()">,
 def IsMClass         : Predicate<"Subtarget->isMClass()">,
                                  AssemblerPredicate<(all_of FeatureMClass), "armv*m">;
 def IsNotMClass      : Predicate<"!Subtarget->isMClass()">,
-                                 AssemblerPredicate<(all_of (not FeatureMClass)),
+                                 AssemblerPredicate<(none_of FeatureMClass),
                                                     "!armv*m">;
 def IsARM            : Predicate<"!Subtarget->isThumb()">,
-                                 AssemblerPredicate<(all_of (not ModeThumb)), "arm-mode">;
+                                 AssemblerPredicate<(none_of ModeThumb), "arm-mode">;
 def IsMachO          : Predicate<"Subtarget->isTargetMachO()">;
 def IsNotMachO       : Predicate<"!Subtarget->isTargetMachO()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -176,7 +176,7 @@ def IsReadTPSoft     : Predicate<"Subtarget->isReadTPSoft()">;
 
 def UseNegativeImmediates :
   Predicate<"false">,
-            AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
+            AssemblerPredicate<(none_of FeatureNoNegativeImmediates),
                                "NegativeImmediates">;
 
 // FIXME: Eventually this will be just "hasV6T2Ops".

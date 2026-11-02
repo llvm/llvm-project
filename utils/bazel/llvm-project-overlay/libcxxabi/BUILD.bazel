@@ -1,0 +1,40 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+licenses(["notice"])
+
+filegroup(
+    name = "libcxxabi_hdrs",
+    srcs = glob(["include/*.h"]),
+)
+
+filegroup(
+    name = "libcxxabi_srcs",
+    srcs = glob(
+        [
+            "src/**/*.cpp",
+            "src/**/*.h",
+        ],
+        exclude = [
+            # Support functions only used when building without exceptions
+            # (`-fno-exceptions`), which duplicate symbols in `cxa_exception.cpp`.
+            "src/cxa_noexception.cpp",
+
+            # Vendor-specific test shims (e.g. Apple system dylib ABI shims).
+            "src/vendor/**",
+        ],
+    ),
+)
+
+filegroup(
+    name = "libcxxabi_textual_srcs",
+    srcs = glob([
+        "src/**/*.def",
+        "src/**/*.inc",
+    ]),
+)

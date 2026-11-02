@@ -55,12 +55,12 @@ end
 !PARSE-TREE: DoConstruct
 
 subroutine f02(x)
-  integer, allocatable :: x
+  integer :: x
   !$omp declare simd linear(ref(x) : 2)
 end
 
 !UNPARSE: SUBROUTINE f02 (x)
-!UNPARSE:  INTEGER, ALLOCATABLE :: x
+!UNPARSE:  INTEGER x
 !UNPARSE: !$OMP DECLARE SIMD LINEAR(REF(x): 2_4)
 !UNPARSE: END SUBROUTINE
 

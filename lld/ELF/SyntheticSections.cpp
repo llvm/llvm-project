@@ -228,28 +228,6 @@ BssSection::BssSection(Ctx &ctx, StringRef name, uint64_t size,
 EhFrameSection::EhFrameSection(Ctx &ctx)
     : SyntheticSection(ctx, ".eh_frame", SHT_PROGBITS, SHF_ALLOC, 1) {}
 
-// Search for an existing CIE record or create a new one.
-// CIE records from input object files are uniquified by their contents
-// and where their relocations point to.
-CieRecord *EhFrameSection::addCie(EhSectionPiece &cie,
-                                  ArrayRef<Relocation> rels) {
-  Symbol *personality = nullptr;
-  unsigned firstRelI = cie.firstRelocation;
-  if (firstRelI != (unsigned)-1)
-    personality = rels[firstRelI].sym;
-
-  // Search for an existing CIE by CIE contents/relocation target pair.
-  CieRecord *&rec = cieMap[{cie.data(), personality}];
-
-  // If not found, create a new one.
-  if (!rec) {
-    rec = make<CieRecord>();
-    rec->cie = &cie;
-    cieRecords.push_back(rec);
-  }
-  return rec;
-}
-
 // There is one FDE per function. Returns a non-null pointer to the function
 // symbol if the given FDE points to a live function.
 Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde,
@@ -270,56 +248,23 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde,
   return nullptr;
 }
 
-// .eh_frame is a sequence of CIE or FDE records. In general, there
-// is one CIE record per input object file which is followed by
-// a list of FDEs. This function searches an existing CIE or create a new
-// one and associates FDEs to the CIE.
-template <endianness e> void EhFrameSection::addRecords(EhInputSection *sec) {
-  auto rels = sec->rels;
-  offsetToCie.clear();
-  for (EhSectionPiece &cie : sec->cies)
-    offsetToCie[cie.inputOff] = addCie(cie, rels);
-  for (EhSectionPiece &fde : sec->fdes) {
-    uint32_t id = endian::read32<e>(fde.data().data() + 4);
-    CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
-    if (!rec)
-      Fatal(ctx) << sec << ": invalid CIE reference";
-
-    if (!isFdeLive(fde, rels))
-      continue;
-    rec->fdes.push_back(&fde);
-    numFdes++;
-  }
-}
-
-// Used by ICF<ELFT>::handleLSDA(). This function is very similar to
-// EhFrameSection::addRecords().
-template <class ELFT>
-void EhFrameSection::iterateFDEWithLSDAAux(
-    EhInputSection &sec, DenseSet<size_t> &ciesWithLSDA,
-    llvm::function_ref<void(InputSection &)> fn) {
-  for (EhSectionPiece &cie : sec.cies)
-    if (hasLSDA(cie))
-      ciesWithLSDA.insert(cie.inputOff);
-  for (EhSectionPiece &fde : sec.fdes) {
-    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
-    if (!ciesWithLSDA.contains(fde.inputOff + 4 - id))
-      continue;
-
-    // The CIE has a LSDA argument. Call fn with d's section.
-    if (Defined *d = isFdeLive(fde, sec.rels))
-      if (auto *s = dyn_cast_or_null<InputSection>(d->section))
-        fn(*s);
-  }
-}
-
-template <class ELFT>
+// Used by ICF.
 void EhFrameSection::iterateFDEWithLSDA(
     llvm::function_ref<void(InputSection &)> fn) {
-  DenseSet<size_t> ciesWithLSDA;
+  SmallVector<bool, 0> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    iterateFDEWithLSDAAux<ELFT>(*sec, ciesWithLSDA, fn);
+    for (EhSectionPiece &cie : sec->cies)
+      ciesWithLSDA.push_back(hasLSDA(*sec, cie));
+    for (EhSectionPiece &fde : sec->fdes) {
+      if (!ciesWithLSDA[fde.cie])
+        continue;
+
+      // The CIE has a LSDA argument. Call fn with d's section.
+      if (Defined *d = isFdeLive(fde, sec->rels))
+        if (auto *s = dyn_cast_or_null<InputSection>(d->section))
+          fn(*s);
+    }
   }
 }
 
@@ -332,33 +277,62 @@ static void writeCieFde(Ctx &ctx, uint8_t *buf, ArrayRef<uint8_t> d) {
 void EhFrameSection::finalizeContents() {
   assert(!this->size); // Not finalized.
 
-  switch (ctx.arg.ekind) {
-  case ELFNoneKind:
-    llvm_unreachable("invalid ekind");
-  case ELF32LEKind:
-  case ELF64LEKind:
-    for (EhInputSection *sec : sections)
-      if (sec->isLive())
-        addRecords<endianness::little>(sec);
-    break;
-  case ELF32BEKind:
-  case ELF64BEKind:
-    for (EhInputSection *sec : sections)
-      if (sec->isLive())
-        addRecords<endianness::big>(sec);
-    break;
-  }
-
+  // Uniquify CIEs by their contents and where their relocations point to.
+  DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, uint32_t> cieMap;
   size_t off = 0;
-  for (CieRecord *rec : cieRecords) {
-    rec->cie->outputOff = off;
-    off += rec->cie->size;
-
-    for (EhSectionPiece *fde : rec->fdes) {
-      fde->outputOff = off;
-      off += fde->size;
+  for (EhInputSection *sec : sections) {
+    if (!sec->isLive())
+      continue;
+    for (EhSectionPiece &cie : sec->cies) {
+      Symbol *personality = nullptr;
+      if (cie.firstRelocation != unsigned(-1))
+        personality = sec->rels[cie.firstRelocation].sym;
+      auto [it, inserted] =
+          cieMap.try_emplace({cie.data(*sec), personality}, off);
+      if (inserted) {
+        cie.outputOff = off;
+        off += cie.size;
+        uint8_t enc = getFdeEncoding(*sec, cie);
+        fdeEncodings[cie.outputOff] = enc;
+        enc &= 0x70;
+        if (enc != DW_EH_PE_absptr && enc != DW_EH_PE_pcrel)
+          Err(ctx) << "unknown FDE size encoding";
+      }
+      sec->cieOutputOffs.push_back(it->second);
     }
   }
+
+  // Place live FDEs after the CIEs in input order. Compute section-relative
+  // offsets in parallel, then add each section's base offset.
+  struct FdeRange {
+    uint64_t off = 0, size = 0;
+    size_t num = 0;
+  };
+  SmallVector<FdeRange, 0> ranges(sections.size());
+  parallelFor(0, sections.size(), [&](size_t i) {
+    EhInputSection &sec = *sections[i];
+    if (!sec.isLive())
+      return;
+    FdeRange &r = ranges[i];
+    for (EhSectionPiece &fde : sec.fdes) {
+      if (!isFdeLive(fde, sec.rels))
+        continue;
+      fde.outputOff = r.size;
+      r.size += fde.size;
+      ++r.num;
+    }
+  });
+  for (FdeRange &r : ranges) {
+    r.off = off;
+    off += r.size;
+    firstFdes.push_back(numFdes);
+    numFdes += r.num;
+  }
+  parallelFor(0, sections.size(), [&](size_t i) {
+    for (EhSectionPiece &fde : sections[i]->fdes)
+      if (fde.outputOff != -1)
+        fde.outputOff += ranges[i].off;
+  });
 
   // The LSB standard does not allow a .eh_frame section with zero
   // Call Frame Information records. glibc unwind-dw2-fde.c
@@ -370,64 +344,28 @@ void EhFrameSection::finalizeContents() {
 }
 
 void EhFrameSection::writeTo(uint8_t *buf) {
-  // Write CIE and FDE records.
-  for (CieRecord *rec : cieRecords) {
-    size_t cieOffset = rec->cie->outputOff;
-    writeCieFde(ctx, buf + cieOffset, rec->cie->data());
-
-    for (EhSectionPiece *fde : rec->fdes) {
-      size_t off = fde->outputOff;
-      writeCieFde(ctx, buf + off, fde->data());
+  parallelForEach(sections, [&](EhInputSection *sec) {
+    for (EhSectionPiece &cie : sec->cies)
+      if (cie.outputOff != -1)
+        writeCieFde(ctx, buf + cie.outputOff, cie.data(*sec));
+    for (EhSectionPiece &fde : sec->fdes) {
+      if (fde.outputOff == -1)
+        continue;
+      size_t off = fde.outputOff;
+      writeCieFde(ctx, buf + off, fde.data(*sec));
 
       // FDE's second word should have the offset to an associated CIE.
       // Write it.
-      write32(ctx, buf + off + 4, off + 4 - cieOffset);
+      write32(ctx, buf + off + 4, off + 4 - sec->cieOutputOffs[fde.cie]);
     }
-  }
-
-  // Apply relocations to .eh_frame entries. This includes CIE personality
-  // pointers, FDE initial_location fields, and LSDA pointers.
-  for (EhInputSection *s : sections)
-    ctx.target->relocateEh(*s, buf);
-
-  EhFrameHeader *hdr = ctx.in.ehFrameHdr.get();
-  if (!hdr || !hdr->getParent())
-    return;
-
-  // Write the .eh_frame_hdr section using cached FDE data from updateAllocSize.
-  bool large = hdr->large;
-  int64_t ehFramePtr = getParent()->addr - hdr->getVA() - 4;
-  auto writeField = [&](uint8_t *buf, uint64_t val) {
-    large ? write64(ctx, buf, val) : write32(ctx, buf, val);
-  };
-
-  uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
-  // version
-  hdrBuf[0] = 1;
-  // eh_frame_ptr_enc
-  hdrBuf[1] = DW_EH_PE_pcrel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
-  // fde_count_enc
-  hdrBuf[2] = DW_EH_PE_udata4;
-  // table_enc
-  hdrBuf[3] = DW_EH_PE_datarel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
-  hdrBuf += 4;
-  writeField(hdrBuf, ehFramePtr);
-  hdrBuf += large ? 8 : 4;
-  write32(ctx, hdrBuf, hdr->fdes.size());
-  hdrBuf += 4;
-  for (const FdeData &fde : hdr->fdes) {
-    writeField(hdrBuf, fde.pcRel);
-    writeField(hdrBuf + (large ? 8 : 4), fde.fdeVARel);
-    hdrBuf += large ? 16 : 8;
-  }
+    // Apply relocations to CIE personality pointers, FDE initial_location
+    // fields, and LSDA pointers.
+    ctx.target->relocateEh(*sec, buf);
+  });
 }
 
 EhFrameHeader::EhFrameHeader(Ctx &ctx)
     : SyntheticSection(ctx, ".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC, 4) {}
-
-void EhFrameHeader::writeTo(uint8_t *buf) {
-  // The section content is written during EhFrameSection::writeTo.
-}
 
 bool EhFrameHeader::isNeeded() const {
   return isLive() && ctx.in.ehFrame->isNeeded();
@@ -441,51 +379,84 @@ void EhFrameHeader::finalizeContents() {
   size = 4 + (large ? 8 : 4) + 4 + numFdes * (large ? 16 : 8);
 }
 
+// Call fn parallelly with the .eh_frame order index, pcRel and fdeVARel of each
+// live FDE that is not zero-range. pcRel and fdeVARel are relative to
+// .eh_frame_hdr's VA.
+template <class Fn> void EhFrameHeader::forEachFde(Fn fn) {
+  EhFrameSection &ehFrame = *ctx.in.ehFrame;
+  uint64_t hdrVA = getVA();
+  uint64_t ehFrameVA = ehFrame.getParent()->addr;
+  parallelFor(0, ehFrame.sections.size(), [&](size_t i) {
+    EhInputSection *sec = ehFrame.sections[i];
+    SmallVector<uint8_t, 2> encs;
+    for (uint32_t off : sec->cieOutputOffs)
+      encs.push_back(ehFrame.fdeEncodings.lookup(off));
+    size_t j = ehFrame.firstFdes[i];
+    for (const EhSectionPiece &fde : sec->fdes) {
+      if (fde.outputOff == -1)
+        continue;
+      size_t idx = j++;
+      // Discard zero-range FDE, otherwise it would displace the FDE of the
+      // next function, which shares its address.
+      if (hasZeroPcRange(*sec, fde, encs[fde.cie]))
+        continue;
+      // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
+      // live Defined.
+      const Relocation &reloc = sec->rels[fde.firstRelocation];
+      assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
+      int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
+      int64_t fdeVARel = ehFrameVA + fde.outputOff - hdrVA;
+      fn(idx, pcRel, fdeVARel);
+    }
+  });
+}
+
+// Return the FDE entries sorted by PC. Usually there is only one FDE at an
+// address, but there can be more than one FDEs pointing to the address. Keep
+// the first in .eh_frame.
+SmallVector<EhFrameHeader::FdeData, 0> EhFrameHeader::getFdeData() {
+  // Slots of zero-range FDEs keep INT64_MAX, which sorts last.
+  SmallVector<FdeData, 0> fdes(ctx.in.ehFrame->numFdes, {INT64_MAX, 0});
+  forEachFde([&](size_t i, int64_t pcRel, int64_t fdeVARel) {
+    fdes[i] = {pcRel, fdeVARel};
+  });
+  // Stable sort by PC. The entries usually form a few ascending runs, so merge
+  // adjacent runs pairwise.
+  auto less = [](const FdeData &a, const FdeData &b) {
+    return a.pcRel < b.pcRel;
+  };
+  SmallVector<size_t, 0> runs = {0};
+  for (size_t i = 1, e = fdes.size(); i < e; ++i)
+    if (less(fdes[i], fdes[i - 1]))
+      runs.push_back(i);
+  runs.push_back(fdes.size());
+  size_t numRuns = runs.size() - 1;
+  auto at = [&](size_t r) { return fdes.begin() + runs[std::min(r, numRuns)]; };
+  for (size_t w = 1; w < numRuns; w *= 2)
+    for (size_t r = 0; r < numRuns; r += 2 * w)
+      std::inplace_merge(at(r), at(r + w), at(r + 2 * w), less);
+  fdes.erase(
+      llvm::unique(fdes, [](const FdeData &a,
+                            const FdeData &b) { return a.pcRel == b.pcRel; }),
+      fdes.end());
+  if (!fdes.empty() && fdes.back().pcRel == INT64_MAX)
+    fdes.pop_back();
+  return fdes;
+}
+
 bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // This is called after `finalizeSynthetic`, so in the typical case without
   // .relr.dyn, this function will not change the size and assignAddresses
   // will not need another iteration.
   EhFrameSection *ehFrame = ctx.in.ehFrame.get();
-  uint64_t hdrVA = getVA();
-  int64_t ehFramePtr = ehFrame->getParent()->addr - hdrVA - 4;
+
   // Determine if 64-bit encodings are needed.
-  bool newLarge = !isInt<32>(ehFramePtr);
-
-  // Collect FDE entries. For each FDE, compute pcRel and fdeVARel relative to
-  // .eh_frame_hdr's VA.
-  fdes.clear();
-  for (CieRecord *rec : ehFrame->getCieRecords()) {
-    uint8_t enc = getFdeEncoding(rec->cie);
-    if ((enc & 0x70) != DW_EH_PE_absptr && (enc & 0x70) != DW_EH_PE_pcrel) {
-      Err(ctx) << "unknown FDE size encoding";
-      continue;
-    }
-    for (EhSectionPiece *fde : rec->fdes) {
-      // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
-      // live Defined.
-      auto *isec = cast<EhInputSection>(fde->sec);
-      auto &reloc = isec->rels[fde->firstRelocation];
-      assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
-      int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
-      int64_t fdeVARel = ehFrame->getParent()->addr + fde->outputOff - hdrVA;
-      fdes.push_back({pcRel, fdeVARel});
-      newLarge |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
-    }
-  }
-
-  // Sort the FDE list by their PC and uniquify. Usually there is only one FDE
-  // at an address, but there can be more than one FDEs pointing to the address.
-  llvm::stable_sort(
-      fdes, [](const EhFrameSection::FdeData &a,
-               const EhFrameSection::FdeData &b) { return a.pcRel < b.pcRel; });
-  fdes.erase(llvm::unique(fdes,
-                          [](const EhFrameSection::FdeData &a,
-                             const EhFrameSection::FdeData &b) {
-                            return a.pcRel == b.pcRel;
-                          }),
-             fdes.end());
-  ehFrame->numFdes = fdes.size();
-
+  std::atomic<bool> newLarge =
+      !isInt<32>(ehFrame->getParent()->addr - getVA() - 4);
+  forEachFde([&](size_t, int64_t pcRel, int64_t fdeVARel) {
+    if (!isInt<32>(pcRel) || !isInt<32>(fdeVARel))
+      newLarge = true;
+  });
   large = newLarge;
 
   // Compute size.
@@ -498,6 +469,33 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
     size = oldSize;
 
   return size != oldSize;
+}
+
+void EhFrameHeader::writeTo(uint8_t *buf) {
+  SmallVector<FdeData, 0> fdes = getFdeData();
+  int64_t ehFramePtr = ctx.in.ehFrame->getParent()->addr - getVA() - 4;
+  auto writeField = [&](uint8_t *buf, uint64_t val) {
+    large ? write64(ctx, buf, val) : write32(ctx, buf, val);
+  };
+
+  // version
+  buf[0] = 1;
+  // eh_frame_ptr_enc
+  buf[1] = DW_EH_PE_pcrel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  // fde_count_enc
+  buf[2] = DW_EH_PE_udata4;
+  // table_enc
+  buf[3] = DW_EH_PE_datarel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  buf += 4;
+  writeField(buf, ehFramePtr);
+  buf += large ? 8 : 4;
+  write32(ctx, buf, fdes.size());
+  buf += 4;
+  size_t entSize = large ? 16 : 8;
+  parallelFor(0, fdes.size(), [&](size_t i) {
+    writeField(buf + i * entSize, fdes[i].pcRel);
+    writeField(buf + i * entSize + entSize / 2, fdes[i].fdeVARel);
+  });
 }
 
 GotSection::GotSection(Ctx &ctx)
@@ -4705,15 +4703,6 @@ template void elf::splitSections<ELF32LE>(Ctx &);
 template void elf::splitSections<ELF32BE>(Ctx &);
 template void elf::splitSections<ELF64LE>(Ctx &);
 template void elf::splitSections<ELF64BE>(Ctx &);
-
-template void EhFrameSection::iterateFDEWithLSDA<ELF32LE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF32BE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF64LE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF64BE>(
-    function_ref<void(InputSection &)>);
 
 template class elf::SymbolTableSection<ELF32LE>;
 template class elf::SymbolTableSection<ELF32BE>;

@@ -149,20 +149,20 @@ define i64 @sum_3_at_with_int_conversion(ptr %A, ptr %B, ptr %C, i64 %N) {
 ; CHECK-NEXT:    [[SUB_I17:%.*]] = sub i64 [[END_INT_I16]], [[START_INT_I15]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i64 [[SUB_I]] to i128
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i128 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[SUB_I6]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[SUB_I17]] to i128
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i128 [[TMP2]], 1
-; CHECK-NEXT:    [[UMIN:%.*]] = tail call i128 @llvm.umin.i128(i128 [[TMP3]], i128 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i64 [[SUB_I17]] to i128
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i64 [[SUB_I6]] to i128
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i128 [[TMP4]], 1
-; CHECK-NEXT:    [[UMIN23:%.*]] = tail call i128 @llvm.umin.i128(i128 [[UMIN]], i128 [[TMP5]])
+; CHECK-NEXT:    [[UMIN:%.*]] = tail call i128 @llvm.umin.i128(i128 [[TMP3]], i128 [[TMP5]])
+; CHECK-NEXT:    [[UMIN23:%.*]] = tail call i128 @llvm.umin.i128(i128 [[UMIN]], i128 [[TMP1]])
 ; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext nneg i64 [[SMAX]] to i128
 ; CHECK-NEXT:    [[UMIN24:%.*]] = tail call i128 @llvm.umin.i128(i128 [[UMIN23]], i128 [[TMP6]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i128 [[TMP1]], [[UMIN24]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i128 [[TMP5]], [[UMIN24]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i128 [[TMP3]], [[UMIN24]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[ERROR_I:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i128 [[TMP3]], [[UMIN24]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i128 [[TMP5]], [[UMIN24]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[ERROR_I10:%.*]], label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[ERROR_I21:%.*]], label [[LOOP_PREHEADER:%.*]]

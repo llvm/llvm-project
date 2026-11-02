@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32v1.3-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.3-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - -filetype=obj | spirv-val --target-env spv1.3 %}
 
 ; CHECK-DAG: OpExtension "SPV_KHR_no_integer_wrap_decoration"
 

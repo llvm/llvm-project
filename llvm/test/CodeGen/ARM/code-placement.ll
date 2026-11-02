@@ -11,10 +11,9 @@ entry:
   br i1 %0, label %bb2, label %bb
 
 bb:
-; CHECK: LBB0_[[LABEL:[0-9]]]:
-; CHECK: bne LBB0_[[LABEL]]
-; CHECK-NOT: b LBB0_[[LABEL]]
-; CHECK: bx lr
+; CHECK: LBB0_[[LABEL:[0-9]]]: @ %bb
+; CHECK: bxeq lr
+; CHECK: b LBB0_[[LABEL]]
   %list_addr.05 = phi ptr [ %2, %bb ], [ %list, %entry ]
   %next.04 = phi ptr [ %list_addr.05, %bb ], [ null, %entry ]
   %1 = getelementptr inbounds %struct.list_head, ptr %list_addr.05, i32 0, i32 0

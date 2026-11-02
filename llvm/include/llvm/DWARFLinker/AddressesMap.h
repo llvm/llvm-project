@@ -45,6 +45,22 @@ public:
       DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
       uint64_t EndOffset, bool Verbose) = 0;
 
+  /// Returns the relocation adjustment value for the .debug_addr entry that the
+  /// DW_OP_addrx or DW_OP_constx operation \p Op refers to, or std::nullopt if
+  /// there is no corresponding live address. The entry may name a different
+  /// symbol than whatever owns the expression, such as a variable in a location
+  /// list covering a function's code, and that symbol may have moved by a
+  /// different amount.
+  std::optional<int64_t> getAddrIndexRelocAdjustment(
+      DWARFUnit &U, const DWARFExpression::Operation &Op, bool Verbose) {
+    std::optional<uint64_t> AddrOffset =
+        U.getIndexedAddressOffset(Op.getRawOperand(0));
+    if (!AddrOffset)
+      return std::nullopt;
+    return getExprOpAddressRelocAdjustment(
+        U, Op, *AddrOffset, *AddrOffset + U.getAddressByteSize(), Verbose);
+  }
+
   /// Checks that the specified subprogram \p DIE references the live code
   /// section and returns the relocation adjustment value (to get the linked
   /// address this value might be added to the source subprogram address).

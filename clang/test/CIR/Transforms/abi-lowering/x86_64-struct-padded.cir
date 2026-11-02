@@ -59,8 +59,8 @@ module attributes {
 } {
 
   // The coerce slot is allocated as the whole 16-byte record and bitcast down to
-  // the 4-byte coerce type, not the other way round, or the reload would read
-  // past the slot.
+  // the 4-byte coerce type, not the other way round, or reading the record out
+  // of it would run past the slot.
   cir.func @take_ov(%arg0: !rec_Ov) {
     cir.return
   }
@@ -69,7 +69,7 @@ module attributes {
   // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_Ov>
   // CHECK:   %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Ov> -> !cir.ptr<!s32i>
   // CHECK:   cir.store %arg0, %[[VIEW]] : !s32i, !cir.ptr<!s32i>
-  // CHECK:   %{{.+}} = cir.load %[[SLOT]] : !cir.ptr<!rec_Ov>, !rec_Ov
+  // CHECK-NEXT:   cir.return
 
   // Past two eightbytes, so byval, and the alignment comes from the record's
   // declared alignment in cir.record_layouts rather than from its members,
@@ -97,17 +97,17 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_anon_pad(%arg0: !u64i)
 
-  // The caller side coerces in the other direction, storing the record and
-  // reloading the register from a view of the same slot.
+  // The caller side coerces in the other direction, copying the whole record
+  // into a slot of its own and reading the register from a view of it.
   cir.func @call_ov(%arg0: !rec_Ov) {
     cir.call @take_ov(%arg0) : (!rec_Ov) -> ()
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @call_ov(%arg0: !s32i)
-  // CHECK:   %[[IN:.*]] = cir.load %{{.+}} : !cir.ptr<!rec_Ov>, !rec_Ov
+  // CHECK:   %[[IN:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_Ov>
   // CHECK:   %[[OUT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_Ov>
-  // CHECK:   cir.store %[[IN]], %[[OUT]] : !rec_Ov, !cir.ptr<!rec_Ov>
+  // CHECK:   cir.copy %[[IN]] align(4) to %[[OUT]] align(4) : !cir.ptr<!rec_Ov>
   // CHECK:   %[[OUTVIEW:.*]] = cir.cast bitcast %[[OUT]] : !cir.ptr<!rec_Ov> -> !cir.ptr<!s32i>
   // CHECK:   %[[REG:.*]] = cir.load %[[OUTVIEW]] : !cir.ptr<!s32i>, !s32i
   // CHECK:   cir.call @take_ov(%[[REG]]) : (!s32i) -> ()

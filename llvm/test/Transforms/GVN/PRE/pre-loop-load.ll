@@ -107,22 +107,26 @@ exit:
 }
 
 
-; TODO: We can PRE the load away from the hot path.
+; We can PRE the load away from the hot path: @side_effect is nofree, so the
+; object under %p cannot be deallocated between the loads.
 define i32 @test_load_on_cold_path(ptr %p) {
 ; CHECK-LABEL: @test_load_on_cold_path(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE1]], [[ENTRY:%.*]] ], [ [[X2:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
 ; CHECK-NEXT:    call void @side_effect() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X2]] = phi i32 [ [[X_PRE]], [[COLD_PATH]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -355,22 +359,26 @@ exit:
   ret i32 %x
 }
 
-; TODO: We can PRE via splitting of the critical edge in the cold path.
+; We PRE into the cold path. TODO: split the critical edge so that the reload
+; does not also run on the path that leaves the loop.
 define i32 @test_load_on_exiting_cold_path_01(ptr %p) {
 ; CHECK-LABEL: @test_load_on_exiting_cold_path_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE2:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE2]], [[ENTRY:%.*]] ], [ [[X3:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
 ; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br i1 [[SIDE_COND]], label [[BACKEDGE]], label [[COLD_EXIT:%.*]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X3]] = phi i32 [ [[X_PRE]], [[COLD_PATH]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -570,14 +578,17 @@ exit:
   ret i32 %x
 }
 
-; TODO: We can PRE via splitting of the critical edge in the cold path. Make sure we only insert 1 load.
+; We PRE into the last cold block, inserting exactly 1 load. TODO: split the
+; critical edge so that the reload does not also run on the path that leaves the
+; loop.
 define i32 @test_load_on_multi_exiting_cold_path(ptr %p) {
 ; CHECK-LABEL: @test_load_on_multi_exiting_cold_path(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE2:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE2]], [[ENTRY:%.*]] ], [ [[X3:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH_1:%.*]]
 ; CHECK:       hot_path:
@@ -590,8 +601,10 @@ define i32 @test_load_on_multi_exiting_cold_path(ptr %p) {
 ; CHECK-NEXT:    br i1 [[SIDE_COND_2]], label [[COLD_PATH_3:%.*]], label [[COLD_EXIT]]
 ; CHECK:       cold_path.3:
 ; CHECK-NEXT:    [[SIDE_COND_3:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br i1 [[SIDE_COND_3]], label [[BACKEDGE]], label [[COLD_EXIT]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X3]] = phi i32 [ [[X_PRE]], [[COLD_PATH_3]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -773,14 +786,16 @@ exit:
   ret i32 %x
 }
 
-; TODO: We can PRE via split of critical edge.
+; We PRE into the call block. TODO: split the critical edge so that the reload
+; does not also run on the path that leaves the loop.
 define i32 @test_side_exit_after_merge(ptr %p) {
 ; CHECK-LABEL: @test_side_exit_after_merge(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE2:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE2]], [[ENTRY:%.*]] ], [ [[X3:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -790,11 +805,14 @@ define i32 @test_side_exit_after_merge(ptr %p) {
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[DO_CALL:%.*]], label [[SIDE_EXITING:%.*]]
 ; CHECK:       do_call:
 ; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[SIDE_EXITING]]
 ; CHECK:       side_exiting:
+; CHECK-NEXT:    [[X4:%.*]] = phi i32 [ [[X_PRE]], [[DO_CALL]] ], [ 0, [[COLD_PATH]] ]
 ; CHECK-NEXT:    [[SIDE_COND_PHI:%.*]] = phi i1 [ [[SIDE_COND]], [[DO_CALL]] ], [ true, [[COLD_PATH]] ]
 ; CHECK-NEXT:    br i1 [[SIDE_COND_PHI]], label [[BACKEDGE]], label [[COLD_EXIT:%.*]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X3]] = phi i32 [ [[X4]], [[SIDE_EXITING]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -929,6 +947,74 @@ hot_path:
   br label %backedge
 
 cold_path:
+  call void @side_effect() nofree
+  br label %backedge
+
+backedge:
+  %iv.next = add i32 %iv, %x
+  %loop.cond = icmp ult i32 %iv.next, 1000
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %x
+}
+
+; We can PRE into the merge block. %merge has two predecessors, so proving the
+; absence of a deallocation requires walking both paths back to the header load.
+define i32 @test_merged_nofree_paths(ptr %p, i1 %take.a) {
+; CHECK-LABEL: @test_merged_nofree_paths(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE1]], [[ENTRY:%.*]] ], [ [[X2:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_ENTRY:%.*]]
+; CHECK:       hot_path:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       cold_entry:
+; CHECK-NEXT:    br i1 [[TAKE_A:%.*]], label [[PATH_A:%.*]], label [[PATH_B:%.*]]
+; CHECK:       path_a:
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       path_b:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[X2]] = phi i32 [ [[X_PRE]], [[MERGE]] ], [ [[X]], [[HOT_PATH]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[X]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+  %x = load i32, ptr %p
+  %cond = icmp ne i32 %x, 0
+  br i1 %cond, label %hot_path, label %cold_entry
+
+hot_path:
+  br label %backedge
+
+cold_entry:
+  br i1 %take.a, label %path_a, label %path_b
+
+path_a:
+  call void @side_effect() nofree
+  br label %merge
+
+path_b:
+  br label %merge
+
+merge:
   call void @side_effect() nofree
   br label %backedge
 

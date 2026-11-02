@@ -119,6 +119,28 @@ define <2 x double> @frexp_frexp_vector(<2 x double> %x) {
   ret <2 x double> %f_part
 }
 
+; CHECK: %[[#x_var5:]] = OpFunctionParameter %[[#float_32_type]]
+; CHECK: %[[#var11:]] = OpVariable %[[#fn_ptr_type_i32]] Function
+; CHECK: %[[#extinst11:]] = OpExtInst %[[#float_32_type]] %[[#extinst_id]] frexp %[[#x_var5]] %[[#var11]]
+; CHECK-NOT: OpLoad %[[#int_32_type]] %[[#var11]]
+; CHECK: OpReturnValue %[[#extinst11]]
+define float @frexp_mantissa_only(float %x) {
+  %ret = call { float, i32 } @llvm.frexp.f32.i32(float %x)
+  %f_part = extractvalue { float, i32 } %ret, 0
+  ret float %f_part
+}
+
+; CHECK: %[[#x_var6:]] = OpFunctionParameter %[[#vec2_float_type]]
+; CHECK: %[[#var12:]] = OpVariable %[[#fn_ptr_type_vec2_i32]] Function
+; CHECK: %[[#extinst12:]] = OpExtInst %[[#vec2_float_type]] %[[#extinst_id]] frexp %[[#x_var6]] %[[#var12]]
+; CHECK-NOT: OpLoad %[[#vec2_int_type]] %[[#var12]]
+; CHECK: OpReturnValue %[[#extinst12]]
+define <2 x float> @frexp_mantissa_only_vector(<2 x float> %x) {
+  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %x)
+  %f_part = extractvalue { <2 x float>, <2 x i32> } %ret, 0
+  ret <2 x float> %f_part
+}
+
 ; CHECK: %[[#out_param_f16:]] = OpFunctionParameter %[[#fn_ptr_type_struct_f16]]
 ; CHECK: %[[#x_var_f16:]] = OpFunctionParameter %[[#float_16_type]]
 ; CHECK: %[[#var_f16:]] = OpVariable %[[#fn_ptr_type_i32]] Function

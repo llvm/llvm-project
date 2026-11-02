@@ -108,7 +108,7 @@ r = iall(a,dim=2)
 ! CHECK:  fir.call @_FortranAIAllDim(%[[CONV_BOX]], %[[CONV_ARG0]], %[[C2]], %{{.*}}, %{{.*}}, %[[CONV_ABSENT]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> ()
 ! CHECK:  %[[BOX_LOAD:.*]] = fir.load %[[BOX_ALLOCA]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:  %[[ADDR:.*]] = fir.box_addr %[[BOX_LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:  %[[TMP_DECL:.*]]:2 = hlfir.declare %[[ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+! CHECK:  %[[TMP_DECL:.*]]:2 = hlfir.declare %[[ADDR]]({{.*}}) uniq_name(".tmp.intrinsic_result"){{.*}} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:  %[[EXPR:.*]] = hlfir.as_expr %[[TMP_DECL]]#0 move %{{.*}} : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
 ! CHECK:  hlfir.assign %[[EXPR]] to %[[ARG1_DECL]]#0 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
 ! CHECK:  hlfir.destroy %[[EXPR]] : !hlfir.expr<?xi32>
@@ -122,7 +122,7 @@ logical, optional :: mask(:)
 ! CHECK:  %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:  %[[RES_ALLOCA:.*]] = fir.alloca i32
 ! CHECK:  %[[RES_DECL:.*]]:2 = hlfir.declare %[[RES_ALLOCA]]
-! CHECK:  %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK]] dummy_scope %[[SCOPE]] arg 1 {fortran_attrs = #fir.var_attrs<optional>, {{.*}}}
+! CHECK:  %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK]] dummy_scope %[[SCOPE]] arg 1 uniq_name("_QFiall_test_optionalEmask") fortran_attrs<optional>
 ! CHECK:  %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %[[SCOPE]] arg 2 {{.*}}
 iall_test_optional = iall(x, mask=mask)
 ! CHECK:  %[[CONV_X:.*]] = fir.convert %[[X_DECL]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
@@ -139,7 +139,7 @@ logical, pointer :: mask(:)
 ! CHECK:  %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:  %[[RES_ALLOCA:.*]] = fir.alloca i32
 ! CHECK:  %[[RES_DECL:.*]]:2 = hlfir.declare %[[RES_ALLOCA]]
-! CHECK:  %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK]] dummy_scope %[[SCOPE]] arg 1 {fortran_attrs = #fir.var_attrs<pointer>, {{.*}}}
+! CHECK:  %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK]] dummy_scope %[[SCOPE]] arg 1 {{.*}}fortran_attrs<pointer>
 ! CHECK:  %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %[[SCOPE]] arg 2 {{.*}}
 iall_test_optional_2 = iall(x, mask=mask)
 ! CHECK:  %[[MASK_LOAD1:.*]] = fir.load %[[MASK_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>
@@ -164,7 +164,7 @@ logical, optional :: mask(10)
 ! CHECK:  %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:  %[[RES_ALLOCA:.*]] = fir.alloca i32
 ! CHECK:  %[[RES_DECL:.*]]:2 = hlfir.declare %[[RES_ALLOCA]]
-! CHECK:  %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK]]({{.*}}) dummy_scope %[[SCOPE]] arg 1 {fortran_attrs = #fir.var_attrs<optional>, {{.*}}}
+! CHECK:  %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK]]({{.*}}) dummy_scope %[[SCOPE]] arg 1 uniq_name("_QFiall_test_optional_3Emask") fortran_attrs<optional>
 ! CHECK:  %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %[[SCOPE]] arg 2 {{.*}}
 iall_test_optional_3 = iall(x, mask=mask)
 ! CHECK:  %[[IS_PRESENT:.*]] = fir.is_present %[[MASK_DECL]]#0 : (!fir.ref<!fir.array<10x!fir.logical<4>>>) -> i1
@@ -189,7 +189,7 @@ logical, allocatable :: mask(:)
 ! CHECK:  %[[RES_ALLOCA:.*]] = fir.alloca i32
 ! CHECK:  %[[RES_DECL:.*]]:2 = hlfir.declare %[[RES_ALLOCA]]
 ! CHECK:  %[[MASK_ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
-! CHECK:  %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK_ALLOCA]] {fortran_attrs = #fir.var_attrs<allocatable>, {{.*}}}
+! CHECK:  %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK_ALLOCA]] {{.*}}fortran_attrs<allocatable>
 ! CHECK:  %[[USE_MASK_DECL:.*]]:2 = hlfir.declare %[[USE_MASK]] dummy_scope %[[SCOPE]] arg 2 {{.*}}
 ! CHECK:  %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %[[SCOPE]] arg 1 {{.*}}
 if (use_mask) then

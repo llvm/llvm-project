@@ -150,6 +150,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
   Info.IsConvergent = CB.isConvergent();
+  Info.NoMerge = CB.hasFnAttr(Attribute::NoMerge);
 
   if (!Info.CanLowerReturn) {
     // Callee requires sret demotion.
@@ -460,7 +461,13 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       return;
     }
 
-    B.buildTrunc(OrigRegs[0], SrcReg);
+    LLT OrigITy = OrigTy.changeToInteger();
+    if (OrigTy == OrigITy) {
+      B.buildTrunc(OrigRegs[0], SrcReg);
+    } else {
+      auto Trunc = B.buildTrunc(OrigITy, SrcReg);
+      B.buildBitcast(OrigRegs[0], Trunc);
+    }
     return;
   }
 
@@ -613,7 +620,21 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
     assert(DstRegs.size() == 1);
-    B.buildInstr(ExtendOp, {DstRegs[0]}, {SrcReg});
+    // Convert float to integer if needed
+    LLT SrcITy = SrcTy.changeToInteger();
+    LLT PartITy = PartTy.changeToInteger();
+    if (SrcTy != SrcITy)
+      SrcReg = B.buildBitcast(SrcITy, SrcReg).getReg(0);
+
+    // Emit the sext/zext/anyext
+    Register DstIReg =
+        B.buildInstr(ExtendOp,
+                     PartITy == PartTy ? DstOp(DstRegs[0]) : DstOp(PartITy),
+                     {SrcReg})
+            .getReg(0);
+    // Convert back to the original type if needed
+    if (PartITy != PartTy)
+      B.buildBitcast(DstRegs[0], DstIReg);
     return;
   }
 

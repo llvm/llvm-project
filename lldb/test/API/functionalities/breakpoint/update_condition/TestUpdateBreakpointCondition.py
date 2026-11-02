@@ -19,6 +19,8 @@ class UpdateBreakpointConditionTestCase(TestBase):
         self.source = "main.c"
 
     @add_test_categories(["pyapi"])
+    # Flaky on Windows on Arm buildbot - https://github.com/llvm/llvm-project/issues/206141.
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test_update_condition_python_api(self):
         """Test that updating a breakpoint condition works correctly using Python API."""
         self.build()
@@ -77,6 +79,8 @@ class UpdateBreakpointConditionTestCase(TestBase):
         )
         self.assertEqual(breakpoint.GetHitCount(), 4)
 
+    # Flaky on Windows on Arm buildbot - https://github.com/llvm/llvm-project/issues/206141.
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test_update_condition_command(self):
         """Test that updating a breakpoint condition works correctly using breakpoint modify."""
         self.build()

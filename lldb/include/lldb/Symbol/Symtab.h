@@ -346,9 +346,9 @@ private:
                                         SymbolContextList &sc_list);
 
   void RegisterMangledNameEntry(
-      uint32_t value, std::set<const char *> &class_contexts,
-      std::vector<std::pair<NameToIndexMap::Entry, const char *>> &backlog,
-      RichManglingContext &rmc);
+      uint32_t value, const Mangled::FunctionNameParts &parts,
+      std::set<const char *> &class_contexts,
+      std::vector<std::pair<NameToIndexMap::Entry, const char *>> &backlog);
 
   void RegisterBacklogEntry(const NameToIndexMap::Entry &entry,
                             const char *decl_context,

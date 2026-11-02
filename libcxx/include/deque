@@ -2525,8 +2525,12 @@ struct __container_traits<deque<_Tp, _Allocator> > {
   //  assignment operator of T, there are no effects. If an exception is thrown while inserting a single element at
   //  either end, there are no effects. Otherwise, if an exception is thrown by the move constructor of a
   //  non-Cpp17CopyInsertable T, the effects are unspecified.
+  //
+  // The "no effects" guarantee for an insertion at the end does not cover an insertion in the middle, which
+  // move-constructs and move-assigns existing elements. Emplacement at an arbitrary position therefore has the
+  // strong guarantee only when neither of those operations can throw.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
-      is_nothrow_move_constructible<_Tp>::value || __is_cpp17_copy_insertable_v<_Allocator>;
+      is_nothrow_move_constructible<_Tp>::value && is_nothrow_move_assignable<_Tp>::value;
 
   static _LIBCPP_CONSTEXPR const bool __reservable = false;
 };

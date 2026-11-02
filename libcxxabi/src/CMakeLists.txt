@@ -9,6 +9,7 @@ set(LIBCXXABI_SOURCES
   cxa_handlers.cpp
   cxa_vector.cpp
   cxa_virtual.cpp
+  cxa_thread_atexit.cpp
   # C++ STL files
   stdlib_exception.cpp
   stdlib_stdexcept.cpp
@@ -33,13 +34,6 @@ if (LIBCXXABI_ENABLE_EXCEPTIONS)
 else()
   list(APPEND LIBCXXABI_SOURCES
     cxa_noexception.cpp
-  )
-endif()
-
-if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN)
-    AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
-  list(APPEND LIBCXXABI_SOURCES
-    cxa_thread_atexit.cpp
   )
 endif()
 

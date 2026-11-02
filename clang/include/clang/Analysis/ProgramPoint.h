@@ -107,23 +107,22 @@ private:
 
 protected:
   ProgramPoint() = default;
-  ProgramPoint(const void *P, Kind k, const StackFrame *SF,
-               const ProgramPointTag *tag = nullptr,
+  ProgramPoint(const void *P, Kind K, const StackFrame *SF,
+               const ProgramPointTag *T = nullptr,
                CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0})
-      : Data1(P), Data2(nullptr, (((unsigned)k) >> 0) & 0x3),
-        S(SF, (((unsigned)k) >> 2) & 0x3), Tag(tag, (((unsigned)k) >> 4) & 0x3),
-        ElemRef(ElemRef) {
-    assert(getKind() == k);
-    assert(getStackFrame() == SF);
-    assert(getData1() == P);
-  }
+      : ProgramPoint(P, nullptr, K, SF, T, ElemRef) {}
 
-  ProgramPoint(const void *P1, const void *P2, Kind k, const StackFrame *SF,
-               const ProgramPointTag *tag = nullptr,
+  ProgramPoint(const void *P1, const void *P2, Kind K, const StackFrame *SF,
+               const ProgramPointTag *T = nullptr,
                CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0})
-      : Data1(P1), Data2(P2, (((unsigned)k) >> 0) & 0x3),
-        S(SF, (((unsigned)k) >> 2) & 0x3), Tag(tag, (((unsigned)k) >> 4) & 0x3),
-        ElemRef(ElemRef) {}
+      : Data1(P1), Data2(P2, (((unsigned)K) >> 0) & 0x3),
+        S(SF, (((unsigned)K) >> 2) & 0x3), Tag(T, (((unsigned)K) >> 4) & 0x3),
+        ElemRef(ElemRef) {
+    assert(getKind() == K);
+    assert(getStackFrame() == SF);
+    assert(getData1() == P1);
+    assert(getData2() == P2);
+  }
 
 protected:
   const void *getData1() const { return Data1; }
@@ -134,9 +133,9 @@ protected:
 public:
   /// Create a new ProgramPoint object that is the same as the original
   /// except for using the specified tag value.
-  ProgramPoint withTag(const ProgramPointTag *tag) const {
+  ProgramPoint withTag(const ProgramPointTag *NewTag) const {
     return ProgramPoint(getData1(), getData2(), getKind(), getStackFrame(),
-                        tag);
+                        NewTag, getElementRef());
   }
 
   /// Convert to the specified ProgramPoint type, asserting that this

@@ -148,9 +148,9 @@ static int BUCompareLatency(const SUnit *left, const SUnit *right) {
   int LDepth = left->getDepth();
   int RDepth = right->getDepth();
   if (LDepth != RDepth) {
-    LLVM_DEBUG(dbgs() << "  Comparing latency of SU (" << left->NodeNum
-                      << ") depth " << LDepth << " vs SU (" << right->NodeNum
-                      << ") depth " << RDepth << "\n");
+    LLVM_DEBUG(dbgs() << "  Comparing latency of " << *left << " depth "
+                      << LDepth << " vs " << *right << " depth " << RDepth
+                      << "\n");
     return LDepth < RDepth ? 1 : -1;
   }
   if (left->Latency != right->Latency)
@@ -168,9 +168,9 @@ const SUnit *GCNILPScheduler::pickBest(const SUnit *left, const SUnit *right)
   if (!DisableSchedCriticalPath) {
     int spread = (int)left->getDepth() - (int)right->getDepth();
     if (std::abs(spread) > MaxReorderWindow) {
-      LLVM_DEBUG(dbgs() << "Depth of SU(" << left->NodeNum << "): "
-                        << left->getDepth() << " != SU(" << right->NodeNum
-                        << "): " << right->getDepth() << "\n");
+      LLVM_DEBUG(dbgs() << "Depth of " << *left << ": " << left->getDepth()
+                        << " != " << *right << ": " << right->getDepth()
+                        << "\n");
       return left->getDepth() < right->getDepth() ? right : left;
     }
   }
@@ -323,9 +323,7 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
 
     LLVM_DEBUG(dbgs() << "\n=== Picking candidate\n"
                          "Ready queue:";
-               for (auto &C
-                    : AvailQueue) dbgs()
-               << ' ' << C.SU->NodeNum;
+               for (auto &C : AvailQueue) dbgs() << ' ' << *C.SU;
                dbgs() << '\n';);
 
     auto *C = pickCandidate();

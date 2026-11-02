@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
+#include "InstCombineCLOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -34,10 +35,6 @@
 
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
-
-// As a default, let's assume that we want to be aggressive,
-// and attempt to traverse with no limits in attempt to sink negation.
-static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
 
 // Let's guesstimate that most often we will end up visiting/producing
 // fairly small number of new instructions.
@@ -77,11 +74,15 @@ public:
                    OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
                    const DataLayout &DL,
-                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT,
+                   const InstCombineCLOptions &CLOpts)
       : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
-                     RPOT) {}
+                     RPOT),
+        CLOpts(CLOpts) {}
 
   ~InstCombinerImpl() override = default;
+
+  const InstCombineCLOptions &CLOpts;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);
@@ -191,6 +192,8 @@ public:
   Instruction *simplifyBinOpSplats(ShuffleVectorInst &SVI);
   Instruction *visitShuffleVectorInst(ShuffleVectorInst &SVI);
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
+  Instruction *visitBitInsertInst(BitInsertInst &BI);
+  Instruction *visitBitExtractInst(BitExtractInst &BE);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
   Instruction *visitVAEndInst(VAEndInst &I);
   Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
@@ -468,9 +471,10 @@ private:
 
   /// Simplify \p V given that it is known to be non-null.
   /// Returns the simplified value if possible, otherwise returns nullptr.
-  /// If \p HasDereferenceable is true, the simplification will not perform
-  /// same object checks.
-  Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
+  /// If \p UseProvenance is true, the simplification will use provenance-based
+  /// reasoning (if the pointer is known to be dereferenceable in an
+  /// address-space where null is not defined).
+  Value *simplifyNonNullOperand(Value *V, bool UseProvenance,
                                 unsigned Depth = 0);
 
   /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
@@ -525,6 +529,16 @@ public:
   /// Performs a few simplifications for operators which are associative
   /// or commutative.
   bool SimplifyAssociativeOrCommutative(BinaryOperator &I);
+
+  /// If InnerVal1 and OuterVal form a symmetric pair, and "op" is commutative:
+  /// "(InnerVal0 op InnerVal1) op OuterVal" ==> "(X op' Y) op InnerVal0".
+  /// "OuterVal op (InnerVal0 op InnerVal1)" ==> "InnerVal0 op (X op' Y)".
+  /// X and Y are the inputs to the symmetric pair. "op'" indicates that
+  /// InnerOp will have its poison-generating flags dropped.
+  bool tryReassociateAndFoldSymmetricPair(BinaryOperator &OuterOp,
+                                          BinaryOperator &InnerOp,
+                                          Value *InnerVal0, Value *InnerVal1,
+                                          Value *OuterVal);
 
   /// Tries to simplify binary operations which some other binary
   /// operation distributes over.
@@ -726,7 +740,8 @@ public:
   bool foldAllocaCmp(AllocaInst *Alloca);
   Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
                                             GetElementPtrInst *GEP,
-                                            CmpInst &ICI,
+                                            CmpPredicate Pred, Constant *RHSC,
+                                            Instruction &CtxI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
@@ -744,6 +759,10 @@ public:
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantAllowPoison(ICmpInst &Cmp,
                                                    const APInt &C);
+  /// Match Op0 Pred Op1 on binops with a removable common operand.
+  bool matchCommonBinOpOperands(Value *Op0, Value *Op1, CmpInst::Predicate Pred,
+                                Value *&LHS, Value *&RHS,
+                                const SimplifyQuery &Q);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
                                   Value *Z, CmpPredicate Pred);
@@ -885,10 +904,12 @@ class Negator final {
 
   const bool IsTrulyNegation;
 
+  const unsigned MaxDepth;
+
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
-          bool IsTrulyNegation);
+  Negator(Module &M, const DominatorTree &DT, bool IsTrulyNegation,
+          unsigned MaxDepth);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

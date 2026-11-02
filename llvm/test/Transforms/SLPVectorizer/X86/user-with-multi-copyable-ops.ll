@@ -25,7 +25,7 @@ define void @test(ptr %this, ptr %0, double %1) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = fmul <4 x double> zeroinitializer, [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = fneg <4 x double> [[TMP11]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fneg <4 x double> [[TMP15]]
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x double> [[TMP13]], <2 x double> <double undef, double 1.000000e+00>, <4 x i32> <i32 1, i32 3, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x double> [[TMP13]], <2 x double> <double poison, double 1.000000e+00>, <4 x i32> <i32 1, i32 3, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <4 x double> [[TMP18]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <4 x double> [[TMP20]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP29:%.*]] = fmul <4 x double> [[TMP19]], [[TMP28]]

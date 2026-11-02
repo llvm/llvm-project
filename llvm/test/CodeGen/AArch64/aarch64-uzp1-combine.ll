@@ -266,11 +266,10 @@ define i8 @trunc_v4i64_v4i8(<4 x i64> %input) {
 ;
 ; CHECK-BE-LABEL: trunc_v4i64_v4i8:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
-; CHECK-BE-NEXT:    xtn v0.2s, v0.2d
-; CHECK-BE-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-BE-NEXT:    addv h0, v0.4h
 ; CHECK-BE-NEXT:    fmov w0, s0
 ; CHECK-BE-NEXT:    ret

@@ -960,6 +960,10 @@ __OMP_RTL_ATTRS(__kmpc_omp_task_with_deps, DefaultAttrs, SExt,
 __OMP_RTL_ATTRS(__kmpc_taskloop, DefaultAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, AttributeSet(), SExt,
                            ArgPtrAttrs, ArgPtrAttrs, AttributeSet(), SExt, SExt))
+__OMP_RTL_ATTRS(__kmpc_taskloop_5, DefaultAttrs, AttributeSet(),
+                ParamAttrs(ReadOnlyPtrAttrs, SExt, AttributeSet(), SExt,
+                           ArgPtrAttrs, ArgPtrAttrs, AttributeSet(), SExt, SExt,
+                           AttributeSet(), SExt))
 __OMP_RTL_ATTRS(__kmpc_omp_target_task_alloc, DefaultAttrs, ReturnPtrAttrs,
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt, SizeTyExt, SizeTyExt,
                            ReadOnlyPtrAttrs, AttributeSet()))
@@ -990,6 +994,9 @@ __OMP_RTL_ATTRS(__kmpc_fork_teams, ForkAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_push_num_teams, InaccessibleArgOnlyAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt, SExt))
+__OMP_RTL_ATTRS(__kmpc_push_num_teams_51, InaccessibleArgOnlyAttrs,
+                AttributeSet(),
+                ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt, SExt, SExt))
 __OMP_RTL_ATTRS(__kmpc_set_thread_limit, InaccessibleArgOnlyAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt))
 
@@ -1038,7 +1045,7 @@ __OMP_RTL_ATTRS(__kmpc_free, AllocAttrs, AttributeSet(),
 
 __OMP_RTL_ATTRS(__tgt_interop_init, AttributeSet(), AttributeSet(),
                 ParamAttrs(AttributeSet(), SExt, AttributeSet(), SExt,
-                           SExt, AttributeSet(), AttributeSet(), SExt))
+                           SExt, SExt, AttributeSet(), SExt))
 __OMP_RTL_ATTRS(__tgt_interop_destroy, AttributeSet(), AttributeSet(),
                 ParamAttrs(AttributeSet(), SExt, AttributeSet(), SExt, SExt,
                            AttributeSet(), SExt))

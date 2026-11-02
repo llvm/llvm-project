@@ -64,7 +64,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_64_xexec = SI_PS_LIVE
-  ; GFX908-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX908-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   S_BRANCH %bb.2
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2 (%ir-block.5):
@@ -80,12 +80,12 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY7]], [[COPY8]], implicit $exec
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX908-NEXT:   [[V_MBCNT_HI_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_HI_U32_B32_e64 [[COPY9]], [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
-  ; GFX908-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY2]], 2, implicit $exec
+  ; GFX908-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY2]], 2, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[WAVE_REDUCE_FADD_PSEUDO_F32_]]
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_MBCNT_HI_U32_B32_e64_]], [[COPY11]], implicit $exec
   ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:sreg_64_xexec = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GFX908-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64_xexec = SI_IF [[COPY12]], %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX908-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64_xexec = SI_IF [[COPY12]], %bb.4, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   S_BRANCH %bb.3
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3 (%ir-block.17):
@@ -97,10 +97,10 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT: bb.4.Flow:
   ; GFX908-NEXT:   successors: %bb.5(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX908-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.5 (%ir-block.19):
-  ; GFX908-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX908-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
@@ -113,7 +113,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX90A-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_64_xexec = SI_PS_LIVE
-  ; GFX90A-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.2
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2 (%ir-block.5):
@@ -129,12 +129,12 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY7]], [[COPY8]], implicit $exec
   ; GFX90A-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX90A-NEXT:   [[V_MBCNT_HI_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_HI_U32_B32_e64 [[COPY9]], [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
-  ; GFX90A-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY2]], 2, implicit $exec
+  ; GFX90A-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY2]], 2, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[WAVE_REDUCE_FADD_PSEUDO_F32_]]
   ; GFX90A-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX90A-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_MBCNT_HI_U32_B32_e64_]], [[COPY11]], implicit $exec
   ; GFX90A-NEXT:   [[COPY12:%[0-9]+]]:sreg_64_xexec = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GFX90A-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64_xexec = SI_IF [[COPY12]], %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64_xexec = SI_IF [[COPY12]], %bb.4, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.3 (%ir-block.17):
@@ -146,10 +146,10 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A-NEXT: bb.4.Flow:
   ; GFX90A-NEXT:   successors: %bb.5(0x80000000)
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.5 (%ir-block.19):
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
@@ -162,7 +162,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX942-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX942-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX942-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_64_xexec = SI_PS_LIVE
-  ; GFX942-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX942-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT:   S_BRANCH %bb.2
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT: bb.2 (%ir-block.5):
@@ -178,12 +178,12 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX942-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY7]], [[COPY8]], implicit $exec
   ; GFX942-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX942-NEXT:   [[V_MBCNT_HI_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_HI_U32_B32_e64 [[COPY9]], [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
-  ; GFX942-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY2]], 2, implicit $exec
+  ; GFX942-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY2]], 2, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[WAVE_REDUCE_FADD_PSEUDO_F32_]]
   ; GFX942-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX942-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_MBCNT_HI_U32_B32_e64_]], [[COPY11]], implicit $exec
   ; GFX942-NEXT:   [[COPY12:%[0-9]+]]:sreg_64_xexec = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GFX942-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64_xexec = SI_IF [[COPY12]], %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX942-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64_xexec = SI_IF [[COPY12]], %bb.4, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT:   S_BRANCH %bb.3
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT: bb.3 (%ir-block.17):
@@ -195,10 +195,10 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX942-NEXT: bb.4.Flow:
   ; GFX942-NEXT:   successors: %bb.5(0x80000000)
   ; GFX942-NEXT: {{  $}}
-  ; GFX942-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX942-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT: bb.5 (%ir-block.19):
-  ; GFX942-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX942-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
@@ -211,7 +211,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX11-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_32_xm0_xexec = SI_PS_LIVE
-  ; GFX11-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX11-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[SI_PS_LIVE]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.2
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.2 (%ir-block.5):
@@ -222,12 +222,12 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
   ; GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX11-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY4]], [[COPY5]], implicit $exec
-  ; GFX11-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY2]], 2, implicit $exec
+  ; GFX11-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY2]], 2, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[WAVE_REDUCE_FADD_PSEUDO_F32_]]
   ; GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX11-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[V_MBCNT_LO_U32_B32_e64_]], [[COPY7]], implicit $exec
   ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GFX11-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX11-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.4, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.3
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.3 (%ir-block.13):
@@ -239,10 +239,10 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11-NEXT: bb.4.Flow:
   ; GFX11-NEXT:   successors: %bb.5(0x80000000)
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX11-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.5 (%ir-block.15):
-  ; GFX11-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX11-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret void

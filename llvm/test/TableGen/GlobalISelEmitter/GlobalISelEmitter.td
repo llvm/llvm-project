@@ -961,94 +961,6 @@ def : Pat<(sub leaf:$src1, leaf:$src2), (INSN5 GPR32:$src1, GPR32:$src2)>;
 
 def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 
-//===- Test a simple pattern with a leaf immediate and a predicate. -------===//
-//
-// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
-// NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_I64_Predicate_simm8),
-// NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// NOOPT-NEXT:    // MIs[0] Operand 1
-// NOOPT-NEXT:    // No operand predicates
-// NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm8>>:$imm => (MOVimm8:{ *:[i32] } (imm:{ *:[i32] }):$imm)
-// NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm8),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
-// NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
-// NOOPT-NEXT:    // GIR_Coverage, 9,
-// NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
-// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-
-def simm8 : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
-def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$imm)]>;
-
-//===- Same again but use an IntImmLeaf. ----------------------------------===//
-//
-// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
-// NOOPT-NEXT:    GIM_CheckAPIntImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_APInt_Predicate_simm9),
-// NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// NOOPT-NEXT:    // MIs[0] Operand 1
-// NOOPT-NEXT:    // No operand predicates
-// NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm9>>:$imm =>  (MOVimm9:{ *:[i32] } (imm:{ *:[i32] }):$imm)
-// NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm9),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
-// NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
-// NOOPT-NEXT:    // GIR_Coverage, 10,
-// NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
-// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-
-def simm9 : IntImmLeaf<i32, [{ return isInt<9>(Imm->getSExtValue()); }]>;
-def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$imm)]>;
-
-//===- Test a pattern with a custom renderer. -----------------------------===//
-//
-// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
-// NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_I64_Predicate_cimm8),
-// NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// NOOPT-NEXT:    // MIs[0] Operand 1
-// NOOPT-NEXT:    // No operand predicates
-// NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_cimm8>><<X:cimm8_xform>>:$imm  =>  (MOVcimm8:{ *:[i32] } (cimm8_xform:{ *:[i32] } (imm:{ *:[i32] }):$imm))
-// NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVcimm8),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// NOOPT-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GIMT_Encode2(GICR_renderImm), // imm
-// NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
-// NOOPT-NEXT:    // GIR_Coverage, 11,
-// NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
-// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-
-def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$imm)]>;
-
-//===- Test a simple pattern with a FP immediate and a predicate. ---------===//
-//
-// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_FCONSTANT),
-// NOOPT-NEXT:    GIM_CheckAPFloatImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_APFloat_Predicate_fpimmz),
-// NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::FPR32RegClassID),
-// NOOPT-NEXT:    // MIs[0] Operand 1
-// NOOPT-NEXT:    // No operand predicates
-// NOOPT-NEXT:    // (fpimm:{ *:[f32] })<<P:Predicate_fpimmz>>:$imm =>  (MOVfpimmz:{ *:[f32] } (fpimm:{ *:[f32] }):$imm)
-// NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVfpimmz),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// NOOPT-NEXT:    GIR_CopyFConstantAsFPImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
-// NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
-// NOOPT-NEXT:    // GIR_Coverage, 18,
-// NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
-// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-
 //===- Test a simple pattern with inferred pointer operands. ---------------===//
 //
 // NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
@@ -1065,7 +977,7 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>> => (LOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
-// NOOPT-NEXT:    // GIR_Coverage, 12,
+// NOOPT-NEXT:    // GIR_Coverage, 9,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1111,12 +1023,101 @@ def : Pat<(load GPR32:$src),
 // NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_sextload>><<P:Predicate_sextloadi16>>  =>  (SEXTLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::SEXTLOAD),
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
-// NOOPT-NEXT:    // GIR_Coverage, 13,
+// NOOPT-NEXT:    // GIR_Coverage, 10,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
 def SEXTLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
                  [(set GPR32:$dst, (sextloadi16 GPR32:$src1))]>;
+
+//===- Test a simple pattern with a leaf immediate and a predicate. -------===//
+//
+// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
+// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
+// NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_I64_Predicate_simm8),
+// NOOPT-NEXT:    // MIs[0] DstI[dst]
+// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    // MIs[0] Operand 1
+// NOOPT-NEXT:    // No operand predicates
+// NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm8>>:$imm => (MOVimm8:{ *:[i32] } (imm:{ *:[i32] }):$imm)
+// NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm8),
+// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
+// NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
+// NOOPT-NEXT:    // GIR_Coverage, 11,
+// NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
+// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+
+def simm8 : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
+def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$imm)]>;
+
+//===- Same again but use an IntImmLeaf. ----------------------------------===//
+//
+// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
+// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
+// NOOPT-NEXT:    GIM_CheckAPIntImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_APInt_Predicate_simm9),
+// NOOPT-NEXT:    // MIs[0] DstI[dst]
+// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    // MIs[0] Operand 1
+// NOOPT-NEXT:    // No operand predicates
+// NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm9>>:$imm =>  (MOVimm9:{ *:[i32] } (imm:{ *:[i32] }):$imm)
+// NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm9),
+// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
+// NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
+// NOOPT-NEXT:    // GIR_Coverage, 12,
+// NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
+// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+
+def simm9 : IntImmLeaf<i32, [{ return isInt<9>(Imm->getSExtValue()); }]>;
+def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$imm)]>;
+
+//===- Test a pattern with a custom renderer. -----------------------------===//
+//
+// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
+// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
+// NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_I64_Predicate_cimm8),
+// NOOPT-NEXT:    // MIs[0] DstI[dst]
+// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    // MIs[0] Operand 1
+// NOOPT-NEXT:    // No operand predicates
+// NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_cimm8>><<X:cimm8_xform>>:$imm  =>  (MOVcimm8:{ *:[i32] } (cimm8_xform:{ *:[i32] } (imm:{ *:[i32] }):$imm))
+// NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVcimm8),
+// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GIMT_Encode2(GICR_renderImm), // imm
+// NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
+// NOOPT-NEXT:    // GIR_Coverage, 13,
+// NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
+// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+
+def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$imm)]>;
+
+//===- Test a simple pattern with a FP immediate and a predicate. ---------===//
+//
+// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
+// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_FCONSTANT),
+// NOOPT-NEXT:    GIM_CheckAPFloatImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_APFloat_Predicate_fpimmz),
+// NOOPT-NEXT:    // MIs[0] DstI[dst]
+// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::FPR32RegClassID),
+// NOOPT-NEXT:    // MIs[0] Operand 1
+// NOOPT-NEXT:    // No operand predicates
+// NOOPT-NEXT:    // (fpimm:{ *:[f32] })<<P:Predicate_fpimmz>>:$imm =>  (MOVfpimmz:{ *:[f32] } (fpimm:{ *:[f32] }):$imm)
+// NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVfpimmz),
+// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_CopyFConstantAsFPImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
+// NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
+// NOOPT-NEXT:    // GIR_Coverage, 18,
+// NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
+// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+
 
 //===- Test a simple pattern with regclass operands. ----------------------===//
 //

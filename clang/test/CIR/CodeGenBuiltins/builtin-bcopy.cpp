@@ -16,7 +16,7 @@ void foo(void) {
   // CIR: %[[V6:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[V7:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[V8:.*]] = cir.mul %[[V6]], %[[V7]] : !u64i
-  // CIR: cir.libc.memmove %[[V8]] bytes from %[[V3]] to %[[V5]] : !cir.ptr<!void>, !u64i
+  // CIR: cir.libc.memmove %[[V8]] bytes from %[[V3]] align(16) to %[[V5]] align(16) : !cir.ptr<!void>, !u64i
   // CIR: cir.return
 
   // LLVM-LABEL: define dso_local void @_Z3foov()
@@ -24,7 +24,7 @@ void foo(void) {
   // LLVM: %[[V2:.*]] = alloca [8 x float], align 16
   // LLVM: %[[V3:.*]] = getelementptr float, ptr %[[V1]], i32 0
   // LLVM: %[[V4:.*]] = getelementptr float, ptr %[[V2]], i32 0
-  // LLVM: call void @llvm.memmove.p0.p0.i64(ptr %[[V4]], ptr %[[V3]], i64 16, i1 false)
+  // LLVM: call void @llvm.memmove.p0.p0.i64(ptr align 16 %[[V4]], ptr align 16 %[[V3]], i64 16, i1 false)
   // LLVM: ret void
 
   // OGCG-LABEL: define dso_local void @_Z3foov()
@@ -120,11 +120,11 @@ void testbcopy(const void *src, void *dest, size_t n) {
 // CIR: %[[DEST:.*]] = cir.alloca "dest" {{.*}} init : !cir.ptr<!cir.ptr<!s8i>>
 // CIR: %[[SRC_TO_VOIDPTR:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!cir.ptr<!s8i>> -> !cir.ptr<!void>
 // CIR: %[[DEST_TO_VOIDPTR:.*]] = cir.cast bitcast %[[DEST]] : !cir.ptr<!cir.ptr<!s8i>> -> !cir.ptr<!void>
-// CIR: cir.libc.memmove {{.*}} bytes from %[[SRC_TO_VOIDPTR]] to %[[DEST_TO_VOIDPTR]]
+// CIR: cir.libc.memmove {{.*}} bytes from %[[SRC_TO_VOIDPTR]] align(8) to %[[DEST_TO_VOIDPTR]] align(8)
 // LLVM-LABEL: @testaddressof(
 // LLVM: %[[SRC:.*]] = alloca ptr
 // LLVM: %[[DEST:.*]] = alloca ptr
-// LLVM: call void @llvm.memmove.p0.p0.i64(ptr %[[DEST]], ptr %[[SRC]], i64 {{.*}}, i1 false)
+// LLVM: call void @llvm.memmove.p0.p0.i64(ptr align 8 %[[DEST]], ptr align 8 %[[SRC]], i64 {{.*}}, i1 false)
 // OGCG-LABEL: @testaddressof(
 // OGCG: %[[SRC:.*]] = alloca ptr
 // OGCG: %[[DEST:.*]] = alloca ptr

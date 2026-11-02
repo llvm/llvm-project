@@ -1,7 +1,7 @@
 # Check that the backend can produce a branch-on-count instruction also in
 # the presence of a DEBUG_VALUE machine instruction.
 #
-# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=postrapseudos \
+# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=post-ra-pseudos \
 # RUN:   -o - 2>&1 | FileCheck %s
 #
 # CHECK: brctg

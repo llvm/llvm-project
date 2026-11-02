@@ -1,0 +1,46 @@
+# RUN: llc -mtriple=bpfel -mcpu=v4 -run-pass=bpf-mi-zext-elim -verify-machineinstrs -o - %s | FileCheck %s
+#
+# mov, shift left, shift right is a zero extension that is not needed after
+# a 32 bit load. The results of the mov and of the left shift are used elsewhere
+# too: they have to stay.
+---
+name:            other_users
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r1
+    ; CHECK-LABEL: name: other_users
+    ; CHECK:       [[LD:%[0-9]+]]:gpr32 = LDW32
+    ; CHECK:       [[MOV:%[0-9]+]]:gpr = SUBREG_TO_REG [[LD]], %subreg.sub_32
+    ; CHECK:       [[SLL:%[0-9]+]]:gpr = SLL_ri [[MOV]], 32
+    ; CHECK:       [[EXT:%[0-9]+]]:gpr = SUBREG_TO_REG [[LD]], %subreg.sub_32
+    ; CHECK:       [[A:%[0-9]+]]:gpr = ADD_rr [[EXT]], [[MOV]]
+    ; CHECK:       ADD_rr [[A]], [[SLL]]
+    %0:gpr = COPY $r1
+    %1:gpr32 = LDW32 %0, 0
+    %2:gpr = MOV_32_64 %1
+    %3:gpr = SLL_ri %2, 32
+    %4:gpr = SRL_ri %3, 32
+    %5:gpr = ADD_rr %4, %2
+    %6:gpr = ADD_rr %5, %3
+    $r0 = COPY %6
+    RET implicit $r0
+...
+---
+name:            no_other_users
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r1
+    ; CHECK-LABEL: name: no_other_users
+    ; CHECK:       [[LD:%[0-9]+]]:gpr32 = LDW32
+    ; CHECK-NEXT:  [[EXT:%[0-9]+]]:gpr = SUBREG_TO_REG [[LD]], %subreg.sub_32
+    ; CHECK-NEXT:  $r0 = COPY [[EXT]]
+    %0:gpr = COPY $r1
+    %1:gpr32 = LDW32 %0, 0
+    %2:gpr = MOV_32_64 %1
+    %3:gpr = SLL_ri %2, 32
+    %4:gpr = SRL_ri %3, 32
+    $r0 = COPY %4
+    RET implicit $r0
+...

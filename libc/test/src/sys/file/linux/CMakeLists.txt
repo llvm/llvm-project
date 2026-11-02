@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_file_unittests)
+add_libc_testsuite(libc-sys-file-tests)
 
 add_libc_test(
   flock_test
   SUITE
-    libc_sys_file_unittests
+    libc-sys-file-tests
   SRCS
     flock_test.cpp
   DEPENDS
@@ -12,7 +12,6 @@ add_libc_test(
     libc.hdr.sys_file_macros
     libc.hdr.sys_stat_macros
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.file.flock
     libc.src.unistd.close

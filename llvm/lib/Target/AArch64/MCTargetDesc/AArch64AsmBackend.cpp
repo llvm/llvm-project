@@ -10,6 +10,7 @@
 #include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -347,18 +348,19 @@ AArch64AsmBackend::getFixupKind(StringRef Name) const {
   if (!TheTriple.isOSBinFormatELF())
     return std::nullopt;
 
-  unsigned Type = llvm::StringSwitch<unsigned>(Name)
-#define ELF_RELOC(X, Y)  .Case(#X, Y)
+  constexpr llvm::EnumStringDef<uint16_t> TypesDefs[] = {
+#define ELF_RELOC(X, Y) {{#X}, Y},
 #include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
 #undef ELF_RELOC
-                      .Case("BFD_RELOC_NONE", ELF::R_AARCH64_NONE)
-                      .Case("BFD_RELOC_16", ELF::R_AARCH64_ABS16)
-                      .Case("BFD_RELOC_32", ELF::R_AARCH64_ABS32)
-                      .Case("BFD_RELOC_64", ELF::R_AARCH64_ABS64)
-                      .Default(-1u);
-  if (Type == -1u)
-    return std::nullopt;
-  return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+      {{"BFD_RELOC_NONE"}, ELF::R_AARCH64_NONE},
+      {{"BFD_RELOC_16"}, ELF::R_AARCH64_ABS16},
+      {{"BFD_RELOC_32"}, ELF::R_AARCH64_ABS32},
+      {{"BFD_RELOC_64"}, ELF::R_AARCH64_ABS64},
+  };
+  static constexpr auto Types = BUILD_ENUM_STRINGS(TypesDefs);
+  if (const auto *E = llvm::EnumStrings(Types).fromString(Name))
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + E->value());
+  return std::nullopt;
 }
 
 /// getFixupKindContainereSizeInBytes - The number of bytes of the

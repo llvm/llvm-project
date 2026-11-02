@@ -16,9 +16,9 @@
 #include <complex>
 
 namespace Fortran::runtime {
-template <typename INTERMEDIATE> class NonComplexProductAccumulator {
+template <typename INTERMEDIATE> class IntegerProductAccumulator {
 public:
-  explicit RT_API_ATTRS NonComplexProductAccumulator(const Descriptor &array)
+  explicit RT_API_ATTRS IntegerProductAccumulator(const Descriptor &array)
       : array_{array} {}
   RT_API_ATTRS void Reinitialize() { product_ = 1; }
   template <typename A>
@@ -29,6 +29,29 @@ public:
   RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
     product_ *= *array_.Element<A>(at);
     return product_ != 0;
+  }
+
+private:
+  const Descriptor &array_;
+  INTERMEDIATE product_{1};
+};
+
+template <typename INTERMEDIATE> class RealProductAccumulator {
+public:
+  explicit RT_API_ATTRS RealProductAccumulator(const Descriptor &array)
+      : array_{array} {}
+  RT_API_ATTRS void Reinitialize() { product_ = 1; }
+  template <typename A>
+  RT_API_ATTRS void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
+    *p = static_cast<A>(product_);
+  }
+  template <typename A>
+  RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
+    product_ *= *array_.Element<A>(at);
+    // Unlike the integer case, a zero running product cannot end the
+    // reduction early: the remaining elements determine the sign of the
+    // zero, and a later NaN or infinity must still produce NaN.
+    return true;
   }
 
 private:
@@ -64,25 +87,25 @@ RT_EXT_API_GROUP_BEGIN
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(ProductInteger1)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
+      IntegerProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Integer, 2> RTDEF(ProductInteger2)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
+      IntegerProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(ProductInteger4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
+      IntegerProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Integer, 8> RTDEF(ProductInteger8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x},
+      IntegerProductAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x},
       "PRODUCT");
 }
 #ifdef __SIZEOF_INT128__
@@ -90,8 +113,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(ProductInteger16)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
-      mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
+      mask, IntegerProductAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
       "PRODUCT");
 }
 #endif
@@ -100,32 +122,28 @@ CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(ProductUnsigned1)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Unsigned, 1>(x, source, line, dim,
-      mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      mask, IntegerProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(ProductUnsigned2)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Unsigned, 2>(x, source, line, dim,
-      mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      mask, IntegerProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(ProductUnsigned4)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Unsigned, 4>(x, source, line, dim,
-      mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      mask, IntegerProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(ProductUnsigned8)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Unsigned, 8>(x, source, line, dim,
-      mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 8>>{x},
+      mask, IntegerProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 8>>{x},
       "PRODUCT");
 }
 #ifdef __SIZEOF_INT128__
@@ -134,7 +152,7 @@ CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(ProductUnsigned16)(
     const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Unsigned, 16>(x, source, line, dim,
       mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 16>>{x},
+      IntegerProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 16>>{x},
       "PRODUCT");
 }
 #endif
@@ -143,29 +161,25 @@ CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(ProductUnsigned16)(
 CppTypeFor<TypeCategory::Real, 4> RTDEF(ProductReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 4>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 4>>{x},
-      "PRODUCT");
+      RealProductAccumulator<CppTypeFor<TypeCategory::Real, 4>>{x}, "PRODUCT");
 }
 CppTypeFor<TypeCategory::Real, 8> RTDEF(ProductReal8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 8>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
-      "PRODUCT");
+      RealProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x}, "PRODUCT");
 }
 #if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDEF(ProductReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 10>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
-      "PRODUCT");
+      RealProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x}, "PRODUCT");
 }
 #endif
 #if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(ProductReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 16>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 16>>{x},
-      "PRODUCT");
+      RealProductAccumulator<CppTypeFor<TypeCategory::Real, 16>>{x}, "PRODUCT");
 }
 #endif
 
@@ -204,8 +218,8 @@ void RTDEF(CppProductComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
 
 void RTDEF(ProductDim)(Descriptor &result, const Descriptor &x, int dim,
     const char *source, int line, const Descriptor *mask) {
-  TypedPartialNumericReduction<NonComplexProductAccumulator,
-      NonComplexProductAccumulator, ComplexProductAccumulator,
+  TypedPartialNumericReduction<IntegerProductAccumulator,
+      RealProductAccumulator, ComplexProductAccumulator,
       /*MIN_REAL_KIND=*/4>(result, x, dim, source, line, mask, "PRODUCT");
 }
 

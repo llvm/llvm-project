@@ -62,7 +62,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
 
   if (clientAPI != spirv::ClientAPI::OpenCL &&
       clientAPI != spirv::ClientAPI::Unknown)
-    getOperation()->emitWarning()
+    emitWarning(module.getLoc())
         << "address space mapping for client '"
         << spirv::stringifyClientAPI(clientAPI) << "' not implemented";
 

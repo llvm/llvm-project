@@ -12,15 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/logf.h"
 #include "src/mathvec/logf.h"
 #include "test/UnitTest/SIMDMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/mathvec/UnitTestWrappers.h"
 
-#include "hdr/stdint_proxy.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define MATHVEC_TOL 1
+#else
+#define MATHVEC_TOL 0
+#endif
 
 using LlvmLibcVecLogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -85,8 +91,11 @@ TEST_F(LlvmLibcVecLogfTest, TrickyInputs) {
 
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
-    EXPECT_SIMD_EQ(wrap_ref<LogfOp>(x, -x), wrap_vector<LogfOp>(x, -x));
+    EXPECT_SIMD_EQ(wrap_ref<LogfOp>(x, -x), wrap_vector<LogfOp>(x, -x),
+                   MATHVEC_TOL);
   }
 }
 
-TEST_F(LlvmLibcVecLogfTest, InFloatRange) { TEST_MATHVEC_FLOAT_RANGE(LogfOp); }
+TEST_F(LlvmLibcVecLogfTest, InFloatRange) {
+  TEST_MATHVEC_FLOAT_RANGE_TOL(LogfOp, MATHVEC_TOL);
+}

@@ -1,0 +1,26 @@
+// RUN: cir-opt %s -cir-cxxabi-lowering -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!rec_Foo = !cir.struct<"Foo" {data !s32i}>
+!method = !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
+!rec_HasMethod = !cir.struct<"HasMethod" {data !method}>
+!rec_Plain = !cir.struct<"Plain" {data !s32i}>
+
+// A record reaching a method type is rebuilt with the Itanium lowered form,
+// a {ptrdiff_t, ptrdiff_t} pair. Dropping MethodType from typeMayChange
+// leaves the member unlowered and this check fails.
+// CHECK-DAG: !rec_HasMethod = !cir.struct<"HasMethod" {data !rec_anon_struct}>
+// CHECK-DAG: !rec_anon_struct = !cir.struct<{data !s64i, data !s64i}>
+
+// A record reaching no member pointer type converts to itself and passes
+// through with its name and members untouched.
+// CHECK-DAG: !rec_Plain = !cir.struct<"Plain" {data !s32i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @method_record() {
+    %m = cir.const #cir.zero : !rec_HasMethod
+    %p = cir.const #cir.zero : !rec_Plain
+    cir.return
+  }
+}

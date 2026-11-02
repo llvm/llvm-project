@@ -39,12 +39,12 @@ define i64 @t1(i32 %a, i32 %b, i64 %c) {
 ; O0-NEXT:    .reg .b64 %rd<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [t1_param_2];
-; O0-NEXT:    ld.param.b32 %r2, [t1_param_1];
 ; O0-NEXT:    ld.param.b32 %r1, [t1_param_0];
+; O0-NEXT:    ld.param.b32 %r2, [t1_param_1];
 ; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.s64.s32 %rd2, %r3;
-; O0-NEXT:    add.s64 %rd3, %rd1, %rd2;
+; O0-NEXT:    cvt.s64.s32 %rd1, %r3;
+; O0-NEXT:    ld.param.b64 %rd2, [t1_param_2];
+; O0-NEXT:    add.s64 %rd3, %rd2, %rd1;
 ; O0-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O0-NEXT:    ret;
   %mul = mul nsw i32 %a, %b
@@ -87,12 +87,12 @@ define i64 @t2(i32 %a, i32 %b, i64 %c) {
 ; O0-NEXT:    .reg .b64 %rd<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [t2_param_2];
-; O0-NEXT:    ld.param.b32 %r2, [t2_param_1];
 ; O0-NEXT:    ld.param.b32 %r1, [t2_param_0];
+; O0-NEXT:    ld.param.b32 %r2, [t2_param_1];
 ; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.s64.s32 %rd2, %r3;
-; O0-NEXT:    add.s64 %rd3, %rd2, %rd1;
+; O0-NEXT:    cvt.s64.s32 %rd1, %r3;
+; O0-NEXT:    ld.param.b64 %rd2, [t2_param_2];
+; O0-NEXT:    add.s64 %rd3, %rd1, %rd2;
 ; O0-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O0-NEXT:    ret;
   %mul = mul nsw i32 %a, %b
@@ -133,8 +133,8 @@ define i64 @t3(i32 %a, i32 %b) {
 ; O0-NEXT:    .reg .b64 %rd<3>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [t3_param_1];
 ; O0-NEXT:    ld.param.b32 %r1, [t3_param_0];
+; O0-NEXT:    ld.param.b32 %r2, [t3_param_1];
 ; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
 ; O0-NEXT:    cvt.s64.s32 %rd1, %r3;
 ; O0-NEXT:    add.s64 %rd2, %rd1, 1;
@@ -178,9 +178,9 @@ define i64 @t4(i32 %a, i64 %c) {
 ; O0-NEXT:    .reg .b64 %rd<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [t4_param_1];
 ; O0-NEXT:    ld.param.b32 %r1, [t4_param_0];
 ; O0-NEXT:    mul.lo.s32 %r2, %r1, 3;
+; O0-NEXT:    ld.param.b64 %rd1, [t4_param_1];
 ; O0-NEXT:    cvt.s64.s32 %rd2, %r2;
 ; O0-NEXT:    add.s64 %rd3, %rd1, %rd2;
 ; O0-NEXT:    st.param.b64 [func_retval0], %rd3;
@@ -267,12 +267,12 @@ define i64 @t5(i32 %a, i32 %b, i64 %c) {
 ; O0-NEXT:    .reg .b64 %rd<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [t5_param_2];
-; O0-NEXT:    ld.param.b32 %r2, [t5_param_1];
 ; O0-NEXT:    ld.param.b32 %r1, [t5_param_0];
+; O0-NEXT:    ld.param.b32 %r2, [t5_param_1];
 ; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.u64.u32 %rd2, %r3;
-; O0-NEXT:    add.s64 %rd3, %rd1, %rd2;
+; O0-NEXT:    cvt.u64.u32 %rd1, %r3;
+; O0-NEXT:    ld.param.b64 %rd2, [t5_param_2];
+; O0-NEXT:    add.s64 %rd3, %rd2, %rd1;
 ; O0-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O0-NEXT:    ret;
   %mul = mul nuw i32 %a, %b
@@ -315,12 +315,12 @@ define i64 @t6(i32 %a, i32 %b, i64 %c) {
 ; O0-NEXT:    .reg .b64 %rd<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [t6_param_2];
-; O0-NEXT:    ld.param.b32 %r2, [t6_param_1];
 ; O0-NEXT:    ld.param.b32 %r1, [t6_param_0];
+; O0-NEXT:    ld.param.b32 %r2, [t6_param_1];
 ; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.u64.u32 %rd2, %r3;
-; O0-NEXT:    add.s64 %rd3, %rd2, %rd1;
+; O0-NEXT:    cvt.u64.u32 %rd1, %r3;
+; O0-NEXT:    ld.param.b64 %rd2, [t6_param_2];
+; O0-NEXT:    add.s64 %rd3, %rd1, %rd2;
 ; O0-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O0-NEXT:    ret;
   %mul = mul nuw i32 %a, %b
@@ -330,155 +330,90 @@ define i64 @t6(i32 %a, i32 %b, i64 %c) {
 }
 
 define i32 @t7(i16 %a, i16 %b) {
-; O1-LABEL: t7(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b32 %r<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t7_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t7_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    cvt.u32.u16 %r1, %rs3;
-; O1-NEXT:    st.param.b32 [func_retval0], %r1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t7(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b32 %r<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t7_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t7_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.u32.u16 %r1, %rs3;
-; O0-NEXT:    st.param.b32 [func_retval0], %r1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t7(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t7_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t7_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
   %mul = mul i16 %a, %b
   %zext = zext i16 %mul to i32
   ret i32 %zext
 }
 
 define i32 @t8(i16 %a, i16 %b) {
-; O1-LABEL: t8(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b32 %r<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t8_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t8_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    cvt.s32.s16 %r1, %rs3;
-; O1-NEXT:    st.param.b32 [func_retval0], %r1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t8(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b32 %r<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t8_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t8_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.s32.s16 %r1, %rs3;
-; O0-NEXT:    st.param.b32 [func_retval0], %r1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t8_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t8_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.s32.s16 %r1, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
   %mul = mul i16 %a, %b
   %sext = sext i16 %mul to i32
   ret i32 %sext
 }
 
 define i64 @t9(i32 %a, i32 %b) {
-; O1-LABEL: t9(
-; O1:       {
-; O1-NEXT:    .reg .b32 %r<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b32 %r1, [t9_param_0];
-; O1-NEXT:    ld.param.b32 %r2, [t9_param_1];
-; O1-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O1-NEXT:    cvt.u64.u32 %rd1, %r3;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t9(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [t9_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [t9_param_0];
-; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.u64.u32 %rd1, %r3;
-; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t9(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [t9_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [t9_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    cvt.u64.u32 %rd1, %r3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
   %mul = mul i32 %a, %b
   %zext = zext i32 %mul to i64
   ret i64 %zext
 }
 
 define i64 @t10(i32 %a, i32 %b) {
-; O1-LABEL: t10(
-; O1:       {
-; O1-NEXT:    .reg .b32 %r<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b32 %r1, [t10_param_0];
-; O1-NEXT:    ld.param.b32 %r2, [t10_param_1];
-; O1-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O1-NEXT:    cvt.s64.s32 %rd1, %r3;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t10(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [t10_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [t10_param_0];
-; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.s64.s32 %rd1, %r3;
-; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t10(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [t10_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [t10_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    cvt.s64.s32 %rd1, %r3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
   %mul = mul i32 %a, %b
   %sext = sext i32 %mul to i64
   ret i64 %sext
 }
 
 define i32 @t11(i16 %a, i16 %b) {
-; O1-LABEL: t11(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b32 %r<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t11_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t11_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    cvt.u32.u16 %r1, %rs3;
-; O1-NEXT:    st.param.b32 [func_retval0], %r1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t11(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b32 %r<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t11_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t11_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.u32.u16 %r1, %rs3;
-; O0-NEXT:    st.param.b32 [func_retval0], %r1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t11(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t11_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t11_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
   %mul = mul nsw i16 %a, %b
   %zext = zext i16 %mul to i32
   ret i32 %zext
@@ -503,8 +438,8 @@ define i32 @t12(i16 %a, i16 %b) {
 ; O0-NEXT:    .reg .b32 %r<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t12_param_1];
 ; O0-NEXT:    ld.param.b16 %rs1, [t12_param_0];
+; O0-NEXT:    ld.param.b16 %rs2, [t12_param_1];
 ; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
 ; O0-NEXT:    cvt.s32.s16 %r1, %rs3;
 ; O0-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -515,31 +450,18 @@ define i32 @t12(i16 %a, i16 %b) {
 }
 
 define i64 @t13(i32 %a, i32 %b) {
-; O1-LABEL: t13(
-; O1:       {
-; O1-NEXT:    .reg .b32 %r<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b32 %r1, [t13_param_0];
-; O1-NEXT:    ld.param.b32 %r2, [t13_param_1];
-; O1-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O1-NEXT:    cvt.u64.u32 %rd1, %r3;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t13(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [t13_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [t13_param_0];
-; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.u64.u32 %rd1, %r3;
-; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t13(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [t13_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [t13_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    cvt.u64.u32 %rd1, %r3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
   %mul = mul nsw i32 %a, %b
   %zext = zext i32 %mul to i64
   ret i64 %zext
@@ -564,8 +486,8 @@ define i64 @t14(i32 %a, i32 %b) {
 ; O0-NEXT:    .reg .b64 %rd<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [t14_param_1];
 ; O0-NEXT:    ld.param.b32 %r1, [t14_param_0];
+; O0-NEXT:    ld.param.b32 %r2, [t14_param_1];
 ; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
 ; O0-NEXT:    cvt.s64.s32 %rd1, %r3;
 ; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
@@ -594,8 +516,8 @@ define i32 @t15(i16 %a, i16 %b) {
 ; O0-NEXT:    .reg .b32 %r<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t15_param_1];
 ; O0-NEXT:    ld.param.b16 %rs1, [t15_param_0];
+; O0-NEXT:    ld.param.b16 %rs2, [t15_param_1];
 ; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
 ; O0-NEXT:    cvt.u32.u16 %r1, %rs3;
 ; O0-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -606,31 +528,18 @@ define i32 @t15(i16 %a, i16 %b) {
 }
 
 define i32 @t16(i16 %a, i16 %b) {
-; O1-LABEL: t16(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b32 %r<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t16_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t16_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    cvt.s32.s16 %r1, %rs3;
-; O1-NEXT:    st.param.b32 [func_retval0], %r1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t16(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b32 %r<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t16_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t16_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.s32.s16 %r1, %rs3;
-; O0-NEXT:    st.param.b32 [func_retval0], %r1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t16_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t16_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.s32.s16 %r1, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
   %sext = sext i16 %mul to i32
   ret i32 %sext
@@ -655,8 +564,8 @@ define i64 @t17(i32 %a, i32 %b) {
 ; O0-NEXT:    .reg .b64 %rd<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [t17_param_1];
 ; O0-NEXT:    ld.param.b32 %r1, [t17_param_0];
+; O0-NEXT:    ld.param.b32 %r2, [t17_param_1];
 ; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
 ; O0-NEXT:    cvt.u64.u32 %rd1, %r3;
 ; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
@@ -667,62 +576,36 @@ define i64 @t17(i32 %a, i32 %b) {
 }
 
 define i64 @t18(i32 %a, i32 %b) {
-; O1-LABEL: t18(
-; O1:       {
-; O1-NEXT:    .reg .b32 %r<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b32 %r1, [t18_param_0];
-; O1-NEXT:    ld.param.b32 %r2, [t18_param_1];
-; O1-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O1-NEXT:    cvt.s64.s32 %rd1, %r3;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t18(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [t18_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [t18_param_0];
-; O0-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.s64.s32 %rd1, %r3;
-; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t18(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [t18_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [t18_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    cvt.s64.s32 %rd1, %r3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
   %mul = mul nuw i32 %a, %b
   %sext = sext i32 %mul to i64
   ret i64 %sext
 }
 
 define i32 @t19(i16 %a, i16 %b) {
-; O1-LABEL: t19(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b32 %r<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t19_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t19_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    cvt.u32.u16 %r1, %rs3;
-; O1-NEXT:    st.param.b32 [func_retval0], %r1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t19(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b32 %r<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t19_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t19_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.u32.u16 %r1, %rs3;
-; O0-NEXT:    st.param.b32 [func_retval0], %r1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t19(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t19_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t19_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
   %mul = mul i16 %a, %b
   %zext = zext i16 %mul to i32
   ret i32 %zext
@@ -960,31 +843,18 @@ define i64 @t30(i32 %a) {
 }
 
 define i64 @t31(i32 %a, i32 %b) {
-; O1-LABEL: t31(
-; O1:       {
-; O1-NEXT:    .reg .b32 %r<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b32 %r1, [t31_param_0];
-; O1-NEXT:    ld.param.b32 %r2, [t31_param_1];
-; O1-NEXT:    shl.b32 %r3, %r1, %r2;
-; O1-NEXT:    cvt.s64.s32 %rd1, %r3;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t31(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r2, [t31_param_1];
-; O0-NEXT:    ld.param.b32 %r1, [t31_param_0];
-; O0-NEXT:    shl.b32 %r3, %r1, %r2;
-; O0-NEXT:    cvt.s64.s32 %rd1, %r3;
-; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t31(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [t31_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [t31_param_1];
+; CHECK-NEXT:    shl.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    cvt.s64.s32 %rd1, %r3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
   %mul = shl nuw i32 %a, %b
   %sext = sext i32 %mul to i64
   ret i64 %sext
@@ -1024,12 +894,12 @@ define i32 @t32(i16 %a, i16 %b, i32 %c) {
 ; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r1, [t32_param_2];
-; O0-NEXT:    ld.param.b16 %rs2, [t32_param_1];
 ; O0-NEXT:    ld.param.b16 %rs1, [t32_param_0];
+; O0-NEXT:    ld.param.b16 %rs2, [t32_param_1];
 ; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.s32.s16 %r2, %rs3;
-; O0-NEXT:    add.s32 %r3, %r1, %r2;
+; O0-NEXT:    cvt.s32.s16 %r1, %rs3;
+; O0-NEXT:    ld.param.b32 %r2, [t32_param_2];
+; O0-NEXT:    add.s32 %r3, %r2, %r1;
 ; O0-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O0-NEXT:    ret;
   %mul = mul nsw i16 %a, %b
@@ -1072,12 +942,12 @@ define i32 @t33(i16 %a, i16 %b, i32 %c) {
 ; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r1, [t33_param_2];
-; O0-NEXT:    ld.param.b16 %rs2, [t33_param_1];
 ; O0-NEXT:    ld.param.b16 %rs1, [t33_param_0];
+; O0-NEXT:    ld.param.b16 %rs2, [t33_param_1];
 ; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.s32.s16 %r2, %rs3;
-; O0-NEXT:    add.s32 %r3, %r1, %r2;
+; O0-NEXT:    cvt.s32.s16 %r1, %rs3;
+; O0-NEXT:    ld.param.b32 %r2, [t33_param_2];
+; O0-NEXT:    add.s32 %r3, %r2, %r1;
 ; O0-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O0-NEXT:    ret;
   %mul = mul nsw i16 %a, %b
@@ -1118,8 +988,8 @@ define i32 @t34(i16 %a, i16 %b) {
 ; O0-NEXT:    .reg .b32 %r<3>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t34_param_1];
 ; O0-NEXT:    ld.param.b16 %rs1, [t34_param_0];
+; O0-NEXT:    ld.param.b16 %rs2, [t34_param_1];
 ; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
 ; O0-NEXT:    cvt.s32.s16 %r1, %rs3;
 ; O0-NEXT:    add.s32 %r2, %r1, 1;
@@ -1163,9 +1033,9 @@ define i32 @t35(i16 %a, i32 %c) {
 ; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r1, [t35_param_1];
 ; O0-NEXT:    ld.param.b16 %rs1, [t35_param_0];
 ; O0-NEXT:    mul.lo.s16 %rs2, %rs1, 3;
+; O0-NEXT:    ld.param.b32 %r1, [t35_param_1];
 ; O0-NEXT:    cvt.s32.s16 %r2, %rs2;
 ; O0-NEXT:    add.s32 %r3, %r1, %r2;
 ; O0-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -1252,12 +1122,12 @@ define i32 @t37(i16 %a, i16 %b, i32 %c) {
 ; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r1, [t37_param_2];
-; O0-NEXT:    ld.param.b16 %rs2, [t37_param_1];
 ; O0-NEXT:    ld.param.b16 %rs1, [t37_param_0];
+; O0-NEXT:    ld.param.b16 %rs2, [t37_param_1];
 ; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.u32.u16 %r2, %rs3;
-; O0-NEXT:    add.s32 %r3, %r1, %r2;
+; O0-NEXT:    cvt.u32.u16 %r1, %rs3;
+; O0-NEXT:    ld.param.b32 %r2, [t37_param_2];
+; O0-NEXT:    add.s32 %r3, %r2, %r1;
 ; O0-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O0-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
@@ -1300,12 +1170,12 @@ define i32 @t38(i16 %a, i16 %b, i32 %c) {
 ; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b32 %r1, [t38_param_2];
-; O0-NEXT:    ld.param.b16 %rs2, [t38_param_1];
 ; O0-NEXT:    ld.param.b16 %rs1, [t38_param_0];
+; O0-NEXT:    ld.param.b16 %rs2, [t38_param_1];
 ; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.u32.u16 %r2, %rs3;
-; O0-NEXT:    add.s32 %r3, %r2, %r1;
+; O0-NEXT:    cvt.u32.u16 %r1, %rs3;
+; O0-NEXT:    ld.param.b32 %r2, [t38_param_2];
+; O0-NEXT:    add.s32 %r3, %r1, %r2;
 ; O0-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O0-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
@@ -1315,130 +1185,75 @@ define i32 @t38(i16 %a, i16 %b, i32 %c) {
 }
 
 define i64 @t39(i16 %a, i16 %b) {
-; O1-LABEL: t39(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t39_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t39_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    cvt.u64.u16 %rd1, %rs3;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t39(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t39_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t39_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.u64.u16 %rd1, %rs3;
-; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t39(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t39_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t39_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.u64.u16 %rd1, %rs3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
   %mul = mul i16 %a, %b
   %zext = zext i16 %mul to i64
   ret i64 %zext
 }
 
 define i64 @t40(i16 %a, i16 %b) {
-; O1-LABEL: t40(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t40_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t40_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    cvt.u64.u16 %rd1, %rs3;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t40(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t40_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t40_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.u64.u16 %rd1, %rs3;
-; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t40(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t40_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t40_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.u64.u16 %rd1, %rs3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
   %zext = zext i16 %mul to i64
   ret i64 %zext
 }
 
 define i64 @t41(i16 %a, i16 %b) {
-; O1-LABEL: t41(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t41_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t41_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    cvt.s64.s16 %rd1, %rs3;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t41(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b16 %rs2, [t41_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t41_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    cvt.s64.s16 %rd1, %rs3;
-; O0-NEXT:    st.param.b64 [func_retval0], %rd1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t41(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t41_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t41_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.s64.s16 %rd1, %rs3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
   %mul = mul nsw i16 %a, %b
   %sext = sext i16 %mul to i64
   ret i64 %sext
 }
 
 define i32 @t42(i16 %a, i16 %b, ptr %ptr) {
-; O1-LABEL: t42(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b32 %r<2>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t42_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t42_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    ld.param.b64 %rd1, [t42_param_2];
-; O1-NEXT:    st.b16 [%rd1], %rs3;
-; O1-NEXT:    cvt.u32.u16 %r1, %rs3;
-; O1-NEXT:    st.param.b32 [func_retval0], %r1;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t42(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b32 %r<2>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [t42_param_2];
-; O0-NEXT:    ld.param.b16 %rs2, [t42_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t42_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    st.b16 [%rd1], %rs3;
-; O0-NEXT:    cvt.u32.u16 %r1, %rs3;
-; O0-NEXT:    st.param.b32 [func_retval0], %r1;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t42(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t42_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t42_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    ld.param.b64 %rd1, [t42_param_2];
+; CHECK-NEXT:    st.b16 [%rd1], %rs3;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
   store i16 %mul, ptr %ptr
   %zext = zext i16 %mul to i32
@@ -1446,41 +1261,23 @@ define i32 @t42(i16 %a, i16 %b, ptr %ptr) {
 }
 
 define i32 @t43(i16 %a, i16 %b, i32 %c, ptr %ptr) {
-; O1-LABEL: t43(
-; O1:       {
-; O1-NEXT:    .reg .b16 %rs<4>;
-; O1-NEXT:    .reg .b32 %r<4>;
-; O1-NEXT:    .reg .b64 %rd<2>;
-; O1-EMPTY:
-; O1-NEXT:  // %bb.0:
-; O1-NEXT:    ld.param.b16 %rs1, [t43_param_0];
-; O1-NEXT:    ld.param.b16 %rs2, [t43_param_1];
-; O1-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O1-NEXT:    ld.param.b64 %rd1, [t43_param_3];
-; O1-NEXT:    st.b16 [%rd1], %rs3;
-; O1-NEXT:    ld.param.b32 %r1, [t43_param_2];
-; O1-NEXT:    cvt.u32.u16 %r2, %rs3;
-; O1-NEXT:    add.s32 %r3, %r2, %r1;
-; O1-NEXT:    st.param.b32 [func_retval0], %r3;
-; O1-NEXT:    ret;
-;
-; O0-LABEL: t43(
-; O0:       {
-; O0-NEXT:    .reg .b16 %rs<4>;
-; O0-NEXT:    .reg .b32 %r<4>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [t43_param_3];
-; O0-NEXT:    ld.param.b32 %r1, [t43_param_2];
-; O0-NEXT:    ld.param.b16 %rs2, [t43_param_1];
-; O0-NEXT:    ld.param.b16 %rs1, [t43_param_0];
-; O0-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; O0-NEXT:    st.b16 [%rd1], %rs3;
-; O0-NEXT:    cvt.u32.u16 %r2, %rs3;
-; O0-NEXT:    add.s32 %r3, %r2, %r1;
-; O0-NEXT:    st.param.b32 [func_retval0], %r3;
-; O0-NEXT:    ret;
+; CHECK-LABEL: t43(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [t43_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [t43_param_1];
+; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    ld.param.b64 %rd1, [t43_param_3];
+; CHECK-NEXT:    st.b16 [%rd1], %rs3;
+; CHECK-NEXT:    ld.param.b32 %r1, [t43_param_2];
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    add.s32 %r3, %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
   store i16 %mul, ptr %ptr
   %zext = zext i16 %mul to i32

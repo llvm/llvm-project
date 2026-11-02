@@ -643,7 +643,7 @@ struct MatchableInfo {
     if (int Cmp = Mnemonic.compare_insensitive(RHS.Mnemonic))
       return Cmp == -1;
 
-    // (Optionally) Order by the resultant instuctions size.
+    // (Optionally) Order by the resultant instructions size.
     // eg. for ARM thumb instructions smaller encodings should be preferred.
     if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
       return ResInstSize < RHS.ResInstSize;
@@ -1215,7 +1215,7 @@ ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
     // RegisterOperand may have an associated ParserMatchClass. If it does,
     // use it, else just fall back to the underlying register class.
     const RecordVal *R = Rec->getValue("ParserMatchClass");
-    if (!R || !R->getValue())
+    if (!R)
       PrintFatalError(Rec->getLoc(),
                       "Record `" + Rec->getName() +
                           "' does not have a ParserMatchClass!\n");

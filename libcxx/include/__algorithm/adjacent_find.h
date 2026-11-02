@@ -26,7 +26,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter, class _Sent, class _Pred, class _Proj>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
 __adjacent_find(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
   if (__first == __last)
     return __first;
@@ -41,14 +41,14 @@ __adjacent_find(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
 }
 
 template <class _ForwardIterator, class _BinaryPredicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 adjacent_find(_ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __pred) {
   __identity __proj;
   return std::__adjacent_find(std::move(__first), std::move(__last), __pred, __proj);
 }
 
 template <class _ForwardIterator>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 adjacent_find(_ForwardIterator __first, _ForwardIterator __last) {
   return std::adjacent_find(std::move(__first), std::move(__last), __equal_to());
 }

@@ -72,7 +72,7 @@ define double @caller() {
   ; MIR32-NEXT:   $f11 = XXLXORdpz
   ; MIR32-NEXT:   $f12 = XXLXORdpz
   ; MIR32-NEXT:   $f13 = XXLXORdpz
-  ; MIR32-NEXT:   BL_NOP <mcsymbol .callee[PR]>, csr_aix32_altivec, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $f1, implicit killed $f2, implicit killed $v2, implicit killed $v3, implicit killed $v4, implicit killed $v5, implicit killed $v6, implicit killed $v7, implicit killed $v8, implicit killed $v9, implicit killed $v10, implicit killed $v11, implicit killed $v12, implicit killed $v13, implicit killed $f3, implicit killed $f4, implicit killed $f5, implicit killed $f6, implicit killed $f7, implicit killed $f8, implicit killed $f9, implicit killed $f10, implicit killed $f11, implicit killed $f12, implicit killed $f13, implicit $r2, implicit-def $r1, implicit-def $f1
+  ; MIR32-NEXT:   BL_NOP <mcsymbol .callee[PR]>, csr_aix32_altivec, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $f1, implicit $f2, implicit $v2, implicit $v3, implicit $v4, implicit $v5, implicit $v6, implicit $v7, implicit $v8, implicit $v9, implicit $v10, implicit $v11, implicit $v12, implicit $v13, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit $f10, implicit $f11, implicit $f12, implicit $f13, implicit $r2, implicit-def $r1, implicit-def $f1
   ; MIR32-NEXT:   ADJCALLSTACKUP 188, 0, implicit-def dead $r1, implicit $r1
   ; MIR32-NEXT:   BLR implicit $lr, implicit $rm, implicit $f1
   ;
@@ -131,7 +131,7 @@ define double @caller() {
   ; MIR64-NEXT:   $f11 = XXLXORdpz
   ; MIR64-NEXT:   $f12 = XXLXORdpz
   ; MIR64-NEXT:   $f13 = XXLXORdpz
-  ; MIR64-NEXT:   BL8_NOP <mcsymbol .callee[PR]>, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $f1, implicit killed $f2, implicit killed $v2, implicit killed $v3, implicit killed $v4, implicit killed $v5, implicit killed $v6, implicit killed $v7, implicit killed $v8, implicit killed $v9, implicit killed $v10, implicit killed $v11, implicit killed $v12, implicit killed $v13, implicit killed $f3, implicit killed $f4, implicit killed $f5, implicit killed $f6, implicit killed $f7, implicit killed $f8, implicit killed $f9, implicit killed $f10, implicit killed $f11, implicit killed $f12, implicit killed $f13, implicit $x2, implicit-def $r1, implicit-def $f1
+  ; MIR64-NEXT:   BL8_NOP <mcsymbol .callee[PR]>, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $f1, implicit $f2, implicit $v2, implicit $v3, implicit $v4, implicit $v5, implicit $v6, implicit $v7, implicit $v8, implicit $v9, implicit $v10, implicit $v11, implicit $v12, implicit $v13, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit $f10, implicit $f11, implicit $f12, implicit $f13, implicit $x2, implicit-def $r1, implicit-def $f1
   ; MIR64-NEXT:   ADJCALLSTACKUP 224, 0, implicit-def dead $r1, implicit $r1
   ; MIR64-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $f1
   entry:

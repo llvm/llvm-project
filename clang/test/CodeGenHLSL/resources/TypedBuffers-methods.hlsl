@@ -50,7 +50,7 @@ export float TestLoadWithStatus() {
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
 // CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 1, ptr {{.*}} %tmp) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %tmp2) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %tmp1) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: add
 // CHECK: ret float
 

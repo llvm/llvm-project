@@ -17,9 +17,9 @@
 
 ! CHECK-LABEL: func.func @_QPomp_taskloop_inreduction
 ! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloop_inreductionEi"}>
-! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_inreductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] uniq_name("_QFomp_taskloop_inreductionEi"){{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFomp_taskloop_inreductionEx"}>
-! CHECK:          %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] {uniq_name = "_QFomp_taskloop_inreductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:          %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] uniq_name("_QFomp_taskloop_inreductionEx"){{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[INIT_X:.*]] = arith.constant 0 : i32
 ! CHECK:          hlfir.assign %[[INIT_X]] to %[[DECL_X]]#0 : i32, !fir.ref<i32>
 subroutine omp_taskloop_inreduction()
@@ -29,7 +29,7 @@ subroutine omp_taskloop_inreduction()
    ! CHECK-SAME:     %[[DECL_X]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) private(@[[PRIVATE_I]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>) {
    ! CHECK:        omp.taskloop.wrapper {
    ! CHECK:        %[[VAL_ARG1:.*]]:2 = hlfir.declare %[[ARG0]] 
-   ! CHECK-SAME:   {uniq_name = "_QFomp_taskloop_inreductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+   ! CHECK-SAME:   uniq_name("_QFomp_taskloop_inreductionEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
    !$omp taskloop in_reduction(+:x)
    do i = 1, 100
       ! CHECK: %[[X_VAL:.*]] = fir.load %[[VAL_ARG1]]#0 : !fir.ref<i32>

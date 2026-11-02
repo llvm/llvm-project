@@ -8,10 +8,10 @@ SUBROUTINE s1
   EQUIVALENCE (r,i)
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[group]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[iloc:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-  ! CHECK: %[[i_decl:.*]]:2 = hlfir.declare %[[iloc]] storage(%[[group]][0]) {uniq_name = "_QFs1Ei"}
+  ! CHECK: %[[i_decl:.*]]:2 = hlfir.declare %[[iloc]] storage(%[[group]][0]) uniq_name("_QFs1Ei")
   ! CHECK: %[[coor2:.*]] = fir.coordinate_of %[[group]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[rloc:.*]] = fir.convert %[[coor2]] : (!fir.ref<i8>) -> !fir.ptr<f32>
-  ! CHECK: %[[r_decl:.*]]:2 = hlfir.declare %[[rloc]] storage(%[[group]][0]) {uniq_name = "_QFs1Er"}
+  ! CHECK: %[[r_decl:.*]]:2 = hlfir.declare %[[rloc]] storage(%[[group]][0]) uniq_name("_QFs1Er")
   i = 4
   ! CHECK: hlfir.assign %c4{{.*}} to %[[i_decl]]#0
   PRINT *, r
@@ -26,10 +26,10 @@ SUBROUTINE s2
   EQUIVALENCE (r(3),i(5))
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[arr]], %c0{{.*}} : (!fir.ref<!fir.array<48xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[iarr:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.array<10xi32>>
-  ! CHECK: %[[i_decl:.*]]:2 = hlfir.declare %[[iarr]](%{{.*}}) storage(%[[arr]][0]) {uniq_name = "_QFs2Ei"}
+  ! CHECK: %[[i_decl:.*]]:2 = hlfir.declare %[[iarr]](%{{.*}}) storage(%[[arr]][0]) uniq_name("_QFs2Ei")
   ! CHECK: %[[coor2:.*]] = fir.coordinate_of %[[arr]], %c8{{.*}} : (!fir.ref<!fir.array<48xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[rarr:.*]] = fir.convert %[[coor2]] : (!fir.ref<i8>) -> !fir.ptr<!fir.array<10xf32>>
-  ! CHECK: %[[r_decl:.*]]:2 = hlfir.declare %[[rarr]](%{{.*}}) storage(%[[arr]][8]) {uniq_name = "_QFs2Er"}
+  ! CHECK: %[[r_decl:.*]]:2 = hlfir.declare %[[rarr]](%{{.*}}) storage(%[[arr]][8]) uniq_name("_QFs2Er")
   i(5) = 18
   ! CHECK: %[[ides:.*]] = hlfir.designate %[[i_decl]]#0 (%c5{{.*}})
   ! CHECK: hlfir.assign %c18{{.*}} to %[[ides]]
@@ -48,8 +48,8 @@ SUBROUTINE s3
   TYPE(t) x
   ! CHECK: %[[group:.*]] = fir.alloca !fir.array<40xi8>
   EQUIVALENCE (r,x)
-  ! CHECK: %[[r_decl:.*]]:2 = hlfir.declare %{{.*}} storage(%[[group]][0]) {uniq_name = "_QFs3Er"}
-  ! CHECK: %[[x_decl:.*]]:2 = hlfir.declare %{{.*}} storage(%[[group]][0]) {uniq_name = "_QFs3Ex"}
+  ! CHECK: %[[r_decl:.*]]:2 = hlfir.declare %{{.*}} storage(%[[group]][0]) uniq_name("_QFs3Er")
+  ! CHECK: %[[x_decl:.*]]:2 = hlfir.declare %{{.*}} storage(%[[group]][0]) uniq_name("_QFs3Ex")
   x%r(9) = 9.0
   ! CHECK: %[[xdes:.*]] = hlfir.designate %[[x_decl]]#0{"r"} <%{{.*}}> (%c9{{.*}})
   ! CHECK: hlfir.assign %{{.*}} to %[[xdes]]

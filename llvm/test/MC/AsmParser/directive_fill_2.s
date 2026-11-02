@@ -26,7 +26,13 @@ bar2:
 .if (I==6)
 
 .data
+## A zero-size .fill emits nothing.
+.fill 6, 0
+.fill ((foo+8)-bar), 0
 .long 0x12345678
 .fill ((foo+8)-bar), 4, 0x12345678
 
 .endif
+
+.bss
+.fill 3, 0, 0xff

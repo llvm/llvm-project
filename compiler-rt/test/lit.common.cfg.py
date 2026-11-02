@@ -696,7 +696,7 @@ if config.android:
             % (adb, android_api_level_str)
         )
     android_api_level = min(android_api_level, int(config.android_api_level))
-    for required in [26, 28, 29, 30]:
+    for required in [26, 28, 29, 30, 34, 37]:
         if android_api_level >= required:
             config.available_features.add("android-%s" % required)
     # FIXME: Replace with appropriate version when availible.
@@ -743,6 +743,7 @@ if config.target_os == "Linux" and not config.android:
         for required in [
             (2, 19),
             (2, 27),
+            (2, 28),
             (2, 30),
             (2, 33),
             (2, 34),

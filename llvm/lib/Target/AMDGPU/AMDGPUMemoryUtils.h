@@ -31,7 +31,7 @@ class TargetExtType;
 
 namespace AMDGPU {
 
-static constexpr unsigned NamedBarrierTypeSizeInBytes = 16;
+static constexpr unsigned NamedBarrierTypeSizeInBytes = 1;
 
 using FunctionVariableMap = MapVector<Function *, DenseSet<GlobalVariable *>>;
 using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;

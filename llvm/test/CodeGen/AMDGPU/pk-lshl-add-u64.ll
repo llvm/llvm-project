@@ -63,8 +63,8 @@ define amdgpu_kernel void @pk_lshl_add_u64_s2v(<2 x i64> %v) {
 ; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
 ; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
 ; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[4:7], v[8:9], v[0:3]
-; GFX1251-NEXT:    flat_store_b128 v[0:1], v[0:3]
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[2:5], v[4:7], v[8:9], v[0:3]
+; GFX1251-NEXT:    flat_store_b128 v[0:1], v[2:5]
 ; GFX1251-NEXT:    s_endpgm
   %a = load <2 x i64>, ptr poison
   %shl = shl <2 x i64> %v, <i64 2, i64 2>
@@ -90,8 +90,8 @@ define amdgpu_kernel void @pk_lshl_add_u64_v2s(<2 x i64> %a) {
 ; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
 ; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
 ; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[0:3], v[8:9], v[4:7]
-; GFX1251-NEXT:    flat_store_b128 v[0:1], v[0:3]
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[2:5], v[0:3], v[8:9], v[4:7]
+; GFX1251-NEXT:    flat_store_b128 v[0:1], v[2:5]
 ; GFX1251-NEXT:    s_endpgm
   %v = load <2 x i64>, ptr poison
   %shl = shl <2 x i64> %v, <i64 2, i64 2>
@@ -133,12 +133,11 @@ define i32 @pk_lshl_add_u64_gep(<2 x ptr> %p, <2 x i64> %a) {
 ; GFX1251-NEXT:    s_mov_b32 s0, 2
 ; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-NEXT:    v_dual_mov_b32 v8, s0 :: v_dual_mov_b32 v9, s0
-; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[4:7], v[8:9], v[0:3]
-; GFX1251-NEXT:    flat_load_b32 v4, v[0:1]
-; GFX1251-NEXT:    flat_load_b32 v5, v[2:3]
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[2:5], v[4:7], v[8:9], v[0:3]
+; GFX1251-NEXT:    flat_load_b32 v0, v[2:3]
+; GFX1251-NEXT:    flat_load_b32 v1, v[4:5]
 ; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-NEXT:    s_wait_xcnt 0x1
-; GFX1251-NEXT:    v_add_nc_u32_e32 v0, v4, v5
+; GFX1251-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr inbounds i32, <2 x ptr> %p, <2 x i64> %a
   %gep0 = extractelement <2 x ptr> %gep, i32 0
@@ -161,12 +160,11 @@ define i32 @pk_lshl_add_u64_maybe_oob(<2 x ptr> %p, <2 x i32> %i) {
 ; GFX1251-NEXT:    v_mov_b32_e32 v8, s0
 ; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[4:7], v[8:9], v[0:3]
-; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], 12
-; GFX1251-NEXT:    flat_load_b32 v4, v[0:1]
-; GFX1251-NEXT:    flat_load_b32 v5, v[2:3]
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[2:5], v[0:3], 12
+; GFX1251-NEXT:    flat_load_b32 v0, v[2:3]
+; GFX1251-NEXT:    flat_load_b32 v1, v[4:5]
 ; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-NEXT:    s_wait_xcnt 0x1
-; GFX1251-NEXT:    v_add_nc_u32_e32 v0, v4, v5
+; GFX1251-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
   %idx = add nsw <2 x i32> %i, <i32 3, i32 3>
   %gep = getelementptr i32, <2 x ptr> %p, <2 x i32> %idx

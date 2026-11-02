@@ -21,18 +21,15 @@ class temp {
     friend void g();
     // expected-error@-1 {{friend declaration with a constraint that depends on an enclosing template parameter must be a definition}}
 
-    temp(); // #temp-ctor
+    temp();
 };
 
 template<C<temp<int>> T>
 void g() {
     auto v = temp<T>();
-    // expected-error@-1 {{calling a private constructor of class 'temp<int>'}}
-    //   expected-note@#temp-ctor {{implicitly declared private here}}
 }
 
 void h() {
     f<int>();
     g<int>();
-    // expected-note@-1 {{in instantiation of function template specialization 'g<int>' requested here}}
 }

@@ -54,6 +54,7 @@
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/SymbolTable.h"
@@ -71,11 +72,15 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 class OffloadTargetVerifier
     : public acc::impl::OffloadTargetVerifierBase<OffloadTargetVerifier> {
 public:
   using OffloadTargetVerifierBase::OffloadTargetVerifierBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    OffloadTargetVerifierBase::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
 
   /// Returns true if the target device type corresponds to host execution.
   bool isHostTarget() const {
@@ -255,5 +260,4 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "Exit OffloadTargetVerifier()\n");
   }
 };
-
 } // namespace

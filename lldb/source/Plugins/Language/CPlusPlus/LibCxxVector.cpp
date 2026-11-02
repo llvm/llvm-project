@@ -9,7 +9,6 @@
 #include "LibCxx.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -35,7 +34,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   lldb::ChildCacheState UpdateVectorWithLayoutSubobject(ValueObject *layout);
@@ -62,7 +61,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   CompilerType m_bool_type;
@@ -202,10 +201,10 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (!m_start || !m_finish)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  auto optional_idx = formatters::ExtractIndexFromString(name);
   if (!optional_idx) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
@@ -303,10 +302,10 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (!m_count || !m_base_data_address)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  auto optional_idx = ExtractIndexFromString(name.AsCString(nullptr));
+  auto optional_idx = ExtractIndexFromString(name);
   if (!optional_idx) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }

@@ -501,6 +501,8 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
     for (const SymbolContext &sc : sc_list) {
       if (!sc.symbol->IsExternal() && !sc.symbol->IsWeak())
         continue;
+      if (sc.symbol->GetType() == eSymbolTypeUndefined)
+        continue;
       // Don't return a symbol that itself only re-exports the definition
       // (e.g. an ELF filter library's placeholder): the real definition is
       // found by following the module-level re-exports below, which also
@@ -757,11 +759,10 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
   } else {
     m_addr_or_reexport.GetReExportInfo(*this).name =
         ConstString(strtab.Get(data.GetU32(offset_ptr)));
-    // m_reexport_info.library is calculated based on the
-    // binaries loaded in the target, lazily.  It is not
-    // saved in the serialized Symbol format as it could vary
-    // depending on the Target libraries.
-    m_addr_or_reexport.GetReExportInfo(*this).library_up.reset();
+    llvm::StringRef filename = strtab.Get(data.GetU32(offset_ptr));
+    if (!filename.empty())
+      m_addr_or_reexport.GetReExportInfo(*this).library_up =
+          std::make_unique<FileSpec>(filename);
   }
   m_flags = data.GetU32(offset_ptr);
   return true;
@@ -772,7 +773,7 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 // the DataFileCache version number in Symtab::Encode
 // will need to be incremented as well.
 #if __SIZEOF_POINTER__ == 8
-static_assert(sizeof(lldb_private::Symbol) == 80,
+static_assert(sizeof(lldb_private::Symbol) == 72,
               "Symbol size has changed, Symbol::Encode and Decode likely need "
               "to be updated");
 #endif
@@ -835,10 +836,14 @@ void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
     file.AppendU64(m_addr_or_reexport.GetAddressRange(*this).GetByteSize());
   } else {
     file.AppendU32(strtab.Add(m_addr_or_reexport.GetReExportInfo(*this).name));
-    // m_reexport_info.library_up is calculated based on the
-    // binaries loaded in the target, lazily.  It is not
-    // saved in the serialized Symbol format as it could vary
-    // depending on the Target libraries.
+    if (m_addr_or_reexport.GetReExportInfo(*this).library_up) {
+      ConstString filepath(m_addr_or_reexport.GetReExportInfo(*this)
+                               .library_up->GetPath()
+                               .c_str());
+      file.AppendU32(strtab.Add(filepath));
+    } else {
+      file.AppendU32(strtab.Add(ConstString("")));
+    }
   }
   file.AppendU32(m_flags);
 }

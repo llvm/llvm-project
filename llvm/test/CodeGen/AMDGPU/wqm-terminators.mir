@@ -30,7 +30,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $exec_lo
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK-NEXT:   $exec_lo = S_WQM_B32 $exec_lo, implicit-def $scc
+  ; CHECK-NEXT:   $exec_lo = S_WQM_B32 $exec_lo, implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
@@ -38,7 +38,7 @@ body: |
   ; CHECK-NEXT:   undef [[V_MUL_F32_e64_:%[0-9]+]].sub0:vreg_64 = V_MUL_F32_e64 0, [[COPY2]].sub0, 0, [[COPY2]].sub1, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]].sub1:vreg_64 = V_MUL_F32_e64 0, [[COPY2]].sub0, 0, [[COPY2]].sub1, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY $scc
-  ; CHECK-NEXT:   $exec_lo = S_AND_B32 $exec_lo, [[COPY]], implicit-def $scc
+  ; CHECK-NEXT:   $exec_lo = S_AND_B32 $exec_lo, [[COPY]], implicit-def dead $scc
   ; CHECK-NEXT:   $scc = COPY [[COPY3]]
   ; CHECK-NEXT:   [[IMAGE_SAMPLE_V3_V2_gfx10_:%[0-9]+]]:vreg_96 = IMAGE_SAMPLE_V3_V2_gfx10 [[V_MUL_F32_e64_]], [[DEF]], [[DEF1]], 7, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 8)
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc

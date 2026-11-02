@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Host/windows/HostThreadWindows.h"
@@ -71,4 +72,44 @@ void HostThreadWindows::Reset() {
 
 bool HostThreadWindows::EqualsThread(lldb::thread_t thread) const {
   return GetThreadId() == ::GetThreadId(thread);
+}
+
+StructuredData::ObjectSP HostThreadWindows::GetExtendedInfo() const {
+  struct ThreadBasicInformation {
+    LONG ExitStatus;
+    PVOID TebBaseAddress;
+    struct {
+      HANDLE UniqueProcess;
+      HANDLE UniqueThread;
+    } ClientId;
+    ULONG_PTR AffinityMask;
+    LONG Priority;
+    LONG BasePriority;
+  };
+  using NtQueryInformationThreadFn =
+      LONG(WINAPI *)(HANDLE ThreadHandle, ULONG ThreadInformationClass,
+                     PVOID ThreadInformation, ULONG ThreadInformationLength,
+                     PULONG ReturnLength);
+
+  static LazyImport<NtQueryInformationThreadFn> s_query_information_thread{
+      L"ntdll.dll", "NtQueryInformationThread"};
+  if (!s_query_information_thread)
+    return StructuredData::ObjectSP();
+  auto NtQueryInformationThread = *s_query_information_thread;
+
+  HANDLE handle = GetSystemHandle();
+  if (!handle || handle == INVALID_HANDLE_VALUE)
+    return StructuredData::ObjectSP();
+
+  ThreadBasicInformation info = {};
+  // ThreadInformationClass 0 is ThreadBasicInformation.
+  if (NtQueryInformationThread(handle, 0, &info, sizeof(info), nullptr) < 0)
+    return StructuredData::ObjectSP();
+  if (!info.TebBaseAddress)
+    return StructuredData::ObjectSP();
+
+  auto dict = std::make_shared<StructuredData::Dictionary>();
+  dict->AddIntegerItem("teb_address",
+                       reinterpret_cast<uint64_t>(info.TebBaseAddress));
+  return dict;
 }

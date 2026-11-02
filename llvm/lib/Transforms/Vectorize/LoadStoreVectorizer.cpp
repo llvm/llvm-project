@@ -258,8 +258,8 @@ class Vectorizer {
 public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
-      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
-        DL(F.getDataLayout()), Builder(SE.getContext()) {}
+      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI), DL(F.getDataLayout()),
+        Builder(SE.getModule()) {}
 
   bool run();
 

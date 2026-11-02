@@ -1,0 +1,12 @@
+Test unwinding from the first instruction of a function that no symbol covers
+and that is described only by the PE .pdata/.xdata unwind info.
+
+RUN: mkdir -p %t.dir
+RUN: yaml2obj %S/Inputs/symbolless-entry-unwind.exe.yaml -o %t.dir/symbolless-entry-unwind.exe
+RUN: yaml2obj %S/Inputs/symbolless-entry-unwind.dmp.yaml -o %t.dir/symbolless-entry-unwind.dmp
+RUN: %lldb -O "settings set target.exec-search-paths %t.dir" \
+RUN:   -c %t.dir/symbolless-entry-unwind.dmp -o "thread backtrace" -o exit \
+RUN:   | FileCheck %s
+
+CHECK:      frame #0: 0x0000000140001010 symbolless-entry-unwind.exe`
+CHECK-NEXT: frame #1: 0x0000000140001009 symbolless-entry-unwind.exe`

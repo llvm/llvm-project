@@ -250,6 +250,29 @@ func.func @extract_slice_matching_insert_slice(
 
 // -----
 
+// CHECK-LABEL: func @extract_slice_matching_insert_slice_dynamic
+func.func @extract_slice_matching_insert_slice_dynamic(
+    %tensor: tensor<?xf32> {bufferization.writable = true},
+    %offset: index, %size: index) -> tensor<?xf32> {
+  // Identical dynamic offsets/sizes and static strides should be recognized
+  // without constructing a ValueBounds constraint set.
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none", "none"]}
+  %slice = tensor.extract_slice %tensor[%offset][%size][1]
+      : tensor<?xf32> to tensor<?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
+  %result = tensor.insert_slice %slice into %tensor[%offset][%size][1]
+      : tensor<?xf32> into tensor<?xf32>
+
+  //      CHECK: return
+  // CHECK-SAME: __equivalent_func_args__ = [0]
+  return %result : tensor<?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @read_of_matching_insert_slice_source
 func.func @read_of_matching_insert_slice_source(
     %A : tensor<?xf32> {bufferization.writable = true},

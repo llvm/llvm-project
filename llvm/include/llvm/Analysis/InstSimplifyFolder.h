@@ -37,7 +37,7 @@ class LLVM_ABI InstSimplifyFolder final : public IRBuilderFolder {
   TargetFolder ConstFolder;
   SimplifyQuery SQ;
 
-  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION() override;
 
 public:
   explicit InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
@@ -78,8 +78,8 @@ public:
     return simplifyCmpInst(P, LHS, RHS, SQ);
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     return simplifyGEPInst(Ty, Ptr, IdxList, NW, SQ);
   }
 
@@ -116,13 +116,11 @@ public:
   }
 
   Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
-    // TODO
-    return nullptr;
+    return simplifyBitInsertInst(Base, Val, Offset, SQ);
   }
 
   Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
-    // TODO
-    return nullptr;
+    return simplifyBitExtractInst(Ty, Src, Offset, SQ);
   }
 
   Value *FoldCast(Instruction::CastOps Op, Value *V,

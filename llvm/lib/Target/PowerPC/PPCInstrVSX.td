@@ -56,7 +56,7 @@ def SDT_PPCldvsxlh : SDTypeProfile<1, 1, [
 ]>;
 
 def SDT_PPCfpexth : SDTypeProfile<1, 2, [
-  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>, SDTCisPtrTy<2>
+  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>, SDTCisVT<2, i32>
 ]>;
 
 def SDT_PPCldsplat : SDTypeProfile<1, 1, [

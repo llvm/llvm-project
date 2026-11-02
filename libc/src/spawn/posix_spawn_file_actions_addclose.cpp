@@ -9,10 +9,10 @@
 #include "posix_spawn_file_actions_addclose.h"
 
 #include "file_actions.h"
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 #include <spawn.h>

@@ -205,6 +205,17 @@ private:
   /// \returns Number of errors that occurred during verification.
   unsigned verifyDebugInfoCallSite(const DWARFDie &Die);
 
+  /// Verifies that a subprogram entry carries enough information for a
+  /// consumer to identify it.
+  ///
+  /// This function currently checks for:
+  /// - subprograms with no attributes other than DW_AT_sibling (error)
+  /// - subprograms with no name, abstract origin, specification or address
+  ///   range (warning)
+  ///
+  /// \returns Number of errors that occurred during verification.
+  unsigned verifyDebugInfoSubprogram(const DWARFDie &Die);
+
   /// Verify that all Die ranges are valid.
   ///
   /// This function currently checks for:

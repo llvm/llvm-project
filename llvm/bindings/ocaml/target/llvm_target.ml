@@ -6,12 +6,6 @@
  *
  *===----------------------------------------------------------------------===*)
 
-module Endian = struct
-  type t =
-  | Big
-  | Little
-end
-
 module CodeGenOptLevel = struct
   type t =
   | None
@@ -55,39 +49,6 @@ exception Error of string
 
 let () = Callback.register_exception "Llvm_target.Error" (Error "")
 
-module DataLayout = struct
-  type t
-
-  external of_string : string -> t = "llvm_datalayout_of_string"
-  external as_string : t -> string = "llvm_datalayout_as_string"
-  external byte_order : t -> Endian.t = "llvm_datalayout_byte_order"
-  external pointer_size : t -> int = "llvm_datalayout_pointer_size"
-  external intptr_type : Llvm.llcontext -> t -> Llvm.lltype
-                       = "llvm_datalayout_intptr_type"
-  external qualified_pointer_size : int -> t -> int
-                                  = "llvm_datalayout_qualified_pointer_size"
-  external qualified_intptr_type : Llvm.llcontext -> int -> t -> Llvm.lltype
-                                 = "llvm_datalayout_qualified_intptr_type"
-  external size_in_bits : Llvm.lltype -> t -> Int64.t
-                        = "llvm_datalayout_size_in_bits"
-  external store_size : Llvm.lltype -> t -> Int64.t
-                      = "llvm_datalayout_store_size"
-  external abi_size : Llvm.lltype -> t -> Int64.t
-                    = "llvm_datalayout_abi_size"
-  external abi_align : Llvm.lltype -> t -> int
-                     = "llvm_datalayout_abi_align"
-  external stack_align : Llvm.lltype -> t -> int
-                       = "llvm_datalayout_stack_align"
-  external preferred_align : Llvm.lltype -> t -> int
-                           = "llvm_datalayout_preferred_align"
-  external preferred_align_of_global : Llvm.llvalue -> t -> int
-                                   = "llvm_datalayout_preferred_align_of_global"
-  external element_at_offset : Llvm.lltype -> Int64.t -> t -> int
-                             = "llvm_datalayout_element_at_offset"
-  external offset_of_element : Llvm.lltype -> int -> t -> Int64.t
-                             = "llvm_datalayout_offset_of_element"
-end
-
 module Target = struct
   type t
 
@@ -127,7 +88,7 @@ module TargetMachine = struct
                = "llvm_targetmachine_cpu"
   external features : t -> string
                     = "llvm_targetmachine_features"
-  external data_layout : t -> DataLayout.t
+  external data_layout : t -> Llvm.DataLayout.t
                        = "llvm_targetmachine_data_layout"
   external set_verbose_asm : bool -> t -> unit
                            = "llvm_targetmachine_set_verbose_asm"

@@ -57,6 +57,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #include "llvm/ADT/STLExtras.h"
 // CHECK-NEXT:  #include "llvm/ADT/StringRef.h"
 // CHECK-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
+// CHECK-NEXT:  #include "llvm/Frontend/Directive/Version.h"
 // CHECK-NEXT:  #include "llvm/Support/Compiler.h"
 // CHECK-NEXT:  #include <cstddef>
 // CHECK-NEXT:  #include <utility>
@@ -191,8 +192,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:  constexpr unsigned getDirectivePureSince(Directive) {
-// CHECK-NEXT:    return unsigned(2147483647);
+// CHECK-NEXT:  constexpr directive::Version getDirectivePureSince(Directive) {
+// CHECK-NEXT:    return directive::Version(2147483647);
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr SourceLanguage getDirectiveLanguages(Directive D) {
@@ -213,7 +214,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:   return getTdlDirectiveKindAndVersions(Str).first;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_ABI StringRef getTdlDirectiveName(Directive D, unsigned V = unsigned(0));
+// CHECK-NEXT:  LLVM_ABI StringRef getTdlDirectiveName(Directive D, directive::Version V = directive::Version(0));
 // CHECK-EMPTY:
 // CHECK-NEXT:  LLVM_ABI std::pair<Clause, directive::VersionRange> getTdlClauseKindAndVersions(StringRef Str);
 // CHECK-EMPTY:
@@ -221,14 +222,14 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    return getTdlClauseKindAndVersions(Str).first;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_ABI StringRef getTdlClauseName(Clause C, unsigned V = unsigned(0));
+// CHECK-NEXT:  LLVM_ABI StringRef getTdlClauseName(Clause C, directive::Version V = directive::Version(0));
 // CHECK-EMPTY:
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p V.
-// CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned V);
+// CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, directive::Version V);
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
 // CHECK-NEXT:  LLVM_ABI bool isAllowedLoopModifier(Directive D, LoopModifier LM);
-// CHECK-NEXT:  LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, unsigned V = unsigned(0));
+// CHECK-NEXT:  LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, directive::Version V = directive::Version(0));
 // CHECK-NEXT:  LLVM_ABI AKind getAKind(StringRef Str);
 // CHECK-NEXT:  LLVM_ABI StringRef getTdlAKindName(AKind x);
 // CHECK-EMPTY:
@@ -423,6 +424,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:  #undef GEN_DIRECTIVES_IMPL
 // IMPL-EMPTY:
 // IMPL-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
+// IMPL-NEXT:  #include "llvm/Frontend/Directive/Version.h"
 // IMPL-NEXT:  #include "llvm/Support/ErrorHandling.h"
 // IMPL-NEXT:  #include <utility>
 // IMPL-EMPTY:
@@ -433,7 +435,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:     .Default({TDLD_dira, All});
 // IMPL-NEXT: }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlDirectiveName(llvm::tdl::Directive Kind, unsigned V) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlDirectiveName(llvm::tdl::Directive Kind, llvm::directive::Version V) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case TDLD_dira:
 // IMPL-NEXT:        return "dira";
@@ -451,7 +453,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:     .Default({TDLC_clauseb, All});
 // IMPL-NEXT: }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlClauseName(llvm::tdl::Clause Kind, unsigned V) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlClauseName(llvm::tdl::Clause Kind, llvm::directive::Version V) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case TDLC_clausea:
 // IMPL-NEXT:        return "clausea";
@@ -459,10 +461,10 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:        return "clauseb";
 // IMPL-NEXT:      case TDLC_clausec: {
 // IMPL-NEXT:        static constexpr llvm::directive::Spelling TDLC_clausec_spellings[] = {
-// IMPL-NEXT:            {"clausec", {0, 2147483647}},
-// IMPL-NEXT:            {"ccccccc", {0, 2147483647}},
+// IMPL-NEXT:            {"clausec", {directive::Version(0), directive::Version(2147483647)}},
+// IMPL-NEXT:            {"ccccccc", {directive::Version(0), directive::Version(2147483647)}},
 // IMPL-NEXT:        };
-// IMPL-NEXT:        return llvm::directive::FindName(TDLC_clausec_spellings, static_cast<unsigned>(V));
+// IMPL-NEXT:        return llvm::directive::FindName(TDLC_clausec_spellings, V);
 // IMPL-NEXT:      }
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
@@ -488,7 +490,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl AKind kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(llvm::tdl::Directive D, llvm::tdl::Clause C, unsigned V) {
+// IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(llvm::tdl::Directive D, llvm::tdl::Clause C, llvm::directive::Version V) {
 // IMPL-NEXT:    assert(unsigned(D) <= Directive_enumSize);
 // IMPL-NEXT:    assert(unsigned(C) <= Clause_enumSize);
 // IMPL-NEXT:    switch (D) {
@@ -516,7 +518,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getLoopModifierName(llvm::tdl::LoopModifier Kind, unsigned V) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getLoopModifierName(llvm::tdl::LoopModifier Kind, llvm::directive::Version V) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case flattened:
 // IMPL-NEXT:        return "flattened";

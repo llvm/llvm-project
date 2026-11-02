@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/MIRSampleProfile.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/CodeGen/MIRFSDiscriminatorOptions.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -90,10 +91,6 @@ namespace llvm {
 // Defined in CodeGen/MachineBlockFrequencyInfo.cpp:
 // -view-block-layout-with-bfi={none | fraction | integer | count}
 extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
-
-// Command line option to specify the name of the function for CFG dump
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
-extern cl::opt<std::string> ViewBlockFreqFuncName;
 
 std::optional<PseudoProbe> extractProbe(const MachineInstr &MI) {
   if (MI.isPseudoProbe()) {
@@ -374,9 +371,10 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
       MDT, MPDT, &getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,
       &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE());
 
+  StringRef ViewFuncName =
+      getViewBlockFreqFuncName(MF.getFunction().getContext());
   if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       MF.getFunction().getName() == ViewBlockFreqFuncName)) {
+      (ViewFuncName.empty() || MF.getFunction().getName() == ViewFuncName)) {
     MBFI->view("MIR_Prof_loader_b." + MF.getName(), false);
   }
 
@@ -388,8 +386,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (ViewBFIAfter && ViewBlockLayoutWithBFI != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       MF.getFunction().getName() == ViewBlockFreqFuncName)) {
+      (ViewFuncName.empty() || MF.getFunction().getName() == ViewFuncName)) {
     MBFI->view("MIR_prof_loader_a." + MF.getName(), false);
   }
 

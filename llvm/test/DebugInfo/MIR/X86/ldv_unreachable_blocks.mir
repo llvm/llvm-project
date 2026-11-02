@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-apple-macos %s -start-before=livedebugvalues -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+# RUN: llc -mtriple=x86_64-apple-macos %s -start-before=live-debug-values -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 # CHECK: DW_TAG_subprogram
 # Test that LiveDebugValues can handle MBBs that are not reachable in a RPOT.
 --- |

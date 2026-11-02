@@ -56,10 +56,6 @@ static cl::opt<bool>
     AllowWLSLoops("allow-arm-wlsloops", cl::Hidden, cl::init(true),
                   cl::desc("Enable the generation of WLS loops"));
 
-static cl::opt<bool> UseWidenGlobalArrays(
-    "widen-global-strings", cl::Hidden, cl::init(true),
-    cl::desc("Enable the widening of global strings to alignment boundaries"));
-
 extern cl::opt<TailPredication::Mode> EnableTailPredication;
 
 extern cl::opt<bool> EnableMaskedGatherScatters;
@@ -1311,10 +1307,17 @@ InstructionCost ARMTTIImpl::getShuffleCost(
     // instructions for, for example REV.
     if (!Mask.empty()) {
       std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
+      unsigned Unused;
       if (LT.second.isVector() &&
           Mask.size() <= LT.second.getVectorNumElements() &&
           (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
-           isVREVMask(Mask, LT.second, 64)))
+           isVREVMask(Mask, LT.second, 64) ||
+           isVTRNMask(Mask, LT.second, Unused) ||
+           isVTRN_v_undef_Mask(Mask, LT.second, Unused) ||
+           isVZIPMask(Mask, LT.second, Unused) ||
+           isVZIP_v_undef_Mask(Mask, LT.second, Unused) ||
+           isVUZPMask(Mask, LT.second, Unused) ||
+           isVUZP_v_undef_Mask(Mask, LT.second, Unused)))
         return LT.first;
     }
   }
@@ -2875,8 +2878,9 @@ bool ARMTTIImpl::isProfitableToSinkOperands(Instruction *I,
     return Sub->getOpcode() == Instruction::FSub && Sub->getOperand(1) == I;
   };
   auto IsFMS = [&](Instruction *I) {
-    if (match(I->getOperand(0), m_FNeg(m_Value())) ||
-        match(I->getOperand(1), m_FNeg(m_Value())))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(I->getOperand(0), m_FNegOrFSubNegZero(m_Value())) ||
+        match(I->getOperand(1), m_FNegOrFSubNegZero(m_Value())))
       return true;
     return false;
   };
@@ -2965,33 +2969,4 @@ bool ARMTTIImpl::isProfitableToSinkOperands(Instruction *I,
     Ops.push_back(&OpIdx.value());
   }
   return true;
-}
-
-unsigned ARMTTIImpl::getNumBytesToPadGlobalArray(unsigned Size,
-                                                 Type *ArrayType) const {
-  if (!UseWidenGlobalArrays) {
-    LLVM_DEBUG(dbgs() << "Padding global arrays disabled\n");
-    return false;
-  }
-
-  // Don't modify none integer array types
-  if (!ArrayType || !ArrayType->isArrayTy() ||
-      !ArrayType->getArrayElementType()->isIntegerTy())
-    return 0;
-
-  // We pad to 4 byte boundaries
-  if (Size % 4 == 0)
-    return 0;
-
-  unsigned NumBytesToPad = 4 - (Size % 4);
-  unsigned NewSize = Size + NumBytesToPad;
-
-  // Max number of bytes that memcpy allows for lowering to load/stores before
-  // it uses library function (__aeabi_memcpy).
-  unsigned MaxMemIntrinsicSize = getMaxMemIntrinsicInlineSizeThreshold();
-
-  if (NewSize > MaxMemIntrinsicSize)
-    return 0;
-
-  return NumBytesToPad;
 }

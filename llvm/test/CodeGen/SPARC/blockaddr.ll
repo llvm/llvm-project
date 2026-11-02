@@ -44,10 +44,10 @@ entry:
 ; v8pic32: sethi %hi(_GLOBAL_OFFSET_TABLE_+{{.+}}), [[R:%[gilo][0-7]]]
 ; v8pic32: or [[R]], %lo(_GLOBAL_OFFSET_TABLE_+{{.+}}), [[R1:%[gilo][0-7]]]
 ; v8pic32: add [[R1]], %o7, %[[R2:[gilo][0-7]]]
-; v8pic32: sethi %hi([[BLK:.+]]), [[R3:%[gilo][0-7]]]
-; v8pic32: add  [[R3]], %lo([[BLK]]), %[[R4:[gilo][0-7]]]
+; v8pic32: sethi %gdop_hix22([[BLK:.+]]), [[R3:%[gilo][0-7]]]
+; v8pic32: xor [[R3]], %gdop_lox10([[BLK]]), %[[R4:[gilo][0-7]]]
 ; v8pic32: call dummy
-; v8pic32: ld [%[[R2]]+%[[R4]]], %o0
+; v8pic32: ld [%[[R2]]+%[[R4]]], %o0, %gdop([[BLK]])
 ; v8pic32: jmp %o0
 
 
@@ -55,10 +55,10 @@ entry:
 ; v9pic32: sethi %hi(_GLOBAL_OFFSET_TABLE_+{{.+}}), [[R:%[gilo][0-7]]]
 ; v9pic32: or [[R]], %lo(_GLOBAL_OFFSET_TABLE_+{{.+}}), [[R1:%[gilo][0-7]]]
 ; v9pic32: add [[R1]], %o7, %[[R2:[gilo][0-7]]]
-; v9pic32: sethi %hi([[BLK:.+]]), [[R3:%[gilo][0-7]]]
-; v9pic32: add  [[R3]], %lo([[BLK]]), %[[R4:[gilo][0-7]]]
+; v9pic32: sethi %gdop_hix22([[BLK:.+]]), [[R3:%[gilo][0-7]]]
+; v9pic32: xor [[R3]], %gdop_lox10([[BLK]]), %[[R4:[gilo][0-7]]]
 ; v9pic32: call dummy
-; v9pic32: ldx [%[[R2]]+%[[R4]]], %o0
+; v9pic32: ldx [%[[R2]]+%[[R4]]], %o0, %gdop([[BLK]])
 ; v9pic32: jmp %o0
 
 

@@ -17,16 +17,15 @@ target triple = "nvptx64-nvidia-cuda"
 define void @test_corner_values() {
 ; CHECK-LABEL: test_corner_values(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<24>;
+; CHECK-NEXT:    .reg .b64 %rd<20>;
 ; CHECK-NEXT:    .reg .b128 %rq<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.global.b64 %rd1, [v64];
 ; CHECK-NEXT:    add.s64 %rd2, %rd1, 8;
-; CHECK-NEXT:    mov.b64 %rd13, -1;
-; CHECK-NEXT:    mov.b128 %rq1, {%rd13, %rd13};
-; CHECK-NEXT:    mov.b64 %rd14, v_u128_max;
-; CHECK-NEXT:    cvta.global.u64 %rd3, %rd14;
+; CHECK-NEXT:    mov.b64 %rd13, v_u128_max;
+; CHECK-NEXT:    cvta.global.u64 %rd3, %rd13;
+; CHECK-NEXT:    mov.b128 %rq1, {-1, -1};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b64 hi;
@@ -37,13 +36,12 @@ define void @test_corner_values() {
 ; CHECK-NEXT:    st.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.global.b64 %rd15, [v64];
-; CHECK-NEXT:    add.s64 %rd4, %rd15, 16;
-; CHECK-NEXT:    add.s64 %rd5, %rd15, 24;
-; CHECK-NEXT:    mov.b64 %rd16, 9223372036854775807;
-; CHECK-NEXT:    mov.b128 %rq2, {%rd13, %rd16};
-; CHECK-NEXT:    mov.b64 %rd17, v_i128_max;
-; CHECK-NEXT:    cvta.global.u64 %rd6, %rd17;
+; CHECK-NEXT:    ld.global.b64 %rd14, [v64];
+; CHECK-NEXT:    add.s64 %rd4, %rd14, 16;
+; CHECK-NEXT:    add.s64 %rd5, %rd14, 24;
+; CHECK-NEXT:    mov.b64 %rd15, v_i128_max;
+; CHECK-NEXT:    cvta.global.u64 %rd6, %rd15;
+; CHECK-NEXT:    mov.b128 %rq2, {-1, 9223372036854775807};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b64 hi;
@@ -54,14 +52,12 @@ define void @test_corner_values() {
 ; CHECK-NEXT:    st.b128 [%rd6], %rq2;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.global.b64 %rd18, [v64];
-; CHECK-NEXT:    add.s64 %rd7, %rd18, 32;
-; CHECK-NEXT:    add.s64 %rd8, %rd18, 40;
-; CHECK-NEXT:    mov.b64 %rd19, -9223372036854775808;
-; CHECK-NEXT:    mov.b64 %rd20, 0;
-; CHECK-NEXT:    mov.b128 %rq3, {%rd20, %rd19};
-; CHECK-NEXT:    mov.b64 %rd21, v_i128_min;
-; CHECK-NEXT:    cvta.global.u64 %rd9, %rd21;
+; CHECK-NEXT:    ld.global.b64 %rd16, [v64];
+; CHECK-NEXT:    add.s64 %rd7, %rd16, 32;
+; CHECK-NEXT:    add.s64 %rd8, %rd16, 40;
+; CHECK-NEXT:    mov.b64 %rd17, v_i128_min;
+; CHECK-NEXT:    cvta.global.u64 %rd9, %rd17;
+; CHECK-NEXT:    mov.b128 %rq3, {0, -9223372036854775808};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b64 hi;
@@ -72,12 +68,12 @@ define void @test_corner_values() {
 ; CHECK-NEXT:    st.b128 [%rd9], %rq3;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.global.b64 %rd22, [v64];
-; CHECK-NEXT:    add.s64 %rd10, %rd22, 48;
-; CHECK-NEXT:    add.s64 %rd11, %rd22, 56;
-; CHECK-NEXT:    mov.b128 %rq4, {%rd20, %rd20};
-; CHECK-NEXT:    mov.b64 %rd23, v_u128_zero;
-; CHECK-NEXT:    cvta.global.u64 %rd12, %rd23;
+; CHECK-NEXT:    ld.global.b64 %rd18, [v64];
+; CHECK-NEXT:    add.s64 %rd10, %rd18, 48;
+; CHECK-NEXT:    add.s64 %rd11, %rd18, 56;
+; CHECK-NEXT:    mov.b64 %rd19, v_u128_zero;
+; CHECK-NEXT:    cvta.global.u64 %rd12, %rd19;
+; CHECK-NEXT:    mov.b128 %rq4, {0, 0};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b64 hi;

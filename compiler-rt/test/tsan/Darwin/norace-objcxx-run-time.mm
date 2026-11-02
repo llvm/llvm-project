@@ -1,14 +1,13 @@
 // RUN: %clang_tsan %s -lc++ -fobjc-arc -lobjc -o %t -framework Foundation
-// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
+// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
 // Check that we do not report races between:
 // - Object retain and initialize
 // - Object release and dealloc
 // - Object release and .cxx_destruct
 
-#import <Foundation/Foundation.h>
 #include "../test.h"
-invisible_barrier_t barrier2;
+#import <Foundation/Foundation.h>
 
 class NeedCleanup {
   public:
@@ -74,40 +73,38 @@ class NeedCleanup {
 int main(int argc, const char *argv[]) {
   // Ensure that there is no race when calling initialize on TestInitializeObject;
   // otherwise, the locking from ObjC runtime becomes observable. Also ensures that
-  // blocks are dispatched to 2 different threads.
-  barrier_init(&barrier, 2);
-  // Ensure that objects are destructed during block object release.
-  barrier_init(&barrier2, 3);
+  // blocks are dispatched to 2 different threads, and that main has dropped its
+  // references so objects are destructed during block object release.
+  barrier_init(&barrier, 3);
 
   TestDeallocObject *tdo = [[TestDeallocObject alloc] init];
   TestCXXDestructObject *tcxxdo = [[TestCXXDestructObject alloc] init];
   [tdo accessMember];
   [tcxxdo accessMember];
-  {
-    dispatch_queue_t q = dispatch_queue_create(NULL, DISPATCH_QUEUE_CONCURRENT);
-    dispatch_async(q, ^{
-        [TestInitializeObject new];
-        barrier_wait(&barrier);
-        long local = InitializerAccessedGlobal;
-        local++;
-        [tdo accessMember];
-        [tcxxdo accessMember];
-        barrier_wait(&barrier2);
-    });
-    dispatch_async(q, ^{
-        barrier_wait(&barrier);
-        [TestInitializeObject new];
-        long local = InitializerAccessedGlobal;
-        local++;
-        [tdo accessMember];
-        [tcxxdo accessMember];
-        barrier_wait(&barrier2);
-    });
-  }
-  barrier_wait(&barrier2);
+  dispatch_queue_t q = dispatch_queue_create(NULL, DISPATCH_QUEUE_CONCURRENT);
+  dispatch_async(q, ^{
+    [TestInitializeObject new];
+    barrier_wait(&barrier);
+    long local = InitializerAccessedGlobal;
+    local++;
+    [tdo accessMember];
+    [tcxxdo accessMember];
+  });
+  dispatch_async(q, ^{
+    barrier_wait(&barrier);
+    [TestInitializeObject new];
+    long local = InitializerAccessedGlobal;
+    local++;
+    [tdo accessMember];
+    [tcxxdo accessMember];
+  });
+  tdo = nil;
+  tcxxdo = nil;
+  barrier_wait(&barrier);
+  // Order main after both blocks (including their release) for TSan.
+  dispatch_barrier_sync(q, ^{});
   NSLog(@"Done.");
   return 0;
 }
 
 // CHECK: Done.
-// CHECK-NOT: ThreadSanitizer: data race

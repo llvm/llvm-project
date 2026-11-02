@@ -12,6 +12,7 @@ on:
       - 'clang-tools-extra/clang-tidy/**'
       - 'clang-tools-extra/docs/clang-tidy/**'
       - '.github/workflows/pr-code-lint.yml'
+      - '.ci/compute_projects**'
 
 jobs:
   code_linter:
@@ -28,7 +29,7 @@ jobs:
       cancel-in-progress: true
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 2
@@ -55,8 +56,7 @@ jobs:
         run: |
           git config --global --add safe.directory '*'
 
-          . <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
-
+          projects_to_build=$(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py | python3 -c "import json, sys; print(json.load(sys.stdin).get('projects_to_build', ''))")
           if [[ "${projects_to_build}" == "" ]]; then
             echo "No projects to analyze"
             exit 0
@@ -100,7 +100,7 @@ jobs:
             --changed-files "$CHANGED_FILES"
       
       - name: Upload results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: workflow-args

@@ -1,5 +1,13 @@
-#ifndef LIBSYCL_UNITTESTS_HANDLER_TEST_HELPERS_HPP
-#define LIBSYCL_UNITTESTS_HANDLER_TEST_HELPERS_HPP
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBSYCL_UNITTESTS_HANDLER_TEST_HELPERS_HPP
+#define _LIBSYCL_UNITTESTS_HANDLER_TEST_HELPERS_HPP
 
 #include <mock/helpers.hpp>
 
@@ -8,15 +16,17 @@
 #include <gmock/gmock.h>
 
 #include <algorithm>
-#include <initializer_list>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace unittests {
 
-inline void expectDeviceMemoryInfo(mock::MockWrapper &Mock,
-                                   const std::vector<const void *> ExpectedPtrs,
-                                   ol_device_handle_t Device, int Count) {
+// Expects Count olGetMemInfo(OL_MEM_INFO_DEVICE) queries, each for one of
+// ExpectedPtrs, and reports Device as the owning device.
+inline void
+expectDeviceMemoryInfo(mock::MockWrapper &Mock,
+                       const std::vector<const void *> &ExpectedPtrs,
+                       ol_device_handle_t Device, int Count) {
   EXPECT_CALL(Mock.get(),
               olGetMemInfo(::testing::_, ::testing::_, OL_MEM_INFO_DEVICE,
                            sizeof(ol_device_handle_t), ::testing::_))
@@ -34,4 +44,4 @@ inline void expectDeviceMemoryInfo(mock::MockWrapper &Mock,
 } // namespace unittests
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif
+#endif // _LIBSYCL_UNITTESTS_HANDLER_TEST_HELPERS_HPP

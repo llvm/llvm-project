@@ -29,7 +29,7 @@ class Lowerer : public coro::LowererBase {
 
 public:
   Lowerer(Module &M)
-      : LowererBase(M), Builder(Context),
+      : LowererBase(M), Builder(M),
         AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
   void lowerEarlyIntrinsics(Function &F);
 };

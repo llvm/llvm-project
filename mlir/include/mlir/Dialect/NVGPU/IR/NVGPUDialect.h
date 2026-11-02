@@ -14,7 +14,7 @@
 #define MLIR_DIALECT_NVGPU_NVGPUDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialectDecl.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"

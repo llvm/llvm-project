@@ -192,6 +192,7 @@ class ReturnValueTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr24778"
     )
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"], debug_info=["pdb"])
     def test_vector_values(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

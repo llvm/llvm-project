@@ -22,8 +22,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Block.h"
 #include "Descriptor.h"
-#include "InterpBlock.h"
 #include "Primitives.h"
 
 namespace clang {

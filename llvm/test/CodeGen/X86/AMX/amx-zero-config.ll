@@ -66,7 +66,7 @@ define void @foo(ptr %buf) nounwind {
 ; AVX512-O0-NEXT:    pushq %rbp
 ; AVX512-O0-NEXT:    movq %rsp, %rbp
 ; AVX512-O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; AVX512-O0-NEXT:    subq $3072, %rsp # imm = 0xC00
+; AVX512-O0-NEXT:    subq $2048, %rsp # imm = 0x800
 ; AVX512-O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-O0-NEXT:    # kill: def $zmm0 killed $xmm0
 ; AVX512-O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
@@ -107,7 +107,7 @@ define void @foo(ptr %buf) nounwind {
 ; AVX2-O0-NEXT:    pushq %rbp
 ; AVX2-O0-NEXT:    movq %rsp, %rbp
 ; AVX2-O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; AVX2-O0-NEXT:    subq $3072, %rsp # imm = 0xC00
+; AVX2-O0-NEXT:    subq $2048, %rsp # imm = 0x800
 ; AVX2-O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX2-O0-NEXT:    # kill: def $ymm0 killed $xmm0
 ; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
@@ -149,7 +149,7 @@ define void @foo(ptr %buf) nounwind {
 ; SSE2-O0-NEXT:    pushq %rbp
 ; SSE2-O0-NEXT:    movq %rsp, %rbp
 ; SSE2-O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; SSE2-O0-NEXT:    subq $3072, %rsp # imm = 0xC00
+; SSE2-O0-NEXT:    subq $2048, %rsp # imm = 0x800
 ; SSE2-O0-NEXT:    xorps %xmm0, %xmm0
 ; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)

@@ -330,7 +330,7 @@ template <int KIND> struct FitsInIntegerKind {
       return true;
     } else {
       return value <=
-          std::numeric_limits<
+          common::numeric_limits<
               CppTypeFor<Fortran::common::TypeCategory::Integer, KIND>>::max();
     }
   }

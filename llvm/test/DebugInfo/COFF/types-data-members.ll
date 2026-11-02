@@ -598,7 +598,7 @@
 ; ASM: .short	0x6                     # Record length
 ; ASM: .short	0xa                     # Record kind: LF_VTSHAPE
 ; ASM: .short	0x1                     # VFEntryCount
-; ASM: .byte	0x0
+; ASM: .byte	0x50
 ; ASM: .byte	241
 ; ASM: # Pointer (0x1014)
 ; ASM: .short	0xa                     # Record length

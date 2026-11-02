@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <map>
 #include <memory>
@@ -67,6 +68,9 @@ enum ActionKind {
 
   /// Emit a .cir file
   EmitCIR,
+
+  /// Emit a .cirbc file (ClangIR bytecode).
+  EmitCIRBC,
 
   /// Emit a .ll file.
   EmitLLVM,
@@ -461,6 +465,9 @@ public:
   /// If given, filter dumped AST Decl nodes by this substring.
   std::string ASTDumpFilter;
 
+  /// If given, filter dumped AST Decl nodes by source file path (glob pattern).
+  std::string ASTDumpFilterPath;
+
   /// If given, enable code completion at the provided location.
   ParsedSourceLocation CodeCompletionAt;
 
@@ -542,6 +549,10 @@ public:
   /// This can increase the size of the output by 2-3 times.
   LLVM_PREFERRED_TYPE(bool)
   unsigned TimeTraceVerbose : 1;
+
+  /// Compression mode for -ftime-trace output.
+  llvm::TimeTraceCompression TimeTraceCompress =
+      llvm::TimeTraceCompression::Infer;
 
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;

@@ -51,3 +51,10 @@ TEST_P(olGetContextInfoTest, InvalidSizeSmall) {
                olGetContextInfo(Context, OL_CONTEXT_INFO_NUM_DEVICES,
                                 sizeof(NumDevices) - 1, &NumDevices));
 }
+
+TEST_P(olGetContextInfoTest, SuccessNativeHandle) {
+  void *Handle = nullptr;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(olGetContextInfo(
+      Context, OL_CONTEXT_INFO_NATIVE_HANDLE, sizeof(Handle), &Handle));
+  ASSERT_NE(Handle, nullptr);
+}

@@ -187,7 +187,7 @@ bool PlatformNetBSD::CanDebugProcess() {
 }
 
 void PlatformNetBSD::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back("_sigtramp");
 }
 
 MmapArgList PlatformNetBSD::GetMmapArgumentList(const ArchSpec &arch,

@@ -198,12 +198,6 @@ public:
   bool legalizeImplicitArgPtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
 
-  bool getLDSKernelId(Register DstReg, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &B) const;
-
-  bool legalizeLDSKernelId(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
-
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 
@@ -255,8 +249,7 @@ public:
   bool legalizeTrapEndpgm(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
-  bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
-                       MachineIRBuilder &B) const;
+  bool legalizeTrapHsa(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
 

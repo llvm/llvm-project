@@ -1,0 +1,13 @@
+macros:
+  MSG_NOERROR:
+    in-latest-posix: ''
+
+functions:
+  msgctl:
+    in-latest-posix: ''
+  msgget:
+    in-latest-posix: ''
+  msgrcv:
+    in-latest-posix: ''
+  msgsnd:
+    in-latest-posix: ''

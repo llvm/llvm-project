@@ -33,7 +33,7 @@ struct VirtualInherits : virtual Base1, virtual Base2 {
 // LLVM: %struct.VirtualInherits = type <{ ptr, i32, i32, i32, %struct.Base1, %struct.Base2, [4 x i8] }>
 //
 Inherits I;
-// CIR: cir.global external @I = #cir.zero : !rec_Inherits {alignment = 4 : i64}
+// CIR: cir.global external @I = #cir.zero : !rec_Inherits align(4)
 // LLVM: @I = global %struct.Inherits zeroinitializer, align 4
 
 Inherits I2 {{1,2,3},{1.1, 2.2, 3.3}, 4, 5, 6};
@@ -42,12 +42,12 @@ Inherits I2 {{1,2,3},{1.1, 2.2, 3.3}, 4, 5, 6};
 // OGCG: @I2 = global { i32, i32, i32, float, float, float, i32, i32, i32 } { i32 1, i32 2, i32 3, float {{.*}}, float {{.*}}, float {{.*}}, i32 4, i32 5, i32 6 }, align 4
 
 VirtualInherits VI;
-// CIR-BEFORE: cir.global external @VI = ctor : !rec_VirtualInherits {
+// CIR-BEFORE: cir.global external @VI = #cir.zero : !rec_VirtualInherits ctor {
 // CIR-BEFORE:   %[[GET_GLOB:.*]] = cir.get_global @VI : !cir.ptr<!rec_VirtualInherits>
 // CIR-BEFORE:   cir.call @_ZN15VirtualInheritsC1Ev(%[[GET_GLOB]]) nothrow : (!cir.ptr<!rec_VirtualInherits> {llvm.align = 8 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef}) -> ()
-// CIR-BEFORE: } {alignment = 8 : i64, ast = #cir.var.decl.ast}
+// CIR-BEFORE: } align(8) ast(#cir.var.decl.ast)
 //
-// CIR-AFTER: cir.global external @VI = #cir.zero : !rec_VirtualInherits {alignment = 8 : i64, ast = #cir.var.decl.ast}
+// CIR-AFTER: cir.global external @VI = #cir.zero : !rec_VirtualInherits align(8) ast(#cir.var.decl.ast)
 // CIR-AFTER: cir.func {{.*}}@__cxx_global_var_init() {
 // CIR-AFTER:   %[[GET_GLOB:.*]] = cir.get_global @VI : !cir.ptr<!rec_VirtualInherits> loc(#loc12)
 // CIR-AFTER:   cir.call @_ZN15VirtualInheritsC1Ev(%[[GET_GLOB]]) nothrow : (!cir.ptr<!rec_VirtualInherits> {llvm.align = 8 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef}) -> ()

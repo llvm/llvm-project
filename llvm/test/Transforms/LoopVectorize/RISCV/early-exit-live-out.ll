@@ -175,7 +175,8 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV64-NEXT:  [[ENTRY:.*]]:
 ; RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[TMP1]]
+; RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 4)
+; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[TMP2]]
 ; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
 ; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 132, [[TMP1]]
@@ -228,7 +229,8 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV32-NEXT:  [[ENTRY:.*]]:
 ; RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; RV32-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[TMP1]]
+; RV32-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 3)
+; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[TMP3]]
 ; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV32:       [[VECTOR_PH]]:
 ; RV32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 132, [[TMP1]]

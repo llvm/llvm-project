@@ -7,7 +7,7 @@
 ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !{{[0-9]+}},
 ; CHECK-SAME: !DIExpression(DW_OP_plus_uconst, 8, DW_OP_stack_value),
 ; CHECK-SAME: debug-location !{{[0-9]+}}
-; CHECK-NEXT: %{{[0-9]+}}:gpr = LD killed %[[BASE]], target-flags(riscv-lo) @values + 8
+; CHECK-NEXT: %{{[0-9]+}}:gpr = LD %[[BASE]], target-flags(riscv-lo) @values + 8
 
 @values = external hidden local_unnamed_addr global [2 x i64], align 8
 

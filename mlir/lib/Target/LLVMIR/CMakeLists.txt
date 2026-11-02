@@ -39,6 +39,7 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   TargetParser
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRDLTIDialect
   MLIRLLVMDialect
   MLIRLLVMIRTransforms

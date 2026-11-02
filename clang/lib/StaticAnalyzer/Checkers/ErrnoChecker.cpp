@@ -148,7 +148,7 @@ void ErrnoChecker::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
     case MustNotBeChecked:
       // Read of 'errno' when it may have undefined value.
       if (!AllowErrnoReadOutsideConditions || isInCondition(S, C)) {
-        if (ExplodedNode *N = C.generateErrorNode()) {
+        if (ExplodedNode *N = C.addSink()) {
           auto BR = std::make_unique<PathSensitiveBugReport>(
               BT_InvalidErrnoRead,
               "An undefined value may be read from 'errno'", N);

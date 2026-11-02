@@ -316,6 +316,11 @@ struct ProcedureDesignator {
   const Symbol *GetInterfaceSymbol() const;
 
   std::string GetName() const;
+  std::optional<parser::CharBlock> genericName() const { return genericName_; }
+  ProcedureDesignator &set_genericName(parser::CharBlock name) {
+    genericName_ = name;
+    return *this;
+  }
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   bool IsElemental() const;
@@ -327,6 +332,10 @@ struct ProcedureDesignator {
   std::variant<SpecificIntrinsic, SymbolRef,
       common::CopyableIndirection<Component>>
       u;
+
+private:
+  // Diagnostic metadata only; equality and lowering use the resolved specific.
+  std::optional<parser::CharBlock> genericName_;
 };
 
 using Chevrons = std::vector<Expr<SomeType>>;

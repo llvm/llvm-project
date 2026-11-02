@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Supplemental HSA-introspection drain (Linux only).
+// HSA resident-image drain (Linux only).
 //
-// The host-shadow drain in InstrProfilingPlatformROCm.cpp only sees device code
-// objects with a host-side shadow (__hipRegisterVar) or an intercepted
-// hipModuleLoad*. Device-linked code with no host shadow (e.g. RCCL) is
-// invisible to it. This pass walks every GPU agent's loaded executables via
-// HSA, finds each __llvm_profile_sections table on the device, and drains the
-// ones the host-shadow pass missed (deduped by the section-bounds tuple). It
-// reuses processDeviceOffloadPrf() so the profraw layout is identical.
+// This pass walks loaded executables on each GPU agent and drains their
+// __llvm_profile_sections tables. It covers static HIP images and device-linked
+// programs without host shadows, while avoiding lookups that would load unused
+// static images. It shares processDeviceOffloadPrf() and section-bounds dedup
+// with the dynamic-module drain.
 //
 //===----------------------------------------------------------------------===//
 
@@ -207,6 +205,10 @@ static int loadHsaRuntimePointers(void) {
   if (isVerboseMode())
     PROF_NOTE("%s", "HSA + HIP runtime resolved for device profiling\n");
   return setHsaRuntimeState(1);
+}
+
+int __prof_rocm::hsaRuntimeAvailable(void) {
+  return loadHsaRuntimePointers() == 0;
 }
 
 /* The canonical device bounds-table symbol from InstrProfilingPlatformGPU.c. */

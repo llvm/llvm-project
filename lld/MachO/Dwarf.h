@@ -35,6 +35,7 @@ public:
 
   llvm::StringRef getAbbrevSection() const override { return abbrevSection; }
   llvm::StringRef getStrSection() const override { return strSection; }
+  llvm::StringRef getLineStrSection() const override { return lineStrSection; }
 
   llvm::DWARFSection const &getLineSection() const override {
     return lineSection;
@@ -54,6 +55,7 @@ private:
   llvm::DWARFSection strOffsSection;
   llvm::StringRef abbrevSection;
   llvm::StringRef strSection;
+  llvm::StringRef lineStrSection;
 };
 
 } // namespace lld::macho

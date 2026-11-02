@@ -31,7 +31,6 @@ operator<<(std::ostream &OS, const LegalizeAction Act) {
   case Custom: OS << "Custom"; break;
   case Bitcast: OS << "Bitcast"; break;
   case Unsupported: OS << "Unsupported"; break;
-  case NotFound: OS << "NotFound"; break;
   }
   return OS;
 }

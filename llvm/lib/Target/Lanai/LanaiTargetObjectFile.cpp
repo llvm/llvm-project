@@ -7,24 +7,19 @@
 
 #include "LanaiTargetObjectFile.h"
 
+#include "LanaiTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
-static cl::opt<unsigned> SSThreshold(
-    "lanai-ssection-threshold", cl::Hidden,
-    cl::desc("Small data and bss section threshold size (default=0)"),
-    cl::init(0));
-
-void LanaiTargetObjectFile::Initialize(MCContext &Ctx,
-                                       const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void LanaiTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
+                                       const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   SmallDataSection = getContext().getELFSection(
       ".sdata", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
@@ -35,10 +30,10 @@ void LanaiTargetObjectFile::Initialize(MCContext &Ctx,
 // A address must be loaded from a small section if its size is less than the
 // small section size threshold. Data in this section must be addressed using
 // gp_rel operator.
-static bool isInSmallSection(uint64_t Size) {
+static bool isInSmallSection(const LanaiOptions &CLOpts, uint64_t Size) {
   // gcc has traditionally not treated zero-sized objects as small data, so this
   // is effectively part of the ABI.
-  return Size > 0 && Size <= SSThreshold;
+  return Size > 0 && Size <= CLOpts.ssection_threshold;
 }
 
 // Return true if this global address should be placed into small data/bss
@@ -92,6 +87,7 @@ bool LanaiTargetObjectFile::isGlobalInSmallSectionImpl(
 
   Type *Ty = GVA->getValueType();
   return isInSmallSection(
+      static_cast<const LanaiTargetMachine &>(TM).getCLOpts(),
       GVA->getDataLayout().getTypeAllocSize(Ty));
 }
 
@@ -110,7 +106,9 @@ MCSection *LanaiTargetObjectFile::SelectSectionForGlobal(
 /// Return true if this constant should be placed into small data section.
 bool LanaiTargetObjectFile::isConstantInSmallSection(const DataLayout &DL,
                                                      const Constant *CN) const {
-  return isInSmallSection(DL.getTypeAllocSize(CN->getType()));
+  return isInSmallSection(
+      static_cast<const LanaiTargetMachine *>(TM)->getCLOpts(),
+      DL.getTypeAllocSize(CN->getType()));
 }
 
 MCSection *LanaiTargetObjectFile::getSectionForConstant(

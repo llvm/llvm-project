@@ -50,14 +50,16 @@ static cl::opt<unsigned>
 namespace {
 
 enum HardClauseType {
-  // For GFX10 and GFX1250:
+  // For targets where loads, stores and atomics share one clause type per
+  // memory class (see hasMixedLoadStoreClauses):
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
   // Flat (not global or scratch) memory instructions.
   HARDCLAUSE_FLAT,
 
-  // For GFX11:
+  // For targets where each memory class is typed separately for loads,
+  // stores and atomics:
 
   // Texture memory instructions.
   HARDCLAUSE_MIMG_LOAD,
@@ -101,8 +103,7 @@ public:
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
-      if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
-          ST->hasGFX1250Insts()) {
+      if (ST->hasMixedLoadStoreClauses()) {
         if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
             SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
@@ -220,7 +221,6 @@ public:
       return false;
 
     const SIInstrInfo *SII = ST->getInstrInfo();
-    const TargetRegisterInfo *TRI = ST->getRegisterInfo();
 
     bool Changed = false;
     for (auto &MBB : MF) {
@@ -247,7 +247,7 @@ public:
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,
-                                                  Dummy3, TRI)) {
+                                                  Dummy3)) {
             // We failed to get the base operands, so we'll never clause this
             // instruction with any other, so pretend it's illegal.
             Type = HARDCLAUSE_ILLEGAL;
@@ -258,15 +258,10 @@ public:
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
              Type != HARDCLAUSE_IGNORE &&
              (Type != CI.Type ||
-              // Note that we lie to shouldClusterMemOps about the size of the
-              // cluster. When shouldClusterMemOps is called from the machine
-              // scheduler it limits the size of the cluster to avoid increasing
-              // register pressure too much, but this pass runs after register
-              // allocation so there is no need for that kind of limit.
-              // We also lie about the Offset and OffsetIsScalable parameters,
-              // as they aren't used in the SIInstrInfo implementation.
-              !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
-                                        2, 2))) ||
+              // shouldClusterMemOps() would also apply the pre-RA memory
+              // cluster budget, which must not limit clauses formed after
+              // register allocation.
+              !SII->memOpsHaveSameBase(CI.BaseOps, BaseOps))) ||
             (CI.Length && ST->hasGFX1250_STRICT() &&
              isIncompatibleScope(MI, *CI.Last, SII))) {
           // Finish the current clause.

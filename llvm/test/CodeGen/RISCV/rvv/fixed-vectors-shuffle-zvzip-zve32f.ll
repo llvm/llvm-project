@@ -91,7 +91,7 @@ define void @deinterleave_v4i16_even(ptr %in, ptr %out) {
 ; ZVL64B-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; ZVL64B-NEXT:    vle16.v v8, (a0)
 ; ZVL64B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVL64B-NEXT:    vnsrl.wi v8, v8, 0
+; ZVL64B-NEXT:    vunzipe.v v8, v8
 ; ZVL64B-NEXT:    vse16.v v8, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -100,7 +100,7 @@ define void @deinterleave_v4i16_even(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVL128B-NEXT:    vle16.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVL128B-NEXT:    vnsrl.wi v8, v8, 0
+; ZVL128B-NEXT:    vunzipe.v v8, v8
 ; ZVL128B-NEXT:    vse16.v v8, (a1)
 ; ZVL128B-NEXT:    ret
 entry:
@@ -116,7 +116,7 @@ define void @deinterleave_v4i16_odd(ptr %in, ptr %out) {
 ; ZVL64B-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; ZVL64B-NEXT:    vle16.v v8, (a0)
 ; ZVL64B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVL64B-NEXT:    vnsrl.wi v8, v8, 16
+; ZVL64B-NEXT:    vunzipo.v v8, v8
 ; ZVL64B-NEXT:    vse16.v v8, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -125,7 +125,7 @@ define void @deinterleave_v4i16_odd(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVL128B-NEXT:    vle16.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVL128B-NEXT:    vnsrl.wi v8, v8, 16
+; ZVL128B-NEXT:    vunzipo.v v8, v8
 ; ZVL128B-NEXT:    vse16.v v8, (a1)
 ; ZVL128B-NEXT:    ret
 entry:
@@ -170,7 +170,7 @@ define void @deinterleave_v4i8_even(ptr %in, ptr %out) {
 ; ZVL64B-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; ZVL64B-NEXT:    vle8.v v8, (a0)
 ; ZVL64B-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; ZVL64B-NEXT:    vnsrl.wi v8, v8, 0
+; ZVL64B-NEXT:    vunzipe.v v8, v8
 ; ZVL64B-NEXT:    vse8.v v8, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -179,7 +179,7 @@ define void @deinterleave_v4i8_even(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVL128B-NEXT:    vle8.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; ZVL128B-NEXT:    vnsrl.wi v8, v8, 0
+; ZVL128B-NEXT:    vunzipe.v v8, v8
 ; ZVL128B-NEXT:    vse8.v v8, (a1)
 ; ZVL128B-NEXT:    ret
 entry:
@@ -195,7 +195,7 @@ define void @deinterleave_v4i8_odd(ptr %in, ptr %out) {
 ; ZVL64B-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; ZVL64B-NEXT:    vle8.v v8, (a0)
 ; ZVL64B-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; ZVL64B-NEXT:    vnsrl.wi v8, v8, 8
+; ZVL64B-NEXT:    vunzipo.v v8, v8
 ; ZVL64B-NEXT:    vse8.v v8, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -204,7 +204,7 @@ define void @deinterleave_v4i8_odd(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVL128B-NEXT:    vle8.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; ZVL128B-NEXT:    vnsrl.wi v8, v8, 8
+; ZVL128B-NEXT:    vunzipo.v v8, v8
 ; ZVL128B-NEXT:    vse8.v v8, (a1)
 ; ZVL128B-NEXT:    ret
 entry:
@@ -328,7 +328,7 @@ define void @deinterleave_v4f16_even(ptr %in, ptr %out) {
 ; ZVL64B-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; ZVL64B-NEXT:    vle16.v v8, (a0)
 ; ZVL64B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVL64B-NEXT:    vnsrl.wi v8, v8, 0
+; ZVL64B-NEXT:    vunzipe.v v8, v8
 ; ZVL64B-NEXT:    vse16.v v8, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -337,7 +337,7 @@ define void @deinterleave_v4f16_even(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVL128B-NEXT:    vle16.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVL128B-NEXT:    vnsrl.wi v8, v8, 0
+; ZVL128B-NEXT:    vunzipe.v v8, v8
 ; ZVL128B-NEXT:    vse16.v v8, (a1)
 ; ZVL128B-NEXT:    ret
 entry:
@@ -353,7 +353,7 @@ define void @deinterleave_v4f16_odd(ptr %in, ptr %out) {
 ; ZVL64B-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; ZVL64B-NEXT:    vle16.v v8, (a0)
 ; ZVL64B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVL64B-NEXT:    vnsrl.wi v8, v8, 16
+; ZVL64B-NEXT:    vunzipo.v v8, v8
 ; ZVL64B-NEXT:    vse16.v v8, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -362,7 +362,7 @@ define void @deinterleave_v4f16_odd(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVL128B-NEXT:    vle16.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVL128B-NEXT:    vnsrl.wi v8, v8, 16
+; ZVL128B-NEXT:    vunzipo.v v8, v8
 ; ZVL128B-NEXT:    vse16.v v8, (a1)
 ; ZVL128B-NEXT:    ret
 entry:

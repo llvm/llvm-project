@@ -189,7 +189,7 @@ func.func @matmul_transpose_reads(%arg0: !fir.ref<!fir.array<5x10xf32>>, %arg1: 
 
 func.func @associate(%arg0: i32) {
 // expected-remark@+1 {{found an instance of 'allocate' on resource '<Default>'}}
-  %0:3 = hlfir.associate %arg0 {uniq_name = "x"} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+  %0:3 = hlfir.associate %arg0 uniq_name("x") : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 // expected-remark@+1 {{found an instance of 'free' on resource '<Default>'}}
   hlfir.end_associate %0#1, %0#2 : !fir.ref<i32>, i1
   return

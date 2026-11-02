@@ -37,10 +37,10 @@ func.func @int32_scalar_srem(%lhs: i32, %rhs: i32) {
 // CHECK-LABEL: @scalar_ceildivui
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @scalar_ceildivui(%lhs: i32, %rhs: i32) -> i32 {
-  // CHECK:     %[[ISZERO:.+]] = spirv.IEqual %[[LHS]], %{{.+}} : i32
   // CHECK:     %[[MINUSONE:.+]] = spirv.ISub %[[LHS]], %{{.+}} : i32
   // CHECK:     %[[Q:.+]] = spirv.UDiv %[[MINUSONE]], %[[RHS]] : i32
   // CHECK:     %[[PLUSONE:.+]] = spirv.IAdd %[[Q]], %{{.+}} : i32
+  // CHECK:     %[[ISZERO:.+]] = spirv.IEqual %[[LHS]], %{{.+}} : i32
   // CHECK:     %[[R:.+]] = spirv.Select %[[ISZERO]], %{{.+}}, %[[PLUSONE]] : i1, i32
   // CHECK:     spirv.ReturnValue %[[R]]
   %0 = arith.ceildivui %lhs, %rhs : i32

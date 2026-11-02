@@ -11,7 +11,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-LABEL: middle.block:
 ; CHECK-DAG: ![[$MD1]] = !{![[MD2:[0-9]+]]}
 ; CHECK-DAG: ![[MD2]] = distinct !{![[MD2]], ![[MD3:[0-9]+]]}
-; CHECK-DAG: ![[MD3]] = distinct !{![[MD3]], !"LVerDomain"}
+; CHECK-DAG: ![[MD3]] = distinct !{![[MD3]], i1 false, !"LVerDomain"}
 
 define void @test(ptr nocapture readonly %a, ptr nocapture %b) {
 entry:

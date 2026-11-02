@@ -281,3 +281,22 @@ la $5, 1f             # O32: lui $5, %hi($tmp0)            # encoding: [0x3c,0x0
                       # N32: addiu $5, $5, %lo(.Ltmp0)     # encoding: [0x24,0xa5,A,A]
                       # N32:                               #   fixup A - offset: 0, value: %lo(.Ltmp0), kind: fixup_Mips_LO16
 1:
+
+# Absolute aliases, parenthesized expressions, and symbolic aliases.
+.set absolute, 24
+.set alias, symbol+16
+la $2, absolute           # CHECK: addiu $2, $zero, 24
+
+la $2, absolute($4)       # CHECK: addiu $2, $4, 24
+
+la $2, (8+16)($4)         # CHECK: addiu $2, $4, 24
+
+la $2, ($4)               # CHECK: addiu $2, $4, 0
+
+la $2, (symbol+8)($4)     # CHECK: lui $2, %hi(symbol+8)
+                          # CHECK: addiu $2, $2, %lo(symbol+8)
+                          # CHECK: addu $2, $2, $4
+
+la $2, alias($4)          # CHECK: lui $2, %hi(alias)
+                          # CHECK: addiu $2, $2, %lo(alias)
+                          # CHECK: addu $2, $2, $4

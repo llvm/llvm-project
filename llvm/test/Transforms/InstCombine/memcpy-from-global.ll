@@ -97,7 +97,7 @@ define void @test2() {
 define void @test2_no_null_opt() #0 {
 ; CHECK-LABEL: @test2_no_null_opt(
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[T:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[B]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[B]], ptr noundef align 16 dereferenceable(124) @G, i64 124, i1 false)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;

@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_RISCV64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_RISCV64_H
 
-#include "RegisterInfoInterface.h"
-#include "RegisterInfoPOSIX_riscv64.h"
-#include "lldb-riscv-register-enums.h"
+#include "Register/RegisterInfoInterface.h"
+#include "Register/Common/RegisterInfo_riscv64.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -19,7 +19,7 @@ class RegisterContextPOSIX_riscv64 : public lldb_private::RegisterContext {
 public:
   RegisterContextPOSIX_riscv64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info);
+      std::unique_ptr<RegisterInfo_riscv64> register_info);
 
   ~RegisterContextPOSIX_riscv64() override;
 
@@ -42,7 +42,7 @@ public:
   const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
 
 protected:
-  std::unique_ptr<RegisterInfoPOSIX_riscv64> m_register_info_up;
+  std::unique_ptr<RegisterInfo_riscv64> m_register_info_up;
 
   virtual const lldb_private::RegisterInfo *GetRegisterInfo();
 
@@ -50,7 +50,7 @@ protected:
 
   bool IsFPR(unsigned reg);
 
-  size_t GetFPRSize() { return sizeof(RegisterInfoPOSIX_riscv64::FPR); }
+  size_t GetFPRSize() { return sizeof(RegisterInfo_riscv64::FPR); }
 
   uint32_t GetRegNumFCSR() const { return fpr_fcsr_riscv; }
 

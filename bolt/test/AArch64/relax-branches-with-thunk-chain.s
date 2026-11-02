@@ -39,18 +39,15 @@
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 0
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
 # CHECK-BOLT-NEXT: BOLT-INFO:   117440604 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   8 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   8 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   8 thunk bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 1
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
 # CHECK-BOLT-NEXT: BOLT-INFO:   117440584 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   24 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   16 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   16 thunk bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-NEXT: BOLT-INFO:   4 fragment(s)
 # CHECK-BOLT-NEXT: BOLT-INFO:   67108944 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   16 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   8 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   8 thunk bytes
 # CHECK-BOLT: BOLT-INFO: relaxed 7 unconditional branches
 # CHECK-BOLT: BOLT-INFO: 8 branch thunks created
 # CHECK-BOLT: BOLT-INFO: 2 branch thunks reused
@@ -59,18 +56,15 @@
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 0
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   67108944 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   16 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   8 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   8 thunk bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 1
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440604 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   24 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   12 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   12 thunk bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 fragment(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440584 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   8 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   4 thunk bytes
 # CHECK-BOLT-HFE: BOLT-INFO: relaxed 4 unconditional branches
 # CHECK-BOLT-HFE: BOLT-INFO: 6 branch thunks created
 

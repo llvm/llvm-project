@@ -86,6 +86,8 @@ MCJIT::MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> TM,
 
   if (First->getDataLayout().isDefault())
     First->setDataLayout(getDataLayout());
+  if (First->getTargetTriple().empty())
+    First->setTargetTriple(this->TM->getTargetTriple());
 
   OwnedModules.addModule(std::move(First));
   RegisterJITEventListener(JITEventListener::createGDBRegistrationListener());
@@ -108,6 +110,8 @@ void MCJIT::addModule(std::unique_ptr<Module> M) {
 
   if (M->getDataLayout().isDefault())
     M->setDataLayout(getDataLayout());
+  if (M->getTargetTriple().empty())
+    M->setTargetTriple(TM->getTargetTriple());
 
   OwnedModules.addModule(std::move(M));
 }

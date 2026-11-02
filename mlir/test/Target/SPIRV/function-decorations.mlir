@@ -94,3 +94,15 @@ spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0,
     spirv.Return
   }
 }
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, Int64], []> {
+  // CHECK-LABEL: spirv.func @func_arg_decoration_unit(%{{.*}}: !spirv.ptr<i32, CrossWorkgroup> {spirv.decoration = #spirv.decoration<Volatile>}, %{{.*}}: !spirv.ptr<i32, CrossWorkgroup> {spirv.decoration = #spirv.decoration<Coherent>})
+  spirv.func @func_arg_decoration_unit(
+      %arg0: !spirv.ptr<i32, CrossWorkgroup> { spirv.decoration = #spirv.decoration<Volatile> },
+      %arg1: !spirv.ptr<i32, CrossWorkgroup> { spirv.decoration = #spirv.decoration<Coherent> }
+  ) "None" {
+    spirv.Return
+  }
+}

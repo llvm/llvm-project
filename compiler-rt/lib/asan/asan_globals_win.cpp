@@ -60,7 +60,6 @@ static void unregister_dso_globals() {
 
 // Register globals
 #  if !defined(__GNUC__) || defined(__clang__)
-#    pragma section(".CRT$XCU", long, read)
 #    pragma section(".CRT$XTX", long, read)
 #  endif
 extern "C" IN_SECTION(".CRT$XCU") void (*const __asan_dso_reg_hook)() =

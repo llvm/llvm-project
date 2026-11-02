@@ -67,3 +67,10 @@ TEST_P(olGetQueueInfoTest, InvalidNullPointerPropValue) {
                olGetQueueInfo(Queue, OL_QUEUE_INFO_DEVICE,
                               sizeof(RetrievedDevice), nullptr));
 }
+
+TEST_P(olGetQueueInfoTest, SuccessNativeHandle) {
+  void *Handle = nullptr;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(olGetQueueInfo(
+      Queue, OL_QUEUE_INFO_NATIVE_HANDLE, sizeof(Handle), &Handle));
+  ASSERT_NE(Handle, nullptr);
+}

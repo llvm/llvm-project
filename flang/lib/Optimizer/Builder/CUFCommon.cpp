@@ -10,11 +10,13 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/StringSet.h"
@@ -70,6 +72,22 @@ bool cuf::isCUDADeviceContext(mlir::Region &region,
   return false;
 }
 
+bool cuf::isExecutingOnDevice(mlir::Operation *op) {
+  if (!op)
+    return false;
+  if (fir::isInOffloadRegion(op))
+    return true;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+    if (auto cudaProcAttr =
+            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
+    }
+  }
+  return false;
+}
+
 bool cuf::isRegisteredDeviceAttr(std::optional<cuf::DataAttribute> attr) {
   if (attr && (*attr == cuf::DataAttribute::Device ||
                *attr == cuf::DataAttribute::Managed ||
@@ -84,15 +102,41 @@ bool cuf::isRegisteredDeviceGlobal(fir::GlobalOp op) {
   return isRegisteredDeviceAttr(op.getDataAttr());
 }
 
-void cuf::genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder) {
+bool cuf::isTypeInfoGlobal(fir::GlobalOp op) {
+  if (op.getDataAttrAttr())
+    return false;
+  auto [nameKind, deconstructed] =
+      fir::NameUniquer::deconstruct(op.getSymName());
+  // Literals and runtime tables live in the _QQ namespace; type information
+  // is mangled as an ordinary variable whose name starts with a separator
+  // marker (e.g. _QMmodE.dt.t), or 'X' once the markers have been renamed.
+  if (nameKind == fir::NameUniquer::NameKind::NOT_UNIQUED ||
+      nameKind == fir::NameUniquer::NameKind::GENERATED)
+    return false;
+  return fir::NameUniquer::isSpecialSymbol(deconstructed.name);
+}
+
+bool cuf::isTypeDescriptorGlobal(fir::GlobalOp op) {
+  if (!isTypeInfoGlobal(op))
+    return false;
+  auto [nameKind, deconstructed] =
+      fir::NameUniquer::deconstruct(op.getSymName());
+  llvm::StringRef name = deconstructed.name;
+  static const std::string renamedSeparator =
+      fir::NameUniquer::replaceSpecialSymbols(
+          fir::kTypeDescriptorSeparator.str());
+  return name.starts_with(fir::kTypeDescriptorSeparator) ||
+         name.starts_with(renamedSeparator);
+}
+
+void cuf::genPointerSync(mlir::Location loc, const mlir::Value box,
+                         fir::FirOpBuilder &builder) {
   if (auto declareOp = box.getDefiningOp<hlfir::DeclareOp>()) {
     if (auto addrOfOp = declareOp.getMemref().getDefiningOp<fir::AddrOfOp>()) {
-      auto mod = addrOfOp->getParentOfType<mlir::ModuleOp>();
-      if (auto globalOp =
-              mod.lookupSymbol<fir::GlobalOp>(addrOfOp.getSymbol())) {
+      if (auto globalOp = builder.getNamedGlobal(
+              addrOfOp.getSymbol().getLeafReference().getValue())) {
         if (cuf::isRegisteredDeviceGlobal(globalOp)) {
-          cuf::SyncDescriptorOp::create(builder, box.getLoc(),
-                                        addrOfOp.getSymbol());
+          cuf::SyncDescriptorOp::create(builder, loc, addrOfOp.getSymbol());
         }
       }
     }

@@ -239,7 +239,7 @@ end
 ! CHECK:         %[[B:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]]#0 : !fir.ref<complex<f32>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]]#0 : !fir.ref<complex<f32>>
-! CHECK:         %[[ADD:.*]] = fir.addc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:         %[[ADD:.*]] = fir.addc %[[A_VAL]], %[[B_VAL]] fastmath(contract) : complex<f32>
 ! CHECK:         hlfir.assign %[[ADD]] to %[[FCTRES_DECL]]#0 : complex<f32>, !fir.ref<complex<f32>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES_DECL]]#0 : !fir.ref<complex<f32>>
 ! CHECK:         return %[[RET]] : complex<f32>
@@ -258,7 +258,7 @@ end
 ! CHECK:         %[[FCTRES_DECL:.*]]:2 = hlfir.declare %[[FCTRES]]
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]]#0 : !fir.ref<complex<f32>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]]#0 : !fir.ref<complex<f32>>
-! CHECK:         %[[SUB:.*]] = fir.subc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:         %[[SUB:.*]] = fir.subc %[[A_VAL]], %[[B_VAL]] fastmath(contract) : complex<f32>
 ! CHECK:         hlfir.assign %[[SUB]] to %[[FCTRES_DECL]]#0 : complex<f32>, !fir.ref<complex<f32>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES_DECL]]#0 : !fir.ref<complex<f32>>
 ! CHECK:         return %[[RET]] : complex<f32>
@@ -277,7 +277,7 @@ end
 ! CHECK:         %[[FCTRES_DECL:.*]]:2 = hlfir.declare %[[FCTRES]]
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]]#0 : !fir.ref<complex<f32>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]]#0 : !fir.ref<complex<f32>>
-! CHECK:         %[[MUL:.*]] = fir.mulc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:         %[[MUL:.*]] = fir.mulc %[[A_VAL]], %[[B_VAL]] fastmath(contract) : complex<f32>
 ! CHECK:         hlfir.assign %[[MUL]] to %[[FCTRES_DECL]]#0 : complex<f32>, !fir.ref<complex<f32>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES_DECL]]#0 : !fir.ref<complex<f32>>
 ! CHECK:         return %[[RET]] : complex<f32>
@@ -370,7 +370,7 @@ end
 
 ! CHECK-LABEL: func @_QPsub1_arr(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"})
-! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[ARG0]]({{.*}}) {{.*}} {uniq_name = "_QFsub1_arrEa"}
+! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[ARG0]]({{.*}}) {{.*}} uniq_name("_QFsub1_arrEa")
 ! CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
 ! CHECK:         %[[ELEM:.*]] = hlfir.designate %[[A]]#0 (%[[C2]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
@@ -384,7 +384,7 @@ end
 
 ! CHECK-LABEL: func @_QPsub2_arr(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"})
-! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[ARG0]]({{.*}}) {{.*}} {uniq_name = "_QFsub2_arrEa"}
+! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[ARG0]]({{.*}}) {{.*}} uniq_name("_QFsub2_arrEa")
 ! CHECK:         %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK:         hlfir.assign %[[C10]] to %[[A]]#0 : i32, !fir.ref<!fir.array<10xi32>>
 ! CHECK:         return

@@ -1589,6 +1589,12 @@ public:
     Attrs = Attrs.addParamAttributes(getContext(), ArgNo, B);
   }
 
+  /// Adds the attribute to the indicated argument
+  void maybeAddParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+    assert(ArgNo < arg_size() && "Out of bounds");
+    Attrs = Attrs.maybeAddParamAttribute(getContext(), ArgNo, Kind);
+  }
+
   /// removes the attribute from the list of attributes.
   void removeAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) {
     Attrs = Attrs.removeAttributeAtIndex(getContext(), i, Kind);
@@ -2357,6 +2363,12 @@ public:
     return map_range(bundle_op_infos(), [this](BundleOpInfo BOI) {
       return operandBundleFromBundleOpInfo(BOI);
     });
+  }
+
+  /// Return whether there exists an operand bundle of type ID
+  bool hasOperandBundle(uint32_t ID) const {
+    return any_of(operand_bundles(),
+                  [&](OperandBundleUse OBU) { return OBU.getTagID() == ID; });
   }
 
   /// Populate the BundleOpInfo instances and the Use& vector from \p

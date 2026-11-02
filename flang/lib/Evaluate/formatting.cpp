@@ -414,22 +414,6 @@ template <typename T> static Precedence ToPrecedence(const Expr<T> &expr) {
   return common::visit([](const auto &x) { return ToPrecedence(x); }, expr.u);
 }
 
-template <typename T> static bool IsNegatedScalarConstant(const Expr<T> &expr) {
-  static constexpr TypeCategory cat{T::category};
-  if constexpr (cat == TypeCategory::Integer || cat == TypeCategory::Real) {
-    if (auto n{GetScalarConstantValue<T>(expr)}) {
-      return n->IsNegative();
-    }
-  }
-  return false;
-}
-
-template <TypeCategory CAT>
-static bool IsNegatedScalarConstant(const Expr<SomeKind<CAT>> &expr) {
-  return common::visit(
-      [](const auto &x) { return IsNegatedScalarConstant(x); }, expr.u);
-}
-
 struct OperatorSpelling {
   const char *prefix{""}, *infix{","}, *suffix{""};
 };
@@ -826,6 +810,10 @@ llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
     EmitVar(o << separator, stat_, "STAT=");
     separator = ',';
   }
+  if (notify_) {
+    EmitVar(o << separator, notify_, "NOTIFY=");
+    separator = ',';
+  }
   if (team_) {
     EmitVar(o << separator, team_,
         std::holds_alternative<Expr<SomeInteger>>(team_->value().u)
@@ -895,11 +883,21 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
 }
 
 llvm::raw_ostream &RankOneBoundElement::AsFortran(llvm::raw_ostream &o) const {
-  // A RankOneBoundElement extracts a single element from a rank-1 array that
-  // was used as an array bound in a declaration; it has no true Fortran
-  // surface syntax.  Render it in an internal, clearly-synthetic form.
-  base().AsFortran(o << "rank1BoundElement(")
-      << ",dim=" << (dimension_ + 1) << ')';
+  if (originatingArray_) {
+    // This element was produced by folding an UBOUND()/LBOUND() inquiry of an
+    // explicit-shape array declared with a rank-1 array bound.  Serialize it as
+    // the originating intrinsic so the mod file round-trips as real Fortran.
+    o << (isUpperBound_ ? "ubound(" : "lbound(");
+    originatingArray_->AsFortran(o);
+    return o << ",dim=" << (dimension_ + 1) << ",kind=" << Result::kind << ')';
+  }
+  // A declaration-time RankOneBoundElement extracts a single element from a
+  // rank-1 array expression used as an array bound.  It has no true Fortran
+  // surface syntax and never reaches a mod file (the writer unwraps the whole
+  // base instead), so it only appears in developer dumps such as
+  // -fdebug-dump-symbols.  Render it with a synthetic %ROBE marker, mirroring
+  // the %STRIDE descriptor-inquiry spelling, to signal it is not real Fortran.
+  base().AsFortran(o << "%ROBE(") << ",dim=" << (dimension_ + 1) << ')';
   return o;
 }
 

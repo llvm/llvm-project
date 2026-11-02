@@ -19,6 +19,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <limits>
+#include <optional>
 #if LLVM_ENABLE_ZLIB
 #include <zlib.h>
 #endif
@@ -31,6 +32,37 @@
 
 using namespace llvm;
 using namespace llvm::compression;
+
+// RFC 1950 section 2.2 zlib wrapper. Two-byte header CMF then FLG:
+//   CMF: CM (bits 0-3) must be 8 (deflate). CINFO (bits 4-7) is
+//        log2(windowSize)-8 and must be <= 7.
+//   FLG: FCHECK (bits 0-4) is chosen so CMF*256+FLG is a multiple of 31;
+//        FDICT (bit 5) marks a preset dictionary; FLEVEL (bits 6-7) is a
+//        compressor hint. This only identifies the wrapper.
+static bool isZlibHeader(ArrayRef<uint8_t> Input) {
+  if (Input.size() < 2)
+    return false;
+  unsigned CMF = Input[0];
+  unsigned FLG = Input[1];
+  if ((CMF & 0x0f) != 8 || (CMF >> 4) > 7)
+    return false;
+  return (CMF * 256 + FLG) % 31 == 0;
+}
+
+// RFC 8878 section 3.1.1: Zstandard frame magic 0xFD2FB528, little-endian.
+static bool isZstdMagic(ArrayRef<uint8_t> Input) {
+  static constexpr uint8_t Magic[] = {0x28, 0xb5, 0x2f, 0xfd};
+  return Input.take_front(4) == ArrayRef(Magic);
+}
+
+// Check zstd first: 0x28 is a valid zlib CMF (CINFO=2, 1KiB window).
+static std::optional<Format> identifyFormat(ArrayRef<uint8_t> Input) {
+  if (isZstdMagic(Input))
+    return Format::Zstd;
+  if (isZlibHeader(Input))
+    return Format::Zlib;
+  return std::nullopt;
+}
 
 const char *compression::getReasonIfUnsupported(compression::Format F) {
   switch (F) {
@@ -46,6 +78,12 @@ const char *compression::getReasonIfUnsupported(compression::Format F) {
            "build time";
   }
   llvm_unreachable("");
+}
+
+const char *compression::getReasonIfUnsupported(ArrayRef<uint8_t> Input) {
+  if (std::optional<Format> F = identifyFormat(Input))
+    return getReasonIfUnsupported(*F);
+  return "unknown compression format";
 }
 
 void compression::compress(Params P, ArrayRef<uint8_t> Input,
@@ -87,6 +125,16 @@ Error compression::decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
                               SmallVectorImpl<uint8_t> &Output,
                               size_t UncompressedSize) {
   return decompress(formatFor(T), Input, Output, UncompressedSize);
+}
+
+Error compression::decompress(ArrayRef<uint8_t> Input,
+                              SmallVectorImpl<uint8_t> &Output,
+                              size_t UncompressedSize) {
+  std::optional<Format> F = identifyFormat(Input);
+  if (const char *Reason =
+          F ? getReasonIfUnsupported(*F) : "unknown compression format")
+    return createStringError(Reason);
+  return decompress(*F, Input, Output, UncompressedSize);
 }
 
 #if LLVM_ENABLE_ZLIB

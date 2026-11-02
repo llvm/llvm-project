@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu6.00 -mattr=+mad-mac-f32-insts -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefixes=SI,GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu8.02 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global < %s | FileCheck --check-prefixes=VI-FLUSH,GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu8.02 -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 -mattr=+mad-mac-f32-insts -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefixes=SI,GCN %s
+; RUN: llc -mtriple=amdgpu8.02 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global < %s | FileCheck --check-prefixes=VI-FLUSH,GCN %s
+; RUN: llc -mtriple=amdgpu8.02 -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}mac_vvv:
 ; GCN: buffer_load_dword [[A:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 glc{{$}}
@@ -37,29 +37,18 @@ entry:
 ; GCN-LABEL: {{^}}mad_vvs:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
-define amdgpu_kernel void @mad_vvs(ptr addrspace(1) %out, ptr addrspace(1) %in, float %c) #0 {
-entry:
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-
-  %a = load float, ptr addrspace(1) %in
-  %b = load float, ptr addrspace(1) %b_ptr
-
+define float @mad_vvs(float %a, float %b, float inreg %c) #0 {
   %tmp0 = fmul float %a, %b
   %tmp1 = fadd float %tmp0, %c
-  store float %tmp1, ptr addrspace(1) %out
-  ret void
+  ret float %tmp1
 }
 
 ; GCN-LABEL: {{^}}mac_ssv:
 ; GCN: v_mac_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-define amdgpu_kernel void @mac_ssv(ptr addrspace(1) %out, ptr addrspace(1) %in, float %a) #0 {
-entry:
-  %c = load float, ptr addrspace(1) %in
-
+define float @mac_ssv(float %in, float inreg %a) #0 {
   %tmp0 = fmul float %a, %a
-  %tmp1 = fadd float %tmp0, %c
-  store float %tmp1, ptr addrspace(1) %out
-  ret void
+  %tmp1 = fadd float %tmp0, %in
+  ret float %tmp1
 }
 
 ; GCN-LABEL: {{^}}mac_mad_same_add:
@@ -96,121 +85,61 @@ entry:
 ; GCN-LABEL: {{^}}mad_neg_src0:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define amdgpu_kernel void @mad_neg_src0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-entry:
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %c_ptr = getelementptr float, ptr addrspace(1) %in, i32 2
-
-  %a = load float, ptr addrspace(1) %in
-  %b = load float, ptr addrspace(1) %b_ptr
-  %c = load float, ptr addrspace(1) %c_ptr
-
+define float @mad_neg_src0(float %a, float %b, float %c) #0 {
   %neg_a = fneg float %a
   %tmp0 = fmul float %neg_a, %b
   %tmp1 = fadd float %tmp0, %c
-
-  store float %tmp1, ptr addrspace(1) %out
-  ret void
+  ret float %tmp1
 }
 
 ; GCN-LABEL: {{^}}nsz_mad_sub0_src0:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define amdgpu_kernel void @nsz_mad_sub0_src0(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-entry:
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %c_ptr = getelementptr float, ptr addrspace(1) %in, i32 2
-
-  %a = load float, ptr addrspace(1) %in
-  %b = load float, ptr addrspace(1) %b_ptr
-  %c = load float, ptr addrspace(1) %c_ptr
-
+define float @nsz_mad_sub0_src0(float %a, float %b, float %c) {
   %neg_a = fsub nsz float 0.0, %a
   %tmp0 = fmul float %neg_a, %b
   %tmp1 = fadd float %tmp0, %c
-
-  store float %tmp1, ptr addrspace(1) %out
-  ret void
+  ret float %tmp1
 }
 
 ; GCN-LABEL: {{^}}safe_mad_sub0_src0:
 ; GCN: v_sub_f32_e32 [[SUB0:v[0-9]+]], 0,
 ; GCN: v_ma{{[cd]}}_f32{{[_e32]*}} v{{[0-9]+}}, [[SUB0]], v{{[0-9]+}}
-define amdgpu_kernel void @safe_mad_sub0_src0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-entry:
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %c_ptr = getelementptr float, ptr addrspace(1) %in, i32 2
-
-  %a = load float, ptr addrspace(1) %in
-  %b = load float, ptr addrspace(1) %b_ptr
-  %c = load float, ptr addrspace(1) %c_ptr
-
+define float @safe_mad_sub0_src0(float %a, float %b, float %c) #0 {
   %neg_a = fsub float 0.0, %a
   %tmp0 = fmul float %neg_a, %b
   %tmp1 = fadd float %tmp0, %c
-
-  store float %tmp1, ptr addrspace(1) %out
-  ret void
+  ret float %tmp1
 }
 
 ; GCN-LABEL: {{^}}mad_neg_src1:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define amdgpu_kernel void @mad_neg_src1(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-entry:
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %c_ptr = getelementptr float, ptr addrspace(1) %in, i32 2
-
-  %a = load float, ptr addrspace(1) %in
-  %b = load float, ptr addrspace(1) %b_ptr
-  %c = load float, ptr addrspace(1) %c_ptr
-
+define float @mad_neg_src1(float %a, float %b, float %c) #0 {
   %neg_b = fneg float %b
   %tmp0 = fmul float %a, %neg_b
   %tmp1 = fadd float %tmp0, %c
-
-  store float %tmp1, ptr addrspace(1) %out
-  ret void
+  ret float %tmp1
 }
 
 ; GCN-LABEL: {{^}}nsz_mad_sub0_src1:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define amdgpu_kernel void @nsz_mad_sub0_src1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-entry:
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %c_ptr = getelementptr float, ptr addrspace(1) %in, i32 2
-
-  %a = load float, ptr addrspace(1) %in
-  %b = load float, ptr addrspace(1) %b_ptr
-  %c = load float, ptr addrspace(1) %c_ptr
-
+define float @nsz_mad_sub0_src1(float %a, float %b, float %c) {
   %neg_b = fsub nsz float 0.0, %b
   %tmp0 = fmul float %a, %neg_b
   %tmp1 = fadd float %tmp0, %c
-
-  store float %tmp1, ptr addrspace(1) %out
-  ret void
+  ret float %tmp1
 }
 
 ; GCN-LABEL: {{^}}mad_neg_src2:
 ; GCN-NOT: v_mac
 ; GCN: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[-0-9]}}
-define amdgpu_kernel void @mad_neg_src2(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-entry:
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %c_ptr = getelementptr float, ptr addrspace(1) %in, i32 2
-
-  %a = load float, ptr addrspace(1) %in
-  %b = load float, ptr addrspace(1) %b_ptr
-  %c = load float, ptr addrspace(1) %c_ptr
-
+define float @mad_neg_src2(float %a, float %b, float %c) #0 {
   %neg_c = fneg float %c
   %tmp0 = fmul float %a, %b
   %tmp1 = fadd float %tmp0, %neg_c
-
-  store float %tmp1, ptr addrspace(1) %out
-  ret void
+  ret float %tmp1
 }
 
 ; Without special casing the inline constant check for v_mac_f32's

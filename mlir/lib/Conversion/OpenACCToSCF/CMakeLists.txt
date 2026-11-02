@@ -11,6 +11,7 @@ add_mlir_conversion_library(MLIROpenACCToSCF
   MLIRArithDialect
   MLIRIR
   MLIROpenACCDialect
+  MLIROpenACCAllExtensions
   MLIRSCFDialect
   MLIRTransforms
   )

@@ -65,13 +65,14 @@ define i32 @sadd_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ;
 ; NOCMOV-LABEL: sadd_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; NOCMOV-NEXT:    leal (%eax,%edx), %ecx
+; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:    addl %edx, %eax
 ; NOCMOV-NEXT:    jno .LBB1_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    addl %edx, %ecx
 ; NOCMOV-NEXT:    addl (%eax), %ecx
 ; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:  .LBB1_2:
@@ -145,13 +146,14 @@ define i32 @uadd_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ;
 ; NOCMOV-LABEL: uadd_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; NOCMOV-NEXT:    leal (%eax,%edx), %ecx
+; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:    addl %edx, %eax
 ; NOCMOV-NEXT:    jae .LBB3_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    addl %edx, %ecx
 ; NOCMOV-NEXT:    addl (%eax), %ecx
 ; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:  .LBB3_2:
@@ -225,14 +227,14 @@ define i32 @ssub_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ;
 ; NOCMOV-LABEL: ssub_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; NOCMOV-NEXT:    movl %eax, %ecx
-; NOCMOV-NEXT:    subl %edx, %ecx
+; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:    subl %edx, %eax
 ; NOCMOV-NEXT:    jno .LBB5_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    subl %edx, %ecx
 ; NOCMOV-NEXT:    addl (%eax), %ecx
 ; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:  .LBB5_2:
@@ -306,14 +308,14 @@ define i32 @usub_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ;
 ; NOCMOV-LABEL: usub_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; NOCMOV-NEXT:    movl %eax, %ecx
-; NOCMOV-NEXT:    subl %edx, %ecx
+; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:    subl %edx, %eax
 ; NOCMOV-NEXT:    jae .LBB7_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    subl %edx, %ecx
 ; NOCMOV-NEXT:    addl (%eax), %ecx
 ; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:  .LBB7_2:
@@ -387,14 +389,14 @@ define i32 @smul_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ;
 ; NOCMOV-LABEL: smul_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; NOCMOV-NEXT:    movl %eax, %ecx
-; NOCMOV-NEXT:    imull %edx, %ecx
+; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:    imull %edx, %eax
 ; NOCMOV-NEXT:    jae .LBB9_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    imull %edx, %ecx
 ; NOCMOV-NEXT:    addl (%eax), %ecx
 ; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:  .LBB9_2:

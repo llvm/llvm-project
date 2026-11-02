@@ -52,6 +52,7 @@ cc_library(
         "//mlir:CommonFolders",
         "//mlir:DataLayoutInterfaces",
         "//mlir:FuncDialect",
+        "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:InliningUtils",
         "//mlir:LLVMDialect",

@@ -74,16 +74,16 @@ public:
     }
   };
 
-  FormattersMatchCandidate(ConstString name,
+  FormattersMatchCandidate(std::string name,
                            ScriptInterpreter *script_interpreter, TypeImpl type,
                            Flags flags, uint32_t ptr_stripped_depth = 0)
-      : m_type_name(name), m_script_interpreter(script_interpreter),
+      : m_type_name(std::move(name)), m_script_interpreter(script_interpreter),
         m_type(type), m_flags(flags), m_ptr_stripped_depth(ptr_stripped_depth) {
   }
 
   ~FormattersMatchCandidate() = default;
 
-  ConstString GetTypeName() const { return m_type_name; }
+  llvm::StringRef GetTypeName() const { return m_type_name; }
 
   TypeImpl GetType() const { return m_type; }
 
@@ -115,7 +115,7 @@ public:
   }
 
 private:
-  ConstString m_type_name;
+  std::string m_type_name;
   // If a formatter provides a matching callback function, we need the script
   // interpreter and the type object (as an argument to the callback).
   ScriptInterpreter *m_script_interpreter;
@@ -133,7 +133,7 @@ public:
 
   FormattersMatchVector GetMatchesVector();
 
-  ConstString GetTypeForCache();
+  llvm::StringRef GetTypeForCache();
 
   CandidateLanguagesVector GetCandidateLanguages();
 
@@ -145,7 +145,7 @@ private:
   ValueObject &m_valobj;
   lldb::DynamicValueType m_dynamic_value_type;
   std::pair<FormattersMatchVector, bool> m_formatters_match_vector;
-  ConstString m_type_for_cache;
+  std::string m_type_for_cache;
   CandidateLanguagesVector m_candidate_languages;
 };
 

@@ -138,8 +138,8 @@ liveins:
   - { reg: '$esi', virtual-reg: '' }
   - { reg: '$edx', virtual-reg: '' }
 callSites:       
-  - { bb: 0, offset: 21, fwdArgRegs: [] }
-  - { bb: 0, offset: 31, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 21, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 31, fwdArgRegs:
       - { arg: 0, reg: '$rdi' }
       - { arg: 1, reg: '$esi' }
       - { arg: 2, reg: '$edx' }

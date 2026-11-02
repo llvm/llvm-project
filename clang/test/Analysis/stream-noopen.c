@@ -100,11 +100,13 @@ void test_fgets(char *Buf, int N, FILE *F) {
 
   char Buf1[10];
   Ret = fgets(Buf1, 11, F); // expected-warning {{The 1st argument to 'fgets' is a buffer with size 10}}
+  // expected-warning@-1 {{'fgets' size argument is too large; destination buffer has size 10, but size argument is 11}}
 }
 
 void test_fgets_bufsize(FILE *F) {
   char Buf[10];
   fgets(Buf, 11, F); // expected-warning {{The 1st argument to 'fgets' is a buffer with size 10}}
+  // expected-warning@-1 {{'fgets' size argument is too large; destination buffer has size 10, but size argument is 11}}
 }
 
 void test_fputs(char *Buf, FILE *F) {

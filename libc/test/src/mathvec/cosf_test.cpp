@@ -14,7 +14,15 @@
 #include "hdr/math_macros.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/math/cosf.h"
+#include "src/__support/macros/optimization.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define MATHVEC_TOL 1
+#else
+#define MATHVEC_TOL 0
+#endif
+// Keep the scalar reference correctly rounded in every build configuration.
+#undef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#include "src/__support/math/cosf_double_eval.h"
 #include "src/mathvec/cosf.h"
 #include "test/UnitTest/SIMDMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -25,9 +33,8 @@
 
 using LlvmLibcVecCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-using CosfOp =
-    LIBC_NAMESPACE::testing::mathvec::UnaryOp<float, LIBC_NAMESPACE::cosf,
-                                              LIBC_NAMESPACE::cosf>;
+using CosfOp = LIBC_NAMESPACE::testing::mathvec::UnaryOp<
+    float, LIBC_NAMESPACE::math::double_eval::cosf, LIBC_NAMESPACE::cosf>;
 using LIBC_NAMESPACE::cpp::splat;
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 using LIBC_NAMESPACE::testing::mathvec::wrap_ref;
@@ -50,7 +57,8 @@ TEST_F(LlvmLibcVecCosfTest, SpecialNumbers) {
 TEST_F(LlvmLibcVecCosfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
     float x = FPBits((v)).get_val();
-    EXPECT_SIMD_EQ(wrap_ref<CosfOp>(x, -x), wrap_vector<CosfOp>(x, -x));
+    EXPECT_SIMD_EQ(wrap_ref<CosfOp>(x, -x), wrap_vector<CosfOp>(x, -x),
+                   MATHVEC_TOL);
   }
 }
 
@@ -103,8 +111,11 @@ TEST_F(LlvmLibcVecCosfTest, SpecificBitPatterns) {
 
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
-    EXPECT_SIMD_EQ(wrap_ref<CosfOp>(x, -x), wrap_vector<CosfOp>(x, -x));
+    EXPECT_SIMD_EQ(wrap_ref<CosfOp>(x, -x), wrap_vector<CosfOp>(x, -x),
+                   MATHVEC_TOL);
   }
 }
 
-TEST_F(LlvmLibcVecCosfTest, InFloatRange) { TEST_MATHVEC_FLOAT_RANGE(CosfOp); }
+TEST_F(LlvmLibcVecCosfTest, InFloatRange) {
+  TEST_MATHVEC_FLOAT_RANGE_TOL(CosfOp, MATHVEC_TOL);
+}

@@ -61,7 +61,7 @@
 # RUN: llvm-readelf --file-headers %t.v800.o | FileCheck %s -DMACHINE="NEC V800 series"
 
 # RUN: yaml2obj %s -o %t.fr20.o -D MACHINE=EM_FR20
-# RUN: llvm-readelf --file-headers %t.fr20.o | FileCheck %s -DMACHINE="Fujistsu FR20"
+# RUN: llvm-readelf --file-headers %t.fr20.o | FileCheck %s -DMACHINE="Fujitsu FR20"
 
 # RUN: yaml2obj %s -o %t.rh32.o -D MACHINE=EM_RH32
 # RUN: llvm-readelf --file-headers %t.rh32.o | FileCheck %s -DMACHINE="TRW RH-32"
@@ -121,7 +121,7 @@
 # RUN: llvm-readelf --file-headers %t.ncpu.o | FileCheck %s -DMACHINE="Sony nCPU embedded RISC processor"
 
 # RUN: yaml2obj %s -o %t.ndri.o -D MACHINE=EM_NDR1
-# RUN: llvm-readelf --file-headers %t.ndri.o | FileCheck %s -DMACHINE="Denso NDR1 microprocesspr"
+# RUN: llvm-readelf --file-headers %t.ndri.o | FileCheck %s -DMACHINE="Denso NDR1 microprocessor"
 
 # RUN: yaml2obj %s -o %t.starcore.o -D MACHINE=EM_STARCORE
 # RUN: llvm-readelf --file-headers %t.starcore.o | FileCheck %s -DMACHINE="Motorola Star*Core processor"
@@ -373,7 +373,7 @@
 # RUN: llvm-readelf --file-headers %t.nds32.o | FileCheck %s -DMACHINE="Andes Technology compact code size embedded RISC processor family"
 
 # RUN: yaml2obj %s -o %t.ecog1.o -D MACHINE=EM_ECOG1
-# RUN: llvm-readelf --file-headers %t.ecog1.o | FileCheck %s -DMACHINE="Cyan Technology eCOG1 microprocessor"
+# RUN: llvm-readelf --file-headers %t.ecog1.o | FileCheck %s -DMACHINE="Cyan Technology eCOG1X family"
 
 # RUN: yaml2obj %s -o %t.maxq30.o -D MACHINE=EM_MAXQ30
 # RUN: llvm-readelf --file-headers %t.maxq30.o | FileCheck %s -DMACHINE="Dallas Semiconductor MAXQ30 Core microcontrollers"

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-dump-symbols -fenumeration-type %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-dump-symbols %s 2>&1 | FileCheck %s
 ! Regression test: the enumeration-type intrinsics INT/NEXT/PREVIOUS are
 ! elemental, so a constant array argument must fold elementwise in a constant
 ! context.  Previously the enum fold path extracted only a scalar ordinal, so an

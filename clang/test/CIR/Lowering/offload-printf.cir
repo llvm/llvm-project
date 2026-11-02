@@ -1,0 +1,51 @@
+// RUN: cir-translate %s -cir-to-llvmir --target nvptx64-nvidia-cuda --disable-cc-lowering -o - \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+// All printfs share one vprintf declaration.
+// CHECK:     declare i32 @vprintf(ptr, ptr)
+// CHECK-NOT: declare
+
+module {
+  // Without arguments, vprintf gets a null buffer.
+  cir.func @no_args(%fmt: !cir.ptr<!s8i>) -> !s32i {
+    %0 = cir.offload.printf(%fmt) : (!cir.ptr<!s8i>) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK-LABEL: define i32 @no_args(ptr %0)
+  // CHECK:         %[[R:.*]] = call i32 @vprintf(ptr %0, ptr null)
+  // CHECK:         ret i32 %[[R]]
+
+  // The buffer is allocated in the entry block, even when the printf is not.
+  cir.func @args(%fmt: !cir.ptr<!s8i>, %i: !s32i, %d: !cir.double) -> !s32i {
+    cir.br ^bb1
+  ^bb1:
+    %0 = cir.offload.printf(%fmt, %i, %d) : (!cir.ptr<!s8i>, !s32i, !cir.double) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK-LABEL: define i32 @args(ptr %0, i32 %1, double %2)
+  // CHECK:         %[[BUF:.*]] = alloca { i32, double }, align 8
+  // CHECK:         br label %[[BB:.*]]
+  // CHECK:       [[BB]]:
+  // CHECK:         %[[F0:.*]] = getelementptr inbounds nuw { i32, double }, ptr %[[BUF]], i32 0, i32 0
+  // CHECK:         store i32 %1, ptr %[[F0]], align 4
+  // CHECK:         %[[F1:.*]] = getelementptr inbounds nuw { i32, double }, ptr %[[BUF]], i32 0, i32 1
+  // CHECK:         store double %2, ptr %[[F1]], align 8
+  // CHECK:         %[[R:.*]] = call i32 @vprintf(ptr %0, ptr %[[BUF]])
+  // CHECK:         ret i32 %[[R]]
+
+  // A format string in another address space is cast to the generic one.
+  cir.func @constant_format(%fmt: !cir.ptr<!s8i, target_address_space(4)>) -> !s32i {
+    %0 = cir.offload.printf(%fmt) : (!cir.ptr<!s8i, target_address_space(4)>) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK-LABEL: define i32 @constant_format(ptr addrspace(4) %0)
+  // CHECK:         %[[FMT:.*]] = addrspacecast ptr addrspace(4) %0 to ptr
+  // CHECK:         %[[R:.*]] = call i32 @vprintf(ptr %[[FMT]], ptr null)
+  // CHECK:         ret i32 %[[R]]
+}

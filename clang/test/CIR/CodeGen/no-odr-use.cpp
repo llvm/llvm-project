@@ -15,11 +15,11 @@
 // LLVM-DAG: @[[F_A:.*]] = private constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 // OGCG-DAG: @__const._Z1fi.a = private unnamed_addr constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 
-// CIR-CXX11-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE.const = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> {alignment = 16 : i64}
+// CIR-CXX11-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE.const = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
 // LLVM-CXX11-DAG :@_ZN7PR422765State3dmsE.const = private constant [2 x i64] zeroinitializer, align 16
 // OGCG-CXX11-DAG :@_ZN7PR422765State3dmsE.const = private constant [2 x i64] zeroinitializer, align 16
 
-// CIR-CXX20-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> {alignment = 16 : i64}
+// CIR-CXX20-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
 // LLVM-CXX20-DAG :@_ZN7PR422765State3dmsE = private constant [2 x i64] zeroinitializer, align 16
 // OGCG-CXX20-DAG :@_ZN7PR422765State3dmsE = private constant [2 x i64] zeroinitializer, align 16
 
@@ -79,12 +79,12 @@ int f(int i) {
         // OGCG: getelementptr inbounds i8, ptr @__const._Z1fi.a, i64 %{{.*}}
         // OGCG: load i32
         ? a.*p
+        // CIR: %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
+        // CIR: %[[Y:.*]] = cir.get_member %[[A]][1] {name = "y"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 2>>
         // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
         // CIR: %[[N:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
         // CIR: %[[SUB:.*]] = cir.sub nsw %[[TWO]], %[[N]] : !s32i
         // CIR: %[[SUB_64:.*]] = cir.cast integral %[[SUB]] : !s32i -> !s64i
-        // CIR: %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
-        // CIR: %[[Y:.*]] = cir.get_member %[[A]][1] {name = "y"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 2>>
         // CIR: cir.get_element %[[Y]][%[[SUB_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 
         // LLVM: getelementptr [2 x i32], ptr getelementptr inbounds nuw ({{.*}} @[[F_A]], i64 4), i32 0, i64 %{{.*}}

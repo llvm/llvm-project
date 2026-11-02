@@ -473,9 +473,14 @@ public:
     nb::handle(static_cast<PyObject *>(callbacks.userData)).inc_ref();
     callbacks.construct = nullptr;
     callbacks.destruct = [](void *userData) {
+      nb::gil_scoped_acquire acquire;
       nb::handle(static_cast<PyObject *>(userData)).dec_ref();
     };
     callbacks.getSpeculatability = [](MlirOperation op, void *userData) {
+      // Interface methods can be queried from native passes while
+      // PassManager.run has detached from the interpreter; re-attach before
+      // calling back into Python.
+      nb::gil_scoped_acquire acquire;
       nb::handle pyClass(static_cast<PyObject *>(userData));
 
       auto pyGetSpeculatability =
@@ -541,11 +546,16 @@ public:
     nb::handle(static_cast<PyObject *>(callbacks.userData)).inc_ref();
     callbacks.construct = nullptr;
     callbacks.destruct = [](void *userData) {
+      nb::gil_scoped_acquire acquire;
       nb::handle(static_cast<PyObject *>(userData)).dec_ref();
     };
     callbacks.getEffects = [](MlirOperation op,
                               MlirMemoryEffectInstancesCallback callback,
                               void *callbackUserData, void *userData) {
+      // Interface methods can be queried from native passes while
+      // PassManager.run has detached from the interpreter; re-attach before
+      // calling back into Python.
+      nb::gil_scoped_acquire acquire;
       nb::handle pyClass(static_cast<PyObject *>(userData));
 
       // Get the 'get_effects' method from the Python class.

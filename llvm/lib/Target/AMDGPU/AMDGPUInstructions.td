@@ -295,40 +295,53 @@ def AMDGPUmul_i24_oneuse : HasOneUseBinOp<AMDGPUmul_i24>;
 
 // Constrained shift PatFrags.
 
+// G_CONSTANT is assigned the SGPR bank, so a VGPR G_AND reads the mask through
+// a COPY. An SGPR G_AND feeding a VGPR shift likewise has a COPY on the amount.
+// GIIgnoreCopies looks through those copies; the pattern shape is unchanged.
+let GIIgnoreCopies = 1 in {
+
 def csh_mask_16 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 4); }]> {
+  [{ return isUnneededShiftMask(N, 4); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 4); }];
   }
 
 def csh_mask_32 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 5); }]> {
+  [{ return isUnneededShiftMask(N, 5); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 5); }];
   }
 
 def csh_mask_64 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 6); }]> {
+  [{ return isUnneededShiftMask(N, 6); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 6); }];
   }
+
+} // End GIIgnoreCopies = 1
 
 foreach width = [16, 32, 64] in {
 defvar csh_mask = !cast<SDPatternOperator>("csh_mask_"#width);
 
 def cshl_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(shl node:$src0, node:$src1), (shl node:$src0, (csh_mask node:$src1))]>;
+  [(shl node:$src0, node:$src1), (shl node:$src0, (csh_mask node:$src1))]>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 defvar cshl = !cast<SDPatternOperator>("cshl_"#width);
 def cshl_#width#_oneuse : HasOneUseBinOp<cshl>;
 def clshl_rev_#width : PatFrag <(ops node:$src0, node:$src1),
   (cshl $src1, $src0)>;
 
 def csrl_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(srl node:$src0, node:$src1), (srl node:$src0, (csh_mask node:$src1))]>;
+  [(srl node:$src0, node:$src1), (srl node:$src0, (csh_mask node:$src1))]>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 defvar csrl = !cast<SDPatternOperator>("csrl_"#width);
 def csrl_#width#_oneuse : HasOneUseBinOp<csrl>;
 def clshr_rev_#width : PatFrag <(ops node:$src0, node:$src1),
   (csrl $src1, $src0)>;
 
 def csra_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(sra node:$src0, node:$src1), (sra node:$src0, (csh_mask node:$src1))]>;
+  [(sra node:$src0, node:$src1), (sra node:$src0, (csh_mask node:$src1))]>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 defvar csra = !cast<SDPatternOperator>("csra_"#width);
 def csra_#width#_oneuse : HasOneUseBinOp<csra>;
 def cashr_rev_#width : PatFrag <(ops node:$src0, node:$src1),
@@ -528,19 +541,11 @@ def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextloadi16 node:$ptr)> {
   let IsLoad = 1;
 }
 
+def atomic_load_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = 1;
+}
+
 def atomic_load_nonext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_16 node:$ptr)> {
-  let IsAtomic = 1;
-}
-
-def atomic_load_nonext_32_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_32 node:$ptr)> {
-  let IsAtomic = 1;
-}
-
-def atomic_load_nonext_64_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_64 node:$ptr)> {
-  let IsAtomic = 1;
-}
-
-def atomic_load_nonext_128_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_128 node:$ptr)> {
   let IsAtomic = 1;
 }
 
@@ -600,16 +605,14 @@ def truncstorei16_hi16_#as : StoreHi16<truncstorei16, i16>;
 } // End let IsStore = 1, AddressSpaces = ...
 
 let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
+def atomic_store_#as : PatFrag<(ops node:$val, node:$ptr),
+                               (atomic_store node:$val, node:$ptr)> {
+  let IsTruncStore = 0;
+}
 def atomic_store_8_#as : PatFrag<(ops node:$val, node:$ptr),
                                  (atomic_store_8 node:$val, node:$ptr)>;
 def atomic_store_16_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_16 node:$val, node:$ptr)>;
-def atomic_store_32_#as : PatFrag<(ops node:$val, node:$ptr),
-                                  (atomic_store_32 node:$val, node:$ptr)>;
-def atomic_store_64_#as : PatFrag<(ops node:$val, node:$ptr),
-                                  (atomic_store_64 node:$val, node:$ptr)>;
-def atomic_store_128_#as : PatFrag<(ops node:$val, node:$ptr),
-                                   (atomic_store_128 node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = ...
 } // End foreach as
 

@@ -489,6 +489,11 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
            CCAssignToStack<16, 16>>
 ]>;
 
+let Entry = 1 in
+def CC_AArch64_AnyReg : CallingConv<[
+  CCCustom<"CC_AArch64_AnyReg_Error">
+]>;
+
 //===----------------------------------------------------------------------===//
 // ARM64 Calling Convention for GHC
 //===----------------------------------------------------------------------===//
@@ -540,7 +545,7 @@ def CC_AArch64_Preserve_None : CallingConv<[
   // This handles the non-variadic parameter case. Variadic parameters
   // are handled in CCAssignFnForCall.
   CCIfVarArg<CCIfSubtarget<"isTargetDarwin()", CCDelegateTo<CC_AArch64_DarwinPCS>>>,
-  CCIfVarArg<CCIfSubtarget<"isTargetWindows()", CCDelegateTo<CC_AArch64_Win64PCS>>>,
+  CCIfVarArg<CCIfSubtarget<"isTargetWindowsOrUEFI()", CCDelegateTo<CC_AArch64_Win64PCS>>>,
   CCIfVarArg<CCDelegateTo<CC_AArch64_AAPCS>>,
 
   // We can pass arguments in all general registers, except:
@@ -569,9 +574,9 @@ def CC_AArch64_Preserve_None : CallingConv<[
                                  X12, X13, X14, X9]>>,
 
   // Windows uses X15 for stack allocation
-  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
+  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindowsOrUEFI()",
     CCIfType<[i32], CCAssignToReg<[W15]>>>,
-  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
+  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindowsOrUEFI()",
     CCIfType<[i64], CCAssignToReg<[X15]>>>,
 
   CCDelegateTo<CC_AArch64_AAPCS>

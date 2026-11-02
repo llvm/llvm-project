@@ -329,7 +329,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
     }
   }
 
-  SmallSet<const SortRegion *, 8> Regions;
+  SmallPtrSet<const SortRegion *, 8> Regions;
   for (auto &MBB : MF) {
     const SortRegion *Region = SRI.getRegionFor(&MBB);
     if (Region)

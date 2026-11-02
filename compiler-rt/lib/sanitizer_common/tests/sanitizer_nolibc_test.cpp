@@ -19,7 +19,7 @@
 
 extern const char *argv0;
 
-#if SANITIZER_LINUX && defined(__x86_64__)
+#if SANITIZER_LINUX && !SANITIZER_ANDROID && defined(__x86_64__)
 TEST(SanitizerCommon, NolibcMain) {
   std::string NolibcTestPath = argv0;
   NolibcTestPath += "-Nolibc";

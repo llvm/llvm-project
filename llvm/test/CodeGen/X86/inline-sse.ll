@@ -11,7 +11,7 @@ define void @nop() nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    #APP
 ; X86-NEXT:    #NO_APP
 ; X86-NEXT:    movaps %xmm0, (%esp)

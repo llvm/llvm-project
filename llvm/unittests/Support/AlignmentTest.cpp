@@ -39,6 +39,16 @@ TEST(AlignmentTest, AlignConstant) {
   EXPECT_EQ(Align::Constant<64>(), Align(64));
 }
 
+TEST(AlignmentTest, AlignFromLog2) {
+  for (unsigned Log2Value = 0; Log2Value < 64; ++Log2Value) {
+    Align A = Align::fromLog2(Log2Value);
+    EXPECT_EQ(A, Align(1ULL << Log2Value));
+    EXPECT_EQ(Log2(A), Log2Value);
+  }
+  constexpr Align kConstantAlign = Align::fromLog2(4);
+  static_assert(kConstantAlign.value() == 16);
+}
+
 TEST(AlignmentTest, AlignConstexprConstant) {
   constexpr Align kConstantAlign = Align::Of<uint64_t>();
   EXPECT_EQ(Align(alignof(uint64_t)), kConstantAlign);
@@ -251,6 +261,7 @@ TEST(AlignmentDeathTest, InvalidCTors) {
     EXPECT_DEATH((MaybeAlign(Value)),
                  "Alignment is neither 0 nor a power of 2");
   }
+  EXPECT_DEATH((Align::fromLog2(64)), "Alignment exponent is too large");
 }
 
 TEST(AlignmentDeathTest, ComparisonsWithZero) {

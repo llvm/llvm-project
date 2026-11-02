@@ -32,21 +32,13 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL: ::std::optional<MyBitEnum> symbolizeMyBitEnum(::llvm::StringRef);
 
 // DECL: struct FieldParser<::MyBitEnum, ::MyBitEnum> {
-// DECL:   template <typename ParserT>
-// DECL:   static FailureOr<::MyBitEnum> parse(ParserT &parser) {
-// DECL:     // Parse the keyword/string containing the enum.
-// DECL:     std::string enumKeyword;
-// DECL:     auto loc = parser.getCurrentLocation();
-// DECL:     if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
-// DECL:       return parser.emitError(loc, "expected keyword for An example bit enum");
-// DECL:     // Symbolize the keyword.
-// DECL:     if (::std::optional<::MyBitEnum> attr = ::symbolizeEnum<::MyBitEnum>(enumKeyword))
-// DECL:       return *attr;
-// DECL:     return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for An example bit enum, got: ") << enumKeyword;
-// DECL:   }
+// DECL-NEXT:   static FailureOr<::MyBitEnum> parse(AsmParser &parser);
+// DECL-NEXT: };
 
 // DECL: struct FieldParser<std::optional<::MyBitEnum>, std::optional<::MyBitEnum>> {
 // DECL:   static constexpr bool isKeyValueCompositional = false;
+// DECL:   static FailureOr<std::optional<::MyBitEnum>> parse(AsmParser &parser);
+// DECL-NEXT: };
 
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyBitEnum value) {
 // DECL:   auto valueStr = stringifyEnum(value);
@@ -101,6 +93,23 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DEF: .Case("tagged", 1)
 // DEF: .Case("Bit1", 2)
 
+// DEF-LABEL: FailureOr<::MyBitEnum> FieldParser<::MyBitEnum, ::MyBitEnum>::parse(AsmParser &parser) {
+// DEF:   // Parse the keyword/string containing the enum.
+// DEF:   std::string enumKeyword;
+// DEF:   auto loc = parser.getCurrentLocation();
+// DEF:   if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
+// DEF:     return parser.emitError(loc, "expected keyword for An example bit enum");
+// DEF:   // Symbolize the keyword.
+// DEF:   if (::std::optional<::MyBitEnum> attr = ::symbolizeEnum<::MyBitEnum>(enumKeyword))
+// DEF:     return *attr;
+// DEF:   return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for An example bit enum, got: ") << enumKeyword;
+// DEF: }
+
+// DEF-LABEL: FailureOr<std::optional<::MyBitEnum>>
+// DEF-NEXT: FieldParser<std::optional<::MyBitEnum>, std::optional<::MyBitEnum>>::parse(AsmParser &parser) {
+// DEF:   if (failed(parser.parseOptionalKeywordOrString(&enumKeyword, {"none", "tagged", "Bit1", "Bit2", "Bit3", "BitGroup"})))
+// DEF-NEXT:     return std::optional<::MyBitEnum>{};
+
 // Test enum printer generation for non non-keyword enums.
 
 def NonKeywordBit: I32BitEnumCaseBit<"Bit0", 0, "tag-ged">;
@@ -138,25 +147,27 @@ def MyNonQuotedPrintBitEnum
 
 // DECL: struct FieldParser<::MyNonQuotedPrintBitEnum, ::MyNonQuotedPrintBitEnum> {
 // DECL:   static constexpr bool isKeyValueCompositional = true;
-// DECL:   template <typename ParserT>
-// DECL:   static FailureOr<::MyNonQuotedPrintBitEnum> parse(ParserT &parser) {
-// DECL:     ::MyNonQuotedPrintBitEnum flags = {};
-// DECL:     do {
-  // DECL:     // Parse the keyword containing a part of the enum.
-// DECL:       ::llvm::StringRef enumKeyword;
-// DECL:       auto loc = parser.getCurrentLocation();
-// DECL:       if (failed(parser.parseOptionalKeyword(&enumKeyword))) {
-// DECL:         return parser.emitError(loc, "expected keyword for Example new-style bit enum");
-// DECL:       }
-// DECL:       // Symbolize the keyword.
-// DECL:       if (::std::optional<::MyNonQuotedPrintBitEnum> flag = ::symbolizeEnum<::MyNonQuotedPrintBitEnum>(enumKeyword))
-// DECL:         flags = flags | *flag;
-// DECL:       } else {
-// DECL:         return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for Example new-style bit enum, got: ") << enumKeyword;
-// DECL:       }
-// DECL:     } while (::mlir::succeeded(parser.parseOptionalVerticalBar()));
-// DECL:     return flags;
-// DECL:   }
+// DECL:   static FailureOr<::MyNonQuotedPrintBitEnum> parse(AsmParser &parser);
+// DECL-NEXT: };
+
+// DEF-LABEL: FailureOr<::MyNonQuotedPrintBitEnum> FieldParser<::MyNonQuotedPrintBitEnum, ::MyNonQuotedPrintBitEnum>::parse(AsmParser &parser) {
+// DEF:   ::MyNonQuotedPrintBitEnum flags = {};
+// DEF:   do {
+// DEF:     // Parse the keyword containing a part of the enum.
+// DEF:     ::llvm::StringRef enumKeyword;
+// DEF:     auto loc = parser.getCurrentLocation();
+// DEF:     if (failed(parser.parseOptionalKeyword(&enumKeyword))) {
+// DEF:       return parser.emitError(loc, "expected keyword for Example new-style bit enum");
+// DEF:     }
+// DEF:     // Symbolize the keyword.
+// DEF:     if (::std::optional<::MyNonQuotedPrintBitEnum> flag = ::symbolizeEnum<::MyNonQuotedPrintBitEnum>(enumKeyword)) {
+// DEF:       flags = flags | *flag;
+// DEF:     } else {
+// DEF:       return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for Example new-style bit enum, got: ") << enumKeyword;
+// DEF:     }
+// DEF:   } while (::mlir::succeeded(parser.parseOptionalVerticalBar()));
+// DEF:   return flags;
+// DEF: }
 
 def MyCommaSeparatedBitEnum
   : I32BitEnum<"MyCommaSeparatedBitEnum", "Comma-separated bit enum",

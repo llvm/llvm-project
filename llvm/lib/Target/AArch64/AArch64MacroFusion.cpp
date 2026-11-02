@@ -150,24 +150,21 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
-// True unless the pair provably writes non overlapping physical registers.
-// Pre-RA the dests are still virtual, and post-RA it requires a genuine WAW,
-// that is overlapping dest regs. Overlapping includes sub and super register
-// relations, e.g. W0 and X0, which matches the register unit based dependency
-// model of the scheduling DAG.
+// True unless the pair provably writes different physical registers. Pre-RA
+// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
+// reg).
 static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
-                                 const MachineInstr &SecondMI,
-                                 const TargetRegisterInfo *TRI) {
+                                 const MachineInstr &SecondMI) {
   Register DestFirst = FirstMI.getOperand(0).getReg();
   Register DestSecond = SecondMI.getOperand(0).getReg();
   if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
     return true;
-  return TRI->regsOverlap(DestFirst, DestSecond);
+  return DestFirst == DestSecond;
 }
 
 /// AES crypto encoding or decoding.
-static bool isAESPair(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
-                      const TargetRegisterInfo *TRI) {
+static bool isAESPair(const MachineInstr *FirstMI,
+                      const MachineInstr &SecondMI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
   unsigned SecondOpcode = SecondMI.getOpcode();
   switch (SecondOpcode) {
@@ -179,7 +176,7 @@ static bool isAESPair(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
     if (FirstMI->getOpcode() != AArch64::AESErr)
       return false;
     return SecondOpcode == AArch64::AESMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
@@ -188,7 +185,7 @@ static bool isAESPair(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
     if (FirstMI->getOpcode() != AArch64::AESDrr)
       return false;
     return SecondOpcode == AArch64::AESIMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   }
 
   return false;
@@ -532,19 +529,41 @@ static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
   return false;
 }
 
-static bool definesRegInClass(const MachineInstr &MI,
-                              const TargetRegisterInfo *TRI,
-                              const TargetRegisterClass &Class) {
-  return llvm::any_of(Class, [&MI, TRI](MCPhysReg Reg) {
-    return MI.definesRegister(Reg, TRI);
+// Checks whether RegMO's class is Class, or a subclass of it. Supports both
+// physical and virtual registers.
+static bool isRegInClass(const MachineOperand &RegMO,
+                         const TargetRegisterClass &Class,
+                         const MachineRegisterInfo &MRI) {
+  Register Reg = RegMO.getReg();
+  if (Reg.isVirtual())
+    return Class.hasSubClassEq(MRI.getRegClass(Reg));
+  return Class.contains(Reg.asMCReg());
+}
+
+// Checks whether MI defines any register whose class is any of Classes, or a
+// subclass of them. Supports both physical and virtual registers.
+static bool
+definesRegInClass(const MachineInstr &MI,
+                  const ArrayRef<const TargetRegisterClass *> Classes) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return llvm::any_of(MI.all_defs(), [&](const MachineOperand &MO) {
+    return llvm::any_of(Classes, [&](const TargetRegisterClass *Class) {
+      return isRegInClass(MO, *Class, MRI);
+    });
   });
 }
 
-static bool readsRegInClass(const MachineInstr &MI,
-                            const TargetRegisterInfo *TRI,
-                            const TargetRegisterClass &Class) {
-  return llvm::any_of(
-      Class, [&MI, TRI](MCPhysReg Reg) { return MI.readsRegister(Reg, TRI); });
+// Checks whether MI reads/uses any register whose class is any of Classes, or a
+// subclass of them. Supports both physical and virtual registers.
+static bool
+readsRegInClass(const MachineInstr &MI,
+                const ArrayRef<const TargetRegisterClass *> Classes) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return llvm::any_of(MI.all_uses(), [&](const MachineOperand &MO) {
+    return llvm::any_of(Classes, [&](const TargetRegisterClass *Class) {
+      return isRegInClass(MO, *Class, MRI);
+    });
+  });
 }
 
 static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
@@ -554,7 +573,9 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
                              MI.definesRegister(AArch64::ZA, TRI);
 
   // (read/write ZA or read/write Z)
-  if (!ReadOrWriteZA && !definesRegInClass(MI, TRI, AArch64::ZPRRegClass))
+  if (!ReadOrWriteZA &&
+      !definesRegInClass(MI, {&AArch64::ZPRRegClass, &AArch64::ZPR2RegClass,
+                              &AArch64::ZPR3RegClass, &AArch64::ZPR4RegClass}))
     return false;
 
   // (NOT load/store)
@@ -562,12 +583,12 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
     return false;
 
   // (NOT write P)
-  if (definesRegInClass(MI, TRI, AArch64::PPRRegClass))
+  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass}))
     return false;
 
   // (NOT write GPR)
-  const bool WriteGPR = definesRegInClass(MI, TRI, AArch64::GPR32RegClass) ||
-                        definesRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  const bool WriteGPR =
+      definesRegInClass(MI, {&AArch64::GPR32RegClass, &AArch64::GPR64RegClass});
   if (WriteGPR)
     return false;
 
@@ -576,8 +597,8 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
       MI.definesRegister(AArch64::NZCV, TRI))
     return false;
 
-  const bool ReadGPR = readsRegInClass(MI, TRI, AArch64::GPR32RegClass) &&
-                       readsRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  const bool ReadGPR =
+      readsRegInClass(MI, {&AArch64::GPR32RegClass, &AArch64::GPR64RegClass});
 
   // ( (NOT read GPR) or read/write ZA )
   if (ReadGPR && !ReadOrWriteZA)
@@ -628,8 +649,7 @@ static bool isFMinFMax(unsigned Opcode) {
 
 // FMIN + FMAX.
 static bool isFMinFMaxPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI,
-                           const TargetRegisterInfo *TRI) {
+                           const MachineInstr &SecondMI) {
   if (!isFMinFMax(SecondMI.getOpcode()))
     return false;
 
@@ -640,7 +660,7 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
   if (!isFMinFMax(FirstMI->getOpcode()))
     return false;
 
-  return mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
+  return mayHaveWAWDependency(*FirstMI, SecondMI);
 }
 
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
@@ -679,7 +699,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedArithmeticCbz;
     return true;
   }
-  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI, TRI)) {
+  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI)) {
     ++NumFusedAES;
     return true;
   }
@@ -720,7 +740,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAddSub2RegAndConstOne;
     return true;
   }
-  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI, TRI)) {
+  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI)) {
     ++NumFusedFMinFMax;
     return true;
   }

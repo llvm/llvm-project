@@ -16,16 +16,16 @@
 
 #include "ProcessWindowsLog.h"
 #include "RegisterContextWindows_x86.h"
-#include "Plugins/Process/Utility/RegisterContext_x86.h"
+#include "Register/Arch/RegisterContext_x86.h"
 #include "TargetThreadWindows.h"
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-#define DEFINE_GPR(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatHexUppercase
+#define DEFINE_GPR(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatHex
 #define DEFINE_GPR_BIN(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatBinary
 
 namespace {

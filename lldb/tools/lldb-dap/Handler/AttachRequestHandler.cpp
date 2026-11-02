@@ -71,7 +71,9 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
               .c_str());
     }
   } else {
-    target = dap.CreateTarget(error);
+    // Attach by name passes a process name as program, so this can fail.
+    lldb::SBError create_error;
+    target = dap.CreateTarget(create_error);
   }
 
   if (target.IsValid())

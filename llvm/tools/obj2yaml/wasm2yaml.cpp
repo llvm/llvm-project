@@ -67,6 +67,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       DylinkSec->ImportInfo.push_back({Imp.Module, Imp.Field, Imp.Flags});
     for (const auto &Exp : Info.ExportInfo)
       DylinkSec->ExportInfo.push_back({Exp.Name, Exp.Flags});
+    DylinkSec->TargetArch = Info.TargetArch;
     CustomSec = std::move(DylinkSec);
   } else if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec =
@@ -160,6 +161,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       LinkingSec->InitFunctions.emplace_back(F);
     }
 
+    LinkingSec->TargetArch = Obj.linkingData().TargetArch;
     CustomSec = std::move(LinkingSec);
   } else if (WasmSec.Name == "producers") {
     std::unique_ptr<WasmYAML::ProducersSection> ProducersSec =

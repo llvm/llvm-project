@@ -117,20 +117,6 @@ merge:                                            ; preds = %there, %here
   ret void
 }
 
-; The gc.relocate type is different from %arg, but removing the gc.relocate,
-; needs a bitcast to be added from ptr addrspace(1) to ptr addrspace(1)
-define ptr addrspace(1) @test5(ptr addrspace(1) %arg) gc "statepoint-example" {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void ()) @g, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"() ]
-; CHECK-NEXT:    ret ptr addrspace(1) [[ARG:%.*]]
-;
-entry:
-  %statepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @g, i32 0, i32 0, i32 0, i32 0) ["gc-live"(ptr addrspace(1) %arg), "deopt" (i32 100)]
-  %arg.relocated = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %statepoint_token, i32 0, i32 0) ; (%arg, %arg)
-  ret ptr addrspace(1) %arg.relocated
-}
-
 attributes #0 = { nounwind readonly }
 attributes #1 = { nounwind "gc-leaf-function" }
 !0 = !{}

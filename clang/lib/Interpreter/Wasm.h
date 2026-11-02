@@ -19,12 +19,27 @@
 
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "llvm/ADT/SmallString.h"
+#include <string>
+#include <vector>
 
 namespace clang {
 
+class WasmIncrementalExecutorBuilder : public IncrementalExecutorBuilder {
+public:
+  llvm::Error configure(IncrementalCompilerBuilder &CB,
+                        const Options &Opts) override;
+  bool supportsJIT() const override { return false; }
+  llvm::Expected<llvm::Triple> getHostJITTriple() const override;
+
+private:
+  llvm::Expected<std::unique_ptr<IncrementalExecutor>>
+  createExecutor(llvm::orc::ThreadSafeContext &TSC,
+                 const clang::TargetInfo &TI) override;
+};
+
 class WasmIncrementalExecutor : public IncrementalExecutor {
 public:
-  WasmIncrementalExecutor(llvm::Error &Err);
+  WasmIncrementalExecutor(llvm::Error &Err, std::vector<std::string> LLVMArgs);
   ~WasmIncrementalExecutor() override;
 
   llvm::Error addModule(PartialTranslationUnit &PTU) override;
@@ -38,6 +53,7 @@ public:
 
 private:
   llvm::SmallString<256> TempDir;
+  std::vector<std::string> StoredLLVMArgs;
 };
 
 } // namespace clang

@@ -68,7 +68,7 @@ public:
 
     template<typename T>
     const T *get() const {
-      return Entity.dyn_cast<const T *>();
+      return dyn_cast<const T *>(Entity);
     }
 
     unsigned getOperandNo() const { return OperandNo; }

@@ -217,6 +217,8 @@ private:
       targetOp.setDependIteratedKindsAttr(nullptr);
       targetOp.getDeviceMutable().clear();
       targetOp.getDynGroupprivateSizeMutable().clear();
+      targetOp.setDynGroupprivateAccessGroupAttr(nullptr);
+      targetOp.setDynGroupprivateFallbackAttr(nullptr);
       targetOp.getIfExprMutable().clear();
       targetOp.getInReductionVarsMutable().clear();
       targetOp.setInReductionByrefAttr(nullptr);

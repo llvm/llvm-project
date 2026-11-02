@@ -33,9 +33,7 @@ union Union toUnionAssign() {
   // LLVM-LABEL: define dso_local i32 @toUnionAssign()
   // OGCG-LABEL: define dso_local i32 @toUnionAssign()
   //
-  // CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Union>
   // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Union>
-  // LLVM: %[[COERCE:.*]] = alloca %union.Union
   // LLVM: %[[RET_ALLOCA:.*]] = alloca %union.Union
   // OGCG: %[[RET_ALLOCA:.*]] = alloca %union.Union
   union Union u;
@@ -46,14 +44,10 @@ union Union toUnionAssign() {
   // LLVM: store i32 42, ptr %[[RET_ALLOCA]]
   // OGCG: store i32 42, ptr %[[RET_ALLOCA]]
   return u;
-  // CIR: %[[LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_Union>, !rec_Union
-  // CIR: cir.store %[[LOAD]], %[[COERCE]] : !rec_Union, !cir.ptr<!rec_Union>
-  // CIR: %[[COERCE_TO_INT:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_Union> -> !cir.ptr<!s32i>
-  // CIR: %[[RET:.*]] = cir.load %[[COERCE_TO_INT]] : !cir.ptr<!s32i>, !s32i
-  // CIR: cir.return %[[RET]] : !s32i
-  // LLVM: %[[LOAD:.*]] = load %union.Union, ptr %[[RET_ALLOCA]]
-  // LLVM: store %union.Union %[[LOAD]], ptr %[[COERCE]]
-  // LLVM: %[[RET:.*]] = load i32, ptr %[[COERCE]]
+  // CIR: %[[RET_TO_INT:.*]] = cir.cast bitcast %[[RET_ALLOCA]] : !cir.ptr<!rec_Union> -> !cir.ptr<!s32i>
+  // CIR-NEXT: %[[RET:.*]] = cir.load align(4) %[[RET_TO_INT]] : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT: cir.return %[[RET]] : !s32i
+  // LLVM: %[[RET:.*]] = load i32, ptr %[[RET_ALLOCA]], align 4
   // LLVM: ret i32 %[[RET]]
   // OGCG: %[[DIVE:.*]] = getelementptr inbounds nuw %union.Union, ptr %[[RET_ALLOCA]], i32 0, i32 0
   // OGCG: %[[RET:.*]] = load i32, ptr %[[DIVE]]

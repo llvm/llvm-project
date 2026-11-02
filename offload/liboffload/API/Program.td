@@ -46,6 +46,22 @@ def olIsValidBinary : Function {
     let returns = [];
 }
 
+def olIterateCompatibleDevices : Function {
+    let desc = "Iterates over all available devices that are compatible with the binary image pointed to by `ProgData`, calling the callback for each device.";
+    let details = [
+        "The provided `ProgData` will not be loaded onto any device",
+        "If the user-provided callback returns `false`, the iteration is stopped.",
+        "Only platforms that are compatible with the binary image will be initialized"
+    ];
+    let params = [
+        Param<"const void*", "ProgData", "pointer to the program binary data", PARAM_IN>,
+        Param<"size_t", "ProgDataSize", "size of the program binary in bytes", PARAM_IN>,
+        Param<"ol_device_iterate_cb_t", "Callback", "user-provided function called for each compatible device", PARAM_IN>,
+        Param<"void*", "UserData", "optional user data to pass to the callback", PARAM_IN_OPTIONAL>
+    ];
+    let returns = [];
+}
+
 def olDestroyProgram : Function {
     let desc = "Destroy the program and free all underlying resources.";
     let details = [];

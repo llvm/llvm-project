@@ -42,7 +42,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -54,11 +53,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-optimize-leas"
-
-static cl::opt<bool>
-    DisableX86LEAOpt("disable-x86-lea-opt", cl::Hidden,
-                     cl::desc("X86: Disable LEA optimizations."),
-                     cl::init(false));
 
 STATISTIC(NumSubstLEAs, "Number of LEA instruction substitutions");
 STATISTIC(NumRedundantLEAs, "Number of redundant LEA instructions removed");
@@ -691,12 +685,13 @@ bool X86OptimizeLEAsImpl::runOnMachineFunction(
     MachineBlockFrequencyInfo *MBFI) {
   bool Changed = false;
 
-  if (DisableX86LEAOpt)
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.getCLOpts().disable_x86_lea_opt)
     return false;
 
   MRI = &MF.getRegInfo();
-  TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
-  TRI = MF.getSubtarget<X86Subtarget>().getRegisterInfo();
+  TII = ST.getInstrInfo();
+  TRI = ST.getRegisterInfo();
 
   // Process all basic blocks.
   for (auto &MBB : MF) {

@@ -83,11 +83,21 @@ static Error removeSections(const CommonConfig &Config, Object &Obj) {
   return Obj.removeSections(RemovePred);
 }
 
-static void markSymbols(const CommonConfig &, Object &Obj) {
+static void markSymbols(const CommonConfig &Config, Object &Obj) {
   // Symbols referenced from the indirect symbol table must not be removed.
   for (IndirectSymbolEntry &ISE : Obj.IndirectSymTable.Symbols)
     if (ISE.Symbol)
       (*ISE.Symbol)->Referenced = true;
+
+  // --strip-all removes relocations, so their symbols need not be preserved.
+  if (Config.StripAll)
+    return;
+
+  for (const LoadCommand &LC : Obj.LoadCommands)
+    for (const std::unique_ptr<Section> &Sec : LC.Sections)
+      for (const RelocationInfo &R : Sec->Relocations)
+        if (R.Symbol && *R.Symbol)
+          (*R.Symbol)->Referenced = true;
 }
 
 static void updateAndRemoveSymbols(const CommonConfig &Config,
@@ -454,8 +464,7 @@ static Error handleArgs(const CommonConfig &Config,
     return createFileError(Config.InputFilename, std::move(E));
 
   // Mark symbols to determine which symbols are still needed.
-  if (Config.StripAll)
-    markSymbols(Config, Obj);
+  markSymbols(Config, Obj);
 
   updateAndRemoveSymbols(Config, MachOConfig, Obj);
 

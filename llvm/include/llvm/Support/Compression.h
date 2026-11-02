@@ -130,6 +130,9 @@ struct Params {
 // return a string literal describing the reason.
 LLVM_ABI const char *getReasonIfUnsupported(Format F);
 
+// Return nullptr if LLVM can decompress Input, otherwise a string literal.
+LLVM_ABI const char *getReasonIfUnsupported(ArrayRef<uint8_t> Input);
+
 // Compress Input with the specified format P.Format. If Level is -1, use
 // *::DefaultCompression for the format.
 LLVM_ABI void compress(Params P, ArrayRef<uint8_t> Input,
@@ -142,6 +145,10 @@ LLVM_ABI Error decompress(Format F, ArrayRef<uint8_t> Input,
                           SmallVectorImpl<uint8_t> &Output,
                           size_t UncompressedSize);
 LLVM_ABI Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+                          SmallVectorImpl<uint8_t> &Output,
+                          size_t UncompressedSize);
+// Infer the compression format from the input.
+LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
                           SmallVectorImpl<uint8_t> &Output,
                           size_t UncompressedSize);
 

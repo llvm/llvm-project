@@ -11,7 +11,7 @@ define amdgpu_kernel void @spill_i16_alu() #0 {
 ; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    scratch_load_u16 v0, off, off scope:SCOPE_SYS
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0x7b, v0.l
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, 0x7b
 ; GFX1250-TRUE16-NEXT:    scratch_store_b16 off, v0, off offset:2 nv ; 2-byte Folded Spill
 ; GFX1250-TRUE16-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-TRUE16-NEXT:    ;;#ASMSTART
@@ -32,7 +32,7 @@ define amdgpu_kernel void @spill_i16_alu() #0 {
 ; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    scratch_load_u16 v0, off, off scope:SCOPE_SYS
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v0, 0x7b, v0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v0, v0, 0x7b
 ; GFX1250-FAKE16-NEXT:    scratch_store_b32 off, v0, off offset:4 nv ; 4-byte Folded Spill
 ; GFX1250-FAKE16-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-FAKE16-NEXT:    ;;#ASMSTART

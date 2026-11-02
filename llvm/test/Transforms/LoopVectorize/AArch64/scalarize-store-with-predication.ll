@@ -37,7 +37,7 @@ while.body:
   %i = phi i64 [ 1023, %entry ], [ %i.next, %if.end ]
   %arrayidx = getelementptr inbounds i32, ptr %data1, i64 %i
   %ld = load i32, ptr %arrayidx, align 4
-  %cmp = icmp sgt i32 %ld, %ld
+  %cmp = icmp sgt i32 %ld, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:

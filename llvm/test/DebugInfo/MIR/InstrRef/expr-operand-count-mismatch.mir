@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations=true \
-# RUN:     -run-pass=livedebugvalues | FileCheck %s
+# RUN:     -run-pass=live-debug-values | FileCheck %s
 #
 ## Two debug values for the same variable can carry identical DIExpressions
 ## while having different numbers of location operands.

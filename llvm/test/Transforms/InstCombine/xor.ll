@@ -5,7 +5,10 @@
 @G2 = global i32 0
 
 declare i32 @llvm.ctlz.i32(i32, i1)
+declare i24 @llvm.ctlz.i24(i24, i1)
+declare i33 @llvm.cttz.i33(i33, i1)
 declare <2 x i8> @llvm.cttz.v2i8(<2 x i8>, i1)
+declare <2 x i24> @llvm.cttz.v2i24(<2 x i24>, i1)
 declare void @use(i8)
 
 define i1 @test0(i1 %A) {
@@ -1360,6 +1363,54 @@ define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
   %z = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %d, i1 true) ; 0 is poison
   %r = xor <2 x i8> %z, <i8 7, i8 7>
   ret <2 x i8> %r
+}
+
+; The xor idiom requires a power-of-two bit width, even when the input is a
+; power of two or zero.
+
+define i24 @ctlz_pow2_non_pow2_width(i24 %x) {
+; CHECK-LABEL: @ctlz_pow2_non_pow2_width(
+; CHECK-NEXT:    [[N:%.*]] = sub i24 0, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i24 [[X]], [[N]]
+; CHECK-NEXT:    [[Z:%.*]] = call range(i24 0, 25) i24 @llvm.ctlz.i24(i24 [[A]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = xor i24 [[Z]], 23
+; CHECK-NEXT:    ret i24 [[R]]
+;
+  %n = sub i24 0, %x
+  %a = and i24 %n, %x
+  %z = call i24 @llvm.ctlz.i24(i24 %a, i1 true)
+  %r = xor i24 %z, 23
+  ret i24 %r
+}
+
+define i33 @cttz_pow2_non_pow2_width(i33 %x, i33 %y) {
+; CHECK-LABEL: @cttz_pow2_non_pow2_width(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i33 1, [[X:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv exact i33 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = call range(i33 0, 34) i33 @llvm.cttz.i33(i33 [[D]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = xor i33 [[Z]], 32
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %s = shl i33 1, %x
+  %d = udiv exact i33 %s, %y
+  %z = call i33 @llvm.cttz.i33(i33 %d, i1 true)
+  %r = xor i33 %z, 32
+  ret i33 %r
+}
+
+define <2 x i24> @cttz_pow2_non_pow2_width_vec(<2 x i24> %x, <2 x i24> %y) {
+; CHECK-LABEL: @cttz_pow2_non_pow2_width_vec(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i24> splat (i24 1), [[X:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i24> [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = call range(i24 0, 25) <2 x i24> @llvm.cttz.v2i24(<2 x i24> [[D]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i24> [[Z]], splat (i24 23)
+; CHECK-NEXT:    ret <2 x i24> [[R]]
+;
+  %s = shl <2 x i24> <i24 1, i24 1>, %x
+  %d = udiv exact <2 x i24> %s, %y
+  %z = call <2 x i24> @llvm.cttz.v2i24(<2 x i24> %d, i1 true)
+  %r = xor <2 x i24> %z, <i24 23, i24 23>
+  ret <2 x i24> %r
 }
 
 ; negative test - 0 input returns 63

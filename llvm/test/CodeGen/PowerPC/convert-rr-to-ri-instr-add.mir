@@ -25,7 +25,7 @@ body: |
     liveins: $x3, $f1, $x5
     $x3 = ADDI8 $x5, 100
     ; Following instruction $r3 also reads $x3, ADDI8 can not be erased
-    ; CHECK: $x3 = ADDI8 $x5, 100, implicit-def $r3
+    ; CHECK: $x3 = ADDI8 $x5, 100
     STW $r3, $x5, 100
     ; CHECK: STW killed $r3, $x5, 100
     STFSX killed $f1, $zero8, $x3

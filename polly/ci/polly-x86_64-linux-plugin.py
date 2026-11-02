@@ -37,6 +37,7 @@ with worker.run(
             "-DBUILD_SHARED_LIBS=OFF",
             "-DLLVM_BUILD_LLVM_DYLIB=OFF",
             "-DLLVM_LINK_LLVM_DYLIB=OFF",
+            "-DCLANG_ENABLE_CIR=OFF",
         ]
         if w.jobs:
             cmakecmd.append(f"-DLLVM_LIT_ARGS=-sv;-j{w.jobs}")

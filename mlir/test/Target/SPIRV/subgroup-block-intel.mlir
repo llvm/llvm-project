@@ -21,13 +21,13 @@ spirv.module Physical64 GLSL450 requires #spirv.vce<v1.3, [Addresses, Shader, Li
   }
   // CHECK-LABEL: @subgroup_block_write_intel
   spirv.func @subgroup_block_write_intel(%ptr : !spirv.ptr<i32, StorageBuffer>, %value: i32) -> () "None" {
-    // CHECK: spirv.INTEL.SubgroupBlockWrite %{{.*}}, %{{.*}} : i32
+    // CHECK: spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %{{.*}}, %{{.*}} : i32
     spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : i32
     spirv.Return
   }
   // CHECK-LABEL: @subgroup_block_write_intel_vector
   spirv.func @subgroup_block_write_intel_vector(%ptr : !spirv.ptr<i32, StorageBuffer>, %value: vector<3xi32>) -> () "None" {
-    // CHECK: spirv.INTEL.SubgroupBlockWrite %{{.*}}, %{{.*}} : vector<3xi32>
+    // CHECK: spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %{{.*}}, %{{.*}} : vector<3xi32>
     spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : vector<3xi32>
     spirv.Return
   }

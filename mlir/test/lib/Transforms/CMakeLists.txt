@@ -47,7 +47,7 @@ add_mlir_library(MLIRTestTransforms
   MLIRTestDialect
   )
 mlir_target_link_libraries(MLIRTestTransforms PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRFuncDialect
   MLIRInferIntRangeInterface
   MLIRTransforms

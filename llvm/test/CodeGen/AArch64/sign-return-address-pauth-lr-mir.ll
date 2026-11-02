@@ -81,6 +81,7 @@ define i32 @leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-addr
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $w0
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETAASPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp
@@ -127,6 +128,7 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $x0, $lr
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
@@ -181,6 +183,7 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $w0, $lr
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
@@ -233,6 +236,7 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $w0, $lr
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
@@ -271,6 +275,7 @@ define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $w0, $lr, $x18
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   early-clobber $x18 = frame-setup STRXpost $lr, $x18, 8
@@ -304,6 +309,7 @@ define i32 @leaf_sign_all_v83(i32 %x) "branch-protection-pauth-lr" "sign-return-
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $w0
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETAASPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp
@@ -335,6 +341,7 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $x0, $lr
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
@@ -379,6 +386,7 @@ define i32 @leaf_sign_all_a_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $w0
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETAASPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp
@@ -418,6 +426,7 @@ define i32 @leaf_sign_all_b_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
   ; PAUTHLR-MIR-NEXT:   liveins: $w0
   ; PAUTHLR-MIR-NEXT: {{  $}}
   ; PAUTHLR-MIR-NEXT:   frame-setup EMITBKEY
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIBSPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETABSPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp
@@ -443,6 +452,7 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "branch-protection-pauth-lr" "sign-r
   ; PAUTHLR-MIR-NEXT:   liveins: $w0
   ; PAUTHLR-MIR-NEXT: {{  $}}
   ; PAUTHLR-MIR-NEXT:   frame-setup EMITBKEY
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIBSPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETABSPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp
@@ -479,6 +489,7 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
   ; PAUTHLR-MIR: bb.0 (%ir-block.0):
   ; PAUTHLR-MIR-NEXT:   liveins: $w0
   ; PAUTHLR-MIR-NEXT: {{  $}}
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETAASPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp
@@ -518,6 +529,7 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
   ; PAUTHLR-MIR-NEXT:   liveins: $w0
   ; PAUTHLR-MIR-NEXT: {{  $}}
   ; PAUTHLR-MIR-NEXT:   frame-setup EMITBKEY
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIBSPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETABSPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp
@@ -543,6 +555,7 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
   ; PAUTHLR-MIR-NEXT:   liveins: $w0
   ; PAUTHLR-MIR-NEXT: {{  $}}
   ; PAUTHLR-MIR-NEXT:   frame-setup EMITBKEY
+  ; PAUTHLR-MIR-NEXT:   frame-setup EMITNONHINTED
   ; PAUTHLR-MIR-NEXT:   frame-setup PACIBSPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETABSPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp

@@ -1,9 +1,9 @@
-add_custom_target(libc_assert_unittests)
+add_libc_testsuite(libc-assert-tests)
 
 add_libc_test(
   assert_test
   SUITE
-    libc_assert_unittests
+    libc-assert-tests
   SRCS
     assert_test.cpp
   DEPENDS

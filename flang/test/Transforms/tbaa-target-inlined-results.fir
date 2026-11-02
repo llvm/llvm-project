@@ -12,9 +12,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %0 = fir.alloca !fir.char<1> {bindc_name = ".result"}
     %1 = fir.dummy_scope : !fir.dscope
     %9 = fir.dummy_scope : !fir.dscope
-    %10 = fir.declare %0 typeparams %c1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmFbarEbar"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
+    %10 = fir.declare %0 typeparams %c1 uniq_name("_QMmFbarEbar") fortran_attrs<target> : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
     %11 = fir.address_of(@_QQclX61) : !fir.ref<!fir.char<1>>
-    %12 = fir.declare %11 typeparams %c1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX61"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
+    %12 = fir.declare %11 typeparams %c1 uniq_name("_QQclX61") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
     %13 = fir.load %12 : !fir.ref<!fir.char<1>>
     fir.store %13 to %10 : !fir.ref<!fir.char<1>>
     return

@@ -79,6 +79,7 @@ public:
   /// Visit an instruction, or a TBAA node itself as part of a metadata, and
   /// return true if it is valid, return false if an invalid TBAA is attached.
   LLVM_ABI bool visitTBAAMetadata(const Instruction *I, const MDNode *MD);
+  LLVM_ABI bool visitTBAAStructMetadata(const Instruction *I, const MDNode *MD);
 };
 
 /// Check a function for errors, useful for use when debugging a

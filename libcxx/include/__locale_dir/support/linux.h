@@ -174,6 +174,9 @@ inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_len_max(__locale_t __loc)
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    if defined(__BIONIC__)
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+#    endif
 inline _LIBCPP_HIDE_FROM_ABI wint_t __btowc(int __c, __locale_t __loc) {
   __locale_guard __current(__loc);
   return std::btowc(__c);
@@ -183,6 +186,9 @@ inline _LIBCPP_HIDE_FROM_ABI int __wctob(wint_t __c, __locale_t __loc) {
   __locale_guard __current(__loc);
   return std::wctob(__c);
 }
+#    if defined(__BIONIC__)
+_LIBCPP_SUPPRESS_DEPRECATED_POP
+#    endif
 
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __wcsnrtombs(char* __dest, const wchar_t** __src, size_t __nwc, size_t __len, mbstate_t* __ps, __locale_t __loc) {

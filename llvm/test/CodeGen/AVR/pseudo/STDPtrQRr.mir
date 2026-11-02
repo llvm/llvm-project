@@ -1,0 +1,44 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs %s -o - \
+# RUN:     | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -verify-machineinstrs -mattr=avrtiny %s -o - \
+# RUN:     | FileCheck %s --check-prefix=CHECK-TINY
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $r24, $r25, $r31r30
+
+    ; CHECK-LABEL: test
+
+    ; CHECK:           STDPtrQRr $r29r28, 0, $r24
+    ; CHECK-NEXT:      STDPtrQRr $r29r28, 0, killed $r24
+    ; CHECK-TINY:      STPtrRr $r29r28, $r24
+    ; CHECK-TINY-NEXT: STPtrRr $r29r28, killed $r24
+    STDPtrQRr $r29r28, 0, $r24
+    STDPtrQRr $r29r28, 0, killed $r24
+
+    ; CHECK-NEXT:      STDPtrQRr $r31r30, 9, $r25
+    ; CHECK-TINY-NEXT: $r30 = SUBIRdK killed $r30, 247, implicit-def $sreg
+    ; CHECK-TINY-NEXT: $r31 = SBCIRdK killed $r31, 255, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-TINY-NEXT: STPtrRr $r31r30, $r25
+    ; CHECK-TINY-NEXT: $r30 = SUBIRdK killed $r30, 9, implicit-def $sreg
+    ; CHECK-TINY-NEXT: $r31 = SBCIRdK killed $r31, 0, implicit-def $sreg, implicit killed $sreg
+    STDPtrQRr $r31r30, 9, $r25
+
+    ; CHECK-NEXT:      STDPtrQRr killed $r31r30, 9, killed $r25
+    ; CHECK-TINY-NEXT: $r30 = SUBIRdK killed $r30, 247, implicit-def $sreg
+    ; CHECK-TINY-NEXT: $r31 = SBCIRdK killed $r31, 255, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-TINY-NEXT: STPtrRr killed $r31r30, killed $r25
+    ; CHECK-TINY-NOT:  SUBIRdK
+    STDPtrQRr killed $r31r30, 9, killed $r25
+...

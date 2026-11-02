@@ -197,7 +197,7 @@ void IteratorRangeChecker::verifyDereference(CheckerContext &C,
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos && isPastTheEnd(State, *Pos)) {
-    auto *N = C.generateErrorNode(State);
+    auto *N = C.addSink(State);
     if (!N)
       return;
     reportBug("Past-the-end iterator dereferenced.", Val, C, N);
@@ -244,14 +244,14 @@ void IteratorRangeChecker::verifyRandomIncrOrDecr(CheckerContext &C,
   assert(PosAfter &&
          "Iterator should have position after successful advancement");
   if (isAheadOfRange(State, *PosAfter)) {
-    auto *N = C.generateErrorNode(State);
+    auto *N = C.addSink(State);
     if (!N)
       return;
     reportBug("Iterator decremented ahead of its valid range.", LHS,
                         C, N);
   }
   if (isBehindPastTheEnd(State, *PosAfter)) {
-    auto *N = C.generateErrorNode(State);
+    auto *N = C.addSink(State);
     if (!N)
       return;
     reportBug("Iterator incremented behind the past-the-end "

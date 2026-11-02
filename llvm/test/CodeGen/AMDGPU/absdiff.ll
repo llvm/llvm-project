@@ -2,10 +2,9 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdpal < %s | FileCheck %s
 
 
-define amdgpu_gs float @absdiff_valu_input_regression() {
+define amdgpu_gs float @absdiff_valu_input_regression(i32 inreg %start) {
 ; CHECK-LABEL: absdiff_valu_input_regression:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:  .LBB0_1: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_mov_b32 s1, s0
@@ -22,7 +21,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
-  %i = phi i32 [ 0, %bb ], [ %i9, %bb1 ]
+  %i = phi i32 [ %start, %bb ], [ %i9, %bb1 ]
   %i2 = phi i32 [ 0, %bb ], [ %i5, %bb1 ]
   %i3 = or i32 %i2, 1
   %i4 = or i32 %i3, 0

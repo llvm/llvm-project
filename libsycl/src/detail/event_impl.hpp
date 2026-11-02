@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_EVENT_IMPL
-#define _LIBSYCL_EVENT_IMPL
+#ifndef _LIBSYCL_SRC_DETAIL_EVENT_IMPL_HPP
+#define _LIBSYCL_SRC_DETAIL_EVENT_IMPL_HPP
 
 #include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/detail/config.hpp>
@@ -21,6 +21,7 @@
 #include <OffloadAPI.h>
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -102,4 +103,4 @@ private:
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_EVENT_IMPL
+#endif // _LIBSYCL_SRC_DETAIL_EVENT_IMPL_HPP

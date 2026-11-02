@@ -40,6 +40,7 @@ class IntrinsicInst;
 class LazyValueInfo;
 class LoadInst;
 class PHINode;
+struct ScalarOptions;
 class SelectInst;
 class SwitchInst;
 class TargetLibraryInfo;
@@ -77,6 +78,7 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 /// In this case, the unconditional branch at the end of the first if can be
 /// revectored to the false side of the second if.
 class JumpThreadingPass : public OptionalPassInfoMixin<JumpThreadingPass> {
+  const ScalarOptions *Opts = nullptr;
   Function *F = nullptr;
   FunctionAnalysisManager *FAM = nullptr;
   TargetLibraryInfo *TLI = nullptr;

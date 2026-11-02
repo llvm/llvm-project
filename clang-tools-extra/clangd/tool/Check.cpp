@@ -142,7 +142,7 @@ std::vector<std::string> listTidyChecks(llvm::StringRef Glob) {
 class Checker {
   // from constructor
   std::string File;
-  ClangdLSPServer::Options Opts;
+  const ClangdLSPServer::Options &Opts;
   // from buildCommand
   tooling::CompileCommand Cmd;
   std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
@@ -463,7 +463,7 @@ public:
 } // namespace
 
 bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts) {
+           ClangdLSPServer::Options &&Opts) {
   std::optional<Range> LineRange;
   if (!CheckFileLines.empty()) {
     uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
@@ -510,9 +510,11 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
         F.Diagnostics.ClangTidy.FastCheckFilter.emplace("None");
       return {std::move(F).compile(Diag)};
     }
-  } OverrideConfig;
-  auto ConfigProvider =
-      config::Provider::combine({Opts.ConfigProvider, &OverrideConfig});
+  };
+  std::vector<std::unique_ptr<config::Provider>> ConfigProviders;
+  ConfigProviders.push_back(std::move(Opts.ConfigProvider));
+  ConfigProviders.push_back(std::make_unique<OverrideConfigProvider>());
+  auto ConfigProvider = config::Provider::combine(std::move(ConfigProviders));
 
   auto ContextProvider = ClangdServer::createConfiguredContextProvider(
       ConfigProvider.get(), nullptr);

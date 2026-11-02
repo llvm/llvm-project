@@ -92,14 +92,14 @@ liveins:
   - { reg: '$esi', virtual-reg: '' }
   - { reg: '$edx', virtual-reg: '' }
 callSites:       
-  - { bb: 0, offset: 21, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 21, fwdArgRegs:
       - { arg: 0, reg: '$edi' }
       - { arg: 1, reg: '$esi' }
       - { arg: 2, reg: '$rdx' }
       - { arg: 3, reg: '$rcx' }
       - { arg: 4, reg: '$r8' }
       - { arg: 5, reg: '$r9d' } }
-  - { bb: 0, offset: 24, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 24, fwdArgRegs:
       - { arg: 0, reg: '$rdi' } }
 body:             |
   bb.0.entry:

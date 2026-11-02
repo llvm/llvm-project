@@ -55,24 +55,18 @@ typedef union Trivial {
 
 extern "C" Trivial ret_trivial() { return {}; }
   // CIR-LABEL: cir.func {{.*}} @ret_trivial() -> !s32i
-  // CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Trivial>
   // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Trivial>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = "a"}
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0>
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_A]]
-  // CIR: %[[TRIVIAL:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_Trivial>, !rec_Trivial
-  // CIR: cir.store %[[TRIVIAL]], %[[COERCE]] : !rec_Trivial, !cir.ptr<!rec_Trivial>
-  // CIR: %[[COERCE_I32:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_Trivial> -> !cir.ptr<!s32i>
-  // CIR: %[[RET:.*]] = cir.load %[[COERCE_I32]] : !cir.ptr<!s32i>, !s32i
-  // CIR: cir.return %[[RET]] : !s32i
+  // CIR: %[[RET_I32:.*]] = cir.cast bitcast %[[RET_ALLOCA]] : !cir.ptr<!rec_Trivial> -> !cir.ptr<!s32i>
+  // CIR-NEXT: %[[RET:.*]] = cir.load align(4) %[[RET_I32]] : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT: cir.return %[[RET]] : !s32i
 
   // LLVM-LABEL: define dso_local i32 @ret_trivial()
-  // LLVMCIR: %[[COERCE:.*]] = alloca %union.Trivial
   // LLVM: %[[RET_ALLOCA:.*]] = alloca %union.Trivial
   // LLVM: store i32 0, ptr %[[RET_ALLOCA]]
-  // LLVMCIR: %[[TRIVIAL:.*]] = load %union.Trivial, ptr %[[RET_ALLOCA]]
-  // LLVMCIR: store %union.Trivial %[[TRIVIAL]], ptr %[[COERCE]]
-  // LLVMCIR: %[[RET:.*]] = load i32, ptr %[[COERCE]]
+  // LLVMCIR: %[[RET:.*]] = load i32, ptr %[[RET_ALLOCA]], align 4
   // OGCG: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %union.Trivial, ptr %[[RET_ALLOCA]], i32 0, i32 0
   // OGCG: %[[RET:.*]] = load i32, ptr %[[COERCE_DIVE]]
   // LLVM: ret i32 %[[RET]]

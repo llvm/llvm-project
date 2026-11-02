@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-opt-isl -polly-opt-max-coefficient=-1 -polly-parallel '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-opt-isl -plugin-arg=Polly,-polly-opt-max-coefficient=-1 -plugin-arg=Polly,-polly-parallel '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 ;
 ; Check that we do not crash but generate parallel code
 ;

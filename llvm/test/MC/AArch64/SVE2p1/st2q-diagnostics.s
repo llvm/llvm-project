@@ -22,11 +22,11 @@ st2q {z21.q, z22.q}, p2.q, [x10, x21, lsl #4]
 // Invalid immediate offset
 
 st2q {z23.q, z24.q}, p3, [x13, #-17, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: st2q {z23.q, z24.q}, p3, [x13, #-17, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st2q {z23.q, z24.q}, p3, [x13, #15, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: st2q {z23.q, z24.q}, p3, [x13, #15, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

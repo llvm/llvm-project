@@ -55,7 +55,7 @@ __m128 test_mm_cvtph_ps(__m128i a) {
 //
 // Test values: -2.5f, 1.123f, POS_HALFWAY
 TEST_CONSTEXPR(match_v8hi(
-  _mm_cvtps_ph(_mm_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_NEAREST_INT),
+  _mm_cvtps_ph(_mm_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_NEAREST_TIES_EVEN),
   0xC100, 0x3C7E, 0x3C00, 0x0000, 0, 0, 0, 0
 ));
 TEST_CONSTEXPR(match_v8hi(
@@ -86,7 +86,7 @@ TEST_CONSTEXPR(match_m256(
 //
 // Test values: -2.5f, 1.123f, POS_HALFWAY
 TEST_CONSTEXPR(match_v8hi(
-  _mm256_cvtps_ph(_mm256_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f, -2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_NEAREST_INT),
+  _mm256_cvtps_ph(_mm256_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f, -2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_NEAREST_TIES_EVEN),
   0xC100, 0x3C7E, 0x3C00, 0x0000, 0xC100, 0x3C7E, 0x3C00, 0x0000
 ));
 TEST_CONSTEXPR(match_v8hi(

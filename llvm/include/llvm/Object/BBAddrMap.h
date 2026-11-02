@@ -162,6 +162,10 @@ struct BBAddrMap {
   // corresponds to the function entry.
   std::vector<BBRangeEntry> BBRanges;
 
+  // GUID of the function (as computed by `Function::getGUID`). Only valid when
+  // the `FuncGUID` feature is enabled; zero otherwise.
+  uint64_t FuncGUID = 0;
+
   // Returns the function address associated with this BBAddrMap, which is
   // stored as the `BaseAddress` of its first BBRangeEntry.
   uint64_t getFunctionAddress() const {
@@ -196,7 +200,7 @@ struct BBAddrMap {
 
   // Equality operator for unit testing.
   bool operator==(const BBAddrMap &Other) const {
-    return BBRanges == Other.BBRanges;
+    return BBRanges == Other.BBRanges && FuncGUID == Other.FuncGUID;
   }
 };
 

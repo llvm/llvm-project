@@ -62,7 +62,7 @@
 // CHECK:             %[[VAL_6:.*]] = wasmssa.const 1 : i32
 // CHECK:             %[[VAL_7:.*]] = wasmssa.add %[[VAL_5]] %[[VAL_6]] : i32
 // CHECK:             wasmssa.block_return %[[VAL_7]] : i32
-// CHECK:           } "else "{
+// CHECK:           } else {
 // CHECK:             %[[VAL_8:.*]] = wasmssa.local_get %[[ARG0]] :  ref to i32
 // CHECK:             %[[VAL_9:.*]] = wasmssa.const 1 : i32
 // CHECK:             %[[VAL_10:.*]] = wasmssa.shr_u %[[VAL_8]] by %[[VAL_9]] bits : i32
@@ -104,7 +104,7 @@
 // CHECK:             } > ^bb1
 // CHECK:           ^bb1(%[[VAL_10:.*]]: i32):
 // CHECK:             wasmssa.block_return %[[VAL_10]] : i32
-// CHECK:           } "else "{
+// CHECK:           } else {
 // CHECK:             %[[VAL_11:.*]] = wasmssa.const 1 : i32
 // CHECK:             wasmssa.block_return %[[VAL_11]] : i32
 // CHECK:           }> ^bb1

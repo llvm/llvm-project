@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-modref-calls '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-modref-calls '-passes=polly<no-default-opts>' -disable-output < %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -plugin-arg=Polly,-polly-allow-modref-calls '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -plugin-arg=Polly,-polly-allow-modref-calls '-passes=polly<no-default-opts>' -disable-output < %s
 ;
 ; Check that we assume the call to func has a read on the whole A array.
 ;

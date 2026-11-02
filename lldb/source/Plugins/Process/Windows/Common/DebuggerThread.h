@@ -36,6 +36,11 @@ public:
   HostProcess GetProcess() const { return m_process; }
   HostThread GetMainThread() const { return m_main_thread; }
 
+  /// The path the process was created with, as recorded in its process
+  /// parameters, or an empty string if it could not be read. Set by the
+  /// create-process event.
+  const std::string &GetImagePath() const { return m_image_path; }
+
   /// Returns the exception the debug loop is currently reporting, or null if
   /// there is none. Safe to call from any thread.
   ExceptionRecordSP GetActiveException();
@@ -50,6 +55,10 @@ public:
   void ContinueAsyncDllEvent();
 
 private:
+  /// Have the delegate report the stop it collected, then wait until the
+  /// client resumes before taking the next debug event.
+  void ReportDeferredStopAndWaitForResume();
+
   void FreeProcessHandles();
   void DebugLoop();
   ExceptionResult HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
@@ -75,6 +84,7 @@ private:
 
   // The image file of the process being debugged.
   HANDLE m_image_file = nullptr;
+  std::string m_image_path;
 
   // The current exception waiting to be handled.
   ExceptionRecordSP m_active_exception;

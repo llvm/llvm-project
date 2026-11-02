@@ -757,8 +757,8 @@ body: |
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C3]](s32)
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[COPY8]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP]](s1)
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[AMDGPU_COPY_VCC_SCC:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C4]](s32)
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[AMDGPU_COPY_VCC_SCC:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C4]](i32)
   ; CHECK-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY6]](s1), $exec_lo, implicit-def $scc
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC]](s1), implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
@@ -778,8 +778,8 @@ body: |
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY [[C6]](s32)
   ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[LOAD1]](s32), [[COPY12]]
   ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP1]](s1)
-  ; CHECK-NEXT:   [[C7:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[AMDGPU_COPY_VCC_SCC1:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C7]](s32)
+  ; CHECK-NEXT:   [[C7:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[AMDGPU_COPY_VCC_SCC1:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C7]](i32)
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[AMDGPU_COPY_VCC_SCC1]](s1)
   ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY13]](s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   G_BR %bb.4
@@ -813,8 +813,9 @@ body: |
   ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[PHI2]], [[C9]]
   ; CHECK-NEXT:   [[C10:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 100
   ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(i32) = G_ICMP intpred(ult), [[PHI2]](s32), [[C10]]
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[ICMP2]], [[C9]]
-  ; CHECK-NEXT:   [[AMDGPU_COPY_VCC_SCC2:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[AND]](s32)
+  ; CHECK-NEXT:   [[C11:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[ICMP2]], [[C11]]
+  ; CHECK-NEXT:   [[AMDGPU_COPY_VCC_SCC2:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[AND]](i32)
   ; CHECK-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY14]](s1), $exec_lo, implicit-def $scc
   ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC2]](s1), implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
@@ -944,4 +945,69 @@ body: |
     %70:sgpr(s32) = G_PHI %15(s32), %bb.3
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %70(s32)
     S_ENDPGM 0
+...
+
+---
+name: unmerge_i32_to_i16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+
+    ; CHECK-LABEL: name: unmerge_i32_to_i16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[AMT:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHIFT:%[0-9]+]]:sgpr(i32) = G_LSHR [[SRC]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T0:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SRC]](i32)
+    ; CHECK-NEXT: [[T1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[T0]](i16), implicit [[T1]](i16)
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i16), %2:sgpr(i16) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2
+...
+
+---
+name: unmerge_i64_to_i16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: unmerge_i64_to_i16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[LO:%[0-9]+]]:sgpr(i32), [[HI:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[SRC]](i64)
+    ; CHECK-NEXT: [[AMT:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHIFT:%[0-9]+]]:sgpr(i32) = G_LSHR [[LO]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T0:%[0-9]+]]:sgpr(i16) = G_TRUNC [[LO]](i32)
+    ; CHECK-NEXT: [[T1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT]](i32)
+    ; CHECK-NEXT: [[SHIFT1:%[0-9]+]]:sgpr(i32) = G_LSHR [[HI]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T2:%[0-9]+]]:sgpr(i16) = G_TRUNC [[HI]](i32)
+    ; CHECK-NEXT: [[T3:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT1]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[T0]](i16), implicit [[T1]](i16), implicit [[T2]](i16), implicit [[T3]](i16)
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i16), %2:sgpr(i16), %3:sgpr(i16), %4:sgpr(i16) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %3, implicit %4
+...
+
+---
+name: unmerge_v4i16_to_i16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: unmerge_v4i16_to_i16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(<4 x i16>) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[LO:%[0-9]+]]:sgpr(i32), [[HI:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[SRC]](<4 x i16>)
+    ; CHECK-NEXT: [[AMT:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHIFT:%[0-9]+]]:sgpr(i32) = G_LSHR [[LO]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T0:%[0-9]+]]:sgpr(i16) = G_TRUNC [[LO]](i32)
+    ; CHECK-NEXT: [[T1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT]](i32)
+    ; CHECK-NEXT: [[SHIFT1:%[0-9]+]]:sgpr(i32) = G_LSHR [[HI]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T2:%[0-9]+]]:sgpr(i16) = G_TRUNC [[HI]](i32)
+    ; CHECK-NEXT: [[T3:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT1]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[T0]](i16), implicit [[T1]](i16), implicit [[T2]](i16), implicit [[T3]](i16)
+    %0:sgpr(<4 x i16>) = COPY $sgpr0_sgpr1
+    %1:sgpr(i16), %2:sgpr(i16), %3:sgpr(i16), %4:sgpr(i16) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %3, implicit %4
 ...

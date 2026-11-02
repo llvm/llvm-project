@@ -22,19 +22,6 @@
 
 namespace llvm {
 namespace memprof {
-namespace detail {
-// "Dereference" the iterator from DenseMap or OnDiskChainedHashTable.  We have
-// to do so in one of two different ways depending on the type of the hash
-// table.
-template <typename value_type, typename IterTy>
-value_type DerefIterator(IterTy Iter) {
-  using deref_type = llvm::remove_cvref_t<decltype(*Iter)>;
-  if constexpr (std::is_same_v<deref_type, value_type>)
-    return *Iter;
-  else
-    return Iter->second;
-}
-} // namespace detail
 
 // A function object that returns a frame for a given FrameId.
 template <typename MapTy> struct FrameIdConverter {
@@ -56,7 +43,7 @@ template <typename MapTy> struct FrameIdConverter {
       LastUnmappedId = Id;
       return Frame();
     }
-    return detail::DerefIterator<Frame>(Iter);
+    return Iter->second;
   }
 };
 
@@ -83,8 +70,7 @@ template <typename MapTy> struct CallStackIdConverter {
     if (CSIter == Map.end()) {
       LastUnmappedId = CSId;
     } else {
-      llvm::SmallVector<FrameId> CS =
-          detail::DerefIterator<llvm::SmallVector<FrameId>>(CSIter);
+      ArrayRef<FrameId> CS = CSIter->second;
       Frames.reserve(CS.size());
       for (FrameId Id : CS)
         Frames.push_back(FrameIdToFrame(Id));

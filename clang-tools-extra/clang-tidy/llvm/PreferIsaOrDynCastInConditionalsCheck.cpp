@@ -7,18 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::llvm_check {
-
-namespace {
-AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
-} // namespace
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {

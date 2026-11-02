@@ -29,7 +29,7 @@ end program use_gp_mod
 ! CHECK:         fir.address_of(@_QMgp_modEgp_x) : !fir.ref<i32>
 ! CHECK:         omp.teams {
 ! CHECK:           %[[GP:.*]] = omp.groupprivate @_QMgp_modEgp_x device_type (host) : !fir.ref<i32>
-! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMgp_modEgp_x"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMgp_modEgp_x") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[C42:.*]] = arith.constant 42 : i32
 ! CHECK:           hlfir.assign %[[C42]] to %[[DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.terminator

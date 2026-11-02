@@ -13,13 +13,34 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
 namespace llvm {
+class DWARFDie;
+
 namespace dwarf_linker {
+
+/// Test if the location of variable \p Die contains a global address
+/// but only uses to compute the variable's value, for example
+/// DW_OP_addr DW_OP_stack_value.
+LLVM_ABI bool hasImplicitAddressLocation(const DWARFDie &Die);
+
+/// Test if the DW_TAG_member \p Die is a DWARF 2-4 style static data member: a
+/// declaration with no storage in the record. DWARF 5 uses a DW_TAG_variable
+/// instead.
+LLVM_ABI bool isStaticDataMember(const DWARFDie &Die);
+
+/// Test if an unnamed type with tag \p Tag is identified by its children, which
+/// tell it apart from other unnamed types declared on the same line. Other
+/// unnamed types, like pointer types, have no such children.
+LLVM_ABI bool isIdentifiedByChildren(dwarf::Tag Tag);
+
+/// Test if \p Die is a child that identifies its unnamed parent type.
+LLVM_ABI bool isIdentifyingChild(const DWARFDie &Die);
 
 /// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
 /// the first-row index (in \p LT.Rows) of the corresponding line-table

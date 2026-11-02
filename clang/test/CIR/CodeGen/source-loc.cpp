@@ -37,7 +37,7 @@ namespace std {
 // LLVM: @.constant = private constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.1, i32 {{.*}}, i32 {{.*}} }
 // OGCG: @.constant = private unnamed_addr constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.1, i32 {{.*}}, i32 {{.*}} }
 //
-// CIR: cir.global "private" constant cir_private dso_local @".str.2" = #cir.const_array<"void use2()" : !cir.array<!s8i x 11>, trailing_zeros> : !cir.array<!s8i x 12> {alignment = 1 : i64} loc(#loc1)
+// CIR: cir.global "private" constant cir_private dso_local @".str.2" = #cir.const_array<"void use2()" : !cir.array<!s8i x 11>, trailing_zeros> : !cir.array<!s8i x 12> align(1) loc(#loc1)
 // LLVM: @.str.2 = private constant [{{.*}} x i8] c"void use2
 // OGCG: @.str.2 = private unnamed_addr constant [{{.*}} x i8] c"void use2
 //

@@ -29,9 +29,48 @@ namespace fir {
 ConvertFIRToLLVMPattern::ConvertFIRToLLVMPattern(
     llvm::StringRef rootOpName, mlir::MLIRContext *context,
     const fir::LLVMTypeConverter &typeConverter,
-    const fir::FIRToLLVMPassOptions &options, mlir::PatternBenefit benefit)
+    const fir::FIRToLLVMPassOptions &options,
+    mlir::SymbolTableCollection *symbolTables, mlir::PatternBenefit benefit)
     : ConvertToLLVMPattern(rootOpName, context, typeConverter, benefit),
-      options(options) {}
+      options(options), symbolTables(symbolTables) {}
+
+void registerSymbol(mlir::SymbolTableCollection *symbolTables,
+                    mlir::Operation *symbolTableOp, mlir::Operation *symbol) {
+  if (!symbolTables)
+    return;
+  [[maybe_unused]] mlir::StringAttr name =
+      mlir::SymbolTable::getSymbolName(symbol);
+  [[maybe_unused]] mlir::StringAttr inserted =
+      symbolTables->getSymbolTable(symbolTableOp).insert(symbol);
+  // SymbolTable::insert renames the symbol when an operation with the same
+  // name is still registered. That would silently change a symbol of the
+  // generated code, so it must never happen here: a symbol being replaced has
+  // to be removed from the table first (see replaceSymbol).
+  assert(inserted == name && "symbol renamed on insertion");
+}
+
+void replaceSymbol(mlir::SymbolTableCollection *symbolTables,
+                   mlir::Operation *symbolTableOp, mlir::Operation *oldSymbol,
+                   mlir::Operation *newSymbol) {
+  if (!symbolTables)
+    return;
+  symbolTables->getSymbolTable(symbolTableOp).remove(oldSymbol);
+  registerSymbol(symbolTables, symbolTableOp, newSymbol);
+}
+
+void unregisterSymbol(mlir::SymbolTableCollection *symbolTables,
+                      mlir::Operation *symbolTableOp, mlir::Operation *symbol) {
+  if (symbolTables)
+    symbolTables->getSymbolTable(symbolTableOp).remove(symbol);
+}
+
+void buildSymbolTables(mlir::SymbolTableCollection &symbolTables,
+                       mlir::Operation *root) {
+  root->walk([&](mlir::Operation *op) {
+    if (op->hasTrait<mlir::OpTrait::SymbolTable>())
+      symbolTables.getSymbolTable(op);
+  });
+}
 
 // Convert FIR type to LLVM without turning fir.box<T> into memory
 // reference.

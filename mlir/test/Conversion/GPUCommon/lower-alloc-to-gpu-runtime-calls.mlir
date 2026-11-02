@@ -36,6 +36,25 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL: llvm.func @dealloc_address_space
+  func.func @dealloc_address_space(%arg0 : memref<10xf32, 1>) {
+    // CHECK: %[[pointer:.*]] = llvm.extractvalue {{.*}}[0]
+    // CHECK: %[[generic:.*]] = llvm.addrspacecast %[[pointer]] : !llvm.ptr<1> to !llvm.ptr
+    // CHECK: llvm.call @mgpuMemFree(%[[generic]], {{.*}})
+    gpu.dealloc %arg0 : memref<10xf32, 1>
+    return
+  }
+
+  // CHECK-LABEL: llvm.func @alloc_dealloc_generic_space
+  func.func @alloc_dealloc_generic_space() {
+    // CHECK: llvm.call @mgpuMemAlloc
+    // CHECK-NOT: llvm.addrspacecast
+    // CHECK: llvm.call @mgpuMemFree
+    %0 = gpu.alloc () : memref<10xf32, #ptr.generic_space>
+    gpu.dealloc %0 : memref<10xf32, #ptr.generic_space>
+    return
+  }
+
   // CHECK-LABEL: llvm.func @alloc_sync
   // CHECK-SAME: %[[size:.*]]: i64
   func.func @alloc_sync(%size : index) {

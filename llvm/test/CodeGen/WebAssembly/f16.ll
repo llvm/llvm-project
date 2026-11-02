@@ -495,10 +495,10 @@ define half @chained_fp_ops(half %x) {
 ; ALL-NEXT:    local.tee $push6=, 1, $pop7
 ; ALL-NEXT:    local.get $push9=, 1
 ; ALL-NEXT:    f32.add $push0=, $pop6, $pop9
-; ALL-NEXT:    call $push2=, __truncsfhf2, $pop0
-; ALL-NEXT:    call $push3=, __extendhfsf2, $pop2
-; ALL-NEXT:    f32.const $push1=, 0x1p-1
-; ALL-NEXT:    f32.mul $push4=, $pop3, $pop1
+; ALL-NEXT:    call $push1=, __truncsfhf2, $pop0
+; ALL-NEXT:    call $push2=, __extendhfsf2, $pop1
+; ALL-NEXT:    f32.const $push3=, 0x1p-1
+; ALL-NEXT:    f32.mul $push4=, $pop2, $pop3
 ; ALL-NEXT:    call $push5=, __truncsfhf2, $pop4
 ; ALL-NEXT:    return $pop5
 start:
@@ -514,9 +514,9 @@ define half @test_select_cc(half) nounwind {
 ; ALL-NEXT:    i32.const $push4=, 15360
 ; ALL-NEXT:    i32.const $push3=, 0
 ; ALL-NEXT:    local.get $push6=, 0
-; ALL-NEXT:    call $push1=, __extendhfsf2, $pop6
-; ALL-NEXT:    f32.const $push0=, 0x0p0
-; ALL-NEXT:    f32.ne $push2=, $pop1, $pop0
+; ALL-NEXT:    call $push0=, __extendhfsf2, $pop6
+; ALL-NEXT:    f32.const $push1=, 0x0p0
+; ALL-NEXT:    f32.ne $push2=, $pop0, $pop1
 ; ALL-NEXT:    i32.select $push5=, $pop4, $pop3, $pop2
 ; ALL-NEXT:    return $pop5
   %2 = fcmp une half %0, 0xH0000

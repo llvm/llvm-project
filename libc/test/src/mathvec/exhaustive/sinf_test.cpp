@@ -13,12 +13,14 @@
 
 #include "exhaustive_test.h"
 #include "src/__support/CPP/simd.h"
-#include "src/math/sinf.h"
+#include "src/__support/macros/optimization.h"
+// Keep the scalar reference correctly rounded in every build configuration.
+#undef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#include "src/__support/math/sinf_double_eval.h"
 #include "src/mathvec/sinf.h"
 
-using LlvmLibcSinfExhaustiveTest =
-    LlvmLibcUnaryOpExhaustiveMathvecTest<float, LIBC_NAMESPACE::sinf,
-                                         LIBC_NAMESPACE::sinf>;
+using LlvmLibcSinfExhaustiveTest = LlvmLibcUnaryOpExhaustiveMathvecTest<
+    float, LIBC_NAMESPACE::math::double_eval::sinf, LIBC_NAMESPACE::sinf>;
 
 // Tests all possible 32-bit input patterns
 TEST_F(LlvmLibcSinfExhaustiveTest, EntireRange) { test_full_range_RN(); }

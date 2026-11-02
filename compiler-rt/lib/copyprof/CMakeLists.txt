@@ -54,8 +54,8 @@ if(SANITIZER_USE_SYMBOLS)
   foreach(arch ${COPYPROF_SUPPORTED_ARCH})
     add_sanitizer_rt_symbols(clang_rt.copyprof
       ARCHS ${arch}
+      PARENT_TARGET copyprof
       EXTRA copyprof.syms.extra)
-    add_dependencies(copyprof clang_rt.copyprof-${arch}-symbols)
   endforeach()
 endif()
 

@@ -195,7 +195,7 @@ find_first_character(const unsigned char *src, unsigned char ch,
 // 4. arch_vector - hand-coded per architecture. Possibly in asm, or with
 // intrinsics.
 //
-// The called implemenation is chosen at build-time by setting
+// The called implementation is chosen at build-time by setting
 // LIBC_CONF_{FUNC}_IMPL in config.json
 static constexpr auto &string_length_impl =
     LIBC_COPT_STRING_LENGTH_IMPL::string_length;

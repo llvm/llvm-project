@@ -14,20 +14,20 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: mul_i32
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $r5
     ; MIPS32: [[MUL:%[0-9]+]]:gpr32 = MUL [[COPY]], [[COPY1]], implicit-def dead $hi0, implicit-def dead $lo0
-    ; MIPS32: $v0 = COPY [[MUL]]
-    ; MIPS32: RetRA implicit $v0
-    %0:gprb(s32) = COPY $a0
-    %1:gprb(s32) = COPY $a1
+    ; MIPS32: $r2 = COPY [[MUL]]
+    ; MIPS32: RetRA implicit $r2
+    %0:gprb(s32) = COPY $r4
+    %1:gprb(s32) = COPY $r5
     %2:gprb(s32) = G_MUL %0, %1
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -38,26 +38,26 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
-    liveins: $a0, $a1, $a2, $a3
+    liveins: $r4, $r5, $r6, $r7
 
     ; MIPS32-LABEL: name: umul_with_overflow
-    ; MIPS32: liveins: $a0, $a1, $a2, $a3
-    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; MIPS32: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-    ; MIPS32: [[COPY3:%[0-9]+]]:gpr32 = COPY $a3
+    ; MIPS32: liveins: $r4, $r5, $r6, $r7
+    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $r5
+    ; MIPS32: [[COPY2:%[0-9]+]]:gpr32 = COPY $r6
+    ; MIPS32: [[COPY3:%[0-9]+]]:gpr32 = COPY $r7
     ; MIPS32: [[MUL:%[0-9]+]]:gpr32 = MUL [[COPY]], [[COPY1]], implicit-def dead $hi0, implicit-def dead $lo0
     ; MIPS32: [[PseudoMULTu:%[0-9]+]]:acc64 = PseudoMULTu [[COPY]], [[COPY1]]
     ; MIPS32: [[PseudoMFHI:%[0-9]+]]:gpr32 = PseudoMFHI [[PseudoMULTu]]
-    ; MIPS32: [[SLTu:%[0-9]+]]:gpr32 = SLTu $zero, [[PseudoMFHI]]
+    ; MIPS32: [[SLTu:%[0-9]+]]:gpr32 = SLTu $r0, [[PseudoMFHI]]
     ; MIPS32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[SLTu]], 1
     ; MIPS32: SB [[ANDi]], [[COPY3]], 0 :: (store (s8) into %ir.pcarry_flag)
     ; MIPS32: SW [[MUL]], [[COPY2]], 0 :: (store (s32) into %ir.pmul)
     ; MIPS32: RetRA
-    %0:gprb(s32) = COPY $a0
-    %1:gprb(s32) = COPY $a1
-    %2:gprb(p0) = COPY $a2
-    %3:gprb(p0) = COPY $a3
+    %0:gprb(s32) = COPY $r4
+    %1:gprb(s32) = COPY $r5
+    %2:gprb(p0) = COPY $r6
+    %3:gprb(p0) = COPY $r7
     %4:gprb(s32) = G_MUL %0, %1
     %7:gprb(s32) = G_UMULH %0, %1
     %8:gprb(s32) = G_CONSTANT i32 0

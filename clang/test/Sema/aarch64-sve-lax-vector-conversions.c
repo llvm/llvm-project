@@ -2,20 +2,17 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=4 -mvscale-max=4 -flax-vector-conversions=integer -ffreestanding -fsyntax-only -verify=lax-vector-integer %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=4 -mvscale-max=4 -flax-vector-conversions=all -ffreestanding -fsyntax-only -verify=lax-vector-all %s
 
-// lax-vector-all-no-diagnostics
-
-// REQUIRES: aarch64-registered-target || arm-registered-target
+// REQUIRES: aarch64-registered-target
 
 #include <arm_sve.h>
 
 #define N __ARM_FEATURE_SVE_BITS
-#define SVE_FIXED_ATTR __attribute__((arm_sve_vector_bits(N)))
-#define GNU_FIXED_ATTR __attribute__((vector_size(N / 8)))
 
-typedef svfloat32_t sve_fixed_float32_t SVE_FIXED_ATTR;
-typedef svint32_t sve_fixed_int32_t SVE_FIXED_ATTR;
-typedef float gnu_fixed_float32_t GNU_FIXED_ATTR;
-typedef int gnu_fixed_int32_t GNU_FIXED_ATTR;
+typedef svfloat32_t sve_fixed_float32_t __attribute__((arm_sve_vector_bits(N)));
+typedef svint32_t sve_fixed_int32_t     __attribute__((arm_sve_vector_bits(N)));
+typedef float gnu_fixed_float32_t       __attribute__((vector_size(N / 8)));
+typedef int gnu_fixed_int32_t           __attribute__((vector_size(N / 8)));
+typedef float gnu_fixed_float32x2_t     __attribute__((vector_size((N * 2) / 8)));
 
 void sve_allowed_with_integer_lax_conversions() {
   sve_fixed_int32_t fi32;
@@ -67,4 +64,19 @@ void gnu_allowed_with_all_lax_conversions() {
   sf64 = ff32;
   // lax-vector-none-error@-1 {{assigning to 'svfloat64_t' (aka '__SVFloat64_t') from incompatible type}}
   // lax-vector-integer-error@-2 {{assigning to 'svfloat64_t' (aka '__SVFloat64_t') from incompatible type}}
+}
+
+void gnu_dissallow_multivector_conversions() {
+  svint64x2_t sf64;
+  gnu_fixed_float32x2_t ff32;
+
+  sf64 = ff32;
+  // lax-vector-none-error@-1 {{assigning to 'svint64x2_t' (aka '__clang_svint64x2_t') from incompatible type}}
+  // lax-vector-integer-error@-2 {{assigning to 'svint64x2_t' (aka '__clang_svint64x2_t') from incompatible type}}
+  // lax-vector-all-error@-3 {{assigning to 'svint64x2_t' (aka '__clang_svint64x2_t') from incompatible type}}
+
+  ff32 = sf64;
+  // lax-vector-none-error@-1 {{assigning to 'gnu_fixed_float32x2_t' (vector of 32 'float' values) from incompatible type}}
+  // lax-vector-integer-error@-2 {{assigning to 'gnu_fixed_float32x2_t' (vector of 32 'float' values) from incompatible type}}
+  // lax-vector-all-error@-3 {{assigning to 'gnu_fixed_float32x2_t' (vector of 32 'float' values) from incompatible type}}
 }

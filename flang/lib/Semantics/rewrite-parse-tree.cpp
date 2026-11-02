@@ -19,6 +19,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <list>
+#include <utility>
 
 namespace Fortran::semantics {
 
@@ -63,6 +64,8 @@ public:
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
   void Post(parser::AccObjectList &);
+  void Post(parser::AccBeginLoopDirective &);
+  void Post(parser::AccBeginCombinedDirective &);
 
   // Name resolution yet implemented:
   // TODO: Can some/all of these now be enabled?
@@ -93,6 +96,7 @@ private:
   void FixMisparsedStmtFuncs(parser::SpecificationPart &, parser::Block &);
   void OpenMPSimdOnly(parser::Block &, bool);
   void OpenMPSimdOnly(parser::SpecificationPart &);
+  void NormalizeAccLoopClauses(parser::AccClauseList &, llvm::acc::Directive);
 
   SemanticsContext &context_;
   bool errorOnUnresolvedName_{true};
@@ -526,6 +530,73 @@ void RewriteMutator::Post(parser::AccObjectList &x) {
   x.v.remove_if([this](const parser::AccObject &o) {
     return context_.IsAccObjectDuplicate(&o);
   });
+}
+
+// Recover from repeated or conflicting loop modes before structure checking
+// and lowering. Repeated clauses of one mode retain that mode.
+// Merely downgrading the exclusivity diagnostic would leave INDEPENDENT in the
+// parse tree and incorrectly promise parallelism to lowering. Discard both
+// modes so that the enclosing compute construct determines the loop's default
+// mode.
+void RewriteMutator::NormalizeAccLoopClauses(
+    parser::AccClauseList &clauses, llvm::acc::Directive directive) {
+  unsigned seq{0}, independent{0};
+  for (const auto &clause : clauses.v) {
+    if (std::holds_alternative<parser::AccClause::Seq>(clause.u)) {
+      ++seq;
+    } else if (std::holds_alternative<parser::AccClause::Independent>(
+                   clause.u)) {
+      ++independent;
+    } else if (std::holds_alternative<parser::AccClause::Auto>(clause.u) ||
+        std::holds_alternative<parser::AccClause::DeviceType>(clause.u)) {
+      // Preserve existing diagnostics for other mode conflicts and device
+      // groups. Recovery here only handles SEQ/INDEPENDENT modes.
+      return;
+    }
+  }
+  // These executable directives belong to the source program, even when an
+  // ancestor scope was read from a module file for a separate submodule.
+  if (seq && independent) {
+    context_.messages().Warn(/*isInModuleFile=*/false,
+        context_.languageFeatures(), common::UsageWarning::OpenAccUsage,
+        clauses.source,
+        "SEQ and INDEPENDENT clauses on the %s directive are ignored because they are mutually exclusive"_warn_en_US,
+        parser::ToUpperCaseLetters(
+            llvm::acc::getOpenACCDirectiveName(directive).str()));
+    clauses.v.remove_if([](const parser::AccClause &clause) {
+      return std::holds_alternative<parser::AccClause::Seq>(clause.u) ||
+          std::holds_alternative<parser::AccClause::Independent>(clause.u);
+    });
+    return;
+  }
+  if (seq < 2 && independent < 2) {
+    return;
+  }
+  context_.messages().Warn(/*isInModuleFile=*/false,
+      context_.languageFeatures(), common::UsageWarning::OpenAccUsage,
+      clauses.source,
+      "Repeated %s clauses on the %s directive are ignored"_warn_en_US,
+      seq ? "SEQ" : "INDEPENDENT",
+      parser::ToUpperCaseLetters(
+          llvm::acc::getOpenACCDirectiveName(directive).str()));
+  bool seen{false};
+  clauses.v.remove_if([&](const parser::AccClause &clause) {
+    if (std::holds_alternative<parser::AccClause::Seq>(clause.u) ||
+        std::holds_alternative<parser::AccClause::Independent>(clause.u)) {
+      return std::exchange(seen, true);
+    }
+    return false;
+  });
+}
+
+void RewriteMutator::Post(parser::AccBeginLoopDirective &x) {
+  NormalizeAccLoopClauses(std::get<parser::AccClauseList>(x.t),
+      std::get<parser::AccLoopDirective>(x.t).v);
+}
+
+void RewriteMutator::Post(parser::AccBeginCombinedDirective &x) {
+  NormalizeAccLoopClauses(std::get<parser::AccClauseList>(x.t),
+      std::get<parser::AccCombinedDirective>(x.t).v);
 }
 
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {

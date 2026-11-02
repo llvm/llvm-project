@@ -29,6 +29,9 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### ELF Improvements
 
+* `--mmap-output-file` and `--no-mmap-output-file` were swapped in LLVM 21 and 22.
+  They now mean what they say again; the default behavior is unchanged.
+
 ### Breaking changes
 
 ### COFF Improvements

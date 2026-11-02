@@ -3017,16 +3017,16 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB45_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a12, a5, .LBB45_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB45_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB45_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB45_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3109,16 +3109,16 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB46_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a12, a5, .LBB46_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB46_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB46_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB46_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3206,16 +3206,16 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB47_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a12, a5, .LBB47_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB47_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB47_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB47_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3302,16 +3302,16 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB48_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a12, a5, .LBB48_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB48_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB48_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB48_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3396,16 +3396,16 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB49_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a12, a5, .LBB49_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB49_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB49_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB49_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3489,16 +3489,16 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB50_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a12, a5, .LBB50_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB50_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB50_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB50_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3581,16 +3581,16 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB51_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a12, a5, .LBB51_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB51_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB51_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB51_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3678,16 +3678,16 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB52_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a12, a5, .LBB52_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB52_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB52_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB52_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3774,16 +3774,16 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB53_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a12, a5, .LBB53_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB53_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB53_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB53_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -3868,16 +3868,16 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB54_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a7, a15
-; XTENSA-ATOMIC-NEXT:    and a5, a7, a9
-; XTENSA-ATOMIC-NEXT:    or a6, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a6, a15
+; XTENSA-ATOMIC-NEXT:    and a5, a6, a9
+; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a12, a5, .LBB54_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB54_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a6, a7, a7
+; XTENSA-ATOMIC-NEXT:    or a7, a6, a6
 ; XTENSA-ATOMIC-NEXT:  .LBB54_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB54_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a7, a6, a9
+; XTENSA-ATOMIC-NEXT:    and a7, a7, a9
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a7, a7
 ; XTENSA-ATOMIC-NEXT:    and a6, a15, a10
@@ -5950,18 +5950,18 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB90_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bge a11, a6, .LBB90_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB90_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB90_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB90_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI90_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI90_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6046,18 +6046,18 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB91_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bge a11, a6, .LBB91_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB91_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB91_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB91_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI91_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI91_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6145,18 +6145,18 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB92_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bge a11, a6, .LBB92_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB92_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB92_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB92_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI92_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI92_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6243,18 +6243,18 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB93_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bge a11, a6, .LBB93_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB93_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB93_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB93_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI93_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI93_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6341,18 +6341,18 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB94_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bge a11, a6, .LBB94_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB94_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB94_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB94_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI94_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI94_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6438,18 +6438,18 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB95_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    blt a11, a6, .LBB95_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB95_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB95_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB95_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI95_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI95_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6534,18 +6534,18 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB96_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    blt a11, a6, .LBB96_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB96_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB96_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB96_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI96_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI96_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6633,18 +6633,18 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB97_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    blt a11, a6, .LBB97_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB97_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB97_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB97_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI97_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI97_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6731,18 +6731,18 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB98_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    blt a11, a6, .LBB98_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB98_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB98_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB98_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI98_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI98_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6829,18 +6829,18 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:  .LBB99_2: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a14
-; XTENSA-ATOMIC-NEXT:    slli a7, a15, 16
-; XTENSA-ATOMIC-NEXT:    srai a6, a7, 16
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a14
+; XTENSA-ATOMIC-NEXT:    slli a15, a7, 16
+; XTENSA-ATOMIC-NEXT:    srai a6, a15, 16
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    blt a11, a6, .LBB99_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB99_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB99_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB99_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    l32r a15, .LCPI99_0
-; XTENSA-ATOMIC-NEXT:    and a15, a7, a15
+; XTENSA-ATOMIC-NEXT:    l32r a7, .LCPI99_0
+; XTENSA-ATOMIC-NEXT:    and a15, a15, a7
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a15, a15
 ; XTENSA-ATOMIC-NEXT:    and a7, a14, a9
@@ -6925,16 +6925,16 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI100_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a6, a5, .LBB100_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB100_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB100_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB100_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7018,16 +7018,16 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI101_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a6, a5, .LBB101_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB101_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB101_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB101_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7114,16 +7114,16 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI102_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a6, a5, .LBB102_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB102_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB102_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB102_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7209,16 +7209,16 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI103_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a6, a5, .LBB103_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB103_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB103_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB103_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7304,16 +7304,16 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI104_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bgeu a6, a5, .LBB104_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB104_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB104_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB104_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7398,16 +7398,16 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI105_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a6, a5, .LBB105_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB105_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB105_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB105_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7491,16 +7491,16 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI106_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a6, a5, .LBB106_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB106_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB106_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB106_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7587,16 +7587,16 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI107_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a6, a5, .LBB107_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB107_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB107_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB107_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7682,16 +7682,16 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI108_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a6, a5, .LBB108_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB108_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB108_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB108_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9
@@ -7777,16 +7777,16 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; XTENSA-ATOMIC-NEXT:    l32r a14, .LCPI109_0
 ; XTENSA-ATOMIC-NEXT:    and a6, a3, a14
 ; XTENSA-ATOMIC-NEXT:    ssr a8
-; XTENSA-ATOMIC-NEXT:    srl a15, a13
-; XTENSA-ATOMIC-NEXT:    and a5, a15, a14
-; XTENSA-ATOMIC-NEXT:    or a7, a3, a3
+; XTENSA-ATOMIC-NEXT:    srl a7, a13
+; XTENSA-ATOMIC-NEXT:    and a5, a7, a14
+; XTENSA-ATOMIC-NEXT:    or a15, a3, a3
 ; XTENSA-ATOMIC-NEXT:    bltu a6, a5, .LBB109_4
 ; XTENSA-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB109_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    or a7, a15, a15
+; XTENSA-ATOMIC-NEXT:    or a15, a7, a7
 ; XTENSA-ATOMIC-NEXT:  .LBB109_4: # %atomicrmw.start
 ; XTENSA-ATOMIC-NEXT:    # in Loop: Header=BB109_2 Depth=1
-; XTENSA-ATOMIC-NEXT:    and a14, a7, a14
+; XTENSA-ATOMIC-NEXT:    and a14, a15, a14
 ; XTENSA-ATOMIC-NEXT:    ssl a8
 ; XTENSA-ATOMIC-NEXT:    sll a14, a14
 ; XTENSA-ATOMIC-NEXT:    and a15, a13, a9

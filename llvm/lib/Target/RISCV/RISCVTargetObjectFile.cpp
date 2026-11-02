@@ -23,9 +23,10 @@ unsigned RISCVELFTargetObjectFile::getTextSectionAlignment() const {
       *getContext().getSubtargetInfo());
 }
 
-void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                          const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void RISCVELFTargetObjectFile::initialize(MCContext &Ctx,
+                                          const TargetMachine &TM,
+                                          const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   PLTPCRelativeSpecifier = ELF::R_RISCV_PLT32;
   SupportIndirectSymViaGOTPCRel = true;
@@ -44,6 +45,17 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
       ".srodata.cst16", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
   SmallROData32Section = getContext().getELFSection(
       ".srodata.cst32", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  M.getModuleFlagsMetadata(ModuleFlags);
+
+  for (const auto &MFE : ModuleFlags) {
+    StringRef Key = MFE.Key->getString();
+    if (Key == "SmallDataLimit") {
+      SSThreshold = mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue();
+      break;
+    }
+  }
 }
 
 const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
@@ -54,6 +66,15 @@ const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
   Res = MCBinaryExpr::createAdd(
       Res, MCConstantExpr::create(Offset + MV.getConstant(), Ctx), Ctx);
   return MCSpecifierExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
+}
+
+bool RISCVELFTargetObjectFile::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  // With the large code model, keep the jump table in the function's section.
+  if (TM->getCodeModel() == CodeModel::Large)
+    return true;
+  return TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
+      UsesLabelDifference, F);
 }
 
 // A address must be loaded from a small section if its size is less than the
@@ -137,20 +158,6 @@ MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
-}
-
-void RISCVELFTargetObjectFile::getModuleMetadata(Module &M) {
-  TargetLoweringObjectFileELF::getModuleMetadata(M);
-  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
-  M.getModuleFlagsMetadata(ModuleFlags);
-
-  for (const auto &MFE : ModuleFlags) {
-    StringRef Key = MFE.Key->getString();
-    if (Key == "SmallDataLimit") {
-      SSThreshold = mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue();
-      break;
-    }
-  }
 }
 
 /// Return true if this constant should be placed into small data section.

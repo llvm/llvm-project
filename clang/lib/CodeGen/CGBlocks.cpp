@@ -1588,7 +1588,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
     entry_ptr = entry_ptr->getNextNode()->getIterator();
   else
     entry_ptr = entry->end();
-  Builder.SetInsertPoint(entry, entry_ptr);
+  Builder.SetInsertPoint(entry_ptr);
 
   // Emit debug information for all the DeclRefExprs.
   // FIXME: also for 'this'

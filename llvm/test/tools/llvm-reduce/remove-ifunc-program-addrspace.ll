@@ -64,12 +64,12 @@ define ptr addrspace(0) @resolver0_in_1() addrspace(1) {
 
 define void @call_removed() addrspace(0) {
   ; CHECK-FINAL-LABEL: @call_removed(
-  ; CHECK-FINAL-NEXT: %1 = load ptr addrspace(1), ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 3), align 8
+  ; CHECK-FINAL-NEXT: %1 = load ptr addrspace(1), ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) [[TABLE]], i64 24), align 8
   ; CHECK-FINAL-NEXT: %2 = addrspacecast ptr addrspace(1) %1 to ptr
   ; CHECK-FINAL-NEXT: call addrspace(0) void %2()
-  ; CHECK-FINAL-NEXT: %3 = load ptr addrspace(1), ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 4), align 8
+  ; CHECK-FINAL-NEXT: %3 = load ptr addrspace(1), ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) [[TABLE]], i64 32), align 8
   ; CHECK-FINAL-NEXT: call addrspace(1) void %3()
-  ; CHECK-FINAL-NEXT: %4 = load ptr addrspace(1), ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 5), align 8
+  ; CHECK-FINAL-NEXT: %4 = load ptr addrspace(1), ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) [[TABLE]], i64 40), align 8
   ; CHECK-FINAL-NEXT: call addrspace(1) void %4()
   ; CHECK-FINAL-NEXT: ret void
   call addrspace(0) void @ifunc_remove_as1_resolver_in_0()
@@ -94,14 +94,14 @@ define void @load_removed() addrspace(0) {
 ; CHECK-FINAL-NEXT: %1 = call addrspace(1) ptr addrspace(1) @resolver1_in_1()
 ; CHECK-FINAL-NEXT: store ptr addrspace(1) %1, ptr addrspace(2) [[TABLE]], align 8
 ; CHECK-FINAL-NEXT: %2 = call addrspace(0) ptr addrspace(1) @resolver1_in_0()
-; CHECK-FINAL-NEXT: store ptr addrspace(1) %2, ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 1), align 8
+; CHECK-FINAL-NEXT: store ptr addrspace(1) %2, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) [[TABLE]], i64 8), align 8
 ; CHECK-FINAL-NEXT: %3 = call addrspace(1) ptr @resolver0_in_1()
 ; CHECK-FINAL-NEXT: %4 = addrspacecast ptr %3 to ptr addrspace(1)
-; CHECK-FINAL-NEXT: store ptr addrspace(1) %4, ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 2), align 8
+; CHECK-FINAL-NEXT: store ptr addrspace(1) %4, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) [[TABLE]], i64 16), align 8
 ; CHECK-FINAL-NEXT: %5 = call addrspace(0) ptr addrspace(1) @resolver1_in_0()
-; CHECK-FINAL-NEXT: store ptr addrspace(1) %5, ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 3), align 8
+; CHECK-FINAL-NEXT: store ptr addrspace(1) %5, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) [[TABLE]], i64 24), align 8
 ; CHECK-FINAL-NEXT: %6 = call addrspace(1) ptr addrspace(1) @resolver1_in_1()
-; CHECK-FINAL-NEXT: store ptr addrspace(1) %6, ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 4), align 8
+; CHECK-FINAL-NEXT: store ptr addrspace(1) %6, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) [[TABLE]], i64 32), align 8
 ; CHECK-FINAL-NEXT: %7 = call addrspace(0) ptr addrspace(1) @resolver1_in_0()
-; CHECK-FINAL-NEXT: store ptr addrspace(1) %7, ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 5), align 8
+; CHECK-FINAL-NEXT: store ptr addrspace(1) %7, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) [[TABLE]], i64 40), align 8
 ; CHECK-FINAL-NEXT: ret void

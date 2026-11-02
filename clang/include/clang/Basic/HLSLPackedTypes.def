@@ -1,0 +1,31 @@
+//===-- HLSLPackedTypes.def - HLSL packed scalar types ----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines HLSL SM 6.6 packed types.
+//
+// The macro is:
+//
+//    HLSL_PACKED_TYPE(Spelling, Id, SingletonId)
+//
+// where:
+//
+//  - Spelling is the HLSL type name (e.g. int8_t4_packed).
+//
+//  - BuiltinType::Id is the enumerator defining the type.
+//
+//  - Context.SingletonId is the global singleton of this type.
+//
+// To include this file, define HLSL_PACKED_TYPE.
+// The macro will be undefined after inclusion.
+//
+//===----------------------------------------------------------------------===//
+
+HLSL_PACKED_TYPE(int8_t4_packed, Int8_4Packed, Int8_4PackedTy)
+HLSL_PACKED_TYPE(uint8_t4_packed, UInt8_4Packed, UInt8_4PackedTy)
+
+#undef HLSL_PACKED_TYPE

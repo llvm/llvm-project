@@ -11,13 +11,13 @@ subroutine test1(a, b)
 
   !  Look at inline constructor case
   ! CHECK: %[[CONST:.*]] = fir.address_of(@_QQro.3xr4.0) : !fir.ref<!fir.array<3xf32>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CONST]](%{{.*}}) {{{.*}}uniq_name = "_QQro.3xr4.0"}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CONST]](%{{.*}}) {{.*}}uniq_name("_QQro.3xr4.0")
   ! CHECK: hlfir.assign %[[DECL]]#0 to %{{.*}}
   a = (/ 1.0, 2.0, 3.0 /)
 
   !  Look at PARAMETER case
   ! CHECK: %[[CONST2:.*]] = fir.address_of(@_QQro.4xi4.1) : !fir.ref<!fir.array<4xi32>>
-  ! CHECK: %[[DECL2:.*]]:2 = hlfir.declare %[[CONST2]](%{{.*}}) {{{.*}}uniq_name = "_QQro.4xi4.1"}
+  ! CHECK: %[[DECL2:.*]]:2 = hlfir.declare %[[CONST2]](%{{.*}}) {{.*}}uniq_name("_QQro.4xi4.1")
   ! CHECK: hlfir.assign %[[DECL2]]#0 to %{{.*}}
   b = constant_array
 end subroutine test1

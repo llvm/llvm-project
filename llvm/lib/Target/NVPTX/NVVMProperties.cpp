@@ -25,7 +25,6 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/NVVMAttributes.h"
-#include <functional>
 #include <map>
 #include <mutex>
 #include <numeric>
@@ -293,6 +292,25 @@ std::optional<unsigned> llvm::getMaxNReg(const Function &F) {
 
 bool llvm::hasBlocksAreClusters(const Function &F) {
   return F.hasFnAttribute(NVVMAttr::BlocksAreClusters);
+}
+
+// The Verifier rejects values that are not unsigned base-ten integers, on both
+// function and callsite attributes, so a parse failure cannot reach codegen.
+static std::optional<unsigned> getFnAttrParsedInt(AttributeList Attrs,
+                                                  StringRef Attr) {
+  const Attribute A = Attrs.getFnAttr(Attr);
+  if (!A.isValid())
+    return std::nullopt;
+
+  unsigned Value;
+  if (A.getValueAsString().getAsInteger(10, Value))
+    return std::nullopt;
+  return Value;
+}
+
+ABIPreserveInfo llvm::getABIPreserve(AttributeList Attrs) {
+  return {getFnAttrParsedInt(Attrs, NVVMAttr::AbiPreserve),
+          getFnAttrParsedInt(Attrs, NVVMAttr::AbiPreserveControl)};
 }
 
 bool llvm::isParamGridConstant(const Argument &Arg) {

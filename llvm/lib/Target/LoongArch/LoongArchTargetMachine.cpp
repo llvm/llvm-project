@@ -69,6 +69,11 @@ static cl::opt<bool>
                    cl::desc("Enable sinking and folding of instruction copies"),
                    cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableMachineCombiner("loongarch-enable-machine-combiner",
+                          cl::desc("Enable the machine combiner pass"),
+                          cl::init(true), cl::Hidden);
+
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
@@ -155,6 +160,7 @@ public:
   void addPreEmitPass2() override;
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool addILPOpts() override;
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
   void addMachineLateOptimization() override;
@@ -219,6 +225,13 @@ void LoongArchPassConfig::addPreRegAlloc() {
   addPass(createLoongArchPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMergeBaseOffset)
     addPass(createLoongArchMergeBaseOffsetOptPass());
+}
+
+bool LoongArchPassConfig::addILPOpts() {
+  if (EnableMachineCombiner)
+    addPass(&MachineCombinerID);
+
+  return true;
 }
 
 bool LoongArchPassConfig::addRegAssignAndRewriteFast() {

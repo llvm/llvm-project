@@ -53,15 +53,15 @@ define i64 @increment(i64 %value) {
 define i64 @identity_i64(i64 %value) {
 ; BE-LABEL: identity_i64:
 ; BE:       # %bb.0:
-; BE-NEXT:    move $2, $4
-; BE-NEXT:    jr $ra
 ; BE-NEXT:    move $3, $5
+; BE-NEXT:    jr $ra
+; BE-NEXT:    move $2, $4
 ;
 ; LE-LABEL: identity_i64:
 ; LE:       # %bb.0:
-; LE-NEXT:    move $2, $4
-; LE-NEXT:    jr $ra
 ; LE-NEXT:    move $3, $5
+; LE-NEXT:    jr $ra
+; LE-NEXT:    move $2, $4
   ret i64 %value
 }
 
@@ -111,14 +111,14 @@ define double @identity_double(double %value) {
 ;
 ; SOFT-BE-LABEL: identity_double:
 ; SOFT-BE:       # %bb.0:
-; SOFT-BE-NEXT:    move $2, $4
-; SOFT-BE-NEXT:    jr $ra
 ; SOFT-BE-NEXT:    move $3, $5
+; SOFT-BE-NEXT:    jr $ra
+; SOFT-BE-NEXT:    move $2, $4
 ;
 ; SOFT-LE-LABEL: identity_double:
 ; SOFT-LE:       # %bb.0:
-; SOFT-LE-NEXT:    move $2, $4
-; SOFT-LE-NEXT:    jr $ra
 ; SOFT-LE-NEXT:    move $3, $5
+; SOFT-LE-NEXT:    jr $ra
+; SOFT-LE-NEXT:    move $2, $4
   ret double %value
 }

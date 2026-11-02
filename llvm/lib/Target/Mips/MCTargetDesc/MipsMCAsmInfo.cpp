@@ -44,7 +44,6 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   ZeroDirective               = "\t.space\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
   DwarfRegNumForCFI = true;
 }
 
@@ -54,8 +53,6 @@ MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo(const MCTargetOptions &Options)
     : MCAsmInfoGNUCOFF(Options) {
   HasSingleParameterDotFile = true;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-
-  ExceptionsType = ExceptionHandling::WinEH;
 
   InternalSymbolPrefix = ".L";
   AllowAtInName = true;

@@ -36,6 +36,7 @@ $__covrec_B = comdat any
 ; CHECK-NEXT: - Type:            CUSTOM
 ; CHECK-NEXT:   Name:            linking
 ; CHECK-NEXT:   Version:         2
+; CHECK-NEXT:   TargetArch:      wasm32
 ; CHECK-NEXT:   Comdats:
 ; CHECK-NEXT:     - Name:            __covrec_A
 ; CHECK-NEXT:       Entries:

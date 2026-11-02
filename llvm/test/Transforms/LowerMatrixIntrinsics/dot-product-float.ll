@@ -6,7 +6,7 @@ define <1 x float> @dotproduct_float_v6(<6 x float> %a, <6 x float> %b) {
 ; CHECK-LABEL: @dotproduct_float_v6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul <6 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v6f32(float 0.000000e+00, <6 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v6f32(float -0.000000e+00, <6 x float> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    ret <1 x float> [[TMP2]]
 ;
@@ -21,7 +21,7 @@ define <1 x float> @dotproduct_float_v1(<1 x float> %a, <1 x float> %b) {
 ; CHECK-LABEL: @dotproduct_float_v1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul <1 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v1f32(float 0.000000e+00, <1 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v1f32(float -0.000000e+00, <1 x float> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    ret <1 x float> [[TMP2]]
 ;
@@ -36,7 +36,7 @@ define <1 x float> @dotproduct_float_v3(<3 x float> %a, <3 x float> %b) {
 ; CHECK-LABEL: @dotproduct_float_v3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul <3 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float -0.000000e+00, <3 x float> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    ret <1 x float> [[TMP2]]
 ;
@@ -53,7 +53,7 @@ define <1 x float> @intrinsic_column_major_load_dot_product_float_v6(ptr %lhs_ad
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <6 x float>, ptr [[RHS_ADDRESS:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <6 x float>, ptr [[LHS_ADDRESS:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <6 x float> [[TMP0]], [[COL_LOAD]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v6f32(float 0.000000e+00, <6 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v6f32(float -0.000000e+00, <6 x float> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <1 x float> poison, float [[TMP2]], i64 0
 ; CHECK-NEXT:    ret <1 x float> [[TMP3]]
 ;
@@ -72,7 +72,7 @@ define <1 x float> @LoadInst_dot_product_float_v7(ptr %lhs_address, ptr %rhs_add
 ; CHECK-NEXT:    [[LHS:%.*]] = load <7 x float>, ptr [[LHS_ADDRESS:%.*]], align 32
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <7 x float>, ptr [[RHS_ADDRESS:%.*]], align 32
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul <7 x float> [[LHS]], [[COL_LOAD]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v7f32(float 0.000000e+00, <7 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v7f32(float -0.000000e+00, <7 x float> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    ret <1 x float> [[TMP2]]
 ;
@@ -89,7 +89,7 @@ define <1 x double> @dotproduct_double_v6(<6 x double> %a, <6 x double> %b) {
 ; CHECK-LABEL: @dotproduct_double_v6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul <6 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v6f64(double 0.000000e+00, <6 x double> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v6f64(double -0.000000e+00, <6 x double> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x double> poison, double [[TMP1]], i64 0
 ; CHECK-NEXT:    ret <1 x double> [[TMP2]]
 ;
@@ -106,7 +106,7 @@ define <1 x double> @intrinsic_column_major_load_dot_product_double_v6(ptr %lhs_
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <6 x double>, ptr [[RHS_ADDRESS:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <6 x double>, ptr [[LHS_ADDRESS:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <6 x double> [[TMP0]], [[COL_LOAD]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v6f64(double 0.000000e+00, <6 x double> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v6f64(double -0.000000e+00, <6 x double> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <1 x double> poison, double [[TMP2]], i64 0
 ; CHECK-NEXT:    ret <1 x double> [[TMP3]]
 ;
@@ -125,7 +125,7 @@ define <1 x double> @LoadInst_dot_product_double_v7(ptr %lhs_address, ptr %rhs_a
 ; CHECK-NEXT:    [[LHS:%.*]] = load <7 x double>, ptr [[LHS_ADDRESS:%.*]], align 64
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <7 x double>, ptr [[RHS_ADDRESS:%.*]], align 64
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul <7 x double> [[LHS]], [[COL_LOAD]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v7f64(double 0.000000e+00, <7 x double> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v7f64(double -0.000000e+00, <7 x double> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x double> poison, double [[TMP1]], i64 0
 ; CHECK-NEXT:    ret <1 x double> [[TMP2]]
 ;

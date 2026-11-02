@@ -90,7 +90,7 @@ def ROCDL_Dialect : Dialect {
     behavior of these operations can be determined by investigating the
     documentation for the corresponding intrinsic. This documentation
     can be found in
-    - `llvm/docs/AMDGPUUsage.rst` and
+    - `llvm/docs/AMDGPUUsage.md` and
     - The comments of `llvm/include/llvm/IR/IntrinsicsAMDGPU.td`, which
       is where details of the meaning of certain bitfields or of how an
       intrinsic corresponds to hardware instructions are most likely to
@@ -159,7 +159,7 @@ def ROCDL_Dialect : Dialect {
      "::mlir::DenseI32ArrayAttr":$reqd_work_group_size,
      "::mlir::StringAttr":$flat_work_group_size,
      "::mlir::IntegerAttr":$max_flat_work_group_size,
-     "::mlir::IntegerAttr":$waves_per_eu,
+     "::mlir::StringAttr":$waves_per_eu,
      "::mlir::BoolAttr":$unsafe_fp_atomics,
      // Boolean attributes for explicitly enabling/disabling xnack or sramecc.
      // Not setting these is a third "default"/"any" state, and not the same as
@@ -170,6 +170,7 @@ def ROCDL_Dialect : Dialect {
      "::mlir::UnitAttr":$last_use,
      "::mlir::UnitAttr":$no_remote_memory,
      "::mlir::UnitAttr":$no_fine_grained_memory,
+     // Deprecated: use `ignore_denormal_mode` on `llvm.atomicrmw` instead.
      "::mlir::UnitAttr":$ignore_denormal_mode
   );
 

@@ -10,7 +10,7 @@
 func.func @volatile_roundtrip(%arg0: !fir.ref<f32>) {
   %0 = fir.undefined !fir.dscope
   %1 = fir.volatile_cast %arg0 : (!fir.ref<f32>) -> !fir.ref<f32, volatile>
-  %2 = fir.declare %1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "x"} : (!fir.ref<f32, volatile>, !fir.dscope) -> !fir.ref<f32, volatile>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("x") fortran_attrs<volatile> : (!fir.ref<f32, volatile>, !fir.dscope) -> !fir.ref<f32, volatile>
   %3 = fir.load %2 : !fir.ref<f32, volatile>
   fir.store %3 to %2 : !fir.ref<f32, volatile>
   return

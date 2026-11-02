@@ -92,3 +92,9 @@ const unsigned char a[] = {
 static_assert(
 #embed <jk.txt> limit(defined(FOO)) // expected-error {{'defined' cannot appear within this context}}
   == 0); // expected-error {{expected expression}}
+
+// Used to crash instead of skipping to the end of the directive when a token
+// followed the parameter whose expression evaluated 'defined' (GH212075).
+static_assert(
+#embed <jk.txt> limit(defined(FOO)), // expected-error {{'defined' cannot appear within this context}}
+  == 0); // expected-error {{expected expression}}

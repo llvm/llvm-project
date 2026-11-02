@@ -54,11 +54,14 @@
 #define DEBUG_TYPE "block-freq"
 
 namespace llvm {
-extern LLVM_ABI llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
+/// Return -check-bfi-unknown-block-queries.
+LLVM_ABI bool shouldCheckBFIUnknownBlockQueries(const LLVMContext &C);
 
 extern LLVM_ABI llvm::cl::opt<bool> UseIterativeBFIInference;
-extern LLVM_ABI llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
-extern LLVM_ABI llvm::cl::opt<double> IterativeBFIPrecision;
+/// Return -iterative-bfi-max-iterations-per-block.
+LLVM_ABI unsigned getIterativeBFIMaxIterationsPerBlock(const LLVMContext &C);
+/// Return -iterative-bfi-precision.
+LLVM_ABI double getIterativeBFIPrecision(const LLVMContext &C);
 
 class BranchProbabilityInfo;
 class CycleInfo;
@@ -406,6 +409,9 @@ public:
 
   /// Indexed information about loops.
   std::list<LoopData> Loops;
+
+  /// -check-bfi-unknown-block-queries of the function's context.
+  bool CheckUnknownBlockQueries = false;
 
   /// Has an irreducible SCC outside every loop.
   bool TopContainsIrreducible = false;
@@ -954,6 +960,8 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
   BlockFrequencyInfoImplBase::clear();
   RPOT.clear();
   Nodes.clear();
+  this->CheckUnknownBlockQueries =
+      shouldCheckBFIUnknownBlockQueries(F.getFunction().getContext());
 
   LLVM_DEBUG(dbgs() << "\nblock-frequency: " << F.getName()
                     << "\n================="
@@ -978,7 +986,7 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
     applyIterativeInference();
   finalizeMetrics();
 
-  if (CheckBFIUnknownBlockQueries) {
+  if (this->CheckUnknownBlockQueries) {
     // To detect BFI queries for unknown blocks, add entries for unreachable
     // blocks, if any. This is to distinguish between known/existing unreachable
     // blocks and unknown blocks.
@@ -1342,13 +1350,15 @@ template <class BT>
 void BlockFrequencyInfoImpl<BT>::iterativeInference(
     const ProbMatrixType &ProbMatrix, const BitVector &Blocks,
     std::vector<Scaled64> &Freq) const {
-  assert(0.0 < IterativeBFIPrecision && IterativeBFIPrecision < 1.0 &&
+  const LLVMContext &C = F->getFunction().getContext();
+  const double PrecisionValue = getIterativeBFIPrecision(C);
+  assert(0.0 < PrecisionValue && PrecisionValue < 1.0 &&
          "incorrectly specified precision");
   // Convert double precision to Scaled64
   const auto Precision =
-      Scaled64::getInverse(static_cast<uint64_t>(1.0 / IterativeBFIPrecision));
+      Scaled64::getInverse(static_cast<uint64_t>(1.0 / PrecisionValue));
   const size_t MaxIterations =
-      IterativeBFIMaxIterationsPerBlock * Blocks.count();
+      getIterativeBFIMaxIterationsPerBlock(C) * Blocks.count();
 
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "  Initial discrepancy = "

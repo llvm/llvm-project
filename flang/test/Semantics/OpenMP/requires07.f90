@@ -1,8 +1,10 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
 ! OpenMP Version 5.0
 ! 2.4 Requires directive
-! Target-related clauses in 'requires' directives must come strictly before any
-! device constructs, such as target parallel regions.
+! The 'lexically before any device construct' restriction is scoped to a
+! program unit: a device construct (here a target parallel region) in one
+! program unit must not make a REQUIRES directive in a separate program unit
+! ill-formed.
 
 subroutine f
   !$omp target parallel
@@ -10,13 +12,6 @@ subroutine f
 end subroutine f
 
 subroutine g
-  !ERROR: REQUIRES directive with 'DYNAMIC_ALLOCATORS' clause found lexically after device construct
-  !$omp requires dynamic_allocators
-  !WARNING: REVERSE_OFFLOAD clause is not supported and will be ignored
-  !ERROR: REQUIRES directive with 'REVERSE_OFFLOAD' clause found lexically after device construct
-  !$omp requires reverse_offload
-  !ERROR: REQUIRES directive with 'UNIFIED_ADDRESS' clause found lexically after device construct
-  !$omp requires unified_address
-  !ERROR: REQUIRES directive with 'UNIFIED_SHARED_MEMORY' clause found lexically after device construct
   !$omp requires unified_shared_memory
+  !$omp requires unified_address
 end subroutine g

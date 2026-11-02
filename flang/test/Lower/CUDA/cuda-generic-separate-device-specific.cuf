@@ -1,0 +1,53 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! A separate module procedure whose interface is attributes(device), global or
+! grid_global runs on the device, so its generic call may select the
+! device-only specific.
+
+module parent
+  interface sg
+    module procedure s_host
+    module procedure s_dev
+  end interface
+  interface
+    attributes(device) module subroutine caller(x)
+      real(8), device :: x
+    end subroutine
+    attributes(global) module subroutine kernel(x)
+      real(8), device :: x
+    end subroutine
+    attributes(grid_global) module subroutine gkernel(x)
+      real(8), device :: x
+    end subroutine
+  end interface
+contains
+  subroutine s_host(x)
+    real(8), intent(in) :: x
+  end subroutine
+
+  attributes(device) subroutine s_dev(x)
+    real(8), device :: x
+  end subroutine
+end module
+
+submodule(parent) implementation
+contains
+  module procedure caller
+    call sg(x)
+  end procedure
+  module procedure kernel
+    call sg(x)
+  end procedure
+  module procedure gkernel
+    call sg(x)
+  end procedure
+end submodule
+
+! CHECK-LABEL: func.func @_QMparentPcaller
+! CHECK: fir.call @_QMparentPs_dev
+
+! CHECK-LABEL: func.func @_QMparentPkernel
+! CHECK: fir.call @_QMparentPs_dev
+
+! CHECK-LABEL: func.func @_QMparentPgkernel
+! CHECK: fir.call @_QMparentPs_dev

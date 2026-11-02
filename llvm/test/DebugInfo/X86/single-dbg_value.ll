@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=livedebugvalues -o - %s \
+; RUN: llc -stop-after=live-debug-values -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=SANITY
 ; RUN: llc -o - %s -filetype=obj \
 ; RUN:   | llvm-dwarfdump -v -all - | FileCheck %s

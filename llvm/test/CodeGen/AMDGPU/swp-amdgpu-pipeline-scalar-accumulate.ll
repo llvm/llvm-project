@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s
 ; Reduced from Composable Kernels. Scalar fp reduction: an i16 buffer
 ; load feeding a transcendental exp() with a NaN-guarded accumulate. Verifies
 ; such a loop software-pipelines.

@@ -106,7 +106,7 @@ class NDSRVInstBB<bit cs, string opcodestr>
     : RVInst<(outs),
              (ins GPR:$rs1, uimmlog2xlen:$cimm, bare_simm11_lsb0:$imm10),
              opcodestr, "$rs1, $cimm, $imm10", [], InstFormatNDS_BRANCH_10>,
-      Sched<[WriteJmp, ReadIALU]> {
+      Sched<[WriteJmp, ReadJmp]> {
   bits<10> imm10;
   bits<5> rs1;
   bits<6> cimm;
@@ -130,7 +130,7 @@ class NDSRVInstBB<bit cs, string opcodestr>
 class NDSRVInstBC<bits<3> funct3, string opcodestr>
     : RVInst<(outs), (ins GPR:$rs1, uimm7:$cimm, bare_simm11_lsb0:$imm10),
              opcodestr, "$rs1, $cimm, $imm10", [], InstFormatNDS_BRANCH_10>,
-      Sched<[WriteJmp, ReadIALU]> {
+      Sched<[WriteJmp, ReadJmp]> {
   bits<10> imm10;
   bits<5> rs1;
   bits<7> cimm;

@@ -26,8 +26,7 @@ extern "C" void use() {
   // CIR: %[[GET_STRUCT_CALL:.*]] = cir.call @getStruct(%[[ZERO]])
   // CIR: cir.store{{.*}} %[[GET_STRUCT_CALL]], %[[COERCE]] : !s32i, !cir.ptr<!s32i>
   // CIR: %[[COERCE_REC:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!s32i> -> !cir.ptr<!rec_Struct>
-  // CIR: %[[STRUCT_VAL:.*]] = cir.load %[[COERCE_REC]] : !cir.ptr<!rec_Struct>, !rec_Struct
-  // CIR: cir.store{{.*}} %[[STRUCT_VAL]], %[[TEMP_ALLOCA]]
+  // CIR: cir.copy %[[COERCE_REC]] align(4) to %[[TEMP_ALLOCA]] align(4) : !cir.ptr<!rec_Struct>
   // CIR: %[[GET_MEMBER:.*]] = cir.get_member %[[TEMP_ALLOCA]][0] {name = "member"}
   // CIR: %[[LOAD_MEM:.*]] = cir.load{{.*}}%[[GET_MEMBER]]
   // CIR: cir.store{{.*}} %[[LOAD_MEM]], %[[G_ALLOCA]] : !s32i, !cir.ptr<!s32i>
@@ -38,8 +37,7 @@ extern "C" void use() {
   // LLVMCIR: %[[TEMP_ALLOCA:.*]] = alloca %struct.Struct
   // LLVMCIR: %[[GET_STRUCT_CALL:.*]] = call i32 @getStruct(i32 noundef 0)
   // LLVMCIR: store i32 %[[GET_STRUCT_CALL]], ptr %[[COERCE]]
-  // LLVMCIR: %[[STRUCT_VAL:.*]] = load %struct.Struct, ptr %[[COERCE]]
-  // LLVMCIR: store %struct.Struct %[[STRUCT_VAL]], ptr %[[TEMP_ALLOCA]]
+  // LLVMCIR: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TEMP_ALLOCA]], ptr align 4 %[[COERCE]], i64 4, i1 false)
   //
   // OGCG: %[[G_ALLOCA:.*]] = alloca i32
   // OGCG: %[[TEMP_ALLOCA:.*]] = alloca %struct.Struct

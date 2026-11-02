@@ -172,7 +172,7 @@ body:             |
     ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; CHECK: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
-    ; CHECK: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; CHECK: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def dead $eflags
     ; CHECK: $al = COPY [[AND8rr]]
     ; CHECK: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
@@ -668,7 +668,7 @@ body:             |
     ; CHECK: UCOMISSrr [[COPY1]], [[COPY3]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
     ; CHECK: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
-    ; CHECK: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; CHECK: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def dead $eflags
     ; CHECK: $al = COPY [[OR8rr]]
     ; CHECK: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
@@ -708,7 +708,7 @@ body:             |
     ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; CHECK: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags
-    ; CHECK: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; CHECK: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[SETCCr]], [[SETCCr1]], implicit-def dead $eflags
     ; CHECK: $al = COPY [[AND8rr]]
     ; CHECK: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0
@@ -1204,7 +1204,7 @@ body:             |
     ; CHECK: UCOMISDrr [[COPY1]], [[COPY3]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
     ; CHECK: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 10, implicit $eflags
-    ; CHECK: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def $eflags
+    ; CHECK: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def dead $eflags
     ; CHECK: $al = COPY [[OR8rr]]
     ; CHECK: RET 0, implicit $al
     %2:vecr(s128) = COPY $xmm0

@@ -327,6 +327,15 @@ declare_mlir_dialect_extension_python_bindings(
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/MathTransformOps.td
+  SOURCES
+    dialects/transform/math.py
+  DIALECT_NAME transform
+  EXTENSION_NAME math_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/VectorTransformOps.td
   SOURCES
     dialects/transform/vector.py
@@ -838,6 +847,7 @@ declare_mlir_python_extension(MLIRPythonExtension.MLIRPythonSupport
     Globals.cpp
     IRAttributes.cpp
     IRCore.cpp
+    IRRemarks.cpp
     IRTypes.cpp
 )
 

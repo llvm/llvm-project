@@ -1,0 +1,56 @@
+add_entrypoint_object(
+  inotify_init
+  SRCS
+    inotify_init.cpp
+  HDRS
+    ../inotify_init.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.inotify_init
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  inotify_init1
+  SRCS
+    inotify_init1.cpp
+  HDRS
+    ../inotify_init1.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.inotify_init1
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  inotify_add_watch
+  SRCS
+    inotify_add_watch.cpp
+  HDRS
+    ../inotify_add_watch.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.OSUtil.linux.syscall_wrappers.inotify_add_watch
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  inotify_rm_watch
+  SRCS
+    inotify_rm_watch.cpp
+  HDRS
+    ../inotify_rm_watch.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.inotify_rm_watch
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

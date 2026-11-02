@@ -28,12 +28,13 @@ def LLVMTargetToDataLayout : Pass<"llvm-target-to-data-layout"> {
 }
 
 def LLVMTargetToTargetFeatures : Pass<"llvm-target-to-target-features"> {
-  let summary = "Update attached #llvm.target's features per the described target";
+  let summary = "Derive and store the target's DLTI features";
+  let dependentDialects = ["mlir::DLTIDialect"];
   let description = [{
     Obtain the TargetMachine specified by the attached #llvm.target's attributes
-    and obtain from it the full list of features of the selected target. Updates
-    the attached #llvm.target so that its features reflect the full list of
-    features.
+    and obtain from it the full list of features of the selected target. Stores
+    the resulting features under the `features` key of the operation's DLTI
+    map.
   }];
   let options = [
     Option<"initializeLLVMTargets", "initialize-llvm-targets", "bool",

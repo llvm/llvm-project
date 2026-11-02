@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/BoxAnalyzer.h"
@@ -344,6 +345,47 @@ mlir::Value Fortran::lower::genInitialDataTarget(
                               /*slice=*/mlir::Value{});
 }
 
+static mlir::Value genCoarrayDefaultInitializerValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Type boxType) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  auto baseBoxType = mlir::cast<fir::BaseBoxType>(boxType);
+  auto baseAddrType = baseBoxType.getBaseAddressType();
+  auto type = fir::unwrapRefType(baseAddrType);
+  auto nullAddr = builder.createNullConstant(loc, baseAddrType);
+  mlir::Value shape, slice;
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
+    llvm::SmallVector<mlir::Value> lbounds, extents;
+    if (const auto *details =
+            sym.GetUltimate()
+                .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+      for (const Fortran::semantics::ShapeSpec &spec : details->shape()) {
+        if (spec.lbound().GetExplicit())
+          if (auto lb =
+                  Fortran::evaluate::ToInt64(*spec.lbound().GetExplicit()))
+            lbounds.push_back(builder.createIntegerConstant(
+                loc, builder.getIndexType(), *lb));
+          else
+            lbounds.push_back(
+                builder.createIntegerConstant(loc, builder.getIndexType(), 1));
+        else
+          lbounds.push_back(
+              builder.createIntegerConstant(loc, builder.getIndexType(), 1));
+      }
+    }
+    for (int64_t extent : seqTy.getShape())
+      extents.push_back(
+          builder.createIntegerConstant(loc, builder.getIndexType(), extent));
+
+    shape = builder.createShape(loc,
+                                fir::ArrayBoxValue{nullAddr, extents, lbounds});
+  }
+  auto embox =
+      fir::EmboxOp::create(builder, loc, baseBoxType, nullAddr, shape, slice,
+                           /*lenParams=*/{}, /*typeSourceBox=*/{});
+  return embox;
+}
+
 /// Generate default initial value for a derived type object \p sym with mlir
 /// type \p symTy.
 static mlir::Value genDefaultInitializerValue(
@@ -574,6 +616,21 @@ fir::GlobalOp Fortran::lower::defineGlobal(
         fir::HasValueOp::create(b, loc, box);
       });
     }
+  } else if (Fortran::evaluate::IsCoarray(sym)) {
+    if (oeDetails && oeDetails->init()) {
+      auto expr = *oeDetails->init();
+      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+        mlir::Value box =
+            Fortran::lower::genInitialDataTarget(converter, loc, symTy, expr);
+        fir::HasValueOp::create(b, loc, box);
+      });
+    } else {
+      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+        mlir::Value box =
+            genCoarrayDefaultInitializerValue(converter, loc, sym, symTy);
+        fir::HasValueOp::create(b, loc, box);
+      });
+    }
   } else if (oeDetails) {
     if (oeDetails->init()) {
       createGlobalInitialization(
@@ -751,9 +808,19 @@ bool needCUDAAlloc(const Fortran::semantics::Symbol &sym) {
         (*details->cudaDataAttr() == Fortran::common::CUDADataAttr::Device ||
          *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Managed ||
          *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Unified ||
-         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Shared ||
-         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Pinned))
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Shared))
       return true;
+    // Pinned data is host memory. For an allocatable or pointer, the pinned
+    // allocator is recorded in the descriptor and the descriptor itself stays
+    // in host memory.
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Pinned &&
+        !Fortran::semantics::IsAllocatableOrPointer(sym.GetUltimate()))
+      return true;
+    // Derived-type function result storage is replaced by the caller-provided
+    // buffer in the AbstractResult pass, so it must not be CUDA allocated.
+    if (Fortran::semantics::IsFunctionResult(sym))
+      return false;
     const Fortran::semantics::DeclTypeSpec *type{details->type()};
     const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
                                                             : nullptr};
@@ -2373,6 +2440,117 @@ static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
   return false;
 }
 
+/// When every explicit bound on the requested side (lower or upper) of an
+/// array is a RankOneBoundElement, they all extract elements from the same
+/// rank-1 base expression -- that is how the front end builds them (see
+/// ArraySpecAnalyzer).  Evaluate that base exactly once and return the
+/// per-dimension element values, converted to \p idxTy, so a call-valued base
+/// such as `mb(n)` in `real :: a(mb(n))` is not re-evaluated for every
+/// dimension.  Returns an empty vector (so the caller lowers each bound
+/// independently) when the bounds are not rank-1 bound elements.
+static llvm::SmallVector<mlir::Value> lowerSharedRankOneBounds(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::lower::BoxAnalyzer &box, bool upper, mlir::Type idxTy,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  const Fortran::evaluate::RankOneBoundElement *shared = nullptr;
+  for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound()) {
+    const Fortran::semantics::Bound &bound =
+        upper ? spec->ubound() : spec->lbound();
+    const auto &explicitBound = bound.GetExplicit();
+    if (!explicitBound)
+      return {};
+    if (const auto *robe = Fortran::evaluate::UnwrapExpr<
+            Fortran::evaluate::RankOneBoundElement>(*explicitBound)) {
+      if (!shared)
+        shared = robe;
+      else if (!(robe->base() == shared->base()))
+        // Different dimensions extract from different rank-1 bases, so they do
+        // not share a single base; let the caller lower each bound on its own.
+        return {};
+    } else {
+      return {};
+    }
+  }
+  if (!shared)
+    return {};
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::evaluate::FoldingContext &foldingContext =
+      converter.getFoldingContext();
+  // Build the shared rank-1 base at most once, and only if some dimension
+  // needs a runtime load: a constant base (e.g. a PARAMETER) folds to a
+  // compile-time scalar for each dimension instead.
+  std::optional<hlfir::Entity> baseArray;
+  llvm::SmallVector<mlir::Value> values;
+  for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound()) {
+    const Fortran::semantics::Bound &bound =
+        upper ? spec->ubound() : spec->lbound();
+    Fortran::lower::SomeExpr elemExpr{Fortran::evaluate::Fold(
+        foldingContext, Fortran::evaluate::AsGenericExpr(
+                            Fortran::common::Clone(*bound.GetExplicit())))};
+    if (std::optional<int64_t> cst = Fortran::evaluate::ToInt64(elemExpr)) {
+      values.emplace_back(builder.createIntegerConstant(loc, idxTy, *cst));
+      continue;
+    }
+    if (!baseArray) {
+      Fortran::lower::SomeExpr baseExpr{Fortran::evaluate::AsGenericExpr(
+          Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
+              Fortran::common::Clone(shared->base())})};
+      baseArray = hlfir::Entity{Fortran::lower::convertExprToHLFIR(
+          loc, converter, baseExpr, symMap, stmtCtx)};
+    }
+    const auto *robe =
+        Fortran::evaluate::UnwrapExpr<Fortran::evaluate::RankOneBoundElement>(
+            *bound.GetExplicit());
+    mlir::Value idx =
+        builder.createIntegerConstant(loc, idxTy, robe->dimension() + 1);
+    mlir::Value elem = hlfir::loadElementAt(loc, builder, *baseArray, {idx});
+    values.emplace_back(builder.createConvert(loc, idxTy, elem));
+  }
+  return values;
+}
+
+/// True when any dimension's explicit bound is a rank-1 bound element, i.e. the
+/// array's rank was produced by expanding a rank-1 integer bound.  In that case
+/// a non-ROBE bound in a given direction is a single user-written scalar that
+/// the front end clones into every dimension's ShapeSpec, so it can be
+/// evaluated once and reused instead of once per dimension.
+static bool hasRankOneBoundElement(const Fortran::lower::BoxAnalyzer &box) {
+  for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound())
+    for (const Fortran::semantics::Bound &bound :
+         {std::cref(spec->lbound()), std::cref(spec->ubound())})
+      if (const auto &explicitBound = bound.GetExplicit())
+        if (Fortran::evaluate::UnwrapExpr<
+                Fortran::evaluate::RankOneBoundElement>(*explicitBound))
+          return true;
+  return false;
+}
+
+/// True when every dimension has an explicit bound on the requested side (lower
+/// or upper) and those bounds are all structurally identical.  A rank-1 bound
+/// base expands to the whole declaration -- a comma list mixing it with other
+/// specs is rejected by semantics (see declaration-explicit-array-bounds.f90)
+/// -- so the front end clones the single user-written scalar bound on the
+/// non-ROBE side (e.g. the lower bound in `a(lb : rank1base)`) into every
+/// dimension's ShapeSpec, making them identical by construction.  This is a
+/// defensive guard: if the bounds were ever not identical, the caller falls
+/// back to lowering each dimension on its own.
+static bool allSideBoundsIdentical(const Fortran::lower::BoxAnalyzer &box,
+                                   bool upper) {
+  const Fortran::semantics::SubscriptIntExpr *first = nullptr;
+  for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound()) {
+    const Fortran::semantics::Bound &bound =
+        upper ? spec->ubound() : spec->lbound();
+    const auto &explicitBound = bound.GetExplicit();
+    if (!explicitBound)
+      return false;
+    if (!first)
+      first = &*explicitBound;
+    else if (!(*explicitBound == *first))
+      return false;
+  }
+  return first != nullptr;
+}
+
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
 /// array, or if the lower bounds are deferred, or all implicit or one.
 static void lowerExplicitLowerBounds(
@@ -2387,6 +2565,27 @@ static void lowerExplicitLowerBounds(
   if (box.isStaticArray()) {
     for (int64_t lb : box.staticLBound())
       result.emplace_back(builder.createIntegerConstant(loc, idxTy, lb));
+    return;
+  }
+  if (llvm::SmallVector<mlir::Value> shared = lowerSharedRankOneBounds(
+          converter, loc, box, /*upper=*/false, idxTy, symMap, stmtCtx);
+      !shared.empty()) {
+    result.append(shared.begin(), shared.end());
+    return;
+  }
+  // A non-ROBE lower bound in a rank-1-bound-expanded array is a single scalar
+  // the front end cloned across every dimension; evaluate it once and reuse it.
+  // allSideBoundsIdentical is a defensive guard (the clones are identical by
+  // construction); if it ever fails, fall through to per-dimension lowering.
+  if (hasRankOneBoundElement(box) &&
+      allSideBoundsIdentical(box, /*upper=*/false)) {
+    const Fortran::semantics::ShapeSpec *spec = box.dynamicBound().front();
+    if (auto low = spec->lbound().GetExplicit()) {
+      auto expr = Fortran::lower::SomeExpr{*low};
+      mlir::Value lb = builder.createConvert(
+          loc, idxTy, genScalarValue(converter, loc, expr, symMap, stmtCtx));
+      result.append(box.dynamicBound().size(), lb);
+    }
     return;
   }
   for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound()) {
@@ -2428,11 +2627,36 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
       result.emplace_back(builder.createIntegerConstant(loc, idxTy, extent));
     return;
   }
+  // Rank-1 bound elements share one base; evaluate it once and reuse the
+  // extracted upper bound for every dimension's extent computation.
+  llvm::SmallVector<mlir::Value> sharedUpper = lowerSharedRankOneBounds(
+      converter, loc, box, /*upper=*/true, idxTy, symMap, stmtCtx);
+  // A non-ROBE upper bound in a rank-1-bound-expanded array is a single scalar
+  // the front end cloned across every dimension; evaluate it once and reuse it.
+  // allSideBoundsIdentical is a defensive guard (the clones are identical by
+  // construction); if it ever fails, fall through to per-dimension lowering.
+  mlir::Value broadcastUpper;
+  if (sharedUpper.empty() && hasRankOneBoundElement(box) &&
+      allSideBoundsIdentical(box, /*upper=*/true)) {
+    const Fortran::semantics::ShapeSpec *spec = box.dynamicBound().front();
+    if (auto up = spec->ubound().GetExplicit()) {
+      auto expr = Fortran::lower::SomeExpr{*up};
+      broadcastUpper = builder.createConvert(
+          loc, idxTy, genScalarValue(converter, loc, expr, symMap, stmtCtx));
+    }
+  }
   for (const auto &spec : llvm::enumerate(box.dynamicBound())) {
     if (auto up = spec.value()->ubound().GetExplicit()) {
-      auto expr = Fortran::lower::SomeExpr{*up};
-      mlir::Value ub = builder.createConvert(
-          loc, idxTy, genScalarValue(converter, loc, expr, symMap, stmtCtx));
+      mlir::Value ub;
+      if (!sharedUpper.empty()) {
+        ub = sharedUpper[spec.index()];
+      } else if (broadcastUpper) {
+        ub = broadcastUpper;
+      } else {
+        auto expr = Fortran::lower::SomeExpr{*up};
+        ub = builder.createConvert(
+            loc, idxTy, genScalarValue(converter, loc, expr, symMap, stmtCtx));
+      }
       if (lowerBounds.empty())
         result.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       else
@@ -2443,6 +2667,27 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
     }
   }
   assert(result.empty() || result.size() == box.dynamicBound().size());
+}
+
+llvm::SmallVector<mlir::Value> Fortran::lower::lowerExplicitMappedExtents(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &symbol, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  Fortran::lower::BoxAnalyzer box;
+  box.analyze(symbol);
+  llvm::SmallVector<mlir::Value> extents;
+  if (!box.isArray() || box.isStaticArray())
+    return extents;
+  // Only divert from the caller's default per-dimension extent lowering when a
+  // rank-1 bound base (e.g. mb(n) in res(mb(n))) would otherwise be
+  // re-evaluated once per dimension; lowerExplicitExtents evaluates it once.
+  if (!hasRankOneBoundElement(box))
+    return extents;
+  llvm::SmallVector<mlir::Value> lowerBounds;
+  lowerExplicitLowerBounds(converter, loc, box, lowerBounds, symMap, stmtCtx);
+  lowerExplicitExtents(converter, loc, box, lowerBounds, extents, symMap,
+                       stmtCtx);
+  return extents;
 }
 
 /// Lower explicit character length if any. Return empty mlir::Value if no
@@ -2540,12 +2785,24 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
 }
 
+/// Whether storage may be accessed indirectly through internal procedure calls.
 static bool
 isCapturedInInternalProcedure(Fortran::lower::AbstractConverter &converter,
                               const Fortran::semantics::Symbol &sym) {
   const Fortran::lower::pft::FunctionLikeUnit *funit =
       converter.getCurrentFunctionUnit();
-  if (!funit || funit->getHostAssoc().empty())
+  if (!funit)
+    return false;
+  if (const auto *host =
+          funit->parent.getIf<Fortran::lower::pft::FunctionLikeUnit>()) {
+    // Treat a symbol as captured here when both conditions hold:
+    // - It is declared in the immediate host procedure.
+    // - It belongs to the host's global capture set, excluding private copies.
+    if (&sym.owner() == &host->getScope() &&
+        host->getHostAssoc().isAssociatedGlobal(sym))
+      return true;
+  }
+  if (funit->getHostAssoc().empty())
     return false;
   if (funit->getHostAssoc().isAssociated(sym))
     return true;
@@ -2653,6 +2910,15 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       argNo = converter.getDummyArgPosition(sym);
     }
     auto [storage, storageOffset] = converter.getSymbolStorage(sym);
+
+    if (Fortran::evaluate::IsCoarray(sym) &&
+        !Fortran::semantics::IsAllocatableOrPointer(sym)) {
+      auto newBase = hlfir::DeclareOp::create(
+          builder, loc, base, name, /*shape=*/nullptr, lenParams, dummyScope,
+          storage, storageOffset, attributes, dataAttr, argNo);
+      symMap.addVariableDefinition(sym, newBase, force);
+      return;
+    }
     auto newBase = hlfir::DeclareOp::create(
         builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
         storageOffset, attributes, dataAttr, argNo);
@@ -3013,14 +3279,22 @@ void Fortran::lower::mapSymbolAttributes(
 
   // The origin must be \vec{1}.
   auto populateShape = [&](auto &shapes, const auto &bounds, mlir::Value box) {
+    // Rank-1 bound elements share one base; evaluate it once and reuse the
+    // extracted upper bound for every dimension (empty when not applicable).
+    llvm::SmallVector<mlir::Value> sharedUpper = lowerSharedRankOneBounds(
+        converter, loc, ba, /*upper=*/true, idxTy, symMap, stmtCtx);
     for (auto iter : llvm::enumerate(bounds)) {
       auto *spec = iter.value();
       assert(spec->lbound().GetExplicit() &&
              "lbound must be explicit with constant value 1");
       if (auto high = spec->ubound().GetExplicit()) {
-        Fortran::lower::SomeExpr highEx{*high};
-        mlir::Value ub = genValue(highEx);
-        ub = builder.createConvert(loc, idxTy, ub);
+        mlir::Value ub;
+        if (!sharedUpper.empty()) {
+          ub = sharedUpper[iter.index()];
+        } else {
+          Fortran::lower::SomeExpr highEx{*high};
+          ub = builder.createConvert(loc, idxTy, genValue(highEx));
+        }
         shapes.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       } else if (spec->ubound().isColon()) {
         assert(box && "assumed bounds require a descriptor");
@@ -3040,6 +3314,32 @@ void Fortran::lower::mapSymbolAttributes(
   // The origin is not \vec{1}.
   auto populateLBoundsExtents = [&](auto &lbounds, auto &extents,
                                     const auto &bounds, mlir::Value box) {
+    // Rank-1 bound elements share one base per side; evaluate each once and
+    // reuse the extracted bounds for every dimension (empty when not
+    // applicable).
+    llvm::SmallVector<mlir::Value> sharedLower = lowerSharedRankOneBounds(
+        converter, loc, ba, /*upper=*/false, idxTy, symMap, stmtCtx);
+    llvm::SmallVector<mlir::Value> sharedUpper = lowerSharedRankOneBounds(
+        converter, loc, ba, /*upper=*/true, idxTy, symMap, stmtCtx);
+    // A non-ROBE bound in a rank-1-bound-expanded array is a single scalar
+    // broadcast across every dimension; evaluate it once and reuse it.  Only
+    // broadcast a side whose bounds are all the same cloned expression; a mixed
+    // array with distinct per-dimension bounds is lowered dimension by
+    // dimension below.
+    mlir::Value broadcastLower, broadcastUpper;
+    if (hasRankOneBoundElement(ba)) {
+      const Fortran::semantics::ShapeSpec *spec0 = ba.dynamicBound().front();
+      if (sharedLower.empty() && allSideBoundsIdentical(ba, /*upper=*/false))
+        if (auto low = spec0->lbound().GetExplicit()) {
+          auto expr = Fortran::lower::SomeExpr{*low};
+          broadcastLower = builder.createConvert(loc, idxTy, genValue(expr));
+        }
+      if (sharedUpper.empty() && allSideBoundsIdentical(ba, /*upper=*/true))
+        if (auto high = spec0->ubound().GetExplicit()) {
+          auto expr = Fortran::lower::SomeExpr{*high};
+          broadcastUpper = builder.createConvert(loc, idxTy, genValue(expr));
+        }
+    }
     for (auto iter : llvm::enumerate(bounds)) {
       auto *spec = iter.value();
       fir::BoxDimsOp dimInfo;
@@ -3062,7 +3362,11 @@ void Fortran::lower::mapSymbolAttributes(
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, 1));
         }
       } else {
-        if (auto low = spec->lbound().GetExplicit()) {
+        if (!sharedLower.empty()) {
+          lb = sharedLower[iter.index()];
+        } else if (broadcastLower) {
+          lb = broadcastLower;
+        } else if (auto low = spec->lbound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*low};
           lb = builder.createConvert(loc, idxTy, genValue(expr));
         } else {
@@ -3070,7 +3374,15 @@ void Fortran::lower::mapSymbolAttributes(
         }
         lbounds.emplace_back(lb);
 
-        if (auto high = spec->ubound().GetExplicit()) {
+        if (!sharedUpper.empty()) {
+          ub = sharedUpper[iter.index()];
+          extents.emplace_back(
+              fir::factory::computeExtent(builder, loc, lb, ub));
+        } else if (broadcastUpper) {
+          ub = broadcastUpper;
+          extents.emplace_back(
+              fir::factory::computeExtent(builder, loc, lb, ub));
+        } else if (auto high = spec->ubound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*high};
           ub = builder.createConvert(loc, idxTy, genValue(expr));
           extents.emplace_back(

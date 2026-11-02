@@ -6,10 +6,10 @@
 func.func @preserve_name_loc_for_descriptor_base_member(%arg0: !fir.box<!fir.array<?xi32>>) {
   %0 = fir.alloca !fir.box<!fir.heap<i32>>
   %1 = fir.zero_bits !fir.heap<i32>
-  %2:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "test"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg0 uniq_name("test") fortran_attrs<intent_out> : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %3 = fir.embox %1 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-  %4:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "test2"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+  %4:2 = hlfir.declare %0 uniq_name("test2") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
   %5 = fir.allocmem i32 {fir.must_be_heap = true}
   %6 = fir.embox %5 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
   fir.store %6 to %4#1 : !fir.ref<!fir.box<!fir.heap<i32>>>

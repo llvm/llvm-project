@@ -11,11 +11,11 @@
 define void @relaxed_store_hint_roW_i8(ptr %ptr, i32 %offset, i8 %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_roW_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stcph
 ; CHECK-NEXT:    strb w2, [x0, w1, sxtw]
 ; CHECK-NEXT:    ret
   %addr = getelementptr i8, ptr %ptr, i32 %offset
-  store atomic i8 %val, ptr %addr monotonic, align 8, !mem.cache_hint !0
+  store atomic i8 %val, ptr %addr monotonic, align 8, !mem.cache_hint !4
   ret void
 }
 
@@ -124,11 +124,11 @@ define void @relaxed_store_hint_roW_double(ptr %ptr, i32 %offset, double %val) n
 define void @relaxed_store_hint_roX_i8(ptr %ptr, i64 %offset, i8 %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_roX_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    shuh
 ; CHECK-NEXT:    strb w2, [x0, x1]
 ; CHECK-NEXT:    ret
   %addr = getelementptr i8, ptr %ptr, i64 %offset
-  store atomic i8 %val, ptr %addr monotonic, align 8, !mem.cache_hint !2
+  store atomic i8 %val, ptr %addr monotonic, align 8, !mem.cache_hint !6
   ret void
 }
 
@@ -237,11 +237,11 @@ define void @relaxed_store_hint_roX_double(ptr %ptr, i64 %offset, double %val) n
 define void @relaxed_store_hint_uimm_i8(ptr %ptr, i8 %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_uimm_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    shuh ph
 ; CHECK-NEXT:    strb w1, [x0, #4095]
 ; CHECK-NEXT:    ret
   %addr = getelementptr i8, ptr %ptr, i32 4095
-  store atomic i8 %val, ptr %addr monotonic, align 8, !mem.cache_hint !2
+  store atomic i8 %val, ptr %addr monotonic, align 8, !mem.cache_hint !8
   ret void
 }
 
@@ -460,3 +460,9 @@ define void @relaxed_store_hint_imm_double(ptr %ptr, double %val) nounwind {
 !1 = !{!"aarch64.mem_hint", i32 0}
 !2 = !{i32 1, !3}
 !3 = !{!"aarch64.mem_hint", i32 1}
+!4 = !{i32 1, !5}
+!5 = !{!"aarch64.mem_hint", i32 2}
+!6 = !{i32 1, !7}
+!7 = !{!"aarch64.mem_hint", i32 3}
+!8 = !{i32 1, !9}
+!9 = !{!"aarch64.mem_hint", i32 4}

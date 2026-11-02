@@ -17,7 +17,7 @@ define internal spir_func void @main() #0 {
 
 ; CHECK:   %[[#entry:]] = OpLabel
 ; CHECK:      %[[#idx]] = OpVariable %[[#]] Function
-; ACHECK:                 OpStore %[[#idx]] %[[#int_0]]
+; CHECK:                 OpStore %[[#idx]] %[[#int_0]]
 ; CHECK:                  OpBranch %[[#while_cond:]]
 entry:
   %0 = call token @llvm.experimental.convergence.entry()

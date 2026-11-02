@@ -13,8 +13,8 @@
 ; CHECK: .target sm_{{[0-9]+}}, debug
 
 ; CHECK: .visible .entry _Z5saxpyifPfS_(
-; CHECK: .param .u32 {{.+}},
-; CHECK: .param .f32 {{.+}},
+; CHECK: .param .b32 {{.+}},
+; CHECK: .param .b32 {{.+}},
 ; CHECK: .param .u64 {{.+}},
 ; CHECK: .param .u64 {{.+}}
 ; CHECK: )

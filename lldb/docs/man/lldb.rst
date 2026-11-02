@@ -339,7 +339,7 @@ the warning, add the following command to ~/.lldbinit:
 SEE ALSO
 --------
 
-The LLDB project page https://lldb.llvm.org has many different resources
-for :program:`lldb` users ‐‐ the gdb/lldb command equivalence page
-https://lldb.llvm.org/use/map.html can be especially helpful for users
+The :doc:`LLDB project page </index>` has many different resources
+for :program:`lldb` users ‐‐ the :doc:`gdb/lldb command equivalence page
+</use/map>` can be especially helpful for users
 coming from gdb.

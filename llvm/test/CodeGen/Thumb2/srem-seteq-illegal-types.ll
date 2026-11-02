@@ -96,14 +96,14 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NEXT:    adr r0, .LCPI3_0
 ; CHECK-NEXT:    vmov.32 d8[1], r4
+; CHECK-NEXT:    vmov.32 d9[1], r5
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; CHECK-NEXT:    adr r0, .LCPI3_1
+; CHECK-NEXT:    vand q11, q4, q9
 ; CHECK-NEXT:    vmov.32 d16[1], r3
-; CHECK-NEXT:    vmov.32 d9[1], r5
-; CHECK-NEXT:    vand q8, q8, q9
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0:128]
 ; CHECK-NEXT:    adr r0, .LCPI3_2
-; CHECK-NEXT:    vand q11, q4, q9
+; CHECK-NEXT:    vand q8, q8, q9
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; CHECK-NEXT:    vceq.i32 q10, q11, q10
 ; CHECK-NEXT:    vceq.i32 q8, q8, q9
@@ -114,10 +114,11 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    vmvn q9, q9
 ; CHECK-NEXT:    vmvn q8, q8
 ; CHECK-NEXT:    vmovn.i64 d18, q9
-; CHECK-NEXT:    vmovn.i64 d16, q8
-; CHECK-NEXT:    vmov.32 r0, d18[0]
-; CHECK-NEXT:    vmov.32 r1, d18[1]
-; CHECK-NEXT:    vmov.32 r2, d16[0]
+; CHECK-NEXT:    vmovn.i64 d19, q8
+; CHECK-NEXT:    vmovn.i32 d16, q9
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    vmov.u16 r1, d16[1]
+; CHECK-NEXT:    vmov.u16 r2, d16[2]
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}

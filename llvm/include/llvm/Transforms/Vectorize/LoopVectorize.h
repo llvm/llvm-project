@@ -57,7 +57,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include <functional>
@@ -79,9 +78,6 @@ class ProfileSummaryInfo;
 class ScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
-
-LLVM_ABI extern cl::opt<bool> EnableLoopInterleaving;
-LLVM_ABI extern cl::opt<bool> EnableLoopVectorization;
 
 struct LoopVectorizeOptions {
   /// If false, consider all loops for interleaving.

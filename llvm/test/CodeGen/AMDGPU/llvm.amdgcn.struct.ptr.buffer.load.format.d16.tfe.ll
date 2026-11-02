@@ -290,9 +290,8 @@ define amdgpu_kernel void @load_v2f16_tfe(ptr addrspace(8) inreg %rsrc, ptr addr
 ; GFX8-UNPACKED-GISEL-NEXT:    v_mov_b32_e32 v5, s6
 ; GFX8-UNPACKED-GISEL-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-UNPACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-UNPACKED-GISEL-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX8-UNPACKED-GISEL-NEXT:    s_or_b32 s0, s0, s1
@@ -401,9 +400,8 @@ define amdgpu_kernel void @load_v2i16_tfe(ptr addrspace(8) inreg %rsrc, ptr addr
 ; GFX8-UNPACKED-GISEL-NEXT:    v_mov_b32_e32 v5, s6
 ; GFX8-UNPACKED-GISEL-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-UNPACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-UNPACKED-GISEL-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX8-UNPACKED-GISEL-NEXT:    s_or_b32 s0, s0, s1
@@ -518,15 +516,13 @@ define amdgpu_kernel void @load_v4f16_tfe(ptr addrspace(8) inreg %rsrc, ptr addr
 ; GFX8-UNPACKED-GISEL-NEXT:    v_mov_b32_e32 v8, s7
 ; GFX8-UNPACKED-GISEL-NEXT:    v_mov_b32_e32 v7, s6
 ; GFX8-UNPACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
+; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX8-UNPACKED-GISEL-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX8-UNPACKED-GISEL-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX8-UNPACKED-GISEL-NEXT:    s_or_b32 s0, s0, s1
 ; GFX8-UNPACKED-GISEL-NEXT:    s_or_b32 s1, s2, s3
@@ -656,15 +652,13 @@ define amdgpu_kernel void @load_v4i16_tfe(ptr addrspace(8) inreg %rsrc, ptr addr
 ; GFX8-UNPACKED-GISEL-NEXT:    v_mov_b32_e32 v8, s7
 ; GFX8-UNPACKED-GISEL-NEXT:    v_mov_b32_e32 v7, s6
 ; GFX8-UNPACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
+; GFX8-UNPACKED-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX8-UNPACKED-GISEL-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX8-UNPACKED-GISEL-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX8-UNPACKED-GISEL-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX8-UNPACKED-GISEL-NEXT:    s_or_b32 s0, s0, s1
 ; GFX8-UNPACKED-GISEL-NEXT:    s_or_b32 s1, s2, s3

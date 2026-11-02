@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgpu12.50 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: llvm-mc -triple=amdgpu12.50 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu12.50 -disassemble -show-encoding | FileCheck --check-prefix=GFX1250 %s
+// RUN: llvm-mc -triple=amdgpu12.50 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu12.50 -disassemble -show-encoding | FileCheck -strict-whitespace --check-prefix=GFX1250 %s
 // RUN: not llvm-mc -triple=amdgpu12.00 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 s_load_b32 s4, s[2:3], 10 nv

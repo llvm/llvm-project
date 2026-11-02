@@ -20,9 +20,9 @@ to a user-visible surface (`ScriptedFrameProvider::CreateInstance`,
 `StopHookScripted::SetScriptCallback`) propagate the detailed error through
 their return type; tests for those are tracked as follow-up.
 
-`StopHookScripted::HandleStop` has no diagnostic channel of its own either:
-it writes to the debugger's asynchronous output stream, so those tests
-capture the debugger's output rather than listening for an event.
+Scripted hook callbacks (`StopHookScripted::HandleStop` and the
+`HookScripted` callbacks) have no caller to return an error to either, so
+their failures are likewise broadcast via `Debugger::ReportError`.
 """
 
 import os
@@ -231,16 +231,16 @@ class TestScriptedExtensionsDiagnostics(TestBase):
         self.assert_diagnostic("list_processes")
 
     # ------------------------------------------------------------------
-    # Scripted Stop Hook - reports on the debugger's async output stream
+    # Scripted Stop Hook - reports via StopHookScripted::HandleStop
     # ------------------------------------------------------------------
 
     def run_to_breakpoint_capturing_output(self, stop_hook_class):
         """Add `stop_hook_class` as a stop hook, run to the breakpoint in
         main.c and return everything the debugger printed.
 
-        Stop hook diagnostics are written to the debugger's asynchronous
-        output stream, which `SBCommandReturnObject` does not capture, so
-        redirect the debugger's output to a file for the duration of the run.
+        Stop hooks print to the debugger's asynchronous output stream, which
+        `SBCommandReturnObject` does not capture, so redirect the debugger's
+        output to a file for the duration of the run.
         """
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
@@ -266,12 +266,10 @@ class TestScriptedExtensionsDiagnostics(TestBase):
     def test_scripted_stop_hook_exception(self):
         """An exception raised by `handle_stop` should be reported to the
         user, with the Python backtrace, rather than silently ignored."""
-        output = self.run_to_breakpoint_capturing_output(
+        self.run_to_breakpoint_capturing_output(
             "malformed_scripted_extensions.ExceptionScriptedStopHook"
         )
-        self.assertIn("intentional exception from handle_stop()", output)
-        self.assertIn("RuntimeError", output)
-        self.assertIn("handle_stop", output)
+        self.assert_diagnostic("intentional exception from handle_stop()")
 
     def test_scripted_stop_hook_returning_none(self):
         """`handle_stop` returning None is not a failure: the hook runs, the
@@ -280,6 +278,6 @@ class TestScriptedExtensionsDiagnostics(TestBase):
             "malformed_scripted_extensions.NoneReturningScriptedStopHook"
         )
         self.assertIn("NoneReturningScriptedStopHook ran", output)
-        self.assertNotIn("error:", output)
+        self.assertFalse(self.listener.PeekAtNextEvent(lldb.SBEvent()), "no diagnostic")
         process = self.dbg.GetSelectedTarget().GetProcess()
         self.assertState(process.GetState(), lldb.eStateStopped)

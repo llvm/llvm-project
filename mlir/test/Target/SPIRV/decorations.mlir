@@ -159,9 +159,83 @@ spirv.func @fp_rounding_mode(%arg: f32) -> f16 "None" {
 
 // -----
 
+spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Float64], []> {
+spirv.func @f_convert_rounding_mode(%arg: f64) -> f32 "None" {
+  // CHECK: spirv.FConvert %{{.*}} {fp_rounding_mode = #spirv.fp_rounding_mode<RTZ>} : f64 to f32
+  %0 = spirv.FConvert %arg {fp_rounding_mode = #spirv.fp_rounding_mode<RTZ>} : f64 to f32
+  spirv.ReturnValue %0 : f32
+}
+spirv.func @convert_s_to_f_rounding_mode(%arg: i32) -> f32 "None" {
+  // CHECK: spirv.ConvertSToF %{{.*}} {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>} : i32 to f32
+  %0 = spirv.ConvertSToF %arg {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>} : i32 to f32
+  spirv.ReturnValue %0 : f32
+}
+spirv.func @convert_u_to_f_rounding_mode(%arg: vector<4xi32>) -> vector<4xf32> "None" {
+  // CHECK: spirv.ConvertUToF %{{.*}} {fp_rounding_mode = #spirv.fp_rounding_mode<RTP>} : vector<4xi32> to vector<4xf32>
+  %0 = spirv.ConvertUToF %arg {fp_rounding_mode = #spirv.fp_rounding_mode<RTP>} : vector<4xi32> to vector<4xf32>
+  spirv.ReturnValue %0 : vector<4xf32>
+}
+spirv.func @convert_f_to_s_rounding_mode(%arg: f32) -> i32 "None" {
+  // CHECK: spirv.ConvertFToS %{{.*}} {fp_rounding_mode = #spirv.fp_rounding_mode<RTN>} : f32 to i32
+  %0 = spirv.ConvertFToS %arg {fp_rounding_mode = #spirv.fp_rounding_mode<RTN>} : f32 to i32
+  spirv.ReturnValue %0 : i32
+}
+spirv.func @convert_f_to_u_rounding_mode(%arg: f32) -> i32 "None" {
+  // CHECK: spirv.ConvertFToU %{{.*}} {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>} : f32 to i32
+  %0 = spirv.ConvertFToU %arg {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>} : f32 to i32
+  spirv.ReturnValue %0 : i32
+}
+}
+
+// -----
+
+spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Int8, Int64], []> {
+spirv.func @convert_f_to_s_saturated(%arg: f32) -> i32 "None" {
+  // CHECK: spirv.ConvertFToS %{{.*}} {saturated_conversion} : f32 to i32
+  %0 = spirv.ConvertFToS %arg {saturated_conversion} : f32 to i32
+  spirv.ReturnValue %0 : i32
+}
+spirv.func @convert_f_to_u_saturated(%arg: vector<4xf32>) -> vector<4xi32> "None" {
+  // CHECK: spirv.ConvertFToU %{{.*}} {saturated_conversion} : vector<4xf32> to vector<4xi32>
+  %0 = spirv.ConvertFToU %arg {saturated_conversion} : vector<4xf32> to vector<4xi32>
+  spirv.ReturnValue %0 : vector<4xi32>
+}
+spirv.func @s_convert_saturated(%arg: i64) -> i32 "None" {
+  // CHECK: spirv.SConvert %{{.*}} {saturated_conversion} : i64 to i32
+  %0 = spirv.SConvert %arg {saturated_conversion} : i64 to i32
+  spirv.ReturnValue %0 : i32
+}
+spirv.func @u_convert_saturated(%arg: i32) -> i8 "None" {
+  // CHECK: spirv.UConvert %{{.*}} {saturated_conversion} : i32 to i8
+  %0 = spirv.UConvert %arg {saturated_conversion} : i32 to i8
+  spirv.ReturnValue %0 : i8
+}
+spirv.func @convert_f_to_s_saturated_rounding_mode(%arg: f32) -> i32 "None" {
+  // CHECK: spirv.ConvertFToS %{{.*}} {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>, saturated_conversion} : f32 to i32
+  %0 = spirv.ConvertFToS %arg {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>, saturated_conversion} : f32 to i32
+  spirv.ReturnValue %0 : i32
+}
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   // CHECK: spirv.func @relaxed_precision_arg({{%.*}}: !spirv.ptr<f32, Function> {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) "None" attributes {relaxed_precision} {
   spirv.func @relaxed_precision_arg(%arg0: !spirv.ptr<f32, Function> {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) -> () "None" attributes {relaxed_precision} {
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Int8, Int64, Linkage], []> {
+  // CHECK: spirv.func @cpacked_struct(%{{.*}}: !spirv.ptr<!spirv.struct<(i8, i64, i32), CPacked>, CrossWorkgroup>)
+  spirv.func @cpacked_struct(%arg0: !spirv.ptr<!spirv.struct<(i8, i64, i32), CPacked>, CrossWorkgroup>) "None" {
+    spirv.Return
+  }
+
+  // CHECK: spirv.func @cpacked_identified_struct(%{{.*}}: !spirv.ptr<!spirv.struct<packed, (i8, i64, i32), CPacked>, CrossWorkgroup>)
+  spirv.func @cpacked_identified_struct(%arg0: !spirv.ptr<!spirv.struct<packed, (i8, i64, i32), CPacked>, CrossWorkgroup>) "None" {
     spirv.Return
   }
 }

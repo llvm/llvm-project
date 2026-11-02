@@ -23,8 +23,8 @@ void f(bool which) {
   }
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[GV0:.*]] = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.array<!s32i x 4> {alignment = 16 : i64}
-// CIR-DAG: cir.global "private" constant cir_private @[[GV1:.*]] = #cir.const_array<[#cir.int<50> : !s32i, #cir.int<60> : !s32i]> : !cir.array<!s32i x 2> {alignment = 4 : i64}
+// CIR-DAG: cir.global "private" constant cir_private @[[GV0:.*]] = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.array<!s32i x 4> align(16)
+// CIR-DAG: cir.global "private" constant cir_private @[[GV1:.*]] = #cir.const_array<[#cir.int<50> : !s32i, #cir.int<60> : !s32i]> : !cir.array<!s32i x 2> align(4)
 
 // CIR: cir.func{{.*}} @_Z1fb
 // CIR:   cir.get_global @[[GV0]] : !cir.ptr<!cir.array<!s32i x 4>>

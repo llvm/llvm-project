@@ -2,7 +2,7 @@
 
 --- !ifs-v1
 IfsVersion: 3.0
-Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Target: { ObjectFormat: ELF, Arch: aarch64, Endianness: little, BitWidth: 64 }
 Symbols: []
 ...
 

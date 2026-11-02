@@ -67,19 +67,17 @@ WhitespaceManager::Change::Change(
       StartOfBlockComment(nullptr), IndentationOffset(0), ConditionalsLevel(0) {
 }
 
-void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
-                                          unsigned Spaces,
-                                          unsigned StartOfTokenColumn,
-                                          const FormatToken *AlignedTo,
-                                          bool InPPDirective,
-                                          unsigned IndentedFromColumn) {
+void WhitespaceManager::replaceWhitespace(
+    FormatToken &Tok, unsigned Newlines, unsigned Spaces,
+    unsigned StartOfTokenColumn, const FormatToken *AlignedTo,
+    bool InPPDirective, unsigned IndentedFromColumn, bool CreateReplacement) {
   if (Tok.Finalized || (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg))
     return;
-  Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
-  Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
-                           Spaces, StartOfTokenColumn, IndentedFromColumn,
-                           Newlines, "", "", AlignedTo,
-                           InPPDirective && !Tok.IsFirst,
+  if (CreateReplacement)
+    Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
+  Changes.push_back(Change(Tok, CreateReplacement, Tok.WhitespaceRange, Spaces,
+                           StartOfTokenColumn, IndentedFromColumn, Newlines, "",
+                           "", AlignedTo, InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
 }
 

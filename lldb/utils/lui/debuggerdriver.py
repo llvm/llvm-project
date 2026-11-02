@@ -29,7 +29,7 @@ class DebuggerDriver(Thread):
         self.debugger = debugger
         self.listener = debugger.GetListener()
         if not self.listener.IsValid():
-            raise "Invalid listener"
+            raise RuntimeError("Invalid listener")
 
         self.listener.StartListeningForEventClass(
             self.debugger,

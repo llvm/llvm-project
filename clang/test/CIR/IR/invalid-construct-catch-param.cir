@@ -248,3 +248,65 @@ cir.func @construct_not_followed_by_begin_catch() {
 }
 
 }
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.struct<"E" {pad !u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTIP1E : !cir.ptr<!u8i>
+
+cir.func @ref_to_record_ptr_referent_not_a_pointer() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!rec_E>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIP1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      // expected-error @below {{'cir.construct_catch_param' op 'reference_to_record_pointer' requires 'param_addr' to be the address of a reference to a pointer}}
+      cir.construct_catch_param reference_to_record_pointer %eh_token to %p using
+        : !cir.ptr<!cir.ptr<!rec_E>>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.struct<"E" {pad !u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTIP1E : !cir.ptr<!u8i>
+
+cir.func @ref_to_ptr_not_a_reference() {
+  cir.scope {
+    %p = cir.alloca "p" align(1) : !cir.ptr<!rec_E>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIP1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      // expected-error @below {{'cir.construct_catch_param' op 'reference_to_pointer' requires 'param_addr' to be the address of a reference to a pointer}}
+      cir.construct_catch_param reference_to_pointer %eh_token to %p using
+        : !cir.ptr<!rec_E>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}

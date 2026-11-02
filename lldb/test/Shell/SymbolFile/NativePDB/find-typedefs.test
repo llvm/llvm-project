@@ -1,0 +1,76 @@
+# REQUIRES: target-windows
+
+# Test that typedefs, which only exist as S_UDT symbols, can be found by name.
+# RUN: split-file %s %t
+# RUN: %build --nodefaultlib -o %t.exe -- %t/main.cpp
+# RUN: %lldb -f %t.exe -s \
+# RUN:     %t/commands.input 2>&1 | FileCheck %s
+
+#--- main.cpp
+
+using GlobalTypedef = short;
+
+namespace NS {
+using NamespaceTypedef = long long;
+namespace Inner {
+using InnerTypedef = char;
+}
+} // namespace NS
+
+namespace {
+using AnonTypedef = int;
+}
+
+int main(int argc, char **argv) {
+  GlobalTypedef g = 1;
+  NS::NamespaceTypedef n = 2;
+  NS::Inner::InnerTypedef i = 3;
+  AnonTypedef a = 4;
+  return g + n + i + a;
+}
+
+#--- commands.input
+
+b main
+r
+
+type lookup GlobalTypedef
+type lookup NS::NamespaceTypedef
+type lookup NamespaceTypedef
+type lookup NS::Inner::InnerTypedef
+type lookup Inner::InnerTypedef
+type lookup AnonTypedef
+type lookup NS::GlobalTypedef
+expr sizeof(GlobalTypedef)
+expr sizeof(NS::NamespaceTypedef)
+expr sizeof(NS::Inner::InnerTypedef)
+expr sizeof(AnonTypedef)
+expr (NS::NamespaceTypedef)42
+
+quit
+
+# CHECK:      (lldb) type lookup GlobalTypedef
+# CHECK-NEXT: short
+# CHECK-NEXT: (lldb) type lookup NS::NamespaceTypedef
+# CHECK-NEXT: long long
+# CHECK-NEXT: (lldb) type lookup NamespaceTypedef
+# CHECK-NEXT: long long
+# CHECK-NEXT: (lldb) type lookup NS::Inner::InnerTypedef
+# CHECK-NEXT: char
+# CHECK-NEXT: (lldb) type lookup Inner::InnerTypedef
+# CHECK-NEXT: char
+# CHECK-NEXT: (lldb) type lookup AnonTypedef
+# CHECK-NEXT: int
+# CHECK-NEXT: (lldb) type lookup NS::GlobalTypedef
+# CHECK-NEXT: no type was found in the current language c++ matching 'NS::GlobalTypedef'; performing a global search across all languages
+# CHECK-NEXT: no type was found matching 'NS::GlobalTypedef'
+# CHECK-NEXT: (lldb) expr sizeof(GlobalTypedef)
+# CHECK-NEXT: (__size_t) $0 = 2
+# CHECK-NEXT: (lldb) expr sizeof(NS::NamespaceTypedef)
+# CHECK-NEXT: (__size_t) $1 = 8
+# CHECK-NEXT: (lldb) expr sizeof(NS::Inner::InnerTypedef)
+# CHECK-NEXT: (__size_t) $2 = 1
+# CHECK-NEXT: (lldb) expr sizeof(AnonTypedef)
+# CHECK-NEXT: (__size_t) $3 = 4
+# CHECK-NEXT: (lldb) expr (NS::NamespaceTypedef)42
+# CHECK-NEXT: (NS::NamespaceTypedef) $4 = 42

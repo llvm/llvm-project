@@ -3,7 +3,7 @@ add_clang_library(CIROpenACCSupport
   RegisterOpenACCExtensions.cpp
 
   DEPENDS
-  MLIRCIRTypeConstraintsIncGen
+  mlir-headers
 
   LINK_LIBS PUBLIC
   MLIRIR

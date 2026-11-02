@@ -36,7 +36,6 @@ namespace {
 class HexagonGenMemAbsolute : public MachineFunctionPass {
   const HexagonInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
 
 public:
   static char ID;
@@ -72,7 +71,6 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
 
   TII = Fn.getSubtarget<HexagonSubtarget>().getInstrInfo();
   MRI = &Fn.getRegInfo();
-  TRI = Fn.getRegInfo().getTargetRegisterInfo();
 
   MachineDominatorTree &MDT =
       getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -121,7 +119,7 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
       const MachineOperand *BaseOp = nullptr;
       int64_t Offset;
       bool Scalable;
-      TII->getMemOperandWithOffset(*NextMI, BaseOp, Offset, Scalable, TRI);
+      TII->getMemOperandWithOffset(*NextMI, BaseOp, Offset, Scalable);
 
       // Ensure BaseOp is non-null and register type.
       if (!BaseOp || !BaseOp->isReg())

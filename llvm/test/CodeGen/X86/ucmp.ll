@@ -366,26 +366,26 @@ define i8 @ucmp_wide_op(i109 %x, i109 %y) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl $8191, %ecx # imm = 0x1FFF
+; X86-NEXT:    movl $8191, %esi # imm = 0x1FFF
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl %esi, %edx
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    sbbl %edi, %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    sbbl %esi, %eax
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sbbl %ecx, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    sbbl %edx, %eax
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    cmpl %ebp, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    sbbl %ebx, %esi
-; X86-NEXT:    sbbl %ecx, %edx
+; X86-NEXT:    sbbl %ebx, %ecx
+; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

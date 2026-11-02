@@ -360,7 +360,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     }
     SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
-      if (!summary_only) {
+      // Only record on include_modules, as `GetObjectFile` and
+      // `GetDebugInfoModules` may be expensive to parse.
+      if (!summary_only && include_modules) {
         if (sym_file->GetObjectFile() != module->GetObjectFile())
           module_stat.symfile_path =
               sym_file->GetObjectFile()->GetFileSpec().GetPath();
@@ -415,9 +417,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     if (include_modules) {
       module_stat.identifier = (intptr_t)module;
       module_stat.path = module->GetFileSpec().GetPath();
-      if (ConstString object_name = module->GetObjectName()) {
+      if (llvm::StringRef object_name = module->GetObjectName();
+          !object_name.empty()) {
         module_stat.path.append(1, '(');
-        module_stat.path.append(object_name.GetStringRef().str());
+        module_stat.path.append(object_name.str());
         module_stat.path.append(1, ')');
       }
       module_stat.uuid = module->GetUUID().GetAsString();

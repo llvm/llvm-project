@@ -57,7 +57,7 @@ stack:
   - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
   - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
 callSites:
-  - { bb: 0, offset: 10, fwdArgRegs:
+  - { bb: '%bb.0', offset: 10, fwdArgRegs:
       - { arg: 0, reg: '$x0' }
       - { arg: 1, reg: '$x1' }
       - { arg: 2, reg: '$x2' } }

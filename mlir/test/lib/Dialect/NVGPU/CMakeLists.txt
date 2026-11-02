@@ -7,7 +7,7 @@ add_mlir_library(MLIRNVGPUTestPasses
 mlir_target_link_libraries(MLIRNVGPUTestPasses PUBLIC
   MLIRIR
   MLIRAffineDialect
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRFuncDialect
   MLIRGPUDialect
   MLIRLLVMDialect

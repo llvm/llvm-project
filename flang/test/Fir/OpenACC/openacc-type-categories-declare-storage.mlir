@@ -8,7 +8,7 @@ module {
     %arr = fir.alloca !fir.array<4xi8>
     %elem_i8 = fir.coordinate_of %arr, %c0 : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
     %elem_f32 = fir.convert %elem_i8 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %view = fir.declare %elem_f32 storage(%arr[0]) {uniq_name = "_QFpi"}
+    %view = fir.declare %elem_f32 storage(%arr[0]) uniq_name("_QFpi")
       : (!fir.ref<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ref<f32>
     // Force interface query through an acc op that prints type category
     %cp = acc.copyin varPtr(%view : !fir.ref<f32>) structured(false) name("pi") -> !fir.ref<f32>

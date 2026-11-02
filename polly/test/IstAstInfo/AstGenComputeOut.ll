@@ -23,8 +23,8 @@
 
 ; REQUIRES: asserts
 
-; RUN: opt %loadNPMPolly %s -passes='polly-custom<ast>' -polly-process-unprofitable \
-; RUN:   -polly-astgen-computeout=1 -debug-only=polly-ast \
+; RUN: opt %loadNPMPolly %s -passes='polly-custom<ast>' -plugin-arg=Polly,-polly-process-unprofitable \
+; RUN:   -plugin-arg=Polly,-polly-astgen-computeout=1 -debug-only=polly-ast \
 ; RUN:   -disable-output 2>&1 | FileCheck %s
 
 define void @eggs(i32 %arg) {

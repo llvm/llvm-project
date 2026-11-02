@@ -7,11 +7,11 @@ define void @speculative_load_cost(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call b16 (ptr, i1, ...) @llvm.speculative.load.b16.p0(ptr %p, i1 false, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call b32 (ptr, i1, ...) @llvm.speculative.load.b32.p0(ptr %p, i1 false, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call b64 (ptr, i1, ...) @llvm.speculative.load.b64.p0(ptr %p, i1 false, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %5 = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr %p, i1 false, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %6 = call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr %p, i1 false, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %7 = call <2 x i64> (ptr, i1, ...) @llvm.speculative.load.v2i64.p0(ptr %p, i1 false, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %8 = call <4 x float> (ptr, i1, ...) @llvm.speculative.load.v4f32.p0(ptr %p, i1 false, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %9 = call <2 x double> (ptr, i1, ...) @llvm.speculative.load.v2f64.p0(ptr %p, i1 false, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr %p, i1 false, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr %p, i1 false, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <2 x i64> (ptr, i1, ...) @llvm.speculative.load.v2i64.p0(ptr %p, i1 false, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = call <4 x float> (ptr, i1, ...) @llvm.speculative.load.v4f32.p0(ptr %p, i1 false, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = call <2 x double> (ptr, i1, ...) @llvm.speculative.load.v2f64.p0(ptr %p, i1 false, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call b8 (ptr, i1, ...) @llvm.speculative.load.b8.p0(ptr %p, i1 false, i64 0)

@@ -2697,12 +2697,14 @@ define void @test_mm256_stream_pd(ptr%a0, <4 x double> %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovntps %ymm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_stream_pd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   store <4 x double> %a1, ptr %a0, align 32, !nontemporal !0
@@ -2714,12 +2716,14 @@ define void @test_mm256_stream_ps(ptr%a0, <8 x float> %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovntps %ymm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_stream_ps:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   store <8 x float> %a1, ptr %a0, align 32, !nontemporal !0
@@ -2731,12 +2735,14 @@ define void @test_mm256_stream_si256(ptr%a0, <4 x i64> %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovntps %ymm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_stream_si256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   store <4 x i64> %a1, ptr %a0, align 32, !nontemporal !0

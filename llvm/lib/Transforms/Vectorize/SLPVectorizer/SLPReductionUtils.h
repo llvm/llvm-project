@@ -16,14 +16,20 @@
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPREDUCTIONUTILS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
+class BasicBlock;
 class DataLayout;
+class DominatorTree;
 class FastMathFlags;
 class IRBuilderBase;
 class Instruction;
+class LoopInfo;
 class PHINode;
+class ScalarEvolution;
 class Type;
 class Value;
 enum class RecurKind;
@@ -55,6 +61,14 @@ BoolBitmask isBoolBitmaskRdx(
     const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
     const DataLayout &DL);
 
+/// Matches \p V as the zero-extended fields, placed one after another from the
+/// lowest bit and filling \p V completely. The instructions are looked through
+/// up to \p MaxDepth. Appends the fields in the order of their positions to
+/// \p Fields and the instructions of the pack to \p Chain.
+bool matchPackedFields(Value *V, unsigned MaxDepth,
+                       SmallVectorImpl<Value *> &Fields,
+                       SmallVectorImpl<Instruction *> &Chain);
+
 /// \returns the first operand of \p I that does not match \p Phi. If
 /// the operand is not an instruction, returns nullptr.
 Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi);
@@ -62,6 +76,21 @@ Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi);
 /// \returns true if \p I is a candidate instruction for reduction
 /// vectorization.
 bool isReductionCandidate(Instruction *I);
+
+/// Checks if the reduction, rooted at \p Root, reduces the loop accumulators,
+/// whose updates are the same expressions \p Shape in the same block, loading
+/// from consecutive addresses at each position. Such a reduction vectorizes
+/// along its own reduced values without gathers, while a tree across several
+/// such reductions transposes them. The different update expressions may form
+/// the nodes, which the other reductions, sharing them, cannot reuse. An empty
+/// \p Shape is set to the expressions of \p Root, \p Accs collects the
+/// accumulators.
+bool isReductionOfConsecutiveAccumulators(Instruction *Root, const LoopInfo &LI,
+                                          const DataLayout &DL,
+                                          ScalarEvolution &SE,
+                                          unsigned MaxDepth,
+                                          SmallVectorImpl<unsigned> &Shape,
+                                          SmallPtrSetImpl<PHINode *> &Accs);
 
 /// Emits the booleanized logical and/or reduction of \p Vec with the i1 root
 /// \p Root as trunc+bitcast+cmp (all-ones comparison for And, zero for Or) if
@@ -72,6 +101,12 @@ Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
                                   RecurKind RdxKind, Value *Vec,
                                   const Value *Root, FastMathFlags FMF,
                                   TargetTransformInfo::TargetCostKind CostKind);
+
+/// Try to get a reduction instruction from phi node \p P in block \p ParentBB,
+/// considering incoming values from \p ParentBB or the containing loop latch.
+/// \returns a candidate reduction value, or nullptr if none.
+Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                               BasicBlock *ParentBB, LoopInfo *LI);
 
 } // namespace llvm::slpvectorizer
 

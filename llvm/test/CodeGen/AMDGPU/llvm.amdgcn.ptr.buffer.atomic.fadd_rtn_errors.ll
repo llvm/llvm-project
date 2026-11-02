@@ -30,8 +30,8 @@
 ; ERR-RAW-F32-SDAG: LLVM ERROR: Cannot select: {{.+}}: f32,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-RAW-F32-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(f32) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
-define float @raw_ptr_buffer_atomic_fadd_f32_rtn(float %val, <4 x i32> inreg %rsrc, i32 inreg %soffset) {
-  %ret = call float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 0, i32 %soffset, i32 0)
+define float @raw_ptr_buffer_atomic_fadd_f32_rtn(float %val, ptr addrspace(8) inreg %rsrc, i32 inreg %soffset) {
+  %ret = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 0, i32 %soffset, i32 0)
   ret float %ret
 }
 
@@ -48,8 +48,8 @@ define float @struct_ptr_buffer_atomic_fadd_f32_rtn(float %val, ptr addrspace(8)
 ; ERR-RAW-V2F16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2f16,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-RAW-V2F16-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(<2 x f16>) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
-define <2 x half> @raw_ptr_buffer_atomic_fadd_v2f16_rtn(<2 x half> %val, <4 x i32> inreg %rsrc, i32 inreg %soffset) {
-  %ret = call <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 0, i32 %soffset, i32 0)
+define <2 x half> @raw_ptr_buffer_atomic_fadd_v2f16_rtn(<2 x half> %val, ptr addrspace(8) inreg %rsrc, i32 inreg %soffset) {
+  %ret = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 0, i32 %soffset, i32 0)
   ret <2 x half> %ret
 }
 
@@ -66,8 +66,8 @@ define <2 x half> @struct_ptr_buffer_atomic_fadd_v2f16_rtn(<2 x half> %val, ptr 
 ; ERR-RAW-V2BF16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2bf16,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-RAW-V2BF16-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(<2 x bf16>) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
-define <2 x bfloat> @raw_ptr_buffer_atomic_fadd_v2bf16_rtn(<2 x bfloat> %val, <4 x i32> inreg %rsrc, i32 inreg %soffset) {
-  %ret = call <2 x bfloat> @llvm.amdgcn.raw.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, <4 x i32> %rsrc, i32 0, i32 %soffset, i32 0)
+define <2 x bfloat> @raw_ptr_buffer_atomic_fadd_v2bf16_rtn(<2 x bfloat> %val, ptr addrspace(8) inreg %rsrc, i32 inreg %soffset) {
+  %ret = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 0, i32 %soffset, i32 0)
   ret <2 x bfloat> %ret
 }
 

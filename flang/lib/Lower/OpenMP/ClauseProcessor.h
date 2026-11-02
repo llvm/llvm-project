@@ -154,8 +154,10 @@ public:
   bool processIsDevicePtr(lower::StatementContext &stmtCtx,
                           mlir::omp::IsDevicePtrClauseOps &result,
                           llvm::SmallVectorImpl<Object> &isDeviceObjects) const;
-  bool processLinear(mlir::omp::LinearClauseOps &result,
-                     bool isDeclareSimd = false) const;
+  bool
+  processLinear(mlir::omp::LinearClauseOps &result, bool isDeclareSimd = false,
+                llvm::SmallVectorImpl<const semantics::Symbol *> *linearSyms =
+                    nullptr) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
 

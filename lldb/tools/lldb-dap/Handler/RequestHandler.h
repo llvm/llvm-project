@@ -174,7 +174,7 @@ protected:
 };
 
 /// A specialized base class for attach and launch requests that delays sending
-/// the response until 'configurationDone' is received.
+/// a successful response until 'configurationDone' is received.
 template <typename Args, typename Resp>
 class DelayedResponseRequestHandler : public BaseRequestHandler {
   using BaseRequestHandler::BaseRequestHandler;
@@ -191,8 +191,10 @@ class DelayedResponseRequestHandler : public BaseRequestHandler {
     if (llvm::Error err = arguments.takeError())
       return SendError(std::move(err), response);
 
-    BuildErrorResponse(Run(*arguments), response);
+    if (llvm::Error err = Run(*arguments))
+      return SendError(std::move(err), response);
 
+    response.success = true;
     dap.on_configuration_done = [this, response]() mutable { Send(response); };
 
     // The 'configurationDone' request is not sent until after 'initialized'
@@ -275,17 +277,34 @@ public:
   void PostRun() const override;
 };
 
-class DisconnectRequestHandler
-    : public RequestHandler<std::optional<protocol::DisconnectArguments>,
-                            protocol::DisconnectResponse> {
+/// The response to 'disconnect' is sent once the session ended, as the last
+/// message to the client. See `DAP::Loop`.
+class DisconnectRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral GetCommand() { return "disconnect"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureTerminateDebuggee};
   }
   llvm::Error
-  Run(const std::optional<protocol::DisconnectArguments> &args) const override;
+  Run(const std::optional<protocol::DisconnectArguments> &args) const;
+
+private:
+  void operator()(const protocol::Request &request) const override {
+    protocol::Response response;
+    response.request_seq = request.seq;
+    response.command = request.command;
+
+    llvm::Expected<std::optional<protocol::DisconnectArguments>> arguments =
+        parseArgs<std::optional<protocol::DisconnectArguments>>(request);
+    if (llvm::Error err = arguments.takeError())
+      return SendError(std::move(err), response);
+
+    BuildErrorResponse(Run(*arguments), response);
+    dap.on_session_end = [this, response = std::move(response)]() mutable {
+      Send(response);
+    };
+  }
 };
 
 class EvaluateRequestHandler

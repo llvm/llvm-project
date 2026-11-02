@@ -19,7 +19,7 @@ void test_delete_array(OverAligned *a) {
   delete[] a;
 }
 // CIR-LABEL: cir.func {{.*}}@_Z17test_delete_arrayP11OverAligned(
-// CIR-BEFORE:     cir.delete_array %{{.*}} : !cir.ptr<!rec_OverAligned> {delete_fn = @_ZdaPvmSt11align_val_t, delete_params = #cir.usual_delete_params<size = true, alignment = 64>, element_align = 64 : i64, element_dtor = @_ZN11OverAlignedD1Ev}
+// CIR-BEFORE:     cir.delete_array %{{.*}} : !cir.ptr<!rec_OverAligned> delete_fn(@_ZdaPvmSt11align_val_t) delete_params<size = true, alignment = 64> element_dtor(@_ZN11OverAlignedD1Ev) element_align(64)
 
 // CIR-AFTER: %[[A:.*]] = cir.alloca "a" align(8) init : !cir.ptr<!cir.ptr<!rec_OverAligned>>
 // CIR-AFTER: %[[LOAD_A:.*]] = cir.load align(8) %[[A]] : !cir.ptr<!cir.ptr<!rec_OverAligned>>, !cir.ptr<!rec_OverAligned>
@@ -58,7 +58,7 @@ void test_not_aligned_new_but_need_cookie(NotAlignedNewButNeedCookie *a) {
   delete [] a;
 }
 // CIR-LABEL: cir.func {{.*}}@_Z36test_not_aligned_new_but_need_cookieP26NotAlignedNewButNeedCookie(
-// CIR-BEFORE: cir.delete_array %{{.*}} : !cir.ptr<!rec_NotAlignedNewButNeedCookie> {delete_fn = @_ZdaPvm, delete_params = #cir.usual_delete_params<size = true>, element_align = 16 : i64, element_dtor = @_ZN26NotAlignedNewButNeedCookieD1Ev}
+// CIR-BEFORE: cir.delete_array %{{.*}} : !cir.ptr<!rec_NotAlignedNewButNeedCookie> delete_fn(@_ZdaPvm) delete_params<size = true> element_dtor(@_ZN26NotAlignedNewButNeedCookieD1Ev) element_align(16)
 // CIR-AFTER: %[[A:.*]] = cir.alloca "a" align(8) init : !cir.ptr<!cir.ptr<!rec_NotAlignedNewButNeedCookie>>
 
 // CIR-AFTER: %[[LOAD_A:.*]] = cir.load align(8) %[[A]] : !cir.ptr<!cir.ptr<!rec_NotAlignedNewButNeedCookie>>, !cir.ptr<!rec_NotAlignedNewButNeedCookie>

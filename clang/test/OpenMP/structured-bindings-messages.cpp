@@ -563,3 +563,45 @@ void test_bindings_only_orig_not_dereferenced() {
     c = c + 30;
   }
 }
+
+void test_copyprivate_orphaned() {
+  Point p{1, 2};
+  auto [a, b] = p;
+#pragma omp single copyprivate(a, b)
+  ;
+}
+
+void test_copyprivate_private() {
+  Point p{1, 2};
+  auto [a, b] = p;
+#pragma omp parallel private(a, b)
+#pragma omp single copyprivate(a, b)
+  ;
+}
+
+void test_copyprivate_firstprivate() {
+  Point p{1, 2};
+  auto [a, b] = p;
+#pragma omp parallel firstprivate(a)
+#pragma omp single copyprivate(a)
+  ;
+}
+
+void test_copyprivate_shared() {
+  Point p{1, 2};
+  auto [a, b] = p;
+#pragma omp parallel // expected-note {{implicitly determined as shared}}
+#pragma omp single copyprivate(a) // expected-error {{copyprivate variable must be threadprivate or private in the enclosing context}}
+  ;
+}
+
+template <typename T> void test_copyprivate_template(T p) {
+  auto [a, b] = p;
+#pragma omp parallel private(a)
+#pragma omp single copyprivate(a)
+  ;
+}
+
+void instantiate_copyprivate_template() {
+  test_copyprivate_template(Point{1, 2});
+}

@@ -4,8 +4,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
   func.func @my_square_(%arg0: !fir.ref<i32> {fir.bindc_name = "x"} ) -> i32 attributes {fir.internal_name = "_QPmy_square"} {
     %0 = fir.undefined !fir.dscope
     %1 = fir.alloca i32 {bindc_name = "my_square", uniq_name = "_QFmy_squareEmy_square"}
-    %2 = fircg.ext_declare %1 {uniq_name = "_QFmy_squareEmy_square"} : (!fir.ref<i32>) -> !fir.ref<i32>
-    %3 = fircg.ext_declare %arg0 dummy_scope %0 {uniq_name = "_QFmy_squareEx"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %2 = fircg.ext_declare %1 uniq_name("_QFmy_squareEmy_square") : (!fir.ref<i32>) -> !fir.ref<i32>
+    %3 = fircg.ext_declare %arg0 dummy_scope %0 uniq_name("_QFmy_squareEx") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
     %4 = fir.load %3 : !fir.ref<i32>
     %5 = arith.muli %4, %4 : i32
     fir.store %5 to %2 : !fir.ref<i32>

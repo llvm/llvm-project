@@ -123,8 +123,10 @@ def BlockArgHostEvalClause : BlockArgOpenMPClause<
     "host_eval", "HostEval", BlockArgHasDeviceAddrClause>;
 def BlockArgInReductionClause : BlockArgOpenMPClause<
     "in_reduction", "InReduction", BlockArgHostEvalClause>;
+def BlockArgLinearClause : BlockArgOpenMPClause<
+    "linear", "Linear", BlockArgInReductionClause>;
 def BlockArgMapClause : BlockArgOpenMPClause<
-    "map", "Map", BlockArgInReductionClause>;
+    "map", "Map", BlockArgLinearClause>;
 def BlockArgPrivateClause : BlockArgOpenMPClause<
     "private", "Private", BlockArgMapClause>;
 def BlockArgReductionClause : BlockArgOpenMPClause<
@@ -145,7 +147,8 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
   let cppNamespace = "::mlir::omp";
 
   defvar clauses = [ BlockArgHasDeviceAddrClause, BlockArgHostEvalClause,
-    BlockArgInReductionClause, BlockArgMapClause, BlockArgPrivateClause,
+    BlockArgInReductionClause, BlockArgLinearClause, BlockArgMapClause,
+    BlockArgPrivateClause,
     BlockArgReductionClause, BlockArgTaskReductionClause,
     BlockArgUseDeviceAddrClause, BlockArgUseDevicePtrClause ];
 

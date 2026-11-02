@@ -417,8 +417,7 @@ define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid
 ; CHECK-NEXT:  ; %bb.3: ; %A
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_and_b64 s[4:5], vcc, exec
-; CHECK-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
+; CHECK-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
 ; CHECK-NEXT:  ; %bb.4: ; %exit
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]

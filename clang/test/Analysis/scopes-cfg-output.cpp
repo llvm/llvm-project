@@ -890,7 +890,7 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   3: __end1
 // CHECK-NEXT:   4: [B2.3] (ImplicitCastExpr, LValueToRValue, A *)
 // CHECK-NEXT:   5: [B2.2] != [B2.4]
-// CHECK-NEXT:   T: for (auto &i : [B5.4])
+// CHECK-NEXT:   T: for (auto &i : [B5.5])
 // CHECK:         [B4.11];
 // CHECK:        Preds (2): B3 B5
 // CHECK-NEXT:   Succs (2): B4 B1
@@ -918,17 +918,19 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   1: CFGScopeBegin(a)
 // CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], A[10])
 // CHECK-NEXT:   3: A a[10];
-// CHECK-NEXT:   4: a
-// CHECK-NEXT:   5: auto &&__range1 = a;
-// CHECK-NEXT:   6: CFGScopeBegin(__end1)
-// CHECK-NEXT:   7: __range1
-// CHECK-NEXT:   8: [B5.7] (ImplicitCastExpr, ArrayToPointerDecay, A *)
-// CHECK-NEXT:   9: 10
-// CHECK-NEXT:  10: [B5.8] + [B5.9]
-// CHECK-NEXT:  11: auto __end1 = __range1 + 10
+// CHECK-NEXT:   4: CFGScopeBegin(__range1)
+// CHECK-NEXT:   5: a
+// CHECK-NEXT:   6: auto &&__range1 = a;
+// CHECK-NEXT:   7: CFGScopeBegin(__begin1)
+// CHECK-NEXT:   8: __range1
+// CHECK-NEXT:   9: [B5.8] (ImplicitCastExpr, ArrayToPointerDecay, A *)
+// CHECK-NEXT:  10: auto __begin1 = __range1;
+// CHECK-NEXT:  11: CFGScopeBegin(__end1)
 // CHECK-NEXT:  12: __range1
 // CHECK-NEXT:  13: [B5.12] (ImplicitCastExpr, ArrayToPointerDecay, A *)
-// CHECK-NEXT:  14: auto __begin1 = __range1;
+// CHECK-NEXT:  14: 10{{L*}}
+// CHECK-NEXT:  15: [B5.13] + [B5.14]
+// CHECK-NEXT:  16: auto __end1 = __range1 + 10{{L*}};
 // CHECK-NEXT:   Preds (1): B6
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B0 (EXIT)]

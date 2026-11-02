@@ -27,7 +27,7 @@ end subroutine
 
 ! CHECK:  func.func @_QPprivate_common() {
 ! CHECK:    omp.parallel private(@[[X_PRIVATIZER]] %{{.*}}#0 -> %[[PRIV_ARG:.*]] : ![[PTR_TYPE]]) {
-! CHECK:      %[[REG_DECL:.*]]:2 = hlfir.declare %[[PRIV_ARG]] {{{.*}}} : (![[PTR_TYPE]]) -> ({{.*}})
+! CHECK:      %[[REG_DECL:.*]]:2 = hlfir.declare %[[PRIV_ARG]] {{.*}} : (![[PTR_TYPE]]) -> ({{.*}})
 ! CHECK:      %[[CST:.*]] = arith.constant {{.*}}
 ! CHECK:      hlfir.assign %[[CST]] to %[[REG_DECL]]#0 : {{.*}}
 ! CHECK:      omp.terminator

@@ -290,10 +290,12 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
   assert(DbgLabels.empty() && "DbgLabels map wasn't cleaned!");
   calculateDbgEntityHistory(MF, Asm->MF->getSubtarget().getRegisterInfo(),
                             DbgValues, DbgLabels);
-  InstOrdering.initialize(*MF);
-  if (TrimVarLocs)
-    DbgValues.trimLocationRanges(*MF, LScopes, InstOrdering);
-  LLVM_DEBUG(DbgValues.dump(MF->getName()));
+  if (!DbgValues.empty()) {
+    InstOrdering.initialize(*MF);
+    if (TrimVarLocs)
+      DbgValues.trimLocationRanges(*MF, LScopes, InstOrdering);
+    LLVM_DEBUG(DbgValues.dump(MF->getName()));
+  }
 
   // Request labels for the full history.
   for (const auto &I : DbgValues) {

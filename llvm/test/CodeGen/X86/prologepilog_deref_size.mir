@@ -1,4 +1,8 @@
 # RUN: llc -run-pass=prolog-epilog -o - %s | FileCheck %s
+
+# An indirect DBG_VALUE of a frame index with an implicit expression is
+# rewritten to load the object with DW_OP_deref_size. That is only valid for an
+# object no larger than an address; for a larger one the location is dropped.
 --- |
   ; ModuleID = 'dbg.opt.ll'
   source_filename = "dbg.c"
@@ -10,6 +14,16 @@
   entry:
     call void @llvm.dbg.value(metadata i16 %x, metadata !32, metadata !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !34
     ret i16 %x
+  }
+
+  define dso_local void @ptrsize() #0 !dbg !40 {
+  entry:
+    ret void
+  }
+
+  define dso_local void @toobig() #0 !dbg !50 {
+  entry:
+    ret void
   }
 
   ; Function Attrs: nounwind readnone speculatable
@@ -37,6 +51,15 @@
   !32 = !DILocalVariable(name: "y", scope: !7, file: !1, line: 3, type: !33)
   !33 = !DIBasicType(name: "signed int", size: 32, encoding: DW_ATE_signed)
   !34 = !DILocation(line: 3, column: 20, scope: !7)
+  !40 = distinct !DISubprogram(name: "ptrsize", scope: !1, file: !1, line: 5, type: !41, scopeLine: 5, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+  !41 = !DISubroutineType(types: !42)
+  !42 = !{null}
+  !43 = !DILocalVariable(name: "p", scope: !40, file: !1, line: 6, type: !44)
+  !44 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
+  !45 = !DILocation(line: 6, column: 1, scope: !40)
+  !50 = distinct !DISubprogram(name: "toobig", scope: !1, file: !1, line: 8, type: !41, scopeLine: 8, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+  !51 = !DILocalVariable(name: "b", scope: !50, file: !1, line: 9, type: !44)
+  !52 = !DILocation(line: 9, column: 1, scope: !50)
 
 ...
 ---
@@ -55,5 +78,34 @@ body:             |
     DBG_VALUE %fixed-stack.0, 0, !32, !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value), debug-location !34
     RET 0, $ax
 ...
+# CHECK-LABEL: name: foo
 # CHECK: machineFunctionInfo
 # CHECK: DBG_VALUE $rsp, $noreg, !12, !DIExpression(DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref_size, 2, DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value), debug-location !14
+
+# An 8-byte object is exactly the size of an address, so it is still loaded.
+---
+name:            ptrsize
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 8, stack-id: default }
+body:             |
+  bb.0.entry:
+    DBG_VALUE %stack.0, 0, !43, !DIExpression(DW_OP_stack_value), debug-location !45
+    RET 0
+...
+# CHECK-LABEL: name: ptrsize
+# CHECK: DBG_VALUE $rsp, $noreg, !{{[0-9]+}}, !DIExpression({{.*}}DW_OP_deref_size, 8, DW_OP_stack_value)
+
+# A 16-byte object has no correct implicit value, so its location is dropped.
+---
+name:            toobig
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: default, offset: 0, size: 16, alignment: 8, stack-id: default }
+body:             |
+  bb.0.entry:
+    DBG_VALUE %stack.0, 0, !51, !DIExpression(DW_OP_stack_value), debug-location !52
+    RET 0
+...
+# CHECK-LABEL: name: toobig
+# CHECK: DBG_VALUE $noreg, 0, !{{[0-9]+}}, !DIExpression(DW_OP_stack_value)

@@ -1,7 +1,7 @@
 {
   "configuration": {
     "runtime_prefix": "__bytes_computed_",
-    "runtime_bitcode": "bytes_computed_rt.bc",
+    "runtime_bitcodes": ["bytes_computed_rt.bc"],
     "inline_runtime": true
   },
   "instruction_pre": {

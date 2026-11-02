@@ -256,10 +256,10 @@ define i1 @bittest_constant_by_var_shl_i64(i64 %b) nounwind {
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    ori $a2, $zero, 1
 ; LA32-NEXT:    sll.w $a0, $a2, $a0
+; LA32-NEXT:    lu12i.w $a2, 301408
+; LA32-NEXT:    ori $a2, $a2, 722
+; LA32-NEXT:    and $a0, $a0, $a2
 ; LA32-NEXT:    and $a0, $a1, $a0
-; LA32-NEXT:    lu12i.w $a1, 301408
-; LA32-NEXT:    ori $a1, $a1, 722
-; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    sltu $a0, $zero, $a0
 ; LA32-NEXT:    ret
 ;

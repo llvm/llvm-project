@@ -1,0 +1,1475 @@
+// RUN: cir-opt %s -split-input-file -verify-diagnostics -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -split-input-file -verify-diagnostics -cir-call-conv-lowering=target=x86_64 \
+// RUN:   | FileCheck %s --check-prefix=MOVE
+// RUN: cir-opt %s -split-input-file -verify-diagnostics -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - \
+// RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+!rec_UX87 = !cir.union<"UX87" {data !cir.long_double<!cir.f80>, data !cir.array<!u8i x 16>}>
+!rec_UX87Mem = !cir.union<"UX87Mem" {data !cir.complex<!cir.long_double<!cir.f80>>, data !cir.array<!u8i x 32>}>
+!rec_HS = !cir.struct<"HS" {data !s8i, data !s32i}>
+!rec_H = !cir.union<"H" {data !rec_HS, data !cir.array<!s32i x 2>}>
+!rec_HBS = !cir.struct<"HBS" {data !s8i, data !s64i, data !s64i, data !s64i}>
+!rec_HMem = !cir.union<"HMem" {data !rec_HBS, data !cir.array<!s32i x 8>}>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
+!rec_SF = !cir.struct<"SF" {data !s64i, data !s32i}>
+!rec_S12 = !cir.struct<"S12" {data !s32i, data !s32i, data !s32i}>
+!rec_S16 = !cir.struct<"S16" {data !s32i, data !s32i, data !s32i, data !s32i}>
+!rec_U3 = !cir.union<"U3" {data !cir.array<!s8i x 3>}>
+!rec_SMem = !cir.struct<"SMem" {data !s64i, data !s64i, data !s64i}>
+!rec_TP = !cir.struct<"TP" {data !s32i, data !s8i, pad !cir.array<!u8i x 3>}>
+!rec_TPMem = !cir.struct<"TPMem" {data !s64i, data !s64i, data !s64i, data !s8i, pad !cir.array<!u8i x 7>}>
+!rec___va_list_tag = !cir.struct<"__va_list_tag" {data !u32i, data !u32i, data !cir.ptr<!void>, data !cir.ptr<!void>}>
+
+// CHECK-DAG: ![[PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !u64i}>
+// CHECK-DAG: ![[SFPAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !s64i, data !s32i}>
+// CHECK-DAG: ![[S12PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !s32i}>
+
+// Up to the constants at the end of the first module, no named record is
+// loaded or stored as a value.
+// MOVE-NOT: cir.load {{.*}}, !rec_{{[A-Z]}}
+// MOVE-NOT: cir.store {{.*}} : !rec_{{[A-Z]}}
+// MOVE-LABEL: cir.func @const_feed_x87(
+
+// LLVM-DAG: %union.UX87 = type { x86_fp80 }
+// LLVM-DAG: %union.H = type { %struct.HS }
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+} {
+
+  // Each callee is rewritten with its call sites in declaration order, so
+  // these call sites are rewritten before any definition below.
+  cir.func private @take_x87(!rec_UX87)
+  cir.func private @make_x87() -> !rec_UX87
+  cir.func private @take_h(!rec_H)
+  cir.func private @make_h() -> !rec_H
+  cir.func private @take_s(!rec_S)
+  cir.func private @make_s() -> !rec_S
+  cir.func private @take_sf(!rec_SF)
+  cir.func private @make_sf() -> !rec_SF
+  cir.func private @take_s12(!rec_S12)
+  cir.func private @take_s16(!rec_S16)
+  cir.func private @take_u3(!rec_U3)
+  cir.func private @take_x87mem(!rec_UX87Mem)
+  cir.func private @make_x87mem() -> !rec_UX87Mem
+  cir.func private @take_hmem(!rec_HMem)
+  cir.func private @make_hmem() -> !rec_HMem
+  cir.func private @take_smem(!rec_SMem)
+  cir.func private @make_smem() -> !rec_SMem
+  cir.func private @make_tp() -> !rec_TP
+  cir.func private @make_tpmem() -> !rec_TPMem
+
+  // CHECK: cir.func private @take_x87(!u64i, !u64i)
+  // CHECK: cir.func private @make_x87() -> ![[PAIR]]
+  // CHECK: cir.func private @take_h(!u64i)
+  // CHECK: cir.func private @make_h() -> !u64i
+  // CHECK: cir.func private @take_s(!u64i)
+  // CHECK: cir.func private @make_s() -> !u64i
+  // CHECK: cir.func private @take_sf(!s64i, !s32i)
+  // CHECK: cir.func private @make_sf() -> ![[SFPAIR]]
+  // CHECK: cir.func private @take_s12(!u64i, !s32i)
+  // CHECK: cir.func private @take_s16(!u64i, !u64i)
+  // CHECK: cir.func private @take_u3(!cir.int<u, 24>)
+  // CHECK: cir.func private @take_x87mem(!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.byval = !rec_UX87Mem, llvm.noundef})
+  // CHECK: cir.func private @make_x87mem(!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.sret = !rec_UX87Mem, llvm.writable})
+  // CHECK: cir.func private @take_hmem(!cir.ptr<!rec_HMem> {llvm.align = 8 : i64, llvm.byval = !rec_HMem, llvm.noundef})
+  // CHECK: cir.func private @make_hmem(!cir.ptr<!rec_HMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_HMem, llvm.writable})
+  // CHECK: cir.func private @take_smem(!cir.ptr<!rec_SMem> {llvm.align = 8 : i64, llvm.byval = !rec_SMem, llvm.noundef})
+  // CHECK: cir.func private @make_smem(!cir.ptr<!rec_SMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_SMem, llvm.writable})
+  // CHECK: cir.func private @make_tp() -> !u64i
+  // CHECK: cir.func private @make_tpmem(!cir.ptr<!rec_TPMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_TPMem, llvm.writable})
+
+  // A spilled parameter is copied out of its coercion slot.
+  cir.func @param_spill_x87(%arg0: !rec_UX87) {
+    %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+    cir.store %arg0, %0 : !rec_UX87, !cir.ptr<!rec_UX87>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_spill_x87(%arg0: !u64i, %arg1: !u64i)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[SLOT]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[LOP]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg1, %[[HIP]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[SPILL:.*]] = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %[[SPILL]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @param_spill_h(%arg0: !rec_H) {
+    %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+    cir.store %arg0, %0 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_spill_h(%arg0: !u64i)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[SPILL:.*]] = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[SPILL]] align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @param_spill_s(%arg0: !rec_S) {
+    %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+    cir.store %arg0, %0 : !rec_S, !cir.ptr<!rec_S>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_spill_s(%arg0: !u64i)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_S>
+  // CHECK-NEXT:    %[[SPILL:.*]] = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[SPILL]] align(4) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @param_spill_sf(%arg0: !rec_SF) {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
+    cir.store %arg0, %0 : !rec_SF, !cir.ptr<!rec_SF>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_spill_sf(%arg0: !s64i, %arg1: !s32i)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[SFPAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[SLOT]][0] {name = ""} : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!s64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[LOP]] : !s64i, !cir.ptr<!s64i>
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:    cir.store %arg1, %[[HIP]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[SPILL:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[SPILL]] align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.return
+
+  // An unused parameter still fills its slot and nothing reads it.
+  cir.func @param_unused_x87(%arg0: !rec_UX87) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_unused_x87(%arg0: !u64i, %arg1: !u64i)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[SLOT]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[LOP]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg1, %[[HIP]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.cast bitcast %[[SLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @param_unused_h(%arg0: !rec_H) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_unused_h(%arg0: !u64i)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @param_unused_s(%arg0: !rec_S) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_unused_s(%arg0: !u64i)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.return
+
+  // The call is rewritten first and stores the parameter into an argument
+  // slot.  The parameter's rewrite turns that store into a copy.
+  cir.func @param_forward_x87(%arg0: !rec_UX87) {
+    cir.call @take_x87(%arg0) : (!rec_UX87) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_forward_x87(%arg0: !u64i, %arg1: !u64i)
+  // CHECK:         %[[VIEW:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[ARG:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %[[ARG]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[ARGVIEW:.*]] = cir.cast bitcast %[[ARG]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[ARGVIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[ARGVIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load %[[HIP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @param_forward_h(%arg0: !rec_H) {
+    cir.call @take_h(%arg0) : (!rec_H) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_forward_h(%arg0: !u64i)
+  // CHECK:         %[[VIEW:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[ARG:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[ARG]] align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[ARGVIEW:.*]] = cir.cast bitcast %[[ARG]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load %[[ARGVIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_h(%[[V]]) : (!u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @param_forward_sf(%arg0: !rec_SF) {
+    cir.call @take_sf(%arg0) : (!rec_SF) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_forward_sf(%arg0: !s64i, %arg1: !s32i)
+  // CHECK:         %[[VIEW:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[ARG:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[ARG]] align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[ARGVIEW:.*]] = cir.cast bitcast %[[ARG]] : !cir.ptr<!rec_SF> -> !cir.ptr<![[SFPAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[ARGVIEW]][0] {name = ""} : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!s64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load %[[LOP]] : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[ARGVIEW]][1] {name = ""} : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load %[[HIP]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:    cir.call @take_sf(%[[LO]], %[[HI]]) : (!s64i, !s32i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // A returned parameter is read in place out of its own coercion slot.
+  cir.func @param_return_x87(%arg0: !rec_UX87) -> !rec_UX87 {
+    cir.return %arg0 : !rec_UX87
+  }
+
+  // CHECK-LABEL: cir.func @param_return_x87(%arg0: !u64i, %arg1: !u64i)
+  // CHECK-SAME:    -> ![[PAIR]]
+  // CHECK:         %[[VIEW:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load align(16) %[[RVIEW]] : !cir.ptr<![[PAIR]]>, ![[PAIR]]
+  // CHECK-NEXT:    cir.return %[[RET]] : ![[PAIR]]
+
+  cir.func @param_return_h(%arg0: !rec_H) -> !rec_H {
+    cir.return %arg0 : !rec_H
+  }
+
+  // CHECK-LABEL: cir.func @param_return_h(%arg0: !u64i) -> !u64i
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load align(8) %[[RVIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.return %[[RET]] : !u64i
+
+  cir.func @param_return_sf(%arg0: !rec_SF) -> !rec_SF {
+    cir.return %arg0 : !rec_SF
+  }
+
+  // CHECK-LABEL: cir.func @param_return_sf(%arg0: !s64i, %arg1: !s32i)
+  // CHECK-SAME:    -> ![[SFPAIR]]
+  // CHECK:         %[[VIEW:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_SF> -> !cir.ptr<![[SFPAIR]]>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load align(8) %[[RVIEW]] : !cir.ptr<![[SFPAIR]]>, ![[SFPAIR]]
+  // CHECK-NEXT:    cir.return %[[RET]] : ![[SFPAIR]]
+
+  cir.func @ret_local_x87() -> !rec_UX87 {
+    %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+    %1 = cir.load %0 : !cir.ptr<!rec_UX87>, !rec_UX87
+    cir.return %1 : !rec_UX87
+  }
+
+  // CHECK-LABEL: cir.func @ret_local_x87()
+  // CHECK-SAME:    -> ![[PAIR]]
+  // CHECK-NEXT:    %[[U:.*]] = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[U]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load align(16) %[[RVIEW]] : !cir.ptr<![[PAIR]]>, ![[PAIR]]
+  // CHECK-NEXT:    cir.return %[[RET]] : ![[PAIR]]
+
+  cir.func @ret_local_h() -> !rec_H {
+    %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+    %1 = cir.load %0 : !cir.ptr<!rec_H>, !rec_H
+    cir.return %1 : !rec_H
+  }
+
+  // CHECK-LABEL: cir.func @ret_local_h() -> !u64i
+  // CHECK-NEXT:    %[[H:.*]] = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[H]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load align(4) %[[RVIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.return %[[RET]] : !u64i
+
+  // An argument loaded from an alloca is read in place.
+  cir.func @call_inplace_x87() {
+    %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+    %1 = cir.load %0 : !cir.ptr<!rec_UX87>, !rec_UX87
+    cir.call @take_x87(%1) : (!rec_UX87) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_inplace_x87()
+  // CHECK-NEXT:    %[[U:.*]] = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[U]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[VIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load align(16) %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[VIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load align(8) %[[HIP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @call_inplace_h() {
+    %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+    %1 = cir.load %0 : !cir.ptr<!rec_H>, !rec_H
+    cir.call @take_h(%1) : (!rec_H) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_inplace_h()
+  // CHECK-NEXT:    %[[H:.*]] = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[H]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load align(4) %[[VIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_h(%[[V]]) : (!u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @call_inplace_s() {
+    %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+    %1 = cir.load %0 : !cir.ptr<!rec_S>, !rec_S
+    cir.call @take_s(%1) : (!rec_S) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_inplace_s()
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[S]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load align(4) %[[VIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_s(%[[V]]) : (!u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @call_inplace_sf() {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
+    %1 = cir.load %0 : !cir.ptr<!rec_SF>, !rec_SF
+    cir.call @take_sf(%1) : (!rec_SF) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_inplace_sf()
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[S]] : !cir.ptr<!rec_SF> -> !cir.ptr<![[SFPAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[VIEW]][0] {name = ""} : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!s64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load align(8) %[[LOP]] : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[VIEW]][1] {name = ""} : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load align(8) %[[HIP]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:    cir.call @take_sf(%[[LO]], %[[HI]]) : (!s64i, !s32i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // Each field is read at the alignment the alloca guarantees at its offset.
+  cir.func @call_inplace_s16() {
+    %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S16>
+    %1 = cir.load %0 : !cir.ptr<!rec_S16>, !rec_S16
+    cir.call @take_s16(%1) : (!rec_S16) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_inplace_s16()
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(4) : !cir.ptr<!rec_S16>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[S]] : !cir.ptr<!rec_S16> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[VIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load align(4) %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[VIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load align(4) %[[HIP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_s16(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // Storage that is not an alloca is copied into a slot first.
+  cir.func @call_copied_x87(%arg0: !cir.ptr<!rec_UX87>) {
+    %0 = cir.load %arg0 : !cir.ptr<!rec_UX87>, !rec_UX87
+    cir.call @take_x87(%0) : (!rec_UX87) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_copied_x87(%arg0: !cir.ptr<!rec_UX87>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %arg0 align(16) to %[[SLOT]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[VIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[VIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load %[[HIP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @call_copied_h(%arg0: !cir.ptr<!rec_H>) {
+    %0 = cir.load %arg0 : !cir.ptr<!rec_H>, !rec_H
+    cir.call @take_h(%0) : (!rec_H) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_copied_h(%arg0: !cir.ptr<!rec_H>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %arg0 align(4) to %[[SLOT]] align(8) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load align(8) %[[VIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_h(%[[V]]) : (!u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // The coerced type is larger than the record, so the alloca is copied
+  // into a slot that holds both.
+  cir.func @call_small_u3() {
+    %0 = cir.alloca "u" align(1) : !cir.ptr<!rec_U3>
+    %1 = cir.load %0 : !cir.ptr<!rec_U3>, !rec_U3
+    cir.call @take_u3(%1) : (!rec_U3) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_small_u3()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_U3>
+  // CHECK-NEXT:    %[[U:.*]] = cir.alloca "u" align(1) : !cir.ptr<!rec_U3>
+  // CHECK-NEXT:    cir.copy %[[U]] align(1) to %[[SLOT]] align(4) : !cir.ptr<!rec_U3>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_U3> -> !cir.ptr<!cir.int<u, 24>>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load align(4) %[[VIEW]] : !cir.ptr<!cir.int<u, 24>>, !cir.int<u, 24>
+  // CHECK-NEXT:    cir.call @take_u3(%[[V]]) : (!cir.int<u, 24>) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @call_small_s12() {
+    %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S12>
+    %1 = cir.load %0 : !cir.ptr<!rec_S12>, !rec_S12
+    cir.call @take_s12(%1) : (!rec_S12) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @call_small_s12()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[S12PAIR]]>
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(4) : !cir.ptr<!rec_S12>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[S12PAIR]]> -> !cir.ptr<!rec_S12>
+  // CHECK-NEXT:    cir.copy %[[S]] align(4) to %[[RVIEW]] align(8) : !cir.ptr<!rec_S12>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[SLOT]][0] {name = ""} : !cir.ptr<![[S12PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<![[S12PAIR]]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load %[[HIP]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:    cir.call @take_s12(%[[LO]], %[[HI]]) : (!u64i, !s32i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // A stored call result is copied out of its return slot.
+  cir.func @result_store_x87() {
+    %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+    %1 = cir.call @make_x87() : () -> !rec_UX87
+    cir.store %1, %0 : !rec_UX87, !cir.ptr<!rec_UX87>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_store_x87()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[U:.*]] = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_x87() : () -> ![[PAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : ![[PAIR]], !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %[[U]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @result_store_h() {
+    %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+    %1 = cir.call @make_h() : () -> !rec_H
+    cir.store %1, %0 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_store_h()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[H:.*]] = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_h() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[H]] align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @result_store_s() {
+    %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+    %1 = cir.call @make_s() : () -> !rec_S
+    cir.store %1, %0 : !rec_S, !cir.ptr<!rec_S>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_store_s()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_s() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[S]] align(4) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @result_store_sf() {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
+    %1 = cir.call @make_sf() : () -> !rec_SF
+    cir.store %1, %0 : !rec_SF, !cir.ptr<!rec_SF>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_store_sf()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[SFPAIR]]>
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_sf() : () -> ![[SFPAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : ![[SFPAIR]], !cir.ptr<![[SFPAIR]]>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[S]] align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.return
+
+  // A store into an array element is a copy into that element.
+  cir.func @result_stride_x87(%arg0: !cir.ptr<!rec_UX87>) {
+    %0 = cir.const #cir.int<3> : !s64i
+    %1 = cir.ptr_stride %arg0, %0 : (!cir.ptr<!rec_UX87>, !s64i) -> !cir.ptr<!rec_UX87>
+    %2 = cir.call @make_x87() : () -> !rec_UX87
+    cir.store align(16) %2, %1 : !rec_UX87, !cir.ptr<!rec_UX87>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_stride_x87(%arg0: !cir.ptr<!rec_UX87>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[IDX:.*]] = cir.const #cir.int<3> : !s64i
+  // CHECK-NEXT:    %[[ELT:.*]] = cir.ptr_stride %arg0, %[[IDX]] : (!cir.ptr<!rec_UX87>, !s64i) -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_x87() : () -> ![[PAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : ![[PAIR]], !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %[[ELT]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @result_stride_h(%arg0: !cir.ptr<!rec_H>) {
+    %0 = cir.const #cir.int<3> : !s64i
+    %1 = cir.ptr_stride %arg0, %0 : (!cir.ptr<!rec_H>, !s64i) -> !cir.ptr<!rec_H>
+    %2 = cir.call @make_h() : () -> !rec_H
+    cir.store align(4) %2, %1 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_stride_h(%arg0: !cir.ptr<!rec_H>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[IDX:.*]] = cir.const #cir.int<3> : !s64i
+  // CHECK-NEXT:    %[[ELT:.*]] = cir.ptr_stride %arg0, %[[IDX]] : (!cir.ptr<!rec_H>, !s64i) -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_h() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[ELT]] align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.return
+
+  // The consumer is rewritten first and stores the result into an argument
+  // slot.  The producer's rewrite turns that store into a copy.
+  cir.func @result_feed_x87() {
+    %0 = cir.call @make_x87() : () -> !rec_UX87
+    cir.call @take_x87(%0) : (!rec_UX87) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_feed_x87()
+  // CHECK-NEXT:    %[[RSLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[ASLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_x87() : () -> ![[PAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[RSLOT]] : ![[PAIR]], !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[RSLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[RVIEW]] align(16) to %[[ASLOT]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[AVIEW:.*]] = cir.cast bitcast %[[ASLOT]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[AVIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[AVIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load %[[HIP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @result_feed_h() {
+    %0 = cir.call @make_h() : () -> !rec_H
+    cir.call @take_h(%0) : (!rec_H) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_feed_h()
+  // CHECK-NEXT:    %[[RSLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[ASLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_h() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[RSLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[RSLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %[[RVIEW]] align(8) to %[[ASLOT]] align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[AVIEW:.*]] = cir.cast bitcast %[[ASLOT]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load %[[AVIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_h(%[[V]]) : (!u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // The producer is rewritten first, so the return reads its slot in place.
+  cir.func @result_return_x87() -> !rec_UX87 {
+    %0 = cir.call @make_x87() : () -> !rec_UX87
+    cir.return %0 : !rec_UX87
+  }
+
+  // CHECK-LABEL: cir.func @result_return_x87()
+  // CHECK-SAME:    -> ![[PAIR]]
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_x87() : () -> ![[PAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : ![[PAIR]], !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load align(16) %[[RVIEW]] : !cir.ptr<![[PAIR]]>, ![[PAIR]]
+  // CHECK-NEXT:    cir.return %[[RET]] : ![[PAIR]]
+
+  cir.func @result_return_h() -> !rec_H {
+    %0 = cir.call @make_h() : () -> !rec_H
+    cir.return %0 : !rec_H
+  }
+
+  // CHECK-LABEL: cir.func @result_return_h() -> !u64i
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_h() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load align(8) %[[RVIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.return %[[RET]] : !u64i
+
+  // A volatile store becomes a volatile copy.
+  cir.func @result_volatile_x87(%arg0: !cir.ptr<!rec_UX87>) {
+    %0 = cir.call @make_x87() : () -> !rec_UX87
+    cir.store volatile align(16) %0, %arg0 : !rec_UX87, !cir.ptr<!rec_UX87>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_volatile_x87(%arg0: !cir.ptr<!rec_UX87>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_x87() : () -> ![[PAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : ![[PAIR]], !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %arg0 align(16) volatile : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @result_volatile_h(%arg0: !cir.ptr<!rec_H>) {
+    %0 = cir.call @make_h() : () -> !rec_H
+    cir.store volatile %0, %arg0 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_volatile_h(%arg0: !cir.ptr<!rec_H>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_h() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %arg0 align(4) volatile : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.return
+
+  // A result whose destination is loaded after the call is copied out of a
+  // return slot of its own.
+  cir.func @sret_nodom_x87mem(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Mem>>) {
+    %0 = cir.call @make_x87mem() : () -> !rec_UX87Mem
+    %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_UX87Mem>>, !cir.ptr<!rec_UX87Mem>
+    cir.store %0, %1 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @sret_nodom_x87mem(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Mem>>)
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.call @make_x87mem(%[[SRET]]) : (!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.sret = !rec_UX87Mem, llvm.writable}) -> ()
+  // CHECK-NEXT:    %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_UX87Mem>>, !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.copy %[[SRET]] align(16) to %[[DEST]] align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @sret_nodom_hmem(%arg0: !cir.ptr<!cir.ptr<!rec_HMem>>) {
+    %0 = cir.call @make_hmem() : () -> !rec_HMem
+    %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_HMem>>, !cir.ptr<!rec_HMem>
+    cir.store %0, %1 : !rec_HMem, !cir.ptr<!rec_HMem>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @sret_nodom_hmem(%arg0: !cir.ptr<!cir.ptr<!rec_HMem>>)
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.call @make_hmem(%[[SRET]]) : (!cir.ptr<!rec_HMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_HMem, llvm.writable}) -> ()
+  // CHECK-NEXT:    %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_HMem>>, !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[DEST]] align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @sret_nodom_smem(%arg0: !cir.ptr<!cir.ptr<!rec_SMem>>) {
+    %0 = cir.call @make_smem() : () -> !rec_SMem
+    %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_SMem>>, !cir.ptr<!rec_SMem>
+    cir.store %0, %1 : !rec_SMem, !cir.ptr<!rec_SMem>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @sret_nodom_smem(%arg0: !cir.ptr<!cir.ptr<!rec_SMem>>)
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.call @make_smem(%[[SRET]]) : (!cir.ptr<!rec_SMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_SMem, llvm.writable}) -> ()
+  // CHECK-NEXT:    %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_SMem>>, !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[DEST]] align(8) : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.return
+
+  // A local is a complete object, so the copy into it takes the whole record.
+  cir.func @tp_store_local() {
+    %0 = cir.alloca "t" align(4) : !cir.ptr<!rec_TP>
+    %1 = cir.call @make_tp() : () -> !rec_TP
+    cir.store %1, %0 : !rec_TP, !cir.ptr<!rec_TP>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @tp_store_local()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[T:.*]] = cir.alloca "t" align(4) : !cir.ptr<!rec_TP>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_tp() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_TP>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[T]] align(4) : !cir.ptr<!rec_TP>
+  // CHECK-NEXT:    cir.return
+
+  // Any other destination may be a subobject whose tail padding holds
+  // another object, so the copy stops at the data size.
+  cir.func @tp_store_ptr(%arg0: !cir.ptr<!rec_TP>) {
+    %0 = cir.call @make_tp() : () -> !rec_TP
+    cir.store %0, %arg0 : !rec_TP, !cir.ptr<!rec_TP>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @tp_store_ptr(%arg0: !cir.ptr<!rec_TP>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_tp() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_TP>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %arg0 align(4) skip_tail_padding : !cir.ptr<!rec_TP>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @sret_nodom_tpmem(%arg0: !cir.ptr<!cir.ptr<!rec_TPMem>>) {
+    %0 = cir.call @make_tpmem() : () -> !rec_TPMem
+    %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_TPMem>>, !cir.ptr<!rec_TPMem>
+    cir.store %0, %1 : !rec_TPMem, !cir.ptr<!rec_TPMem>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @sret_nodom_tpmem(%arg0: !cir.ptr<!cir.ptr<!rec_TPMem>>)
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_TPMem>
+  // CHECK-NEXT:    cir.call @make_tpmem(%[[SRET]]) : (!cir.ptr<!rec_TPMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_TPMem, llvm.writable}) -> ()
+  // CHECK-NEXT:    %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_TPMem>>, !cir.ptr<!rec_TPMem>
+  // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[DEST]] align(8) skip_tail_padding : !cir.ptr<!rec_TPMem>
+  // CHECK-NEXT:    cir.return
+
+  // A record with a layout gap but no pad member has no tail padding, so the
+  // copy through a pointer takes the whole record.
+  cir.func @sf_store_ptr(%arg0: !cir.ptr<!rec_SF>) {
+    %0 = cir.call @make_sf() : () -> !rec_SF
+    cir.store %0, %arg0 : !rec_SF, !cir.ptr<!rec_SF>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @sf_store_ptr(%arg0: !cir.ptr<!rec_SF>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[SFPAIR]]>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_sf() : () -> ![[SFPAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : ![[SFPAIR]], !cir.ptr<![[SFPAIR]]>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[SFPAIR]]> -> !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %arg0 align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.return
+
+  cir.func @tp_param_store_ptr(%arg0: !rec_TP, %arg1: !cir.ptr<!rec_TP>) {
+    cir.store %arg0, %arg1 : !rec_TP, !cir.ptr<!rec_TP>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @tp_param_store_ptr(%arg0: !u64i, %arg1: !cir.ptr<!rec_TP>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_TP>
+  // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %arg1 align(4) skip_tail_padding : !cir.ptr<!rec_TP>
+  // CHECK-NEXT:    cir.return
+
+  // The copy that replaces a byval parameter's only store keeps the store's
+  // alignment.
+  cir.func @byval_tpmem_ptr(%arg0: !rec_TPMem, %arg1: !cir.ptr<!rec_TPMem>) {
+    cir.store align(1) %arg0, %arg1 : !rec_TPMem, !cir.ptr<!rec_TPMem>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @byval_tpmem_ptr(%arg0: !cir.ptr<!rec_TPMem> {llvm.align = 8 : i64, llvm.byval = !rec_TPMem, llvm.noundef}, %arg1: !cir.ptr<!rec_TPMem>)
+  // CHECK-NEXT:    cir.copy %arg0 align(8) to %arg1 align(1) skip_tail_padding : !cir.ptr<!rec_TPMem>
+  // CHECK-NEXT:    cir.return
+
+  // A byval parameter stored twice has no single spill, so each store is a
+  // copy from the incoming pointer.
+  cir.func @byval_twice_x87mem(%arg0: !rec_UX87Mem, %arg1: !cir.ptr<!rec_UX87Mem>) {
+    %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Mem>
+    cir.store %arg0, %0 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
+    cir.store %arg0, %arg1 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @byval_twice_x87mem(%arg0: !cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.byval = !rec_UX87Mem, llvm.noundef}, %arg1: !cir.ptr<!rec_UX87Mem>)
+  // CHECK-NEXT:    %[[U:.*]] = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.copy %arg0 align(16) to %[[U]] align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.copy %arg0 align(16) to %arg1 align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.return
+
+  // A byval parameter handed straight on is copied into the callee's slot.
+  cir.func @byval_forward_hmem(%arg0: !rec_HMem) {
+    cir.call @take_hmem(%arg0) : (!rec_HMem) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @byval_forward_hmem(%arg0: !cir.ptr<!rec_HMem> {llvm.align = 8 : i64, llvm.byval = !rec_HMem, llvm.noundef})
+  // CHECK-NEXT:    %[[BYVAL:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.copy %arg0 align(8) to %[[BYVAL]] align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.call @take_hmem(%[[BYVAL]]) : (!cir.ptr<!rec_HMem> {llvm.align = 8 : i64, llvm.byval = !rec_HMem, llvm.noundef}) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // The consumer is rewritten first and stores the sret result into its
+  // byval slot.  The producer's rewrite turns that store into a copy.
+  cir.func @byval_result_x87mem() {
+    %0 = cir.call @make_x87mem() : () -> !rec_UX87Mem
+    cir.call @take_x87mem(%0) : (!rec_UX87Mem) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @byval_result_x87mem()
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.call @make_x87mem(%[[SRET]])
+  // CHECK-NEXT:    %[[BYVAL:.*]] = cir.alloca "byval" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.copy %[[SRET]] align(16) to %[[BYVAL]] align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.call @take_x87mem(%[[BYVAL]]) : (!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.byval = !rec_UX87Mem, llvm.noundef}) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @byval_result_hmem() {
+    %0 = cir.call @make_hmem() : () -> !rec_HMem
+    cir.call @take_hmem(%0) : (!rec_HMem) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @byval_result_hmem()
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.call @make_hmem(%[[SRET]])
+  // CHECK-NEXT:    %[[BYVAL:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[BYVAL]] align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.call @take_hmem(%[[BYVAL]]) : (!cir.ptr<!rec_HMem> {llvm.align = 8 : i64, llvm.byval = !rec_HMem, llvm.noundef}) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // A register-class fetch copies out of the register save area through a
+  // temp, and the fetched value is copied into the local.  The second fetch
+  // feeds a call rewritten before it, whose argument slot store becomes a
+  // copy.
+  cir.func @vaarg_x87(%arg0: !s32i, ...) {
+    %0 = cir.alloca "ap" align(16) : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %1 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+    %2 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+    %3 = cir.va_arg %2 : (!cir.ptr<!rec___va_list_tag>) -> !rec_UX87
+    cir.store align(16) %3, %1 : !rec_UX87, !cir.ptr<!rec_UX87>
+    %4 = cir.va_arg %2 : (!cir.ptr<!rec___va_list_tag>) -> !rec_UX87
+    cir.call @take_x87(%4) : (!rec_UX87) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @vaarg_x87(%arg0: !s32i, ...)
+  // CHECK-NEXT:    %[[ASLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.alloca "ap"
+  // CHECK-NEXT:    %[[U:.*]] = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK:         %[[TEMP:.*]] = cir.alloca "vaarg.reg" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK:         %[[REG:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[REG]] align(8) to %[[TEMP]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK:         %[[ADDR:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[ADDR]] align(16) to %[[U]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK:         %[[TEMP2:.*]] = cir.alloca "vaarg.reg" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK:         %[[REG2:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[REG2]] align(8) to %[[TEMP2]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK:         %[[ADDR2:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[ADDR2]] align(16) to %[[ASLOT]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[AVIEW:.*]] = cir.cast bitcast %[[ASLOT]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[AVIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[AVIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load %[[HIP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @vaarg_h(%arg0: !s32i, ...) {
+    %0 = cir.alloca "ap" align(16) : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %1 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+    %2 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+    %3 = cir.va_arg %2 : (!cir.ptr<!rec___va_list_tag>) -> !rec_H
+    cir.store %3, %1 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @vaarg_h(%arg0: !s32i, ...)
+  // CHECK-NEXT:    cir.alloca "ap"
+  // CHECK-NEXT:    %[[H:.*]] = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
+  // CHECK:         %[[ADDR:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %[[ADDR]] align(4) to %[[H]] align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.return
+
+  // A memory-class fetch reads the overflow area.  The second one feeds a
+  // byval slot, filled by a copy.
+  cir.func @vaarg_x87mem(%arg0: !s32i, ...) {
+    %0 = cir.alloca "ap" align(16) : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %1 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Mem>
+    %2 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+    %3 = cir.va_arg %2 : (!cir.ptr<!rec___va_list_tag>) -> !rec_UX87Mem
+    cir.store align(16) %3, %1 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
+    %4 = cir.va_arg %2 : (!cir.ptr<!rec___va_list_tag>) -> !rec_UX87Mem
+    cir.call @take_x87mem(%4) : (!rec_UX87Mem) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @vaarg_x87mem(%arg0: !s32i, ...)
+  // CHECK-NEXT:    cir.alloca "ap"
+  // CHECK-NEXT:    %[[U:.*]] = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NOT:     cir.ternary
+  // CHECK:         %[[ADDR:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.copy %[[ADDR]] align(16) to %[[U]] align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK:         %[[ADDR2:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    %[[BYVAL:.*]] = cir.alloca "byval" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.copy %[[ADDR2]] align(16) to %[[BYVAL]] align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.call @take_x87mem(%[[BYVAL]])
+  // CHECK-NEXT:    cir.return
+
+  // The producer is rewritten before the consumer, so the consumer reads the
+  // producer's slot in place.
+  cir.func @param_forward_late_x87(%arg0: !rec_UX87) {
+    cir.call @take_late_x87(%arg0) : (!rec_UX87) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_forward_late_x87(%arg0: !u64i, %arg1: !u64i)
+  // CHECK:         %[[VIEW:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[AVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[AVIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load align(16) %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[AVIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load align(8) %[[HIP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_late_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @param_forward_late_h(%arg0: !rec_H) {
+    cir.call @take_late_h(%arg0) : (!rec_H) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @param_forward_late_h(%arg0: !u64i)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[AVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load align(8) %[[AVIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_late_h(%[[V]]) : (!u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @result_feed_late_x87() {
+    %0 = cir.call @make_x87() : () -> !rec_UX87
+    cir.call @take_late_x87(%0) : (!rec_UX87) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_feed_late_x87()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_x87() : () -> ![[PAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : ![[PAIR]], !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[AVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[AVIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load align(16) %[[LOP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[AVIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load align(8) %[[HIP]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_late_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  cir.func @result_feed_late_h() {
+    %0 = cir.call @make_h() : () -> !rec_H
+    cir.call @take_late_h(%0) : (!rec_H) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @result_feed_late_h()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_h() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[AVIEW:.*]] = cir.cast bitcast %[[VIEW]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load align(8) %[[AVIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_late_h(%[[V]]) : (!u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // The sret slot is handed on as the byval argument.
+  cir.func @byval_result_late_x87mem() {
+    %0 = cir.call @make_x87mem() : () -> !rec_UX87Mem
+    cir.call @take_late_x87mem(%0) : (!rec_UX87Mem) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @byval_result_late_x87mem()
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    cir.call @make_x87mem(%[[SRET]])
+  // CHECK-NEXT:    cir.call @take_late_x87mem(%[[SRET]]) : (!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.byval = !rec_UX87Mem, llvm.noundef}) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // The definition is rewritten before the producer, so the return stores
+  // the result into a slot and the producer's rewrite turns that store into
+  // a copy.
+  cir.func @result_return_late_x87() -> !rec_UX87 {
+    %0 = cir.call @make_late_x87() : () -> !rec_UX87
+    cir.return %0 : !rec_UX87
+  }
+
+  cir.func @result_return_late_h() -> !rec_H {
+    %0 = cir.call @make_late_h() : () -> !rec_H
+    cir.return %0 : !rec_H
+  }
+
+  cir.func private @take_late_x87(!rec_UX87)
+  cir.func private @take_late_h(!rec_H)
+  cir.func private @take_late_x87mem(!rec_UX87Mem)
+  cir.func private @make_late_x87() -> !rec_UX87
+  cir.func private @make_late_h() -> !rec_H
+
+  // CHECK-LABEL: cir.func @result_return_late_x87()
+  // CHECK-SAME:    -> ![[PAIR]]
+  // CHECK-NEXT:    %[[RSLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_late_x87() : () -> ![[PAIR]]
+  // CHECK-NEXT:    cir.store %[[RES]], %[[RSLOT]] : ![[PAIR]], !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[RSLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    cir.copy %[[RVIEW]] align(16) to %[[SLOT]] align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[VIEW]] : !cir.ptr<![[PAIR]]>, ![[PAIR]]
+  // CHECK-NEXT:    cir.return %[[RET]] : ![[PAIR]]
+
+  // CHECK-LABEL: cir.func @result_return_late_h() -> !u64i
+  // CHECK-NEXT:    %[[RSLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_late_h() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[RSLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RVIEW:.*]] = cir.cast bitcast %[[RSLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
+  // CHECK-NEXT:    cir.copy %[[RVIEW]] align(8) to %[[SLOT]] align(4) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[VIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.return %[[RET]] : !u64i
+
+  // CHECK: cir.func private @take_late_x87(!u64i, !u64i)
+  // CHECK: cir.func private @take_late_h(!u64i)
+  // CHECK: cir.func private @take_late_x87mem(!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.byval = !rec_UX87Mem, llvm.noundef})
+  // CHECK: cir.func private @make_late_x87() -> ![[PAIR]]
+  // CHECK: cir.func private @make_late_h() -> !u64i
+
+  // A constant carries no bytes beyond its own value, so it is still stored
+  // into the argument slot by value.
+  cir.func @const_feed_x87() {
+    %0 = cir.const #cir.zero : !rec_UX87
+    cir.call @take_x87(%0) : (!rec_UX87) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @const_feed_x87()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[C:.*]] = cir.const #cir.zero : !rec_UX87
+  // CHECK-NEXT:    cir.store %[[C]], %[[SLOT]] : !rec_UX87, !cir.ptr<!rec_UX87>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_UX87> -> !cir.ptr<![[PAIR]]>
+  // CHECK:         cir.call @take_x87(%{{.*}}, %{{.*}}) : (!u64i, !u64i) -> ()
+  // MOVE:          cir.store %{{.*}}, %{{.*}} : !rec_UX87, !cir.ptr<!rec_UX87>
+
+  cir.func @const_feed_h() {
+    %0 = cir.const #cir.zero : !rec_H
+    cir.call @take_h(%0) : (!rec_H) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @const_feed_h()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[C:.*]] = cir.const #cir.zero : !rec_H
+  // CHECK-NEXT:    cir.store %[[C]], %[[SLOT]] : !rec_H, !cir.ptr<!rec_H>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[V:.*]] = cir.load %[[VIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_h(%[[V]]) : (!u64i) -> ()
+  // MOVE-LABEL:    cir.func @const_feed_h()
+  // MOVE:          cir.store %{{.*}}, %{{.*}} : !rec_H, !cir.ptr<!rec_H>
+
+  cir.func @const_feed_hmem() {
+    %0 = cir.const #cir.zero : !rec_HMem
+    cir.call @take_hmem(%0) : (!rec_HMem) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @const_feed_hmem()
+  // CHECK-NEXT:    %[[C:.*]] = cir.const #cir.zero : !rec_HMem
+  // CHECK-NEXT:    %[[BYVAL:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.store %[[C]], %[[BYVAL]] : !rec_HMem, !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    cir.call @take_hmem(%[[BYVAL]])
+  // MOVE-LABEL:    cir.func @const_feed_hmem()
+  // MOVE:          cir.store %{{.*}}, %{{.*}} : !rec_HMem, !cir.ptr<!rec_HMem>
+
+  // A member read reads the record back out of the result slot.
+  cir.func @result_extract_s() -> !s32i {
+    %0 = cir.call @make_s() : () -> !rec_S
+    %1 = cir.extract_member %0[1] : !rec_S -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @result_extract_s() -> !s32i
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[RES:.*]] = cir.call @make_s() : () -> !u64i
+  // CHECK-NEXT:    cir.store %[[RES]], %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_S>
+  // CHECK-NEXT:    %[[REC:.*]] = cir.load align(8) %[[VIEW]] : !cir.ptr<!rec_S>, !rec_S
+  // CHECK-NEXT:    %[[FIELD:.*]] = cir.extract_member %[[REC]][1] : !rec_S -> !s32i
+  // CHECK-NEXT:    cir.return %[[FIELD]] : !s32i
+  // MOVE-LABEL:    cir.func @result_extract_s()
+  // MOVE:          cir.load align(8) %{{.*}} : !cir.ptr<!rec_S>, !rec_S
+}
+
+// LLVM-LABEL: define void @param_spill_x87(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,]+}}, ptr align 16 %{{[^,]+}}, i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_spill_h(i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 8, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_spill_s(i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_spill_sf(i64 %{{[^,)]+}}, i32 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_unused_x87(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_unused_h(i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_unused_s(i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_forward_x87(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @take_x87(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
+// LLVM-LABEL: define void @param_forward_h(i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @take_h(i64 %{{[^,)]+}})
+// LLVM-LABEL: define void @param_forward_sf(i64 %{{[^,)]+}}, i32 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @take_sf(i64 %{{[^,)]+}}, i32 %{{[^,)]+}})
+// LLVM-LABEL: define { i64, i64 } @param_return_x87(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       load { i64, i64 }, ptr %{{[^,]+}}, align 16
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define i64 @param_return_h(i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define { i64, i32 } @param_return_sf(i64 %{{[^,)]+}}, i32 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define { i64, i64 } @ret_local_x87()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define i64 @ret_local_h()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @call_inplace_x87()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       load i64, ptr %{{[^,]+}}, align 16
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       load i64, ptr %{{[^,]+}}, align 8
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @call_inplace_h()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       load i64, ptr %{{[^,]+}}, align 4
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @call_inplace_s()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @call_inplace_sf()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @call_inplace_s16()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       %[[LO:[0-9]+]] = load i64, ptr %{{[^,]+}}, align 4
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       %[[HI:[0-9]+]] = load i64, ptr %{{[^,]+}}, align 4
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @take_s16(i64 %[[LO]], i64 %[[HI]])
+// LLVM-LABEL: define void @call_copied_x87(
+// LLVM-SAME:  ptr %[[SRC:[^,)]+]])
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,]+}}, ptr align 16 %[[SRC]], i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @call_copied_h(
+// LLVM-SAME:  ptr %[[SRC:[^,)]+]])
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 4 %[[SRC]], i64 8, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @call_small_u3()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{[^,]+}}, ptr align 1 %{{[^,]+}}, i64 3, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       load i24, ptr %{{[^,]+}}, align 4
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @call_small_s12()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 4 %{{[^,]+}}, i64 12, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_store_x87()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,]+}}, ptr align 16 %{{[^,]+}}, i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_store_h()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 8, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_store_s()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_store_sf()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_stride_x87(ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       %[[ELT:[0-9]+]] = getelementptr %union.UX87, ptr %{{[^,]+}}, i64 3
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ELT]], ptr align 16 %{{[^,]+}}, i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_stride_h(ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       %[[ELT:[0-9]+]] = getelementptr %union.H, ptr %{{[^,]+}}, i64 3
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ELT]], ptr align 8 %{{[^,]+}}, i64 8, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_feed_x87()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_feed_h()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define { i64, i64 } @result_return_x87()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define i64 @result_return_h()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_volatile_x87(
+// LLVM-SAME:  ptr %[[DST:[^,)]+]])
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[DST]], ptr align 16 %{{[^,]+}}, i64 16, i1 true)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_volatile_h(
+// LLVM-SAME:  ptr %[[DST:[^,)]+]])
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[DST]], ptr align 8 %{{[^,]+}}, i64 8, i1 true)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @sret_nodom_x87mem(ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,]+}}, ptr align 16 %{{[^,]+}}, i64 32, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @sret_nodom_hmem(ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 32, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @sret_nodom_smem(ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 24, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @tp_store_local()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 8, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @tp_store_ptr(ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 5, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @sret_nodom_tpmem(ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 25, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @sf_store_ptr(ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @tp_param_store_ptr(i64 %{{[^,)]+}}, ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 5, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @byval_tpmem_ptr(ptr noundef byval(%struct.TPMem) align 8 %{{[^,)]+}}, ptr %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 25, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @byval_twice_x87mem(
+// LLVM-SAME:  ptr noundef byval(%union.UX87Mem) align 16 %[[SRC:[^,)]+]], ptr %[[DST:[^,)]+]])
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,]+}}, ptr align 16 %[[SRC]], i64 32, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[DST]], ptr align 16 %[[SRC]], i64 32, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @byval_forward_hmem(ptr noundef byval(%union.HMem) align 8 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @byval_result_x87mem()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @byval_result_hmem()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @vaarg_x87(i32 %{{[^,)]+}}, ...)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,]+}}, ptr align 8 %{{[^,]+}}, i64 16, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @vaarg_h(i32 %{{[^,)]+}}, ...)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{[^,]+}}, ptr align 4 %{{[^,]+}}, i64 8, i1 false)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @vaarg_x87mem(i32 %{{[^,)]+}}, ...)
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_forward_late_x87(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @param_forward_late_h(i64 %{{[^,)]+}})
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_feed_late_x87()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @result_feed_late_h()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @byval_result_late_x87mem()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM:       call void @make_x87mem(ptr dead_on_unwind writable sret(%union.UX87Mem) align 16 %[[SRET:[^,)]+]])
+// LLVM-NEXT:  call void @take_late_x87mem(ptr noundef byval(%union.UX87Mem) align 16 %[[SRET]])
+// LLVM-LABEL: define { i64, i64 } @result_return_late_x87()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define i64 @result_return_late_h()
+// LLVM-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<?\{ ?x86_fp80|%union\.|%struct\.)}}
+// LLVM-LABEL: define void @const_feed_x87()
+// LLVM:       call void @take_x87(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
+// LLVM-LABEL: define void @const_feed_h()
+// LLVM:       call void @take_h(i64 %{{[^,)]+}})
+// LLVM-LABEL: define void @const_feed_hmem()
+// LLVM:       call void @take_hmem(ptr noundef byval(%union.HMem) align 8 %{{[^,)]+}})
+// LLVM-LABEL: define i32 @result_extract_s()
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_HS = !cir.struct<"HS" {data !s8i, data !s32i}>
+!rec_H = !cir.union<"H" {data !rec_HS, data !cir.array<!s32i x 2>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func @atomic_store_param_h(%arg0: !rec_H, %arg1: !cir.ptr<!rec_H>) {
+    // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
+    cir.store atomic(seq_cst) %arg0, %arg1 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_UX87 = !cir.union<"UX87" {data !cir.long_double<!cir.f80>, data !cir.array<!u8i x 16>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func @atomic_store_flat_param_x87(%arg0: !rec_UX87, %arg1: !cir.ptr<!rec_UX87>) {
+    // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
+    cir.store atomic(seq_cst) %arg0, %arg1 : !rec_UX87, !cir.ptr<!rec_UX87>
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_UX87Mem = !cir.union<"UX87Mem" {data !cir.complex<!cir.long_double<!cir.f80>>, data !cir.array<!u8i x 32>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func @atomic_store_byval_param(%arg0: !rec_UX87Mem, %arg1: !cir.ptr<!rec_UX87Mem>) {
+    %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Mem>
+    cir.store %arg0, %0 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
+    // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
+    cir.store atomic(seq_cst) %arg0, %arg1 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_UX87 = !cir.union<"UX87" {data !cir.long_double<!cir.f80>, data !cir.array<!u8i x 16>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func private @make_x87() -> !rec_UX87
+  cir.func @atomic_store_result_x87(%arg0: !cir.ptr<!rec_UX87>) {
+    %0 = cir.call @make_x87() : () -> !rec_UX87
+    // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
+    cir.store atomic(seq_cst) %0, %arg0 : !rec_UX87, !cir.ptr<!rec_UX87>
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_UX87Mem = !cir.union<"UX87Mem" {data !cir.complex<!cir.long_double<!cir.f80>>, data !cir.array<!u8i x 32>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func private @make_x87mem() -> !rec_UX87Mem
+  cir.func @atomic_store_sret_x87mem(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Mem>>) {
+    %0 = cir.call @make_x87mem() : () -> !rec_UX87Mem
+    %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_UX87Mem>>, !cir.ptr<!rec_UX87Mem>
+    // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
+    cir.store atomic(seq_cst) %0, %1 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
+    cir.return
+  }
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+!rec_HS = !cir.struct<"HS" {data !s8i, data !s32i}>
+!rec_H = !cir.union<"H" {data !rec_HS, data !cir.array<!s32i x 2>}>
+!rec___va_list_tag = !cir.struct<"__va_list_tag" {data !u32i, data !u32i, data !cir.ptr<!void>, data !cir.ptr<!void>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func @atomic_store_vaarg_h(%arg0: !cir.ptr<!rec___va_list_tag>, %arg1: !cir.ptr<!rec_H>) {
+    %0 = cir.va_arg %arg0 : (!cir.ptr<!rec___va_list_tag>) -> !rec_H
+    // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
+    cir.store atomic(seq_cst) %0, %arg1 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_HS = !cir.struct<"HS" {data !s8i, data !s32i}>
+!rec_H = !cir.union<"H" {data !rec_HS, data !cir.array<!s32i x 2>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func private @make_h() -> !rec_H
+
+  // A call result consumed by anything but a store, call, return or member
+  // read would be loaded from its slot as a value.
+  cir.func @result_yield_h(%arg0: !cir.bool, %arg1: !cir.ptr<!rec_H>) {
+    %0 = cir.call @make_h() : () -> !rec_H
+    %1 = cir.ternary(%arg0, true {
+      // expected-error @below {{use of a record argument or result other than by a store, call, return or member read not yet implemented in CallConvLowering}}
+      cir.yield %0 : !rec_H
+    }, false {
+      %2 = cir.load %arg1 : !cir.ptr<!rec_H>, !rec_H
+      cir.yield %2 : !rec_H
+    }) : (!cir.bool) -> !rec_H
+    cir.store %1, %arg1 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+}

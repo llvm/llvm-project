@@ -22,6 +22,7 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   MLIRBufferizationTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRAffineDialect
   MLIRArithDialect
   MLIRDestinationStyleOpInterface

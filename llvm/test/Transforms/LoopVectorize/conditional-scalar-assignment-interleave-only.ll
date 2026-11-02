@@ -29,8 +29,8 @@ define i32 @simple_find_last_reduction(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = freeze i1 [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12]] = select i1 [[TMP11]], i1 [[TMP7]], i1 [[TMP0]]
-; CHECK-NEXT:    [[TMP13]] = select i1 [[TMP11]], i1 [[TMP8]], i1 [[TMP3]]
+; CHECK-NEXT:    [[TMP12]] = select i1 [[TMP11]], i1 [[TMP9]], i1 [[TMP0]]
+; CHECK-NEXT:    [[TMP13]] = select i1 [[TMP11]], i1 [[TMP10]], i1 [[TMP3]]
 ; CHECK-NEXT:    [[TMP14]] = select i1 [[TMP11]], i32 [[TMP5]], i32 [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP19]] = select i1 [[TMP11]], i32 [[TMP21]], i32 [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

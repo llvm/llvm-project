@@ -2,10 +2,10 @@
 
 subroutine foo(x)
   integer :: x
-  !ERROR: At least one motion-clause (TO/FROM) must be specified on TARGET UPDATE construct.
+  !ERROR: One of FROM or TO clauses is required on TARGET UPDATE directive
   !$omp target update
 
-  !ERROR: At least one motion-clause (TO/FROM) must be specified on TARGET UPDATE construct.
+  !ERROR: One of FROM or TO clauses is required on TARGET UPDATE directive
   !$omp target update nowait
 
   !$omp target update to(x) nowait

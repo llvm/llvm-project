@@ -51,6 +51,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.ACTION
     libc.hdr.types.ENTRY
+    libc.include.llvm-libc-types.struct_hsearch_data
     libc.src.__support.HashTable.table
     libc.src.errno.errno
 )

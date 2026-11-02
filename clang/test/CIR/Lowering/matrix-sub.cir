@@ -1,0 +1,70 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @int_matrix_sub(%arg0: !cir.matrix<2 x 3 x !s32i>,
+                           %arg1: !cir.matrix<2 x 3 x !s32i>) -> !cir.matrix<2 x 3 x !s32i> {
+    %0 = cir.sub %arg0, %arg1 : !cir.matrix<2 x 3 x !s32i>
+    cir.return %0 : !cir.matrix<2 x 3 x !s32i>
+  }
+
+  // MLIR-LABEL: llvm.func @int_matrix_sub
+  // MLIR: llvm.sub %{{.*}}, %{{.*}} : vector<6xi32>
+  // LLVM-LABEL: define {{.*}}@int_matrix_sub(
+  // LLVM: sub <6 x i32> %{{.*}}, %{{.*}}
+
+  cir.func @int_matrix_sub_nsw(%arg0: !cir.matrix<2 x 3 x !s32i>,
+                               %arg1: !cir.matrix<2 x 3 x !s32i>) -> !cir.matrix<2 x 3 x !s32i> {
+    %0 = cir.sub nsw %arg0, %arg1 : !cir.matrix<2 x 3 x !s32i>
+    cir.return %0 : !cir.matrix<2 x 3 x !s32i>
+  }
+
+  // MLIR-LABEL: llvm.func @int_matrix_sub_nsw
+  // MLIR: llvm.sub %{{.*}}, %{{.*}} overflow<nsw> : vector<6xi32>
+  // LLVM-LABEL: define {{.*}}@int_matrix_sub_nsw(
+  // LLVM: sub nsw <6 x i32> %{{.*}}, %{{.*}}
+
+  cir.func @fp_matrix_sub(%arg0: !cir.matrix<3 x 3 x !cir.float>,
+                          %arg1: !cir.matrix<3 x 3 x !cir.float>) -> !cir.matrix<3 x 3 x !cir.float> {
+    %0 = cir.fsub %arg0, %arg1 : !cir.matrix<3 x 3 x !cir.float>
+    cir.return %0 : !cir.matrix<3 x 3 x !cir.float>
+  }
+
+  // MLIR-LABEL: llvm.func @fp_matrix_sub
+  // MLIR: llvm.fsub %{{.*}}, %{{.*}} : vector<9xf32>
+  // LLVM-LABEL: define {{.*}}@fp_matrix_sub(
+  // LLVM: fsub <9 x float> %{{.*}}, %{{.*}}
+
+  cir.func @matrix_splat_sub(%arg0: !cir.matrix<3 x 3 x !cir.float>,
+                             %arg1: !cir.float) -> !cir.matrix<3 x 3 x !cir.float> {
+    %0 = cir.vec.splat %arg1 : !cir.float, !cir.matrix<3 x 3 x !cir.float>
+    %1 = cir.fsub %arg0, %0 : !cir.matrix<3 x 3 x !cir.float>
+    cir.return %1 : !cir.matrix<3 x 3 x !cir.float>
+  }
+
+  // MLIR-LABEL: llvm.func @matrix_splat_sub
+  // MLIR: %[[POISON:.*]] = llvm.mlir.poison : vector<9xf32>
+  // MLIR: %[[IDX:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // MLIR: %[[INS:.*]] = llvm.insertelement %{{.*}}, %[[POISON]][%[[IDX]] : i64] : vector<9xf32>
+  // MLIR: %[[SPLAT:.*]] = llvm.shufflevector %[[INS]], %[[POISON]] [0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<9xf32>
+  // MLIR: llvm.fsub %{{.*}}, %[[SPLAT]] : vector<9xf32>
+  // LLVM-LABEL: define {{.*}}@matrix_splat_sub(
+  // LLVM: %[[INS:.*]] = insertelement <9 x float> poison, float %{{.*}}, i64 0
+  // LLVM: %[[SPLAT:.*]] = shufflevector <9 x float> %[[INS]], <9 x float> poison, <9 x i32> zeroinitializer
+  // LLVM: fsub <9 x float> %{{.*}}, %[[SPLAT]]
+
+  // A splat of a constant lowers to a dense constant vector.
+  cir.func @matrix_const_splat() -> !cir.matrix<2 x 3 x !s32i> {
+    %0 = cir.const #cir.int<7> : !s32i
+    %1 = cir.vec.splat %0 : !s32i, !cir.matrix<2 x 3 x !s32i>
+    cir.return %1 : !cir.matrix<2 x 3 x !s32i>
+  }
+
+  // MLIR-LABEL: llvm.func @matrix_const_splat
+  // MLIR: %[[C:.*]] = llvm.mlir.constant(dense<7> : vector<6xi32>) : vector<6xi32>
+  // MLIR: llvm.return %[[C]]
+  // LLVM-LABEL: define {{.*}}@matrix_const_splat(
+  // LLVM: ret <6 x i32> splat (i32 7)
+}

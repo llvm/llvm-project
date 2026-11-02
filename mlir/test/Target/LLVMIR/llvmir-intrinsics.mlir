@@ -432,6 +432,24 @@ llvm.func @pext_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector
   llvm.return
 }
 
+// CHECK-LABEL: @smulh_test
+llvm.func @smulh_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.smulh.i32
+  "llvm.intr.smulh"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.smulh.v8i32
+  "llvm.intr.smulh"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @umulh_test
+llvm.func @umulh_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.umulh.i32
+  "llvm.intr.umulh"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.umulh.v8i32
+  "llvm.intr.umulh"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
 // CHECK-LABEL: @maximum_test
 llvm.func @maximum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
   // CHECK: call float @llvm.maximum.f32
@@ -1225,6 +1243,13 @@ llvm.func @vector_deinterleave2(%vec1: vector<4xf64>, %vec2: vector<[8]xi32>) {
   // CHECK: call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %{{.*}})
   %1 = "llvm.intr.vector.deinterleave2" (%vec2) :
               (vector<[8]xi32>) -> !llvm.struct<(vector<[4]xi32>, vector<[4]xi32>)>
+  llvm.return
+}
+
+// CHECK-LABEL: @vector_repeat
+llvm.func @vector_repeat(%src: vector<4xf32>) {
+  // CHECK:  call <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32
+  %0 = llvm.intr.vector.repeat (%src) : (vector<4xf32>) -> vector<[4]xf32>
   llvm.return
 }
 
@@ -2180,6 +2205,7 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double>)
 // CHECK-DAG: declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
+// CHECK-DAG: declare <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float>)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(ptr captures(none))
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(ptr captures(none))
 // CHECK-DAG: declare ptr @llvm.invariant.start.p0(i64 immarg, ptr captures(none))

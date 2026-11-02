@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-assume-teams-oversubscription -fopenmp-assume-threads-oversubscription -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -fopenmp-assume-teams-oversubscription -fopenmp-assume-threads-oversubscription -o - %s | FileCheck %s
 
 ! ------------------------------------------------------------------------------
 ! GENERIC KERNELS

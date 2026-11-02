@@ -55,8 +55,6 @@ Error ModuleDebugStreamRef::reloadSerialize(BinaryStreamReader &Reader) {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Module has both C11 and C13 line info");
 
-  BinaryStreamRef S;
-
   if (auto EC = Reader.readInteger(Signature))
     return EC;
   Reader.setOffset(0);

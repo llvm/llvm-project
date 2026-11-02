@@ -198,7 +198,7 @@ static APValue getConstantExprValue(const ASTContext &Ctx, const Expr &E) {
   if (auto IntegerConstant = E.getIntegerConstantExpr(Ctx))
     return APValue(*IntegerConstant);
   APValue Constant;
-  if (Ctx.getLangOpts().CPlusPlus && E.isCXX11ConstantExpr(Ctx, &Constant))
+  if (Ctx.getLangOpts().CPlusPlus && E.isCXX11ConstantExpr(Ctx, Constant))
     return Constant;
   return {};
 }

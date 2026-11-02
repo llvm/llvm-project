@@ -998,6 +998,22 @@ gpu.func @vector_extract_strided_slice_partial_offsets() {
   gpu.return
 }
 
+// Only 8 of the subgroup's lanes split dim 1, so that dim's size and offset are
+// rescaled by 8 rather than by the subgroup size.
+// CHECK-LABEL: gpu.func @vector_extract_strided_slice_lane_count_below_subgroup_size
+// CHECK: %[[ESS:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 2], sizes = [4, 2], strides = [1, 1] : vector<8x4xf32> to vector<4x2xf32>
+gpu.func @vector_extract_strided_slice_lane_count_below_subgroup_size() {
+  %0 = "test.some_op"()
+    : () -> vector<8x32xf32>
+  %1 = vector.extract_strided_slice %0 offsets = [2, 16], sizes = [4, 16], strides = [1, 1]
+    : vector<8x32xf32> to vector<4x16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 1]>
+    }> : vector<4x16xf32>
+  gpu.return
+}
+
 // A convert_layout that only repacks lane_data along the non-distributed outer
 // dimension (from [4, 1] to [1, 1] with order = [1, 0]), keeping lane_layout
 // unchanged, folds to its source when consumed by exactly 4 (== outer
@@ -1279,6 +1295,57 @@ gpu.func @convert_layout_repack_innermost_lane_data_3d() {
       target_layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 4]>
     }> : vector<1x1x64xbf16>
   "test.some_use"(%cvt) : (vector<1x1x64xbf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL:     gpu.func @convert_layout_via_slm_lane_layout
+// CHECK-NOT:         xegpu.convert_layout
+// CHECK:             %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<16x16xf32> to vector<16x1xf32>
+// CHECK:             %[[SLM:.*]] = memref.alloca() : memref<4096xi8, 3>
+// CHECK:             %[[MD:.*]] = xegpu.create_mem_desc %[[SLM]] : memref<4096xi8, 3> -> !xegpu.mem_desc<64x16xf32>
+// CHECK:             %[[SGID:.*]] = gpu.subgroup_id : index
+// CHECK:             %[[ROWS:.*]] = arith.constant 16 : index
+// CHECK:             %[[BASE:.*]] = arith.muli %[[SGID]], %[[ROWS]] : index
+// CHECK:             gpu.lane_id
+// CHECK-COUNT-16:    xegpu.store_matrix %{{.*}}, %[[MD]]{{\[}}%{{.*}}, %{{.*}}] : vector<1x1xf32>, !xegpu.mem_desc<64x16xf32>, index, index
+// CHECK:             xegpu.fence memory_kind = slm, fence_scope = workgroup
+// CHECK-COUNT-16:    xegpu.load_matrix %[[MD]]{{\[}}%{{.*}}, %{{.*}}] : !xegpu.mem_desc<64x16xf32>, index, index -> vector<1x1xf32>
+// CHECK:             builtin.unrealized_conversion_cast %{{.*}} : vector<1x16xf32> to vector<16x16xf32>
+gpu.func @convert_layout_via_slm_lane_layout() kernel attributes {known_block_size = array<i32: 64, 1, 1>} {
+  %src = "test.some_op"() : () -> vector<16x16xf32>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+    }> : vector<16x16xf32>
+  "test.some_use"(%cvt) : (vector<16x16xf32>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL:     gpu.func @convert_layout_via_slm_lane_data
+// CHECK-NOT:         xegpu.convert_layout
+// CHECK:             %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<1x2x32xbf16> to vector<1x1x4xbf16>
+// CHECK:             %[[SLM:.*]] = memref.alloca() : memref<512xi8, 3>
+// CHECK:             %[[MD:.*]] = xegpu.create_mem_desc %[[SLM]] : memref<512xi8, 3> -> !xegpu.mem_desc<4x2x32xbf16>
+// CHECK:             gpu.subgroup_id : index
+// CHECK:             xegpu.store_matrix %[[SRC]], %[[MD]]{{\[}}%{{.*}}, %{{.*}}, %{{.*}}] : vector<1x1x4xbf16>, !xegpu.mem_desc<4x2x32xbf16>, index, index, index
+// CHECK:             xegpu.fence memory_kind = slm, fence_scope = workgroup
+// CHECK-COUNT-4:     xegpu.load_matrix %[[MD]]{{\[}}%{{.*}}, %{{.*}}, %{{.*}}] : !xegpu.mem_desc<4x2x32xbf16>, index, index, index -> vector<1x1x1xbf16>
+// CHECK:             builtin.unrealized_conversion_cast %{{.*}} : vector<1x1x4xbf16> to vector<1x2x32xbf16>
+gpu.func @convert_layout_via_slm_lane_data() kernel attributes {known_block_size = array<i32: 64, 1, 1>} {
+  %src = "test.some_op"() : () -> vector<1x2x32xbf16>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 4]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>
+    }> : vector<1x2x32xbf16>
+  "test.some_use"(%cvt) : (vector<1x2x32xbf16>) -> ()
   gpu.return
 }
 }
@@ -1733,6 +1800,51 @@ gpu.func @convert_layout_partial_subgroup() {
     layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
     layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
   }> : (vector<8x64xf4E2M1FN>, vector<64x16xf4E2M1FN>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
+  gpu.return
+}
+}
+
+// -----
+// Two distributed dims: lane_layout [1, 2, 8] splits dims 1 and 2, so each
+// carries its own lane count and both the size and the offset along it are
+// rescaled by that count. Dim 0 is not split and keeps its offset.
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @extract_strided_slice_two_distributed_dims
+// CHECK:         %[[SRC:.*]] = "test.some_op"()
+// CHECK:         %[[DIST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<16x32x32xbf16> to vector<16x16x4xbf16>
+// CHECK:         vector.extract_strided_slice %[[DIST]] offsets = [3, 2, 2], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<16x16x4xbf16> to vector<1x2x2xbf16>
+gpu.func @extract_strided_slice_two_distributed_dims() {
+  %src = "test.some_op"() : () -> vector<16x32x32xbf16>
+  %0 = vector.extract_strided_slice %src offsets = [3, 4, 16], sizes = [1, 4, 16], strides = [1, 1, 1]
+    : vector<16x32x32xbf16> to vector<1x4x16xbf16>
+  // Anchors the layout on %0; recoverTemporaryLayouts derives the operand's
+  // layout from it.
+  %1 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>
+    }> : vector<1x4x16xbf16>
+  gpu.return
+}
+}
+
+// -----
+// A distributed dim that is also packed: lane_data 4 on dim 1, so a lane owns 4
+// contiguous columns. The slice covers the whole dim, so only its size rescales.
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @extract_strided_slice_packed_distributed_dim
+// CHECK:         %[[SRC:.*]] = "test.some_op"()
+// CHECK:         %[[DIST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<8x64xbf16> to vector<8x4xbf16>
+// CHECK:         vector.extract_strided_slice %[[DIST]] offsets = [0, 0], sizes = [1, 4], strides = [1, 1] : vector<8x4xbf16> to vector<1x4xbf16>
+gpu.func @extract_strided_slice_packed_distributed_dim() {
+  %src = "test.some_op"() : () -> vector<8x64xbf16>
+  %0 = vector.extract_strided_slice %src offsets = [0, 0], sizes = [1, 64], strides = [1, 1]
+    : vector<8x64xbf16> to vector<1x64xbf16>
+  %1 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>
+    }> : vector<1x64xbf16>
   gpu.return
 }
 }

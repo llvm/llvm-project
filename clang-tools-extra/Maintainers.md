@@ -2,7 +2,7 @@
 
 This file is a list of the
 [maintainers](https://llvm.org/docs/DeveloperPolicy.html#maintainers)
-for the [Extra Clang Tools](https://clang.llvm.org/extra/index.html) project.
+for the {doc}`Extra Clang Tools </index>` project.
 
 
 # Active Maintainers

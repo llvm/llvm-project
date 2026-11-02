@@ -10,6 +10,8 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h" // For S_IRWXU
+#include "src/__support/CPP/scope.h"
+#include "src/fcntl/fcntl.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fgets.h"
@@ -28,7 +30,7 @@ TEST_F(LlvmLibcStdioFdopenTest, WriteAppendRead) {
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
   auto *fp = LIBC_NAMESPACE::fdopen(fd, "w");
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_TRUE(nullptr != fp);
+  ASSERT_NE(fp, nullptr);
   constexpr const char HELLO[] = "Hello";
   LIBC_NAMESPACE::fputs(HELLO, fp);
   LIBC_NAMESPACE::fclose(fp);
@@ -38,7 +40,7 @@ TEST_F(LlvmLibcStdioFdopenTest, WriteAppendRead) {
   int fd2 = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_RDWR);
   auto *fp2 = LIBC_NAMESPACE::fdopen(fd2, "a");
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_TRUE(nullptr != fp2);
+  ASSERT_NE(fp2, nullptr);
   LIBC_NAMESPACE::fputs(LLVM, fp2);
   LIBC_NAMESPACE::fclose(fp2);
   ASSERT_ERRNO_SUCCESS();
@@ -60,7 +62,7 @@ TEST_F(LlvmLibcStdioFdopenTest, InvalidFd) {
   // With `fd` already closed, `fdopen` should fail and set the `errno` to EBADF
   auto *fp = LIBC_NAMESPACE::fdopen(fd, "r");
   ASSERT_ERRNO_EQ(EBADF);
-  ASSERT_TRUE(nullptr == fp);
+  ASSERT_EQ(fp, nullptr);
 }
 
 TEST_F(LlvmLibcStdioFdopenTest, InvalidMode) {
@@ -73,14 +75,52 @@ TEST_F(LlvmLibcStdioFdopenTest, InvalidMode) {
   // `Mode` must be one of "r", "w" or "a"
   auto *fp = LIBC_NAMESPACE::fdopen(fd, "m+");
   ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_TRUE(nullptr == fp);
+  ASSERT_EQ(fp, nullptr);
 
   // If the mode argument is invalid, then `fdopen` returns a nullptr and sets
   // the `errno` to EINVAL. In this case the `mode` param can only be "r" or
   // "r+"
   auto *fp2 = LIBC_NAMESPACE::fdopen(fd, "w");
   ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_TRUE(nullptr == fp2);
+  ASSERT_EQ(fp2, nullptr);
   LIBC_NAMESPACE::close(fd);
   ASSERT_ERRNO_SUCCESS();
+}
+
+TEST_F(LlvmLibcStdioFdopenTest, CloseOnExecPreservedWithoutModifier) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  constexpr const char *TEST_FILE_NAME =
+      "testdata/close_on_exec_preserved.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int fd =
+      LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY | O_CLOEXEC, S_IRWXU);
+  ASSERT_GE(fd, 0);
+
+  FILE *file = LIBC_NAMESPACE::fdopen(fd, "w");
+  LIBC_NAMESPACE::cpp::scope_exit close_file([&] {
+    if (file != nullptr)
+      EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    else
+      EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  });
+  ASSERT_NE(file, nullptr);
+  EXPECT_THAT(LIBC_NAMESPACE::fcntl(fd, F_GETFD), Succeeds(FD_CLOEXEC));
+}
+
+TEST_F(LlvmLibcStdioFdopenTest, CloseOnExecEnabledByModifier) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  constexpr const char *TEST_FILE_NAME = "testdata/close_on_exec_enabled.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  ASSERT_GE(fd, 0);
+
+  FILE *file = LIBC_NAMESPACE::fdopen(fd, "we");
+  LIBC_NAMESPACE::cpp::scope_exit close_file([&] {
+    if (file != nullptr)
+      EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    else
+      EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  });
+  ASSERT_NE(file, nullptr);
+  EXPECT_THAT(LIBC_NAMESPACE::fcntl(fd, F_GETFD), Succeeds(FD_CLOEXEC));
 }

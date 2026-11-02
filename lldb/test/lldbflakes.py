@@ -24,8 +24,13 @@ def _hit_known_flake(output):
 def execute_with_reruns(execute_once):
     """Run execute_once, which returns a lit.Test.Result, until it stops
     failing with a known flake."""
+    outputs = []
     for attempt in range(MAX_ATTEMPTS):
         result = execute_once()
+        outputs.append(
+            "Attempt %d of %d: %s\n%s"
+            % (attempt + 1, MAX_ATTEMPTS, result.code.name, result.output)
+        )
         if result.code != lit.Test.FAIL or not _hit_known_flake(result.output):
             break
 
@@ -36,5 +41,6 @@ def execute_with_reruns(execute_once):
             result.code = lit.Test.FLAKYPASS
         result.attempts = attempt + 1
         result.max_allowed_attempts = MAX_ATTEMPTS
+        result.output = "\n".join(outputs)
 
     return result

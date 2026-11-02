@@ -34,11 +34,11 @@ program test_omp_reduction
 !CHECK: op.modmul.: UserReductionDetails TYPE(t1)
 !CHECK: t1: Use from t1 in module1
 !CHECK: OtherConstruct scope: size=8 alignment=4 sourceRange=0 bytes
-!CHECK: omp_in size=4 offset=0: ObjectEntity type: TYPE(t1)
-!CHECK: omp_out size=4 offset=4: ObjectEntity type: TYPE(t1)
+!CHECK: omp_in (OmpInVar) size=4 offset=0: ObjectEntity type: TYPE(t1)
+!CHECK: omp_out (OmpOutVar) size=4 offset=4: ObjectEntity type: TYPE(t1)
 !CHECK: OtherConstruct scope: size=8 alignment=4 sourceRange=0 bytes
-!CHECK: omp_orig size=4 offset=0: ObjectEntity type: TYPE(t1)
-!CHECK: omp_priv size=4 offset=4: ObjectEntity type: TYPE(t1)
+!CHECK: omp_orig (OmpOrigVar) size=4 offset=0: ObjectEntity type: TYPE(t1)
+!CHECK: omp_priv (OmpPrivVar) size=4 offset=4: ObjectEntity type: TYPE(t1)
   result = t1(1.0)
   !$omp parallel do reduction(.modmul.:result)
   do i = 1, 10

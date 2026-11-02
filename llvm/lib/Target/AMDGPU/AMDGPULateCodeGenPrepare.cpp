@@ -261,7 +261,7 @@ Value *LiveRegOptimizer::convertToOptType(Instruction *V,
   TypeSize OriginalSize = DL.getTypeSizeInBits(VTy);
   TypeSize NewSize = DL.getTypeSizeInBits(NewTy);
 
-  IRBuilder<> Builder(V->getParent(), InsertPt);
+  IRBuilder<> Builder(InsertPt);
   // If there is a bitsize match, we can fit the old vector into a new vector of
   // desired type.
   if (OriginalSize == NewSize)
@@ -291,7 +291,7 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
   TypeSize OriginalSize = DL.getTypeSizeInBits(V->getType());
   TypeSize NewSize = DL.getTypeSizeInBits(NewVTy);
 
-  IRBuilder<> Builder(InsertBB, InsertPt);
+  IRBuilder<> Builder(InsertPt);
   // If there is a bitsize match, we simply convert back to the original type.
   if (OriginalSize == NewSize)
     return Builder.CreateBitCast(V, NewVTy, V->getName() + ".bc");

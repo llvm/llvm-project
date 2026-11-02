@@ -53,9 +53,9 @@ bool AlwaysInlineImpl(
     DebugLoc DLoc = CB.getDebugLoc();
     BasicBlock *Block = CB.getParent();
 
-    TargetTransformInfo &CalleeTTI = GetTTI(Callee);
+    TargetTransformInfo &CallerTTI = GetTTI(*Caller);
     std::optional<InlineResult> CanInlineWithAttributes =
-        getAttributeBasedInliningDecision(CB, &Callee, CalleeTTI, GetTLI);
+        getAttributeBasedInliningDecision(CB, &Callee, CallerTTI, GetTLI);
     if (!CanInlineWithAttributes || !CanInlineWithAttributes->isSuccess()) {
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
@@ -172,9 +172,9 @@ bool AlwaysInlineImpl(
 
       // Use getAttributeBasedInliningDecision for all attribute-based checks
       // including TTI/TLI compatibility and isInlineViable.
-      TargetTransformInfo &CalleeTTI = GetTTI(*Callee);
+      TargetTransformInfo &CallerTTI = GetTTI(*CB->getCaller());
       auto Decision =
-          getAttributeBasedInliningDecision(*CB, Callee, CalleeTTI, GetTLI);
+          getAttributeBasedInliningDecision(*CB, Callee, CallerTTI, GetTLI);
       if (!Decision || !Decision->isSuccess())
         continue;
 

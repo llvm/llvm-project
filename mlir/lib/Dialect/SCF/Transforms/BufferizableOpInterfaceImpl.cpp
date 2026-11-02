@@ -1230,6 +1230,16 @@ struct ForallOpInterface
         {{forallOp.getTiedOpResult(&opOperand), BufferRelation::Equivalent}}};
   }
 
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, Value value,
+                        const AnalysisState &state) const {
+    auto result = dyn_cast<OpResult>(value);
+    if (!result)
+      return {};
+    auto forallOp = cast<ForallOp>(op);
+    return {{forallOp.getTiedOpOperand(result), BufferRelation::Equivalent}};
+  }
+
   bool isWritable(Operation *op, Value value,
                   const AnalysisState &state) const {
     return true;

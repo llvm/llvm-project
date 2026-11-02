@@ -37,7 +37,7 @@ body:             |
   ; CHECK: bb.2:
   ; CHECK:   ADJCALLSTACKUP
   ; CHECK:   $sgpr16 = COPY [[LANE]]
-  ; CHECK:   SI_CALL_ISEL [[DEST]], 0, csr_amdgpu_gfx90ainsts, implicit killed $sgpr16
+  ; CHECK:   SI_CALL_ISEL [[DEST]], 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
   ; CHECK:   ADJCALLSTACKDOWN
   ; CHECK:   SI_WATERFALL_LOOP %bb.1
   bb.0:

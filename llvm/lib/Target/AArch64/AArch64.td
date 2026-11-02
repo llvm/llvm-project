@@ -111,6 +111,7 @@ def SME2Unsupported : AArch64Unsupported {
 
 def SMEUnsupported : AArch64Unsupported {
   let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64, HasSMEFA64,
+                      HasNonStreamingMatMulFP64_or_SVE_PERM256,
                        HasSMEandIsNonStreamingSafe],
                       SME2Unsupported.F);
 }

@@ -31,10 +31,10 @@ func.func @_QPtest1() attributes {noinline} {
   %c2_i32 = arith.constant 2 : i32
   %0 = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFtest1FinnerEy"}
   %1 = fir.address_of(@_QMmEglob) : !fir.ref<i32>
-  %2 = fir.declare %1 {uniq_name = "_QMmEglob"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %2 = fir.declare %1 uniq_name("_QMmEglob") : (!fir.ref<i32>) -> !fir.ref<i32>
   %3 = fir.dummy_scope : !fir.dscope
-  %4 = fir.declare %2 dummy_scope %3 {uniq_name = "_QFtest1FinnerEx"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-  %5 = fir.declare %0 {uniq_name = "_QFtest1FinnerEy"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.declare %2 dummy_scope %3 uniq_name("_QFtest1FinnerEx") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %5 = fir.declare %0 uniq_name("_QFtest1FinnerEy") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c1_i32 to %5 : !fir.ref<i32>
   %6 = fir.load %5 : !fir.ref<i32>
   fir.store %6 to %4 : !fir.ref<i32>
@@ -58,10 +58,10 @@ fir.global @_QMmEglob : i32
 // CHECK-LABEL:   func.func @_QPtest1() attributes {noinline} {
 // CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFtest1FinnerEy"}>
 // CHECK:           %[[VAL_3:.*]] = fir.address_of(@_QMmEglob) : !fir.ref<i32>
-// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] {uniq_name = "_QMmEglob"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] uniq_name("_QMmEglob") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_4]] dummy_scope %[[VAL_5]] {uniq_name = "_QFtest1FinnerEx"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-// CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_2]] {uniq_name = "_QFtest1FinnerEy"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_4]] dummy_scope %[[VAL_5]] uniq_name("_QFtest1FinnerEx") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_2]] uniq_name("_QFtest1FinnerEy") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           fir.store %{{.*}} to %[[VAL_7]] <{tbaa = [#[[$LOCAL_ATTR_2]]]}> : !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] <{tbaa = [#[[$LOCAL_ATTR_2]]]}>  : !fir.ref<i32>
 // CHECK:           fir.store %[[VAL_8]] to %[[VAL_6]] <{tbaa = [#[[$ATTR_7]]]}> : !fir.ref<i32>
@@ -77,10 +77,10 @@ func.func @_QPtest2() attributes {noinline} {
   %0 = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFtest2FinnerEy"}
   %test_dummy_scope = fir.dummy_scope : !fir.dscope
   %1 = fir.address_of(@_QMmEglob) : !fir.ref<i32>
-  %2 = fir.declare %1 {uniq_name = "_QMmEglob"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %2 = fir.declare %1 uniq_name("_QMmEglob") : (!fir.ref<i32>) -> !fir.ref<i32>
   %3 = fir.dummy_scope : !fir.dscope
-  %4 = fir.declare %2 dummy_scope %3 {uniq_name = "_QFtest2FinnerEx"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-  %5 = fir.declare %0 {uniq_name = "_QFtest2FinnerEy"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.declare %2 dummy_scope %3 uniq_name("_QFtest2FinnerEx") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %5 = fir.declare %0 uniq_name("_QFtest2FinnerEy") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c1_i32 to %5 : !fir.ref<i32>
   %6 = fir.load %5 : !fir.ref<i32>
   fir.store %6 to %4 : !fir.ref<i32>
@@ -110,10 +110,10 @@ fir.global @_QMmEglob : i32
 // CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFtest2FinnerEy"}>
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMmEglob) : !fir.ref<i32>
-// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {uniq_name = "_QMmEglob"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] uniq_name("_QMmEglob") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[DUMMY_SCOPE_1:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[DECLARE_0]] dummy_scope %[[DUMMY_SCOPE_1]] {uniq_name = "_QFtest2FinnerEx"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-// CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest2FinnerEy"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[DECLARE_0]] dummy_scope %[[DUMMY_SCOPE_1]] uniq_name("_QFtest2FinnerEx") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ALLOCA_0]] uniq_name("_QFtest2FinnerEy") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           fir.store %[[CONSTANT_0]] to %[[DECLARE_2]] <{tbaa = [#[[$ATTR_12]]]}> : !fir.ref<i32>
 // CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_2]] <{tbaa = [#[[$ATTR_12]]]}> : !fir.ref<i32>
 // CHECK:           fir.store %[[LOAD_0]] to %[[DECLARE_1]] <{tbaa = [#[[$ATTR_13]]]}> : !fir.ref<i32>

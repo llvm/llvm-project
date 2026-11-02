@@ -1,0 +1,4 @@
+## Test that the output of clang can be piped through opt.
+
+# RUN: cp %S/Inputs/opt-pipeline.c %t.c && %update_cc_test_checks %t.c
+# RUN: diff -u %S/Inputs/opt-pipeline.c.expected %t.c

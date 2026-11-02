@@ -47,6 +47,13 @@ protected:
 
   CompilerInstance compInst;
 
+  // Targets register their library options, which compInst holds from its
+  // construction.
+  static void SetUpTestSuite() {
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+  }
+
   void SetUp() override {
     // Generate a unique test file name.
     const testing::TestInfo *const testInfo =
@@ -67,13 +74,11 @@ protected:
     inputFilePath = cwd.c_str();
     inputFilePath += "/" + inputFileName;
 
-    // Set-up default target triple and initialize LLVM Targets so that the
-    // target data layout can be passed to the frontend.
+    // Set-up default target triple so that the target data layout can be
+    // passed to the frontend.
     compInst.getInvocation().getTargetOpts().triple =
         llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
     compInst.getInvocation().getLangOpts().OpenMPVersion = 60;
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
 
     compInst.createDiagnostics();
     compInst.getFrontendOpts().inputs.push_back(

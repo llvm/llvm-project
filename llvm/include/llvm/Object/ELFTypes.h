@@ -244,7 +244,7 @@ struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
   void setType(unsigned char t) { setBindingAndType(getBinding(), t); }
 
   void setBindingAndType(unsigned char b, unsigned char t) {
-    st_info = (b << 4) + (t & 0x0f);
+    st_info = ELF::getSymbolInfo(b, t);
   }
 
   /// Access to the STV_xxx flag stored in the first two bits of st_other.

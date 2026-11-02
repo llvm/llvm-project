@@ -227,6 +227,10 @@ protected:
 
   Module *GetModuleByCompUnitInfo(CompileUnitInfo *comp_unit_info);
 
+  /// Report missing object files once per module, not once per object file,
+  /// to avoid flooding the console.
+  void ReportMissingOSOs(const CompileUnitInfo &missing_info);
+
   Module *GetModuleByOSOIndex(uint32_t oso_idx);
 
   ObjectFile *GetObjectFileByCompUnitInfo(CompileUnitInfo *comp_unit_info);
@@ -329,6 +333,7 @@ protected:
   std::vector<uint32_t> m_func_indexes; // Sorted by address
   std::vector<uint32_t> m_glob_indexes;
   std::map<std::pair<ConstString, llvm::sys::TimePoint<>>, OSOInfoSP> m_oso_map;
+  bool m_reported_missing_osos = false;
   // A map from CompilerType to the struct/class/union/enum DIE (might be a
   // declaration or a definition) that is used to construct it.
   llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>

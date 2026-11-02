@@ -20,7 +20,7 @@ define void @fun(ptr noalias nocapture sret(%struct.a) %a, i32 %p1, i32 %p2) {
 ; Function Attrs: nounwind
 define void @caller() {
 ; CHECK-LABEL: caller:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, callee@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, callee@hi(, %s0)

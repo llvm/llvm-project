@@ -15,10 +15,11 @@
 #define LLVM_LIBC_SRC_MATHVEC_ACOSHF_H
 
 #include "src/__support/CPP/simd.h"
+#include "src/__support/macros/attributes.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-cpp::simd<float> acoshf(cpp::simd<float> x);
+LIBC_VECTOR_PCS cpp::simd<float> acoshf(cpp::simd<float> x);
 
 } // namespace LIBC_NAMESPACE_DECL
 

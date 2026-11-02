@@ -127,6 +127,15 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
 }
 
 bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
+  // Any decl can be declared with __asm("foo") on it, and this takes precedence
+  // over all other naming in the .o file.
+  if (D->hasAttr<AsmLabelAttr>())
+    return true;
+
+  return shouldMangleDeclNameIgnoringAsmLabel(D);
+}
+
+bool MangleContext::shouldMangleDeclNameIgnoringAsmLabel(const NamedDecl *D) {
   const ASTContext &ASTContext = getASTContext();
 
   CCMangling CC = getCallingConvMangling(ASTContext, D);
@@ -147,11 +156,6 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   // In C, functions with no attributes never need to be mangled. Fastpath them.
   if (!getASTContext().getLangOpts().CPlusPlus && !D->hasAttrs())
     return false;
-
-  // Any decl can be declared with __asm("foo") on it, and this takes precedence
-  // over all other naming in the .o file.
-  if (D->hasAttr<AsmLabelAttr>())
-    return true;
 
   // Declarations that don't have identifier names always need to be mangled.
   if (isa<MSGuidDecl>(D))
@@ -243,7 +247,6 @@ static void emitLLDBAsmLabel(llvm::StringRef label, GlobalDecl GD,
 }
 
 void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
-  const ASTContext &ASTContext = getASTContext();
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
 
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
@@ -282,6 +285,14 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
 
     return;
   }
+
+  mangleNameIgnoringAsmLabel(GD, Out);
+}
+
+void MangleContext::mangleNameIgnoringAsmLabel(GlobalDecl GD,
+                                               raw_ostream &Out) {
+  const ASTContext &ASTContext = getASTContext();
+  const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
 
   if (auto *GD = dyn_cast<MSGuidDecl>(D))
     return mangleMSGuidDecl(GD, Out);

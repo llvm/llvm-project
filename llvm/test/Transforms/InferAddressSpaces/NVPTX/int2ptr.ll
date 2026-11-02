@@ -227,7 +227,7 @@ define void @test3(ptr addrspace(3) %sp) {
 
 define void @test_ce() {
 ; CHECK-LABEL: define void @test_ce() {
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr addrspacecast (ptr addrspace(1) @g to ptr) to i64), i64 7) to ptr), align 4
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) addrspacecast (ptr inttoptr (i64 xor (i64 ptrtoint (ptr addrspacecast (ptr addrspace(1) @g to ptr) to i64), i64 7) to ptr) to ptr addrspace(1)), align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr inttoptr (i64

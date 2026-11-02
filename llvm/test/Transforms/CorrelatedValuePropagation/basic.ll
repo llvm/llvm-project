@@ -2091,6 +2091,27 @@ define range(i32 512, 1024) i32 @range_non_overlapping(i8 %x) {
   ret i32 %zext
 }
 
+define i32 @sext_cond_br_not_cond(i1 %a) {
+; CHECK-LABEL: define range(i32 -1, 1) i32 @sext_cond_br_not_cond
+; CHECK-SAME: (i1 [[A:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = sext i1 [[A]] to i32
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    br i1 [[NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i32 -1
+; CHECK:       false:
+; CHECK-NEXT:    ret i32 0
+;
+  %b = sext i1 %a to i32
+  %not = xor i1 %a , true
+  br i1 %not, label %false, label %true
+
+true:
+  ret i32 %b
+false:
+  ret i32 %b
+}
+
 declare i32 @llvm.uadd.sat.i32(i32, i32)
 declare i32 @llvm.usub.sat.i32(i32, i32)
 declare i32 @llvm.sadd.sat.i32(i32, i32)

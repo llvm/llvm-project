@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -69,6 +70,12 @@ STATISTIC(NumImportedCriticalFunctionsThinLink,
 STATISTIC(NumImportedGlobalVarsThinLink,
           "Number of global variables thin link decided to import");
 STATISTIC(NumImportedFunctions, "Number of functions imported in backend");
+STATISTIC(NumRequiredDeclsThinLink,
+          "Number of function declarations thin link decided to import because "
+          "the callee is required in the caller's module (e.g. for MemProf "
+          "ICP)");
+STATISTIC(NumImportedFunctionDecls,
+          "Number of function declarations imported in backend");
 STATISTIC(NumImportedGlobalVars,
           "Number of global variables imported in backend");
 STATISTIC(NumImportedModules, "Number of modules imported from");
@@ -404,9 +411,14 @@ class GlobalsImporter final {
   FunctionImporter::ImportMapTy &ImportList;
   DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
 
-  bool shouldImportGlobal(const ValueInfo &VI) {
+  bool shouldImportGlobal(const ValueInfo &VI, StringRef ReferencingModule) {
     const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
     if (GVS == DefinedGVSummaries.end())
+      return true;
+    // A local definition in the destination module cannot satisfy a reference
+    // from a different module.
+    if (shouldSkipLocalInAnotherModule(GVS->second, VI.getSummaryList().size(),
+                                       ReferencingModule))
       return true;
     // We should not skip import if the module contains a non-prevailing
     // definition with interposable linkage type. This is required for
@@ -430,7 +442,7 @@ class GlobalsImporter final {
   onImportingSummaryImpl(const GlobalValueSummary &Summary,
                          SmallVectorImpl<const GlobalVarSummary *> &Worklist) {
     for (const auto &VI : Summary.refs()) {
-      if (!shouldImportGlobal(VI)) {
+      if (!shouldImportGlobal(VI, Summary.modulePath())) {
         LLVM_DEBUG(
             dbgs() << "Ref ignored! Target already in destination module.\n");
         continue;
@@ -527,6 +539,12 @@ protected:
       IsPrevailing;
   const ModuleSummaryIndex &Index;
   DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
+  // Values exported because a declaration of them is required in an importing
+  // module (see RequiresDeclImport in computeImportForFunction). These are
+  // tracked separately from ExportLists, as unlike values exported because of
+  // an imported definition, their own references and calls should not be
+  // exported.
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> RequiredDeclExports;
 
   ModuleImportsManager(
       function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
@@ -536,8 +554,36 @@ protected:
       : IsPrevailing(IsPrevailing), Index(Index), ExportLists(ExportLists) {}
   virtual bool canImport(ValueInfo VI) { return true; }
 
+  /// Import a declaration of the callee \p VI of a call edge requiring a
+  /// declaration import (see RequiresDeclImport in computeImportForFunction),
+  /// from a function in \p CallerModulePath that is defined in or being
+  /// imported into the current module, and isn't already defined in the
+  /// current module. This is called when the callee definition is not being
+  /// imported via that edge, and the callee summaries have not already been
+  /// qualified by selectCallee (see addRequiredDeclaration). If the
+  /// definition is (or is subsequently) imported via another edge, it takes
+  /// precedence over the declaration.
+  void importRequiredDeclaration(ValueInfo VI, StringRef CallerModulePath,
+                                 FunctionImporter::ImportMapTy &ImportList);
+
+  /// Import a declaration of the callee \p VI from the module containing
+  /// \p DeclSummary, which must be a candidate that is legal to import (i.e.
+  /// for which qualifyCalleeCandidates returned ImportFailureReason::None, as
+  /// is the case for the SummaryForDeclImport returned by selectCallee), and
+  /// mark it exported from that module. Does nothing if the callee definition
+  /// was already imported.
+  void addRequiredDeclaration(ValueInfo VI,
+                              const GlobalValueSummary *DeclSummary,
+                              FunctionImporter::ImportMapTy &ImportList);
+
 public:
   virtual ~ModuleImportsManager() = default;
+
+  /// Values that must be exported from their defining modules because
+  /// declarations of them are required in importing modules.
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> &requiredDeclExports() {
+    return RequiredDeclExports;
+  }
 
   /// Given the list of globals defined in a module, compute the list of imports
   /// as well as the list of "exports", i.e. the list of symbols referenced from
@@ -897,9 +943,29 @@ void ModuleImportsManager::computeImportForFunction(
     LLVM_DEBUG(dbgs() << " edge -> " << VI << " Threshold:" << Threshold
                       << "\n");
 
+    // Whether at least a declaration of the callee must be imported (and the
+    // callee exported from its defining module) if its definition is not
+    // imported. This is the case when the edge was marked as requiring a
+    // declaration import (e.g. for MemProf ICP), or when declaration imports
+    // are enabled via -import-declaration for an indirect call edge, since the
+    // backend may then promote the indirect call to the imported declaration
+    // (e.g. regular ICP under -icp-allow-decls), which requires that the
+    // callee not be internalized. Callees of direct calls don't need to be
+    // exported here, since they are either referenced directly from the
+    // destination module, in which case they are already treated as visible
+    // outside their defining module, or from an imported definition, in which
+    // case they are marked exported in ComputeCrossModuleImport.
+    const bool RequiresDeclImport =
+        Edge.second.requiresDeclImport() ||
+        (ImportDeclaration && Edge.second.hasIndirectCall());
+
     if (ImportCutoff >= 0 && ImportCount >= ImportCutoff) {
       LLVM_DEBUG(dbgs() << "ignored! import-cutoff value of " << ImportCutoff
                         << " reached.\n");
+      // Still import a declaration if one is required, as that doesn't
+      // affect the import cutoff count.
+      if (RequiresDeclImport && !DefinedGVSummaries.count(VI.getGUID()))
+        importRequiredDeclaration(VI, Summary.modulePath(), ImportList);
       continue;
     }
 
@@ -973,6 +1039,11 @@ void ModuleImportsManager::computeImportForFunction(
                  "Expected FailureInfo for previously rejected candidate");
           FailureInfo->Attempts++;
         }
+        // The callee definition was rejected when reached via a different
+        // edge, but this edge may require that a declaration be imported and
+        // exported.
+        if (RequiresDeclImport)
+          importRequiredDeclaration(VI, Summary.modulePath(), ImportList);
         continue;
       }
 
@@ -986,12 +1057,14 @@ void ModuleImportsManager::computeImportForFunction(
       if (!CalleeSummary) {
         // There isn't a callee for definition import but one for declaration
         // import.
-        if (ImportDeclaration && SummaryForDeclImport) {
-          StringRef DeclSourceModule = SummaryForDeclImport->modulePath();
-
-          // Note `ExportLists` only keeps track of exports due to imported
-          // definitions.
-          ImportList.maybeAddDeclaration(DeclSourceModule, VI.getGUID());
+        if (SummaryForDeclImport) {
+          if (RequiresDeclImport)
+            // This also marks the callee exported.
+            addRequiredDeclaration(VI, SummaryForDeclImport, ImportList);
+          else if (ImportDeclaration)
+            // Not exported, see the comments where RequiresDeclImport is set.
+            ImportList.maybeAddDeclaration(SummaryForDeclImport->modulePath(),
+                                           VI.getGUID());
         }
         // Update with new larger threshold if this was a retry (otherwise
         // we would have already inserted with NewThreshold above). Also
@@ -1139,6 +1212,49 @@ void ModuleImportsManager::computeImportForModule(
              << ", Attempts = " << FailureInfo->Attempts << "\n";
     }
   }
+}
+
+void ModuleImportsManager::importRequiredDeclaration(
+    ValueInfo VI, StringRef CallerModulePath,
+    FunctionImporter::ImportMapTy &ImportList) {
+  // Find a callee summary that we can legally import a declaration of. Note
+  // that qualifyCalleeCandidates only checks the legality of importing each
+  // candidate (returning ImportFailureReason::None if legal). The additional
+  // size and noinline checks that determine whether it is worth importing a
+  // definition (TooLarge/NoInline) are applied separately by selectCallee, and
+  // are not relevant for a declaration import.
+  for (auto [Reason, CandidateSummary] :
+       qualifyCalleeCandidates(Index, VI.getSummaryList(), CallerModulePath)) {
+    assert(Reason != FunctionImporter::ImportFailureReason::TooLarge &&
+           Reason != FunctionImporter::ImportFailureReason::NoInline &&
+           "Expected only legality checks in qualifyCalleeCandidates");
+    if (Reason == FunctionImporter::ImportFailureReason::None) {
+      addRequiredDeclaration(VI, CandidateSummary, ImportList);
+      return;
+    }
+  }
+}
+
+void ModuleImportsManager::addRequiredDeclaration(
+    ValueInfo VI, const GlobalValueSummary *DeclSummary,
+    FunctionImporter::ImportMapTy &ImportList) {
+  StringRef SrcModule = DeclSummary->modulePath();
+  auto ExistingImportType = ImportList.getImportType(SrcModule, VI.getGUID());
+  // Nothing to do if we already decided to import the definition, which is
+  // also exported.
+  if (ExistingImportType == GlobalValueSummary::Definition)
+    return;
+  if (!ExistingImportType) {
+    ImportList.maybeAddDeclaration(SrcModule, VI.getGUID());
+    NumRequiredDeclsThinLink++;
+  }
+  // The declaration needs to be exported so that the callee is not
+  // internalized, and so that locals are promoted. Note this is needed even if
+  // we already decided to import the declaration for another reason (i.e.
+  // -import-declaration for a direct call edge), as those declaration imports
+  // are not exported.
+  if (ExportLists)
+    RequiredDeclExports[SrcModule].insert(VI);
 }
 
 #ifndef NDEBUG
@@ -1292,6 +1408,12 @@ void llvm::ComputeCrossModuleImport(
     ELI.second.insert_range(NewExports);
   }
 
+  // Now add the values exported because declarations of them are required in
+  // importing modules. We do this after the above loop since their own
+  // references and calls should not be exported.
+  for (auto &[ModPath, RequiredExports] : MIS->requiredDeclExports())
+    ExportLists[ModPath].insert_range(RequiredExports);
+
   assert(checkVariableImport(Index, ImportLists, ExportLists));
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "Import/Export lists for " << ImportLists.size()
@@ -1403,13 +1525,14 @@ static void ComputeCrossModuleImportForModuleFromIndexForTest(
 // accordingly.
 void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
                                      FunctionSummary *FS) {
-  for (auto &EI : FS->mutableCalls()) {
-    if (!EI.first.getSummaryList().empty())
-      continue;
-    auto GUID = Index.getGUIDFromOriginalID(EI.first.getGUID());
+  // Returns the ValueInfo that should be used in place of \p CalleeVI, or an
+  // empty ValueInfo if no update is needed.
+  auto GetUpdatedCallee = [&](ValueInfo CalleeVI) -> ValueInfo {
+    if (!CalleeVI || !CalleeVI.getSummaryList().empty())
+      return ValueInfo();
+    auto GUID = Index.getGUIDFromOriginalID(CalleeVI.getGUID());
     if (GUID == 0)
-      continue;
-    // Update the edge to point directly to the correct GUID.
+      return ValueInfo();
     auto VI = Index.getValueInfo(GUID);
     if (llvm::any_of(
             VI.getSummaryList(),
@@ -1426,8 +1549,28 @@ void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
               return SummaryPtr->getSummaryKind() ==
                      GlobalValueSummary::GlobalVarKind;
             }))
-      continue;
-    EI.first = VI;
+      return ValueInfo();
+    return VI;
+  };
+
+  for (auto &EI : FS->mutableCalls()) {
+    // Update the edge to point directly to the correct GUID.
+    if (auto VI = GetUpdatedCallee(EI.first))
+      EI.first = VI;
+  }
+
+  // MemProf summarizes indirect callsites by synthesizing a CallsiteInfo
+  // record for each profiled target, using the same GUIDs found in the VP
+  // metadata (which, for local targets, may be the original name GUID when
+  // e.g. synthesized from the MemProf profile or from a SamplePGO profile).
+  // Update those callees as well so that they are consistent with the call
+  // edges above, and so that the thin link's MemProf context disambiguation
+  // can correlate the callsite with the summary for the target function.
+  if (FS->callsites().empty())
+    return;
+  for (auto &CI : FS->mutableCallsites()) {
+    if (auto VI = GetUpdatedCallee(CI.Callee))
+      CI.Callee = VI;
   }
 }
 
@@ -1978,6 +2121,9 @@ Expected<bool> FunctionImporter::importFunctions(
 
     // Find the globals to import
     SetVector<GlobalValue *> GlobalsToImport;
+    // Functions (or aliases of functions) to import as declarations, along
+    // with their GUIDs.
+    SmallVector<std::pair<GlobalValue *, GlobalValue::GUID>> DeclsToImport;
     {
       llvm::TimeTraceScope functionsScope("Functions");
       for (Function &F : *SrcModule) {
@@ -2015,6 +2161,9 @@ Expected<bool> FunctionImporter::importFunctions(
                                            SrcModule->getSourceFileName())}));
           }
           GlobalsToImport.insert(&F);
+        } else if (MaybeImportType) {
+          assert(*MaybeImportType == GlobalValueSummary::Declaration);
+          DeclsToImport.push_back({&F, GUID});
         }
       }
     }
@@ -2088,6 +2237,10 @@ Expected<bool> FunctionImporter::importFunctions(
                                            SrcModule->getSourceFileName())}));
           }
           GlobalsToImport.insert(Fn);
+        } else if (MaybeImportType) {
+          assert(*MaybeImportType == GlobalValueSummary::Declaration);
+          if (isa<FunctionType>(GA.getValueType()))
+            DeclsToImport.push_back({&GA, GUID});
         }
       }
     }
@@ -2106,6 +2259,35 @@ Expected<bool> FunctionImporter::importFunctions(
     renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
                            &GlobalsToImport);
 
+    // Record the information needed to create the declarations to import,
+    // after any promotion and renaming above, since the source module is
+    // consumed by the IRMover below.
+    struct DeclInfo {
+      std::string Name;
+      FunctionType *Ty;
+      unsigned AddrSpace;
+      CallingConv::ID CC;
+      AttributeList Attrs;
+      GlobalValue::VisibilityTypes Visibility;
+      bool DSOLocal;
+      GlobalValue::GUID GUID;
+    };
+    SmallVector<DeclInfo> DeclInfos;
+    for (auto [GV, GUID] : DeclsToImport) {
+      assert(!GV->hasLocalLinkage() &&
+             "Expected imported declaration to be promoted");
+      const Function *F = dyn_cast<Function>(GV);
+      if (!F)
+        F = dyn_cast_or_null<Function>(
+            cast<GlobalAlias>(GV)->getAliaseeObject());
+      if (!F)
+        continue;
+      DeclInfos.push_back({GV->getName().str(), F->getFunctionType(),
+                           F->getAddressSpace(), F->getCallingConv(),
+                           F->getAttributes(), GV->getVisibility(),
+                           GV->isDSOLocal(), GUID});
+    }
+
     if (PrintImports) {
       for (const auto *GV : GlobalsToImport)
         dbgs() << DestModule.getSourceFileName() << ": Import " << GV->getName()
@@ -2121,6 +2303,40 @@ Expected<bool> FunctionImporter::importFunctions(
 
     ImportedCount += GlobalsToImport.size();
     NumImportedModules++;
+
+    // Now create the declarations to import, if they don't already exist in
+    // the destination module. Declarations of direct callees will typically
+    // already exist, either because the call is in the destination module or
+    // because the IRMover created them when linking an imported definition
+    // that references them. Callees reached only via indirect calls (e.g.
+    // from value profile or MemProf call edges in the summary) have no such IR
+    // reference, so this is mainly where declarations of those are created.
+    //
+    // We create these declarations by hand rather than via the IRMover: the
+    // IRMover only creates declarations as a side effect of mapping references
+    // from linked IR, it creates attribute-less declarations for aliases, and
+    // it does not copy metadata from source definitions.
+    for (auto &DI : DeclInfos) {
+      if (DestModule.getNamedValue(DI.Name))
+        continue;
+      Function *F = Function::Create(DI.Ty, GlobalValue::ExternalLinkage,
+                                     DI.AddrSpace, DI.Name, &DestModule);
+      F->setCallingConv(DI.CC);
+      F->setAttributes(DI.Attrs);
+      // Note that the visibility must be set before dso_local, since
+      // setDSOLocal(false) is not allowed on an implicitly dso_local value.
+      F->setVisibility(DI.Visibility);
+      F->setDSOLocal(DI.DSOLocal);
+      // Record the GUID of the original value, which may differ from the GUID
+      // computed from the current name if it was a promoted local. This allows
+      // the declaration to be located via the GUID, e.g. by MemProf ICP.
+      F->setMetadata(LLVMContext::MD_guid,
+                     MDNode::get(DestModule.getContext(),
+                                 {ConstantAsMetadata::get(ConstantInt::get(
+                                     Type::getInt64Ty(DestModule.getContext()),
+                                     DI.GUID))}));
+      NumImportedFunctionDecls++;
+    }
   }
 
   internalizeGVsAfterImport(DestModule);

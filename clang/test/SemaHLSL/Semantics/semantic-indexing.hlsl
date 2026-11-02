@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
 struct Pair {
   uint A;
@@ -17,3 +18,46 @@ void derived_index(Pair GI : SV_GroupIndex) {}
 
 [shader("compute")][numthreads(1,1,1)]
 void no_index(uint GI : SV_GroupIndex) {}
+
+// An array also derives an index per element.
+[shader("compute")][numthreads(1,1,1)]
+void array_index(uint3 ID[2] : SV_DispatchThreadID) {}
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
+
+// Diagnose uint32_t overflow before checking whether indexing is supported.
+[shader("compute")][numthreads(1,1,1)]
+void array_index_overflow(uint3 ID[2] : SV_DispatchThreadID4294967295) {}
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' index 4294967296 exceeds the maximum supported index 4294967295}}
+
+// Reaching UINT32_MAX is not overflow; the non-indexable check still applies.
+[shader("compute")][numthreads(1,1,1)]
+void array_index_ends_at_max(uint3 ID[2] : SV_DispatchThreadID4294967294) {}
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
+
+// Inner dimensions also derive semantic indices.
+[shader("compute")][numthreads(1,1,1)]
+void nested_array_index(uint3 ID[1][2] : SV_DispatchThreadID) {}
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
+
+// SV_Position is non-indexable on pixel shader inputs.
+[shader("pixel")]
+float4 position_ps(float4 P : SV_Position1) : SV_Target { return P; }
+// expected-error@-1 {{semantic 'SV_Position' does not allow indexing}}
+
+// On vertex shader inputs, SV_Position is arbitrary: integer components,
+// explicit indices, and consecutive array indices are all allowed.
+[shader("vertex")]
+float4 position_vs(int4 P[2] : SV_Position1) : SV_Position { return (float4)P[0]; }
+
+// The same name on a vertex output is a non-indexable system value.
+[shader("vertex")]
+float4 position_vs_out(float4 P : USER) : SV_Position1 { return P; }
+// expected-error@-1 {{semantic 'SV_Position' does not allow indexing}}
+
+[shader("pixel")]
+float4 user_index(float4 P : USER7) : SV_Target { return P; }
+
+// Recognizing the name does not bypass shader-stage validation.
+[shader("compute")][numthreads(1,1,1)]
+void position_compute(float4 P : SV_Position) {}
+// expected-error@-1 {{semantic 'SV_Position' is not supported in compute shader inputs}}

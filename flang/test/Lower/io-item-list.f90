@@ -8,7 +8,7 @@ subroutine pass_assumed_len_char_unformatted_io(c)
   character(*) :: c
   ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
   ! CHECK: %[[UNBOX:.*]]:2 = fir.unboxchar %[[C_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  ! CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[UNBOX]]#0 typeparams %[[UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFpass_assumed_len_char_unformatted_ioEc"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  ! CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[UNBOX]]#0 typeparams %[[UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QFpass_assumed_len_char_unformatted_ioEc") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   write(1, rec=1) c
   ! CHECK: %[[EMBOX:.*]] = fir.embox %[[C_DECL]]#1 typeparams %[[UNBOX]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
@@ -25,7 +25,7 @@ subroutine pass_assumed_len_char_array(carray)
   ! CHECK: %[[C2:.*]] = arith.constant 2 : index
   ! CHECK: %[[C3:.*]] = arith.constant 3 : index
   ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C2]], %[[C3]] : (index, index) -> !fir.shape<2>
-  ! CHECK: %[[CARRAY_DECL:.*]]:2 = hlfir.declare %[[CONV]](%[[SHAPE]]) typeparams %[[UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFpass_assumed_len_char_arrayEcarray"} : (!fir.ref<!fir.array<2x3x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<2x3x!fir.char<1,?>>>, !fir.ref<!fir.array<2x3x!fir.char<1,?>>>)
+  ! CHECK: %[[CARRAY_DECL:.*]]:2 = hlfir.declare %[[CONV]](%[[SHAPE]]) typeparams %[[UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QFpass_assumed_len_char_arrayEcarray") : (!fir.ref<!fir.array<2x3x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<2x3x!fir.char<1,?>>>, !fir.ref<!fir.array<2x3x!fir.char<1,?>>>)
   print *, carray
   ! CHECK: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput({{.*}})
   ! CHECK: %[[SHAPE2:.*]] = fir.shape %[[C2]], %[[C3]] : (index, index) -> !fir.shape<2>
@@ -39,7 +39,7 @@ end
 subroutine pass_array_slice_read(x)
   real :: x(:)
   ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-  ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFpass_array_slice_readEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QFpass_array_slice_readEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   read(5, *) x(101:200:2)
   ! CHECK: %[[C101:.*]] = arith.constant 101 : index
   ! CHECK: %[[C200:.*]] = arith.constant 200 : index
@@ -56,7 +56,7 @@ end
 subroutine pass_array_slice_write(x)
   real :: x(:)
   ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-  ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFpass_array_slice_writeEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QFpass_array_slice_writeEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   write(1, rec=1) x(101:200:2)
   ! CHECK: %[[C101:.*]] = arith.constant 101 : index
   ! CHECK: %[[C200:.*]] = arith.constant 200 : index
@@ -78,10 +78,10 @@ subroutine pass_vector_subscript_write(x, j)
   ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
   ! CHECK: %[[C10:.*]] = arith.constant 10 : index
   ! CHECK: %[[J_SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
-  ! CHECK: %[[J_DECL:.*]]:2 = hlfir.declare %[[J_ARG]](%[[J_SHAPE]]) dummy_scope %[[DSCOPE]] arg 2 {uniq_name = "_QFpass_vector_subscript_writeEj"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  ! CHECK: %[[J_DECL:.*]]:2 = hlfir.declare %[[J_ARG]](%[[J_SHAPE]]) dummy_scope %[[DSCOPE]] arg 2 uniq_name("_QFpass_vector_subscript_writeEj") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   ! CHECK: %[[C100:.*]] = arith.constant 100 : index
   ! CHECK: %[[X_SHAPE:.*]] = fir.shape %[[C100]] : (index) -> !fir.shape<1>
-  ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]](%[[X_SHAPE]]) dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFpass_vector_subscript_writeEx"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]](%[[X_SHAPE]]) dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QFpass_vector_subscript_writeEx") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
   ! CHECK: %[[VECTOR_I64:.*]] = hlfir.elemental %[[J_SHAPE]] {{.*}} -> !hlfir.expr<10xi64> {
   ! CHECK: ^bb0(%[[I:.*]]: index):
   ! CHECK:   %[[J_I_ADDR:.*]] = hlfir.designate %[[J_DECL]]#0 (%[[I]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>

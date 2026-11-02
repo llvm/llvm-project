@@ -139,29 +139,24 @@ define i1 @test_add_nsw(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    ret i1 [[RES_15]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    [[START_1:%.*]] = add nuw i8 [[START]], 1
+; CHECK-NEXT:    [[START_1:%.*]] = add nuw nsw i8 [[START]], 1
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 [[F_0]], [[F_1]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[RES_0]], false
-; CHECK-NEXT:    [[SC_2:%.*]] = icmp sge i8 [[START_1]], [[HIGH]]
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[SC_2]]
-; CHECK-NEXT:    [[START_2:%.*]] = add nuw i8 [[START]], 2
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
+; CHECK-NEXT:    [[START_2:%.*]] = add nuw nsw i8 [[START]], 2
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[F_2]]
-; CHECK-NEXT:    [[SC_3:%.*]] = icmp sge i8 [[START_2]], [[HIGH]]
-; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[SC_3]]
-; CHECK-NEXT:    [[SC_4:%.*]] = icmp sle i8 [[START_2]], [[START_1]]
-; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[SC_4]]
-; CHECK-NEXT:    [[START_3:%.*]] = add nuw i8 [[START]], 3
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], false
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], false
+; CHECK-NEXT:    [[START_3:%.*]] = add nuw nsw i8 [[START]], 3
 ; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[F_3]]
-; CHECK-NEXT:    [[SC_5:%.*]] = icmp sge i8 [[START_3]], [[START_1]]
-; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[SC_5]]
-; CHECK-NEXT:    [[START_4:%.*]] = add nuw i8 [[START]], 4
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], true
+; CHECK-NEXT:    [[START_4:%.*]] = add nuw nsw i8 [[START]], 4
 ; CHECK-NEXT:    [[UC_2:%.*]] = icmp uge i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[UC_2]]
-; CHECK-NEXT:    [[SC_6:%.*]] = icmp sge i8 [[START_4]], [[START_1]]
-; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[SC_6]]
+; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], true
 ; CHECK-NEXT:    [[SC_7:%.*]] = icmp sge i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_10:%.*]] = xor i1 [[RES_9]], [[SC_7]]
 ; CHECK-NEXT:    ret i1 [[RES_10]]

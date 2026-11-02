@@ -4,6 +4,9 @@
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 include(LLVMDistributionSupport)
 
+set(LLVM_TABLEGEN_LAUNCHER "" CACHE STRING
+  "Semicolon-separated command prefix for TableGen invocations")
+
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
 
@@ -132,6 +135,13 @@ function(tablegen project ofn)
   set(tablegen_exe ${${project}_TABLEGEN_EXE})
   set(tablegen_depends ${${project}_TABLEGEN_TARGET} ${tablegen_exe})
 
+  # CMake only maps a target name to its location in the first word of COMMAND,
+  # so spell the location out when a launcher takes that position.
+  set(tablegen_launcher ${LLVM_TABLEGEN_LAUNCHER})
+  if(tablegen_launcher AND TARGET ${tablegen_exe})
+    set(tablegen_exe $<TARGET_FILE:${tablegen_exe}>)
+  endif()
+
   if(LLVM_PARALLEL_TABLEGEN_JOBS)
     set(LLVM_TABLEGEN_JOB_POOL JOB_POOL tablegen_job_pool)
   else()
@@ -139,7 +149,7 @@ function(tablegen project ofn)
   endif()
 
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn} ${EXTRA_OUTPUTS}
-    COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS}
+    COMMAND ${tablegen_launcher} ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS}
     ${tblgen_includes}
     ${LLVM_TABLEGEN_FLAGS}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}

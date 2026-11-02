@@ -5,7 +5,7 @@
 // RUN: | FileCheck %s
 // RUN: mlir-opt %s \
 // RUN:   --nvvm-attach-target='module=options.* O=1 chip=sm_70 fast=true ftz=true' \
-// RUN:   --rocdl-attach-target='module=options.* l=file1.bc,file2.bc wave64=false finite-only=true' \
+// RUN:   --rocdl-attach-target='module=options.* l=file1.bc,file2.bc wavesize=32 finite-only=true' \
 // RUN:   --xevm-attach-target='module=options.* O=1 chip=pvc' \
 // RUN: | FileCheck %s --check-prefix=CHECK-OPTIONS
 

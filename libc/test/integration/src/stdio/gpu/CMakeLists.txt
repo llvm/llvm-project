@@ -1,5 +1,4 @@
-add_custom_target(stdio-gpu-integration-tests)
-add_dependencies(libc-integration-tests stdio-gpu-integration-tests)
+add_libc_testsuite(libc-stdio-gpu-integration-tests PARENT libc-stdio-integration-tests)
 
 # Create an output directory for any temporary test files.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
@@ -9,7 +8,7 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
 add_integration_test(
   printf_test
   SUITE
-    stdio-gpu-integration-tests
+    libc-stdio-gpu-integration-tests
   SRCS
     printf_test.cpp
   DEPENDS

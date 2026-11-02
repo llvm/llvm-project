@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-unknown-unknown -global-isel -verify-machineinstrs -stop-after=irtranslator %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-unknown-unknown -global-isel -verify-machineinstrs -stop-after=ir-translator %s -o - | FileCheck %s
 
 define void @memset() {
   ; CHECK-LABEL: name: memset

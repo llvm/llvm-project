@@ -72,9 +72,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
   case Unsupported:
     OS << "Unsupported";
     break;
-  case NotFound:
-    OS << "NotFound";
-    break;
   }
   return OS;
 }

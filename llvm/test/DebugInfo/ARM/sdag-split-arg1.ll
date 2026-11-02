@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm %s -o -  -stop-after=livedebugvalues | FileCheck %s
+; RUN: llc -filetype=asm %s -o -  -stop-after=live-debug-values | FileCheck %s
 ; This tests that transferring debug info describing the lower bits of
 ; an extended SDNode works.
 target triple = "thumbv6m-apple-unknown-macho"

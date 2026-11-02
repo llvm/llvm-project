@@ -20,7 +20,7 @@ body: |
     %1:fpr(<2 x i64>) = COPY $q0
     %0:fpr(<4 x f32>) = G_BITCAST %1(<2 x i64>)
     %3:fpr(f32) = G_FCONSTANT float 2.000000e+00
-    %2:fpr(<4 x f32>) = G_DUP %3(f32)
+    %2:fpr(<4 x f32>) = G_SPLAT_VECTOR %3(f32)
     %4:fpr(<4 x f32>) = G_FMUL %2, %0
     %5:fpr(<4 x i32>) = G_FPTOSI %4(<4 x f32>)
     $q0 = COPY %5(<4 x i32>)

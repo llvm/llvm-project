@@ -121,38 +121,38 @@ define i32 @call_used_in_initializer(double %arg) {
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @[[GLOB0]], align 8
 ; CHECK-NEXT:    call void [[TMP1]]()
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 1), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 8), align 8
 ; CHECK-NEXT:    call void [[TMP2]]()
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define void @store_ifunc_2(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 1), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 8), align 8
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr [[PTR]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 1), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 8), align 8
 ; CHECK-NEXT:    store ptr [[PTR]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define void @call_ifunc_is_argument(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 1), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 8), align 8
 ; CHECK-NEXT:    call void @other_func(ptr [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define void @call_ifunc_both_call_argument(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 4), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 4), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 32), align 8
 ; CHECK-NEXT:    call void [[TMP1]](ptr [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define i32 @call_ifunc_nonvoid(
 ; CHECK-SAME: double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 5), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 40), align 8
 ; CHECK-NEXT:    [[RET:%.*]] = call i32 [[TMP1]](double [[ARG]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -160,7 +160,7 @@ define i32 @call_used_in_initializer(double %arg) {
 ; CHECK-LABEL: define float @call_different_type_ifunc_nonvoid(
 ; CHECK-SAME: double [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CAST_ARG:%.*]] = bitcast double [[ARG]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 5), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 40), align 8
 ; CHECK-NEXT:    [[RET:%.*]] = call float [[TMP1]](i64 [[CAST_ARG]])
 ; CHECK-NEXT:    ret float [[RET]]
 ;
@@ -173,7 +173,7 @@ define i32 @call_used_in_initializer(double %arg) {
 ;
 ; CHECK-LABEL: define i32 @call_used_in_initializer(
 ; CHECK-SAME: double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 7), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 56), align 8
 ; CHECK-NEXT:    [[RET:%.*]] = call i32 [[TMP1]](double [[ARG]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -182,18 +182,18 @@ define i32 @call_used_in_initializer(double %arg) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @resolver1()
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr @[[GLOB0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @resolver1()
-; CHECK-NEXT:    store ptr [[TMP2]], ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 1), align 8
+; CHECK-NEXT:    store ptr [[TMP2]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 8), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @resolver2()
-; CHECK-NEXT:    store ptr [[TMP3]], ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 2), align 8
+; CHECK-NEXT:    store ptr [[TMP3]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 16), align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @resolver3()
-; CHECK-NEXT:    store ptr [[TMP4]], ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 3), align 8
+; CHECK-NEXT:    store ptr [[TMP4]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 24), align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @resolver4()
-; CHECK-NEXT:    store ptr [[TMP5]], ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 4), align 8
+; CHECK-NEXT:    store ptr [[TMP5]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 32), align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @resolver5()
-; CHECK-NEXT:    store ptr [[TMP6]], ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 5), align 8
+; CHECK-NEXT:    store ptr [[TMP6]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 40), align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = call ptr @resolver5()
-; CHECK-NEXT:    store ptr [[TMP7]], ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 6), align 8
+; CHECK-NEXT:    store ptr [[TMP7]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 48), align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = call ptr @resolver5()
-; CHECK-NEXT:    store ptr [[TMP8]], ptr getelementptr inbounds ([8 x ptr], ptr @[[GLOB0]], i32 0, i32 7), align 8
+; CHECK-NEXT:    store ptr [[TMP8]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 56), align 8
 ; CHECK-NEXT:    ret void
 ;

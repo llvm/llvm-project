@@ -35,8 +35,7 @@ template <
     class _Tp,
     __enable_if_t<!__specialized_algorithm<_Algorithm::__fill_n, __single_iterator<_OutputIterator> >::__has_algorithm,
                   int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-__fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
 #ifndef _LIBCPP_CXX03_LANG
   if constexpr (__is_segmented_iterator_v<_OutputIterator>) {
     using __local_iterator = typename __segmented_iterator_traits<_OutputIterator>::__local_iterator;
@@ -57,14 +56,13 @@ template <class _OutIter,
           class _Tp,
           __enable_if_t<__specialized_algorithm<_Algorithm::__fill_n, __single_iterator<_OutIter> >::__has_algorithm,
                         int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutIter __fill_n(_OutIter __first, _Size __n, const _Tp& __value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _OutIter __fill_n(_OutIter __first, _Size __n, const _Tp& __value) {
   return __specialized_algorithm<_Algorithm::__fill_n, __single_iterator<_OutIter> >()(
       std::move(__first), __n, __value);
 }
 
 template <class _OutputIterator, class _Size, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
   return std::__fill_n(__first, std::__convert_to_integral(__n), __value);
 }
 

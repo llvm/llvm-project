@@ -34,14 +34,12 @@ size_t ConnectionConPTY::Read(void *dst, size_t dst_len,
                               const Timeout<std::micro> &timeout,
                               lldb::ConnectionStatus &status,
                               Status *error_ptr) {
-  {
-    std::unique_lock<std::mutex> guard(m_pty->GetMutex());
-    if (m_pty->IsStopping())
-      m_pty->GetCV().wait(guard, [this] { return !m_pty->IsStopping(); });
-    if (!m_pty->IsConnected()) {
-      status = eConnectionStatusEndOfFile;
-      return 0;
-    }
+  bool open = m_pty->GetMode() == PseudoConsole::Mode::ConPTY
+                  ? m_pty->GetSTDOUTHandle() != INVALID_HANDLE_VALUE
+                  : m_pty->IsConnected();
+  if (!open) {
+    status = eConnectionStatusEndOfFile;
+    return 0;
   }
 
   char *out = static_cast<char *>(dst);

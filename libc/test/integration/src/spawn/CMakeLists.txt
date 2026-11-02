@@ -1,5 +1,4 @@
-add_custom_target(spawn-integration-tests)
-add_dependencies(libc-integration-tests spawn-integration-tests)
+add_libc_testsuite(libc-spawn-integration-tests PARENT libc-integration-tests)
 
 add_executable(
   libc_posix_spawn_test_binary
@@ -23,7 +22,7 @@ add_header_library(
 add_integration_test(
   posix_spawn_test
   SUITE
-    spawn-integration-tests
+    libc-spawn-integration-tests
   SRCS
     posix_spawn_test.cpp
   DEPENDS

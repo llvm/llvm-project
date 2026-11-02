@@ -5,12 +5,12 @@
 // Immediate out of lower bound [-24, 21].
 
 st3w {z12.s, z13.s, z14.s}, p4, [x12, #-27, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-24, 21].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 3 in range [-24, 21].
 // CHECK-NEXT: st3w {z12.s, z13.s, z14.s}, p4, [x12, #-27, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st3w {z7.s, z8.s, z9.s}, p3, [x1, #24, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-24, 21].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 3 in range [-24, 21].
 // CHECK-NEXT: st3w {z7.s, z8.s, z9.s}, p3, [x1, #24, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -19,12 +19,12 @@ st3w {z7.s, z8.s, z9.s}, p3, [x1, #24, MUL VL]
 // Immediate not a multiple of three.
 
 st3w {z12.s, z13.s, z14.s}, p4, [x12, #-7, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-24, 21].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 3 in range [-24, 21].
 // CHECK-NEXT: st3w {z12.s, z13.s, z14.s}, p4, [x12, #-7, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st3w {z7.s, z8.s, z9.s}, p3, [x1, #5, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-24, 21].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 3 in range [-24, 21].
 // CHECK-NEXT: st3w {z7.s, z8.s, z9.s}, p3, [x1, #5, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

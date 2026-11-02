@@ -17,14 +17,13 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 
 namespace llvm {
-class M68kTargetMachine;
 class M68kELFTargetObjectFile : public TargetLoweringObjectFileELF {
-  const M68kTargetMachine *TM;
   MCSection *SmallDataSection;
   MCSection *SmallBSSSection;
 
 public:
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 };
 } // end namespace llvm
 

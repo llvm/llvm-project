@@ -33,7 +33,7 @@
 /// user to pick which implementation will be used to propagate variable
 /// locations.
 
-#define DEBUG_TYPE "livedebugvalues"
+#define DEBUG_TYPE "live-debug-values"
 
 using namespace llvm;
 
@@ -128,7 +128,7 @@ void LiveDebugValuesPass::printPipeline(
 bool LiveDebugValuesLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *TPC = &getAnalysis<TargetPassConfig>();
   return LiveDebugValues().run(
-      MF, TPC->getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues());
+      MF, TPC->getTM<TargetMachine>().shouldEmitDebugEntryValues());
 }
 
 bool LiveDebugValues::run(MachineFunction &MF,

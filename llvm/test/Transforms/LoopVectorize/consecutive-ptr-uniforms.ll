@@ -1276,10 +1276,9 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SMAX]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SMAX2]], 3
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[SMAX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[SMAX2]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
@@ -1342,10 +1341,9 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX2]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; INTER:       [[VECTOR_MEMCHECK]]:
-; INTER-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; INTER-NEXT:    [[TMP0:%.*]] = shl i64 [[SMAX]], 3
+; INTER-NEXT:    [[TMP0:%.*]] = shl i64 [[SMAX2]], 3
 ; INTER-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
-; INTER-NEXT:    [[TMP1:%.*]] = shl i64 [[SMAX]], 2
+; INTER-NEXT:    [[TMP1:%.*]] = shl i64 [[SMAX2]], 2
 ; INTER-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
 ; INTER-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
 ; INTER-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
@@ -1436,9 +1434,8 @@ define void @pointer_operand_geps_with_different_indexed_types(ptr %A, ptr %B, i
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[SMAX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[SMAX]], 3
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[SMAX2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[SMAX2]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP6]], -4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[TMP1]]
@@ -1512,9 +1509,8 @@ define void @pointer_operand_geps_with_different_indexed_types(ptr %A, ptr %B, i
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[SMAX2]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; INTER:       [[VECTOR_MEMCHECK]]:
-; INTER-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; INTER-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[SMAX]]
-; INTER-NEXT:    [[TMP8:%.*]] = shl i64 [[SMAX]], 3
+; INTER-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[SMAX2]]
+; INTER-NEXT:    [[TMP8:%.*]] = shl i64 [[SMAX2]], 3
 ; INTER-NEXT:    [[TMP0:%.*]] = add i64 [[TMP8]], -4
 ; INTER-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
 ; INTER-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[TMP1]]

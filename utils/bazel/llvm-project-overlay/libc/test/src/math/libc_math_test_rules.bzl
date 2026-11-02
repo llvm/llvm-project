@@ -37,6 +37,7 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
             "//libc:__support_fputil_normal_float",
             "//libc:__support_macros_optimization",
             "//libc:__support_macros_properties_architectures",
+            "//libc:__support_macros_properties_cpu_features",
             "//libc:__support_macros_properties_os",
             "//libc:__support_macros_properties_types",
             "//libc:__support_math_extras",

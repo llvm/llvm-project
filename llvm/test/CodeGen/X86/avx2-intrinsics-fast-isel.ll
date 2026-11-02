@@ -1837,11 +1837,11 @@ define <4 x i64> @test_mm256_mulhi_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %res = call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> %arg0, <16 x i16> %arg1)
+  %res = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %arg0, <16 x i16> %arg1)
   %bc = bitcast <16 x i16> %res to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16>, <16 x i16>) nounwind readnone
+declare <16 x i16> @llvm.smulh.v16i16(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_mulhi_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_mulhi_epu16:
@@ -1850,11 +1850,11 @@ define <4 x i64> @test_mm256_mulhi_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %res = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> %arg0, <16 x i16> %arg1)
+  %res = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %arg0, <16 x i16> %arg1)
   %bc = bitcast <16 x i16> %res to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16>, <16 x i16>) nounwind readnone
+declare <16 x i16> @llvm.umulh.v16i16(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_mulhrs_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_mulhrs_epi16:

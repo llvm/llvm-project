@@ -1,0 +1,166 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenacc
+
+! Device data may not be read by host code outside of a data transfer
+! assignment or an actual argument. Module scalars are read from their host
+! copy, and other device scalars are only warned about.
+
+module m
+  real, device :: md(10)
+  integer, device :: mn
+  integer, constant :: mc = 10
+  integer, constant :: mca(3)
+  real, managed :: mm(10)
+  type t
+    real, device, allocatable :: c(:)
+    real :: h(10)
+  end type
+contains
+  attributes(global) subroutine k(x)
+    real :: x(:)
+  end subroutine
+  real function f(x)
+    real, device :: x(*)
+    f = 0.0
+  end function
+end module
+
+subroutine dummy_expl_ifcond(h, a)
+  implicit none
+  double precision :: h
+  double precision :: a(10)
+  integer, device :: i
+  attributes(device) :: a
+  !ERROR: Device data 'a' may not be referenced in host code outside of a data transfer or an actual argument
+  if (a(3) > 2.5d0) h = 1.0d0
+  !WARNING: Device data 'i' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  if (i > 0) h = 2.0d0
+end subroutine
+
+subroutine host(ad)
+  use m
+  implicit none
+  real, device, allocatable :: ad(:)
+  real, device, allocatable :: ad2(:,:)
+  integer, device :: nd, nda(2)
+  integer, device, allocatable :: ndl
+  real :: h(10), x
+  integer :: i
+  type(t) :: tt
+  type(t) :: tta(10)
+
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  if (allocated(tta(nda(1))%c)) continue
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  if (f(tta(nda(1))%c) > 0.0) continue
+  if (allocated(tta(2)%c)) continue
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  if (size(ad2, dim=nda(1)) > 0) continue
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  if (lbound(ad2, nda(1)) > 0) continue
+  if (size(ad2, dim=2) > 0) continue
+
+  !ERROR: Device data 'ndl' may not be referenced in host code outside of a data transfer or an actual argument
+  if (ndl > 0) x = 1.0
+  if (x > 0.0) then
+  !ERROR: Device data 'md' may not be referenced in host code outside of a data transfer or an actual argument
+  else if (md(1) > 0.0) then
+  end if
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  do i = 1, nda(2)
+  end do
+  !ERROR: Device data 'md' may not be referenced in host code outside of a data transfer or an actual argument
+  do while (md(1) > 0.0)
+  end do
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  select case (nda(1))
+  case (1)
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+    stop nda(1)
+  end select
+  !ERROR: Device data 'md' may not be referenced in host code outside of a data transfer or an actual argument
+  if (md(1) + 1.0 > 0.0) x = 2.0
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  if (h(nda(1)) > 0.0) x = 3.0
+  !ERROR: Device data 'c' may not be referenced in host code outside of a data transfer or an actual argument
+  if (tt%c(1) > 0.0) x = 4.0
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  if (f(md(nda(1))) > 0.0) x = 5.0
+
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  if (nd > 0) x = 1.0
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  if (h(nd) > 0.0) x = 3.0
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  if (f(md(nd)) > 0.0) x = 5.0
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  if (allocated(tta(nd)%c)) continue
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  if (size(ad2, dim=nd) > 0) continue
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  do i = 1, nd
+  end do
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  select case (nd)
+  case (1)
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+    stop nd
+  end select
+  !WARNING: Device data 'nd' is read in host code outside of a data transfer or an actual argument [-Wcuda-usage]
+  allocate(ad(nd))
+
+  ! Module scalars are read from their host copy.
+  if (mn > 0) x = 1.0
+  if (h(mn) > 0.0) x = 3.0
+  if (mn + mc > 0) x = 1.0
+  do i = 1, mn
+  end do
+  allocate(ad2(mn, mc))
+
+  if (allocated(ad)) x = 6.0
+  if (size(ad) > 3) x = 7.0
+  if (lbound(ad, 1) == 1) x = 8.0
+  if (allocated(tt%c)) x = 9.0
+  if (f(md) > 0.0) x = 10.0
+  if (f(md(2)) > 0.0) x = 11.0
+  if (mm(1) > 0.0) x = 12.0
+  if (tt%h(1) > 0.0) x = 13.0
+  if (mc > 0) x = 14.0
+  !ERROR: Device data 'mca' may not be referenced in host code outside of a data transfer or an actual argument
+  if (mca(1) > 0) x = 14.0
+  !ERROR: Device data 'nda' may not be referenced in host code outside of a data transfer or an actual argument
+  if (size(tta(nda(1))%c, dim=1) > 0) x = 15.0
+  if (size(tta(2)%c, dim=1) > 0) x = 14.0
+  mc = 10
+  x = md(1)
+  h = md
+  md = h
+  call k<<<1, 1>>>(md)
+  !$cuf kernel do <<<*,*>>>
+  do i = 1, 10
+    if (md(i) > 0.0) md(i) = 0.0
+  end do
+
+  !$acc parallel
+  if (mn > 0) md(1) = 0.0
+  !$acc end parallel
+  !$acc serial
+  if (md(1) > 0.0) md(1) = 0.0
+  !$acc end serial
+  !$acc kernels
+  do i = 1, mn
+    if (md(i) > 0.0) md(i) = 0.0
+  end do
+  !$acc end kernels
+  !$acc parallel loop
+  do i = 1, mn
+    if (md(i) > 0.0) md(i) = 0.0
+  end do
+
+
+
+end subroutine
+
+attributes(global) subroutine kernel(a)
+  real, device :: a(10)
+  if (a(1) > 0.0) a(1) = 1.0
+end subroutine

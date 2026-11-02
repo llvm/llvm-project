@@ -20,6 +20,7 @@
 # RESULT: bb.9:
 # RESULT: bb.10.exitblock:
 # RESULT: bb.11 (machine-block-address-taken):
+# RESULT: bb.12 (label-must-be-emitted):
 
 --- |
   define void @func(i32 %size)  {
@@ -72,4 +73,6 @@ body:             |
     S_ENDPGM 0, implicit %0
 
   bb.11 (machine-block-address-taken):
+
+  bb.12 (label-must-be-emitted):
 ...

@@ -18,6 +18,12 @@ addha za0.d, p0/m, p0/m, z0.d
 
 .arch_extension nosme-i16i64
 
+.arch_extension sme-f16f8f16
+fmopab za0.h, { z0.h, z1.h }, z0.b, z20.b
+// CHECK: fmopab za0.h, { z0.h, z1.h }, z0.b, z20.b
+
+.arch_extension nosme-f16f8f16
+
 .arch armv9-a+sme
 smstart
 // CHECK: smstart
@@ -33,3 +39,7 @@ fmopa za0.d, p0/m, p0/m, z0.d, z0.d
 .arch armv9-a+sme-i16i64
 addha za0.d, p0/m, p0/m, z0.d
 // CHECK: addha za0.d, p0/m, p0/m, z0.d
+
+.arch armv9-a+sme-f16f8f16
+fmopab za0.h, { z0.h, z1.h }, z0.b, z20.b
+// CHECK: fmopab za0.h, { z0.h, z1.h }, z0.b, z20.b

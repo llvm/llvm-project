@@ -26,7 +26,8 @@ struct PrintIRPass : public impl::PrintIRPassBase<PrintIRPass> {
     if (!this->label.empty())
       llvm::dbgs() << " " << this->label;
     llvm::dbgs() << " //----- //\n";
-    getOperation()->dump();
+    getOperation()->print(llvm::dbgs(), OpPrintingFlags().useLocalScope());
+    llvm::dbgs() << "\n";
     markAllAnalysesPreserved();
   }
 };

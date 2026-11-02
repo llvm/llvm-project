@@ -7,17 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "StaticAccessedThroughInstanceCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
-
-namespace {
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-} // namespace
 
 static unsigned getNameSpecifierNestingLevel(QualType QType) {
   unsigned NameSpecifierNestingLevel = 1;

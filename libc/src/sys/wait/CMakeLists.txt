@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  waitid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.waitid
+)
+
+add_entrypoint_object(
   waitpid
   ALIAS
   DEPENDS

@@ -269,12 +269,12 @@ call void @llvm.assume(i1 %nonneg)
 
 ; %x is a power of two:
 %ctpop = call i8 @llvm.ctpop.i8(i8 %x)
-%pow2 = icmp eq i8 %x, 1
+%pow2 = icmp eq i8 %ctpop, 1
 call void @llvm.assume(i1 %pow2)
 
 ; %x is a power of two or zero:
 %ctpop = call i8 @llvm.ctpop.i8(i8 %x)
-%pow2orzero = icmp ult i8 %x, 2
+%pow2orzero = icmp ult i8 %ctpop, 2
 call void @llvm.assume(i1 %pow2orzero)
 
 ; Adding %x and %y does not overflow in a signed sense:

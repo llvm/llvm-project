@@ -15,7 +15,8 @@
 
 using namespace llvm;
 
-void llvm::parseFuzzerCLOpts(int ArgC, char *ArgV[]) {
+void llvm::parseFuzzerCLOpts(cl::LibraryOptionsContext &LibraryOptions,
+                             int ArgC, char *ArgV[]) {
   std::vector<const char *> CLArgs;
   CLArgs.push_back(ArgV[0]);
 
@@ -26,10 +27,11 @@ void llvm::parseFuzzerCLOpts(int ArgC, char *ArgV[]) {
   while (I < ArgC)
     CLArgs.push_back(ArgV[I++]);
 
-  cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data());
+  cl::parseCommandLineOptions(LibraryOptions, CLArgs);
 }
 
-void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
+void llvm::handleExecNameEncodedBEOpts(
+    cl::LibraryOptionsContext &LibraryOptions, StringRef ExecName) {
   std::vector<std::string> Args{std::string(ExecName)};
 
   auto NameAndArgs = ExecName.split("--");
@@ -62,10 +64,11 @@ void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
   for (std::string &S : Args)
     CLArgs.push_back(S.c_str());
 
-  cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data());
+  cl::parseCommandLineOptions(LibraryOptions, CLArgs);
 }
 
-void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
+void llvm::handleExecNameEncodedOptimizerOpts(
+    cl::LibraryOptionsContext &LibraryOptions, StringRef ExecName) {
   // TODO: Refactor parts common with the 'handleExecNameEncodedBEOpts'
   std::vector<std::string> Args{std::string(ExecName)};
 
@@ -136,7 +139,7 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
   for (std::string &S : Args)
     CLArgs.push_back(S.c_str());
 
-  cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data());
+  cl::parseCommandLineOptions(LibraryOptions, CLArgs);
 }
 
 int llvm::runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,

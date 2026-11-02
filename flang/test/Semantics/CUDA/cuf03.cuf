@@ -77,6 +77,10 @@ module m
   subroutine host()
     !ERROR: Object 'rc' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram
     real, constant :: rc
+    block
+      !ERROR: Object 'rcb' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram
+      real, constant :: rcb
+    end block
   end subroutine
 
   attributes(global) subroutine devsubr2()
@@ -107,4 +111,12 @@ end module
 
 program p
   real, unified :: um ! ok
+  integer :: h
+  !ERROR: Object 'pc' with ATTRIBUTES(CONSTANT) may not be declared in a main program
+  complex, constant :: pc = (1.0, 2.0)
+
+  block
+    !ERROR: Object 'c' with ATTRIBUTES(CONSTANT) may not be declared in a main program
+    integer, constant :: c = 3
+  end block
 end program

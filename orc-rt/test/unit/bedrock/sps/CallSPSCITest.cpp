@@ -14,6 +14,7 @@
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "DirectCaller.h"
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 #include <optional>
@@ -29,7 +30,7 @@ static DirectCaller caller(orc_rt_WrapperFunction Fn) { return {nullptr, Fn}; }
 
 TEST(CallSPSCITest, Registration) {
   SimpleSymbolTable CI;
-  cantFail(sps_ci::addCall(CI));
+  ASSERT_THAT_ERROR(sps_ci::addCall(CI), Succeeded());
 
   EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_call_void_void")));
   EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_call_main")));
@@ -42,7 +43,7 @@ TEST(CallSPSCITest, CallVoidVoid) {
   using SPSSig = void(SPSExecutorAddr);
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_call_void_void),
-      [](Error Err) { cantFail(std::move(Err)); },
+      [](Error Err) { EXPECT_THAT_ERROR(std::move(Err), Succeeded()); },
       reinterpret_cast<void *>(callVoidVoidFn));
   EXPECT_EQ(CallVoidVoidCount, 1);
 }
@@ -68,8 +69,7 @@ TEST(CallSPSCITest, CallMain) {
       reinterpret_cast<void *>(callMainFn), Args);
 
   ASSERT_TRUE(Result.has_value());
-  ASSERT_TRUE(!!*Result) << toString(Result->takeError());
-  EXPECT_EQ(**Result, 42);
+  EXPECT_THAT_EXPECTED(*Result, HasValue(42));
 
   EXPECT_EQ(CallMainArgC, 3)
       << "argc should equal the number of program arguments, "
@@ -100,8 +100,7 @@ TEST(CallSPSCITest, CallMainEmptyArgV) {
       reinterpret_cast<void *>(callMainEmptyArgVFn), Args);
 
   ASSERT_TRUE(Result.has_value());
-  ASSERT_TRUE(!!*Result) << toString(Result->takeError());
-  EXPECT_EQ(**Result, 42);
+  EXPECT_THAT_EXPECTED(*Result, HasValue(42));
   EXPECT_EQ(CallMainEmptyArgVArgC, 0);
   EXPECT_TRUE(CallMainEmptyArgVIsNullTerminated);
 }

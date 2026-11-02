@@ -201,6 +201,23 @@ TEST_F(TestTargetParseTest, ParsesIndirectWithAlignAndByval) {
   EXPECT_EQ(fc.argInfos[0].kind, ArgKind::Indirect);
   EXPECT_EQ(fc.argInfos[0].indirectAlign, llvm::Align(16));
   EXPECT_FALSE(fc.argInfos[0].byVal);
+  EXPECT_EQ(fc.argInfos[0].indirectAddrSpace, 0u);
+}
+
+TEST_F(TestTargetParseTest, ParsesIndirectAddrSpace) {
+  auto indirect = makeArg({
+      builder.getNamedAttr("kind", builder.getStringAttr("indirect")),
+      builder.getNamedAttr("indirect_align", builder.getI64IntegerAttr(8)),
+      builder.getNamedAttr("indirect_addr_space", builder.getI64IntegerAttr(5)),
+  });
+  auto attr = builder.getDictionaryAttr({
+      builder.getNamedAttr("return", indirect),
+      builder.getNamedAttr("args", builder.getArrayAttr({})),
+  });
+
+  auto fc = parseOk(attr);
+  EXPECT_EQ(fc.returnInfo.kind, ArgKind::Indirect);
+  EXPECT_EQ(fc.returnInfo.indirectAddrSpace, 5u);
 }
 
 TEST_F(TestTargetParseTest, ParsesIgnoreAndExpand) {
@@ -299,6 +316,22 @@ TEST_F(TestTargetParseTest, RejectsIndirectWithNonPowerOfTwoAlign) {
       builder.getNamedAttr("args", builder.getArrayAttr({badIndirect})),
   });
   parseError(attr, "must be a positive power of 2");
+}
+
+TEST_F(TestTargetParseTest, RejectsNegativeIndirectAddrSpace) {
+  auto badIndirect = makeArg({
+      builder.getNamedAttr("kind", builder.getStringAttr("indirect")),
+      builder.getNamedAttr("indirect_align", builder.getI64IntegerAttr(8)),
+      builder.getNamedAttr("indirect_addr_space",
+                           builder.getI64IntegerAttr(-1)),
+  });
+  auto direct =
+      makeArg({builder.getNamedAttr("kind", builder.getStringAttr("direct"))});
+  auto attr = builder.getDictionaryAttr({
+      builder.getNamedAttr("return", direct),
+      builder.getNamedAttr("args", builder.getArrayAttr({badIndirect})),
+  });
+  parseError(attr, "'indirect_addr_space' must be non-negative");
 }
 
 TEST_F(TestTargetParseTest, RejectsUnknownKind) {

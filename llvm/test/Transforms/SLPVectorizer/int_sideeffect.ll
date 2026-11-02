@@ -33,10 +33,19 @@ declare void @foo()
 
 define void @test_inaccessiblememonly(ptr %p) {
 ; CHECK-LABEL: @test_inaccessiblememonly(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[P]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, ptr [[P]], i64 3
+; CHECK-NEXT:    [[L0:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load float, ptr [[P1]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[P2]], align 4
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[L3:%.*]] = load float, ptr [[P3]], align 4
+; CHECK-NEXT:    store float [[L0]], ptr [[P]], align 4
 ; CHECK-NEXT:    call void @foo() #[[ATTR1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[P]], align 4
+; CHECK-NEXT:    store float [[L1]], ptr [[P1]], align 4
+; CHECK-NEXT:    store float [[L2]], ptr [[P2]], align 4
+; CHECK-NEXT:    store float [[L3]], ptr [[P3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr float, ptr %p, i64 1

@@ -20,7 +20,7 @@
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   func.func @_QPtest_ptr_component() {
     %0 = fir.alloca !fir.type<_QMtbaaTouterP{in:!fir.type<_QMtbaaTinnerP{p:!fir.box<!fir.ptr<f32>>}>}> {uniq_name = "_QMtbaaFtest_ptr_componentEz", bindc_name = "z"}
-    %z = fir.declare %0 {uniq_name = "_QMtbaaFtest_ptr_componentEz"} : (!fir.ref<!fir.type<_QMtbaaTouterP{in:!fir.type<_QMtbaaTinnerP{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTouterP{in:!fir.type<_QMtbaaTinnerP{p:!fir.box<!fir.ptr<f32>>}>}>>
+    %z = fir.declare %0 uniq_name("_QMtbaaFtest_ptr_componentEz") : (!fir.ref<!fir.type<_QMtbaaTouterP{in:!fir.type<_QMtbaaTinnerP{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTouterP{in:!fir.type<_QMtbaaTinnerP{p:!fir.box<!fir.ptr<f32>>}>}>>
     %in = fir.coordinate_of %z, in : (!fir.ref<!fir.type<_QMtbaaTouterP{in:!fir.type<_QMtbaaTinnerP{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTinnerP{p:!fir.box<!fir.ptr<f32>>}>>
     %pref = fir.coordinate_of %in, p : (!fir.ref<!fir.type<_QMtbaaTinnerP{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
     %bl = fir.load %pref : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -46,7 +46,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   func.func @_QPtest_deep_ptr_component() {
     %0 = fir.alloca !fir.type<_QMtbaaTl0{a:!fir.type<_QMtbaaTl1{b:!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>}>}> {uniq_name = "_QMtbaaFtest_deep_ptr_componentEz"}
-    %z = fir.declare %0 {uniq_name = "_QMtbaaFtest_deep_ptr_componentEz"} : (!fir.ref<!fir.type<_QMtbaaTl0{a:!fir.type<_QMtbaaTl1{b:!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTl0{a:!fir.type<_QMtbaaTl1{b:!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>}>}>>
+    %z = fir.declare %0 uniq_name("_QMtbaaFtest_deep_ptr_componentEz") : (!fir.ref<!fir.type<_QMtbaaTl0{a:!fir.type<_QMtbaaTl1{b:!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTl0{a:!fir.type<_QMtbaaTl1{b:!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>}>}>>
     %l1 = fir.coordinate_of %z, a : (!fir.ref<!fir.type<_QMtbaaTl0{a:!fir.type<_QMtbaaTl1{b:!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTl1{b:!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>}>>
     %l2 = fir.coordinate_of %l1, b : (!fir.ref<!fir.type<_QMtbaaTl1{b:!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>>
     %pref = fir.coordinate_of %l2, p : (!fir.ref<!fir.type<_QMtbaaTl2{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -77,7 +77,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
   }
   func.func @_QPtest_glob_nested_ptr() {
     %0 = fir.address_of(@_QMtbaaEgdeep) : !fir.ref<!fir.type<_QMtbaaTg0{a:!fir.type<_QMtbaaTg1{p:!fir.box<!fir.ptr<f32>>}>}>>
-    %g = fir.declare %0 {uniq_name = "_QMtbaaEgdeep"} : (!fir.ref<!fir.type<_QMtbaaTg0{a:!fir.type<_QMtbaaTg1{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTg0{a:!fir.type<_QMtbaaTg1{p:!fir.box<!fir.ptr<f32>>}>}>>
+    %g = fir.declare %0 uniq_name("_QMtbaaEgdeep") : (!fir.ref<!fir.type<_QMtbaaTg0{a:!fir.type<_QMtbaaTg1{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTg0{a:!fir.type<_QMtbaaTg1{p:!fir.box<!fir.ptr<f32>>}>}>>
     %in = fir.coordinate_of %g, a : (!fir.ref<!fir.type<_QMtbaaTg0{a:!fir.type<_QMtbaaTg1{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTg1{p:!fir.box<!fir.ptr<f32>>}>>
     %pref = fir.coordinate_of %in, p : (!fir.ref<!fir.type<_QMtbaaTg1{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
     %bl = fir.load %pref : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -107,8 +107,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
   func.func @_QPtest_two_nested_ptr_paths() {
     %0 = fir.alloca !fir.type<_QMtbaaTx0{p:!fir.type<_QMtbaaTx1{q:!fir.box<!fir.ptr<f32>>}>}> {uniq_name = "_QMtbaaFtest_two_nested_ptr_pathsEx"}
     %1 = fir.alloca !fir.type<_QMtbaaTy0{p:!fir.type<_QMtbaaTy1{q:!fir.box<!fir.ptr<f32>>}>}> {uniq_name = "_QMtbaaFtest_two_nested_ptr_pathsEy"}
-    %x = fir.declare %0 {uniq_name = "_QMtbaaFtest_two_nested_ptr_pathsEx"} : (!fir.ref<!fir.type<_QMtbaaTx0{p:!fir.type<_QMtbaaTx1{q:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTx0{p:!fir.type<_QMtbaaTx1{q:!fir.box<!fir.ptr<f32>>}>}>>
-    %y = fir.declare %1 {uniq_name = "_QMtbaaFtest_two_nested_ptr_pathsEy"} : (!fir.ref<!fir.type<_QMtbaaTy0{p:!fir.type<_QMtbaaTy1{q:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTy0{p:!fir.type<_QMtbaaTy1{q:!fir.box<!fir.ptr<f32>>}>}>>
+    %x = fir.declare %0 uniq_name("_QMtbaaFtest_two_nested_ptr_pathsEx") : (!fir.ref<!fir.type<_QMtbaaTx0{p:!fir.type<_QMtbaaTx1{q:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTx0{p:!fir.type<_QMtbaaTx1{q:!fir.box<!fir.ptr<f32>>}>}>>
+    %y = fir.declare %1 uniq_name("_QMtbaaFtest_two_nested_ptr_pathsEy") : (!fir.ref<!fir.type<_QMtbaaTy0{p:!fir.type<_QMtbaaTy1{q:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTy0{p:!fir.type<_QMtbaaTy1{q:!fir.box<!fir.ptr<f32>>}>}>>
     %x1 = fir.coordinate_of %x, p : (!fir.ref<!fir.type<_QMtbaaTx0{p:!fir.type<_QMtbaaTx1{q:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTx1{q:!fir.box<!fir.ptr<f32>>}>>
     %xq = fir.coordinate_of %x1, q : (!fir.ref<!fir.type<_QMtbaaTx1{q:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
     %y1 = fir.coordinate_of %y, p : (!fir.ref<!fir.type<_QMtbaaTy0{p:!fir.type<_QMtbaaTy1{q:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTy1{q:!fir.box<!fir.ptr<f32>>}>>
@@ -141,7 +141,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   func.func @_QPtest_nested_alloc_descriptor() {
     %0 = fir.alloca !fir.type<_QMtbaaTd0{w:!fir.type<_QMtbaaTd1{mid:!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>}>}> {uniq_name = "_QMtbaaFtest_nested_alloc_descriptorEv"}
-    %v = fir.declare %0 {uniq_name = "_QMtbaaFtest_nested_alloc_descriptorEv"} : (!fir.ref<!fir.type<_QMtbaaTd0{w:!fir.type<_QMtbaaTd1{mid:!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTd0{w:!fir.type<_QMtbaaTd1{mid:!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>}>}>>
+    %v = fir.declare %0 uniq_name("_QMtbaaFtest_nested_alloc_descriptorEv") : (!fir.ref<!fir.type<_QMtbaaTd0{w:!fir.type<_QMtbaaTd1{mid:!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTd0{w:!fir.type<_QMtbaaTd1{mid:!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>}>}>>
     %w = fir.coordinate_of %v, w : (!fir.ref<!fir.type<_QMtbaaTd0{w:!fir.type<_QMtbaaTd1{mid:!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTd1{mid:!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>}>>
     %mid = fir.coordinate_of %w, mid : (!fir.ref<!fir.type<_QMtbaaTd1{mid:!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>}>>) -> !fir.ref<!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>>
     %fref = fir.coordinate_of %mid, f : (!fir.ref<!fir.type<_QMtbaaTd2{f:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -181,7 +181,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   func.func @_QPtest_dummy_ptr_alloc(%arg0: !fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>> {fir.bindc_name = "obj"}) {
     %scope = fir.dummy_scope : !fir.dscope
-    %obj = fir.declare %arg0 dummy_scope %scope {uniq_name = "_QFtest_dummy_ptr_allocEobj"} : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>
+    %obj = fir.declare %arg0 dummy_scope %scope uniq_name("_QFtest_dummy_ptr_allocEobj") : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>
     %pref = fir.coordinate_of %obj, p : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
     %pbox = fir.load %pref : !fir.ref<!fir.box<!fir.ptr<f32>>>
     %paddr = fir.box_addr %pbox : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
@@ -225,7 +225,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   func.func @_QPtest_target_local() {
     %0 = fir.alloca !fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}> {bindc_name = "obj", fir.target, uniq_name = "_QFtest_target_localEobj"}
-    %obj = fir.declare %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest_target_localEobj"} : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>
+    %obj = fir.declare %0 uniq_name("_QFtest_target_localEobj") fortran_attrs<target> : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>
     %pref = fir.coordinate_of %obj, p : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
     %pbox = fir.load %pref : !fir.ref<!fir.box<!fir.ptr<f32>>>
     %paddr = fir.box_addr %pbox : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>

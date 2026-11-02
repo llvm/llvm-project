@@ -499,3 +499,110 @@ module attributes {transform.with_named_sequence} {
       transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL: func.func @maxnumf_ninf(
+// CHECK: %[[INIT:.*]] = arith.constant 0xFFC00000 : f32
+// CHECK: linalg.fill ins(%[[INIT]] : f32)
+// CHECK: arith.maxnumf {{.*}} fastmath<ninf> : f32
+func.func @maxnumf_ninf(%in: tensor<32xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"]
+  } ins(%in : tensor<32xf32>) outs(%out : tensor<f32>) {
+  ^bb0(%value: f32, %acc: f32):
+    %result = arith.maxnumf %value, %acc fastmath<ninf> : f32
+    linalg.yield %result : f32
+  } -> tensor<f32>
+  return %r : tensor<f32>
+}
+
+// CHECK-LABEL: func.func @maxnumf_nnan(
+// CHECK: %[[INIT:.*]] = arith.constant 0xFF800000 : f32
+// CHECK: linalg.fill ins(%[[INIT]] : f32)
+// CHECK: arith.maxnumf {{.*}} fastmath<nnan> : f32
+func.func @maxnumf_nnan(%in: tensor<32xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"]
+  } ins(%in : tensor<32xf32>) outs(%out : tensor<f32>) {
+  ^bb0(%value: f32, %acc: f32):
+    %result = arith.maxnumf %value, %acc fastmath<nnan> : f32
+    linalg.yield %result : f32
+  } -> tensor<f32>
+  return %r : tensor<f32>
+}
+
+// CHECK-LABEL: func.func @minnumf_ninf(
+// CHECK: %[[INIT:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK: linalg.fill ins(%[[INIT]] : f32)
+// CHECK: arith.minnumf {{.*}} fastmath<ninf> : f32
+func.func @minnumf_ninf(%in: tensor<32xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"]
+  } ins(%in : tensor<32xf32>) outs(%out : tensor<f32>) {
+  ^bb0(%value: f32, %acc: f32):
+    %result = arith.minnumf %value, %acc fastmath<ninf> : f32
+    linalg.yield %result : f32
+  } -> tensor<f32>
+  return %r : tensor<f32>
+}
+
+// CHECK-LABEL: func.func @minnumf_nnan(
+// CHECK: %[[INIT:.*]] = arith.constant 0x7F800000 : f32
+// CHECK: linalg.fill ins(%[[INIT]] : f32)
+// CHECK: arith.minnumf {{.*}} fastmath<nnan> : f32
+func.func @minnumf_nnan(%in: tensor<32xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"]
+  } ins(%in : tensor<32xf32>) outs(%out : tensor<f32>) {
+  ^bb0(%value: f32, %acc: f32):
+    %result = arith.minnumf %value, %acc fastmath<nnan> : f32
+    linalg.yield %result : f32
+  } -> tensor<f32>
+  return %r : tensor<f32>
+}
+
+// CHECK-LABEL: func.func @maxnumf_nnan_ninf
+// CHECK: %[[MAX_INIT:.*]] = arith.constant -3.40282347E+38 : f32
+// CHECK: linalg.fill ins(%[[MAX_INIT]] : f32)
+// CHECK: arith.maxnumf {{.*}} fastmath<nnan,ninf> : f32
+func.func @maxnumf_nnan_ninf(%in: tensor<32xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"]
+  } ins(%in : tensor<32xf32>) outs(%out : tensor<f32>) {
+  ^bb0(%value: f32, %acc: f32):
+    %max = arith.maxnumf %value, %acc fastmath<nnan,ninf> : f32
+    linalg.yield %max : f32
+  } -> tensor<f32>
+  return %r : tensor<f32>
+}
+
+// CHECK-LABEL: func.func @minnumf_nnan_ninf
+// CHECK: %[[MIN_INIT:.*]] = arith.constant 3.40282347E+38 : f32
+// CHECK: linalg.fill ins(%[[MIN_INIT]] : f32)
+// CHECK: arith.minnumf {{.*}} fastmath<nnan,ninf> : f32
+func.func @minnumf_nnan_ninf(%in: tensor<32xf32>, %out: tensor<f32>) -> tensor<f32> {
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"]
+  } ins(%in : tensor<32xf32>) outs(%out : tensor<f32>) {
+  ^bb0(%value: f32, %acc: f32):
+    %min = arith.minnumf %value, %acc fastmath<nnan,ninf> : f32
+    linalg.yield %min : f32
+  } -> tensor<f32>
+  return %r : tensor<f32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %ops = transform.structured.match ops{["linalg.generic"]} in %root : (!transform.any_op) -> !transform.any_op
+    %split:4 = transform.structured.split_reduction %ops <split_factor = 4, insert_split_dimension = 0, inner_parallel>
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}

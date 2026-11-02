@@ -1,0 +1,72 @@
+## `ld -r` emits __eh_frame as S_REGULAR instead of S_COALESCED. Check that ICF
+## does not crash on it.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: %lld -dylib --icf=all %t.o -o /dev/null
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x1
+  ncmds:           2
+  sizeofcmds:      256
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         ''
+    vmaddr:          0
+    vmsize:          50
+    fileoff:         288
+    filesize:        50
+    maxprot:         7
+    initprot:        7
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            1
+        offset:          0x120
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         C3
+      - sectname:        __eh_frame
+        segname:         __TEXT
+        addr:            0x8
+        size:            42
+        offset:          0x128
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0 ## S_REGULAR
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         0D00000000000000017A520001781001101500000015000000DFFFFFFFFFFFFFFF010000000000000000
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          344
+    nsyms:           1
+    stroff:          360
+    strsize:         4
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _f
+...

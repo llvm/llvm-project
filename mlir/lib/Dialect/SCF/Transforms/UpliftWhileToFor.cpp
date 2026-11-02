@@ -20,7 +20,7 @@ using namespace mlir;
 
 namespace {
 struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(scf::WhileOp loop,
                                 PatternRewriter &rewriter) const override {

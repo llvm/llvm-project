@@ -121,6 +121,23 @@ enum class AtomicBinOpCode : uint32_t {
   Exchange = 8,
 };
 
+enum class BarrierMemoryTypeFlag : uint32_t {
+  UAVMemory = 0x1,
+  GroupSharedMemory = 0x2,
+  NodeInputMemory = 0x4,
+  NodeOutputMemory = 0x8,
+  NodeMemory = 0xc,
+  ValidMask = 0xf,
+};
+
+enum class BarrierSemanticFlag : uint32_t {
+  GroupSync = 0x1,
+  GroupScope = 0x2,
+  DeviceScope = 0x4,
+  GroupFlags = 0x3,
+  ValidMask = 0x7,
+};
+
 const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 

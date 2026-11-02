@@ -219,6 +219,7 @@ if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 endif ()
 
+option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" ON)
 if (CLANG_ENABLE_CIR AND "clang" IN_LIST LLVM_ENABLE_PROJECTS AND
     NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
   message(STATUS "Enabling MLIR as a dependency of ClangIR")
@@ -973,7 +974,8 @@ else()
 endif()
 
 # Used to test building the llvm shared library with explicit symbol visibility on
-# Windows and Linux. For ELF platforms default symbols visibility is set to hidden.
+# Windows, Linux and macOS. For ELF and Mach-O platforms default symbol visibility
+# is set to hidden.
 set(LLVM_BUILD_LLVM_DYLIB_VIS FALSE CACHE BOOL "")
 mark_as_advanced(LLVM_BUILD_LLVM_DYLIB_VIS)
 
@@ -1240,16 +1242,20 @@ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
 set(LLVM_HAVE_TFLITE "" CACHE BOOL "Use tflite")
 
 set(LLVM_MLGO_MODELS "" CACHE STRING "List of MLGO models")
-set(LLVM_MLGO_MLIR_OPT "mlir-opt" CACHE STRING "Path or system binary name for mlir-opt")
-set(LLVM_MLGO_MLIR_TRANSLATE "mlir-translate" CACHE STRING "Path or system binary name for mlir-translate")
-
-set(LLVM_HAVE_MLIR_LOWERING OFF)
-if (NOT LLVM_MLGO_MODELS STREQUAL "")
-  set(LLVM_HAVE_MLIR_LOWERING ON)
+set(LLVM_MLGO_MLIR_OPT "" CACHE STRING "Path or system binary name for mlir-opt")
+set(LLVM_MLGO_MLIR_TRANSLATE "" CACHE STRING "Path or system binary name for mlir-translate")
+if (LLVM_MLGO_MLIR_OPT STREQUAL "mlir-opt")
+  set(LLVM_MLGO_MLIR_OPT "" CACHE STRING "Path or system binary name for mlir-opt" FORCE)
+endif()
+if (LLVM_MLGO_MLIR_TRANSLATE STREQUAL "mlir-translate")
+  set(LLVM_MLGO_MLIR_TRANSLATE "" CACHE STRING "Path or system binary name for mlir-translate" FORCE)
 endif()
 
-if (LLVM_HAVE_MLIR_LOWERING AND LLVM_HAVE_TFLITE)
-  message(FATAL_ERROR "Only one of LLVM_HAVE_TFLITE and LLVM_HAVE_MLIR_LOWERING can be enabled.")
+set(LLVM_HAVE_MLIR_LOWERING OFF)
+if (NOT LLVM_MLGO_MLIR_OPT STREQUAL "" AND NOT LLVM_MLGO_MLIR_TRANSLATE STREQUAL "")
+  set(LLVM_HAVE_MLIR_LOWERING ON)
+elseif (NOT LLVM_MLGO_MLIR_OPT STREQUAL "" OR NOT LLVM_MLGO_MLIR_TRANSLATE STREQUAL "")
+  message(FATAL_ERROR "Both LLVM_MLGO_MLIR_OPT and LLVM_MLGO_MLIR_TRANSLATE must be specified together.")
 endif()
 
 if (LLVM_HAVE_TFLITE)
@@ -1284,6 +1290,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   if (LLVM_HAVE_TF_AOT AND LLVM_HAVE_MLIR_LOWERING)
     message(FATAL_ERROR "Only one of LLVM_HAVE_TF_AOT and LLVM_HAVE_MLIR_LOWERING can be enabled.")
   endif()
+
   # Once we add more modules, we should handle this more automatically.
   if (DEFINED LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL)
     set(LLVM_INLINER_MODEL_PATH "none")

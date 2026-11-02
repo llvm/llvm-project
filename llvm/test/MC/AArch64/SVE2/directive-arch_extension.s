@@ -39,3 +39,11 @@ fmmla   z23.s, z13.h, z8.h
 .arch_extension sve-bfscale
 bfscale z0.h, p0/m, z0.h, z0.h
 // CHECK: bfscale z0.h, p0/m, z0.h, z0.h
+
+.arch_extension sve-lrcpc
+ldapro z0, [x0]
+// CHECK: ldapro z0, [x0]
+
+.arch_extension sve-perm256
+zip1 z0.q, z1.q, z2.q
+// CHECK: zip1 z0.q, z1.q, z2.q

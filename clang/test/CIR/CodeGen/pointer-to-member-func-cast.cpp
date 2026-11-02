@@ -32,7 +32,8 @@ bool memfunc_to_bool(void (Foo::*func)(int)) {
 // CIR-BEFORE:   %{{.*}} = cir.cast member_ptr_to_bool %{{.*}} : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo> -> !cir.bool
 
 // CIR-AFTER:     cir.func {{.*}} @_Z15memfunc_to_boolM3FooFviE
-// CIR-AFTER:       cir.store %{{.*}}, %[[FUNC_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86:   cir.copy %{{.*}} align(8) to %[[FUNC_ADDR:.*]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM:   cir.store %{{.*}}, %[[FUNC_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:       %[[FUNC:.*]] = cir.load{{.*}} %[[FUNC_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[NULL_VAL:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER:       %[[FUNC_PTR:.*]] = cir.extract_member %[[FUNC]][0] : !rec_anon_struct -> !s64i
@@ -49,7 +50,8 @@ bool memfunc_to_bool(void (Foo::*func)(int)) {
 
 // LLVM-X86: define dso_local noundef zeroext i1 @_Z15memfunc_to_boolM3FooFviE(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-ARM: define dso_local noundef i1 @_Z15memfunc_to_boolM3FooFviE({ i64, i64 } %{{[^,)]+}})
-// LLVM:       store { i64, i64 } %{{.*}}, ptr %[[FUNC_ADDR:.*]], align 8
+// LLVM-X86:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[FUNC_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-ARM:   store { i64, i64 } %{{.*}}, ptr %[[FUNC_ADDR:.*]], align 8
 // LLVM:       %[[FUNC:.*]] = load { i64, i64 }, ptr %[[FUNC_ADDR]]
 // LLVM:       %[[FUNC_PTR:.*]] = extractvalue { i64, i64 } %[[FUNC]], 0
 // LLVM:       %[[BOOL_VAL:.*]] = icmp ne i64 %[[FUNC_PTR]], 0
@@ -87,7 +89,8 @@ auto memfunc_reinterpret(void (Foo::*func)(int)) -> void (Bar::*)() {
 // CIR-BEFORE:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo> -> !cir.method<!cir.func<(!cir.ptr<!rec_Bar>)> in !rec_Bar>
 
 // CIR-AFTER: cir.func {{.*}} @_Z19memfunc_reinterpretM3FooFviE
-// CIR-AFTER:   cir.store %{{.*}}, %[[FUNC_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86: cir.copy %{{.*}} align(8) to %[[FUNC_ADDR:.*]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM: cir.store %{{.*}}, %[[FUNC_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[FUNC:.*]] = cir.load{{.*}} %[[FUNC_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   cir.store %[[FUNC]], %[[RET_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[RET:.*]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
@@ -95,7 +98,8 @@ auto memfunc_reinterpret(void (Foo::*func)(int)) -> void (Bar::*)() {
 
 // LLVM-X86: define dso_local { i64, i64 } @_Z19memfunc_reinterpretM3FooFviE(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-ARM: define dso_local { i64, i64 } @_Z19memfunc_reinterpretM3FooFviE({ i64, i64 } %{{[^,)]+}})
-// LLVM:   store { i64, i64 } %{{.*}}, ptr %[[FUNC_ADDR:.*]], align 8
+// LLVM-X86: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[FUNC_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-ARM: store { i64, i64 } %{{.*}}, ptr %[[FUNC_ADDR:.*]], align 8
 // LLVM:   %[[FUNC:.*]] = load { i64, i64 }, ptr %[[FUNC_ADDR]]
 // LLVM:   store { i64, i64 } %[[FUNC]], ptr %[[RET_ADDR:.*]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RET_ADDR]]
@@ -138,9 +142,10 @@ DerivedMemFunc base_to_derived_zero_offset(Base1MemFunc ptr) {
 // CIR-BEFORE:   %{{.*}} = cir.derived_method %[[PTR]][0] : !cir.method<!cir.func<(!cir.ptr<!rec_Base1>, !s32i)> in !rec_Base1> -> !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>
 
 // CIR-AFTER: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1FviE
-// CIR-AFTER:   %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
-// CIR-AFTER:   cir.store %{{.*}}, %[[PTR]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER:   %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86: cir.copy %{{.*}} align(8) to %[[PTR]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM: cir.store %{{.*}}, %[[PTR]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[TMP:.*]] = cir.load{{.*}} %[[PTR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   cir.store %[[TMP]], %[[RET]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[RET_VAL:.*]] = cir.load %[[RET]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
@@ -148,7 +153,8 @@ DerivedMemFunc base_to_derived_zero_offset(Base1MemFunc ptr) {
 
 // LLVM-X86: define dso_local { i64, i64 } @_Z27base_to_derived_zero_offsetM5Base1FviE(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-ARM: define dso_local { i64, i64 } @_Z27base_to_derived_zero_offsetM5Base1FviE({ i64, i64 } %{{[^,)]+}})
-// LLVM:   store { i64, i64 } %{{.*}}, ptr %[[ARG_ADDR:.*]], align 8
+// LLVM-X86: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[ARG_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-ARM: store { i64, i64 } %{{.*}}, ptr %[[ARG_ADDR:.*]], align 8
 // LLVM:   %[[TMP:.*]] = load { i64, i64 }, ptr %[[ARG_ADDR]]
 // LLVM:   store { i64, i64 } %[[TMP]], ptr %[[RET_ADDR:.*]], align 8
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RET_ADDR]]
@@ -171,7 +177,8 @@ DerivedMemFunc base_to_derived(Base2MemFunc ptr) {
 // CIR-BEFORE:   %{{.*}} = cir.derived_method %[[PTR]][16] : !cir.method<!cir.func<(!cir.ptr<!rec_Base2>, !s32i)> in !rec_Base2> -> !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>
 
 // CIR-AFTER:     cir.func {{.*}} @_Z15base_to_derivedM5Base2FviE
-// CIR-AFTER:       cir.store %{{.*}}, %[[PTR_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86:   cir.copy %{{.*}} align(8) to %[[PTR_ADDR:.*]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM:   cir.store %{{.*}}, %[[PTR_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:       %[[PTR:.*]] = cir.load{{.*}} %[[PTR_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[OFFSET:.*]] = cir.extract_member %[[PTR]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER-X86:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
@@ -181,7 +188,8 @@ DerivedMemFunc base_to_derived(Base2MemFunc ptr) {
 
 // LLVM-X86: define dso_local { i64, i64 } @_Z15base_to_derivedM5Base2FviE(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-ARM: define dso_local { i64, i64 } @_Z15base_to_derivedM5Base2FviE({ i64, i64 } %{{[^,)]+}})
-// LLVM:       store { i64, i64 } %{{.*}}, ptr %[[ARG_ADDR:.*]], align 8
+// LLVM-X86:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[ARG_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-ARM:   store { i64, i64 } %{{.*}}, ptr %[[ARG_ADDR:.*]], align 8
 // LLVM:       %[[ARG:.*]] = load { i64, i64 }, ptr %[[ARG_ADDR]]
 // LLVM:       %[[ADJ:.*]] = extractvalue { i64, i64 } %[[ARG]], 1
 // LLVM-X86:   %[[ADJ_ADJ:.*]] = add nsw i64 %[[ADJ]], 16
@@ -207,9 +215,10 @@ Base1MemFunc derived_to_base_zero_offset(DerivedMemFunc ptr) {
 // CIR-BEFORE:   %{{.*}} = cir.base_method %[[PTR]][0] : !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!cir.ptr<!rec_Base1>, !s32i)> in !rec_Base1>
 
 // CIR-AFTER: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7DerivedFviE
-// CIR-AFTER:   %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
-// CIR-AFTER:   cir.store %{{.*}}, %[[PTR]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER:   %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86: cir.copy %{{.*}} align(8) to %[[PTR]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM: cir.store %{{.*}}, %[[PTR]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[TMP:.*]] = cir.load{{.*}} %[[PTR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   cir.store %[[TMP]], %[[RET]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[RET_VAL:.*]] = cir.load %[[RET]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
@@ -217,7 +226,8 @@ Base1MemFunc derived_to_base_zero_offset(DerivedMemFunc ptr) {
 
 // LLVM-X86: define dso_local { i64, i64 } @_Z27derived_to_base_zero_offsetM7DerivedFviE(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-ARM: define dso_local { i64, i64 } @_Z27derived_to_base_zero_offsetM7DerivedFviE({ i64, i64 } %{{[^,)]+}})
-// LLVM:   store { i64, i64 } %{{.*}}, ptr %[[ARG_ADDR:.*]], align 8
+// LLVM-X86: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[ARG_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-ARM: store { i64, i64 } %{{.*}}, ptr %[[ARG_ADDR:.*]], align 8
 // LLVM:   %[[TMP:.*]] = load { i64, i64 }, ptr %[[ARG_ADDR]]
 // LLVM:   store { i64, i64 } %[[TMP]], ptr %[[RET_ADDR:.*]], align 8
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RET_ADDR]]
@@ -244,7 +254,8 @@ Base2MemFunc derived_to_base(DerivedMemFunc ptr) {
 // CIR-BEFORE:   %{{.*}} = cir.base_method %[[PTR]][16] : !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!cir.ptr<!rec_Base2>, !s32i)> in !rec_Base2>
 
 // CIR-AFTER:     cir.func {{.*}} @_Z15derived_to_baseM7DerivedFviE
-// CIR-AFTER:       cir.store %{{.*}}, %[[PTR_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86:   cir.copy %{{.*}} align(8) to %[[PTR_ADDR:.*]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM:   cir.store %{{.*}}, %[[PTR_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:       %[[PTR:.*]] = cir.load{{.*}} %[[PTR_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[OFFSET:.*]] = cir.extract_member %[[PTR]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER-X86:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
@@ -254,7 +265,8 @@ Base2MemFunc derived_to_base(DerivedMemFunc ptr) {
 
 // LLVM-X86: define dso_local { i64, i64 } @_Z15derived_to_baseM7DerivedFviE(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-ARM: define dso_local { i64, i64 } @_Z15derived_to_baseM7DerivedFviE({ i64, i64 } %{{[^,)]+}})
-// LLVM:       store { i64, i64 } %{{.*}}, ptr %[[ARG_ADDR:.*]], align 8
+// LLVM-X86:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[ARG_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-ARM:   store { i64, i64 } %{{.*}}, ptr %[[ARG_ADDR:.*]], align 8
 // LLVM:       %[[ARG:.*]] = load { i64, i64 }, ptr %[[ARG_ADDR]]
 // LLVM:       %[[ADJ:.*]] = extractvalue { i64, i64 } %[[ARG]], 1
 // LLVM-X86:   %[[ADJ_ADJ:.*]] = sub nsw i64 %[[ADJ]], 16

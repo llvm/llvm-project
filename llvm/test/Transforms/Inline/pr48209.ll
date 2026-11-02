@@ -22,4 +22,4 @@ define void @test(ptr %p) {
 
 !0 = !{!1}
 !1 = distinct !{!1, !2}
-!2 = distinct !{!2}
+!2 = distinct !{!2, i1 false}

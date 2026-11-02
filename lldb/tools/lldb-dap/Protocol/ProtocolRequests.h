@@ -1071,6 +1071,19 @@ struct ExceptionInfoResponseBody {
 
   /// Detailed information about the exception.
   std::optional<ExceptionDetails> details;
+
+  /// lldb-dap Extensions
+  /// @{
+
+  /// The thread's stop reason extended info, as reported by
+  /// `SBThread::GetStopReasonExtendedInfoAsJSON`.
+  std::optional<llvm::json::Value> lldbExtStopReasonExtendedInfo;
+
+  /// The process's extended crash information, as reported by
+  /// `SBProcess::GetExtendedCrashInformation`.
+  std::optional<llvm::json::Value> lldbExtExtendedCrashInformation;
+
+  /// @}
 };
 llvm::json::Value toJSON(const ExceptionInfoResponseBody &);
 

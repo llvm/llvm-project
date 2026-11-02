@@ -9,7 +9,7 @@
 // REQUIRES: std-at-least-c++26
 
 // These compilers do not support __builtin_type_order
-// UNSUPPORTED: clang-21, clang-22, clang-23, apple-clang-21
+// UNSUPPORTED: clang-21, clang-22, clang-23, apple-clang-21, apple-clang-22, apple-clang-23
 
 // <compare>
 

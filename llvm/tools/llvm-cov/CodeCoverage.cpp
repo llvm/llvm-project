@@ -51,10 +51,6 @@
 using namespace llvm;
 using namespace coverage;
 
-void exportCoverageDataToJson(const coverage::CoverageMapping &CoverageMapping,
-                              const CoverageViewOptions &Options,
-                              raw_ostream &OS);
-
 namespace {
 /// The implementation of the coverage tool.
 class CodeCoverageTool {

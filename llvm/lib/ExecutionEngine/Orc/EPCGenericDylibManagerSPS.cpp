@@ -11,36 +11,6 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/RecordProxy.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
-
-namespace llvm::orc::shared {
-
-// Serialize a local SymbolLookupSet directly as an SPSRemoteSymbolLookupSet,
-// avoiding a std::string copy of each (potentially large) symbol name.
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
-                             SymbolLookupSet::value_type> {
-public:
-  static size_t size(const SymbolLookupSet::value_type &V) {
-    return SPSArgList<SPSString, bool>::size(
-        *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const SymbolLookupSet::value_type &V) {
-    return SPSArgList<SPSString, bool>::serialize(
-        OB, *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
-  }
-};
-
-template <>
-class TrivialSPSSequenceSerialization<SPSRemoteSymbolLookupSetElement,
-                                      SymbolLookupSet> {
-public:
-  static constexpr bool available = true;
-};
-
-} // namespace llvm::orc::shared
 
 namespace llvm::orc::sps {
 

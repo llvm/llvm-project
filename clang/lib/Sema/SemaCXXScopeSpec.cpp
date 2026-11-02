@@ -853,28 +853,27 @@ bool Sema::ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS,
   return false;
 }
 
-bool Sema::ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
-                                                  const DeclSpec &DS,
-                                                  SourceLocation ColonColonLoc,
-                                                  QualType Type) {
+ParsedType Sema::ActOnCXXNestedNameSpecifierIndexedPack(
+    CXXScopeSpec &SS, const DeclSpec &DS, TypeSourceInfo *PatternLoc,
+    SourceLocation ColonColonLoc, QualType Type) {
   if (SS.isInvalid() || DS.getTypeSpecType() == DeclSpec::TST_error)
-    return true;
+    return ParsedType();
 
   assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
 
   if (Type.isNull())
-    return true;
+    return ParsedType();
 
   assert(SS.isEmpty());
 
   TypeLocBuilder TLB;
-  TLB.pushTrivial(getASTContext(),
-                  cast<PackIndexingType>(Type.getTypePtr())->getPattern(),
-                  DS.getBeginLoc());
+  TLB.pushFullCopy(PatternLoc->getTypeLoc());
   PackIndexingTypeLoc PIT = TLB.push<PackIndexingTypeLoc>(Type);
   PIT.setEllipsisLoc(DS.getEllipsisLoc());
-  SS.Make(Context, TLB.getTypeLocInContext(Context, Type), ColonColonLoc);
-  return false;
+  TypeSourceInfo *TSI = TLB.getTypeSourceInfo(Context, Type);
+  if (ColonColonLoc.isValid())
+    SS.Make(Context, TSI->getTypeLoc(), ColonColonLoc);
+  return CreateParsedType(Type, TSI);
 }
 
 bool Sema::IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,

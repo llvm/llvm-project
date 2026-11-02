@@ -1651,8 +1651,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_MEMCHECK]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 5
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP1]], 5
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], -1
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = sub i64 [[OUT_OFFSET]], 1
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]

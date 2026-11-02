@@ -649,10 +649,11 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     MIB.add(predOps(ARMCC::AL));
   };
 
-  auto addGOTMemOperand = [this, &MF, Alignment](MachineInstrBuilder &MIB) {
+  auto addGOTMemOperand = [&MF, Alignment](MachineInstrBuilder &MIB) {
+    const DataLayout &DL = MF.getDataLayout();
     MIB.addMemOperand(MF.getMachineMemOperand(
         MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad,
-        TM.getProgramPointerSize(), Alignment));
+        DL.getPointerSize(DL.getProgramAddressSpace()), Alignment));
   };
 
   if (TM.isPositionIndependent()) {

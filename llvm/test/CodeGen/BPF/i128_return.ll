@@ -7,8 +7,7 @@ define i64 @bar(i64 %a, i64 %b) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    call foo
-; CHECK-NEXT:    r2 += r0
-; CHECK-NEXT:    r0 = r2
+; CHECK-NEXT:    r0 += r2
 ; CHECK-NEXT:    exit
 entry:
     %c = call i128 @foo(i64 %a, i64 %b)
@@ -33,8 +32,8 @@ define i128 @foo(i64 %a, i64 %b) {
 ; CHECK-NEXT:    r2 s>>= 63
 ; CHECK-NEXT:    r1 s>>= 63
 ; CHECK-NEXT:    r1 += r2
-; CHECK-NEXT:    r1 += r3
-; CHECK-NEXT:    r2 = r1
+; CHECK-NEXT:    r3 += r1
+; CHECK-NEXT:    r2 = r3
 ; CHECK-NEXT:    exit
 entry:
     %a1 = sext i64 %a to i128

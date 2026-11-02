@@ -15,7 +15,7 @@ void test_delete_array(int *ptr) {
 // CIR-BEFORE:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
 // CIR-BEFORE:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!s32i>
 // CIR-BEFORE:   cir.if %[[NOT_NULL]] {
-// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!s32i> {delete_fn = @_ZdaPv, delete_params = #cir.usual_delete_params<>
+// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!s32i> delete_fn(@_ZdaPv)
 // CIR-BEFORE:   }
 
 // CIR: cir.func {{.*}} @_Z17test_delete_arrayPi
@@ -65,7 +65,7 @@ void test_simple_delete_array(SimpleArrDelete *ptr) {
 // CIR-BEFORE:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_SimpleArrDelete>
 // CIR-BEFORE:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!rec_SimpleArrDelete>
 // CIR-BEFORE:   cir.if %[[NOT_NULL]] {
-// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_SimpleArrDelete> {delete_fn = @_ZN15SimpleArrDeletedaEPv, delete_params = #cir.usual_delete_params<>
+// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_SimpleArrDelete> delete_fn(@_ZN15SimpleArrDeletedaEPv)
 // CIR-BEFORE:   }
 
 // CIR: cir.func {{.*}} @_Z24test_simple_delete_arrayP15SimpleArrDelete
@@ -116,7 +116,7 @@ void test_sized_array_delete(SizedArrayDelete *ptr) {
 // CIR-BEFORE:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_SizedArrayDelete>
 // CIR-BEFORE:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!rec_SizedArrayDelete>
 // CIR-BEFORE:   cir.if %[[NOT_NULL]] {
-// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_SizedArrayDelete> {delete_fn = @_ZN16SizedArrayDeletedaEPvm, delete_params = #cir.usual_delete_params<size = true>
+// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_SizedArrayDelete> delete_fn(@_ZN16SizedArrayDeletedaEPvm) delete_params<size = true>
 // CIR-BEFORE:   }
 
 // CIR: cir.func {{.*}} @_Z23test_sized_array_deleteP16SizedArrayDelete
@@ -182,10 +182,10 @@ void test_delete_array_destructed(Destructed *ptr) {
 // CIR-BEFORE:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_Destructed>
 // CIR-BEFORE:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!rec_Destructed>
 // CIR-BEFORE:   cir.if %[[NOT_NULL]] {
-// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_Destructed> {
-// CIR-BEFORE-SAME:       delete_fn = @_ZdaPvm,
-// CIR-BEFORE-SAME:       delete_params = #cir.usual_delete_params<size = true>,
-// CIR-BEFORE-SAME:       element_dtor = @_ZN10DestructedD1Ev}
+// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_Destructed>
+// CIR-BEFORE-SAME:       delete_fn(@_ZdaPvm)
+// CIR-BEFORE-SAME:       delete_params<size = true>
+// CIR-BEFORE-SAME:       element_dtor(@_ZN10DestructedD1Ev)
 // CIR-BEFORE:   }
 
 // CIR: cir.func {{.*}} @_Z28test_delete_array_destructedP10Destructed

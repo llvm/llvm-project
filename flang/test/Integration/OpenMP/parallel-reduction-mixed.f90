@@ -28,7 +28,7 @@ end subroutine proc
 !CHECK: call void (ptr, i32, ptr, ...)
 !CHECK-SAME: @__kmpc_fork_call(ptr {{.*}}, i32 1, ptr @[[OMP_PAR:.*]], {{.*}})
 
-!CHECK: define internal void @[[OMP_PAR]](ptr {{.*}} %[[TID_ADDR:.*]], ptr noalias
+!CHECK: define internal void @[[OMP_PAR]](ptr {{[^,]*}} %[[TID_ADDR:[^,]+]], ptr noalias
 !CHECK:  %[[TID_LOCAL:.*]] = alloca i32
 !CHECK:  %[[TID:.*]] = load i32, ptr %[[TID_ADDR]]
 !CHECK:  store i32 %[[TID]], ptr %[[TID_LOCAL]]

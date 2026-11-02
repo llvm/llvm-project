@@ -14,6 +14,8 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
+#include "OffloadAPI.h"
+
 #include "Shared/APITypes.h"
 #include "Shared/Environment.h"
 #include "Shared/SourceInfo.h"
@@ -130,20 +132,29 @@ private:
   using PostProcFuncTy = std::function<int()>;
   llvm::SmallVector<PostProcFuncTy> PostProcessingFunctions;
 
-  __tgt_async_info AsyncInfo;
+  ol_queue_handle_t Queue = nullptr;
   DeviceTy &Device;
 
 public:
   /// Synchronization method to be used.
   SyncTy SyncType;
 
-  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING)
-      : Device(Device), SyncType(SyncType) {}
-  ~AsyncInfoTy() { synchronize(); }
+  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING);
+  ~AsyncInfoTy();
+
+  // If we ever need to enable one of this methods we need to ensure
+  // that the underlying queue is not freed more than once.
+  AsyncInfoTy(const AsyncInfoTy &) = delete;
+  AsyncInfoTy &operator=(const AsyncInfoTy &) = delete;
+  AsyncInfoTy(AsyncInfoTy &&) = delete;
+  AsyncInfoTy &operator=(AsyncInfoTy &&) = delete;
 
   /// Implicit conversion to the __tgt_async_info which is used in the
   /// plugin interface.
-  operator __tgt_async_info *() { return &AsyncInfo; }
+  operator __tgt_async_info *();
+
+  /// Get the underlying queue handle.
+  ol_queue_handle_t getQueue() const { return Queue; }
 
   /// Synchronize all pending actions.
   ///

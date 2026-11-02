@@ -106,9 +106,9 @@ define i1 @shl_to_shr_eq_i32_s3_fail(i32 %x) {
 define i1 @shl_to_shr_ne_i32_s16(i32 %x) {
 ; CHECK-NOBMI-LABEL: shl_to_shr_ne_i32_s16:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movzwl %di, %eax
+; CHECK-NOBMI-NEXT:    movl %edi, %eax
 ; CHECK-NOBMI-NEXT:    shrl $16, %edi
-; CHECK-NOBMI-NEXT:    cmpl %edi, %eax
+; CHECK-NOBMI-NEXT:    cmpw %di, %ax
 ; CHECK-NOBMI-NEXT:    setne %al
 ; CHECK-NOBMI-NEXT:    retq
 ;
@@ -286,9 +286,9 @@ define i1 @shr_to_shl_eq_i64_s7(i64 %x) {
 define i1 @shl_to_shr_ne_i32_s24(i32 %x) {
 ; CHECK-LABEL: shl_to_shr_ne_i32_s24:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    shrl $24, %edi
-; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    cmpb %dil, %al
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %shl = shl i32 %x, 24
