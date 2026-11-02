@@ -351,6 +351,38 @@ func.func @ascending_inclusive_tile(%arg0: memref<128xf32>, %lb: index, %ub: ind
   return
 }
 
+// Test 2-level loop tiling with inclusive upper bounds, the form of a Fortran
+// DO loop nest: each element bound subtracts one from its tile's edge, and
+// both the tile group and the element group keep the inclusive upper bounds.
+
+// CHECK-LABEL: func.func @nested_inclusive_tile
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         acc.loop gang control(%[[I:.*]] : index, %[[J:.*]] : index) = (%[[C1]], %[[C1]] : index, index) to (%[[UB0:.*]], %[[UB1:.*]] : index, index) step (%[[C8]], %[[C4]] : index, index) {
+// CHECK:           %[[STEPPED0:.*]] = arith.addi %[[I]], %[[C8]] : index
+// CHECK:           %[[EDGE0:.*]] = arith.subi %[[STEPPED0]], %{{.*}} : index
+// CHECK:           %[[MUB0:.*]] = arith.minsi %[[UB0]], %[[EDGE0]] : index
+// CHECK:           %[[STEPPED1:.*]] = arith.addi %[[J]], %[[C4]] : index
+// CHECK:           %[[EDGE1:.*]] = arith.subi %[[STEPPED1]], %{{.*}} : index
+// CHECK:           %[[MUB1:.*]] = arith.minsi %[[UB1]], %[[EDGE1]] : index
+// CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to (%[[MUB0]], %[[MUB1]] : index, index) step (%[[C1]], %[[C1]] : index, index) {
+// CHECK:             acc.yield
+// CHECK:           } inclusiveUpperbound(array<i1: true, true>) independent
+// CHECK:           acc.yield
+// CHECK:         } inclusiveUpperbound(array<i1: true, true>) independent
+func.func @nested_inclusive_tile(%arg0: memref<?x?xf32>, %ub0: index, %ub1: index) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %cst = arith.constant 1.0 : f32
+  acc.loop gang vector tile({%c4 : index, %c8 : index}) control(%i : index, %j : index) = (%c1, %c1 : index, index) to (%ub0, %ub1 : index, index) step (%c1, %c1 : index, index) {
+    memref.store %cst, %arg0[%i, %j] : memref<?x?xf32>
+    acc.yield
+  } inclusiveUpperbound(array<i1: true, true>) independent
+  return
+}
+
 // Test a step whose sign is only known at run time: both clamps are computed
 // and selected on the sign.
 
