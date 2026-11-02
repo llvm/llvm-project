@@ -304,6 +304,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
   bool IsWholeWaveFunction = false;
+  bool HasVGPRAsMemoryAccess = false;
 
   std::optional<unsigned> DynamicVGPRBlockSize;
   unsigned ScratchReservedForDynamicVGPRs = 0;
@@ -371,6 +372,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
+    YamlIO.mapOptional("hasVGPRAsMemoryAccess", MFI.HasVGPRAsMemoryAccess,
+                       false);
     YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
   }
 };
@@ -489,6 +492,10 @@ private:
   bool HasSpilledVGPRs = false;
   bool HasNonSpillStackObjects = false;
   bool IsStackRealigned = false;
+
+  // Whatever creates the indexed pseudos of a VGPR "as memory" access must set
+  // this: AMDGPULowerVGPREncoding skips functions without it.
+  bool HasVGPRAsMemoryAccess = false;
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
@@ -1125,6 +1132,10 @@ public:
   void setIsStackRealigned(bool Realigned = true) {
     IsStackRealigned = Realigned;
   }
+
+  bool hasVGPRAsMemoryAccess() const { return HasVGPRAsMemoryAccess; }
+
+  void setHasVGPRAsMemoryAccess() { HasVGPRAsMemoryAccess = true; }
 
   unsigned getNumSpilledSGPRs() const {
     return NumSpilledSGPRs;

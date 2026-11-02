@@ -46,6 +46,7 @@
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
@@ -648,11 +649,13 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   // Lowered on every subtarget, and first, so the MSB work below sees the
   // moves like any other instruction.
   bool Changed = false;
-  for (auto &MBB : MF) {
-    for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
-      if (isa<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
-        lowerLoadStoreIdx(MI);
-        Changed = true;
+  if (MF.getInfo<SIMachineFunctionInfo>()->hasVGPRAsMemoryAccess()) {
+    for (auto &MBB : MF) {
+      for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
+        if (isa<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+          lowerLoadStoreIdx(MI);
+          Changed = true;
+        }
       }
     }
   }

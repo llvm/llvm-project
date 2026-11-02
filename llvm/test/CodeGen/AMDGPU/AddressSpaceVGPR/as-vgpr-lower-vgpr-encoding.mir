@@ -9,6 +9,8 @@
 ---
 name: load_past_end
 tracksRegLiveness: true
+machineFunctionInfo:
+  hasVGPRAsMemoryAccess: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -26,6 +28,8 @@ body: |
 ---
 name: store_straddling_end
 tracksRegLiveness: true
+machineFunctionInfo:
+  hasVGPRAsMemoryAccess: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr4_vgpr5_vgpr6_vgpr7
@@ -46,6 +50,8 @@ body: |
 ---
 name: gpr_idx_load_past_end
 tracksRegLiveness: true
+machineFunctionInfo:
+  hasVGPRAsMemoryAccess: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -59,5 +65,23 @@ body: |
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0
     $vgpr0 = V_LOAD_IDX_GPR_IDX_B32 $sgpr0, 300, implicit-def $m0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    S_ENDPGM 0, implicit $vgpr0
+...
+
+# Without hasVGPRAsMemoryAccess the pass does not look for the pseudos.
+---
+name: load_without_flag
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: load_without_flag
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $m0 = S_MOV_B32 $sgpr0
+    ; CHECK-NEXT: $vgpr0 = V_LOAD_IDX_B32 0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0
+    $m0 = S_MOV_B32 $sgpr0
+    $vgpr0 = V_LOAD_IDX_B32 0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
     S_ENDPGM 0, implicit $vgpr0
 ...
