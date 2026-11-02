@@ -4,6 +4,7 @@
 ---
 name:            vcmp_with_opposite_cond
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: vcmp_with_opposite_cond
   ; CHECK: bb.0:
@@ -249,6 +250,7 @@ body:             |
 ---
 name:            vcmp_with_opposite_cond_and_swapped_operands
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: vcmp_with_opposite_cond_and_swapped_operands
   ; CHECK: bb.0:
@@ -354,6 +356,7 @@ body:             |
 ---
 name:            triple_vcmp
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ;
   ; Tests that, when there are 2 "VPNOT-like VCMPs" in a row, only the first
@@ -373,6 +376,7 @@ body:             |
 ---
 name:            killed_vccr_values
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: killed_vccr_values
   ; CHECK: bb.0:
@@ -436,6 +440,7 @@ body:             |
 ---
 name:            predicated_vcmps
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: predicated_vcmps
   ; CHECK: bb.0:
@@ -519,6 +524,7 @@ body:             |
 ---
 name:            flt_with_swapped_operands
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: flt_with_swapped_operands
   ; CHECK: bb.0:
@@ -572,6 +578,7 @@ body:             |
 ---
 name:            different_opcodes
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ;
   ; Tests that a "VPNOT-like VCMP" with an opcode different from the previous VCMP
@@ -589,6 +596,7 @@ body:             |
 ---
 name:            incorrect_condcode
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: incorrect_condcode
   ; CHECK: bb.0:
@@ -622,6 +630,7 @@ body:             |
 ---
 name:            vpr_or_vccr_write_between_vcmps
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ;
   ; Tests that a "VPNOT-like VCMP" will not be transformed into a VPNOT if
@@ -641,6 +650,7 @@ body:             |
 ---
 name:            spill_prevention
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: spill_prevention
   ; CHECK: bb.0:
@@ -782,6 +792,7 @@ body:             |
 ---
 name:            spill_prevention_multi
 alignment:       4
+tracksRegLiveness: false
 body:             |
   bb.0:
     ;
@@ -838,6 +849,7 @@ body:             |
 ---
 name:            spill_prevention_predicated_vpnots
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: spill_prevention_predicated_vpnots
   ; CHECK: bb.0:
@@ -879,6 +891,7 @@ body:             |
 ---
 name:            spill_prevention_copies
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ;
   ; Tests that VPNOTs are replaced by a COPY instead of inserting a VPNOT
@@ -905,6 +918,7 @@ body:             |
 ---
 name:            spill_prevention_vpnot_reordering
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: spill_prevention_vpnot_reordering
   ; CHECK: [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
@@ -932,6 +946,7 @@ body:             |
 ---
 name:            spill_prevention_stop_after_write
 alignment:       4
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: spill_prevention_stop_after_write
   ; CHECK: bb.0:
@@ -986,6 +1001,7 @@ body:             |
 ---
 name:            reuse_kill_flags
 alignment:       4
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reuse_kill_flags
@@ -1008,6 +1024,7 @@ body:             |
 ---
 name:            kill_flags_2
 alignment:       4
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: kill_flags_2
