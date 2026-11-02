@@ -33,7 +33,7 @@ body:             |
     %3:intregs = PHI %1, %bb.0, %2, %bb.2
     %4:intregs = PHI %2, %bb.0, %5, %bb.2
     %6:intregs = S2_lsr_i_r %3, 1
-    S2_storerb_io %0, 0, killed %6
+    S2_storerb_io %0, 0, %6
     S4_storerb_rr %0, %4, 0, %2
     %5:intregs = A2_tfrsi 1
     ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
