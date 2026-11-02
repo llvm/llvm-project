@@ -87,10 +87,9 @@
          and	r17, qword ptr [r16 + 123], 127
 
 ## MRM5m
-## AsmParser is buggy for this KNC instruction
-# C;HECK: vscatterpf0dps	{k1}, zmmword ptr [r16 + zmm0]
-# C;HECK: encoding: [0x62,0xfa,0x7d,0x49,0xc6,0x2c,0x00]
-#         vscatterpf0dps	{k1}, zmmword ptr [r16 + zmm0]
+# CHECK: vscatterpf0dps	dword ptr [r16 + zmm0] {k1}
+# CHECK: encoding: [0x62,0xfa,0x7d,0x49,0xc6,0x2c,0x00]
+         vscatterpf0dps	dword ptr [r16 + zmm0] {k1}
 
 # CHECK: sub	r17, qword ptr [r16 + 123], 127
 # CHECK: encoding: [0x62,0xfc,0xf4,0x10,0x83,0x68,0x7b,0x7f]

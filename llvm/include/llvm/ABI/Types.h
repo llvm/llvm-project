@@ -215,10 +215,19 @@ public:
 };
 
 class PointerType : public PointerLikeType {
+  bool HasAddressSpaceQualifier;
+
 public:
-  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0)
+  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0,
+              bool HasAddressSpaceQualifier = false)
       : PointerLikeType(TypeKind::Pointer, TypeSize::getFixed(Size), ABIAlign,
-                        AddressSpace) {}
+                        AddressSpace),
+        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {
+    assert((HasAddressSpaceQualifier || AddressSpace == 0) &&
+           "an unqualified pointer is in address space 0");
+  }
+
+  bool hasAddressSpaceQualifier() const { return HasAddressSpaceQualifier; }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Pointer;
@@ -487,9 +496,10 @@ public:
   }
 
   const PointerType *getPointerType(uint64_t Size, Align Align,
-                                    unsigned Addrspace = 0) {
+                                    unsigned Addrspace = 0,
+                                    bool HasAddressSpaceQualifier = false) {
     return new (Allocator.Allocate<PointerType>())
-        PointerType(Size, Align, Addrspace);
+        PointerType(Size, Align, Addrspace, HasAddressSpaceQualifier);
   }
 
   const ArrayType *getArrayType(const Type *ElementType, uint64_t NumElements,

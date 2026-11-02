@@ -1,43 +1,7 @@
 # TODO: Clean up this directory and its dependencies
 set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND ProcessUtility)
 
-add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
-  PARTIAL_SOURCES_INTENDED
-  RegisterContext_x86.cpp
-  RegisterInfoFreeBSD_i386.cpp
-  RegisterInfoFreeBSD_powerpc.cpp
-  RegisterInfoFreeBSD_x86_64.cpp
-  RegisterInfoLinux_i386.cpp
-  RegisterInfoLinux_x86_64.cpp
-  RegisterInfoLinux_s390x.cpp
-  RegisterInfoNetBSD_i386.cpp
-  RegisterInfoNetBSD_x86_64.cpp
-  RegisterInfoOpenBSD_i386.cpp
-  RegisterInfoOpenBSD_x86_64.cpp
-  RegisterInfoWindows_i386.cpp
-  RegisterInfoWindows_x86_64.cpp
-  RegisterTypeDetector_arm64.cpp
-  RegisterInfos_x86_64_with_base_shared.cpp
-  RegisterInfo_arm.cpp
-  RegisterInfo_arm64.cpp
-  RegisterInfo_loongarch64.cpp
-  RegisterInfo_ppc64le.cpp
-  RegisterInfo_ppc64.cpp
-  RegisterInfo_riscv32.cpp
-  RegisterInfo_riscv64.cpp
-  RegisterInfoDynamic_riscv32.cpp
-
-  LINK_COMPONENTS
-    Support
-    TargetParser
-  LINK_LIBS
-    lldbUtility
-  ALLOWED_INTERNAL_DEPENDENCIES
-    lldbUtility
-  )
-
 add_lldb_library(lldbPluginProcessUtility
-  PARTIAL_SOURCES_INTENDED
   AuxVector.cpp
   FreeBSDSignals.cpp
   GDBRemoteSignals.cpp
@@ -48,12 +12,6 @@ add_lldb_library(lldbPluginProcessUtility
   LinuxSignals.cpp
   MemoryTagManagerAArch64MTE.cpp
   NativeProcessSoftwareSingleStep.cpp
-  NativeRegisterContextDBReg.cpp
-  NativeRegisterContextDBReg_arm.cpp
-  NativeRegisterContextDBReg_arm64.cpp
-  NativeRegisterContextDBReg_loongarch.cpp
-  NativeRegisterContextDBReg_x86.cpp
-  NativeRegisterContextRegisterInfo.cpp
   NetBSDSignals.cpp
   OpenBSDSignals.cpp
   RegisterContextDarwin_arm.cpp

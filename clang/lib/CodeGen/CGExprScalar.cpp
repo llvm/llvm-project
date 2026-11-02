@@ -371,8 +371,11 @@ public:
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
   Value *EmitLoadOfLValue(const Expr *E) {
-    Value *V = EmitLoadOfLValue(EmitCheckedLValue(E, CodeGenFunction::TCK_Load),
-                                E->getExprLoc());
+    LValue LV = EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+    if (CGF.CurLoadedLValueCapture && CGF.CurLoadedLValueCapture->E == E)
+      CGF.CurLoadedLValueCapture->LV = LV;
+
+    Value *V = EmitLoadOfLValue(LV, E->getExprLoc());
 
     EmitLValueAlignmentAssumption(E, V);
     return V;
