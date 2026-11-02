@@ -658,16 +658,14 @@ public:
   void setIndeterminateStateAtFunctionBoundary(bool OnReturn) {
     // On return the ABI leaves VScnt/STOREcnt possibly outstanding. On entry
     // we wait for all counters except VScnt/StoreCnt.
-    if (Context->ST.hasVscnt() || Context->ST.hasExtendedWaitCounts()) {
+    if (Context->ST.hasVscnt() || Context->ST.hasExtendedWaitCounts())
       setIndeterminate(AMDGPU::STORE_CNT);
-    }
 
     // On return VMCnt/LOADcnt can be outstanding if there're trailing
     // GLOBAL_INV or BUFFER_INV; see also simplifyVmemInvOnlyWait.
     if (OnReturn && (Context->ST.hasBufferInvInst() ||
-                     Context->ST.hasExtendedWaitCounts())) {
+                     Context->ST.hasExtendedWaitCounts()))
       setIndeterminate(AMDGPU::LOAD_CNT, HWEvents::VMEM_INV_ACCESS);
-    }
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
