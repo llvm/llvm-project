@@ -421,7 +421,13 @@ JITLoaderSP JITLoaderGDB::CreateInstance(Process *process, bool force) {
       break;
     case EnableJITLoaderGDB::eEnableJITLoaderGDBDefault:
       ArchSpec arch(process->GetTarget().GetArchitecture());
-      enable = arch.GetTriple().getVendor() != llvm::Triple::Apple;
+      // Do not load the plugin for post-mortem processes because they do not
+      // support runtime-generated code. `JITLoaderGDB::DidAttach()` attempts
+      // to set up symbolic breakpoints, which may force loading of more debug
+      // information than necessary. Disabling the plugin speeds up loading of
+      // core dumps and other post-mortem files.
+      enable = process->IsLiveDebugSession() &&
+               arch.GetTriple().getVendor() != llvm::Triple::Apple;
       break;
   }
   if (enable)
