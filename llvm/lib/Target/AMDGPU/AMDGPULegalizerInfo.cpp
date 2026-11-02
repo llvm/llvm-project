@@ -23,6 +23,7 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -36,7 +37,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-
 #define DEBUG_TYPE "amdgpu-legalinfo"
 
 using namespace llvm;
@@ -5561,6 +5561,28 @@ bool AMDGPULegalizerInfo::legalizeSignedDIV_REM(MachineInstr &MI,
   const unsigned FirstSrcOpIdx = MI.getNumExplicitDefs();
   Register LHS = MI.getOperand(FirstSrcOpIdx).getReg();
   Register RHS = MI.getOperand(FirstSrcOpIdx + 1).getReg();
+
+  // NEW: Fast path for 64-bit operands that fit in 32 bits
+  if (Ty == I64) {
+    GISelValueTracking KB(*MI.getMF());
+    if (KB.computeNumSignBits(LHS) > 33 && KB.computeNumSignBits(RHS) > 32) {
+      auto TruncLHS = B.buildTrunc(I32, LHS);
+      auto TruncRHS = B.buildTrunc(I32, RHS);
+
+      if (MI.getOpcode() == AMDGPU::G_SDIVREM) {
+        auto DivRem32 =
+            B.buildInstr(AMDGPU::G_SDIVREM, {I32, I32}, {TruncLHS, TruncRHS});
+        B.buildSExt(MI.getOperand(0).getReg(), DivRem32.getReg(0));
+        B.buildSExt(MI.getOperand(1).getReg(), DivRem32.getReg(1));
+      } else {
+        auto DivRem32 =
+            B.buildInstr(MI.getOpcode(), {I32}, {TruncLHS, TruncRHS});
+        B.buildSExt(MI.getOperand(0).getReg(), DivRem32);
+      }
+      MI.eraseFromParent();
+      return true;
+    }
+  }
 
   auto SignBitOffset = B.buildConstant(I32, Ty.getSizeInBits() - 1);
   auto LHSign = B.buildAShr(Ty, LHS, SignBitOffset);
