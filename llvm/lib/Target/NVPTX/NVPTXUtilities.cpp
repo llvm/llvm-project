@@ -42,7 +42,8 @@ Align llvm::getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL) {
   return std::min(Align(128), DL.getABITypeAlign(ArgTy));
 }
 
-static Align getByValParamAlignFloor(const Function *F, LLVMContext &Ctx) {
+static Align getByValParamAlignFloor(const Function *F,
+                                     const LLVMContext &Ctx) {
   // Old ptx versions have a bug. When PTX code takes address of
   // byval parameter with alignment < 4, ptxas generates code to
   // spill argument into memory. Alas on sm_50+ ptxas generates

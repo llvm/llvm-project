@@ -26,11 +26,11 @@ defm : ValueField<"nvptx-traverse-address-aliasing-limit", "unsigned", "6",
 // One way around that is to create such copies early on, and let them percolate
 // through the optimizations. The copying itself will never trigger creation of
 // another copy later on, as the reads are allowed. If LLVM can eliminate it,
-// it's a win. It the full optimization pipeline can't remove the copy, that's
+// it's a win. If the full optimization pipeline can't remove the copy, that's
 // as good as it gets in terms of the effort we could've done, and it's
 // certainly a much better effort than what we do now.
 //
-// This early injection of the copies has potential to create undesireable
+// This early injection of the copies has potential to create undesirable
 // side-effects, so it's disabled by default, for now, until it sees more
 // testing.
 defm : BoolField<"nvptx-early-byval-copy", "false",
@@ -72,14 +72,14 @@ defm : BoolField<"nvptx-allow-ftz-atomics", "false",
 defm : BoolField<"nvptx-approx-log2f32", "false",
   "NVPTX Specific: whether to use lg2.approx for log2">;
 defm : OptionalValueField<"nvptx-fma-level", "unsigned",
-  "NVPTX Specific: FMA contraction (0: don't do it 1: do it  2: do it aggressively">;
+  "NVPTX Specific: FMA contraction (0: don't do it, 1: do it, 2: do it aggressively)">;
 defm : OptionalEnumField<"nvptx-prec-divf32", "NVPTX::DivPrecisionLevel",
   "0,1,2,3", ["NVPTX::DivPrecisionLevel::Approx", "NVPTX::DivPrecisionLevel::Full", "NVPTX::DivPrecisionLevel::IEEE754", "NVPTX::DivPrecisionLevel::IEEE754_NoFTZ"],
   "NVPTX Specific: Override the precision of the lowering for f32 fdiv">;
 defm : OptionalBoolField<"nvptx-prec-sqrtf32",
   "NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn.">;
 defm : BoolField<"nvptx-sched4reg", "false",
-  "NVPTX Specific: schedule for register pressue">;
+  "NVPTX Specific: schedule for register pressure">;
 
 // NVPTXSubtarget.cpp
 defm : BoolField<"nvptx-no-f16-math", "false",
@@ -88,7 +88,7 @@ defm : BoolField<"nvptx-no-f32x2", "false",
   "NVPTX Specific: Disable generation of f32x2 instructions and registers.">;
 
 // NVPTXTargetMachine.cpp
-// NVPTX IR Peephole is a new pass; this option will lets us turn it off in case
+// NVPTX IR Peephole is a new pass; this option will let us turn it off in case
 // we encounter some issues.
 defm : BoolField<"disable-nvptx-ir-peephole", "false",
   "Disable NVPTX IR Peephole">;
@@ -107,7 +107,7 @@ defm : BoolField<"nvptx-force-min-byval-param-align", "false",
 // NVVMReflect.cpp
 // Allow users to specify additional key/value pairs to reflect. These key/value
 // pairs are the last to be added to the ReflectMap, and therefore will take
-// precedence over initial values (i.e. __CUDA_FTZ from module medadata and
+// precedence over initial values (i.e. __CUDA_FTZ from module metadata and
 // __CUDA_ARCH from SmVersion).
 defm : ListField<"nvvm-reflect-add", "StringRef",
   "A key=value pair. Replace __nvvm_reflect(name) with value.">,
