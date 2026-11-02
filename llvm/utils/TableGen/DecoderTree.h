@@ -10,19 +10,23 @@
 #define LLVM_UTILS_TABLEGEN_DECODERTREE_H
 
 #include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <map>
 #include <memory>
+#include <string>
 
 namespace llvm {
 
 class InstructionEncoding;
 
 using PredicateSet = SetVector<CachedHashString>;
-using DecoderSet = SetVector<CachedHashString>;
+// Maps a decoder's debug-free body (the de-duplication key) to the body that is
+// emitted, so debug logging cannot change decoder sharing.
+using DecoderSet = MapVector<CachedHashString, std::string>;
 
 /// Context shared across decoder trees.
 /// Predicates and decoders are shared across decoder trees to provide more
@@ -39,9 +43,11 @@ struct DecoderContext {
     return std::distance(Predicates.begin(), I);
   }
 
-  unsigned getDecoderIndex(StringRef Decoder) {
-    Decoders.insert(CachedHashString(Decoder));
-    DecoderSet::const_iterator I = find(Decoders, Decoder);
+  // If \p DedupKey was seen before, the first \p DecoderBody wins.
+  unsigned getDecoderIndex(StringRef DedupKey, StringRef DecoderBody) {
+    CachedHashString Key(DedupKey);
+    Decoders.insert({Key, DecoderBody.str()});
+    auto I = Decoders.find(Key);
     return std::distance(Decoders.begin(), I);
   }
 };

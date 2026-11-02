@@ -1,0 +1,8 @@
+# REQUIRES: asserts
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -debug-only=amdgpu-disassembler < %s 2>&1 | FileCheck %s
+#
+# Encodings wider than 64 bits are printed whole, in zero-padded 64-bit chunks.
+
+# CHECK: decodeInstruction: insn = 0xccbbaa998877665544332211
+
+0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc
