@@ -17,7 +17,6 @@
 #include <optional>
 
 namespace mlir {
-
 class UnrealizedConversionCastOp;
 class VectorType;
 class OpOperand;
@@ -38,7 +37,6 @@ struct uArch;
 } // namespace xegpu
 
 namespace xegpu {
-
 /// Flatten a set of ValueRange into a single SmallVector<Value>
 SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
 
@@ -149,11 +147,12 @@ Value lowerToVectorReductions(TypedValue<VectorType> src,
                               Location loc, PatternRewriter &rewriter);
 
 /// Creates a constant filled with the neutral (identity) value for the
-/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL/AND,
-/// max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and +/-infinity
-/// for float min/max operations. If \p type is a VectorType, returns a splat
-/// vector constant; otherwise returns a scalar constant. Returns nullptr if
-/// the element type is incompatible with the requested reduction kind.
+/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL, all ones
+/// for AND, max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and
+/// +/-infinity for float min/max operations. If \p type is a VectorType,
+/// returns a splat vector constant; otherwise returns a scalar constant.
+/// Returns nullptr if the element type is incompatible with the requested
+/// reduction kind.
 Value createReductionNeutralValue(OpBuilder &builder, Location loc, Type type,
                                   vector::CombiningKind kind);
 
@@ -243,12 +242,19 @@ bool requireTranspose(const DistributeLayoutAttr layout,
 /// Returns true if `type` has a static shape and static strides.
 bool hasStaticShapeAndStrides(MemRefType type);
 
+/// Returns `baseAddr + elemOffset * bitWidth / 8`, i.e. advances the byte
+/// address `baseAddr` by `elemOffset` elements of `memrefTy`'s element type.
+/// Sub-byte element types (e.g. i4) are supported. `baseAddr` and `elemOffset`
+/// must have the same index or integer type, which is also the result type.
+Value addElemOffsetInBytes(OpBuilder &builder, Location loc, Value baseAddr,
+                           Value elemOffset, MemRefType memrefTy);
+
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                            SmallVector<int64_t> &expandedUnitDims);
 
-// Checks if dst shape is an expansion of src shape where each dimension in src
-// is split into one or more consecutive dimensions in dst
+// Checks if dst shape is a non-unit expansion of src shape where each
+// dimension in src is split into one or more consecutive dimensions in dst.
 bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                             SmallVector<SmallVector<int64_t>> &splitDimGroups);
 
@@ -304,9 +310,7 @@ void cleanupUnrealizedConversionCasts(
 // dst=[1,4096] -> true, collapseDims=[[],[0,1,2]].
 bool matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                       SmallVector<SmallVector<int64_t>> &collapseDims);
-
 } // namespace xegpu
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_

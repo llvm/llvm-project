@@ -28,6 +28,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
@@ -189,63 +190,17 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   llvm::SmallString<64> Name;
   GlobalDecl D(FD);
 
-  // TODO: This list should be expanded or refactored after all GCC-compatible
-  // std libcall builtins are implemented.
-  static const SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
-      {Builtin::BI__builtin___fprintf_chk, "__fprintf_chkieee128"},
-      {Builtin::BI__builtin___printf_chk, "__printf_chkieee128"},
-      {Builtin::BI__builtin___snprintf_chk, "__snprintf_chkieee128"},
-      {Builtin::BI__builtin___sprintf_chk, "__sprintf_chkieee128"},
-      {Builtin::BI__builtin___vfprintf_chk, "__vfprintf_chkieee128"},
-      {Builtin::BI__builtin___vprintf_chk, "__vprintf_chkieee128"},
-      {Builtin::BI__builtin___vsnprintf_chk, "__vsnprintf_chkieee128"},
-      {Builtin::BI__builtin___vsprintf_chk, "__vsprintf_chkieee128"},
-      {Builtin::BI__builtin_fprintf, "__fprintfieee128"},
-      {Builtin::BI__builtin_printf, "__printfieee128"},
-      {Builtin::BI__builtin_snprintf, "__snprintfieee128"},
-      {Builtin::BI__builtin_sprintf, "__sprintfieee128"},
-      {Builtin::BI__builtin_vfprintf, "__vfprintfieee128"},
-      {Builtin::BI__builtin_vprintf, "__vprintfieee128"},
-      {Builtin::BI__builtin_vsnprintf, "__vsnprintfieee128"},
-      {Builtin::BI__builtin_vsprintf, "__vsprintfieee128"},
-      {Builtin::BI__builtin_fscanf, "__fscanfieee128"},
-      {Builtin::BI__builtin_scanf, "__scanfieee128"},
-      {Builtin::BI__builtin_sscanf, "__sscanfieee128"},
-      {Builtin::BI__builtin_vfscanf, "__vfscanfieee128"},
-      {Builtin::BI__builtin_vscanf, "__vscanfieee128"},
-      {Builtin::BI__builtin_vsscanf, "__vsscanfieee128"},
-      {Builtin::BI__builtin_nexttowardf128, "__nexttowardieee128"},
-  };
-
-  // The AIX library functions frexpl, ldexpl, and modfl are for 128-bit
-  // IBM 'long double' (i.e. __ibm128). Map to the 'double' versions
-  // if it is 64-bit 'long double' mode.
-  static const SmallDenseMap<unsigned, StringRef, 4> AIXLongDouble64Builtins{
-      {Builtin::BI__builtin_frexpl, "frexp"},
-      {Builtin::BI__builtin_ldexpl, "ldexp"},
-      {Builtin::BI__builtin_modfl, "modf"},
-  };
-
   // If the builtin has been declared explicitly with an assembler label,
   // use the mangled name. This differs from the plain label on platforms
   // that prefix labels.
   if (FD->hasAttr<AsmLabelAttr>())
     Name = getMangledName(D);
-  else {
-    // TODO: This mutation should also be applied to other targets other than
-    // PPC, after backend supports IEEE 128-bit style libcalls.
-    if (getTriple().isPPC64() &&
-        &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
-        F128Builtins.contains(BuiltinID))
-      Name = F128Builtins.lookup(BuiltinID);
-    else if (getTriple().isOSAIX() &&
-             &getTarget().getLongDoubleFormat() ==
-                 &llvm::APFloat::IEEEdouble() &&
-             AIXLongDouble64Builtins.contains(BuiltinID))
-      Name = AIXLongDouble64Builtins.lookup(BuiltinID);
-    else
-      Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
-  }
+  else if (StringRef TargetName = CodeGenUtils::getTargetBuiltinLibFunctionName(
+               BuiltinID, getTarget());
+           !TargetName.empty())
+    Name = TargetName;
+  else
+    Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
 
   llvm::FunctionType *Ty =
     cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
@@ -4042,6 +3997,92 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     // General case: fall back to the library function stdc_memreverse8.
     break;
+  }
+
+  // stdc_load8_*: load N bytes from a const unsigned char* and assemble
+  // into an integer using little-endian or big-endian byte order.
+  case Builtin::BIstdc_load8_leu8:
+  case Builtin::BIstdc_load8_les8:
+  case Builtin::BIstdc_load8_beu8:
+  case Builtin::BIstdc_load8_bes8:
+  case Builtin::BIstdc_load8_aligned_leu8:
+  case Builtin::BIstdc_load8_aligned_les8:
+  case Builtin::BIstdc_load8_aligned_beu8:
+  case Builtin::BIstdc_load8_aligned_bes8:
+  case Builtin::BIstdc_load8_leu16:
+  case Builtin::BIstdc_load8_les16:
+  case Builtin::BIstdc_load8_beu16:
+  case Builtin::BIstdc_load8_bes16:
+  case Builtin::BIstdc_load8_aligned_leu16:
+  case Builtin::BIstdc_load8_aligned_les16:
+  case Builtin::BIstdc_load8_aligned_beu16:
+  case Builtin::BIstdc_load8_aligned_bes16:
+  case Builtin::BIstdc_load8_leu32:
+  case Builtin::BIstdc_load8_les32:
+  case Builtin::BIstdc_load8_beu32:
+  case Builtin::BIstdc_load8_bes32:
+  case Builtin::BIstdc_load8_aligned_leu32:
+  case Builtin::BIstdc_load8_aligned_les32:
+  case Builtin::BIstdc_load8_aligned_beu32:
+  case Builtin::BIstdc_load8_aligned_bes32:
+  case Builtin::BIstdc_load8_leu64:
+  case Builtin::BIstdc_load8_les64:
+  case Builtin::BIstdc_load8_beu64:
+  case Builtin::BIstdc_load8_bes64:
+  case Builtin::BIstdc_load8_aligned_leu64:
+  case Builtin::BIstdc_load8_aligned_les64:
+  case Builtin::BIstdc_load8_aligned_beu64:
+  case Builtin::BIstdc_load8_aligned_bes64: {
+    bool IsBE = BuiltinID == Builtin::BIstdc_load8_beu8 ||
+                BuiltinID == Builtin::BIstdc_load8_bes8 ||
+                BuiltinID == Builtin::BIstdc_load8_beu16 ||
+                BuiltinID == Builtin::BIstdc_load8_bes16 ||
+                BuiltinID == Builtin::BIstdc_load8_beu32 ||
+                BuiltinID == Builtin::BIstdc_load8_bes32 ||
+                BuiltinID == Builtin::BIstdc_load8_beu64 ||
+                BuiltinID == Builtin::BIstdc_load8_bes64 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu8 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes8 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu16 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes16 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu32 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes32 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu64 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes64;
+    bool IsAligned = BuiltinID == Builtin::BIstdc_load8_aligned_leu8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes64;
+
+    llvm::Type *IntTy = ConvertType(E->getType());
+    unsigned BitWidth = IntTy->getIntegerBitWidth();
+    assert(
+        (BitWidth == 8 || BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
+        "unexpected bit width for stdc_load8_*");
+    Address Addr = EmitPointerWithAlignment(E->getArg(0));
+    if (IsAligned) {
+      CharUnits TypeAlign = getContext().getTypeAlignInChars(E->getType());
+      Addr = Addr.withAlignment(std::max(Addr.getAlignment(), TypeAlign));
+    }
+    Addr = Addr.withElementType(IntTy);
+    Value *Val = Builder.CreateLoad(Addr);
+    if ((BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
+        IsBE != getTarget().isBigEndian())
+      Val = Builder.CreateCall(CGM.getIntrinsic(Intrinsic::bswap, IntTy), Val);
+
+    return RValue::get(Val);
   }
 
   case Builtin::BI__builtin_constant_p: {

@@ -36,7 +36,7 @@ end subroutine omp_tile01
 ! CHECK:         %[[VAL_16:.*]] = arith.select %[[VAL_14]], %[[VAL_15]], %[[VAL_11]] : i32
 ! CHECK:         %[[VAL_17:.*]] = arith.select %[[VAL_14]], %[[VAL_10]], %[[VAL_9]] : i32
 ! CHECK:         %[[VAL_18:.*]] = arith.select %[[VAL_14]], %[[VAL_9]], %[[VAL_10]] : i32
-! CHECK:         %[[VAL_19:.*]] = arith.subi %[[VAL_18]], %[[VAL_17]] overflow<nuw> : i32
+! CHECK:         %[[VAL_19:.*]] = arith.subi %[[VAL_18]], %[[VAL_17]] : i32
 ! CHECK:         %[[VAL_20:.*]] = arith.divui %[[VAL_19]], %[[VAL_16]] : i32
 ! CHECK:         %[[VAL_21:.*]] = arith.addi %[[VAL_20]], %[[VAL_13]] overflow<nuw> : i32
 ! CHECK:         %[[VAL_22:.*]] = arith.cmpi slt, %[[VAL_18]], %[[VAL_17]] : i32

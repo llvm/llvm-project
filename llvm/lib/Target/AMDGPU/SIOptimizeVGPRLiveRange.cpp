@@ -243,8 +243,9 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
           continue;
 
         Register MOReg = MO.getReg();
-        // We can only optimize AGPR/VGPR virtual register
-        if (MOReg.isPhysical() || !TRI->isVectorRegister(*MRI, MOReg))
+        // We can only optimize VGPR/AGPR/AV virtual registers.
+        if (!MOReg.isVirtual() ||
+            !TRI->hasVectorRegisters(MRI->getRegClass(MOReg)))
           continue;
 
         if (MO.readsReg()) {
@@ -282,7 +283,7 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
         continue;
 
       Register Reg = MO.getReg();
-      if (Reg.isPhysical() || !TRI->isVectorRegister(*MRI, Reg))
+      if (!Reg.isVirtual() || !TRI->hasVectorRegisters(MRI->getRegClass(Reg)))
         continue;
 
       if (isLiveIntoMBB(Reg, Endif)) {
@@ -365,8 +366,9 @@ void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
         continue;
 
       Register MOReg = MO.getReg();
-      // We can only optimize AGPR/VGPR virtual register
-      if (MOReg.isPhysical() || !TRI->isVectorRegister(*MRI, MOReg))
+      // We can only optimize VGPR/AGPR/AV virtual registers.
+      if (!MOReg.isVirtual() ||
+          !TRI->hasVectorRegisters(MRI->getRegClass(MOReg)))
         continue;
 
       if (MO.readsReg()) {
@@ -503,10 +505,6 @@ INITIALIZE_PASS_END(SIOptimizeVGPRLiveRangeLegacy, DEBUG_TYPE,
                     "SI Optimize VGPR LiveRange", false, false)
 
 char &llvm::SIOptimizeVGPRLiveRangeLegacyID = SIOptimizeVGPRLiveRangeLegacy::ID;
-
-FunctionPass *llvm::createSIOptimizeVGPRLiveRangeLegacyPass() {
-  return new SIOptimizeVGPRLiveRangeLegacy();
-}
 
 bool SIOptimizeVGPRLiveRangeLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))

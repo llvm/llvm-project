@@ -249,7 +249,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     if (lex_or_err) {
       // Parse the expression.
       auto tree_or_error = dil::DILParser::Parse(
-          condition.GetText(), std::move(*lex_or_err), exe_ctx.GetFrameRef(),
+          exe_ctx, condition.GetText(), std::move(*lex_or_err),
           lldb::eNoDynamicValues, eDILModeFull);
       if (tree_or_error) {
         m_dil_expr_tree = std::move(*tree_or_error);
@@ -270,9 +270,8 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   // If the expression was parsed successfully, it can be evaluated separately
   // at every breakpoint location hit without having to parse it again.
   if (m_dil_expr_tree) {
-    dil::Interpreter interpreter(exe_ctx.GetTargetSP(), condition.GetText(),
-                                 exe_ctx.GetFrameRef(), lldb::eNoDynamicValues,
-                                 0);
+    dil::Interpreter interpreter(exe_ctx, condition.GetText(),
+                                 lldb::eNoDynamicValues, 0);
     // Evaluate the expression by DIL.
     auto valobj_or_error = interpreter.EvaluateTree(m_dil_expr_tree);
     if (valobj_or_error) {

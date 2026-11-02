@@ -725,6 +725,35 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
   return reductionResult;
 }
 
+/// Returns the neutral value of the float min or max reduction `kind` over
+/// elements of `semantics`. Builds only values the format can represent:
+/// - A kind that ignores NaN operands uses a quiet NaN, if the format has one.
+/// - Otherwise it uses the infinity that never wins.
+/// - A format without that infinity uses its lowest (for max) or highest (for
+///   min) value. That value never wins either.
+static APFloat getMinMaxNeutral(const llvm::fltSemantics &semantics,
+                                vector::CombiningKind kind) {
+  bool isMax = kind == vector::CombiningKind::MAXIMUMF ||
+               kind == vector::CombiningKind::MAXNUMF ||
+               kind == vector::CombiningKind::MAXIMUMNUMF;
+  bool ignoresNaN = kind != vector::CombiningKind::MINIMUMF &&
+                    kind != vector::CombiningKind::MAXIMUMF;
+  if (ignoresNaN && APFloat::semanticsHasNaN(semantics))
+    return APFloat::getQNaN(semantics);
+  if (!isMax)
+    return APFloat::semanticsHasInf(semantics) ? APFloat::getInf(semantics)
+                                               : APFloat::getLargest(semantics);
+  // An unsigned format has no negative values. Its lowest value is zero, or
+  // its smallest positive value if it has no zero.
+  if (!APFloat::semanticsHasSignedRepr(semantics))
+    return APFloat::semanticsHasZero(semantics)
+               ? APFloat::getZero(semantics)
+               : APFloat::getSmallest(semantics);
+  return APFloat::semanticsHasInf(semantics)
+             ? APFloat::getInf(semantics, /*Negative=*/true)
+             : APFloat::getLargest(semantics, /*Negative=*/true);
+}
+
 Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
                                          Type type,
                                          vector::CombiningKind kind) {
@@ -747,8 +776,15 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return makeConst(builder.getZeroAttr(elemTy));
 
   case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
     return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::AND:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getAllOnes(intTy.getWidth())));
+    if (elemTy.isIndex())
+      return makeConst(builder.getIndexAttr(-1));
+    return nullptr;
 
   case vector::CombiningKind::MINSI:
     if (auto intTy = dyn_cast<IntegerType>(elemTy))
@@ -769,25 +805,14 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return nullptr;
 
   case vector::CombiningKind::MINIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
-    return nullptr;
-
   case vector::CombiningKind::MAXIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy,
-          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
-    return nullptr;
-
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMNUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
+          elemTy, getMinMaxNeutral(floatTy.getFloatSemantics(), kind)));
     return nullptr;
   }
   return nullptr;
@@ -821,7 +846,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3p>(uArch))
     return false;
   if (!layout)
     return false;
@@ -838,6 +863,39 @@ bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
   int64_t offset;
   return succeeded(type.getStridesAndOffset(strides, offset)) &&
          llvm::none_of(strides, ShapedType::isDynamic);
+}
+
+Value xegpu::addElemOffsetInBytes(OpBuilder &builder, Location loc,
+                                  Value baseAddr, Value elemOffset,
+                                  MemRefType memrefTy) {
+  Type type = elemOffset.getType();
+  assert(baseAddr.getType() == type &&
+         "expected base address and offset of the same type");
+  auto makeConst = [&](int64_t value) -> Value {
+    return arith::ConstantOp::create(builder, loc, type,
+                                     builder.getIntegerAttr(type, value));
+  };
+
+  // finalAddr = baseAddr + elemOffset * bitWidth / 8
+  unsigned elemBits = memrefTy.getElementTypeBitWidth();
+  Value byteOffset;
+  if (elemBits % 8 == 0) {
+    // For byte-sized elements divide by 8 statically so that the division is
+    // folded into the constant:
+    //   finalAddr = baseAddr + elemOffset * (bitWidth / 8)
+    byteOffset = arith::MulIOp::create(builder, loc, elemOffset,
+                                       makeConst(elemBits / 8));
+  } else {
+    // For sub-byte elements multiply first and then divide by 8, otherwise the
+    // byte size would be zero (e.g. 4 / 8 == 0 for i4):
+    //   finalAddr = baseAddr + (elemOffset * bitWidth) / 8
+    Value bitSize = makeConst(elemBits);
+    Value eight = makeConst(8);
+    byteOffset = arith::DivUIOp::create(
+        builder, loc, arith::MulIOp::create(builder, loc, elemOffset, bitSize),
+        eight);
+  }
+  return arith::AddIOp::create(builder, loc, baseAddr, byteOffset);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
@@ -864,10 +922,15 @@ bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst whose product equals
 // the original dimension. Populates splitDimGroups with groups of dst indices
 // that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
-// true
+// true. Shapes that only insert unit dimensions are  rejected here.
 bool xegpu::matchSplitDimExpansion(
     ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
     SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  SmallVector<int64_t> expandedUnitDims;
+  if (matchUnitDimExpansion(src, dst, expandedUnitDims) &&
+      !expandedUnitDims.empty())
+    return false;
+
   // each dim in src can be mapped to one or more dims in dst whose product
   // equals to the src dim
   size_t srcIdx = 0;
