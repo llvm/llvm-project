@@ -811,6 +811,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when a local register variable bound to a pseudo or status register by an `asm` label,
   such as `register long double t __asm("17");` (the flags register), was used as an inline asm operand.
   Such declarations are now rejected, matching GCC. (#GH225033)
+- Fixed a crash on `break` out of a `for` loop whose init-statement declares a variable in C89 mode (a Clang
+  extension), which happened at `-O1` and above or when the variable had a `cleanup` attribute. (#GH170243)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
