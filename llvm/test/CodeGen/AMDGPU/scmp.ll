@@ -421,10 +421,10 @@ define <2 x i32> @scmp_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_cmp_lt_i16_e32 vcc_lo, v0.h, v1.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v0, v2, v4
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v0, v2, v4
 ; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v1, v3, v1
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %r = call <2 x i32> @llvm.scmp.v2i32.v2i16(<2 x i16> %a, <2 x i16> %b)
@@ -567,19 +567,19 @@ define <4 x i32> @scmp_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v1, v5
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v0, v8, v0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v2, v6
+; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v0, v8, v0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v1, v9, v1
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v3, v7
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v2, v10, v2
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v2, v10, v2
 ; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v3, v11, v3
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %r = call <4 x i32> @llvm.scmp.v4i32.v4i8(<4 x i8> %a, <4 x i8> %b)
