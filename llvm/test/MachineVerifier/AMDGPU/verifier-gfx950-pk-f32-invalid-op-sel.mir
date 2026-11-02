@@ -4,6 +4,7 @@
 # CHECK-NOT: Bad machine code
 ---
 name: test
+tracksRegLiveness: false
 body: |
   bb.0:
     ; Valid: opsel[1:0] == 2'b00, 2'b01 and 2'b11.

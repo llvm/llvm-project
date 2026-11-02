@@ -24,6 +24,7 @@ namespace {
 // OP_SEL_0 only (the swapped swizzle).
 const char *PkF32MIR = R"MIR(
 name: pk_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     $vgpr0_vgpr1 = V_PK_ADD_F32 8, $vgpr2_vgpr3, 8, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
