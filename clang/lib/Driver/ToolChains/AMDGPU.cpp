@@ -614,12 +614,23 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
-  CC1Args.push_back("-idirafter");
-  CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
-  SmallString<128> LibHipCxxPath(getIncludePath());
+  // When ROCm is installed in a non-system directory (e.g. /opt/rocm),
+  // use -internal-isystem so the selected ROCm headers take precedence
+  // over any distro-installed HIP headers in /usr/include.
+  // When installed under /usr, keep -idirafter to avoid prepending
+  // /usr/include before C++ standard library headers, which would
+  // break #include_next chains (see cd597588).
+  StringRef IncPath = getIncludePath();
+  SmallString<128> SysUsr(D.SysRoot);
+  SysUsr.append("/usr/");
+  const char *IncFlag = IncPath.starts_with(SysUsr) ? "-idirafter"
+                                                    : "-internal-isystem";
+  CC1Args.push_back(IncFlag);
+  CC1Args.push_back(DriverArgs.MakeArgString(IncPath));
+  SmallString<128> LibHipCxxPath(IncPath);
   llvm::sys::path::append(LibHipCxxPath, "libhipcxx");
   if (D.getVFS().exists(LibHipCxxPath)) {
-    CC1Args.push_back("-idirafter");
+    CC1Args.push_back(IncFlag);
     CC1Args.push_back(DriverArgs.MakeArgString(LibHipCxxPath));
   }
   if (UsesRuntimeWrapper)

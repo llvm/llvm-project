@@ -85,6 +85,13 @@
 // RUN:   --print-rocm-search-dirs --hip-link %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=USR %s
 
+// Test that --rocm-path to a non-system directory uses -internal-isystem
+// even when a sysroot is set, so ROCm headers take precedence over any
+// distro-installed HIP headers under /usr/include.
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx1010 --sysroot=%t \
+// RUN:   --rocm-path=%S/Inputs/rocm -nogpulib %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=NON-USR %s
+
 // Test detecting latest /opt/rocm-{release} directory.
 // RUN: rm -rf %t/*
 // RUN: mkdir -p %t/opt
@@ -103,18 +110,20 @@
 // ROCM-ENV: ROCm installation search path: [[ROCM_PATH:.*/Inputs/rocm]]
 
 // HIP-PATH: "-mlink-builtin-bitcode" "[[ROCM_PATH]]/amdgcn/bitcode/oclc_isa_version_1010.bc"
-// HIP-PATH: "-idirafter" "[[HIP_PATH:.*/myhip]]/include"
+// HIP-PATH: "-internal-isystem" "[[HIP_PATH:[^"]*myhip]]/include"
 // HIP-PATH: "[[HIP_PATH]]/lib/libamdhip64.so"
 
 // ROCM-PATH: ROCm installation search path: [[ROCM_PATH:.*/Inputs/rocm]]
 // ROCM-PATH: "-mlink-builtin-bitcode" "[[ROCM_PATH]]/amdgcn/bitcode/oclc_isa_version_1010.bc"
-// ROCM-PATH: "-idirafter" "[[ROCM_PATH]]/include"
+// ROCM-PATH: "-internal-isystem" "[[ROCM_PATH]]/include"
 // ROCM-PATH: "[[ROCM_PATH]]/lib/libamdhip64.so"
 
 // USR: ROCm installation search path: [[ROCM_PATH:.*/usr$]]
 // USR: "-mlink-builtin-bitcode" "[[ROCM_PATH]]/amdgcn/bitcode/oclc_isa_version_1010.bc"
 // USR: "-idirafter" "[[ROCM_PATH]]/include"
 // USR: "[[ROCM_PATH]]/lib/libamdhip64.so"
+
+// NON-USR: "-internal-isystem" "{{.*}}Inputs/rocm/include"
 
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0
