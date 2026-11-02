@@ -2473,6 +2473,10 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
 NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
                                      Scope *S, bool ForRedeclaration,
                                      SourceLocation Loc) {
+  if (ForRedeclaration && Context.BuiltinInfo.isPredefinedLibFunction(ID) &&
+      strpbrk(Context.BuiltinInfo.getTypeString(ID), "|ut"))
+    return nullptr;
+
   LookupNecessaryTypesForBuiltin(S, ID);
 
   ASTContext::GetBuiltinTypeError Error;
@@ -11275,10 +11279,20 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
               LookupNecessaryTypesForBuiltin(S, BuiltinID);
               QualType BuiltinType = Context.GetBuiltinType(BuiltinID, Error);
 
-              if (!Error && !BuiltinType.isNull() &&
-                  Context.hasSameFunctionTypeIgnoringExceptionSpec(
-                      NewFD->getType(), BuiltinType))
-                NewFD->addAttr(BuiltinAttr::CreateImplicit(Context, BuiltinID));
+              if (!Error && !BuiltinType.isNull() && NewFD->hasPrototype()) {
+                BuiltinType = QualType(
+                    Context.adjustFunctionType(
+                        BuiltinType->castAs<FunctionType>(),
+                        NewFD->getType()->castAs<FunctionType>()->getExtInfo()),
+                    0);
+                if (getLangOpts().CPlusPlus
+                        ? Context.hasSameFunctionTypeIgnoringExceptionSpec(
+                              NewFD->getType(), BuiltinType)
+                        : Context.typesAreCompatible(NewFD->getType(),
+                                                     BuiltinType))
+                  NewFD->addAttr(
+                      BuiltinAttr::CreateImplicit(Context, BuiltinID));
+              }
             }
           }
         } else if (InStdNamespace && NewFD->isInStdNamespace() &&

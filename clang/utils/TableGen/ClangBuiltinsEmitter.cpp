@@ -156,27 +156,36 @@ class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
       : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution),
-        EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")) {
+        EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")),
+        IsLibBuiltin(Builtin->isSubClassOf("LibBuiltin")) {
     ParsePrototype(Builtin->getValueAsString("Prototype"));
+    if (std::optional<StringRef> WinProto =
+            Builtin->getValueAsOptionalString("WindowsPrototype")) {
+      Loc = Builtin->getFieldLoc("WindowsPrototype");
+      if (Type.empty())
+        PrintFatalError(Loc, "WindowsPrototype requires a non-empty Prototype");
+      Type += '|';
+      ParsePrototype(*WinProto);
+    }
   }
 
   std::string takeTypeString() && { return std::move(Type); }
 
 private:
+  static bool isValidIdentifier(StringRef S) {
+    return !S.empty() && !isDigit(S[0]) && llvm::all_of(S, [](char C) {
+      return isLower(C) || isDigit(C) || C == '_';
+    });
+  }
+
   void ParsePrototype(StringRef Prototype) {
     Prototype = Prototype.trim();
 
     // Some builtins don't have an expressible prototype, simply emit an empty
     // string for them.
-    if (Prototype.empty()) {
-      Type = "";
+    if (Prototype.empty())
       return;
-    }
 
-    ParseTypes(Prototype);
-  }
-
-  void ParseTypes(StringRef &Prototype) {
     auto ReturnType = Prototype.take_until([](char c) { return c == '('; });
     ParseType(ReturnType);
     Prototype = Prototype.drop_front(ReturnType.size() + 1);
@@ -295,6 +304,11 @@ private:
     } else if (T.consume_back(")")) {
       ParseType(T);
       Type += "&";
+    } else if (IsLibBuiltin && T.consume_front("struct ")) {
+      T = T.trim();
+      if (!isValidIdentifier(T))
+        PrintFatalError(Loc, "Expected struct name after 'struct'");
+      Type += "u" + std::to_string(T.size()) + T.str();
     } else if (EnableOpenCLLong && T.consume_front("long long")) {
       Type += "O";
       ParseType(T);
@@ -376,6 +390,7 @@ private:
                                .Case("short", "s")
                                .Case("sigjmp_buf", "SJ")
                                .Case("size_t", "z")
+                               .Case("ssize_t", "Sz")
                                .Case("std::meta::info", "r")
                                .Case("ucontext_t", "K")
                                .Case("uint8_t", "UBi")
@@ -394,8 +409,15 @@ private:
                                .Case("wchar_t", "w")
                                .Case("...", ".")
                                .Default("error");
-      if (ReturnTypeVal == "error")
+      if (ReturnTypeVal == "error") {
+        // For LibBuiltins, allow unrecognized `*_t` typedef names (e.g.
+        // nfds_t, socklen_t) to be resolved by translation-unit lookup.
+        if (IsLibBuiltin && T.ends_with("_t") && isValidIdentifier(T)) {
+          Type += "t" + std::to_string(T.size()) + T.str();
+          return;
+        }
         PrintFatalError(Loc, "Unknown Type: " + T);
+      }
       Type += ReturnTypeVal;
     }
   }
@@ -403,6 +425,7 @@ private:
   SMLoc Loc;
   StringRef Substitution;
   bool EnableOpenCLLong;
+  bool IsLibBuiltin;
   std::string Type;
 };
 
