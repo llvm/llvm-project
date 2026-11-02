@@ -66,6 +66,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:           },
 //CHECK-SARIF-NEXT:           "relatedLocations": [
 //CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "id": 0,
 //CHECK-SARIF-NEXT:               "message": {
 //CHECK-SARIF-NEXT:                 "text": "expanded from macro 'X'"
 //CHECK-SARIF-NEXT:               },
@@ -83,11 +84,13 @@ struct Foo {
 //CHECK-SARIF-NEXT:               }
 //CHECK-SARIF-NEXT:             },
 //CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "id": 1,
 //CHECK-SARIF-NEXT:               "message": {
 //CHECK-SARIF-NEXT:                 "text": "expanded from here"
 //CHECK-SARIF-NEXT:               }
 //CHECK-SARIF-NEXT:             },
 //CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "id": 2,
 //CHECK-SARIF-NEXT:               "message": {
 //CHECK-SARIF-NEXT:                 "text": "declare 'static' if the function is not intended to be used outside of this translation unit"
 //CHECK-SARIF-NEXT:               },
@@ -105,6 +108,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:               }
 //CHECK-SARIF-NEXT:             },
 //CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "id": 3,
 //CHECK-SARIF-NEXT:               "message": {
 //CHECK-SARIF-NEXT:                 "text": "expanded from macro 'X'"
 //CHECK-SARIF-NEXT:               },

@@ -643,7 +643,8 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
-  if (!SarifExport.empty() && SarifExport == ExportFixes) {
+  if (!SarifExport.empty() && SarifExport == ExportFixes &&
+      !llvm::sys::fs::equivalent(SarifExport, ExportFixes)) {
     llvm::errs() << "Error: --sarif-export and --export-fixes cannot write to "
                     "the same output '"
                  << SarifExport << "'.\n";
@@ -668,7 +669,6 @@ int clangTidyMain(int argc, const char **argv) {
     FileName = PathList.front();
 
   const SmallString<256> FilePath = makeAbsolute(FileName);
-
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
 
   const std::vector<std::string> EnabledChecks =

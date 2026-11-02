@@ -30,6 +30,13 @@
 
 namespace clang {
 
+// SARIF reportingConfiguration.rank is given to each severity. Notes, remarks
+// and warnings keep the default -1.
+namespace rank {
+constexpr float Error = 50.0f;
+constexpr float Fatal = 100.0f;
+} // namespace rank
+
 SarifResultLevel getSarifResultLevel(DiagnosticsEngine::Level level) {
   switch (level) {
   case DiagnosticsEngine::Ignored:
@@ -44,8 +51,7 @@ SarifResultLevel getSarifResultLevel(DiagnosticsEngine::Level level) {
   case DiagnosticsEngine::Fatal:
     return SarifResultLevel::Error;
   }
-  llvm_unreachable("Potentially un-handled DiagnosticsEngine::Level. "
-                   "Is the switch not fully covered?");
+  llvm_unreachable("Un-handled DiagnosticsEngine::Level occured.");
 }
 
 SarifRule addDiagnosticLevelToRule(SarifRule Rule,
@@ -55,9 +61,9 @@ SarifRule addDiagnosticLevelToRule(SarifRule Rule,
           getSarifResultLevel(Level));
 
   if (Level == DiagnosticsEngine::Error)
-    Config = Config.setRank(50);
+    Config = Config.setRank(rank::Error);
   else if (Level == DiagnosticsEngine::Fatal)
-    Config = Config.setRank(100);
+    Config = Config.setRank(rank::Fatal);
 
   return Rule.setDefaultConfiguration(Config);
 }

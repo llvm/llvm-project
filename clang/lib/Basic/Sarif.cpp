@@ -426,12 +426,16 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   if (!Locs.empty())
     Ret["locations"] = std::move(Locs);
 
-  // The schema requires relatedLocations items to be unique.
+  // relatedLocations must hold unique items, a distinct Id per location is
+  // added to keep notes unique.
   json::Array ReLocs;
+  int64_t RelatedLocationId = 0;
   for (const auto &[Range, Message] : Result.RelatedLocations) {
-    json::Value Loc = createLocation(createPhysicalLocation(Range), Message);
-    if (!Loc.getAsObject()->empty() && !llvm::is_contained(ReLocs, Loc))
-      ReLocs.emplace_back(std::move(Loc));
+    json::Object Loc = createLocation(createPhysicalLocation(Range), Message);
+    if (Loc.empty())
+      continue;
+    Loc["id"] = RelatedLocationId++;
+    ReLocs.emplace_back(std::move(Loc));
   }
 
   if (!ReLocs.empty())

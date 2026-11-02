@@ -223,8 +223,8 @@ public:
     return Loc.isValid() ? getOffsetRange(SourceMgr, Loc) : CharSourceRange();
   }
 
-  SmallVector<ThreadFlow, 8> createThreadFlows(const ClangTidyError &Error) {
-    SmallVector<ThreadFlow, 8> Flows;
+  SmallVector<ThreadFlow> createNotesThreadFlows(const ClangTidyError &Error) {
+    SmallVector<ThreadFlow> Flows;
     Flows.reserve(Error.Notes.size());
     for (const tooling::DiagnosticMessage &Note : Error.Notes) {
       Flows.push_back(ThreadFlow::create()
@@ -236,8 +236,7 @@ public:
 
   void exportSarifResult(const ClangTidyError &Error,
                          const SourceLocation Loc) {
-    if (!SarifWriter)
-      return;
+    assert(SarifWriter && "SARIF writer must be initialized");
 
     const auto [RuleIndexEntryIt, Inserted] =
         SarifRuleIdx.try_emplace(Error.DiagnosticName, 0);
@@ -278,25 +277,22 @@ public:
     // Also, add helpUri with this for in-tree checks, pointing to their
     // documentation pages.
     if (StringRef(Error.DiagnosticName).starts_with("clang-analyzer-"))
-      Result = Result.setThreadFlows(createThreadFlows(Error));
+      Result = Result.setThreadFlows(createNotesThreadFlows(Error));
     else
       for (const tooling::DiagnosticMessage &Note : Error.Notes)
         Result = Result.addRelatedLocations(getNoteRange(Note), Note.Message);
-    if (SarifWriter)
-      SarifWriter->appendResult(Result);
+    SarifWriter->appendResult(Result);
   }
 
   // SARIF regions need a character range: use 1 char at Loc, or 0 at EOF.
   CharSourceRange getOffsetRange(SourceManager &SM, SourceLocation Loc) {
-    const std::pair<FileID, unsigned> &DecomposedLoc = SM.getDecomposedLoc(Loc);
-    const FileID FileId = DecomposedLoc.first;
-    const unsigned Offset = DecomposedLoc.second;
+    const auto [FileId, Offset] = SM.getDecomposedLoc(Loc);
     return CharSourceRange::getCharRange(
         Loc, Loc.getLocWithOffset(Offset < SM.getFileIDSize(FileId) ? 1 : 0));
   }
 
-  SmallVector<CharSourceRange, 4> getResultRanges(const ClangTidyError &Error) {
-    SmallVector<CharSourceRange, 4> Ranges;
+  SmallVector<CharSourceRange> getResultRanges(const ClangTidyError &Error) {
+    SmallVector<CharSourceRange> Ranges;
     Ranges.reserve(Error.Message.Ranges.size());
     for (const FileByteRange &FBR : Error.Message.Ranges)
       Ranges.push_back(getRange(FBR));
@@ -380,8 +376,7 @@ private:
   }
 
   void finalizeSarif() {
-    if (!SarifWriter)
-      return;
+    assert(SarifWriter && "SARIF writer must be initialized");
     const llvm::json::Value Document = SarifWriter->createDocument();
     if (SarifExportPath == "-") {
       llvm::outs() << llvm::formatv("{0:2}", Document);
@@ -456,8 +451,6 @@ private:
   unsigned AppliedFixes = 0U;
   unsigned WarningsAsErrors = 0U;
   std::string SarifExportPath;
-  // ExportSarifResult is called for each SARIF rule that gets created, while a
-  // SarifWriter run is created once at ErrorReporter construction.
   std::optional<SarifDocumentWriter> SarifWriter;
   // SarifRuleIdx is used across multiple calls of exportSarifResult as cache to
   // avoid creating duplicate SARIF rules.

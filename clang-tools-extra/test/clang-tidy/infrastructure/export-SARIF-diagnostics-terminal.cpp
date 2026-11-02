@@ -53,6 +53,7 @@ struct Foo {
 //CHECK-NEXT:           },
 //CHECK-NEXT:           "relatedLocations": [
 //CHECK-NEXT:             {
+//CHECK-NEXT:               "id": 0,
 //CHECK-NEXT:               "message": {
 //CHECK-NEXT:                 "text": "expanded from macro 'X'"
 //CHECK-NEXT:               },
@@ -70,11 +71,13 @@ struct Foo {
 //CHECK-NEXT:               }
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
+//CHECK-NEXT:               "id": 1,
 //CHECK-NEXT:               "message": {
 //CHECK-NEXT:                 "text": "expanded from here"
 //CHECK-NEXT:               }
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
+//CHECK-NEXT:               "id": 2,
 //CHECK-NEXT:               "message": {
 //CHECK-NEXT:                 "text": "declare 'static' if the function is not intended to be used outside of this translation unit"
 //CHECK-NEXT:               },
@@ -92,6 +95,7 @@ struct Foo {
 //CHECK-NEXT:               }
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
+//CHECK-NEXT:               "id": 3,
 //CHECK-NEXT:               "message": {
 //CHECK-NEXT:                 "text": "expanded from macro 'X'"
 //CHECK-NEXT:               },
@@ -296,4 +300,3 @@ struct Foo {
 //CHECK-NEXT:   ],
 //CHECK-NEXT:   "version": "{{.*}}"
 //CHECK-NEXT: }
-
