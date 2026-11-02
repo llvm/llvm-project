@@ -157,6 +157,12 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- Fixed Microsoft calling convention for returning HVAs and HFAs from
+  `__vectorcall` functions on x86 and x86-64. Such types are now returned in
+  vector registers even if they are not C++14 aggregates (for example, if they
+  have base classes, non-public data members, or user-provided constructors),
+  and also from instance methods, matching MSVC. (#GH63417)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
