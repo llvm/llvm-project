@@ -8,8 +8,6 @@
 // Port of clang/test/CodeGenSYCL/address-space-conversions.cpp. Local
 // variables and parameters are allocated in the private address space and
 // accessed through the generic address space.
-//
-// TODO(cir): Calls are missing the spir_func calling convention.
 
 void bar(int &Data) {}
 void bar2(int &Data) {}
@@ -148,42 +146,42 @@ void tmpl(T t) {}
 // LLVM-CIR-NEXT: store ptr addrspace(1) %[[TMP15]], ptr addrspace(4) %[[GLOB_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP16:.*]] = load ptr addrspace(1), ptr addrspace(4) %[[GLOB_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP17:.*]] = addrspacecast ptr addrspace(1) %[[TMP16]] to ptr addrspace(4)
-// LLVM-CIR-NEXT: call void @_Z3barRi(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP17]])
+// LLVM-CIR-NEXT: call spir_func void @_Z3barRi(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP17]])
 // LLVM-CIR-NEXT: %[[TMP18:.*]] = load ptr addrspace(1), ptr addrspace(4) %[[GLOB_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP19:.*]] = addrspacecast ptr addrspace(1) %[[TMP18]] to ptr addrspace(4)
-// LLVM-CIR-NEXT: call void @_Z4bar2Ri(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP19]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4bar2Ri(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP19]])
 // LLVM-CIR-NEXT: %[[TMP20:.*]] = load ptr addrspace(3), ptr addrspace(4) %[[LOC_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z3barRU3AS3i(ptr addrspace(3) noundef align 4 dereferenceable(4) %[[TMP20]])
+// LLVM-CIR-NEXT: call spir_func void @_Z3barRU3AS3i(ptr addrspace(3) noundef align 4 dereferenceable(4) %[[TMP20]])
 // LLVM-CIR-NEXT: %[[TMP21:.*]] = load ptr addrspace(3), ptr addrspace(4) %[[LOC_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP22:.*]] = addrspacecast ptr addrspace(3) %[[TMP21]] to ptr addrspace(4)
-// LLVM-CIR-NEXT: call void @_Z4bar2Ri(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP22]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4bar2Ri(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP22]])
 // LLVM-CIR-NEXT: %[[TMP23:.*]] = load ptr addrspace(4), ptr addrspace(4) %[[NOAS_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z3barRi(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP23]])
+// LLVM-CIR-NEXT: call spir_func void @_Z3barRi(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP23]])
 // LLVM-CIR-NEXT: %[[TMP24:.*]] = load ptr addrspace(4), ptr addrspace(4) %[[NOAS_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z4bar2Ri(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP24]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4bar2Ri(ptr addrspace(4) noundef align 4 dereferenceable(4) %[[TMP24]])
 // LLVM-CIR-NEXT: %[[TMP25:.*]] = load ptr addrspace(1), ptr addrspace(4) %[[GLOB_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP26:.*]] = addrspacecast ptr addrspace(1) %[[TMP25]] to ptr addrspace(4)
-// LLVM-CIR-NEXT: call void @_Z3fooPi(ptr addrspace(4) noundef %[[TMP26]])
+// LLVM-CIR-NEXT: call spir_func void @_Z3fooPi(ptr addrspace(4) noundef %[[TMP26]])
 // LLVM-CIR-NEXT: %[[TMP27:.*]] = load ptr addrspace(1), ptr addrspace(4) %[[GLOB_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP28:.*]] = addrspacecast ptr addrspace(1) %[[TMP27]] to ptr addrspace(4)
-// LLVM-CIR-NEXT: call void @_Z4foo2Pi(ptr addrspace(4) noundef %[[TMP28]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4foo2Pi(ptr addrspace(4) noundef %[[TMP28]])
 // LLVM-CIR-NEXT: %[[TMP29:.*]] = load ptr addrspace(3), ptr addrspace(4) %[[LOC_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z3fooPU3AS3i(ptr addrspace(3) noundef %[[TMP29]])
+// LLVM-CIR-NEXT: call spir_func void @_Z3fooPU3AS3i(ptr addrspace(3) noundef %[[TMP29]])
 // LLVM-CIR-NEXT: %[[TMP30:.*]] = load ptr addrspace(3), ptr addrspace(4) %[[LOC_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP31:.*]] = addrspacecast ptr addrspace(3) %[[TMP30]] to ptr addrspace(4)
-// LLVM-CIR-NEXT: call void @_Z4foo2Pi(ptr addrspace(4) noundef %[[TMP31]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4foo2Pi(ptr addrspace(4) noundef %[[TMP31]])
 // LLVM-CIR-NEXT: %[[TMP32:.*]] = load ptr addrspace(4), ptr addrspace(4) %[[NOAS_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z3fooPi(ptr addrspace(4) noundef %[[TMP32]])
+// LLVM-CIR-NEXT: call spir_func void @_Z3fooPi(ptr addrspace(4) noundef %[[TMP32]])
 // LLVM-CIR-NEXT: %[[TMP33:.*]] = load ptr addrspace(4), ptr addrspace(4) %[[NOAS_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z4foo2Pi(ptr addrspace(4) noundef %[[TMP33]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4foo2Pi(ptr addrspace(4) noundef %[[TMP33]])
 // LLVM-CIR-NEXT: %[[TMP34:.*]] = load ptr addrspace(1), ptr addrspace(4) %[[GLOB_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef %[[TMP34]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef %[[TMP34]])
 // LLVM-CIR-NEXT: %[[TMP35:.*]] = load ptr addrspace(3), ptr addrspace(4) %[[LOC_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z4tmplIPU3AS3iEvT_(ptr addrspace(3) noundef %[[TMP35]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4tmplIPU3AS3iEvT_(ptr addrspace(3) noundef %[[TMP35]])
 // LLVM-CIR-NEXT: %[[TMP36:.*]] = load ptr, ptr addrspace(4) %[[PRIV_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z4tmplIPU3AS0iEvT_(ptr noundef %[[TMP36]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4tmplIPU3AS0iEvT_(ptr noundef %[[TMP36]])
 // LLVM-CIR-NEXT: %[[TMP37:.*]] = load ptr addrspace(4), ptr addrspace(4) %[[NOAS_ASCAST]], align 8
-// LLVM-CIR-NEXT: call void @_Z4tmplIPiEvT_(ptr addrspace(4) noundef %[[TMP37]])
+// LLVM-CIR-NEXT: call spir_func void @_Z4tmplIPiEvT_(ptr addrspace(4) noundef %[[TMP37]])
 // LLVM-CIR-NEXT: ret void
 
 // OGCG-LABEL: define {{.*}}spir_func void @_Z6usagesv(

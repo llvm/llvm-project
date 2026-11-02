@@ -100,7 +100,8 @@ void privatizeSymbol(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
     std::optional<llvm::omp::Directive> dir = std::nullopt,
-    bool forceHeapAllocationForPrivateDynamicArrays = false);
+    bool forceHeapAllocationForPrivateDynamicArrays = false,
+    bool isLinear = false);
 
 } // end namespace Fortran::lower
 
