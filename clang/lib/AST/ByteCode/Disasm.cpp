@@ -541,7 +541,7 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     if (getCallee())
       describe(OS);
     else
-      OS << "Frame (Depth: " << getDepth() << ")";
+      OS << "Frame";
     OS << "\n";
   }
   OS.indent(Spaces) << "Function: " << getFunction();
@@ -557,7 +557,6 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
   else
     OS.indent(Spaces) << "RVO: -\n";
-  OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
 #ifndef NDEBUG
@@ -628,12 +627,10 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
     OS << "-\n";
   OS << "  Pointers: " << NPointers << "\n";
   OS << "  Dead: " << isDead() << "\n";
-  OS << "  Static: " << IsStatic << "\n";
   OS << "  Extern: " << isExtern() << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
   OS << "  Weak: " << isWeak() << "\n";
   OS << "  Dynamic: " << isDynamic() << "\n";
-  OS << "  Metadata: " << MDSize << '\n';
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {

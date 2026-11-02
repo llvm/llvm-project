@@ -1,10 +1,9 @@
-add_custom_target(sys-sem-integration-tests)
-add_dependencies(libc-integration-tests sys-sem-integration-tests)
+add_libc_testsuite(libc-sys-sem-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   sem_test
   SUITE
-    sys-sem-integration-tests
+    libc-sys-sem-integration-tests
   SRCS
     sem_test.cpp
   DEPENDS
@@ -13,7 +12,6 @@ add_integration_test(
     libc.hdr.sys_sem_macros
     libc.hdr.types.struct_sembuf
     libc.src.__support.threads.sleep
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.signal.kill
     libc.src.stdlib.exit

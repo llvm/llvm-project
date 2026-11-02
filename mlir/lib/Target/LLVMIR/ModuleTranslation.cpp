@@ -36,7 +36,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/TargetFolder.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -803,9 +802,11 @@ ModuleTranslation::ModuleTranslation(Operation *module,
 }
 
 ModuleTranslation::~ModuleTranslation() {
-  if (ompBuilder && !ompBuilder->isFinalized())
-    ompBuilder->finalize();
+  // Destroy extensions while the rest of the translation state is still alive.
+  extensions.clear();
 }
+
+ModuleTranslation::Extension::~Extension() = default;
 
 void ModuleTranslation::forgetMapping(Region &region) {
   SmallVector<Region *> toProcess;
@@ -905,8 +906,8 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
   for (Block &bb : llvm::drop_begin(region)) {
     llvm::BasicBlock *llvmBB = state.lookupBlock(&bb);
     auto phis = llvmBB->phis();
-    auto numArguments = bb.getNumArguments();
-    assert(numArguments == std::distance(phis.begin(), phis.end()));
+    unsigned numArguments = bb.getNumArguments();
+    assert(numArguments == llvm::range_size(phis));
     for (auto [index, phiNode] : llvm::enumerate(phis)) {
       for (auto *pred : bb.getPredecessors()) {
         // Find the LLVM IR block that contains the converted terminator
@@ -1571,10 +1572,11 @@ static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
 static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
                                                  ArrayRef<int32_t> values) {
   SmallVector<llvm::Metadata *> mdValues;
-  llvm::transform(
-      values, std::back_inserter(mdValues), [&context](int32_t value) {
-        return convertIntegerToMetadata(context, llvm::APInt(32, value));
-      });
+  llvm::transform(values, std::back_inserter(mdValues),
+                  [&context](int32_t value) {
+                    return convertIntegerToMetadata(
+                        context, llvm::APInt(32, value, /*isSigned=*/true));
+                  });
   return llvm::MDNode::get(context, mdValues);
 }
 
@@ -2140,13 +2142,8 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
       llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
       if (!imports.empty())
         importGUIDs.insert(imports.begin(), imports.end());
-      llvm::MDBuilder metadataBuilder(llvmFunc->getContext());
-      llvmFunc->setMetadata(
-          llvm::LLVMContext::MD_prof,
-          metadataBuilder.createFunctionEntryCount(
-              entryCount.getEntryCount(),
-              entryCount.getCountType() == ProfileCountType::Synthetic,
-              imports.empty() ? nullptr : &importGUIDs));
+      llvmFunc->setEntryCount(entryCount.getEntryCount(),
+                              imports.empty() ? nullptr : &importGUIDs);
     }
 
     // Convert result attributes.
@@ -2600,32 +2597,6 @@ void ModuleTranslation::remapAllValuesWith(llvm::Value *oldValue,
       entry.second = newValue;
 }
 
-llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
-  if (!ompBuilder) {
-    ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
-
-    // Flags represented as top-level OpenMP dialect attributes are set in
-    // `OpenMPDialectLLVMIRTranslationInterface::amendOperation()`. Here we set
-    // the default configuration.
-    llvm::OpenMPIRBuilderConfig config(
-        /* IsTargetDevice = */ false, /* IsGPU = */ false,
-        /* OpenMPOffloadMandatory = */ false,
-        /* HasRequiresReverseOffload = */ false,
-        /* HasRequiresUnifiedAddress = */ false,
-        /* HasRequiresUnifiedSharedMemory = */ false,
-        /* HasRequiresDynamicAllocators = */ false);
-    unsigned int defaultAS =
-        llvmModule->getDataLayout().getProgramAddressSpace();
-    config.setDefaultTargetAS(defaultAS);
-    config.setRuntimeCC(llvmModule->getTargetTriple().isSPIRV()
-                            ? llvm::CallingConv::SPIR_FUNC
-                            : llvm::CallingConv::C);
-    ompBuilder->setConfig(std::move(config));
-    ompBuilder->initialize();
-  }
-  return ompBuilder.get();
-}
-
 llvm::vfs::FileSystem &ModuleTranslation::getFileSystem() {
   if (fileSystem)
     return *fileSystem;
@@ -2795,9 +2766,12 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // beforehand.
   translator.debugTranslation->addModuleFlagsIfNotPresent();
 
-  // Call the OpenMP IR Builder callbacks prior to verifying the module
-  if (auto *ompBuilder = translator.getOpenMPBuilder())
-    ompBuilder->finalize();
+  // Let dialect translations complete their pending work (e.g. OpenMP region
+  // outlining) prior to verifying the module. Index-based iteration tolerates
+  // extensions created during finalization.
+  for (size_t i = 0; i < translator.extensions.size(); ++i)
+    if (failed(translator.extensions.begin()[i].second->finalize()))
+      return nullptr;
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

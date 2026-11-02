@@ -203,7 +203,7 @@ TEST(LibraryOptionsTest, Register) {
 }
 
 // parseCommandLineOptions sets the options of a library that is not
-// per-context in its Global, which a context without values reads.
+// per-context in its Global.
 TEST(LibraryOptionsTest, ParseIntoGlobal) {
   cl::ResetCommandLineParser();
   opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
@@ -211,7 +211,6 @@ TEST(LibraryOptionsTest, ParseIntoGlobal) {
   const char *Args[] = {"prog", "-lib-count=5"};
   EXPECT_TRUE(cl::parseCommandLineOptions(V, Args, "", &nulls()));
   EXPECT_EQ(TestLibraryOptions::Global.count, 5u);
-  EXPECT_EQ(&V.get<TestLibraryOptions>(), &TestLibraryOptions::Global);
   cl::ResetCommandLineParser();
 }
 
