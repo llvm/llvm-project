@@ -5920,7 +5920,8 @@ AMDGPUInstructionSelector::selectVINTERPModsHi(MachineOperand &Root) const {
 // pre-scaled value and return true.
 bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
                                                   Register &Offset,
-                                                  bool IsSigned) const {
+                                                  bool IsSigned,
+                                                  bool IsSMEM) const {
   if (!Subtarget->hasScaleOffset())
     return false;
 
@@ -5933,6 +5934,7 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
   uint64_t Size = MMO->getSize().getValue();
 
   Register OffsetReg = matchExtendFromS32OrS32(Offset, IsSigned);
+  bool IsExtended = OffsetReg && OffsetReg != Offset;
   if (!OffsetReg)
     OffsetReg = Offset;
 
@@ -5966,10 +5968,29 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
                                   m_Copy(m_SpecificICst(Size))))) &&
        mi_match(Mul->getOperand(2).getReg(), *MRI, m_Reg(Op0)));
 
-  if (ScaleOffset)
-    Offset = Op0;
+  if (!ScaleOffset)
+    return false;
 
-  return ScaleOffset;
+  // SMEM scales the offset in 32 bits, other instructions in 64 bits.
+  unsigned Bits = Log2_64_Ceil(Size);
+  if (IsSMEM) {
+    if (!IsExtended && MRI->getType(Offset).getSizeInBits() == 64) {
+      KnownBits Known = VT->getKnownBits(Op0);
+      if (Known.countMaxActiveBits() + Bits > 32)
+        return false;
+    }
+  } else if (IsExtended) {
+    const MachineInstr *Scale = MRI->getVRegDef(OffsetReg);
+    if (IsSigned && !Scale->getFlag(MachineInstr::NoSWrap) &&
+        VT->computeNumSignBits(Op0) <= Bits)
+      return false;
+    if (!IsSigned && !Scale->getFlag(MachineInstr::NoUWrap) &&
+        VT->getKnownBits(Op0).countMinLeadingZeros() < Bits)
+      return false;
+  }
+
+  Offset = Op0;
+  return true;
 }
 
 bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
@@ -6003,8 +6024,8 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
       if (GEPI2.SgprParts.size() == 2 && GEPI2.Imm == 0) {
         Register OffsetReg = GEPI2.SgprParts[1];
         if (ScaleOffset)
-          *ScaleOffset =
-              selectScaleOffset(Root, OffsetReg, false /* IsSigned */);
+          *ScaleOffset = selectScaleOffset(
+              Root, OffsetReg, false /* IsSigned */, true /* IsSMEM */);
         OffsetReg = matchZeroExtendFromS32OrS32(OffsetReg);
         if (OffsetReg) {
           Base = GEPI2.SgprParts[0];
@@ -6053,7 +6074,8 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
   if (SOffset && GEPI.SgprParts.size() && GEPI.Imm == 0) {
     Register OffsetReg = GEPI.SgprParts[1];
     if (ScaleOffset)
-      *ScaleOffset = selectScaleOffset(Root, OffsetReg, false /* IsSigned */);
+      *ScaleOffset = selectScaleOffset(Root, OffsetReg, false /* IsSigned */,
+                                       true /* IsSMEM */);
     OffsetReg = matchZeroExtendFromS32OrS32(OffsetReg);
     if (OffsetReg) {
       Base = GEPI.SgprParts[0];
