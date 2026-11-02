@@ -69,10 +69,10 @@ body:             |
     ; CHECK-NEXT: [[MVE_VADDVs16no_acc1:%[0-9]+]]:tgpreven = MVE_VADDVs16no_acc [[COPY2]], 1, [[COPY4]], $noreg
     ; CHECK-NEXT: [[MVE_VADDVs16no_acc2:%[0-9]+]]:tgpreven = MVE_VADDVs16no_acc [[COPY1]], 1, [[COPY4]], $noreg
     ; CHECK-NEXT: [[MVE_VADDVs16no_acc3:%[0-9]+]]:tgpreven = MVE_VADDVs16no_acc [[COPY1]], 1, [[COPY3]], $noreg
-    ; CHECK-NEXT: t2STRi12 killed [[MVE_VADDVs16no_acc1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.px)
-    ; CHECK-NEXT: t2STRi12 killed [[MVE_VADDVs16no_acc]], [[COPY]], 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx1)
-    ; CHECK-NEXT: t2STRi12 killed [[MVE_VADDVs16no_acc2]], [[COPY]], 8, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx2)
-    ; CHECK-NEXT: t2STRi12 killed [[MVE_VADDVs16no_acc3]], [[COPY]], 12, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx3)
+    ; CHECK-NEXT: t2STRi12 [[MVE_VADDVs16no_acc1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.px)
+    ; CHECK-NEXT: t2STRi12 [[MVE_VADDVs16no_acc]], [[COPY]], 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx1)
+    ; CHECK-NEXT: t2STRi12 [[MVE_VADDVs16no_acc2]], [[COPY]], 8, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx2)
+    ; CHECK-NEXT: t2STRi12 [[MVE_VADDVs16no_acc3]], [[COPY]], 12, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx3)
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg
     %2:gpr = COPY $r0
     %1:mqpr = COPY $q1
@@ -80,15 +80,15 @@ body:             |
     %4:rgpr = t2MOVi16 52428, 14 /* CC::al */, $noreg
     %5:vccr = COPY %4
     %6:tgpreven = MVE_VADDVs16no_acc %0, 1, %5, $noreg
-    t2STRi12 killed %6, %2, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx1)
+    t2STRi12 %6, %2, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx1)
     %7:rgpr = t2MOVi16 13107, 14 /* CC::al */, $noreg
     %8:vccr = COPY %7
     %9:tgpreven = MVE_VADDVs16no_acc %0, 1, %8, $noreg
-    t2STRi12 killed %9, %2, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.px)
+    t2STRi12 %9, %2, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.px)
     %10:tgpreven = MVE_VADDVs16no_acc %1, 1, %8, $noreg
-    t2STRi12 killed %10, %2, 8, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx2)
+    t2STRi12 %10, %2, 8, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx2)
     %11:tgpreven = MVE_VADDVs16no_acc %1, 1, %5, $noreg
-    t2STRi12 killed %11, %2, 12, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx3)
+    t2STRi12 %11, %2, 12, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx3)
     tBX_RET 14 /* CC::al */, $noreg
 
 ...

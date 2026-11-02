@@ -57,6 +57,7 @@
 # s_waitcnt vmcnt(0)
 
 name: flat_zero_waitcnt
+tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: flat_zero_waitcnt
@@ -112,6 +113,7 @@ body: |
 
 
 name: single_fallthrough_successor_no_end_block_wait
+tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: single_fallthrough_successor_no_end_block_wait
@@ -143,6 +145,7 @@ body: |
 
 
 name: single_branch_successor_not_next_block
+tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: single_branch_successor_not_next_block
@@ -337,6 +340,7 @@ body: |
 # agpr should be disjoint and tracked separately from vgpr
 
 name: high_register_collision
+tracksRegLiveness: false
 
 body: |
   bb.0:

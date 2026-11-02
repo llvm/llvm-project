@@ -2297,6 +2297,10 @@ let Predicates = [HasStdExtP] in {
   // Pattern for insert_vector_elt
   def : Pat<(XLenVT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
             (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
+            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
+            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Match a pattern of 2 bytes being inserted into bits [15:8] when only the
   // upper 16 bits are being demanded.
@@ -3392,6 +3396,8 @@ let append Predicates = [IsRV64] in {
             (MULSU_W00 sexti32:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (mul (sext_inreg GPR:$rs1, i32), zexti32:$rs2)),
             (MULSU_W00 GPR:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (mul (sra GPR:$rs1, (XLenVT 32)), (srl GPR:$rs2, (XLenVT 32)))),
+            (MULSU_W11 GPR:$rs1, GPR:$rs2)>;
 
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, sexti32:$rs2))),
             (MACC_W00 GPR:$rd, sexti32:$rs1, sexti32:$rs2)>;
@@ -3403,8 +3409,17 @@ let append Predicates = [IsRV64] in {
             (MACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1, zexti32:$rs2))),
             (MACCU_W00 GPR:$rd, zexti32:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1,
+                                           (srl GPR:$rs2, (XLenVT 32))))),
+            (MACCU_W01 GPR:$rd, zexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse (srl GPR:$rs1, (XLenVT 32)),
+                                           (srl GPR:$rs2, (XLenVT 32))))),
+            (MACCU_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, zexti32:$rs2))),
             (MACCSU_W00 GPR:$rd, sexti32:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 32)),
+                                           (srl GPR:$rs2, (XLenVT 32))))),
+            (MACCSU_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value, and bits [63:32] being
@@ -3692,6 +3707,8 @@ let append Predicates = [IsRV64] in {
   // 32-bit vselect patterns
   def : Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+  def : Pat<(v2i32 (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
+            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed sign extend patterns
   // Sign extend inreg patterns using psext. sext_invec is lowered to
