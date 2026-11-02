@@ -168,6 +168,12 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`performance-inefficient-container-assignment
+  <clang-tidy/checks/performance/inefficient-container-assignment>` check.
+
+  Finds assignments of a temporary container to a container of the same type
+  that could reuse the storage of the destination instead.
+
 - New {doc}`portability-avoid-pragma-comment
   <clang-tidy/checks/portability/avoid-pragma-comment>` check.
 

@@ -6,6 +6,13 @@
 
 namespace std {
 
+#if __cplusplus >= 202302L
+struct from_range_t {
+  explicit from_range_t() = default;
+};
+inline constexpr from_range_t from_range{};
+#endif
+
 template <typename T, typename A = allocator<T>>
 class vector {
 public:
@@ -19,7 +26,13 @@ public:
   vector();
   vector(size_type count);
   vector(size_type count, const T &value, const A &alloc = A());
+  template <typename InputIt, typename = decltype(*InputIt())>
+  vector(InputIt first, InputIt last, const A &alloc = A());
   vector(initializer_list<T>, const A &alloc = A());
+#if __cplusplus >= 202302L
+  template <typename R>
+  vector(from_range_t, R &&range, const A &alloc = A());
+#endif
   vector(const vector &other);
   vector(vector &&other);
   ~vector();
@@ -68,6 +81,13 @@ public:
   void resize(size_type count, const T &value);
 
   void assign(size_type count, const T &value);
+  template <typename InputIt, typename = decltype(*InputIt())>
+  void assign(InputIt first, InputIt last);
+  void assign(initializer_list<T>);
+#if __cplusplus >= 202302L
+  template <typename R>
+  void assign_range(R &&range);
+#endif
 
   iterator insert(const_iterator pos, const T &value);
   iterator insert(const_iterator pos, T &&value);
