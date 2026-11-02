@@ -1940,6 +1940,27 @@ public:
   }
 };
 
+/// Converts `spirv.CL.clz` and `spirv.CL.ctz` to `llvm.intr.ctlz` and
+/// `llvm.intr.cttz`.
+template <typename SPIRVOp, typename LLVMOp>
+class CountZerosPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    rewriter.template replaceOpWithNewOp<LLVMOp>(op, dstType,
+                                                 adaptor.getOperand(),
+                                                 /*is_zero_poison=*/false);
+    return success();
+  }
+};
+
 /// Converts `spirv.GL.Fract` to `x - floor(x)`.
 class FractPattern : public SPIRVToLLVMConversion<spirv::GLFractOp> {
 public:
@@ -2502,6 +2523,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
+      CountZerosPattern<spirv::CLClzOp, LLVM::CountLeadingZerosOp>,
+      CountZerosPattern<spirv::CLCtzOp, LLVM::CountTrailingZerosOp>,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
