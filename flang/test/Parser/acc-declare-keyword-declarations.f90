@@ -8,6 +8,7 @@
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/integer.f90
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/integer.f
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/array.f90
+! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/array.f
 
 ! These are declarations in unnamed main programs, not procedure headers.
 ! Fortran keywords are not reserved (F2023 5.5.2, R801).
@@ -75,3 +76,12 @@ real x
 functionx = 1.0
 x = functionx(1)
 end
+
+! Fixed-form REAL FUNCTIONF(3) must remain an array declaration.
+!--- array.f
+c$acc declare create(x)
+      real functionf(3)
+      real x
+      functionf = 1.0
+      x = functionf(1)
+      end

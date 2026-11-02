@@ -34,6 +34,17 @@ static constexpr auto validFunctionStmt{
             pure<std::list<Name>>()),
         pure<std::optional<Suffix>>())};
 
+// Complete structural SUBROUTINE headers, without repairing the argument list
+// or trailing text. Share this with lookahead that must not recognize an
+// assignment to a keyword-shaped name as a procedure header.
+static constexpr auto validSubroutineStmt{
+    construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
+        parenthesized(optionalList(dummyArg)), maybe(languageBindingSpec)) /
+        atEndOfStmt ||
+    construct<SubroutineStmt>(many(prefixSpec),
+        "SUBROUTINE" >> name / atEndOfStmt, pure<std::list<DummyArg>>(),
+        pure<std::optional<LanguageBindingSpec>>())};
+
 // function-stmt with error recovery -- used in interfaces and internal
 // subprograms, but not at the top level, where REALFUNCTIONF and
 // INTEGERPUREELEMENTALFUNCTIONG(10) might appear as the first statement
@@ -87,21 +98,28 @@ static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
-// At file scope, DECLARE may start an unnamed main program. Diagnose it as
-// misplaced only when the following complete statement starts a subprogram.
-// Use the existing directive grammar, including clauses and continuations.
+// Treat a whole run as one recovery region, diagnosing each DECLARE. Compiler
+// and ROUTINE directives may intervene before the following program unit.
+// Consuming the run together avoids repeatedly rescanning its remaining suffix.
+static constexpr auto misplacedOpenACCDeclareRun{MisplacedOpenACCDeclare{} >>
+    skipMany(MisplacedOpenACCDeclare{} || globalCompilerDirective >> ok ||
+        globalOpenACCCompilerDirective >> ok)};
+
+// At file scope, DECLARE may start an unnamed main program. Complete
+// specification statements therefore take precedence over procedure headers,
+// including CUDA ATTRIBUTES statements with keyword-shaped object names.
+// After fixed-form blank removal, a typed header with arguments can also be an
+// array declaration; such headers retain normal parser diagnostics.
+// Lookahead uses the recovery parser too, with messages deferred, so malformed
+// DECLARE lines are recognized consistently here and in procedure/interface
+// lists.
 static constexpr auto misplacedOpenACCDeclareAtFileScope{
-    lookAhead(
-        some(skipStuffBeforeStatement >> "!$ACC "_sptok >>
-            Parser<OpenACCStandaloneDeclarativeConstruct>{} / endOfLine) >>
-        skipStuffBeforeStatement >> !statement(typeDeclarationStmt) >>
-        maybe(label) >>
-        (validFunctionStmt >> ok ||
-            skipMany(prefixSpec) >> "SUBROUTINE"_tok >> name >>
-                maybe(parenthesized(optionalList(dummyArg))) >>
-                maybe(languageBindingSpec) >> atEndOfStmt >> ok)) >>
+    lookAhead(misplacedOpenACCDeclareRun >> skipStuffBeforeStatement >>
+        !statement(Parser<OtherSpecificationStmt>{}) >>
+        !statement(typeDeclarationStmt) >> maybe(label) >>
+        (validFunctionStmt >> ok || validSubroutineStmt >> ok)) >>
     construct<ProgramUnit>(
-        MisplacedOpenACCAsProgramUnit{} >> construct<ErrorRecovery>())};
+        misplacedOpenACCDeclareRun >> construct<ErrorRecovery>())};
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
@@ -313,7 +331,7 @@ TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<ModuleSubprogram>(indirect(compilerDirective)) ||
     construct<ModuleSubprogram>(
-        MisplacedOpenACCAsModuleSubprogram{} >> construct<ErrorRecovery>()))
+        MisplacedOpenACCDeclare{} >> construct<ErrorRecovery>()))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -402,8 +420,7 @@ TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<InterfaceSpecification>(indirect(compilerDirective)) ||
     construct<InterfaceSpecification>(
-        MisplacedOpenACCAsInterfaceSpecification{} >>
-        construct<ErrorRecovery>()))
+        MisplacedOpenACCDeclare{} >> construct<ErrorRecovery>()))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
@@ -657,14 +674,14 @@ TYPE_CONTEXT_PARSER("SUBROUTINE subprogram"_en_US,
 // R1535 subroutine-stmt ->
 //         [prefix] SUBROUTINE subroutine-name [( [dummy-arg-list] )
 //         [proc-language-binding-spec]]
-TYPE_PARSER(
+TYPE_PARSER(validSubroutineStmt ||
     (construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
          !"("_tok >> pure<std::list<DummyArg>>(),
          pure<std::optional<LanguageBindingSpec>>()) ||
         construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
             defaulted(parenthesized(optionalList(dummyArg))),
             maybe(languageBindingSpec))) /
-    checkEndOfKnownStmt)
+        checkEndOfKnownStmt)
 
 // R1536 dummy-arg -> dummy-arg-name | *
 TYPE_PARSER(construct<DummyArg>(name) || construct<DummyArg>(star))

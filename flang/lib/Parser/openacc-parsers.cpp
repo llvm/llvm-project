@@ -347,31 +347,12 @@ std::optional<Success> MisplacedOpenACCDeclare::Parse(ParseState &state) const {
       lookAhead("!$ACC "_sptok >> "DECLARE"_tok) >>
       recovery(
           fail<Success>(
-              "OpenACC DECLARE directive must appear in a specification part"_err_en_US),
+              "OpenACC DECLARE directive must appear in a specification part, "
+              "not between procedures or interface bodies"_err_en_US),
           startAccLine >>
               Parser<OpenACCStandaloneDeclarativeConstruct>{} / endAccLine >>
               ok)};
   return parser.Parse(state);
-}
-
-std::optional<Success> MisplacedOpenACCAsProgramUnit::Parse(
-    ParseState &state) const {
-  return MisplacedOpenACCDeclare{}.Parse(state);
-}
-
-std::optional<Success> MisplacedOpenACCAsInternalSubprogram::Parse(
-    ParseState &state) const {
-  return MisplacedOpenACCDeclare{}.Parse(state);
-}
-
-std::optional<Success> MisplacedOpenACCAsModuleSubprogram::Parse(
-    ParseState &state) const {
-  return MisplacedOpenACCDeclare{}.Parse(state);
-}
-
-std::optional<Success> MisplacedOpenACCAsInterfaceSpecification::Parse(
-    ParseState &state) const {
-  return MisplacedOpenACCDeclare{}.Parse(state);
 }
 
 // [Clause, [Clause], ...]

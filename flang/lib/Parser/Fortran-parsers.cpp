@@ -125,8 +125,8 @@ TYPE_CONTEXT_PARSER("internal subprogram"_en_US,
         construct<InternalSubprogram>(indirect(subroutineSubprogram))) /
             forceEndOfStmt ||
         construct<InternalSubprogram>(indirect(compilerDirective)) ||
-        construct<InternalSubprogram>(MisplacedOpenACCAsInternalSubprogram{} >>
-            construct<ErrorRecovery>()))
+        construct<InternalSubprogram>(
+            MisplacedOpenACCDeclare{} >> construct<ErrorRecovery>()))
 
 // R511 internal-subprogram-part -> contains-stmt [internal-subprogram]...
 TYPE_CONTEXT_PARSER("internal subprogram part"_en_US,
