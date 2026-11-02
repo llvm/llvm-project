@@ -5446,70 +5446,75 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (!VT.isVector() && VT.getSizeInBits() > 64)
       return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
 
-    InstructionCost Cost = BaseT::getArithmeticInstrCost(
-        Opcode, Ty, CostKind, Op1Info, Op2Info);
-    if (Ty->isVectorTy() && (ISD == ISD::SDIV || ISD == ISD::UDIV)) {
-      if (TLI->isOperationLegalOrCustom(ISD, LT.second) && ST->hasSVE()) {
-        // SDIV/UDIV operations are lowered using SVE, then we can have less
-        // costs.
-        if (VT.isSimple() && isa<FixedVectorType>(Ty) &&
-            Ty->getPrimitiveSizeInBits().getFixedValue() < 128) {
-          static const CostTblEntry DivTbl[]{
-              {ISD::SDIV, MVT::v2i8, 5},  {ISD::SDIV, MVT::v4i8, 8},
-              {ISD::SDIV, MVT::v8i8, 8},  {ISD::SDIV, MVT::v2i16, 5},
-              {ISD::SDIV, MVT::v4i16, 5}, {ISD::SDIV, MVT::v2i32, 1},
-              {ISD::UDIV, MVT::v2i8, 5},  {ISD::UDIV, MVT::v4i8, 8},
-              {ISD::UDIV, MVT::v8i8, 8},  {ISD::UDIV, MVT::v2i16, 5},
-              {ISD::UDIV, MVT::v4i16, 5}, {ISD::UDIV, MVT::v2i32, 1}};
+    if (!Ty->isVectorTy()) {
+      // A divide will have a throughput / latency dependant on the value being
+      // divided. It is typically between 5-20 cycles. Using experimental data,
+      // we use 7 as a weighted average.
+      return LT.first * ((CostKind == TTI::TCK_CodeSize ? 1 : 7) +
+                         ((ISD == ISD::SREM || ISD == ISD::UREM) ? 1 : 0));
+    }
 
-          const auto *Entry = CostTableLookup(DivTbl, ISD, VT.getSimpleVT());
-          if (nullptr != Entry)
-            return Entry->Cost;
-        }
-        // A non-power-of-2 count can't divide as a single whole-register op
-        // (an inactive lane's leftover value could be a zero divisor and
-        // trap), so the legalizer emits one div per whole register plus one
-        // per set bit of the remainder (e.g. <7 x i32> emits 3 divs, not 2).
-        if (auto *FVTy = dyn_cast<FixedVectorType>(Ty);
-            FVTy && LT.second.isFixedLengthVector()) {
-          unsigned NumElts = FVTy->getNumElements();
-          unsigned RegElts = LT.second.getVectorNumElements();
-          if (RegElts > 0)
-            Cost = (NumElts / RegElts + popcount(NumElts % RegElts)) * 2;
-        }
-        // For 8/16-bit elements, the cost is higher because the type
-        // requires promotion and possibly splitting:
-        if (LT.second.getScalarType() == MVT::i8)
-          Cost *= 8;
-        else if (LT.second.getScalarType() == MVT::i16)
-          Cost *= 4;
-        return Cost;
-      } else {
-        // If one of the operands is a uniform constant then the cost for each
-        // element is Cost for insertion, extraction and division.
-        // Insertion cost = 2, Extraction Cost = 2, Division = cost for the
-        // operation with scalar type
-        if ((Op1Info.isConstant() && Op1Info.isUniform()) ||
-            (Op2Info.isConstant() && Op2Info.isUniform())) {
-          if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
-            InstructionCost DivCost = BaseT::getArithmeticInstrCost(
-                Opcode, Ty->getScalarType(), CostKind, Op1Info, Op2Info);
-            return (4 + DivCost) * VTy->getNumElements();
-          }
-        }
-        // On AArch64, without SVE, vector divisions are expanded
-        // into scalar divisions of each pair of elements.
-        Cost += getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind,
-                                   -1, nullptr, nullptr);
-        Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
-                                   nullptr, nullptr);
+    if (ST->hasSVE() && (ISD == ISD::SREM || ISD == ISD::UREM))
+      return getArithmeticInstrCost(
+                 ISD == ISD::SREM ? Instruction::SDiv : Instruction::UDiv, Ty,
+                 CostKind, Op1Info, Op2Info, Args, CtxI) +
+             getArithmeticInstrCost(Instruction::Mul, Ty, CostKind);
+
+    if (ST->hasSVE() && TLI->isOperationLegalOrCustom(ISD, LT.second)) {
+      // SDIV/UDIV operations are lowered using SVE, then we can use a sve
+      // vector divide instruction.
+      InstructionCost Cost = LT.first * (CostKind == TTI::TCK_CodeSize ? 1 : 7);
+      if (VT.isSimple() && isa<FixedVectorType>(Ty) &&
+          Ty->getPrimitiveSizeInBits().getFixedValue() < 128) {
+        static const CostTblEntry DivTbl[]{
+            {ISD::SDIV, MVT::v2i8, 4},  {ISD::SDIV, MVT::v4i8, 7},
+            {ISD::SDIV, MVT::v8i8, 7},  {ISD::SDIV, MVT::v2i16, 4},
+            {ISD::SDIV, MVT::v4i16, 4}, {ISD::SDIV, MVT::v2i32, 0},
+            {ISD::UDIV, MVT::v2i8, 4},  {ISD::UDIV, MVT::v4i8, 7},
+            {ISD::UDIV, MVT::v8i8, 7},  {ISD::UDIV, MVT::v2i16, 4},
+            {ISD::UDIV, MVT::v4i16, 4}, {ISD::UDIV, MVT::v2i32, 0}};
+
+        const auto *Entry = CostTableLookup(DivTbl, ISD, VT.getSimpleVT());
+        if (nullptr != Entry)
+          return Entry->Cost + Cost;
       }
 
-      // TODO: if one of the arguments is scalar, then it's not necessary to
-      // double the cost of handling the vector elements.
-      Cost += Cost;
+      // A non-power-of-2 count can't divide as a single whole-register op
+      // (an inactive lane's leftover value could be a zero divisor and
+      // trap), so the legalizer emits one div per whole register plus one
+      // per set bit of the remainder (e.g. <7 x i32> emits 3 divs, not 2).
+      if (auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+          FVTy && LT.second.isFixedLengthVector()) {
+        unsigned NumElts = FVTy->getNumElements();
+        unsigned RegElts = LT.second.getVectorNumElements();
+        if (RegElts > 0)
+          Cost = (NumElts / RegElts + popcount(NumElts % RegElts)) * 2;
+      }
+      // For 8/16-bit elements, the cost is higher because the type
+      // requires promotion and possibly splitting:
+      if (LT.second.getScalarType() == MVT::i8)
+        Cost *= 8;
+      else if (LT.second.getScalarType() == MVT::i16)
+        Cost *= 4;
+      return Cost;
     }
-    return Cost;
+
+    // Scalarization Cost
+    if (LT.second.isVector()) {
+      InstructionCost Cost = getArithmeticInstrCost(Opcode, Ty->getScalarType(),
+                                                    CostKind, Op1Info, Op2Info);
+      Cost += ((!Op1Info.isConstant() && !Op1Info.isUniform()) +
+               (!Op2Info.isConstant() && !Op2Info.isUniform())) *
+              getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
+                                 nullptr, nullptr);
+      Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
+                                 nullptr, nullptr);
+      return LT.first * LT.second.getVectorMinNumElements() * Cost;
+    } else {
+      InstructionCost Cost = getArithmeticInstrCost(Opcode, Ty->getScalarType(),
+                                                    CostKind, Op1Info, Op2Info);
+      return LT.first * Cost;
+    }
   }
   case ISD::XOR:
   case ISD::OR:

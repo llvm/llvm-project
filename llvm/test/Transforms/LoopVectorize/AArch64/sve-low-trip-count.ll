@@ -390,22 +390,19 @@ exit:
 define void @tc3_udiv_i8_reject(ptr noalias %a, ptr noalias %b, ptr noalias %c) #0 {
 ; CHECK-LABEL: define void @tc3_udiv_i8_reject(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    [[PC:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[IV]]
-; CHECK-NEXT:    [[VA:%.*]] = load i8, ptr [[PA]], align 1
-; CHECK-NEXT:    [[VB:%.*]] = load i8, ptr [[PB]], align 1
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[VA]], [[VB]]
-; CHECK-NEXT:    store i8 [[DIV]], ptr [[PC]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 3
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[A]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr [[B]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv <2 x i8> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <2 x i8> [[TMP0]], ptr [[C]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
   br label %loop
