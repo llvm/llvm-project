@@ -42,7 +42,11 @@ add_header_library(
   HDRS
     functional.h
   DEPENDS
+    .type_traits
+    .utility
     libc.hdr.stdint_proxy
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -117,6 +121,9 @@ add_header_library(
   DEPENDS
     .type_traits
     .utility
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -210,6 +217,10 @@ add_header_library(
   expected
   HDRS
     expected.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -221,6 +232,7 @@ add_header_library(
     .type_traits
     .utility
     libc.hdr.types.size_t
+    libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )

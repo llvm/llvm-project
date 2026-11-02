@@ -12,7 +12,7 @@ module attributes {
   cir.lowering_lang_options = #cir.lowering_lang_options<
     exceptions = false, threadsafe_statics = true, cuda = false,
     cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false, openmp = false,
-    openmp_is_target_device = false, clang_abi_compat = 16>
+    openmp_is_target_device = false, clang_abi_compat = 16, long_double_size = 0>
 } {
   cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ1gvE1x"> @_ZZ1gvE1x = #cir.int<0> : !s32i align(4) dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
 

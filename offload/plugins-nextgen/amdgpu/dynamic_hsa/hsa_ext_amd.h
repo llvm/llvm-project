@@ -62,7 +62,29 @@ typedef enum {
 
 typedef enum {
   HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS = 0,
+  HSA_AMD_AGENT_MEMORY_POOL_INFO_NUM_LINK_HOPS = 1,
+  HSA_AMD_AGENT_MEMORY_POOL_INFO_LINK_INFO = 2,
 } hsa_amd_agent_memory_pool_info_t;
+
+typedef enum {
+  HSA_AMD_LINK_INFO_TYPE_HYPERTRANSPORT = 0,
+  HSA_AMD_LINK_INFO_TYPE_QPI = 1,
+  HSA_AMD_LINK_INFO_TYPE_PCIE = 2,
+  HSA_AMD_LINK_INFO_TYPE_INFINBAND = 3,
+  HSA_AMD_LINK_INFO_TYPE_XGMI = 4,
+} hsa_amd_link_info_type_t;
+
+typedef struct hsa_amd_memory_pool_link_info_s {
+  uint32_t min_latency;
+  uint32_t max_latency;
+  uint32_t min_bandwidth;
+  uint32_t max_bandwidth;
+  bool atomic_support_32bit;
+  bool atomic_support_64bit;
+  bool coherent_support;
+  hsa_amd_link_info_type_t link_type;
+  uint32_t numa_distance;
+} hsa_amd_memory_pool_link_info_t;
 
 typedef enum {
   HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED = 0,
@@ -219,6 +241,14 @@ hsa_amd_profiling_get_dispatch_time(hsa_agent_t agent, hsa_signal_t signal,
 
 hsa_status_t hsa_amd_profiling_set_profiler_enabled(hsa_queue_t *queue,
                                                     int enable);
+
+typedef struct hsa_amd_profiling_async_copy_time_s {
+  uint64_t start;
+  uint64_t end;
+} hsa_amd_profiling_async_copy_time_t;
+
+hsa_status_t hsa_amd_profiling_get_async_copy_time(
+    hsa_signal_t signal, hsa_amd_profiling_async_copy_time_t *time);
 
 hsa_status_t hsa_amd_vmem_address_reserve(void **va, size_t size,
                                           uint64_t address, uint64_t flags);

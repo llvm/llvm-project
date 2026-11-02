@@ -11,11 +11,14 @@
 
 #include "ArrayList.h"
 #include "llvm/ADT/ConcurrentHashtable.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Parallel.h"
 #include <atomic>
 #include <limits>
+#include <variant>
 
 namespace llvm {
 namespace dwarf_linker {
@@ -26,6 +29,48 @@ class CompileUnit;
 class TypeEntryBody;
 
 using TypeEntry = StringMapEntry<std::atomic<TypeEntryBody *>>;
+
+/// A type key is text interleaved with references to other type entries. A
+/// reference stands for the referenced entry's key without copying it. Keys
+/// are interned, so equal references mean equal keys.
+class TypeKey {
+public:
+  /// A maximal run of text, or a reference.
+  using Part = std::variant<StringRef, const TypeEntry *>;
+
+  /// Remove the first part of the non-empty key \p Key and return it.
+  static Part takePart(StringRef &Key);
+
+  /// Compare \p LHS and \p RHS as if every reference were replaced by the key
+  /// it refers to, so the result does not depend on pointer values.
+  static int compare(StringRef LHS, StringRef RHS);
+
+  /// \returns \p Key with every reference replaced by the key it refers to.
+  static std::string expand(StringRef Key);
+
+  TypeKey &operator+=(StringRef Text) {
+    assert(!Text.contains(RefMarker) && "text would read as a reference");
+    Bytes += Text;
+    return *this;
+  }
+  TypeKey &operator+=(char C) {
+    assert(C != RefMarker && "text would read as a reference");
+    Bytes += C;
+    return *this;
+  }
+  void appendRef(const TypeEntry *Entry);
+
+  size_t size() const { return Bytes.size(); }
+  void truncate(size_t Size) { Bytes.truncate(Size); }
+  StringRef str() const { return Bytes; }
+
+private:
+  /// DWARF strings cannot contain NUL, so the marker is unambiguous.
+  static constexpr char RefMarker = '\0';
+  static constexpr size_t RefSize = 1 + sizeof(const TypeEntry *);
+
+  SmallString<1000> Bytes;
+};
 
 /// Keeps cloned data for the type DIE.
 class TypeEntryBody {
@@ -166,13 +211,21 @@ public:
 
   /// Sort children for each kept type entry.
   void sortTypes() {
-    std::function<void(TypeEntry * Entry)> SortChildrenRec =
-        [&](TypeEntry *Entry) {
-          Entry->getValue().load()->Children.sort(TypesComparator);
-          Entry->getValue().load()->Children.forEach(SortChildrenRec);
-        };
+    SmallVector<TypeEntry *> Entries;
+    SmallVector<TypeEntry *> Worklist = {getRoot()};
+    while (!Worklist.empty()) {
+      TypeEntry *Entry = Worklist.pop_back_val();
+      Entries.push_back(Entry);
+      Entry->getValue().load()->Children.forEach(
+          [&](TypeEntry *Child) { Worklist.push_back(Child); });
+    }
 
-    SortChildrenRec(getRoot());
+    // The comparator is a total order, so the result does not depend on
+    // scheduling.
+    parallelForEach(Entries, [&](TypeEntry *Entry) {
+      Entry->getValue().load()->Children.sort(TypesComparator,
+                                              /*Parallel=*/true);
+    });
   }
 
   /// Return root for all type entries.
@@ -192,7 +245,7 @@ protected:
         RHS->getValue().load()->SortKey.load(std::memory_order_relaxed);
     if (LK != RK)
       return LK < RK;
-    return LHS->getKey() < RHS->getKey();
+    return TypeKey::compare(LHS->getKey(), RHS->getKey()) < 0;
   };
 
   // Root of all type entries.

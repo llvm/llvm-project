@@ -1010,22 +1010,26 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
     if (auto *BO = dyn_cast_or_null<BinaryOperator>(VarIndex)) {
       Value *UnscaledIndex = nullptr;
       const APInt *Constant;
+      bool FoundIndexScale = true;
       if (match(BO, m_Mul(m_Value(UnscaledIndex), m_APInt(Constant)))) {
         IndexScale *= *Constant;
       } else if (match(BO, m_Shl(m_Value(UnscaledIndex), m_APInt(Constant))) &&
                  Constant->ult(BitWidth)) {
         IndexScale <<= *Constant;
       } else {
-        break;
+        FoundIndexScale = false;
       }
 
-      // If we do not have nuw or nsw on the mul/shl we need to update the flags
-      if (!BO->hasNoSignedWrap())
-        Expr.Flags = Expr.Flags.withoutNoUnsignedSignedWrap();
-      if (!BO->hasNoUnsignedWrap())
-        Expr.Flags = Expr.Flags.withoutNoUnsignedWrap();
+      if (FoundIndexScale) {
+        // If we do not have nuw or nsw on the mul/shl we need to update the
+        // flags
+        if (!BO->hasNoSignedWrap())
+          Expr.Flags = Expr.Flags.withoutNoUnsignedSignedWrap();
+        if (!BO->hasNoUnsignedWrap())
+          Expr.Flags = Expr.Flags.withoutNoUnsignedWrap();
 
-      VarIndex = UnscaledIndex;
+        VarIndex = UnscaledIndex;
+      }
     }
 
     for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
@@ -1043,8 +1047,9 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
         // Truncate if type size exceeds index space.
         APInt IndexedSize(BitWidth, GTI.getSequentialElementStride(DL),
                           /*isSigned=*/false,
-                          /*implcitTrunc=*/true);
-        Expr.Offset += ConstOffset->getValue() * IndexedSize;
+                          /*implicitTrunc=*/true);
+        Expr.Offset +=
+            ConstOffset->getValue().sextOrTrunc(BitWidth) * IndexedSize;
         continue;
       }
 
