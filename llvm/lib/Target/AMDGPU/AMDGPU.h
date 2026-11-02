@@ -106,6 +106,7 @@ public:
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
+FunctionPass *createSIMaterializeWMMAScaleLegacyPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 
@@ -239,6 +240,9 @@ extern char &SIPeepholeSDWALegacyID;
 
 void initializeSIShrinkInstructionsLegacyPass(PassRegistry &);
 extern char &SIShrinkInstructionsLegacyID;
+
+void initializeSIMaterializeWMMAScaleLegacyPass(PassRegistry &);
+extern char &SIMaterializeWMMAScaleLegacyID;
 
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;

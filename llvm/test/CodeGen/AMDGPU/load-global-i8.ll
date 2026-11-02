@@ -9162,11 +9162,11 @@ define amdgpu_kernel void @global_zextload_v2i8_to_v2i16(ptr addrspace(1) %out, 
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s9, s3
 ; GCN-NOHSA-VI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s4, s0
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s0, 0xc060c00
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s5, s1
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
-; GCN-NOHSA-VI-NEXT:    v_perm_b32 v0, v1, v0, s0
+; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v1, 0xff0000, v1
+; GCN-NOHSA-VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NOHSA-VI-NEXT:    s_endpgm
 ;

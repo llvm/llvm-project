@@ -8,16 +8,24 @@ define amdgpu_ps <8 x float> @wmma_scale_src_uniform_pack(<16 x i32> %a, <16 x i
 ; CHECK-NEXT:    s_mov_b64 s[64:65], 0
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; CHECK-NEXT:    v_perm_b32 v40, s0, s1, 4
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(TRANS32_DEP_1)
-; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v40 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
+; CHECK-NEXT:    s_and_b32 s2, s1, 0xff
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
+; CHECK-NEXT:    s_lshl_b32 s3, s2, 8
+; CHECK-NEXT:    s_lshl_b32 s2, s2, 16
+; CHECK-NEXT:    s_lshl_b32 s1, s1, 24
+; CHECK-NEXT:    s_or_b32 s0, s0, s3
+; CHECK-NEXT:    s_or_b32 s1, s2, s1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s0 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v33
 ; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v33
 ; CHECK-NEXT:    v_dual_mov_b32 v2, v34 :: v_dual_mov_b32 v3, v35
+; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; CHECK-NEXT:    v_dual_mov_b32 v4, v36 :: v_dual_mov_b32 v5, v37
 ; CHECK-NEXT:    v_dual_mov_b32 v6, v38 :: v_dual_mov_b32 v7, v39
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -40,9 +48,17 @@ define amdgpu_ps void @uniform_pack_not_wmma_scale(i32 inreg %scale0, i32 inreg 
 ; CHECK-NEXT:    s_mov_b64 s[64:65], 0
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; CHECK-NEXT:    v_perm_b32 v0, s0, s1, 4
+; CHECK-NEXT:    s_and_b32 s2, s1, 0xff
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
+; CHECK-NEXT:    s_lshl_b32 s3, s2, 8
+; CHECK-NEXT:    s_lshl_b32 s2, s2, 16
+; CHECK-NEXT:    s_lshl_b32 s1, s1, 24
+; CHECK-NEXT:    s_or_b32 s0, s0, s3
+; CHECK-NEXT:    s_or_b32 s1, s2, s1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_endpgm
   %byte0 = and i32 %scale0, 255
@@ -64,18 +80,25 @@ define amdgpu_ps <8 x float> @wmma_scale_src_extra_use(<16 x i32> %a, <16 x i32>
 ; CHECK-NEXT:    s_mov_b64 s[64:65], 0
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; CHECK-NEXT:    v_perm_b32 v40, s0, s1, 4
+; CHECK-NEXT:    s_and_b32 s2, s1, 0xff
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
+; CHECK-NEXT:    s_lshl_b32 s3, s2, 8
+; CHECK-NEXT:    s_lshl_b32 s2, s2, 16
+; CHECK-NEXT:    s_lshl_b32 s1, s1, 24
+; CHECK-NEXT:    s_or_b32 s0, s0, s3
+; CHECK-NEXT:    s_or_b32 s1, s2, s1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s0 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v40
+; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(TRANS32_DEP_1)
-; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v40 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v33
 ; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v33
 ; CHECK-NEXT:    v_dual_mov_b32 v2, v34 :: v_dual_mov_b32 v3, v35
 ; CHECK-NEXT:    v_dual_mov_b32 v4, v36 :: v_dual_mov_b32 v5, v37
 ; CHECK-NEXT:    v_dual_mov_b32 v6, v38 :: v_dual_mov_b32 v7, v39
@@ -90,6 +113,106 @@ define amdgpu_ps <8 x float> @wmma_scale_src_extra_use(<16 x i32> %a, <16 x i32>
   %pack = or i32 %pack01, %pack23
   call void asm sideeffect "; use $0", "s"(i32 %pack)
   %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 1, <16 x i32> %a, i32 1, <16 x i32> %b, i16 0, <8 x float> %c, i32 0, i32 0, i32 %pack, i32 0, i32 0, i32 %pack, i1 false, i1 false)
+  ret <8 x float> %res
+}
+
+define amdgpu_ps <8 x float> @wmma_scale_src_uniform_pack_multi(<16 x i32> %a, <16 x i32> %b, <8 x float> %c, i32 inreg %scale0, i32 inreg %scale1) {
+; CHECK-LABEL: wmma_scale_src_uniform_pack_multi:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_and_b32 s2, s1, 0xff
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
+; CHECK-NEXT:    s_lshl_b32 s3, s2, 8
+; CHECK-NEXT:    s_lshl_b32 s2, s2, 16
+; CHECK-NEXT:    s_lshl_b32 s1, s1, 24
+; CHECK-NEXT:    s_or_b32 s0, s0, s3
+; CHECK-NEXT:    s_or_b32 s1, s2, s1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s0 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
+; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s0 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v33
+; CHECK-NEXT:    v_dual_mov_b32 v2, v34 :: v_dual_mov_b32 v3, v35
+; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; CHECK-NEXT:    v_dual_mov_b32 v4, v36 :: v_dual_mov_b32 v5, v37
+; CHECK-NEXT:    v_dual_mov_b32 v6, v38 :: v_dual_mov_b32 v7, v39
+; CHECK-NEXT:    ; return to shader part epilog
+  %byte0 = and i32 %scale0, 255
+  %byte1 = and i32 %scale1, 255
+  %byte1.shift8 = shl i32 %byte1, 8
+  %byte1.shift16 = shl i32 %byte1, 16
+  %byte1.shift24 = shl i32 %byte1, 24
+  %pack01 = or i32 %byte0, %byte1.shift8
+  %pack23 = or i32 %byte1.shift16, %byte1.shift24
+  %pack = or i32 %pack01, %pack23
+  %res0 = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 1, <16 x i32> %a, i32 1, <16 x i32> %b, i16 0, <8 x float> %c, i32 0, i32 0, i32 %pack, i32 0, i32 0, i32 %pack, i1 false, i1 false)
+  %res1 = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 1, <16 x i32> %a, i32 1, <16 x i32> %b, i16 0, <8 x float> %res0, i32 0, i32 0, i32 %pack, i32 0, i32 0, i32 %pack, i1 false, i1 false)
+  ret <8 x float> %res1
+}
+
+define amdgpu_ps <8 x float> @wmma_scale_src_uniform_pack_loop(<16 x i32> %a, <16 x i32> %b, <8 x float> %c, i32 inreg %scale0, i32 inreg %scale1, i32 inreg %n) {
+; CHECK-LABEL: wmma_scale_src_uniform_pack_loop:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_and_b32 s3, s1, 0xff
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
+; CHECK-NEXT:    s_lshl_b32 s4, s3, 8
+; CHECK-NEXT:    s_lshl_b32 s3, s3, 16
+; CHECK-NEXT:    s_lshl_b32 s1, s1, 24
+; CHECK-NEXT:    s_or_b32 s0, s0, s4
+; CHECK-NEXT:    s_or_b32 s1, s3, s1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_mov_b32_e32 v40, s0
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:  .LBB4_1: ; %loop
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v40 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
+; CHECK-NEXT:    s_add_co_i32 s0, s0, 1
+; CHECK-NEXT:    s_cmp_lt_u32 s0, s2
+; CHECK-NEXT:    s_cbranch_scc1 .LBB4_1
+; CHECK-NEXT:  ; %bb.2: ; %exit
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v33
+; CHECK-NEXT:    v_dual_mov_b32 v2, v34 :: v_dual_mov_b32 v3, v35
+; CHECK-NEXT:    v_dual_mov_b32 v4, v36 :: v_dual_mov_b32 v5, v37
+; CHECK-NEXT:    v_dual_mov_b32 v6, v38 :: v_dual_mov_b32 v7, v39
+; CHECK-NEXT:    ; return to shader part epilog
+entry:
+  %byte0 = and i32 %scale0, 255
+  %byte1 = and i32 %scale1, 255
+  %byte1.shift8 = shl i32 %byte1, 8
+  %byte1.shift16 = shl i32 %byte1, 16
+  %byte1.shift24 = shl i32 %byte1, 24
+  %pack01 = or i32 %byte0, %byte1.shift8
+  %pack23 = or i32 %byte1.shift16, %byte1.shift24
+  %pack = or i32 %pack01, %pack23
+  br label %loop
+
+loop:
+  %c.phi = phi <8 x float> [ %c, %entry ], [ %res, %loop ]
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 1, <16 x i32> %a, i32 1, <16 x i32> %b, i16 0, <8 x float> %c.phi, i32 0, i32 0, i32 %pack, i32 0, i32 0, i32 %pack, i1 false, i1 false)
+  %i.next = add nuw i32 %i, 1
+  %cmp = icmp ult i32 %i.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
   ret <8 x float> %res
 }
 
