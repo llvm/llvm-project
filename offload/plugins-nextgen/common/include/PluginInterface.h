@@ -1001,21 +1001,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                bool *IsQueueWorkCompleted) = 0;
 
-  /// Indicate whether the plugin transfers data faster when the host side of
-  /// the transfer is pinned memory. If a plugin returns true, the kernel
-  /// launch environment is staged in a pinned host buffer before it is
-  /// submitted. Plugins may benefit for different reasons: some pick a cheaper
-  /// copy path for buffers they know are pinned, others rely on the driver
-  /// only issuing a true asynchronous transfer out of page-locked memory.
-  virtual bool hasFastTransferWithPinnedMemory() const { return false; }
-
-  /// Allocate a pinned host buffer to stage a kernel launch environment. The
-  /// caller owns it and must release it (as TARGET_ALLOC_HOST) once the
-  /// transfer reading it has completed. Returns nullptr if staging is
-  /// unavailable, in which case the caller must submit the launch environment
-  /// from ordinary host memory.
-  KernelLaunchEnvironmentTy *getPinnedLaunchEnvBuffer();
-
   /// Check whether the architecture supports VA management
   virtual bool supportVAManagement() const { return false; }
 
@@ -1260,6 +1245,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
   virtual uint64_t getHardwareParallelism() const { return 0; }
+
+  /// Get the maximum size of a synchronous host-to-device transfer that may be
+  /// done by the host writing the device memory directly, or zero if the
+  /// device does not support direct writes.
+  virtual uint64_t getMaxDirectWriteSize() const { return 0; }
 
   /// Get the RPC server running on this device.
   RPCServerTy *getRPCServer() const { return RPCServer; }

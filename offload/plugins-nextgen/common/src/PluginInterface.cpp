@@ -607,32 +607,6 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
   return Plugin::success();
 }
 
-KernelLaunchEnvironmentTy *GenericDeviceTy::getPinnedLaunchEnvBuffer() {
-  if (!hasFastTransferWithPinnedMemory())
-    return nullptr;
-
-  // While recording or replaying, dataAlloc serves every allocation kind from
-  // the record-replay device memory pool, so it cannot give us host memory.
-  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
-    return nullptr;
-
-  auto AllocOrErr =
-      dataAlloc(sizeof(KernelLaunchEnvironmentTy), /*HostPtr=*/nullptr,
-                TargetAllocTy::TARGET_ALLOC_HOST, /*Alignment=*/0);
-  if (!AllocOrErr) {
-    // Staging is optional, so fall back to unpinned memory. Consume the
-    // error unconditionally: ODBG does not evaluate its operands unless
-    // debugging is enabled.
-    std::string ErrStr = toString(AllocOrErr.takeError());
-    ODBG(OLDT_Alloc) << "Failed to allocate a pinned buffer for the kernel "
-                        "launch environment, submitting it unstaged: "
-                     << ErrStr;
-    return nullptr;
-  }
-
-  return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
-}
-
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
   return Plugin::error(ErrorCode::UNSUPPORTED,
                        "device does not support VA Management");

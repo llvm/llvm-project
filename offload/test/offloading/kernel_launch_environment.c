@@ -1,18 +1,24 @@
-// Stress the kernel launch environment (KLE) transfer.
+// Stress the kernel launch environment (KLE) of concurrent launches.
 //
-// A cross-team reduction gives the launch a KLE, which the plugin stages in a
-// host buffer and copies to the device asynchronously. The KLE carries that
-// launch's own reduction buffer, so overlapping launches must neither share a
-// staging buffer nor release one while its transfer is still in flight: either
-// makes a launch reduce into another launch's buffer. Every launch here
-// accumulates a distinct value, so that shows up as a wrong sum.
+// A cross-team reduction gives the launch a KLE, which carries that launch's
+// own reduction buffer. The KLE is copied to the device synchronously, which the
+// plugin may do by storing it in place where device memory is host-writable.
+// Either has to hold up when launches overlap: every launch needs its own KLE,
+// and a launch's KLE has to be visible to the device before its kernel runs
+// and stay intact until it finishes. Otherwise a launch reduces into another
+// launch's buffer, or reads a KLE that has not landed yet. Every launch here
+// accumulates a distinct value, so either shows up as a wrong sum.
 //
 // RUN: %libomptarget-compile-generic -fopenmp-offload-mandatory
 // RUN: %libomptarget-run-generic
 // RUN: %libomptarget-compileopt-generic -fopenmp-offload-mandatory
 // RUN: %libomptarget-run-generic
+// RUN: rm -rf %t.rr && mkdir -p %t.rr
+// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_DIR=%t.rr \
+// RUN:   %libomptarget-run-generic
 //
 // REQUIRES: gpu
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>
@@ -39,7 +45,7 @@ int main(void) {
   int Errors = 0;
 
   // Launches issued back to back without an intervening synchronization, so
-  // that several KLE transfers are outstanding at once.
+  // that several launches are in flight at once.
   for (int k = 0; k < NUM_LAUNCHES; k++) {
     Results[k] = 0;
 #pragma omp target teams distribute parallel for map(tofrom : Results[k : 1])  \
@@ -51,8 +57,8 @@ int main(void) {
   Errors += check("nowait", Results);
 
   // Same, but with the launches and the synchronizations spread over several
-  // host threads: a thread finalizing its queue must not release a staging
-  // buffer that another thread's launch is still using.
+  // host threads: a thread finalizing its queue must not disturb the launch
+  // environment of a launch another thread still has in flight.
 #pragma omp parallel for num_threads(8)
   for (int k = 0; k < NUM_LAUNCHES; k++) {
     long Sum = 0;
