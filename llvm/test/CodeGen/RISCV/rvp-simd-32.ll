@@ -720,15 +720,6 @@ define <2 x i16> @test_padd_hs_splat_rhs(<2 x i16> %a, i16 %b) {
 define <4 x i8> @test_build_vector_i8(i8 %a, i8 %c, i8 %b, i8 %d) {
 ; RV32-LABEL: test_build_vector_i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    ppaire.b a3, a3, a0
-; RV32-NEXT:    ppaire.b a4, a0, a0
-; RV32-NEXT:    pack a3, a3, a4
-; RV32-NEXT:    ppaire.b a2, a2, a0
-; RV32-NEXT:    ppaire.b a1, a1, a0
-; RV32-NEXT:    pack a1, a1, a4
-; RV32-NEXT:    ppaire.b a0, a0, a0
-; RV32-NEXT:    pack a2, a2, a4
-; RV32-NEXT:    pack a0, a0, a4
 ; RV32-NEXT:    ppaire.db a0, a0, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
@@ -1000,24 +991,15 @@ define <4 x i8> @test_psll_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srli a3, a0, 24
-; RV32-NEXT:    ppaire.b a4, a0, a0
-; RV32-NEXT:    sll a2, a3, a2
-; RV32-NEXT:    srli a3, a1, 8
-; RV32-NEXT:    ppaire.b a2, a2, a0
-; RV32-NEXT:    srli a5, a0, 8
-; RV32-NEXT:    pack a7, a2, a4
-; RV32-NEXT:    sll a2, a5, a3
-; RV32-NEXT:    ppaire.b a2, a2, a0
-; RV32-NEXT:    sll a3, a0, a1
+; RV32-NEXT:    srli a4, a1, 8
+; RV32-NEXT:    sll a3, a3, a2
+; RV32-NEXT:    srli a2, a0, 8
+; RV32-NEXT:    sll a6, a0, a1
 ; RV32-NEXT:    srli a1, a1, 16
 ; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    ppaire.b a3, a3, a0
-; RV32-NEXT:    sll a0, a0, a1
-; RV32-NEXT:    pack t1, a3, a4
-; RV32-NEXT:    ppaire.b a0, a0, a0
-; RV32-NEXT:    pack a6, a2, a4
-; RV32-NEXT:    pack t2, a0, a4
-; RV32-NEXT:    ppaire.db a0, t1, a6
+; RV32-NEXT:    sll a2, a2, a4
+; RV32-NEXT:    sll a7, a0, a1
+; RV32-NEXT:    ppaire.db a0, a6, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -1173,26 +1155,17 @@ define <4 x i8> @test_psrl_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srli a3, a0, 24
-; RV32-NEXT:    ppaire.b a4, a0, a0
-; RV32-NEXT:    srl a2, a3, a2
-; RV32-NEXT:    slli a3, a0, 16
-; RV32-NEXT:    ppaire.b a2, a2, a0
-; RV32-NEXT:    srli a5, a1, 8
-; RV32-NEXT:    srli a6, a3, 24
-; RV32-NEXT:    pack a3, a2, a4
-; RV32-NEXT:    srl a2, a6, a5
-; RV32-NEXT:    ppaire.b a2, a2, a0
+; RV32-NEXT:    srli a4, a1, 8
+; RV32-NEXT:    srl a3, a3, a2
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    srli a2, a2, 24
 ; RV32-NEXT:    zext.b a5, a0
-; RV32-NEXT:    srl a5, a5, a1
+; RV32-NEXT:    srl a6, a5, a1
 ; RV32-NEXT:    slli a0, a0, 8
 ; RV32-NEXT:    srli a1, a1, 16
 ; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    ppaire.b a5, a5, a0
-; RV32-NEXT:    srl a0, a0, a1
-; RV32-NEXT:    pack a6, a5, a4
-; RV32-NEXT:    ppaire.b a0, a0, a0
-; RV32-NEXT:    pack a2, a2, a4
-; RV32-NEXT:    pack a7, a0, a4
+; RV32-NEXT:    srl a2, a2, a4
+; RV32-NEXT:    srl a7, a0, a1
 ; RV32-NEXT:    ppaire.db a0, a6, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
@@ -1251,26 +1224,17 @@ define <4 x i8> @test_psra_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srai a3, a0, 24
-; RV32-NEXT:    ppaire.b a4, a0, a0
-; RV32-NEXT:    sra a2, a3, a2
-; RV32-NEXT:    slli a3, a0, 16
-; RV32-NEXT:    ppaire.b a2, a2, a0
-; RV32-NEXT:    srli a5, a1, 8
-; RV32-NEXT:    srai a6, a3, 24
-; RV32-NEXT:    pack a3, a2, a4
-; RV32-NEXT:    sra a2, a6, a5
-; RV32-NEXT:    ppaire.b a2, a2, a0
+; RV32-NEXT:    srli a4, a1, 8
+; RV32-NEXT:    sra a3, a3, a2
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    srai a2, a2, 24
 ; RV32-NEXT:    sext.b a5, a0
-; RV32-NEXT:    sra a5, a5, a1
+; RV32-NEXT:    sra a6, a5, a1
 ; RV32-NEXT:    slli a0, a0, 8
 ; RV32-NEXT:    srli a1, a1, 16
 ; RV32-NEXT:    srai a0, a0, 24
-; RV32-NEXT:    ppaire.b a5, a5, a0
-; RV32-NEXT:    sra a0, a0, a1
-; RV32-NEXT:    pack a6, a5, a4
-; RV32-NEXT:    ppaire.b a0, a0, a0
-; RV32-NEXT:    pack a2, a2, a4
-; RV32-NEXT:    pack a7, a0, a4
+; RV32-NEXT:    sra a2, a2, a4
+; RV32-NEXT:    sra a7, a0, a1
 ; RV32-NEXT:    ppaire.db a0, a6, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
@@ -1992,12 +1956,12 @@ define <4 x i8> @test_psdiv_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a2, a1, 24
 ; RV32-NEXT:    srai a3, a0, 24
-; RV32-NEXT:    div a2, a3, a2
-; RV32-NEXT:    slli a3, a1, 16
+; RV32-NEXT:    div a3, a3, a2
+; RV32-NEXT:    slli a2, a1, 16
 ; RV32-NEXT:    slli a4, a0, 16
-; RV32-NEXT:    srai a3, a3, 24
+; RV32-NEXT:    srai a2, a2, 24
 ; RV32-NEXT:    srai a4, a4, 24
-; RV32-NEXT:    div a3, a4, a3
+; RV32-NEXT:    div a2, a4, a2
 ; RV32-NEXT:    sext.b a4, a1
 ; RV32-NEXT:    sext.b a5, a0
 ; RV32-NEXT:    div a4, a5, a4
@@ -2005,17 +1969,8 @@ define <4 x i8> @test_psdiv_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-NEXT:    slli a0, a0, 8
 ; RV32-NEXT:    srai a1, a1, 24
 ; RV32-NEXT:    srai a0, a0, 24
-; RV32-NEXT:    div a0, a0, a1
-; RV32-NEXT:    ppaire.b a1, a2, a0
-; RV32-NEXT:    ppaire.b a2, a0, a0
-; RV32-NEXT:    pack a1, a1, a2
-; RV32-NEXT:    ppaire.b a3, a3, a0
-; RV32-NEXT:    ppaire.b a4, a4, a0
-; RV32-NEXT:    pack a4, a4, a2
-; RV32-NEXT:    ppaire.b a5, a0, a0
-; RV32-NEXT:    pack a0, a3, a2
-; RV32-NEXT:    pack a5, a5, a2
-; RV32-NEXT:    ppaire.db a0, a4, a0
+; RV32-NEXT:    div a5, a0, a1
+; RV32-NEXT:    ppaire.db a0, a4, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -2102,12 +2057,12 @@ define <4 x i8> @test_pudiv_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srli a3, a0, 24
-; RV32-NEXT:    divu a2, a3, a2
-; RV32-NEXT:    slli a3, a1, 16
+; RV32-NEXT:    divu a3, a3, a2
+; RV32-NEXT:    slli a2, a1, 16
 ; RV32-NEXT:    slli a4, a0, 16
-; RV32-NEXT:    srli a3, a3, 24
+; RV32-NEXT:    srli a2, a2, 24
 ; RV32-NEXT:    srli a4, a4, 24
-; RV32-NEXT:    divu a3, a4, a3
+; RV32-NEXT:    divu a2, a4, a2
 ; RV32-NEXT:    zext.b a4, a1
 ; RV32-NEXT:    zext.b a5, a0
 ; RV32-NEXT:    divu a4, a5, a4
@@ -2115,17 +2070,8 @@ define <4 x i8> @test_pudiv_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-NEXT:    slli a0, a0, 8
 ; RV32-NEXT:    srli a1, a1, 24
 ; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    divu a0, a0, a1
-; RV32-NEXT:    ppaire.b a1, a2, a0
-; RV32-NEXT:    ppaire.b a2, a0, a0
-; RV32-NEXT:    pack a1, a1, a2
-; RV32-NEXT:    ppaire.b a3, a3, a0
-; RV32-NEXT:    ppaire.b a4, a4, a0
-; RV32-NEXT:    pack a4, a4, a2
-; RV32-NEXT:    ppaire.b a5, a0, a0
-; RV32-NEXT:    pack a0, a3, a2
-; RV32-NEXT:    pack a5, a5, a2
-; RV32-NEXT:    ppaire.db a0, a4, a0
+; RV32-NEXT:    divu a5, a0, a1
+; RV32-NEXT:    ppaire.db a0, a4, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -2208,12 +2154,12 @@ define <4 x i8> @test_psrem_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a2, a1, 24
 ; RV32-NEXT:    srai a3, a0, 24
-; RV32-NEXT:    rem a2, a3, a2
-; RV32-NEXT:    slli a3, a1, 16
+; RV32-NEXT:    rem a3, a3, a2
+; RV32-NEXT:    slli a2, a1, 16
 ; RV32-NEXT:    slli a4, a0, 16
-; RV32-NEXT:    srai a3, a3, 24
+; RV32-NEXT:    srai a2, a2, 24
 ; RV32-NEXT:    srai a4, a4, 24
-; RV32-NEXT:    rem a3, a4, a3
+; RV32-NEXT:    rem a2, a4, a2
 ; RV32-NEXT:    sext.b a4, a1
 ; RV32-NEXT:    sext.b a5, a0
 ; RV32-NEXT:    rem a4, a5, a4
@@ -2221,17 +2167,8 @@ define <4 x i8> @test_psrem_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-NEXT:    slli a0, a0, 8
 ; RV32-NEXT:    srai a1, a1, 24
 ; RV32-NEXT:    srai a0, a0, 24
-; RV32-NEXT:    rem a0, a0, a1
-; RV32-NEXT:    ppaire.b a1, a2, a0
-; RV32-NEXT:    ppaire.b a2, a0, a0
-; RV32-NEXT:    pack a1, a1, a2
-; RV32-NEXT:    ppaire.b a3, a3, a0
-; RV32-NEXT:    ppaire.b a4, a4, a0
-; RV32-NEXT:    pack a4, a4, a2
-; RV32-NEXT:    ppaire.b a5, a0, a0
-; RV32-NEXT:    pack a0, a3, a2
-; RV32-NEXT:    pack a5, a5, a2
-; RV32-NEXT:    ppaire.db a0, a4, a0
+; RV32-NEXT:    rem a5, a0, a1
+; RV32-NEXT:    ppaire.db a0, a4, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -2294,12 +2231,12 @@ define <4 x i8> @test_purem_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srli a3, a0, 24
-; RV32-NEXT:    remu a2, a3, a2
-; RV32-NEXT:    slli a3, a1, 16
+; RV32-NEXT:    remu a3, a3, a2
+; RV32-NEXT:    slli a2, a1, 16
 ; RV32-NEXT:    slli a4, a0, 16
-; RV32-NEXT:    srli a3, a3, 24
+; RV32-NEXT:    srli a2, a2, 24
 ; RV32-NEXT:    srli a4, a4, 24
-; RV32-NEXT:    remu a3, a4, a3
+; RV32-NEXT:    remu a2, a4, a2
 ; RV32-NEXT:    zext.b a4, a1
 ; RV32-NEXT:    zext.b a5, a0
 ; RV32-NEXT:    remu a4, a5, a4
@@ -2307,17 +2244,8 @@ define <4 x i8> @test_purem_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-NEXT:    slli a0, a0, 8
 ; RV32-NEXT:    srli a1, a1, 24
 ; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    remu a0, a0, a1
-; RV32-NEXT:    ppaire.b a1, a2, a0
-; RV32-NEXT:    ppaire.b a2, a0, a0
-; RV32-NEXT:    pack a1, a1, a2
-; RV32-NEXT:    ppaire.b a3, a3, a0
-; RV32-NEXT:    ppaire.b a4, a4, a0
-; RV32-NEXT:    pack a4, a4, a2
-; RV32-NEXT:    ppaire.b a5, a0, a0
-; RV32-NEXT:    pack a0, a3, a2
-; RV32-NEXT:    pack a5, a5, a2
-; RV32-NEXT:    ppaire.db a0, a4, a0
+; RV32-NEXT:    remu a5, a0, a1
+; RV32-NEXT:    ppaire.db a0, a4, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
