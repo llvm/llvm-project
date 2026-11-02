@@ -79,6 +79,16 @@ entry:
   ret void
 }
 
+; The output that the input is tied to needs two registers.
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction:{{.*}}asm_tied_multireg
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for asm_tied_multireg
+; FALLBACK-WITH-REPORT-OUT-LABEL: asm_tied_multireg
+define i128 @asm_tied_multireg(i128 %x) {
+entry:
+  %r = call i128 asm "", "=r,0"(i128 %x)
+  ret i128 %r
+}
+
 %struct.foo = type { [8 x i64] }
 
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction:{{.*}}ld64b{{.*}}asm_output_ls64

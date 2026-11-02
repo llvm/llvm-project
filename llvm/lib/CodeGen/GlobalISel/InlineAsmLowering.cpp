@@ -406,7 +406,15 @@ bool InlineAsmLowering::lowerInlineAsm(
         unsigned InstFlagIdx = StartIdx;
         for (unsigned i = 0; i < DefIdx; ++i)
           InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
-        assert(getNumOpRegs(*Inst, InstFlagIdx) == 1 && "Wrong flag");
+
+        // Only one register is tied below, so let SelectionDAG tie each
+        // register of an output that needs several, such as an i128 in two
+        // 64-bit registers.
+        if (getNumOpRegs(*Inst, InstFlagIdx) != 1) {
+          LLVM_DEBUG(dbgs() << "Matching input constraint to an output with "
+                               "several registers not supported yet\n");
+          return false;
+        }
 
         const InlineAsm::Flag MatchedOperandFlag(Inst->getOperand(InstFlagIdx).getImm());
         if (MatchedOperandFlag.isMemKind()) {
