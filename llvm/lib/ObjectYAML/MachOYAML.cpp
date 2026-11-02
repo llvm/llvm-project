@@ -101,8 +101,13 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
     IO.setContext(&Object);
   }
   IO.mapTag("!mach-o", true);
-  IO.mapOptional("IsLittleEndian", Object.IsLittleEndian,
-                 sys::IsLittleEndianHost);
+  // Always write the byte order: input without it gets the host's, so leaving
+  // it out would make the YAML mean different objects on different hosts.
+  if (IO.outputting())
+    IO.mapRequired("IsLittleEndian", Object.IsLittleEndian);
+  else
+    IO.mapOptional("IsLittleEndian", Object.IsLittleEndian,
+                   sys::IsLittleEndianHost);
   Object.DWARF.IsLittleEndian = Object.IsLittleEndian;
 
   IO.mapRequired("FileHeader", Object.Header);
