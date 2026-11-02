@@ -1992,6 +1992,7 @@ void addInstrRequirements(const MachineInstr &MI,
     case SPIRV::GroupOperation::PartitionedReduceNV:
     case SPIRV::GroupOperation::PartitionedInclusiveScanNV:
     case SPIRV::GroupOperation::PartitionedExclusiveScanNV:
+      Reqs.addExtension(SPIRV::Extension::SPV_NV_shader_subgroup_partitioned);
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformPartitionedNV);
       break;
     }
