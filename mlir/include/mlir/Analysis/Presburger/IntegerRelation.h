@@ -928,13 +928,12 @@ protected:
 
   /// Removes the constraints of `this` that have been marked redundant in
   /// `simplex` (see `Simplex::detectRedundant`). The constraints of `this`
-  /// must have been added to `simplex` in the same order as
-  /// `SimplexBase::intersectIntegerRelation` does, starting at constraint index
-  /// `offset`: first all inequalities, then each equality as a pair of
-  /// inequalities. That is, inequality `i` corresponds to simplex constraint
-  /// `offset + i`, and equality `j` corresponds to the pair of simplex
-  /// constraints `offset + numIneqs + 2 * j` and `offset + numIneqs + 2 * j +
-  /// 1`. An equality is removed only if both constraints of its pair are marked
+  /// must be in the `simplex` starting at constraint index `offset`,
+  /// and in the same order as `SimplexBase::intersectIntegerRelation`.
+  /// That is, inequality `i` corresponds to simplex constraint `offset + i`,
+  /// and equality `j` corresponds to the pair of simplex constraints
+  /// `offset + numIneqs + 2 * j` , and `offset + numIneqs + 2 * j + 1`.
+  /// An equality is removed only if both constraints of its pair are marked
   /// redundant.
   void removeRedundantConstraintsFromSimplex(const Simplex &simplex,
                                              unsigned offset);
