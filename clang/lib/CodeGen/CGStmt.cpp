@@ -2555,7 +2555,7 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
 
     llvm::Type *Ty = ConvertType(InputType);
     uint64_t Size = CGM.getDataLayout().getTypeSizeInBits(Ty);
-    if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
+    if ((Size <= 128 && llvm::isPowerOf2_64(Size)) ||
         getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
       Ty = llvm::IntegerType::get(getLLVMContext(), Size);
 
