@@ -667,3 +667,68 @@ define void @trunc_as_icmp_eq_and(<2 x i8> %x, <2 x i8> %y, ptr %p) {
   store <2 x i8> %z1, ptr %p1, align 1
   ret void
 }
+
+define void @zext_nneg(ptr %p, ptr %q) {
+; CHECK-LABEL: @zext_nneg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[TMP2]], splat (i32 65536)
+; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds <2 x i8>, ptr %p, i64 1
+  %p2 = getelementptr inbounds <2 x i8>, ptr %p, i64 2
+  %p3 = getelementptr inbounds <2 x i8>, ptr %p, i64 3
+  %l0 = load <2 x i8>, ptr %p, align 2
+  %l1 = load <2 x i8>, ptr %p1, align 2
+  %l2 = load <2 x i8>, ptr %p2, align 2
+  %l3 = load <2 x i8>, ptr %p3, align 2
+  %z0 = zext nneg <2 x i8> %l0 to <2 x i32>
+  %c0 = add <2 x i32> %z0, <i32 65536, i32 65536>
+  %z1 = zext nneg <2 x i8> %l1 to <2 x i32>
+  %c1 = add <2 x i32> %z1, <i32 65536, i32 65536>
+  %z2 = zext nneg <2 x i8> %l2 to <2 x i32>
+  %c2 = add <2 x i32> %z2, <i32 65536, i32 65536>
+  %z3 = zext nneg <2 x i8> %l3 to <2 x i32>
+  %c3 = add <2 x i32> %z3, <i32 65536, i32 65536>
+  %q1 = getelementptr inbounds <2 x i32>, ptr %q, i64 1
+  %q2 = getelementptr inbounds <2 x i32>, ptr %q, i64 2
+  %q3 = getelementptr inbounds <2 x i32>, ptr %q, i64 3
+  store <2 x i32> %c0, ptr %q, align 8
+  store <2 x i32> %c1, ptr %q1, align 8
+  store <2 x i32> %c2, ptr %q2, align 8
+  store <2 x i32> %c3, ptr %q3, align 8
+  ret void
+}
+
+define void @uitofp_nneg(ptr %p, ptr %q) {
+; CHECK-LABEL: @uitofp_nneg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <8 x i32> [[TMP0]] to <8 x float>
+; CHECK-NEXT:    store <8 x float> [[TMP1]], ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds <2 x i32>, ptr %p, i64 1
+  %p2 = getelementptr inbounds <2 x i32>, ptr %p, i64 2
+  %p3 = getelementptr inbounds <2 x i32>, ptr %p, i64 3
+  %l0 = load <2 x i32>, ptr %p, align 8
+  %l1 = load <2 x i32>, ptr %p1, align 8
+  %l2 = load <2 x i32>, ptr %p2, align 8
+  %l3 = load <2 x i32>, ptr %p3, align 8
+  %c0 = uitofp nneg <2 x i32> %l0 to <2 x float>
+  %c1 = uitofp nneg <2 x i32> %l1 to <2 x float>
+  %c2 = uitofp nneg <2 x i32> %l2 to <2 x float>
+  %c3 = uitofp nneg <2 x i32> %l3 to <2 x float>
+  %q1 = getelementptr inbounds <2 x float>, ptr %q, i64 1
+  %q2 = getelementptr inbounds <2 x float>, ptr %q, i64 2
+  %q3 = getelementptr inbounds <2 x float>, ptr %q, i64 3
+  store <2 x float> %c0, ptr %q, align 8
+  store <2 x float> %c1, ptr %q1, align 8
+  store <2 x float> %c2, ptr %q2, align 8
+  store <2 x float> %c3, ptr %q3, align 8
+  ret void
+}

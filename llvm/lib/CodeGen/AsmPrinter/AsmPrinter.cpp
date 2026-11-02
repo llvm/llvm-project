@@ -178,6 +178,13 @@ static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
              "unnecessary for some PGOAnalysisMap features."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> BBAddrMapEmitFuncGUID(
+    "basic-block-address-map-emit-func-guid",
+    cl::desc("Emit the function GUID in the SHT_LLVM_BB_ADDR_MAP section for "
+             "functions with local linkage. This allows identifying them "
+             "without relying on their (possibly non-unique) symbol names."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
@@ -1512,6 +1519,11 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
   bool BrProbEnabled =
       AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::BrProb));
   bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
+  // Only emit the GUID for functions with local linkage, whose symbol names
+  // may not be unique across translation units. Other functions can be
+  // identified by their symbol names.
+  bool FuncGUIDEnabled =
+      BBAddrMapEmitFuncGUID && MF.getFunction().hasLocalLinkage();
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
@@ -1521,7 +1533,7 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
-          shouldEmitBBHash(), PostLinkCfgEnabled, /*FuncGUID=*/false};
+          shouldEmitBBHash(), PostLinkCfgEnabled, FuncGUIDEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1546,6 +1558,12 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls,
                                       FuncCFGProfile);
   OutStreamer->emitInt16(Features.encode());
+  if (Features.FuncGUID) {
+    // Use the GUID assigned by AssignGUIDPass if available. Otherwise, compute
+    // it from the source file name and the function name.
+    OutStreamer->AddComment("function GUID");
+    OutStreamer->emitInt64(MF.getFunction().getGUIDOrFallback());
+  }
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
     OutStreamer->AddComment("number of basic block ranges");
@@ -3018,6 +3036,31 @@ bool AsmPrinter::doFinalization(Module &M) {
     emitRemarksSection(*RS);
 
   TLOF.emitModuleMetadata(*OutStreamer, M);
+
+  // Emit raw section data from llvm.raw.sections metadata. Each operand is
+  // a tuple of {section_name, alignment, flags, data}.
+  if (const NamedMDNode *RawSections =
+          M.getNamedMetadata("llvm.raw.sections")) {
+    for (const MDNode *Op : RawSections->operands()) {
+      auto *SectionName = cast<MDString>(Op->getOperand(0));
+      auto *AlignCI = mdconst::extract<ConstantInt>(Op->getOperand(1));
+      auto *Data = cast<MDString>(Op->getOperand(3));
+
+      MCSection *Section = TLOF.getNamedSection(SectionName->getString(),
+                                                SectionKind::getMetadata());
+      if (!Section) {
+        M.getContext().emitError("llvm.raw.sections entry '" +
+                                 SectionName->getString() +
+                                 "' is not supported on this target");
+        continue;
+      }
+      OutStreamer->pushSection();
+      OutStreamer->switchSection(Section);
+      OutStreamer->emitValueToAlignment(Align(AlignCI->getZExtValue()));
+      OutStreamer->emitBytes(Data->getString());
+      OutStreamer->popSection();
+    }
+  }
 
   if (Target.isOSBinFormatELF()) {
     MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();

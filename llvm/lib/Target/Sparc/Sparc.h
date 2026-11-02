@@ -26,7 +26,8 @@ class MachineInstr;
 class PassRegistry;
 class SparcTargetMachine;
 
-FunctionPass *createSparcISelDag(SparcTargetMachine &TM);
+FunctionPass *createSparcISelDag(SparcTargetMachine &TM,
+                                 CodeGenOptLevel OptLevel);
 FunctionPass *createSparcDelaySlotFillerPass();
 
 void initializeSparcAsmPrinterPass(PassRegistry &);

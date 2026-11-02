@@ -1,12 +1,12 @@
-# This file defines a reusable workflow that submits the LNT reports contained in an artifact
-# of the current workflow run to LLVM's LNT instance.
+# This file defines a reusable workflow that submits the LNT reports contained in one or more
+# artifacts of the current workflow run to LLVM's LNT instance.
 #
 # This allows separating concerns around submission (e.g. access tokens) and generating the
 # actual data. It is not specific to any project: any workflow that produces LNT v5 run
 # submissions can use it.
 #
-# The artifact must contain one or more `*.json` files at its root, each holding a single LNT v5
-# run submission. All the runs are submitted to the given test suite, which must already exist.
+# Each artifact must contain `*.json` files at its root, each holding a single LNT v5 run
+# submission. All the runs are submitted to the given test suite, which must already exist.
 
 name: "[LNT] Submit runs"
 
@@ -16,8 +16,10 @@ permissions:
 on:
   workflow_call:
     inputs:
-      artifact-name:
-        description: 'The name of the artifact containing the LNT reports to submit'
+      artifacts:
+        description: |
+          The name of the artifact containing the LNT reports to submit, or a glob pattern matching
+          several such artifacts.
         required: true
         type: string
       test-suite:
@@ -58,19 +60,19 @@ jobs:
       - name: Download the LNT reports
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ inputs.artifact-name }}
+          pattern: ${{ inputs.artifacts }}
           path: ${{ runner.temp }}/reports
 
       - name: Submit to LNT
         env:
-          ARTIFACT_NAME: ${{ inputs.artifact-name }}
+          ARTIFACTS: ${{ inputs.artifacts }}
           LNT_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
           TEST_SUITE: ${{ inputs.test-suite }}
         run: |
           shopt -s nullglob
-          reports=("${RUNNER_TEMP}"/reports/*.json)
+          reports=("${RUNNER_TEMP}"/reports/*/*.json)
           if [ "${#reports[@]}" -eq 0 ]; then
-            echo "error: the ${ARTIFACT_NAME} artifact doesn't contain any LNT report"
+            echo "error: no LNT report was found in the artifacts matching ${ARTIFACTS}"
             exit 1
           fi
 

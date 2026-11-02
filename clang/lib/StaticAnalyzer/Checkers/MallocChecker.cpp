@@ -575,8 +575,6 @@ private:
   };
 
   bool isMemCall(const CallEvent &Call) const;
-  bool hasOwnershipReturns(const CallEvent &Call) const;
-  bool hasOwnershipTakesHolds(const CallEvent &Call) const;
   void reportTaintBug(StringRef Msg, ProgramStateRef State, CheckerContext &C,
                       llvm::ArrayRef<SymbolRef> TaintedSyms,
                       AllocationFamily Family) const;
