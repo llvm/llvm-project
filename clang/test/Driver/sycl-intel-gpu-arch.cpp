@@ -72,6 +72,7 @@
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_12.60. -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-NUM %s
 // CHK-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.
+
 /// A numeric name names no device unless the list has its GPU IP version.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_40.11.0 -c %s 2>&1 \
@@ -92,6 +93,7 @@
 // RUN:   --offload-arch=generic:foo -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-GENERIC %s
 // CHK-BAD-GENERIC: error: unsupported SYCL gpu architecture: generic:foo
+
 /// As for CUDA and HIP, --no-offload-arch is checked too when the target is
 /// given.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
@@ -99,6 +101,7 @@
 // RUN:   --no-offload-arch=foo -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-NO-ARCH %s
 // CHK-BAD-NO-ARCH: error: unsupported SYCL gpu architecture: foo
+
 /// Only a plain SPIR-V target is checked.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-intel --offload-arch=foo -c %s 2>&1 \
@@ -107,6 +110,7 @@
 // RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=foo -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-NOT-CHECKED %s
 // CHK-NOT-CHECKED-NOT: error:
+
 /// An Intel name needs a plain SPIR-V target.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-intel --offload-arch=xe-pvc -c %s 2>&1 \
@@ -121,6 +125,7 @@
 // RUN:   --offload-targets=spirv64-intel --offload-arch=graniterapids -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=graniterapids -DTRIPLE=spirv64-intel %s
 // CHK-NOT-PLAIN: error: the target architecture '[[ARCH]]' is not supported by the target '[[TRIPLE]]'
+
 /// An Intel CPU is accepted on a plain SPIR-V target.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids \
