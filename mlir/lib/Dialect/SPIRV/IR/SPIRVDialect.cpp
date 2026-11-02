@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 
+#include "SPIRVOpUtils.h"
 #include "SPIRVParsingUtils.h"
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
@@ -248,6 +249,11 @@ static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
           << t.getElementType();
       return Type();
     }
+    if (containsMicroscalingType(t.getElementType())) {
+      parser.emitError(typeLoc,
+                       "microscaling types are not supported in matrices");
+      return Type();
+    }
   } else {
     parser.emitError(typeLoc, "matrix must be composed using vector "
                               "type, got ")
@@ -374,6 +380,15 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
   if (!elementTy)
     return {};
 
+  // CooperativeMatrixType::get does not validate the element type. The
+  // extension does not enable cooperative matrices for these types.
+  if (containsMicroscalingType(elementTy)) {
+    parser.emitError(
+        parser.getCurrentLocation(),
+        "microscaling types are not supported in cooperative matrices");
+    return {};
+  }
+
   Scope scope;
   if (parser.parseComma() ||
       spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
@@ -463,6 +478,13 @@ static Type parsePointerType(SPIRVDialect const &dialect,
   if (!storageClass) {
     parser.emitError(storageClassLoc, "unknown storage class: ")
         << storageClassSpec;
+    return Type();
+  }
+  if (*storageClass != StorageClass::Function &&
+      *storageClass != StorageClass::Private &&
+      containsMicroscalingType(pointeeType, /*subByteOnly=*/true)) {
+    parser.emitError(storageClassLoc,
+                     "FP4 and FP6 types require Function or Private storage");
     return Type();
   }
   if (parser.parseGreater())
@@ -629,6 +651,12 @@ static Type parseImageType(SPIRVDialect const &dialect,
                               ImageFormat>{}(dialect, parser);
   if (!value)
     return Type();
+
+  if (containsMicroscalingType(std::get<0>(*value))) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "microscaling types are not supported in images");
+    return Type();
+  }
 
   if (parser.parseGreater())
     return Type();

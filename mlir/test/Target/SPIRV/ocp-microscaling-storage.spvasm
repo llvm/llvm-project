@@ -1,0 +1,32 @@
+; REQUIRES: spirv-tools
+; RUN: spirv-as --target-env spv1.6 %s -o %t.spv
+; RUN: mlir-translate --deserialize-spirv %t.spv | FileCheck %s
+
+; CHECK: spirv.GlobalVariable @fp4 : !spirv.ptr<f4E2M1FN, Private>
+; CHECK: spirv.GlobalVariable @fp6e2m3 : !spirv.ptr<f6E2M3FN, Private>
+; CHECK: spirv.GlobalVariable @fp6e3m2 : !spirv.ptr<f6E3M2FN, Private>
+; CHECK: spirv.GlobalVariable @fp8e8m0 : !spirv.ptr<f8E8M0FNU, Workgroup>
+
+OpCapability Shader
+OpCapability Float4EXT
+OpCapability Float6EXT
+OpCapability Float8UnsignedE8M0EXT
+OpExtension "SPV_EXT_float8"
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+OpName %var4 "fp4"
+OpName %var6e2m3 "fp6e2m3"
+OpName %var6e3m2 "fp6e3m2"
+OpName %var8e8m0 "fp8e8m0"
+%fp4 = OpTypeFloat 4 Float4E2M1EXT
+%fp6e2m3 = OpTypeFloat 6 Float6E2M3EXT
+%fp6e3m2 = OpTypeFloat 6 Float6E3M2EXT
+%fp8e8m0 = OpTypeFloat 8 Float8UnsignedE8M0EXT
+%ptr4 = OpTypePointer Private %fp4
+%ptr6e2m3 = OpTypePointer Private %fp6e2m3
+%ptr6e3m2 = OpTypePointer Private %fp6e3m2
+%ptr8e8m0 = OpTypePointer Workgroup %fp8e8m0
+%var4 = OpVariable %ptr4 Private
+%var6e2m3 = OpVariable %ptr6e2m3 Private
+%var6e3m2 = OpVariable %ptr6e3m2 Private
+%var8e8m0 = OpVariable %ptr8e8m0 Workgroup

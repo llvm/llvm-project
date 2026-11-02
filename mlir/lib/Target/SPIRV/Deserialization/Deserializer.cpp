@@ -1218,6 +1218,22 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
                    spirv::FPEncoding::Float8E5M2EXT &&
                bitWidth == 8)
         floatTy = opBuilder.getF8E5M2Type();
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float4E2M1EXT &&
+               bitWidth == 4)
+        floatTy = Float4E2M1FNType::get(context);
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float6E2M3EXT &&
+               bitWidth == 6)
+        floatTy = Float6E2M3FNType::get(context);
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float6E3M2EXT &&
+               bitWidth == 6)
+        floatTy = Float6E3M2FNType::get(context);
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float8UnsignedE8M0EXT &&
+               bitWidth == 8)
+        floatTy = opBuilder.getF8E8M0Type();
       else
         return emitError(unknownLoc, "unsupported OpTypeFloat FP encoding: ")
                << operands[2] << " and bitWidth " << bitWidth;
@@ -1866,6 +1882,14 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     } else if (floatType.isF8E5M2()) {
       APInt data(8, operands[2]);
       value = APFloat(APFloat::Float8E5M2(), data);
+    } else if (isa<Float4E2M1FNType>(floatType)) {
+      value = APFloat(APFloat::Float4E2M1FN(), APInt(4, operands[2]));
+    } else if (isa<Float6E2M3FNType>(floatType)) {
+      value = APFloat(APFloat::Float6E2M3FN(), APInt(6, operands[2]));
+    } else if (isa<Float6E3M2FNType>(floatType)) {
+      value = APFloat(APFloat::Float6E3M2FN(), APInt(6, operands[2]));
+    } else if (isa<Float8E8M0FNUType>(floatType)) {
+      value = APFloat(APFloat::Float8E8M0FNU(), APInt(8, operands[2]));
     }
 
     auto attr = opBuilder.getFloatAttr(floatType, value);

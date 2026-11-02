@@ -20,6 +20,26 @@
 using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
+LogicalResult BitcastExtractEXTOp::verify() {
+  Type baseType = getBase().getType();
+  Type resultType = getResult().getType();
+  auto baseVector = dyn_cast<VectorType>(baseType);
+  auto resultVector = dyn_cast<VectorType>(resultType);
+  if (static_cast<bool>(baseVector) != static_cast<bool>(resultVector) ||
+      (baseVector &&
+       baseVector.getNumElements() != resultVector.getNumElements()))
+    return emitOpError(
+        "base and result must have the same number of components");
+
+  Type baseElement = baseVector ? baseVector.getElementType() : baseType;
+  Type resultElement =
+      resultVector ? resultVector.getElementType() : resultType;
+  if (baseElement.getIntOrFloatBitWidth() <=
+      resultElement.getIntOrFloatBitWidth())
+    return emitOpError(
+        "result components must be narrower than base components");
+  return success();
+}
 
 static FailureOr<std::pair<Type, Type>>
 getCastOpOperandAndResultElementType(Operation *op) {
