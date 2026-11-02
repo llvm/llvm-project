@@ -952,7 +952,7 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   if (isFSAccess(Inst))
     return rewriteFSAccess(Inst, Out, STI);
 
-  // The compiler never generates 32-bit addressing in 64-bit mode.
+  // The compiler never generates 32-bit addressing in LP64 mode.
   int MemIdx = X86II::getMemoryOperandIdx(InstInfo->get(Inst.getOpcode()));
   if (MemIdx >= 0 && !ignoresMemOperand(Inst.getOpcode()) &&
       has32BitAddress(Inst, MemIdx))
