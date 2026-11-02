@@ -12,7 +12,7 @@
 
 #include "DXILWriterPass.h"
 #include "DXILBitcodeWriter.h"
-#include "MCTargetDesc/DirectXContainerObjectWriter.h"
+#include "MCTargetDesc/DirectXMCOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
@@ -28,17 +28,11 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
-
-cl::opt<bool> dxil::SourceInDebugModule(
-    "dx-source-in-debug-module",
-    cl::desc("Embed source code into debug module on DirectX target"),
-    cl::init(false));
 
 namespace {
 class WriteDXILPass : public llvm::ModulePass {
@@ -155,13 +149,15 @@ static void replaceNamedMetadataArray(Module &M, StringRef Name,
 }
 
 class EmbedDXILPass : public llvm::ModulePass {
+  const DirectXMCOptions *CLOpts = nullptr;
+
   std::string writeModule(Module &M, bool HasDebugInfo, bool WriteDebug) {
     std::string Data;
     llvm::raw_string_ostream OS(Data);
 
     if (HasDebugInfo) {
       if (WriteDebug) {
-        if (!SourceInDebugModule) {
+        if (!CLOpts->source_in_debug_module) {
           // Replace dx.source metadata nodes with stubs.
           LLVMContext &Ctx = M.getContext();
           MDString *EmptyString = MDString::get(Ctx, "");
@@ -232,12 +228,13 @@ public:
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
 
-    if (SlimDebug && EmbedDebug)
+    CLOpts = &M.getContext().getLibraryOptions().get<DirectXMCOptions>();
+    if (CLOpts->slim_debug && CLOpts->embed_debug)
       reportFatalUsageError("/Qembed_debug is not compatible with /Zs");
-    if (!HasDebugInfo && EmbedDebug)
+    if (!HasDebugInfo && CLOpts->embed_debug)
       reportFatalUsageError(
           "Missing debug info for embedding into the container");
-    if (!HasDebugInfo && !PdbDebugPath.empty())
+    if (!HasDebugInfo && !CLOpts->pdb_path.empty())
       reportFatalUsageError("Missing debug info for writing to the PDB file");
 
     std::string ILDBData;

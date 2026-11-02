@@ -13,9 +13,8 @@
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DXILSignatureAnalysis.h"
-#include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
-#include "MCTargetDesc/DirectXContainerObjectWriter.h"
+#include "MCTargetDesc/DirectXMCOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,7 +29,6 @@
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
@@ -42,14 +40,9 @@ using namespace llvm;
 using namespace llvm::dxil;
 using namespace llvm::mcdxbc;
 
-static cl::opt<bool> ShaderHashDependsOnSource(
-    "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
-
-cl::opt<bool> dxil::PdbInPrivate("dx-pdb-in-private",
-                                 cl::desc("Store PDB in private user data"));
-
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
+  const DirectXMCOptions *CLOpts = nullptr;
 
   GlobalVariable *buildContainerGlobal(Module &M, Constant *Content,
                                        StringRef Name, StringRef SectionName);
@@ -93,6 +86,7 @@ public:
 } // namespace
 
 bool DXContainerGlobals::runOnModule(Module &M) {
+  CLOpts = &M.getContext().getLibraryOptions().get<DirectXMCOptions>();
   llvm::SmallVector<GlobalValue *> Globals;
   Globals.push_back(getFeatureFlags(M));
   computeShaderHashAndDebugName(M, Globals);
@@ -133,7 +127,7 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   MD5 Digest;
   dxbc::ShaderHash HashData = {0, {0}};
 
-  if (ShaderHashDependsOnSource) {
+  if (CLOpts->Zss) {
     if (auto *ILDB = M.getNamedGlobal("dx.ildb")) {
       DXILConstant = cast<ConstantDataArray>(ILDB->getInitializer());
       HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
@@ -164,9 +158,9 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   SmallString<40> DebugNameStr;
   Digest.stringifyResult(MD5, DebugNameStr);
   DebugNameStr += ".pdb";
-  if (!PdbDebugPath.empty() || PdbInPrivate) {
-    if (!PdbDebugPath.empty()) {
-      StringRef DebugFile = PdbDebugPath.getValue();
+  if (!CLOpts->pdb_path.empty() || CLOpts->pdb_in_private) {
+    if (!CLOpts->pdb_path.empty()) {
+      StringRef DebugFile = CLOpts->pdb_path;
       SmallString<256> AbsoluteDebugName;
       if (sys::path::is_separator(DebugFile.back())) {
         // If PDB output path was specified as a directory, put the MD5.pdb file
@@ -440,7 +434,7 @@ void DXContainerGlobals::addSourceInfo(Module &M,
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  if (!MMI.SourceInfo || SourceInDebugModule)
+  if (!MMI.SourceInfo || CLOpts->source_in_debug_module)
     return;
 
   MMI.SourceInfo->computeEntries();

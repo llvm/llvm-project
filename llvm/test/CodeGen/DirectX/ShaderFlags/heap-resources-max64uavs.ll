@@ -1,5 +1,5 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
-; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
+; RUN: llc %s -dx-remove-unused-resources=false --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 
 ; This test verifies that the Max64UAVs flag is *not* set if there
 ; are 9 or more heap UAVs, since a heap UAVs do not count.
