@@ -271,6 +271,14 @@ def aaddu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def asub_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def asubu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 
+// Scalar Saturation
+def sati_i32 : RISCVBuiltin<"int32_t(int32_t, _Constant unsigned int)">;
+def usati_u32 : RISCVBuiltin<"uint32_t(int32_t, _Constant unsigned int)">;
+let Features = "experimental-p,64bit" in {
+def sati_i64 : RISCVBuiltin<"int64_t(int64_t, _Constant unsigned int)">;
+def usati_u64 : RISCVBuiltin<"uint64_t(int64_t, _Constant unsigned int)">;
+} // Features = "experimental-p,64bit"
+
 // Scalar Multiply High
 def mulh_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def mulhr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
@@ -290,6 +298,10 @@ def mhraccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
 // Scalar "Q-format" Multiplication
 def mulq_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def mulqr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+
+// Scalar "Q-format" Multiply with Widening Accumulate
+def mqwacc_i64 : RISCVBuiltin<"int64_t(int64_t, int32_t, int32_t)">;
+def mqrwacc_i64 : RISCVBuiltin<"int64_t(int64_t, int32_t, int32_t)">;
 
 // Packed Multiply High (32-bit)
 def pmulh_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
@@ -396,6 +408,11 @@ def pm4add_i16x4 : RISCVBuiltin<"int64_t(_Vector<4, short>, _Vector<4, short>)">
 def pm4addu_u16x4 : RISCVBuiltin<"uint64_t(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
 def pm4addsu_i16x4 : RISCVBuiltin<"int64_t(_Vector<4, short>, _Vector<4, unsigned short>)">;
 
+// Packed Widening Multiply Accumulate
+def pwmacc_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, short>, _Vector<2, short>)">;
+def pwmaccu_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, _Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def pwmaccsu_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, short>, _Vector<2, unsigned short>)">;
+
 // Packed Multiplication with Widening Horizontal Addition (32-bit)
 def pm2wadd_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, short>)">;
 def pm2wadd_x_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, short>)">;
@@ -403,6 +420,14 @@ def pm2waddu_u64 : RISCVBuiltin<"uint64_t(_Vector<2, unsigned short>, _Vector<2,
 def pm2wsub_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, short>)">;
 def pm2wsub_x_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, short>)">;
 def pm2waddsu_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, unsigned short>)">;
+
+// Packed Multiplication with Widening Horizontal Addition and Accumulate (32-bit)
+def pm2wadda_i64 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, short>, _Vector<2, short>)">;
+def pm2wadda_x_i64 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, short>, _Vector<2, short>)">;
+def pm2waddau_u64 : RISCVBuiltin<"uint64_t(uint64_t, _Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def pm2wsuba_i64 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, short>, _Vector<2, short>)">;
+def pm2wsuba_x_i64 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, short>, _Vector<2, short>)">;
+def pm2waddasu_i64 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, short>, _Vector<2, unsigned short>)">;
 
 // Packed Absolute Difference Sum (32-bit)
 def pabdsumu_u8x4_u32 : RISCVBuiltin<"unsigned int(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;

@@ -2052,6 +2052,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // (or compatible) type and kind do so.  Check for missing non-optional
   // arguments now, too.
   const ActualArgument *sameArg{nullptr};
+  const char *sameArgName{nullptr};
   const ActualArgument *operandArg{nullptr};
   const IntrinsicDummyArgument *kindDummyArg{nullptr};
   const ActualArgument *kindArg{nullptr};
@@ -2239,6 +2240,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::same: {
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
       }
       auto sameType{sameArg->GetType().value()};
       if (name == "move_alloc"s) {
@@ -2250,10 +2252,18 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       } else {
         argOk = sameType.IsTkLenCompatibleWith(*type);
       }
+      if (!argOk) {
+        CHECK(sameArgName);
+        messages.Say(arg->sourceLocation(),
+            "Actual argument for '%s=' has type '%s', but '%s=' has type '%s'"_err_en_US,
+            d.keyword, type->AsFortran(), sameArgName, sameType.AsFortran());
+        return std::nullopt;
+      }
     } break;
     case KindCode::sameKind:
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
       }
       argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
       break;
@@ -2289,6 +2299,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::sameAtom:
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
         argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       } else {
         argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
@@ -4148,15 +4159,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
       }
     }
 
-    // NEXT/PREVIOUS are enumeration-type-only intrinsics.  They are only
-    // recognized as intrinsic names when the enumeration-type feature is
-    // enabled, so that pre-F2023 programs may still use those names for
-    // external procedures.  This gating is symmetric with the one in
-    // resolve-names.cpp and should be removed once the feature is fully
-    // implemented.
-    if ((call.name == "next" || call.name == "previous") &&
-        context.languageFeatures().IsEnabled(
-            common::LanguageFeature::EnumerationType)) {
+    if (call.name == "next" || call.name == "previous") {
       const semantics::DerivedTypeSpec *derived{nullptr};
       if (const ActualArgument *arg{FindFirstDummyArgument(arguments, "a")}) {
         derived = GetEnumerationTypeSpec(arg->GetType());

@@ -245,6 +245,8 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
   // "isvectorized" is encoded as an i32 value.
   if (BoolAttr isVectorized = attr.getIsVectorized())
     addI32NodeWithVal("llvm.loop.isvectorized", isVectorized.getValue());
+  if (uint32_t align = attr.getAlign())
+    addI32NodeWithVal("llvm.loop.align", align);
 
   if (auto options = attr.getVectorize())
     convertLoopOptions(options);
