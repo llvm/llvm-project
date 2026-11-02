@@ -1134,6 +1134,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
   // Build an offloading toolchain for every requested target and kind.
   llvm::StringMap<StringRef> FoundNormalizedTriples;
+  bool UsesLLVMOffloading = C.getInputArgs().hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   for (const llvm::Triple &Target : Triples) {
     // OpenMP offloading requires a compatible libomp.
     if (Kinds.contains(Action::OFK_OpenMP)) {
@@ -1152,14 +1154,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           Diag(clang::diag::err_drv_argument_not_allowed_with)
               << IncompatArg->getSpelling() << "-fsycl";
 
-      // SYCL cannot target NVIDIA GPUs yet; report it instead of asserting.
-      bool UsesLLVMOffloading =
-          C.getInputArgs().hasFlag(options::OPT_foffload_via_llvm,
-                                   options::OPT_fno_offload_via_llvm, false);
+      // The CUDA toolchain supports only CUDA and OpenMP, so diagnose SYCL
+      // offloading to an NVIDIA GPU here, unless it uses -foffload-via-llvm.
       if (Target.isNVPTX() && !UsesLLVMOffloading) {
         Diag(diag::err_drv_invalid_or_unsupported_offload_target)
             << Target.str();
-        return;
+        continue;
       }
     }
 
