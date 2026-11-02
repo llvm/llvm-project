@@ -233,12 +233,12 @@ static StringRef stripLeadingComments(StringRef Snippet) {
   Snippet = Snippet.ltrim();
   while (!Snippet.empty()) {
     if (Snippet.starts_with("//")) {
-      size_t Newline = Snippet.find('\n');
+      const size_t Newline = Snippet.find('\n');
       if (Newline == StringRef::npos)
         return ""; // Entire snippet is a comment.
       Snippet = Snippet.substr(Newline + 1).ltrim();
     } else if (Snippet.starts_with("/*")) {
-      size_t End = Snippet.find("*/");
+      const size_t End = Snippet.find("*/");
       if (End == StringRef::npos)
         return Snippet; // Malformed block comment
       Snippet = Snippet.substr(End + 2).ltrim();
