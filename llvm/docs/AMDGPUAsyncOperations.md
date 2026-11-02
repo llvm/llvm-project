@@ -101,10 +101,12 @@ not related in *program-order* with any other operations from that thread. But
 the thread can use an asyncmark to ensure that the async operation is
 *completed-at* some later operation.
 
-An async operation `A`, *initiated-by* an instruction `I` is *completed-at* some
-`wait.asyncmark()` operation `Y` if there exists an `asyncmark()` operation `X`:
+An async operation `A` *initiated-by* an instruction `I` is *completed-at* some
+`wait.asyncmark()` operation `Y` with stage mask `B` if there exists an
+`asyncmark()` operation `X` with mask `C`:
 
 - `I` is *program-ordered* before `X`, and
+- `I` belongs to a stage in `C`, and
 - `X` is *completed-at* `Y`.
 
 ### happens-before
@@ -391,3 +393,29 @@ following cases. These are just examples and not meant to be an exhaustive list.
    Here, as with `X` above, every sequence qualifies, so `Y` can be eliminated.
    If only some sequences qualified, the `wait.asyncmark` could be modified to
    only wait for the relevant stages.
+
+3. An `asyncmark` operation that has mask bits that don't refer to any
+   instruction.
+
+    ```c++
+   void foo() {
+     ...
+     global_load_async_to_lds
+     asyncmark(0)
+     ...
+   }
+   ```
+
+   Here, the program can be refined to -
+
+   ```c++
+   void foo() {
+     ...
+     global_load_async_to_lds
+     asyncmark(ASYNC_LOAD_LDS)
+     ...
+   }
+   ```
+
+   Since only that particular stage is actually relevant to ensuring the
+   completion of async operations.

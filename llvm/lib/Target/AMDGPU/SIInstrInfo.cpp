@@ -4852,8 +4852,8 @@ bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI,
   return false;
 }
 
-AMDGPU::AsyncStages SIInstrInfo::getAsyncStage(const MachineInstr &MI) {
-  if (!isLDSDMA(MI))
+AMDGPU::AsyncStages SIInstrInfo::getAsyncStage(const MachineInstr &MI) const {
+  if (!isAsync(MI))
     return AMDGPU::AsyncStages::NONE;
   if (usesTENSOR_CNT(MI))
     return AMDGPU::AsyncStages::TENSOR;

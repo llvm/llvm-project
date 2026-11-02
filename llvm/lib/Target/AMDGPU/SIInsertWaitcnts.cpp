@@ -409,42 +409,6 @@ public:
   bool mayStoreIncrementingDSCNT(const MachineInstr &MI) const;
   bool run();
 
-  bool isAsync(const MachineInstr &MI) const {
-    if (!SIInstrInfo::isLDSDMA(MI))
-      return false;
-    if (SIInstrInfo::usesASYNC_CNT(MI))
-      return true;
-    const MachineOperand *Async =
-        TII.getNamedOperand(MI, AMDGPU::OpName::IsAsync);
-    return Async && (Async->getImm());
-  }
-
-  bool isNonAsyncLdsDmaWrite(const MachineInstr &MI) const {
-    return SIInstrInfo::mayWriteLDSThroughDMA(MI) && !isAsync(MI);
-  }
-
-  bool isAsyncLdsDmaWrite(const MachineInstr &MI) const {
-    return SIInstrInfo::mayWriteLDSThroughDMA(MI) && isAsync(MI);
-  }
-
-  // The stage whose pending async score an event on counter \p T from \p MI
-  // updates, if any.
-  AMDGPU::AsyncStages getAsyncStageToUpdate(const MachineInstr &MI,
-                                            AMDGPU::InstCounterType T) const {
-    AMDGPU::InstCounterType StageCounter;
-    if (SIInstrInfo::usesTENSOR_CNT(MI))
-      StageCounter = AMDGPU::TENSOR_CNT;
-    else if (!isAsyncLdsDmaWrite(MI))
-      return AMDGPU::AsyncStages::NONE;
-    else if (SIInstrInfo::usesASYNC_CNT(MI))
-      StageCounter = AMDGPU::ASYNC_CNT;
-    else
-      StageCounter = AMDGPU::LOAD_CNT;
-    if (T != StageCounter)
-      return AMDGPU::AsyncStages::NONE;
-    return SIInstrInfo::getAsyncStage(MI);
-  }
-
   bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
@@ -1061,7 +1025,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
       setScoreByOperand(Op, T, CurrScore);
     }
     if (Inst.mayStore() &&
-        (TII.isDS(Inst) || Context->isNonAsyncLdsDmaWrite(Inst))) {
+        (TII.isDS(Inst) || TII.isNonAsyncLdsDmaWrite(Inst))) {
       // MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS
       // written can be accessed. A load from LDS to VMEM does not need a wait.
       //
@@ -1105,7 +1069,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
         setVMemScore(LDSDMA_BEGIN + static_cast<VMEMID>(Slot), T, CurrScore);
     }
 
-    AMDGPU::AsyncStages Stage = Context->getAsyncStageToUpdate(Inst, T);
+    AMDGPU::AsyncStages Stage = TII.getAsyncStage(Inst);
     if (any(Stage))
       AsyncScore[AMDGPU::getAsyncStageIndex(Stage)][T] = CurrScore;
 
