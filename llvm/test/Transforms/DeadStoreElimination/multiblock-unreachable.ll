@@ -199,11 +199,12 @@ define void @unreachable_exit_with_coro_end(ptr noalias %ptr, i1 %cond) presplit
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.async(i32 16, i32 16, i32 1, ptr null)
 ; CHECK-NEXT:    [[HDL:%.*]] = call ptr @llvm.coro.begin(token [[ID]], ptr null)
+; CHECK-NEXT:    store i8 0, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    store i8 1, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void (ptr, i1, ...) @llvm.coro.end.async(ptr [[HDL]], i1 false)
