@@ -1124,6 +1124,11 @@ public:
   void returnFromCallee() {
     if (hasProgramExited())
       return;
+
+    if (CurrentFrame->ResolvedCallee &&
+        CurrentFrame->ResolvedCallee->doesNotReturn())
+      reportImmediateUB() << "Return from a noreturn function.";
+
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
