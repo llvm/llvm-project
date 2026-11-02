@@ -933,8 +933,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
     if (FeatureFlagsAnd) {
       // Emit a .note.gnu.property section with the flags.
-      assert((TT.isX86_32() || TT.isX86_64()) &&
-             "CFProtection used on invalid architecture!");
+      assert(TT.isX86() && "CFProtection used on invalid architecture!");
       MCSection *Cur = OutStreamer->getCurrentSectionOnly();
       MCSection *Nt = MMI->getContext().getELFSection(
           ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);

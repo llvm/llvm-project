@@ -229,22 +229,22 @@ QualType SystemZABIInfo::getSingleElementType(QualType Ty) const {
 
     // Check the fields.
     for (const auto *FD : RD->fields()) {
-      // Unlike isSingleElementStruct(), empty structure and array fields
+      // Unlike isSingleElementRecord(), empty structure and array fields
       // do count.  So do anonymous bitfields that aren't zero-sized.
 
-      // Like isSingleElementStruct(), ignore C++20 empty data members.
+      // Like isSingleElementRecord(), ignore C++20 empty data members.
       if (FD->hasAttr<NoUniqueAddressAttr>() &&
           isEmptyRecord(getContext(), FD->getType(), true))
         continue;
 
-      // Unlike isSingleElementStruct(), arrays do not count.
+      // Unlike isSingleElementRecord(), arrays do not count.
       // Nested structures still do though.
       if (!Found.isNull())
         return Ty;
       Found = getSingleElementType(FD->getType());
     }
 
-    // Unlike isSingleElementStruct(), trailing padding is allowed.
+    // Unlike isSingleElementRecord(), trailing padding is allowed.
     // An 8-byte aligned struct s { float f; } is passed as a double.
     if (!Found.isNull())
       return Found;

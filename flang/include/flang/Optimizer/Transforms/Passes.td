@@ -263,7 +263,12 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "Command-line flags to append to DWARF producer">,
     Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
-           "Emit fake use for debug variables to extend their lifetime">
+           "Emit fake use for debug variables to extend their lifetime">,
+    Option<"boundsInStackSlots", "bounds-in-stack-slots",
+           "bool", /*default=*/"false",
+           "Keep the bounds and length parameters of a variable in stack "
+           "slots, so that they can be described wherever the variable is "
+           "visible">
   ];
 }
 
@@ -465,9 +470,59 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     Loop Versioning pass adds a check and two variants of a loop when the input
     array is an assumed shape array, to optimize for the (often common) case where
     an array has element sized stride. The element sizes stride allows some
-    loops to be vectorized as well as other loop optimizations.
+    loops to be vectorized as well as other loop optimizations. Accesses through
+    a local POINTER associated with such an array are handled the same way. A
+    loop that is versioned anyway also checks the local POINTER arrays that it
+    accesses if their pointer assignment is not visible.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
+  let options = [
+    Option<"enableSlices", "enable-slices", "bool",
+           /*default=*/"true",
+           "Enable versioning for supported static-unit array slices; disabling "
+           "this option leaves other loop versioning active">
+  ];
+}
+
+def LoopTripCountVersioning
+    : Pass<"loop-tripcount-versioning", "mlir::func::FuncOp"> {
+  let summary = "Version innermost loops on a likely constant trip count";
+  let description = [{
+    Adds a runtime check and two variants of an innermost loop whose trip count
+    is likely to equal a compile-time constant, so that one variant has a
+    constant trip count that LLVM can fully unroll, or at least vectorize
+    without a minimum-iteration check and remainder loop. Both variants are the
+    original loop with only the bound changed, so the transformation is legal
+    wherever the runtime check is uniform across the threads executing the
+    loop. Device code is excluded: on a GPU the check could differ between
+    threads and send them to different copies of a convergent operation such
+    as a barrier.
+
+    The heuristics decide only where it is worthwhile. The first heuristic
+    takes the constant from the declared extent of an explicit-shape array
+    whose leading dimension the loop indexes: for `a(1:n, :)` on `a(4, :)` the
+    innermost loop runs `1..n`, and versioning on `n == 4` gives the fast
+    variant a trip count of 4. Further heuristics may be added in the future.
+
+    Candidates are limited by the declared extent (`max-section-extent`) and
+    by the size of the fully unrolled fast variant, extent times FIR operations
+    in the loop body (`max-unrolled-ops`). The latter is a heuristic proxy for
+    LLVM's full-unroll decision, which is made on target-costed instructions
+    after lowering. The default of 300 is a proxy for LLVM's -O3 threshold on
+    the scalar unroll path; where the vectorizer takes the loop first, LLVM
+    collapses larger products as well, so the default is conservative on
+    wide-vector targets.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::arith::ArithDialect" ];
+  let options = [
+    Option<"maxSectionExtent", "max-section-extent", "unsigned",
+           /*default=*/"32",
+           "Do not version on declared extents larger than this; 0 disables">,
+    Option<"maxUnrolledOps", "max-unrolled-ops", "unsigned",
+           /*default=*/"300",
+           "Do not version if the declared extent times the number of FIR "
+           "operations in the loop body exceeds this; 0 removes the limit">
+  ];
 }
 
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
@@ -578,7 +633,8 @@ def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
   let summary = "Delay cuf.alloc of descriptor types to just before first use";
   let description = [{
     Moves cuf.alloc operations for allocatable/pointer descriptors (box types)
-    from function entry to just before their first use. This defers
+    from function entry to just before their first use, but never into a block
+    on a CFG cycle, where the alloc would run on every trip. This defers
     cudaMallocManaged calls so that users can call cudaSetDevice before any
     CUDA context is created.
   }];
@@ -641,6 +697,34 @@ def CUFDeviceGlobal :
   ];
 }
 
+def CUFSharedTypeInfo : Pass<"cuf-shared-type-info", "mlir::ModuleOp"> {
+  let summary = "Share host runtime type information with device code";
+  let description = [{
+    Under -gpu=mem:managed, a descriptor in managed memory can be written by
+    device code and read by host code, so the type descriptor address it holds
+    must be valid on both sides.
+
+    This pass makes the host runtime type information writable and places it
+    in the `__nv_type_info` section, which CUFAddConstructor registers with the
+    CUDA runtime so device code can read it through its host address. Each
+    type descriptor present in the GPU module gets a managed pointer, which
+    the CUDA Fortran constructor sets to the host address of the type
+    descriptor. The GPU module attribute `cuf.shared_type_descs` maps type
+    descriptor names to these pointers, and code generation loads the type
+    descriptor address from them in device code. The `acc.declare` attribute
+    is dropped so OpenACC does not copy the type information to the device.
+
+    Each translation unit defining such type information also ends the
+    section with a page-aligned global, so that the registered pages hold
+    nothing but type information.
+
+    Device code then sees the host binding tables, so type-bound procedures
+    cannot be called from device code.
+  }];
+  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect",
+                           "mlir::LLVM::LLVMDialect"];
+}
+
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
@@ -658,6 +742,11 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
            "time and HMM/ATS handles migration.">,
+    Option<"cudaManagedTypeInfo", "cuda-managed-type-info", "bool",
+           /*default=*/"false",
+           "Register the runtime type information shared with device code "
+           "under -gpu=mem:managed (see cuf-shared-type-info): register the "
+           "pages of its section with the CUDA runtime.">,
     Option<"priority", "priority", "int32_t", /*default=*/"0",
            "Priority for the CUDA Fortran global constructor in "
            "llvm.mlir.global_ctors.">,

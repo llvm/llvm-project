@@ -257,8 +257,10 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
 
     // --- SCF FOR ---
     if (auto forOp = dyn_cast<scf::ForOp>(user)) {
-      unsigned idx = use.getOperandNumber();
-      if (auto *res = traceToVectorWriteLikeUserOperation(forOp.getResult(idx)))
+      OpResult loopResult = forOp.getTiedLoopResult(&use);
+      if (!loopResult)
+        continue;
+      if (auto *res = traceToVectorWriteLikeUserOperation(loopResult))
         return res;
       continue;
     }

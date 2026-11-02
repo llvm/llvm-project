@@ -367,17 +367,13 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
     const ASTRecordLayout &astLayout =
         emitter.cgm.getASTContext().getASTRecordLayout(cxxrd);
     if (astLayout.hasOwnVFPtr()) {
-      mlir::Value addrPtr = emitter.cgm.getCXXABI().getVTableAddressPoint(
-          BaseSubobject(cxxrd, offsetInDerived),
-          cast<CXXRecordDecl>(vtableBaseTy));
       assert(!cir::MissingFeatures::addressPointerAuthInfo());
-      auto apOp = addrPtr.getDefiningOp<cir::VTableAddrPointOp>();
-      mlir::ArrayAttr indices = builder.getArrayAttr(
-          {builder.getI32IntegerAttr(apOp.getAddressPoint().getIndex()),
-           builder.getI32IntegerAttr(apOp.getAddressPoint().getOffset())});
-      elements[0] =
-          cir::GlobalViewAttr::get(cir::VPtrType::get(builder.getContext()),
-                                   apOp.getNameAttr(), indices);
+      cir::GlobalViewAttr vptr =
+          emitter.cgm.getCXXABI().getVTableAddressPointAttr(
+              BaseSubobject(cxxrd, offsetInDerived),
+              cast<CXXRecordDecl>(vtableBaseTy));
+      assert(vptr && "failed to get vtable address point");
+      elements[0] = vptr;
     }
 
     unsigned baseNo = 0;
@@ -676,7 +672,7 @@ public:
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *e,
                                              QualType t) {
-    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(t));
+    return cgm.emitNullConstantAttr(t);
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {
@@ -1669,9 +1665,22 @@ mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {
   if (getTypes().isZeroInitializable(t))
     return builder.getZeroInitAttr(getTypes().convertTypeForMem(t));
 
-  if (getASTContext().getAsConstantArrayType(t)) {
-    errorNYI("CIRGenModule::emitNullConstantAttr ConstantArrayType");
-    return {};
+  if (const ConstantArrayType *cat =
+          getASTContext().getAsConstantArrayType(t)) {
+    QualType elementTy = cat->getElementType();
+    mlir::TypedAttr elementAttr = emitNullConstantAttr(elementTy);
+    if (!elementAttr)
+      return {};
+
+    auto arrayTy = mlir::cast<cir::ArrayType>(getTypes().convertTypeForMem(t));
+
+    if (builder.isNullValue(elementAttr))
+      return cir::ZeroAttr::get(arrayTy);
+
+    llvm::SmallVector<mlir::Attribute> elements(cat->getZExtSize(),
+                                                elementAttr);
+    return cir::ConstArrayAttr::get(
+        arrayTy, mlir::ArrayAttr::get(builder.getContext(), elements));
   }
 
   if (const RecordType *rt = t->getAs<RecordType>())

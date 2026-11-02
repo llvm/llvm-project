@@ -76,8 +76,7 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP12]], 4
 ; NO-VP-NEXT:    [[TMP19:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP6]], 1
@@ -214,8 +213,7 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP12]], 4
 ; NO-VP-NEXT:    [[TMP19:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP6]], 1
@@ -352,8 +350,7 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP12]], 4
 ; NO-VP-NEXT:    [[TMP19:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP6]], 1
@@ -490,8 +487,7 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP12]], 4
 ; NO-VP-NEXT:    [[TMP19:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP6]], 1
@@ -619,8 +615,7 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP10]], 4
 ; NO-VP-NEXT:    [[TMP15:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP6]], 1
@@ -737,8 +732,7 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP10]], 4
 ; NO-VP-NEXT:    [[TMP15:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP6]], 1
@@ -859,8 +853,7 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP10]], 4
 ; NO-VP-NEXT:    [[TMP17:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP6]], 1
@@ -987,8 +980,7 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP10]], 4
 ; NO-VP-NEXT:    [[TMP17:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP6]], 1
@@ -1111,8 +1103,7 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP9]], 4
 ; NO-VP-NEXT:    [[TMP11:%.*]] = add i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B2]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP6]], 1

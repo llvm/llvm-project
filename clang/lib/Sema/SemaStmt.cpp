@@ -430,6 +430,26 @@ void Sema::ActOnFinishOfCompoundStmt() {
   PopCompoundScope();
 }
 
+static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
+  StringRef DeferSpelling =
+      S.PP.getLastMacroWithSpelling(DeferLoc, {tok::kw__Defer});
+  if (DeferSpelling.empty())
+    DeferSpelling = "_Defer";
+  return DeferSpelling;
+}
+
+// Diagnose if the given statement is a redundant _Defer statement.
+static bool CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
+  Stmt *Inner = Body->stripLabelLikeStatements();
+  if (isa<DeferStmt>(Inner)) {
+    SourceLocation DeferLoc = Inner->getBeginLoc();
+    S.Diag(DeferLoc, diag::warn_redundant_defer)
+        << Inner->getSourceRange() << GetDeferKeywordSpelling(S, DeferLoc);
+    return true;
+  }
+  return false;
+}
+
 sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
   return getCurFunction()->CompoundScopes.back();
 }
@@ -474,6 +494,21 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
     for (unsigned i = 0; i != NumElts - 1; ++i)
       DiagnoseEmptyLoopBody(Elts[i], Elts[i + 1]);
   }
+
+  // Find defer statements that immediately precede a `break`/`continue`
+  // or a plain `return` statement.
+  if (NumElts > 1) {
+    for (unsigned i = 0; i != NumElts - 1; ++i) {
+      Stmt *Inner = Elts[i + 1]->stripLabelLikeStatements();
+      if (isa<BreakStmt, ContinueStmt>(Inner) ||
+          (isa<ReturnStmt>(Inner) && !cast<ReturnStmt>(Inner)->getRetValue()))
+        CheckRedundantDeferStmt(*this, Elts[i]);
+    }
+  }
+
+  // Check for defer as last statement.
+  if (NumElts > 0)
+    CheckRedundantDeferStmt(*this, Elts[NumElts - 1]);
 
   // Calculate difference between FP options in this compound statement and in
   // the enclosing one. If this is a function body, take the difference against
@@ -1001,6 +1036,12 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
 
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
+
+  if (CheckRedundantDeferStmt(*this, thenStmt))
+    Diag(thenStmt->getBeginLoc(), diag::note_redundant_defer_if)
+        << GetDeferKeywordSpelling(*this, thenStmt->getBeginLoc());
+  if (elseStmt)
+    CheckRedundantDeferStmt(*this, elseStmt);
 
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {
@@ -1840,7 +1881,8 @@ static void CheckLoopBody(Sema &S, Expr *CondExpr, Stmt *Body) {
     // This does not apply for `if` statements and range-`for`
     // loops which call DiagnoseEmptyStmtBody() directly.
     S.getCurCompoundScope().setHasEmptyLoopBodies();
-  }
+  } else
+    CheckRedundantDeferStmt(S, Body);
 }
 
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
@@ -4057,6 +4099,7 @@ StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
   assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
   SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
+  CheckRedundantDeferStmt(*this, Body);
   setFunctionHasBranchProtectedScope();
   return DeferStmt::Create(Context, DeferLoc, Body);
 }
@@ -4469,24 +4512,7 @@ public:
 
 StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
                                   ArrayRef<Stmt *> Handlers) {
-  const llvm::Triple &T = Context.getTargetInfo().getTriple();
-  const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
-
   DiagnoseExceptionUse(TryLoc, /* IsTry= */ true);
-
-  // In OpenMP target regions, we assume that catch is never reached on GPU
-  // targets.
-  if (IsOpenMPGPUTarget)
-    targetDiag(TryLoc, diag::warn_try_not_valid_on_target) << T.str();
-
-  // Exceptions aren't allowed in CUDA device code.
-  if (getLangOpts().CUDA)
-    CUDA().DiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
-        << "try" << CUDA().CurrentTarget();
-
-  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
-    Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";
 
   sema::FunctionScopeInfo *FSI = getCurFunction();
 
@@ -4580,16 +4606,36 @@ void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
   const bool IsOpenMPGPUTarget =
       getLangOpts().OpenMPIsTargetDevice && T.isGPU();
 
-  // Don't report an error if 'try' is used in system headers or in an OpenMP
-  // target region compiled for a GPU architecture.
-  if (IsOpenMPGPUTarget || getLangOpts().CUDA)
-    // Delay error emission for the OpenMP device code.
+  // Skip this check if we're in a dependent context as we don't want
+  // to diagnose try/throw in a discarded branch of an 'if constexpr'.
+  if (CurContext->isDependentContext())
     return;
 
-  if (!getLangOpts().CXXExceptions &&
-      !getSourceManager().isInSystemHeader(Loc) &&
-      !CurContext->isDependentContext())
-    targetDiag(Loc, diag::err_exceptions_disabled) << (IsTry ? "try" : "throw");
+  // Warn that we assume that throw/catch is never reached on OpenMP
+  // GPU targets.
+  if (IsOpenMPGPUTarget)
+    targetDiag(Loc, diag::warn_exceptions_not_valid_on_target)
+        << T.str() << IsTry;
+
+  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope()) {
+    Diag(Loc, diag::err_omp_simd_region_cannot_use_exceptions) << IsTry;
+    return;
+  }
+
+  if (IsOpenMPGPUTarget)
+    return;
+
+  // Exceptions aren't allowed in CUDA device code. Skip this check if
+  // exceptions are disabled since we will issue a more general diagnostic
+  // for that below.
+  if (getLangOpts().CUDA && getLangOpts().CXXExceptions) {
+    CUDA().DiagIfDeviceCode(Loc, diag::err_cuda_device_exceptions)
+        << IsTry << CUDA().CurrentTarget();
+    return;
+  }
+
+  if (!getLangOpts().CXXExceptions && !getSourceManager().isInSystemHeader(Loc))
+    targetDiag(Loc, diag::err_exceptions_disabled) << IsTry;
 }
 
 StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,

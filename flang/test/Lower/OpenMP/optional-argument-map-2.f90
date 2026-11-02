@@ -25,7 +25,7 @@ contains
 end module mod
 
 ! CHECK-LABEL:   func.func @_QMmodProutine_box(
-! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "a", fir.optional}) {
+! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_inout>, fir.optional}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QMmodFroutine_boxEa") fortran_attrs<allocatable, intent_inout, optional> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
@@ -54,7 +54,7 @@ end module mod
 ! CHECK:           }
 
 ! CHECK-LABEL:   func.func @_QMmodProutine_boxchar(
-! CHECK-SAME:      %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "a", fir.optional}) {
+! CHECK-SAME:      %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.optional}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.boxchar<1>
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)

@@ -260,10 +260,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
     Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string);
   }
 
-  ConstantExpr *Res = ConstantExpr::Create(getASTContext(), Expr,
-                                           ConstantResultStorageKind::APValue);
-  Res->SetResult(V, getASTContext());
-  return Res;
+  return ConstantExpr::Create(getASTContext(), Expr, V);
 }
 
 StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
