@@ -897,9 +897,6 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
 
-- Fixed rejecting valid reference initialization with conversion function templates whose returned type is depending on 
-  template parameters. (#GH226984)
-
 - Fixed a crash when an `address_space` attribute with a dependent argument was
   written after the declarator-id, where it appertains to the declared entity
   rather than to a declarator chunk. (#GH196982, #GH111463)
@@ -1498,6 +1495,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   matching the behavior of such maps outside a mapper.
 - Fixed a crash when the `safelen` and `simdlen` clauses of an OpenMP directive
   have arguments of different integer types. (#GH108367)
+- Fixed a crash when the init or increment of an OpenMP loop uses a braced
+  list, such as `int i = {0}`. (#GH202562)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
