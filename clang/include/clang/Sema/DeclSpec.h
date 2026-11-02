@@ -263,8 +263,9 @@ namespace clang {
     /// makes the argument parseable. Null if type construction rejected the
     /// attribute.
     ///
-    /// Held as the base class so the parser stays agnostic about which bounds
-    /// attribute this is; Sema dispatches on the concrete kind when completing.
+    /// Store pointer to the base class so the parser stays agnostic about which
+    /// bounds attribute this is; Sema dispatches on the concrete kind when
+    /// completing.
     BoundsAttributedType *TypeToComplete = nullptr;
 
     LateParsedTypeAttrInfo(ParsedAttr::Kind Kind, SourceLocation NameLoc)
