@@ -21,6 +21,7 @@
 # X86-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib
 # X86-NEXT:   [[CPATH]]lib
 # X86-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib{{[/\\]}}i686-pc-windows-msvc
+# X86-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib{{[/\\]}}i386-pc-windows-msvc
 # X86-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}DIA SDK{{[/\\]}}lib
 # X86-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}VC{{[/\\]}}Tools{{[/\\]}}MSVC{{[/\\]}}1.1.1.1{{[/\\]}}lib{{[/\\]}}x86
 # X86-NEXT:   [[SYSROOT]]{{[/\\]}}sysroot{{[/\\]}}VC{{[/\\]}}Tools{{[/\\]}}MSVC{{[/\\]}}1.1.1.1{{[/\\]}}atlmfc{{[/\\]}}lib{{[/\\]}}x86

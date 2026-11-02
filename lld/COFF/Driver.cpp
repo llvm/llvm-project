@@ -24,6 +24,7 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
@@ -204,7 +205,7 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   }
 }
 
-static std::optional<std::string>
+static llvm::SmallVector<std::string, 2>
 perTargetRuntimeDirForMachineType(MachineTypes mt) {
   switch (mt) {
   case ARM64:
@@ -213,13 +214,13 @@ perTargetRuntimeDirForMachineType(MachineTypes mt) {
   case ARM64EC:
     return {"arm64ec-pc-windows-msvc"};
   case ARMNT:
-    return {"armv7-pc-windows-msvc"};
+    return {"armv7-pc-windows-msvc", "arm-pc-windows-msvc"};
   case AMD64:
     return {"x86_64-pc-windows-msvc"};
   case I386:
-    return {"i686-pc-windows-msvc"};
+    return {"i686-pc-windows-msvc", "i386-pc-windows-msvc"};
   default:
-    return std::nullopt;
+    return {};
   }
 }
 
@@ -901,11 +902,11 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
 }
 
 void LinkerDriver::addClangPerTargetRuntimeDirSearchPaths() {
+  auto machineDirs = perTargetRuntimeDirForMachineType(ctx.config.machine);
   // Add per-target resource dir library path
-  if (std::optional<std::string> machineDir =
-          perTargetRuntimeDirForMachineType(ctx.config.machine)) {
+  for (std::string machineDir : machineDirs) {
     SmallString<128> targetRuntimeDir(clangRuntimeLibDir);
-    sys::path::append(targetRuntimeDir, *machineDir);
+    sys::path::append(targetRuntimeDir, machineDir);
     searchPaths.push_back(saver().save(targetRuntimeDir.str()));
   }
 }
