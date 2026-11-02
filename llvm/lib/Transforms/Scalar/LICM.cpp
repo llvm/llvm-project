@@ -1453,7 +1453,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
     moveInstructionBefore(I, Dest->getTerminator()->getIterator(), *SafetyInfo,
                           MSSAU, SE);
 
-  I.updateLocationAfterHoist();
+  I.dropSourcePositionKeepIRLayers();
 
   if (isa<LoadInst>(I))
     ++NumMovedLoads;

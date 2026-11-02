@@ -1088,7 +1088,20 @@ void Instruction::mergeDIAssignID(
   setMetadata(LLVMContext::MD_DIAssignID, MergeID);
 }
 
-void Instruction::updateLocationAfterHoist() { dropLocation(); }
+void Instruction::dropSourcePositionKeepIRLayers() {
+  const DebugLoc &DL = getDebugLoc();
+  DILayerLocList *IRLayers = DL ? DL->getInnermostIRLayers() : nullptr;
+  DISubprogram *SP = getFunction()->getSubprogram();
+  if (!IRLayers || !SP) {
+    dropLocation();
+    return;
+  }
+  // The function's scope, as dropLocation() uses for calls, so the
+  // instruction does not stretch an inlined scope to its new position.
+  setDebugLoc(DILocation::get(getContext(), 0, 0, SP, /*InlinedAt=*/nullptr,
+                              /*ImplicitCode=*/false, /*AtomGroup=*/0,
+                              /*AtomRank=*/0, IRLayers));
+}
 
 void Instruction::dropLocation() {
   const DebugLoc &DL = getDebugLoc();
