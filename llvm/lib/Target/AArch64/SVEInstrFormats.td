@@ -6316,6 +6316,108 @@ multiclass sve_fp_2op_p_pd<bits<3> opc, string asm,
 
 
 //===----------------------------------------------------------------------===//
+// SVE Floating Point Compare - Total Order
+//===----------------------------------------------------------------------===//
+
+class sve_fp_3op_u_pd<bits<2> sz, bits<3> opc, string asm, ZPRRegOp zprty,
+                      PPRRegOp pprty>
+: I<(outs pprty:$Pd), (ins  zprty:$Zn, zprty:$Zm),
+  asm, "\t$Pd, $Zn, $Zm",
+  "", []>, Sched<[]> {
+  bits<4> Pd;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15-13} = 0b000;
+  let Inst{12-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4}     = 0;
+  let Inst{3-0}   = Pd;
+
+  let hasSideEffects = 0;
+  let mayRaiseFPException = 0;
+  let Uses = [ FPCR ];
+}
+
+
+multiclass sve_fp_3op_u_pd_totalcomp<bits<3> opc, string asm> {
+  def _H : sve_fp_3op_u_pd<0b01, opc, asm, ZPR16, PPR16>;
+  def _S : sve_fp_3op_u_pd<0b10, opc, asm, ZPR32, PPR32>;
+  def _D : sve_fp_3op_u_pd<0b11, opc, asm, ZPR64, PPR64>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE Min Max
+//===----------------------------------------------------------------------===//
+
+class sve_fp_2op_p_zds_minmax<bits<2> sz, bits<1> op, bits<2> opc, string asm,
+                       ZPRRegOp zprty>
+: I<(outs zprty:$Zdn), (ins PPR3bAny:$Pg, zprty:$_Zdn, zprty:$Zm),
+  asm, "\t$Zdn, $Pg/m, $_Zdn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zdn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = sz;
+  let Inst{21-20} = 0b00;
+  let Inst{19}    = op;
+  let Inst{18}    = 0b0;
+  let Inst{17-16} = opc;
+  let Inst{15-13} = 0b111;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zm;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = zprty.ElementSize;
+  let mayRaiseFPException = 1;
+  let Uses = [ FPCR ];
+}
+
+multiclass sve_fp_2op_p_zds_minmax<bits<1> op, bits<2> opc, string asm> {
+  def _H : sve_fp_2op_p_zds_minmax<0b01, op, opc, asm, ZPR16>;
+  def _S : sve_fp_2op_p_zds_minmax<0b10, op, opc, asm, ZPR32>;
+  def _D : sve_fp_2op_p_zds_minmax<0b11, op, opc, asm, ZPR64>;
+}
+
+class sve_fp_fast_red_minmax<bits<2> sz, bits<2> opc, bit R, string asm,
+                             ZPRRegOp zprty, RegisterClass dstRegClass>
+: I<(outs dstRegClass:$Vd), (ins PPR3bAny:$Pg, zprty:$Zn),
+  asm, "\t$Vd, $Pg, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<5> Vd;
+  bits<5> Zn;
+  bits<3> Pg;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = sz;
+  let Inst{21-18} = 0b0101;
+  let Inst{17-16} = opc;
+  let Inst{15-14} = 0b11;
+  let Inst{13}    = R;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Vd;
+
+  let hasSideEffects = 0;
+  let mayRaiseFPException = 1;
+  let Uses = [ FPCR ];
+}
+
+multiclass sve_fp_fast_red_minmax<bits<2> opc, bit R, string asm> {
+  def _H : sve_fp_fast_red_minmax<0b01, opc, R, asm, ZPR16, FPR16>;
+  def _S : sve_fp_fast_red_minmax<0b10, opc, R, asm, ZPR32, FPR32>;
+  def _D : sve_fp_fast_red_minmax<0b11, opc, R, asm, ZPR64, FPR64>;
+}
+
+
+//===----------------------------------------------------------------------===//
 //SVE Index Generation Group
 //===----------------------------------------------------------------------===//
 

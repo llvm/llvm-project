@@ -175,13 +175,13 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 
 /// @C shouldLoopVersion
 ///
-/// Check if Loop Versioning should be enabled.
+/// Check if a loop versioning pass should be enabled.
 /// We look for the last of one of the following:
-///   -Ofast, -O4, -O<number> and -f[no-]version-loops-for-stride.
-/// Loop versioning is disabled if the last option is
-///  -fno-version-loops-for-stride.
+///   -Ofast, -O4, -O<number>, -O0 and the pass's -f[no-]version-loops-for-*
+///   flag.
+/// Loop versioning is disabled if the last option is the -fno- flag or -O0.
 /// Loop versioning is enabled if the last option is one of:
-///  -floop-versioning
+///  the -f flag
 ///  -Ofast
 ///  -O4
 ///  -O3
@@ -190,17 +190,19 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 /// The gfortran compiler automatically enables the option for -O3 or -Ofast.
 ///
 /// @return true if loop-versioning should be enabled, otherwise false.
-static bool shouldLoopVersion(const ArgList &Args) {
-  const Arg *LoopVersioningArg = Args.getLastArg(
-      options::OPT_Ofast, options::OPT_O, options::OPT_O4,
-      options::OPT_floop_versioning, options::OPT_fno_loop_versioning);
+static bool shouldLoopVersion(const ArgList &Args, options::ID PosFlag,
+                              options::ID NegFlag) {
+  const Arg *LoopVersioningArg =
+      Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4,
+                      options::OPT_O0, PosFlag, NegFlag);
   if (!LoopVersioningArg)
     return false;
 
-  if (LoopVersioningArg->getOption().matches(options::OPT_fno_loop_versioning))
+  if (LoopVersioningArg->getOption().matches(NegFlag) ||
+      LoopVersioningArg->getOption().matches(options::OPT_O0))
     return false;
 
-  if (LoopVersioningArg->getOption().matches(options::OPT_floop_versioning))
+  if (LoopVersioningArg->getOption().matches(PosFlag))
     return true;
 
   if (LoopVersioningArg->getOption().matches(options::OPT_Ofast) ||
@@ -240,8 +242,6 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fno_underscoring,
                    options::OPT_funsigned,
                    options::OPT_fno_unsigned,
-                   options::OPT_fenumeration_type,
-                   options::OPT_fno_enumeration_type,
                    options::OPT_fout_of_bounds_subscripts,
                    options::OPT_fno_out_of_bounds_subscripts,
                    options::OPT_fopenacc_default_none_scalars_strict,
@@ -367,8 +367,12 @@ void Flang::addCodegenOptions(const ArgList &Args,
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
 
-  if (shouldLoopVersion(Args))
+  if (shouldLoopVersion(Args, options::OPT_floop_versioning,
+                        options::OPT_fno_loop_versioning))
     CmdArgs.push_back("-fversion-loops-for-stride");
+  if (shouldLoopVersion(Args, options::OPT_floop_tripcount_versioning,
+                        options::OPT_fno_loop_tripcount_versioning))
+    CmdArgs.push_back("-fversion-loops-for-trip-count");
 
   for (const auto &arg :
        Args.getAllArgValues(options::OPT_frepack_arrays_contiguity_EQ))

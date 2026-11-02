@@ -2976,22 +2976,16 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   DebugLoc MergedLoc =
       DILocation::getMergedLocation(Root.getDebugLoc(), Prev.getDebugLoc());
 
-  bool Mul1IsKill = Mul1.isKill();
-  bool Mul2IsKill = Mul2.isKill();
-  bool AddendIsKill = Addend.isKill();
-
   // We need to clear kill flags since we may be extending the live range past
-  // a kill. If the mul had kill flags, we can preserve those since we know
-  // where the previous range stopped.
+  // a kill.
   MRI.clearKillFlags(Mul1.getReg());
   MRI.clearKillFlags(Mul2.getReg());
 
-  MachineInstrBuilder MIB =
-      BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
-          .addReg(Mul1.getReg(), getKillRegState(Mul1IsKill))
-          .addReg(Mul2.getReg(), getKillRegState(Mul2IsKill))
-          .addReg(Addend.getReg(), getKillRegState(AddendIsKill))
-          .setMIFlags(IntersectedFlags);
+  MachineInstrBuilder MIB = BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
+                                .addReg(Mul1.getReg())
+                                .addReg(Mul2.getReg())
+                                .addReg(Addend.getReg())
+                                .setMIFlags(IntersectedFlags);
 
   InsInstrs.push_back(MIB);
   if (MRI.hasOneNonDBGUse(Prev.getOperand(0).getReg()))
@@ -3046,12 +3040,12 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
   Register NewVR = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
   auto MIB1 = BuildMI(*MF, MIMetadata(Root), TII->get(InnerOpc), NewVR)
-                  .addReg(Y.getReg(), getKillRegState(Y.isKill()))
-                  .addReg(Z.getReg(), getKillRegState(Z.isKill()));
+                  .addReg(Y.getReg())
+                  .addReg(Z.getReg());
   auto MIB2 = BuildMI(*MF, MIMetadata(Root), TII->get(Root.getOpcode()),
                       Root.getOperand(0).getReg())
-                  .addReg(NewVR, RegState::Kill)
-                  .addReg(X.getReg(), getKillRegState(X.isKill()));
+                  .addReg(NewVR)
+                  .addReg(X.getReg());
 
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
   InsInstrs.push_back(MIB1);
