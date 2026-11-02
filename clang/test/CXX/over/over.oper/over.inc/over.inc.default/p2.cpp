@@ -171,6 +171,18 @@ struct NotFirst {
 NotFirst NotFirst::operator++(int) = default; // expected-error {{defaulting this postfix increment operator would delete it after its first declaration}}
 // expected-error@-1 {{call to deleted constructor of 'NotFirst'}}
 
+// The same holds for an instantiation of such a definition.
+template <typename T> struct NotFirstTemplate {
+  NotFirstTemplate operator++(int);
+};
+template <typename T>
+NotFirstTemplate<T> NotFirstTemplate<T>::operator++(int) = default; // #NotFirstTemplate
+// expected-error@#NotFirstTemplate {{defaulting this postfix increment operator would delete it after its first declaration}}
+// expected-note@#NotFirstTemplate {{defaulted 'operator++' is implicitly deleted because there is no viable prefix 'operator++' for an lvalue of type 'NotFirstTemplate<int>'}}
+void use_not_first_template(NotFirstTemplate<int> n) {
+  n++; // expected-note {{in instantiation of member function 'NotFirstTemplate<int>::operator++' requested here}}
+}
+
 // No warning is produced for a template instantiation, but the function is
 // still deleted.
 template <typename T> struct Wrapper {

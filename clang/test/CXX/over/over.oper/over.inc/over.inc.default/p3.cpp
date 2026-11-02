@@ -285,6 +285,38 @@ constexpr int member() {
 }
 static_assert(member() == 12);
 } // namespace D
+
+// For a member of a class template defaulted outside the class, the lookup is
+// performed at the definition and reused by each instantiation.
+namespace E {
+template <class T> struct Z {
+  int v;
+  constexpr Z operator++(int);
+  constexpr Z operator--(int);
+};
+} // namespace E
+template <class T> constexpr E::Z<T> &operator++(E::Z<T> &z) {
+  ++z.v;
+  return z;
+}
+template <class T> constexpr E::Z<T> E::Z<T>::operator++(int) = default;
+template <class T> constexpr E::Z<T> E::Z<T>::operator--(int) = default; // #ZDec
+// expected-error@#ZDec {{defaulting this postfix decrement operator would delete it after its first declaration}}
+// expected-note@#ZDec {{defaulted 'operator--' is implicitly deleted because there is no viable prefix 'operator--' for an lvalue of type 'Lookup::E::Z<int>'}}
+// Declared after the defaulted definition, so not found.
+template <class T> constexpr E::Z<T> &operator--(E::Z<T> &z);
+template E::Z<int> E::Z<int>::operator++(int);
+constexpr int out_of_line() {
+  E::Z<int> z{1};
+  E::Z<int> a = z++;
+  E::Z<long> l{1};
+  E::Z<long> b = l++;
+  return a.v * 1000 + z.v * 100 + b.v * 10 + l.v;
+}
+static_assert(out_of_line() == 1212);
+void decrement(E::Z<int> z) {
+  z--; // expected-note {{in instantiation of member function 'Lookup::E::Z<int>::operator--' requested here}}
+}
 } // namespace Lookup
 
 // C++2d [except.spec]p10:

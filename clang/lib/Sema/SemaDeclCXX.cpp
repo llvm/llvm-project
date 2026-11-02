@@ -9835,7 +9835,14 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
   DefaultedPostfixOperatorInfo Info =
       analyzeDefaultedPostfixOperator(*this, FD, Kind, C, /*Diagnose=*/false);
 
-  bool First = FD == FD->getFirstDecl();
+  // An instantiated member function has a single declaration; whether it is
+  // defaulted on its first declaration, and where, is decided by the
+  // defaulted definition that it is instantiated from.
+  const FunctionDecl *Defaulted = FD;
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+    if (const FunctionDecl *PatternDef = Pattern->getDefinition())
+      Defaulted = PatternDef;
+  bool First = Defaulted == Defaulted->getFirstDecl();
 
   if (!First) {
     if (Info.Deleted) {
@@ -9851,7 +9858,7 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
       analyzeDefaultedPostfixOperator(*this, FD, Kind, C, /*Diagnose=*/true);
       return true;
     }
-    if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+    if (isa<CXXRecordDecl>(Defaulted->getLexicalDeclContext())) {
       // C++2d [over.inc.default]p1:
       //   A definition of a postfix increment or decrement operator as
       //   defaulted that appears in a class shall be the first declaration of
@@ -19611,8 +19618,18 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
   FD->setDefaultLoc(DefaultLoc);
 
   // Defer checking functions that are defaulted in a dependent context.
-  if (FD->isDependentContext())
+  if (FD->isDependentContext()) {
+    // The unqualified lookup of the prefix operator for a postfix operator
+    // defaulted outside its class can only be performed now, while we have the
+    // scope of the function-body. Instantiation reuses its result. (When it is
+    // defaulted in its class, the lookup is performed once the class is
+    // complete.)
+    if (DefKind.isPostfixOperator() &&
+        !isa<CXXRecordDecl>(FD->getLexicalDeclContext()))
+      CheckExplicitlyDefaultedPostfixOperator(S, FD,
+                                              DefKind.asPostfixOperator());
     return;
+  }
 
   // Unset that we will have a body for this function. We might not,
   // if it turns out to be trivial, and we don't need this marking now
