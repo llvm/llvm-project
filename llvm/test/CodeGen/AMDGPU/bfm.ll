@@ -89,6 +89,37 @@ define void @v_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
   ret void
 }
 
+define amdgpu_ps i64 @s_bfm64_pattern(i64 inreg %x, i64 inreg %y) {
+; SI-LABEL: s_bfm64_pattern:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_bfm_b64 s[0:1], s0, s2
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: s_bfm64_pattern:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_bfm_b64 s[0:1], s0, s2
+; VI-NEXT:    ; return to shader part epilog
+  %a = shl i64 1, %x
+  %b = sub i64 %a, 1
+  %c = shl i64 %b, %y
+  ret i64 %c
+}
+
+define amdgpu_ps i64 @s_bfm64_pattern_simple(i64 inreg %x) {
+; SI-LABEL: s_bfm64_pattern_simple:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_bfm_b64 s[0:1], s0, 0
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: s_bfm64_pattern_simple:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_bfm_b64 s[0:1], s0, 0
+; VI-NEXT:    ; return to shader part epilog
+  %a = shl i64 1, %x
+  %b = sub i64 %a, 1
+  ret i64 %b
+}
+
 define void @v_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
 ; SI-LABEL: v_bfm_pattern_simple:
 ; SI:       ; %bb.0:
@@ -113,6 +144,145 @@ define void @v_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
   %b = sub i32 %a, 1
   store i32 %b, ptr addrspace(1) %out
   ret void
+}
+
+define amdgpu_ps <2 x i64> @s_bfm64_v2i64_pattern(<2 x i64> inreg %x, <2 x i64> inreg %y) {
+; SI-LABEL: s_bfm64_v2i64_pattern:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_bfm_b64 s[2:3], s2, s6
+; SI-NEXT:    s_bfm_b64 s[0:1], s0, s4
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: s_bfm64_v2i64_pattern:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_bfm_b64 s[2:3], s2, s6
+; VI-NEXT:    s_bfm_b64 s[0:1], s0, s4
+; VI-NEXT:    ; return to shader part epilog
+  %a = shl <2 x i64> splat (i64 1), %x
+  %b = sub <2 x i64> %a, splat (i64 1)
+  %c = shl <2 x i64> %b, %y
+  ret <2 x i64> %c
+}
+
+define amdgpu_ps <2 x i64> @s_bfm64_v2i64_pattern_simple(<2 x i64> inreg %x) {
+; SI-LABEL: s_bfm64_v2i64_pattern_simple:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_bfm_b64 s[2:3], s2, 0
+; SI-NEXT:    s_bfm_b64 s[0:1], s0, 0
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: s_bfm64_v2i64_pattern_simple:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_bfm_b64 s[2:3], s2, 0
+; VI-NEXT:    s_bfm_b64 s[0:1], s0, 0
+; VI-NEXT:    ; return to shader part epilog
+  %a = shl <2 x i64> splat (i64 1), %x
+  %b = sub <2 x i64> %a, splat (i64 1)
+  ret <2 x i64> %b
+}
+
+define i64 @v_bfm64_pattern(i64 %x, i64 %y) {
+; SI-LABEL: v_bfm64_pattern:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshl_b64 v[0:1], 1, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
+; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], v2
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_bfm64_pattern:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b64 v[0:1], v0, 1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, -1, v0
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
+; VI-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %a = shl i64 1, %x
+  %b = sub i64 %a, 1
+  %c = shl i64 %b, %y
+  ret i64 %c
+}
+
+define i64 @v_bfm64_pattern_simple(i64 %x) {
+; SI-LABEL: v_bfm64_pattern_simple:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshl_b64 v[0:1], 1, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_bfm64_pattern_simple:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b64 v[0:1], v0, 1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, -1, v0
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %a = shl i64 1, %x
+  %b = sub i64 %a, 1
+  ret i64 %b
+}
+
+define <2 x i64> @v_bfm64_v2i64_pattern(<2 x i64> %x, <2 x i64> %y) {
+; SI-LABEL: v_bfm64_v2i64_pattern:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshl_b64 v[2:3], 1, v2
+; SI-NEXT:    v_lshl_b64 v[0:1], 1, v0
+; SI-NEXT:    v_add_i32_e32 v2, vcc, -1, v2
+; SI-NEXT:    v_addc_u32_e32 v3, vcc, -1, v3, vcc
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
+; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], v4
+; SI-NEXT:    v_lshl_b64 v[2:3], v[2:3], v6
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_bfm64_v2i64_pattern:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b64 v[2:3], v2, 1
+; VI-NEXT:    v_lshlrev_b64 v[0:1], v0, 1
+; VI-NEXT:    v_add_u32_e32 v2, vcc, -1, v2
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, -1, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v0, vcc, -1, v0
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
+; VI-NEXT:    v_lshlrev_b64 v[0:1], v4, v[0:1]
+; VI-NEXT:    v_lshlrev_b64 v[2:3], v6, v[2:3]
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %a = shl <2 x i64> splat (i64 1), %x
+  %b = sub <2 x i64> %a, splat (i64 1)
+  %c = shl <2 x i64> %b, %y
+  ret <2 x i64> %c
+}
+
+define <2 x i64> @v_bfm64_v2i64_pattern_simple(<2 x i64> %x) {
+; SI-LABEL: v_bfm64_v2i64_pattern_simple:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshl_b64 v[0:1], 1, v0
+; SI-NEXT:    v_lshl_b64 v[2:3], 1, v2
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
+; SI-NEXT:    v_add_i32_e32 v2, vcc, -1, v2
+; SI-NEXT:    v_addc_u32_e32 v3, vcc, -1, v3, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_bfm64_v2i64_pattern_simple:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b64 v[0:1], v0, 1
+; VI-NEXT:    v_lshlrev_b64 v[2:3], v2, 1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, -1, v0
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v2, vcc, -1, v2
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, -1, v3, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %a = shl <2 x i64> splat (i64 1), %x
+  %b = sub <2 x i64> %a, splat (i64 1)
+  ret <2 x i64> %b
 }
 
 attributes #0 = { nounwind }

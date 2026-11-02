@@ -66,6 +66,7 @@
 ; CHECK-O-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-O-NEXT: Running pass: NoRecurseLTOInferencePass
 ; CHECK-O23-NEXT: Running pass: CoroEarlyPass
+; CHECK-O1-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O23-NEXT: Running pass: GlobalOptPass
 ; CHECK-O23-NEXT: Running pass: PromotePass
@@ -118,12 +119,12 @@
 ; CHECK-O23-NEXT: Running analysis: CycleAnalysis
 ; CHECK-O23-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23-NEXT: Running pass: MergedLoadStoreMotionPass on foo
+; CHECK-O23-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-EP-VECTORIZER-START-NEXT: Running pass: NoOpFunctionPass on foo
 ; CHECK-O23-NEXT: Running pass: LoopSimplifyPass on foo
 ; CHECK-O23-NEXT: Running pass: LCSSAPass on foo
 ; CHECK-O23-NEXT: Running pass: IndVarSimplifyPass on loop
 ; CHECK-O23-NEXT: Running pass: LoopDeletionPass on loop
-; CHECK-O23-NEXT: Running pass: LoopFullUnrollPass on loop
 ; CHECK-O23-NEXT: Running pass: LoopDistributePass on foo
 ; CHECK-O23-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-O23-NEXT: Running pass: LoopVectorizePass on foo
@@ -149,10 +150,22 @@
 ; CHECK-EP-VECTORIZER-END-NEXT: Running pass: NoOpFunctionPass on foo
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass on foo
 ; CHECK-O23-NEXT: Running pass: JumpThreadingPass on foo
+; CHECK-O23-NEXT: Running pass: ModuleInlinerWrapperPass on [module]
+; CHECK-O23-NEXT: Running analysis: InlineAdvisorAnalysis on [module]
+; CHECK-O23-NEXT: Running pass: InlinerPass on (foo) (1 node)
+; CHECK-O23-NEXT: Running pass: InlinerPass on (foo) (1 node)
+; CHECK-O23-NEXT: Invalidating analysis: InlineAdvisorAnalysis on [module]
 ; CHECK-O23-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O-NEXT: Running pass: DropTypeTestsPass
+; CHECK-O23-NEXT: Running pass: SROAPass on foo
+; CHECK-O23-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O23-NEXT: Running pass: LoopSimplifyPass on foo
+; CHECK-O23-NEXT: Running pass: LCSSAPass on foo
+; CHECK-O23-NEXT: Running pass: LICMPass on loop %loop
 ; CHECK-O23-NEXT: Running pass: LoopSink
 ; CHECK-O23-NEXT: Running pass: DivRemPairs
+; CHECK-O23-NEXT: Running pass: MergeICmpsPass
+; CHECK-O23-NEXT: Running pass: ExpandMemCmpPass
 ; CHECK-O23-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O23-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O23-NEXT: Running pass: GlobalDCEPass

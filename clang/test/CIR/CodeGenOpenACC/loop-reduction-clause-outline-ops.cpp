@@ -2356,6 +2356,10 @@ void acc_loop() {
 #pragma acc loop reduction(||:someVarArr[1:1])
   for(int i=0;i < 5; ++i);
 
+  // CHECK-NEXT: cir.func {{.*}}@_Z4usesv()
+  // CHECK-NEXT: cir.call @_Z8acc_loopI19HasOperatorsOutlineEvv() : () -> ()
+  // CHECK-NEXT: cir.return
+  // CHECK-NEXT: }
   // CHECK-NEXT: cir.func {{.*}}@_Z8acc_loop
 }
 

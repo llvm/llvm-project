@@ -14,9 +14,9 @@
 // CHECK:           %[[MIN_UB:.*]] = arith.minsi %[[NEW_UB]], %[[C10]] : index
 // CHECK:           acc.loop control(%[[INNER_IV:.*]] : index) = (%[[IV]] : index) to (%[[MIN_UB]] : index) step (%[[C1]] : index) {
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @single_loop_tile(%arg0: memref<10xf32>) {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
@@ -27,7 +27,7 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i] : memref<10xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -49,9 +49,9 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
 // Element-group loop with vector.
 // CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to (%[[MUB0]], %[[MUB1]] : index, index) step (%[[C1]], %[[C1]] : index, index) {
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
   %c0 = arith.constant 0 : index
   %c100 = arith.constant 100 : index
@@ -65,7 +65,7 @@ func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -81,9 +81,9 @@ func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
 // CHECK:           acc.loop control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to ({{.*}}) step ({{.*}}) {
 // CHECK-NOT:         gang
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
   %c0 = arith.constant 0 : index
   %c100 = arith.constant 100 : index
@@ -98,7 +98,7 @@ func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -116,9 +116,9 @@ func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
 // CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to ({{.*}}) step ({{.*}}) {
 // CHECK-NOT:         worker
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @worker_num_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
   %c0 = arith.constant 0 : index
   %c100 = arith.constant 100 : index
@@ -133,7 +133,7 @@ func.func @worker_num_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -162,7 +162,7 @@ func.func @unknown_tile_size(%arg0: memref<1000xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i] : memref<1000xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -179,7 +179,7 @@ func.func @no_tile_values() {
   %c1 = arith.constant 1 : index
   acc.loop control(%i : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -213,6 +213,94 @@ func.func @body_with_nested_region(%arg0: memref<10xi32>) {
     }
     memref.store %val, %arg0[%i] : memref<10xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
+  return
+}
+
+// Test a descending loop: the element bound clamps the tile's far edge up to
+// the original bound, so it uses max rather than min.
+
+// CHECK-LABEL: func.func @descending_loop_tile
+// CHECK:         %[[CM4:.*]] = arith.constant -4 : index
+// CHECK:         acc.loop control(%[[IV:.*]] : index) = (%{{.*}} : index) to (%[[UB:.*]] : index) step (%[[CM4]] : index) {
+// CHECK:           %[[EDGE:.*]] = arith.addi %[[IV]], %[[CM4]] : index
+// CHECK:           %[[MAX_UB:.*]] = arith.maxsi %[[UB]], %[[EDGE]] : index
+// CHECK:           acc.loop control(%{{.*}} : index) = (%[[IV]] : index) to (%[[MAX_UB]] : index) step (%{{.*}} : index) {
+func.func @descending_loop_tile(%arg0: memref<16xf32>, %start: index, %floor: index) {
+  %cm1 = arith.constant -1 : index
+  %c4 = arith.constant 4 : index
+  acc.loop tile({%c4 : index}) control(%i : index) = (%start : index) to (%floor : index) step (%cm1 : index) {
+    %val = arith.index_castui %i : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i] : memref<16xf32>
+    acc.yield
+  } independent
+  return
+}
+
+// Test a descending loop with an inclusive upper bound: the inclusive edge
+// moves in the step's direction, so it adds one instead of subtracting.
+
+// CHECK-LABEL: func.func @descending_inclusive_tile
+// CHECK:         %[[CM32:.*]] = arith.constant -32 : index
+// CHECK:         acc.loop control(%[[IV:.*]] : index) = (%{{.*}} : index) to (%[[UB:.*]] : index) step (%[[CM32]] : index) {
+// CHECK:           %[[STEPPED:.*]] = arith.addi %[[IV]], %[[CM32]] : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[EDGE:.*]] = arith.addi %[[STEPPED]], %[[C1]] : index
+// CHECK:           %[[MAX_UB:.*]] = arith.maxsi %[[UB]], %[[EDGE]] : index
+// CHECK:           acc.loop control(%{{.*}} : index) = (%[[IV]] : index) to (%[[MAX_UB]] : index) step (%{{.*}} : index) {
+func.func @descending_inclusive_tile(%arg0: memref<128xf32>, %start: index, %floor: index) {
+  %cm1 = arith.constant -1 : index
+  %c32 = arith.constant 32 : index
+  acc.loop tile({%c32 : index}) control(%i : index) = (%start : index) to (%floor : index) step (%cm1 : index) {
+    %val = arith.index_castui %i : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i] : memref<128xf32>
+    acc.yield
+  } inclusiveUpperbound(array<i1: true>) independent
+  return
+}
+
+// Test an ascending loop with an inclusive upper bound: uses min, and the edge
+// subtracts one.
+
+// CHECK-LABEL: func.func @ascending_inclusive_tile
+// CHECK:         acc.loop control(%[[IV:.*]] : index) = (%{{.*}} : index) to (%[[UB:.*]] : index) step (%{{.*}} : index) {
+// CHECK:           %[[STEPPED:.*]] = arith.addi %[[IV]], %{{.*}} : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[EDGE:.*]] = arith.subi %[[STEPPED]], %[[C1]] : index
+// CHECK:           %[[MIN_UB:.*]] = arith.minsi %[[UB]], %[[EDGE]] : index
+func.func @ascending_inclusive_tile(%arg0: memref<128xf32>, %lb: index, %ub: index) {
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  acc.loop tile({%c32 : index}) control(%i : index) = (%lb : index) to (%ub : index) step (%c1 : index) {
+    %val = arith.index_castui %i : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i] : memref<128xf32>
+    acc.yield
+  } inclusiveUpperbound(array<i1: true>) independent
+  return
+}
+
+// Test a step whose sign is only known at run time: both clamps are computed
+// and selected on the sign.
+
+// CHECK-LABEL: func.func @runtime_step_tile
+// CHECK:         acc.loop control(%[[IV:.*]] : index) = (%{{.*}} : index) to (%[[UB:.*]] : index) step (%{{.*}} : index) {
+// CHECK:           %[[EDGE:.*]] = arith.addi %[[IV]], %{{.*}} : index
+// CHECK:           %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK:           %[[IS_DESC:.*]] = arith.cmpi slt, %[[STEP:.*]], %[[ZERO]] : index
+// CHECK:           %[[MAX_UB:.*]] = arith.maxsi %[[UB]], %[[EDGE]] : index
+// CHECK:           %[[MIN_UB:.*]] = arith.minsi %[[UB]], %[[EDGE]] : index
+// CHECK:           %[[SEL:.*]] = arith.select %[[IS_DESC]], %[[MAX_UB]], %[[MIN_UB]] : index
+// CHECK:           acc.loop control(%{{.*}} : index) = (%[[IV]] : index) to (%[[SEL]] : index) step (%{{.*}} : index) {
+func.func @runtime_step_tile(%arg0: memref<16xf32>, %lb: index, %ub: index, %step: index) {
+  %c4 = arith.constant 4 : index
+  acc.loop tile({%c4 : index}) control(%i : index) = (%lb : index) to (%ub : index) step (%step : index) {
+    %val = arith.index_castui %i : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i] : memref<16xf32>
+    acc.yield
+  } independent
   return
 }

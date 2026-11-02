@@ -22,22 +22,22 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   LoopAnnotationTranslation.cpp
   ModuleTranslation.cpp
   TypeToLLVM.cpp
-  Dialect/OpenMPCommon.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
 
   DEPENDS
   intrinsics_gen
+  MLIRLLVMTranslationDialectInterfaceIncGen
 
   LINK_COMPONENTS
   Analysis
   Core
-  FrontendOpenMP
   TransformUtils
   TargetParser
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRDLTIDialect
   MLIRLLVMDialect
   MLIRLLVMIRTransforms

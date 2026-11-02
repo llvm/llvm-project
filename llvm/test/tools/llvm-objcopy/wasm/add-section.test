@@ -27,7 +27,7 @@
 # RUN: diff %t8 %t6
 # RUN: obj2yaml %t7 | FileCheck %s --check-prefix=RAW-DATA
 
-## Check that raw data is well formated in the file as well.
+## Check that raw data is well formatted in the file as well.
 # RAW-DATA:      Name: bar
 # RAW-DATA-NEXT: Payload: '0201000102'
 

@@ -186,6 +186,9 @@ class MCAsmStreamer final : public MCAsmBaseStreamer {
                                raw_svector_ostream &OS) const;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  void emitBundleAlignMode(Align Alignment) override;
+  void emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) override;
+  void emitBundleUnlock(const MCSubtargetInfo &STI) override;
 
   /// Helper to emit common .loc directive flags, isa, and discriminator.
   void emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
@@ -299,6 +302,7 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void emitTargetTriple(StringRef TargetTriple) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitConditionalAssignment(MCSymbol *Symbol,
@@ -469,6 +473,7 @@ public:
   void emitIdent(StringRef IdentString) override;
   void emitCFIBKeyFrame() override;
   void emitCFIMTETaggedFrame() override;
+  void emitCFINonHintPAuthFrame() override;
   void emitCFISections(bool EH, bool Debug, bool SFrame) override;
   void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) override;
   void emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) override;
@@ -686,7 +691,8 @@ bool MCAsmStreamer::popSection() {
   if (!MCStreamer::popSection())
     return false;
   auto [Sec, Subsec] = getCurrentSection();
-  MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
+  if (Sec)
+    MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
   return true;
 }
 
@@ -824,6 +830,11 @@ void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
   emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+}
+
+void MCAsmStreamer::emitTargetTriple(StringRef TargetTriple) {
+  OS << "\t.target_triple \"" << TargetTriple << '"';
+  EmitEOL();
 }
 
 void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -2427,6 +2438,12 @@ void MCAsmStreamer::emitCFIMTETaggedFrame() {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCFINonHintPAuthFrame() {
+  MCStreamer::emitCFINonHintPAuthFrame();
+  OS << "\t.cfi_non_hint_pauth_frame";
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCFIValOffset(int64_t Register, int64_t Offset,
                                      SMLoc Loc) {
   MCStreamer::emitCFIValOffset(Register, Offset, Loc);
@@ -2667,6 +2684,24 @@ void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   OS << " ";
   FnSym->print(OS, MAI);
 
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
+  OS << "\t.bundle_align_mode " << Log2(Alignment);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleLock(bool AlignToEnd,
+                                   const MCSubtargetInfo &STI) {
+  OS << "\t.bundle_lock";
+  if (AlignToEnd)
+    OS << " align_to_end";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
+  OS << "\t.bundle_unlock";
   EmitEOL();
 }
 

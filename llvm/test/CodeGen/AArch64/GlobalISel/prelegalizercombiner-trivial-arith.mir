@@ -10,13 +10,13 @@ body:             |
     ;
     ; CHECK-LABEL: name: right_ident_sub
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: $w0 = COPY %x(s32)
+    ; CHECK: %x:_(i32) = COPY $w0
+    ; CHECK: $w0 = COPY %x(i32)
     ; CHECK: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_SUB %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_SUB %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -30,13 +30,13 @@ body:             |
     ; CHECK-LABEL: name: right_ident_add
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY %x(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY %x(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_ADD %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_ADD %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -50,13 +50,13 @@ body:             |
     ; CHECK-LABEL: name: mul_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY %cst(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY %cst(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_MUL %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_MUL %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -71,15 +71,15 @@ body:             |
     ; CHECK-LABEL: name: mul_0_cant_replace
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %op:gpr(s32) = G_MUL %x, %cst
-    ; CHECK-NEXT: $w0 = COPY %op(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %op:gpr(i32) = G_MUL %x, %cst
+    ; CHECK-NEXT: $w0 = COPY %op(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:gpr(s32) = G_MUL %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:gpr(i32) = G_MUL %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -94,13 +94,13 @@ body:             |
     ; CHECK-LABEL: name: sdiv_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY %cst(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY %cst(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_SDIV %cst, %x
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_SDIV %cst, %x
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -114,13 +114,13 @@ body:             |
     ; CHECK-LABEL: name: udiv_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY %cst(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY %cst(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_UDIV %cst, %x
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_UDIV %cst, %x
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -134,13 +134,13 @@ body:             |
     ; CHECK-LABEL: name: srem_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY %cst(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY %cst(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_SREM %cst, %x
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_SREM %cst, %x
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -154,13 +154,13 @@ body:             |
     ; CHECK-LABEL: name: urem_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY %cst(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY %cst(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_UREM %cst, %x
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_UREM %cst, %x
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -175,13 +175,13 @@ body:             |
     ; CHECK-LABEL: name: right_ident_or
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY %x(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY %x(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_OR %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_OR %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -195,13 +195,13 @@ body:             |
     ; CHECK-LABEL: name: right_ident_xor
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY %x(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY %x(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_XOR %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_XOR %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -215,13 +215,13 @@ body:             |
     ; CHECK-LABEL: name: right_ident_shl
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY %x(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY %x(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_SHL %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_SHL %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -235,13 +235,13 @@ body:             |
     ; CHECK-LABEL: name: right_ident_ashr
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY %x(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY %x(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_ASHR %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_ASHR %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -255,13 +255,13 @@ body:             |
     ; CHECK-LABEL: name: right_ident_lshr
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY %x(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY %x(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %op:_(s32) = G_LSHR %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 0
+    %op:_(i32) = G_LSHR %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -275,15 +275,15 @@ body:             |
     ; CHECK-LABEL: name: dont_fold_sub
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %op:_(s32) = G_ADD %x, [[C]]
-    ; CHECK-NEXT: $w0 = COPY %op(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %op:_(i32) = G_ADD %x, [[C]]
+    ; CHECK-NEXT: $w0 = COPY %op(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %op:_(s32) = G_SUB %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %op:_(i32) = G_SUB %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -296,14 +296,14 @@ body:             |
     ; CHECK-LABEL: name: look_through_zext
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %zext_zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: $x0 = COPY %zext_zero(s64)
+    ; CHECK-NEXT: %zext_zero:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY %zext_zero(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %zero:_(s8) = G_CONSTANT i8 0
-    %zext_zero:_(s64) = G_ZEXT %zero(s8)
-    %c:_(s64) = G_CONSTANT i64 72340172838076673
-    %mul:_(s64) = G_MUL %c, %zext_zero
-    $x0 = COPY %mul(s64)
+    %zero:_(i8) = G_CONSTANT i8 0
+    %zext_zero:_(i64) = G_ZEXT %zero(i8)
+    %c:_(i64) = G_CONSTANT i64 72340172838076673
+    %mul:_(i64) = G_MUL %c, %zext_zero
+    $x0 = COPY %mul(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -320,7 +320,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY %x(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(p0) = COPY $x0
-    %cst:_(s64) = G_CONSTANT i64 0
+    %cst:_(i64) = G_CONSTANT i64 0
     %op:_(p0) = G_PTR_ADD %x(p0), %cst
     $x0 = COPY %op(p0)
     RET_ReallyLR implicit $x0
@@ -334,13 +334,13 @@ body:             |
     ; CHECK-LABEL: name: right_identity_rotl
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY %copy(s32)
+    ; CHECK-NEXT: %copy:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY %copy(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %copy:_(s32) = COPY $w0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %rot:_(s32) = G_ROTL %copy(s32), %zero(s32)
-    $w0 = COPY %rot(s32)
+    %copy:_(i32) = COPY $w0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %rot:_(i32) = G_ROTL %copy(i32), %zero(i32)
+    $w0 = COPY %rot(i32)
     RET_ReallyLR implicit $w0
 ...
 ...
@@ -353,13 +353,13 @@ body:             |
     ; CHECK-LABEL: name: right_identity_rotr
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY %copy(s32)
+    ; CHECK-NEXT: %copy:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY %copy(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %copy:_(s32) = COPY $w0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %rot:_(s32) = G_ROTR %copy(s32), %zero(s32)
-    $w0 = COPY %rot(s32)
+    %copy:_(i32) = COPY $w0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %rot:_(i32) = G_ROTR %copy(i32), %zero(i32)
+    $w0 = COPY %rot(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -370,14 +370,14 @@ body:             |
     ; CHECK-LABEL: name: lshr_of_vec_zero
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: $q0 = COPY [[COPY]](<8 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
+    ; CHECK-NEXT: $q0 = COPY [[COPY]](<8 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<8 x s16>) = COPY $q0
-    %5:_(s16) = G_CONSTANT i16 0
-    %zero_vec:_(<8 x s16>) = G_BUILD_VECTOR %5(s16), %5(s16), %5(s16), %5(s16), %5(s16), %5(s16), %5(s16), %5(s16)
-    %shift:_(<8 x s16>) = G_LSHR %0, %zero_vec(<8 x s16>)
-    $q0 = COPY %shift(<8 x s16>)
+    %0:_(<8 x i16>) = COPY $q0
+    %5:_(i16) = G_CONSTANT i16 0
+    %zero_vec:_(<8 x i16>) = G_BUILD_VECTOR %5(i16), %5(i16), %5(i16), %5(i16), %5(i16), %5(i16), %5(i16), %5(i16)
+    %shift:_(<8 x i16>) = G_LSHR %0, %zero_vec(<8 x i16>)
+    $q0 = COPY %shift(<8 x i16>)
     RET_ReallyLR implicit $q0
 ...
 ---
@@ -392,9 +392,9 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY [[COPY]](<2 x p0>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x p0>) = COPY $q0
-    %5:_(s64) = G_CONSTANT i64 0
-    %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %5(s64), %5(s64)
-    %ptr:_(<2 x p0>) = G_PTR_ADD %0, %zero_vec(<2 x s64>)
+    %5:_(i64) = G_CONSTANT i64 0
+    %zero_vec:_(<2 x i64>) = G_BUILD_VECTOR %5(i64), %5(i64)
+    %ptr:_(<2 x p0>) = G_PTR_ADD %0, %zero_vec(<2 x i64>)
     $q0 = COPY %ptr(<2 x p0>)
     RET_ReallyLR implicit $q0
 ...
@@ -410,16 +410,16 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128))
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 9223372036854775808
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s128) = G_OR [[LOAD]], [[C]]
-    ; CHECK-NEXT: G_STORE [[OR]](s128), [[COPY]](p0) :: (store (s128), align 4)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i128) = G_LOAD [[COPY]](p0) :: (load (i128))
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i128) = G_CONSTANT i128 9223372036854775808
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i128) = G_OR [[LOAD]], [[C]]
+    ; CHECK-NEXT: G_STORE [[OR]](i128), [[COPY]](p0) :: (store (i128), align 4)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %2:_(s128) = G_LOAD %0(p0) :: (load (s128))
-    %4:_(s128) = G_CONSTANT i128 9223372036854775808
-    %5:_(s128) = G_OR %2, %4
-    G_STORE %5(s128), %0(p0) :: (store (s128), align 4)
+    %2:_(i128) = G_LOAD %0(p0) :: (load (i128))
+    %4:_(i128) = G_CONSTANT i128 9223372036854775808
+    %5:_(i128) = G_OR %2, %4
+    G_STORE %5(i128), %0(p0) :: (store (i128), align 4)
     RET_ReallyLR
 
 ...
@@ -434,18 +434,18 @@ body:             |
     ; CHECK-LABEL: name: mul_1_shift_of_shift
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[C]]
-    ; CHECK-NEXT: $x0 = COPY [[OR]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i64) = G_OR [[SHL]], [[C]]
+    ; CHECK-NEXT: $x0 = COPY [[OR]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = G_CONSTANT i64 1
-    %2:_(s64) = G_SHL %0, %1(s64)
-    %3:_(s64) = G_OR %2, %1
-    %4:_(s64) = G_MUL %3, %1
-    $x0 = COPY %4(s64)
+    %0:_(i64) = COPY $x0
+    %1:_(i64) = G_CONSTANT i64 1
+    %2:_(i64) = G_SHL %0, %1(i64)
+    %3:_(i64) = G_OR %2, %1
+    %4:_(i64) = G_MUL %3, %1
+    $x0 = COPY %4(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -462,15 +462,15 @@ body:             |
     ; CHECK-LABEL: name: udiv_of_sext
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY [[C]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %2:_(s1) = G_CONSTANT i1 true
-    %4:_(s2) = G_CONSTANT i2 1
-    %3:_(s2) = G_SEXT %2:_(s1)
-    %5:_(s2) = G_UDIV %4:_, %3:_
-    %6:_(s32) = G_ANYEXT %5:_(s2)
-    $w0 = COPY %6:_(s32)
+    %2:_(i1) = G_CONSTANT i1 true
+    %4:_(i2) = G_CONSTANT i2 1
+    %3:_(i2) = G_SEXT %2:_(i1)
+    %5:_(i2) = G_UDIV %4:_, %3:_
+    %6:_(i32) = G_ANYEXT %5:_(i2)
+    $w0 = COPY %6:_(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -483,15 +483,15 @@ body:             |
     ; CHECK-LABEL: name: sub_to_add
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %op:_(s32) = G_ADD %x, [[C]]
-    ; CHECK-NEXT: $w0 = COPY %op(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %op:_(i32) = G_ADD %x, [[C]]
+    ; CHECK-NEXT: $w0 = COPY %op(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %op:_(s32) = G_SUB %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %op:_(i32) = G_SUB %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -504,15 +504,15 @@ body:             |
     ; CHECK-LABEL: name: sub_to_add_nuw
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %op:_(s32) = G_ADD %x, [[C]]
-    ; CHECK-NEXT: $w0 = COPY %op(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %op:_(i32) = G_ADD %x, [[C]]
+    ; CHECK-NEXT: $w0 = COPY %op(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %op:_(s32) = nuw G_SUB %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %op:_(i32) = nuw G_SUB %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -525,15 +525,15 @@ body:             |
     ; CHECK-LABEL: name: sub_to_add_nsw
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %op:_(s32) = nsw G_ADD %x, [[C]]
-    ; CHECK-NEXT: $w0 = COPY %op(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %op:_(i32) = nsw G_ADD %x, [[C]]
+    ; CHECK-NEXT: $w0 = COPY %op(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %op:_(s32) = nsw G_SUB %x(s32), %cst
-    $w0 = COPY %op(s32)
+    %x:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %op:_(i32) = nsw G_SUB %x(i32), %cst
+    $w0 = COPY %op(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -546,18 +546,18 @@ body:             |
     ; CHECK-LABEL: name: sub_to_add_nsw_128
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s32) = COPY $w0
-    ; CHECK-NEXT: %b:_(s8) = G_TRUNC %a(s32)
-    ; CHECK-NEXT: %c:_(s8) = G_CONSTANT i8 -128
-    ; CHECK-NEXT: %add:_(s8) = G_ADD %b, %c
-    ; CHECK-NEXT: %d:_(s32) = G_ZEXT %add(s8)
-    ; CHECK-NEXT: $w0 = COPY %d(s32)
+    ; CHECK-NEXT: %a:_(i32) = COPY $w0
+    ; CHECK-NEXT: %b:_(i8) = G_TRUNC %a(i32)
+    ; CHECK-NEXT: %c:_(i8) = G_CONSTANT i8 -128
+    ; CHECK-NEXT: %add:_(i8) = G_ADD %b, %c
+    ; CHECK-NEXT: %d:_(i32) = G_ZEXT %add(i8)
+    ; CHECK-NEXT: $w0 = COPY %d(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s32) = COPY $w0
-    %b:_(s8) = G_TRUNC %a
-    %c:_(s8) = G_CONSTANT i8 -128
-    %add:_(s8) = nsw nuw G_SUB %b, %c
-    %d:_(s32) = G_ZEXT %add
+    %a:_(i32) = COPY $w0
+    %b:_(i8) = G_TRUNC %a
+    %c:_(i8) = G_CONSTANT i8 -128
+    %add:_(i8) = nsw nuw G_SUB %b, %c
+    %d:_(i32) = G_ZEXT %add
     $w0 = COPY %d
     RET_ReallyLR implicit $x0
 
@@ -571,14 +571,14 @@ body:             |
     ; CHECK-LABEL: name: sub_to_add_nsw_intmin
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s32) = COPY $w0
-    ; CHECK-NEXT: %c:_(s32) = G_CONSTANT i32 -2147483648
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %a, %c
-    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: %a:_(i32) = COPY $w0
+    ; CHECK-NEXT: %c:_(i32) = G_CONSTANT i32 -2147483648
+    ; CHECK-NEXT: %add:_(i32) = G_ADD %a, %c
+    ; CHECK-NEXT: $w0 = COPY %add(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s32) = COPY $w0
-    %c:_(s32) = G_CONSTANT i32 -2147483648
-    %add:_(s32) = nsw nuw G_SUB %a, %c
+    %a:_(i32) = COPY $w0
+    %c:_(i32) = G_CONSTANT i32 -2147483648
+    %add:_(i32) = nsw nuw G_SUB %a, %c
     $w0 = COPY %add
     RET_ReallyLR implicit $x0
 ...

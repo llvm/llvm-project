@@ -9,6 +9,9 @@
 #include "mlir/IR/PatternMatch.h"
 #include "gtest/gtest.h"
 
+#include <string>
+#include <vector>
+
 #include "../../test/lib/Dialect/Test/TestDialect.h"
 #include "../../test/lib/Dialect/Test/TestOps.h"
 
@@ -32,6 +35,49 @@ TEST(OpRewritePatternTest, GetGeneratedNames) {
 
   ASSERT_EQ(ops.size(), 1u);
   ASSERT_EQ(ops.front().getStringRef(), test::OpB::getOperationName());
+}
+} // end anonymous namespace
+
+namespace {
+template <int ID>
+struct ConstructorArgumentPattern : RewritePattern {
+  ConstructorArgumentPattern(MLIRContext *context, std::string argument,
+                             std::vector<std::string> *arguments)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {
+    arguments->push_back(std::move(argument));
+  }
+
+  LogicalResult matchAndRewrite(Operation *, PatternRewriter &) const override {
+    return failure();
+  }
+};
+
+using ConstructorArgumentPattern0 = ConstructorArgumentPattern<0>;
+using ConstructorArgumentPattern1 = ConstructorArgumentPattern<1>;
+
+TEST(RewritePatternSetTest, CopyArgumentsWhenAddingMultiplePatterns) {
+  MLIRContext context;
+  std::vector<std::string> arguments;
+
+  RewritePatternSet addPatterns(&context);
+  addPatterns.add<ConstructorArgumentPattern0, ConstructorArgumentPattern1>(
+      &context, std::string("add"), &arguments);
+  EXPECT_EQ(arguments, (std::vector<std::string>{"add", "add"}));
+
+  arguments.clear();
+  RewritePatternSet labeledPatterns(&context);
+  labeledPatterns
+      .addWithLabel<ConstructorArgumentPattern0, ConstructorArgumentPattern1>(
+          {"test"}, &context, std::string("addWithLabel"), &arguments);
+  EXPECT_EQ(arguments,
+            (std::vector<std::string>{"addWithLabel", "addWithLabel"}));
+
+  arguments.clear();
+  RewritePatternSet insertPatterns(&context);
+  insertPatterns
+      .insert<ConstructorArgumentPattern0, ConstructorArgumentPattern1>(
+          &context, std::string("insert"), &arguments);
+  EXPECT_EQ(arguments, (std::vector<std::string>{"insert", "insert"}));
 }
 } // end anonymous namespace
 

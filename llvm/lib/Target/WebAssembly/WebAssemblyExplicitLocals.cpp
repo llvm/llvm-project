@@ -42,7 +42,6 @@ class WebAssemblyExplicitLocalsLegacy final : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -378,11 +377,8 @@ static bool explicitLocals(MachineFunction &MF) {
               MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext();
           if (UseEmpty[OldReg.virtRegIndex()] && !NeedsRegForDebug) {
             unsigned Opc = getDropOpcode(RC);
-            MachineInstr *Drop =
-                BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
-                    .addReg(NewReg);
-            // After the drop instruction, this reg operand will not be used
-            Drop->getOperand(0).setIsKill();
+            BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
+                .addReg(NewReg);
             if (MFI.isFrameBaseVirtual() && OldReg == MFI.getFrameBaseVreg())
               MFI.clearFrameBaseVreg();
           } else {

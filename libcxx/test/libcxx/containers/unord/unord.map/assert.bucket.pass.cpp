@@ -10,10 +10,7 @@
 
 // size_type bucket(const key_type& __k) const;
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
 
 #include <unordered_map>
 #include <string>

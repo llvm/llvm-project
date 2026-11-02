@@ -1,6 +1,8 @@
 ; RUN: split-file %s %t
 ; RUN: not llvm-as -disable-output %t/scalar.ll              2>&1 | FileCheck %t/scalar.ll
 ; RUN: not llvm-as -disable-output %t/odd-sized.ll           2>&1 | FileCheck %t/odd-sized.ll
+; RUN: not llvm-as -disable-output %t/non-byte.ll            2>&1 | FileCheck %t/non-byte.ll
+; RUN: not llvm-as -disable-output %t/non-byte-element.ll    2>&1 | FileCheck %t/non-byte-element.ll
 ; RUN: not llvm-as -disable-output %t/add-must-be-integer.ll 2>&1 | FileCheck %t/add-must-be-integer.ll
 ; RUN: not llvm-as -disable-output %t/fadd-must-be-fp.ll     2>&1 | FileCheck %t/fadd-must-be-fp.ll
 ; RUN: not llvm-as -disable-output %t/seq-cst.ll             2>&1 | FileCheck %t/seq-cst.ll
@@ -17,6 +19,20 @@ define i32 @bad_scalar(ptr %p, i32 %v) {
 define <5 x i32> @bad_odd_sized_vector(ptr %p, <5 x i32> %v) {
   %old = atomicrmw elementwise add ptr %p, <5 x i32> %v monotonic, align 4
   ret <5 x i32> %old
+}
+
+;--- non-byte.ll
+; CHECK: atomic memory access' size must be byte-sized
+define <4 x i1> @bad_non_byte(ptr %p, <4 x i1> %v) {
+  %old = atomicrmw elementwise xchg ptr %p, <4 x i1> %v monotonic, align 1
+  ret <4 x i1> %old
+}
+
+;--- non-byte-element.ll
+; CHECK: atomic memory access' size must be byte-sized
+define <8 x i1> @bad_non_byte_element(ptr %p, <8 x i1> %v) {
+  %old = atomicrmw elementwise xchg ptr %p, <8 x i1> %v monotonic, align 1
+  ret <8 x i1> %old
 }
 
 ;--- add-must-be-integer.ll

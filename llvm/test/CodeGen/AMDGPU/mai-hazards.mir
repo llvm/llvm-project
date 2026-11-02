@@ -6,6 +6,7 @@
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            valu_write_vgpr_mfma_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
@@ -19,6 +20,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            valu_write_vgpr_accvgpr_write_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
@@ -30,6 +32,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            asm_write_vgpr_accvgpr_write_read
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -44,6 +47,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            asm_write_vgpr_accvgpr_write_read_partialnop
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -57,6 +61,7 @@ body:             |
 # GCN:      INLINEASM
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            asm_write_vgpr_accvgpr_write_read_otherreg
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -73,6 +78,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            bundle_write_vgpr_accvgpr_write_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = BUNDLE {
@@ -88,6 +94,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MFMA
 name:            mfma_write_agpr_mfma_read_same_agpr
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -100,6 +107,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            mfma_write_agpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr1_agpr2_agpr3_agpr4 = V_MFMA_F32_4X4X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -112,6 +120,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            mfma_write_agpr_mfma_read_partial
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -124,6 +133,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            mfma_write_agpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -136,6 +146,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            mfma_write_agpr_mfma_srcb_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -148,6 +159,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            mfma_4x4_write_agpr_accvgpr_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -160,6 +172,7 @@ body:             |
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            mfma_16x16_write_agpr_accvgpr_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -173,6 +186,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            mfma_32x32_write_agpr_accvgpr_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -185,6 +199,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            mfma_4x4_write_agpr_accvgpr_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -197,6 +212,7 @@ body:             |
 # GCN-NEXT: S_NOP 6
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            mfma_16x16_write_agpr_accvgpr_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -209,6 +225,7 @@ body:             |
 # GCN-NEXT: S_NOP 14
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            mfma_32x32_write_agpr_accvgpr_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -220,6 +237,7 @@ body:             |
 # GCN:      V_MFMA_F32_4X4X1F32
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            mfma_4x4_read_srcc_accvgpr_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -232,6 +250,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            mfma_16x16_read_srcc_accvgpr_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_16X16X1F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -244,6 +263,7 @@ body:             |
 # GCN-NEXT: S_NOP 12
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            mfma_32x32_read_srcc_accvgpr_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X2F32_e64 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -255,6 +275,7 @@ body:             |
 # GCN:      V_ACCVGPR_READ_B32_e64
 # GCN-NEXT: V_ADD_F32
 name:            accvgpr_read_write_vgpr_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
@@ -267,6 +288,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            accvgpr_read_write_vgpr_mfma_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
@@ -279,6 +301,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            accvgpr_read_write_vgpr_accvgpr_write_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
@@ -291,6 +314,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
 name:            accvgpr_write_agpr_mfma_read_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
@@ -303,6 +327,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            accvgpr_write_agpr_mfma_read_srca
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
@@ -315,6 +340,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            accvgpr_write_agpr_mfma_read_srcb
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
@@ -327,6 +353,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            accvgpr_write_agpr_accvgpr_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
@@ -339,6 +366,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            vcmpx_write_exec_mfma
+tracksRegLiveness: false
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -351,6 +379,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            vcmpx_write_exec_accvgpr_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -363,6 +392,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_LOAD_DWORD
 name:            accvgpr_read_write_vgpr_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
@@ -375,6 +405,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: DS_PERMUTE_B32
 name:            accvgpr_read_write_vgpr_ds_permute
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
@@ -387,6 +418,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_LOAD_DWORD
 name:            accvgpr_read_write_vgpr_flat_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
@@ -399,6 +431,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: BUFFER_STORE_DWORD_OFFSET
 name:            accvgpr_read_write_vgpr_buffer_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
@@ -411,6 +444,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: DS_WRITE_B32
 name:            accvgpr_read_write_vgpr_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
@@ -423,6 +457,7 @@ body:             |
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 # GCN-NEXT: FLAT_LOAD_DWORD
 name:            valu_write_vgpr_accvgpr_read_load_no_dependency
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
@@ -437,6 +472,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: FLAT_LOAD_DWORD
 name:            valu_write_vgpr_accvgpr_read_load_1_and_3_depend
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
@@ -451,6 +487,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: FLAT_LOAD_DWORD
 name:            valu_write_vgpr_accvgpr_write_load_1_and_3_depend
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
@@ -465,6 +502,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_LOAD_DWORD
 name:            valu_write_vgpr_accvgpr_read_load_2_and_3_depend
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec

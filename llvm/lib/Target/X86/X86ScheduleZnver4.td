@@ -1952,7 +1952,7 @@ def Zn4WriteVZeroIdiomALUZ : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn4WriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteVecALUZ]>
 ]>;
-def : InstRW<[Zn4WriteVZeroIdiomALUY],
+def : InstRW<[Zn4WriteVZeroIdiomALUZ],
              (instrs VPSUBBZrr, VPSUBWZrr, VPSUBDZrr, VPSUBQZrr,
                      VPCMPGTBZrr, VPCMPGTWZrr, VPCMPGTDZrr, VPCMPGTQZrr)>;
 

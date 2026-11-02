@@ -2971,8 +2971,30 @@ INTERCEPTOR(int, getaddrinfo, char *node, char *service,
   if (node) COMMON_INTERCEPTOR_READ_RANGE(ctx, node, internal_strlen(node) + 1);
   if (service)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, service, internal_strlen(service) + 1);
-  if (hints)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, hints, sizeof(__sanitizer_addrinfo));
+  if (hints) {
+    // Check individual members instead of the whole structure to avoid
+    // requiring callers to initialize padding bytes.
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_flags,
+                                  sizeof(hints->ai_flags));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_family,
+                                  sizeof(hints->ai_family));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_socktype,
+                                  sizeof(hints->ai_socktype));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_protocol,
+                                  sizeof(hints->ai_protocol));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_addrlen,
+                                  sizeof(hints->ai_addrlen));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_addr,
+                                  sizeof(hints->ai_addr));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_canonname,
+                                  sizeof(hints->ai_canonname));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_next,
+                                  sizeof(hints->ai_next));
+#if SANITIZER_AIX
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &hints->ai_eflags,
+                                  sizeof(hints->ai_eflags));
+#endif
+  }
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
@@ -3583,7 +3605,8 @@ INTERCEPTOR(int, sysinfo, void *info) {
 INTERCEPTOR(__sanitizer_dirent *, opendir, const char *path) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, opendir, path);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
+  if (path)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
   __sanitizer_dirent *res = REAL(opendir)(path);
   if (res)
     COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path);

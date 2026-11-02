@@ -83,17 +83,14 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
   StringRef TargetIdWithFeature =
       Components.size() == 6 ? Components.back() : "";
   StringRef TargetId = TargetIdWithFeature.split(':').first;
-  if (!TargetId.empty() &&
-      clang::StringToOffloadArch(TargetId) != clang::OffloadArch::Unknown)
+  if (!TargetId.empty() && !clang::StringToOffloadArch(TargetId).isUnknown())
     this->TargetID = TargetIdWithFeature;
   else
     this->TargetID = "";
 
   this->OffloadKind = Components.front();
   ArrayRef<StringRef> TripleSlice{&Components[1], /*length=*/4};
-  llvm::Triple T = llvm::Triple(llvm::join(TripleSlice, "-"));
-  this->Triple = llvm::Triple(T.getArchName(), T.getVendorName(), T.getOSName(),
-                              T.getEnvironmentName());
+  this->Triple = llvm::Triple(llvm::join(TripleSlice, "-"));
 }
 
 bool OffloadTargetInfo::hasHostKind() const {
@@ -358,8 +355,10 @@ public:
   ~BinaryFileHandler() final {}
 
   Error ReadHeader(StringRef FC) final {
-    // Initialize the current bundle with the end of the container.
+    // Ensure iterators indicate an empty bundle range in case header parsing
+    // exits early.
     CurBundleInfo = BundlesInfo.end();
+    NextBundleInfo = BundlesInfo.end();
 
     // Check if buffer is smaller than magic string.
     size_t ReadChars = sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1;

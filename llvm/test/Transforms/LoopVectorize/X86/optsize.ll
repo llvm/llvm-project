@@ -327,14 +327,14 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[START1:%.*]] = ptrtoaddr ptr [[START]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[END]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 [[START1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP8]], -72
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[START1]], -72
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP8]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 72
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP2]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP3]], 63
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 64
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 63
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <64 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -362,14 +362,14 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:  [[ENTRY:.*:]]
 ; AUTOVF-NEXT:    [[START1:%.*]] = ptrtoaddr ptr [[START]] to i32
 ; AUTOVF-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[END]] to i32
-; AUTOVF-NEXT:    [[TMP8:%.*]] = sub i32 [[START1]], [[TMP4]]
-; AUTOVF-NEXT:    [[TMP1:%.*]] = add i32 [[TMP8]], -72
+; AUTOVF-NEXT:    [[TMP8:%.*]] = add i32 [[START1]], -72
+; AUTOVF-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP8]], [[TMP4]]
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 72
 ; AUTOVF-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP2]], 1
 ; AUTOVF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AUTOVF:       [[VECTOR_PH]]:
 ; AUTOVF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP3]], 7
-; AUTOVF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; AUTOVF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; AUTOVF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; AUTOVF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP3]], 1
 ; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0

@@ -70,10 +70,10 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP14]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP15]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[TMP16]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP15]], i64 2
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[TMP16]], i64 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP20]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

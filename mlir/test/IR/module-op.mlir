@@ -12,6 +12,12 @@ module attributes {foo.attr = true} {
 
 // -----
 
+// CHECK: module @property_module <sym_visibility = "private"> attributes {foo.attr = true} {
+module @property_module <sym_visibility = "private"> attributes {foo.attr = true} {
+}
+
+// -----
+
 // CHECK: module {
 module {
   // CHECK-NEXT: "foo.result_op"() : () -> i32

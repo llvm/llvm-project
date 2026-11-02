@@ -239,3 +239,47 @@ if.end:                                           ; preds = %entry
 
 
 declare void @use(i1)
+declare void @llvm.assume(i1)
+
+; A `sub` without nsw/nuw is decomposed in the unsigned system under the
+; recorded precondition (Op1 u<= Op0). Given `%b u<= %a`, `%a - %b u<= %a` is
+; therefore known and the check folds to true. Before the precondition is
+; assumed (the first check) it must NOT fold.
+define i1 @sub_no_wrap_flags_ule(i8 %a, i8 %b) {
+; CHECK-LABEL: @sub_no_wrap_flags_ule(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[C_NEG:%.*]] = icmp ule i8 [[SUB_NEG]], [[A]]
+; CHECK-NEXT:    call void @use(i1 [[C_NEG]])
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ule i8 [[B]], [[A]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %sub.neg = sub i8 %a, %b
+  %c.neg = icmp ule i8 %sub.neg, %a
+  call void @use(i1 %c.neg)
+  %precond = icmp ule i8 %b, %a
+  call void @llvm.assume(i1 %precond)
+  %sub = sub i8 %a, %b
+  %c = icmp ule i8 %sub, %a
+  ret i1 %c
+}
+
+define <4 x i8> @sub_vector_no_nuw(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: @sub_vector_no_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp uge <4 x i8> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ALLC:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[C]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ALLC]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i8> [[A]], [[B]]
+; CHECK-NEXT:    ret <4 x i8> [[SUB]]
+;
+entry:
+  %c = icmp uge <4 x i8> %a, %b
+  %allc = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %c)
+  call void @llvm.assume(i1 %allc)
+  %sub = sub <4 x i8> %a, %b
+  ret <4 x i8> %sub
+}

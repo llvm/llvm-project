@@ -242,6 +242,11 @@ public:
            static_cast<unsigned>(x.dimension());
   }
   static unsigned
+  getHashValue(const Fortran::evaluate::RankOneBoundElement &x) {
+    return getHashValue(x.base()) * 141u +
+           static_cast<unsigned>(x.dimension()) * 17u;
+  }
+  static unsigned
   getHashValue(const Fortran::evaluate::StructureConstructor &x) {
     // FIXME: hash the contents.
     return 149u;
@@ -547,6 +552,10 @@ public:
     return isEqual(x.base(), y.base()) && x.field() == y.field() &&
            x.dimension() == y.dimension();
   }
+  static bool isEqual(const Fortran::evaluate::RankOneBoundElement &x,
+                      const Fortran::evaluate::RankOneBoundElement &y) {
+    return x.dimension() == y.dimension() && isEqual(x.base(), y.base());
+  }
   static bool isEqual(const Fortran::evaluate::StructureConstructor &x,
                       const Fortran::evaluate::StructureConstructor &y) {
     const auto &xValues = x.values();
@@ -663,7 +672,7 @@ void privatizeSymbol(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays) {
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
   mlir::OpBuilder::InsertPoint dcIP;
@@ -701,6 +710,8 @@ void privatizeSymbol(
   // not emit the copy region when dealing with the SIMD directive.
   if (dir && dir == llvm::omp::Directive::OMPD_simd)
     emitCopyRegion = false;
+  assert((!isLinear || std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) &&
+         "only omp.private has a `linear` type");
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
@@ -740,8 +751,12 @@ void privatizeSymbol(
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+    // Get name so later passes (e.g. MapsForPrivatizedSymbols) can report it in
+    // offload info.
+    mlir::Location boxLoc = mlir::NameLoc::get(
+        firOpBuilder.getStringAttr(sym->name().ToString()), symLoc);
     auto alloca =
-        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
+        fir::AllocaOp::create(firOpBuilder, boxLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
     fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;
@@ -756,7 +771,8 @@ void privatizeSymbol(
     auto moduleOp = firOpBuilder.getModule();
     std::string privatizerPrefix =
         converter.mangleName(*sym) +
-        (emitCopyRegion ? "_firstprivate" : "_private");
+        (emitCopyRegion ? "_firstprivate"
+                        : (isLinear ? "_linear" : "_private"));
     if (forceHeapAllocation)
       privatizerPrefix += "_heap";
     auto uniquePrivatizerName = fir::getTypeAsString(
@@ -778,12 +794,15 @@ void privatizeSymbol(
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
       result = OpType::create(
-          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          firOpBuilder, symLoc, uniquePrivatizerName,
+          /*sym_visibility=*/nullptr, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
+          : isLinear     ? mlir::omp::DataSharingClauseType::Linear
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
       result =
-          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName,
+                         /*sym_visibility=*/nullptr, allocType,
                          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
                                         : fir::LocalitySpecifierType::Local);
     }
@@ -877,6 +896,20 @@ void privatizeSymbol(
       }
     }
 
+    // A `linear` privatizer of a descriptor gives the address of its data.
+    if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
+      if (isLinear && mlir::isa<fir::BaseBoxType>(allocType)) {
+        mlir::Block *block =
+            firOpBuilder.createBlock(&result.getDataAddressRegion(),
+                                     /*insertPt=*/{}, {argType}, {symLoc});
+        firOpBuilder.setInsertionPointToEnd(block);
+        mlir::Value box =
+            fir::LoadOp::create(firOpBuilder, symLoc, block->getArgument(0));
+        mlir::Value addr = fir::BoxAddrOp::create(firOpBuilder, symLoc, box);
+        mlir::omp::YieldOp::create(firOpBuilder, symLoc, addr);
+      }
+    }
+
     return result;
   }();
 
@@ -901,7 +934,7 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays);
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear);
 
 template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
@@ -912,6 +945,6 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     const semantics::Symbol *symToPrivatize,
     fir::LocalitySpecifierOperands *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays);
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear);
 
 } // end namespace Fortran::lower

@@ -1,0 +1,33 @@
+add_libc_testsuite(libc-sys-statfs-tests)
+
+add_libc_test(
+  statfs_test
+  SUITE
+    libc-sys-statfs-tests
+  SRCS
+    statfs_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.src.sys.statfs.statfs
+    libc.src.sys.stat.mkdirat
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  fstatfs_test
+  SUITE
+    libc-sys-statfs-tests
+  SRCS
+    fstatfs_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.src.sys.statfs.fstatfs
+    libc.src.sys.stat.mkdirat
+    libc.src.unistd.rmdir
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

@@ -33,6 +33,7 @@
 // void vprint_nonunicode(ostream& os, string_view fmt, format_args args);
 
 #include <cassert>
+#include <locale>
 #include <ostream>
 
 #include "test_macros.h"

@@ -15,12 +15,14 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; IF-EVL-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; IF-EVL-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; IF-EVL-NEXT:  Live-in ir<%N> = original trip-count
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:  ir-bb<entry>:
 ; IF-EVL-NEXT:  Successor(s): scalar.ph, vector.ph
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:  vector.ph:
+; IF-EVL-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
+; IF-EVL-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; IF-EVL-NEXT:  Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:  <x1> vector loop: {
@@ -31,14 +33,14 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; IF-EVL-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; IF-EVL-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[VP8]]>
-; IF-EVL-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
+; IF-EVL-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; IF-EVL-NEXT:      WIDEN ir<%0> = load vp<[[VP9]]>, vp<[[VP7]]>
 ; IF-EVL-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[VP8]]>
-; IF-EVL-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx2>, ir<1>
+; IF-EVL-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx2>, ir<1>
 ; IF-EVL-NEXT:      WIDEN ir<%1> = load vp<[[VP10]]>, vp<[[VP7]]>
 ; IF-EVL-NEXT:      WIDEN ir<%add> = add nsw ir<%1>, ir<%0>
 ; IF-EVL-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<[[VP8]]>
-; IF-EVL-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx4>, ir<1>
+; IF-EVL-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx4>, ir<1>
 ; IF-EVL-NEXT:      WIDEN store vp<[[VP11]]>, ir<%add>, vp<[[VP7]]>
 ; IF-EVL-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; IF-EVL-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -65,14 +67,14 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    vector.body:
 ; NO-VP-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; NO-VP-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[VP4]]>
-; NO-VP-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
+; NO-VP-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx>, ir<1>
 ; NO-VP-NEXT:      WIDEN ir<%0> = load vp<[[VP5]]>
 ; NO-VP-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[VP4]]>
-; NO-VP-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx2>, ir<1>
+; NO-VP-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx2>, ir<1>
 ; NO-VP-NEXT:      WIDEN ir<%1> = load vp<[[VP6]]>
 ; NO-VP-NEXT:      WIDEN ir<%add> = add nsw ir<%1>, ir<%0>
 ; NO-VP-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<[[VP4]]>
-; NO-VP-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx4>, ir<1>
+; NO-VP-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i32, ir<%arrayidx4>, ir<1>
 ; NO-VP-NEXT:      WIDEN store vp<[[VP7]]>, ir<%add>
 ; NO-VP-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; NO-VP-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>

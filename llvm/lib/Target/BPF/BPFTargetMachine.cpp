@@ -30,8 +30,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include <optional>
 using namespace llvm;
 
@@ -52,6 +50,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeGlobalISel(PR);
   initializeBPFAsmPrinterPass(PR);
   initializeBPFCheckAndAdjustIRLegacyPass(PR);
+  initializeBPFFuncTableLegacyPass(PR);
   initializeBPFMIPeepholeLegacyPass(PR);
   initializeBPFMIExpandStackArgPseudosLegacyPass(PR);
   initializeBPFMIPreEmitPeepholeLegacyPass(PR);
@@ -70,7 +69,7 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<BPFTargetLoweringObjectFileELF>()),
@@ -115,10 +114,15 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void BPFPassConfig::addIRPasses() {
+  const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
+
   addPass(createAtomicExpandLegacyPass());
   addPass(createBPFCheckAndAdjustIRLegacyPass());
+  if (Subtarget->hasFuncTable())
+    addPass(createBPFFuncTablePass());
 
   TargetPassConfig::addIRPasses();
+  addPass(createBPFUnwindPreparePass());
 }
 
 TargetTransformInfo
@@ -149,6 +153,7 @@ void BPFPassConfig::addMachineSSAOptimization() {
 }
 
 void BPFPassConfig::addPreEmitPass() {
+  addPass(createBPFUnwindLowerPass());
   addPass(createBPFMIPreEmitCheckingLegacyPass());
   if (!DisableMIPeephole) {
     addPass(createBPFMIExpandStackArgPseudosLegacyPass());
@@ -157,21 +162,21 @@ void BPFPassConfig::addPreEmitPass() {
 }
 
 bool BPFPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslatorLegacy());
   return false;
 }
 
 bool BPFPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool BPFPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool BPFPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }

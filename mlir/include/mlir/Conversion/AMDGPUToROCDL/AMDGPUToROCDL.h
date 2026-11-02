@@ -8,7 +8,7 @@
 #ifndef MLIR_CONVERSION_AMDGPUTOROCDL_AMDGPUTOROCDL_H_
 #define MLIR_CONVERSION_AMDGPUTOROCDL_AMDGPUTOROCDL_H_
 
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include <memory>
 #include <string>
 
@@ -27,7 +27,7 @@ class Pass;
 /// populateAMDGPUTypeAndAttributeConversions().
 void populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns,
-                                             amdgpu::Chipset chipset);
+                                             const ROCDL::TargetInfo &target);
 
 namespace amdgpu {
 /// Remap common GPU memory spaces (Workgroup, Private, etc) to LLVM address

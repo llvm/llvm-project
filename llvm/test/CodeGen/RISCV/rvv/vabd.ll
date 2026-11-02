@@ -330,6 +330,314 @@ define <vscale x 32 x i16> @vabd_vv_mask_i16m8(<vscale x 32 x i16> %passthru, <v
     iXLen %vl, iXLen 1)
   ret <vscale x 32 x i16> %res
 }
+
+define <vscale x 1 x i32> @vabd_vx_i32mf2(<vscale x 1 x i32> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i32mf2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i32> @llvm.riscv.vabd(<vscale x 1 x i32> poison, <vscale x 1 x i32> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 1 x i32> %res
+}
+
+define <vscale x 1 x i32> @vabd_vx_mask_i32mf2(<vscale x 1 x i32> %passthru, <vscale x 1 x i32> %a, iXLen %b, <vscale x 1 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i32mf2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i32> @llvm.riscv.vabd.mask(<vscale x 1 x i32> %passthru, <vscale x 1 x i32> %a, iXLen %b, <vscale x 1 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 1 x i32> %res
+}
+
+define <vscale x 2 x i32> @vabd_vv_i32m1(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vv_i32m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vabd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.riscv.vabd(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, <vscale x 2 x i32> %b, iXLen %vl)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @vabd_vx_i32m1(<vscale x 2 x i32> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i32m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.riscv.vabd(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @vabd_vx_mask_i32m1(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, iXLen %b, <vscale x 2 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i32m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.riscv.vabd.mask(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, iXLen %b, <vscale x 2 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 4 x i32> @vabd_vx_i32m2(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i32m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i32> @llvm.riscv.vabd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @vabd_vx_mask_i32m2(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, iXLen %b, <vscale x 4 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i32m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v10, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i32> @llvm.riscv.vabd.mask(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, iXLen %b, <vscale x 4 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 8 x i32> @vabd_vx_i32m4(<vscale x 8 x i32> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i32m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i32> @llvm.riscv.vabd(<vscale x 8 x i32> poison, <vscale x 8 x i32> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 8 x i32> %res
+}
+
+define <vscale x 8 x i32> @vabd_vx_mask_i32m4(<vscale x 8 x i32> %passthru, <vscale x 8 x i32> %a, iXLen %b, <vscale x 8 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i32m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v12, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i32> @llvm.riscv.vabd.mask(<vscale x 8 x i32> %passthru, <vscale x 8 x i32> %a, iXLen %b, <vscale x 8 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 8 x i32> %res
+}
+
+define <vscale x 16 x i32> @vabd_vx_i32m8(<vscale x 16 x i32> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i32m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i32> @llvm.riscv.vabd(<vscale x 16 x i32> poison, <vscale x 16 x i32> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 16 x i32> %res
+}
+
+define <vscale x 16 x i32> @vabd_vx_mask_i32m8(<vscale x 16 x i32> %passthru, <vscale x 16 x i32> %a, iXLen %b, <vscale x 16 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i32m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v16, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i32> @llvm.riscv.vabd.mask(<vscale x 16 x i32> %passthru, <vscale x 16 x i32> %a, iXLen %b, <vscale x 16 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 16 x i32> %res
+}
+
+define <vscale x 1 x i64> @vabd_vv_i64m1(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vv_i64m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vabd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i64> @llvm.riscv.vabd(<vscale x 1 x i64> poison, <vscale x 1 x i64> %a, <vscale x 1 x i64> %b, iXLen %vl)
+  ret <vscale x 1 x i64> %res
+}
+
+define <vscale x 1 x i64> @vabd_vx_i64m1(<vscale x 1 x i64> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i64m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i64> @llvm.riscv.vabd(<vscale x 1 x i64> poison, <vscale x 1 x i64> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 1 x i64> %res
+}
+
+define <vscale x 1 x i64> @vabd_vx_mask_i64m1(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %a, iXLen %b, <vscale x 1 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i64m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i64> @llvm.riscv.vabd.mask(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %a, iXLen %b, <vscale x 1 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 1 x i64> %res
+}
+
+define <vscale x 2 x i64> @vabd_vx_i64m2(<vscale x 2 x i64> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i64m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i64> @llvm.riscv.vabd(<vscale x 2 x i64> poison, <vscale x 2 x i64> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @vabd_vx_mask_i64m2(<vscale x 2 x i64> %passthru, <vscale x 2 x i64> %a, iXLen %b, <vscale x 2 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i64m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v10, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i64> @llvm.riscv.vabd.mask(<vscale x 2 x i64> %passthru, <vscale x 2 x i64> %a, iXLen %b, <vscale x 2 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 4 x i64> @vabd_vx_i64m4(<vscale x 4 x i64> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i64m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i64> @llvm.riscv.vabd(<vscale x 4 x i64> poison, <vscale x 4 x i64> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 4 x i64> %res
+}
+
+define <vscale x 4 x i64> @vabd_vx_mask_i64m4(<vscale x 4 x i64> %passthru, <vscale x 4 x i64> %a, iXLen %b, <vscale x 4 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i64m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v12, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i64> @llvm.riscv.vabd.mask(<vscale x 4 x i64> %passthru, <vscale x 4 x i64> %a, iXLen %b, <vscale x 4 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 4 x i64> %res
+}
+
+define <vscale x 8 x i64> @vabd_vx_i64m8(<vscale x 8 x i64> %a, iXLen %b, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_i64m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vabd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i64> @llvm.riscv.vabd(<vscale x 8 x i64> poison, <vscale x 8 x i64> %a, iXLen %b, iXLen %vl)
+  ret <vscale x 8 x i64> %res
+}
+
+define <vscale x 8 x i64> @vabd_vx_mask_i64m8(<vscale x 8 x i64> %passthru, <vscale x 8 x i64> %a, iXLen %b, <vscale x 8 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vabd_vx_mask_i64m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vabd.vx v8, v16, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i64> @llvm.riscv.vabd.mask(<vscale x 8 x i64> %passthru, <vscale x 8 x i64> %a, iXLen %b, <vscale x 8 x i1> %mask, iXLen %vl, iXLen 1)
+  ret <vscale x 8 x i64> %res
+}
+
+define <vscale x 4 x i32> @vwabda_i16(<vscale x 4 x i32> %acc, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b) {
+; CHECK-LABEL: vwabda_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vwabda.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %a.sext = sext <vscale x 4 x i16> %a to <vscale x 4 x i32>
+  %b.sext = sext <vscale x 4 x i16> %b to <vscale x 4 x i32>
+  %sub = sub <vscale x 4 x i32> %a.sext, %b.sext
+  %abs = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> %sub, i1 true)
+  %ret = add <vscale x 4 x i32> %acc, %abs
+  ret <vscale x 4 x i32> %ret
+}
+
+define <vscale x 4 x i32> @vwabdau_i16(<vscale x 4 x i32> %acc, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b) {
+; CHECK-LABEL: vwabdau_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vwabdau.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %a.zext = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
+  %b.zext = zext <vscale x 4 x i16> %b to <vscale x 4 x i32>
+  %sub = sub <vscale x 4 x i32> %a.zext, %b.zext
+  %abs = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> %sub, i1 true)
+  %ret = add <vscale x 4 x i32> %acc, %abs
+  ret <vscale x 4 x i32> %ret
+}
+
+define <vscale x 4 x i16> @wide_abd_is_not_narrow_operand(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i8> %narrow) {
+; CHECK-LABEL: wide_abd_is_not_narrow_operand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vabd.vv v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.wv v8, v8, v10
+; CHECK-NEXT:    ret
+  %a.sext = sext <vscale x 4 x i16> %a to <vscale x 4 x i32>
+  %b.sext = sext <vscale x 4 x i16> %b to <vscale x 4 x i32>
+  %sub = sub <vscale x 4 x i32> %a.sext, %b.sext
+  %abs = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> %sub, i1 true)
+  %diff = trunc <vscale x 4 x i32> %abs to <vscale x 4 x i16>
+  %narrow.zext = zext <vscale x 4 x i8> %narrow to <vscale x 4 x i16>
+  %ret = add <vscale x 4 x i16> %diff, %narrow.zext
+  ret <vscale x 4 x i16> %ret
+}
+
+define <vscale x 4 x i32> @vwabda_mask_mismatch(<vscale x 4 x i32> %acc, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: vwabda_mask_mismatch:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vabd.vv v10, v10, v11, v0.t
+; CHECK-NEXT:    vwaddu.wv v8, v8, v10
+; CHECK-NEXT:    ret
+  %diff = call <vscale x 4 x i16> @llvm.riscv.vabd.mask(<vscale x 4 x i16> poison, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i1> %mask, iXLen -1, iXLen 3)
+  %diff.ext = zext <vscale x 4 x i16> %diff to <vscale x 4 x i32>
+  %ret = add <vscale x 4 x i32> %acc, %diff.ext
+  ret <vscale x 4 x i32> %ret
+}
+
+define <vscale x 4 x i32> @vwabda_vl_mismatch(<vscale x 4 x i32> %acc, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b, iXLen %vl) {
+; CHECK-LABEL: vwabda_vl_mismatch:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vabd.vv v10, v10, v11
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vwaddu.wv v8, v8, v10
+; CHECK-NEXT:    ret
+  %diff = call <vscale x 4 x i16> @llvm.riscv.vabd(<vscale x 4 x i16> poison, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b, iXLen %vl)
+  %diff.ext = zext <vscale x 4 x i16> %diff to <vscale x 4 x i32>
+  %ret = add <vscale x 4 x i32> %acc, %diff.ext
+  ret <vscale x 4 x i32> %ret
+}
+
+define <4 x i16> @vwabdau_combine_i16(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
+; CHECK-LABEL: vwabdau_combine_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v11, v10
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vwabda.vv v11, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v11
+; CHECK-NEXT:    ret
+  %sub = sub nsw <4 x i8> %a, %b
+  %diff = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %sub, i1 true)
+  %diff.ext = zext <4 x i8> %diff to <4 x i16>
+  %c.ext = zext <4 x i8> %c to <4 x i16>
+  %ret = add <4 x i16> %diff.ext, %c.ext
+  ret <4 x i16> %ret
+}
+
+define <4 x i32> @vwabdau_combine_i32(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
+; CHECK-LABEL: vwabdau_combine_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v11, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwabda.vv v11, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v11
+; CHECK-NEXT:    ret
+  %sub = sub nsw <4 x i16> %a, %b
+  %diff = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %sub, i1 true)
+  %diff.ext = zext <4 x i16> %diff to <4 x i32>
+  %c.ext = zext <4 x i16> %c to <4 x i32>
+  %ret = add <4 x i32> %diff.ext, %c.ext
+  ret <4 x i32> %ret
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; RV32: {{.*}}
 ; RV64: {{.*}}

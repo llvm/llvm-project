@@ -92,11 +92,6 @@ BitVector VERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-const TargetRegisterClass *
-VERegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &VE::I64RegClass;
-}
-
 static unsigned offsetToDisp(MachineInstr &MI) {
   // Default offset in instruction's operands (reg+reg+imm).
   unsigned OffDisp = 2;
@@ -158,7 +153,7 @@ class EliminateFrameIndex {
                         int64_t Bytes = 0);
   // Replace the frame index in \p MI with a frame register and a given offset
   // if it fits in the immediate field.  Otherwise, use pre-calculated address
-  // in a clobber regsiter.
+  // in a clobber register.
   void replaceFI(MachineInstr &MI, Register FrameReg, int64_t Offset,
                  int FIOperandNum);
 

@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=nvptx64 -mcpu=sm_20 -run-pass=nvptx-peephole %s -o - | FileCheck %s --check-prefixes=CHECK,FOLD
-# RUN: llc -mtriple=nvptx64 -mcpu=sm_20 -nvptx-short-ptr -run-pass=nvptx-peephole %s -o - | FileCheck %s --check-prefixes=CHECK,NOFOLD
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_20 -target-abi=shortptr -run-pass=nvptx-peephole %s -o - | FileCheck %s --check-prefixes=CHECK,NOFOLD
 
 # Do not fold a 64-bit LEA onto a 32-bit %SPL.
 

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DynamicAllocator.h"
-#include "InterpBlock.h"
-#include "InterpState.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -40,8 +38,7 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
   // Create a new descriptor for an array of the specified size and
   // element type.
   const Descriptor *D =
-      allocateDescriptor(Source, nullptr, T, Descriptor::InlineDescMD,
-                         NumElements, /*IsConst=*/false,
+      allocateDescriptor(Source, nullptr, T, NumElements, /*IsConst=*/false,
                          /*IsTemporary=*/false, /*IsMutable=*/false,
                          /*IsVolatile=*/false);
 
@@ -51,13 +48,11 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
 Block *DynamicAllocator::allocate(const Descriptor *ElementDesc,
                                   size_t NumElements, unsigned EvalID,
                                   Form AllocForm) {
-  assert(ElementDesc->getMetadataSize() == 0);
   // Create a new descriptor for an array of the specified size and
   // element type.
   // FIXME: Pass proper element type.
   const Descriptor *D = allocateDescriptor(
-      ElementDesc->asExpr(), nullptr, ElementDesc, Descriptor::InlineDescMD,
-      NumElements,
+      ElementDesc->asExpr(), nullptr, ElementDesc, NumElements,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false);
   return allocate(D, EvalID, AllocForm);
 }
@@ -74,11 +69,9 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   });
 
   auto Memory =
-      std::make_unique<std::byte[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(EvalID, D, /*isStatic=*/false);
+      std::make_unique<std::byte[]>(Block::allocSize(D, Block::Local));
+  auto *B = new (Memory.get()) Block(EvalID, D, Block::Local);
   B->invokeCtorNoMemset();
-
-  assert(D->getMetadataSize() == sizeof(InlineDescriptor));
   InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());
   ID->Desc = D;
   ID->IsActive = true;

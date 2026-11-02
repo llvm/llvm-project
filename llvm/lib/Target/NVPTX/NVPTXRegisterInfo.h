@@ -24,7 +24,7 @@ private:
   // State for debug register mapping that can be mutated even through a const
   // pointer so that we can get the proper dwarf register encoding during ASM
   // emission.
-  mutable DenseMap<uint64_t, uint64_t> debugRegisterMap;
+  mutable DenseMap<Register, uint64_t> DebugRegisterMap;
 
 public:
   NVPTXRegisterInfo();
@@ -45,7 +45,7 @@ public:
   Register getFrameRegister(const MachineFunction &MF) const override;
   Register getFrameLocalRegister(const MachineFunction &MF) const;
 
-  // Manage the debugRegisterMap.  PTX virtual registers for DebugInfo are
+  // Manage the DebugRegisterMap.  PTX virtual registers for DebugInfo are
   // encoded using the names used in the emitted text of the PTX assembly. This
   // mapping must be managed during assembly emission.
   //
@@ -53,14 +53,11 @@ public:
   // RegisterInfo object are all const, but we need to communicate some state
   // here, because the proper encoding for debug registers is available only
   // temporarily during ASM emission.
-  void addToDebugRegisterMap(uint64_t preEncodedVirtualRegister,
-                             StringRef RegisterName) const;
+  void addToDebugRegisterMap(Register VirtReg, StringRef RegisterName) const;
   void clearDebugRegisterMap() const;
   int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const override;
   int64_t getDwarfRegNumForVirtReg(Register RegNum, bool isEH) const override;
 };
-
-StringRef getNVPTXRegClassStr(const TargetRegisterClass *RC);
 
 } // end namespace llvm
 

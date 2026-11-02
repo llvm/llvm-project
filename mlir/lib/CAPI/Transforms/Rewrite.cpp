@@ -87,6 +87,32 @@ mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter) {
   return wrap(std::addressof(*it));
 }
 
+MlirRewriterBaseInsertPoint
+mlirRewriterBaseSaveInsertionPoint(MlirRewriterBase rewriter) {
+  OpBuilder::InsertPoint ip = unwrap(rewriter)->saveInsertionPoint();
+  if (!ip.isSet())
+    return {{nullptr}, {nullptr}};
+  Block *block = ip.getBlock();
+  MlirOperation operationAfter = ip.getPoint() == block->end()
+                                     ? MlirOperation{nullptr}
+                                     : wrap(&*ip.getPoint());
+  return {wrap(block), operationAfter};
+}
+
+void mlirRewriterBaseRestoreInsertionPoint(
+    MlirRewriterBase rewriter, MlirRewriterBaseInsertPoint insertPoint) {
+  if (mlirBlockIsNull(insertPoint.block)) {
+    unwrap(rewriter)->clearInsertionPoint();
+    return;
+  }
+  Block *block = unwrap(insertPoint.block);
+  if (mlirOperationIsNull(insertPoint.operationAfter))
+    unwrap(rewriter)->setInsertionPointToEnd(block);
+  else
+    unwrap(rewriter)->setInsertionPoint(
+        block, Block::iterator(unwrap(insertPoint.operationAfter)));
+}
+
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
 //===----------------------------------------------------------------------===//
@@ -276,6 +302,18 @@ MlirRewriterBase mlirIRRewriterCreateFromOp(MlirOperation op) {
 
 void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
   delete static_cast<IRRewriter *>(unwrap(rewriter));
+}
+
+//===----------------------------------------------------------------------===//
+/// Dialect constant materialization API
+//===----------------------------------------------------------------------===//
+
+MlirOperation mlirDialectMaterializeConstant(MlirDialect dialect,
+                                             MlirRewriterBase rewriter,
+                                             MlirAttribute value, MlirType type,
+                                             MlirLocation loc) {
+  return wrap(unwrap(dialect)->materializeConstant(
+      *unwrap(rewriter), unwrap(value), unwrap(type), unwrap(loc)));
 }
 
 //===----------------------------------------------------------------------===//

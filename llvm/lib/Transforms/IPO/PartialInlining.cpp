@@ -356,7 +356,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   std::unique_ptr<BlockFrequencyInfo> ScopedBFI;
   BlockFrequencyInfo *BFI;
   if (!GetBFI) {
-    ScopedBFI.reset(new BlockFrequencyInfo(F, BPI, LI));
+    ScopedBFI.reset(new BlockFrequencyInfo(F, BPI, CI));
     BFI = ScopedBFI.get();
   } else
     BFI = &(GetBFI(F));
@@ -723,12 +723,12 @@ bool PartialInlinerImpl::shouldPartialInline(
     return isInlineViable(*Callee).isSuccess();
 
   Function *Caller = CB.getCaller();
-  auto &CalleeTTI = GetTTI(*Callee);
+  auto &CallerTTI = GetTTI(*Caller);
   bool RemarksEnabled =
       Callee->getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
           DEBUG_TYPE);
   InlineCost IC =
-      getInlineCost(CB, getInlineParams(), CalleeTTI, GetAssumptionCache,
+      getInlineCost(CB, getInlineParams(), CallerTTI, GetAssumptionCache,
                     GetTLI, GetBFI, &PSI, RemarksEnabled ? &ORE : nullptr);
 
   if (IC.isAlways()) {
@@ -763,7 +763,7 @@ bool PartialInlinerImpl::shouldPartialInline(
   const DataLayout &DL = Caller->getDataLayout();
 
   // The savings of eliminating the call:
-  int NonWeightedSavings = getCallsiteCost(CalleeTTI, CB, DL);
+  int NonWeightedSavings = getCallsiteCost(CallerTTI, CB, DL);
   BlockFrequency NormWeightedSavings(NonWeightedSavings);
 
   // Weighted saving is smaller than weighted cost, return false
@@ -907,10 +907,8 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
       if (!GetBFI) {
         CycleInfo CI;
         CI.compute(*Caller);
-        LoopInfo LI;
-        LI.analyze(Caller);
         BranchProbabilityInfo BPI(*Caller, CI);
-        TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, LI));
+        TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, CI));
         CurrentCallerBFI = TempBFI.get();
       } else {
         // New pass manager:
@@ -1095,9 +1093,8 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
   CycleInfo CI;
   CI.compute(*ClonedFunc);
-  LoopInfo LI(DT);
   BranchProbabilityInfo BPI(*ClonedFunc, CI);
-  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
+  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, CI));
 
   // Cache and recycle the CodeExtractor analysis to avoid O(n^2) compile-time.
   CodeExtractorAnalysisCache CEAC(*ClonedFunc);
@@ -1172,9 +1169,8 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
   CycleInfo CI;
   CI.compute(*ClonedFunc);
-  LoopInfo LI(DT);
   BranchProbabilityInfo BPI(*ClonedFunc, CI);
-  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
+  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, CI));
 
   // Gather up the blocks that we're going to extract.
   std::vector<BasicBlock *> ToExtract;

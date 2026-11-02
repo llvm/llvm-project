@@ -77,18 +77,18 @@ define void @diff_memcheck_known_false_for_vf_4(ptr %B, ptr %A, ptr %end) {
 ; CHECK-LABEL: define void @diff_memcheck_known_false_for_vf_4(
 ; CHECK-SAME: ptr [[B:%.*]], ptr [[A:%.*]], ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[A_INT:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[B_CAST:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[PTR_SUB:%.*]] = sub i64 [[A_INT]], [[B_CAST]]
 ; CHECK-NEXT:    [[ADD_PTR11:%.*]] = getelementptr i8, ptr [[B]], i64 [[PTR_SUB]]
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A_INT]], [[END1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], -8
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
