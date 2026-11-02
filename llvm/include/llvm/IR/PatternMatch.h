@@ -1239,7 +1239,7 @@ inline BinaryOp_match<LHS, RHS, Instruction::FSub> m_FSub(const LHS &L,
   return BinaryOp_match<LHS, RHS, Instruction::FSub>(L, R);
 }
 
-template <typename Op_t> struct FNeg_match {
+template <typename Op_t, bool AllowFSubNegZero = false> struct FNeg_match {
   Op_t X;
 
   FNeg_match(const Op_t &Op) : X(Op) {}
@@ -1251,30 +1251,37 @@ template <typename Op_t> struct FNeg_match {
     if (FPMO->getOpcode() == Instruction::FNeg)
       return X.match(FPMO->getOperand(0));
 
-    if (FPMO->getOpcode() == Instruction::FSub) {
-      if (FPMO->hasNoSignedZeros()) {
-        // With 'nsz', any zero goes.
-        if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
-          return false;
-      } else {
-        // Without 'nsz', we need fsub -0.0, X exactly.
-        if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
-          return false;
-      }
+    if constexpr (AllowFSubNegZero) {
+      if (FPMO->getOpcode() == Instruction::FSub) {
+        if (FPMO->hasNoSignedZeros()) {
+          // With 'nsz', any zero goes.
+          if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
+            return false;
+        } else {
+          // Without 'nsz', we need fsub -0.0, X exactly.
+          if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
+            return false;
+        }
 
-      return X.match(FPMO->getOperand(1));
+        return X.match(FPMO->getOperand(1));
+      }
     }
 
     return false;
   }
 };
 
-/// Match 'fneg X' as 'fsub -0.0, X'.
-template <typename OpTy> inline FNeg_match<OpTy> m_FNeg(const OpTy &X) {
-  return FNeg_match<OpTy>(X);
+/// Match fneg X only
+template <typename OpTy> inline FNeg_match<OpTy, false> m_FNeg(const OpTy &X) {
+  return FNeg_match<OpTy, false>(X);
 }
 
-/// Match 'fneg X' as 'fsub +-0.0, X'.
+/// Match fneg X or fsub -0.0, X.
+template <typename OpTy>
+inline FNeg_match<OpTy, true> m_FNegOrFSubNegZero(const OpTy &X) {
+  return FNeg_match<OpTy, true>(X);
+}
+
 template <typename RHS>
 inline BinaryOp_match<cstfp_pred_ty<is_any_zero_fp>, RHS, Instruction::FSub>
 m_FNegNSZ(const RHS &X) {
@@ -2002,6 +2009,21 @@ template <typename Val_t, typename Idx_t>
 inline TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>
 m_ExtractElt(const Val_t &Val, const Idx_t &Idx) {
   return TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>(Val, Idx);
+}
+
+/// Matches BitInsertInst.
+template <typename Base_t, typename Val_t, typename Off_t>
+inline ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>
+m_BitInsert(const Base_t &Base, const Val_t &Val, const Off_t &Off) {
+  return ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>(Base, Val,
+                                                                      Off);
+}
+
+/// Matches BitExtractInst.
+template <typename Src_t, typename Off_t>
+inline TwoOps_match<Src_t, Off_t, Instruction::BitExtract>
+m_BitExtract(const Src_t &Src, const Off_t &Off) {
+  return TwoOps_match<Src_t, Off_t, Instruction::BitExtract>(Src, Off);
 }
 
 /// Matches shuffle.

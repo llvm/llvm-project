@@ -747,8 +747,15 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return makeConst(builder.getZeroAttr(elemTy));
 
   case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
     return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::AND:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getAllOnes(intTy.getWidth())));
+    if (elemTy.isIndex())
+      return makeConst(builder.getIndexAttr(-1));
+    return nullptr;
 
   case vector::CombiningKind::MINSI:
     if (auto intTy = dyn_cast<IntegerType>(elemTy))
@@ -838,6 +845,39 @@ bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
   int64_t offset;
   return succeeded(type.getStridesAndOffset(strides, offset)) &&
          llvm::none_of(strides, ShapedType::isDynamic);
+}
+
+Value xegpu::addElemOffsetInBytes(OpBuilder &builder, Location loc,
+                                  Value baseAddr, Value elemOffset,
+                                  MemRefType memrefTy) {
+  Type type = elemOffset.getType();
+  assert(baseAddr.getType() == type &&
+         "expected base address and offset of the same type");
+  auto makeConst = [&](int64_t value) -> Value {
+    return arith::ConstantOp::create(builder, loc, type,
+                                     builder.getIntegerAttr(type, value));
+  };
+
+  // finalAddr = baseAddr + elemOffset * bitWidth / 8
+  unsigned elemBits = memrefTy.getElementTypeBitWidth();
+  Value byteOffset;
+  if (elemBits % 8 == 0) {
+    // For byte-sized elements divide by 8 statically so that the division is
+    // folded into the constant:
+    //   finalAddr = baseAddr + elemOffset * (bitWidth / 8)
+    byteOffset = arith::MulIOp::create(builder, loc, elemOffset,
+                                       makeConst(elemBits / 8));
+  } else {
+    // For sub-byte elements multiply first and then divide by 8, otherwise the
+    // byte size would be zero (e.g. 4 / 8 == 0 for i4):
+    //   finalAddr = baseAddr + (elemOffset * bitWidth) / 8
+    Value bitSize = makeConst(elemBits);
+    Value eight = makeConst(8);
+    byteOffset = arith::DivUIOp::create(
+        builder, loc, arith::MulIOp::create(builder, loc, elemOffset, bitSize),
+        eight);
+  }
+  return arith::AddIOp::create(builder, loc, baseAddr, byteOffset);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.

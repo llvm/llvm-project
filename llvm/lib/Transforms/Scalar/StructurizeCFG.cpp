@@ -66,7 +66,8 @@ using BBValuePair = std::pair<BasicBlock *, Value *>;
 
 using RNVector = SmallVector<RegionNode *, 8>;
 using BBVector = SmallVector<BasicBlock *, 8>;
-using BranchVector = SmallVector<CondBrInst *, 8>;
+// Branch paired with the block whose predicates define its condition.
+using BranchVector = SmallVector<std::pair<CondBrInst *, BasicBlock *>, 8>;
 using BBValueVector = SmallVector<BBValuePair, 2>;
 
 using BBSet = SmallPtrSet<BasicBlock *, 8>;
@@ -270,7 +271,6 @@ class StructurizeCFG {
   Function *Func;
   Region *ParentRegion;
 
-  UniformityInfo *UA = nullptr;
   DominatorTree *DT;
 
   SmallVector<RegionNode *, 8> Order;
@@ -356,7 +356,7 @@ class StructurizeCFG {
 public:
   void init(Region *R);
   bool run(Region *R, DominatorTree *DT, const TargetTransformInfo *TTI);
-  bool makeUniformRegion(Region *R, UniformityInfo &UA);
+  bool makeUniformRegion(Region *R, const UniformityInfo &UA);
 };
 
 class StructurizeCFGLegacyPass : public FunctionPass {
@@ -642,16 +642,15 @@ void StructurizeCFG::insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter) {
   BranchVector &Conds = Loops ? LoopConds : Conditions;
   Value *Default = Loops ? BoolTrue : BoolFalse;
 
-  for (CondBrInst *Term : Conds) {
+  for (auto [Term, Target] : Conds) {
     BasicBlock *Parent = Term->getParent();
-    BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
     unsigned Variable = PhiInserter.AddVariable("", Boolean);
     PhiInserter.AddAvailableValue(Variable, Loops ? SuccFalse : Parent,
                                   Default);
 
-    BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
+    BBPredicates &Preds = Loops ? LoopPreds[Target] : Predicates[Target];
 
     NearestCommonDominator Dominator(DT);
     Dominator.addBlock(Parent);
@@ -1154,7 +1153,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     // let it point to entry and next block
     CondBrInst *Br = CondBrInst::Create(BoolPoison, Entry, Next, Flow);
     Br->setDebugLoc(DL);
-    Conditions.push_back(Br);
+    Conditions.push_back({Br, Entry});
     addPhiValues(Flow, Entry);
     DT->changeImmediateDominator(Entry, Flow);
 
@@ -1196,7 +1195,13 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
   CondBrInst *Br = CondBrInst::Create(BoolPoison, Next, LoopStart, LoopEnd);
   Br->setDebugLoc(DL);
-  LoopConds.push_back(Br);
+  BasicBlock *Header = Node->getEntry();
+  LoopConds.push_back({Br, Header});
+
+  // The backedge targets the prefix block, so it must always enter the header.
+  if (LoopStart != Header)
+    Predicates[Header][LoopEnd] = {BoolTrue, std::nullopt};
+
   addPhiValues(LoopEnd, LoopStart);
   setPrevNode(Next);
 }
@@ -1290,15 +1295,11 @@ void StructurizeCFG::init(Region *R) {
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
   BoolPoison = PoisonValue::get(Boolean);
-
-  this->UA = nullptr;
 }
 
-bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
+bool StructurizeCFG::makeUniformRegion(Region *R, const UniformityInfo &UA) {
   if (R->isTopLevelRegion())
     return false;
-
-  this->UA = &UA;
 
   if (hasOnlyUniformBranches(R, UA)) {
     LLVM_DEBUG(dbgs() << "Skipping region with uniform control flow: " << *R
@@ -1393,7 +1394,7 @@ void StructurizeCFGPass::printPipeline(
 /// Structurize every region in \p RI, processing inner regions before the
 /// regions that contain them. If \p UI is non-null, skip uniform regions.
 static bool runImpl(DominatorTree &DT, RegionInfo &RI,
-                    const TargetTransformInfo &TTI, UniformityInfo *UI) {
+                    const TargetTransformInfo &TTI, const UniformityInfo *UI) {
   bool Changed = false;
   std::vector<Region *> Regions;
   addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
@@ -1415,9 +1416,8 @@ static bool runImpl(DominatorTree &DT, RegionInfo &RI,
 }
 
 bool StructurizeCFGLegacyPass::runOnFunction(Function &F) {
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
-  UniformityInfo *UI = nullptr;
+  const ScalarOptions &Opts = getScalarOptions(F);
+  const UniformityInfo *UI = nullptr;
   if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
     UI = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -1432,9 +1432,8 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = AM.getResult<RegionInfoAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
-  UniformityInfo *UI = nullptr;
+  const ScalarOptions &Opts = getScalarOptions(F);
+  const UniformityInfo *UI = nullptr;
   if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
     UI = &AM.getResult<UniformityInfoAnalysis>(F);
 

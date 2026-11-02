@@ -92,12 +92,12 @@ defm : ValueField<"instrument-cold-function-only-path", "StringRef", "",
   "File path for cold function only instrumentation(requires use with --pgo-instrument-cold-function-only)">;
 defm : BoolField<"mandatory-inlining-first", "false",
   "Perform mandatory inlinings module-wide, before performing inlining">;
+defm : BoolField<"memprof-preinline-ignore-profile", "true",
+  "When using both a memory profile and a sample profile, make the pre-inliner ignore the sample profile">;
 defm : BoolField<"opt-pipeline-trigger-crash", "false",
   "Trigger crash in optimization pipeline">;
 defm : ValueField<"preinline-threshold", "int", "75",
   "Control the amount of inlining in pre-instrumentation inliner (default = 75)">;
-defm : BoolField<"enable-profcheck-in-pipeline", "false",
-  "Adds profile verification to the pipeline, erroring if profile information is dropped.">;
 
 // RunCodeGen.cpp
 defm : OptionalBoolField<"force-new-pm-codegen",

@@ -34,6 +34,7 @@
 namespace llvm {
 class StringRef;
 class AAManager;
+class LLVMContext;
 class TargetMachine;
 class ModuleSummaryIndex;
 struct PassesOptions;
@@ -53,8 +54,6 @@ public:
   /// null.
   LLVM_ABI explicit PipelineTuningOptions(
       const cl::LibraryOptionsContext *LibraryOptions);
-
-  const cl::LibraryOptionsContext *LibraryOptions;
 
   /// Tuning option to set loop interleaving on/off, set based on opt level.
   bool LoopInterleaving;
@@ -103,6 +102,11 @@ public:
   /// Tuning option to override the default inliner threshold.
   int InlinerThreshold;
 
+  /// Tuning option to cap how many times the inliner pipeline reruns on an SCC
+  /// after devirtualizing a call. Its default value is that of the flag:
+  /// `-max-devirt-iterations`.
+  unsigned MaxDevirtIterations;
+
   // Experimental option to eagerly invalidate more analyses. This has the
   // potential to decrease max memory usage in exchange for more compile time.
   // This may affect codegen due to either passes using analyses only when
@@ -129,7 +133,7 @@ enum class PrintPipelinePassesFormat {
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
-  const cl::LibraryOptionsContext *LibraryOptions;
+  LLVMContext &Context;
   const PassesOptions &Opts;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
@@ -151,9 +155,12 @@ public:
     std::vector<PipelineElement> InnerPipeline;
   };
 
+  /// The pipelines read the library options of \p Context, which must outlive
+  /// the PassBuilder. If \p PTO is not given, it reads its defaults from
+  /// \p Context.
   LLVM_ABI explicit PassBuilder(
-      TargetMachine *TM = nullptr,
-      PipelineTuningOptions PTO = PipelineTuningOptions(),
+      LLVMContext &Context, TargetMachine *TM = nullptr,
+      std::optional<PipelineTuningOptions> PTO = std::nullopt,
       std::optional<PGOOptions> PGOOpt = std::nullopt,
       PassInstrumentationCallbacks *PIC = nullptr,
       IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem());
@@ -680,17 +687,12 @@ public:
                                        std::string ProfileFile,
                                        std::string ProfileRemappingFile);
 
+  LLVMContext &getContext() const { return Context; }
+
   /// Returns PIC. External libraries can use this to register pass
   /// instrumentation callbacks.
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
-  }
-
-  /// Returns the library options the pipelines read: the
-  /// PipelineTuningOptions', else the TargetMachine's, else null for the global
-  /// values.
-  const cl::LibraryOptionsContext *getLibraryOptions() const {
-    return LibraryOptions;
   }
 
   /// Returns the virtual file system.
@@ -830,7 +832,8 @@ private:
   // profile instrumentation/matching (to enable better context sensitivity),
   // and for memprof to enable better matching with missing debug frames.
   void addPreInlinerPasses(ModulePassManager &MPM, OptimizationLevel Level,
-                           ThinOrFullLTOPhase LTOPhase);
+                           ThinOrFullLTOPhase LTOPhase,
+                           bool IgnoreProfile = false);
 
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
