@@ -265,3 +265,56 @@ bb:
   call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 %len, i1 false)
   ret void
 }
+
+; optsize still expands: the opportunity is rare, so the code size impact is small.
+define void @optsize(ptr %p, i64 %len) optsize {
+; EXPAND-LABEL: define void @optsize(
+; EXPAND-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) #[[ATTR2:[0-9]+]] {
+; EXPAND-NEXT:    [[LEN_GE4:%.*]] = icmp uge i64 [[LEN]], 4
+; EXPAND-NEXT:    br i1 [[LEN_GE4]], label %[[MEMSET_STORE4:.*]], label %[[MEMSET_LT4:.*]]
+; EXPAND:       [[MEMSET_STORE4]]:
+; EXPAND-NEXT:    store i32 0, ptr [[P]], align 1
+; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[LEN]], 4
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    store i32 0, ptr [[TAIL]], align 1
+; EXPAND-NEXT:    br label %[[MEMSET_DONE:.*]]
+; EXPAND:       [[MEMSET_LT4]]:
+; EXPAND-NEXT:    [[LEN_GE2:%.*]] = icmp uge i64 [[LEN]], 2
+; EXPAND-NEXT:    br i1 [[LEN_GE2]], label %[[MEMSET_STORE2:.*]], label %[[MEMSET_LT2:.*]]
+; EXPAND:       [[MEMSET_STORE2]]:
+; EXPAND-NEXT:    store i16 0, ptr [[P]], align 1
+; EXPAND-NEXT:    [[TAIL_OFF1:%.*]] = sub i64 [[LEN]], 2
+; EXPAND-NEXT:    [[TAIL2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TAIL_OFF1]]
+; EXPAND-NEXT:    store i16 0, ptr [[TAIL2]], align 1
+; EXPAND-NEXT:    br label %[[BB2:.*]]
+; EXPAND:       [[MEMSET_LT2]]:
+; EXPAND-NEXT:    [[LEN_GE1:%.*]] = icmp uge i64 [[LEN]], 1
+; EXPAND-NEXT:    br i1 [[LEN_GE1]], label %[[MEMSET_STORE1:.*]], label %[[BB1:.*]]
+; EXPAND:       [[MEMSET_STORE1]]:
+; EXPAND-NEXT:    store i8 0, ptr [[P]], align 1
+; EXPAND-NEXT:    br label %[[BB1]]
+; EXPAND:       [[BB1]]:
+; EXPAND-NEXT:    br label %[[BB2]]
+; EXPAND:       [[BB2]]:
+; EXPAND-NEXT:    br label %[[MEMSET_DONE]]
+; EXPAND:       [[MEMSET_DONE]]:
+; EXPAND-NEXT:    ret void
+;
+; CALL-LABEL: define void @optsize(
+; CALL-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) #[[ATTR2:[0-9]+]] {
+; CALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 range(i64 0, 8) [[LEN]], i1 false)
+; CALL-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 range(i64 0, 8) %len, i1 false)
+  ret void
+}
+
+define void @minsize(ptr %p, i64 %len) minsize {
+; COMMON-LABEL: define void @minsize(
+; COMMON-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) #[[ATTR3:[0-9]+]] {
+; COMMON-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 range(i64 0, 8) [[LEN]], i1 false)
+; COMMON-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 range(i64 0, 8) %len, i1 false)
+  ret void
+}
