@@ -8816,7 +8816,6 @@ multiclass SIMDAcrossLanesFPIntrinsic<string baseOpc,
                 (DstTy (SUBREG_TO_REG
                   (!cast<Instruction>(baseOpc # "Vv4i16v") V64:$Rn),
                   hsub))>;
-    }
       def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
                         (f16 (opNode (v8f16 V128:$Rn))), (i64 0))),
                 (DstTy (SUBREG_TO_REG
@@ -8830,7 +8829,6 @@ multiclass SIMDAcrossLanesFPIntrinsic<string baseOpc,
               (DstTy (SUBREG_TO_REG
                 (!cast<Instruction>(baseOpc # "Pv2i32p") V64:$Rn),
                 ssub))>;
-  }
     def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
                       (f32 (opNode (v4f32 V128:$Rn))), (i64 0))),
               (DstTy (SUBREG_TO_REG
