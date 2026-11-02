@@ -879,3 +879,39 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     llvm.return
   }
 }
+
+// -----
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  omp.declare_mapper @inner_iterator_mapper : !llvm.struct<"inner", (i32)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c10 = llvm.mlir.constant(10 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"inner", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+      omp.yield(%m : !llvm.ptr)
+    } -> !omp.iterated<!llvm.ptr>
+    omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  omp.declare_mapper @outer_mapper : !llvm.struct<"outer", (struct<"inner", (i32)>)> {
+  ^bb0(%arg: !llvm.ptr):
+    %in = llvm.getelementptr %arg[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"outer", (struct<"inner", (i32)>)>
+    %m = omp.map.info var_ptr(%in : !llvm.ptr, !llvm.struct<"inner", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@inner_iterator_mapper) name("") -> !llvm.ptr
+    omp.declare_mapper.info map_entries(%m : !llvm.ptr)
+  }
+
+  // The iterator mapper is reached through a member map and a nested mapper.
+  llvm.func @target_mapper_iterator(%addr : !llvm.ptr) {
+    %field = llvm.getelementptr %addr[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"wrap", (struct<"outer", (struct<"inner", (i32)>)>)>
+    %member = omp.map.info var_ptr(%field : !llvm.ptr, !llvm.struct<"outer", (struct<"inner", (i32)>)>) map_clauses(tofrom) capture(ByRef) mapper(@outer_mapper) name("") -> !llvm.ptr
+    %parent = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"wrap", (struct<"outer", (struct<"inner", (i32)>)>)>) map_clauses(tofrom) capture(ByRef) members(%member : [0] : !llvm.ptr) name("") partial_map(true) -> !llvm.ptr
+    // expected-error@below {{not yet implemented: Unhandled clause mapper with iterator modifier in omp.target operation}}
+    // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+    omp.target kernel_type(generic) map_entries(%parent -> %arg0 : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
