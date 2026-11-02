@@ -254,9 +254,6 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
         if (Succ0 && Succ1 && Succ0 == Succ1 &&
             Phi->getBasicBlockIndex(BB) != -1)
           Phi->removeIncomingValue(BB, false);
-        if (BB == Out) {
-          V = NewPhi;
-        }
         AllUndef &= isa<UndefValue>(V);
         AllPoison &= isa<PoisonValue>(V);
       }
