@@ -2459,9 +2459,9 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
                                                "riscv32-unknown-elf",
                                                "riscv32-redhat-linux"};
   static const char *const RISCV64LibDirs[] = {"/lib64", "/lib"};
-  static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
-                                               "riscv64-unknown-elf",
-                                               "riscv64-redhat-linux"};
+  static const char *const RISCV64Triples[] = {
+      "riscv64-unknown-linux-gnu", "riscv64-unknown-elf", "riscv64-suse-linux",
+      "riscv64-redhat-linux"};
 
   static const char *const RISCV32beLibDirs[] = {"/lib32", "/lib"};
   static const char *const RISCV32beTriples[] = {"riscv32be-unknown-linux-gnu",
