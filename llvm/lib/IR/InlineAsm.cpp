@@ -14,8 +14,10 @@
 #include "ConstantsContext.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -26,6 +28,32 @@
 #include <cstdlib>
 
 using namespace llvm;
+
+const MDNode *InlineAsm::getSourceLocMetadata(const MDNode *LocMD) {
+  if (!LocMD || LocMD->getNumOperands() < 2)
+    return nullptr;
+  const auto *Locs =
+      dyn_cast_or_null<MDNode>(LocMD->getOperand(LocMD->getNumOperands() - 1));
+  if (!Locs || Locs->getNumOperands() < 4 ||
+      (Locs->getNumOperands() - 1) % 3 != 0)
+    return nullptr;
+  const auto *Tag = dyn_cast_or_null<MDString>(Locs->getOperand(0));
+  if (!Tag || Tag->getString() != "inlineasm.dbg.offset")
+    return nullptr;
+  uint64_t Previous = 0;
+  for (unsigned I = 1; I < Locs->getNumOperands(); ++I) {
+    const auto *Value = mdconst::dyn_extract<ConstantInt>(Locs->getOperand(I));
+    if (!Value || Value->getBitWidth() != 32)
+      return nullptr;
+    if ((I - 1) % 3 == 0) {
+      uint64_t Offset = Value->getZExtValue();
+      if (I != 1 && Offset <= Previous)
+        return nullptr;
+      Previous = Offset;
+    }
+  }
+  return Locs;
+}
 
 InlineAsm::InlineAsm(FunctionType *FTy, const std::string &asmString,
                      const std::string &constraints, bool hasSideEffects,
