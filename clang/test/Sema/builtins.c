@@ -386,3 +386,20 @@ int test_is_fpclass(float x, int mask) {
   float _Complex c = x;
   int x7 = __builtin_isfpclass(c, 3); // expected-error{{floating point classification requires argument of floating point type (passed in '_Complex float')}}
 }
+
+// GH120083: declarations sharing the name of the size-specific builtin that a
+// type-generic __sync builtin call is rewritten to.
+static int __sync_lock_test_and_set_4(volatile int *, int);
+static long long __sync_fetch_and_sub_8;
+typedef short __sync_swap_2;
+short __sync_add_and_fetch_2(volatile short *, short); // expected-error {{cannot redeclare builtin function '__sync_add_and_fetch_2'}} \
+                                                       // expected-note {{'__sync_add_and_fetch_2' is a builtin with type 'short (volatile short *, short, ...)'}}
+void test_gh120083(int *ip, long long *llp, short *sp, int a, long long b, short c) {
+  int __sync_lock_release_4 = 0;
+  (void)__sync_lock_test_and_set(ip, a);
+  (void)__sync_fetch_and_sub(llp, b);
+  (void)__sync_swap(sp, c);
+  (void)__sync_add_and_fetch(sp, c);
+  __sync_lock_release(ip);
+  (void)__sync_lock_release_4;
+}

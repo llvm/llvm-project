@@ -843,6 +843,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   format warnings to errors. (#GH211943)
 - Fixed a crash when `__atomic_always_lock_free` or `__atomic_is_lock_free` is
   called with a size of zero. (#GH170139, #GH120082)
+- Fixed a crash when a type-generic `__sync_*` builtin is called in a program
+  that declares a `static` function or a variable with the name of the
+  size-specific builtin, such as `__sync_lock_test_and_set_4`. (#GH120083)
 - Fixed wrong code generation in `__builtin_clear_padding` wherein the wrong
   bits of the following types were cleared: `_BitInt`, struct bitfields, and
   packed boolean vectors. (#GH215809), (#GH216063), (#GH224033)
