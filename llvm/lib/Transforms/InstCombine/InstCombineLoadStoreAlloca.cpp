@@ -1720,6 +1720,11 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
 
     auto *SIVTy = SI.getValueOperand()->getType();
     auto *OSVTy = OtherStore->getValueOperand()->getType();
+    // The other value is cast to SI's type before merging. Casting bytes to a
+    // non-byte type can lose provenance and spread poison to additional bits.
+    if (OSVTy->isByteOrByteVectorTy() && !SIVTy->isByteOrByteVectorTy())
+      return false;
+
     if (!CastInst::isBitOrNoopPointerCastable(OSVTy, SIVTy, DL) ||
         !SI.hasSameSpecialState(OtherStore))
       return false;
