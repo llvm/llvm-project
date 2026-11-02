@@ -3,16 +3,17 @@
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/assignment.f90
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/main.f90
 ! RUN: %flang_fc1 -fsyntax-only %t/interposed.f90
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/external-malformed.f90 2>&1 | FileCheck %s --check-prefix=ONE -DFILE=external-malformed.f90 -DLINE=1 -DCOL=1 --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module-malformed.f90 2>&1 | FileCheck %s --check-prefix=ONE -DFILE=module-malformed.f90 -DLINE=3 -DCOL=1 --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/interface-malformed.f90 2>&1 | FileCheck %s --check-prefix=ONE -DFILE=interface-malformed.f90 -DLINE=3 -DCOL=1 --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/indented.f90 2>&1 | FileCheck %s --check-prefix=INDENTED --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/interposed.f90 2>&1 | FileCheck %s --check-prefix=INTERPOSED --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/consecutive-module.f90 2>&1 | FileCheck %s --check-prefix=CONSECUTIVE --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/trailing-internal.f90 2>&1 | FileCheck %s --check-prefix=ONE -DFILE=trailing-internal.f90 -DLINE=5 -DCOL=1 --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed-continued.f 2>&1 | FileCheck %s --check-prefix=FIXED --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed-ambiguous.f 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS
-! RUN: not %flang_fc1 -fsyntax-only %t/malformed-header.f90 2>&1 | FileCheck %s --check-prefix=HEADER --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/external-malformed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=ONE -DFILE=external-malformed.f90 -DLINE=1 -DCOL=1 --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module-malformed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=ONE -DFILE=module-malformed.f90 -DLINE=3 -DCOL=1 --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/interface-malformed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=ONE -DFILE=interface-malformed.f90 -DLINE=3 -DCOL=1 --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/indented.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=INDENTED --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/interposed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=INTERPOSED --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/consecutive-module.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=CONSECUTIVE --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/trailing-internal.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=ONE -DFILE=trailing-internal.f90 -DLINE=5 -DCOL=1 --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed-continued.f 2>&1 | FileCheck %s --strict-whitespace --check-prefix=FIXED --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed-ambiguous.f 2>&1 | FileCheck %s --strict-whitespace --check-prefix=AMBIGUOUS --implicit-check-not="OpenACC DECLARE"
+! RUN: not %flang_fc1 -fopenacc -ffixed-form -fsyntax-only %t/fixed-cuda-ambiguous.cuf 2>&1 | FileCheck %s --strict-whitespace --check-prefix=AMBIGUOUS --implicit-check-not="OpenACC DECLARE"
+! RUN: not %flang_fc1 -fsyntax-only %t/malformed-header.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=HEADER --implicit-check-not="error:"
 
 ! Check filenames and exact locations, as well as the diagnostic text. The
 ! malformed directives have balanced parentheses and reach parser recovery.
@@ -36,7 +37,8 @@
 ! FIXED-NEXT: {{^  \^$}}
 
 ! In fixed form, a typed header with arguments is also a possible array
-! declaration after blanks are removed. Preserve declaration precedence and
+! declaration, and a CUDA header without arguments is also a possible
+! ATTRIBUTES statement. Preserve declaration precedence and
 ! document this remaining diagnostic limitation rather than rejecting arrays.
 ! AMBIGUOUS-NOT: OpenACC DECLARE directive
 ! AMBIGUOUS: error: Could not parse
@@ -155,3 +157,9 @@ c$acc declare create(x)
 !--- malformed-header.f90
 subroutine s bind(c)
 end subroutine
+
+!--- fixed-cuda-ambiguous.cuf
+c$acc declare create(x)
+      attributes(device) subroutine s
+      real :: x
+      end subroutine

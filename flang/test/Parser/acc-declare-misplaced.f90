@@ -1,31 +1,31 @@
 ! RUN: split-file %s %t
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/continued.f90 2>&1 | FileCheck %s --check-prefix=CONTINUED --implicit-check-not="error:" -DFILE=continued.f90 -DLINE1=1 -DLINE2=7 -DLINE3=12
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/malformed.f90 2>&1 | FileCheck %s --check-prefix=MALFORMED
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/consecutive.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=consecutive.f90 -DLINE1=1 -DLINE2=2 -DLINE3=3
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/trailing.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=trailing.f90 -DLINE1=3 -DLINE2=7 -DLINE3=11
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed.f 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=fixed.f -DLINE1=1 -DLINE2=8 -DLINE3=14
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/external.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=external.f90 -DLINE1=1 -DLINE2=7 -DLINE3=13
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/after-external.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=after-external.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/after-program.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=after-program.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-program.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-program.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-unnamed-main.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-unnamed-main.f90 -DLINE1=4 -DLINE2=10 -DLINE3=16
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-function.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-function.f90 -DLINE1=5 -DLINE2=11 -DLINE3=17
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-subroutine.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-subroutine.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=module.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/submodule.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=submodule.f90 -DLINE1=9 -DLINE2=15 -DLINE3=21
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-module-function.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-module-function.f90 -DLINE1=7 -DLINE2=13 -DLINE3=19
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-module-subroutine.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-module-subroutine.f90 -DLINE1=5 -DLINE2=11 -DLINE3=17
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-submodule-function.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-submodule-function.f90 -DLINE1=13 -DLINE2=19 -DLINE3=25
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-submodule-subroutine.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-submodule-subroutine.f90 -DLINE1=11 -DLINE2=17 -DLINE3=23
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-separate-module-procedure.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-separate-module-procedure.f90 -DLINE1=11 -DLINE2=17 -DLINE3=23
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/interface.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=interface.f90 -DLINE1=3 -DLINE2=8 -DLINE3=12
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/abstract-interface.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=abstract-interface.f90 -DLINE1=3 -DLINE2=8 -DLINE3=12
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/generic-interface.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=generic-interface.f90 -DLINE1=3 -DLINE2=9 -DLINE3=14
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module-interface.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=module-interface.f90 -DLINE1=3 -DLINE2=8 -DLINE3=12
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/separate-in-module.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=separate-in-module.f90 -DLINE1=12 -DLINE2=18 -DLINE3=24
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/separate-in-submodule.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=separate-in-submodule.f90 -DLINE1=14 -DLINE2=20 -DLINE3=26
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/separate-module-procedure.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=separate-module-procedure.f90 -DLINE1=14 -DLINE2=20 -DLINE3=26
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-separate-module-function.f90 2>&1 | FileCheck %s --implicit-check-not="error:" -DFILE=internal-separate-module-function.f90 -DLINE1=12 -DLINE2=18 -DLINE3=24
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/continued.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=CONTINUED --implicit-check-not="error:" -DFILE=continued.f90 -DLINE1=1 -DLINE2=7 -DLINE3=12
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/malformed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=MALFORMED
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/consecutive.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=consecutive.f90 -DLINE1=1 -DLINE2=2 -DLINE3=3
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/trailing.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=trailing.f90 -DLINE1=3 -DLINE2=7 -DLINE3=11
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed.f 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=fixed.f -DLINE1=1 -DLINE2=8 -DLINE3=14
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/external.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=external.f90 -DLINE1=1 -DLINE2=7 -DLINE3=13
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/after-external.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=after-external.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/after-program.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=after-program.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-program.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-program.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-unnamed-main.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-unnamed-main.f90 -DLINE1=4 -DLINE2=10 -DLINE3=16
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-function.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-function.f90 -DLINE1=5 -DLINE2=11 -DLINE3=17
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-subroutine.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-subroutine.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=module.f90 -DLINE1=3 -DLINE2=9 -DLINE3=15
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/submodule.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=submodule.f90 -DLINE1=9 -DLINE2=15 -DLINE3=21
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-module-function.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-module-function.f90 -DLINE1=7 -DLINE2=13 -DLINE3=19
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-module-subroutine.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-module-subroutine.f90 -DLINE1=5 -DLINE2=11 -DLINE3=17
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-submodule-function.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-submodule-function.f90 -DLINE1=13 -DLINE2=19 -DLINE3=25
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-submodule-subroutine.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-submodule-subroutine.f90 -DLINE1=11 -DLINE2=17 -DLINE3=23
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-separate-module-procedure.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-separate-module-procedure.f90 -DLINE1=11 -DLINE2=17 -DLINE3=23
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/interface.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=interface.f90 -DLINE1=3 -DLINE2=8 -DLINE3=12
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/abstract-interface.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=abstract-interface.f90 -DLINE1=3 -DLINE2=8 -DLINE3=12
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/generic-interface.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=generic-interface.f90 -DLINE1=3 -DLINE2=9 -DLINE3=14
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module-interface.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=module-interface.f90 -DLINE1=3 -DLINE2=8 -DLINE3=12
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/separate-in-module.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=separate-in-module.f90 -DLINE1=12 -DLINE2=18 -DLINE3=24
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/separate-in-submodule.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=separate-in-submodule.f90 -DLINE1=14 -DLINE2=20 -DLINE3=26
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/separate-module-procedure.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=separate-module-procedure.f90 -DLINE1=14 -DLINE2=20 -DLINE3=26
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/internal-separate-module-function.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=internal-separate-module-function.f90 -DLINE1=12 -DLINE2=18 -DLINE3=24
 
 ! Three procedure forms in each context: untyped FUNCTION, typed FUNCTION,
 ! and SUBROUTINE. DECLARE is misplaced before each procedure header.

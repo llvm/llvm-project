@@ -109,7 +109,8 @@ static constexpr auto misplacedOpenACCDeclareRun{MisplacedOpenACCDeclare{} >>
 // specification statements therefore take precedence over procedure headers,
 // including CUDA ATTRIBUTES statements with keyword-shaped object names.
 // After fixed-form blank removal, a typed header with arguments can also be an
-// array declaration; such headers retain normal parser diagnostics.
+// array declaration, and a CUDA header without arguments can be an ATTRIBUTES
+// statement; such headers retain normal parser diagnostics.
 // Lookahead uses the recovery parser too, with messages deferred, so malformed
 // DECLARE lines are recognized consistently here and in procedure/interface
 // lists.

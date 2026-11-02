@@ -340,7 +340,7 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<AccDeclarativeDirective>(
     first("DECLARE" >> pure(llvm::acc::Directive::ACCD_declare)))))
 
-// Recovery alternative for lists that cannot contain declarative directives.
+// Recovery alternative where a declarative directive cannot appear.
 // The lookahead keeps unrelated OpenACC directives on their existing paths.
 std::optional<Success> MisplacedOpenACCDeclare::Parse(ParseState &state) const {
   static constexpr auto parser{skipStuffBeforeStatement >>

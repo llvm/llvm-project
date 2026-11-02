@@ -5,10 +5,10 @@
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/colon.cuf
 ! RUN: %flang_fc1 -fopenacc -fsyntax-only %t/name.cuf
 ! RUN: %flang_fc1 -fopenacc -ffixed-form -fsyntax-only %t/fixed.cuf
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/global.cuf 2>&1 | FileCheck %s -DFILE=global.cuf --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/device.cuf 2>&1 | FileCheck %s -DFILE=device.cuf --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/host-device.cuf 2>&1 | FileCheck %s -DFILE=host-device.cuf --implicit-check-not="error:"
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/no-args.cuf 2>&1 | FileCheck %s -DFILE=no-args.cuf --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/global.cuf 2>&1 | FileCheck %s --strict-whitespace -DFILE=global.cuf --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/device.cuf 2>&1 | FileCheck %s --strict-whitespace -DFILE=device.cuf --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/host-device.cuf 2>&1 | FileCheck %s --strict-whitespace -DFILE=host-device.cuf --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/no-args.cuf 2>&1 | FileCheck %s --strict-whitespace -DFILE=no-args.cuf --implicit-check-not="error:"
 
 ! CUDA ATTRIBUTES statements are specification statements, including when ::
 ! is omitted and an object name starts with FUNCTION or SUBROUTINE.

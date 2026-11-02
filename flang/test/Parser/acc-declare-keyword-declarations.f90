@@ -77,8 +77,8 @@ functionx = 1.0
 x = functionx(1)
 end
 
-! Fixed-form REAL FUNCTIONF(3) must remain an array declaration.
 !--- array.f
+! A literal-bound array remains accepted; the bound is not a valid dummy name.
 c$acc declare create(x)
       real functionf(3)
       real x
