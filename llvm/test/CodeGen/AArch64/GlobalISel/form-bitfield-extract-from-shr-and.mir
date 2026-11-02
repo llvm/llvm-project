@@ -6,6 +6,7 @@
 ---
 name:            mask_extract_unsigned_32
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mask_extract_unsigned_32
@@ -23,6 +24,7 @@ body:             |
 ---
 name:            mask_extract_unsigned_64
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mask_extract_unsigned_64
@@ -41,6 +43,7 @@ body:             |
 ---
 name:            no_mask_extract_unsigned_128
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: no_mask_extract_unsigned_128
@@ -60,6 +63,7 @@ body:             |
 ---
 name:            mask_extract_asr
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mask_extract_asr
@@ -78,6 +82,7 @@ body:             |
 ---
 name:            no_mask_extract_asr
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: no_mask_extract_asr
@@ -95,6 +100,7 @@ body:             |
 ---
 name:            mask_extract_signed_nonneg
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mask_extract_signed_nonneg
@@ -113,6 +119,7 @@ body:             |
 ---
 name:            no_mask_extract_large_shift
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: no_mask_extract_large_shift
@@ -132,6 +139,7 @@ body:             |
 ---
 name:            no_mask_extract_negative_shift
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: no_mask_extract_negative_shift
@@ -151,6 +159,7 @@ body:             |
 ---
 name:            no_mask_extract_disjoint
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: no_mask_extract_disjoint
@@ -170,6 +179,7 @@ body:             |
 ---
 name:           no_mask_extract_extra_bits
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: no_mask_extract_extra_bits
@@ -189,6 +199,7 @@ body:             |
 ---
 name:          zero_from_large_shift
 legalized: true
+tracksRegLiveness: false
 body:              |
   bb.1.entry:
     ; CHECK-LABEL: name: zero_from_large_shift

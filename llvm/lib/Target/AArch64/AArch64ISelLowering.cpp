@@ -7787,7 +7787,6 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
   MVT DestVT = Op.getSimpleValueType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
 
   unsigned SrcAS = N->getSrcAddressSpace();
@@ -7797,7 +7796,6 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   assert(DAG.getDataLayout().getPointerSize(SrcAS) !=
              DAG.getDataLayout().getPointerSize(DestAS) &&
          "addrspacecast must be between different ptr sizes");
-  (void)TLI;
 
   if (SrcAS == ARM64AS::PTR32_SPTR) {
     return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, Src);
@@ -8508,7 +8506,8 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
                                     : Intrinsic::aarch64_neon_bfmlalt);
 
   EVT AccVT = UseSVEBFMLAL ? MVT::nxv4f32 : MVT::v4f32;
-  bool IgnoreZeroSign = DAG.canIgnoreSignBitOfZero(Op);
+  bool IgnoreZeroSign =
+      Op->getFlags().hasNoSignedZeros() || DAG.canIgnoreSignBitOfZeroResult(Op);
   SDValue Zero = DAG.getConstantFP(IgnoreZeroSign ? +0.0F : -0.0F, DL, AccVT);
   SDValue Pg = getPredicateForVector(DAG, DL, AccVT);
 
@@ -25473,8 +25472,8 @@ tryCombineFADDReductionWithZero(SDNode *N, SelectionDAG &DAG,
   // This avoids the scenario where all the added values are -0.0 except the
   // +0.0 element we chose to ignore.
   SDNodeFlags Flags = N->getFlags();
-  bool IsSignedZeroSafe =
-      Flags.hasNoSignedZeros() || DAG.canIgnoreSignBitOfZero(SDValue(N, 0));
+  bool IsSignedZeroSafe = Flags.hasNoSignedZeros() ||
+                          DAG.canIgnoreSignBitOfZeroResult(SDValue(N, 0));
 
   // Determine which elements are known to be zero. When signed zeros can be
   // ignored, an element is "zero" if all bits except the sign bit are known

@@ -331,6 +331,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/eventfd.h entrypoints
     libc.src.sys.eventfd.eventfd
+    libc.src.sys.eventfd.eventfd_read
+    libc.src.sys.eventfd.eventfd_write
 
     # sys/file.h entrypoints
     libc.src.sys.file.flock
@@ -521,6 +523,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getegid
     libc.src.unistd.getentropy
     libc.src.unistd.geteuid
+    libc.src.unistd.getgroups
     libc.src.unistd.gethostname
     libc.src.unistd.getpagesize
     libc.src.unistd.getpgid
@@ -742,6 +745,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdimf128
+    libc.src.math.fdimf80
     libc.src.math.fdiml
     libc.src.math.fdiv
     libc.src.math.fdivl
@@ -763,13 +767,16 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_mag_num
     libc.src.math.fmaximum_mag_numf
     libc.src.math.fmaximum_mag_numf128
+    libc.src.math.fmaximum_mag_numf80
     libc.src.math.fmaximum_mag_numl
     libc.src.math.fmaximum_magf
     libc.src.math.fmaximum_magf128
+    libc.src.math.fmaximum_magf80
     libc.src.math.fmaximum_magl
     libc.src.math.fmaximum_num
     libc.src.math.fmaximum_numf
     libc.src.math.fmaximum_numf128
+    libc.src.math.fmaximum_numf80
     libc.src.math.fmaximum_numl
     libc.src.math.fmaximumf
     libc.src.math.fmaximumf128
@@ -785,13 +792,16 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_mag_num
     libc.src.math.fminimum_mag_numf
     libc.src.math.fminimum_mag_numf128
+    libc.src.math.fminimum_mag_numf80
     libc.src.math.fminimum_mag_numl
     libc.src.math.fminimum_magf
     libc.src.math.fminimum_magf128
+    libc.src.math.fminimum_magf80
     libc.src.math.fminimum_magl
     libc.src.math.fminimum_num
     libc.src.math.fminimum_numf
     libc.src.math.fminimum_numf128
+    libc.src.math.fminimum_numf80
     libc.src.math.fminimum_numl
     libc.src.math.fminimumf
     libc.src.math.fminimumf128
