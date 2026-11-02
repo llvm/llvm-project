@@ -620,24 +620,14 @@ PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     llvm::raw_string_ostream &os, const PathDiagnosticConstruct &C) const {
   // Slow, but probably doesn't matter.
-  bool isEmpty = os.str().empty();
-  if (isEmpty)
-    os << ' ';
-
+  os << (os.str().empty() ? "Execution " : "execution ");
   const PathDiagnosticLocation &Loc = ExecutionContinues(C);
 
   if (Loc.asStmt()) {
-    if (!isEmpty)
-      os << "execution continues on line "
-         << getSourceManager().getExpansionLineNumber(Loc.asLocation());
-    else
-      os << "Execution continues on line "
-         << getSourceManager().getExpansionLineNumber(Loc.asLocation());
+    os << "continues on line "
+       << getSourceManager().getExpansionLineNumber(Loc.asLocation());
   } else {
-    if (!isEmpty)
-      os << "execution jumps to the end of the ";
-    else
-      os << "Execution jumps to the end of the ";
+    os << "jumps to the end of the ";
     const Decl *D = C.getCurrStackFrame()->getDecl();
     if (isa<ObjCMethodDecl>(D))
       os << "method";
