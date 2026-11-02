@@ -204,12 +204,12 @@ public:
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Iter>
-  operator-(const counted_iterator& __lhs, default_sentinel_t) {
+  operator-(const counted_iterator& __lhs, default_sentinel_t) noexcept {
     return -__lhs.__count_;
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Iter>
-  operator-(default_sentinel_t, const counted_iterator& __rhs) {
+  operator-(default_sentinel_t, const counted_iterator& __rhs) noexcept {
     return __rhs.__count_;
   }
 
@@ -239,7 +239,7 @@ public:
     return __lhs.__count_ == __rhs.__count_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const counted_iterator& __lhs, default_sentinel_t) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const counted_iterator& __lhs, default_sentinel_t) noexcept {
     return __lhs.__count_ == 0;
   }
 

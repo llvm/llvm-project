@@ -55,7 +55,7 @@ body:                   |
     ; CHECK-LIBCALL32-LABEL: name: push_rvlist15
     ; CHECK-LIBCALL32: liveins: $x1, $x8, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
     ; CHECK-LIBCALL32-NEXT: {{  $}}
-    ; CHECK-LIBCALL32-NEXT: $x5 = frame-setup PseudoCALLReg target-flags(riscv-call) &__riscv_save_12
+    ; CHECK-LIBCALL32-NEXT: $x5 = frame-setup PseudoCALLReg target-flags(riscv-call) &__riscv_save_12, implicit $x2, implicit-def $x2, implicit $x1, implicit $x8, implicit $x9, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27
     ; CHECK-LIBCALL32-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 64
     ; CHECK-LIBCALL32-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -4
     ; CHECK-LIBCALL32-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -8
@@ -83,7 +83,7 @@ body:                   |
     ; CHECK-LIBCALL32-NEXT: $x25 = IMPLICIT_DEF
     ; CHECK-LIBCALL32-NEXT: $x26 = IMPLICIT_DEF
     ; CHECK-LIBCALL32-NEXT: $x27 = IMPLICIT_DEF
-    ; CHECK-LIBCALL32-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit $x2
+    ; CHECK-LIBCALL32-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
     ;
     ; CHECK-ZCMP64-LABEL: name: push_rvlist15
     ; CHECK-ZCMP64: liveins: $x1, $x8, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
@@ -122,7 +122,7 @@ body:                   |
     ; CHECK-LIBCALL64-LABEL: name: push_rvlist15
     ; CHECK-LIBCALL64: liveins: $x1, $x8, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
     ; CHECK-LIBCALL64-NEXT: {{  $}}
-    ; CHECK-LIBCALL64-NEXT: $x5 = frame-setup PseudoCALLReg target-flags(riscv-call) &__riscv_save_12
+    ; CHECK-LIBCALL64-NEXT: $x5 = frame-setup PseudoCALLReg target-flags(riscv-call) &__riscv_save_12, implicit $x2, implicit-def $x2, implicit $x1, implicit $x8, implicit $x9, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27
     ; CHECK-LIBCALL64-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 112
     ; CHECK-LIBCALL64-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -8
     ; CHECK-LIBCALL64-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -16
@@ -150,7 +150,7 @@ body:                   |
     ; CHECK-LIBCALL64-NEXT: $x25 = IMPLICIT_DEF
     ; CHECK-LIBCALL64-NEXT: $x26 = IMPLICIT_DEF
     ; CHECK-LIBCALL64-NEXT: $x27 = IMPLICIT_DEF
-    ; CHECK-LIBCALL64-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit $x2
+    ; CHECK-LIBCALL64-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
     ;
     ; CHECK-NO-ZCMP32-LABEL: name: push_rvlist15
     ; CHECK-NO-ZCMP32: liveins: $x1, $x8, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
