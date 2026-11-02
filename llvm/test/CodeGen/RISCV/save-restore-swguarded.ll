@@ -1,0 +1,24 @@
+; RUN: llc -mtriple=riscv32 -mattr=+save-restore -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefix=RV32
+; RUN: llc -mtriple=riscv64 -mattr=+save-restore -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefix=RV64
+
+; Test that the __riscv_restore tail call uses the software guarded sequence
+; (t2) when cf-protection-branch is enabled.
+
+declare void @g()
+
+define void @f() nounwind {
+; RV32-LABEL: f:
+; RV32:         tail __riscv_restore_2, t2
+;
+; RV64-LABEL: f:
+; RV64:         tail __riscv_restore_2, t2
+  call void @g()
+  call void asm sideeffect "", "~{s0},~{s1}"()
+  ret void
+}
+
+!llvm.module.flags = !{!0, !1}
+!0 = !{i32 8, !"cf-protection-branch", i32 1}
+!1 = !{i32 1, !"cf-branch-label-scheme", !"unlabeled"}
