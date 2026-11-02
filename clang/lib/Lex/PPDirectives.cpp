@@ -1126,23 +1126,90 @@ OptionalFileEntryRef Preprocessor::LookupFile(
   if (FromFile) {
     // We're supposed to start looking from after a particular file. Search
     // the include path until we find that file or run out of files.
-    ConstSearchDirIterator TmpCurDir = CurDir;
-    ConstSearchDirIterator TmpFromDir = nullptr;
-    while (OptionalFileEntryRef FE = HeaderInfo.LookupFile(
-               Filename, FilenameLoc, isAngled, TmpFromDir, &TmpCurDir,
-               Includers, SearchPath, RelativePath, RequestingModule,
-               SuggestedModule, /*IsMapped=*/nullptr,
-               /*IsFrameworkFound=*/nullptr, SkipCache)) {
-      // Keep looking as if this file did a #include_next.
-      TmpFromDir = TmpCurDir;
-      ++TmpFromDir;
-      if (&FE->getFileEntry() == FromFile) {
-        // Found it.
-        FromDir = TmpFromDir;
-        CurDir = TmpCurDir;
-        break;
+    // The #include_next may name a different header than the current file
+    // (e.g. __mbstate_t.h doing #include_next <wchar.h>), in which case
+    // looking up Filename would never find FromFile. Look up the current
+    // file's own name to locate the directory it was found in. That name is
+    // its path relative to the search directory (e.g. "sys/inner.h"), not just
+    // the basename, so that headers in subdirectories are found too.
+    auto FindFromFile = [&](StringRef LocateName) {
+      bool SameName = LocateName == Filename;
+      ConstSearchDirIterator TmpCurDir = CurDir;
+      ConstSearchDirIterator TmpFromDir = nullptr;
+      while (OptionalFileEntryRef FE = HeaderInfo.LookupFile(
+                 LocateName, FilenameLoc, isAngled, TmpFromDir, &TmpCurDir,
+                 Includers, SameName ? SearchPath : nullptr,
+                 SameName ? RelativePath : nullptr, RequestingModule,
+                 SameName ? SuggestedModule : nullptr, /*IsMapped=*/nullptr,
+                 /*IsFrameworkFound=*/nullptr, SkipCache,
+                 /*BuildSystemModule=*/false, /*OpenFile=*/true,
+                 /*CacheFailures=*/true, /*DiagnoseShadowing=*/false)) {
+        // Keep looking as if this file did a #include_next.
+        TmpFromDir = TmpCurDir;
+        ++TmpFromDir;
+        if (&FE->getFileEntry() == FromFile) {
+          // Found it.
+          FromDir = TmpFromDir;
+          CurDir = TmpCurDir;
+          return true;
+        }
       }
-    }
+      return false;
+    };
+
+    // Candidate names for the current file: its path relative to the search
+    // directory it was found in, if known, else to every search directory
+    // that contains it. Search directories are matched by identity rather than
+    // by spelling, as the file may have been reached through a different path
+    // (e.g. "./x/sys/inner.h" for -Ix).
+    // FIXME: If a search directory is nested in another (-Ix -Ix/sub), the file
+    // is reachable under several names ("sys/inner.h" and "inner.h") and we
+    // cannot tell which one it was originally found as. Fixing this requires
+    // recording the search directory when a module header is entered.
+    SmallVector<std::string, 4> Names;
+    StringRef BaseName;
+    if (CurPPLexer)
+      if (OptionalFileEntryRef CurFE = CurPPLexer->getFileEntry()) {
+        StringRef Path = CurFE->getName();
+        BaseName = llvm::sys::path::filename(Path);
+        // Each ancestor directory of the file, with the file's path relative
+        // to it.
+        SmallVector<std::pair<DirectoryEntryRef, std::string>, 8> Ancestors;
+        SmallString<128> Rel(BaseName);
+        for (StringRef Parent = llvm::sys::path::parent_path(Path);
+             !Parent.empty(); Parent = llvm::sys::path::parent_path(Parent)) {
+          if (OptionalDirectoryEntryRef Dir =
+                  FileMgr.getOptionalDirectoryRef(Parent))
+            Ancestors.emplace_back(*Dir, Rel.str().str());
+          StringRef Name = llvm::sys::path::filename(Parent);
+          if (Name.empty())
+            break;
+          SmallString<128> NewRel(Name);
+          llvm::sys::path::append(NewRel, Rel);
+          Rel = NewRel;
+        }
+        auto AddRelPath = [&](const DirectoryLookup &DL) {
+          OptionalDirectoryEntryRef Dir = DL.getDirRef();
+          if (!Dir)
+            return;
+          for (const auto &[AncestorDir, AncestorRel] : Ancestors)
+            if (AncestorDir == *Dir) {
+              Names.push_back(AncestorRel);
+              return;
+            }
+        };
+        if (CurDir)
+          AddRelPath(*CurDir);
+        else
+          for (const DirectoryLookup &DL : HeaderInfo.search_dir_range())
+            AddRelPath(DL);
+      }
+    if (!BaseName.empty() && BaseName != Filename)
+      Names.push_back(BaseName.str());
+    Names.push_back(Filename.str());
+    for (const std::string &Name : Names)
+      if (FindFromFile(Name))
+        break;
   }
 
   // Do a standard file entry lookup.
