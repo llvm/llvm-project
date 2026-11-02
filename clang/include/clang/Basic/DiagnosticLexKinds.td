@@ -33,6 +33,9 @@ defm raw_string_literal_character_set : CXX26Compat<
   "'%0' in a raw string literal delimiter is", /*ext_warn*/false>;
 defm cxx26_pp_embed_directive : CXX26Compat<"#embed is">;
 
+// C++2d compatibility with C++2c and earlier.
+defm cxx29_pp_embed_offset : CXX29Compat<"the 'offset' #embed parameter is">;
+
 def null_in_char_or_string : Warning<
   "null character(s) preserved in %select{char|string}0 literal">,
   InGroup<NullCharacter>;
@@ -487,6 +490,9 @@ def warn_cxx23_compat_warning_directive : Warning<
 def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
+def ext_pp_embed_offset : ExtWarn<
+  "the 'offset' #embed parameter is a Clang extension">,
+  InGroup<DiagGroup<"embed-offset-extension">>;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;
 def err_pp_embed_device_file : Error<
