@@ -3424,16 +3424,6 @@ bool Sema::CheckIfOverriddenFunctionIsMarkedFinal(const CXXMethodDecl *New,
   return true;
 }
 
-static bool InitializationHasSideEffects(const FieldDecl &FD) {
-  const Type *T = FD.getType()->getBaseElementTypeUnsafe();
-  // FIXME: Destruction of ObjC lifetime types has side-effects.
-  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
-    return !RD->isCompleteDefinition() ||
-           !RD->hasTrivialDefaultConstructor() ||
-           !RD->hasTrivialDestructor();
-  return false;
-}
-
 void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
                                       DeclarationName FieldName,
                                       const CXXRecordDecl *RD,
@@ -3482,26 +3472,6 @@ void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
       Bases.erase(It);
     }
   }
-}
-
-template <typename AttrType>
-inline static bool HasAttribute(const QualType &T) {
-  if (const TagDecl *TD = T->getAsTagDecl())
-    return TD->hasAttr<AttrType>();
-  if (const TypedefType *TDT = T->getAs<TypedefType>())
-    return TDT->getDecl()->hasAttr<AttrType>();
-  return false;
-}
-
-bool clang::IsUnusedPrivateField(const FieldDecl *FD) {
-  if (FD->isImplicit() || !FD->getDeclName() || FD->getAccess() != AS_private ||
-      FD->hasAttr<UnusedAttr>() || FD->getParent()->isDependentContext())
-    return false;
-
-  QualType FieldType = FD->getType();
-  return !HasAttribute<UnusedAttr>(FieldType) &&
-         (HasAttribute<WarnUnusedAttr>(FieldType) ||
-          !InitializationHasSideEffects(*FD));
 }
 
 NamedDecl *
@@ -3797,7 +3767,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     FieldCollector->Add(FD);
 
     if (!Diags.isIgnored(diag::warn_unused_private_field, FD->getLocation()) &&
-        IsUnusedPrivateField(FD)) {
+        FD->isUnusedPrivateField()) {
       // Remember all explicit private FieldDecls that have a name, no side
       // effects and are not part of a dependent type declaration.
       UnusedPrivateFields.insert(FD);
