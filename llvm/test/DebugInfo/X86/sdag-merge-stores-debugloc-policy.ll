@@ -5,7 +5,7 @@
 ;; operation's debug location if all merged operations are in the same function
 ;; or inlined call (or in functions inlined into it). Otherwise, merge their
 ;; locations with getMergedLocation, where -pick-merged-source-locations takes
-;; effect; if any merged operation has no debug location, the result has none.
+;; effect.
 
 ; CHECK-DAG: ![[HELPER:[0-9]+]] = distinct !DISubprogram(name: "helper",
 ; CHECK-DAG: ![[PLAIN:[0-9]+]] = distinct !DISubprogram(name: "plain_lines",
