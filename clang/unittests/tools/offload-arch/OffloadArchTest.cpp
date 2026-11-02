@@ -324,7 +324,7 @@ TEST(IntelGPUArchName, KnownArchitecturesGetAFriendlyName) {
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 7)), "xe-pvc");
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(20, 1, 4)), "xe-bmg-g21");
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(35, 10, 0)), "xe-nvl-p");
-  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 0, 0)), "xe-tgllp");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 0, 0)), "xe-tgl");
 }
 
 // When several devices share a major and a minor version, the first one listed

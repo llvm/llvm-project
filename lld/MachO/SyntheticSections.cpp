@@ -1768,7 +1768,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       },
       /*forceInputOrder=*/true);
 
-  // Like lexigraphical sort, except we read strings in reverse and take the
+  // Like lexicographical sort, except we read strings in reverse and take the
   // longest string first
   // TODO: We could improve performance by implementing our own sort that avoids
   // comparing characters we know to be the same. See
@@ -2075,6 +2075,9 @@ ObjCMethListSection::ObjCMethListSection()
 // create them early on here to ensure they are processed correctly by the lld
 // pipeline.
 void ObjCMethListSection::setUp() {
+  llvm::erase_if(inputs, [](const ConcatInputSection *isec) {
+    return isec->shouldOmitFromOutput();
+  });
   for (const ConcatInputSection *isec : inputs) {
     uint32_t structSizeAndFlags = 0, structCount = 0;
     readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
@@ -2140,6 +2143,8 @@ void ObjCMethListSection::finalize() {
 void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
   uint8_t *buf = bufStart;
   for (const ConcatInputSection *isec : inputs) {
+    assert(!isec->shouldOmitFromOutput() &&
+           "dead method list should have been dropped in setUp()");
     assert(buf - bufStart == std::ptrdiff_t(isec->outSecOff) &&
            "Writing at unexpected offset");
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
@@ -2551,15 +2556,20 @@ void ChainedFixupsSection::finalizeContents() {
   for (Location &loc : locations) {
     uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
-    if (offset % pageSize + target->wordSize > pageSize) {
-      std::string msg = loc.isec->getLocation(loc.offset) +
-                        ": fixup straddles page boundary; stop packing structs "
-                        "containing pointers or link with -no_fixup_chains";
+    auto report = [&](const Twine &problem) {
+      std::string msg = (loc.isec->getLocation(loc.offset) + ": " + problem +
+                         "; stop packing structs containing pointers or link "
+                         "with -no_fixup_chains")
+                            .str();
       std::string src = loc.isec->getSourceLocation(loc.offset);
       if (!src.empty())
         msg += "\n>>> defined at " + src;
       error(msg);
-    }
+    };
+    if (offset % pageSize + target->wordSize > pageSize)
+      report("fixup straddles page boundary");
+    if (offset % chainStride != 0)
+      report("fixup is not " + Twine(chainStride) + "-byte aligned");
     loc.offset = offset;
   }
 
