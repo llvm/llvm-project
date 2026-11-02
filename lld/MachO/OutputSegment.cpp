@@ -79,6 +79,21 @@ template <typename T, typename F> static auto compareByOrder(F ord) {
 }
 
 static int segmentOrder(OutputSegment *seg) {
+  // __LINKEDIT contents are finalized after all regular sections, so it must
+  // remain last in file and VM order. Honor the requested order for every
+  // other segment; stable_sort preserves input order for names omitted from
+  // the list.
+  if (!config->segmentOrder.empty()) {
+    if (seg->name == segment_names::pageZero)
+      return -1;
+    if (seg->name == segment_names::linkEdit)
+      return std::numeric_limits<int>::max();
+    auto it = llvm::find(config->segmentOrder, seg->name);
+    if (it != config->segmentOrder.end())
+      return std::distance(config->segmentOrder.begin(), it);
+    return config->segmentOrder.size();
+  }
+
   return StringSwitch<int>(seg->name)
       .Case(segment_names::pageZero, -4)
       .Case(segment_names::text, -3)
