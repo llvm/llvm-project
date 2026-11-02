@@ -4,6 +4,7 @@
 ---
 name: and_s1_sgpr_sgpr
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -27,6 +28,7 @@ body: |
 ---
 name: and_s1_scc_scc
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -54,6 +56,7 @@ body: |
 ---
 name: and_s1_vgpr_vgpr
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -82,6 +85,7 @@ body: |
 ---
 name: and_s1_vcc_vcc
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -108,6 +112,7 @@ body: |
 ---
 name: and_s1_sgpr_vgpr
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -135,6 +140,7 @@ body: |
 ---
 name: and_s1_vgpr_sgpr
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -163,6 +169,7 @@ body: |
 ---
 name: and_s1_scc_vcc
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -191,6 +198,7 @@ body: |
 ---
 name: and_s1_vcc_scc
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -277,6 +285,7 @@ body: |
 ---
 name: and_s1_vgpr_sgpr_sgpr
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -309,6 +318,7 @@ body: |
 ---
 name: and_s1_sgpr_sgpr_sgpr
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

@@ -37,7 +37,7 @@ public:
   CheckForOverride(Target &target,
                    lldb::BreakpointResolverSP initial_sp) override;
 
-  llvm::Error Validate() override;
+  llvm::Error HasErrors() override;
 
 private:
   StructuredDataImpl m_args_data;

@@ -81,18 +81,17 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
       [TTI](ScalableForceKind ForceScalableHint,
             ScalableForceKind ForceScalableOpt, unsigned ForceWidth,
             ElementCount ForceWidthOpt) -> ScalableForceKind {
-    // -scalable-vectorization=(always|off|on) has the highest precedence.
-    if (ForceScalableOpt != SK_Unspecified)
-      return ForceScalableOpt;
-
-    // Then, consider loop hints.
+    // Loop hints have the highest precedence.
     assert(ForceScalableHint != SK_AlwaysScalable && "Unexpected loop hint.");
     if (ForceScalableHint == SK_PreferScalable ||
         ForceScalableHint == SK_FixedWidthOnly)
       return ForceScalableHint;
 
+    // Then, consider -scalable-vectorization=(always|off|on).
+    if (ForceScalableOpt != SK_Unspecified)
+      return ForceScalableOpt;
+
     // Then, infer scalability from a preferred VF.
-    assert(ForceScalableOpt == SK_Unspecified);
     if (ForceWidthOpt.isScalable())
       return SK_AlwaysScalable;
     if (ForceWidth)
@@ -679,17 +678,30 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       return false;
   }
 
-  // Like for inner loops, the widest integer induction type is used for the
-  // canonical IV and trip count, so at least one integer induction is required.
-  if (!WidestIndTy) {
+  // Like for inner loops, the widest induction type is used for the canonical
+  // IV and trip count.
+  if (!canDetermineWidestInductionType())
+    return false;
+
+  return Result;
+}
+
+bool LoopVectorizationLegality::canDetermineWidestInductionType() {
+  if (Inductions.empty()) {
     reportVectorizationFailure(
         "Did not find one integer induction var",
         "loop induction variable could not be identified",
         "NoInductionVariable", ORE, TheLoop);
     return false;
   }
-
-  return Result;
+  if (!WidestIndTy) {
+    reportVectorizationFailure(
+        "Did not find one integer induction var",
+        "integer loop induction variable could not be identified",
+        "NoIntegerInductionVariable", ORE, TheLoop);
+    return false;
+  }
+  return true;
 }
 
 void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
@@ -712,7 +724,7 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
 
   // Int inductions are special because we only allow one IV.
   if (ID.getKind() == InductionDescriptor::IK_IntInduction &&
-      ID.getConstIntStepValue() && ID.getConstIntStepValue()->isOne() &&
+      ID.getConstStepValue() && ID.getConstStepValue()->isOne() &&
       isa<Constant>(ID.getStartValue()) &&
       cast<Constant>(ID.getStartValue())->isNullValue()) {
 
@@ -749,6 +761,19 @@ bool LoopVectorizationLegality::addConditionalInduction(
   return true;
 }
 
+/// Returns true if \p ID is a pointer induction with a non-constant step. Such
+/// inductions are rejected unless -lv-strided-pointer-ivs is set, to preserve
+/// historical vectorizer behavior after a generalization of the IVDescriptor
+/// code. The intent is to remove this check, but issues around code quality
+/// for such loops have to be fixed first.
+static bool isDisallowedStridedPointerInduction(const InductionDescriptor &ID,
+                                                const VectorizeOptions &Opts) {
+  if (Opts.lv_strided_pointer_ivs)
+    return false;
+  return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
+         !ID.getConstStepValue();
+}
+
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -756,7 +781,9 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
   auto IsSupportedPhi = [&](PHINode &Phi) -> bool {
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(&Phi, TheLoop, PSE, ID) &&
-        ID.getKind() == InductionDescriptor::IK_IntInduction) {
+        (ID.getKind() == InductionDescriptor::IK_IntInduction ||
+         ID.getKind() == InductionDescriptor::IK_PtrInduction) &&
+        !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(&Phi, ID);
       return true;
     }
@@ -814,20 +841,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   }
 
   if (!PrimaryInduction) {
-    if (Inductions.empty()) {
-      reportVectorizationFailure(
-          "Did not find one integer induction var",
-          "loop induction variable could not be identified",
-          "NoInductionVariable", ORE, TheLoop);
+    if (!canDetermineWidestInductionType())
       return false;
-    }
-    if (!WidestIndTy) {
-      reportVectorizationFailure(
-          "Did not find one integer induction var",
-          "integer loop induction variable could not be identified",
-          "NoIntegerInductionVariable", ORE, TheLoop);
-      return false;
-    }
     LLVM_DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
   }
 
@@ -888,21 +903,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
-    // We prevent matching non-constant strided pointer IVS to preserve
-    // historical vectorizer behavior after a generalization of the
-    // IVDescriptor code.  The intent is to remove this check, but we
-    // have to fix issues around code quality for such loops first.
-    auto IsDisallowedStridedPointerInduction =
-        [&](const InductionDescriptor &ID) {
-          if (Opts.lv_strided_pointer_ivs)
-            return false;
-          return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-                 ID.getConstIntStepValue() == nullptr;
-        };
-
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID) &&
-        !IsDisallowedStridedPointerInduction(ID)) {
+        !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(Phi, ID);
       Requirements->addExactFPMathInst(ID.getExactFPMathInst());
       return true;
@@ -923,7 +926,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // As a last resort, coerce the PHI to a AddRec expression
     // and re-try classifying it a an induction PHI.
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
-        !IsDisallowedStridedPointerInduction(ID)) {
+        !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(Phi, ID);
       return true;
     }
@@ -1712,10 +1715,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  if (Reductions.size() || FixedOrderRecurrences.size()) {
+  if (!FixedOrderRecurrences.empty()) {
     reportVectorizationFailure(
-        "Found reductions or recurrences in early-exit loop",
-        "Cannot vectorize early exit loop with reductions or recurrences",
+        "Found fixed-order recurrences in early-exit loop",
+        "Cannot vectorize early exit loop with fixed-order recurrences",
         "RecurrencesInEarlyExitLoop", ORE, TheLoop);
     return false;
   }
@@ -1749,7 +1752,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   Predicates.clear();
 
   if (UncountableExitingBlocks.empty()) {
-    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits");
+    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits\n");
     return false;
   }
 

@@ -2833,6 +2833,117 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
                Style);
 }
 
+TEST_F(FormatTest, FormatsSwitchStatementCompactCaseLabels) {
+  FormatStyle Style = getLLVMStyle();
+  Style.CompactCaseLabels = true;
+
+  Style.IndentCaseLabels = false;
+  verifyFormat("switch (n) {\n"
+               "break; case 0: {\n"
+               "  return false;\n"
+               "}\n"
+               "break; default: {\n"
+               "  return true;\n"
+               "}\n"
+               "}",
+               Style);
+
+  Style.IndentCaseLabels = true;
+  verifyFormat("switch (n) {\n"
+               "  break; case 0:\n"
+               "    foo();\n"
+               "  [[fallthrough]]; case 1:\n"
+               "    bar();\n"
+               "}",
+               Style);
+
+  verifyFormat("switch (n) {\n"
+               "  break; case 0: {\n"
+               "    return false;\n"
+               "  }\n"
+               "  [[fallthrough]]; default:;\n"
+               "}",
+               Style);
+
+  verifyFormat("switch (n) {\n"
+               "  break; case 0: {\n"
+               "    return false;\n"
+               "  }\n"
+               "  break; case 1:\n"
+               "    while (x)\n"
+               "      break;\n"
+               "  case 2:\n"
+               "  break; default: {\n"
+               "    return true;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  Style.BraceWrapping.AfterCaseLabel = true;
+  verifyFormat("switch (n)\n"
+               "{\n"
+               "  break; case 0:\n"
+               "  {\n"
+               "    foo();\n"
+               "  }\n"
+               "  break; case 1:\n"
+               "  {\n"
+               "    bar();\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.IndentBraces = true;
+  verifyFormat("switch (n)\n"
+               "  {\n"
+               "    break; case 0:\n"
+               "      {\n"
+               "        foo();\n"
+               "      }\n"
+               "    break; case 1:\n"
+               "      {\n"
+               "        bar();\n"
+               "      }\n"
+               "  }",
+               Style);
+
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Never;
+  Style.BraceWrapping.AfterCaseLabel = false;
+  Style.BraceWrapping.IndentBraces = false;
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Always;
+  verifyFormat("switch (n) {\n"
+               "  break; case 0:\n"
+               "    foo();\n"
+               "    [[fallthrough]];\n"
+               "  case 1:\n"
+               "    bar();\n"
+               "}",
+               "switch (n) {\n"
+               "  break; case 0:\n"
+               "    foo();\n"
+               "  [[fallthrough]]; case 1:\n"
+               "    bar();\n"
+               "}",
+               Style);
+
+  Style.AllowShortCaseLabelsOnASingleLine = true;
+  Style.AlignConsecutiveShortCaseStatements.Enabled = true;
+  verifyFormat("switch (n) {\n"
+               "  break; case 0:  b = false;\n"
+               "  break; default: b = true;\n"
+               "}",
+               Style);
+
+  verifyFormat("switch (n) {\n"
+               "  case 0:         b = false;\n"
+               "  break; default: b = true;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, CaseRanges) {
   verifyFormat("switch (x) {\n"
                "case 'A' ... 'Z':\n"
@@ -7697,7 +7808,21 @@ TEST_F(FormatTest, EnumAssignmentContinuationIndentation) {
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
   verifyFormat("enum Flag {\n"
                "  VeryLongFlagNameThatForcesBreak =\n"
-               "          1 << 2 << 3,\n"
+               "      1 << 2 << 3,\n"
+               "};",
+               Style);
+
+  Style.ColumnLimit = 42;
+  verifyFormat("enum Flag {\n"
+               "  VeryLongFlagNameThatForcesBreak =\n"
+               "      1 << 2 << 3,\n"
+               "};",
+               Style);
+
+  Style = getLLVMStyleWithColumns(42);
+  verifyFormat("enum Flag {\n"
+               "  VeryLongFlagNameThatForcesBreak =\n"
+               "      1 << 2 << 3,\n"
                "};",
                Style);
 }

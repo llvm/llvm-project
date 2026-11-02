@@ -1851,6 +1851,16 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
+  void Post(const parser::OmpAssumesDirective &x) {
+    if (llvm::any_of(x.v.Clauses().v, [](const parser::OmpClause &clause) {
+          return std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u);
+        })) {
+      if (Symbol * symbol{currScope().symbol()}) {
+        symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+      }
+    }
+  }
+
   // Make sure that the following code is properly handled:
   //
   // function baz(a)

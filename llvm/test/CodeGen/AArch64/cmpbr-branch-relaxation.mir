@@ -7,6 +7,7 @@
 # RUN:    FileCheck -check-prefix=NO-RELAX %s
 ---
 name:            relax_cb
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
