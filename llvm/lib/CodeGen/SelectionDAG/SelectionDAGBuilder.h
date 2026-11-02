@@ -277,6 +277,20 @@ public:
   /// Map a landing pad to the call site indexes.
   DenseMap<MachineBasicBlock *, SmallVector<unsigned, 4>> LPadToCallSiteMap;
 
+  /// A direct output of a callbr's asm, and the registers that its
+  /// INLINEASM_BR defines it in (see RegsForValue). The indirect targets read
+  /// the output from these registers, since the copies of it after the
+  /// INLINEASM_BR are only on the path to the default target.
+  struct CallBrOutput {
+    TargetLowering::AsmOperandInfo OpInfo;
+    SmallVector<Register, 4> Regs;
+    MVT RegVT;
+    EVT ValueVT;
+  };
+
+  /// The direct outputs, in order, of each callbr whose asm was lowered.
+  DenseMap<const CallBrInst *, SmallVector<CallBrOutput, 2>> CallBrOutputs;
+
   /// This is set to true if a call in the current block has been translated as
   /// a tail call. In this case, no subsequent DAG nodes should be created.
   bool HasTailCall = false;
