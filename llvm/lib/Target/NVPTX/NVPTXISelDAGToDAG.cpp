@@ -1469,12 +1469,19 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   MachineMemOperand *MemRef = LD->getMemOperand();
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(NVPTXLD), {MemRef});
 
-  SDNode *Result = NVPTXLD;
-  if (IsB128)
-    Result = CurDAG->getMachineNode(NVPTX::I128toV2I64, DL, LD->getVTList(),
-                                    {SDValue(NVPTXLD, 0), SDValue(NVPTXLD, 1)});
-
-  ReplaceNode(LD, Result);
+  if (IsB128) {
+    SDNode *Unpacked = CurDAG->getMachineNode(
+        NVPTX::I128toV2I64, DL, {MVT::i64, MVT::i64}, SDValue(NVPTXLD, 0));
+    // Replace results directly: DAGCombiner has already run, and emission
+    // does not assign registers to MERGE_VALUES results.
+    SDValue LoadChain(NVPTXLD, 1);
+    SDValue OldResults[] = {SDValue(LD, 0), SDValue(LD, 1), SDValue(LD, 2)};
+    SDValue Results[] = {SDValue(Unpacked, 0), SDValue(Unpacked, 1), LoadChain};
+    ReplaceUses(OldResults, Results, 3);
+    CurDAG->RemoveDeadNode(LD);
+  } else {
+    ReplaceNode(LD, NVPTXLD);
+  }
   return true;
 }
 
