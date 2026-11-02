@@ -2748,7 +2748,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
           break;
         }
         if (symIndex >= syms.size()) {
-          Err(ctx) << f << ": invalid symbol index in addrsig section";
+          Err(ctx) << f << ": out of range symbol index "
+                   << symIndex << " in addrsig section";
           break;
         }
         markAddrsig(icfSafe, syms[symIndex]);
