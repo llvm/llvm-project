@@ -608,7 +608,7 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
         } else {
           return IostatEnd;
         }
-      } else { // non-contiguous or byte-swapped intrinsic type unformatted I/O
+      } else { // non-contiguous intrinsic type unformatted I/O
         for (; !IsComplete(); Advance()) {
           char &x{ExtractElement<char>(io_, instance_, subscripts_)};
           if (Transfer(x, elementBytes)) {

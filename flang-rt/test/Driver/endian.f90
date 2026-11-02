@@ -14,8 +14,8 @@ program main
   call test2()
   call test4()
   call test8()
-  call testComplex()
-  call testDerived()
+  call testEmptyItem()
+  call testReadSwapped()
   print *,'PASS'
 
 end program main
@@ -93,60 +93,40 @@ subroutine test8()
      stop
   endif
 end subroutine
-subroutine testComplex()
+! A zero-size array followed by another item, with IOSTAT=.
+! Fails without the change: the scalar is neither written nor read.
+subroutine testEmptyItem()
   implicit none
-  complex(8) z(2)
-  integer(1) i32(32)
-
-  z = (/ (1.0_8, 2.0_8), (3.0_8, 4.0_8) /)
-
-  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='swap')
-  write(10) z
+  integer(4), allocatable :: empty(:)
+  integer(4) :: x, y, ios, n
+  allocate(empty(0))
+  x = 123456789
+  open(10,file='test.dat',form='unformatted',access='stream',status='replace',convert='swap')
+  write(10,iostat=ios) empty, x
+  inquire(10,size=n)
+  if (ios /= 0 .or. n /= 4) error stop 'empty item: write'
+  rewind(10)
+  y = -1
+  read(10,iostat=ios) empty, y
   close(10)
-
-  open(10,file='test.dat',form='unformatted',access='stream',status='unknown')
-  read(10) i32
-  close(10)
-
-  ! Each complex(8) value consists of two real(8) components.
-  call SwapEndianness(i32, 32_8, 8_8)
-
-  if (.not. all (z == transfer(i32, z))) then
-     stop
-  endif
+  if (ios /= 0 .or. y /= x) error stop 'empty item: read'
 end subroutine
-subroutine testDerived()
+! Swapped READ of arrays whose swap unit is smaller than the element
+! (CHARACTER(KIND=4), COMPLEX), plus a strided target.
+subroutine testReadSwapped()
   implicit none
-  integer k
-  type :: t
-     integer(4) :: i
-     real(8) :: x
-  end type t
-  type(t) :: a(2)
-  integer(1) i4(4)
-  integer(1) i8(8)
-
-  a = (/ t(1_4, 2.0_8), t(3_4, 4.0_8) /)
-
-  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='swap')
-  write(10) a
+  character(kind=4,len=3) :: c(3), c2(3)
+  complex(4) :: z(3), z2(3)
+  integer(4) :: i(6), i2(6)
+  c = [4_'abc', 4_'def', 4_'ghi']
+  z = [(1.0,2.0), (3.0,4.0), (5.0,6.0)]
+  i = [1, 2, 3, 4, 5, 6]
+  open(10,file='test.dat',form='unformatted',access='stream',status='replace',convert='swap')
+  write(10) c, z, i(1:6:2)
+  rewind(10)
+  i2 = -1
+  read(10) c2, z2, i2(1:6:2)
   close(10)
-
-  open(10,file='test.dat',form='unformatted',access='stream',status='unknown')
-  do k=1,2
-     read(10) i4
-     call SwapEndianness(i4, 4_8, 4_8)
-
-     if (.not. (a(k)%i == transfer(i4, a(k)%i))) then
-        stop
-     endif
-     read(10) i8
-     call SwapEndianness(i8, 8_8, 8_8)
-
-     if (.not. (a(k)%x == transfer(i8, a(k)%x))) then
-        stop
-     endif
-  enddo
-
-  close(10)
-end subroutine testDerived
+  if (any(c2 /= c) .or. any(z2 /= z)) error stop 'swapped read'
+  if (any(i2(1:6:2) /= i(1:6:2)) .or. any(i2(2:6:2) /= -1)) error stop 'strided read'
+end subroutine
