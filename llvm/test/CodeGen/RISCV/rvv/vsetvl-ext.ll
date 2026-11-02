@@ -638,7 +638,6 @@ define i64 @vsetvl_bounded_avl(i64 %avl) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 31
 ; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, ma
-; CHECK-NEXT:    andi a0, a0, 31
 ; CHECK-NEXT:    ret
   %limit = and i64 %avl, 31
   %vl = call i64 @llvm.riscv.vsetvli(i64 %limit, i64 0, i64 0)
@@ -664,13 +663,9 @@ define i64 @vsetvl_bounded_avl_narrow_mask(i64 %avl) {
 define <vscale x 2 x i32> @prefix_create_mask_i32_indices(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, i64 %avl) {
 ; CHECK-LABEL: prefix_create_mask_i32_indices:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v11
-; CHECK-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vmslt.vx v0, v11, a0
-; CHECK-NEXT:    vadd.vv v10, v9, v8, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v10, v9, v8
+; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %vl = tail call range(i64 0, 2049) i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 2, i64 0)
   %id = tail call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
