@@ -1113,8 +1113,9 @@ define void @repeated_div_mixed_contract_reversed(
 ; GFX6-NEXT:    v_div_fmas_f32 v8, v8, v9, v11
 ; GFX6-NEXT:    v_div_fixup_f32 v6, v8, v6, 1.0
 ; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    v_mul_f32_e32 v5, v5, v6
 ; GFX6-NEXT:    v_mul_f32_e32 v4, v4, v6
-; GFX6-NEXT:    v_fma_f32 v5, v5, v6, v7
+; GFX6-NEXT:    v_add_f32_e32 v5, v5, v7
 ; GFX6-NEXT:    buffer_store_dword v4, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    buffer_store_dword v5, v[2:3], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -1134,8 +1135,9 @@ define void @repeated_div_mixed_contract_reversed(
 ; GFX9-NEXT:    v_fma_f32 v8, -v8, v11, v9
 ; GFX9-NEXT:    v_div_fmas_f32 v8, v8, v10, v11
 ; GFX9-NEXT:    v_div_fixup_f32 v6, v8, v6, 1.0
+; GFX9-NEXT:    v_mul_f32_e32 v5, v5, v6
 ; GFX9-NEXT:    v_mul_f32_e32 v4, v4, v6
-; GFX9-NEXT:    v_fma_f32 v5, v5, v6, v7
+; GFX9-NEXT:    v_add_f32_e32 v5, v5, v7
 ; GFX9-NEXT:    global_store_dword v[0:1], v4, off
 ; GFX9-NEXT:    global_store_dword v[2:3], v5, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1145,26 +1147,26 @@ define void @repeated_div_mixed_contract_reversed(
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_div_scale_f32 v8, null, v6, v6, 1.0
-; GFX11-NEXT:    v_div_scale_f32 v11, vcc_lo, 1.0, v6, 1.0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_rcp_f32_e32 v9, v8
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_f32 v10, -v8, v9, 1.0
 ; GFX11-NEXT:    v_fmac_f32_e32 v9, v10, v9
+; GFX11-NEXT:    v_div_scale_f32 v10, vcc_lo, 1.0, v6, 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_mul_f32_e32 v10, v11, v9
-; GFX11-NEXT:    v_fma_f32 v12, -v8, v10, v11
+; GFX11-NEXT:    v_mul_f32_e32 v11, v10, v9
+; GFX11-NEXT:    v_fma_f32 v12, -v8, v11, v10
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_fmac_f32_e32 v10, v12, v9
-; GFX11-NEXT:    v_fma_f32 v8, -v8, v10, v11
+; GFX11-NEXT:    v_fmac_f32_e32 v11, v12, v9
+; GFX11-NEXT:    v_fma_f32 v8, -v8, v11, v10
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_div_fmas_f32 v8, v8, v9, v10
+; GFX11-NEXT:    v_div_fmas_f32 v8, v8, v9, v11
 ; GFX11-NEXT:    v_div_fixup_f32 v6, v8, v6, 1.0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mul_f32_e32 v4, v4, v6
-; GFX11-NEXT:    v_fmac_f32_e32 v7, v5, v6
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_mul_f32_e32 v5, v5, v6
+; GFX11-NEXT:    v_dual_mul_f32 v4, v4, v6 :: v_dual_add_f32 v5, v5, v7
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off
-; GFX11-NEXT:    global_store_b32 v[2:3], v7, off
+; GFX11-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
     ptr addrspace(1) %out, ptr addrspace(1) %sum_out,
     float %a, float %b, float %divisor, float %c) #0 {
