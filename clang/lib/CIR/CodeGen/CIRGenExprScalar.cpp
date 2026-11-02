@@ -3348,10 +3348,8 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     mlir::Value rhsValue = Visit(rhsExpr);
 
     // Test the MSB with a signed compare, as classic codegen does.
-    auto condVecTy = cast<cir::VectorType>(convertType(condType));
-    auto condEltTy = cast<cir::IntType>(condVecTy.getElementType());
-    mlir::Type vecTy = cir::VectorType::get(
-        builder.getSIntNTy(condEltTy.getWidth()), condVecTy.getSize());
+    mlir::Type vecTy =
+        convertType(cgf.getContext().getCorrespondingSignedType(condType));
     condValue = builder.createBitcast(condValue, vecTy);
     mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
     auto testMSB = cir::VecCmpOp::create(
