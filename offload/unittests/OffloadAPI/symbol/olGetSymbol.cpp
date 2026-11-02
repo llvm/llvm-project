@@ -130,7 +130,7 @@ TEST_P(olGetSymbolImageVariableTest, InvalidName) {
 }
 
 // Zero-initialized globals live in `.bss` and have no contents in the image,
-// so only the (lazy) host address query fails.
+// so only the host address query fails.
 TEST_P(olGetSymbolGlobalTest, InvalidHostAddressNoContents) {
   ol_symbol_handle_t Global = nullptr;
   ASSERT_SUCCESS(
