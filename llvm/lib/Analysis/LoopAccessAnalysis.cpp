@@ -242,6 +242,8 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
   MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
+  StartOffset = SE.applyLoopGuards(StartOffset, LoopGuards);
+  DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
 
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
@@ -273,7 +275,6 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
       return false;
-    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
   } else {
     // For a negative step StartOffset is the highest offset and AR at MaxBTC
     // is DistToLastIter below it, so it must not fall below StartPtr. The end
