@@ -735,20 +735,6 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
 
     auto &GlobalRes = (*GlobalResolutions)[SymbolName];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
-    if (Res.Prevailing) {
-      assert(!GlobalRes.Prevailing &&
-             "Multiple prevailing defs are not allowed");
-      GlobalRes.Prevailing = true;
-      GlobalRes.IRName = std::string(Sym.getIRName());
-    } else if (!GlobalRes.Prevailing && GlobalRes.IRName.empty()) {
-      // Sometimes it can be two copies of symbol in a module and prevailing
-      // symbol can have no IR name. That might happen if symbol is defined in
-      // module level inline asm block. In case we have multiple modules with
-      // the same symbol we want to use IR name of the prevailing symbol.
-      // Otherwise, if we haven't seen a prevailing symbol, set the name so that
-      // we can later use it to check if there is any prevailing copy in IR.
-      GlobalRes.IRName = std::string(Sym.getIRName());
-    }
 
     // In rare occasion, the symbol used to initialize GlobalRes has a different
     // IRName from the inspected Symbol. This can happen on macOS + iOS, when a
@@ -762,9 +748,25 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // based on mangled name, but this requires an access to the Target Triple
     // and would be relatively invasive on the codebase.
     // FIXME: use the GUID member of GlobalRes.
-    if (GlobalRes.IRName != Sym.getIRName()) {
+    if ((GlobalRes.Prevailing || !GlobalRes.IRName.empty()) &&
+        GlobalRes.IRName != Sym.getIRName()) {
       GlobalRes.Partition = GlobalResolution::External;
       GlobalRes.VisibleOutsideSummary = true;
+    }
+
+    if (Res.Prevailing) {
+      assert(!GlobalRes.Prevailing &&
+             "Multiple prevailing defs are not allowed");
+      GlobalRes.Prevailing = true;
+      GlobalRes.IRName = std::string(Sym.getIRName());
+    } else if (!GlobalRes.Prevailing && GlobalRes.IRName.empty()) {
+      // Sometimes it can be two copies of symbol in a module and prevailing
+      // symbol can have no IR name. That might happen if symbol is defined in
+      // module level inline asm block. In case we have multiple modules with
+      // the same symbol we want to use IR name of the prevailing symbol.
+      // Otherwise, if we haven't seen a prevailing symbol, set the name so that
+      // we can later use it to check if there is any prevailing copy in IR.
+      GlobalRes.IRName = std::string(Sym.getIRName());
     }
 
     bool IsLibcall = Sym.isLibcall(TLI, Libcalls);
