@@ -1,5 +1,5 @@
 // RUN: mlir-translate -no-implicit-module -split-input-file --verify-diagnostics -mlir-print-debuginfo -test-spirv-roundtrip-debug %s | FileCheck %s
-// RUN: mlir-translate -no-implicit-module -split-input-file -mlir-print-debuginfo --spirv-emit-debug-info -serialize-spirv -deserialize-spirv %s | FileCheck %s
+// RUN: mlir-translate --no-implicit-module --split-input-file --mlir-print-debuginfo --spirv-emit-debug-info --serialize-spirv --deserialize-spirv %s | FileCheck %s
 // RUN: %if spirv-tools %{ rm -rf %t %}
 // RUN: %if spirv-tools %{ mkdir %t %}
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --spirv-emit-debug-info --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
