@@ -180,6 +180,96 @@ define void @lifetime(ptr %v) {
   ret void
 }
 
+; A variable moving to another alloca ends the first alloca's record, even if
+; the second alloca is promoted first.
+define void @moved(i32 %a1, i32 %a2, i32 %b0, i32 %b1) {
+; CHECK-LABEL: define void @moved(
+; CHECK-SAME:    i32 [[A1:%.*]], i32 [[A2:%.*]], i32 [[B0:%.*]], i32 [[B1:%.*]])
+; CHECK-NEXT:    #dbg_value(i32 [[A1]], {{.*}}, !DIExpression(),
+; CHECK-NEXT:    call
+; CHECK-NEXT:    #dbg_value(i32 [[B1]], {{.*}}, !DIExpression(),
+; CHECK-NEXT:    call
+; CHECK-NEXT:    call
+; CHECK-NEXT:    ret void
+  %b = alloca i32
+  %a = alloca i32
+    #dbg_value(ptr %a, !20, !DIExpression(DW_OP_deref), !30)
+  store i32 %a1, ptr %a
+  call void @step()
+  store i32 %b0, ptr %b
+  store i32 %b1, ptr %b
+    #dbg_value(ptr %b, !20, !DIExpression(DW_OP_deref), !30)
+  call void @step()
+  store i32 %a2, ptr %a
+  call void @step()
+  ret void
+}
+
+; Same, with the first alloca promoted first.
+define void @moved_swapped(i32 %a1, i32 %a2, i32 %b0, i32 %b1) {
+; CHECK-LABEL: define void @moved_swapped(
+; CHECK-SAME:    i32 [[A1:%.*]], i32 [[A2:%.*]], i32 [[B0:%.*]], i32 [[B1:%.*]])
+; CHECK-NEXT:    #dbg_value(i32 [[A1]], {{.*}}, !DIExpression(),
+; CHECK-NEXT:    call
+; CHECK-NEXT:    #dbg_value(i32 [[B1]], {{.*}}, !DIExpression(),
+; CHECK-NEXT:    call
+; CHECK-NEXT:    call
+; CHECK-NEXT:    ret void
+  %a = alloca i32
+  %b = alloca i32
+    #dbg_value(ptr %a, !20, !DIExpression(DW_OP_deref), !30)
+  store i32 %a1, ptr %a
+  call void @step()
+  store i32 %b0, ptr %b
+  store i32 %b1, ptr %b
+    #dbg_value(ptr %b, !20, !DIExpression(DW_OP_deref), !30)
+  call void @step()
+  store i32 %a2, ptr %a
+  call void @step()
+  ret void
+}
+
+; A record with no store before it is removed.
+define void @uninitialized(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @uninitialized(
+; CHECK-SAME:    i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    #dbg_value(i32 0, {{.*}}, !DIExpression(),
+; CHECK-NEXT:    call
+; CHECK-NEXT:    #dbg_value(i32 [[A]], {{.*}}, !DIExpression(),
+; CHECK-NEXT:    call
+; CHECK-NEXT:    #dbg_value(i32 [[B]], {{.*}}, !DIExpression(),
+; CHECK-NEXT:    call
+; CHECK-NEXT:    ret void
+  %x = alloca i32
+    #dbg_value(i32 0, !20, !DIExpression(), !30)
+    #dbg_value(ptr %x, !20, !DIExpression(DW_OP_deref), !30)
+  call void @step()
+  store i32 %a, ptr %x
+  call void @step()
+  store i32 %b, ptr %x
+  call void @step()
+  ret void
+}
+
+; The lifetime marker doesn't create a poison record before the first step.
+define void @lifetime_uninitialized(ptr %v) {
+; CHECK-LABEL: define void @lifetime_uninitialized(
+; CHECK-SAME:    ptr [[V:%.*]])
+; CHECK-NEXT:    #dbg_value(ptr null, {{.*}}, !DIExpression(),
+; CHECK-NEXT:    call
+; CHECK-NEXT:    #dbg_value(ptr [[V]], {{.*}}, !DIExpression(),
+; CHECK-NEXT:    ret void
+  %a = alloca ptr
+    #dbg_value(ptr null, !22, !DIExpression(), !30)
+  call void @llvm.lifetime.start.p0(ptr %a)
+    #dbg_value(ptr %a, !22, !DIExpression(DW_OP_deref), !30)
+  call void @step()
+  store ptr %v, ptr %a
+  call void @llvm.lifetime.end.p0(ptr %a)
+  ret void
+}
+
+
 declare void @step()
 
 !llvm.module.flags = !{!1, !2}

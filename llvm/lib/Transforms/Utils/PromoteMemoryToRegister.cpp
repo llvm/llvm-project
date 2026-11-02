@@ -269,6 +269,7 @@ struct AllocaInfo {
 
 using DVRIndirectValuesAtStoreMap =
     DenseMap<StoreInst *, SmallVector<DbgVariableRecord *, 1>>;
+using DVRIndirectValueLastStoreMap = DenseMap<DbgVariableRecord *, StoreInst *>;
 
 template <typename T> class VectorWithUndo {
   SmallVector<T, 8> Vals;
@@ -406,6 +407,9 @@ struct PromoteMem2Reg {
 
   /// For each store to an alloca, the #dbg_values with a deref alive there.
   DVRIndirectValuesAtStoreMap DVRIndirectValuesAtStore;
+  /// For each #dbg_value with a deref, the last store to its alloca before it,
+  /// in its block.
+  DVRIndirectValueLastStoreMap DVRIndirectValueLastStore;
 
   /// The set of basic blocks the renamer has already visited.
   BitVector Visited;
@@ -686,7 +690,8 @@ static bool promoteSingleBlockAlloca(
     AllocaInst *AI, const AllocaInfo &Info, LargeBlockInfo &LBI,
     const DataLayout &DL, DominatorTree &DT, AssumptionCache *AC,
     SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete,
-    const DVRIndirectValuesAtStoreMap &DVRIndirectValuesAtStore) {
+    const DVRIndirectValuesAtStoreMap &DVRIndirectValuesAtStore,
+    const DVRIndirectValueLastStoreMap &DVRIndirectValueLastStore) {
   // The trickiest case to handle is when we have large blocks. Because of this,
   // this code is optimized assuming that large blocks happen.  This does not
   // significantly pessimize the small block case.  This uses LargeBlockInfo to
@@ -745,6 +750,31 @@ static bool promoteSingleBlockAlloca(
     LBI.deleteValue(LI);
   }
 
+  // Each #dbg_value with a deref takes the value of the last store to the
+  // alloca, with its deref stripped.
+  SmallVector<std::pair<DbgVariableRecord *, Value *>, 1> DVRIndirectValues;
+  for (DbgVariableRecord *DbgItem : Info.DPUsers) {
+    if (!DbgItem->isDbgValue() || !DbgItem->getExpression()->startsWithDeref())
+      continue;
+
+    StoreInst *SI = DVRIndirectValueLastStore.lookup(DbgItem);
+    // If there is no store to the alloca yet, or if the content is undef, the
+    // variable should keep its previous location.
+    Value *LastStoreValue = nullptr;
+    if (SI && (!isa<UndefValue>(SI->getValueOperand()) ||
+               isa<PoisonValue>(SI->getValueOperand()))) {
+      LastStoreValue = SI->getValueOperand();
+    }
+
+    // If the next instruction is a store, mark the record for removal to avoid
+    // a duplicate record, as the store will also create a record.
+    auto *Next = dyn_cast<StoreInst>(DbgItem->getInstruction());
+    if (Next && Next->getPointerOperand() == AI) {
+      LastStoreValue = nullptr;
+    }
+    DVRIndirectValues.push_back({DbgItem, LastStoreValue});
+  }
+
   // Remove the (now dead) stores and alloca.
   DIBuilder DIB(*AI->getModule(), /*AllowUnresolved*/ false);
   while (!AI->use_empty()) {
@@ -774,19 +804,33 @@ static bool promoteSingleBlockAlloca(
   at::deleteAssignmentMarkers(AI);
   AI->eraseFromParent();
 
-  // The alloca's debuginfo can be removed as well.
+  // The alloca's #dbg_declare records have been rewritten and can be deleted.
   for (DbgVariableRecord *DbgItem : Info.DPUsers) {
     if (DbgItem->isAddressOfVariable() ||
-        DbgItem->getExpression()->startsWithDeref())
+        (DbgItem->isDbgDeclareValue() &&
+         DbgItem->getExpression()->startsWithDeref()))
       DbgItem->eraseFromParent();
+  }
+  // Indirect #dbg_value records are rewritten to use the last store to the
+  // alloca, or removed if there is none.
+  for (auto [DbgItem, V] : DVRIndirectValues) {
+    if (!V) {
+      DbgItem->eraseFromParent();
+      continue;
+    }
+    DbgItem->setRawLocation(ValueAsMetadata::get(V));
+    DbgItem->setExpression(DIExpression::get(
+        V->getContext(), DbgItem->getExpression()
+                             ->getSingleLocationExpressionElements()
+                             ->drop_front()));
   }
 
   ++NumLocalPromoted;
   return true;
 }
 
-/// Collect which records are valid at each store, walking each block once for
-/// all allocas.
+/// Collect which records are valid at each store, and which store reaches each
+/// record, walking each block once for all allocas.
 void PromoteMem2Reg::collectDVRIndirectValuesAtStores() {
   // A #dbg_value with a deref can be cloned and rewritten at each store.
   // Any other kind is left to be poisoned.
@@ -808,6 +852,8 @@ void PromoteMem2Reg::collectDVRIndirectValuesAtStores() {
         LiveByVar;
     // The records alive at this point, whose value use the alloca.
     SmallDenseMap<Value *, SmallVector<DbgVariableRecord *, 1>> LiveByAlloca;
+    // The last store to each alloca before this point.
+    SmallDenseMap<Value *, StoreInst *> LastStore;
     for (Instruction &I : *BB) {
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
         // Only #dbg_values have a meaningful location.
@@ -824,13 +870,17 @@ void PromoteMem2Reg::collectDVRIndirectValuesAtStores() {
         // If this is one of our indirect records, mark it live.
         if (DVRIndirectValues.contains(&DVR)) {
           Live.push_back(&DVR);
-          LiveByAlloca[DVR.getVariableLocationOp(0)].push_back(&DVR);
+          Value *Ptr = DVR.getVariableLocationOp(0);
+          LiveByAlloca[Ptr].push_back(&DVR);
+          if (StoreInst *SI = LastStore.lookup(Ptr))
+            DVRIndirectValueLastStore[&DVR] = SI;
         }
       }
       // Save the records alive at this point.
       auto *SI = dyn_cast<StoreInst>(&I);
       if (!SI)
         continue;
+      LastStore[SI->getPointerOperand()] = SI;
       // Copy the list of live records into the map, if it was tracked.
       auto Live = LiveByAlloca.lookup(SI->getPointerOperand());
       if (!Live.empty())
@@ -898,8 +948,8 @@ void PromoteMem2Reg::run() {
     // linear sweep over the block to eliminate it.
     if (Info.OnlyUsedInOneBlock &&
         promoteSingleBlockAlloca(AI, Info, LBI, SQ.DL, DT, AC,
-                                 &DVRAssignsToDelete,
-                                 DVRIndirectValuesAtStore)) {
+                                 &DVRAssignsToDelete, DVRIndirectValuesAtStore,
+                                 DVRIndirectValueLastStore)) {
       // The alloca has been processed, move on.
       RemoveFromAllocasList(AllocaNum);
       continue;

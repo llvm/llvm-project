@@ -21,6 +21,7 @@
 ; CHECK: define dso_local void @fun()
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: #dbg_value(ptr null, ![[LOCAL:[0-9]+]], !DIExpression(),
+; CHECK-NEXT: #dbg_value(ptr null, ![[LOCAL]], !DIExpression(),
 ; CHECK-NEXT: #dbg_value(ptr poison, ![[C:[0-9]+]], !DIExpression(),
 ; CHECK-NOT: #dbg_value({{.*}}, ![[LOCAL]]
 ; CHECK: [[ADD:%.*]] = getelementptr inbounds i8, ptr null, i64 4
