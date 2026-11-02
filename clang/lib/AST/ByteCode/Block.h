@@ -71,7 +71,7 @@ public:
   }
 
   /// Number of bytes needed to allocate the block.
-  static constexpr unsigned allocSize(const Descriptor *D, BlockKind K) {
+  static unsigned allocSize(const Descriptor *D, BlockKind K) {
     return sizeof(Block) + getMetadataSize(K) + D->getAllocSize();
   }
 
