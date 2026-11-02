@@ -88,6 +88,7 @@ body:             |
 ...
 ---
 name:            add_nsw_nuw_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: add_nsw_nuw_i32
