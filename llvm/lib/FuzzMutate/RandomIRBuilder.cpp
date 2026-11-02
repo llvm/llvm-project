@@ -90,6 +90,10 @@ std::pair<GlobalVariable *, bool>
 RandomIRBuilder::findOrCreateGlobalVariable(Module *M, ArrayRef<Value *> Srcs,
                                             fuzzerop::SourcePred Pred) {
   auto MatchesPred = [&Srcs, &Pred](GlobalVariable *GV) {
+    // The value is read with a load, so skip globals of unsized type (e.g. an
+    // opaque struct), which can't be loaded.
+    if (!GV->getValueType()->isSized())
+      return false;
     // Can't directly compare GV's type, as it would be a pointer to the actual
     // type.
     return Pred.matches(Srcs, PoisonValue::get(GV->getValueType()));
