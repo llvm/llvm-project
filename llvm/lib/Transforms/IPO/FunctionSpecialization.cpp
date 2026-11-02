@@ -592,7 +592,7 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
     if (!Solver.isBlockExecutable(Call->getParent()))
       continue;
 
-    llvm::DenseSet<Value *> NoPromote;
+    DenseSet<Value *> NoPromote;
     SmallVector<unsigned> ConstValArgs;
     for (const Use &U : Call->args()) {
       unsigned Idx = Call->getArgOperandNo(&U);
@@ -609,14 +609,14 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
         ConstValArgs.push_back(Idx);
     }
 
-    llvm::DenseMap<Value *, Value *> ArgVals;
+    SmallDenseMap<Value *, Value *> ArgVals;
     for (unsigned Idx : ConstValArgs) {
       Value *ArgOp = Call->getArgOperand(Idx);
 
       if (NoPromote.contains(ArgOp))
         continue;
 
-      Value *GV = ArgVals.lookup_or(ArgOp, nullptr);
+      auto &GV = ArgVals[ArgOp];
       if (!GV) {
         auto *ConstVal = getConstantStackValue(Call, ArgOp);
         GV = new GlobalVariable(M, ConstVal->getType(), true,
