@@ -820,5 +820,78 @@ exit:
   ret void
 }
 
+; The lanes from the landing pad are speculated in %bb, the region entry is not
+; an EH pad.
+define void @eh_pad_lanes(ptr %p, ptr %q) personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define void @eh_pad_lanes(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
+; CHECK-NEXT:    [[X2:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load i32, ptr [[P3]], align 4
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[M2:%.*]] = mul i32 [[X2]], 7
+; CHECK-NEXT:    [[M3:%.*]] = mul i32 [[X3]], 9
+; CHECK-NEXT:    invoke void @foo()
+; CHECK-NEXT:            to label %[[OK:.*]] unwind label %[[LPAD:.*]]
+; CHECK:       [[OK]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[M0:%.*]] = mul i32 [[X0]], 3
+; CHECK-NEXT:    [[M1:%.*]] = mul i32 [[X1]], 5
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    store i32 [[M0]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 1
+; CHECK-NEXT:    store i32 [[M1]], ptr [[Q1]], align 4
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 2
+; CHECK-NEXT:    store i32 [[M2]], ptr [[Q2]], align 4
+; CHECK-NEXT:    [[Q3:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 3
+; CHECK-NEXT:    store i32 [[M3]], ptr [[Q3]], align 4
+; CHECK-NEXT:    resume { ptr, i32 } [[LP]]
+;
+entry:
+  %x0 = load i32, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  %x1 = load i32, ptr %p1, align 4
+  %p2 = getelementptr inbounds i32, ptr %p, i64 2
+  %x2 = load i32, ptr %p2, align 4
+  %p3 = getelementptr inbounds i32, ptr %p, i64 3
+  %x3 = load i32, ptr %p3, align 4
+  br label %bb
+
+bb:
+  %m2 = mul i32 %x2, 7
+  %m3 = mul i32 %x3, 9
+  invoke void @foo() to label %ok unwind label %lpad
+
+ok:
+  ret void
+
+lpad:
+  %lp = landingpad { ptr, i32 } cleanup
+  %m0 = mul i32 %x0, 3
+  %m1 = mul i32 %x1, 5
+  br label %exit
+
+exit:
+  store i32 %m0, ptr %q, align 4
+  %q1 = getelementptr inbounds i32, ptr %q, i64 1
+  store i32 %m1, ptr %q1, align 4
+  %q2 = getelementptr inbounds i32, ptr %q, i64 2
+  store i32 %m2, ptr %q2, align 4
+  %q3 = getelementptr inbounds i32, ptr %q, i64 3
+  store i32 %m3, ptr %q3, align 4
+  resume { ptr, i32 } %lp
+}
+
 declare void @foo()
 declare void @bar(i32)
+declare i32 @__gxx_personality_v0(...)

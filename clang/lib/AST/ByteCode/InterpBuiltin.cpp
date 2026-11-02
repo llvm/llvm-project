@@ -2328,6 +2328,10 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     pushInteger(S, 0, Call->getType());
     return true;
   }
+
+  if (PtrA.isFunctionPointer() || PtrB.isFunctionPointer())
+    return false;
+
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
