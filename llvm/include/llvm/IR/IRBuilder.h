@@ -2167,7 +2167,8 @@ public:
       Value *VScale = CreateVScale(Offset->getType()->getScalarType());
       if (auto *VT = dyn_cast<VectorType>(Offset->getType()))
         VScale = CreateVectorSplat(VT->getElementCount(), VScale);
-      Offset = CreateMul(VScale, Offset);
+      Offset = CreateMul(VScale, Offset, "", NW.hasNoUnsignedWrap(),
+                         NW.hasNoUnsignedSignedWrap());
     }
     return CreateScaledPtrAdd(Ptr, Scale.getKnownMinValue(), Offset, Name, NW);
   }
