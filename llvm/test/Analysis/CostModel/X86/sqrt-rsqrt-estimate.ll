@@ -63,7 +63,7 @@ define double @f64(double %x, double %y) {
 
 define <2 x float> @v2f32(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: 'v2f32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:15 SizeLat:1 for: %s = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:0 SizeLat:1 for: %s = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %d = fdiv arcp <2 x float> %y, %s
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x float> %d
 ;

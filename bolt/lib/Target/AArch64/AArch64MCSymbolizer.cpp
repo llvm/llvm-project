@@ -83,6 +83,7 @@ std::optional<Relocation>
 AArch64MCSymbolizer::adjustRelocation(const Relocation &Rel,
                                       const MCInst &Inst) const {
   BinaryContext &BC = Function.getBinaryContext();
+  const RelocationHandler &RH = BC.getRelocationHandler();
 
   // The linker can convert ADRP+ADD and ADRP+LDR instruction sequences into
   // NOP+ADR. After the conversion, the linker might keep the relocations and
@@ -114,7 +115,7 @@ AArch64MCSymbolizer::adjustRelocation(const Relocation &Rel,
     }
   }
 
-  if (!Relocation::isGOT(Rel.Type))
+  if (!RH.isGOT(Rel.Type))
     return Rel;
 
   Relocation AdjustedRel = Rel;
@@ -137,7 +138,7 @@ AArch64MCSymbolizer::adjustRelocation(const Relocation &Rel,
   // Note that ADRP relaxation described above cannot happen for TLS relocation.
   // Since TLS relocations may not even have a valid symbol (not supported by
   // BOLT), we explicitly exclude them from the check.
-  if (BC.MIB->isADRP(Inst) && Rel.Addend == 0 && !Relocation::isTLS(Rel.Type)) {
+  if (BC.MIB->isADRP(Inst) && Rel.Addend == 0 && !RH.isTLS(Rel.Type)) {
     ErrorOr<uint64_t> SymbolValue = BC.getSymbolValue(*Rel.Symbol);
     assert(SymbolValue && "Symbol value should be set");
     const uint64_t SymbolPageAddr = *SymbolValue & ~0xfffULL;

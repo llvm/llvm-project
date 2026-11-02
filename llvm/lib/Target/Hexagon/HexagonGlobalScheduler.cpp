@@ -4152,8 +4152,7 @@ bool HexagonGlobalSchedulerImpl::pullUpPeelBBLoop(MachineBasicBlock *PredBB,
   MachineInstr *RegMI = &*FMI;
   if (RegMI->isBundle())
     return false;
-  int TfrOpcode = RegMI->getOpcode();
-  if (TfrOpcode != Hexagon::A2_tfr && TfrOpcode != Hexagon::A2_tfr)
+  if (RegMI->getOpcode() != Hexagon::A2_tfr)
     return false;
   if (!(RegMI->getOperand(0).isReg() && RegMI->getOperand(1).isReg()))
     return false;

@@ -494,9 +494,8 @@ define ptr @shl_add_or(i64 %a, ptr %ptr) {
 ; CHECK-SAME: i64 [[A:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], 2
-; CHECK-NEXT:    [[OR2:%.*]] = add i64 [[SHL]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[PTR]], i64 [[OR2]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[PTR]], i64 [[SHL]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 52
 ; CHECK-NEXT:    ret ptr [[P3]]
 ;
 entry:
@@ -504,8 +503,7 @@ entry:
   %add = add i64 %shl, 12
   %or = or disjoint i64 %add, 1
   ; ((a << 2) + 12) and 1 have no common bits. Therefore,
-  ; SeparateConstOffsetFromGEP is able to extract the 12.
-  ; TODO(jingyue): We could reassociate the expression to combine 12 and 1.
+  ; SeparateConstOffsetFromGEP can extract and combine both 12 and 1.
   %p = getelementptr float, ptr %ptr, i64 %or
   ret ptr %p
 }

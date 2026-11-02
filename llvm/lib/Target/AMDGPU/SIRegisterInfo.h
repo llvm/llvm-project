@@ -128,6 +128,10 @@ public:
     return 27;
   }
 
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
+  }
+
   // When building a block VGPR load, we only really transfer a subset of the
   // registers in the block, based on a mask. Liveness analysis is not aware of
   // the mask, so it might consider that any register in the block is available
@@ -441,7 +445,7 @@ public:
 
   // For a given 16 bit \p Reg \returns a 32 bit register holding it.
   // \returns \p Reg otherwise.
-  MCPhysReg get32BitRegister(MCPhysReg Reg) const;
+  MCRegister get32BitRegister(MCRegister Reg) const;
 
   // Returns true if a given register class is properly aligned for
   // the subtarget.

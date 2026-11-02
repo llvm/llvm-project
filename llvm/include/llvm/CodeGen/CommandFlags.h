@@ -117,8 +117,6 @@ LLVM_ABI bool getEnableCallGraphSection();
 
 LLVM_ABI bool getEmitCallSiteInfo();
 
-LLVM_ABI bool getEnableMachineFunctionSplitter();
-
 LLVM_ABI bool getEnableStaticDataPartitioning();
 
 LLVM_ABI bool getEnableDebugEntryValues();
@@ -195,7 +193,7 @@ LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
 /// line. This can be used for tools that do not need further customization of
 /// the TargetOptions.
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
-    const Triple &TargetTriple,
+    const cl::LibraryOptionsContext &LibraryOptions, const Triple &TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
 /// Conditionally enables the collection of LLVM statistics during the tool run,

@@ -171,7 +171,7 @@ define <2 x half> @fmul_v2f16_imm_a(<2 x half> %b) {
 ; GFX11-LABEL: fmul_v2f16_imm_a:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_mul_f16 v0, 0x44004200, v0
+; GFX11-NEXT:    v_pk_mul_f16 v0, v0, 0x44004200
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r.val = fmul <2 x half> <half 3.0, half 4.0>, %b
   ret <2 x half> %r.val
@@ -211,7 +211,7 @@ define <2 x half> @fmul_v2f16_imm_b(<2 x half> %a) {
 ; GFX11-LABEL: fmul_v2f16_imm_b:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_mul_f16 v0, 0x42004400, v0
+; GFX11-NEXT:    v_pk_mul_f16 v0, v0, 0x42004400
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r.val = fmul <2 x half> %a, <half 4.0, half 3.0>
   ret <2 x half> %r.val
@@ -323,8 +323,8 @@ define <4 x half> @fmul_v4f16_imm_a(<4 x half> %b) {
 ; GFX11-LABEL: fmul_v4f16_imm_a:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_mul_f16 v0, 0x40004800, v0
-; GFX11-NEXT:    v_pk_mul_f16 v1, 0x44004200, v1
+; GFX11-NEXT:    v_pk_mul_f16 v0, v0, 0x40004800
+; GFX11-NEXT:    v_pk_mul_f16 v1, v1, 0x44004200
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r.val = fmul <4 x half> <half 8.0, half 2.0, half 3.0, half 4.0>, %b
   ret <4 x half> %r.val

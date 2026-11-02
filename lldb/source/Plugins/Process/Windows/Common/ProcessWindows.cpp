@@ -606,10 +606,9 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
 
   if (m_pty) {
     DrainProcessStdout();
-    m_pty->SetStopping(true);
     m_pty->Close();
     m_stdio_communication.InterruptRead();
-    m_stdio_communication.StopReadThread();
+    m_stdio_communication.JoinReadThread();
   }
 
   TargetSP target = CalculateTarget();
@@ -627,29 +626,8 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
 }
 
 void ProcessWindows::DrainProcessStdout() {
-  if (!m_stdio_communication.ReadThreadIsRunning())
-    return;
-  m_stdio_communication.SynchronizeWithReadThread();
-  if (!m_pty || m_pty->GetMode() != PseudoConsole::Mode::ConPTY)
-    return;
-
-  HANDLE pipe = m_pty->GetSTDOUTHandle();
-  for (int consec_empty = 0; consec_empty < 3;) {
-    if (!m_stdio_communication.ReadThreadIsRunning())
-      break;
-    DWORD avail = 0;
-    // PeekNamedPipe is thread safe.
-    if (!::PeekNamedPipe(pipe, nullptr, 0, nullptr, &avail, nullptr))
-      break;
-    if (avail > 0) {
-      consec_empty = 0;
-      m_stdio_communication.SynchronizeWithReadThread();
-    } else {
-      ++consec_empty;
-      if (consec_empty < 3)
-        ::SleepEx(1, FALSE);
-    }
-  }
+  if (m_stdio_communication.ReadThreadIsRunning())
+    m_stdio_communication.SynchronizeWithReadThread();
 }
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
@@ -689,7 +667,7 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   ThreadSP main_thread =
       std::make_shared<TargetThreadWindows>(*this, host_main_thread);
 
-  tid_t id = host_main_thread.GetNativeThread().GetThreadId();
+  lldb::tid_t id = host_main_thread.GetNativeThread().GetThreadId();
   main_thread->SetID(id);
 
   m_session_data->m_new_threads[id] = main_thread;
@@ -792,7 +770,7 @@ void ProcessWindows::OnCreateThread(const HostThread &new_thread) {
   ThreadSP thread = std::make_shared<TargetThreadWindows>(*this, new_thread);
 
   const HostNativeThread &native_new_thread = new_thread.GetNativeThread();
-  tid_t id = native_new_thread.GetThreadId();
+  lldb::tid_t id = native_new_thread.GetThreadId();
   thread->SetID(id);
 
   m_session_data->m_new_threads[id] = thread;
