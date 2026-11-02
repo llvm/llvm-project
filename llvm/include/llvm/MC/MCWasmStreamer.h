@@ -54,6 +54,7 @@ public:
                              Align ByteAlignment) override;
 
   void emitIdent(StringRef IdentString) override;
+  void emitULEB128Value(const MCExpr *Value) override;
 
   void finishImpl() override;
 

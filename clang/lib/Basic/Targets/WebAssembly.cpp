@@ -53,6 +53,7 @@ bool WebAssemblyTargetInfo::setABI(const std::string &Name) {
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("atomics", HasAtomics)
+      .Case("branch-hinting", HasBranchHinting)
       .Case("bulk-memory", HasBulkMemory)
       .Case("bulk-memory-opt", HasBulkMemoryOpt)
       .Case("call-indirect-overlong", HasCallIndirectOverlong)
@@ -89,6 +90,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
   defineCPUMacros(Builder, "wasm", /*Tuning=*/false);
   if (HasAtomics)
     Builder.defineMacro("__wasm_atomics__");
+  if (HasBranchHinting)
+    Builder.defineMacro("__wasm_branch_hinting__");
   if (HasBulkMemory)
     Builder.defineMacro("__wasm_bulk_memory__");
   if (HasBulkMemoryOpt)
@@ -199,6 +202,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
+    Features["branch-hinting"] = true;
     Features["compact-imports"] = true;
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
@@ -231,6 +235,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-atomics") {
       HasAtomics = false;
+      continue;
+    }
+    if (Feature == "+branch-hinting") {
+      HasBranchHinting = true;
+      continue;
+    }
+    if (Feature == "-branch-hinting") {
+      HasBranchHinting = false;
       continue;
     }
     if (Feature == "+bulk-memory") {
