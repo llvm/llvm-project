@@ -18401,9 +18401,15 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       case Intrinsic::riscv_pmulhrsu:
         Opc = getRVPMulHighOpcode(IntNo);
         break;
+      case Intrinsic::riscv_psati:
+        Opc = RISCVISD::SATI;
+        break;
+      case Intrinsic::riscv_pusati:
+        Opc = RISCVISD::USATI;
+        break;
       default:
-        // pas/psa/psas/pssa/paas/pasa, pmerge and psati/pusati: re-emit at the
-        // widened type rather than lowering to a generic node.
+        // pas/psa/psas/pssa/paas/pasa and pmerge: re-emit at the widened type
+        // rather than lowering to a generic node.
         Opc = ISD::INTRINSIC_WO_CHAIN;
         break;
       }
@@ -18416,10 +18422,15 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, Op, Undef);
       }
       SDValue Res;
-      if (Opc == ISD::INTRINSIC_WO_CHAIN)
+      if (Opc == ISD::INTRINSIC_WO_CHAIN) {
         Res = DAG.getNode(Opc, DL, WideVT, Ops);
-      else
+      } else if (Opc == RISCVISD::SATI || Opc == RISCVISD::USATI) {
+        SDValue Imm = DAG.getTargetConstant(N->getConstantOperandVal(2), DL,
+                                            Subtarget.getXLenVT());
+        Res = DAG.getNode(Opc, DL, WideVT, Ops[1], Imm);
+      } else {
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
+      }
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
