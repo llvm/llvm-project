@@ -246,7 +246,7 @@ TEST(DynTypedNode, QualType) {
 }
 
 TEST(DynTypedNode, ObjCProtocolLoc) {
-  std::string code = R"cc(
+  static constexpr StringRef Code = R"cc(
     @protocol P
     @end
     @interface I <P>
@@ -255,7 +255,7 @@ TEST(DynTypedNode, ObjCProtocolLoc) {
     @end
   )cc";
   auto AST =
-      clang::tooling::buildASTFromCodeWithArgs(code, {"-x", "objective-c"});
+      clang::tooling::buildASTFromCodeWithArgs(Code, {"-x", "objective-c"});
   auto IMatches =
       match(objcInterfaceDecl(hasName("I")).bind("i"), AST->getASTContext());
   auto JMatches =
@@ -284,8 +284,9 @@ TEST(DynTypedNode, ObjCProtocolLoc) {
 }
 
 TEST(DynTypedNode, NestedNameSpecifier) {
-  std::string code = R"cc(namespace a { struct b {}; } a::b x;)cc";
-  auto AST = clang::tooling::buildASTFromCode(code);
+  static constexpr StringRef Code =
+      R"cc(namespace a { struct b {}; } a::b x;)cc";
+  auto AST = clang::tooling::buildASTFromCode(Code);
   auto matches =
       match(nestedNameSpecifier(specifiesNamespace(hasName("a"))).bind("nns"),
             AST->getASTContext());
@@ -307,8 +308,8 @@ TEST(DynTypedNode, NestedNameSpecifier) {
 }
 
 TEST(DynTypedNode, TypeLoc) {
-  std::string code = R"cc(void example() { int abc; })cc";
-  auto AST = clang::tooling::buildASTFromCode(code);
+  static constexpr StringRef Code = R"cc(void example() { int abc; })cc";
+  auto AST = clang::tooling::buildASTFromCode(Code);
   auto matches =
       match(traverse(TK_AsIs,
                      varDecl(hasName("abc"), hasTypeLoc(typeLoc().bind("tl")))),
@@ -322,8 +323,8 @@ TEST(DynTypedNode, TypeLoc) {
 }
 
 TEST(DynTypedNode, PointerTypeLoc) {
-  std::string code = R"cc(void example() { int *abc; })cc";
-  auto AST = clang::tooling::buildASTFromCode(code);
+  static constexpr StringRef Code = R"cc(void example() { int *abc; })cc";
+  auto AST = clang::tooling::buildASTFromCode(Code);
   auto matches =
       match(traverse(TK_AsIs, varDecl(hasName("abc"),
                                       hasTypeLoc(typeLoc().bind("ptl")))),
