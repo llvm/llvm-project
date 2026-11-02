@@ -1,11 +1,22 @@
-REQUIRES: system-darwin || system-freebsd
+UNSUPPORTED: system-windows
 
 RUN: printf 'Hello\360\237\230\203\n\202\261\202\361\202\311\202\277\202\315\n' > %t
 
-RUN: env LANG=en_US.US-ASCII  llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-US-ASCII %s
-RUN: env LANG=en_US.ISO8859-1 llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-ISO8859-1 %s
-RUN: env LANG=en_US.UTF-8     llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-UTF-8 %s
-RUN: env LANG=ja_JP.SJIS      llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-SJIS %s
+RUN: %if locale-en_US.US-ASCII %{ env LANG=en_US.US-ASCII \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-US-ASCII %s %} \
+RUN: %else %{ echo en_US.US-ASCII locale not supported, skipping test %}
+
+RUN: %if locale-en_US.ISO8859-1 %{ env LANG=en_US.ISO8859-1 \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-ISO8859-1 %s %} \
+RUN: %else %{ echo en_US.ISO8859-1 locale not supported, skipping test %}
+
+RUN: %if locale-en_US.UTF-8 %{ env LANG=en_US.UTF-8 \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-UTF-8 %s %} \
+RUN: %else %{ echo en_US.UTF-8 locale not supported, skipping test %}
+
+RUN: %if locale-ja_JP.SJIS %{ env LANG=ja_JP.SJIS \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-SJIS %s %} \
+RUN: %else %{ echo ja_JP.SJIS locale not supported, skipping test %}
 
 CHECK-IN-US-ASCII:Hello
 CHECK-IN-ISO8859-1:Hello{{\xF0}}

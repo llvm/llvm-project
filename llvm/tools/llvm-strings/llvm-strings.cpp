@@ -115,8 +115,8 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 // On Apple, <uchar.h> is not available, and wchar_t is not always UTF-32. We
 // implement mbrtoc() and crtomb() through iconv().
 // On FreeBSD, <uchar.h> is available but the result for encoding errors is
-// (size_t)-2 rather than (size_t) which we cannot recover from, so likewise use
-// iconv().
+// (size_t)-2 rather than (size_t)-1. We cannot recover from this, so likewise
+// use iconv().
 // On glibc, mbrtoc32() is a wrapper for mbrtowc() and never returns (size_t)-3,
 // instead it handles this case by returning 0 but setting Ch to a non-null
 // character.
@@ -133,18 +133,24 @@ static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   return std::wcrtomb(S, Ch, MBState);
 }
 #elif defined(__APPLE__) || defined(__FreeBSD__)
+struct IconvHandle {
+  IconvHandle(const char *DstName, const char *SrcName)
+      : Value(iconv_open(DstName, SrcName)) {
+    if (Value == (iconv_t)-1)
+      reportCmdLineError("failed to open iconv");
+  }
+  IconvHandle(IconvHandle &&) = delete;
+  ~IconvHandle() { iconv_close(Value); }
+  iconv_t value() const { return Value; }
+
+private:
+  iconv_t Value;
+};
+
 using char_t = char32_t;
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
                      std::mbstate_t *MBState) {
-  static struct IconvHandle {
-    IconvHandle() : Value(iconv_open("UCS-4-INTERNAL", nl_langinfo(CODESET))) {
-      if (Value == (iconv_t)-1)
-        report_fatal_error("failed to open iconv");
-    }
-    ~IconvHandle() { iconv_close(Value); }
-
-    iconv_t Value;
-  } CD;
+  static IconvHandle CD("UCS-4-INTERNAL", nl_langinfo(CODESET));
 
   wchar_t WCh;
   size_t BytesRead = mbrtowc(&WCh, S, N, MBState);
@@ -156,7 +162,7 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
     size_t NIn = BytesWritten;
     char *POut = reinterpret_cast<char *>(Ch);
     size_t NOut = sizeof(char_t);
-    const size_t NumErrors = iconv(CD.Value, &PIn, &NIn, &POut, &NOut);
+    const size_t NumErrors = iconv(CD.value(), &PIn, &NIn, &POut, &NOut);
     // mbrtowc() may be lenient and accept invalid characters that iconv()
     // rejects.
     if (NIn == BytesWritten)
@@ -167,15 +173,7 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
   return BytesRead;
 }
 static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
-  static struct IconvHandle {
-    IconvHandle() : Value(iconv_open(nl_langinfo(CODESET), "UCS-4-INTERNAL")) {
-      if (Value == (iconv_t)-1)
-        report_fatal_error("failed to open iconv");
-    }
-    ~IconvHandle() { iconv_close(Value); }
-
-    iconv_t Value;
-  } CD;
+  static IconvHandle CD(nl_langinfo(CODESET), "UCS-4-INTERNAL");
 
   char Cvt[MB_LEN_MAX];
   std::mbstate_t CvtMBState{};
@@ -183,7 +181,7 @@ static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   size_t NIn = sizeof(char_t);
   char *POut = Cvt;
   size_t NOut = MB_LEN_MAX;
-  const size_t NumErrors = iconv(CD.Value, &PIn, &NIn, &POut, &NOut);
+  const size_t NumErrors = iconv(CD.value(), &PIn, &NIn, &POut, &NOut);
   if (NumErrors == (size_t)-1 || NIn)
     llvm_unreachable("internal error: iconv failed on valid character");
   if (NumErrors)
@@ -257,10 +255,11 @@ struct CharSet {
       char_t UCh;
       for (;;) {
         // Read one byte at a time. This is usually not the best way to use
-        // mbrtoc32(), usually it would make more sense to pass the size of the
-        // buffer, but the strings utility is unusual in that it is expected to
-        // encounter many bytes that do not form valid characters and it is more
-        // useful to optimise for this case.
+        // mbrtoc32(): usually passing the size of the buffer reduces the
+        // number of times it needs to be called. The strings utility is unusual
+        // in that it is expected to encounter many bytes that do not form valid
+        // characters and to recover from the subsequent decoding errors,
+        // however, so it is more useful to optimise for this case.
         const size_t BytesRead = mbrtoc(&UCh, Next, 1, &NextMBState);
         switch (BytesRead) {
         case 1:
@@ -709,7 +708,7 @@ int main(int argc, char **argv) {
 #endif
 #ifdef _WIN32
       // Using LLVM's built-in decoder is necessary for correctness as
-      // Strings<CharSet::MultiByteStateless> on WIndows is implemented on top
+      // Strings<CharSet::MultiByteStateless> on Windows is implemented on top
       // of 16-bit wchar_t which cannot represent all code points.
       if (GetACP() == CP_UTF8)
         return strings<CharSet::Utf8>;
