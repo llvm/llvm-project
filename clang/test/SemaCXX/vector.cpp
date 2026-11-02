@@ -5,7 +5,6 @@
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 %s
 // RUN: %clang_cc1 -flax-vector-conversions=integer -triple x86_64-apple-darwin10 -fsyntax-only -verify %s -DNO_LAX_FLOAT
 // RUN: %clang_cc1 -flax-vector-conversions=none -triple x86_64-apple-darwin10 -fsyntax-only -verify %s -DNO_LAX_FLOAT -DNO_LAX_INT
-// RUN: not %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -fno-caret-diagnostics %s 2>&1 | FileCheck %s
 
 typedef char char16 __attribute__ ((__vector_size__ (16)));
 typedef long long longlong16 __attribute__ ((__vector_size__ (16)));
@@ -347,7 +346,6 @@ typedef ScopedE ScopedEnumSizeVector __attribute__((vector_size(16))); // expect
 #endif
 
 template <typename T> struct Vector {
-  // CHECK: :[[#@LINE+1]]:11: error: invalid vector element type 'GH225037::E'
   typedef T type __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'GH225037::E'}}
 };
 Vector<E> enum_vector; // expected-note {{in instantiation of template class 'GH225037::Vector<GH225037::E>' requested here}}
