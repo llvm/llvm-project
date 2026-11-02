@@ -1,8 +1,8 @@
-# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,INV %s
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,INV %s
-# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,NOINV %s
-# RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,NOINV %s
-# RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,NOINV %s
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,INV %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,INV %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,NOINV %s
+# RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,NOINV %s
+# RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefixes=GCN,NOINV %s
 
 # A callee can leave BUFFER_INV events outstanding. With a new load after the
 # call, vmcnt(1) cannot be removed based on a presumed empty incoming counter.

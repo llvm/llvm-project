@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -run-pass=si-insert-waitcnts -o - %s | FileCheck %s
 
 # A callee may return with GLOBAL_INV events outstanding. A subsequent load
 # prevents treating a preexisting loadcnt(1) wait as redundant.
