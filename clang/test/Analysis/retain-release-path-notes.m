@@ -293,7 +293,7 @@ void CFAutoreleaseUnownedMixed(void) {
   [_ownedProp retain]; // FIXME-note {{Object loaded from instance variable}}
   // FIXME-note@-1 {{Reference count incremented; the object now has a +1 retain count}}
   [_ownedProp release]; // FIXME-note {{Reference count decremented}}
-  [_ownedProp release]; // FIXME-note {{Strong instance variable relinquished. Object released}}
+  [_ownedProp release]; // FIXME-note {{Strong instance variable relinquished; object released}}
   [_ownedProp myMethod]; // FIXME-note {{Reference-counted object is used after it is released}}
   // FIXME-warning@-1 {{used after it is released}}
 }
@@ -302,7 +302,7 @@ void CFAutoreleaseUnownedMixed(void) {
   [_ivarOnly retain]; // FIXME-note {{Object loaded from instance variable}}
   // FIXME-note@-1 {{Reference count incremented; the object now has a +1 retain count}}
   [_ivarOnly release]; // FIXME-note {{Reference count decremented}}
-  [_ivarOnly release]; // FIXME-note {{Strong instance variable relinquished. Object released}}
+  [_ivarOnly release]; // FIXME-note {{Strong instance variable relinquished; object released}}
   [_ivarOnly myMethod]; // FIXME-note {{Reference-counted object is used after it is released}}
   // FIXME-warning@-1 {{used after it is released}}
 }
