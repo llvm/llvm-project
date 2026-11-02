@@ -25,9 +25,13 @@ class MachineInstr;
 class SIInstrInfo;
 class MCRegisterClass;
 
+enum class VOPDMaterializationKind { SGPR, VGPR };
+
+/// The next statement applies to an SGPR fixup.
 /// A 32-bit immediate which the VOPD encoding cannot hold. The pair only
 /// becomes legal after the operand is replaced by a scalar register holding
 /// \p Imm.
+/// A VGPR fixup replaces the operand with a vector register instead.
 struct VOPDLiteralFixup {
   /// Component holding the immediate, AMDGPU::VOPD::X or AMDGPU::VOPD::Y.
   unsigned CompIdx;
@@ -35,8 +39,12 @@ struct VOPDLiteralFixup {
   unsigned OpIdx;
   /// Value which has to be placed in a register.
   int32_t Imm;
+  /// Type of register which must hold the value.
+  VOPDMaterializationKind Kind;
+  /// The next statement applies to an SGPR fixup.
   /// Scalar registers the VOPD source slot can read. This is the slot class
   /// narrowed to SGPR_32, so every register in it can be used.
+  /// A VGPR fixup uses the slot class narrowed to VGPR_32.
   const MCRegisterClass *SlotRC;
 };
 
