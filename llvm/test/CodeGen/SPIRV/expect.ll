@@ -38,3 +38,16 @@ define i32 @test_with_probability(i32 %x) {
   %v = call i32 @llvm.expect.with.probability.i32(i32 %val, i32 %x, double 0.9)
   ret i32 %v
 }
+
+; CHECK:     OpFunction
+; CHECK:     %[[#P:]] = OpFunctionParameter %2
+; CHECK:     %[[#V:]] = OpIMul %2 %[[#P]] %[[#]]
+; CHECK-NOT: OpExpectKHR
+; CHECK:     OpReturnValue %[[#V]]
+
+define i32 @test_with_low_probability(i32 %x) {
+  %one = call i32 @getOne()
+  %val = mul i32 %x, %one
+  %v = call i32 @llvm.expect.with.probability.i32(i32 %val, i32 %x, double 0.1)
+  ret i32 %v
+}

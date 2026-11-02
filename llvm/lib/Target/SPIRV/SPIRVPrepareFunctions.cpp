@@ -35,6 +35,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -422,14 +423,17 @@ static void lowerExpectAssume(IntrinsicInst *II) {
         {II->getOperand(0)->getType()});
     II->setCalledFunction(F);
   } else if (II->getIntrinsicID() == Intrinsic::expect_with_probability) {
-    // OpExpectKHR has no probability operand, so drop it.
-    IRBuilder<> Builder(II);
-    Value *Expect = Builder.CreateIntrinsic(
-        Intrinsic::SPVIntrinsics::spv_expect, {II->getType()},
-        {II->getArgOperand(0), II->getArgOperand(1)});
-    Expect->takeName(II);
-    II->replaceAllUsesWith(Expect);
-    II->eraseFromParent();
+    // OpExpectKHR has no probability operand. Keep the hint only if the
+    // expected value is likely, as LowerExpectIntrinsic does for PHIs.
+    Value *Res = II->getArgOperand(0);
+    double Prob =
+        cast<ConstantFP>(II->getArgOperand(2))->getValueAPF().convertToDouble();
+    if (Prob > 0.5)
+      Res = IRBuilder<>(II).CreateIntrinsic(
+          Intrinsic::SPVIntrinsics::spv_expect, {II->getType()},
+          {II->getArgOperand(0), II->getArgOperand(1)});
+    BasicBlock::iterator BI = II->getIterator();
+    ReplaceInstWithValue(BI, Res);
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
