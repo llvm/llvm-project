@@ -2613,9 +2613,10 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
     if (useLegacy)
       return;
 
-    // FIXME: Matrices use array-like size and alignment. Applying vector rules can produce invalid 
-    // SSE/SSEUP classification. Classifying as array exposes problems with sub byte elements like 
-    // _BitInt(4) since array memory layout will pad to one byte per elm but vector loads and stores 
+    // FIXME: Matrices use array-like size and alignment. Applying vector rules
+    // can produce invalid SSE/SSEUP classification. Classifying as array
+    // exposes problems with sub byte elements like _BitInt(4) since array
+    // memory layout will pad to one byte per elm but vector loads and stores
     // will assume packed elm with no padding. For now just classify as memory.
     ClassifyAsMemory();
     return;
