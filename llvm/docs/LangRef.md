@@ -4138,9 +4138,9 @@ Given these definitions, R{sub}`byte` is defined as follows:
    synchronization.)
 -  Otherwise, if there is no write to the same byte that happens before
    R{sub}`byte`, R{sub}`byte` returns `undef` for that byte.
--  Otherwise, if any two accesses in the set consisting of R and all the
-   writes that R{sub}`byte` may see form a *data race*, R{sub}`byte`
-   returns `undef`.
+-  Otherwise, consider the set consisting of R and all the writes that
+   R{sub}`byte` may see. If any two accesses in that set form a
+   *data race*, R{sub}`byte` returns `undef`.
 -  Otherwise, R{sub}`byte` chooses one of the values written by the
    writes it may see.
    See the {ref}`Atomic Memory Ordering Constraints <ordering>` section
