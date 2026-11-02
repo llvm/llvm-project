@@ -1799,7 +1799,7 @@ def udiv_by_shifted_pow2 : GICombineRule<
 
 // Convert signed division or remainder of nonnegative operands to unsigned.
 class signed_divrem_to_unsigned<Instruction signedOpcode,
-                               Instruction unsignedOpcode> : GICombineRule<
+                                Instruction unsignedOpcode> : GICombineRule<
   (defs root:$root),
   (match (signedOpcode $dst, $x, $y):$root,
    [{ return Helper.matchSignedDivRemToUnsigned(*${root},
