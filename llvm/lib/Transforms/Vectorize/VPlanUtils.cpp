@@ -70,7 +70,7 @@ bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->usesFirstPartOnly(Def); });
+                [](const VPUser *U) { return U->isFirstPartUser(); });
 }
 
 bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
