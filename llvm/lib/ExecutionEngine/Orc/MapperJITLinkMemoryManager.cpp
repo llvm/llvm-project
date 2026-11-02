@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Process.h"
 
 using namespace llvm::jitlink;
@@ -54,9 +55,66 @@ private:
 };
 
 MapperJITLinkMemoryManager::MapperJITLinkMemoryManager(
-    size_t ReservationGranularity, std::unique_ptr<MemoryMapper> Mapper)
-    : ReservationUnits(ReservationGranularity), AvailableMemory(AMAllocator),
-      Mapper(std::move(Mapper)) {}
+    size_t ReservationGranularity, std::unique_ptr<MemoryMapper> Mapper,
+    bool ColocatePerJITDylib)
+    : ReservationUnits(ReservationGranularity),
+      ColocatePerJITDylib(ColocatePerJITDylib), Mapper(std::move(Mapper)) {}
+
+// Lazily creates and stores Key's pool on first access. Pools are
+// heap-allocated behind unique_ptr so the returned reference survives map
+// rehashing, and AMAllocator (declared before the pools) outlives them. Also
+// registers for a destruction notification the first time a JITDylib is
+// seen, so its pool can be freed in notifyDestroying().
+MapperJITLinkMemoryManager::AvailableMemoryMap &
+MapperJITLinkMemoryManager::getAvailableMemory(const JITLinkDylib *Key) {
+  auto [It, Inserted] = Pools.try_emplace(Key);
+  if (Inserted && Key)
+    const_cast<JITLinkDylib *>(Key)->notifyOnDestruction(*this);
+  auto &Pool = It->second.AvailPool;
+  if (!Pool)
+    Pool = std::make_unique<AvailableMemoryMap>(AMAllocator);
+  return *Pool;
+}
+
+void MapperJITLinkMemoryManager::notifyDestroying(JITLinkDylib &JD) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  Pools.erase(&JD);
+}
+
+void MapperJITLinkMemoryManager::denySlabGrowth() {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  OnSlabGrow = [](const JITLinkDylib *JD, size_t RequestedSize) -> Error {
+    return createStringError(
+        "JITDylib '%s' slab exhausted (single-slab mode); enable slab "
+        "growth to allow further reservations (%zu bytes requested)",
+        JD ? JD->getName().c_str() : "<unnamed>", RequestedSize);
+  };
+}
+
+void MapperJITLinkMemoryManager::allowSlabGrowth() {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  OnSlabGrow = [](const JITLinkDylib *, size_t) -> Error {
+    return Error::success();
+  };
+}
+
+void MapperJITLinkMemoryManager::setSlabPolicy(SlabGrowthPolicy Policy) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  OnSlabGrow = std::move(Policy);
+}
+
+Expected<std::unique_ptr<MapperJITLinkMemoryManager>>
+createColocatingInProcessMemoryManager(
+    std::optional<size_t> ReservationGranularity) {
+  auto Mapper = InProcessMemoryMapper::Create();
+  if (!Mapper)
+    return Mapper.takeError();
+  return std::make_unique<MapperJITLinkMemoryManager>(
+      ReservationGranularity.value_or(
+          MapperJITLinkMemoryManager::defaultSlabSize()),
+      std::move(*Mapper),
+      /*ColocatePerJITDylib=*/true);
+}
 
 void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
                                           OnAllocatedFunction OnAllocated) {
@@ -71,7 +129,11 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
 
   auto TotalSize = SegsSizes->total();
 
-  auto CompleteAllocation = [this, &G, BL = std::move(BL),
+  // Which pool to draw from: the JITDylib's own pool when colocating
+  // per-JITDylib, otherwise a single shared (nullptr) pool.
+  const JITLinkDylib *PoolKey = ColocatePerJITDylib ? JD : nullptr;
+
+  auto CompleteAllocation = [this, PoolKey, &G, BL = std::move(BL),
                              OnAllocated = std::move(OnAllocated)](
                                 Expected<ExecutorAddrRange> Result) mutable {
     if (!Result) {
@@ -105,10 +167,12 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     }
 
     UsedMemory.insert({Result->Start, NextSegAddr - Result->Start});
+    AllocPoolKey[Result->Start] = PoolKey;
 
     if (NextSegAddr < Result->End) {
-      // Save the remaining memory for reuse in next allocation(s)
-      AvailableMemory.insert(NextSegAddr, Result->End - 1, true);
+      // Save the remaining memory for reuse by later allocations from the same
+      // pool.
+      getAvailableMemory(PoolKey).insert(NextSegAddr, Result->End - 1, true);
     }
     Mutex.unlock();
 
@@ -123,11 +187,12 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
 
   Mutex.lock();
 
-  // find an already reserved range that is large enough
+  // find an already reserved range in this pool that is large enough
   ExecutorAddrRange SelectedRange{};
 
-  for (AvailableMemoryMap::iterator It = AvailableMemory.begin();
-       It != AvailableMemory.end(); It++) {
+  AvailableMemoryMap &Avail = getAvailableMemory(PoolKey);
+  for (AvailableMemoryMap::iterator It = Avail.begin(); It != Avail.end();
+       It++) {
     if (It.stop() - It.start() + 1 >= TotalSize) {
       SelectedRange = ExecutorAddrRange(It.start(), It.stop() + 1);
       It.erase();
@@ -136,8 +201,29 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
   }
 
   if (SelectedRange.empty()) { // no already reserved range was found
+    // A reservation is needed. If this pool already owns one, reserving
+    // another (possibly out-of-range) slab may place its objects out of range,
+    // so consult the growth policy first.
+    bool IsFirstReservation = !Pools[PoolKey].Reserved;
+    Pools[PoolKey].Reserved = true;
     auto TotalAllocation = alignTo(TotalSize, ReservationUnits);
-    Mapper->reserve(TotalAllocation, std::move(CompleteAllocation));
+    if (!IsFirstReservation) {
+      if (auto Err = OnSlabGrow(JD, TotalAllocation))
+        return CompleteAllocation(std::move(Err));
+    }
+    Mapper->reserve(TotalAllocation,
+                    [this, PoolKey, IsFirstReservation,
+                     CompleteAllocation = std::move(CompleteAllocation)](
+                        Expected<ExecutorAddrRange> Result) mutable {
+                      // If this was the pool's first reservation attempt and it
+                      // failed, undo the Reserved flag so a later attempt is
+                      // treated as the first one again, rather than
+                      // incorrectly triggering the growth policy for a pool
+                      // that never got a slab.
+                      if (!Result && IsFirstReservation)
+                        Pools[PoolKey].Reserved = false;
+                      CompleteAllocation(std::move(Result));
+                    });
   } else {
     CompleteAllocation(SelectedRange);
   }
@@ -174,7 +260,11 @@ void MapperJITLinkMemoryManager::deallocate(
         ExecutorAddrDiff Size = UsedMemory[Addr];
 
         UsedMemory.erase(Addr);
-        AvailableMemory.insert(Addr, Addr + Size - 1, true);
+
+        // Return the range to the pool it was allocated from.
+        const JITLinkDylib *PoolKey = AllocPoolKey.lookup(Addr);
+        AllocPoolKey.erase(Addr);
+        getAvailableMemory(PoolKey).insert(Addr, Addr + Size - 1, true);
 
         FA.release();
       }
