@@ -45,23 +45,23 @@ define i32 @load_i32(ptr addrspace(13) %p) {
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
+; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 2, v0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-GISEL-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e32 s2, v0
+; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e32 s2, v1
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, s2
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:
 ; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s0
-; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, 1, v1
+; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-SDAG-LABEL: load_i32:
@@ -88,22 +88,22 @@ define i32 @load_i32(ptr addrspace(13) %p) {
 ; GFX942-GISEL-LABEL: load_i32:
 ; GFX942-GISEL:       ; %bb.0:
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 2, v0
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX942-GISEL-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
-; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX942-GISEL-NEXT:    s_nop 1
-; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0
+; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_set_gpr_idx_on s4, gpr_idx(SRC0)
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, v0
 ; GFX942-GISEL-NEXT:    s_set_gpr_idx_off
-; GFX942-GISEL-NEXT:    ; implicit-def: $vgpr0
+; GFX942-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX942-GISEL-NEXT:    s_xor_b64 exec, exec, s[2:3]
 ; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX942-GISEL-NEXT:  ; %bb.2:
 ; GFX942-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-GISEL-NEXT:    v_add_u32_e32 v0, 1, v1
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v0, 1, v0
 ; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %x = load i32, ptr addrspace(13) %p
   %y = add i32 %x, 1
