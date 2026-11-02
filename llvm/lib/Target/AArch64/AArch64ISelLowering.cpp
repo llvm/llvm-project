@@ -28446,20 +28446,19 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     // needs the wide value.
     if (!WideValue.hasOneUse()) {
       // Single Zip pair + multiple stp is often preferable to multiple st2
-      if (!llvm::all_of(WideValue->users(),
-                        [&](SDNode *User) {
-                          auto *Store = dyn_cast<StoreSDNode>(User);
-                          return Store && ISD::isNormalStore(Store) &&
-                                 Store->isSimple() &&
-                                 Store->getValue() == WideValue;
-                        }) ||
-          (WideValue.getValueType().isFixedLengthVector() &&
-           ValueInterleaveOps.size() == 2))
+      if ((WideValue.getValueType().isFixedLengthVector() &&
+           ValueInterleaveOps.size() == 2 && !DAG.shouldOptForSize()) ||
+          !llvm::all_of(WideValue->users(), [&](SDNode *User) {
+            auto *Store = dyn_cast<StoreSDNode>(User);
+            return Store && ISD::isNormalStore(Store) && Store->isSimple() &&
+                   Store->getValue() == WideValue;
+          }))
         return SDValue();
 
       // Reusing the wide vector is cheaper than duplicating structured stores
       // when every fixed-length input is already a splat.
       if (WideValue.getValueType().isFixedLengthVector() &&
+          ValueInterleaveOps.size() == 4 &&
           llvm::all_of(ValueInterleaveOps, [&](SDValue Op) {
             return DAG.isSplatValue(Op, /*AllowUndefs=*/true);
           }))

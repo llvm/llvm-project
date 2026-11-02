@@ -17,6 +17,20 @@ define void @store2_twice(ptr %dst0, ptr %dst1, <4 x i32> %v0, <4 x i32> %v1) {
   ret void
 }
 
+define void @store2_twice_optsize(ptr %dst0, ptr %dst1, <4 x i32> %v0, <4 x i32> %v1) optsize {
+; CHECK-LABEL: store2_twice_optsize:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x0]
+; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x1]
+; CHECK-NEXT:    ret
+  %interleaved = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %v0, <4 x i32> %v1)
+  store <8 x i32> %interleaved, ptr %dst0, align 4
+  store <8 x i32> %interleaved, ptr %dst1, align 4
+  ret void
+}
+
 define void @store3_twice(ptr %dst0, ptr %dst1, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-LABEL: store3_twice:
 ; CHECK:       // %bb.0:
