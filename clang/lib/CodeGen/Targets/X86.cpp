@@ -1366,8 +1366,7 @@ class X86_64ABIInfo : public ABIInfo {
   /// Collect the canonical element type and shared classification properties
   /// of the vector \param VT or matrix \param MT. At least one must be
   /// non-null.
-  VectorTypeInfo getVectorTypeInfo(const VectorType *VT,
-                                   const MatrixType *MT = nullptr) const;
+  VectorTypeInfo getVectorTypeInfo(const VectorType *VT) const;
 
   /// Return true when \param AT must be passed in memory because of the SysV
   /// size limit or the alignment of its base. Regcall ignores the size limit.
@@ -2087,11 +2086,9 @@ X86_64ABIInfo::getClassPairForSpan(uint64_t Offset, uint64_t Size, Class C) {
 }
 
 X86_64ABIInfo::VectorTypeInfo
-X86_64ABIInfo::getVectorTypeInfo(const VectorType *VT,
-                                 const MatrixType *MT) const {
-  assert((VT || MT) && "expected a vector or matrix type");
-  QualType ElementType = getContext().getCanonicalType(
-      VT ? VT->getElementType() : MT->getElementType());
+X86_64ABIInfo::getVectorTypeInfo(const VectorType *VT) const {
+  assert((VT) && "expected a vector type");
+  QualType ElementType = getContext().getCanonicalType(VT->getElementType());
   bool IsFPElement = ElementType->isFloat16Type() ||
                      ElementType->isBFloat16Type() ||
                      ElementType == getContext().FloatTy ||
@@ -2511,18 +2508,15 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
     return;
   }
 
-  // Vector & Matrix types
-  // Matrix types are "flattened" and then classified as a m*n vector with the
-  // same element type.
+  // Vector types
   const VectorType *VT = Ty->getAs<VectorType>();
-  const MatrixType *MT = Ty->getAs<MatrixType>();
-  if (VT || (MT && !useLegacy)) {
+  if (VT) {
     if (useLegacy) {
       classifyLegacyVector(VT, OffsetBase, EightBytes, isNamedArg);
       return;
     }
 
-    VectorTypeInfo Info = getVectorTypeInfo(VT, MT);
+    VectorTypeInfo Info = getVectorTypeInfo(VT);
 
     auto SetEightByteClasses = [&](Class FirstClass, Class RestClass) {
       // Vector objects should not start partway through one eightbyte and
@@ -2611,6 +2605,19 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
   // BitInt Types
   if (const auto *EITy = Ty->getAs<BitIntType>()) {
     SetClassPair(OffsetBase, getBitIntTypeClassification(EITy));
+    return;
+  }
+
+  const ConstantMatrixType *MT = Ty->getAs<ConstantMatrixType>();
+  if (MT) {
+    if (useLegacy)
+      return;
+
+    // FIXME: Matrices use array-like size and alignment. Applying vector rules can produce invalid 
+    // SSE/SSEUP classification. Classifying as array exposes problems with sub byte elements like 
+    // _BitInt(4) since array memory layout will pad to one byte per elm but vector loads and stores 
+    // will assume packed elm with no padding. For now just classify as memory.
+    ClassifyAsMemory();
     return;
   }
 
