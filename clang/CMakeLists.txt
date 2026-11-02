@@ -197,13 +197,27 @@ if(CLANG_BUILT_STANDALONE)
 endif()
 
 if(CLANG_ENABLE_CIR)
-  if (CLANG_BUILT_STANDALONE)
-    message(FATAL_ERROR
-      "ClangIR is not yet supported in the standalone build.")
-  endif()
-  if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR
-      "Cannot build ClangIR without MLIR enabled")
+  if(CLANG_BUILT_STANDALONE)
+    find_package(MLIR REQUIRED CONFIG)
+    list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
+    include(AddMLIR)
+    set(CLANG_CIR_MLIR_INCLUDE_DIRS ${MLIR_INCLUDE_DIRS})
+    # MLIRConfig.cmake sets MLIR_TABLEGEN_EXE to the bare tool name;
+    # resolve it to an actual path, like Flang's standalone build does.
+    find_program(CLANG_MLIR_TABLEGEN_EXE "mlir-tblgen"
+      HINTS "${LLVM_TOOLS_BINARY_DIR}")
+    if(NOT CLANG_MLIR_TABLEGEN_EXE)
+      message(FATAL_ERROR "ClangIR requires mlir-tblgen, which was not found. "
+        "Point CLANG_MLIR_TABLEGEN_EXE at it, or add it to PATH.")
+    endif()
+    set(MLIR_TABLEGEN_EXE "${CLANG_MLIR_TABLEGEN_EXE}")
+  else()
+    # The MLIR_*_INCLUDE_DIR variables cannot be used here: MLIR gets configured
+    # after clang, so they are still empty at this point. Derive the same roots
+    # from the LLVM paths instead.
+    set(CLANG_CIR_MLIR_INCLUDE_DIRS
+      "${LLVM_MAIN_SRC_DIR}/../mlir/include"
+      "${LLVM_BINARY_DIR}/tools/mlir/include")
   endif()
   # Number of translation units the TableGen-generated CIR operation
   # definitions are split into. Shared by the CIROps.td TableGen invocations

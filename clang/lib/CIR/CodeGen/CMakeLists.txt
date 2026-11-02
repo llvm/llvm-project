@@ -67,6 +67,7 @@ add_clang_library(clangCIR
 
   DEPENDS
   MLIRCIR
+  MLIRCIROpInterfacesIncGen
   mlir-headers
 
   LINK_LIBS

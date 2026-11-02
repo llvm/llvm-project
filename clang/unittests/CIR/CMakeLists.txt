@@ -1,7 +1,4 @@
-set(MLIR_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../mlir/include )
-set(MLIR_TABLEGEN_OUTPUT_DIR ${LLVM_BINARY_DIR}/tools/mlir/include)
-include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
-include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
+include_directories(SYSTEM ${CLANG_CIR_MLIR_INCLUDE_DIRS})
 
 add_distinct_clang_unittest(CIRUnitTests
   CallOpTest.cpp
