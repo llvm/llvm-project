@@ -21,7 +21,7 @@
 
 constexpr bool test() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-  
+
   // Test `chunk_view.size()` when V models only `input_range`
   {
     static_assert(std::ranges::sized_range<std::ranges::chunk_view<
@@ -50,7 +50,7 @@ constexpr bool test() {
 
   // Test `chunk_view.size()` when the range is not fully divisible
   {
-    auto chunked            = std::ranges::ref_view(vector) | std::views::chunk(5);
+    auto chunked = std::ranges::ref_view(vector) | std::views::chunk(5);
     assert(chunked.size() == 3);
   }
 
@@ -63,7 +63,7 @@ constexpr bool test() {
 
   // Test `chunk_view.size()` when chunk size is larger than the range
   {
-    auto chunked            = std::ranges::ref_view(vector) | std::views::chunk(100);
+    auto chunked = std::ranges::ref_view(vector) | std::views::chunk(100);
     assert(chunked.size() == 1);
   }
 
