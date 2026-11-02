@@ -14594,11 +14594,12 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   // In cases where a shuffle is mandatory regardless of load type,
   // prefer Compressed since the reorder/reuse shuffle can be merged
   // with the compress shuffle.
+  // TODO: Handle such cases by incorporating extra shuffles into costing.
   if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
     return;
 
   SmallVector<Value *> PointerOps = map_to_vector(E.Scalars, [](Value *V) {
-    return cast<LoadInst>(V)->getPointerOperand();
+    return isa<UndefValue>(V) ? V : cast<LoadInst>(V)->getPointerOperand();
   });
 
   Type *ScalarTy = E.getMainOp()->getType();
@@ -14629,7 +14630,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
       LI0->getPointerOperand(), CommonAlignment,
       TTI::CastContextHint::GatherScatter, CostKind, /*IsReverse=*/false);
   if (StridedCost >= CompressedCost && !Opts.slp_force_strided_loads) {
-    CompressEntryToData.try_emplace(&E, std::move(CompressInfo)).first;
+    CompressEntryToData.try_emplace(&E, std::move(CompressInfo));
     return;
   }
 
@@ -17961,9 +17962,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                   E->ReorderIndices.end());
             reorderScalars(Scalars, Mask);
           }
-          SmallVector<Value *> PointerOps(Scalars.size());
-          for (auto [I, V] : enumerate(Scalars))
-            PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+          SmallVector<Value *> PointerOps =
+              map_to_vector(Scalars, [](Value *V) {
+                return isa<UndefValue>(V)
+                           ? V
+                           : cast<LoadInst>(V)->getPointerOperand();
+              });
 
           CompressedLoadInfo CompressInfo;
           (void)isMaskedLoadCompress(

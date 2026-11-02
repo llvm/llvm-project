@@ -391,16 +391,12 @@ bool isMaskedLoadCompress(
       TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy, CostKind, CostMask);
   if (!Order.empty()) {
     SmallVector<int> NewMask(Sz, PoisonMaskElem);
-    for (unsigned I : seq<unsigned>(Sz)) {
+    for (unsigned I : seq<unsigned>(Sz))
       NewMask[I] = Info.CompressMask[Mask[I]];
-    }
     Info.CompressMask.swap(NewMask);
   }
   InstructionCost TotalVecCost = VectorGEPCost + LoadCost + CompressCost;
-  if (TotalVecCost >= GatherCost)
-    return false;
-
-  return true;
+  return TotalVecCost < GatherCost;
 }
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
