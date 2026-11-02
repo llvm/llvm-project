@@ -4,10 +4,10 @@
 ; RUN: %if spirv-tools %{ llc --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=true -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Typedef T whose base is a pointer back to T, scoped in an enumeration type.
-; The enumeration is unsupported, so T fails after the pointer has already named
-; T's forward id. With SPV_KHR_relaxed_extended_instruction and
-; -spirv-debug-scope-forward-refs that id is defined
-; as DebugInfoNone; without it both edges are dropped.
+; The enumeration is incomplete, so T fails after the pointer has already
+; named T's forward id. With
+; SPV_KHR_relaxed_extended_instruction and -spirv-debug-scope-forward-refs
+; that id is defined as DebugInfoNone; without it both edges are dropped.
 
 ; CHECK-SPIRV-NOT: DebugTypedef
 ; CHECK-SPIRV-NOT: DebugTypePointer
@@ -36,7 +36,7 @@ entry:
 !4 = !{!5, !8}
 !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "T", file: !3, line: 2, baseType: !8, scope: !7)
 !6 = distinct !DISubprogram(name: "test", scope: !3, file: !3, line: 5, type: !10, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!7 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", file: !3, line: 1, size: 32, elements: !12)
+!7 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", file: !3, line: 1, size: 0, elements: !12)
 !8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5, size: 64, dwarfAddressSpace: 4)
 !10 = !DISubroutineType(types: !11)
 !11 = !{null}

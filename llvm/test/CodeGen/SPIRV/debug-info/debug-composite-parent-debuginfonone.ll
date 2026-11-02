@@ -6,7 +6,7 @@
 ; RUN: %if spirv-tools %{ llc --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=0 -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; struct S { int x; } is declared in namespace ns, and ns is declared in f.
-; f is scoped in an unsupported enumeration.
+; f is scoped in an incomplete enumeration.
 ;
 ; Namespaces are emitted before types, so ns is entered first and enters f
 ; while ns is still open. f's parameter type is S*, and S's Parent is ns, so
@@ -45,7 +45,7 @@ entry:
 !3 = !DIFile(filename: "ns-parent.cpp", directory: "/src")
 
 !6 = distinct !DISubprogram(name: "f", scope: !7, file: !3, line: 1, type: !8, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!7 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", file: !3, line: 1, size: 32, elements: !12)
+!7 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", file: !3, line: 1, size: 0, elements: !12)
 !8 = !DISubroutineType(types: !11)
 !11 = !{null, !14}
 !12 = !{}
