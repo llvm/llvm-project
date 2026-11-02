@@ -1419,7 +1419,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
         using TypeS = llvm::remove_cvref_t<decltype(s)>;
         if constexpr ( //
             std::is_base_of_v<parser::OmpBlockConstruct, TypeS> ||
-            std::is_same_v<parser::OpenMPLoopConstruct, TypeS> ||
             std::is_same_v<parser::OpenMPSectionsConstruct, TypeS>) {
           if (auto &endSpec{s.EndDir()}) {
             CheckCompoundDirective(&s.BeginDir(), &*endSpec);
