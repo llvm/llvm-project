@@ -907,6 +907,10 @@ void SPIRVAsmPrinter::outputModuleSections() {
     NSDebugHandler->prepareModuleOutput(*ST, *MAI);
   if (AuxDataHandler)
     AuxDataHandler->prepareModuleOutput(*ST, *MAI);
+  // Generate the module-scope NSDI to decide if extensions (like
+  // SPV_KHR_relaxed_extended_instruction) are actually needed.
+  if (NSDebugHandler)
+    NSDebugHandler->generateModuleDebugInfo(*MAI);
 
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
