@@ -321,6 +321,64 @@ func.func @extract_after_insert_chain(%first: f32, %value: f32, %tensor: tensor<
 
 // -----
 
+// CHECK-LABEL: func.func @extract_after_insert_disjoint_1d(
+// CHECK-SAME: %[[V0:.*]]: f32, %[[V1:.*]]: f32, %[[T:.*]]: tensor<8xf32>
+// CHECK-NEXT: return %[[V0]] : f32
+func.func @extract_after_insert_disjoint_1d(%v0: f32, %v1: f32, %t: tensor<8xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %ins0 = tensor.insert %v0 into %t[%c0] : tensor<8xf32>
+  %ins1 = tensor.insert %v1 into %ins0[%c1] : tensor<8xf32>
+  %ext = tensor.extract %ins1[%c0] : tensor<8xf32>
+  return %ext : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_disjoint_multihop(
+// CHECK-SAME: %[[V0:[^:]+]]: f32,
+// CHECK-NEXT: return %[[V0]] : f32
+func.func @extract_after_insert_disjoint_multihop(%v0: f32, %v1: f32, %v2: f32, %t: tensor<8xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %ins0 = tensor.insert %v0 into %t[%c0] : tensor<8xf32>
+  %ins1 = tensor.insert %v1 into %ins0[%c1] : tensor<8xf32>
+  %ins2 = tensor.insert %v2 into %ins1[%c2] : tensor<8xf32>
+  %ext = tensor.extract %ins2[%c0] : tensor<8xf32>
+  return %ext : f32
+} 
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_disjoint_2d(
+// CHECK-SAME: %[[V0:[^:]+]]: f32,
+// CHECK-NEXT: return %[[V0]] : f32
+func.func @extract_after_insert_disjoint_2d(%v0: f32, %v1: f32, %dynamic_idx: index, %t: tensor<8x8xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %ins0 = tensor.insert %v0 into %t[%c0, %dynamic_idx] : tensor<8x8xf32>
+  %ins1 = tensor.insert %v1 into %ins0[%c1, %dynamic_idx] : tensor<8x8xf32>
+  %ext = tensor.extract %ins1[%c0, %dynamic_idx] : tensor<8x8xf32>
+  return %ext : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_unknown_indices(
+// CHECK: %[[INS0:.*]] = tensor.insert
+// CHECK: %[[INS1:.*]] = tensor.insert %{{.*}} into %[[INS0]]
+// CHECK: %[[EXT:.*]] = tensor.extract %[[INS1]]
+// CHECK: return %[[EXT]] : f32
+func.func @extract_after_insert_unknown_indices(%v0: f32, %v1: f32, %i: index, %j: index, %t: tensor<8xf32>) -> f32 {
+  %ins0 = tensor.insert %v0 into %t[%i] : tensor<8xf32>
+  %ins1 = tensor.insert %v1 into %ins0[%j] : tensor<8xf32>
+  %ext = tensor.extract %ins1[%i] : tensor<8xf32>
+  return %ext : f32
+}
+
+// -----
+
 // Ensure extract dense resource elements not crash.
 
 // CHECK-LABEL: func @extract_dense_resource_nofold
