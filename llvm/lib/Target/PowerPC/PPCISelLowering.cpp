@@ -1241,24 +1241,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::STRICT_FROUND, MVT::v2f64, Legal);
 
       addRegisterClass(MVT::v2i64, &PPC::VSRCRegClass);
-      addRegisterClass(MVT::f128, &PPC::VRRCRegClass);
-
-      for (MVT FPT : MVT::fp_valuetypes())
-        setLoadExtAction(ISD::EXTLOAD, MVT::f128, FPT, Expand);
-
-      // Expand the SELECT to SELECT_CC
-      setOperationAction(ISD::SELECT, MVT::f128, Expand);
-
-      setTruncStoreAction(MVT::f128, MVT::f64, Expand);
-      setTruncStoreAction(MVT::f128, MVT::f32, Expand);
-
-      // No implementation for these ops for PowerPC.
-      setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
-      setOperationAction(ISD::FSIN, MVT::f128, Expand);
-      setOperationAction(ISD::FCOS, MVT::f128, Expand);
-      setOperationAction(ISD::FPOW, MVT::f128, Expand);
-      setOperationAction(ISD::FPOWI, MVT::f128, Expand);
-      setOperationAction(ISD::FREM, MVT::f128, LibCall);
     }
 
     if (Subtarget.hasP8Altivec()) {
@@ -1331,7 +1313,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::BSWAP, MVT::v4i32, Legal);
       setOperationAction(ISD::BSWAP, MVT::v2i64, Legal);
       setOperationAction(ISD::BSWAP, MVT::v1i128, Legal);
-    } else if (Subtarget.hasVSX()) {
+    } else if (Subtarget.hasAltivec()) {
       setOperationAction(ISD::LOAD, MVT::f128, Promote);
       setOperationAction(ISD::STORE, MVT::f128, Promote);
 
@@ -1412,6 +1394,27 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
                               Legal);
     setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8,
                               Legal);
+  }
+
+  if (Subtarget.hasAltivec()) {
+    addRegisterClass(MVT::f128, &PPC::VRRCRegClass);
+
+    for (MVT FPT : MVT::fp_valuetypes())
+      setLoadExtAction(ISD::EXTLOAD, MVT::f128, FPT, Expand);
+
+    // Expand the SELECT to SELECT_CC
+    setOperationAction(ISD::SELECT, MVT::f128, Expand);
+
+    setTruncStoreAction(MVT::f128, MVT::f64, Expand);
+    setTruncStoreAction(MVT::f128, MVT::f32, Expand);
+
+    // No implementation for these ops for PowerPC.
+    setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
+    setOperationAction(ISD::FSIN, MVT::f128, Expand);
+    setOperationAction(ISD::FCOS, MVT::f128, Expand);
+    setOperationAction(ISD::FPOW, MVT::f128, Expand);
+    setOperationAction(ISD::FPOWI, MVT::f128, Expand);
+    setOperationAction(ISD::FREM, MVT::f128, LibCall);
   }
 
   if (Subtarget.pairedVectorMemops()) {

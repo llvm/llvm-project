@@ -602,7 +602,7 @@ define void @test_sitofp_i64(i64 %a, ptr %p) nounwind {
 ; BE-NEXT:    cmpldi r5, 1
 ; BE-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
 ; BE-NEXT:    mr r30, r4
-; BE-NEXT:    ble cr0, .LBB12_2
+; BE-NEXT:    bc 4, gt, .LBB12_2
 ; BE-NEXT:  # %bb.1:
 ; BE-NEXT:    clrldi r4, r3, 53
 ; BE-NEXT:    addi r4, r4, 2047
@@ -694,7 +694,7 @@ define i64 @test_fptoui_i64(ptr %p) nounwind {
 ; BE-NEXT:    stfd f2, 120(r1)
 ; BE-NEXT:    fctidz f2, f1
 ; BE-NEXT:    stfd f2, 112(r1)
-; BE-NEXT:    blt cr0, .LBB13_2
+; BE-NEXT:    bc 12, lt, .LBB13_2
 ; BE-NEXT:  # %bb.1:
 ; BE-NEXT:    ld r3, 120(r1)
 ; BE-NEXT:    li r4, 1
@@ -784,7 +784,7 @@ define void @test_uitofp_i64(i64 %a, ptr %p) nounwind {
 ; BE-NEXT:    cmpldi r5, 1
 ; BE-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
 ; BE-NEXT:    mr r30, r4
-; BE-NEXT:    bgt cr0, .LBB14_2
+; BE-NEXT:    bc 12, gt, .LBB14_2
 ; BE-NEXT:  # %bb.1:
 ; BE-NEXT:    mr r4, r3
 ; BE-NEXT:    b .LBB14_3
@@ -801,7 +801,7 @@ define void @test_uitofp_i64(i64 %a, ptr %p) nounwind {
 ; BE-NEXT:    cmpldi r5, 1
 ; BE-NEXT:    rldicl r5, r3, 63, 1
 ; BE-NEXT:    or r4, r6, r5
-; BE-NEXT:    ble cr0, .LBB14_5
+; BE-NEXT:    bc 4, gt, .LBB14_5
 ; BE-NEXT:  # %bb.4:
 ; BE-NEXT:    clrldi r4, r4, 53
 ; BE-NEXT:    addi r4, r4, 2047
