@@ -6640,7 +6640,11 @@ defm ORN : SIMDLogicalThreeVector<0, 0b11, "orn",
 defm ORR : SIMDLogicalThreeVector<0, 0b10, "orr", or>;
 
 // Pseudo bitwise select pattern BSP.
-// It is expanded into BSL/BIT/BIF after register allocation.
+// It is expanded into BSL/BIT/BIF after register allocation. When SVE2
+// instructions are available, BSPv16i8 may also be expanded into
+// MOVPRFX + SVE2 BSL. Unlike most V128 instructions, it should not be assumed
+// that the BSPv16i8 pseudo zeroes the upper bits (above bit 127) of the
+// overlaying Z register as the SVE expansion code does not guarantee this.
 defm BSP : SIMDLogicalThreeVectorPseudo<TriOpFrag<(or (and node:$LHS, node:$MHS),
                                                       (and (vnot node:$LHS), node:$RHS))>>;
 defm BSL : SIMDLogicalThreeVectorTied<1, 0b01, "bsl">;
