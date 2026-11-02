@@ -16,6 +16,8 @@
 #ifndef LLVM_CLANG_C_INDEX_H
 #define LLVM_CLANG_C_INDEX_H
 
+#include <stdint.h>
+
 #include "clang-c/BuildSystem.h"
 #include "clang-c/CXDiagnostic.h"
 #include "clang-c/CXErrorCode.h"
@@ -118,8 +120,12 @@ struct CXUnsavedFile {
 
   /**
    * The length of the unsaved contents of this buffer.
+   *
+   * A fixed-width type is used so the struct layout is identical across data
+   * models (e.g. LLP64 vs LP64); `unsigned long` previously made the field 4
+   * bytes on Windows and 8 bytes elsewhere, breaking FFI consumers.
    */
-  unsigned long Length;
+  uint64_t Length;
 };
 
 /**
