@@ -1249,7 +1249,7 @@ Expr<T> FoldMINorMAX(
 template <typename T>
 Expr<T> RewriteSpecificMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef) {
-  const int kind{funcRef.kind()};
+  int kind{funcRef.kind()}; // not const: GCC 7 ICE in generic lambdas
   ActualArguments &args{funcRef.arguments()};
   auto &intrinsic{DEREF(std::get_if<SpecificIntrinsic>(&funcRef.proc().u))};
   // Rewrite MAX1(args) to INT(MAX(args)) and fold. Same logic for MIN1.

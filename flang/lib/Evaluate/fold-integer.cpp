@@ -654,7 +654,7 @@ static Expr<T> FoldBitReduction(FoldingContext &context, FunctionRef<T> &&ref,
 template <typename T>
 std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     FoldingContext &context, FunctionRef<T> &funcRef) {
-  const int kind{funcRef.kind()};
+  int kind{funcRef.kind()}; // not const: GCC 7 ICE in generic lambdas
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -1822,7 +1822,7 @@ static std::optional<Expr<Type<TypeCategory::Integer>>> ExtractRankOneElement(
   return common::visit(
       [&](const auto &y) -> std::optional<Expr<T>> {
         using Ty = std::decay_t<decltype(y)>;
-        const int kind{y.kind()};
+        int kind{y.kind()}; // not const: GCC 7 ICE in nested generic lambdas
         if constexpr (std::is_same_v<Ty, Constant<T>>) {
           ConstantSubscripts at{y.lbounds()};
           at[0] = y.lbounds()[0] + dim;

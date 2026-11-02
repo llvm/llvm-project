@@ -54,7 +54,7 @@ static mlir::Attribute convertToAttribute(
     fir::FirOpBuilder &builder,
     const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC>> &value,
     mlir::Type type) {
-  const int kind{value.kind()};
+  int kind{value.kind()}; // not const: GCC 7 ICE in generic lambdas
   if constexpr (TC == Fortran::common::TypeCategory::Integer) {
     if (kind <= 8)
       return builder.getIntegerAttr(type, value.ToInt64());
