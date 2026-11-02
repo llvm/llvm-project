@@ -685,16 +685,8 @@ bool RuntimeCheckingPtrGroup::addPointer(unsigned Index, const SCEV *Start,
 /// - X vs C2 + X
 /// - C1 + X vs C2 + X
 static const SCEV *stripConstant(const SCEV *S) {
-  auto *AddExpr = dyn_cast<SCEVAddExpr>(S);
-  if (!AddExpr || AddExpr->getNumOperands() != 2)
-    return S;
-
-  if (isa<SCEVConstant>(AddExpr->getOperand(0)))
-    return AddExpr->getOperand(1);
-  if (isa<SCEVConstant>(AddExpr->getOperand(1)))
-    return AddExpr->getOperand(0);
-
-  return S;
+  const SCEV *R;
+  return match(S, m_scev_Add(m_SCEVConstant(), m_SCEV(R))) ? R : S;
 }
 
 void RuntimePointerChecking::groupChecks() {
@@ -795,7 +787,7 @@ void RuntimePointerChecking::groupChecks() {
       // Greedy fallback:
       // Go through all the existing sets and see if we can find one
       // which can include this pointer.
-      for (unsigned I = 0; I < Groups.size(); ++I) {
+      for (const auto &[Idx, Group] : enumerate(Groups)) {
         // Don't perform more than a certain amount of comparisons.
         // This should limit the cost of grouping the pointers to something
         // reasonable.  If we do end up hitting this threshold, the algorithm
@@ -804,8 +796,8 @@ void RuntimePointerChecking::groupChecks() {
           break;
 
         ++TotalComparisons;
-        if (Groups[I].addPointer(Pointer, *this)) {
-          KeyToGroups.try_emplace(PtrStripped, I);
+        if (Group.addPointer(Pointer, *this)) {
+          KeyToGroups.try_emplace(PtrStripped, Idx);
           Merged = true;
           break;
         }
