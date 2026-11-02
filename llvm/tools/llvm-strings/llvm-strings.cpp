@@ -114,8 +114,9 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 // and is close enough, as long as we make sure to avoid it for UTF-8 locales.
 // On Apple, <uchar.h> is not available, and wchar_t is not always UTF-32. We
 // implement mbrtoc() and crtomb() through iconv().
-// On FreeBSD, <uchar.h> is available but assumes wchar_t is always UTF-32, yet
-// on FreeBSD, wchar_t is not always UTF-32, so likewise use iconv().
+// On FreeBSD, <uchar.h> is available but the result for encoding errors is
+// (size_t)-2 rather than (size_t) which we cannot recover from, so likewise use
+// iconv().
 // On glibc, mbrtoc32() is a wrapper for mbrtowc() and never returns (size_t)-3,
 // instead it handles this case by returning 0 but setting Ch to a non-null
 // character.
