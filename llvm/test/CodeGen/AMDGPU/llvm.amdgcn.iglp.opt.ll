@@ -828,12 +828,8 @@ entry:
   ret void
 }
 
-; If we run this function after test_iglp_opt_rev_mfma_gemm, we get:
-; > Assertion `(!IsInitial || (DSWCount == 0 && DSWWithPermCount == 0 &&
-; > DSWWithSharedVMEMCount == 0)) && "DSWCounters should be zero in pre-RA
-; > scheduling!"' failed.
-; This is because, previously, the counters were global static variables which
-; weren't reset.
+; Check that the iglp_opt(1) analysis data of test_iglp_opt_rev_mfma_gemm,
+; which is scheduled before this function, does not leak into this function.
 define amdgpu_kernel void @test_after_test_iglp_opt_rev_mfma_gemm(ptr %src, ptr addrspace(3) %dst) {
 ; GCN-LABEL: test_after_test_iglp_opt_rev_mfma_gemm:
 ; GCN:       ; %bb.0: ; %entry

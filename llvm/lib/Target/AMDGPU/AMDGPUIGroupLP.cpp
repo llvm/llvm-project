@@ -952,8 +952,22 @@ protected:
   // with the MIR.
   MachineInstr *IGLPOptMI;
 
+  /// Returns true if IGLPOptMI holds \p NumValues analysis data values.
+  bool hasIGLPOptData(unsigned NumValues) const {
+    return IGLPOptMI->getNumOperands() == NumValues + 1 &&
+           all_of(drop_begin(IGLPOptMI->operands()),
+                  [](const MachineOperand &MO) { return MO.isImm(); });
+  }
+
   /// Replace the analysis data stored on IGLPOptMI with \p Data.
   void setIGLPOptData(ArrayRef<int64_t> Data) {
+    // Overwrite the values in place if an earlier scheduling stage already
+    // stored the same number of values.
+    if (hasIGLPOptData(Data.size())) {
+      for (auto [MO, V] : zip_equal(drop_begin(IGLPOptMI->operands()), Data))
+        MO.setImm(V);
+      return;
+    }
     while (IGLPOptMI->getNumOperands() > 1)
       IGLPOptMI->removeOperand(IGLPOptMI->getNumOperands() - 1);
     for (int64_t V : Data)
@@ -962,15 +976,13 @@ protected:
 
   /// Returns the \p NumValues analysis data values stored on IGLPOptMI, or
   /// std::nullopt if there are none.
-  std::optional<SmallVector<int64_t>> getIGLPOptData(unsigned NumValues) const {
-    if (IGLPOptMI->getNumOperands() != NumValues + 1)
+  template <unsigned NumValues>
+  std::optional<std::array<int64_t, NumValues>> getIGLPOptData() const {
+    if (!hasIGLPOptData(NumValues))
       return std::nullopt;
-    SmallVector<int64_t> Data;
-    for (const MachineOperand &MO : drop_begin(IGLPOptMI->operands())) {
-      if (!MO.isImm())
-        return std::nullopt;
-      Data.push_back(MO.getImm());
-    }
+    std::array<int64_t, NumValues> Data;
+    for (auto [V, MO] : zip_equal(Data, drop_begin(IGLPOptMI->operands())))
+      V = MO.getImm();
     return Data;
   }
 
@@ -1062,23 +1074,24 @@ private:
   std::optional<unsigned> FirstPipeDSR;
   // The MFMAPipe SUs with no MFMA predecessors
   SmallVector<SUnit *, 4> MFMAChainSeeds;
-  // Compute the heuristics for the pipeline, returning whether or not the DAG
-  // is well formatted for the mutation
+  // Compute the analysis data for the pipeline, returning whether or not the
+  // DAG is well formatted for the mutation
   bool analyzeDAG(const SIInstrInfo *TII);
 
-  // The number of heuristics values stored on the IGLP_OPT by
-  // storeHeuristics.
-  static constexpr unsigned NumHeuristics = 8;
-  // Store the heuristics on the IGLP_OPT for PostRA scheduling, where the DAG
-  // dependencies differ and the analysis cannot be repeated.
-  void storeHeuristics() {
+  // The number of analysis data values stored on the IGLP_OPT by
+  // storeAnalysisData.
+  static constexpr unsigned NumAnalysisValues = 8;
+  // Store the analysis data on the IGLP_OPT for PostRA scheduling, where the
+  // DAG dependencies differ and the analysis cannot be repeated.
+  void storeAnalysisData() {
     setIGLPOptData({TransPipeCount, MFMAPipeCount, AddPipeCount, MFMAEnablement,
                     ExpRequirement, MFMAChains, HasCvt, HasChainBetweenCvt});
   }
-  // Load the heuristics stored by storeHeuristics. Returns false if there are
-  // none, i.e. the pre-RA analysis did not run or failed.
-  bool loadHeuristics() {
-    std::optional<SmallVector<int64_t>> Data = getIGLPOptData(NumHeuristics);
+  // Load the analysis data stored by storeAnalysisData. Returns false if there
+  // is none, i.e. the pre-RA analysis did not run or failed.
+  bool loadAnalysisData() {
+    std::optional<std::array<int64_t, NumAnalysisValues>> Data =
+        getIGLPOptData<NumAnalysisValues>();
     if (!Data)
       return false;
     TransPipeCount = (*Data)[0];
@@ -1089,6 +1102,8 @@ private:
     MFMAChains = (*Data)[5];
     HasCvt = (*Data)[6];
     HasChainBetweenCvt = (*Data)[7];
+    assert(TransPipeCount > 0 && MFMAPipeCount > 0 && MFMAChains > 0 &&
+           "guaranteed by a successful analyzeDAG");
     return true;
   }
 
@@ -1519,7 +1534,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
 
   auto isAdd = [](unsigned Opc) { return Opc == AMDGPU::V_ADD_F32_e32; };
 
-  AddPipeCount = 0;
   for (SUnit &SU : DAG->SUnits) {
     auto Opc = SU.getInstr()->getOpcode();
     if (TII->isTRANS(Opc)) {
@@ -1548,8 +1562,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
 
   if (!(PackSUs.size() && MFMAPipeCands.size() && ExpPipeCands.size()))
     return false;
-
-  TransPipeCount = 0;
 
   std::optional<SUnit *> TempMFMA;
   std::optional<SUnit *> TempExp;
@@ -1604,7 +1616,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     }
   }
 
-  HasCvt = false;
   if (TempCvt.has_value()) {
     for (auto &SuccSU : MFMAPipeSUs) {
       if (DAG->IsReachable(SuccSU, *TempCvt)) {
@@ -1614,7 +1625,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     }
   }
 
-  MFMAChains = 0;
   for (auto &MFMAPipeSU : MFMAPipeSUs) {
     if (is_contained(MFMAChainSeeds, MFMAPipeSU))
       continue;
@@ -1656,8 +1666,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   if (PackPred == (*TempMFMA)->Preds.end())
     return false;
 
-  MFMAEnablement = 0;
-  ExpRequirement = 0;
   // How many MFMAs depend on a single bit pack operation
   MFMAEnablement =
       llvm::count_if(PackPred->getSUnit()->Succs, [&TII](SDep &Succ) {
@@ -1683,16 +1691,15 @@ bool MFMAExpInterleaveOpt::shouldApplyStrategy(ScheduleDAGInstrs *DAG,
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   if (Phase == AMDGPU::SchedulingPhase::PostRA)
-    return loadHeuristics();
+    return loadAnalysisData();
 
-  MFMAChainSeeds.clear();
   if (!analyzeDAG(TII)) {
-    // Drop heuristics stored by an earlier pre-RA stage.
+    // Drop analysis data stored by an earlier pre-RA stage.
     setIGLPOptData({});
     return false;
   }
 
-  storeHeuristics();
+  storeAnalysisData();
   return true;
 }
 
@@ -2229,7 +2236,7 @@ public:
                            AMDGPU::SchedulingPhase Phase) override {
     // The later phases need the DS_WRITE counts of the Initial phase.
     return Phase == AMDGPU::SchedulingPhase::Initial ||
-           getIGLPOptData(NumDSWCounts);
+           hasIGLPOptData(NumDSWCounts);
   }
 
   MFMASmallGemmSingleWaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII,
@@ -2254,7 +2261,8 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   bool IsInitial = Phase == AMDGPU::SchedulingPhase::Initial;
 
   if (!IsInitial) {
-    std::optional<SmallVector<int64_t>> Data = getIGLPOptData(NumDSWCounts);
+    std::optional<std::array<int64_t, NumDSWCounts>> Data =
+        getIGLPOptData<NumDSWCounts>();
     assert(Data && "checked by shouldApplyStrategy");
     DSWCount = (*Data)[0];
     DSWWithPermCount = (*Data)[1];

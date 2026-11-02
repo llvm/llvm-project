@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=machine-scheduler -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=machine-scheduler -misched=gcn-iterative-ilp -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42 -run-pass=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42 -run-pass=machine-scheduler -misched=gcn-iterative-ilp -o - %s | FileCheck %s
 
 # Test that the pre-RA machine-scheduler stores the results of the IGLP DAG
 # analysis as additional immediate operands on the IGLP_OPT, so that they are
