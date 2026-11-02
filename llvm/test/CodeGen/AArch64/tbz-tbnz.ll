@@ -199,48 +199,44 @@ if.end:
 define void @test8(i64 %val1, i64 %val2, i64 %val3) {
 ; CHECK-SD-LABEL: test8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    and x8, x1, x2
+; CHECK-SD-NEXT:    and x8, x0, x1, lsl #63
 ; CHECK-SD-NEXT:    and x9, x0, x1
+; CHECK-SD-NEXT:    and x10, x0, x1, lsl #62
+; CHECK-SD-NEXT:    and x8, x9, x8
+; CHECK-SD-NEXT:    and x9, x1, x2
+; CHECK-SD-NEXT:    orr x9, x9, x10
 ; CHECK-SD-NEXT:    cmn x8, #1
-; CHECK-SD-NEXT:    ccmp x9, #0, #0, gt
-; CHECK-SD-NEXT:    b.pl .LBB7_2
-; CHECK-SD-NEXT:  // %bb.1: // %if.then2
-; CHECK-SD-NEXT:    tst x0, x1, lsl #63
-; CHECK-SD-NEXT:    b.mi .LBB7_3
-; CHECK-SD-NEXT:  .LBB7_2: // %if.end
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB7_3: // %if.then3
-; CHECK-SD-NEXT:    tst x0, x1, lsl #62
+; CHECK-SD-NEXT:    ccmp x9, #0, #8, le
 ; CHECK-SD-NEXT:    b.mi .LBB7_2
-; CHECK-SD-NEXT:  // %bb.4: // %if.then4
+; CHECK-SD-NEXT:  // %bb.1: // %if.then4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl t
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:  .LBB7_2: // %if.end
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    tst x0, x1
-; CHECK-GI-NEXT:    b.pl .LBB7_3
+; CHECK-GI-NEXT:    b.pl .LBB7_5
 ; CHECK-GI-NEXT:  // %bb.1:
 ; CHECK-GI-NEXT:    tst x1, x2
-; CHECK-GI-NEXT:    b.mi .LBB7_3
-; CHECK-GI-NEXT:  // %bb.2: // %if.then2
+; CHECK-GI-NEXT:    b.mi .LBB7_5
+; CHECK-GI-NEXT:  // %bb.2:
 ; CHECK-GI-NEXT:    tst x0, x1, lsl #63
-; CHECK-GI-NEXT:    b.mi .LBB7_4
-; CHECK-GI-NEXT:  .LBB7_3: // %if.end
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB7_4: // %if.then3
+; CHECK-GI-NEXT:    b.pl .LBB7_5
+; CHECK-GI-NEXT:  // %bb.3:
 ; CHECK-GI-NEXT:    tst x0, x1, lsl #62
-; CHECK-GI-NEXT:    b.mi .LBB7_3
-; CHECK-GI-NEXT:  // %bb.5: // %if.then4
+; CHECK-GI-NEXT:    b.mi .LBB7_5
+; CHECK-GI-NEXT:  // %bb.4: // %if.then4
 ; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    bl t
 ; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:  .LBB7_5: // %if.end
 ; CHECK-GI-NEXT:    ret
   %and1 = and i64 %val1, %val2
   %tst1 = icmp slt i64 %and1, 0
