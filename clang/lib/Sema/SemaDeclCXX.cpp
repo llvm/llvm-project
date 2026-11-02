@@ -3493,7 +3493,7 @@ inline static bool HasAttribute(const QualType &T) {
   return false;
 }
 
-static bool IsUnusedPrivateField(const FieldDecl *FD) {
+bool clang::IsUnusedPrivateField(const FieldDecl *FD) {
   if (FD->isImplicit() || !FD->getDeclName() || FD->getAccess() != AS_private ||
       FD->hasAttr<UnusedAttr>() || FD->getParent()->isDependentContext())
     return false;

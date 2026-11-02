@@ -369,10 +369,22 @@ struct Outer {
     return i.field_;
   }
 };
-
 WarnUnusedType test() {
   Outer<int> o;
   Outer<int>::Inner i;
   return o.use(i);
+}
+
+template <typename T>
+struct Outer2 {
+  class Inner {
+    WarnUnusedType field_; // expected-warning {{private field 'field_' is not used}}
+  };
+};
+void test2() {
+  Outer2<int> o;
+  Outer2<int>::Inner i;
+  (void)o;
+  (void)i;
 }
 } // namespace warn_unused_template

@@ -22,6 +22,8 @@
 
 namespace clang {
 
+bool IsUnusedPrivateField(const FieldDecl *FD);
+
 inline bool
 FTIHasSingleVoidParameter(const DeclaratorChunk::FunctionTypeInfo &FTI) {
   return FTI.NumParams == 1 && !FTI.isVariadic &&
