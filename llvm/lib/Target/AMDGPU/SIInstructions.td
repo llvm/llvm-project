@@ -2509,7 +2509,7 @@ def : GCNPat <
 
 def : GCNPat <
   (UniformBinFrag<fcopysign> (fp16vt fpimm_pos_zero), f32:$src1),
-  (S_AND_B32 (S_MOV_B32 (i32 0x00008000)),
+  (S_AND_B32 (S_MOV_B32 (i32 0x8000)),
              (S_LSHR_B32 SReg_32:$src1, (i32 16)))
 >;
 
