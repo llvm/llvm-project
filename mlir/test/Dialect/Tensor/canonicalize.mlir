@@ -226,6 +226,101 @@ func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>, i32
 
 // -----
 
+// CHECK-LABEL: func.func @extract_after_insert_dynamic(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_dynamic(%value: f32, %tensor: tensor<8xf32>, %i: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic_rank2(
+// CHECK-SAME: %[[VALUE:.*]]: i32,
+// CHECK-NEXT: return %[[VALUE]] : i32
+func.func @extract_after_insert_dynamic_rank2(%value: i32, %tensor: tensor<4x8xi32>, %i: index, %j: index) -> i32 {
+  %inserted = tensor.insert %value into %tensor[%i, %j] : tensor<4x8xi32>
+  %extracted = tensor.extract %inserted[%i, %j] : tensor<4x8xi32>
+  return %extracted : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_mixed_indices(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_mixed_indices(%value: f32, %tensor: tensor<4x8xf32>, %i: index) -> f32 {
+  %c2 = arith.constant 2 : index
+  %inserted = tensor.insert %value into %tensor[%i, %c2] : tensor<4x8xf32>
+  %extracted = tensor.extract %inserted[%i, %c2] : tensor<4x8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic_shape(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_dynamic_shape(%value: f32, %tensor: tensor<?x?xf32>, %i: index, %j: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i, %j] : tensor<?x?xf32>
+  %extracted = tensor.extract %inserted[%i, %j] : tensor<?x?xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_other_index(
+// CHECK: %[[INSERTED:.*]] = tensor.insert
+// CHECK-NEXT: %[[EXTRACTED:.*]] = tensor.extract %[[INSERTED]]
+// CHECK-NEXT: return %[[EXTRACTED]] : f32
+func.func @extract_after_insert_other_index(%value: f32, %tensor: tensor<8xf32>, %i: index, %j: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%j] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_other_constant(
+// CHECK: %[[INSERTED:.*]] = tensor.insert
+// CHECK-NEXT: %[[EXTRACTED:.*]] = tensor.extract %[[INSERTED]]
+// CHECK-NEXT: return %[[EXTRACTED]] : f32
+func.func @extract_after_insert_other_constant(%value: f32, %tensor: tensor<4x8xf32>, %i: index) -> f32 {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %inserted = tensor.insert %value into %tensor[%i, %c1] : tensor<4x8xf32>
+  %extracted = tensor.extract %inserted[%i, %c2] : tensor<4x8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_shared_tensor(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK: %[[INSERTED:.*]] = tensor.insert %[[VALUE]]
+// CHECK-NEXT: return %[[INSERTED]], %[[VALUE]] : tensor<8xf32>, f32
+func.func @extract_after_insert_shared_tensor(%value: f32, %tensor: tensor<8xf32>, %i: index) -> (tensor<8xf32>, f32) {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %inserted, %extracted : tensor<8xf32>, f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_chain(
+// CHECK-SAME: %{{.*}}: f32, %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_chain(%first: f32, %value: f32, %tensor: tensor<8xf32>, %i: index) -> f32 {
+  %first_insert = tensor.insert %first into %tensor[%i] : tensor<8xf32>
+  %inserted = tensor.insert %value into %first_insert[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
 // Ensure extract dense resource elements not crash.
 
 // CHECK-LABEL: func @extract_dense_resource_nofold
@@ -3074,4 +3169,101 @@ func.func @expand_shape_no_partial_staticization(%arg0: tensor<10x10xf32>)
   %e = tensor.expand_shape %cast [[0, 1], [2]] output_shape [%c10, %c7, %cneg]
       : tensor<?x?xf32> into tensor<?x?x?xf32>
   return %e : tensor<?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_condition(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<4xf32>, %[[B:[^:]+]]: tensor<4xf32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<4xf32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_condition(%p: i1, %a: tensor<4xf32>, %b: tensor<4xf32>) -> tensor<4xf32> {
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %b : tensor<4xi1>, tensor<4xf32>
+  return %x : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_multidimensional(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<2x4xi32>, %[[B:[^:]+]]: tensor<2x4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<2x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_multidimensional(%p: i1, %a: tensor<2x4xi32>, %b: tensor<2x4xi32>) -> tensor<2x4xi32> {
+  %m = tensor.splat %p : tensor<2x4xi1>
+  %x = arith.select %m, %a, %b : tensor<2x4xi1>, tensor<2x4xi32>
+  return %x : tensor<2x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_dynamic(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<?x4xi32>, %[[B:[^:]+]]: tensor<?x4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<?x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_dynamic(%p: i1, %a: tensor<?x4xi32>, %b: tensor<?x4xi32>, %n: index) -> tensor<?x4xi32> {
+  %m = tensor.splat %p[%n] : tensor<?x4xi1>
+  %x = arith.select %m, %a, %b : tensor<?x4xi1>, tensor<?x4xi32>
+  return %x : tensor<?x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_rank_zero(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<i32>, %[[B:[^:]+]]: tensor<i32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<i32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_rank_zero(%p: i1, %a: tensor<i32>, %b: tensor<i32>) -> tensor<i32> {
+  %m = tensor.splat %p : tensor<i1>
+  %x = arith.select %m, %a, %b : tensor<i1>, tensor<i32>
+  return %x : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_shared_mask(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<4xi32>, %[[B:[^:]+]]: tensor<4xi32>
+// CHECK: %[[M:.*]] = tensor.splat %[[P]]
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]], %[[M]]
+func.func @select_splat_shared_mask(%p: i1, %a: tensor<4xi32>, %b: tensor<4xi32>) -> (tensor<4xi32>, tensor<4xi1>) {
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %b : tensor<4xi1>, tensor<4xi32>
+  return %x, %m : tensor<4xi32>, tensor<4xi1>
+}
+
+// -----
+
+// An arbitrary tensor mask is not known to be a splat.
+// CHECK-LABEL: func.func @select_nonuniform_tensor(
+// CHECK-SAME: %[[P:[^:]+]]: tensor<4xi1>
+// CHECK: arith.select %[[P]], %{{.*}}, %{{.*}} : tensor<4xi1>, tensor<4xi32>
+func.func @select_nonuniform_tensor(%p: tensor<4xi1>, %a: tensor<4xi32>, %b: tensor<4xi32>) -> tensor<4xi32> {
+  %x = arith.select %p, %a, %b : tensor<4xi1>, tensor<4xi32>
+  return %x : tensor<4xi32>
+}
+
+// -----
+
+// Preserve the existing refinement of a select with a fully poisoned arm.
+// CHECK-LABEL: func.func @select_uniform_unselected_poison_tensor(
+// CHECK-SAME: %[[P:[^:]+]]: i1
+// CHECK-SAME: %[[A:[^:]+]]: tensor<4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK-NOT: arith.select
+// CHECK: return %[[A]] : tensor<4xi32>
+func.func @select_uniform_unselected_poison_tensor(%p: i1, %a: tensor<4xi32>) -> tensor<4xi32> {
+  %bad = ub.poison : tensor<4xi32>
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %bad : tensor<4xi1>, tensor<4xi32>
+  return %x : tensor<4xi32>
 }
