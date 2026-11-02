@@ -2232,42 +2232,22 @@ class RVPBinaryIntrinsic
   // operand's elements are half as wide, with twice the element count. For
   // the .b forms the third operand holds bytes, for the .w forms it holds
   // halfwords.
-  def int_riscv_pmhacc_b0
+  def int_riscv_pmhacc_half_0
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhacc_b1
+  def int_riscv_pmhacc_half_1
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhaccsu_b0
+  def int_riscv_pmhaccsu_half_0
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhaccsu_b1
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>, LLVMMatchType<0>,
-                               LLVMSubdivide2VectorType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhacc_h0
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>, LLVMMatchType<0>,
-                               LLVMSubdivide2VectorType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhacc_h1
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>, LLVMMatchType<0>,
-                               LLVMSubdivide2VectorType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhaccsu_h0
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>, LLVMMatchType<0>,
-                               LLVMSubdivide2VectorType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhaccsu_h1
+  def int_riscv_pmhaccsu_half_1
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
@@ -2280,14 +2260,10 @@ class RVPBinaryIntrinsic
                               [LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmulh_b0   : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulh_b1   : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulhsu_b0 : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulhsu_b1 : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulh_h0   : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulh_h1   : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulhsu_h0 : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulhsu_h1 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_half_0   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_half_1   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_half_0 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_half_1 : RVPMulHighPartsIntrinsic;
 
   // Packed "Q-format" Multiply with Widening Accumulate.
   class RVPQFormatWideningAccIntrinsic

@@ -131,7 +131,8 @@ static const SCEV *getOuterStep(const SCEV *Ptr, const Loop *L,
   if (!Inner || Inner->getLoop() != SubLoop)
     return nullptr;
   auto *Outer = dyn_cast<SCEVAddRecExpr>(Inner->getStart());
-  if (!Outer || Outer->getLoop() != L)
+  if (!Outer || Outer->getLoop() != L ||
+      !SE.isLoopUniform(Inner->getStepRecurrence(SE), L))
     return nullptr;
   return Outer->getStepRecurrence(SE);
 }

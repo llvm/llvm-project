@@ -174,6 +174,181 @@ exit:
   ret void
 }
 
+; c[i][j] = a[i][(k+1)*j] + a[i+1][(k+1)*j]: the inner step is the same for every
+; i, so the second load of one iteration is the first load of the next.
+; CHECK: remark: <unknown>:0:0: unroll and jammed loop by a factor of 2 with run-time trip count
+; MAX2: remark: <unknown>:0:0: unroll and jammed loop by a factor of 2 with run-time trip count
+define void @inner_step_invariant(i64 %n, i64 %m, i64 %k, ptr noalias %c, ptr noalias %a) {
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i.next = add nuw nsw i64 %i, 1
+  %step = add nuw nsw i64 %k, 1
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer ], [ %j.next, %inner ]
+  %idx = mul nuw nsw i64 %j, %step
+  %p0 = getelementptr inbounds [1000 x double], ptr %a, i64 %i, i64 %idx
+  %p1 = getelementptr inbounds [1000 x double], ptr %a, i64 %i.next, i64 %idx
+  %v0 = load double, ptr %p0
+  %v1 = load double, ptr %p1
+  %sum = fadd double %v0, %v1
+  %q = getelementptr inbounds [1000 x double], ptr %c, i64 %i, i64 %j
+  store double %sum, ptr %q
+  %j.next = add nuw nsw i64 %j, 1
+  %inner.cond = icmp eq i64 %j.next, %m
+  br i1 %inner.cond, label %outer.latch, label %inner
+
+outer.latch:
+  %outer.cond = icmp eq i64 %i.next, %n
+  br i1 %outer.cond, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; c[i][j] = a[i][(i+1)*j] + a[i+1][(i+1)*j]: the pointers differ by one row, but
+; a[i+1][(i+2)*j] in the next iteration is a different address.
+define void @inner_step_varies_with_iv(i64 %n, i64 %m, ptr noalias %c, ptr noalias %a) {
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i.next = add nuw nsw i64 %i, 1
+  %step = add nuw nsw i64 %i, 1
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer ], [ %j.next, %inner ]
+  %idx = mul nuw nsw i64 %j, %step
+  %p0 = getelementptr inbounds [1000 x double], ptr %a, i64 %i, i64 %idx
+  %p1 = getelementptr inbounds [1000 x double], ptr %a, i64 %i.next, i64 %idx
+  %v0 = load double, ptr %p0
+  %v1 = load double, ptr %p1
+  %sum = fadd double %v0, %v1
+  %q = getelementptr inbounds [1000 x double], ptr %c, i64 %i, i64 %j
+  store double %sum, ptr %q
+  %j.next = add nuw nsw i64 %j, 1
+  %inner.cond = icmp eq i64 %j.next, %m
+  br i1 %inner.cond, label %outer.latch, label %inner
+
+outer.latch:
+  %outer.cond = icmp eq i64 %i.next, %n
+  br i1 %outer.cond, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; c[i][j] = a[i][s[i]*j] + a[i+1][s[i]*j]: the same, with an inner step that isn't
+; an add recurrence.
+define void @inner_step_varies_with_load(i64 %n, i64 %m, ptr noalias %s, ptr noalias %c, ptr noalias %a) {
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i.next = add nuw nsw i64 %i, 1
+  %sp = getelementptr inbounds i64, ptr %s, i64 %i
+  %step = load i64, ptr %sp
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer ], [ %j.next, %inner ]
+  %idx = mul nuw nsw i64 %j, %step
+  %p0 = getelementptr inbounds [1000 x double], ptr %a, i64 %i, i64 %idx
+  %p1 = getelementptr inbounds [1000 x double], ptr %a, i64 %i.next, i64 %idx
+  %v0 = load double, ptr %p0
+  %v1 = load double, ptr %p1
+  %sum = fadd double %v0, %v1
+  %q = getelementptr inbounds [1000 x double], ptr %c, i64 %i, i64 %j
+  store double %sum, ptr %q
+  %j.next = add nuw nsw i64 %j, 1
+  %inner.cond = icmp eq i64 %j.next, %m
+  br i1 %inner.cond, label %outer.latch, label %inner
+
+outer.latch:
+  %outer.cond = icmp eq i64 %i.next, %n
+  br i1 %outer.cond, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; c[i][j] = a[i][j*j] + a[i+1][j*j]: the inner step changes with j, but not with
+; i, so the second load of one iteration is still the first load of the next.
+; CHECK: remark: <unknown>:0:0: unroll and jammed loop by a factor of 2 with run-time trip count
+; MAX2: remark: <unknown>:0:0: unroll and jammed loop by a factor of 2 with run-time trip count
+define void @inner_step_uniform(i64 %n, i64 %m, ptr noalias %c, ptr noalias %a) {
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i.next = add nuw nsw i64 %i, 1
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer ], [ %j.next, %inner ]
+  %idx = mul nuw nsw i64 %j, %j
+  %p0 = getelementptr inbounds [1000 x double], ptr %a, i64 %i, i64 %idx
+  %p1 = getelementptr inbounds [1000 x double], ptr %a, i64 %i.next, i64 %idx
+  %v0 = load double, ptr %p0
+  %v1 = load double, ptr %p1
+  %sum = fadd double %v0, %v1
+  %q = getelementptr inbounds [1000 x double], ptr %c, i64 %i, i64 %j
+  store double %sum, ptr %q
+  %j.next = add nuw nsw i64 %j, 1
+  %inner.cond = icmp eq i64 %j.next, %m
+  br i1 %inner.cond, label %outer.latch, label %inner
+
+outer.latch:
+  %outer.cond = icmp eq i64 %i.next, %n
+  br i1 %outer.cond, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; c[i][j] = a[i][(i+1)*j*j] + a[i+1][(i+1)*j*j]: here the inner step changes with
+; both j and i.
+define void @inner_step_quadratic_varies(i64 %n, i64 %m, ptr noalias %c, ptr noalias %a) {
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i.next = add nuw nsw i64 %i, 1
+  %step = add nuw nsw i64 %i, 1
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer ], [ %j.next, %inner ]
+  %sq = mul nuw nsw i64 %j, %j
+  %idx = mul nuw nsw i64 %sq, %step
+  %p0 = getelementptr inbounds [1000 x double], ptr %a, i64 %i, i64 %idx
+  %p1 = getelementptr inbounds [1000 x double], ptr %a, i64 %i.next, i64 %idx
+  %v0 = load double, ptr %p0
+  %v1 = load double, ptr %p1
+  %sum = fadd double %v0, %v1
+  %q = getelementptr inbounds [1000 x double], ptr %c, i64 %i, i64 %j
+  store double %sum, ptr %q
+  %j.next = add nuw nsw i64 %j, 1
+  %inner.cond = icmp eq i64 %j.next, %m
+  br i1 %inner.cond, label %outer.latch, label %inner
+
+outer.latch:
+  %outer.cond = icmp eq i64 %i.next, %n
+  br i1 %outer.cond, label %exit, label %outer
+
+exit:
+  ret void
+}
+
 ; c[i][j] = b[j]: the load is shared by all copies, so the size limits decide.
 ; CHECK: remark: <unknown>:0:0: unroll and jammed loop by a factor of {{[0-9]+}}
 ; MAX2: remark: <unknown>:0:0: unroll and jammed loop by a factor of {{[0-9]+}}

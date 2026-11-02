@@ -107,6 +107,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
+  initializeThumb2ITBlockPass(Registry);
   initializeMVETPAndVPTOptimisationsPass(Registry);
   initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
