@@ -404,6 +404,13 @@ public:
 
   bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B);
 
+  /// Returns the result of \p Solve. If it does not return a value, retries
+  /// after adding A == decompose(A) and B == decompose(B) to the system of \p
+  /// C, if needed, and removes them afterwards.
+  std::optional<bool>
+  tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
+                  function_ref<std::optional<bool>()> Solve);
+
   /// Returns true if \p V is known to be non-negative, either because the
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V);
@@ -1094,18 +1101,19 @@ static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
                                      ConstraintInfo &Info,
                                      const DataLayout &DL);
 
-/// Calls Solve with A == decompose(A) and B == decompose(B) added to the system
-/// of C, if needed, and removes them afterwards. Returns std::nullopt if no
-/// rows were added.
-static std::optional<bool>
-tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C, ConstraintInfo &Info,
-                const DataLayout &DL,
-                function_ref<std::optional<bool>()> Solve) {
-  auto &CS = Info.getCS(C.IsSigned);
-  unsigned NumVars = Info.getValue2Index(C.IsSigned).size();
+std::optional<bool>
+ConstraintInfo::tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
+                                function_ref<std::optional<bool>()> Solve) {
+  if (std::optional<bool> Res = Solve())
+    return Res;
+  if (C.empty())
+    return std::nullopt;
+
+  auto &CS = getCS(C.IsSigned);
+  unsigned NumVars = getValue2Index(C.IsSigned).size();
   unsigned NumPushed = 0;
   for (Value *V : {A, B}) {
-    RowTy Row = getDecompositionLinkRow(V, C, Info, DL);
+    RowTy Row = getDecompositionLinkRow(V, C, *this, DL);
     RowTy Negated = ConstraintSystem::negateOrEqual(Row);
     if (Row.empty() || Negated.empty())
       continue;
@@ -1129,12 +1137,13 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
   if (R.empty())
     return false;
   auto &CS = getCS(R.IsSigned);
-  if (CS.isConditionImpliedInSubSystem(R.Coefficients))
-    return true;
-  auto Solve = [&]() -> std::optional<bool> {
-    return CS.isConditionImpliedInSubSystem(R.Coefficients);
-  };
-  return tryWithLinkRows(A, B, R, *this, DL, Solve).value_or(false);
+  return tryWithLinkRows(A, B, R,
+                         [&]() -> std::optional<bool> {
+                           if (CS.isConditionImpliedInSubSystem(R.Coefficients))
+                             return true;
+                           return std::nullopt;
+                         })
+      .value_or(false);
 }
 
 bool ConstraintInfo::isKnownNonNegative(Value *V) {
@@ -2068,16 +2077,10 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   // == decompose(B), if needed.
   auto TryWithLinkedDecomposition =
       [&](const ConstraintTy &C) -> std::optional<bool> {
-    if (C.empty())
-      return std::nullopt;
-
-    return tryWithLinkRows(A, B, C, Info, CheckInst->getDataLayout(),
-                           [&] { return TryWithConstraint(C); });
+    return Info.tryWithLinkRows(A, B, C, [&] { return TryWithConstraint(C); });
   };
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (auto ImpliedCondition = TryWithConstraint(R))
-    return ImpliedCondition;
   if (auto ImpliedCondition = TryWithLinkedDecomposition(R))
     return ImpliedCondition;
 
@@ -2104,8 +2107,6 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
     auto SR = Info.getConstraint(Pred, A, B, NewVariables,
                                  /*ForceSignedSystem=*/true);
     if (NewVariables.empty()) {
-      if (auto ImpliedCondition = TryWithConstraint(SR))
-        return ImpliedCondition;
       if (auto ImpliedCondition = TryWithLinkedDecomposition(SR))
         return ImpliedCondition;
     }
