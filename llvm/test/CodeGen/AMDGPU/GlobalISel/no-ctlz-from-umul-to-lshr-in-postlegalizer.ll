@@ -8,63 +8,63 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v1
 ; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2
-; CHECK-NEXT:    s_mov_b32 s8, 16
-; CHECK-NEXT:    s_mov_b32 s11, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s11
+; CHECK-NEXT:    s_mov_b32 s7, 16
+; CHECK-NEXT:    s_mov_b32 s10, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s10
 ; CHECK-NEXT:    v_rcp_iflag_f32_e64 v2, v2
 ; CHECK-NEXT:    s_mov_b32 s5, 0x4f7ffffe
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mul_f32_e64 v2, v2, v3
 ; CHECK-NEXT:    v_cvt_u32_f32_e64 v2, v2
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
-; CHECK-NEXT:    s_mov_b32 s10, 0
-; CHECK-NEXT:    s_mul_hi_u32 s6, s4, s10
+; CHECK-NEXT:    s_mov_b32 s8, 0
+; CHECK-NEXT:    s_mul_hi_u32 s6, s4, s8
 ; CHECK-NEXT:    s_add_i32 s4, s4, s6
-; CHECK-NEXT:    s_mul_hi_u32 s4, s4, s8
-; CHECK-NEXT:    s_mov_b32 s6, 2
-; CHECK-NEXT:    s_add_i32 s4, s4, s6
-; CHECK-NEXT:    v_mov_b32_e32 v2, s11
+; CHECK-NEXT:    s_mul_hi_u32 s4, s4, s7
+; CHECK-NEXT:    s_mov_b32 s11, 2
+; CHECK-NEXT:    s_add_i32 s4, s4, s11
+; CHECK-NEXT:    v_mov_b32_e32 v2, s10
 ; CHECK-NEXT:    v_rcp_iflag_f32_e64 v2, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mul_f32_e64 v2, v2, v3
 ; CHECK-NEXT:    v_cvt_u32_f32_e64 v2, v2
-; CHECK-NEXT:    v_readfirstlane_b32 s7, v2
-; CHECK-NEXT:    s_mul_hi_u32 s9, s7, s10
-; CHECK-NEXT:    s_add_i32 s7, s7, s9
-; CHECK-NEXT:    s_mul_hi_u32 s7, s7, s8
-; CHECK-NEXT:    s_add_i32 s9, s7, s6
-; CHECK-NEXT:    v_mov_b32_e32 v2, s11
+; CHECK-NEXT:    v_readfirstlane_b32 s6, v2
+; CHECK-NEXT:    s_mul_hi_u32 s9, s6, s8
+; CHECK-NEXT:    s_add_i32 s6, s6, s9
+; CHECK-NEXT:    s_mul_hi_u32 s6, s6, s7
+; CHECK-NEXT:    s_add_i32 s9, s6, s11
+; CHECK-NEXT:    v_mov_b32_e32 v2, s10
 ; CHECK-NEXT:    v_rcp_iflag_f32_e64 v2, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mul_f32_e64 v2, v2, v3
 ; CHECK-NEXT:    v_cvt_u32_f32_e64 v2, v2
-; CHECK-NEXT:    v_readfirstlane_b32 s7, v2
-; CHECK-NEXT:    s_mul_hi_u32 s12, s7, s10
-; CHECK-NEXT:    s_add_i32 s7, s7, s12
-; CHECK-NEXT:    s_mul_hi_u32 s7, s7, s8
-; CHECK-NEXT:    s_add_i32 s7, s7, s6
-; CHECK-NEXT:    v_mov_b32_e32 v2, s11
+; CHECK-NEXT:    v_readfirstlane_b32 s6, v2
+; CHECK-NEXT:    s_mul_hi_u32 s12, s6, s8
+; CHECK-NEXT:    s_add_i32 s6, s6, s12
+; CHECK-NEXT:    s_mul_hi_u32 s6, s6, s7
+; CHECK-NEXT:    s_add_i32 s6, s6, s11
+; CHECK-NEXT:    v_mov_b32_e32 v2, s10
 ; CHECK-NEXT:    v_rcp_iflag_f32_e64 v2, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mul_f32_e64 v2, v2, v3
 ; CHECK-NEXT:    v_cvt_u32_f32_e64 v2, v2
 ; CHECK-NEXT:    v_readfirstlane_b32 s5, v2
-; CHECK-NEXT:    s_mul_hi_u32 s10, s5, s10
-; CHECK-NEXT:    s_add_i32 s5, s5, s10
-; CHECK-NEXT:    s_mul_hi_u32 s5, s5, s8
-; CHECK-NEXT:    s_add_i32 s5, s5, s6
-; CHECK-NEXT:    s_mov_b32 s6, 0xff
-; CHECK-NEXT:    s_and_b32 s4, s4, s6
-; CHECK-NEXT:    s_and_b32 s9, s9, s6
+; CHECK-NEXT:    s_mul_hi_u32 s8, s5, s8
+; CHECK-NEXT:    s_add_i32 s5, s5, s8
+; CHECK-NEXT:    s_mul_hi_u32 s5, s5, s7
+; CHECK-NEXT:    s_mov_b32 s8, 0xff
+; CHECK-NEXT:    s_and_b32 s4, s4, s8
+; CHECK-NEXT:    s_and_b32 s9, s9, s8
 ; CHECK-NEXT:    s_mov_b32 s10, 8
 ; CHECK-NEXT:    s_lshl_b32 s9, s9, s10
 ; CHECK-NEXT:    s_or_b32 s4, s4, s9
-; CHECK-NEXT:    s_and_b32 s7, s7, s6
-; CHECK-NEXT:    s_lshl_b32 s7, s7, s8
-; CHECK-NEXT:    s_or_b32 s4, s4, s7
-; CHECK-NEXT:    s_and_b32 s5, s5, s6
+; CHECK-NEXT:    s_and_b32 s6, s6, s8
+; CHECK-NEXT:    s_lshl_b32 s6, s6, s7
+; CHECK-NEXT:    s_or_b32 s4, s4, s6
 ; CHECK-NEXT:    s_mov_b32 s6, 24
 ; CHECK-NEXT:    s_lshl_b32 s5, s5, s6
+; CHECK-NEXT:    s_mov_b32 s6, 0x2000000
+; CHECK-NEXT:    s_add_i32 s5, s5, s6
 ; CHECK-NEXT:    s_or_b32 s4, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s4
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2

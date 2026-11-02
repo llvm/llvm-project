@@ -222,6 +222,14 @@ static ParseResult parseRecordMembers(mlir::AsmParser &parser,
 // ConstRecordAttr definitions
 //===----------------------------------------------------------------------===//
 
+static bool isValidFlexibleArrayInit(mlir::Type memberType,
+                                     mlir::Type initType) {
+  auto memberArrayType = mlir::dyn_cast<cir::ArrayType>(memberType);
+  auto initArrayType = mlir::dyn_cast<cir::ArrayType>(initType);
+  return memberArrayType && memberArrayType.getSize() == 0 && initArrayType &&
+         memberArrayType.getElementType() == initArrayType.getElementType();
+}
+
 LogicalResult
 ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                         mlir::Type type, ArrayAttr members) {
@@ -238,7 +246,9 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     auto m = mlir::cast<mlir::TypedAttr>(members[0]);
     // A bit-field variant is initialized as the access unit it owns.
     if (!llvm::any_of(sTy.getMembers(), [&](mlir::Type memberTy) {
-          return cir::memberStorageType(memberTy) == m.getType();
+          mlir::Type storageType = cir::memberStorageType(memberTy);
+          return storageType == m.getType() ||
+                 isValidFlexibleArrayInit(storageType, m.getType());
         }))
       return emitError() << "union element type " << m.getType()
                          << " is not a member of " << sTy;
@@ -606,6 +616,8 @@ void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
     p << ", constant";
   if (getIsManaged())
     p << ", managed";
+  if (getKind() == CUDADeviceVarKind::Surface)
+    p << ", surface_type = " << getSurfTexType();
   p << ">";
 }
 
@@ -640,6 +652,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   bool isExtern = false;
   bool isConstant = false;
   bool isManaged = false;
+  int32_t surfTexType = 0;
 
   while (parser.parseOptionalGreater().failed()) {
     if (parser.parseComma())
@@ -655,14 +668,17 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
       isConstant = true;
     else if (flag == "managed")
       isManaged = true;
-    else {
+    else if (flag == "surface_type") {
+      if (parser.parseEqual() || parser.parseInteger(surfTexType))
+        return {};
+    } else {
       parser.emitError(parser.getCurrentLocation(), "unknown flag: ") << flag;
       return {};
     }
   }
 
   return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
-             isManaged);
+             isManaged, surfTexType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -902,7 +918,10 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
   const auto vecType = mlir::cast<cir::VectorType>(type);
 
-  if (vecType.getSize() != elts.size())
+  if (vecType.isScalable())
+    return emitError() << "scalable vector constants are not supported";
+
+  if (vecType.getFixedSize() != elts.size())
     return emitError()
            << "number of constant elements should match vector size";
 

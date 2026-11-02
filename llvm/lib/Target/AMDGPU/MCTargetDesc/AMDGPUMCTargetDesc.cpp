@@ -176,7 +176,7 @@ void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst,
   if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
     VgprMSBs = Inst.getOperand(0).getImm() & 0xff;
   else if (Inst.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_gfx12 &&
-           STI->hasFeature(AMDGPU::Feature1024AddressableVGPRs)) {
+           STI->hasFeature(AMDGPU::FeatureVGPRMSBs)) {
     VgprMSBs = AMDGPU::convertSetRegImmToVgprMSBs(
                    Inst, STI->hasFeature(AMDGPU::FeatureSetregVGPRMSBFixup))
                    .value_or(0);
@@ -216,6 +216,8 @@ LLVMInitializeAMDGPUTargetMC() {
                                         createR600MCCodeEmitter);
   TargetRegistry::RegisterObjectTargetStreamer(
       getTheR600Target(), createAMDGPUObjectTargetStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(getTheR600Target(),
+                                             createAMDGPUNullTargetStreamer);
 
   // GCN specific registration
   for (Target *T : {&getTheGCNTarget(), &getTheGCNLegacyTarget()}) {

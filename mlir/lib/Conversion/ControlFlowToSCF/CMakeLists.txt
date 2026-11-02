@@ -8,7 +8,6 @@ add_mlir_conversion_library(MLIRControlFlowToSCF
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
   MLIRArithDialect
   MLIRControlFlowDialect
   MLIRSCFDialect
