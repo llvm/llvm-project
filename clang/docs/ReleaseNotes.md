@@ -593,6 +593,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `-Wlifetime-safety-experimental-field-origin-escape`, which warns when a
     member function returns a value derived from a pointer, reference, or view
     field rather than from `*this`.
+  - `-Wlifetime-safety-experimental-destructor-use`, which warns when an object
+    whose non-trivial destructor may read a borrow is destroyed after the
+    storage it borrows from.
 
 - Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
   flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
@@ -775,6 +778,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when a token followed an `#embed` parameter whose
   expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
   (#GH212075)
+- Fixed an assertion failure while recovering from invalid `__has_embed` parameters at the end of a preprocessing directive. (#GH236416)
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
@@ -793,12 +797,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
+- Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
   enclosing context, which is now diagnosed, a data member inside a member function template, or a structured
   binding. (#GH217893)
+- Fixed a crash when template argument substitution fails in the type of an OpenMP `declare reduction` or
+  `declare mapper` directive. (#GH223366)
 - Fixed an assertion failure when a variable implicitly mapped by an OpenMP `target` directive has a class type
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
@@ -808,6 +815,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when a local register variable bound to a pseudo or status register by an `asm` label,
   such as `register long double t __asm("17");` (the flags register), was used as an inline asm operand.
   Such declarations are now rejected, matching GCC. (#GH225033)
+- Fixed a crash on `break` out of a `for` loop whose init-statement declares a variable in C89 mode (a Clang
+  extension), which happened at `-O1` and above or when the variable had a `cleanup` attribute. (#GH170243)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
@@ -893,9 +902,6 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
-
-- Fixed rejecting valid reference initialization with conversion function templates whose returned type is depending on 
-  template parameters. (#GH226984)
 
 - Fixed a crash when an `address_space` attribute with a dependent argument was
   written after the declarator-id, where it appertains to the declared entity
@@ -1217,6 +1223,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   parameter substituted through an alias template is used as the base of an
   unresolved name, such as `TT<T>::value` in a non-type template parameter's
   type. (#GH88592)
+- Fixed an assertion failure that caused clangd to crash on preprocessor 
+  directives that contain an undefined identifier and end inside an unfinished 
+  subexpression, e.g. due to unclosed parenthesis. (#GH226555)
+- Fixed an assertion when emitting base destructor as alias on targets (such
+  as AVR) which have different address spaces for code and data. (#GH236285)
 
 ### OpenACC Specific Changes
 
@@ -1421,6 +1432,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 ### Static Analyzer
 
 #### Crash and bug fixes
+- `unix.BlockInCriticalSection` checker now recognizes `mtx_timedlock`
+  calls with 2 arguments as a locking call. This fixes false negatives.
+  (#GH237154)
 
 % comment:
 % This is for the Static Analyzer.
@@ -1493,11 +1507,15 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   matching the behavior of such maps outside a mapper.
 - Fixed a crash when the `safelen` and `simdlen` clauses of an OpenMP directive
   have arguments of different integer types. (#GH108367)
+- Fixed a crash when the init or increment of an OpenMP loop uses a braced
+  list, such as `int i = {0}`. (#GH202562)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
 - Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
   `_BitInt` type wider than any standard integer type. (#GH140074)
+- Fixed a crash when a non-static data member appears in a `lastprivate` clause
+  inside a member function template of a non-template class. (#GH144302)
 - Loop-transforming constructs such as `tile` and `unroll` are now allowed
   inside a `simd` region for OpenMP 6.0 or later, which classifies them as
   simdizable.

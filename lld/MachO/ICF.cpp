@@ -426,7 +426,7 @@ void ICF::run() {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
       uint32_t hash = isec->icfEqClass[icfPass % 2];
       for (const Relocation &r : isec->relocs) {
-        if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+        if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec()) {
               if (auto *referentIsec =
@@ -570,7 +570,7 @@ void macho::markAddrSigSymbols() {
     const InputSection *isec = addrSigSection->subsections[0].isec;
 
     for (const Relocation &r : isec->relocs) {
-      if (auto *sym = r.referent.dyn_cast<Symbol *>())
+      if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent))
         markSymAsAddrSig(sym);
       else
         error(toString(isec) + ": unexpected section relocation");
@@ -658,21 +658,23 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
                       (isCodeSec || isFoldableIgnoringRelocatedBytes(isec)) &&
                       keepUniqueAllowsFolding && !isec->hasAltEntry &&
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
-    if (isFoldable) {
-      foldable.push_back(isec);
-      for (Defined *d : isec->symbols)
-        if (d->unwindEntry())
-          foldable.push_back(d->unwindEntry());
-    } else if (isEhFrameSection(isec)) {
+    // Check __eh_frame before isFoldable: `ld -r` output marks it S_REGULAR
+    // instead of S_COALESCED, so it can pass hasFoldableFlags, which would
+    // collect its FDEs a second time.
+    if (isEhFrameSection(isec)) {
       // __eh_frame contains two types of records: FDEs and CIEs.
-      // Functions point to FDEs, which are already collected above via
-      // unwindEntry(). CIEs are shared headers and are not attached to
-      // individual functions. Collect only CIEs here so they can also be hashed
-      // and deduplicated.
+      // Functions point to FDEs, which are collected below via unwindEntry().
+      // CIEs are shared headers and are not attached to individual functions.
+      // Collect only CIEs here so they can also be hashed and deduplicated.
       auto *obj = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!onlyCfStrings && obj && !obj->fdes.contains(isec) &&
           !isec->shouldOmitFromOutput())
         foldable.push_back(isec);
+    } else if (isFoldable) {
+      foldable.push_back(isec);
+      for (Defined *d : isec->symbols)
+        if (d->unwindEntry())
+          foldable.push_back(d->unwindEntry());
     } else {
       // Give a unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;
