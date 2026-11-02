@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_IR_DEBUGINFOODRUNIQUER_H
+#define LLVM_IR_DEBUGINFOODRUNIQUER_H
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Metadata.h"
@@ -78,15 +81,14 @@ class DebugInfoODRUniquer {
 public:
   ~DebugInfoODRUniquer() {
     assert(PendingFnDecls.empty() &&
-           "Unexpected unresolved maybe-ODR-unqiue DISubprograms");
+           "Unexpected unresolved maybe-ODR-unique DISubprograms");
   }
 
   // FIXME: Improve the interface for types.
   DenseMap<const MDString *, DICompositeType *> DITypeMap;
 
-  /// Get an existing DISubprogram declaration with matching scope, linkage
-  /// name, type, and template parameters, that has been registered with
-  /// `addSubprogramDecl`, or return nullptr.
+  /// Get an existing DISubprogram declaration with matching scope and linkage
+  /// name that has been registered with `addSubprogramDecl` or return nullptr.
   LLVM_ABI DISubprogram *getODRSubprogramDecl(DIScope *Scope,
                                               StringRef LinkageName);
 
@@ -104,3 +106,5 @@ public:
 };
 
 } // namespace llvm
+
+#endif // LLVM_IR_DEBUGINFOODRUNIQUER_H

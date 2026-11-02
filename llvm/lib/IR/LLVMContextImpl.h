@@ -30,7 +30,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugInfoODRUniquer.h"
 #include "llvm/IR/DerivedTypes.h"

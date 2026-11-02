@@ -58,7 +58,7 @@ void DebugInfoODRUniquer::finalizeUnresolvedSubprogramDecls() {
        ++It) {
     TempDISubprogram SP = std::move(*It);
     if (MDNode *Scope = dyn_cast_or_null<MDNode>(SP->getRawScope())) {
-      assert(!SP->getLinkageName().empty() && "expcted linkage name");
+      assert(!SP->getLinkageName().empty() && "expected linkage name");
       assert(!Scope->isTemporary() &&
              "expected temporary scope to be replaced");
       if (DISubprogram *Existing = getODRSubprogramDecl(cast<DIScope>(Scope),
