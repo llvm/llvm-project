@@ -87,8 +87,7 @@ static bool collectDirectCallSites(Function &F,
     if (!CB || !CB->isCallee(&U) ||
         CB->getFunctionType() != F.getFunctionType())
       return false;
-    // Invoke stays rejected: AMDGPU still treats an invoke as divergent.
-    if (CB->isMustTailCall() || isa<InvokeInst>(CB))
+    if (CB->isMustTailCall())
       return false;
     Calls.push_back(CB);
   }

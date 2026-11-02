@@ -544,11 +544,11 @@ define amdgpu_kernel void @k_already(ptr %p) {
   ret void
 }
 
-; Invoke call sites block promotion.
+; An invoke is a direct call site like any other and is promoted with it.
 
 define internal fastcc void @callee_invoke(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @callee_invoke(
-; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-SAME: ptr inreg [[P:%.*]]) {
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -559,7 +559,7 @@ define internal fastcc void @callee_invoke(ptr %p) {
 define amdgpu_kernel void @k_invoke(ptr %p) personality ptr null {
 ; CHECK-LABEL: define amdgpu_kernel void @k_invoke(
 ; CHECK-SAME: ptr [[P:%.*]]) personality ptr null {
-; CHECK-NEXT:    invoke fastcc void @callee_invoke(ptr [[P]])
+; CHECK-NEXT:    invoke fastcc void @callee_invoke(ptr inreg [[P]])
 ; CHECK-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
 ; CHECK:       [[CONT]]:
 ; CHECK-NEXT:    ret void
@@ -571,6 +571,96 @@ define amdgpu_kernel void @k_invoke(ptr %p) personality ptr null {
   invoke fastcc void @callee_invoke(ptr %p) to label %cont unwind label %lpad
 
 cont:
+  ret void
+
+lpad:
+  %tok = landingpad { ptr, i32 }
+  cleanup
+  ret void
+}
+
+; An invoke and a call to the same function are checked together: the divergent
+; call site keeps %i from being promoted, and the uniform %p still is.
+
+define internal fastcc void @callee_invoke_mixed(ptr %p, i32 %i) {
+; CHECK-LABEL: define internal fastcc void @callee_invoke_mixed(
+; CHECK-SAME: ptr inreg [[P:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    store i32 [[I]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 %i, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_invoke_mixed(ptr %p, i32 %i) personality ptr null {
+; CHECK-LABEL: define amdgpu_kernel void @k_invoke_mixed(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) personality ptr null {
+; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    call fastcc void @callee_invoke_mixed(ptr inreg [[P]], i32 [[TID]])
+; CHECK-NEXT:    invoke fastcc void @callee_invoke_mixed(ptr inreg [[P]], i32 [[I]])
+; CHECK-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
+; CHECK:       [[CONT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    [[TOK:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  call fastcc void @callee_invoke_mixed(ptr %p, i32 %tid)
+  invoke fastcc void @callee_invoke_mixed(ptr %p, i32 %i) to label %cont unwind label %lpad
+
+cont:
+  ret void
+
+lpad:
+  %tok = landingpad { ptr, i32 }
+  cleanup
+  ret void
+}
+
+; An invoke result is not trivially uniform, and it lives in a different block
+; from the invoke that uses it.
+
+define internal fastcc i32 @callee_invoke_result_def(i32 %x) {
+; CHECK-LABEL: define internal fastcc i32 @callee_invoke_result_def(
+; CHECK-SAME: i32 inreg [[X:%.*]]) {
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  ret i32 %x
+}
+
+define internal fastcc void @callee_invoke_result_use(i32 %y) {
+; CHECK-LABEL: define internal fastcc void @callee_invoke_result_use(
+; CHECK-SAME: i32 [[Y:%.*]]) {
+; CHECK-NEXT:    store i32 [[Y]], ptr null, align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 %y, ptr null
+  ret void
+}
+
+define amdgpu_kernel void @k_invoke_result(i32 %x) personality ptr null {
+; CHECK-LABEL: define amdgpu_kernel void @k_invoke_result(
+; CHECK-SAME: i32 [[X:%.*]]) personality ptr null {
+; CHECK-NEXT:    [[R:%.*]] = invoke fastcc i32 @callee_invoke_result_def(i32 inreg [[X]])
+; CHECK-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
+; CHECK:       [[CONT]]:
+; CHECK-NEXT:    invoke fastcc void @callee_invoke_result_use(i32 [[R]])
+; CHECK-NEXT:            to label %[[DONE:.*]] unwind label %[[LPAD]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    [[TOK:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret void
+;
+  %r = invoke fastcc i32 @callee_invoke_result_def(i32 %x) to label %cont unwind label %lpad
+
+cont:
+  invoke fastcc void @callee_invoke_result_use(i32 %r) to label %done unwind label %lpad
+
+done:
   ret void
 
 lpad:
