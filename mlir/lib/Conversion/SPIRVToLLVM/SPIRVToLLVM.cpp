@@ -1064,23 +1064,23 @@ public:
   }
 };
 
-class InverseSqrtPattern
-    : public SPIRVToLLVMConversion<spirv::GLInverseSqrtOp> {
+template <typename SPIRVOp>
+class InverseSqrtPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLInverseSqrtOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLInverseSqrtOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = op.getType();
-    auto dstType = getTypeConverter()->convertType(srcType);
+    auto dstType = this->getTypeConverter()->convertType(srcType);
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     Location loc = op.getLoc();
     Value one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
     Value sqrt = LLVM::SqrtOp::create(rewriter, loc, dstType, op.getOperand());
-    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, dstType, one, sqrt);
+    rewriter.template replaceOpWithNewOp<LLVM::FDivOp>(op, dstType, one, sqrt);
     return success();
   }
 };
@@ -1921,21 +1921,22 @@ public:
 };
 
 // `llvm.intr.abs` requires an `is_int_min_poison` immarg that `spirv.GL.SAbs`
-// does not carry; default to `false` to preserve SPIR-V's well-defined
-// behavior on INT_MIN.
-class SAbsPattern : public SPIRVToLLVMConversion<spirv::GLSAbsOp> {
+// and `spirv.CL.s_abs` do not carry; default to `false` to preserve SPIR-V's
+// well-defined behavior on INT_MIN.
+template <typename SPIRVOp>
+class SAbsPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSAbsOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSAbsOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type dstType = getTypeConverter()->convertType(op.getType());
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    rewriter.replaceOpWithNewOp<LLVM::AbsOp>(op, dstType, adaptor.getOperand(),
-                                             /*is_int_min_poison=*/false);
+    rewriter.template replaceOpWithNewOp<LLVM::AbsOp>(
+        op, dstType, adaptor.getOperand(), /*is_int_min_poison=*/false);
     return success();
   }
 };
@@ -2485,8 +2486,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
       DirectConversionPattern<spirv::GLTanOp, LLVM::TanOp>,
       DirectConversionPattern<spirv::GLTanhOp, LLVM::TanhOp>,
-      InverseSqrtPattern, SAbsPattern, FractPattern,
-      SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
+      InverseSqrtPattern<spirv::GLInverseSqrtOp>, SAbsPattern<spirv::GLSAbsOp>,
+      FractPattern, SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
       SignPattern<spirv::GLSSignOp, /*isFloat=*/false>, GLFMixPattern,
 
       // OpenCL extended instruction set ops
@@ -2523,6 +2524,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
+      InverseSqrtPattern<spirv::CLRsqrtOp>, SAbsPattern<spirv::CLSAbsOp>,
       ClampPattern<spirv::CLFClampOp, LLVM::MinNumOp, LLVM::MaxNumOp>,
       ClampPattern<spirv::CLSClampOp, LLVM::SMinOp, LLVM::SMaxOp>,
       ClampPattern<spirv::CLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,

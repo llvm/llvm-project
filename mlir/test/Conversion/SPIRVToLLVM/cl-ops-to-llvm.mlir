@@ -101,6 +101,32 @@ spirv.func @cl_integer(%arg0: i32, %arg1: i32) "None" {
   %2 = spirv.CL.u_max %arg0, %arg1 : i32
   // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %3 = spirv.CL.u_min %arg0, %arg1 : i32
+  // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (i32) -> i32
+  %4 = spirv.CL.s_abs %arg0 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @cl_s_abs_vector
+spirv.func @cl_s_abs_vector(%arg0: vector<3xi16>) "None" {
+  // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (vector<3xi16>) -> vector<3xi16>
+  %0 = spirv.CL.s_abs %arg0 : vector<3xi16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.rsqrt
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @rsqrt
+spirv.func @rsqrt(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%{{.*}}) : (f32) -> f32
+  // CHECK: llvm.fdiv %[[ONE]], %[[SQRT]] : f32
+  %0 = spirv.CL.rsqrt %arg0 : f32
+  // CHECK: %[[VONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf16>) : vector<3xf16>
+  // CHECK: %[[VSQRT:.*]] = llvm.intr.sqrt(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: llvm.fdiv %[[VONE]], %[[VSQRT]] : vector<3xf16>
+  %1 = spirv.CL.rsqrt %arg1 : vector<3xf16>
   spirv.Return
 }
 
