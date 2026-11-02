@@ -63,6 +63,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -168,24 +169,16 @@ cl::opt<bool>
                       cl::desc("Use this option to turn off/on "
                                "warnings about profile cfg mismatch."));
 
-extern cl::opt<unsigned> MaxNumVTableAnnotations;
-
-// Command line option to turn on CFG dot dump after profile annotation.
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
-extern cl::opt<PGOViewCountsType> PGOViewCounts;
-
-// Command line option to specify the name of the function for CFG dump
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
-extern cl::opt<std::string> ViewBlockFreqFuncName;
-
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
 extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
-bool llvm::isPGOInstrumentColdFunctionOnly() {
-  return InstrumentationOptions::Global.pgo_instrument_cold_function_only;
+bool llvm::isPGOInstrumentColdFunctionOnly(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<InstrumentationOptions>()
+      .pgo_instrument_cold_function_only;
 }
 
 namespace {
@@ -694,7 +687,7 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   auto canInstrument = [](BasicBlock *BB) -> BasicBlock * {
     // There are basic blocks (such as catchswitch) cannot be instrumented.
     // If the returned first insertion point is the end of BB, skip this BB.
-    if (BB->getFirstNonPHIOrDbgOrAlloca() == BB->end())
+    if (BB->getFirstNonPHIOrAlloca() == BB->end())
       return nullptr;
     return BB;
   };
@@ -791,7 +784,7 @@ void FunctionInstrumenter::instrument() {
       Name, PointerType::get(M.getContext(), 0));
   if (Opts.pgo_function_entry_coverage) {
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrAlloca());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
     Builder.CreateIntrinsic(
@@ -850,7 +843,7 @@ void FunctionInstrumenter::instrument() {
   if (Opts.pgo_temporal_instrumentation) {
     NumCounters += Opts.pgo_block_coverage ? 8 : 1;
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrAlloca());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
     Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp,
@@ -861,7 +854,7 @@ void FunctionInstrumenter::instrument() {
   }
 
   for (auto *InstrBB : InstrumentBBs) {
-    IRBuilder<> Builder(InstrBB->getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(InstrBB->getFirstNonPHIOrAlloca());
     assert(Builder.GetInsertPoint() != InstrBB->end() &&
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
@@ -1642,7 +1635,7 @@ void PGOUseFunc::setBlockUniformityAttribute() {
 
   for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
     BasicBlock *BB = InstrumentBBs[I];
-    if (!BB || !BB->getTerminator())
+    if (!BB)
       continue;
     bool IsUniform = ProfileRecord.isBlockUniform(I);
     auto *MD = MDNode::get(
@@ -1726,11 +1719,12 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
 }
 
 static uint32_t getMaxNumAnnotations(const InstrumentationOptions &Opts,
+                                     const LLVMContext &C,
                                      InstrProfValueKind ValueProfKind) {
   if (ValueProfKind == IPVK_MemOPSize)
     return Opts.memop_max_annotations;
   if (ValueProfKind == llvm::IPVK_VTableTarget)
-    return MaxNumVTableAnnotations;
+    return getMaxNumVTableAnnotations(C);
   return Opts.icp_max_annotations;
 }
 
@@ -1761,7 +1755,7 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
   // TODO: Remove this if/when -enable-vtable-value-profiling is on by default.
   if (NumValueSites > 0 && Kind == IPVK_VTableTarget &&
       NumValueSites != FuncInfo.ValueSites[IPVK_VTableTarget].size() &&
-      MaxNumVTableAnnotations != 0)
+      getMaxNumVTableAnnotations(M->getContext()) != 0)
     FuncInfo.ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
   auto &ValueSites = FuncInfo.ValueSites[Kind];
   if (NumValueSites != ValueSites.size()) {
@@ -1783,7 +1777,8 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     annotateValueSite(
         *M, *I.AnnotatedInst, ProfileRecord,
         static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
-        getMaxNumAnnotations(Opts, static_cast<InstrProfValueKind>(Kind)));
+        getMaxNumAnnotations(Opts, M->getContext(),
+                             static_cast<InstrProfValueKind>(Kind)));
     ValueSiteIndex++;
   }
 }
@@ -1890,11 +1885,11 @@ static bool instrumentAllFunctions(
 PreservedAnalyses
 PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &MAM) {
   createProfileFileNameVar(M, CSInstrName);
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // The variable in a comdat may be discarded by LTO. Ensure the declaration
   // will be retained.
   appendToCompilerUsed(
-      M, createIRLevelProfileFlagVar(InstrumentationOptions::Global, M,
-                                     PGOInstrumentationType::CSFDO));
+      M, createIRLevelProfileFlagVar(Opts, M, PGOInstrumentationType::CSFDO));
   if (ProfileSampling)
     createProfileSamplingVar(M);
   PreservedAnalyses PA;
@@ -1919,9 +1914,9 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
     return &FAM.getResult<LoopAnalysis>(F);
   };
 
-  if (!instrumentAllFunctions(InstrumentationOptions::Global, M, LookupTLI,
-                              LookupBPI, LookupBFI, LookupLI,
-                              InstrumentationType))
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  if (!instrumentAllFunctions(Opts, M, LookupTLI, LookupBPI, LookupBFI,
+                              LookupLI, InstrumentationType))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -2170,31 +2165,31 @@ static bool annotateAllFunctions(
       ColdFunctions.push_back(&F);
     else if (FreqAttr == PGOUseFunc::FFA_Hot)
       HotFunctions.push_back(&F);
-    if (PGOViewCounts != PGOVCT_None &&
-        (ViewBlockFreqFuncName.empty() ||
-         F.getName() == ViewBlockFreqFuncName)) {
+    PGOViewCountsType ViewCounts = getPGOViewCounts(F.getContext());
+    StringRef ViewFuncName = getViewBlockFreqFuncName(F.getContext());
+    if (ViewCounts != PGOViewCountsType::None &&
+        (ViewFuncName.empty() || F.getName() == ViewFuncName)) {
       CycleInfo CI;
       CI.compute(F);
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           std::make_unique<BranchProbabilityInfo>(F, CI);
       std::unique_ptr<BlockFrequencyInfo> NewBFI =
           std::make_unique<BlockFrequencyInfo>(F, *NewBPI, CI);
-      if (PGOViewCounts == PGOVCT_Graph)
+      if (ViewCounts == PGOViewCountsType::Graph)
         NewBFI->view();
-      else if (PGOViewCounts == PGOVCT_Text) {
+      else if (ViewCounts == PGOViewCountsType::Text) {
         dbgs() << "pgo-view-counts: " << Func.getFunc().getName() << "\n";
         NewBFI->print(dbgs());
       }
     }
-    if (Opts.pgo_view_raw_counts != PGOVCT_None &&
-        (ViewBlockFreqFuncName.empty() ||
-         F.getName() == ViewBlockFreqFuncName)) {
-      if (Opts.pgo_view_raw_counts == PGOVCT_Graph)
-        if (ViewBlockFreqFuncName.empty())
+    if (Opts.pgo_view_raw_counts != PGOViewCountsType::None &&
+        (ViewFuncName.empty() || F.getName() == ViewFuncName)) {
+      if (Opts.pgo_view_raw_counts == PGOViewCountsType::Graph)
+        if (ViewFuncName.empty())
           WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
         else
           ViewGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
-      else if (Opts.pgo_view_raw_counts == PGOVCT_Text) {
+      else if (Opts.pgo_view_raw_counts == PGOViewCountsType::Text) {
         dbgs() << "pgo-view-raw-counts: " << Func.getFunc().getName() << "\n";
         Func.dumpInfo();
       }
@@ -2255,11 +2250,6 @@ PGOInstrumentationUse::PGOInstrumentationUse(
     : ProfileFileName(std::move(Filename)),
       ProfileRemappingFileName(std::move(RemappingFilename)), IsCS(IsCS),
       FS(std::move(VFS)) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
-  if (!Opts.pgo_test_profile_file.empty())
-    ProfileFileName = Opts.pgo_test_profile_file;
-  if (!Opts.pgo_test_profile_remapping_file.empty())
-    ProfileRemappingFileName = Opts.pgo_test_profile_remapping_file;
   if (!FS)
     FS = vfs::getRealFileSystem();
 }
@@ -2282,9 +2272,15 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   };
 
   auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
-  if (!annotateAllFunctions(InstrumentationOptions::Global, M, ProfileFileName,
-                            ProfileRemappingFileName, *FS, LookupTLI, LookupBPI,
-                            LookupBFI, LookupLI, PSI, IsCS))
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  StringRef ProfileFile = ProfileFileName;
+  if (!Opts.pgo_test_profile_file.empty())
+    ProfileFile = Opts.pgo_test_profile_file;
+  StringRef RemappingFile = ProfileRemappingFileName;
+  if (!Opts.pgo_test_profile_remapping_file.empty())
+    RemappingFile = Opts.pgo_test_profile_remapping_file;
+  if (!annotateAllFunctions(Opts, M, ProfileFile, RemappingFile, *FS, LookupTLI,
+                            LookupBPI, LookupBFI, LookupLI, PSI, IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -2312,7 +2308,9 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
 
-  if (InstrumentationOptions::Global.pgo_emit_branch_prob) {
+  const InstrumentationOptions &Opts =
+      getInstrumentationOptions(*TI->getFunction());
+  if (Opts.pgo_emit_branch_prob) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())
       return;
@@ -2391,7 +2389,9 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
     else
       OS << "Unknown\\l";
 
-    if (!InstrumentationOptions::Global.pgo_instr_select)
+    const InstrumentationOptions &Opts =
+        getInstrumentationOptions(*Node->getParent());
+    if (!Opts.pgo_instr_select)
       return Result;
 
     for (const Instruction &I : *Node) {

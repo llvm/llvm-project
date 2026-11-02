@@ -54,7 +54,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.1, [[ADDI]], %bb.0
-  ; CHECK-NEXT:   STW killed [[PHI]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
+  ; CHECK-NEXT:   STW [[PHI]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
   ; CHECK-NEXT:   [[LI8_:%[0-9]+]]:g8rc = LI8 0
   ; CHECK-NEXT:   $x3 = COPY [[LI8_]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -73,7 +73,7 @@ body:             |
 
   bb.2.entry:
     %5:gprc = PHI %4, %bb.1, %2, %bb.0
-    STW killed %5, 0, %0 :: (store (s32) into %ir.dummy)
+    STW %5, 0, %0 :: (store (s32) into %ir.dummy)
     %6:g8rc = LI8 0
     $x3 = COPY %6
     BLR8 implicit $lr8, implicit $rm, implicit $x3

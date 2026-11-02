@@ -19,4 +19,8 @@ NB_MODULE(_mlirGPUPasses, m) {
 
   // Register all GPU passes on load.
   mlirRegisterGPUPasses();
+  mlirRegisterGPUNVVMPasses();
+  mlirRegisterGPUROCDLPasses();
+  mlirRegisterGPUSPIRVPasses();
+  mlirRegisterGPUXeVMPasses();
 }
