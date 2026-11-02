@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILDebugInfo.h"
 #include "../DirectX.h"
 #include "DXILAttributes.h"
 #include "llvm/ADT/DenseSet.h"

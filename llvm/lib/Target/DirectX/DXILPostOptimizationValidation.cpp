@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILPostOptimizationValidation.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DXILSignatureAnalysis.h"

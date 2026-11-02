@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILResourceImplicitBinding.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
