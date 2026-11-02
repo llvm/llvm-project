@@ -632,3 +632,53 @@ define i64 @vsetvl_e64mf8_and9bits(i64 %avl) {
   %b = and i64 %a, 511
   ret i64 %b
 }
+
+define i64 @vsetvl_bounded_avl(i64 %avl) {
+; CHECK-LABEL: vsetvl_bounded_avl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 31
+; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, ma
+; CHECK-NEXT:    andi a0, a0, 31
+; CHECK-NEXT:    ret
+  %limit = and i64 %avl, 31
+  %vl = call i64 @llvm.riscv.vsetvli(i64 %limit, i64 0, i64 0)
+  %result = and i64 %vl, 31
+  ret i64 %result
+}
+
+define i64 @vsetvl_bounded_avl_narrow_mask(i64 %avl) {
+; CHECK-LABEL: vsetvl_bounded_avl_narrow_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 31
+; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, ma
+; CHECK-NEXT:    andi a0, a0, 15
+; CHECK-NEXT:    ret
+  %limit = and i64 %avl, 31
+  %vl = call i64 @llvm.riscv.vsetvli(i64 %limit, i64 0, i64 0)
+  %result = and i64 %vl, 15
+  ret i64 %result
+}
+
+; Default VectorToLLVM lowering of vector.create_mask(actual VL), after LLVM
+; optimization removes the INT32_MAX clamp using the vsetvli result range.
+define <vscale x 2 x i32> @prefix_create_mask_i32_indices(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, i64 %avl) {
+; CHECK-LABEL: prefix_create_mask_i32_indices:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v11
+; CHECK-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vmslt.vx v0, v11, a0
+; CHECK-NEXT:    vadd.vv v10, v9, v8, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %vl = tail call range(i64 0, 2049) i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 2, i64 0)
+  %id = tail call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %vl32 = trunc nuw nsw i64 %vl to i32
+  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl32, i64 0
+  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %mask = icmp slt <vscale x 2 x i32> %id, %bound
+  %sum = add <vscale x 2 x i32> %b, %a
+  %result = select <vscale x 2 x i1> %mask, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
+  ret <vscale x 2 x i32> %result
+}
