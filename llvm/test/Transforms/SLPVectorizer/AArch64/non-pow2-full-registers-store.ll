@@ -6,24 +6,10 @@ define void @add_12xi32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NON-POW2-LABEL: define void @add_12xi32(
 ; NON-POW2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
 ; NON-POW2-NEXT:  [[ENTRY:.*:]]
-; NON-POW2-NEXT:    [[A4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 4
-; NON-POW2-NEXT:    [[A8:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 8
-; NON-POW2-NEXT:    [[B4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 4
-; NON-POW2-NEXT:    [[B8:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 8
-; NON-POW2-NEXT:    [[C4:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 4
-; NON-POW2-NEXT:    [[C8:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 8
-; NON-POW2-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; NON-POW2-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP0]], [[TMP1]]
-; NON-POW2-NEXT:    store <4 x i32> [[TMP2]], ptr [[C]], align 4
-; NON-POW2-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[A4]], align 4
-; NON-POW2-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[B4]], align 4
-; NON-POW2-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP3]], [[TMP4]]
-; NON-POW2-NEXT:    store <4 x i32> [[TMP5]], ptr [[C4]], align 4
-; NON-POW2-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr [[A8]], align 4
-; NON-POW2-NEXT:    [[TMP7:%.*]] = load <4 x i32>, ptr [[B8]], align 4
-; NON-POW2-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP6]], [[TMP7]]
-; NON-POW2-NEXT:    store <4 x i32> [[TMP8]], ptr [[C8]], align 4
+; NON-POW2-NEXT:    [[TMP0:%.*]] = load <12 x i32>, ptr [[A]], align 4
+; NON-POW2-NEXT:    [[TMP1:%.*]] = load <12 x i32>, ptr [[B]], align 4
+; NON-POW2-NEXT:    [[TMP2:%.*]] = add <12 x i32> [[TMP0]], [[TMP1]]
+; NON-POW2-NEXT:    store <12 x i32> [[TMP2]], ptr [[C]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: define void @add_12xi32(
