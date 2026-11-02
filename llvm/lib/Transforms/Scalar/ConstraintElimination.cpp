@@ -518,6 +518,46 @@ static bool canUseSExt(ConstantInt *CI) {
   return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
 }
 
+/// Returns true if `Op <= MaxVal - Slack` holds in the system for \p Signed, by
+/// scanning it for a row of the form `Op - W <= -Slack`, where W is an integer
+/// variable no wider than \p Op. If \p Upper is false, returns true if
+/// `Op >= MinVal + Slack` holds, using rows of the form `W - Op <= -Slack`.
+static bool hasLimitWitness(const ConstraintInfo &Info, Value *Op,
+                            const APInt &Slack, bool Signed, bool Upper) {
+  if (!Slack.isIntN(63))
+    return false;
+  int64_t RequiredOffset = -static_cast<int64_t>(Slack.getZExtValue());
+
+  const auto &Value2Index = Info.getValue2Index(Signed);
+  unsigned OpIdx = Value2Index.lookup(Op);
+  if (!OpIdx)
+    return false;
+
+  int64_t OpCoefficient = Upper ? 1 : -1;
+  unsigned OpSize = Op->getType()->getScalarSizeInBits();
+
+  for (ArrayRef<Entry> Row : Info.getCS(Signed).getConstraints()) {
+    // Match `OpCoefficient * (Op - W) <= C` with C <= -Slack.
+    if (Row.size() != 3 || Row[0].Id != 0 ||
+        Row[0].Coefficient > RequiredOffset)
+      continue;
+    bool OpFirst = Row[1].Id == OpIdx;
+    const Entry &OpE = Row[OpFirst ? 1 : 2];
+    const Entry &WitnessE = Row[OpFirst ? 2 : 1];
+    if (OpE.Id != OpIdx || OpE.Coefficient != OpCoefficient ||
+        WitnessE.Coefficient != -OpCoefficient)
+      continue;
+
+    auto Witness = find_if(
+        Value2Index, [&](const auto &KV) { return KV.second == WitnessE.Id; });
+    assert(Witness != Value2Index.end() && "row variables must be mapped");
+    Type *WitnessTy = Witness->first->getType();
+    if (WitnessTy->isIntegerTy() && WitnessTy->getIntegerBitWidth() <= OpSize)
+      return true;
+  }
+  return false;
+}
+
 /// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
 /// a signed range if \p Signed is set and as an unsigned range otherwise.
 static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
@@ -535,6 +575,8 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
                         : APInt::getMinValue(BitWidth);
   APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
                         : APInt::getMaxValue(BitWidth);
+  // What a witness has to bridge; computed before Max is clamped below.
+  APInt UpperSlack = MaxVal - Max;
   // Replace bound too large to be decomposed by the largest usable one.
   if (!Signed && Max.uge(MaxConstraintValue))
     Max = APInt(BitWidth, MaxConstraintValue - 1);
@@ -542,11 +584,13 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   Type *Ty = Op->getType();
   if (Min != MinVal &&
       !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
-                     ConstantInt::get(Ty, Min)))
+                     ConstantInt::get(Ty, Min)) &&
+      !hasLimitWitness(Info, Op, Min - MinVal, Signed, /*Upper=*/false))
     return false;
   if (Max != MaxVal &&
       !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
-                     ConstantInt::get(Ty, Max)))
+                     ConstantInt::get(Ty, Max)) &&
+      !hasLimitWitness(Info, Op, UpperSlack, Signed, /*Upper=*/true))
     return false;
   return true;
 }
@@ -641,6 +685,10 @@ static Decomposition decomposeGEP(GEPOperator &GEP, ConstraintInfo &Info,
 
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
   for (auto [Index, Scale] : VariableOffsets) {
+    // Indices narrower or wider than the index type are implicitly
+    // sign-extended or truncated. Don't reason about them.
+    if (Index->getType()->getScalarSizeInBits() != Scale.getBitWidth())
+      return &GEP;
     if (!NW.hasNoUnsignedWrap()) {
       // Try to prove nuw from nusw and nneg. If the index cannot be proven
       // non-negative, keep the GEP as-is instead of decomposing it.
@@ -683,6 +731,8 @@ static bool mayLookThrough(Value *V) {
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
   case Instruction::ZExt:
   case Instruction::SExt:
   case Instruction::Trunc:
@@ -811,6 +861,25 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
       auto Result = decompose(Op0, Info, IsSigned, DL);
       if (!Result.mul(CI->getSExtValue()))
         return Result;
+    }
+    return V;
+  }
+
+  if (match(V, m_Exact(m_Shr(m_Value(Op0), m_ConstantInt(CI))))) {
+    bool IsAShr = cast<Operator>(V)->getOpcode() == Instruction::AShr;
+    if (CI->getValue().ult(std::min(63u, CI->getBitWidth())) &&
+        (IsSigned == IsAShr || Info.isKnownNonNegative(Op0))) {
+      int64_t Factor = int64_t(1) << CI->getZExtValue();
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (Result.Offset % Factor == 0 &&
+          all_of(Result.Vars, [Factor](const DecompEntry &E) {
+            return E.Coefficient % Factor == 0;
+          })) {
+        Result.Offset /= Factor;
+        for (auto &E : Result.Vars)
+          E.Coefficient /= Factor;
+        return Result;
+      }
     }
     return V;
   }
@@ -2406,8 +2475,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));

@@ -20,7 +20,7 @@ namespace llvm {
 TEST(LICMTest, TestSCEVInvalidationOnHoisting) {
   LLVMContext Ctx;
   ModulePassManager MPM;
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;

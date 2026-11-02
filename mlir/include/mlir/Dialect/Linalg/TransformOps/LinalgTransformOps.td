@@ -187,6 +187,22 @@ def ApplyEraseUnusedOperandsAndResultsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyFoldReshapeOpsByExpansionPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_reshape_ops_by_expansion",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that fold reshape operations into their producers or
+    consumers by expanding dimensions.
+
+    If `fold_single_use_only` is true, folding is restricted to cases where the
+    defining producer operation of the operand being fused has exactly one use.
+    Otherwise, no use-count restriction is imposed.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
+  let assemblyFormat = "oilist(`fold_single_use_only` `=` $fold_single_use_only) attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//

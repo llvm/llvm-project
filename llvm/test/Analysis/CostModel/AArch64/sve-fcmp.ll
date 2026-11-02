@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64 -mattr=+sve2 | FileCheck %s --check-prefix=CHECK-COST2
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64 -mattr=+sve2 -mcpu=cortex-a510 | FileCheck %s --check-prefix=CHECK-COST2
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64 -mattr=+sve2 -mcpu=neoverse-v2 | FileCheck %s --check-prefix=CHECK-COST2
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64 -mattr=+sve2 -mcpu=c1-premium | FileCheck %s --check-prefix=CHECK-COST2
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64 -mattr=+sve2 -mcpu=a64fx | FileCheck %s --check-prefix=CHECK-COST2
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64 -mattr=+sve2 -mcpu=ampere1b | FileCheck %s --check-prefix=CHECK-COST1
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64 -mattr=+sve2 -mcpu=apple-m4 | FileCheck %s --check-prefix=CHECK-COST1
