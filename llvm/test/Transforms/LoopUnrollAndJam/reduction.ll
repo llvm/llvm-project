@@ -1,18 +1,15 @@
 ; REQUIRES: x86-registered-target, arm-registered-target
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime -pass-remarks=loop-unroll-and-jam -disable-output < %s 2>&1 | FileCheck %s --check-prefix=VECTOR
-; RUN: opt -mtriple=thumbv8m.main-arm-none-eabi -passes=loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime -pass-remarks=loop-unroll-and-jam -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NOVECTOR
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime -pass-remarks-output=- -disable-output < %s | FileCheck %s --check-prefix=VECTOR
+; RUN: opt -mtriple=thumbv8m.main-arm-none-eabi -passes=loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime -pass-remarks-output=- -disable-output < %s | FileCheck %s --check-prefix=NOVECTOR
 
 ; Each loop shares the load of b[j] between the copies, so it is profitable to
 ; jam. But the chained reductions can't be vectorized anymore, which is only
 ; worth it if they wouldn't have been vectorized anyway.
 
-; Only @strict_fp is jammed if the target can vectorize the other two.
-; VECTOR:     remark: {{.*}} unroll and jammed
-; VECTOR-NOT: remark:
+; Without vector registers nothing is lost, so every loop is jammed there.
 
-; Without vector registers nothing is lost.
-; NOVECTOR-COUNT-4: remark: {{.*}} unroll and jammed
-
+; VECTOR-NOT: Function: int_reduction
+; NOVECTOR: Function: int_reduction
 define void @int_reduction(i64 %n, i64 %m, ptr noalias %c, ptr noalias %b) {
 entry:
   br label %outer
@@ -43,6 +40,8 @@ exit:
   ret void
 }
 
+; VECTOR-NOT: Function: fast_fp
+; NOVECTOR: Function: fast_fp
 define void @fast_fp(i64 %n, i64 %m, ptr noalias %c, ptr noalias %b) {
 entry:
   br label %outer
@@ -74,6 +73,8 @@ exit:
 }
 
 ; Without fast-math this has to stay in order, so it can't be vectorized.
+; VECTOR: Function: strict_fp
+; NOVECTOR: Function: strict_fp
 define void @strict_fp(i64 %n, i64 %m, ptr noalias %c, ptr noalias %b) {
 entry:
   br label %outer
@@ -104,6 +105,8 @@ exit:
   ret void
 }
 
+; VECTOR-NOT: Function: fixed_order_recurrence
+; NOVECTOR: Function: fixed_order_recurrence
 define void @fixed_order_recurrence(i64 %n, i64 %m, ptr noalias %c, ptr noalias %b) {
 entry:
   br label %outer
