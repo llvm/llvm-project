@@ -272,13 +272,12 @@ Instrumentation::createInstrumentationSnippet(BinaryContext &BC, bool IsLeaf) {
 
 // Helper instruction sequence insertion function
 static BinaryBasicBlock::iterator
-insertInstructions(InstructionListType &Instrs, BinaryBasicBlock &BB,
+insertInstructions(const InstructionListType &Instrs, BinaryBasicBlock &BB,
                    BinaryBasicBlock::iterator Iter) {
-  for (MCInst &NewInst : Instrs) {
-    Iter = BB.insertInstruction(Iter, NewInst);
-    ++Iter;
-  }
-  return Iter;
+  if (Instrs.empty())
+    return Iter;
+  return BB.insertInstructions(Iter, Instrs.begin(), Instrs.end()) +
+         Instrs.size();
 }
 
 void Instrumentation::instrumentLeafNode(BinaryBasicBlock &BB,

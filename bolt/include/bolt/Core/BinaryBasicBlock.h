@@ -762,6 +762,16 @@ public:
     return Instructions.insert(At, NewInst);
   }
 
+  /// Insert [\p Begin, \p End) before \p At, which may be end(). The source
+  /// iterators must be multipass and the range must not refer to instructions
+  /// in this block. Return the first inserted instruction, or \p At if the
+  /// range is empty.
+  template <typename Itr>
+  iterator insertInstructions(iterator At, Itr Begin, Itr End) {
+    adjustNumPseudos(Begin, End, 1);
+    return Instructions.insert(At, Begin, End);
+  }
+
   /// Helper to retrieve any terminators in \p BB before \p Pos. This is used
   /// to skip CFI instructions and to retrieve the first terminator instruction
   /// in basic blocks with two terminators (conditional jump and unconditional
