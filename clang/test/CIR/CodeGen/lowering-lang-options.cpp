@@ -27,6 +27,7 @@ int x;
 // PLAIN-SAME: cuda_is_device = false
 // PLAIN-SAME: hip = false
 // PLAIN-SAME: hlsl = false
+// PLAIN-SAME: sycl_is_device = false
 // PLAIN-SAME: gpu_rdc = false
 // PLAIN-SAME: openmp = false
 // PLAIN-SAME: openmp_is_target_device = false
