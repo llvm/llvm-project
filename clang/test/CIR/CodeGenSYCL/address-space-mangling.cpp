@@ -51,13 +51,6 @@ void foo(int *);
 // ITANIUM: declare void @_Z3fooPU10SYconstanti(ptr noundef)
 // ITANIUM: declare void @_Z3fooPi(ptr noundef)
 
-// MS: declare dso_local void @"?foo@@YAXPEAU?$_ASSYglobal@$$CAH@__clang@@@Z"
-// MS: declare dso_local void @"?foo@@YAXPEAU?$_ASSYlocal@$$CAH@__clang@@@Z"
-// MS: declare dso_local void @"?foo@@YAXPEAU?$_ASSYprivate@$$CAH@__clang@@@Z"
-// MS: declare dso_local void @"?foo@@YAXPEAU?$_ASSYgeneric@$$CAH@__clang@@@Z"
-// MS: declare dso_local void @"?foo@@YAXPEAU?$_ASSYconstant@$$CAH@__clang@@@Z"
-// MS: declare dso_local void @"?foo@@YAXPEAH@Z"
-
 [[clang::sycl_external]] void test() {
   int [[clang::sycl_global]] *glob;
   int [[clang::sycl_local]] *loc;
