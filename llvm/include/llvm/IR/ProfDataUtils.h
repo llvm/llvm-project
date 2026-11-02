@@ -16,6 +16,7 @@
 #define LLVM_IR_PROFDATAUTILS_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
@@ -24,6 +25,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
+#include <optional>
 #include <type_traits>
 
 namespace llvm {
@@ -100,6 +102,7 @@ class LLVM_ABI BlockWaveCountPreserver {
   TrackingMDNodeRef Profile;
   SmallVector<Metadata *, 8> ProfileOperands;
   SmallVector<BlockProfile> Blocks;
+  DenseMap<const BasicBlock *, unsigned> BlockIndices;
   bool Invalidated = false;
 
 public:
@@ -111,6 +114,45 @@ public:
   /// block gets a new unmeasured identity, replacing any transplanted metadata.
   void forget(const BasicBlock &BB);
   void restore();
+};
+
+/// Batch wave-profile updates in a caller that repeatedly splits or removes
+/// single-predecessor edges, or merges blocks into an unconditional
+/// predecessor. Record each supported change immediately before redirecting its
+/// edges. Other CFG changes are checked before a recorded change can hide them
+/// and again at apply(). Counts invalidated by those changes remain unmeasured.
+/// Metadata is rebuilt once, at apply(), which consumes the batch. Do not read
+/// wave counts mid-batch. Capture the profile before creating a split block.
+class LLVM_ABI BlockWaveCountUpdater {
+  struct BlockState {
+    WeakVH Block;
+    WeakVH Terminator;
+    TrackingMDNodeRef Metadata;
+    SmallVector<llvm::Metadata *, 6> Operands;
+    SmallVector<WeakVH, 2> Successors;
+    SmallVector<WeakVH, 2> Controls;
+    bool Removed = false;
+  };
+  Function &F;
+  std::optional<BlockWaveCountPreserver> Profile;
+  TrackingMDNodeRef Table;
+  DenseMap<const BasicBlock *, BlockState> Blocks;
+  bool Changed = false;
+  bool ConflictingMetadata = false;
+
+  void initialize();
+  BlockState capture(BasicBlock &BB);
+  void check(BasicBlock &BB);
+  void invalidateSuccessors(const BlockState &State);
+
+public:
+  explicit BlockWaveCountUpdater(Function &F) : F(F) {}
+  /// Whether the lazily captured profile is valid.
+  bool hasProfile();
+  void splitEdge(BasicBlock &Pred, BasicBlock &Succ, BasicBlock &NewBB);
+  void removeBlock(BasicBlock &BB);
+  void mergeBlock(BasicBlock &BB, BasicBlock &Pred);
+  void apply();
 };
 
 /// Profile-based loop metadata that should be accessed only by using

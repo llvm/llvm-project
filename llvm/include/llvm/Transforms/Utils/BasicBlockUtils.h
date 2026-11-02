@@ -25,6 +25,8 @@
 #include <cassert>
 
 namespace llvm {
+
+class BlockWaveCountUpdater;
 class CondBrInst;
 class CycleInfo;
 class LandingPadInst;
@@ -109,7 +111,8 @@ LLVM_ABI bool MergeBlockIntoPredecessor(
     BasicBlock *BB, DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
     MemorySSAUpdater *MSSAU = nullptr,
     MemoryDependenceResults *MemDep = nullptr,
-    bool PredecessorWithTwoSuccessors = false, DominatorTree *DT = nullptr);
+    bool PredecessorWithTwoSuccessors = false, DominatorTree *DT = nullptr,
+    BlockWaveCountUpdater *WPU = nullptr);
 
 /// Merge block(s) sucessors, if possible. Return true if at least two
 /// of the blocks were merged together.
@@ -389,7 +392,8 @@ inline BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
 LLVM_ABI BasicBlock *SplitBlockPredecessors(
     BasicBlock *BB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
     DominatorTree *DT, LoopInfo *LI = nullptr,
-    MemorySSAUpdater *MSSAU = nullptr, bool PreserveLCSSA = false);
+    MemorySSAUpdater *MSSAU = nullptr, bool PreserveLCSSA = false,
+    BlockWaveCountUpdater *WPU = nullptr);
 
 /// This method introduces at least one new basic block into the function and
 /// moves some of the predecessors of BB to be predecessors of the new block.
@@ -408,7 +412,8 @@ LLVM_ABI BasicBlock *SplitBlockPredecessors(
 LLVM_ABI BasicBlock *SplitBlockPredecessors(
     BasicBlock *BB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
     DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
-    MemorySSAUpdater *MSSAU = nullptr, bool PreserveLCSSA = false);
+    MemorySSAUpdater *MSSAU = nullptr, bool PreserveLCSSA = false,
+    BlockWaveCountUpdater *WPU = nullptr);
 
 /// This method transforms the landing pad, OrigBB, by introducing two new basic
 /// blocks into the function. One of those new basic blocks gets the

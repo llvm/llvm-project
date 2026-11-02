@@ -58,9 +58,13 @@ static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
-                                   MemorySSAUpdater *MSSAU,
-                                   bool PreserveLCSSA) {
+                                   MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                                   BlockWaveCountUpdater *WPU) {
   bool Changed = false;
+  BlockWaveCountUpdater LocalWPU(*L->getHeader()->getParent());
+  bool OwnWaveUpdates = !WPU;
+  if (!WPU)
+    WPU = &LocalWPU;
 
   // We re-use a vector for the in-loop predecesosrs.
   SmallVector<BasicBlock *, 4> InLoopPredecessors;
@@ -91,7 +95,7 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
       return false;
 
     auto *NewExitBB = SplitBlockPredecessors(
-        BB, InLoopPredecessors, ".loopexit", DT, LI, MSSAU, PreserveLCSSA);
+        BB, InLoopPredecessors, ".loopexit", DT, LI, MSSAU, PreserveLCSSA, WPU);
 
     if (!NewExitBB)
       LLVM_DEBUG(
@@ -119,6 +123,8 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
       Changed |= RewriteExit(SuccBB);
     }
 
+  if (OwnWaveUpdates)
+    WPU->apply();
   return Changed;
 }
 

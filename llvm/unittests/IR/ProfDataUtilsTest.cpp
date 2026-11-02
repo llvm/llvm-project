@@ -15,7 +15,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
 
@@ -62,6 +64,228 @@ protected:
     ASSERT_TRUE(M);
   }
 };
+
+TEST_F(WaveProfileTest, BatchSplitsAndRemovalsPreserveMeasuredZero) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 0, 60, 100});
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BasicBlock *Right = Left->getNextNode();
+  BasicBlock *Exit = Right->getNextNode();
+  MDNode *Original = F.getMetadata(LLVMContext::MD_wave_profile);
+  BlockWaveCountUpdater WPU(F);
+  BasicBlock *SplitLeft = SplitBlockPredecessors(
+      Exit, {Left}, ".left", static_cast<DominatorTree *>(nullptr), nullptr,
+      nullptr, false, &WPU);
+  BasicBlock *SplitRight = SplitBlockPredecessors(
+      Exit, {Right}, ".right", static_cast<DominatorTree *>(nullptr), nullptr,
+      nullptr, false, &WPU);
+  EXPECT_EQ(F.getMetadata(LLVMContext::MD_wave_profile), Original);
+  WPU.apply();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{100, 0, 60, 0, 0, 100}));
+  EXPECT_EQ(Valid, makeBitVector(6, {0, 1, 2, 5}));
+
+  BlockWaveCountUpdater Remove(F);
+  ASSERT_TRUE(
+      TryToSimplifyUncondBranchFromEmptyBlock(SplitLeft, nullptr, &Remove));
+  ASSERT_TRUE(
+      TryToSimplifyUncondBranchFromEmptyBlock(SplitRight, nullptr, &Remove));
+  Remove.apply();
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{100, 0, 60, 100}));
+  EXPECT_EQ(Valid, makeBitVector(4, {0, 1, 2, 3}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, BatchMergesKeepPredecessorIdentity) {
+  SMDiagnostic Error;
+  auto Chain = parseAssemblyString(R"(
+    define void @chain() {
+    entry:
+      br label %first
+    first:
+      br label %second
+    second:
+      ret void
+    })",
+                                   Error, Context);
+  ASSERT_TRUE(Chain);
+  Function &F = *Chain->getFunction("chain");
+  setBlockWaveCounts(F, {10, 20, 30});
+  BasicBlock *First = F.getEntryBlock().getNextNode();
+  BasicBlock *Second = First->getNextNode();
+  BlockWaveCountUpdater WPU(F);
+  ASSERT_TRUE(MergeBlockIntoPredecessor(First, nullptr, nullptr, nullptr,
+                                        nullptr, false, nullptr, &WPU));
+  ASSERT_TRUE(MergeBlockIntoPredecessor(Second, nullptr, nullptr, nullptr,
+                                        nullptr, false, nullptr, &WPU));
+  WPU.apply();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{10}));
+  EXPECT_EQ(Entry, 10u);
+  EXPECT_EQ(Valid, makeBitVector(1, {0}));
+  EXPECT_FALSE(verifyModule(*Chain, &errs()));
+}
+
+TEST_F(WaveProfileTest, BatchDoesNotHideEarlierUnhandledRedirect) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BasicBlock *Right = Left->getNextNode();
+  BlockWaveCountUpdater WPU(F);
+  ASSERT_TRUE(WPU.hasProfile());
+  Left->getTerminator()->setSuccessor(0, Right);
+  SplitBlockPredecessors(Right, {Left}, ".split",
+                         static_cast<DominatorTree *>(nullptr), nullptr,
+                         nullptr, false, &WPU);
+  WPU.apply();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Valid, makeBitVector(5, {0}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, BatchRejectsLaterUnhandledConditionChange) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BasicBlock *Right = Left->getNextNode();
+  BasicBlock *Exit = Right->getNextNode();
+  BlockWaveCountUpdater WPU(F);
+  SplitBlockPredecessors(Exit, {Left}, ".split",
+                         static_cast<DominatorTree *>(nullptr), nullptr,
+                         nullptr, false, &WPU);
+  cast<CondBrInst>(F.getEntryBlock().getTerminator())
+      ->setCondition(ConstantInt::getTrue(Context));
+  WPU.apply();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Valid, makeBitVector(5, {4}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, BatchPreservesInitialUnavailableCounts) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 0, 60, 100}, makeBitVector(4, {0, 2, 3}));
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BasicBlock *Right = Left->getNextNode();
+  BasicBlock *Exit = Right->getNextNode();
+  BlockWaveCountUpdater WPU(F);
+  SplitBlockPredecessors(Exit, {Left}, ".split",
+                         static_cast<DominatorTree *>(nullptr), nullptr,
+                         nullptr, false, &WPU);
+  WPU.apply();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{100, 0, 60, 0, 100}));
+  EXPECT_EQ(Valid, makeBitVector(5, {0, 2, 4}));
+}
+
+TEST_F(WaveProfileTest, BatchDoesNotResurrectDuplicateIdentity) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BasicBlock *Right = Left->getNextNode();
+  Right->getTerminator()->setMetadata(
+      LLVMContext::MD_wave_profile_block,
+      Left->getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block));
+  BlockWaveCountUpdater WPU(F);
+  ASSERT_TRUE(TryToSimplifyUncondBranchFromEmptyBlock(Right, nullptr, &WPU));
+  WPU.apply();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_TRUE(Valid.none());
+}
+
+TEST_F(WaveProfileTest, BatchRetainsNormalizationWithoutOriginalEntry) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  F.getEntryBlock().eraseFromParent();
+  BasicBlock *Left = &F.getEntryBlock();
+  BasicBlock *Exit = &F.back();
+  BlockWaveCountUpdater WPU(F);
+  SplitBlockPredecessors(Exit, {Left}, ".split",
+                         static_cast<DominatorTree *>(nullptr), nullptr,
+                         nullptr, false, &WPU);
+  WPU.apply();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{80, 60, 0, 100}));
+  EXPECT_EQ(Valid, makeBitVector(4, {0, 1, 3}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, BatchLeavesMissingOrInvalidProfileAlone) {
+  Function &F = *M->getFunction("diamond");
+  for (bool Malformed : {false, true}) {
+    if (Malformed)
+      F.setMetadata(LLVMContext::MD_wave_profile, MDNode::get(Context, {}));
+    MDNode *Original = F.getMetadata(LLVMContext::MD_wave_profile);
+    BasicBlock *Left = F.getEntryBlock().getNextNode();
+    BlockWaveCountUpdater WPU(F);
+    SplitBlockPredecessors(&F.back(), {Left}, ".split",
+                           static_cast<DominatorTree *>(nullptr), nullptr,
+                           nullptr, false, &WPU);
+    WPU.apply();
+    EXPECT_EQ(F.getMetadata(LLVMContext::MD_wave_profile), Original);
+  }
+}
+
+TEST_F(WaveProfileTest, BatchRespectsNewProfileAfterSplitting) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BlockWaveCountUpdater WPU(F);
+  SplitBlockPredecessors(&F.back(), {Left}, ".split",
+                         static_cast<DominatorTree *>(nullptr), nullptr,
+                         nullptr, false, &WPU);
+  setBlockWaveCounts(F, {200, 160, 120, 160, 200});
+  MDNode *Replacement = F.getMetadata(LLVMContext::MD_wave_profile);
+  WPU.apply();
+  EXPECT_EQ(F.getMetadata(LLVMContext::MD_wave_profile), Replacement);
+  SmallVector<uint64_t> Counts;
+  ASSERT_TRUE(extractBlockWaveCounts(F, Counts));
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{200, 160, 120, 160, 200}));
+}
+
+TEST_F(WaveProfileTest, BatchDoesNotCertifyUnrecordedClone) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BlockWaveCountUpdater WPU(F);
+  SplitBlockPredecessors(&F.back(), {Left}, ".split",
+                         static_cast<DominatorTree *>(nullptr), nullptr,
+                         nullptr, false, &WPU);
+  ValueToValueMapTy VMap;
+  CloneBasicBlock(Left, VMap, ".clone", &F);
+  WPU.apply();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  EXPECT_FALSE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
 
 TEST_F(WaveProfileTest, RoundTripAndReplacement) {
   Function &F = *M->getFunction("diamond");
