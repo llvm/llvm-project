@@ -245,12 +245,11 @@ public:
 };
 
 /// Represents a scalar byte value. If the value is not byte-sized, the padding
-/// bits are guaranteed to be filled by either poison/zero bits. The
-/// constructors are responsible to ensure the invariant.
+/// bits are guaranteed to be filled by either poison/zero bits.
 ///
 /// Byte values do not contain undef bits. The only exception is
 /// Context::fromBytes, which converts undef bits into poison bits after
-/// construction.
+/// constructor.
 class ByteValue {
   // The byte order is endianness-dependent.
   std::vector<Byte> Val;
@@ -276,11 +275,10 @@ public:
             PaddingBitsMode Mode = PaddingBitsMode::Canonical)
       : Val(std::move(Val)), BitWidth(BitWidth),
         IsLittleEndian(IsLittleEndian) {
-    if (Mode == PaddingBitsMode::Canonical) {
+    if (Mode == PaddingBitsMode::Canonical)
       assert(isValid() && "Input padding bits must be canonical.");
-    } else {
+    else
       canonicalize(Mode);
-    }
   }
   ByteValue(const ByteValue &) = default;
   ByteValue(ByteValue &&) = default;
@@ -296,8 +294,7 @@ public:
   /// The caller should call canonicalize after mutation.
   MutableArrayRef<Byte> mutableBytes() { return Val; }
 
-  // Handle incoming padding bits according to \p Mode and fill padding bits
-  // based on whether all value bits in the padding byte are poison.
+  // Make sure the padding byte is canonical.
   void canonicalize(PaddingBitsMode Mode) {
     assert(Mode != PaddingBitsMode::Canonical &&
            "Canonical padding bits should not be canonicalized.");
