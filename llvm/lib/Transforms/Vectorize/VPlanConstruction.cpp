@@ -945,6 +945,42 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
   return true;
 }
 
+/// If \p PhiR is an integer induction of the form phi [Start, add(phi, Step)]
+/// with a non-zero loop-invariant Step, return its induction descriptor.
+static std::optional<InductionDescriptor>
+getIntInductionDescriptor(VPPhi *PhiR, PredicatedScalarEvolution &PSE,
+                          const Loop &L) {
+  VPValue *BackedgeVal = PhiR->getOperand(1);
+  VPValue *StepV;
+  if (!match(BackedgeVal, m_c_Add(m_Specific(PhiR), m_VPValue(StepV))))
+    return std::nullopt;
+  const SCEV *Step =
+      PSE.getPredicatedSCEV(vputils::getSCEVExprForVPValue(StepV, PSE, &L));
+  if (isa<SCEVCouldNotCompute>(Step) || !PSE.getSE()->isLoopInvariant(Step, &L))
+    return std::nullopt;
+  return InductionDescriptor(
+      cast<VPIRValue>(PhiR->getOperand(0))->getValue(),
+      InductionDescriptor::IK_IntInduction, Step,
+      cast<BinaryOperator>(BackedgeVal->getUnderlyingValue()));
+}
+
+#ifndef NDEBUG
+/// Returns true if \p IndDesc, detected on VPlan, matches legality's
+/// \p LegalDesc.
+static bool matchesLegalInduction(const InductionDescriptor &IndDesc,
+                                  const InductionDescriptor &LegalDesc,
+                                  PredicatedScalarEvolution &PSE) {
+  // VPlan0 simplifications (stride replacement, combineRecipes, DCE) may make
+  // VPlan's descriptor simpler than legality's.
+  Instruction::BinaryOps LegalOpcode = LegalDesc.getInductionOpcode();
+  return LegalDesc.getKind() == IndDesc.getKind() &&
+         LegalDesc.getNoWrapPredicates().empty() &&
+         PSE.getPredicatedSCEV(LegalDesc.getStep()) == IndDesc.getStep() &&
+         (LegalOpcode == IndDesc.getInductionOpcode() ||
+          (LegalOpcode != Instruction::Add && LegalOpcode != Instruction::Sub));
+}
+#endif
+
 bool VPlanTransforms::createHeaderPhiRecipes(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
     OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
@@ -977,6 +1013,16 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     }
 
     auto InductionIt = Inductions.find(Phi);
+    std::optional<InductionDescriptor> IndDesc;
+    if (!Reductions.contains(Phi))
+      IndDesc = getIntInductionDescriptor(PhiR, PSE, OrigLoop);
+    if (IndDesc) {
+      assert(InductionIt != Inductions.end() &&
+             matchesLegalInduction(*IndDesc, InductionIt->second, PSE) &&
+             "VPlan-detected induction must match legality");
+      return createWidenInductionRecipe(Phi, PhiR, Start, *IndDesc, Plan, PSE,
+                                        OrigLoop, PhiR->getDebugLoc());
+    }
     if (InductionIt != Inductions.end())
       return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
                                         Plan, PSE, OrigLoop,
