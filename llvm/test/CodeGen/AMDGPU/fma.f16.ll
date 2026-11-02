@@ -785,3 +785,93 @@ bb:
   %i5 = zext <2 x i1> %i4 to <2 x i32>
   ret <2 x i32> %i5
 }
+
+define half @test_imm_fold_to_fma(half %arg) {
+; GFX9-SDAG-LABEL: test_imm_fold_to_fma:
+; GFX9-SDAG:       ; %bb.0: ; %bb
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x4900
+; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, s4, 0.5
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: test_imm_fold_to_fma:
+; GFX9-GISEL:       ; %bb.0: ; %bb
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0x4900
+; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, 0.5
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: test_imm_fold_to_fma:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_fma_f16 v0, v0, 0x4900, 0.5
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-TRUE16-LABEL: test_imm_fold_to_fma:
+; GFX11-SDAG-TRUE16:       ; %bb.0: ; %bb
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, 0x4900, 0.5
+; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-FAKE16-LABEL: test_imm_fold_to_fma:
+; GFX11-SDAG-FAKE16:       ; %bb.0: ; %bb
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_fma_f16 v0, v0, 0x4900, 0.5
+; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-TRUE16-LABEL: test_imm_fold_to_fma:
+; GFX11-GISEL-TRUE16:       ; %bb.0: ; %bb
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, 0x4900, 0.5
+; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-FAKE16-LABEL: test_imm_fold_to_fma:
+; GFX11-GISEL-FAKE16:       ; %bb.0: ; %bb
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_fma_f16 v0, v0, 0x4900, 0.5
+; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-TRUE16-LABEL: test_imm_fold_to_fma:
+; GFX12-SDAG-TRUE16:       ; %bb.0: ; %bb
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, 0x4900, 0.5
+; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-FAKE16-LABEL: test_imm_fold_to_fma:
+; GFX12-SDAG-FAKE16:       ; %bb.0: ; %bb
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-FAKE16-NEXT:    v_fma_f16 v0, v0, 0x4900, 0.5
+; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-TRUE16-LABEL: test_imm_fold_to_fma:
+; GFX12-GISEL-TRUE16:       ; %bb.0: ; %bb
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, 0x4900, 0.5
+; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-FAKE16-LABEL: test_imm_fold_to_fma:
+; GFX12-GISEL-FAKE16:       ; %bb.0: ; %bb
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    v_fma_f16 v0, v0, 0x4900, 0.5
+; GFX12-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %mul = fmul contract half %arg, 10.0
+  %madmk = fadd contract half %mul, 0.5
+  ret half %madmk
+}
