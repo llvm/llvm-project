@@ -806,12 +806,6 @@ void PtrView::setLifeState(Lifetime L) const {
 }
 
 void PtrView::initialize() const {
-  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
-  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
-  // initialized the scope via an InitScope op.
-  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
-    Pointee->invokeCtor();
-
   if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
     auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
     GD.InitState = GlobalInitState::Initialized;
@@ -820,7 +814,7 @@ void PtrView::initialize() const {
 
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
-  if (Desc->isPrimitiveArray()) {
+  if (Offset != Base && Desc->isPrimitiveArray()) {
     if (Desc->getNumElems() != 0)
       initializeElement(getIndex());
     return;
@@ -838,12 +832,6 @@ void PtrView::initializeElement(unsigned Index) const {
     return;
 
   assert(Index < getFieldDesc()->getNumElems());
-
-  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
-  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
-  // initialized the scope via an InitScope op.
-  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
-    Pointee->invokeCtor();
 
   InitMapPtr &IM = getInitMap();
   if (IM.allInitialized())

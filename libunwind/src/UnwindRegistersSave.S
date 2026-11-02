@@ -138,21 +138,63 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   movq  %rsi, 40(PTR)
   movq  %rbp, 48(PTR)
   movq  %rsp, 56(PTR)
+#if !defined(X86_64_BASE_SYSCALL)
   addq  $8,   56(PTR)
+#endif
   movq  %r8,  64(PTR)
   movq  %r9,  72(PTR)
   movq  %r10, 80(PTR)
   movq  %r11, 88(PTR)
   movq  %r12, 96(PTR)
   movq  %r13,104(PTR)
+# Skip spilling r14/r15 under LFI; reserved by LFI ABI.
+#if !defined(__LFI__)
   movq  %r14,112(PTR)
   movq  %r15,120(PTR)
+#endif
   movq  (%rsp),TMP
   movq  TMP,128(PTR) # store return address as rip
+#if defined(X86_64_BASE_SYSCALL)
+  # Capture flags before any instruction that changes them.
+  pushfq
+  popq  TMP
+  movl  %esi,136(PTR)
+  leaq  8(%rsp),TMP
+  movq  TMP,56(PTR) # store what sp was at call site as rsp
+  movw  %cs,140(PTR)
+  movw  %fs,148(PTR)
+  movw  %gs,150(PTR)
+  movw  %es,146(PTR)
+  movw  %ss,142(PTR)
+  movw  %ds,144(PTR)
+  movq  $0,152(PTR)
+  movq  $0,160(PTR)
+
+  # Use syscalls rather than FSGSBASE instructions, which require both CPU
+  # support and OS enablement. All syscall-clobbered registers are saved above.
+  # FreeBSD may clear r8-r10 on syscall return. Keep the context pointer in
+  # the callee-saved rbx, preserving its value for our caller as well.
+  pushq %rbx
+  movq  PTR,%rbx
+  movq  $X86_64_BASE_SYSCALL,%rax
+  movq  $X86_64_GET_FSBASE,%rdi
+  leaq  152(%rbx),%rsi
+  syscall
+  # FreeBSD reports errors in CF with a positive errno in rax.
+  jc    9f
+  movq  $X86_64_BASE_SYSCALL,%rax
+  movq  $X86_64_GET_GSBASE,%rdi
+  leaq  160(%rbx),%rsi
+  syscall
+  jc    9f
+  movq  %rbx,PTR
+  popq  %rbx
+#else
   # skip rflags
   # skip cs
   # skip fs
   # skip gs
+#endif
 
 #if defined(_WIN64)
   movdqu %xmm0,176(PTR)
@@ -174,6 +216,12 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #endif
   xorl  %eax, %eax    # return UNW_ESUCCESS
   ret
+#if defined(X86_64_BASE_SYSCALL)
+9:
+  popq %rbx
+  movl $-6540,%eax # UNW_EUNSPEC: segment base capture failed
+  ret
+#endif
 
 #elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32
 

@@ -1964,7 +1964,7 @@ def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
 // PseudoTAILReg is the asm form of "tail address, register" where the
 // register specifies the temp for AUIPC+JALR expansion.
 let isCodeGenOnly = 0, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def PseudoTAILReg : Pseudo<(outs), (ins tail_call_symbol:$dst, GPR:$rs), [],
+def PseudoTAILReg : Pseudo<(outs GPR:$rs), (ins tail_call_symbol:$dst), [],
                             "tail", "$dst, $rs">,
                     Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 // PseudoTAILX7 is CodeGenOnly; used when cf-protection-branch is active.

@@ -26,7 +26,7 @@ define amdgpu_kernel void @below_threshold() {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    ;;#ASMSTART
-; GFX1250-NEXT:    .space 30000
+; GFX1250-NEXT:    .zero 30000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:    s_endpgm
   call void asm sideeffect ".space 30000", ""()
@@ -73,7 +73,7 @@ define amdgpu_kernel void @partial_final_slot(ptr addrspace(1) %out) {
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    ;;#ASMSTART
-; GFX1250-NEXT:    .space 40000
+; GFX1250-NEXT:    .zero 40000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v0, s[0:1]
@@ -137,7 +137,7 @@ define amdgpu_kernel void @cache_size_limit() {
 ; GFX1250-NEXT:  .Lpref_inst_offset22:
 ; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(480, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset22-cache_size_limit), null, prefetchcachelines(480, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset22-cache_size_limit)
 ; GFX1250-NEXT:    ;;#ASMSTART
-; GFX1250-NEXT:    .space 65536
+; GFX1250-NEXT:    .zero 65536
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:    s_endpgm
 ; GFX1250-NEXT:  .Lpref_func_end1:
@@ -178,12 +178,12 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    s_cbranch_scc0 .LBB3_2
 ; GFX1250-NEXT:  ; %bb.1: ; %else
 ; GFX1250-NEXT:    ;;#ASMSTART
-; GFX1250-NEXT:    .space 8000
+; GFX1250-NEXT:    .zero 8000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:    s_branch .LBB3_3
 ; GFX1250-NEXT:  .LBB3_2: ; %then
 ; GFX1250-NEXT:    ;;#ASMSTART
-; GFX1250-NEXT:    .space 8000
+; GFX1250-NEXT:    .zero 8000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:  .LBB3_3: ; %join
 ; GFX1250-NEXT:  .Lpref_inst_offset27:
@@ -201,7 +201,7 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:  .Lpref_inst_offset33:
 ; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(384, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset33-postdominated_prefetch), null, prefetchcachelines(384, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset33-postdominated_prefetch)
 ; GFX1250-NEXT:    ;;#ASMSTART
-; GFX1250-NEXT:    .space 32000
+; GFX1250-NEXT:    .zero 32000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:    s_endpgm
 ; GFX1250-NEXT:  .Lpref_func_end2:
@@ -233,7 +233,7 @@ define void @called_function() {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    ;;#ASMSTART
-; GFX1250-NEXT:    .space 40000
+; GFX1250-NEXT:    .zero 40000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   call void asm sideeffect ".space 40000", ""()

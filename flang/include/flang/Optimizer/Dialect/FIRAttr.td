@@ -82,7 +82,7 @@ def FIRvalue        : I32BitEnumAttrCaseBit<"value", 11>;
 def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
 // Used inside internal procedure to flag variables host associated from parent procedure.
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
-// Used inside parent procedure to flag variables host associated in internal procedure.
+// Marks storage accessible to internal procedures through host association.
 def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
 // Used by alias analysis
 def FIRcray_pointer : I32BitEnumAttrCaseBit<"cray_pointer", 15>;
