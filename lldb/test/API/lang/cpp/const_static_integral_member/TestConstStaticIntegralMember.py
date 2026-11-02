@@ -152,12 +152,7 @@ class TestCase(TestBase):
     def test_inline_static_members_dwarf5(self):
         self.check_inline_static_members("-gdwarf-5")
 
-    # dsymutil strips the debug info for classes that only have const static
-    # data members without locations in DWARF v4 and earlier.
-    @expectedFailureDarwin(
-        debug_info=["dsym"],
-        bugnumber="https://github.com/llvm/llvm-project/issues/165079",
-    )
+    @expectedFailureDarwin(debug_info=["dsym"])
     def test_inline_static_members_dwarf4(self):
         self.check_inline_static_members("-gdwarf-4")
 
