@@ -364,12 +364,6 @@ static bool delayHasHazard(MachineBasicBlock::iterator candidate, bool &sawLoad,
       Opcode >=  SP::LDDArr && Opcode <= SP::LDrr)
     return true;
 
-  // Same as above for FDIV and FSQRT on some LEON processors.
-  if (Subtarget->fixAllFDIVSQRT()
-      &&
-      Opcode >=  SP::FDIVD && Opcode <= SP::FSQRTD)
-    return true;
-
   if (Subtarget->fixTN0009() && candidate->mayStore())
     return true;
 

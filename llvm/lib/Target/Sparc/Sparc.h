@@ -58,20 +58,6 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-class SparcDetectRoundChangePass
-    : public RequiredPassInfoMixin<SparcDetectRoundChangePass> {
-public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
-};
-
-class SparcFixAllFDIVSQRTPass
-    : public RequiredPassInfoMixin<SparcFixAllFDIVSQRTPass> {
-public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
-};
-
 class SparcErrataWorkaroundPass
     : public RequiredPassInfoMixin<SparcErrataWorkaroundPass> {
 public:
