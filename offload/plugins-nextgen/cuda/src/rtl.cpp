@@ -17,9 +17,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "APIHelpers.h"
-#include "cuda_compat.h"
-
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -295,6 +292,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
                  GenericProfilerTy *ProfilerPtr) override {
     CUresult Res = cuDeviceGet(&Device, DeviceId);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
+      return Err;
+
+    Res = cuDriverGetVersion(&DriverVersion);
+    if (auto Err = Plugin::check(Res, "error in cuDriverGetVersion: %s"))
       return Err;
 
     CUuuid UUID = {0};
@@ -993,7 +994,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
 
-    if (api_helper::canCall<cuMemPrefetchBatchAsync>()) {
+    if (DriverVersion >= 13000) {
       CUmemLocation Loc{};
       if (ToHost)
         Loc = {.type = CU_MEM_LOCATION_TYPE_HOST, .id = 0};
@@ -1576,6 +1577,9 @@ private:
 
   /// Device page size.
   size_t Granularity = 0;
+
+  /// The CUDA version supported by the device
+  int DriverVersion = 0;
 
   /// Tracker for virtual address reservations.
   VMemTrackerTy<CUmemGenericAllocationHandle> VMemTracker;
