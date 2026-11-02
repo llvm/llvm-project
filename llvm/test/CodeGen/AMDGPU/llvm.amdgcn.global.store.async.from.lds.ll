@@ -230,3 +230,21 @@ entry:
   call void @llvm.amdgcn.global.store.async.from.lds.b64(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 1)
   ret void
 }
+
+define amdgpu_ps void @global_store_async_from_lds_b128_saddr_voffset_const(ptr addrspace(1) inreg %gaddr, ptr addrspace(3) %laddr, i32 %voffset) {
+; GFX1250-LABEL: global_store_async_from_lds_b128_saddr_voffset_const:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x100
+; GFX1250-NEXT:    global_store_async_from_lds_b128 v1, v0, s[0:1] offset:16
+; GFX1250-NEXT:    s_endpgm
+entry:
+  %sext.offset = sext i32 %voffset to i64
+  %gep0 = getelementptr i8, ptr addrspace(1) %gaddr, i64 %sext.offset
+  %gep1 = getelementptr i8, ptr addrspace(1) %gep0, i64 256
+  call void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gep1, ptr addrspace(3) %laddr, i32 16, i32 0)
+  ret void
+}

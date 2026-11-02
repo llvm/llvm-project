@@ -587,6 +587,58 @@ entry:
   ret void
 }
 
+define amdgpu_ps void @cluster_load_async_to_lds_b128_saddr_voffset_const(ptr addrspace(1) inreg %gaddr, ptr addrspace(3) %laddr, i32 %voffset, i32 inreg %mask) {
+; GFX1250-SDAG-LABEL: cluster_load_async_to_lds_b128_saddr_voffset_const:
+; GFX1250-SDAG:       ; %bb.0: ; %entry
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-NEXT:    v_nop
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x100
+; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s2
+; GFX1250-SDAG-NEXT:    cluster_load_async_to_lds_b128 v0, v1, s[0:1] offset:16
+; GFX1250-SDAG-NEXT:    s_endpgm
+;
+; GFX1250-GISEL-LABEL: cluster_load_async_to_lds_b128_saddr_voffset_const:
+; GFX1250-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-NEXT:    v_nop
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x100
+; GFX1250-GISEL-NEXT:    s_mov_b32 m0, s2
+; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b128 v0, v1, s[0:1] offset:16
+; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1250S-SDAG-LABEL: cluster_load_async_to_lds_b128_saddr_voffset_const:
+; GFX1250S-SDAG:       ; %bb.0: ; %entry
+; GFX1250S-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250S-SDAG-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250S-SDAG-NEXT:    v_nop
+; GFX1250S-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250S-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x100
+; GFX1250S-SDAG-NEXT:    s_mov_b32 m0, 0
+; GFX1250S-SDAG-NEXT:    cluster_load_async_to_lds_b128 v0, v1, s[0:1] offset:16
+; GFX1250S-SDAG-NEXT:    s_endpgm
+;
+; GFX1250S-GISEL-LABEL: cluster_load_async_to_lds_b128_saddr_voffset_const:
+; GFX1250S-GISEL:       ; %bb.0: ; %entry
+; GFX1250S-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250S-GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250S-GISEL-NEXT:    v_nop
+; GFX1250S-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250S-GISEL-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x100
+; GFX1250S-GISEL-NEXT:    s_mov_b32 m0, s2
+; GFX1250S-GISEL-NEXT:    cluster_load_async_to_lds_b128 v0, v1, s[0:1] offset:16
+; GFX1250S-GISEL-NEXT:    s_endpgm
+entry:
+  %sext.offset = sext i32 %voffset to i64
+  %gep0 = getelementptr i8, ptr addrspace(1) %gaddr, i64 %sext.offset
+  %gep1 = getelementptr i8, ptr addrspace(1) %gep0, i64 256
+  call void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1) %gep1, ptr addrspace(3) %laddr, i32 16, i32 0, i32 %mask)
+  ret void
+}
+
 define amdgpu_ps void @cluster_load_async_to_lds_b128_saddr(ptr addrspace(1) inreg %gaddr, ptr addrspace(3) %laddr, i32 inreg %mask) {
 ; GFX1250-SDAG-LABEL: cluster_load_async_to_lds_b128_saddr:
 ; GFX1250-SDAG:       ; %bb.0: ; %entry

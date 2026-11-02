@@ -2072,6 +2072,101 @@ static SDValue matchExtFromI32orI32(SDValue Op, bool IsSigned,
   return (ExtSrc.getValueType() == MVT::i32) ? ExtSrc : SDValue();
 }
 
+static bool isCopiedFromVGPR(Register Reg, const MachineRegisterInfo &MRI,
+                             const SIRegisterInfo &TRI,
+                             SmallPtrSetImpl<const MachineInstr *> &Visited,
+                             unsigned Depth = 0) {
+  const TargetRegisterClass *RC = TRI.getRegClassForReg(MRI, Reg);
+  if (RC && SIRegisterInfo::hasVectorRegisters(RC))
+    return true;
+  const MachineInstr *Def = Reg.isVirtual() ? MRI.getVRegDef(Reg) : nullptr;
+  if (!Def || Depth == 4 ||
+      !(Def->isCopy() || Def->isRegSequence() || Def->isPHI() ||
+        SIInstrInfo::isSALU(*Def)) ||
+      !Visited.insert(Def).second)
+    return false;
+  return any_of(Def->uses(), [&](const MachineOperand &MO) {
+    return MO.isReg() && !MO.isImplicit() &&
+           isCopiedFromVGPR(MO.getReg(), MRI, TRI, Visited, Depth + 1);
+  });
+}
+
+static bool isUniformInVGPRs(SDValue V, const GCNSubtarget &ST,
+                             const MachineRegisterInfo &MRI,
+                             unsigned Depth = 0) {
+  if (auto *Load = dyn_cast<LoadSDNode>(V))
+    return !ST.getTargetLowering()->isUniformLoad(Load);
+  if (isa<MemSDNode>(V))
+    return V.getOpcode() != AMDGPUISD::SBUFFER_LOAD;
+  if (V.getOpcode() == ISD::CopyFromReg) {
+    SmallPtrSet<const MachineInstr *, 16> Visited;
+    return isCopiedFromVGPR(cast<RegisterSDNode>(V.getOperand(1))->getReg(),
+                            MRI, *ST.getRegisterInfo(), Visited);
+  }
+  if (Depth == 4 || V.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+      V.getOpcode() == ISD::INTRINSIC_W_CHAIN)
+    return false;
+  return any_of(V->op_values(), [&](SDValue Op) {
+    return Op.getValueType() != MVT::Other && !Op->isDivergent() &&
+           isUniformInVGPRs(Op, ST, MRI, Depth + 1);
+  });
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrVOffset(SDNode *N, SDValue Addr,
+                                                  SDValue &SAddr,
+                                                  SDValue &VOffset,
+                                                  bool &ScaleOffset) const {
+  bool IsSigned = Subtarget->hasSignedGVSOffset();
+
+  if (Addr->isAnyAdd()) {
+    SDValue LHS = Addr.getOperand(0);
+    SDValue RHS = Addr.getOperand(1);
+
+    if (!LHS->isDivergent()) {
+      // add (i64 sgpr), (*_extend (i32 vgpr))
+      ScaleOffset = SelectScaleOffset(N, RHS, IsSigned);
+      if (SDValue ExtRHS = matchExtFromI32orI32(RHS, IsSigned, CurDAG)) {
+        SAddr = LHS;
+        VOffset = ExtRHS;
+        return true;
+      }
+    }
+
+    RHS = Addr.getOperand(1);
+    if (!RHS->isDivergent()) {
+      // add (*_extend (i32 vgpr)), (i64 sgpr)
+      ScaleOffset = SelectScaleOffset(N, LHS, IsSigned);
+      if (SDValue ExtLHS = matchExtFromI32orI32(LHS, IsSigned, CurDAG)) {
+        SAddr = RHS;
+        VOffset = ExtLHS;
+        return true;
+      }
+    }
+  }
+
+  if (Subtarget->hasScaleOffset() &&
+      (Addr.getOpcode() ==
+           (IsSigned ? AMDGPUISD::MAD_I64_I32 : AMDGPUISD::MAD_U64_U32) ||
+       (Addr.getOpcode() == AMDGPUISD::MAD_U64_U32 &&
+        CurDAG->SignBitIsZero(Addr.getOperand(0)))) &&
+      Addr.getOperand(0)->isDivergent() &&
+      isa<ConstantSDNode>(Addr.getOperand(1)) &&
+      !Addr.getOperand(2)->isDivergent()) {
+    // mad_u64_u32 (i32 vgpr), (i32 c), (i64 sgpr)
+    unsigned Size =
+        (unsigned)cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
+    if (Addr.getConstantOperandVal(1) == Size) {
+      ScaleOffset = true;
+      SAddr = Addr.getOperand(2);
+      VOffset = Addr.getOperand(0);
+      return true;
+    }
+  }
+
+  ScaleOffset = false;
+  return false;
+}
+
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
 // or (64-bit SGPR base) + (sext vgpr offset) + sext(imm offset)
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
@@ -2081,6 +2176,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   using AMDGPU::FlatAddrSpace;
   int64_t ImmOffset = 0;
   ScaleOffset = false;
+  SDValue OrigAddr = Addr;
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
@@ -2135,54 +2231,51 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   }
 
   // Match the variable offset.
-  if (Addr->isAnyAdd()) {
-    LHS = Addr.getOperand(0);
-
-    if (!LHS->isDivergent()) {
-      // add (i64 sgpr), (*_extend (i32 vgpr))
-      RHS = Addr.getOperand(1);
-      ScaleOffset = SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
-      if (SDValue ExtRHS = matchExtFromI32orI32(
-              RHS, Subtarget->hasSignedGVSOffset(), CurDAG)) {
-        SAddr = LHS;
-        VOffset = ExtRHS;
-      }
-    }
-
-    RHS = Addr.getOperand(1);
-    if (!SAddr && !RHS->isDivergent()) {
-      // add (*_extend (i32 vgpr)), (i64 sgpr)
-      ScaleOffset = SelectScaleOffset(N, LHS, Subtarget->hasSignedGVSOffset());
-      if (SDValue ExtLHS = matchExtFromI32orI32(
-              LHS, Subtarget->hasSignedGVSOffset(), CurDAG)) {
-        SAddr = RHS;
-        VOffset = ExtLHS;
-      }
-    }
-
-    if (SAddr) {
-      Offset = CurDAG->getSignedTargetConstant(ImmOffset, SDLoc(), MVT::i32);
-      return true;
-    }
+  if (SelectGlobalSAddrVOffset(N, Addr, SAddr, VOffset, ScaleOffset)) {
+    Offset = CurDAG->getSignedTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+    return true;
   }
 
-  if (Subtarget->hasScaleOffset() &&
-      (Addr.getOpcode() == (Subtarget->hasSignedGVSOffset()
-                                ? AMDGPUISD::MAD_I64_I32
-                                : AMDGPUISD::MAD_U64_U32) ||
-       (Addr.getOpcode() == AMDGPUISD::MAD_U64_U32 &&
-        CurDAG->SignBitIsZero(Addr.getOperand(0)))) &&
-      Addr.getOperand(0)->isDivergent() &&
-      isa<ConstantSDNode>(Addr.getOperand(1)) &&
-      !Addr.getOperand(2)->isDivergent()) {
-    // mad_u64_u32 (i32 vgpr), (i32 c), (i64 sgpr)
-    unsigned Size =
-        (unsigned)cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
-    ScaleOffset = Addr.getConstantOperandVal(1) == Size;
-    if (ScaleOffset) {
-      SAddr = Addr.getOperand(2);
-      VOffset = Addr.getOperand(0);
-      Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+  // FLAT selects the aperture without the immediate offset, and a uniform base
+  // in VGPRs would need a readfirstlane.
+  bool IsFlat = any_of(cast<MemSDNode>(N)->memoperands(),
+                       [](const MachineMemOperand *MMO) {
+                         return MMO->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+                       });
+  if (OrigAddr->isDivergent() && !IsFlat) {
+    SDValue Base = OrigAddr;
+    int64_t COffsetVal = 0, Sum;
+    while (isBaseWithConstantOffset64(Base, LHS, RHS) &&
+           !AddOverflow(COffsetVal, cast<ConstantSDNode>(RHS)->getSExtValue(),
+                        Sum)) {
+      COffsetVal = Sum;
+      Base = LHS;
+    }
+
+    if (Base != OrigAddr &&
+        SelectGlobalSAddrVOffset(N, Base, SAddr, VOffset, ScaleOffset) &&
+        !isUniformInVGPRs(SAddr, *Subtarget,
+                          CurDAG->getMachineFunction().getRegInfo())) {
+      SDLoc SL(N);
+      int64_t SplitImmOffset = 0, RemainderOffset = COffsetVal;
+      if (NeedIOffset) {
+        std::tie(SplitImmOffset, RemainderOffset) =
+            Subtarget->getInstrInfo()->splitFlatOffset(
+                COffsetVal, AMDGPUAS::GLOBAL_ADDRESS,
+                FlatAddrSpace::FlatGlobal);
+      }
+
+      if (RemainderOffset != 0) {
+        SDValue Remainder(
+            CurDAG->getMachineNode(
+                AMDGPU::S_MOV_B64_IMM_PSEUDO, SL, MVT::i64,
+                CurDAG->getTargetConstant(RemainderOffset, SL, MVT::i64)),
+            0);
+        SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_U64_PSEUDO, SL,
+                                               MVT::i64, SAddr, Remainder),
+                        0);
+      }
+      Offset = CurDAG->getSignedTargetConstant(SplitImmOffset, SL, MVT::i32);
       return true;
     }
   }

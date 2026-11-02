@@ -265,6 +265,11 @@ private:
   InstructionSelector::ComplexRendererFns
   selectScratchOffset(MachineOperand &Root) const;
 
+  bool selectGlobalSAddrVOffset(MachineOperand &Root, Register Addr,
+                                Register &SAddr, Register &VOffset,
+                                bool &ScaleOffset) const;
+  Register buildSAddrWithOffset(MachineInstr &MI, Register Base,
+                                int64_t Offset) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
                     bool NeedIOffset = true) const;
