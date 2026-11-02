@@ -155,18 +155,18 @@ fmov	x0, d1
 # CHECK-NEXT:  1      2     1.00                        fcvt	h0, d1
 # CHECK-NEXT:  1      2     1.00                        fcvt	d0, h1
 # CHECK-NEXT:  1      2     1.00                        fcvtxn	s0, d1
-# CHECK-NEXT:  1      3     3.00                        scvtf	h0, w1
-# CHECK-NEXT:  1      3     3.00                        scvtf	h0, x1
-# CHECK-NEXT:  1      3     3.00                        scvtf	s0, w1
-# CHECK-NEXT:  1      3     3.00                        scvtf	s0, x1
-# CHECK-NEXT:  1      3     3.00                        scvtf	d0, w1
-# CHECK-NEXT:  1      3     3.00                        scvtf	d0, x1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h0, w1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h0, x1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s0, w1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s0, x1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d0, w1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d0, x1
+# CHECK-NEXT:  1      3     1.00                        scvtf	h0, w1
+# CHECK-NEXT:  1      3     1.00                        scvtf	h0, x1
+# CHECK-NEXT:  1      3     1.00                        scvtf	s0, w1
+# CHECK-NEXT:  1      3     1.00                        scvtf	s0, x1
+# CHECK-NEXT:  1      3     1.00                        scvtf	d0, w1
+# CHECK-NEXT:  1      3     1.00                        scvtf	d0, x1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h0, w1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h0, x1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s0, w1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s0, x1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d0, w1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d0, x1
 # CHECK-NEXT:  1      3     1.00                        fcvtas	w0, h1
 # CHECK-NEXT:  1      3     1.00                        fcvtas	x0, h1
 # CHECK-NEXT:  1      3     1.00                        fcvtas	w0, s1
@@ -253,7 +253,7 @@ fmov	x0, d1
 # CHECK-NEXT:  1      2     0.50                        fmov	h0, h1
 # CHECK-NEXT:  1      2     0.50                        fmov	s0, s1
 # CHECK-NEXT:  1      2     0.50                        fmov	d0, d1
-# CHECK-NEXT:  1      3     3.00                        fmov	d0, x1
+# CHECK-NEXT:  1      3     1.00                        fmov	d0, x1
 # CHECK-NEXT:  2      5     1.00                        fmov	v0.d[1], x1
 # CHECK-NEXT:  1      2     1.00                        fmov	w0, s1
 # CHECK-NEXT:  1      2     1.00                        fmov	x0, d1
@@ -278,7 +278,7 @@ fmov	x0, d1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     40.00   -      -      -     90.50  5.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     14.00   -      -      -     90.50  5.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -289,18 +289,18 @@ fmov	x0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	h0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	d0, h1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtxn	s0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h0, w1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s0, w1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d0, w1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h0, w1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s0, w1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d0, w1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h0, w1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s0, w1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d0, w1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h0, w1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s0, w1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d0, w1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d0, x1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w0, h1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	x0, h1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w0, s1
@@ -387,7 +387,7 @@ fmov	x0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	h0, h1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	s0, s1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	d0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	d0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     fmov	d0, x1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   fmov	v0.d[1], x1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fmov	w0, s1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fmov	x0, d1

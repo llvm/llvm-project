@@ -656,42 +656,42 @@
 # CHECK-NEXT:  1      2     1.00                        fcvtzu	x3, d5, #1
 # CHECK-NEXT:  1      2     1.00                        fcvtzu	x12, d30, #45
 # CHECK-NEXT:  1      2     1.00                        fcvtzu	x19, d0, #64
-# CHECK-NEXT:  1      3     3.00                        scvtf	h23, w19, #1
-# CHECK-NEXT:  1      3     3.00                        scvtf	h31, wzr, #20
-# CHECK-NEXT:  1      3     3.00                        scvtf	h14, w0, #32
-# CHECK-NEXT:  1      3     3.00                        scvtf	h23, x19, #1
-# CHECK-NEXT:  1      3     3.00                        scvtf	h31, xzr, #20
-# CHECK-NEXT:  1      3     3.00                        scvtf	h14, x0, #64
-# CHECK-NEXT:  1      3     3.00                        scvtf	s23, w19, #1
-# CHECK-NEXT:  1      3     3.00                        scvtf	s31, wzr, #20
-# CHECK-NEXT:  1      3     3.00                        scvtf	s14, w0, #32
-# CHECK-NEXT:  1      3     3.00                        scvtf	s23, x19, #1
-# CHECK-NEXT:  1      3     3.00                        scvtf	s31, xzr, #20
-# CHECK-NEXT:  1      3     3.00                        scvtf	s14, x0, #64
-# CHECK-NEXT:  1      3     3.00                        scvtf	d23, w19, #1
-# CHECK-NEXT:  1      3     3.00                        scvtf	d31, wzr, #20
-# CHECK-NEXT:  1      3     3.00                        scvtf	d14, w0, #32
-# CHECK-NEXT:  1      3     3.00                        scvtf	d23, x19, #1
-# CHECK-NEXT:  1      3     3.00                        scvtf	d31, xzr, #20
-# CHECK-NEXT:  1      3     3.00                        scvtf	d14, x0, #64
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h23, w19, #1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h31, wzr, #20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h14, w0, #32
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h23, x19, #1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h31, xzr, #20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h14, x0, #64
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s23, w19, #1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s31, wzr, #20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s14, w0, #32
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s23, x19, #1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s31, xzr, #20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s14, x0, #64
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d23, w19, #1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d31, wzr, #20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d14, w0, #32
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d23, x19, #1
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d31, xzr, #20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d14, x0, #64
+# CHECK-NEXT:  1      3     1.00                        scvtf	h23, w19, #1
+# CHECK-NEXT:  1      3     1.00                        scvtf	h31, wzr, #20
+# CHECK-NEXT:  1      3     1.00                        scvtf	h14, w0, #32
+# CHECK-NEXT:  1      3     1.00                        scvtf	h23, x19, #1
+# CHECK-NEXT:  1      3     1.00                        scvtf	h31, xzr, #20
+# CHECK-NEXT:  1      3     1.00                        scvtf	h14, x0, #64
+# CHECK-NEXT:  1      3     1.00                        scvtf	s23, w19, #1
+# CHECK-NEXT:  1      3     1.00                        scvtf	s31, wzr, #20
+# CHECK-NEXT:  1      3     1.00                        scvtf	s14, w0, #32
+# CHECK-NEXT:  1      3     1.00                        scvtf	s23, x19, #1
+# CHECK-NEXT:  1      3     1.00                        scvtf	s31, xzr, #20
+# CHECK-NEXT:  1      3     1.00                        scvtf	s14, x0, #64
+# CHECK-NEXT:  1      3     1.00                        scvtf	d23, w19, #1
+# CHECK-NEXT:  1      3     1.00                        scvtf	d31, wzr, #20
+# CHECK-NEXT:  1      3     1.00                        scvtf	d14, w0, #32
+# CHECK-NEXT:  1      3     1.00                        scvtf	d23, x19, #1
+# CHECK-NEXT:  1      3     1.00                        scvtf	d31, xzr, #20
+# CHECK-NEXT:  1      3     1.00                        scvtf	d14, x0, #64
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h23, w19, #1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h31, wzr, #20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h14, w0, #32
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h23, x19, #1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h31, xzr, #20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h14, x0, #64
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s23, w19, #1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s31, wzr, #20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s14, w0, #32
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s23, x19, #1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s31, xzr, #20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s14, x0, #64
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d23, w19, #1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d31, wzr, #20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d14, w0, #32
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d23, x19, #1
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d31, xzr, #20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d14, x0, #64
 # CHECK-NEXT:  1      3     1.00                        fcvtns	w3, h31
 # CHECK-NEXT:  1      3     1.00                        fcvtns	xzr, h12
 # CHECK-NEXT:  1      3     1.00                        fcvtnu	wzr, h12
@@ -708,10 +708,10 @@
 # CHECK-NEXT:  1      3     1.00                        fcvtzs	x12, h13
 # CHECK-NEXT:  1      3     1.00                        fcvtzu	w14, h15
 # CHECK-NEXT:  1      3     1.00                        fcvtzu	x15, h16
-# CHECK-NEXT:  1      3     3.00                        scvtf	h17, w18
-# CHECK-NEXT:  1      3     3.00                        scvtf	h19, x20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h21, w22
-# CHECK-NEXT:  1      3     3.00                        scvtf	h23, x24
+# CHECK-NEXT:  1      3     1.00                        scvtf	h17, w18
+# CHECK-NEXT:  1      3     1.00                        scvtf	h19, x20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h21, w22
+# CHECK-NEXT:  1      3     1.00                        scvtf	h23, x24
 # CHECK-NEXT:  1      3     1.00                        fcvtas	w25, h26
 # CHECK-NEXT:  1      3     1.00                        fcvtas	x27, h28
 # CHECK-NEXT:  1      3     1.00                        fcvtau	w29, h30
@@ -732,10 +732,10 @@
 # CHECK-NEXT:  1      3     1.00                        fcvtzs	x12, s13
 # CHECK-NEXT:  1      3     1.00                        fcvtzu	w14, s15
 # CHECK-NEXT:  1      3     1.00                        fcvtzu	x15, s16
-# CHECK-NEXT:  1      3     3.00                        scvtf	s17, w18
-# CHECK-NEXT:  1      3     3.00                        scvtf	s19, x20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s21, w22
-# CHECK-NEXT:  1      3     3.00                        scvtf	s23, x24
+# CHECK-NEXT:  1      3     1.00                        scvtf	s17, w18
+# CHECK-NEXT:  1      3     1.00                        scvtf	s19, x20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s21, w22
+# CHECK-NEXT:  1      3     1.00                        scvtf	s23, x24
 # CHECK-NEXT:  1      3     1.00                        fcvtas	w25, s26
 # CHECK-NEXT:  1      3     1.00                        fcvtas	x27, s28
 # CHECK-NEXT:  1      3     1.00                        fcvtau	w29, s30
@@ -756,22 +756,22 @@
 # CHECK-NEXT:  1      3     1.00                        fcvtzs	x12, d13
 # CHECK-NEXT:  1      3     1.00                        fcvtzu	w14, d15
 # CHECK-NEXT:  1      3     1.00                        fcvtzu	x15, d16
-# CHECK-NEXT:  1      3     3.00                        scvtf	d17, w18
-# CHECK-NEXT:  1      3     3.00                        scvtf	d19, x20
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d21, w22
-# CHECK-NEXT:  1      3     3.00                        ucvtf	d23, x24
+# CHECK-NEXT:  1      3     1.00                        scvtf	d17, w18
+# CHECK-NEXT:  1      3     1.00                        scvtf	d19, x20
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d21, w22
+# CHECK-NEXT:  1      3     1.00                        ucvtf	d23, x24
 # CHECK-NEXT:  1      3     1.00                        fcvtas	w25, d26
 # CHECK-NEXT:  1      3     1.00                        fcvtas	x27, d28
 # CHECK-NEXT:  1      3     1.00                        fcvtau	w29, d30
 # CHECK-NEXT:  1      3     1.00                        fcvtau	xzr, d0
-# CHECK-NEXT:  1      3     3.00                        fmov	h6, w5
-# CHECK-NEXT:  1      3     3.00                        fmov	h16, x27
+# CHECK-NEXT:  1      3     1.00                        fmov	h6, w5
+# CHECK-NEXT:  1      3     1.00                        fmov	h16, x27
 # CHECK-NEXT:  1      2     1.00                        fmov	w15, h31
 # CHECK-NEXT:  1      2     1.00                        fmov	w3, s9
-# CHECK-NEXT:  1      3     3.00                        fmov	s9, w3
+# CHECK-NEXT:  1      3     1.00                        fmov	s9, w3
 # CHECK-NEXT:  1      2     1.00                        fmov	x21, h14
 # CHECK-NEXT:  1      2     1.00                        fmov	x20, d31
-# CHECK-NEXT:  1      3     3.00                        fmov	d1, x15
+# CHECK-NEXT:  1      3     1.00                        fmov	d1, x15
 # CHECK-NEXT:  1      2     1.00                        fmov	x3, v12.d[1]
 # CHECK-NEXT:  2      5     1.00                        fmov	v1.d[1], x19
 # CHECK-NEXT:  1      2     0.50                        fmov	h29, #0.50000000
@@ -1284,7 +1284,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  59.00  59.00  59.00  97.33  168.33 168.33 487.50 240.50 159.00 159.00 281.50 73.50
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  59.00  59.00  59.00  97.33  168.33 168.33 383.50 240.50 159.00 159.00 281.50 73.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -1934,42 +1934,42 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x3, d5, #1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x12, d30, #45
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x19, d0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h23, w19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h31, wzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h14, w0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h23, x19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h31, xzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h14, x0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s23, w19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s31, wzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s14, w0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s23, x19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s31, xzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s14, x0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d23, w19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d31, wzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d14, w0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d23, x19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d31, xzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d14, x0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h23, w19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h31, wzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h14, w0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h23, x19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h31, xzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h14, x0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s23, w19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s31, wzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s14, w0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s23, x19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s31, xzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s14, x0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d23, w19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d31, wzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d14, w0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d23, x19, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d31, xzr, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d14, x0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h23, w19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h31, wzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h14, w0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h23, x19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h31, xzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h14, x0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s23, w19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s31, wzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s14, w0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s23, x19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s31, xzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s14, x0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d23, w19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d31, wzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d14, w0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d23, x19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d31, xzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d14, x0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h23, w19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h31, wzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h14, w0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h23, x19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h31, xzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h14, x0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s23, w19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s31, wzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s14, w0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s23, x19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s31, xzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s14, x0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d23, w19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d31, wzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d14, w0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d23, x19, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d31, xzr, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d14, x0, #64
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	w3, h31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	xzr, h12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	wzr, h12
@@ -1986,10 +1986,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	x12, h13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	w14, h15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x15, h16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h17, w18
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h19, x20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h21, w22
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h23, x24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h17, w18
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h19, x20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h21, w22
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	h23, x24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w25, h26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	x27, h28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	w29, h30
@@ -2010,10 +2010,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	x12, s13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	w14, s15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x15, s16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s17, w18
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s19, x20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s21, w22
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s23, x24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s17, w18
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s19, x20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s21, w22
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	s23, x24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w25, s26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	x27, s28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	w29, s30
@@ -2034,22 +2034,22 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	x12, d13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	w14, d15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x15, d16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d17, w18
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	d19, x20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d21, w22
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d23, x24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d17, w18
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     scvtf	d19, x20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d21, w22
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	d23, x24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w25, d26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	x27, d28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	w29, d30
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	xzr, d0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	h6, w5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	h16, x27
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     fmov	h6, w5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     fmov	h16, x27
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fmov	w15, h31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fmov	w3, s9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	s9, w3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     fmov	s9, w3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fmov	x21, h14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fmov	x20, d31
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     fmov	d1, x15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     fmov	d1, x15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   fmov	x3, v12.d[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     0.50   0.50   fmov	v1.d[1], x19
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	h29, #0.50000000

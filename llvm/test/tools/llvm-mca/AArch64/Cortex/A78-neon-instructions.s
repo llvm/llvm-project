@@ -96,13 +96,13 @@
 # CHECK-NEXT:  1      2     0.50                        cmtst	v13.2d, v13.2d, v13.2d
 # CHECK-NEXT:  1      2     0.50                        cnt	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.50                        cnt	v0.8b, v0.8b
-# CHECK-NEXT:  1      3     3.00                        dup	v0.16b, w28
-# CHECK-NEXT:  1      3     3.00                        dup	v0.2d, x28
-# CHECK-NEXT:  1      3     3.00                        dup	v0.2s, w28
-# CHECK-NEXT:  1      3     3.00                        dup	v0.4h, w28
-# CHECK-NEXT:  1      3     3.00                        dup	v0.4s, w28
-# CHECK-NEXT:  1      3     3.00                        dup	v0.8b, w28
-# CHECK-NEXT:  1      3     3.00                        dup	v0.8h, w28
+# CHECK-NEXT:  1      3     1.00                        dup	v0.16b, w28
+# CHECK-NEXT:  1      3     1.00                        dup	v0.2d, x28
+# CHECK-NEXT:  1      3     1.00                        dup	v0.2s, w28
+# CHECK-NEXT:  1      3     1.00                        dup	v0.4h, w28
+# CHECK-NEXT:  1      3     1.00                        dup	v0.4s, w28
+# CHECK-NEXT:  1      3     1.00                        dup	v0.8b, w28
+# CHECK-NEXT:  1      3     1.00                        dup	v0.8h, w28
 # CHECK-NEXT:  1      2     0.50                        mov	b0, v0.b[1]
 # CHECK-NEXT:  1      2     0.50                        mov	d0, v0.d[1]
 # CHECK-NEXT:  1      2     0.50                        mov	h0, v0.h[1]
@@ -1301,12 +1301,12 @@
 # CHECK-NEXT:  1      2     0.50                        uaddw2	v0.2d, v0.2d, v0.4s
 # CHECK-NEXT:  1      2     0.50                        uaddw2	v0.4s, v0.4s, v0.8h
 # CHECK-NEXT:  1      2     0.50                        uaddw2	v0.8h, v0.8h, v0.16b
-# CHECK-NEXT:  1      3     3.00                        ucvtf	h17, x12
+# CHECK-NEXT:  1      3     1.00                        ucvtf	h17, x12
 # CHECK-NEXT:  1      2     0.50                        ucvtf	h22, h16, #11
 # CHECK-NEXT:  1      2     0.50                        ucvtf	h7, h21
 # CHECK-NEXT:  1      2     0.50                        ucvtf	d21, d14
 # CHECK-NEXT:  1      2     0.50                        ucvtf	d21, d14, #64
-# CHECK-NEXT:  1      3     3.00                        ucvtf	s8, x0
+# CHECK-NEXT:  1      3     1.00                        ucvtf	s8, x0
 # CHECK-NEXT:  1      2     0.50                        ucvtf	s22, s13
 # CHECK-NEXT:  1      2     0.50                        ucvtf	s22, s13, #32
 # CHECK-NEXT:  1      3     1.00                        ucvtf	v0.2d, v0.2d
@@ -1592,7 +1592,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -     102.67 199.67 199.67 43.25  12.25  12.25  12.25  1118.00 935.00
+# CHECK-NEXT:  -      -      -      -      -      -      -     102.67 199.67 199.67 25.25  12.25  12.25  12.25  1118.00 935.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -1682,13 +1682,13 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cmtst	v13.2d, v13.2d, v13.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cnt	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cnt	v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     dup	v0.16b, w28
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     dup	v0.2d, x28
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     dup	v0.2s, w28
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     dup	v0.4h, w28
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     dup	v0.4s, w28
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     dup	v0.8b, w28
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     dup	v0.8h, w28
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     dup	v0.16b, w28
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     dup	v0.2d, x28
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     dup	v0.2s, w28
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     dup	v0.4h, w28
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     dup	v0.4s, w28
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     dup	v0.8b, w28
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     dup	v0.8h, w28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	b0, v0.b[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	d0, v0.d[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mov	h0, v0.h[1]
@@ -2887,12 +2887,12 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uaddw2	v0.2d, v0.2d, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uaddw2	v0.4s, v0.4s, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uaddw2	v0.8h, v0.8h, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	h17, x12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	h17, x12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   ucvtf	h22, h16, #11
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   ucvtf	h7, h21
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   ucvtf	d21, d14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   ucvtf	d21, d14, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s8, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ucvtf	s8, x0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   ucvtf	s22, s13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   ucvtf	s22, s13, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     ucvtf	v0.2d, v0.2d
