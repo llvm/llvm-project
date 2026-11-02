@@ -11,11 +11,25 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Baton.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+lldb::BatonSP InstrumentationRuntime::CreateBreakpointBaton() {
+  return std::make_shared<TypedBaton<std::weak_ptr<InstrumentationRuntime>>>(
+      std::make_unique<std::weak_ptr<InstrumentationRuntime>>(
+          weak_from_this()));
+}
+
+lldb::InstrumentationRuntimeSP
+InstrumentationRuntime::GetRuntimeFromBaton(void *baton) {
+  if (!baton)
+    return nullptr;
+  return static_cast<std::weak_ptr<InstrumentationRuntime> *>(baton)->lock();
+}
 
 void InstrumentationRuntime::ModulesDidLoad(
     lldb_private::ModuleList &module_list, lldb_private::Process *process,
