@@ -866,6 +866,9 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
     return {};
   }
 
+  assert(!(mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) &&
+         "Vec or Matrix type of Element on non-HLSL mode");
+
   const mlir::ArrayAttr elts = lv.getExtVectorElts();
 
   // If the result of the expression is a non-vector type, we must be extracting
