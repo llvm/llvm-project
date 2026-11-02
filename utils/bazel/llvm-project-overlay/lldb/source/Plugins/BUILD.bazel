@@ -2138,6 +2138,32 @@ cc_library(
     ],
 )
 
+# lldb/unittests/Process/Linux includes these headers without the
+# Plugins/Process/Linux/ prefix, which CMake allows through
+# target_include_directories().
+cc_library(
+    name = "PluginProcessLinuxPrivateHeaders",
+    hdrs = glob(["Process/Linux/*.h"]),
+    includes = ["Process/Linux"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":PluginProcessLinux",
+        ":PluginProcessPOSIX",
+        ":PluginProcessUtility",
+        ":PluginRegisterNative",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
 cc_library(
     name = "PluginScriptedProcess",
     srcs = glob(["Process/scripted/*.cpp"]),
