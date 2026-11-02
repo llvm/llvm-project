@@ -4114,7 +4114,8 @@ void ResourceManager::reserveResources(const MCSchedClassDesc *SCDesc,
   assert(!UseDFA);
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
-    for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
+    // Resource is occupied from AcquireAtCycle to ReleaseAtCycle (exclusive).
+    for (int C = Cycle + PRE.AcquireAtCycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
       ++MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
 
   for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
@@ -4126,7 +4127,8 @@ void ResourceManager::unreserveResources(const MCSchedClassDesc *SCDesc,
   assert(!UseDFA);
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
-    for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
+    // Resource is occupied from AcquireAtCycle to ReleaseAtCycle (exclusive).
+    for (int C = Cycle + PRE.AcquireAtCycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
       --MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
 
   for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)

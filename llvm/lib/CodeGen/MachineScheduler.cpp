@@ -2918,8 +2918,11 @@ unsigned SchedBoundary::getNextResourceCycleByInstance(unsigned InstanceIdx,
   if (NextUnreserved == InvalidCycle)
     return CurrCycle;
   // For bottom-up scheduling add the cycles needed for the current operation.
-  if (!isTop())
-    NextUnreserved = std::max(CurrCycle, NextUnreserved + ReleaseAtCycle);
+  // Resource occupancy is ReleaseAtCycle - AcquireAtCycle.
+  if (!isTop()) {
+    unsigned Occupancy = ReleaseAtCycle - AcquireAtCycle;
+    NextUnreserved = std::max(CurrCycle, NextUnreserved + Occupancy);
+  }
   return NextUnreserved;
 }
 
@@ -3044,7 +3047,7 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
       unsigned NRCycle, InstanceIdx;
       std::tie(NRCycle, InstanceIdx) =
           getNextResourceCycle(SC, ResIdx, ReleaseAtCycle, AcquireAtCycle);
-      if (NRCycle > CurrCycle) {
+      if (NRCycle > CurrCycle + AcquireAtCycle) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         MaxObservedStall = std::max(ReleaseAtCycle, MaxObservedStall);
 #endif
@@ -3238,7 +3241,7 @@ unsigned SchedBoundary::countResource(const MCSchedClassDesc *SC, unsigned PIdx,
   unsigned NextAvailable, InstanceIdx;
   std::tie(NextAvailable, InstanceIdx) =
       getNextResourceCycle(SC, PIdx, ReleaseAtCycle, AcquireAtCycle);
-  if (NextAvailable > CurrCycle) {
+  if (NextAvailable > CurrCycle + AcquireAtCycle) {
     LLVM_DEBUG(dbgs() << "  Resource conflict: "
                       << SchedModel->getResourceName(PIdx)
                       << '[' << InstanceIdx - ReservedCyclesIndex[PIdx]  << ']'
@@ -3308,8 +3311,8 @@ void SchedBoundary::bumpNode(SUnit *SU) {
       unsigned RCycle =
           countResource(SC, PI->ProcResourceIdx, PI->ReleaseAtCycle, NextCycle,
                         PI->AcquireAtCycle);
-      if (RCycle > NextCycle)
-        NextCycle = RCycle;
+      if (RCycle > (NextCycle + PI->AcquireAtCycle))
+        NextCycle = RCycle - PI->AcquireAtCycle;
     }
     if (SU->hasReservedResource) {
       // For reserved resources, record the highest cycle using the resource.
@@ -3343,8 +3346,11 @@ void SchedBoundary::bumpNode(SUnit *SU) {
             std::tie(ReservedUntil, InstanceIdx) = getNextResourceCycle(
                 SC, PIdx, PI->ReleaseAtCycle, PI->AcquireAtCycle);
             if (isTop()) {
+              unsigned Occupancy = PI->ReleaseAtCycle;
+              if (PI->ReleaseAtCycle && PI->ReleaseAtCycle > PI->AcquireAtCycle)
+                Occupancy = PI->ReleaseAtCycle - PI->AcquireAtCycle;
               ReservedCycles[InstanceIdx] =
-                  std::max(ReservedUntil, NextCycle + PI->ReleaseAtCycle);
+                  std::max(ReservedUntil, NextCycle + Occupancy);
             } else
               ReservedCycles[InstanceIdx] = NextCycle;
           }
@@ -3555,10 +3561,12 @@ initResourceDelta(const ScheduleDAGMI *DAG,
   for (TargetSchedModel::ProcResIter
          PI = SchedModel->getWriteProcResBegin(SC),
          PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI) {
+    // Resource occupancy is ReleaseAtCycle - AcquireAtCycle.
+    unsigned Occupancy = PI->ReleaseAtCycle - PI->AcquireAtCycle;
     if (PI->ProcResourceIdx == Policy.ReduceResIdx)
-      ResDelta.CritResources += PI->ReleaseAtCycle;
+      ResDelta.CritResources += Occupancy;
     if (PI->ProcResourceIdx == Policy.DemandResIdx)
-      ResDelta.DemandedResources += PI->ReleaseAtCycle;
+      ResDelta.DemandedResources += Occupancy;
   }
 }
 

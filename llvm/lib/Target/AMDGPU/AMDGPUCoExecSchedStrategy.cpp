@@ -841,8 +841,8 @@ unsigned CandidateHeuristics::getStructuralStallCycles(SchedBoundary &Zone,
           Zone.getNextResourceCycle(SC, PE.ProcResourceIdx, PE.ReleaseAtCycle,
                                     PE.AcquireAtCycle)
               .first;
-      if (NextAvail > CurrCycle)
-        Stall = std::max(Stall, NextAvail - CurrCycle);
+      if (NextAvail > CurrCycle + PE.AcquireAtCycle)
+        Stall = std::max(Stall, NextAvail - (CurrCycle + PE.AcquireAtCycle));
     }
   }
 

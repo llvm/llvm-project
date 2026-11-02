@@ -139,7 +139,8 @@ MachineTraceMetrics::getResources(const MachineBasicBlock *MBB) {
          PI = SchedModel.getWriteProcResBegin(SC),
          PE = SchedModel.getWriteProcResEnd(SC); PI != PE; ++PI) {
       assert(PI->ProcResourceIdx < PRKinds && "Bad processor resource kind");
-      PRCycles[PI->ProcResourceIdx] += PI->ReleaseAtCycle;
+      // Resource occupancy is ReleaseAtCycle - AcquireAtCycle.
+      PRCycles[PI->ProcResourceIdx] += PI->ReleaseAtCycle - PI->AcquireAtCycle;
     }
   }
   FBI->InstrCount = InstrCount;
@@ -1279,7 +1280,8 @@ unsigned MachineTraceMetrics::Trace::getResourceLength(
            PI != PE; ++PI) {
         if (PI->ProcResourceIdx != ResourceIdx)
           continue;
-        Cycles += (PI->ReleaseAtCycle *
+        // Resource occupancy is ReleaseAtCycle - AcquireAtCycle.
+        Cycles += ((PI->ReleaseAtCycle - PI->AcquireAtCycle) *
                    TE.MTM.SchedModel.getResourceFactor(ResourceIdx));
       }
     }

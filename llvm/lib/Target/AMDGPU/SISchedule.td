@@ -70,6 +70,8 @@ def Write16PassDGEMM : SchedWrite;
 def WriteXDL1PassWMMA : SchedWrite;
 def WriteXDL2PassWMMA : SchedWrite;
 def WriteXDL4PassWMMA : SchedWrite;
+def WriteXDL1PassScaledWMMA : SchedWrite;
+def WriteXDL2PassScaledWMMA : SchedWrite;
 def WriteXDL8PassWMMA : SchedWrite;
 def Write4PassWMMA : SchedWrite;
 def Write8PassWMMA : SchedWrite;
@@ -490,8 +492,8 @@ def WriteWMMAScaleStrict_16X16X128_F8F6F4 : SchedWriteVariant<[
 
 def WriteWMMAScale_16X16X128_F8F6F4 : SchedWriteVariant<[
     SchedVar<PredIsGFX1250Strict,     [WriteWMMAScaleStrict_16X16X128_F8F6F4]>,
-    SchedVar<PredIsBothF4_WMMA_SCALE, [WriteXDL1PassWMMA]>,
-    SchedVar<NoSchedPred,             [WriteXDL2PassWMMA]>
+    SchedVar<PredIsBothF4_WMMA_SCALE, [WriteXDL1PassScaledWMMA]>,
+    SchedVar<NoSchedPred,             [WriteXDL2PassScaledWMMA]>
 ]>;
 
 def WriteWMMA_16X16X64_FP8BF8 : SchedWriteVariant<[
@@ -522,6 +524,19 @@ let ReleaseAtCycles = [16] in
 def : HWWriteRes<WriteXDL4PassWMMA, [HWXDL], 16>;
 let ReleaseAtCycles = [32] in
 def : HWWriteRes<WriteXDL8PassWMMA, [HWXDL], 32>;
+
+// Scaled WMMA variants are composed of 2 micro-ops:
+//   1. LD_SCALE (cycle 0): A 1-cycle VALU op that loads the scale operand
+//   2. WMMA (cycles 1-N): An N-cycle WMMA op that uses the XDL unit
+//
+// We model this by consuming both HWVALU and HWXDL with appropriate timing:
+//   - HWVALU: AcquireAtCycle=0, ReleaseAtCycle=1 (LD_SCALE uses VALU at issue)
+//   - HWXDL: AcquireAtCycle=1, ReleaseAtCycle=N+1 (XDL acquired after LD_SCALE,
+//            held for N cycles, so released at cycle 1+N)
+let ReleaseAtCycles = [1, 5], AcquireAtCycles = [0, 1] in
+def : HWWriteRes<WriteXDL1PassScaledWMMA, [HWVALU, HWXDL], 5>;
+let ReleaseAtCycles = [1, 9], AcquireAtCycles = [0, 1] in
+def : HWWriteRes<WriteXDL2PassScaledWMMA, [HWVALU, HWXDL], 9>;
 
 def : HWWriteRes<Write4PassWMMA,  [HWVALU], 16>;
 def : HWWriteRes<Write8PassWMMA,  [HWVALU], 32>;
