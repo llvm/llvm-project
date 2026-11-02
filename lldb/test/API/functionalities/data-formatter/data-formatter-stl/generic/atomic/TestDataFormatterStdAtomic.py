@@ -55,6 +55,9 @@ class StdAtomicTestCase(TestBase):
         self.assertEqual(s.GetNumChildren(), 2, "s has two children")
         self.assertEqual(s.GetChildAtIndex(0).GetValueAsUnsigned(0), 1, "s.x == 1")
         self.assertEqual(s.GetChildAtIndex(1).GetValueAsUnsigned(0), 2, "s.y == 2")
+        self.runCmd('type summary add S --summary-string "(${var.x}, ${var.y})"')
+        self.assertEqual(s_atomic.GetSummary(), "(1, 2)")
+        self.runCmd("type summary clear")
 
         # float, only available if std::atomic<float> is supported.
         atomic_float = self.get_variable("atomic_float")
