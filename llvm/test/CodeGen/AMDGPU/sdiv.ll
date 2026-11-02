@@ -1117,10 +1117,10 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX9-LABEL: sdiv_v4i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 4, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v9, 4, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[0:3], v8, s[10:11] offset:16
-; GFX9-NEXT:    global_load_dwordx4 v[4:7], v8, s[10:11]
+; GFX9-NEXT:    global_load_dwordx4 v[0:3], v9, s[10:11] offset:16
+; GFX9-NEXT:    global_load_dwordx4 v[4:7], v9, s[10:11]
 ; GFX9-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s10, -1
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
@@ -2084,9 +2084,9 @@ define amdgpu_kernel void @v_sdiv_i25(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s3
 ; TONGA-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; TONGA-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
-; TONGA-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; TONGA-NEXT:    flat_load_dword v2, v[2:3]
+; TONGA-NEXT:    v_add_u32_e32 v4, vcc, 4, v0
+; TONGA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; TONGA-NEXT:    flat_load_dword v2, v[4:5]
 ; TONGA-NEXT:    flat_load_dword v0, v[0:1]
 ; TONGA-NEXT:    s_mov_b32 s4, s0
 ; TONGA-NEXT:    s_mov_b32 s5, s1

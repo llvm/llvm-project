@@ -47,8 +47,8 @@ define amdgpu_kernel void @no_reorder_scalarized_v2f64_local_load_store(ptr addr
 ; VI: flat_load_dwordx4
 ; VI: flat_load_dwordx4
 ; VI: flat_load_dwordx4
-; VI: flat_store_dwordx4
 ; VI: flat_load_dwordx4
+; VI: flat_store_dwordx4
 ; VI: flat_store_dwordx4
 ; VI: flat_store_dwordx4
 ; VI: flat_store_dwordx4

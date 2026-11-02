@@ -7,18 +7,18 @@ define double @load_private_f64_align1(ptr addrspace(5) %ptr) {
 ; GFX6-LABEL: load_private_f64_align1:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
-; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
-; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 3, v0
-; GFX6-NEXT:    v_add_i32_e32 v4, vcc, 5, v0
-; GFX6-NEXT:    v_add_i32_e32 v5, vcc, 6, v0
-; GFX6-NEXT:    v_add_i32_e32 v6, vcc, 7, v0
-; GFX6-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v2, v2, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v3, v3, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v4, v4, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v5, v5, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v6, v6, s[0:3], 0 offen
+; GFX6-NEXT:    v_add_i32_e32 v8, vcc, 1, v0
+; GFX6-NEXT:    v_add_i32_e32 v9, vcc, 2, v0
+; GFX6-NEXT:    v_add_i32_e32 v10, vcc, 3, v0
+; GFX6-NEXT:    v_add_i32_e32 v11, vcc, 5, v0
+; GFX6-NEXT:    v_add_i32_e32 v12, vcc, 6, v0
+; GFX6-NEXT:    v_add_i32_e32 v13, vcc, 7, v0
+; GFX6-NEXT:    buffer_load_ubyte v1, v8, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v2, v9, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v3, v10, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v4, v11, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v5, v12, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v6, v13, s[0:3], 0 offen
 ; GFX6-NEXT:    buffer_load_ubyte v7, v0, s[0:3], 0 offen
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
 ; GFX6-NEXT:    buffer_load_ubyte v0, v0, s[0:3], 0 offen
@@ -88,13 +88,13 @@ define double @load_private_f64_align2(ptr addrspace(5) %ptr) {
 ; GFX6-LABEL: load_private_f64_align2:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 2, v0
-; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 4, v0
-; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 6, v0
-; GFX6-NEXT:    buffer_load_ushort v1, v1, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ushort v3, v3, s[0:3], 0 offen
+; GFX6-NEXT:    v_add_i32_e32 v4, vcc, 2, v0
+; GFX6-NEXT:    v_add_i32_e32 v6, vcc, 4, v0
+; GFX6-NEXT:    v_add_i32_e32 v5, vcc, 6, v0
+; GFX6-NEXT:    buffer_load_ushort v1, v4, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ushort v3, v5, s[0:3], 0 offen
 ; GFX6-NEXT:    buffer_load_ushort v0, v0, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ushort v2, v2, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ushort v2, v6, s[0:3], 0 offen
 ; GFX6-NEXT:    s_waitcnt vmcnt(3)
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    s_waitcnt vmcnt(2)
@@ -135,18 +135,18 @@ define i64 @load_private_i64_align1(ptr addrspace(5) %ptr) {
 ; GFX6-LABEL: load_private_i64_align1:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
-; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
-; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 3, v0
-; GFX6-NEXT:    v_add_i32_e32 v4, vcc, 5, v0
-; GFX6-NEXT:    v_add_i32_e32 v5, vcc, 6, v0
-; GFX6-NEXT:    v_add_i32_e32 v6, vcc, 7, v0
-; GFX6-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v2, v2, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v3, v3, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v4, v4, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v5, v5, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v6, v6, s[0:3], 0 offen
+; GFX6-NEXT:    v_add_i32_e32 v8, vcc, 1, v0
+; GFX6-NEXT:    v_add_i32_e32 v9, vcc, 2, v0
+; GFX6-NEXT:    v_add_i32_e32 v10, vcc, 3, v0
+; GFX6-NEXT:    v_add_i32_e32 v11, vcc, 5, v0
+; GFX6-NEXT:    v_add_i32_e32 v12, vcc, 6, v0
+; GFX6-NEXT:    v_add_i32_e32 v13, vcc, 7, v0
+; GFX6-NEXT:    buffer_load_ubyte v1, v8, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v2, v9, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v3, v10, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v4, v11, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v5, v12, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v6, v13, s[0:3], 0 offen
 ; GFX6-NEXT:    buffer_load_ubyte v7, v0, s[0:3], 0 offen
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
 ; GFX6-NEXT:    buffer_load_ubyte v0, v0, s[0:3], 0 offen
@@ -216,12 +216,12 @@ define float @load_private_f32_align1(ptr addrspace(5) %ptr) {
 ; GFX6-LABEL: load_private_f32_align1:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
-; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
-; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 3, v0
-; GFX6-NEXT:    buffer_load_ubyte v1, v1, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v3, v3, s[0:3], 0 offen
-; GFX6-NEXT:    buffer_load_ubyte v2, v2, s[0:3], 0 offen
+; GFX6-NEXT:    v_add_i32_e32 v4, vcc, 1, v0
+; GFX6-NEXT:    v_add_i32_e32 v6, vcc, 2, v0
+; GFX6-NEXT:    v_add_i32_e32 v5, vcc, 3, v0
+; GFX6-NEXT:    buffer_load_ubyte v1, v4, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v3, v5, s[0:3], 0 offen
+; GFX6-NEXT:    buffer_load_ubyte v2, v6, s[0:3], 0 offen
 ; GFX6-NEXT:    buffer_load_ubyte v0, v0, s[0:3], 0 offen
 ; GFX6-NEXT:    s_waitcnt vmcnt(3)
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
