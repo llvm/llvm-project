@@ -663,8 +663,8 @@ public:
 
     // On return VMCnt/LOADcnt can be outstanding if there're trailing
     // GLOBAL_INV or BUFFER_INV; see also simplifyVmemInvOnlyWait.
-    if (OnReturn && (Context->ST.hasBufferInvInst() ||
-                     Context->ST.hasExtendedWaitCounts()))
+    if (OnReturn &&
+        (Context->ST.hasBufferInvInst() || Context->ST.hasExtendedWaitCounts()))
       setIndeterminate(AMDGPU::LOAD_CNT, HWEvents::VMEM_INV_ACCESS);
   }
 
