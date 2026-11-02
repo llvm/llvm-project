@@ -1507,11 +1507,6 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
 
   case Builtin::BIrecv:
   case Builtin::BIrecvfrom: {
-    unsigned ExpectedArgs = BuiltinID == Builtin::BIrecv ? 4 : 6;
-    if (TheCall->getNumArgs() != ExpectedArgs ||
-        !TheCall->getArg(1)->getType()->isPointerType() ||
-        !TheCall->getArg(2)->getType()->isIntegerType())
-      return;
     DiagID = diag::warn_fortify_source_size_mismatch;
     AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(1);
@@ -1521,28 +1516,11 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIpoll:
   case Builtin::BIppoll:
   case Builtin::BIppoll64: {
-    unsigned ExpectedArgs = BuiltinID == Builtin::BIpoll ? 3 : 4;
-    if (TheCall->getNumArgs() != ExpectedArgs ||
-        !TheCall->getArg(1)->getType()->isIntegerType())
+    // POSIX specifies that nfds_t shall be an unsigned integer type:
+    // https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/poll.h.html#tag_14_37
+    if (!TheCall->getArg(1)->getType()->isIntegerType())
       return;
     QualType PointeeTy = TheCall->getArg(0)->getType()->getPointeeType();
-    if (PointeeTy.isNull())
-      return;
-    const RecordDecl *RD = PointeeTy->getAsRecordDecl();
-    if (!RD || !RD->getIdentifier() || RD->getName() != "pollfd")
-      return;
-    if (BuiltinID == Builtin::BIpoll) {
-      if (!TheCall->getArg(2)->getType()->isIntegerType())
-        return;
-    } else {
-      QualType TmoPointeeTy = TheCall->getArg(2)->getType()->getPointeeType();
-      if (TmoPointeeTy.isNull())
-        return;
-      const RecordDecl *TmoRD = TmoPointeeTy->getAsRecordDecl();
-      if (!TmoRD || !TmoRD->getIdentifier() || TmoRD->getName() != "timespec" ||
-          !TheCall->getArg(3)->getType()->isPointerType())
-        return;
-    }
     std::optional<CharUnits> ElemSize =
         Context.getTypeSizeInCharsIfKnown(PointeeTy);
     if (!ElemSize)
@@ -1698,18 +1676,14 @@ void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
     return;
 
   // Recognize the libc function by builtin identity rather than by name and
-  // system-header origin. umask is a LibBuiltin marked IgnoreSignature, so the
-  // builtin id is attached to any file-scope, C-linkage declaration of umask
-  // regardless of the libc's mode_t spelling -- including a hand-written
-  // forward declaration without <sys/stat.h>. A static/local lookalike or a
-  // C++ (non-extern-"C") declaration keeps a zero builtin id and is ignored.
-  if (FD->getBuiltinID() != Builtin::BIumask)
+  // system-header origin.
+  if (FD->getBuiltinID() != Builtin::BIumask || TheCall->getNumArgs() != 1)
     return;
 
   // umask(mode_t): warn when the constant-evaluated argument has bits set
   // outside the file-permission mask (0777). Those bits are ignored.
-  if (TheCall->getNumArgs() != 1)
-    return;
+  // POSIX specifies that mode_t shall be an integer type:
+  // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/sys_types.h.html
   Expr *Arg = TheCall->getArg(0);
   if (!Arg->getType()->isIntegerType())
     return;
@@ -1719,6 +1693,12 @@ void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
   // Operate on the raw two's-complement bit pattern so that negative literals
   // (which convert to large unsigned mode_t values) are caught.
   llvm::APInt RawValue = R.Val.getInt();
+  // 0777 requires 9 bits; a mode_t with 9 or fewer bits cannot have unused bits
+  // set outside 0777, and constructing the mask would assert for smaller
+  // widths.
+  constexpr unsigned MinBitWidthForPermissionsFlag = 10;
+  if (RawValue.getBitWidth() < MinBitWidthForPermissionsFlag)
+    return;
   llvm::APInt Mask(RawValue.getBitWidth(), 0777);
   llvm::APInt Extra = RawValue & ~Mask;
   if (Extra == 0)
