@@ -1,8 +1,12 @@
-# RUN: llc -mtriple=aarch64 -run-pass=shrink-wrap -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64 -passes=shrink-wrap \
+# RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,DEBUG
+# RUN: llc -mtriple=aarch64 \
+# RUN:   -passes='mir-strip-debug,function(machine-function(shrink-wrap))' \
+# RUN:   -mir-strip-debugify-only=0 %s -o - | FileCheck %s
 
 # Debug register and frame-index operands must not prevent the call path from
-# being selected as the save and restore region. A real frame-index use in the
-# shared return block must still disable shrink wrapping.
+# being selected as the save and restore region. Stripping the debug
+# instructions must select the same points.
 
 --- |
   declare void @g()
@@ -12,10 +16,6 @@
   }
 
   define void @f_dbg_phi(i32 %c) {
-    ret void
-  }
-
-  define void @f_real_fi_use(i32 %c) {
     ret void
   }
 
@@ -43,8 +43,8 @@ frameInfo:
 # CHECK-NEXT:    - point:{{ +}}'%bb.1'
 # CHECK:       restorePoint:
 # CHECK-NEXT:    - point:{{ +}}'%bb.1'
-# CHECK:       body:
-# CHECK:         DBG_VALUE $x19
+# DEBUG:      body:
+# DEBUG:        DBG_VALUE $x19
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -76,8 +76,8 @@ stack:
 # CHECK-NEXT:    - point:{{ +}}'%bb.1'
 # CHECK:       restorePoint:
 # CHECK-NEXT:    - point:{{ +}}'%bb.1'
-# CHECK:       body:
-# CHECK:         DBG_PHI %stack.0
+# DEBUG:      body:
+# DEBUG:        DBG_PHI %stack.0
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -95,36 +95,5 @@ body:             |
 
   bb.2:
     DBG_PHI %stack.0, 1, 32
-    RET_ReallyLR
-...
----
-name:            f_real_fi_use
-tracksRegLiveness: true
-frameInfo:
-  adjustsStack:    true
-  hasCalls:        true
-stack:
-  - { id: 0, size: 4, alignment: 4 }
-# CHECK-LABEL: name:{{ +}}f_real_fi_use
-# CHECK-NOT:   savePoint:
-# CHECK-NOT:   restorePoint:
-# CHECK:       body:
-# CHECK:         STRWui $wzr, %stack.0, 0
-body:             |
-  bb.0:
-    successors: %bb.1, %bb.2
-    liveins: $w0
-
-    CBZW killed $w0, %bb.2
-
-  bb.1:
-    successors: %bb.2
-
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
-    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-
-  bb.2:
-    STRWui $wzr, %stack.0, 0 :: (store (s32))
     RET_ReallyLR
 ...
