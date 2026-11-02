@@ -6694,6 +6694,9 @@ SROA::runOnAlloca(AllocaInst &AI) {
 
   // Split GEPs of the alloca that indexes one of two possible offsets into
   // selects of constant offset GEPs, to allow splitting and promotion.
+  // Unfolding the GEPs is only useful when we can split the alloca and then
+  // promote the smaller allocas. Promotion requires predication, which modified
+  // the CFG, so only unfold when we're allowed to modify the CFG.
   if (!PreserveCFG)
     Changed |= unfoldTwoSlotGEPsOfAlloca(AI);
 
