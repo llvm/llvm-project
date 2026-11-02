@@ -4,8 +4,6 @@
 define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; CHECK-LABEL: add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movzwl (%rsi), %eax
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0
@@ -13,9 +11,15 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm1
 ; CHECK-NEXT:    vaddss %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    vpextrw $0, %xmm0, (%rbx)
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    btl $16, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; CHECK-NEXT:    orl $4194304, %eax # imm = 0x400000
+; CHECK-NEXT:    vucomiss %xmm0, %xmm0
+; CHECK-NEXT:    cmovnpl %ecx, %eax
+; CHECK-NEXT:    shrl $16, %eax
+; CHECK-NEXT:    movw %ax, (%rdx)
 ; CHECK-NEXT:    retq
   %a = load bfloat, ptr %pa
   %b = load bfloat, ptr %pb
@@ -27,43 +31,21 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 define <4 x bfloat> @fptrunc_v4f32(<4 x float> %a) nounwind {
 ; CHECK-LABEL: fptrunc_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpshufd $255, (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    vpextrw $0, %xmm0, %ebx
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpextrw $0, %xmm0, %ebp
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpextrw $0, %xmm0, %r14d
-; CHECK-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    vpextrw $0, %xmm0, %eax
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpinsrw $1, %r14d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrw $3, %ebp, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrw $4, %ebx, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrw $5, %ebx, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrw $6, %ebx, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrw $7, %ebx, %xmm0, %xmm0
-; CHECK-NEXT:    addq $64, %rsp
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vpsrld $16, %ymm0, %ymm1
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; CHECK-NEXT:    vpaddd %ymm2, %ymm0, %ymm2
+; CHECK-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [4194304,4194304,4194304,4194304,4194304,4194304,4194304,4194304]
+; CHECK-NEXT:    vpor %ymm2, %ymm0, %ymm2
+; CHECK-NEXT:    vcmpunordps %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    vpsrld $16, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = fptrunc <4 x float> %a to <4 x bfloat>
   ret <4 x bfloat> %b

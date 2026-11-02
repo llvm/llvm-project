@@ -18,7 +18,9 @@ find_program(ORC_RT_FILECHECK_EXECUTABLE
   NAMES FileCheck
   PATHS ${ORC_RT_LLVM_TOOLS_DIR})
 if (NOT ORC_RT_FILECHECK_EXECUTABLE)
-  message(STATUS "Cannot find FileCheck. Please put it in your PATH, set ORC_RT_FILECHECK_EXECUTABLE to its full path, or point ORC_RT_LLVM_TOOLS_DIR to its directory.")
+  message(STATUS "Cannot find FileCheck. Please put it in your PATH, set "
+                 "ORC_RT_FILECHECK_EXECUTABLE to its full path, or point "
+                 "ORC_RT_LLVM_TOOLS_DIR to its directory.")
   set(ORC_RT_LLVM_TOOLS_AVAILABLE FALSE)
 endif()
 
@@ -31,7 +33,24 @@ find_program(ORC_RT_NOT_EXECUTABLE
   NAMES not
   PATHS ${ORC_RT_LLVM_TOOLS_DIR})
 if (NOT ORC_RT_NOT_EXECUTABLE)
-  message(STATUS "Cannot find 'not'. Please put it in your PATH, set ORC_RT_NOT_EXECUTABLE to its full path, or point ORC_RT_LLVM_TOOLS_DIR to its directory.")
+  message(STATUS "Cannot find 'not'. Please put it in your PATH, set "
+                 "ORC_RT_NOT_EXECUTABLE to its full path, or point "
+                 "ORC_RT_LLVM_TOOLS_DIR to its directory.")
+  set(ORC_RT_LLVM_TOOLS_AVAILABLE FALSE)
+endif()
+
+# Add dependence on split-file.
+if (TARGET split-file)
+  list(APPEND ORC_RT_TEST_DEPS split-file)
+endif()
+
+find_program(ORC_RT_SPLIT_FILE_EXECUTABLE
+  NAMES split-file
+  PATHS ${ORC_RT_LLVM_TOOLS_DIR})
+if (NOT ORC_RT_SPLIT_FILE_EXECUTABLE)
+  message(STATUS "Cannot find split-file. Please put it in your PATH, set "
+                 "ORC_RT_SPLIT_FILE_EXECUTABLE to its full path, or point "
+                 "ORC_RT_LLVM_TOOLS_DIR to its directory.")
   set(ORC_RT_LLVM_TOOLS_AVAILABLE FALSE)
 endif()
 

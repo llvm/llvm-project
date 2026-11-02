@@ -27,7 +27,7 @@ llvm::Value *RuntimeDebugBuilder::getPrintableString(PollyIRBuilder &Builder,
 }
 
 Function *RuntimeDebugBuilder::getVPrintF(PollyIRBuilder &Builder) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   const char *Name = "vprintf";
   Function *F = M->getFunction(Name);
 
@@ -115,7 +115,7 @@ void RuntimeDebugBuilder::createCPUPrinterT(PollyIRBuilder &Builder,
 }
 
 Function *RuntimeDebugBuilder::getPrintF(PollyIRBuilder &Builder) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   const char *Name = "printf";
   Function *F = M->getFunction(Name);
 
@@ -140,7 +140,7 @@ void RuntimeDebugBuilder::createPrintF(PollyIRBuilder &Builder,
 }
 
 void RuntimeDebugBuilder::createFlush(PollyIRBuilder &Builder) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   const char *Name = "fflush";
   Function *F = M->getFunction(Name);
 

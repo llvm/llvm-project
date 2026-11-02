@@ -75,7 +75,7 @@ define x86_regcallcc <16 x float> @testf32_inp(<16 x float> %a, <16 x float> %b,
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
-; WIN32-NEXT:    subl $32, %esp
+; WIN32-NEXT:    subl $16, %esp
 ; WIN32-NEXT:    movaps %xmm7, (%esp) # 16-byte Spill
 ; WIN32-NEXT:    movaps %xmm6, %xmm7
 ; WIN32-NEXT:    movaps %xmm5, %xmm6
@@ -363,7 +363,7 @@ define x86_regcallcc <32 x float> @testf32_stack(<32 x float> %a, <32 x float> %
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
-; WIN32-NEXT:    subl $48, %esp
+; WIN32-NEXT:    subl $32, %esp
 ; WIN32-NEXT:    movaps %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; WIN32-NEXT:    movaps %xmm6, (%esp) # 16-byte Spill
 ; WIN32-NEXT:    movaps %xmm5, %xmm6

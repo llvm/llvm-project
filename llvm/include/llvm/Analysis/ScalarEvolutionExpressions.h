@@ -210,8 +210,8 @@ public:
 
   ArrayRef<SCEVUse> operands() const { return ArrayRef(Operands, NumOperands); }
 
-  NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = FlagsMask) const {
-    return static_cast<NoWrapFlags>(SubclassData) & Mask;
+  SCEVFlags getNoWrapFlags(SCEVFlags Mask = FlagsNoWrapMask) const {
+    return static_cast<SCEVFlags>(SubclassData) & Mask & SCEV::FlagsNoWrapMask;
   }
 
   bool hasNoUnsignedWrap() const { return getNoWrapFlags(FlagNUW) != FlagNone; }
@@ -246,8 +246,11 @@ public:
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setFlags(SCEVFlags Flags) {
     SubclassData |= static_cast<unsigned short>(Flags);
+  }
+  void setNoWrapFlags(SCEVFlags Flags) {
+    setFlags(Flags & SCEV::FlagsNoWrapMask);
   }
 };
 
@@ -362,7 +365,9 @@ public:
   /// Set flags for a recurrence without clearing any previously set flags.
   /// For AddRec, either NUW or NSW implies NW. Keep track of this fact here
   /// to make it easier to propagate flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setNoWrapFlags(SCEVFlags Flags) {
+    if (!any(Flags & FlagsNoWrapMask))
+      return;
     if (any(Flags & (FlagNUW | FlagNSW)))
       Flags = ScalarEvolution::setFlags(Flags, FlagNW);
     SubclassData |= static_cast<unsigned short>(Flags);
@@ -377,8 +382,7 @@ public:
   /// number. Takes an explicit list of operands to represent an AddRec.
   LLVM_ABI static SCEVUse
   evaluateAtIteration(ArrayRef<SCEVUse> Operands, const SCEV *It,
-                      ScalarEvolution &SE,
-                      SCEV::NoWrapFlags UseFlags = SCEV::FlagNone);
+                      ScalarEvolution &SE, SCEVFlags UseFlags = SCEV::FlagNone);
 
   /// Return the value of this recurrences when its loop exits, i.e. its value
   /// at the loop's exact backedge-taken count, or SCEVCouldNotCompute if that
@@ -504,8 +508,11 @@ class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setFlags(SCEVFlags Flags) {
     SubclassData |= static_cast<unsigned short>(Flags);
+  }
+  void setNoWrapFlags(SCEVFlags Flags) {
+    setFlags(Flags & SCEV::FlagsNoWrapMask);
   }
 
 protected:
@@ -527,10 +534,6 @@ public:
     default:
       llvm_unreachable("Not a sequential min/max type.");
     }
-  }
-
-  SCEVTypes getEquivalentNonSequentialSCEVType() const {
-    return getEquivalentNonSequentialSCEVType(getSCEVType());
   }
 
   static bool classof(const SCEV *S) {
@@ -568,10 +571,13 @@ class LLVM_ABI SCEVUnknown final : public SCEV, private CallbackVH {
   /// instances owned by a ScalarEvolution.
   SCEVUnknown *Next;
 
+  /// Deterministic ID used for ordering SCEVUnknowns by their creation time.
+  unsigned OrderID;
+
   SCEVUnknown(const FoldingSetNodeIDRef ID, Value *V, ScalarEvolution *se,
-              SCEVUnknown *next)
-      : SCEV(ID, scUnknown, 1, V->getType()), CallbackVH(V), SE(se),
-        Next(next) {}
+              SCEVUnknown *next, unsigned OrderID)
+      : SCEV(ID, scUnknown, 1, V->getType()), CallbackVH(V), SE(se), Next(next),
+        OrderID(OrderID) {}
 
   // Implement CallbackVH.
   void deleted() override;
@@ -579,6 +585,8 @@ class LLVM_ABI SCEVUnknown final : public SCEV, private CallbackVH {
 
 public:
   Value *getValue() const { return getValPtr(); }
+
+  unsigned getOrderID() const { return OrderID; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scUnknown; }
@@ -963,42 +971,10 @@ private:
   ValueToSCEVMapTy &Map;
 };
 
-using LoopToScevMapT = DenseMap<const Loop *, const SCEV *>;
-
-/// The SCEVLoopAddRecRewriter takes a scalar evolution expression and applies
-/// the Map (Loop -> SCEV) to all AddRecExprs.
-class SCEVLoopAddRecRewriter
-    : public SCEVRewriteVisitor<SCEVLoopAddRecRewriter> {
-public:
-  SCEVLoopAddRecRewriter(ScalarEvolution &SE, LoopToScevMapT &M)
-      : SCEVRewriteVisitor(SE), Map(M) {}
-
-  static const SCEV *rewrite(const SCEV *Scev, LoopToScevMapT &Map,
-                             ScalarEvolution &SE) {
-    SCEVLoopAddRecRewriter Rewriter(SE, Map);
-    return Rewriter.visit(Scev);
-  }
-
-  const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-    SmallVector<SCEVUse, 2> Operands;
-    for (SCEVUse Op : Expr->operands())
-      Operands.push_back(visit(Op));
-
-    const Loop *L = Expr->getLoop();
-    auto It = Map.find(L);
-    if (It == Map.end())
-      return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
-
-    return SCEVAddRecExpr::evaluateAtIteration(Operands, It->second, SE);
-  }
-
-private:
-  LoopToScevMapT &Map;
-};
-
 template <typename SCEVPtrT>
-inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
-    : Base(S, 0) {
+inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVFlags Flags) : Base(S, 0) {
+  assert((Flags & SCEVFlags::FlagsNoWrapMask) == Flags &&
+         "Expected only no-wrap flags");
   if (any(Flags)) {
     assert((isa<SCEVAddExpr, SCEVMulExpr, SCEVAddRecExpr>(S)) &&
            "use flags require an expression that can carry no-wrap flags");
@@ -1009,9 +985,8 @@ inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
 }
 
 template <typename SCEVPtrT>
-inline SCEVNoWrapFlags
-SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVNoWrapFlags Mask) const {
-  SCEVNoWrapFlags Flags = SCEVNoWrapFlags::FlagNone;
+inline SCEVFlags SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVFlags Mask) const {
+  SCEVFlags Flags = SCEVFlags::FlagNone;
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
     Flags = NAry->getNoWrapFlags();
   return (Flags | getUseNoWrapFlags()) & Mask;

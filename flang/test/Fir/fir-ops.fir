@@ -37,10 +37,12 @@ func.func @instructions() {
 // CHECK: [[VAL_0:%.*]] = fir.alloca !fir.array<10xi32>
 // CHECK: [[VAL_1:%.*]] = fir.load [[VAL_0]] : !fir.ref<!fir.array<10xi32>>
 // CHECK: [[VAL_2:%.*]] = fir.alloca i32
+// CHECK: [[VAL_ALIGNED:%.*]] = fir.alloca !fir.array<10xf32> <{alignment = 64 : i64}>
 // CHECK: [[VAL_3:%.*]] = arith.constant 22 : i32
   %0 = fir.alloca !fir.array<10xi32>
   %1 = fir.load %0 : !fir.ref<!fir.array<10xi32>>
   %2 = fir.alloca i32
+  %aligned = fir.alloca !fir.array<10xf32> {alignment = 64 : i64}
   %3 = arith.constant 22 : i32
 
 // CHECK: fir.store [[VAL_3]] to [[VAL_2]] : !fir.ref<i32>
@@ -797,14 +799,14 @@ func.func @load_invariant(%arg0: !fir.ref<i32>) -> i32 {
 func.func private @dispatch(%arg0: !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>, %arg1: i32) -> () {
   // CHECK-LABEL: func.func private @dispatch(
   // CHECK-SAME: %[[CLASS:.*]]: !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>, %[[INTARG:.*]]: i32)
-  fir.dispatch "proc1"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-  // CHECK: fir.dispatch "proc1"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+  fir.dispatch "proc1"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) pass_arg_pos(0)
+  // CHECK: fir.dispatch "proc1"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) pass_arg_pos(0)
 
   fir.dispatch "proc2"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) proc_attrs<pure>
   // CHECK: fir.dispatch "proc2"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) proc_attrs <pure>
 
-  fir.dispatch "proc3"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%arg1, %arg0 : i32, !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
-  // CHECK: fir.dispatch "proc3"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%[[INTARG]], %[[CLASS]] : i32, !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
+  fir.dispatch "proc3"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%arg1, %arg0 : i32, !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // CHECK: fir.dispatch "proc3"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%[[INTARG]], %[[CLASS]] : i32, !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) pass_arg_pos(1)
   return
 }
 
@@ -1042,12 +1044,12 @@ func.func @test_if_weights(%cond: i1) {
 // CHECK-LABEL: func @test_declare_value(
 // CHECK-SAME: %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: !fir.dscope) {
 func.func @test_declare_value(%arg0: i32, %scope: !fir.dscope) {
-// CHECK: fir.declare_value %[[VAL_0]] {uniq_name = "test"} : i32
-  fir.declare_value %arg0 {uniq_name = "test"} : i32
-// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "test"} : i32
-  fir.declare_value %arg0 dummy_scope %scope {uniq_name = "test"} : i32
-// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] arg 1 {uniq_name = "test"} : i32
-  fir.declare_value %arg0 dummy_scope %scope arg 1 {uniq_name = "test"} : i32
+// CHECK: fir.declare_value %[[VAL_0]] uniq_name("test") : i32
+  fir.declare_value %arg0 uniq_name("test") : i32
+// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] uniq_name("test") : i32
+  fir.declare_value %arg0 dummy_scope %scope uniq_name("test") : i32
+// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] arg 1 uniq_name("test") : i32
+  fir.declare_value %arg0 dummy_scope %scope arg 1 uniq_name("test") : i32
   return
 }
 

@@ -836,3 +836,20 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
+
+// -----
+#l_in = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+#l_out = #xegpu.layout<inst_data = [1, 64], lane_layout = [1, 16], lane_data = [1, 4]>
+gpu.module @test_kernel {
+  //CHECK-LABEL: gpu.func @convert_layout_tile_covers_both_layouts
+  //CHECK-COUNT-4: xegpu.convert_layout {{.*}} : vector<8x64xbf16>
+  //CHECK-NOT: xegpu.convert_layout {{.*}} : vector<8x16xbf16>
+  gpu.func @convert_layout_tile_covers_both_layouts(%A: memref<16x128xbf16>, %B: memref<16x128xbf16>) {
+    %a_tdesc = xegpu.create_nd_tdesc %A : memref<16x128xbf16> -> !xegpu.tensor_desc<16x128xbf16, #l_in>
+    %a = xegpu.load_nd %a_tdesc[0, 0] <{layout = #l_in}> : !xegpu.tensor_desc<16x128xbf16, #l_in> -> vector<16x128xbf16>
+    %a1 = xegpu.convert_layout %a <{input_layout = #l_in, target_layout = #l_out}> : vector<16x128xbf16>
+    %b_tdesc = xegpu.create_nd_tdesc %B : memref<16x128xbf16> -> !xegpu.tensor_desc<16x128xbf16, #l_out>
+    xegpu.store_nd %a1, %b_tdesc[0, 0] <{layout = #l_out}> : vector<16x128xbf16>, !xegpu.tensor_desc<16x128xbf16, #l_out>
+    gpu.return
+  }
+}

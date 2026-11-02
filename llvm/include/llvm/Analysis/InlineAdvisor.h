@@ -368,7 +368,7 @@ getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
 /// using that cost, so we won't do so from this function. Return std::nullopt
 /// if inlining should not be attempted.
 LLVM_ABI std::optional<InlineCost>
-shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
+shouldInline(CallBase &CB, TargetTransformInfo &CallerTTI,
              function_ref<InlineCost(CallBase &CB)> GetInlineCost,
              OptimizationRemarkEmitter &ORE, bool EnableDeferral = true);
 

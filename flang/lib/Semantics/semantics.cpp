@@ -40,6 +40,7 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Support/default-kinds.h"
@@ -1003,6 +1004,13 @@ void SemanticsContext::NoteUsedSymbols(const UnorderedSymbolSet &set) {
 
 bool SemanticsContext::IsSymbolUsed(const Symbol &symbol) const {
   return isUsed_.find(symbol) != isUsed_.end();
+}
+
+omp::SemanticOverrides &SemanticsContext::GetOmpSemanticOverrides() {
+  if (!ompOverrides_) {
+    ompOverrides_ = std::make_unique<omp::SemanticOverrides>();
+  }
+  return DEREF(ompOverrides_.get());
 }
 
 } // namespace Fortran::semantics

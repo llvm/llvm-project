@@ -8,8 +8,9 @@
 ;; uncountable exit condition has a second user (the store).
 define i64 @loop_contains_store(ptr dereferenceable(1024) %p1, ptr noalias %dest) !dbg !10 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
-; CHECK-REMARK:      foo.c:10:3: loop not vectorized: Early exit loop with store but no supported condition load
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Not vectorizing: Unable to determine early exit condition for loop with side effects.
+; CHECK-REMARK:      foo.c:10:3: loop not vectorized: Unable to determine early exit condition for loop with side effects
 entry:
   br label %loop, !dbg !11
 
@@ -34,7 +35,8 @@ loop.end:
 
 define void @loop_contains_store_condition_load_has_single_user(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_has_single_user'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -88,7 +90,8 @@ exit:
 ;; Exit-condition load on the RHS of the icmp must still be accepted.
 define void @swapped_cmp_operands(ptr noalias %array, ptr %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'swapped_cmp_operands'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition that may fault.
 entry:
   br label %loop
 
@@ -138,11 +141,10 @@ exit:
   ret void
 }
 
-;; Vectorizeable, needs work on exit condition recipe collection.
 define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) !dbg !18 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_fcmp_condition'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
-; CHECK-REMARK:      foo.c:50:3: loop not vectorized: Early exit loop with store but no supported condition load
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body, !dbg !19
 
@@ -236,7 +238,8 @@ exit:
 ;; Alternatively, we could use masked.load.ff or vp.load.ff
 define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i64 %n) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition that may fault.
 entry:
   %n_bytes = mul nuw nsw i64 %n, 2
   call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i64 %n_bytes) ]
@@ -264,7 +267,8 @@ exit:
 
 define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 dereferenceable(40) readonly %load.array, ptr align 2 noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_to_pointer_with_no_deref_info'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -292,7 +296,8 @@ exit:
 ;; Vectorizeable, requires runtime checks and/or ff loads.
 define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100) noalias %array, ptr align 2 dereferenceable(100) readonly %pred, i64 %n) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_unknown_bounds'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition that may fault.
 entry:
   br label %for.body
 
@@ -376,7 +381,8 @@ exit:
 
 define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_in_latch_block'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -742,7 +748,8 @@ exit:
 
 define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_live_out'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -769,7 +776,7 @@ exit:
 ; Vectorizeable, requires improvements in dereferenceability checks
 define void @uncountable_exit_with_constant_nonunit_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred) !dbg !60 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_constant_nonunit_stride'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
 ; CHECK-DEBUG:       LV: Not vectorizing: unable to calculate the loop count due to complex control flow.
 ; CHECK-REMARK:      foo.c:260:3: loop not vectorized: unable to calculate the loop count due to complex control flow
 entry:
@@ -798,7 +805,7 @@ exit:
 ; Vectorizeable, requires improvements in dereferenceability checks
 define void @uncountable_exit_with_invariant_but_unknown_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred, i64 %stride) !dbg !62 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_invariant_but_unknown_stride'
-; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
+; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine symbolic max exit count for latch block.
 ; CHECK-REMARK:      foo.c:270:3: loop not vectorized: Cannot vectorize early exit loop
 ; CHECK-REMARK-NEXT: foo.c:270:3: loop not vectorized: could not determine number of loop iterations
 entry:
@@ -826,7 +833,8 @@ exit:
 
 define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_separate_exit_block'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body
 
@@ -885,9 +893,9 @@ exit:
 
 define i32 @uncountable_exit_with_masked_ldst_separate_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 readonly %st.pred) !dbg !66 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_masked_ldst_separate_condition'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
 ; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported conditional memory operations
-; CHECK-DEBUG:       LV: Vectorization is possible but not beneficial.
+; CHECK-DEBUG:       LV: Vectorization is not possible. Failed to create any vector VPlans.
 ; CHECK-REMARK:      foo.c:290:3: loop not vectorized: Early exit loop with side effects contains unsupported conditional memory operations
 entry:
   br label %for.body, !dbg !67
@@ -1049,10 +1057,10 @@ invalid.block:
   unreachable
 }
 
-define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) !dbg !76 {
+define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'combined_exit_conditions'
-; CHECK-DEBUG:       LV:  Not vectorizing: Cannot vectorize uncountable loop.
-; CHECK-REMARK:      foo.c:340:3: loop not vectorized: Cannot vectorize uncountable loop
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body, !dbg !77
 
@@ -1104,6 +1112,60 @@ exit:
   ret i64 %res
 }
 
+define void @loop_contains_store_condition_load_has_two_users(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_has_two_users'
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, %ee.val
+  store i16 %inc, ptr %st.addr, align 2
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+
+;; The latch exit can be taken early, so the reduction must not be used on it.
+define i64 @combined_exit_conditions_with_reduction(ptr align 1 dereferenceable(1024) %src, ptr noalias %dst) {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'combined_exit_conditions_with_reduction'
+; CHECK-DEBUG:       LV: Vectorization is not possible. Failed to create any vector VPlans.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi i64 [ 0, %entry ], [ %rdx.next, %for.body ]
+  %src.ptr = getelementptr inbounds nuw i8, ptr %src, i64 %iv
+  %data = load i8, ptr %src.ptr, align 1
+  %ext = zext i8 %data to i64
+  %rdx.next = add i64 %rdx, %ext
+  %dst.ptr = getelementptr inbounds nuw i64, ptr %dst, i64 %iv
+  store i64 %ext, ptr %dst.ptr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 1021
+  %ee.val = load i8, ptr %src.ptr, align 1
+  %ee.cond = icmp eq i8 %ee.val, 0
+  %combined.cond = or i1 %counted.cond, %ee.cond
+  br i1 %combined.cond, label %exit, label %for.body
+
+exit:
+  ret i64 %rdx.next
+}
 
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();

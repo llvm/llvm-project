@@ -4,7 +4,7 @@
 /// Check that -march=rv64gcv -flto records +d in module asm and function
 /// target-features even though the driver only passes mcpu=generic-rv64 to lld.
 
-// RUN: %clang --target=riscv64-linux-android -march=rv64gcv -flto %s -S -emit-llvm -o - \
+// RUN: %clang --target=riscv64-linux-android -march=rv64gcv -flto -fno-discard-value-names %s -S -emit-llvm -o - \
 // RUN:   | FileCheck %s --check-prefix=IR
 
 // IR:      module asm(target_features: "{{.*}}+d{{.*}}", target_cpu: "generic-rv64")
@@ -20,11 +20,11 @@
 // IR-NEXT: ![[#]] = !{i32 6, !"riscv-isa", ![[#ISA:]]}
 // IR-NEXT: ![[#ISA]] = !{!"{{.*}}_d2p2_{{.*}}"}
 
-// RUN: %clang --target=riscv64-linux-android -march=rv64gcv -flto -shared -nostdlib -fuse-ld=lld %s -### 2>&1 \
+// RUN: %clang --target=riscv64-linux-android -march=rv64gcv -flto -shared -nostdlib %s -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=DRIVER
 
 // DRIVER: "-cc1"{{.*}}"-target-cpu" "generic-rv64"{{.*}}"-target-feature" "+d"{{.*}}"-target-abi" "lp64d"
-// DRIVER: "{{[^"]*}}ld.lld{{(\.exe)?}}"
+// DRIVER: "-m" "elf64lriscv"
 // DRIVER-NOT: mattr
 // DRIVER-SAME: "-plugin-opt=mcpu=generic-rv64"
 // DRIVER-NOT: mattr

@@ -657,6 +657,9 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCRegisterInfo *RegInfo,
                                    const MCSubtargetInfo *STI);
 
+std::unique_ptr<RelocationHandler>
+createRelocationHandler(Triple::ArchType Arch);
+
 } // namespace bolt
 } // namespace llvm
 
