@@ -107,6 +107,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRIR
   MLIRLLVMDialect
   MLIRGPUDialect
+  MLIROpenMPDialect
   MLIRSideEffectInterfaces
   MLIRInferIntRangeInterface
   )
@@ -195,5 +196,6 @@ add_mlir_dialect_library(MLIRXeVMDialect
   MLIRDialectUtils
   MLIRIR
   MLIRLLVMDialect
+  MLIROpenMPDialect
   MLIRSideEffectInterfaces
 )
