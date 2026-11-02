@@ -251,26 +251,24 @@ sink:
 define i64 @ptrtoint_merge(i1 %cond, i64 %a, ptr %b) {
 ; CHECK-LABEL: @ptrtoint_merge(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       BB0:
-; CHECK-NEXT:    store i64 [[A:%.*]], ptr [[ALLOCA]], align 4
 ; CHECK-NEXT:    br label [[SINK:%.*]]
 ; CHECK:       BB1:
-; CHECK-NEXT:    store ptr [[B:%.*]], ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
-; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = phi i64 [ [[TMP0]], [[BB1]] ], [ [[A:%.*]], [[BB0]] ]
 ; CHECK-NEXT:    ret i64 [[VAL]]
 ;
 entry:
   %alloca = alloca ptr
   br i1 %cond, label %BB0, label %BB1
 BB0:
-  store i64 %a, ptr %alloca
+  store i64 %a, ptr %alloca, align 8
   br label %sink
 BB1:
-  store ptr %b, ptr %alloca
+  store ptr %b, ptr %alloca, align 8
   br label %sink
 sink:
   %val = load i64, ptr %alloca
@@ -304,6 +302,281 @@ sink:
   ret ptr %val
 }
 
+
+define void @ptr_int_merge(ptr %p, i1 %cond, ptr %a, i64 %b) {
+; CHECK-LABEL: @ptr_int_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i64 [ [[B:%.*]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    store i64 [[STOREMERGE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store ptr %a, ptr %p, align 8
+  br label %sink
+BB1:
+  store i64 %b, ptr %p, align 8
+  br label %sink
+sink:
+  ret void
+}
+
+define void @ptr_int_triangle_merge(ptr %p, i1 %cond, ptr %a, i64 %b) {
+; CHECK-LABEL: @ptr_int_triangle_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[SINK:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i64 [ [[B:%.*]], [[BB0]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i64 [[STOREMERGE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  store ptr %a, ptr %p, align 8
+  br i1 %cond, label %BB0, label %sink
+BB0:
+  store i64 %b, ptr %p, align 8
+  br label %sink
+sink:
+  ret void
+}
+
+define void @byte_int_merge(ptr %p, i1 %cond, b16 %a, i16 %b) {
+; CHECK-LABEL: @byte_int_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b16 [[A:%.*]] to i16
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i16 [ [[B:%.*]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store b16 %a, ptr %p, align 2
+  br label %sink
+BB1:
+  store i16 %b, ptr %p, align 2
+  br label %sink
+sink:
+  ret void
+}
+
+define void @int_byte_merge(ptr %p, i1 %cond, i16 %a, b16 %b) {
+; CHECK-LABEL: @int_byte_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16 [[A:%.*]] to b16
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi b16 [ [[B:%.*]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    store b16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store i16 %a, ptr %p, align 2
+  br label %sink
+BB1:
+  store b16 %b, ptr %p, align 2
+  br label %sink
+sink:
+  ret void
+}
+
+define void @byte_int_triangle_merge(ptr %p, i1 %cond, b16 %a, i16 %b) {
+; CHECK-LABEL: @byte_int_triangle_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b16 [[A:%.*]] to i16
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[SINK:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i16 [ [[B:%.*]], [[BB0]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  store b16 %a, ptr %p, align 2
+  br i1 %cond, label %BB0, label %sink
+BB0:
+  store i16 %b, ptr %p, align 2
+  br label %sink
+sink:
+  ret void
+}
+
+define void @byte_vec_int_merge(ptr %p, i1 %cond, <2 x b8> %a, i16 %b) {
+; CHECK-LABEL: @byte_vec_int_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x b8> [[A:%.*]] to i16
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i16 [ [[B:%.*]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store <2 x b8> %a, ptr %p, align 2
+  br label %sink
+BB1:
+  store i16 %b, ptr %p, align 2
+  br label %sink
+sink:
+  ret void
+}
+
+define void @byte_half_merge(ptr %p, i1 %cond, b16 %a, half %b) {
+; CHECK-LABEL: @byte_half_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b16 [[A:%.*]] to half
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi half [ [[B:%.*]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    store half [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store b16 %a, ptr %p, align 2
+  br label %sink
+BB1:
+  store half %b, ptr %p, align 2
+  br label %sink
+sink:
+  ret void
+}
+
+define void @byte_diff_shapes_merge(ptr %p, i1 %cond, b16 %a, <2 x b8> %b) {
+; CHECK-LABEL: @byte_diff_shapes_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b16 [[A:%.*]] to <2 x b8>
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi <2 x b8> [ [[B:%.*]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    store <2 x b8> [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store b16 %a, ptr %p, align 2
+  br label %sink
+BB1:
+  store <2 x b8> %b, ptr %p, align 2
+  br label %sink
+sink:
+  ret void
+}
+
+define void @neg_ptr_byte(ptr %p, i1 %cond, ptr %a, b64 %b) {
+; CHECK-LABEL: @neg_ptr_byte(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    store ptr [[A:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    store b64 [[B:%.*]], ptr [[P]], align 8
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store ptr %a, ptr %p, align 8
+  br label %sink
+BB1:
+  store b64 %b, ptr %p, align 8
+  br label %sink
+sink:
+  ret void
+}
+
+define void @neg_byte_ptr(ptr %p, i1 %cond, b64 %a, ptr %b) {
+; CHECK-LABEL: @neg_byte_ptr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    store b64 [[A:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    store ptr [[B:%.*]], ptr [[P]], align 8
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store b64 %a, ptr %p, align 8
+  br label %sink
+BB1:
+  store ptr %b, ptr %p, align 8
+  br label %sink
+sink:
+  ret void
+}
+
+define void @neg_byte_elementwise_diff_element_size(ptr %p, i1 %cond, <2 x b8> %a, <1 x i16> %b) {
+; CHECK-LABEL: @neg_byte_elementwise_diff_element_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    store atomic elementwise <2 x b8> [[A:%.*]], ptr [[P:%.*]] unordered, align 2
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    store atomic elementwise <1 x i16> [[B:%.*]], ptr [[P]] unordered, align 2
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store atomic elementwise <2 x b8> %a, ptr %p unordered, align 2
+  br label %sink
+BB1:
+  store atomic elementwise <1 x i16> %b, ptr %p unordered, align 2
+  br label %sink
+sink:
+  ret void
+}
 
 define void @pr46688(i1 %cond, i32 %x, i16 %d, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @pr46688(
