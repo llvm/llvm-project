@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+f,+save-restore -target-abi=ilp32f < %s | FileCheck %s -check-prefix=RV32I-FP-SR
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+d,+save-restore -target-abi=lp64d < %s | FileCheck %s -check-prefix=RV64I-FP-SR
 
-; Check that the correct save/restore libcalls are generated.
+;; Check that the correct save/restore libcalls are generated.
 
 @var0 = global [18 x i32] zeroinitializer
 @var1 = global [24 x i32] zeroinitializer
