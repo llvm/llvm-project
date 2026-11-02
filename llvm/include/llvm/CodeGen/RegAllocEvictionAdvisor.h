@@ -117,9 +117,10 @@ public:
   canEvictHintInterference(const LiveInterval &VirtReg, MCRegister PhysReg,
                            const SmallVirtRegSet &FixedRegisters) const = 0;
 
-  /// Returns true if the given \p PhysReg is a callee saved register and has
-  /// not been used for allocation yet.
-  LLVM_ABI bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
+  /// Return an unused callee-saved register that would be used by assigning
+  /// \p VirtReg to \p PhysReg, or NoRegister if there is none.
+  LLVM_ABI MCRegister getUnusedCalleeSavedReg(const LiveInterval &VirtReg,
+                                              MCRegister PhysReg) const;
 
   /// Returns true if this is an urgent eviction.
   LLVM_ABI bool isUrgentEviction(const LiveInterval &VirtReg,
@@ -141,7 +142,8 @@ protected:
   // Determine if it's worth trying to allocate this reg, given the
   // CostPerUseLimit
   // TODO: this is a heuristic component we could consider learning, too.
-  LLVM_ABI bool canAllocatePhysReg(unsigned CostPerUseLimit,
+  LLVM_ABI bool canAllocatePhysReg(const LiveInterval &VirtReg,
+                                   unsigned CostPerUseLimit,
                                    MCRegister PhysReg) const;
 
   const MachineFunction &MF;

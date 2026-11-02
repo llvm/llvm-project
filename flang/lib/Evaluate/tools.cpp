@@ -1196,6 +1196,34 @@ template semantics::UnorderedSymbolSet CollectSymbols(
     const ProcedureDesignator &);
 template semantics::UnorderedSymbolSet CollectSymbols(const Assignment &);
 
+struct CollectRankOneBoundProvenanceSymbolsHelper
+    : public SetTraverse<CollectRankOneBoundProvenanceSymbolsHelper,
+          semantics::UnorderedSymbolSet> {
+  using Base = SetTraverse<CollectRankOneBoundProvenanceSymbolsHelper,
+      semantics::UnorderedSymbolSet>;
+  CollectRankOneBoundProvenanceSymbolsHelper() : Base{*this} {}
+  using Base::operator();
+  semantics::UnorderedSymbolSet operator()(const RankOneBoundElement &x) const {
+    semantics::UnorderedSymbolSet result{(*this)(x.base())};
+    if (const auto &array{x.originatingArray()}) {
+      for (const Symbol &symbol : CollectSymbolsHelper{}(*array)) {
+        result.emplace(symbol);
+      }
+    }
+    return result;
+  }
+};
+template <typename A>
+semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(const A &x) {
+  return CollectRankOneBoundProvenanceSymbolsHelper{}(x);
+}
+template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
+    const Expr<SomeType> &);
+template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
+    const Expr<SomeInteger> &);
+template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
+    const Expr<SubscriptInteger> &);
+
 struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
                                       semantics::UnorderedSymbolSet> {
   using Base =
@@ -2982,7 +3010,9 @@ bool IsLenTypeParameter(const Symbol &symbol) {
 
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
   return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived) &&
-      !(derived && derived->IsVectorType());
+      !(derived && derived->IsVectorType()) &&
+      !(derived &&
+          derived->typeSymbol().get<DerivedTypeDetails>().isEnumerationType());
 }
 
 bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {

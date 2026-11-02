@@ -1285,14 +1285,6 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   return true;
 }
 
-static inline bool IsOpaqueConstantCall(const CallExpr *E) {
-  unsigned Builtin = E->getBuiltinCallee();
-  return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
-          Builtin == Builtin::BI__builtin_function_start);
-}
-
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
                                              const Pointer &RHS);
 
@@ -1343,7 +1335,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     std::optional<size_t> A = LHS.computeOffsetForComparison(S.getASTContext());
     std::optional<size_t> B = RHS.computeOffsetForComparison(S.getASTContext());
     if (!A || !B)
-      return Invalid(S, OpPC);
+      return false;
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*A, *B))));
     return true;
@@ -1384,7 +1376,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
         return false;
       }
       if (const auto *CE = dyn_cast<CallExpr>(E);
-          CE && IsOpaqueConstantCall(CE)) {
+          CE && isOpaqueConstantCall(CE)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_opaque_call_comparison)
             << P.toDiagnosticString(S.getASTContext());
@@ -2854,11 +2846,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
   return true;
 }
 
-inline bool InitScope(InterpState &S, uint32_t I) {
-  S.Current->initScope(I);
-  return true;
-}
-
 inline bool EnableLocal(InterpState &S, uint32_t I) {
   assert(!S.Current->isLocalEnabled(I));
   S.Current->enableLocal(I);
@@ -2973,12 +2960,11 @@ bool CastAPS(InterpState &S, uint32_t BitWidth) {
 // (i.e. truncation would change the value).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastAPToOffsetIndex(InterpState &S, CodePtr OpPC) {
-  T Source = S.Stk.pop<T>();
-  APSInt Val = Source.toAPSInt();
+  T Val = S.Stk.pop<T>();
   if (Val.isNegative() || Val.getActiveBits() > 63)
     return Invalid(S, OpPC);
   S.Stk.push<Integral<64, true>>(
-      Integral<64, true>::from((int64_t)Val.getZExtValue()));
+      Integral<64, true>::from(static_cast<uint64_t>(Val)));
   return true;
 }
 
@@ -3614,6 +3600,8 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
 
   if (Ptr.isRoot() || !Ptr.isUnknownSizeArray() || !S.inConstantContext()) {
     if (Ptr.isBlockPointer()) {
+      if (!Ptr.isArrayRoot())
+        return false;
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
@@ -3712,6 +3700,13 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_stmt_expr_unsupported)
       << S.Current->getRange(OpPC);
+  return false;
+}
+
+inline bool InvalidTargetLabel(InterpState &S, CodePtr OpPC, bool IsContinue) {
+  S.FFDiag(S.Current->getLocation(OpPC),
+           diag::note_break_continue_label_outside_context)
+      << S.Current->getRange(OpPC) << IsContinue;
   return false;
 }
 

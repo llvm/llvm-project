@@ -28,6 +28,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
     [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
      InFunctionScope, Pure]> {
   let summary = "Get the address of a global variable.";
 
@@ -62,6 +63,8 @@ def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
   let builders = [OpBuilder<(ins "spirv::GlobalVariableOp":$var)>];
 
   let assemblyFormat = "$variable attr-dict `:` type($pointer)";
+
+  let hasVerifier = 0;
 }
 
 // -----
@@ -290,7 +293,8 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 
 // -----
 
-def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", []> {
+def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = [{
     Declare an execution mode for an entry point, using <id>s as Extra
     Operands.
@@ -465,9 +469,9 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
 
 // -----
 
-def SPIRV_GlobalVariableOp
-    : SPIRV_Op<"GlobalVariable", [InModuleScope, SymbolName, SymbolVisibility,
-                                  Symbol]> {
+def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [
+    InModuleScope, SymbolName, SymbolVisibility, Symbol,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = [{
     Allocate an object in memory at module scope. The object is
     referenced using a symbol name.
@@ -659,7 +663,8 @@ def SPIRV_ModuleOp : SPIRV_Op<"module",
 
 // -----
 
-def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [Pure]> {
+def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>, Pure]> {
   let summary = "Reference a specialization constant.";
 
   let description = [{
@@ -692,6 +697,8 @@ def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [Pure]> {
   let autogenSerialization = 0;
 
   let assemblyFormat = "$spec_const attr-dict `:` type($reference)";
+
+  let hasVerifier = 0;
 }
 
 // -----
@@ -750,7 +757,8 @@ def SPIRV_SpecConstantOp
 // -----
 
 def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
-    InModuleScope, SymbolName, SymbolVisibility, Symbol]> {
+    InModuleScope, SymbolName, SymbolVisibility, Symbol,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Declare a new composite specialization constant.";
 
   let description = [{
@@ -806,7 +814,8 @@ def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
 
 def SPIRV_EXTSpecConstantCompositeReplicateOp
     : SPIRV_ExtVendorOp<"SpecConstantCompositeReplicate",
-                        [InModuleScope, SymbolName, SymbolVisibility, Symbol]> {
+                        [InModuleScope, SymbolName, SymbolVisibility, Symbol,
+                         DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Declare a new replicated composite specialization constant op.";
 
   let description = [{

@@ -210,7 +210,7 @@ getModeSetregField(const MachineInstr &MI, const SIInstrInfo *TII) {
     return std::nullopt;
   }
   using namespace AMDGPU::Hwreg;
-  unsigned Dst = TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
+  int64_t Dst = TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
   auto [Id, Offset, Width] = HwregEncoding::decode(Dst);
   if (Id != ID_MODE)
     return std::nullopt;
@@ -245,31 +245,31 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_ZERO));
     case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO: {
-      unsigned Mode = MI.getOperand(2).getImm();
+      unsigned Mode = static_cast<unsigned>(MI.getOperand(2).getImm());
       MI.removeOperand(2);
       MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
     }
     case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32: {
-      unsigned Mode = MI.getOperand(2).getImm();
+      unsigned Mode = static_cast<unsigned>(MI.getOperand(2).getImm());
       MI.removeOperand(2);
       MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_fake16_e32));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
     }
     case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64: {
-      unsigned Mode = MI.getOperand(6).getImm();
+      unsigned Mode = static_cast<unsigned>(MI.getOperand(6).getImm());
       MI.removeOperand(6);
       MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
     }
     case AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO: {
-      unsigned Mode = MI.getOperand(2).getImm();
+      unsigned Mode = static_cast<unsigned>(MI.getOperand(2).getImm());
       MI.removeOperand(2);
       MI.setDesc(TII->get(AMDGPU::V_CVT_F32_F64_e32));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
     }
     case AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO: {
-      unsigned Mode = MI.getOperand(2).getImm();
+      unsigned Mode = static_cast<unsigned>(MI.getOperand(2).getImm());
       MI.removeOperand(2);
       MI.setDesc(TII->get(AMDGPU::S_CVT_F16_F32));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
@@ -355,7 +355,8 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
       // as unknown.
       if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
           MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_mode) {
-        unsigned Val = TII->getNamedOperand(MI, AMDGPU::OpName::imm)->getImm();
+        unsigned Val = static_cast<unsigned>(
+            TII->getNamedOperand(MI, AMDGPU::OpName::imm)->getImm());
         unsigned Mode = (Val << Offset) & Mask;
         Status Setreg = Status(Mask, Mode);
         // If we haven't already set the initial requirements for the block we
