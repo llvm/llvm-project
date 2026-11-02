@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=ppc32-- -run-pass=if-converter -o - -verify-machineinstrs \
+# RUN: llc -mtriple=ppc32-- -run-pass=if-converter -o - \
 # RUN:   %s | FileCheck %s
 
 ---

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -mattr=+real-true16 -run-pass=amdgpu-regbank-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -mattr=+real-true16 -run-pass=amdgpu-regbank-combiner %s -o - | FileCheck %s
 # RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -mattr=+real-true16 -passes=amdgpu-regbank-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |

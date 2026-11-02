@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -run-pass peephole-opt -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass peephole-opt %s -o - | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgpu6.00 -passes peephole-opt -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 ...
 # GCN-LABEL: name: no_fold_imm_madak_mac_clamp_f32

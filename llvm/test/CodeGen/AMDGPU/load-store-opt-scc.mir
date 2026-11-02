@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.0a -run-pass=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a -run-pass=si-load-store-opt -o - %s | FileCheck %s
 # RUN: llc -mtriple=amdgpu9.0a -passes=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
 
 # The purpose of this test is to make sure we are combining relevant memory

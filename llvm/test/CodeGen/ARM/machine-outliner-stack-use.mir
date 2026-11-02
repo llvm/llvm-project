@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm-- -run-pass=machine-outliner -verify-machineinstrs \
+# RUN: llc -mtriple=arm-- -run-pass=machine-outliner \
 # RUN: %s -o - | FileCheck %s
 
 --- |
