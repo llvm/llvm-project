@@ -112,41 +112,41 @@ define void @fneg_bf16() {
 define void @fmulneg_bf16() {
 ; CHECK-BASE-LABEL: 'fmulneg_bf16'
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fneg bfloat poison
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat %BF16, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat %BF16, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16 = fneg <2 x bfloat> poison
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> %V2BF16, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> %V2BF16, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fneg <4 x bfloat> poison
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> %V4BF16, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> %V4BF16, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fneg <8 x bfloat> poison
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> %V8BF16, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> %V8BF16, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fneg <16 x bfloat> poison
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> %V16BF16, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> %V16BF16, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'fmulneg_bf16'
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fneg bfloat poison
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat %BF16, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat %BF16, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16 = fneg <2 x bfloat> poison
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> %V2BF16, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> %V2BF16, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fneg <4 x bfloat> poison
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> %V4BF16, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> %V4BF16, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fneg <8 x bfloat> poison
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> %V8BF16, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> %V8BF16, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fneg <16 x bfloat> poison
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> %V16BF16, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> %V16BF16, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-B16B16-LABEL: 'fmulneg_bf16'
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fneg bfloat poison
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat %BF16, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat %BF16, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16 = fneg <2 x bfloat> poison
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> %V2BF16, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> %V2BF16, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fneg <4 x bfloat> poison
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> %V4BF16, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> %V4BF16, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fneg <8 x bfloat> poison
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> %V8BF16, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> %V8BF16, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fneg <16 x bfloat> poison
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> %V16BF16, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> %V16BF16, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %BF16 = fneg bfloat poison
@@ -164,41 +164,41 @@ define void @fmulneg_bf16() {
 
 define void @fnegfmul_bf16() {
 ; CHECK-BASE-LABEL: 'fnegfmul_bf16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat poison, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fneg bfloat %BF16M
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> poison, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16 = fneg <2 x bfloat> %V2BF16M
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> poison, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fneg <4 x bfloat> %V4BF16M
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> poison, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fneg <8 x bfloat> %V8BF16M
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> poison, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fneg <16 x bfloat> %V16BF16M
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'fnegfmul_bf16'
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat poison, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fneg bfloat %BF16M
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> poison, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16 = fneg <2 x bfloat> %V2BF16M
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> poison, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fneg <4 x bfloat> %V4BF16M
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> poison, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fneg <8 x bfloat> %V8BF16M
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> poison, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fneg <16 x bfloat> %V16BF16M
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-B16B16-LABEL: 'fnegfmul_bf16'
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16M = fmul bfloat poison, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fneg bfloat %BF16M
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16M = fmul <2 x bfloat> poison, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2BF16 = fneg <2 x bfloat> %V2BF16M
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16M = fmul <4 x bfloat> poison, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fneg <4 x bfloat> %V4BF16M
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16M = fmul <8 x bfloat> poison, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fneg <8 x bfloat> %V8BF16M
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16M = fmul <16 x bfloat> poison, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fneg <16 x bfloat> %V16BF16M
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -217,24 +217,24 @@ define void @fnegfmul_bf16() {
 
 define void @fmul_bf16() {
 ; CHECK-BASE-LABEL: 'fmul_bf16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fmul bfloat poison, poison
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fmul <4 x bfloat> poison, poison
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fmul <8 x bfloat> poison, poison
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fmul <16 x bfloat> poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fmul bfloat poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fmul <4 x bfloat> poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fmul <8 x bfloat> poison, poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fmul <16 x bfloat> poison, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'fmul_bf16'
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fmul bfloat poison, poison
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fmul <4 x bfloat> poison, poison
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fmul <8 x bfloat> poison, poison
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fmul <16 x bfloat> poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fmul bfloat poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fmul <4 x bfloat> poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fmul <8 x bfloat> poison, poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fmul <16 x bfloat> poison, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-B16B16-LABEL: 'fmul_bf16'
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fmul bfloat poison, poison
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fmul <4 x bfloat> poison, poison
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fmul <8 x bfloat> poison, poison
-; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fmul <16 x bfloat> poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fmul bfloat poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fmul <4 x bfloat> poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fmul <8 x bfloat> poison, poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fmul <16 x bfloat> poison, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %BF16 = fmul bfloat poison, poison
@@ -379,16 +379,16 @@ define void @fma_bf16() {
 define void @fmuladd_bf16() {
 ; CHECK-BASE-LABEL: 'fmuladd_bf16'
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %BF16 = call bfloat @llvm.fmuladd.bf16(bfloat poison, bfloat poison, bfloat poison)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:2 Lat:6 SizeLat:2 for: %V4BF16 = call <4 x bfloat> @llvm.fmuladd.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:2 Lat:6 SizeLat:2 for: %V8BF16 = call <8 x bfloat> @llvm.fmuladd.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x bfloat> poison)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:2 Lat:6 SizeLat:2 for: %V16BF16 = call <16 x bfloat> @llvm.fmuladd.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:2 Lat:6 SizeLat:2 for: %V4BF16 = call <4 x bfloat> @llvm.fmuladd.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:2 Lat:6 SizeLat:2 for: %V8BF16 = call <8 x bfloat> @llvm.fmuladd.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x bfloat> poison)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:2 Lat:6 SizeLat:2 for: %V16BF16 = call <16 x bfloat> @llvm.fmuladd.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'fmuladd_bf16'
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %BF16 = call bfloat @llvm.fmuladd.bf16(bfloat poison, bfloat poison, bfloat poison)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:2 Lat:6 SizeLat:2 for: %V4BF16 = call <4 x bfloat> @llvm.fmuladd.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:2 Lat:6 SizeLat:2 for: %V8BF16 = call <8 x bfloat> @llvm.fmuladd.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x bfloat> poison)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:2 Lat:6 SizeLat:2 for: %V16BF16 = call <16 x bfloat> @llvm.fmuladd.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:6 SizeLat:2 for: %V4BF16 = call <4 x bfloat> @llvm.fmuladd.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:2 Lat:6 SizeLat:2 for: %V8BF16 = call <8 x bfloat> @llvm.fmuladd.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x bfloat> poison)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:2 Lat:6 SizeLat:2 for: %V16BF16 = call <16 x bfloat> @llvm.fmuladd.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-B16B16-LABEL: 'fmuladd_bf16'

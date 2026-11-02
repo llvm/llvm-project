@@ -10,9 +10,6 @@ define void @test(ptr %src, ptr %dst, ptr %p0, ptr %p1, ptr %p2, ptr %p3, double
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], double [[U:%.*]], double [[V:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[U]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double poison, double 1.000000e+00>, double [[V]], i64 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[DST]], align 8
@@ -23,10 +20,13 @@ define void @test(ptr %src, ptr %dst, ptr %p0, ptr %p1, ptr %p2, ptr %p3, double
 ; CHECK-NEXT:    [[L7:%.*]] = load double, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[L8:%.*]] = load double, ptr [[DST]], align 8
 ; CHECK-NEXT:    [[NEG_U:%.*]] = fneg double [[U]]
+; CHECK-NEXT:    [[W_V:%.*]] = fmul double [[V]], f0x3FAC71C71C71C71C
+; CHECK-NEXT:    [[U_1:%.*]] = fadd double [[U]], 1.000000e+00
 ; CHECK-NEXT:    [[W2_U:%.*]] = fmul double [[U]], f0x3F9C71C71C71C71C
 ; CHECK-NEXT:    [[V2_1:%.*]] = fmul double [[V]], [[V]]
 ; CHECK-NEXT:    [[U_2:%.*]] = fadd double [[U]], 1.000000e+00
 ; CHECK-NEXT:    [[W2_V:%.*]] = fmul double [[V]], f0x3F9C71C71C71C71C
+; CHECK-NEXT:    [[W6_U:%.*]] = fmul double [[U]], f0x3FC5555555555555
 ; CHECK-NEXT:    [[U2_0:%.*]] = fmul double [[U]], [[U]]
 ; CHECK-NEXT:    [[W3_U_0:%.*]] = fmul double [[U]], f0x3FB5555555555555
 ; CHECK-NEXT:    [[W3_U_1:%.*]] = fmul double [[U]], f0x3FB5555555555555
@@ -37,37 +37,34 @@ define void @test(ptr %src, ptr %dst, ptr %p0, ptr %p1, ptr %p2, ptr %p3, double
 ; CHECK-NEXT:    [[H_3:%.*]] = fmul double [[U]], 5.000000e-01
 ; CHECK-NEXT:    [[H_4:%.*]] = fmul double [[U]], 5.000000e-01
 ; CHECK-NEXT:    [[H_5:%.*]] = fmul double [[U]], 5.000000e-01
+; CHECK-NEXT:    [[H_6:%.*]] = fmul double [[U]], 5.000000e-01
 ; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[F2:%.*]] = load double, ptr [[P0]], align 8
 ; CHECK-NEXT:    [[F0:%.*]] = load double, ptr [[DST]], align 8
 ; CHECK-NEXT:    [[F1:%.*]] = load double, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[D0:%.*]] = fsub double [[F0]], [[F1]]
 ; CHECK-NEXT:    [[ODD0:%.*]] = fsub double 0.000000e+00, [[U2_0]]
-; CHECK-NEXT:    [[D1:%.*]] = fsub double [[L0]], [[F2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double f0x3FAC71C71C71C71C, double f0x3FC5555555555555>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], <double 1.000000e+00, double -0.000000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP1]], double [[D1]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP6]], splat (double 5.000000e-01)
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP8]], <double -1.950000e+00, double f0xBFB0ECF56BE69CA7>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> <double poison, double 0.000000e+00>, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP11]], i64 0
+; CHECK-NEXT:    [[FEQ0:%.*]] = fmul reassoc contract double [[U_1]], [[W_V]]
+; CHECK-NEXT:    [[EVEN0:%.*]] = fsub contract double [[H_2]], [[FEQ0]]
+; CHECK-NEXT:    [[EVEN0_NEG:%.*]] = fmul contract double [[EVEN0]], -1.950000e+00
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd contract double [[EVEN0_NEG]], [[U]]
 ; CHECK-NEXT:    store double [[TMP12]], ptr [[SRC]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    [[EVEN1:%.*]] = fsub double [[H_2]], [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP11]], i64 1
+; CHECK-NEXT:    [[EVEN1:%.*]] = fsub double [[H_3]], [[W_V]]
+; CHECK-NEXT:    [[D1:%.*]] = fsub double [[L0]], [[F2]]
+; CHECK-NEXT:    [[FA1:%.*]] = fmul double [[D1]], 5.000000e-01
+; CHECK-NEXT:    [[ODD1:%.*]] = fsub double [[FA1]], [[W6_U]]
+; CHECK-NEXT:    [[ODD1_NEG:%.*]] = fmul double [[ODD1]], f0xBFB0ECF56BE69CA7
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd double 0.000000e+00, [[ODD1_NEG]]
 ; CHECK-NEXT:    store double [[TMP14]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[V2_0:%.*]] = fmul double [[V]], [[V]]
-; CHECK-NEXT:    [[E2:%.*]] = fsub double [[H_3]], [[V2_0]]
+; CHECK-NEXT:    [[E2:%.*]] = fsub double [[H_4]], [[V2_0]]
 ; CHECK-NEXT:    [[T2:%.*]] = fsub double [[L1]], [[W3_U_1]]
 ; CHECK-NEXT:    [[M3:%.*]] = fmul double [[W3_U_0]], [[NEG_U]]
-; CHECK-NEXT:    [[E3:%.*]] = fsub double [[H_4]], [[V2_1]]
+; CHECK-NEXT:    [[E3:%.*]] = fsub double [[H_5]], [[V2_1]]
 ; CHECK-NEXT:    [[S3:%.*]] = fsub double [[L2]], [[L3]]
 ; CHECK-NEXT:    [[S4:%.*]] = fsub double [[L6]], [[L5]]
 ; CHECK-NEXT:    [[R4:%.*]] = fadd double [[U2_1]], [[S4]]
-; CHECK-NEXT:    [[E5:%.*]] = fsub double [[H_5]], [[W2_V]]
+; CHECK-NEXT:    [[E5:%.*]] = fsub double [[H_6]], [[W2_V]]
 ; CHECK-NEXT:    [[R5:%.*]] = fadd double [[E5]], [[U2_3]]
 ; CHECK-NEXT:    [[S6:%.*]] = fsub double [[L8]], [[L7]]
 ; CHECK-NEXT:    [[M6:%.*]] = fmul reassoc double [[U_2]], [[W2_U]]

@@ -140,34 +140,22 @@ if.end668:                                        ; preds = %if.then665, %entry
 }
 
 define void @gather_2(ptr %mat1, float %0, float %1) {
-; NON-POW2-LABEL: define void @gather_2(
-; NON-POW2-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i64 0
-; NON-POW2-NEXT:    [[TMP3:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> poison, <3 x i32> zeroinitializer
-; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> <float 0.000000e+00, float poison, float poison>, float [[TMP1]], i64 1
-; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> poison, <3 x i32> <i32 0, i32 1, i32 1>
-; NON-POW2-NEXT:    [[TMP6:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP3]], <3 x float> [[TMP5]], <3 x float> zeroinitializer)
-; NON-POW2-NEXT:    [[ARRAYIDX163:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1
-; NON-POW2-NEXT:    [[TMP7:%.*]] = fmul <3 x float> [[TMP6]], zeroinitializer
-; NON-POW2-NEXT:    store <3 x float> [[TMP7]], ptr [[ARRAYIDX163]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: define void @gather_2(
-; POW2-ONLY-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP1]], i64 1
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x float> zeroinitializer)
-; POW2-ONLY-NEXT:    [[TMP6:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float [[TMP1]], float 0.000000e+00)
-; POW2-ONLY-NEXT:    [[TMP7:%.*]] = fmul float [[TMP6]], 0.000000e+00
-; POW2-ONLY-NEXT:    [[ARRAYIDX163:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1
-; POW2-ONLY-NEXT:    [[ARRAYIDX5_I_I_I280:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1, i64 2
-; POW2-ONLY-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP5]], zeroinitializer
-; POW2-ONLY-NEXT:    store <2 x float> [[TMP8]], ptr [[ARRAYIDX163]], align 4
-; POW2-ONLY-NEXT:    store float [[TMP7]], ptr [[ARRAYIDX5_I_I_I280]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: define void @gather_2(
+; CHECK-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float 0.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.fmuladd.f32(float [[TMP1]], float [[TMP0]], float 0.000000e+00)
+; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float [[TMP1]], float 0.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul float [[TMP2]], 0.000000e+00
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul float [[TMP3]], 0.000000e+00
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul float [[TMP4]], 0.000000e+00
+; CHECK-NEXT:    [[ARRAYIDX163:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1
+; CHECK-NEXT:    [[ARRAYIDX2_I_I_I278:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1, i64 1
+; CHECK-NEXT:    [[ARRAYIDX5_I_I_I280:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1, i64 2
+; CHECK-NEXT:    store float [[TMP5]], ptr [[ARRAYIDX163]], align 4
+; CHECK-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX2_I_I_I278]], align 4
+; CHECK-NEXT:    store float [[TMP7]], ptr [[ARRAYIDX5_I_I_I280]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %2 = call float @llvm.fmuladd.f32(float %0, float 0.000000e+00, float 0.000000e+00)
@@ -402,31 +390,19 @@ entry:
 }
 
 define void @reuse_shuffle_indices_cost_crash_2(ptr %bezt, float %0) {
-; NON-POW2-LABEL: define void @reuse_shuffle_indices_cost_crash_2(
-; NON-POW2-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
-; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[FNEG]], i64 0
-; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> zeroinitializer
-; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> <float poison, float poison, float 0.000000e+00>, float [[TMP0]], i64 0
-; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 0, i32 0, i32 2>
-; NON-POW2-NEXT:    [[TMP5:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP2]], <3 x float> [[TMP4]], <3 x float> zeroinitializer)
-; NON-POW2-NEXT:    store <3 x float> [[TMP5]], ptr [[BEZT]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: define void @reuse_shuffle_indices_cost_crash_2(
-; POW2-ONLY-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
-; POW2-ONLY-NEXT:    store float [[TMP1]], ptr [[BEZT]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
-; POW2-ONLY-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr float, ptr [[BEZT]], i64 1
-; POW2-ONLY-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX5_I]], align 4
-; POW2-ONLY-NEXT:    [[TMP6:%.*]] = tail call float @llvm.fmuladd.f32(float [[FNEG]], float 0.000000e+00, float 0.000000e+00)
-; POW2-ONLY-NEXT:    [[ARRAYIDX8_I831:%.*]] = getelementptr float, ptr [[BEZT]], i64 2
-; POW2-ONLY-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX8_I831]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: define void @reuse_shuffle_indices_cost_crash_2(
+; CHECK-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
+; CHECK-NEXT:    store float [[TMP1]], ptr [[BEZT]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
+; CHECK-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr float, ptr [[BEZT]], i64 1
+; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX5_I]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call float @llvm.fmuladd.f32(float [[FNEG]], float 0.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[ARRAYIDX8_I831:%.*]] = getelementptr float, ptr [[BEZT]], i64 2
+; CHECK-NEXT:    store float [[TMP3]], ptr [[ARRAYIDX8_I831]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %fneg = fmul float %0, 0.000000e+00
