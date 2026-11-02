@@ -326,8 +326,7 @@ public:
       loweredResultTypes.push_back(typeConverter->convertType(result));
     loweredOpState.addTypes(loweredResultTypes);
 
-    // Convert all regions before moving any blocks: a failure leaves the
-    // blocks unmoved for the driver to report.
+    // Convert all regions before moving any blocks.
     for (mlir::Region &region : op->getRegions()) {
       if (mlir::failed(
               rewriter.convertRegionTypes(&region, *getTypeConverter())))
