@@ -3745,12 +3745,18 @@ LegalizerHelper::lowerConstant(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFConstant(MachineInstr &MI) {
-  const MachineOperand &ConstOperand = MI.getOperand(1);
-  const Constant *ConstantVal = ConstOperand.getFPImm();
+  Register Dst = MI.getOperand(0).getReg();
+  const ConstantFP *ConstantVal = MI.getOperand(1).getFPImm();
+  const APFloat &Imm = ConstantVal->getValueAPF();
 
-  emitLoadFromConstantPool(MI.getOperand(0).getReg(), ConstantVal, MIRBuilder);
+  bool ForCodeSize = MIRBuilder.getMF().getFunction().hasOptSize();
+  if (TLI.getFPImmAction(Imm, MRI.getType(Dst), ForCodeSize) ==
+      TargetLowering::FPImmAction::Bitcast)
+    MIRBuilder.buildConstant(Dst, Imm.bitcastToAPInt());
+  else
+    emitLoadFromConstantPool(Dst, ConstantVal, MIRBuilder);
+
   MI.eraseFromParent();
-
   return Legalized;
 }
 
@@ -8194,6 +8200,15 @@ static bool isNonZeroModBitWidthOrUndef(const MachineRegisterInfo &MRI,
       /*AllowUndefs*/ true);
 }
 
+// Check that (every element of) Reg is a constant that is not an exact multiple
+// of BW.
+static bool isNonZeroModBitWidth(const MachineRegisterInfo &MRI, Register Reg,
+                                 unsigned BW) {
+  return matchUnaryPredicate(MRI, Reg, [=](const Constant *C) {
+    return cast<ConstantInt>(C)->getValue().urem(BW) != 0;
+  });
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFunnelShiftWithInverse(MachineInstr &MI) {
   auto [Dst, X, Y, Z] = MI.getFirst4Regs();
@@ -8244,12 +8259,16 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
 
   Register ShX, ShY;
   Register ShAmt, InvShAmt;
+  unsigned OrFlags = MachineInstr::NoFlags;
 
   // FIXME: Emit optimized urem by constant instead of letting it expand later.
   if (isNonZeroModBitWidthOrUndef(MRI, Z, BW)) {
     // fshl: X << C | Y >> (BW - C)
     // fshr: X << (BW - C) | Y >> C
     // where C = Z % BW is not zero
+    // If Z has undef elements, C may be zero so the or isn't disjoint.
+    if (isNonZeroModBitWidth(MRI, Z, BW))
+      OrFlags |= MachineInstr::Disjoint;
     auto BitWidthC = MIRBuilder.buildConstant(ShTy, BW);
     ShAmt = MIRBuilder.buildURem(ShTy, Z, BitWidthC).getReg(0);
     InvShAmt = MIRBuilder.buildSub(ShTy, BitWidthC, ShAmt).getReg(0);
@@ -8258,6 +8277,8 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
   } else {
     // fshl: X << (Z % BW) | Y >> 1 >> (BW - 1 - (Z % BW))
     // fshr: X << 1 << (BW - 1 - (Z % BW)) | Y >> (Z % BW)
+    // The extra shift by 1 guarantees the two sides don't overlap.
+    OrFlags |= MachineInstr::Disjoint;
     auto Mask = MIRBuilder.buildConstant(ShTy, BW - 1);
     if (isPowerOf2_32(BW)) {
       // Z % BW -> Z & (BW - 1)
@@ -8283,7 +8304,7 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
     }
   }
 
-  MIRBuilder.buildOr(Dst, ShX, ShY, MachineInstr::Disjoint);
+  MIRBuilder.buildOr(Dst, ShX, ShY, OrFlags);
   MI.eraseFromParent();
   return Legalized;
 }
@@ -8463,7 +8484,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
   auto BitWidthMinusOneC = MIRBuilder.buildConstant(AmtTy, EltSizeInBits - 1);
   Register ShVal;
   Register RevShiftVal;
+  unsigned OrFlags = MachineInstr::NoFlags;
   if (isPowerOf2_32(EltSizeInBits)) {
+    // If c may be zero modulo w, both shifts may return x so the or isn't
+    // disjoint.
+    if (isNonZeroModBitWidth(MRI, Amt, EltSizeInBits))
+      OrFlags |= MachineInstr::Disjoint;
     // (rotl x, c) -> x << (c & (w - 1)) | x >> (-c & (w - 1))
     // (rotr x, c) -> x >> (c & (w - 1)) | x << (-c & (w - 1))
     auto NegAmt = MIRBuilder.buildSub(AmtTy, Zero, Amt);
@@ -8473,6 +8499,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
     RevShiftVal =
         MIRBuilder.buildInstr(RevShiftOpc, {DstTy}, {Src, RevAmt}).getReg(0);
   } else {
+    OrFlags |= MachineInstr::Disjoint;
     // (rotl x, c) -> x << (c % w) | x >> 1 >> (w - 1 - (c % w))
     // (rotr x, c) -> x >> (c % w) | x << 1 << (w - 1 - (c % w))
     auto BitWidthC = MIRBuilder.buildConstant(AmtTy, EltSizeInBits);
@@ -8484,7 +8511,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
     RevShiftVal =
         MIRBuilder.buildInstr(RevShiftOpc, {DstTy}, {Inner, RevAmt}).getReg(0);
   }
-  MIRBuilder.buildOr(Dst, ShVal, RevShiftVal, MachineInstr::Disjoint);
+  MIRBuilder.buildOr(Dst, ShVal, RevShiftVal, OrFlags);
   MI.eraseFromParent();
   return Legalized;
 }
@@ -9434,10 +9461,12 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !MI.getFlag(MachineInstr::FmNsz)) {
     GISelValueTracking VT(MIRBuilder.getMF());
+    // FIXME: Also demand for subnormal classes depending on the denormal mode.
     KnownFPClass Src0Info = VT.computeKnownFPClass(Src0, fcZero);
     KnownFPClass Src1Info = VT.computeKnownFPClass(Src1, fcZero);
 
-    if (!Src0Info.isKnownNeverZero() && !Src1Info.isKnownNeverZero()) {
+    // FIXME: Must use isKnownNeverLogicalZero(Mode)
+    if (!Src0Info.isKnownNever(fcZero) && !Src1Info.isKnownNever(fcZero)) {
       const unsigned Flags = MI.getFlags();
       Register Zero = MIRBuilder.buildFConstant(Ty, 0.0).getReg(0);
       auto IsZero = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CmpTy, Res, Zero);
