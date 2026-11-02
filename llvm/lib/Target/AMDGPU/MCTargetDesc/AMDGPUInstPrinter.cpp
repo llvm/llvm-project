@@ -1614,7 +1614,7 @@ void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,
 void AMDGPUInstPrinter::printInterpAttr(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned Attr = static_cast<unsigned>(MI->getOperand(OpNum).getImm());
+  int64_t Attr = MI->getOperand(OpNum).getImm();
   O << "attr" << Attr;
 }
 
@@ -1629,15 +1629,15 @@ void AMDGPUInstPrinter::printGPRIdxMode(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   using namespace llvm::AMDGPU::VGPRIndexMode;
-  unsigned Val = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  uint64_t Val = MI->getOperand(OpNo).getImm();
 
   if ((Val & ~ENABLE_MASK) != 0) {
-    O << formatHex(static_cast<uint64_t>(Val));
+    O << formatHex(Val);
   } else {
     O << "gpr_idx(";
     ListSeparator Sep(",");
     for (unsigned ModeId = ID_MIN; ModeId <= ID_MAX; ++ModeId) {
-      if (Val & (1 << ModeId))
+      if (Val & (1ULL << ModeId))
         O << Sep << IdSymbolic[ModeId];
     }
     O << ')';
@@ -1766,7 +1766,7 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
   using namespace llvm::AMDGPU::Swizzle;
 
-  uint16_t Imm = static_cast<uint16_t>(MI->getOperand(OpNo).getImm());
+  uint64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm == 0) {
     return;
   }
@@ -1957,7 +1957,7 @@ void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printEndpgm(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  uint16_t Imm = static_cast<uint16_t>(MI->getOperand(OpNo).getImm());
+  int64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm == 0) {
     return;
   }
@@ -1977,7 +1977,7 @@ void AMDGPUInstPrinter::printNamedInt(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  uint8_t Imm = static_cast<uint8_t>(MI->getOperand(OpNo).getImm());
+  uint64_t Imm = MI->getOperand(OpNo).getImm();
   if (!Imm)
     return;
 
@@ -1985,7 +1985,7 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
   if (Imm <= 10)
     O << formatDec(Imm);
   else
-    O << formatHex(static_cast<uint64_t>(Imm));
+    O << formatHex(Imm);
 }
 
 #include "AMDGPUGenAsmWriter.inc"
