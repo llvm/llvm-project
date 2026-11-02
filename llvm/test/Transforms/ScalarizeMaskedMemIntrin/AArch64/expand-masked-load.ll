@@ -308,6 +308,55 @@ define <1 x i1> @scalarize_v1i1(ptr %p, <1 x i1> %mask, <1 x i1> %passthru) vsca
   ret <1 x i1> %ret
 }
 
-declare <2 x i24> @llvm.masked.load.v2i24.p0(ptr, i32, <2 x i1>, <2 x i24>)
-declare <2 x i48> @llvm.masked.load.v2i48.p0(ptr, i32, <2 x i1>, <2 x i48>)
-declare <2 x i64> @llvm.masked.load.v2i64.p0(ptr, i32, <2 x i1>, <2 x i64>)
+define <2 x i16> @scalarize_v2i16(ptr %p, <2 x i1> %mask, <2 x i16> %passthru) {
+; CHECK-LE-COMMON-LABEL: @scalarize_v2i16(
+; CHECK-LE-COMMON-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-LE-COMMON-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-LE-COMMON-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-LE-COMMON-NEXT:    br i1 [[TMP2]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]]
+; CHECK-LE-COMMON:       cond.load:
+; CHECK-LE-COMMON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-LE-COMMON-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP3]], align 2
+; CHECK-LE-COMMON-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> [[PASSTHRU:%.*]], i16 [[TMP4]], i64 0
+; CHECK-LE-COMMON-NEXT:    br label [[ELSE]]
+; CHECK-LE-COMMON:       else:
+; CHECK-LE-COMMON-NEXT:    [[RES_PHI_ELSE:%.*]] = phi <2 x i16> [ [[TMP5]], [[COND_LOAD]] ], [ [[PASSTHRU]], [[TMP0:%.*]] ]
+; CHECK-LE-COMMON-NEXT:    [[TMP6:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-LE-COMMON-NEXT:    [[TMP7:%.*]] = icmp ne i2 [[TMP6]], 0
+; CHECK-LE-COMMON-NEXT:    br i1 [[TMP7]], label [[COND_LOAD1:%.*]], label [[ELSE2:%.*]]
+; CHECK-LE-COMMON:       cond.load1:
+; CHECK-LE-COMMON-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-LE-COMMON-NEXT:    [[TMP9:%.*]] = load i16, ptr [[TMP8]], align 2
+; CHECK-LE-COMMON-NEXT:    [[TMP10:%.*]] = insertelement <2 x i16> [[RES_PHI_ELSE]], i16 [[TMP9]], i64 1
+; CHECK-LE-COMMON-NEXT:    br label [[ELSE2]]
+; CHECK-LE-COMMON:       else2:
+; CHECK-LE-COMMON-NEXT:    [[RES_PHI_ELSE3:%.*]] = phi <2 x i16> [ [[TMP10]], [[COND_LOAD1]] ], [ [[RES_PHI_ELSE]], [[ELSE]] ]
+; CHECK-LE-COMMON-NEXT:    ret <2 x i16> [[RES_PHI_ELSE3]]
+;
+; CHECK-BE-LABEL: @scalarize_v2i16(
+; CHECK-BE-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP2]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.load:
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP3]], align 2
+; CHECK-BE-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> [[PASSTHRU:%.*]], i16 [[TMP4]], i64 0
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    [[RES_PHI_ELSE:%.*]] = phi <2 x i16> [ [[TMP5]], [[COND_LOAD]] ], [ [[PASSTHRU]], [[TMP0:%.*]] ]
+; CHECK-BE-NEXT:    [[TMP6:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-BE-NEXT:    [[TMP7:%.*]] = icmp ne i2 [[TMP6]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP7]], label [[COND_LOAD1:%.*]], label [[ELSE2:%.*]]
+; CHECK-BE:       cond.load1:
+; CHECK-BE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-BE-NEXT:    [[TMP9:%.*]] = load i16, ptr [[TMP8]], align 2
+; CHECK-BE-NEXT:    [[TMP10:%.*]] = insertelement <2 x i16> [[RES_PHI_ELSE]], i16 [[TMP9]], i64 1
+; CHECK-BE-NEXT:    br label [[ELSE2]]
+; CHECK-BE:       else2:
+; CHECK-BE-NEXT:    [[RES_PHI_ELSE3:%.*]] = phi <2 x i16> [ [[TMP10]], [[COND_LOAD1]] ], [ [[RES_PHI_ELSE]], [[ELSE]] ]
+; CHECK-BE-NEXT:    ret <2 x i16> [[RES_PHI_ELSE3]]
+;
+  %ret = call <2 x i16> @llvm.masked.load.v2i16.p0(ptr %p, i32 2, <2 x i1> %mask, <2 x i16> %passthru)
+  ret <2 x i16> %ret
+}
