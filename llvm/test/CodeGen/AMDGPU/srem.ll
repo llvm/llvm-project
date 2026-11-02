@@ -853,10 +853,10 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-LABEL: srem_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    v_lshlrev_b32_e32 v8, 4, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v9, 4, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v8, s[2:3]
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v8, s[2:3] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v9, s[2:3]
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v9, s[2:3] offset:16
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_sub_u32_e32 v9, 0, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -2643,10 +2643,10 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-LABEL: srem_v2i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GCN-NEXT:    v_lshlrev_b32_e32 v8, 4, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v9, 4, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v8, s[10:11] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v8, s[10:11]
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v9, s[10:11] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v9, s[10:11]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or_b32_e32 v8, v1, v5
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v8
@@ -4768,12 +4768,12 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-LABEL: srem_v4i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GCN-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v11, 5, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[12:15], v8, s[10:11]
-; GCN-NEXT:    global_load_dwordx4 v[16:19], v8, s[10:11] offset:32
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v8, s[10:11] offset:48
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v8, s[10:11] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[12:15], v11, s[10:11]
+; GCN-NEXT:    global_load_dwordx4 v[16:19], v11, s[10:11] offset:32
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v11, s[10:11] offset:48
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v11, s[10:11] offset:16
 ; GCN-NEXT:    s_waitcnt vmcnt(2)
 ; GCN-NEXT:    v_or_b32_e32 v8, v13, v17
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v8
@@ -8736,11 +8736,11 @@ define amdgpu_kernel void @srem_v4i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GCN-LABEL: srem_v4i64_4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v8, s[2:3]
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v8, s[2:3] offset:16
+; GCN-NEXT:    v_lshlrev_b32_e32 v9, 5, v0
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v9, s[2:3]
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v9, s[2:3] offset:16
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_ashrrev_i32_e32 v9, 31, v1
 ; GCN-NEXT:    v_lshrrev_b32_e32 v9, 30, v9

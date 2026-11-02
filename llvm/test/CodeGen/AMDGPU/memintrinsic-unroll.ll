@@ -89,25 +89,25 @@ define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0)
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ALIGNED-NEXT:    v_add_co_u32 v4, vcc_lo, v2, s4
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v5, null, s5, v3, vcc_lo
-; ALIGNED-NEXT:    v_add_co_u32 v16, vcc_lo, v4, 48
+; ALIGNED-NEXT:    v_add_co_u32 v114, vcc_lo, v4, 48
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[12:15], v[4:5] offset:128
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v5, vcc_lo
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v115, null, 0, v5, vcc_lo
 ; ALIGNED-NEXT:    s_clause 0xe
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[18:21], v[4:5]
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[22:25], v[4:5] offset:16
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[26:29], v[4:5] offset:32
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[30:33], v[4:5] offset:64
-; ALIGNED-NEXT:    flat_load_dwordx4 v[4:7], v[16:17]
-; ALIGNED-NEXT:    flat_load_dwordx4 v[8:11], v[16:17] offset:32
-; ALIGNED-NEXT:    flat_load_dwordx4 v[34:37], v[16:17] offset:48
-; ALIGNED-NEXT:    flat_load_dwordx4 v[48:51], v[16:17] offset:64
-; ALIGNED-NEXT:    flat_load_dwordx4 v[52:55], v[16:17] offset:96
-; ALIGNED-NEXT:    flat_load_dwordx4 v[64:67], v[16:17] offset:112
-; ALIGNED-NEXT:    flat_load_dwordx4 v[68:71], v[16:17] offset:128
-; ALIGNED-NEXT:    flat_load_dwordx4 v[80:83], v[16:17] offset:144
-; ALIGNED-NEXT:    flat_load_dwordx4 v[84:87], v[16:17] offset:160
-; ALIGNED-NEXT:    flat_load_dwordx4 v[96:99], v[16:17] offset:176
-; ALIGNED-NEXT:    flat_load_dwordx4 v[100:103], v[16:17] offset:192
+; ALIGNED-NEXT:    flat_load_dwordx4 v[116:119], v[114:115]
+; ALIGNED-NEXT:    flat_load_dwordx4 v[8:11], v[114:115] offset:32
+; ALIGNED-NEXT:    flat_load_dwordx4 v[34:37], v[114:115] offset:48
+; ALIGNED-NEXT:    flat_load_dwordx4 v[48:51], v[114:115] offset:64
+; ALIGNED-NEXT:    flat_load_dwordx4 v[52:55], v[114:115] offset:96
+; ALIGNED-NEXT:    flat_load_dwordx4 v[64:67], v[114:115] offset:112
+; ALIGNED-NEXT:    flat_load_dwordx4 v[68:71], v[114:115] offset:128
+; ALIGNED-NEXT:    flat_load_dwordx4 v[80:83], v[114:115] offset:144
+; ALIGNED-NEXT:    flat_load_dwordx4 v[84:87], v[114:115] offset:160
+; ALIGNED-NEXT:    flat_load_dwordx4 v[96:99], v[114:115] offset:176
+; ALIGNED-NEXT:    flat_load_dwordx4 v[100:103], v[114:115] offset:192
 ; ALIGNED-NEXT:    v_add_co_u32 v16, vcc_lo, v0, s4
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v17, null, s5, v1, vcc_lo
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0x100
@@ -471,10 +471,10 @@ define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0)
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[14:15], v11 offset:76
 ; ALIGNED-NEXT:    flat_store_byte v[12:13], v11 offset:77
-; ALIGNED-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:224
-; ALIGNED-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:228
-; ALIGNED-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:232
-; ALIGNED-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:236
+; ALIGNED-NEXT:    buffer_store_dword v116, off, s[0:3], s32 offset:224
+; ALIGNED-NEXT:    buffer_store_dword v117, off, s[0:3], s32 offset:228
+; ALIGNED-NEXT:    buffer_store_dword v118, off, s[0:3], s32 offset:232
+; ALIGNED-NEXT:    buffer_store_dword v119, off, s[0:3], s32 offset:236
 ; ALIGNED-NEXT:    s_clause 0x3
 ; ALIGNED-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:236
 ; ALIGNED-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:232
@@ -724,14 +724,14 @@ define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0)
 ; UNROLL3-NEXT:    .p2align 6
 ; UNROLL3-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; UNROLL3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; UNROLL3-NEXT:    v_add_co_u32 v12, vcc_lo, v2, s4
-; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v13, null, s5, v3, vcc_lo
+; UNROLL3-NEXT:    v_add_co_u32 v14, vcc_lo, v2, s4
+; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v15, null, s5, v3, vcc_lo
 ; UNROLL3-NEXT:    v_add_co_u32 v16, vcc_lo, v0, s4
 ; UNROLL3-NEXT:    s_add_u32 s4, s4, 48
 ; UNROLL3-NEXT:    s_clause 0x2
-; UNROLL3-NEXT:    flat_load_dwordx4 v[4:7], v[12:13]
-; UNROLL3-NEXT:    flat_load_dwordx4 v[8:11], v[12:13] offset:16
-; UNROLL3-NEXT:    flat_load_dwordx4 v[12:15], v[12:13] offset:32
+; UNROLL3-NEXT:    flat_load_dwordx4 v[4:7], v[14:15]
+; UNROLL3-NEXT:    flat_load_dwordx4 v[8:11], v[14:15] offset:16
+; UNROLL3-NEXT:    flat_load_dwordx4 v[18:21], v[14:15] offset:32
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v17, null, s5, v1, vcc_lo
 ; UNROLL3-NEXT:    s_addc_u32 s5, s5, 0
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
@@ -739,16 +739,16 @@ define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0)
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(2)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[16:17], v[8:11] offset:16
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(2)
-; UNROLL3-NEXT:    flat_store_dwordx4 v[16:17], v[12:15] offset:32
+; UNROLL3-NEXT:    flat_store_dwordx4 v[16:17], v[18:21] offset:32
 ; UNROLL3-NEXT:    v_cmp_lt_u64_e64 vcc_lo, s[4:5], 0x7e0
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB0_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; UNROLL3-NEXT:    flat_load_dwordx4 v[4:7], v[2:3] offset:2016
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:2016
-; UNROLL3-NEXT:    flat_load_dwordx4 v[2:5], v[2:3] offset:2032
+; UNROLL3-NEXT:    flat_load_dwordx4 v[8:11], v[2:3] offset:2032
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:2032
+; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[8:11] offset:2032
 ; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -829,25 +829,25 @@ define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1)
 ; ALIGNED-NEXT:    s_mov_b64 s[4:5], 0
 ; ALIGNED-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
-; ALIGNED-NEXT:    v_add_co_u32 v96, vcc_lo, v2, s4
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v97, null, s5, v3, vcc_lo
+; ALIGNED-NEXT:    v_add_co_u32 v102, vcc_lo, v2, s4
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v103, null, s5, v3, vcc_lo
 ; ALIGNED-NEXT:    s_clause 0xf
-; ALIGNED-NEXT:    global_load_dwordx4 v[8:11], v[96:97], off offset:240
-; ALIGNED-NEXT:    global_load_dwordx4 v[12:15], v[96:97], off offset:224
-; ALIGNED-NEXT:    global_load_dwordx4 v[4:7], v[96:97], off
-; ALIGNED-NEXT:    global_load_dwordx4 v[16:19], v[96:97], off offset:16
-; ALIGNED-NEXT:    global_load_dwordx4 v[20:23], v[96:97], off offset:32
-; ALIGNED-NEXT:    global_load_dwordx4 v[24:27], v[96:97], off offset:48
-; ALIGNED-NEXT:    global_load_dwordx4 v[28:31], v[96:97], off offset:64
-; ALIGNED-NEXT:    global_load_dwordx4 v[32:35], v[96:97], off offset:80
-; ALIGNED-NEXT:    global_load_dwordx4 v[36:39], v[96:97], off offset:96
-; ALIGNED-NEXT:    global_load_dwordx4 v[48:51], v[96:97], off offset:112
-; ALIGNED-NEXT:    global_load_dwordx4 v[52:55], v[96:97], off offset:128
-; ALIGNED-NEXT:    global_load_dwordx4 v[64:67], v[96:97], off offset:144
-; ALIGNED-NEXT:    global_load_dwordx4 v[68:71], v[96:97], off offset:160
-; ALIGNED-NEXT:    global_load_dwordx4 v[80:83], v[96:97], off offset:176
-; ALIGNED-NEXT:    global_load_dwordx4 v[84:87], v[96:97], off offset:192
-; ALIGNED-NEXT:    global_load_dwordx4 v[96:99], v[96:97], off offset:208
+; ALIGNED-NEXT:    global_load_dwordx4 v[8:11], v[102:103], off offset:240
+; ALIGNED-NEXT:    global_load_dwordx4 v[12:15], v[102:103], off offset:224
+; ALIGNED-NEXT:    global_load_dwordx4 v[4:7], v[102:103], off
+; ALIGNED-NEXT:    global_load_dwordx4 v[16:19], v[102:103], off offset:16
+; ALIGNED-NEXT:    global_load_dwordx4 v[20:23], v[102:103], off offset:32
+; ALIGNED-NEXT:    global_load_dwordx4 v[24:27], v[102:103], off offset:48
+; ALIGNED-NEXT:    global_load_dwordx4 v[28:31], v[102:103], off offset:64
+; ALIGNED-NEXT:    global_load_dwordx4 v[32:35], v[102:103], off offset:80
+; ALIGNED-NEXT:    global_load_dwordx4 v[36:39], v[102:103], off offset:96
+; ALIGNED-NEXT:    global_load_dwordx4 v[48:51], v[102:103], off offset:112
+; ALIGNED-NEXT:    global_load_dwordx4 v[52:55], v[102:103], off offset:128
+; ALIGNED-NEXT:    global_load_dwordx4 v[64:67], v[102:103], off offset:144
+; ALIGNED-NEXT:    global_load_dwordx4 v[68:71], v[102:103], off offset:160
+; ALIGNED-NEXT:    global_load_dwordx4 v[80:83], v[102:103], off offset:176
+; ALIGNED-NEXT:    global_load_dwordx4 v[84:87], v[102:103], off offset:192
+; ALIGNED-NEXT:    global_load_dwordx4 v[112:115], v[102:103], off offset:208
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(15)
 ; ALIGNED-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:32
 ; ALIGNED-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:36
@@ -887,10 +887,6 @@ define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1)
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v10, 8, v10
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v11
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v11, 8, v11
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v101
 ; ALIGNED-NEXT:    v_cmp_lt_u64_e64 vcc_lo, s[4:5], 0x800
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    global_store_byte_d16_hi v[8:9], v12, off offset:238
@@ -904,15 +900,19 @@ define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1)
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    global_store_byte_d16_hi v[8:9], v15, off offset:226
 ; ALIGNED-NEXT:    global_store_byte v[8:9], v15, off offset:224
-; ALIGNED-NEXT:    buffer_store_dword v96, off, s[0:3], s32
-; ALIGNED-NEXT:    buffer_store_dword v97, off, s[0:3], s32 offset:4
-; ALIGNED-NEXT:    buffer_store_dword v98, off, s[0:3], s32 offset:8
-; ALIGNED-NEXT:    buffer_store_dword v99, off, s[0:3], s32 offset:12
+; ALIGNED-NEXT:    buffer_store_dword v112, off, s[0:3], s32
+; ALIGNED-NEXT:    buffer_store_dword v113, off, s[0:3], s32 offset:4
+; ALIGNED-NEXT:    buffer_store_dword v114, off, s[0:3], s32 offset:8
+; ALIGNED-NEXT:    buffer_store_dword v115, off, s[0:3], s32 offset:12
 ; ALIGNED-NEXT:    s_clause 0x3
 ; ALIGNED-NEXT:    buffer_load_dword v96, off, s[0:3], s32 offset:12
 ; ALIGNED-NEXT:    buffer_load_dword v97, off, s[0:3], s32 offset:8
 ; ALIGNED-NEXT:    buffer_load_dword v98, off, s[0:3], s32 offset:4
 ; ALIGNED-NEXT:    buffer_load_dword v99, off, s[0:3], s32
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v100
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v100
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v101
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v101
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v12
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v12, 8, v12
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v13
@@ -1457,14 +1457,14 @@ define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1)
 ; UNROLL3-NEXT:    .p2align 6
 ; UNROLL3-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; UNROLL3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; UNROLL3-NEXT:    v_add_co_u32 v12, vcc_lo, v2, s4
-; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v13, null, s5, v3, vcc_lo
+; UNROLL3-NEXT:    v_add_co_u32 v14, vcc_lo, v2, s4
+; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v15, null, s5, v3, vcc_lo
 ; UNROLL3-NEXT:    v_add_co_u32 v16, vcc_lo, v0, s4
 ; UNROLL3-NEXT:    s_add_u32 s4, s4, 48
 ; UNROLL3-NEXT:    s_clause 0x2
-; UNROLL3-NEXT:    global_load_dwordx4 v[4:7], v[12:13], off
-; UNROLL3-NEXT:    global_load_dwordx4 v[8:11], v[12:13], off offset:16
-; UNROLL3-NEXT:    global_load_dwordx4 v[12:15], v[12:13], off offset:32
+; UNROLL3-NEXT:    global_load_dwordx4 v[4:7], v[14:15], off
+; UNROLL3-NEXT:    global_load_dwordx4 v[8:11], v[14:15], off offset:16
+; UNROLL3-NEXT:    global_load_dwordx4 v[18:21], v[14:15], off offset:32
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v17, null, s5, v1, vcc_lo
 ; UNROLL3-NEXT:    s_addc_u32 s5, s5, 0
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(2)
@@ -1472,16 +1472,16 @@ define void @memcpy_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1)
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(1)
 ; UNROLL3-NEXT:    global_store_dwordx4 v[16:17], v[8:11], off offset:16
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
-; UNROLL3-NEXT:    global_store_dwordx4 v[16:17], v[12:15], off offset:32
+; UNROLL3-NEXT:    global_store_dwordx4 v[16:17], v[18:21], off offset:32
 ; UNROLL3-NEXT:    v_cmp_lt_u64_e64 vcc_lo, s[4:5], 0x7e0
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB1_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; UNROLL3-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:2016
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
 ; UNROLL3-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:2016
-; UNROLL3-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:2032
+; UNROLL3-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:2032
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
-; UNROLL3-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:2032
+; UNROLL3-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off offset:2032
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(1) noundef nonnull align 1 %src, i64 2048, i1 false)
@@ -2067,14 +2067,14 @@ define void @memcpy_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4)
 ; UNROLL3-NEXT:    .p2align 6
 ; UNROLL3-NEXT:  .LBB2_1: ; %static-memcpy-expansion-main-body
 ; UNROLL3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; UNROLL3-NEXT:    v_add_co_u32 v12, vcc_lo, v2, s4
-; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v13, null, s5, v3, vcc_lo
+; UNROLL3-NEXT:    v_add_co_u32 v14, vcc_lo, v2, s4
+; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v15, null, s5, v3, vcc_lo
 ; UNROLL3-NEXT:    v_add_co_u32 v16, vcc_lo, v0, s4
 ; UNROLL3-NEXT:    s_add_u32 s4, s4, 48
 ; UNROLL3-NEXT:    s_clause 0x2
-; UNROLL3-NEXT:    global_load_dwordx4 v[4:7], v[12:13], off offset:16
-; UNROLL3-NEXT:    global_load_dwordx4 v[8:11], v[12:13], off
-; UNROLL3-NEXT:    global_load_dwordx4 v[12:15], v[12:13], off offset:32
+; UNROLL3-NEXT:    global_load_dwordx4 v[4:7], v[14:15], off offset:16
+; UNROLL3-NEXT:    global_load_dwordx4 v[8:11], v[14:15], off
+; UNROLL3-NEXT:    global_load_dwordx4 v[18:21], v[14:15], off offset:32
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v17, null, s5, v1, vcc_lo
 ; UNROLL3-NEXT:    s_addc_u32 s5, s5, 0
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(2)
@@ -2082,7 +2082,7 @@ define void @memcpy_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4)
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(1)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[16:17], v[8:11]
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
-; UNROLL3-NEXT:    flat_store_dwordx4 v[16:17], v[12:15] offset:32
+; UNROLL3-NEXT:    flat_store_dwordx4 v[16:17], v[18:21] offset:32
 ; UNROLL3-NEXT:    v_cmp_lt_u64_e64 vcc_lo, s[4:5], 0x7e0
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB2_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
@@ -3529,7 +3529,7 @@ define void @memcpy_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5)
 ; UNROLL3-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen offset:2044
 ; UNROLL3-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:2040
 ; UNROLL3-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:2036
-; UNROLL3-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:2032
+; UNROLL3-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen offset:2032
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(3)
 ; UNROLL3-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:2044
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(2)
@@ -3537,7 +3537,7 @@ define void @memcpy_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5)
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(1)
 ; UNROLL3-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:2036
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
-; UNROLL3-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2032
+; UNROLL3-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:2032
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
 entry:
   tail call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) noundef nonnull align 1 %dst, ptr addrspace(5) noundef nonnull align 1 %src, i64 2048, i1 false)
@@ -5487,23 +5487,23 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:  .LBB5_2: ; %memmove_fwd_loop
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[12:15], v[2:3] offset:128
-; ALIGNED-NEXT:    v_add_co_u32 v84, vcc_lo, v2, 48
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v85, null, 0, v3, vcc_lo
+; ALIGNED-NEXT:    v_add_co_u32 v116, vcc_lo, v2, 48
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v117, null, 0, v3, vcc_lo
 ; ALIGNED-NEXT:    s_clause 0xe
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[16:19], v[2:3] offset:64
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[20:23], v[2:3] offset:16
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[24:27], v[2:3] offset:32
-; ALIGNED-NEXT:    flat_load_dwordx4 v[4:7], v[84:85]
-; ALIGNED-NEXT:    flat_load_dwordx4 v[8:11], v[84:85] offset:32
-; ALIGNED-NEXT:    flat_load_dwordx4 v[28:31], v[84:85] offset:48
-; ALIGNED-NEXT:    flat_load_dwordx4 v[32:35], v[84:85] offset:64
-; ALIGNED-NEXT:    flat_load_dwordx4 v[36:39], v[84:85] offset:96
-; ALIGNED-NEXT:    flat_load_dwordx4 v[48:51], v[84:85] offset:112
-; ALIGNED-NEXT:    flat_load_dwordx4 v[52:55], v[84:85] offset:128
-; ALIGNED-NEXT:    flat_load_dwordx4 v[64:67], v[84:85] offset:144
-; ALIGNED-NEXT:    flat_load_dwordx4 v[68:71], v[84:85] offset:160
-; ALIGNED-NEXT:    flat_load_dwordx4 v[80:83], v[84:85] offset:176
-; ALIGNED-NEXT:    flat_load_dwordx4 v[84:87], v[84:85] offset:192
+; ALIGNED-NEXT:    flat_load_dwordx4 v[4:7], v[116:117]
+; ALIGNED-NEXT:    flat_load_dwordx4 v[8:11], v[116:117] offset:32
+; ALIGNED-NEXT:    flat_load_dwordx4 v[28:31], v[116:117] offset:48
+; ALIGNED-NEXT:    flat_load_dwordx4 v[32:35], v[116:117] offset:64
+; ALIGNED-NEXT:    flat_load_dwordx4 v[36:39], v[116:117] offset:96
+; ALIGNED-NEXT:    flat_load_dwordx4 v[48:51], v[116:117] offset:112
+; ALIGNED-NEXT:    flat_load_dwordx4 v[52:55], v[116:117] offset:128
+; ALIGNED-NEXT:    flat_load_dwordx4 v[64:67], v[116:117] offset:144
+; ALIGNED-NEXT:    flat_load_dwordx4 v[68:71], v[116:117] offset:160
+; ALIGNED-NEXT:    flat_load_dwordx4 v[80:83], v[116:117] offset:176
+; ALIGNED-NEXT:    flat_load_dwordx4 v[112:115], v[116:117] offset:192
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[96:99], v[2:3]
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0xffffff00
 ; ALIGNED-NEXT:    s_addc_u32 s5, s5, -1
@@ -5546,14 +5546,6 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:152
 ; ALIGNED-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:148
 ; ALIGNED-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:144
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v102
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v102
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v103
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v103
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[14:15], v16 offset:72
 ; ALIGNED-NEXT:    flat_store_byte v[12:13], v16 offset:73
@@ -5631,15 +5623,23 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[0:1], v99 offset:2
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v99
-; ALIGNED-NEXT:    buffer_store_dword v84, off, s[0:3], s32 offset:32
-; ALIGNED-NEXT:    buffer_store_dword v85, off, s[0:3], s32 offset:36
-; ALIGNED-NEXT:    buffer_store_dword v86, off, s[0:3], s32 offset:40
-; ALIGNED-NEXT:    buffer_store_dword v87, off, s[0:3], s32 offset:44
+; ALIGNED-NEXT:    buffer_store_dword v112, off, s[0:3], s32 offset:32
+; ALIGNED-NEXT:    buffer_store_dword v113, off, s[0:3], s32 offset:36
+; ALIGNED-NEXT:    buffer_store_dword v114, off, s[0:3], s32 offset:40
+; ALIGNED-NEXT:    buffer_store_dword v115, off, s[0:3], s32 offset:44
 ; ALIGNED-NEXT:    s_clause 0x3
 ; ALIGNED-NEXT:    buffer_load_dword v84, off, s[0:3], s32 offset:44
 ; ALIGNED-NEXT:    buffer_load_dword v85, off, s[0:3], s32 offset:40
 ; ALIGNED-NEXT:    buffer_load_dword v86, off, s[0:3], s32 offset:36
 ; ALIGNED-NEXT:    buffer_load_dword v87, off, s[0:3], s32 offset:32
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v100
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v100
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v101
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v101
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v102
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v102
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v103
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v103
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[14:15], v84 offset:248
 ; ALIGNED-NEXT:    flat_store_byte v[12:13], v84 offset:249
@@ -6126,23 +6126,23 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:  .LBB5_5: ; %memmove_bwd_loop
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[12:15], v[10:11] offset:128
-; ALIGNED-NEXT:    v_add_co_u32 v84, vcc_lo, v10, 48
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v85, null, 0, v11, vcc_lo
+; ALIGNED-NEXT:    v_add_co_u32 v116, vcc_lo, v10, 48
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v117, null, 0, v11, vcc_lo
 ; ALIGNED-NEXT:    s_clause 0xe
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[16:19], v[10:11] offset:64
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[20:23], v[10:11] offset:16
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[24:27], v[10:11] offset:32
-; ALIGNED-NEXT:    flat_load_dwordx4 v[0:3], v[84:85]
-; ALIGNED-NEXT:    flat_load_dwordx4 v[4:7], v[84:85] offset:32
-; ALIGNED-NEXT:    flat_load_dwordx4 v[28:31], v[84:85] offset:48
-; ALIGNED-NEXT:    flat_load_dwordx4 v[32:35], v[84:85] offset:64
-; ALIGNED-NEXT:    flat_load_dwordx4 v[36:39], v[84:85] offset:96
-; ALIGNED-NEXT:    flat_load_dwordx4 v[48:51], v[84:85] offset:112
-; ALIGNED-NEXT:    flat_load_dwordx4 v[52:55], v[84:85] offset:128
-; ALIGNED-NEXT:    flat_load_dwordx4 v[64:67], v[84:85] offset:144
-; ALIGNED-NEXT:    flat_load_dwordx4 v[68:71], v[84:85] offset:160
-; ALIGNED-NEXT:    flat_load_dwordx4 v[80:83], v[84:85] offset:176
-; ALIGNED-NEXT:    flat_load_dwordx4 v[84:87], v[84:85] offset:192
+; ALIGNED-NEXT:    flat_load_dwordx4 v[0:3], v[116:117]
+; ALIGNED-NEXT:    flat_load_dwordx4 v[4:7], v[116:117] offset:32
+; ALIGNED-NEXT:    flat_load_dwordx4 v[28:31], v[116:117] offset:48
+; ALIGNED-NEXT:    flat_load_dwordx4 v[32:35], v[116:117] offset:64
+; ALIGNED-NEXT:    flat_load_dwordx4 v[36:39], v[116:117] offset:96
+; ALIGNED-NEXT:    flat_load_dwordx4 v[48:51], v[116:117] offset:112
+; ALIGNED-NEXT:    flat_load_dwordx4 v[52:55], v[116:117] offset:128
+; ALIGNED-NEXT:    flat_load_dwordx4 v[64:67], v[116:117] offset:144
+; ALIGNED-NEXT:    flat_load_dwordx4 v[68:71], v[116:117] offset:160
+; ALIGNED-NEXT:    flat_load_dwordx4 v[80:83], v[116:117] offset:176
+; ALIGNED-NEXT:    flat_load_dwordx4 v[112:115], v[116:117] offset:192
 ; ALIGNED-NEXT:    flat_load_dwordx4 v[96:99], v[10:11]
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0x100
 ; ALIGNED-NEXT:    s_addc_u32 s5, s5, 0
@@ -6185,14 +6185,6 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:408
 ; ALIGNED-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:404
 ; ALIGNED-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:400
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v102
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v102
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v103
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v103
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[14:15], v16 offset:72
 ; ALIGNED-NEXT:    flat_store_byte v[12:13], v16 offset:73
@@ -6270,15 +6262,23 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[8:9], v99 offset:2
 ; ALIGNED-NEXT:    flat_store_byte v[8:9], v99
-; ALIGNED-NEXT:    buffer_store_dword v84, off, s[0:3], s32 offset:288
-; ALIGNED-NEXT:    buffer_store_dword v85, off, s[0:3], s32 offset:292
-; ALIGNED-NEXT:    buffer_store_dword v86, off, s[0:3], s32 offset:296
-; ALIGNED-NEXT:    buffer_store_dword v87, off, s[0:3], s32 offset:300
+; ALIGNED-NEXT:    buffer_store_dword v112, off, s[0:3], s32 offset:288
+; ALIGNED-NEXT:    buffer_store_dword v113, off, s[0:3], s32 offset:292
+; ALIGNED-NEXT:    buffer_store_dword v114, off, s[0:3], s32 offset:296
+; ALIGNED-NEXT:    buffer_store_dword v115, off, s[0:3], s32 offset:300
 ; ALIGNED-NEXT:    s_clause 0x3
 ; ALIGNED-NEXT:    buffer_load_dword v84, off, s[0:3], s32 offset:300
 ; ALIGNED-NEXT:    buffer_load_dword v85, off, s[0:3], s32 offset:296
 ; ALIGNED-NEXT:    buffer_load_dword v86, off, s[0:3], s32 offset:292
 ; ALIGNED-NEXT:    buffer_load_dword v87, off, s[0:3], s32 offset:288
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v100
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v100
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v101
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v101
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v102
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v102
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v103
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v103
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[14:15], v84 offset:248
 ; ALIGNED-NEXT:    flat_store_byte v[12:13], v84 offset:249
@@ -12287,7 +12287,8 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen offset:2044
 ; UNROLL3-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:2040
 ; UNROLL3-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:2036
-; UNROLL3-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:2032
+; UNROLL3-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen offset:2032
+; UNROLL3-NEXT:    ; implicit-def: $vgpr1
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(3)
 ; UNROLL3-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:2044
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(2)
@@ -12295,9 +12296,8 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(1)
 ; UNROLL3-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:2036
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
-; UNROLL3-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2032
+; UNROLL3-NEXT:    buffer_store_dword v6, v0, s[0:3], 0 offen offset:2032
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr0
-; UNROLL3-NEXT:    ; implicit-def: $vgpr1
 ; UNROLL3-NEXT:  .LBB8_4: ; %Flow
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB8_7

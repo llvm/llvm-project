@@ -369,12 +369,12 @@ define amdgpu_kernel void @v_ctpop_v4i64(ptr addrspace(1) noalias %out, ptr addr
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 5, v0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; SI-NEXT:    v_mov_b32_e32 v9, 0
-; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[8:9], s[8:11], 0 addr64
-; SI-NEXT:    buffer_load_dwordx4 v[4:7], v[8:9], s[8:11], 0 addr64 offset:16
+; SI-NEXT:    v_mov_b32_e32 v5, 0
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[4:5], s[8:11], 0 addr64
+; SI-NEXT:    buffer_load_dwordx4 v[4:7], v[4:5], s[8:11], 0 addr64 offset:16
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
@@ -423,11 +423,11 @@ define amdgpu_kernel void @v_ctpop_v4i64(ptr addrspace(1) noalias %out, ptr addr
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v4, 5, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    global_load_b128 v[0:3], v8, s[2:3]
-; GFX12-NEXT:    global_load_b128 v[4:7], v8, s[2:3] offset:16
+; GFX12-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
+; GFX12-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:16
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    v_bcnt_u32_b32 v1, v1, 0
 ; GFX12-NEXT:    v_bcnt_u32_b32 v3, v3, 0

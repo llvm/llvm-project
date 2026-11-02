@@ -538,19 +538,19 @@ define amdgpu_kernel void @global_load_v16i16(ptr addrspace(1) %out, ptr addrspa
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s10, 0
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s11, s7
-; GCN-NOHSA-SI-NEXT:    v_lshlrev_b32_e32 v4, 5, v0
+; GCN-NOHSA-SI-NEXT:    v_lshlrev_b32_e32 v6, 5, v0
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NOHSA-SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v5, 0
-; GCN-NOHSA-SI-NEXT:    buffer_load_dwordx4 v[0:3], v[4:5], s[8:11], 0 addr64 offset:16
-; GCN-NOHSA-SI-NEXT:    buffer_load_dwordx4 v[4:7], v[4:5], s[8:11], 0 addr64
+; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v7, 0
+; GCN-NOHSA-SI-NEXT:    buffer_load_dwordx4 v[0:3], v[6:7], s[8:11], 0 addr64 offset:16
+; GCN-NOHSA-SI-NEXT:    buffer_load_dwordx4 v[8:11], v[6:7], s[8:11], 0 addr64
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s6, -1
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s4, s0
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s5, s1
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0 offset:16
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0
+; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0
 ; GCN-NOHSA-SI-NEXT:    s_endpgm
 ;
 ; GCN-HSA-LABEL: global_load_v16i16:

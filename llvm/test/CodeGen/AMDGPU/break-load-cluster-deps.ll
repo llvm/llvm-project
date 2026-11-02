@@ -29,124 +29,10 @@ define protected amdgpu_kernel void @_Z12uavReadSpeedI15HIP_vector_typeIfLj4EEEv
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_and_b32 s4, s10, 0xffff
 ; CHECK-NEXT:    s_mul_i32 s6, s6, s4
-; CHECK-NEXT:    v_add_u32_e32 v4, s6, v0
 ; CHECK-NEXT:    s_cmp_lg_u32 s7, 1
-; CHECK-NEXT:    s_mov_b64 s[4:5], -1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_3
-; CHECK-NEXT:  ; %bb.1: ; %Flow41
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_9
-; CHECK-NEXT:  .LBB0_2: ; %bb81
-; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  .LBB0_3: ; %bb20
-; CHECK-NEXT:    s_lshr_b32 s12, s7, 2
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_7
-; CHECK-NEXT:  ; %bb.4: ; %bb23
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
-; CHECK-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x10
-; CHECK-NEXT:    v_mov_b32_e32 v19, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s4
-; CHECK-NEXT:    s_sub_i32 s13, 0, s4
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_mov_b32_e32 v6, 0
-; CHECK-NEXT:    v_rcp_f32_e32 v0, v0
-; CHECK-NEXT:    v_mov_b32_e32 v7, 0
-; CHECK-NEXT:    v_mov_b32_e32 v16, 0
-; CHECK-NEXT:    v_mov_b32_e32 v17, 0
-; CHECK-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
-; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; CHECK-NEXT:    v_mov_b32_e32 v12, 0
-; CHECK-NEXT:    v_mov_b32_e32 v13, 0
-; CHECK-NEXT:    v_mov_b32_e32 v14, 0
-; CHECK-NEXT:    v_mul_lo_u32 v5, s13, v0
-; CHECK-NEXT:    v_mul_hi_u32 v5, v0, v5
-; CHECK-NEXT:    v_add_u32_e32 v0, v0, v5
-; CHECK-NEXT:    v_mul_hi_u32 v0, v4, v0
-; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s4
-; CHECK-NEXT:    v_sub_u32_e32 v0, v4, v0
-; CHECK-NEXT:    v_subrev_u32_e32 v5, s4, v0
-; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
-; CHECK-NEXT:    v_subrev_u32_e32 v5, s4, v0
-; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
-; CHECK-NEXT:    v_add_u32_e32 v5, s10, v0
-; CHECK-NEXT:    v_add_u32_e32 v20, s7, v0
-; CHECK-NEXT:    v_add_u32_e32 v21, s6, v0
-; CHECK-NEXT:    v_add_u32_e32 v22, s5, v0
-; CHECK-NEXT:    v_mov_b32_e32 v15, 0
-; CHECK-NEXT:    v_mov_b32_e32 v8, 0
-; CHECK-NEXT:    v_mov_b32_e32 v9, 0
-; CHECK-NEXT:    v_mov_b32_e32 v10, 0
-; CHECK-NEXT:    v_mov_b32_e32 v11, 0
-; CHECK-NEXT:    v_mov_b32_e32 v23, s1
-; CHECK-NEXT:    v_mov_b32_e32 v0, v19
-; CHECK-NEXT:  .LBB0_5: ; %bb49
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_mov_b32_e32 v18, v22
-; CHECK-NEXT:    v_lshlrev_b64 v[24:25], 4, v[18:19]
-; CHECK-NEXT:    v_mov_b32_e32 v18, v21
-; CHECK-NEXT:    v_add_co_u32_e32 v32, vcc, s0, v24
-; CHECK-NEXT:    v_addc_co_u32_e32 v33, vcc, v23, v25, vcc
-; CHECK-NEXT:    v_lshlrev_b64 v[24:25], 4, v[18:19]
-; CHECK-NEXT:    v_mov_b32_e32 v18, v20
-; CHECK-NEXT:    v_add_co_u32_e32 v34, vcc, s0, v24
-; CHECK-NEXT:    v_addc_co_u32_e32 v35, vcc, v23, v25, vcc
-; CHECK-NEXT:    v_lshlrev_b64 v[36:37], 4, v[18:19]
-; CHECK-NEXT:    v_mov_b32_e32 v18, v5
-; CHECK-NEXT:    global_load_dwordx4 v[24:27], v[32:33], off
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v[34:35], off
-; CHECK-NEXT:    v_add_co_u32_e32 v32, vcc, s0, v36
-; CHECK-NEXT:    v_addc_co_u32_e32 v33, vcc, v23, v37, vcc
-; CHECK-NEXT:    v_lshlrev_b64 v[36:37], 4, v[18:19]
-; CHECK-NEXT:    v_add_co_u32_e32 v36, vcc, s0, v36
-; CHECK-NEXT:    v_addc_co_u32_e32 v37, vcc, v23, v37, vcc
-; CHECK-NEXT:    global_load_dwordx4 v[32:35], v[32:33], off
-; CHECK-NEXT:    s_add_i32 s12, s12, -1
-; CHECK-NEXT:    global_load_dwordx4 v[36:39], v[36:37], off
-; CHECK-NEXT:    v_add_u32_e32 v22, s11, v22
-; CHECK-NEXT:    v_add_u32_e32 v21, s11, v21
-; CHECK-NEXT:    s_cmp_eq_u32 s12, 0
-; CHECK-NEXT:    v_add_u32_e32 v20, s11, v20
-; CHECK-NEXT:    v_add_u32_e32 v5, s11, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[26:27]
-; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[24:25]
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    v_pk_add_f32 v[16:17], v[16:17], v[30:31]
-; CHECK-NEXT:    v_pk_add_f32 v[6:7], v[6:7], v[28:29]
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    v_pk_add_f32 v[14:15], v[14:15], v[34:35]
-; CHECK-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[32:33]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[38:39]
-; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[36:37]
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
-; CHECK-NEXT:  ; %bb.6: ; %bb38
-; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[16:17]
-; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[6:7]
-; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[14:15], v[2:3]
-; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[12:13], v[0:1]
-; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[10:11], v[2:3]
-; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[8:9], v[0:1]
-; CHECK-NEXT:    s_branch .LBB0_8
-; CHECK-NEXT:  .LBB0_7:
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:  .LBB0_8: ; %Flow
-; CHECK-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; CHECK-NEXT:    v_lshlrev_b64 v[6:7], 4, v[4:5]
-; CHECK-NEXT:    v_mov_b32_e32 v5, s3
-; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, s2, v6
-; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, v5, v7, vcc
-; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[0:3], off
-; CHECK-NEXT:    s_branch .LBB0_2
-; CHECK-NEXT:  .LBB0_9: ; %bb13
+; CHECK-NEXT:    v_add_u32_e32 v4, s6, v0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
+; CHECK-NEXT:  ; %bb.1: ; %bb13
 ; CHECK-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
@@ -179,6 +65,114 @@ define protected amdgpu_kernel void @_Z12uavReadSpeedI15HIP_vector_typeIfLj4EEEv
 ; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB0_2: ; %bb20
+; CHECK-NEXT:    s_lshr_b32 s6, s7, 2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_6
+; CHECK-NEXT:  ; %bb.3: ; %bb23
+; CHECK-NEXT:    s_load_dwordx4 s[12:15], s[8:9], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s12
+; CHECK-NEXT:    s_sub_i32 s7, 0, s12
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
+; CHECK-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-NEXT:    v_rcp_f32_e32 v0, v0
+; CHECK-NEXT:    v_mov_b32_e32 v9, 0
+; CHECK-NEXT:    v_mov_b32_e32 v14, 0
+; CHECK-NEXT:    v_mov_b32_e32 v15, 0
+; CHECK-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; CHECK-NEXT:    v_mov_b32_e32 v12, 0
+; CHECK-NEXT:    v_mov_b32_e32 v13, 0
+; CHECK-NEXT:    v_mov_b32_e32 v20, 0
+; CHECK-NEXT:    v_mul_lo_u32 v2, s7, v0
+; CHECK-NEXT:    v_mul_hi_u32 v2, v0, v2
+; CHECK-NEXT:    v_add_u32_e32 v0, v0, v2
+; CHECK-NEXT:    v_mul_hi_u32 v0, v4, v0
+; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s12
+; CHECK-NEXT:    v_sub_u32_e32 v0, v4, v0
+; CHECK-NEXT:    v_subrev_u32_e32 v2, s12, v0
+; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s12, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; CHECK-NEXT:    v_subrev_u32_e32 v2, s12, v0
+; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s12, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; CHECK-NEXT:    v_add_u32_e32 v5, s4, v0
+; CHECK-NEXT:    v_add_u32_e32 v10, s15, v0
+; CHECK-NEXT:    v_add_u32_e32 v11, s14, v0
+; CHECK-NEXT:    v_add_u32_e32 v16, s13, v0
+; CHECK-NEXT:    v_mov_b32_e32 v21, 0
+; CHECK-NEXT:    v_mov_b32_e32 v18, 0
+; CHECK-NEXT:    v_mov_b32_e32 v19, 0
+; CHECK-NEXT:    v_mov_b32_e32 v22, 0
+; CHECK-NEXT:    v_mov_b32_e32 v23, 0
+; CHECK-NEXT:    v_mov_b32_e32 v17, s1
+; CHECK-NEXT:    v_mov_b32_e32 v0, v3
+; CHECK-NEXT:  .LBB0_4: ; %bb49
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    v_mov_b32_e32 v2, v16
+; CHECK-NEXT:    v_lshlrev_b64 v[24:25], 4, v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v2, v11
+; CHECK-NEXT:    v_add_co_u32_e32 v32, vcc, s0, v24
+; CHECK-NEXT:    v_addc_co_u32_e32 v33, vcc, v17, v25, vcc
+; CHECK-NEXT:    v_lshlrev_b64 v[24:25], 4, v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v2, v10
+; CHECK-NEXT:    v_add_co_u32_e32 v34, vcc, s0, v24
+; CHECK-NEXT:    v_addc_co_u32_e32 v35, vcc, v17, v25, vcc
+; CHECK-NEXT:    v_lshlrev_b64 v[36:37], 4, v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v2, v5
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v[32:33], off
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v[34:35], off
+; CHECK-NEXT:    v_add_co_u32_e32 v32, vcc, s0, v36
+; CHECK-NEXT:    v_addc_co_u32_e32 v33, vcc, v17, v37, vcc
+; CHECK-NEXT:    v_lshlrev_b64 v[36:37], 4, v[2:3]
+; CHECK-NEXT:    v_add_co_u32_e32 v36, vcc, s0, v36
+; CHECK-NEXT:    v_addc_co_u32_e32 v37, vcc, v17, v37, vcc
+; CHECK-NEXT:    global_load_dwordx4 v[32:35], v[32:33], off
+; CHECK-NEXT:    s_add_i32 s6, s6, -1
+; CHECK-NEXT:    global_load_dwordx4 v[36:39], v[36:37], off
+; CHECK-NEXT:    v_add_u32_e32 v16, s5, v16
+; CHECK-NEXT:    v_add_u32_e32 v11, s5, v11
+; CHECK-NEXT:    s_cmp_eq_u32 s6, 0
+; CHECK-NEXT:    v_add_u32_e32 v10, s5, v10
+; CHECK-NEXT:    v_add_u32_e32 v5, s5, v5
+; CHECK-NEXT:    s_waitcnt vmcnt(3)
+; CHECK-NEXT:    v_pk_add_f32 v[6:7], v[6:7], v[26:27]
+; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[24:25]
+; CHECK-NEXT:    s_waitcnt vmcnt(2)
+; CHECK-NEXT:    v_pk_add_f32 v[14:15], v[14:15], v[30:31]
+; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[28:29]
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    v_pk_add_f32 v[20:21], v[20:21], v[34:35]
+; CHECK-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[32:33]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_pk_add_f32 v[22:23], v[22:23], v[38:39]
+; CHECK-NEXT:    v_pk_add_f32 v[18:19], v[18:19], v[36:37]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_4
+; CHECK-NEXT:  ; %bb.5: ; %bb38
+; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[6:7], v[14:15]
+; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[8:9]
+; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[20:21], v[2:3]
+; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[12:13], v[0:1]
+; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[22:23], v[2:3]
+; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[18:19], v[0:1]
+; CHECK-NEXT:    s_branch .LBB0_7
+; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:  .LBB0_7: ; %bb42
+; CHECK-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
+; CHECK-NEXT:    v_lshlrev_b64 v[4:5], 4, v[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v6, s3
+; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
+; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, v6, v5, vcc
+; CHECK-NEXT:    global_store_dwordx4 v[4:5], v[0:3], off
 ; CHECK-NEXT:    s_endpgm
 bb:
   %i = tail call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()

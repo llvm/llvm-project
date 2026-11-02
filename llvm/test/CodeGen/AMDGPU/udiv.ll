@@ -1815,13 +1815,13 @@ define amdgpu_kernel void @v_udiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-LABEL: v_udiv_i23:
 ; GFX1030:       ; %bb.0:
 ; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1030-NEXT:    v_mov_b32_e32 v7, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    s_clause 0x3
-; GFX1030-NEXT:    global_load_ubyte v1, v0, s[2:3] offset:6
-; GFX1030-NEXT:    global_load_ushort v2, v0, s[2:3] offset:4
-; GFX1030-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX1030-NEXT:    global_load_ushort v4, v0, s[2:3]
+; GFX1030-NEXT:    global_load_ubyte v1, v7, s[2:3] offset:6
+; GFX1030-NEXT:    global_load_ushort v2, v7, s[2:3] offset:4
+; GFX1030-NEXT:    global_load_ubyte v3, v7, s[2:3] offset:2
+; GFX1030-NEXT:    global_load_ushort v4, v7, s[2:3]
 ; GFX1030-NEXT:    s_waitcnt vmcnt(3)
 ; GFX1030-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1030-NEXT:    s_waitcnt vmcnt(2)
@@ -1856,7 +1856,7 @@ define amdgpu_kernel void @v_udiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    s_cselect_b32 s2, s5, s3
 ; GFX1030-NEXT:    s_and_b32 s2, s2, 0x7fffff
 ; GFX1030-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX1030-NEXT:    global_store_dword v7, v1, s[0:1]
 ; GFX1030-NEXT:    s_endpgm
 ;
 ; EG-LABEL: v_udiv_i23:
@@ -2064,13 +2064,13 @@ define amdgpu_kernel void @v_udiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-LABEL: v_udiv_i24:
 ; GFX1030:       ; %bb.0:
 ; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1030-NEXT:    v_mov_b32_e32 v7, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    s_clause 0x3
-; GFX1030-NEXT:    global_load_ubyte v1, v0, s[2:3] offset:6
-; GFX1030-NEXT:    global_load_ushort v2, v0, s[2:3] offset:4
-; GFX1030-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX1030-NEXT:    global_load_ushort v4, v0, s[2:3]
+; GFX1030-NEXT:    global_load_ubyte v1, v7, s[2:3] offset:6
+; GFX1030-NEXT:    global_load_ushort v2, v7, s[2:3] offset:4
+; GFX1030-NEXT:    global_load_ubyte v3, v7, s[2:3] offset:2
+; GFX1030-NEXT:    global_load_ushort v4, v7, s[2:3]
 ; GFX1030-NEXT:    s_waitcnt vmcnt(3)
 ; GFX1030-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1030-NEXT:    s_waitcnt vmcnt(2)
@@ -2105,7 +2105,7 @@ define amdgpu_kernel void @v_udiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    s_cselect_b32 s2, s5, s3
 ; GFX1030-NEXT:    s_and_b32 s2, s2, 0xffffff
 ; GFX1030-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX1030-NEXT:    global_store_dword v7, v1, s[0:1]
 ; GFX1030-NEXT:    s_endpgm
 ;
 ; EG-LABEL: v_udiv_i24:
@@ -2523,11 +2523,11 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; GFX1030-LABEL: fdiv_test_denormals:
 ; GFX1030:       ; %bb.0: ; %bb
 ; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX1030-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1030-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1030-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    global_load_sbyte v2, v2, s[0:1]
+; GFX1030-NEXT:    global_load_sbyte v2, v4, s[0:1]
 ; GFX1030-NEXT:    global_load_sbyte v3, v[0:1], off
 ; GFX1030-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1030-NEXT:    v_cvt_f32_i32_e32 v2, v2
