@@ -1300,8 +1300,7 @@ bool SeparateConstOffsetFromGEPLegacyPass::runOnFunction(Function &F) {
 }
 
 bool SeparateConstOffsetFromGEP::run(Function &F) {
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   if (Opts.disable_separate_const_offset_from_gep)
     return false;
 

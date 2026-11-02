@@ -379,6 +379,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
                                 {static_cast<uint32_t>(attr.getValue())});
         });
   case spirv::Decoration::Alignment:
+  case spirv::Decoration::MaxByteOffset:
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
