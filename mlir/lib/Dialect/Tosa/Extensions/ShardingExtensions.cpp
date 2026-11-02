@@ -22,7 +22,6 @@ using namespace mlir::tosa;
 using namespace mlir::shard;
 
 namespace {
-
 // loop types: [parallel, parallel, parallel, reduction_sum]
 // indexing maps:
 // (d0, d1, d2, d3) -> (d0, d1, d3)
@@ -110,7 +109,6 @@ template <typename... OpTypes>
 static void registerElemwiseAll(MLIRContext *ctx) {
   (registerElemwiseOne<OpTypes>(ctx), ...);
 }
-
 } // namespace
 
 void mlir::tosa::registerShardingInterfaceExternalModels(

@@ -17,7 +17,6 @@ using namespace mlir::arith;
 using namespace mlir::shard;
 
 namespace {
-
 // Sharding of arith.constant
 // RankedTensor constants can be sharded like any other tensor.
 //   %cst = arith.constant dense<0.000000e+00> : tensor<1024x1024xf32>

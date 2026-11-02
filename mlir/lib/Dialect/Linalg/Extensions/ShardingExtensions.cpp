@@ -35,7 +35,6 @@
 #include <optional>
 
 namespace mlir::linalg {
-
 using GridAxis = shard::GridAxis;
 using ReductionKind = shard::ReductionKind;
 using Sharding = shard::Sharding;
@@ -236,7 +235,6 @@ static void partitionLinalgOpWithShardedReduction(
 }
 
 namespace {
-
 // ShardingInterface for ops that implement LinalgStructuredInterface.
 // The supported ops are only those where the indexing maps are projected
 // permutations.
@@ -314,7 +312,6 @@ struct StructuredOpShardingInterface
     return success();
   }
 };
-
 } // namespace
 
 template <typename OpType>
@@ -344,5 +341,4 @@ void registerShardingInterfaceExternalModels(DialectRegistry &registry) {
         >(ctx);
   });
 }
-
 } // namespace mlir::linalg

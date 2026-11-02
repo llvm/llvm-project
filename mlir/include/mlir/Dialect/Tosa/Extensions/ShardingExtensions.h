@@ -10,13 +10,10 @@
 #define MLIR_DIALECT_TOSA_EXTENSIONS_SHARDINGEXTENSIONS_H_
 
 namespace mlir {
-
 class DialectRegistry;
 
 namespace tosa {
-
 void registerShardingInterfaceExternalModels(DialectRegistry &registry);
-
 } // namespace tosa
 } // namespace mlir
 

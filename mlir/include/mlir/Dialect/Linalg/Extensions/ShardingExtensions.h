@@ -10,13 +10,10 @@
 #define MLIR_DIALECT_LINALG_EXTENSIONS_SHARDINGEXTENSIONS_H_
 
 namespace mlir {
-
 class DialectRegistry;
 
 namespace linalg {
-
 void registerShardingInterfaceExternalModels(DialectRegistry &registry);
-
 } // namespace linalg
 } // namespace mlir
 

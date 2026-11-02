@@ -24,7 +24,6 @@ namespace linalg {
 /// extensions they intend to take advantage of.
 void registerAllExtensions(DialectRegistry &registry);
 } // namespace linalg
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_LINALG_EXTENSIONS_ALLEXTENSIONS_H

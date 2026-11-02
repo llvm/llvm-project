@@ -24,7 +24,6 @@ namespace arith {
 /// extensions they intend to take advantage of.
 void registerAllExtensions(DialectRegistry &registry);
 } // namespace arith
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_ARITH_EXTENSIONS_ALLEXTENSIONS_H

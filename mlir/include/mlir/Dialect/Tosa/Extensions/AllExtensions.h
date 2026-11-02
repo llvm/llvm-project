@@ -24,7 +24,6 @@ namespace tosa {
 /// extensions they intend to take advantage of.
 void registerAllExtensions(DialectRegistry &registry);
 } // namespace tosa
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_EXTENSIONS_ALLEXTENSIONS_H

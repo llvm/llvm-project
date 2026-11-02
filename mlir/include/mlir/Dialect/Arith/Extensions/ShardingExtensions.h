@@ -10,13 +10,10 @@
 #define MLIR_DIALECT_ARITH_EXTENSIONS_SHARDINGEXTENSIONS_H_
 
 namespace mlir {
-
 class DialectRegistry;
 
 namespace arith {
-
 void registerShardingInterfaceExternalModels(DialectRegistry &registry);
-
 } // namespace arith
 } // namespace mlir
 
