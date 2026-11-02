@@ -22,14 +22,14 @@ define void @atomic_store16(ptr %foo) {
 }
 
 ; CHECK-LABEL: atomic_store32
-; CHECK: call __sync_lock_test_and_set_4
+; CHECK: call __atomic_store_4
 define void @atomic_store32(ptr %foo) {
   store atomic i32 1, ptr %foo unordered, align 4
   ret void
 }
 
 ; CHECK-LABEL: atomic_store64
-; CHECK: call __sync_lock_test_and_set_8
+; CHECK: call __atomic_store_8
 define void @atomic_store64(ptr %foo) {
   store atomic i64 1, ptr %foo unordered, align 8
   ret void

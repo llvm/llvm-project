@@ -32,14 +32,11 @@ entry:
 define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2, ptr %ptr3) speculative_load_hardening {
 ; X64-LABEL: test_basic_conditions:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %r14
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 24
-; X64-NEXT:    pushq %rax
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    subq $16, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 32
-; X64-NEXT:    .cfi_offset %rbx, -24
-; X64-NEXT:    .cfi_offset %r14, -16
+; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq $-1, %r10
 ; X64-NEXT:    sarq $63, %rax
@@ -54,11 +51,9 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2,
 ; X64-NEXT:  .LBB1_8: # %exit
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    addq $8, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 24
-; X64-NEXT:    popq %rbx
+; X64-NEXT:    addq $16, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    popq %r14
+; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_4: # %then2
@@ -87,17 +82,17 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2,
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    # kill: def $edi killed $edi killed $rdi
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    movq %r8, (%rsp) # 8-byte Spill
-; X64-NEXT:    movq $-1, %r14
+; X64-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    callq leak@PLT
 ; X64-NEXT:  .Lslh_ret_addr0:
 ; X64-NEXT:    movq %rbx, %rcx
-; X64-NEXT:    movq (%rsp), %r8 # 8-byte Reload
+; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
 ; X64-NEXT:    sarq $63, %rax
 ; X64-NEXT:    cmpq $.Lslh_ret_addr0, %rdx
-; X64-NEXT:    cmovneq %r14, %rax
+; X64-NEXT:    movq $-1, %rdx
+; X64-NEXT:    cmovneq %rdx, %rax
 ; X64-NEXT:  .LBB1_7: # %merge
 ; X64-NEXT:    movslq (%rcx), %rcx
 ; X64-NEXT:    orq %rax, %rcx

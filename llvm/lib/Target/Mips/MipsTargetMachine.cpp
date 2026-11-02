@@ -95,10 +95,11 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      CLOpts(MipsOptions::Global), MCCLOpts(MipsMCOptions::Global),
-      isLittle(isLittle), IsJIT(JIT),
-      DefaultSubtarget(TT, CPU, FS, Options.MCOptions.getABIName(), isLittle,
-                       *this, std::nullopt),
+      CLOpts(cl::LibraryOptionsContext::get<MipsOptions>(
+          Options.MCOptions.LibraryOptions)),
+      MCCLOpts(MIPS_MC::getCLOpts(Options.MCOptions)), isLittle(isLittle),
+      IsJIT(JIT), DefaultSubtarget(TT, CPU, FS, Options.MCOptions.getABIName(),
+                                   isLittle, *this, std::nullopt),
       TLOF(createTLOF(TT, DefaultSubtarget.useSmallSection())) {
   initAsmInfo();
 
@@ -222,8 +223,8 @@ void MipsPassConfig::addIRPasses() {
 // Install an instruction selector pass using
 // the ISelDag to gen Mips code.
 bool MipsPassConfig::addInstSelector() {
-  addPass(createMips16ISelDag(getMipsTargetMachine(), getOptLevel()));
-  addPass(createMipsSEISelDag(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMips16ISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMipsSEISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
   return false;
 }
 

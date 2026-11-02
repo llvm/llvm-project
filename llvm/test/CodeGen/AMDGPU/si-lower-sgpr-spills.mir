@@ -16,6 +16,7 @@
 # CHECK-NEXT: SI_RESTORE_S32_FROM_VGPR
 ---
 name:            empty_entry_block
+tracksRegLiveness: false
 body: |
   bb.0:
 

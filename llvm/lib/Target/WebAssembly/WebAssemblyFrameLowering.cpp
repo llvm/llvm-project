@@ -31,7 +31,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/IR/Module.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-frame-info"
@@ -150,9 +150,9 @@ bool WebAssemblyFrameLowering::needsSPForLocalFrame(
 // restoring the stack pointer after an exception is caught.
 bool WebAssemblyFrameLowering::needsPrologForEH(
     const MachineFunction &MF) const {
-  auto EHType = MF.getTarget().getMCAsmInfo().getExceptionHandlingType();
-  return EHType == ExceptionHandling::Wasm &&
-         MF.getFunction().hasPersonalityFn() && MF.getFrameInfo().hasCalls();
+  return MF.getFunction().hasPersonalityFn() && MF.getFrameInfo().hasCalls() &&
+         MF.getFunction().getParent()->getExceptionModel() ==
+             ExceptionHandling::Wasm;
 }
 
 /// Returns true if this function needs a local user-space stack pointer.

@@ -14,6 +14,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
+#include <optional>
 
 namespace lldb_private::dil {
 
@@ -73,13 +75,48 @@ llvm::Expected<lldb::LanguageType> Interpreter::GetSourceLanguageFromCU() {
 }
 
 llvm::Expected<lldb::TypeSystemSP> Interpreter::GetTypeSystemFromCU() {
-  llvm::Expected<SymbolContext> symbol_context =
-      GetSymbolContexFromFrame(m_exe_ctx);
-  if (!symbol_context)
-    return symbol_context.takeError();
+  lldb::LanguageType language = lldb::eLanguageTypeUnknown;
+  if (auto frame_sp = m_exe_ctx.GetFrameSP()) {
+    SymbolContext symbol_context =
+        frame_sp->GetSymbolContext(lldb::eSymbolContextCompUnit);
+    if (symbol_context.comp_unit) {
+      language = symbol_context.comp_unit->GetLanguage();
+      symbol_context = frame_sp->GetSymbolContext(lldb::eSymbolContextModule);
+      if (symbol_context.module_sp)
+        return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+    }
+  }
 
-  lldb::LanguageType language = symbol_context->comp_unit->GetLanguage();
-  return symbol_context->module_sp->GetTypeSystemForLanguage(language);
+  lldb::TargetSP target_sp = m_exe_ctx.GetTargetSP();
+  if (!target_sp)
+    return llvm::createStringError("no target for frame");
+  if (language == lldb::eLanguageTypeUnknown)
+    language = target_sp->GetLanguage().AsLanguageType();
+  return target_sp->GetScratchTypeSystemForLanguage(language);
+}
+
+// DIL normally treats '.' as member access, but register names may contain
+// periods. Reconstruct the candidate so an exact register name takes
+// precedence.
+static std::optional<std::string> GetRegisterPathName(const ASTNode &node) {
+  if (node.GetKind() == NodeKind::eIdentifierNode) {
+    std::string name_storage =
+        static_cast<const IdentifierNode &>(node).GetName();
+    llvm::StringRef name = name_storage;
+    if (name.consume_front("$"))
+      return name.str();
+    return std::nullopt;
+  }
+
+  if (node.GetKind() != NodeKind::eMemberOfNode)
+    return std::nullopt;
+  const auto &member = static_cast<const MemberOfNode &>(node);
+  if (member.GetIsArrow())
+    return std::nullopt;
+  std::optional<std::string> base_name = GetRegisterPathName(member.GetBase());
+  if (!base_name)
+    return std::nullopt;
+  return *base_name + "." + member.GetFieldName().str();
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -540,10 +577,12 @@ Interpreter::Visit(const IdentifierNode &node) {
 
   if (!identifier && node.GetName()[0] == '$') {
     auto language = GetSourceLanguageFromCU();
-    if (!language)
-      return language.takeError();
-    identifier =
-        LookupPersistentIdentifier(node.GetName(), m_exe_ctx, language.get());
+    if (language)
+      identifier =
+          LookupPersistentIdentifier(node.GetName(), m_exe_ctx, language.get());
+    else
+      // Fall through to the unknown identifier diagnostic without a CU.
+      llvm::consumeError(language.takeError());
   }
 
   if (!identifier && node.GetName() == "nullptr") {
@@ -1493,6 +1532,18 @@ Interpreter::Visit(const BinaryOpNode &node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const MemberOfNode &node) {
+  if (std::optional<std::string> register_name = GetRegisterPathName(node)) {
+    auto frame_sp = m_exe_ctx.GetFrameSP();
+    lldb::RegisterContextSP reg_ctx_sp =
+        frame_sp ? frame_sp->GetRegisterContext() : nullptr;
+    if (reg_ctx_sp) {
+      if (const RegisterInfo *reg_info =
+              reg_ctx_sp->GetRegisterInfoByName(*register_name))
+        return ValueObjectRegister::Create(
+            m_exe_ctx.GetBestExecutionContextScope(), reg_ctx_sp, reg_info);
+    }
+  }
+
   auto base_or_err = Evaluate(node.GetBase());
   if (!base_or_err)
     return base_or_err;
@@ -1610,6 +1661,17 @@ Interpreter::Visit(const ArraySubscriptNode &node) {
 
   CompilerType base_type = base->GetCompilerType().GetNonReferenceType();
   base->GetExpressionPath(var_expr_path_strm);
+  if (base->GetValueType() == lldb::eValueTypeRegister &&
+      !base_type.IsPointerType() &&
+      child_idx > std::numeric_limits<uint32_t>::max()) {
+    std::string err_msg = llvm::formatv(
+        "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+        base->GetTypeName().AsCString("<invalid type>"),
+        var_expr_path_strm.GetData());
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                node.GetLocation());
+  }
+
   bool is_incomplete_array = false;
   if (base_type.IsPointerType()) {
     bool is_objc_pointer = true;
@@ -1674,7 +1736,8 @@ Interpreter::Visit(const ArraySubscriptNode &node) {
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                   node.GetLocation());
     }
-  } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array)) {
+  } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array) ||
+             base_type.IsVectorType()) {
     child_valobj_sp = base->GetChildAtIndex(child_idx);
     if (!child_valobj_sp && (is_incomplete_array || m_use_synthetic))
       child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);

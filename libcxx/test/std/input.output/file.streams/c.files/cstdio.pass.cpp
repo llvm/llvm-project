@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// missing fpos_t, fixed by #221349
-// XFAIL: LLVM-LIBC-FIXME
-
 // test <cstdio>
 
 #include <cstdio>

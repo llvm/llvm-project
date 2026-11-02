@@ -257,6 +257,11 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&ShrinkWrapID);
   disablePass(&RemoveLoadsIntoFakeUsesID);
 
+  // Leave block placement to ptxas. Its CFG transformations can invalidate
+  // layout decisions made at the PTX level, and block placement here can
+  // interfere with ptxas analyses.
+  disablePass(&MachineBlockPlacementID);
+
   addPass(createNVPTXAAWrapperPass());
   addPass(createNVPTXExternalAAWrapperPass());
 

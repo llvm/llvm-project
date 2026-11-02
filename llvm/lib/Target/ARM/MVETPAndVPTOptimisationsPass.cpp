@@ -252,7 +252,8 @@ bool MVETPAndVPTOptimisations::LowerWhileLoopStart(MachineLoop *ML) {
       BuildMI(*WLSIt->getParent(), *WLSIt, WLSIt->getDebugLoc(),
               TII->get(ARM::t2WhileLoopStartLR), LR)
           .add(LoopStart->getOperand(1))
-          .add(WLSIt->getOperand(1));
+          .add(WLSIt->getOperand(1))
+          .setOperandDead(3); // implicit-def $cpsr
   (void)MI;
   LLVM_DEBUG(dbgs() << "Lowered WhileLoopStart into: " << *MI.getInstr());
 
@@ -288,6 +289,8 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
         continue;
 
       LLVM_DEBUG(dbgs() << "Found LR use in predecessors, reverting: " << MI);
+      Register DefReg = LoopStart->getOperand(0).getReg();
+      Register SrcReg = LoopStart->getOperand(1).getReg();
 
       // Create a t2DoLoopStart at the end of the preheader.
       MachineInstrBuilder MIB =
@@ -301,6 +304,13 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
 
       // Revert the t2WhileLoopStartLR to a CMP and Br.
       RevertWhileLoopStartLR(LoopStart, TII, ARM::t2Bcc, true);
+      // If we looked through a COPY to find the WhileLoopStart, replace it's
+      // use with SrcReg.
+      for (MachineOperand &MO :
+           make_early_inc_range(MRI->use_operands(DefReg))) {
+        if (MO.getParent()->getOpcode() == TargetOpcode::COPY)
+          MO.setReg(SrcReg);
+      }
       return MIB;
     }
 
@@ -420,7 +430,8 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
       BuildMI(*LoopEnd->getParent(), *LoopEnd, LoopEnd->getDebugLoc(),
               TII->get(ARM::t2LoopEndDec), DecReg)
           .addReg(PhiReg)
-          .add(LoopEnd->getOperand(1));
+          .add(LoopEnd->getOperand(1))
+          .setOperandDead(3); // implicit-def $cpsr
   (void)MI;
   LLVM_DEBUG(dbgs() << "Merged LoopDec and End into: " << *MI.getInstr());
 
@@ -524,7 +535,7 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
           .add(LoopStart->getOperand(1))
           .addReg(CountReg);
   if (NewOpc == ARM::t2WhileLoopStartTP)
-    MI.add(LoopStart->getOperand(2));
+    MI.add(LoopStart->getOperand(2)).setOperandDead(4); // implicit-def $cpsr
   LLVM_DEBUG(dbgs() << "Replacing " << *LoopStart << "  with "
                     << *MI.getInstr());
   MRI->constrainRegClass(CountReg, &ARM::rGPRRegClass);

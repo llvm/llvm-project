@@ -53,7 +53,7 @@
 ---
 name:            foo
 callSites:
-  - { bb: 0, offset: 1, fwdArgRegs:
+  - { bb: '%bb.0', offset: 1, fwdArgRegs:
       - { arg: 0, reg: '$ymm0' } }
 body:             |
   bb.0.entry:
