@@ -754,7 +754,8 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
     // TODO(cir): Set unnamed address attribute when available in CIR
 
     cacheEntry = gv;
-  } else if (cacheEntry.getAlignment() < align.getQuantity()) {
+  } else if (cacheEntry.getAlignment() <
+             static_cast<uint64_t>(align.getQuantity())) {
     cacheEntry.setAlignment(align.getAsAlign().value());
   }
 
@@ -1331,7 +1332,7 @@ void CIRGenFunction::pushDestroyAndDeferDeactivation(
 void CIRGenFunction::pushLifetimeExtendedDestroy(
     CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray, const ValueDecl *extendingDecl) {
-  if (isInConditionalBranch()) {
+  if (isInConditionalBranch() || hiddenOutermostConditional) {
     cgm.errorNYI("conditional lifetime-extended destroy");
     return;
   }

@@ -35,7 +35,7 @@ void inferior() {
   printf("Before breakpoint\n");
 
   // Go into debugger. Instruction replaced with nop later.
-  // We write 2 instuctions because POKETEXT works with
+  // We write 2 instructions because POKETEXT works with
   // 64 bit values and we don't want to overwrite the
   // call to printf accidentally.
   asm volatile("BRK #0 \n nop");

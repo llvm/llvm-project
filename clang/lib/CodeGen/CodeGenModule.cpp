@@ -337,6 +337,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createLoongArchTargetCodeGenInfo(
         CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
   }
+  case llvm::Triple::xtensa:
+    return createXtensaTargetCodeGenInfo(CGM);
   }
 }
 
@@ -1505,6 +1507,9 @@ void CodeGenModule::Release() {
         llvm::MDString::get(getLLVMContext(),
                             llvm::getExceptionModelName(ExceptionModel)));
   }
+
+  if (CodeGenOpts.getDebuggerTuning() != llvm::DebuggerKind::Default)
+    getModule().setDebuggerTuning(CodeGenOpts.getDebuggerTuning());
 
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
