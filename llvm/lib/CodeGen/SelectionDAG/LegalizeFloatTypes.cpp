@@ -50,6 +50,19 @@ static RTLIB::Libcall GetFPLibCall(EVT VT,
     RTLIB::UNKNOWN_LIBCALL;
 }
 
+/// Return the position of the sign bit in the integer image `NVT` of a
+/// softened floating-point value of type `VT`. This is necessary when there
+/// are padding bits, so the sign bit of the integer image does not match the
+/// sign bit of the floating-point value.
+static unsigned getSoftenedFloatSignBit(EVT VT, EVT NVT) {
+  if (VT == MVT::f80) {
+    assert(NVT.getSizeInBits() >= 80 &&
+           "x86_fp80 must be softened to an integer of at least 80 bits");
+    return 79;
+  }
+  return NVT.getSizeInBits() - 1;
+}
+
 //===----------------------------------------------------------------------===//
 //  Convert Float Results to Integer
 //===----------------------------------------------------------------------===//
@@ -251,7 +264,16 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_BITCAST(SDNode *N) {
-  return BitConvertToInteger(N->getOperand(0));
+  SDValue Op = BitConvertToInteger(N->getOperand(0));
+  // The operand has the same size as the floating-point value, which may be
+  // narrower than the type the value is softened to: An 80-bit x86_fp80, for
+  // instance, is softened to a 16-byte image. The bits that the widening
+  // exposes are padding and are not part of the value, so leave them
+  // indeterminate.
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  if (Op.getValueType() != NVT)
+    Op = DAG.getAnyExtOrTrunc(Op, SDLoc(N), NVT);
+  return Op;
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREEZE(SDNode *N) {
@@ -300,9 +322,13 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N) {
                            TLI.getTypeToTransformTo(*DAG.getContext(),
                                                     CN->getValueType(0)));
   } else {
-    return DAG.getConstant(CN->getValueAPF().bitcastToAPInt(), SDLoc(CN),
-                           TLI.getTypeToTransformTo(*DAG.getContext(),
-                                                    CN->getValueType(0)));
+    APInt Val = CN->getValueAPF().bitcastToAPInt();
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), CN->getValueType(0));
+    // The transform type may be wider than the floating-point type, such as
+    // x86_fp80 -> i128, and the extra bits are padding for the value.
+    if (Val.getBitWidth() < NVT.getSizeInBits())
+      Val = Val.zext(NVT.getSizeInBits());
+    return DAG.getConstant(Val, SDLoc(CN), NVT);
   }
 }
 
@@ -323,12 +349,13 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N, unsigned 
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   unsigned Size = NVT.getSizeInBits();
 
-  // Mask = ~(1 << (Size-1))
+  // Mask = ~(1 << SignBit)
   APInt API = APInt::getAllOnes(Size);
-  API.clearBit(Size - 1);
+  API.clearBit(getSoftenedFloatSignBit(VT, NVT));
   SDValue Mask = DAG.getConstant(API, SDLoc(N), NVT);
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   return DAG.getNode(ISD::AND, SDLoc(N), NVT, Op, Mask);
@@ -425,47 +452,24 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN(SDNode *N) {
   SDValue RHS = BitConvertToInteger(N->getOperand(1));
   SDLoc dl(N);
 
+  EVT VT = N->getValueType(0);
   EVT LVT = LHS.getValueType();
-  EVT RVT = RHS.getValueType();
+  unsigned SignBit = getSoftenedFloatSignBit(VT, LVT);
 
-  unsigned LSize = LVT.getSizeInBits();
-  unsigned RSize = RVT.getSizeInBits();
+  // The right-hand side is as wide as the floating-point value itself, which
+  // may be narrower than the image the value is softened to. The sign bit sits
+  // at the same position in both, so only padding is added, and none of it
+  // survives the mask below.
+  if (RHS.getValueType() != LVT)
+    RHS = DAG.getAnyExtOrTrunc(RHS, dl, LVT);
 
-  // First get the sign bit of second operand.
-  SDValue SignBit = DAG.getNode(
-      ISD::SHL, dl, RVT, DAG.getConstant(1, dl, RVT),
-      DAG.getConstant(RSize - 1, dl,
-                      TLI.getShiftAmountTy(RVT, DAG.getDataLayout())));
-  SignBit = DAG.getNode(ISD::AND, dl, RVT, RHS, SignBit);
-
-  // Shift right or sign-extend it if the two operands have different types.
-  int SizeDiff = RVT.getSizeInBits() - LVT.getSizeInBits();
-  if (SizeDiff > 0) {
-    SignBit =
-        DAG.getNode(ISD::SRL, dl, RVT, SignBit,
-                    DAG.getConstant(SizeDiff, dl,
-                                    TLI.getShiftAmountTy(SignBit.getValueType(),
-                                                         DAG.getDataLayout())));
-    SignBit = DAG.getNode(ISD::TRUNCATE, dl, LVT, SignBit);
-  } else if (SizeDiff < 0) {
-    SignBit = DAG.getNode(ISD::ANY_EXTEND, dl, LVT, SignBit);
-    SignBit =
-        DAG.getNode(ISD::SHL, dl, LVT, SignBit,
-                    DAG.getConstant(-SizeDiff, dl,
-                                    TLI.getShiftAmountTy(SignBit.getValueType(),
-                                                         DAG.getDataLayout())));
-  }
-
-  // Clear the sign bit of the first operand.
-  SDValue Mask = DAG.getNode(
-      ISD::SHL, dl, LVT, DAG.getConstant(1, dl, LVT),
-      DAG.getConstant(LSize - 1, dl,
-                      TLI.getShiftAmountTy(LVT, DAG.getDataLayout())));
-  Mask = DAG.getNode(ISD::SUB, dl, LVT, Mask, DAG.getConstant(1, dl, LVT));
-  LHS = DAG.getNode(ISD::AND, dl, LVT, LHS, Mask);
-
-  // Or the value with the sign bit.
-  return DAG.getNode(ISD::OR, dl, LVT, LHS, SignBit);
+  // Result = (LHS & ~SignMask) | (RHS & SignMask)
+  APInt SignMask = APInt::getOneBitSet(LVT.getSizeInBits(), SignBit);
+  SDValue LHSBits =
+      DAG.getNode(ISD::AND, dl, LVT, LHS, DAG.getConstant(~SignMask, dl, LVT));
+  SDValue RHSBits =
+      DAG.getNode(ISD::AND, dl, LVT, RHS, DAG.getConstant(SignMask, dl, LVT));
+  return DAG.getNode(ISD::OR, dl, LVT, LHSBits, RHSBits);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCOS(SDNode *N) {
@@ -551,11 +555,13 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FNEARBYINT(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FNEG(SDNode *N) {
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDLoc dl(N);
 
   // Expand Y = FNEG(X) -> Y = X ^ sign mask
-  APInt SignMask = APInt::getSignMask(NVT.getSizeInBits());
+  APInt SignMask = APInt::getOneBitSet(NVT.getSizeInBits(),
+                                       getSoftenedFloatSignBit(VT, NVT));
   return DAG.getNode(ISD::XOR, dl, NVT, GetSoftenedFloat(N->getOperand(0)),
                      DAG.getConstant(SignMask, dl, NVT));
 }
@@ -570,9 +576,13 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
   // There's only a libcall for f16 -> f32 and shifting is only valid for bf16
   // -> f32, so proceed in two stages. Also, it's entirely possible for both
   // f16 and f32 to be legal, so use the fully hard-float FP_EXTEND rather
-  // than FP16_TO_FP.
+  // than FP16_TO_FP. The 80-bit x87 format is an exception, as its helper
+  // takes f16 directly.
   if ((Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16) &&
-      N->getValueType(0) != MVT::f32) {
+      N->getValueType(0) != MVT::f32 &&
+      !(Op.getValueType() == MVT::f16 && N->getValueType(0) == MVT::f80 &&
+        DAG.getLibcalls().getLibcallImpl(RTLIB::getFPEXT(MVT::f16, MVT::f80)) !=
+            RTLIB::Unsupported)) {
     if (IsStrict) {
       Op = DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(N),
                        { MVT::f32, MVT::Other }, { Chain, Op });
@@ -1081,6 +1091,10 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FP_TO_BF16:
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:    Res = SoftenFloatOp_FP_ROUND(N); break;
+  case ISD::STRICT_FP_EXTEND:
+  case ISD::FP_EXTEND:
+    Res = SoftenFloatOp_FP_EXTEND(N);
+    break;
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
@@ -1132,9 +1146,29 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_BITCAST(SDNode *N) {
+  EVT VT = N->getValueType(0);
   SDValue Op0 = GetSoftenedFloat(N->getOperand(0));
+  // The result is narrower than the softened image when the float type
+  // occupies a wider slot than its own representation; take the low bits.
+  if (Op0.getValueType() != VT)
+    return DAG.getAnyExtOrTrunc(Op0, SDLoc(N), VT);
+  return DAG.getNode(ISD::BITCAST, SDLoc(N), VT, Op0);
+}
 
-  return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), Op0);
+SDValue DAGTypeLegalizer::SoftenFloatOp_FP_EXTEND(SDNode *N) {
+  // Extend a softened value to a legal type, as in x86_fp80 -> fp128: the
+  // operand is the integer image and the helper extends from there. As the
+  // result type is legal, the transform type in the shared helper resolves to
+  // it, so the helper returns the extended value directly.
+  assert(N->getOpcode() == ISD::FP_EXTEND ||
+         N->getOpcode() == ISD::STRICT_FP_EXTEND);
+
+  bool IsStrict = N->isStrictFPOpcode();
+  EVT SVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
+  RTLIB::Libcall LC = RTLIB::getFPEXT(SVT, N->getValueType(0));
+  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND libcall");
+
+  return SoftenFloatOp_Unary(N, LC);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {

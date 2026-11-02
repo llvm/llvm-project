@@ -46,15 +46,19 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
   {
     auto SquirtleSquad =
         RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("sqrtl");
-    ASSERT_EQ(size(SquirtleSquad), 1);
-    EXPECT_EQ(*SquirtleSquad.begin(), RTLIB::impl_sqrtl);
+    // ARM64EC spells out the x87 flavour of each `long double` libm function
+    // under the same name, so that the module-wide duplication can give it the
+    // `#` prefix; that record itself is not part of any library.
+    ASSERT_EQ(size(SquirtleSquad), 2);
+    EXPECT_TRUE(is_contained(SquirtleSquad, RTLIB::impl_sqrtl));
+    EXPECT_TRUE(is_contained(SquirtleSquad, RTLIB::impl_arm64ec_ldbl_sqrtl));
   }
 
   // Last libcall
   {
     auto Truncs = RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("truncl");
-    ASSERT_EQ(size(Truncs), 1);
-    EXPECT_EQ(*Truncs.begin(), RTLIB::impl_truncl);
+    ASSERT_EQ(size(Truncs), 2);
+    EXPECT_TRUE(is_contained(Truncs, RTLIB::impl_truncl));
   }
 }
 

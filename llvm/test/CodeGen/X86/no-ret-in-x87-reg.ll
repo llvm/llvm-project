@@ -127,14 +127,12 @@ define x86_fp80 @f6(x86_fp80 %a, x86_fp80 %b) nounwind {
 ;
 ; NOX87-LABEL: f6:
 ; NOX87:       # %bb.0: # %entry
-; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; NOX87-NEXT:    pushl %ecx
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOX87-NEXT:    pushl %eax
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl 24(%esp)
+; NOX87-NEXT:    pushl 24(%esp)
+; NOX87-NEXT:    pushl 24(%esp)
+; NOX87-NEXT:    pushl 24(%esp)
+; NOX87-NEXT:    pushl 24(%esp)
+; NOX87-NEXT:    pushl 24(%esp)
 ; NOX87-NEXT:    calll __addxf3
 ; NOX87-NEXT:    addl $24, %esp
 ; NOX87-NEXT:    movzwl %cx, %ecx
@@ -214,10 +212,9 @@ define i32 @f9(x86_fp80 %a) nounwind {
 ;
 ; NOX87-LABEL: f9:
 ; NOX87:       # %bb.0: # %entry
-; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; NOX87-NEXT:    pushl %eax
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl 12(%esp)
+; NOX87-NEXT:    pushl 12(%esp)
+; NOX87-NEXT:    pushl 12(%esp)
 ; NOX87-NEXT:    calll __fixxfsi
 ; NOX87-NEXT:    addl $12, %esp
 ; NOX87-NEXT:    retl

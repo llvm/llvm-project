@@ -343,9 +343,17 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     return pointerIndirection(T);
   }
 
+  if (T->isX86_FP80Ty()) {
+    // Prefix with `llvm` since MSVC doesn't have x87 `long double`. This is a
+    // 10-bytes value that is stored in a 16-byte, 16-byte-aligned slot, and
+    // it's always passed and returned in memory.
+    Out << "__llvm_x__";
+    return pointerIndirection(T);
+  }
+
   if (T->isFloatingPointTy()) {
     report_fatal_error(
-        "Only half, bfloat16, float, double, and fp128 are supported "
+        "Only half, bfloat16, float, double, fp128 and x86_fp80 are supported "
         "for ARM64EC thunks");
   }
 
@@ -362,7 +370,7 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
     if (ElementTy->isHalfTy() || ElementTy->isBFloatTy() ||
         ElementTy->isFloatTy() || ElementTy->isDoubleTy() ||
-        ElementTy->isFP128Ty()) {
+        ElementTy->isFP128Ty() || ElementTy->isX86_FP80Ty()) {
       if (ElementTy->isHalfTy())
         // Prefix with `llvm` since MSVC doesn't specify `_Float16`
         Out << "__llvm_H__";
@@ -376,6 +384,9 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
       else if (ElementTy->isFP128Ty())
         // Prefix with `llvm` since MSVC doesn't specify `_Float128`
         Out << "__llvm_Q__";
+      else if (ElementTy->isX86_FP80Ty())
+        // An array of 80-bit `long double` is always in memory.
+        Out << "__llvm_X__";
       Out << TotalSizeBytes;
       if (Alignment.value() >= 16 && !Ret)
         Out << "a" << Alignment.value();
@@ -389,8 +400,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
       }
     } else if (ElementTy->isFloatingPointTy()) {
       report_fatal_error(
-          "Only half, bfloat16, float, double, and fp128 are supported "
-          "for ARM64EC thunks");
+          "Only half, bfloat16, float, double, fp128 and x86_fp80 are "
+          "supported for ARM64EC thunks");
     }
   }
 
@@ -592,16 +603,28 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
   }
 
   if (F->isVarArg()) {
-    // The 5th argument to variadic entry thunks is used to model the x64 sp
+    // The last argument to variadic entry thunks is used to model the x64 sp
     // which is passed to the thunk in x4, this can be passed to the callee as
     // the variadic argument start address after skipping over the 32 byte
     // shadow store.
 
     // The EC thunk CC will assign any argument marked as InReg to x4.
-    Thunk->addParamAttr(5, Attribute::InReg);
-    Value *Arg = Thunk->getArg(5);
-    Arg = IRB.CreatePtrAdd(Arg, IRB.getInt64(0x20));
-    Args.push_back(Arg);
+    Thunk->addParamAttr(Thunk->arg_size() - 1, Attribute::InReg);
+    Value *StackArgs = Thunk->getArg(Thunk->arg_size() - 1);
+
+    // x4 points at the 32 byte shadow store, so the first stack argument is
+    // 32 bytes further up.  When the hidden return pointer took the first
+    // integer argument register, the x64 caller can only pass three of the
+    // four arguments in registers, and the fourth one, which is the first one
+    // on the stack, fills the last slot of the callee's register save area.
+    uint64_t StackOffset = 0x20;
+    if (TransformDirectToSRet) {
+      Args.push_back(IRB.CreateAlignedLoad(
+          IRB.getInt64Ty(),
+          IRB.CreatePtrAdd(StackArgs, IRB.getInt64(StackOffset)), Align(8)));
+      StackOffset += 8;
+    }
+    Args.push_back(IRB.CreatePtrAdd(StackArgs, IRB.getInt64(StackOffset)));
 
     // Pass in a zero variadic argument size (in x5).
     Args.push_back(IRB.getInt64(0));

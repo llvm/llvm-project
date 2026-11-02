@@ -383,6 +383,13 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
         Ty, IsNamedArg);
   }
 
+  // ARM64EC supports the x87 `long double` type, which is passed as a 128-bit
+  // integer image.
+  if (getTarget().getTriple().isWindowsArm64EC() &&
+      Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+      &getTarget().getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended())
+    return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 128));
+
   // Handle illegal vector types here.
   if (isIllegalVectorType(Ty))
     return coerceIllegalVector(Ty, NSRN, NPRN);
@@ -556,6 +563,13 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
                                               bool IsVariadicFn) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
+
+  // ARM64EC supports the x87 `long double` type, which is returned as a
+  // 128-bit integer image.
+  if (getTarget().getTriple().isWindowsArm64EC() &&
+      RetTy->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+      &getTarget().getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended())
+    return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 128));
 
   if (const auto *VT = RetTy->getAs<VectorType>()) {
     if (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
