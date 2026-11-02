@@ -1803,7 +1803,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr a
 ; NOLIT-SRCC-LABEL: test_mfma_f32_32x32x4f16:
 ; NOLIT-SRCC:       ; %bb.0: ; %bb
 ; NOLIT-SRCC-NEXT:    s_load_dwordx4 s[36:39], s[4:5], 0x24
-; NOLIT-SRCC-NEXT:    v_mov_b32_e32 v29, 0
+; NOLIT-SRCC-NEXT:    v_mov_b32_e32 v28, 0
 ; NOLIT-SRCC-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOLIT-SRCC-NEXT:    s_load_dwordx16 s[16:31], s[36:37], 0x0
 ; NOLIT-SRCC-NEXT:    s_load_dwordx16 s[0:15], s[36:37], 0x40
@@ -1910,18 +1910,19 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr a
 ; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v26, a2
 ; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v25, a1
 ; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v24, a0
-; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v31, a7
-; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v30, a6
-; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v29, a5
-; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v28, a4
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[0:3], s[36:37] offset:96
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[4:7], s[36:37] offset:112
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[8:11], s[36:37] offset:64
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[12:15], s[36:37] offset:80
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[16:19], s[36:37] offset:32
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[20:23], s[36:37] offset:48
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[24:27], s[36:37]
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[28:31], s[36:37] offset:16
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v28, v[0:3], s[36:37] offset:96
+; NOLIT-SRCC-NEXT:    s_nop 0
+; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v0, a4
+; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v1, a5
+; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v2, a6
+; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v3, a7
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v28, v[4:7], s[36:37] offset:112
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v28, v[8:11], s[36:37] offset:64
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v28, v[12:15], s[36:37] offset:80
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v28, v[16:19], s[36:37] offset:32
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v28, v[20:23], s[36:37] offset:48
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v28, v[24:27], s[36:37]
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v28, v[0:3], s[36:37] offset:16
 ; NOLIT-SRCC-NEXT:    s_endpgm
 ;
 ; GFX908-GISEL-LABEL: test_mfma_f32_32x32x4f16:
@@ -2050,7 +2051,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr a
 ; LIT-SRCC-LABEL: test_mfma_f32_32x32x4f16:
 ; LIT-SRCC:       ; %bb.0: ; %bb
 ; LIT-SRCC-NEXT:    s_load_dwordx4 s[36:39], s[4:5], 0x24
-; LIT-SRCC-NEXT:    v_mov_b32_e32 v29, 0
+; LIT-SRCC-NEXT:    v_mov_b32_e32 v28, 0
 ; LIT-SRCC-NEXT:    s_waitcnt lgkmcnt(0)
 ; LIT-SRCC-NEXT:    s_load_dwordx16 s[16:31], s[36:37], 0x0
 ; LIT-SRCC-NEXT:    s_load_dwordx16 s[0:15], s[36:37], 0x40
@@ -2157,18 +2158,19 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr a
 ; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v26, a2
 ; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v25, a1
 ; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v24, a0
-; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v31, a7
-; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v30, a6
-; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v29, a5
-; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v28, a4
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[0:3], s[36:37] offset:96
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[4:7], s[36:37] offset:112
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[8:11], s[36:37] offset:64
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[12:15], s[36:37] offset:80
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[16:19], s[36:37] offset:32
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[20:23], s[36:37] offset:48
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[24:27], s[36:37]
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[28:31], s[36:37] offset:16
+; LIT-SRCC-NEXT:    global_store_dwordx4 v28, v[0:3], s[36:37] offset:96
+; LIT-SRCC-NEXT:    s_nop 0
+; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v0, a4
+; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v1, a5
+; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v2, a6
+; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v3, a7
+; LIT-SRCC-NEXT:    global_store_dwordx4 v28, v[4:7], s[36:37] offset:112
+; LIT-SRCC-NEXT:    global_store_dwordx4 v28, v[8:11], s[36:37] offset:64
+; LIT-SRCC-NEXT:    global_store_dwordx4 v28, v[12:15], s[36:37] offset:80
+; LIT-SRCC-NEXT:    global_store_dwordx4 v28, v[16:19], s[36:37] offset:32
+; LIT-SRCC-NEXT:    global_store_dwordx4 v28, v[20:23], s[36:37] offset:48
+; LIT-SRCC-NEXT:    global_store_dwordx4 v28, v[24:27], s[36:37]
+; LIT-SRCC-NEXT:    global_store_dwordx4 v28, v[0:3], s[36:37] offset:16
 ; LIT-SRCC-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: test_mfma_f32_32x32x4f16:
