@@ -84,6 +84,13 @@ define i32 @wave_multi_prefix_bit_xor(i32 %x) {
   ret i32 %ret
 }
 
+define i32 @wave_multi_prefix_count_bits(i1 %x) {
+  ; CHECK: Function wave_multi_prefix_count_bits : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.bit.count(
+      i1 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
 define noundef i1 @wave_all_equal(i1 %x) {
 entry:
   ; CHECK: Function wave_all_equal : [[WAVE_FLAG]]
