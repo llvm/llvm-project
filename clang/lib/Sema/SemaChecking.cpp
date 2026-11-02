@@ -15057,8 +15057,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
   /// Check whether a modification or use of an object \p O in an expression
   /// \p UsageExpr conflicts with a prior usage of kind \p OtherKind. \p UI is
   /// the \p UsageInfo for the object \p O as obtained via the \p UsageMap.
-  /// \p IsModMod is true when we are checking for a mod-mod unsequenced
-  /// usage and false we are checking for a mod-use unsequenced usage.
+  /// The message displayed in case of a conflict depends on \p WarnKind.
   void checkUsage(Object O, UsageInfo &UI, const Expr *UsageExpr,
                   UsageKind OtherKind, WarningKind WarnKind) {
     if (UI.Diagnosed)
