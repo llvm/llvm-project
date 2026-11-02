@@ -191,11 +191,11 @@ void ARM64::writeObjCMsgSendClassStub(uint8_t *buf, Symbol *stubSym,
   auto writeClassLoad = [&](const uint32_t *code) {
     uint64_t classVA;
     uint32_t pageOffCode = code[1];
-    if (auto *defined = dyn_cast<Defined>(classSym)) {
-      classVA = defined->getVA();
-      pageOffCode = 0x91000000; // add x0, x0, _OBJC_CLASS_$_Foo@pageoff
-    } else {
+    if (needsBinding(classSym)) {
       classVA = in.got->addr + classSym->gotIndex * LP64::wordSize;
+    } else {
+      classVA = classSym->getVA();
+      pageOffCode = 0x91000000; // add x0, x0, _OBJC_CLASS_$_Foo@pageoff
     }
     encodePage21(&buf32[0], d, code[0], pageBits(classVA) - pcPageBits(0));
     encodePageOff12(&buf32[1], d, pageOffCode, classVA);

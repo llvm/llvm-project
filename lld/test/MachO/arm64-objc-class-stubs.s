@@ -86,6 +86,12 @@
 # RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
 # RUN:   --macho %t/dynamic-lookup.out | FileCheck %s --check-prefix=DYNAMIC
 
+# Check that a locally defined class that needs binding is loaded through the GOT.
+# RUN: %lld -arch arm64 -lSystem -interposable -o %t/interposable.out \
+# RUN:   %t/main.o %t/libexternal.dylib -objc_stubs_fast
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN:   --macho %t/interposable.out | FileCheck %s --check-prefix=INTERPOSABLE
+
 # Check diagnostics for missing class symbols.
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/missing.s \
 # RUN:   -o %t/missing.o
@@ -159,6 +165,10 @@
 # DYNAMIC-NEXT: ldr     x16, {{.*}} ; literal pool symbol address: _objc_msgSend
 # DYNAMIC-NEXT: br      x16
 # DYNAMIC-NEXT: brk     #0x1
+
+# INTERPOSABLE:      _objc_msgSendClass$local$_OBJC_CLASS_$_LocalClass:
+# INTERPOSABLE-NEXT: adrp    x0,
+# INTERPOSABLE-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_LocalClass
 
 # ARCHIVE:      Contents of (__TEXT,__objc_stubs) section
 # ARCHIVE-NEXT: _objc_msgSendClass$archive$_OBJC_CLASS_$_ArchiveClass:

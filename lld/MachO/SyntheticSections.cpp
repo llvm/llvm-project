@@ -980,6 +980,9 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
       // Otherwise, an unreferenced class still defaults to a strong import.
       dysym->reference(dysym->isWeakRef() ? RefState::Weak : RefState::Strong);
       in.got->addEntry(dysym);
+    } else if (needsBinding(classSym)) {
+      // Interposable or weak definitions in this image.
+      in.got->addEntry(classSym);
     }
     classSym->used = true;
   } else {
