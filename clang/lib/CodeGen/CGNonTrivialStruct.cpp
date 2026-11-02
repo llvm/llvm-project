@@ -415,7 +415,7 @@ template <class Derived> struct GenFuncBase {
 
     EltQT = IsVolatile ? EltQT.withVolatile() : EltQT;
     this->asDerived().visitWithKind(FK, EltQT, nullptr, CharUnits::Zero(),
-                                NewAddrs);
+                                    NewAddrs);
     LoopBB = CGF.Builder.GetInsertBlock();
 
     for (unsigned I = 0; I < N; ++I) {
