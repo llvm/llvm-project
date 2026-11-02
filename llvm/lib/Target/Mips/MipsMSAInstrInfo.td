@@ -2185,10 +2185,10 @@ class LD_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                    ValueType TyNode, RegisterOperand ROWD,
                    Operand MemOpnd, ComplexPattern Addr = addrimm10> {
   dag OutOperandList = (outs ROWD:$wd);
-  dag InOperandList = (ins MemOpnd:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$wd, $addr");
-  list<dag> Pattern = [(set ROWD:$wd, (TyNode (OpNode Addr:$addr)))];
-  string DecoderMethod = "DecodeMSA128Mem";
+  dag InOperandList = (ins MemBase:$base, MemOpnd:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$wd, ${offset}(${base})");
+  list<dag> Pattern =
+      [(set ROWD:$wd, (TyNode (OpNode (Addr MemBase:$base, iPTR:$offset))))];
 }
 
 class LD_B_DESC : LD_DESC_BASE<"ld.b", load, v16i8, MSA128BOpnd, mem_simm10>;
@@ -2527,10 +2527,10 @@ class ST_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                    ValueType TyNode, RegisterOperand ROWD,
                    Operand MemOpnd, ComplexPattern Addr = addrimm10> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins ROWD:$wd, MemOpnd:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$wd, $addr");
-  list<dag> Pattern = [(OpNode (TyNode ROWD:$wd), Addr:$addr)];
-  string DecoderMethod = "DecodeMSA128Mem";
+  dag InOperandList = (ins ROWD:$wd, MemBase:$base, MemOpnd:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$wd, ${offset}(${base})");
+  list<dag> Pattern = [(OpNode (TyNode ROWD:$wd),
+                               (Addr MemBase:$base, iPTR:$offset))];
 }
 
 class ST_B_DESC : ST_DESC_BASE<"st.b", store, v16i8, MSA128BOpnd, mem_simm10>;
@@ -3443,16 +3443,25 @@ class MSAPat<dag pattern, dag result, list<Predicate> pred = [HasMSA]> :
 def : MSAPat<(extractelt (v4i32 MSA128W:$ws), immZExt4:$idx),
              (COPY_S_W MSA128W:$ws, immZExt4:$idx)>;
 
-def : MSAPat<(v8f16 (load addrimm10lsl1:$addr)), (LD_H addrimm10lsl1:$addr)>;
-def : MSAPat<(v4f32 (load addrimm10lsl2:$addr)), (LD_W addrimm10lsl2:$addr)>;
-def : MSAPat<(v2f64 (load addrimm10lsl3:$addr)), (LD_D addrimm10lsl3:$addr)>;
+def : MSAPat<(v8f16 (load (addrimm10lsl1 MemBase:$addr_base,
+                                         iPTR:$addr_offset))),
+             (LD_H $addr_base, $addr_offset)>;
+def : MSAPat<(v4f32 (load (addrimm10lsl2 MemBase:$addr_base,
+                                         iPTR:$addr_offset))),
+             (LD_W $addr_base, $addr_offset)>;
+def : MSAPat<(v2f64 (load (addrimm10lsl3 MemBase:$addr_base,
+                                         iPTR:$addr_offset))),
+             (LD_D $addr_base, $addr_offset)>;
 
-def ST_FH : MSAPat<(store (v8f16 MSA128H:$ws), addrimm10lsl1:$addr),
-                   (ST_H MSA128H:$ws, addrimm10lsl1:$addr)>;
-def ST_FW : MSAPat<(store (v4f32 MSA128W:$ws), addrimm10lsl2:$addr),
-                   (ST_W MSA128W:$ws, addrimm10lsl2:$addr)>;
-def ST_FD : MSAPat<(store (v2f64 MSA128D:$ws), addrimm10lsl3:$addr),
-                   (ST_D MSA128D:$ws, addrimm10lsl3:$addr)>;
+def ST_FH : MSAPat<(store (v8f16 MSA128H:$ws),
+                          (addrimm10lsl1 MemBase:$addr_base, iPTR:$addr_offset)),
+                   (ST_H MSA128H:$ws, $addr_base, $addr_offset)>;
+def ST_FW : MSAPat<(store (v4f32 MSA128W:$ws),
+                          (addrimm10lsl2 MemBase:$addr_base, iPTR:$addr_offset)),
+                   (ST_W MSA128W:$ws, $addr_base, $addr_offset)>;
+def ST_FD : MSAPat<(store (v2f64 MSA128D:$ws),
+                          (addrimm10lsl3 MemBase:$addr_base, iPTR:$addr_offset)),
+                   (ST_D MSA128D:$ws, $addr_base, $addr_offset)>;
 
 class MSA_FABS_PSEUDO_DESC_BASE<RegisterOperand ROWD,
                                 RegisterOperand ROWS = ROWD> :

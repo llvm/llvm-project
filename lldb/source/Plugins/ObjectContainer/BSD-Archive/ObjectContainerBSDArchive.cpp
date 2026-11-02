@@ -252,8 +252,8 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
     const lldb::ModuleSP &module_sp, DataBufferSP &data_sp,
     lldb::offset_t data_offset, const FileSpec *file,
     lldb::offset_t file_offset, lldb::offset_t length) {
-  ConstString object_name(module_sp->GetObjectName());
-  if (!object_name)
+  llvm::StringRef object_name(module_sp->GetObjectName());
+  if (object_name.empty())
     return nullptr;
 
   if (data_sp) {
@@ -390,7 +390,8 @@ FileSpec GetChildFileSpecificationsFromThin(llvm::StringRef childPath,
 ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
-    if (module_sp->GetObjectName() && m_archive_sp) {
+    const bool module_has_name = !module_sp->GetObjectName().empty();
+    if (module_has_name && m_archive_sp) {
       Object *object = m_archive_sp->FindObject(
           module_sp->GetObjectName(), module_sp->GetObjectModificationTime());
       if (object) {

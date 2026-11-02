@@ -217,11 +217,11 @@ You can then build the libc using:
 ninja -C build libc
 ```
 
-To run the tests for the cross-compiled libc, you must use the hermetic test
-suite, which is entirely self-hosted.
+To run the tests for the cross-compiled libc, you can run `libc-tests`,
+which executes self-hosted tests in full-build mode:
 
 ```sh
-ninja -C build libc-hermetic-tests
+ninja -C build libc-tests
 ```
 
 :::{note}
