@@ -239,7 +239,7 @@ getClobberConflictLocation(MultiExprArg Exprs, Expr **Constraints,
 }
 
 ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
-                                       bool IsConstExpr) {
+                                       bool IsConstexpr) {
   if (!Expr)
     return ExprError();
 
@@ -250,7 +250,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
           << SL->getSourceRange();
     }
 
-    if (!IsConstExpr &&
+    if (!IsConstexpr &&
         PP.getTextEncoding().getFromIBM1047Converter() != nullptr) {
       SmallString<16> ConvertedAsm;
       PP.getTextEncoding().getFromIBM1047Converter()->convert(SL->getString(),
@@ -280,16 +280,11 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
   // Convert it back to UTF-8
   if (llvm::TextEncodingConverter *FromLiteral =
           PP.getTextEncoding().getFromLiteralEncodingConverter()) {
-    unsigned Size = V.getArraySize();
-    std::string Raw;
-    Raw.reserve(Size);
-    for (unsigned I = 0; I < Size; ++I)
-      Raw.push_back(static_cast<char>(
-          V.getArrayInitializedElt(I).getInt().getExtValue()));
+    std::string Raw = V.getCharArrayAsString();
     SmallString<16> Converted;
     if (std::error_code EC = FromLiteral->convert(Raw, Converted)) {
       Diag(Expr->getBeginLoc(), diag::err_exec_charset_conversion_failed)
-          << EC.message();
+          << EC.message() << /*from literal encoding to UTF-8*/ 2;
       return ExprError();
     }
     llvm::APSInt Proto(Context.getTypeSize(Context.CharTy),

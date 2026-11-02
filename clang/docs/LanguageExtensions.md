@@ -2265,10 +2265,9 @@ int foo() {
 
 ### String literal encoding in ASM statements
 
-On targets where the platform's default ordinary literal encoding differs from
-UTF-8 (such as z/OS, where the system default encoding is IBM-1047):
+On z/OS, where the system default encoding is IBM-1047 rather than UTF-8:
 
-* **String literals**: A string literal used as the template string in an
+* A string literal used as the template string in an
   extended asm statement, as the instruction string in a basic asm statement,
   or as the string specifying the assembler name or register in an asm label or
   a global/local register variable declaration (such as `asm("...")` or
@@ -2276,14 +2275,11 @@ UTF-8 (such as z/OS, where the system default encoding is IBM-1047):
   encoding (such as IBM-1047 on z/OS) rather than the literal encoding
   specified by `-fexec-charset=`. This ensures that escape sequences (such as
   octal or hexadecimal byte escapes) are interpreted as system/assembler code
-  points.
-
-* **Constexpr string expressions in ASM statements**: When a parenthesized
-  constant expression is provided in place of an `asm` string, string literals
-  within that constant expression are encoded according to the execution
-  character set specified by `-fexec-charset=` (the literal encoding), as
-  constant expression evaluation expects `char` sequences to operate in the
-  literal encoding.
+  points. This does **not** apply to parenthesized
+  constant expressions (see
+  [Constexpr strings in GNU ASM statements](#constexpr-strings-in-gnu-asm-statements)),
+  in which string literals are encoded according to the literal encoding
+  specified by `-fexec-charset=`.
 
 For example, on z/OS compiled with `-fexec-charset=UTF-8`:
 

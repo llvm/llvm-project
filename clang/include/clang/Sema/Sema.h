@@ -11490,7 +11490,7 @@ private:
 
 public:
   ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel,
-                                   bool IsConstExpr = false);
+                                   bool IsConstexpr = false);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
