@@ -196,6 +196,21 @@ static DecodeStatus decodeSMEMOffset(MCInst &Inst, uint64_t Imm, uint64_t Addr,
   return addOperand(Inst, MCOperand::createImm(Offset));
 }
 
+static DecodeStatus decodeSMEMOffsetPCRel(MCInst &Inst, uint64_t Imm,
+                                          uint64_t Addr,
+                                          const MCDisassembler *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+
+  // Signed 24-bit byte offset from the next instruction. The encoding is 8
+  // bytes, so the target address is PC + 8 + offset.
+  int64_t Target = SignExtend64<24>(Imm) + 8 + Addr;
+  if (DAsm->tryAddingSymbolicOperand(Inst, Target, Addr, /*IsBranch=*/true,
+                                     /*Offset=*/4, /*OpSize=*/3,
+                                     /*InstSize=*/8))
+    return MCDisassembler::Success;
+  return addOperand(Inst, MCOperand::createImm(SignExtend64<24>(Imm)));
+}
+
 static DecodeStatus decodeBoolReg(MCInst &Inst, uint64_t Val, uint64_t Addr,
                                   const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);

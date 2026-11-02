@@ -78,13 +78,23 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return IsPCRel ? ELF::R_AMDGPU_REL64 : ELF::R_AMDGPU_ABS64;
   }
 
-  if (Fixup.getKind() == AMDGPU::fixup_si_sopp_br) {
+  if (Fixup.getKind() == AMDGPU::fixup_si_sopp_br ||
+      Fixup.getKind() == AMDGPU::fixup_si_smem_pcrel) {
     const auto *SymA = Target.getAddSym();
-    assert(SymA);
+    if (!SymA) {
+      reportError(Fixup.getLoc(), "expected a label");
+      return ELF::R_AMDGPU_NONE;
+    }
 
     if (SymA->isUndefined()) {
       reportError(Fixup.getLoc(),
                   Twine("undefined label '") + SymA->getName() + "'");
+      return ELF::R_AMDGPU_NONE;
+    }
+    // No ELF relocation describes the 24-bit field at bits [55:32].
+    if (Fixup.getKind() == AMDGPU::fixup_si_smem_pcrel) {
+      reportError(Fixup.getLoc(),
+                  "PC-relative prefetch target must be a local label");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;
