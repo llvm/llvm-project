@@ -246,14 +246,14 @@ if.end5:
 
 !0 = !{ !1 }
 !1 = distinct !{ !1, !2 }
-!2 = distinct !{ !2 }
+!2 = distinct !{!2, i1 false}
 !3 = distinct !{ !3, !2 }
 !4 = !{ !3 }
 
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]]}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; CHECK: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}

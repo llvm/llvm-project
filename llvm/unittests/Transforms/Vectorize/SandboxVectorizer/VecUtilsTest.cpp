@@ -457,6 +457,7 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
 
   auto *I8Ty = sandboxir::IntegerType::get(Ctx, 8);
   auto *I16Ty = sandboxir::IntegerType::get(Ctx, 16);
+  auto *I32Ty = sandboxir::IntegerType::get(Ctx, 32);
   auto *F32Ty = sandboxir::Type::getFloatTy(Ctx);
 
   // Check same type.
@@ -466,6 +467,11 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
   EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
                 {Store_2xi8, Store_2xi8}, DL),
             sandboxir::FixedVectorType::get(I8Ty, 4));
+
+  // Same-typed FP bundles keep that FP lane type.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f32, Store_f32}, DL),
+      sandboxir::FixedVectorType::get(F32Ty, 2));
 
   // Check different types, power-of-two.
   EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
@@ -478,10 +484,10 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
                 {Store_2xi8, Store_2xi8, Store_2xi16}, DL),
             sandboxir::FixedVectorType::get(I8Ty, 8));
 
-  // Check different types non-power-of-two.
+  // Check different types non-power-of-two. Mixed FP widths pack as integers.
   EXPECT_EQ(
       sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f32, Store_f64}, DL),
-      sandboxir::FixedVectorType::get(F32Ty, 3));
+      sandboxir::FixedVectorType::get(I32Ty, 3));
   EXPECT_EQ(
       sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i32, Store_i16}, DL),
       sandboxir::FixedVectorType::get(I16Ty, 3));
@@ -1300,6 +1306,61 @@ entry:
   EXPECT_TRUE(
       sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
           .empty());
+}
+
+TEST_F(VecUtilsTest, getAlignment) {
+  sandboxir::Context Ctx(C);
+  auto *Int8 = sandboxir::Type::getInt8Ty(Ctx);
+  auto *Int16 = sandboxir::Type::getInt16Ty(Ctx);
+  auto *Int32 = sandboxir::Type::getInt32Ty(Ctx);
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(1), Align(1)},
+                SmallVector<sandboxir::Type *>{Int8, Int8}),
+            Align(1));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(4), Align(4), Align(8)},
+                SmallVector<sandboxir::Type *>{Int32, Int32, Int32}),
+            Align(4));
+
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(1), Align(2)},
+                SmallVector<sandboxir::Type *>{Int8, Int8}),
+            Align(1));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(1), Align(2)},
+                SmallVector<sandboxir::Type *>{Int16, Int16}),
+            Align(1));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(2), Align(4)},
+                SmallVector<sandboxir::Type *>{Int16, Int16}),
+            Align(2));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(4), Align(2)},
+                SmallVector<sandboxir::Type *>{Int16, Int16}),
+            Align(4));
+  EXPECT_EQ(sandboxir::VecUtils::getVecAlignment(
+                SmallVector<Align>{Align(4), Align(4), Align(8)},
+                SmallVector<sandboxir::Type *>{Int8, Int8, Int8}),
+            Align(4));
+
+  EXPECT_EQ(
+      sandboxir::VecUtils::getVecAlignment(
+          SmallVector<Align>{Align(4)}, SmallVector<sandboxir::Type *>{Int8}),
+      Align(4));
+#ifndef NDEBUG
+  EXPECT_DEATH(
+      sandboxir::VecUtils::getVecAlignment(
+          SmallVector<Align>{}, SmallVector<sandboxir::Type *>{Int8, Int8}),
+      ".*empty.*");
+  EXPECT_DEATH(
+      sandboxir::VecUtils::getVecAlignment(SmallVector<Align>{Align(1)},
+                                           SmallVector<sandboxir::Type *>{}),
+      ".*empty.*");
+  EXPECT_DEATH(sandboxir::VecUtils::getVecAlignment(
+                   SmallVector<Align>{Align(1), Align(1)},
+                   SmallVector<sandboxir::Type *>{Int8}),
+               ".*same.*");
+#endif
 }
 
 #ifndef NDEBUG

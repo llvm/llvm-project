@@ -200,6 +200,11 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
+static cl::opt<unsigned> MaxLoopHeaderThreadingSearchBlocks(
+    "simplifycfg-max-loop-header-threading-search", cl::Hidden, cl::init(1024),
+    cl::desc("Limit number of blocks searched to prove that threading through "
+             "a loop header keeps the loop canonical"));
+
 static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
     "max-jump-threading-live-blocks", cl::Hidden, cl::init(24),
     cl::desc("Limit number of blocks a define in a threaded block is allowed "
@@ -1427,6 +1432,8 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   if (PredHasWeights || SuccHasWeights)
     setFittedBranchWeights(*NewSI, Weights, /*IsExpected=*/false,
                            /*ElideAllZero=*/true);
+  else
+    setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE);
 
   // The new switch is only known to be unpredictable if both of the comparisons
   // it was built from were unpredictable.
@@ -1811,6 +1818,15 @@ static void hoistConditionalLoadsStores(
         }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
+      if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range)) {
+        ConstantRange CR = getConstantRangeFromMetadata(*Ranges);
+        if (PassThru && !isa<PoisonValue>(PassThru)) {
+          auto *C = dyn_cast<Constant>(PassThru);
+          CR = C ? CR.unionWith(C->toConstantRange())
+                 : ConstantRange::getFull(CR.getBitWidth());
+        }
+        MaskedLoadStore->addRangeRetAttr(CR);
+      }
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
       if (PN)
         PN->setIncomingValue(PN->getBasicBlockIndex(BB), NewLoadStore);
@@ -1826,12 +1842,8 @@ static void hoistConditionalLoadsStores(
     // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
     //
     // !nonnull, !align : Not support pointer type, no need to keep.
-    // !range: Load type is changed from scalar to vector, but the metadata on
-    //         vector specifies a per-element range, so the semantics stay the
-    //         same. Keep it.
+    // !range: Kept as a return attribute, widened over PassThru (see above).
     // !annotation: Not impact semantics. Keep it.
-    if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
-      MaskedLoadStore->addRangeRetAttr(getConstantRangeFromMetadata(*Ranges));
     I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
     // FIXME: DIAssignID is not supported for masked store yet.
     // (Verifier::visitDIAssignIDMetadata)
@@ -2048,6 +2060,12 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         }
 
         combineMetadataForCSE(I1, I2, true);
+        // If we are combining select instructions, we mark the profile
+        // explicitly unknown given we are hoisting the instruction across
+        // control flow and we have no guarantee that the control flow condition
+        // we are hoisting across is independent of the select condition.
+        if (auto *SI = dyn_cast<SelectInst>(I1))
+          setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
         // I1 and I2 are being combined into a single instruction.  Its debug
         // location is the merged locations of the original instructions.
         I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
@@ -2397,6 +2415,12 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       // instead of using complex API for N-way merge.
       I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
       combineMetadataForCSE(I0, I, true);
+      // We mark branch weights explicitly unknown for select instructions as we
+      // might be sinking through control flow with conditions not independent
+      // of the select condition, or pulling multiple conditions together
+      // through a phi node.
+      if (auto *SI = dyn_cast<SelectInst>(I0))
+        setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
       I0->andIRFlags(I);
       if (auto *CB = dyn_cast<CallBase>(I0)) {
         bool Success = CB->tryIntersectAttributes(cast<CallBase>(I));
@@ -2754,7 +2778,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
   // Either both `invoke`s must not have a normal destination,
   // or     both `invoke`s must     have a normal destination,
   auto HasNormalDest = [](InvokeInst *II) {
-    return !isa<UnreachableInst>(II->getNormalDest()->getFirstNonPHIOrDbg());
+    return !isa<UnreachableInst>(II->getNormalDest()->getFirstNonPHIIt());
   };
   if (any_of(Invokes, HasNormalDest)) {
     // Do not merge `invoke` that does not have a normal destination with one
@@ -2840,7 +2864,7 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     Updates.reserve(2 + 3 * Invokes.size());
 
   bool HasNormalDest =
-      !isa<UnreachableInst>(Invokes[0]->getNormalDest()->getFirstNonPHIOrDbg());
+      !isa<UnreachableInst>(Invokes[0]->getNormalDest()->getFirstNonPHIIt());
 
   // Clone one of the invokes into a new basic block.
   // Since they are all compatible, it doesn't matter which invoke is cloned.
@@ -3065,10 +3089,12 @@ public:
 ///     store i32 %add.add5, i32* %arrayidx2
 ///     ...
 ///
-/// \return The pointer to the value of the previous store if the store can be
-///         hoisted into the predecessor block. 0 otherwise.
+/// \return The value from the previous access if the store can be hoisted into
+///         the predecessor block. PreviousAccess is set to that access. Return
+///         null otherwise.
 static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
-                                     BasicBlock *StoreBB, BasicBlock *EndBB) {
+                                     BasicBlock *StoreBB, BasicBlock *EndBB,
+                                     Instruction *&PreviousAccess) {
   StoreInst *StoreToHoist = dyn_cast<StoreInst>(I);
   if (!StoreToHoist)
     return nullptr;
@@ -3102,9 +3128,11 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       // atomic write.
       if (SI->getPointerOperand() == StorePtr &&
           SI->getValueOperand()->getType() == StoreTy && SI->isSimple() &&
-          SI->getAlign() >= StoreToHoist->getAlign())
+          SI->getAlign() >= StoreToHoist->getAlign()) {
         // Found the previous store, return its value operand.
+        PreviousAccess = SI;
         return SI->getValueOperand();
+      }
       return nullptr; // Unknown store.
     }
 
@@ -3124,6 +3152,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
              isDereferenceablePointer(StorePtr, StoreTy, LI->getDataLayout(),
                                       /*IgnoreFree=*/true))) {
           // Found a previous load, return it.
+          PreviousAccess = LI;
           return LI;
         }
       }
@@ -3285,6 +3314,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
+  Instruction *PreviousStoreAccess = nullptr;
   EphemeralValueTracker EphTracker;
   for (Instruction &I : reverse(drop_end(*ThenBB))) {
     // Skip pseudo probes. The consequence is we lose track of the branch
@@ -3323,8 +3353,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
     if (!IsSafeCheapLoadStore &&
         !isSafeToSpeculativelyExecute(&I, BI, Options.AC) &&
         !(HoistCondStores && !SpeculatedStoreValue &&
-          (SpeculatedStoreValue =
-               isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
+          (SpeculatedStoreValue = isSafeToSpeculateStore(&I, BB, ThenBB, EndBB,
+                                                         PreviousStoreAccess))))
       return false;
     if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
@@ -3426,8 +3456,14 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
       I.dropLocation();
+      I.dropUBImplyingAttrsAndMetadata();
+    } else {
+      assert(PreviousStoreAccess && "Missing previous store access");
+      AAMDNodes MergedAA = SpeculatedStore->getAAMetadata().merge(
+          PreviousStoreAccess->getAAMetadata());
+      I.dropUBImplyingAttrsAndMetadata();
+      I.setAAMetadata(MergedAA);
     }
-    I.dropUBImplyingAttrsAndMetadata();
 
     // Drop ephemeral values.
     if (EphTracker.contains(&I)) {
@@ -3500,6 +3536,33 @@ static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
   for (BasicBlock *Pred : predecessors(BB))
     if (!findReaching(Pred, DefBB, ReachesNonLocalUses))
       return false;
+  return true;
+}
+
+/// Return true if threading \p PredBBs through \p Header to \p RealDest
+/// eliminates the loop's single backedge. \p Header must have two predecessors
+/// (one entry and one backedge), the threaded predecessor must be dominated by
+/// \p Header, and \p RealDest must not reach it without passing through
+/// \p Header.
+static bool isSafeToThreadThroughLoopHeader(BasicBlock *Header,
+                                            ArrayRef<BasicBlock *> PredBBs,
+                                            BasicBlock *RealDest) {
+  if (!Header->hasNPredecessors(2))
+    return false;
+  BlocksSet Visited;
+  SmallVector<BasicBlock *, 8> Worklist(PredBBs);
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (BB == Header || !Visited.insert(BB).second)
+      continue;
+    if (BB == RealDest)
+      return false;
+    if (Visited.size() > MaxLoopHeaderThreadingSearchBlocks)
+      return false;
+    if (pred_empty(BB))
+      return false;
+    append_range(Worklist, predecessors(BB));
+  }
   return true;
 }
 
@@ -3631,7 +3694,7 @@ static bool reachesUncontrolledConvergentCallBeforeBlock(BasicBlock *From,
 /// from the predecessor to their ultimate destination.
 static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
     CondBrInst *BI, const TargetTransformInfo &TTI, DomTreeUpdater *DTU,
-    AssumptionCache *AC, const DataLayout &DL) {
+    AssumptionCache *AC, const DataLayout &DL, bool KeepCanonicalLoop) {
   SmallMapVector<ConstantInt *, SmallSetVector<BasicBlock *, 2>, 2> KnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
@@ -3699,6 +3762,10 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
 
     // Only revector to RealDest if no values defined in BB are live.
     if (ReachesNonLocalUseBlocks.contains(RealDest))
+      continue;
+
+    if (KeepCanonicalLoop &&
+        !isSafeToThreadThroughLoopHeader(BB, PredBBs, RealDest))
       continue;
 
     // Threading through a branch can bypass a reconvergence point. If the
@@ -3820,18 +3887,17 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
 }
 
 bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(CondBrInst *BI) {
-  // Note: If BB is a loop header then there is a risk that threading introduces
-  // a non-canonical loop by moving a back edge. So we avoid this optimization
-  // for loop headers if NeedCanonicalLoop is set.
-  if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BI->getParent()))
-    return false;
+  // Threading through a loop header can introduce a cycle that bypasses the
+  // header.
+  bool KeepCanonicalLoop =
+      Options.NeedCanonicalLoop && is_contained(LoopHeaders, BI->getParent());
 
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, TTI, DTU,
-                                                         Options.AC, DL);
+    Result = foldCondBranchOnValueKnownInPredecessorImpl(
+        BI, TTI, DTU, Options.AC, DL, KeepCanonicalLoop);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -3973,7 +4039,7 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // instructions.
   for (BasicBlock *IfBlock : IfBlocks)
     for (BasicBlock::iterator I = IfBlock->begin(); !I->isTerminator(); ++I)
-      if (!AggressiveInsts.count(&*I) && !I->isDebugOrPseudoInst()) {
+      if (!AggressiveInsts.count(&*I) && !isa<PseudoProbeInst>(I)) {
         // This is not an aggressive instruction that we can promote.
         // Because of this, we won't be able to get rid of the control flow, so
         // the xform is not worth it.
@@ -4127,7 +4193,7 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      BB->getContext(), ConstantFolder{},
+      *BB->getModule(), ConstantFolder{},
       IRBuilderCallbackInserter([&BB](Instruction *I) {
         // The builder is used to create instructions to eliminate the branch in
         // BB. If BB's terminator has !annotation metadata, add it to the new
@@ -4182,8 +4248,10 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
     // could replace PBI's branch probabilities with BI's.
-  } else
+  } else {
     PBI->setMetadata(LLVMContext::MD_prof, nullptr);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*PBI, DEBUG_TYPE);
+  }
 
   // Now, update the CFG.
   PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
@@ -4214,12 +4282,15 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
-  if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
+  if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition())) {
     if (!MDWeights.empty()) {
       assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
       setFittedBranchWeights(*SI, {MDWeights[0], MDWeights[1]},
                              /*IsExpected=*/false, /*ElideAllZero=*/true);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     }
+  }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -4550,9 +4621,7 @@ static bool mergeConditionalStoreToAddress(
   Value *QPHI = ensureValueAvailableInSuccessor(QStore->getValueOperand(),
                                                 QStore->getParent(), PPHI);
 
-  BasicBlock::iterator PostBBFirst = PostBB->getFirstInsertionPt();
-  IRBuilder<> QB(PostBB, PostBBFirst);
-  QB.SetCurrentDebugLocation(PostBBFirst->getStableDebugLoc());
+  IRBuilder<> QB(PostBB->getFirstInsertionPt());
 
   InvertPCond ^= (PStore->getParent() != PTB);
   InvertQCond ^= (QStore->getParent() != QTB);
@@ -5598,6 +5667,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
     CondBrInst *NewBI = Builder.CreateCondBr(Cond, EdgeBB, DefaultBB);
     if (HasProfile)
       setBranchWeights(*NewBI, BranchWeights, /*IsExpected=*/false);
+    else
+      setExplicitlyUnknownBranchWeightsIfProfiled(*NewBI, DEBUG_TYPE);
     if (MDNode *Unpredictable = BI->getMetadata(LLVMContext::MD_unpredictable))
       NewBI->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
     // We don't need to update PHI nodes since we don't add any new edges.
@@ -5616,6 +5687,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
       for (auto &V : drop_begin(NewWeights))
         V = BranchWeights[0] / Values.size();
       setBranchWeights(*New, NewWeights, /*IsExpected=*/false);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*New, DEBUG_TYPE);
     }
 
     // Add all of the 'cases' to the switch instruction.
@@ -5657,19 +5730,8 @@ bool SimplifyCFGOpt::simplifyResume(ResumeInst *RI, IRBuilder<> &Builder) {
 static bool isCleanupBlockEmpty(iterator_range<BasicBlock::iterator> R) {
   for (Instruction &I : R) {
     auto *II = dyn_cast<IntrinsicInst>(&I);
-    if (!II)
+    if (!II || II->getIntrinsicID() != Intrinsic::lifetime_end)
       return false;
-
-    Intrinsic::ID IntrinsicID = II->getIntrinsicID();
-    switch (IntrinsicID) {
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
-    case Intrinsic::lifetime_end:
-      break;
-    default:
-      return false;
-    }
   }
   return true;
 }
@@ -7798,7 +7860,9 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   Builder.SetInsertPoint(SI);
   const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
-  if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
+  const bool IsFullyCoveredLookupTable =
+      !DefaultIsReachable || GeneratingCoveredLookupTable;
+  if (IsFullyCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
     if (DTU)
       Updates.push_back({DominatorTree::Insert, BB, LookupBB});
@@ -7848,6 +7912,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     Value *Shifted = Builder.CreateLShr(TableMask, MaskIndex, "switch.shifted");
     Value *LoBit = Builder.CreateTrunc(
         Shifted, Type::getInt1Ty(Mod.getContext()), "switch.lobit");
+    if (!IsFullyCoveredLookupTable)
+      setExplicitlyUnknownBranchWeightsIfProfiled(*CondBranch, DEBUG_TYPE);
     CondBranch = Builder.CreateCondBr(LoBit, LookupBB, SI->getDefaultDest());
     if (DTU) {
       Updates.push_back({DominatorTree::Insert, MaskBB, LookupBB});
@@ -7911,7 +7977,14 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       ToLookupWeight += BranchWeights[I];
   }
   SI->eraseFromParent();
-  if (HasBranchWeights)
+  // In the case where we do not have a fully covered lookup table (i.e., we
+  // need a range check), and we need a mask check, we split the default case
+  // into two different cases for which we cannot infer branch weights.
+  // Otherwise we have a single branch for which we can infer branch weights.
+  if ((NeedMask && !IsFullyCoveredLookupTable) &&
+      !ProfcheckDisableMetadataFixes)
+    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBranch, DEBUG_TYPE);
+  else if (HasBranchWeights)
     setFittedBranchWeights(*CondBranch, {ToLookupWeight, ToDefaultWeight},
                            /*IsExpected=*/false);
   if (DTU)
@@ -8748,17 +8821,13 @@ bool SimplifyCFGOpt::simplifyIndirectBr(IndirectBrInst *IBI) {
 /// values are flowing through both blocks, we don't lose any ability to
 /// specialize.  If anything, we make such specialization more likely.
 ///
-/// TODO - This transformation could remove entries from a phi in the target
-/// block when the inputs in the phi are the same for the two blocks being
-/// merged.  In some cases, this could result in removal of the PHI entirely.
+/// Phis in the successor are allowed if both blocks pass the same value, or
+/// each passes its own landing pad value and that is its only use: the merged
+/// block's landing pad then carries the value for both edges.
 static bool tryToMergeLandingPad(LandingPadInst *LPad, UncondBrInst *BI,
                                  BasicBlock *BB, DomTreeUpdater *DTU) {
   auto Succ = BB->getUniqueSuccessor();
   assert(Succ);
-  // If there's a phi in the successor block, we'd likely have to introduce
-  // a phi into the merged landing pad block.
-  if (isa<PHINode>(*Succ->begin()))
-    return false;
 
   for (BasicBlock *OtherPred : predecessors(Succ)) {
     if (BB == OtherPred)
@@ -8770,6 +8839,23 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, UncondBrInst *BI,
     ++I;
     UncondBrInst *BI2 = dyn_cast<UncondBrInst>(I);
     if (!BI2 || !BI2->isIdenticalTo(BI))
+      continue;
+
+    // Merging must not require a new phi in the merged landing pad block.
+    if (!all_of(Succ->phis(), [&](PHINode &PN) {
+          Value *V = PN.getIncomingValueForBlock(BB);
+          Value *V2 = PN.getIncomingValueForBlock(OtherPred);
+          return V == V2 || (V == LPad && V2 == LPad2);
+        }))
+      continue;
+
+    // Those phis must be the only uses of the landing pads. Otherwise, with a
+    // loop through Succ, a use would be clobbered when the merged pad is
+    // re-entered.
+    unsigned NumLPadPhis = count_if(Succ->phis(), [&](PHINode &PN) {
+      return PN.getIncomingValueForBlock(BB) == LPad;
+    });
+    if (!LPad->hasNUses(NumLPadPhis) || !LPad2->hasNUses(NumLPadPhis))
       continue;
 
     std::vector<DominatorTree::UpdateType> Updates;
@@ -8821,7 +8907,7 @@ bool SimplifyCFGOpt::simplifyUncondBranch(UncondBrInst *BI,
       Options.NeedCanonicalLoop &&
       (!LoopHeaders.empty() && BB->hasNPredecessorsOrMore(2) &&
        (is_contained(LoopHeaders, BB) || is_contained(LoopHeaders, Succ)));
-  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg();
+  BasicBlock::iterator I = BB->getFirstNonPHIOrPseudoProbe();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
       !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB, DTU))
     return true;
@@ -9312,7 +9398,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   bool Changed = false;
 
   assert(BB && BB->getParent() && "Block not embedded in function!");
-  assert(BB->getTerminator() && "Degenerate basic block encountered!");
+  assert(BB->hasTerminator() && "Degenerate basic block encountered!");
 
   // Remove basic blocks that have no predecessors (except the entry block)...
   // or that just have themself as a predecessor.  These are unreachable.
@@ -9345,7 +9431,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     if (sinkCommonCodeFromPredecessors(BB, DTU) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
-      // so we may now how duplicate PHI's.
+      // so we may now have duplicate PHI's.
       // Let's rerun EliminateDuplicatePHINodes() first,
       // before foldTwoEntryPHINode() potentially converts them into select's,
       // after which we'd need a whole EarlyCSE pass run to cleanup them.

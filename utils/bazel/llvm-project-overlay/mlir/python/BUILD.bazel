@@ -1414,6 +1414,20 @@ gentbl_filegroup(
 )
 
 gentbl_filegroup(
+    name = "MathTransformOpsPyGen",
+    tbl_outs = {"mlir/dialects/_math_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=math_transform",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/MathTransformOps.td",
+    deps = [
+        "//mlir:MathTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
     name = "MemRefTransformOpsPyGen",
     tbl_outs = {"mlir/dialects/_memref_transform_ops_gen.py": [
         "-gen-python-op-bindings",
@@ -1540,6 +1554,7 @@ filegroup(
         ":BufferizationTransformOpsPyGen",
         ":GPUTransformOpsPyGen",
         ":LoopTransformOpsPyGen",
+        ":MathTransformOpsPyGen",
         ":MemRefTransformOpsPyGen",
         ":NVGPUTransformOpsPyGen",
         ":PDLTransformOpsPyGen",

@@ -67,6 +67,10 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
     // because we cannot add another ptrauth bundle to the call instruction.
     if (CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value())
       return false;
+    // Parameterizing the callee would turn this into an indirect call, which
+    // must be authenticated in a "ptrauth-calls" function.
+    if (CI->getFunction()->hasFnAttribute("ptrauth-calls"))
+      return false;
   } else {
     // The target of the arc-attached call must be a constant and cannot be
     // parameterized.
@@ -146,6 +150,14 @@ static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
   return true;
 }
 
+static FunctionHashInfo hashFunction(const Function &F) {
+  // Globals with local linkage are qualified with their module's source file
+  // name so that same-named locals in different modules are not mistaken for
+  // identical operands when the merged map is finalized across modules.
+  return StructuralHashWithDifferences(F, ignoreOp,
+                                       /*SourceQualifyLocalGlobals=*/true);
+}
+
 void GlobalMergeFunc::analyze(Module &M) {
   ++NumAnalyzedModues;
   for (Function &Func : M) {
@@ -153,7 +165,7 @@ void GlobalMergeFunc::analyze(Module &M) {
     if (isEligibleFunction(&Func)) {
       ++NumEligibleFunctions;
 
-      auto FI = llvm::StructuralHashWithDifferences(Func, ignoreOp);
+      auto FI = hashFunction(Func);
 
       // Convert the operand map to a vector for a serialization-friendly
       // format.
@@ -238,7 +250,7 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
       auto *Inst = FI.IndexInstruction->lookup(InstIndex);
       auto *OrigC = Inst->getOperand(OpndIndex);
       if (OrigC->getType() != NewArg->getType()) {
-        IRBuilder<> Builder(Inst->getParent(), Inst->getIterator());
+        IRBuilder<> Builder(Inst->getIterator());
         Inst->setOperand(OpndIndex,
                          Builder.CreateAggregateCast(NewArg, OrigC->getType()));
       } else {
@@ -410,7 +422,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   for (auto &F : M) {
     if (!isEligibleFunction(&F))
       continue;
-    auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
+    auto FI = hashFunction(F);
     if (FunctionMap->contains(FI.FunctionHash))
       HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
   }
@@ -527,9 +539,11 @@ void GlobalMergeFunc::initializeMergerMode(const Module &M) {
   if (Index && !Index->hasExportedFunctions(M))
     return;
 
-  if (cgdata::emitCGData())
+  const cl::LibraryOptionsContext &LibraryOptions =
+      M.getContext().getLibraryOptions();
+  if (cgdata::emitCGData(LibraryOptions))
     MergerMode = HashFunctionMode::BuildingHashFuncion;
-  else if (cgdata::hasStableFunctionMap())
+  else if (cgdata::hasStableFunctionMap(LibraryOptions))
     MergerMode = HashFunctionMode::UsingHashFunction;
 }
 
@@ -558,18 +572,20 @@ void GlobalMergeFunc::emitFunctionMap(Module &M) {
 
 bool GlobalMergeFunc::run(Module &M) {
   initializeMergerMode(M);
+  const cl::LibraryOptionsContext &LibraryOptions =
+      M.getContext().getLibraryOptions();
 
   const StableFunctionMap *FuncMap;
   if (MergerMode == HashFunctionMode::UsingHashFunction) {
     // Use the prior CG data to optimistically create global merge candidates.
-    FuncMap = cgdata::getStableFunctionMap();
+    FuncMap = cgdata::getStableFunctionMap(LibraryOptions);
   } else {
     analyze(M);
     // Emit the local function map to the custom section, __llvm_merge before
     // finalizing it.
     if (MergerMode == HashFunctionMode::BuildingHashFuncion)
       emitFunctionMap(M);
-    LocalFunctionMap->finalize();
+    LocalFunctionMap->finalize(LibraryOptions);
     FuncMap = LocalFunctionMap.get();
   }
 

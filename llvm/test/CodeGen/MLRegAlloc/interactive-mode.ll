@@ -22,6 +22,13 @@
 ; CHECK:      index_to_evict: 9
 ; CHECK-NEXT: index_to_evict: 10
 
+;; Too wide orders fail before any advice is read, so no host is needed.
+; RUN: touch %t.narrow.in
+; RUN: not llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=release \
+; RUN:    -regalloc-evict-interactive-channel-base=%t.narrow -mlregalloc-num-allocatable-regs=4 \
+; RUN:    %S/Inputs/two-large-fcts.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=NARROW
+; NARROW: Regalloc: SyFgets needs -mlregalloc-num-allocatable-regs=15 or more, got 4
+
 ;; Out-of-range priority advice is saturated, not converted.
 
 ; DEFINE: %{prio} = %python %t.rundir/interactive_main.py --priority=

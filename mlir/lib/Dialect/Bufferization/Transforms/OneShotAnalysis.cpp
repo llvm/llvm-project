@@ -1176,15 +1176,21 @@ static bool wouldCreateReadAfterWriteInterference(
     OpOperand &operand, const DominanceInfo &domInfo,
     OneShotAnalysisState &state, bool checkConsistencyOnly = false) {
   // Collect reads and writes of all aliases of OpOperand and OpResult.
-  DenseSet<OpOperand *> usesRead, usesWrite;
-  getAliasingReads(usesRead, operand.get(), state);
+  // Collect writes before reads: without a write, there can be no conflict.
+  DenseSet<OpOperand *> usesWrite;
   getAliasingInplaceWrites(usesWrite, operand.get(), state);
-  for (AliasingValue alias : state.getAliasingValues(operand)) {
-    getAliasingReads(usesRead, alias.value, state);
+  AliasingValueList aliases = state.getAliasingValues(operand);
+  for (AliasingValue alias : aliases)
     getAliasingInplaceWrites(usesWrite, alias.value, state);
-  }
   if (!checkConsistencyOnly && state.bufferizesToMemoryWrite(operand))
     usesWrite.insert(&operand);
+  if (usesWrite.empty())
+    return false;
+
+  DenseSet<OpOperand *> usesRead;
+  getAliasingReads(usesRead, operand.get(), state);
+  for (AliasingValue alias : aliases)
+    getAliasingReads(usesRead, alias.value, state);
 
   return hasReadAfterWriteInterference(usesRead, usesWrite, domInfo, state);
 }

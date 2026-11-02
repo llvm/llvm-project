@@ -54,6 +54,6 @@ body:             |
   ; CHECK-NEXT: %[[arg0:.*]]:fr32 = COPY $xmm0
   ; CHECK-NEXT: %[[add1:.*]]:fr32 = {{.*}} ADDSSrr %[[arg0]], %[[arg1]]
   ; CHECK-NEXT: %[[add2:.*]]:fr32 = {{.*}} ADDSSrr %[[arg2]], %[[arg3]]
-  ; CHECK-NEXT:                            ADDSSrr %[[add1]], killed %[[add2]], {{.*}} debug-instr-number 1
+  ; CHECK-NEXT:                            ADDSSrr %[[add1]], %[[add2]], {{.*}} debug-instr-number 1
   ; CHECK-NEXT: DBG_INSTR_REF ![[VAR]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 ...

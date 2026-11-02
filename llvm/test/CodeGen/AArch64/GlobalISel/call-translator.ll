@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -O0 -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: name: test_trivial_call
 ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp

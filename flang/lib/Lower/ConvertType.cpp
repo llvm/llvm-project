@@ -294,10 +294,15 @@ struct TypeBuilderImpl {
     bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
                          !isAssumedType;
+    if (Fortran::evaluate::IsCoarray(symbol) &&
+        symbol.attrs().test(Fortran::semantics::Attr::VOLATILE))
+      TODO(loc, "coarray: variable with VOLATILE attribute.");
+
     if (Fortran::semantics::IsPointer(symbol))
       return fir::wrapInClassOrBoxType(fir::PointerType::get(ty), isPolymorphic,
                                        isAssumedType, symbol.Corank());
-    if (Fortran::semantics::IsAllocatable(symbol))
+    if (Fortran::semantics::IsAllocatable(symbol) ||
+        Fortran::evaluate::IsCoarray(symbol))
       return fir::wrapInClassOrBoxType(fir::HeapType::get(ty), isPolymorphic,
                                        isAssumedType, symbol.Corank());
     // isPtr and isAlloc are variable that were promoted to be on the
@@ -533,11 +538,6 @@ struct TypeBuilderImpl {
       return getCharacterLengthHelper<4>(symbol);
     }
     llvm_unreachable("unknown character kind");
-  }
-
-  template <typename A>
-  Fortran::lower::LenParameterTy getCharacterLength(const A &expr) {
-    return fir::SequenceType::getUnknownExtent();
   }
 
   template <typename T>
