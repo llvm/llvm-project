@@ -113,8 +113,7 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.not.nxv2i64(<vscale x 2 x i64>, <vs
 define <vscale x 16 x i8> @not_all_active_poison_i8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: not_all_active_poison_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    not z0.b, p0/m, z0.b
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %a)
@@ -124,8 +123,7 @@ define <vscale x 16 x i8> @not_all_active_poison_i8(<vscale x 16 x i8> %a) {
 define <vscale x 16 x i8> @not_all_active_merging_i8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: not_all_active_merging_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    not z0.b, p0/m, z0.b
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %a)
@@ -135,8 +133,7 @@ define <vscale x 16 x i8> @not_all_active_merging_i8(<vscale x 16 x i8> %a) {
 define <vscale x 8 x i16> @not_all_active_poison_i16(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: not_all_active_poison_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    not z0.h, p0/m, z0.h
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.not.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i1> %pg, <vscale x 8 x i16> %a)
@@ -146,8 +143,7 @@ define <vscale x 8 x i16> @not_all_active_poison_i16(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @not_all_active_merging_i16(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: not_all_active_merging_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    not z0.h, p0/m, z0.h
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.not.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i1> %pg, <vscale x 8 x i16> %a)
@@ -157,8 +153,7 @@ define <vscale x 8 x i16> @not_all_active_merging_i16(<vscale x 8 x i16> %a) {
 define <vscale x 4 x i32> @not_all_active_poison_i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: not_all_active_poison_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    not z0.s, p0/m, z0.s
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %a)
@@ -168,8 +163,7 @@ define <vscale x 4 x i32> @not_all_active_poison_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @not_all_active_merging_i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: not_all_active_merging_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    not z0.s, p0/m, z0.s
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %a)
@@ -179,8 +173,7 @@ define <vscale x 4 x i32> @not_all_active_merging_i32(<vscale x 4 x i32> %a) {
 define <vscale x 2 x i64> @not_all_active_poison_i64(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: not_all_active_poison_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    not z0.d, p0/m, z0.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.not.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %a)
@@ -190,8 +183,7 @@ define <vscale x 2 x i64> @not_all_active_poison_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @not_all_active_merging_i64(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: not_all_active_merging_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    not z0.d, p0/m, z0.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.not.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %a)
