@@ -13,6 +13,8 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Compiler.h"
+#include <array>
+#include <mutex>
 
 namespace lld::elf {
 struct Ctx;
@@ -44,6 +46,19 @@ public:
   void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
 
   Symbol *insert(StringRef name);
+  // Add a symbol returned by intern to the symbol table.
+  Symbol *insert(Symbol *sym) {
+    if (!sym->inserted) {
+      sym->inserted = true;
+      symVector.push_back(sym);
+    }
+    return sym;
+  }
+  // Return the symbol named `name`, creating one that is not yet in the symbol
+  // table if needed. This is thread-safe while `concurrent` is true.
+  Symbol *intern(llvm::CachedHashStringRef name);
+  // True while other threads may call intern. The shards are locked only then.
+  bool concurrent = false;
 
   template <typename T> Symbol *addSymbol(const T &newSym) {
     Symbol *sym = insert(newSym.getName());
@@ -87,10 +102,23 @@ private:
 
   Ctx &ctx;
 
-  // Global symbols and a map from symbol name to the index. The order is not
-  // defined. We can use an arbitrary order, but it has to be deterministic even
-  // when cross linking.
-  llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
+  // A map from symbol name to the symbol, sharded by the high bits of the hash
+  // so that intern can run in parallel.
+  struct Shard {
+    llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> map;
+    std::mutex mu;
+  };
+  std::array<Shard, 256> symMap;
+  Shard &getShard(llvm::CachedHashStringRef key) {
+    return symMap[key.hash() >> 24];
+  }
+  std::unique_lock<std::mutex> lock(Shard &shard) {
+    return concurrent ? std::unique_lock<std::mutex>(shard.mu)
+                      : std::unique_lock<std::mutex>();
+  }
+
+  // Global symbols in insertion order, which must be deterministic even when
+  // cross linking.
   SmallVector<Symbol *, 0> symVector;
 
   // A map from demangled symbol names to their symbol objects.
