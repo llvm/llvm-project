@@ -20668,11 +20668,19 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     }
     case Intrinsic::amdgcn_mul_u24:
     case Intrinsic::amdgcn_mul_i24: {
-      KnownBits LHSKnown, RHSKnown;
       Register LHS = MI->getOperand(2).getReg();
       Register RHS = MI->getOperand(3).getReg();
-      VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
+
+      KnownBits RHSKnown;
       VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
+      if (RHSKnown.isUnknown())
+        break;
+
+      KnownBits LHSKnown;
+      VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
+      if (LHSKnown.isUnknown())
+        break;
+
       bool SelfMultiply =
           LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
       Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
