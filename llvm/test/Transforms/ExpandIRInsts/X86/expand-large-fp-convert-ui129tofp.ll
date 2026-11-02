@@ -16,21 +16,21 @@ define half @ui129tohalf(i129 %a) !prof !0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i129 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 129, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 128, [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], 24
-; CHECK-NEXT:    br i1 [[TMP8]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[TMP46:%.*]] = icmp sgt i32 [[TMP6]], 11
+; CHECK-NEXT:    br i1 [[TMP46]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]], !prof [[PROF2:![0-9]+]]
 ; CHECK:       itofp-if-then4:
 ; CHECK-NEXT:    switch i32 [[TMP6]], label [[ITOFP_SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 25, label [[ITOFP_SW_BB:%.*]]
-; CHECK-NEXT:      i32 26, label [[ITOFP_SW_EPILOG:%.*]]
+; CHECK-NEXT:      i32 12, label [[ITOFP_SW_BB:%.*]]
+; CHECK-NEXT:      i32 13, label [[ITOFP_SW_EPILOG:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
 ; CHECK:       itofp-sw-bb:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i129 [[A]], 1
 ; CHECK-NEXT:    br label [[ITOFP_SW_EPILOG]]
 ; CHECK:       itofp-sw-default:
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 103, [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 116, [[TMP5]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i129
 ; CHECK-NEXT:    [[TMP12:%.*]] = lshr i129 [[A]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP5]], 26
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP5]], 13
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP13]] to i129
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr i129 -1, [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = and i129 [[TMP15]], [[A]]
@@ -47,7 +47,7 @@ define half @ui129tohalf(i129 %a) !prof !0 {
 ; CHECK-NEXT:    [[TMP25:%.*]] = or i129 [[TMP20]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = add i129 [[TMP25]], 1
 ; CHECK-NEXT:    [[TMP27:%.*]] = lshr i129 [[TMP26]], 2
-; CHECK-NEXT:    [[A3:%.*]] = and i129 [[TMP26]], 67108864
+; CHECK-NEXT:    [[A3:%.*]] = and i129 [[TMP26]], 8192
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i129 [[A3]], 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = trunc i129 [[TMP27]] to i32
 ; CHECK-NEXT:    [[TMP30:%.*]] = lshr i129 [[TMP27]], 32
@@ -60,7 +60,7 @@ define half @ui129tohalf(i129 %a) !prof !0 {
 ; CHECK-NEXT:    [[TMP35:%.*]] = trunc i129 [[TMP34]] to i32
 ; CHECK-NEXT:    br label [[ITOFP_IF_END26]]
 ; CHECK:       itofp-if-else:
-; CHECK-NEXT:    [[TMP36:%.*]] = add i32 [[TMP5]], -105
+; CHECK-NEXT:    [[TMP36:%.*]] = add i32 [[TMP5]], -118
 ; CHECK-NEXT:    [[TMP37:%.*]] = zext i32 [[TMP36]] to i129
 ; CHECK-NEXT:    [[TMP38:%.*]] = shl i129 [[A]], [[TMP37]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = trunc i129 [[TMP38]] to i32
@@ -71,16 +71,16 @@ define half @ui129tohalf(i129 %a) !prof !0 {
 ; CHECK-NEXT:    [[TMP42:%.*]] = phi i32 [ [[TMP33]], [[ITOFP_IF_THEN20]] ], [ [[TMP29]], [[ITOFP_SW_EPILOG]] ], [ [[TMP39]], [[ITOFP_IF_ELSE]] ]
 ; CHECK-NEXT:    [[TMP43:%.*]] = phi i32 [ [[TMP6]], [[ITOFP_IF_THEN20]] ], [ [[TMP7]], [[ITOFP_SW_EPILOG]] ], [ [[TMP7]], [[ITOFP_IF_ELSE]] ]
 ; CHECK-NEXT:    [[TMP44:%.*]] = trunc i129 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP45:%.*]] = and i32 [[TMP44]], -2147483648
-; CHECK-NEXT:    [[TMP46:%.*]] = shl i32 [[TMP43]], 23
-; CHECK-NEXT:    [[TMP47:%.*]] = add i32 [[TMP46]], 1065353216
-; CHECK-NEXT:    [[TMP48:%.*]] = and i32 [[TMP42]], 8388607
+; CHECK-NEXT:    [[TMP45:%.*]] = and i32 [[TMP44]], 32768
+; CHECK-NEXT:    [[TMP51:%.*]] = shl i32 [[TMP43]], 10
+; CHECK-NEXT:    [[TMP47:%.*]] = add i32 [[TMP51]], 15360
+; CHECK-NEXT:    [[TMP48:%.*]] = and i32 [[TMP42]], 1023
 ; CHECK-NEXT:    [[TMP49:%.*]] = or i32 [[TMP48]], [[TMP45]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = or i32 [[TMP48]], [[TMP47]]
-; CHECK-NEXT:    [[TMP51:%.*]] = bitcast i32 [[TMP50]] to float
-; CHECK-NEXT:    [[TMP52:%.*]] = fptrunc float [[TMP51]] to half
-; CHECK-NEXT:    [[TMP54:%.*]] = icmp uge i32 [[TMP7]], 128
-; CHECK-NEXT:    [[TMP55:%.*]] = select i1 [[TMP54]], half +inf, half [[TMP52]]
+; CHECK-NEXT:    [[TMP52:%.*]] = trunc i32 [[TMP50]] to i16
+; CHECK-NEXT:    [[TMP56:%.*]] = bitcast i16 [[TMP52]] to half
+; CHECK-NEXT:    [[TMP54:%.*]] = icmp uge i32 [[TMP7]], 16
+; CHECK-NEXT:    [[TMP55:%.*]] = select i1 [[TMP54]], half +inf, half [[TMP56]], !prof [[PROF1]]
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
 ; CHECK-NEXT:    [[TMP53:%.*]] = phi half [ [[TMP55]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
@@ -167,7 +167,7 @@ define float @ui129tofloat(i129 %a) {
 ; CHECK-NEXT:    [[TMP50:%.*]] = or i32 [[TMP48]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = bitcast i32 [[TMP50]] to float
 ; CHECK-NEXT:    [[TMP53:%.*]] = icmp uge i32 [[TMP7]], 128
-; CHECK-NEXT:    [[TMP54:%.*]] = select i1 [[TMP53]], float +inf, float [[TMP51]]
+; CHECK-NEXT:    [[TMP54:%.*]] = select i1 [[TMP53]], float +inf, float [[TMP51]], !prof [[PROF1]]
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
 ; CHECK-NEXT:    [[TMP52:%.*]] = phi float [ [[TMP54]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
@@ -279,22 +279,24 @@ define x86_fp80 @ui129tox86_fp80(i129 %a) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i129 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i129 @llvm.ctlz.i129(i129 [[A]], i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i129 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i129 129, [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i129 128, [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i129 [[TMP6]], 113
-; CHECK-NEXT:    br i1 [[TMP8]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 129, [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 128, [[TMP5]]
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp sgt i32 [[TMP7]], 64
+; CHECK-NEXT:    br i1 [[TMP27]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]], !prof [[PROF2]]
 ; CHECK:       itofp-if-then4:
-; CHECK-NEXT:    switch i129 [[TMP6]], label [[ITOFP_SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i129 114, label [[ITOFP_SW_BB:%.*]]
-; CHECK-NEXT:      i129 115, label [[ITOFP_SW_EPILOG:%.*]]
+; CHECK-NEXT:    switch i32 [[TMP7]], label [[ITOFP_SW_DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 65, label [[ITOFP_SW_BB:%.*]]
+; CHECK-NEXT:      i32 66, label [[ITOFP_SW_EPILOG:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF3]]
 ; CHECK:       itofp-sw-bb:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i129 [[A]], 1
 ; CHECK-NEXT:    br label [[ITOFP_SW_EPILOG]]
 ; CHECK:       itofp-sw-default:
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i129 14, [[TMP4]]
+; CHECK-NEXT:    [[TMP28:%.*]] = sub i32 63, [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP28]] to i129
 ; CHECK-NEXT:    [[TMP11:%.*]] = lshr i129 [[A]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i129 [[TMP4]], 115
+; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[TMP5]], 66
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP29]] to i129
 ; CHECK-NEXT:    [[TMP13:%.*]] = lshr i129 -1, [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = and i129 [[TMP13]], [[A]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ne i129 [[TMP14]], 0
@@ -310,39 +312,28 @@ define x86_fp80 @ui129tox86_fp80(i129 %a) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = or i129 [[TMP18]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i129 [[TMP23]], 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = lshr i129 [[TMP24]], 2
-; CHECK-NEXT:    [[A3:%.*]] = and i129 [[TMP24]], 41538374868278621028243970633760768
+; CHECK-NEXT:    [[A3:%.*]] = and i129 [[TMP24]], 73786976294838206464
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i129 [[A3]], 0
-; CHECK-NEXT:    [[TMP27:%.*]] = trunc i129 [[TMP25]] to i128
-; CHECK-NEXT:    [[TMP28:%.*]] = lshr i129 [[TMP25]], 32
-; CHECK-NEXT:    [[TMP29:%.*]] = trunc i129 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP31:%.*]] = trunc i129 [[TMP25]] to i80
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[ITOFP_IF_END26:%.*]], label [[ITOFP_IF_THEN20:%.*]], !prof [[PROF2]]
 ; CHECK:       itofp-if-then20:
 ; CHECK-NEXT:    [[TMP30:%.*]] = lshr i129 [[TMP24]], 3
-; CHECK-NEXT:    [[TMP31:%.*]] = trunc i129 [[TMP30]] to i128
-; CHECK-NEXT:    [[TMP32:%.*]] = lshr i129 [[TMP30]], 32
-; CHECK-NEXT:    [[TMP33:%.*]] = trunc i129 [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP32:%.*]] = trunc i129 [[TMP30]] to i80
 ; CHECK-NEXT:    br label [[ITOFP_IF_END26]]
 ; CHECK:       itofp-if-else:
-; CHECK-NEXT:    [[TMP34:%.*]] = add i129 [[TMP4]], -16
+; CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP5]], -65
+; CHECK-NEXT:    [[TMP34:%.*]] = zext i32 [[TMP33]] to i129
 ; CHECK-NEXT:    [[TMP35:%.*]] = shl i129 [[A]], [[TMP34]]
-; CHECK-NEXT:    [[TMP36:%.*]] = trunc i129 [[TMP35]] to i128
-; CHECK-NEXT:    [[TMP37:%.*]] = lshr i129 [[TMP35]], 32
-; CHECK-NEXT:    [[TMP38:%.*]] = trunc i129 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP36:%.*]] = trunc i129 [[TMP35]] to i80
 ; CHECK-NEXT:    br label [[ITOFP_IF_END26]]
 ; CHECK:       itofp-if-end26:
-; CHECK-NEXT:    [[TMP39:%.*]] = phi i128 [ [[TMP31]], [[ITOFP_IF_THEN20]] ], [ [[TMP27]], [[ITOFP_SW_EPILOG]] ], [ [[TMP36]], [[ITOFP_IF_ELSE]] ]
-; CHECK-NEXT:    [[TMP40:%.*]] = phi i64 [ [[TMP33]], [[ITOFP_IF_THEN20]] ], [ [[TMP29]], [[ITOFP_SW_EPILOG]] ], [ [[TMP38]], [[ITOFP_IF_ELSE]] ]
-; CHECK-NEXT:    [[AND29:%.*]] = and i129 [[TMP1]], 9223372036854775808
-; CHECK-NEXT:    [[TMP41:%.*]] = shl i64 [[TMP40]], 48
-; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[TMP41]], 4611404543450677248
-; CHECK-NEXT:    [[TMP43:%.*]] = zext i64 [[TMP42]] to i128
-; CHECK-NEXT:    [[TMP44:%.*]] = trunc i129 [[AND29]] to i128
-; CHECK-NEXT:    [[TMP45:%.*]] = or i128 [[TMP44]], [[TMP43]]
-; CHECK-NEXT:    [[TMP46:%.*]] = shl i128 [[TMP45]], 64
-; CHECK-NEXT:    [[TMP47:%.*]] = and i128 [[TMP39]], 5192296858534827628530496329220095
-; CHECK-NEXT:    [[TMP48:%.*]] = or i128 [[TMP46]], [[TMP47]]
-; CHECK-NEXT:    [[TMP49:%.*]] = bitcast i128 [[TMP48]] to fp128
-; CHECK-NEXT:    [[TMP50:%.*]] = fptrunc fp128 [[TMP49]] to x86_fp80
+; CHECK-NEXT:    [[TMP37:%.*]] = phi i80 [ [[TMP32]], [[ITOFP_IF_THEN20]] ], [ [[TMP31]], [[ITOFP_SW_EPILOG]] ], [ [[TMP36]], [[ITOFP_IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP38:%.*]] = phi i32 [ [[TMP7]], [[ITOFP_IF_THEN20]] ], [ [[TMP8]], [[ITOFP_SW_EPILOG]] ], [ [[TMP8]], [[ITOFP_IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP39:%.*]] = add i32 [[TMP38]], 16383
+; CHECK-NEXT:    [[TMP40:%.*]] = zext i32 [[TMP39]] to i80
+; CHECK-NEXT:    [[TMP41:%.*]] = shl i80 [[TMP40]], 64
+; CHECK-NEXT:    [[TMP42:%.*]] = or i80 [[TMP37]], [[TMP41]]
+; CHECK-NEXT:    [[TMP50:%.*]] = bitcast i80 [[TMP42]] to x86_fp80
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
 ; CHECK-NEXT:    [[TMP51:%.*]] = phi x86_fp80 [ [[TMP50]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
@@ -398,20 +389,17 @@ define fp128 @ui129tofp128(i129 %a) {
 ; CHECK-NEXT:    [[A3:%.*]] = and i129 [[TMP24]], 41538374868278621028243970633760768
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i129 [[A3]], 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc i129 [[TMP25]] to i128
-; CHECK-NEXT:    [[TMP28:%.*]] = lshr i129 [[TMP25]], 32
 ; CHECK-NEXT:    [[TMP29:%.*]] = trunc i129 [[TMP7]] to i64
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[ITOFP_IF_END26:%.*]], label [[ITOFP_IF_THEN20:%.*]], !prof [[PROF2]]
 ; CHECK:       itofp-if-then20:
 ; CHECK-NEXT:    [[TMP30:%.*]] = lshr i129 [[TMP24]], 3
 ; CHECK-NEXT:    [[TMP31:%.*]] = trunc i129 [[TMP30]] to i128
-; CHECK-NEXT:    [[TMP32:%.*]] = lshr i129 [[TMP30]], 32
 ; CHECK-NEXT:    [[TMP33:%.*]] = trunc i129 [[TMP6]] to i64
 ; CHECK-NEXT:    br label [[ITOFP_IF_END26]]
 ; CHECK:       itofp-if-else:
 ; CHECK-NEXT:    [[TMP34:%.*]] = add i129 [[TMP4]], -16
 ; CHECK-NEXT:    [[TMP35:%.*]] = shl i129 [[A]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = trunc i129 [[TMP35]] to i128
-; CHECK-NEXT:    [[TMP37:%.*]] = lshr i129 [[TMP35]], 32
 ; CHECK-NEXT:    [[TMP38:%.*]] = trunc i129 [[TMP7]] to i64
 ; CHECK-NEXT:    br label [[ITOFP_IF_END26]]
 ; CHECK:       itofp-if-end26:
@@ -514,7 +502,7 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK-NEXT:    [[TMP51:%.*]] = or i32 [[TMP49]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = bitcast i32 [[TMP51]] to float
 ; CHECK-NEXT:    [[TMP114:%.*]] = icmp uge i32 [[TMP8]], 128
-; CHECK-NEXT:    [[TMP115:%.*]] = select i1 [[TMP114]], float +inf, float [[TMP52]]
+; CHECK-NEXT:    [[TMP115:%.*]] = select i1 [[TMP114]], float +inf, float [[TMP52]], !prof [[PROF1]]
 ; CHECK-NEXT:    br label [[ITOFP_RETURN1]]
 ; CHECK:       itofp-return1:
 ; CHECK-NEXT:    [[TMP53:%.*]] = phi float [ [[TMP115]], [[ITOFP_IF_END269]] ], [ 0.000000e+00, [[ITOFP_ENTRYITOFP_ENTRY:%.*]] ]
@@ -594,7 +582,7 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK-NEXT:    [[TMP106:%.*]] = or i32 [[TMP104]], [[TMP103]]
 ; CHECK-NEXT:    [[TMP107:%.*]] = bitcast i32 [[TMP106]] to float
 ; CHECK-NEXT:    [[TMP112:%.*]] = icmp uge i32 [[TMP63]], 128
-; CHECK-NEXT:    [[TMP113:%.*]] = select i1 [[TMP112]], float +inf, float [[TMP107]]
+; CHECK-NEXT:    [[TMP113:%.*]] = select i1 [[TMP112]], float +inf, float [[TMP107]], !prof [[PROF1]]
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
 ; CHECK-NEXT:    [[TMP108:%.*]] = phi float [ [[TMP113]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_RETURN1]] ]
