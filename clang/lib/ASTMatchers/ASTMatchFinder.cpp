@@ -801,8 +801,7 @@ public:
   }
 
 private:
-  std::set<std::tuple<const Stmt *, bool, bool, bool>>
-      TraversedCCompoundLiterals;
+  std::set<std::tuple<const Stmt *, bool, bool, bool>> TraversedStmts;
   bool TraversingASTNodeNotSpelledInSource = false;
   bool TraversingASTNodeNotAsIs = false;
   bool TraversingASTChildrenNotSpelledInSource = false;
@@ -1577,12 +1576,10 @@ bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
   bool ScopedTraversal = TraversingASTNodeNotSpelledInSource ||
                          TraversingASTChildrenNotSpelledInSource;
 
-  // C designated initializers share compound literals between syntactic
-  // and semantic forms. Visit each literal once in each traversal context;
-  // repeating the same subtree adds duplicate callbacks, not new matches.
-  if (!getASTContext().getLangOpts().CPlusPlus &&
-      isa<CompoundLiteralExpr>(StmtNode) &&
-      !TraversedCCompoundLiterals
+  // Shared statements can be reached through several AST paths. Visit each
+  // statement once in each traversal context; repeating the same subtree
+  // adds duplicate callbacks, not new matches.
+  if (!TraversedStmts
            .emplace(StmtNode, ScopedTraversal, TraversingASTNodeNotAsIs,
                     TraversingASTChildrenNotSpelledInSource)
            .second)
