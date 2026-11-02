@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 namespace llvm {
 
@@ -21,6 +20,8 @@ class Function;
 class GCNSubtarget;
 
 namespace AMDGPU {
+
+struct CounterLayout;
 
 /// Return whether expert scheduling mode is available and enabled for \p F.
 bool isExpertSchedulingMode(const GCNSubtarget &ST, const Function &F);
@@ -69,8 +70,8 @@ struct HardwareLimits {
 
   HardwareLimits() = default;
 
-  /// Initializes hardware limits from ISA version.
-  HardwareLimits(const IsaVersion &IV);
+  /// Initializes hardware limits from counter layout \p Layout.
+  explicit HardwareLimits(const CounterLayout &Layout);
 
   unsigned get(InstCounterType T) const;
 };
@@ -180,30 +181,30 @@ public:
   }
 };
 
-Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded);
+Waitcnt decodeWaitcnt(const CounterLayout &Layout, unsigned Encoded);
 
-unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
+unsigned encodeWaitcnt(const CounterLayout &Layout, const Waitcnt &Decoded);
 
 // The following are only meaningful on targets that support
 // S_WAIT_LOADCNT_DSCNT and S_WAIT_STORECNT_DSCNT.
 
-/// \returns Decoded Waitcnt structure from given \p LoadcntDscnt for given
-/// isa \p Version.
-Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt);
+/// \returns Decoded Waitcnt structure from given \p LoadcntDscnt for \p Layout.
+Waitcnt decodeLoadcntDscnt(const CounterLayout &Layout, unsigned LoadcntDscnt);
 
-/// \returns Decoded Waitcnt structure from given \p StorecntDscnt for given
-/// isa \p Version.
-Waitcnt decodeStorecntDscnt(const IsaVersion &Version, unsigned StorecntDscnt);
+/// \returns Decoded Waitcnt structure from given \p StorecntDscnt for
+/// \p Layout.
+Waitcnt decodeStorecntDscnt(const CounterLayout &Layout,
+                            unsigned StorecntDscnt);
 
 /// \returns \p Loadcnt and \p Dscnt components of \p Decoded  encoded as an
-/// immediate that can be used with S_WAIT_LOADCNT_DSCNT for given isa
-/// \p Version.
-unsigned encodeLoadcntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
+/// immediate that can be used with S_WAIT_LOADCNT_DSCNT for \p Layout.
+unsigned encodeLoadcntDscnt(const CounterLayout &Layout,
+                            const Waitcnt &Decoded);
 
 /// \returns \p Storecnt and \p Dscnt components of \p Decoded  encoded as an
-/// immediate that can be used with S_WAIT_STORECNT_DSCNT for given isa
-/// \p Version.
-unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
+/// immediate that can be used with S_WAIT_STORECNT_DSCNT for \p Layout.
+unsigned encodeStorecntDscnt(const CounterLayout &Layout,
+                             const Waitcnt &Decoded);
 
 /// Determine if \p MI is a gfx12+ single-counter S_WAIT_*CNT instruction,
 /// and if so, which counter it is waiting on.

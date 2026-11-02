@@ -2094,7 +2094,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  const AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST.getCPU());
+  const AMDGPU::CounterLayout Layout = AMDGPU::getCounterLayout(ST);
   const MachineOperand *SDST = TII->getNamedOperand(*MI, SDSTName);
   if (!SDST) {
     for (const auto &MO : MI->implicit_operands()) {
@@ -2113,7 +2113,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
     return SIInstrInfo::isSMRD(I) && I.readsRegister(SDSTReg, TRI);
   };
 
-  auto IsExpiredFn = [TII, IV](const MachineInstr &MI, int) {
+  auto IsExpiredFn = [TII, Layout](const MachineInstr &MI, int) {
     if (TII->isSALU(MI)) {
       switch (MI.getOpcode()) {
       case AMDGPU::S_SETVSKIP:
@@ -2130,7 +2130,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
       case AMDGPU::S_WAITCNT: {
         const int64_t Imm = MI.getOperand(0).getImm();
         AMDGPU::Waitcnt Decoded =
-            AMDGPU::decodeWaitcnt(IV, static_cast<unsigned>(Imm));
+            AMDGPU::decodeWaitcnt(Layout, static_cast<unsigned>(Imm));
         // DsCnt corresponds to LGKMCnt here.
         return Decoded.get(AMDGPU::DS_CNT) == 0;
       }

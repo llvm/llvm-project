@@ -438,3 +438,11 @@ def LDSDMAIntrinsicTable : GenericTable {
   let PrimaryKey = ["Intr"];
   let PrimaryKeyName = "lookupLDSDMAIntrinsic";
 }
+
+def CounterFieldFeatures : GenericTable {
+  let FilterClass = "CounterFieldFeature";
+  let CppTypeName = "CounterFieldFeature";
+  let Fields = ["FeatureEnum", "LayoutField", "LayoutValue"];
+  string TypeOf_FeatureEnum = "code";
+  string TypeOf_LayoutField = "code";
+}
