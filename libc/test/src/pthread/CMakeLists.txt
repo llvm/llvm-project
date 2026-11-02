@@ -77,7 +77,6 @@ add_libc_test(
     pthread_rwlockattr_test.cpp
   DEPENDS
     libc.include.pthread
-    libc.src.errno.errno
     libc.src.pthread.pthread_rwlockattr_destroy
     libc.src.pthread.pthread_rwlockattr_getkind_np
     libc.src.pthread.pthread_rwlockattr_getpshared

@@ -3,6 +3,7 @@
 # RUN:   -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs \
 # RUN:   -start-before=register-coalescer \
 # RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
+# RUN:   -enable-misched=0 -amdgpu-stress-vgpr=168 \
 # RUN:   -debug-only=amdgpu-rewrite-agpr-copy-mfma -filetype=null %s 2>&1 \
 # RUN:   | FileCheck %s
 
