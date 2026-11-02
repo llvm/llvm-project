@@ -6419,19 +6419,19 @@ namespace {
 struct TwoSlotGEP {
   /// The GEP that indexes its alloca in `Offset0` or `Offset1`, and with
   /// loads/stores of size `Size`. %gep in the example.
-  GetElementPtrInst *GEP;
+  GetElementPtrInst *const GEP;
 
   /// The index value of the GEP. In the example, this is %idx.
-  Value *Idx;
+  Value *const Idx;
 
   /// The value of `Idx` that accesses `Offset1`. 1 in the example.
-  ConstantInt *Idx1;
+  ConstantInt *const Idx1;
 
   /// Byte offsets of the slots. 0 and 4 in the example.
-  uint64_t Offset0, Offset1;
+  const uint64_t Offset0, Offset1;
 
   /// The size of loads and stores through this GEP. 4 in the example.
-  uint64_t Size;
+  const uint64_t Size;
 };
 
 } // end anonymous namespace
