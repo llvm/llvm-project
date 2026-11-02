@@ -50,6 +50,23 @@ namespace interp {
   return false;
 }
 
+static bool isFixedSizeIntegralType(PrimType T) {
+  switch (T) {
+  case PT_Sint8:
+  case PT_Uint8:
+  case PT_Sint16:
+  case PT_Uint16:
+  case PT_Sint32:
+  case PT_Uint32:
+  case PT_Sint64:
+  case PT_Uint64:
+  case PT_Bool:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void discard(InterpStack &Stk, PrimType T) {
   TYPE_SWITCH(T, { Stk.discard<T>(); });
 }
@@ -435,6 +452,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
   PrimType ElemT = StrPtr.getFieldDesc()->getPrimType();
+  if (!isFixedSizeIntegralType(ElemT))
+    return false;
+
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemDataSize();
   if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
     return Invalid(S, OpPC);
@@ -442,7 +462,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
     const ASTContext &AC = S.getASTContext();
     unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
-    if (StrPtr.getFieldDesc()->getElemDataSize() != WCharSize)
+    if (ElemSize != WCharSize)
       return false;
   }
 
