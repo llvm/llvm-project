@@ -133,14 +133,13 @@ struct TestCacheNoGuardPageConfig {
 };
 
 template <typename Config> static void testBasic() {
-  using SecondaryT = scudo::MapAllocator<scudo::SecondaryConfig<Config>>;
   AllocatorInfoType<Config> Info;
 
   const scudo::uptr Size = 1U << 16;
   void *P = Info.Allocator->allocate(Info.Options, Size);
   EXPECT_NE(P, nullptr);
   memset(P, 'A', Size);
-  EXPECT_GE(SecondaryT::getBlockSize(P), Size);
+  EXPECT_GE(Info.Allocator->getBlockSize(P), Size);
   Info.Allocator->deallocate(Info.Options, P);
 
   // If the Secondary can't cache that pointer, it will be unmapped.
@@ -327,6 +326,95 @@ template <typename Config> void testAllocatorIterate() {
 TEST(ScudoSecondaryTest, AllocatorIterate) {
   testAllocatorIterate<TestNoCacheConfig>();
   testAllocatorIterate<TestNoCacheNoGuardPageConfig>();
+}
+
+template <typename Config> static void testHeaderCorruption() {
+  using ConfigWrapper = scudo::SecondaryConfig<Config>;
+  AllocatorInfoType<Config> Info;
+
+  const scudo::uptr Size = 1U << 16;
+  void *P = Info.Allocator->allocate(Info.Options, Size);
+  ASSERT_NE(P, nullptr);
+  void *Q = Info.Allocator->allocate(Info.Options, Size);
+  ASSERT_NE(Q, nullptr);
+  scudo::LargeBlock::Header *H = scudo::LargeBlock::getHeader<ConfigWrapper>(P);
+  scudo::LargeBlock::Header *HQ =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(Q);
+
+  // The fields that decide what gets cached or unmapped, and where the block
+  // ends, are verified before they are used.
+  H->CommitBase -= PageSize;
+  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P),
+                     "corrupted secondary header");
+  SCUDO_EXPECT_DEATH(Info.Allocator->getBlockSize(P),
+                     "corrupted secondary header");
+  H->CommitBase += PageSize;
+
+  H->CommitSize += PageSize;
+  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P),
+                     "corrupted secondary header");
+  SCUDO_EXPECT_DEATH(Info.Allocator->getBlockSize(P),
+                     "corrupted secondary header");
+  H->CommitSize -= PageSize;
+
+  scudo::LargeBlock::Header Saved = *H;
+  H->MemMap = HQ->MemMap;
+  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, P),
+                     "corrupted secondary header");
+  *H = Saved;
+
+  // A valid header is only valid at its own address.
+  Saved = *HQ;
+  *HQ = *H;
+  SCUDO_EXPECT_DEATH(Info.Allocator->deallocate(Info.Options, Q),
+                     "corrupted secondary header");
+  *HQ = Saved;
+
+  EXPECT_GE(Info.Allocator->getBlockSize(P), Size);
+  Info.Allocator->deallocate(Info.Options, Q);
+  Info.Allocator->deallocate(Info.Options, P);
+}
+
+TEST(ScudoSecondaryDeathTest, HeaderCorruption) {
+  testHeaderCorruption<TestNoCacheConfig>();
+  testHeaderCorruption<TestCacheConfig>();
+  testHeaderCorruption<scudo::DefaultConfig>();
+}
+
+template <typename Config> static void testHeaderCacheReuse() {
+  using ConfigWrapper = scudo::SecondaryConfig<Config>;
+  AllocatorInfoType<Config> Info;
+
+  const scudo::uptr Size = 1U << 16;
+  const scudo::uptr SmallSize = Size - 2 * PageSize;
+  void *P = Info.Allocator->allocate(Info.Options, Size);
+  ASSERT_NE(P, nullptr);
+  const scudo::uptr CommitBase =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(P)->CommitBase;
+  Info.Allocator->deallocate(Info.Options, P);
+
+  // Q reuses the block, with its header further into it.
+  void *Q = Info.Allocator->allocate(Info.Options, SmallSize);
+  ASSERT_NE(Q, nullptr);
+  scudo::LargeBlock::Header *HQ =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(Q);
+  EXPECT_EQ(HQ->CommitBase, CommitBase);
+  EXPECT_GT(reinterpret_cast<scudo::uptr>(Q), reinterpret_cast<scudo::uptr>(P));
+  EXPECT_GE(Info.Allocator->getBlockSize(Q), SmallSize);
+  Info.Allocator->deallocate(Info.Options, Q);
+
+  // R reuses it again with its header back where the one of P was, which puts
+  // the header of Q in the user data of R: its checksum was cleared.
+  void *R = Info.Allocator->allocate(Info.Options, Size);
+  ASSERT_EQ(R, P);
+  EXPECT_GE(Info.Allocator->getBlockSize(R), Size);
+  EXPECT_EQ(HQ->Checksum, 0U);
+  Info.Allocator->deallocate(Info.Options, R);
+}
+
+TEST(ScudoSecondaryTest, HeaderCacheReuse) {
+  testHeaderCacheReuse<TestCacheConfig>();
+  testHeaderCacheReuse<TestCacheNoGuardPageConfig>();
 }
 
 template <typename Config> void testAllocatorWithReleaseThreadsRace() {

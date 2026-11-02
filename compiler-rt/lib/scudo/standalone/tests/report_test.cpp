@@ -99,6 +99,13 @@ TEST(ScudoReportDeathTest, HeaderCorruption) {
       "most likely due to memory corruption");
 }
 
+TEST(ScudoReportDeathTest, SecondaryHeaderCorruption) {
+  UNUSED void *P = reinterpret_cast<void *>(0x42424242U);
+  SCUDO_EXPECT_DEATH(scudo::reportSecondaryHeaderCorruption(P),
+                     "Scudo ERROR.*corrupted secondary header at address "
+                     "0x.*42424242: most likely due to memory corruption");
+}
+
 #if SCUDO_LINUX || SCUDO_TRUSTY || SCUDO_ANDROID
 #include "report_linux.h"
 

@@ -79,6 +79,15 @@ void NORETURN reportHeaderCorruption(void *Header, const void *Ptr) {
   }
 }
 
+// The checksum of the header of a Secondary block is invalid. This could be
+// caused by an {over,under}write of the header.
+void NORETURN reportSecondaryHeaderCorruption(const void *Ptr) {
+  ScopedErrorReport Report;
+  Report.append("corrupted secondary header at address %p: most likely due to "
+                "memory corruption\n",
+                Ptr);
+}
+
 // The allocator was compiled with parameters that conflict with field size
 // requirements.
 void NORETURN reportSanityCheckError(const char *Field) {
