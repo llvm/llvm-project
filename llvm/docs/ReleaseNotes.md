@@ -327,8 +327,6 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Hexagon Backend
 
-### Changes to the LFI Backend
-
 ### Changes to the LoongArch Backend
 
 ### Changes to the MIPS Backend
@@ -518,6 +516,8 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to BOLT
 
 ### Changes to Sanitizers
+
+### Changes to LFI
 
 ### Other Changes
 
