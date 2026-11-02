@@ -1067,50 +1067,31 @@ class VLdStIdxOpcodeInfo<int size, bit isStore, bit isGPRIdx> {
   bit IsGPRIdx = isGPRIdx;
 }
 
+// $offset and the index are in dwords. As with V_INDIRECT_REG_*_MOVREL and
+// _GPR_IDX, the movrel form reads the index from M0 and the GPR_IDX form
+// takes it in an SGPR and clobbers M0. The storage is the whole register
+// file, which no operand can name, so these are memory accesses with an MMO.
+let UseNamedOperandTable = 1, hasSideEffects = 0, Uses = [M0, EXEC] in
 foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
               VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
               VReg_512, VReg_1024] in {
-  // $offset and the index are in dwords. As with V_INDIRECT_REG_*_MOVREL and
-  // _GPR_IDX, the movrel form reads the index from M0 and the GPR_IDX form
-  // takes it in an SGPR and clobbers M0. The storage is the whole register
-  // file, which no operand can name, so these are memory accesses with an MMO.
-  def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
-    (outs rc:$data),
-    (ins i32imm:$offset)>,
-    VLdStIdxOpcodeInfo<rc.Size, 0, 0> {
-      let mayLoad = 1;
-      let UseNamedOperandTable = 1;
-      let hasSideEffects = 0;
-      let Uses = [M0, EXEC];
+  let mayLoad = 1 in {
+    def V_LOAD_IDX_B#rc.Size
+        : VPseudoInstSI<(outs rc:$data), (ins i32imm:$offset)>,
+          VLdStIdxOpcodeInfo<rc.Size, 0, 0>;
+    let Defs = [M0] in
+    def V_LOAD_IDX_GPR_IDX_B#rc.Size
+        : VPseudoInstSI<(outs rc:$data), (ins SReg_32:$idx, i32imm:$offset)>,
+          VLdStIdxOpcodeInfo<rc.Size, 0, 1>;
   }
-  def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
-    (outs),
-    (ins rc:$data, i32imm:$offset)>,
-    VLdStIdxOpcodeInfo<rc.Size, 1, 0> {
-      let mayStore = 1;
-      let UseNamedOperandTable = 1;
-      let hasSideEffects = 0;
-      let Uses = [M0, EXEC];
-  }
-  def V_LOAD_IDX_GPR_IDX_B#rc.Size : VPseudoInstSI <
-    (outs rc:$data),
-    (ins SReg_32:$idx, i32imm:$offset)>,
-    VLdStIdxOpcodeInfo<rc.Size, 0, 1> {
-      let mayLoad = 1;
-      let UseNamedOperandTable = 1;
-      let hasSideEffects = 0;
-      let Uses = [M0, EXEC];
-      let Defs = [M0];
-  }
-  def V_STORE_IDX_GPR_IDX_B#rc.Size : VPseudoInstSI <
-    (outs),
-    (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
-    VLdStIdxOpcodeInfo<rc.Size, 1, 1> {
-      let mayStore = 1;
-      let UseNamedOperandTable = 1;
-      let hasSideEffects = 0;
-      let Uses = [M0, EXEC];
-      let Defs = [M0];
+  let mayStore = 1 in {
+    def V_STORE_IDX_B#rc.Size
+        : VPseudoInstSI<(outs), (ins rc:$data, i32imm:$offset)>,
+          VLdStIdxOpcodeInfo<rc.Size, 1, 0>;
+    let Defs = [M0] in
+    def V_STORE_IDX_GPR_IDX_B#rc.Size
+        : VPseudoInstSI<(outs), (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
+          VLdStIdxOpcodeInfo<rc.Size, 1, 1>;
   }
 }
 

@@ -53,6 +53,10 @@ public:
   // as addressable.
   static unsigned getNumIndexableVGPRs(const MachineFunction &MF);
 
+  // Whether an access of this many bits is supported. Each supported width has
+  // a load and a store pseudo of both forms.
+  static bool isSupportedBitWidth(unsigned Bits);
+
   static bool classof(const MachineInstr *MI) {
     return AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode()) != nullptr;
   }
@@ -60,23 +64,10 @@ public:
 
 class VLoadIdxInst : public VLoadStoreIdxInst {
 public:
-  static int tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
-
   static bool classof(const MachineInstr *MI) {
     const AMDGPU::VLdStIdxOpcodeInfo *Info =
         AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode());
     return Info && !Info->IsStore;
-  }
-};
-
-class VStoreIdxInst : public VLoadStoreIdxInst {
-public:
-  static int tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
-
-  static bool classof(const MachineInstr *MI) {
-    const AMDGPU::VLdStIdxOpcodeInfo *Info =
-        AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode());
-    return Info && Info->IsStore;
   }
 };
 
