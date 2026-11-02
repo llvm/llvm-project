@@ -62,6 +62,7 @@ class Metadata;
 } // namespace llvm
 
 namespace clang {
+class LangOptions;
 class NamedDecl;
 class VarDecl;
 class ParmVarDecl;
@@ -317,6 +318,7 @@ public:
 
   void addBuffer(const HLSLBufferDecl *D);
   void addRootSignature(const HLSLRootSignatureDecl *D);
+  void setPreciseFPOptions(LangOptions &Opts);
   void finishCodeGen();
 
   void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
