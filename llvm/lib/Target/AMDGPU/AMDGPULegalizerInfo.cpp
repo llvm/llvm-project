@@ -555,7 +555,7 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 // Whole-dword accesses only, for now.
 static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
   return MemSize == ValSize &&
-         AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
+         AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(MemSize);
 }
 
 /// Return true if a load or store of the type should be lowered with a bitcast
