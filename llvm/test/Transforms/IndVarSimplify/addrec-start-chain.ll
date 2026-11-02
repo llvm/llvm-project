@@ -8,7 +8,7 @@
 ;
 ; Check how many predicates SCEV checks on the start values of AddRecs.
 
-; CHECK: {{^ *}}11496 scalar-evolution - Number of predicates checked on the start values of AddRecs
+; CHECK: {{^ *}}128 scalar-evolution - Number of predicates checked on the start values of AddRecs
 
 target datalayout = "e-m:e-i64:64-n32:64-S128"
 

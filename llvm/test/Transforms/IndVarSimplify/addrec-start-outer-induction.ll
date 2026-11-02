@@ -8,7 +8,8 @@ declare i1 @cond()
 
 ; %a and %b start at the outer IVs %oa and %ob. %oa <s %ob holds on entry to
 ; the outer loop and on its backedge, so it holds on every outer iteration,
-; and %a <s %b holds on every inner iteration, so %c is true.
+; and %a <s %b holds on every inner iteration.
+; TODO: %c can be folded to true.
 define void @outer_latch_induction(i32 %x, i32 %y) {
 ; CHECK-LABEL: define void @outer_latch_induction(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
@@ -22,7 +23,12 @@ define void @outer_latch_induction(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[OB:%.*]] = phi i32 [ [[OB_NEXT:%.*]], %[[OUTER_LATCH]] ], [ [[Y]], %[[OUTER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[OA]], %[[OUTER]] ], [ [[A_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[OB]], %[[OUTER]] ], [ [[B_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    [[A_NEXT]] = add nsw i32 [[A]], 1
+; CHECK-NEXT:    [[B_NEXT]] = add nsw i32 [[B]], 1
 ; CHECK-NEXT:    [[IE:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[IE]], label %[[INNER]], label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:

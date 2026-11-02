@@ -12863,8 +12863,10 @@ bool ScalarEvolution::isKnownPredicateViaAddRecStart(CmpPredicate Pred,
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
     return false;
 
+  // In the case when the start values are AddRecs themselves, we may recurse
+  // into this function again. Avoid it as it may cause exponential time complexity.
   ++NumAddRecStartQueries;
-  return isKnownPredicate(Pred, LStart, RStart);
+  return isKnownViaNonRecursiveReasoning(Pred, LStart, RStart);
 }
 
 /// Is LHS `Pred` RHS true because one of them is an AddRec that is known not to
