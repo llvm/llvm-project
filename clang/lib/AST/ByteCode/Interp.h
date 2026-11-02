@@ -1285,14 +1285,6 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   return true;
 }
 
-static inline bool IsOpaqueConstantCall(const CallExpr *E) {
-  unsigned Builtin = E->getBuiltinCallee();
-  return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
-          Builtin == Builtin::BI__builtin_function_start);
-}
-
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
                                              const Pointer &RHS);
 
@@ -1384,7 +1376,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
         return false;
       }
       if (const auto *CE = dyn_cast<CallExpr>(E);
-          CE && IsOpaqueConstantCall(CE)) {
+          CE && isOpaqueConstantCall(CE)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_opaque_call_comparison)
             << P.toDiagnosticString(S.getASTContext());
@@ -2968,12 +2960,11 @@ bool CastAPS(InterpState &S, uint32_t BitWidth) {
 // (i.e. truncation would change the value).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastAPToOffsetIndex(InterpState &S, CodePtr OpPC) {
-  T Source = S.Stk.pop<T>();
-  APSInt Val = Source.toAPSInt();
+  T Val = S.Stk.pop<T>();
   if (Val.isNegative() || Val.getActiveBits() > 63)
     return Invalid(S, OpPC);
   S.Stk.push<Integral<64, true>>(
-      Integral<64, true>::from((int64_t)Val.getZExtValue()));
+      Integral<64, true>::from(static_cast<uint64_t>(Val)));
   return true;
 }
 
