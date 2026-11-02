@@ -20,12 +20,13 @@
 // CHK-FEATURE: error: unsupported IGCA gpu architecture: igca_20ca:foo
 // CHK-FEATURE-NOT: llvm-offload-binary
 
-/// A valid IGCA target is still rejected on NVPTX and AMDGPU device triples,
-/// with the existing CUDA/HIP diagnostic:
+/// A valid IGCA target is still rejected on NVPTX and AMDGPU device triples.
+/// SYCL rejects an NVIDIA target itself, and AMDGPU uses the existing HIP
+/// diagnostic:
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=nvptx64-nvidia-cuda --offload-arch=igca_20ca \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-NVPTX %s
-// CHK-NVPTX: error: unsupported CUDA gpu architecture: igca_20ca
+// CHK-NVPTX: error: invalid or unsupported offload target: 'nvptx64-nvidia-cuda'
 // CHK-NVPTX-NOT: llvm-offload-binary
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
