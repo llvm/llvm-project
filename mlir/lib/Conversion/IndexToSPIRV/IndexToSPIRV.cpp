@@ -100,9 +100,18 @@ struct ConvertIndexConstantOpPattern final : OpConversionPattern<ConstantOp> {
 // ConvertIndexCeilDivS
 //===----------------------------------------------------------------------===//
 
-/// Convert `ceildivs(n, m)` into `x = m > 0 ? -1 : 1` and then
-/// `n*m > 0 ? (n+x)/m + 1 : -(-n/m)`. Formula taken from the equivalent
-/// conversion in IndexToLLVM.
+/// Compute `q = n / m`, then select `q + 1` when `q * m != n` and the
+/// operands have the same sign, or `q` otherwise. Truncation toward zero already
+/// rounds up for opposite-sign operands; same-sign operands need the increment
+/// only when the division is inexact.
+///
+/// This uses one division and avoids negating operands. Negating INT_MIN would
+/// cause signed overflow and wrap back to INT_MIN, since its positive magnitude
+/// is not representable, even though a quotient such as INT_MIN / 2 fits.
+/// For defined divisions, `q * m` lies between `n` and zero, so it cannot
+/// overflow. When the increment is selected, `q < INT_MAX`, so the selected
+/// result is also representable. An unselected `q + 1` may overflow; the
+/// wrapping add is safe because that value is discarded.
 struct ConvertIndexCeilDivSPattern final : OpConversionPattern<CeilDivSOp> {
   using Base::Base;
 
@@ -119,30 +128,18 @@ struct ConvertIndexCeilDivSPattern final : OpConversionPattern<CeilDivSOp> {
                                            IntegerAttr::get(nType, 0));
     Value posOne = spirv::ConstantOp::create(rewriter, loc, nType,
                                              IntegerAttr::get(nType, 1));
-    Value negOne = spirv::ConstantOp::create(rewriter, loc, nType,
-                                             IntegerAttr::get(nType, -1));
 
-    // Compute `x`.
-    Value mPos = spirv::SGreaterThanOp::create(rewriter, loc, m, zero);
-    Value x = spirv::SelectOp::create(rewriter, loc, mPos, negOne, posOne);
-
-    // Compute the positive result.
-    Value nPlusX = spirv::IAddOp::create(rewriter, loc, n, x);
-    Value nPlusXDivM = spirv::SDivOp::create(rewriter, loc, nPlusX, m);
-    Value posRes = spirv::IAddOp::create(rewriter, loc, nPlusXDivM, posOne);
-
-    // Compute the negative result.
-    Value negN = spirv::ISubOp::create(rewriter, loc, zero, n);
-    Value negNDivM = spirv::SDivOp::create(rewriter, loc, negN, m);
-    Value negRes = spirv::ISubOp::create(rewriter, loc, zero, negNDivM);
-
-    // Pick the positive result if `n` and `m` have the same sign and `n` is
-    // non-zero, i.e. `(n > 0) == (m > 0) && n != 0`.
-    Value nPos = spirv::SGreaterThanOp::create(rewriter, loc, n, zero);
-    Value sameSign = spirv::LogicalEqualOp::create(rewriter, loc, nPos, mPos);
-    Value nNonZero = spirv::INotEqualOp::create(rewriter, loc, n, zero);
-    Value cmp = spirv::LogicalAndOp::create(rewriter, loc, sameSign, nNonZero);
-    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cmp, posRes, negRes);
+    Value quotient = spirv::SDivOp::create(rewriter, loc, n, m);
+    Value product = spirv::IMulOp::create(rewriter, loc, quotient, m);
+    Value inexact = spirv::INotEqualOp::create(rewriter, loc, product, n);
+    Value nNeg = spirv::SLessThanOp::create(rewriter, loc, n, zero);
+    Value mNeg = spirv::SLessThanOp::create(rewriter, loc, m, zero);
+    Value sameSign = spirv::LogicalEqualOp::create(rewriter, loc, nNeg, mNeg);
+    Value roundUp =
+        spirv::LogicalAndOp::create(rewriter, loc, inexact, sameSign);
+    Value rounded = spirv::IAddOp::create(rewriter, loc, quotient, posOne);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, roundUp, rounded,
+                                                 quotient);
     return success();
   }
 };
