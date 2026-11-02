@@ -91,3 +91,14 @@ constexpr struct Wrapper W = {
 };
 
 }
+
+struct Ctor {
+  Ctor(int, int);
+};
+
+// CHECK: call void @_ZN4CtorC1Eii(ptr {{.*}}%c, i32 noundef 106, i32 noundef 107)
+void ctor_list() {
+  Ctor c = {
+#embed <jk.txt>
+  };
+}

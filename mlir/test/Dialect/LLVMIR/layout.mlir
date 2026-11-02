@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-data-layout-query --split-input-file --verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline='builtin.module(func.func(test-data-layout-query),builtin.module(func.func(test-data-layout-query)))' --split-input-file --verify-diagnostics %s | FileCheck %s
 
 module {
   // CHECK: @no_spec
@@ -173,6 +173,27 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // -----
 
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>
+>} {
+  module attributes { dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>
+  >} {
+    // CHECK-LABEL: @nested_pointer_layout
+    func.func @nested_pointer_layout() {
+      // CHECK: alignment = 8
+      // CHECK: bitsize = 64
+      // CHECK: index = 64
+      // CHECK: preferred = 8
+      // CHECK: size = 8
+      "test.data_layout_query"() : () -> !llvm.ptr
+      return
+    }
+  }
+}
+
+// -----
+
 module {
     // CHECK: @no_spec
     func.func @no_spec() {
@@ -228,6 +249,33 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 >} {
   // CHECK-LABEL: @struct_element_allocation_size
   func.func @struct_element_allocation_size() {
+    // The allocation size is the size rounded up to the ABI alignment.
+    // CHECK: alignment = 16
+    // CHECK-SAME: alloc_size = 16
+    // CHECK-SAME: bitsize = 80
+    // CHECK-SAME: size = 10
+    "test.data_layout_query"() : () -> f80
+
+    // CHECK: alignment = 4
+    // CHECK-SAME: alloc_size = 4
+    // CHECK-SAME: bitsize = 24
+    // CHECK-SAME: preferred = 8
+    // CHECK-SAME: size = 3
+    "test.data_layout_query"() : () -> i24
+
+    // Array elements are spaced by their allocation size.
+    // CHECK: alignment = 16
+    // CHECK-SAME: alloc_size = 32
+    // CHECK-SAME: bitsize = 256
+    // CHECK-SAME: size = 32
+    "test.data_layout_query"() : () -> !llvm.array<2 x f80>
+
+    // CHECK: alignment = 4
+    // CHECK-SAME: alloc_size = 12
+    // CHECK-SAME: bitsize = 96
+    // CHECK-SAME: size = 12
+    "test.data_layout_query"() : () -> !llvm.array<3 x i24>
+
     // A packed element still occupies its allocation size, including padding.
     // CHECK: alignment = 1
     // CHECK-SAME: bitsize = 128

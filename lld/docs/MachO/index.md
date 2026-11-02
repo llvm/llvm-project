@@ -41,7 +41,7 @@ by its sibling file `lld`, as `ld64.lld` is technically a symlink to `lld`.
 
 ## Using LLD
 
-LLD can be used by adding `-fuse-ld=/path/to/ld64.lld` to the linker flags.
+LLD can be used by adding these linker options `-fuse-ld=lld --ld-path=/path/to/ld64.lld`.
 For Xcode, this can be done by adding it to "Other linker flags" in the build
 settings. For Bazel, this can be done with `--linkopt` or with
 [rules_apple_linker](https://github.com/keith/rules_apple_linker).

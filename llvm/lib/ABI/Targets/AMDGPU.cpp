@@ -143,7 +143,8 @@ ArgInfo AMDGPUTargetInfo::classifyKernelArgumentType(const Type *Ty) const {
         PtrTy && PtrTy->getAddrSpace() == Opts.GenericAddrSpace) {
       const Type *Coerced =
           TB.getPointerType(PtrTy->getSizeInBits().getFixedValue(),
-                            PtrTy->getAlignment(), AMDGPUAS::GLOBAL_ADDRESS);
+                            PtrTy->getAlignment(), AMDGPUAS::GLOBAL_ADDRESS,
+                            /*HasAddressSpaceQualifier=*/true);
       return ArgInfo::getDirect(Coerced, /*Offset=*/0, /*Align=*/std::nullopt,
                                 /*CanBeFlattened=*/false);
     }

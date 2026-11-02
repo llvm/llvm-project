@@ -11,6 +11,7 @@
 #include "DXILOpBuilder.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -951,6 +952,25 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerBarrierByMemoryHandle(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *SemanticFlags = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::BarrierByMemoryHandle, {Handle, SemanticFlags});
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -1456,6 +1476,9 @@ public:
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
+      case Intrinsic::dx_barrier_by_memory_handle:
+        HasErrors |= lowerBarrierByMemoryHandle(F);
+        break;
       case Intrinsic::dx_resource_atomic_binop:
         HasErrors |= lowerResourceAtomicBinOp(F);
         break;
@@ -1508,6 +1531,7 @@ PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
   PA.preserve<RootSignatureAnalysis>();
+  PA.preserve<SignatureAnalysis>();
   return PA;
 }
 
@@ -1536,6 +1560,7 @@ public:
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<SignatureAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;
