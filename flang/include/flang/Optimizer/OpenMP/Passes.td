@@ -117,6 +117,26 @@ def AutomapToTargetDataPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
+def DeviceThreadprivateCheckPass
+    : Pass<"omp-device-threadprivate-check", "::mlir::ModuleOp"> {
+  let summary = "Diagnose threadprivate variable accesses in target device "
+                "code";
+  let description = [{
+    Accessing a threadprivate variable in target device code is not supported.
+    Semantics diagnoses accesses in target regions and in procedures that are
+    explicitly or implicitly declare target, based on the calls it can see.
+    This pass is a backstop for accesses in procedures that only become
+    implicitly declare target through calls that are not visible to
+    semantics, e.g. calls generated during lowering. It must run after
+    implicit `declare_target` information has been propagated.
+
+    Threadprivate operations of variables that are not accessed in target
+    device code, e.g. variables of a used module, are removed from it.
+
+    The pass only has an effect when compiling for a target device.
+  }];
+}
+
 def UnimplementedDeviceCheckPass
     : Pass<"omp-unimplemented-device-check", "::mlir::ModuleOp"> {
   let summary = "Report not-yet-implemented situations on target device code";

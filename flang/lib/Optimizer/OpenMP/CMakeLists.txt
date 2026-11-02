@@ -2,6 +2,7 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_flang_library(FlangOpenMPTransforms
   AutomapToTargetData.cpp
+  DeviceThreadprivateCheck.cpp
   DoConcurrentConversion.cpp
   GenericLoopConversion.cpp
   MapsForPrivatizedSymbols.cpp
