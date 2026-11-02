@@ -20299,6 +20299,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   // Find all FDIV users of the same divisor.
   // Use a set because duplicates may be present in the user list.
   SetVector<SDNode *> Users;
+  SDNodeFlags ReciprocalFlags = Flags;
   for (auto *U : N1->users()) {
     if (U->getOpcode() == ISD::FDIV && U->getOperand(1) == N1) {
       // Skip X/sqrt(X) that has not been simplified to sqrt(X) yet.
@@ -20310,8 +20311,10 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
 
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
-      if (U->getFlags().hasAllowReciprocal())
+      if (U->getFlags().hasAllowReciprocal()) {
         Users.insert(U);
+        ReciprocalFlags &= U->getFlags();
+      }
     }
   }
 
@@ -20322,14 +20325,15 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
 
   SDLoc DL(N);
   SDValue FPOne = DAG.getConstantFP(1.0, DL, VT);
-  SDValue Reciprocal = DAG.getNode(ISD::FDIV, DL, VT, FPOne, N1, Flags);
+  SDValue Reciprocal =
+      DAG.getNode(ISD::FDIV, DL, VT, FPOne, N1, ReciprocalFlags);
 
   // Dividend / Divisor -> Dividend * Reciprocal
   for (auto *U : Users) {
     SDValue Dividend = U->getOperand(0);
     if (Dividend != FPOne) {
       SDValue NewNode = DAG.getNode(ISD::FMUL, SDLoc(U), VT, Dividend,
-                                    Reciprocal, Flags);
+                                    Reciprocal, U->getFlags());
       CombineTo(U, NewNode);
     } else if (U != Reciprocal.getNode()) {
       // In the absence of fast-math-flags, this user node is always the
