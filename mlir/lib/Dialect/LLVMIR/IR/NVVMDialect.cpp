@@ -5962,11 +5962,8 @@ void mlir::NVVM::nvvmInferResultRanges(
       return;
     }
   }
-  // An empty ConstantRange has no values and cannot be represented by the
-  // inclusive bounds in ConstantIntRanges. Its endpoints must not be treated as
-  // valid minima/maxima. Fall back to the full signed and unsigned ranges, as
-  // when no range attribute is present, to record an unknown value explicitly
-  // and avoid folding comparisons based on inconsistent empty-set bounds.
+  // ConstantIntRanges cannot represent an empty set. Conservatively fall back
+  // to the full range rather than deriving invalid inclusive bounds.
   setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
 }
 
