@@ -489,6 +489,14 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
     return nullptr;
   }
 
+  // Time the allocation here: the offload API below carries no profiler, and
+  // the trace record built by the RAII above reads these timestamps. Declared
+  // after that RAII, so it is destroyed -- and stamps -- first.
+  auto *Profiler = RTL->getProfiler();
+  assert(Profiler && "Plugin provides no profiler instance");
+  auto ProfTimer = Profiler->getScopedDataAllocTimer(
+      &RTL->getDevice(RTLDeviceID), HstPtr, Size);
+
   auto AllocOrErr =
       PluginCtx->allocate(RTL->getDevice(RTLDeviceID), Size, HstPtr,
                           static_cast<TargetAllocTy>(Kind), /*Alignment=*/0);
@@ -521,6 +529,13 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
              << ": device " << DeviceID << " has no context";
     return OFFLOAD_FAIL;
   }
+
+  // See allocData: the trace record built by the RAII above reads these
+  // timestamps, so this must be declared after it.
+  auto *Profiler = RTL->getProfiler();
+  assert(Profiler && "Plugin provides no profiler instance");
+  auto ProfTimer = Profiler->getScopedDataDeleteTimer(
+      &RTL->getDevice(RTLDeviceID), TgtAllocBegin);
 
   if (auto Err =
           PluginCtx->deallocate(RTL->getDevice(RTLDeviceID), TgtAllocBegin,

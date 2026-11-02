@@ -627,10 +627,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind,
                                             size_t Alignment,
                                             GenericProfilerTy *ProfilerPtr) {
-  GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
-
-  auto ProfTimer = Profiler.getScopedDataAllocTimer(this, HostPtr, Size);
-
+  // Timing is owned by the OpenMP layer, which surrounds this call; see
+  // DeviceTy::allocData.
   void *Alloc = nullptr;
 
   // TODO Check alignment.
@@ -711,9 +709,8 @@ void GenericDeviceTy::recordDeallocation(void *DevicePtr, TargetAllocTy Kind) {
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind,
                                   GenericProfilerTy *ProfilerPtr) {
-  GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
-
-  auto ProfTimer = Profiler.getScopedDataDeleteTimer(this, TgtPtr);
+  // Timing is owned by the OpenMP layer, which surrounds this call; see
+  // DeviceTy::deleteData.
 
   // Free is a noop when recording or replaying.
   if (RecordReplay && RecordReplay->isRecordingOrReplaying())
