@@ -57,6 +57,26 @@ configure_file(simple_version_script.map.in simple_version_script.map)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_options(clang-cpp PRIVATE LINKER:--version-script,${CMAKE_CURRENT_BINARY_DIR}/simple_version_script.map)
+
+  # MLIR is statically linked into libclang-cpp.so (by ClangIR) but is also
+  # provided by libMLIR.so in dylib builds.  Do not export anything that comes
+  # from the MLIR archives: the dynamic linker could otherwise bind another
+  # DSO's references (such as the vtable of an MLIR pattern defined outside of
+  # an anonymous namespace) to clang-cpp's private copy, which is not
+  # interchangeable with libMLIR.so's (e.g. TypeIDs differ).  Unlike the
+  # version script, this doesn't depend on the namespace a symbol is in.
+  set(_mlir_archives)
+  foreach(dep ${_DEPS})
+    if(TARGET ${dep} AND "${dep}" MATCHES "^MLIR")
+      list(APPEND _mlir_archives $<TARGET_FILE_NAME:${dep}>)
+    endif()
+  endforeach()
+  if(_mlir_archives)
+    list(JOIN _mlir_archives "," _mlir_archives_arg)
+    # -Xlinker keeps the comma-separated list in a single argument.
+    target_link_options(clang-cpp PRIVATE
+                        "SHELL:-Xlinker --exclude-libs=${_mlir_archives_arg}")
+  endif()
 endif()
 
 # Optimize function calls for default visibility definitions to avoid PLT and
