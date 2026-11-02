@@ -472,7 +472,9 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
 
     Constant *C = Val->getAggregateElement(i);
     if (!C)
-      C = ConstantExpr::getExtractElement(Val, ConstantInt::get(Ty, i));
+      C = ConstantFoldExtractElementInstruction(Val, ConstantInt::get(Ty, i));
+    if (!C)
+      return nullptr;
     Result.push_back(C);
   }
 
