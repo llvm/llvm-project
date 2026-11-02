@@ -38,7 +38,7 @@ defm : EnumListField<"spirv-avoid-capabilities", "SPIRV::Capability::Capability"
 // When disabled, unwrap a DILexicalBlockFile to its enclosing scope.
 defm : BoolField<"spirv-debug-lexical-block-discriminator-scope", "false",
   "Use a DebugLexicalBlockDiscriminator as a DebugScope">;
-defm : BoolField<"spirv-debug-scope-forward-refs", "false",
+defm : BoolField<"spirv-debug-scope-forward-refs", "true",
   "Forward-reference debug scopes when SPV_KHR_relaxed_extended_instruction is enabled">;
 
 // SPIRVRemoveUnusedResources.cpp
