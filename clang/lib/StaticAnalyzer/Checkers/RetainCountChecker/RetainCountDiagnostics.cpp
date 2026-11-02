@@ -89,11 +89,10 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
       if (CurrV.getIvarAccessHistory() ==
               RefVal::IvarAccessHistory::ReleasedAfterDirectAccess &&
           CurrV.getIvarAccessHistory() != PrevV.getIvarAccessHistory()) {
-        os << "Strong instance variable relinquished; o";
+        os << "Strong instance variable relinquished; object released";
       } else {
-        os << "O";
+        os << "Object released";
       }
-      os << "bject released";
       return true;
 
     case RefVal::ReturnedOwned:
