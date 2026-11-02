@@ -95,20 +95,21 @@ def executeBuiltinEcho(cmd, cmd_shenv):
         elif flag == "-n":
             write_newline = False
 
-    for idx, arg in enumerate(args):
-        if idx > 0:
-            stdout.write(" ")
+    def maybeUnescape(out, arg):
+        if not interpret_escapes:
+            out.write(arg)
+            return False
         pos = 0
-        while interpret_escapes and (backslash := arg.find("\\", pos)) != -1:
-            stdout.write(arg[pos:backslash])
+        while (backslash := arg.find("\\", pos)) != -1:
+            out.write(arg[pos:backslash])
             pos = backslash + 2
             escape = arg[backslash:pos]
             match escape:
                 case "\\a" | "\\b" | "\\f" | "\\n" | "\\r" | "\\t" | "\\v" | "\\\\":
-                    stdout.write(codecs.escape_decode(escape)[0].decode())
+                    out.write(codecs.escape_decode(escape)[0].decode())
                     continue
                 case "\\c":
-                    break
+                    return True
                 case "\\0":
                     base = 8
                     start = pos - 1
@@ -122,7 +123,7 @@ def executeBuiltinEcho(cmd, cmd_shenv):
                     start = pos
                     max = pos + 2
                 case _:
-                    stdout.write(escape)
+                    out.write(escape)
                     continue
             end = pos
             for n in range(pos, min(max, len(arg))):
@@ -136,22 +137,26 @@ def executeBuiltinEcho(cmd, cmd_shenv):
                     break
                 end = n + 1
             if end == start:
-                stdout.write(escape)
+                out.write(escape)
                 continue
             # Mixing text and binary I/O requires explicit flushing
             # to prevent them from being written out of order.
-            stdout.flush()
+            out.flush()
             # Octal escapes permit values over 0xFF. Drop the high bit.
-            stdout.buffer.write((int(arg[start:end], base) & 0o377).to_bytes())
-            stdout.buffer.flush()
+            out.buffer.write((int(arg[start:end], base) & 0o377).to_bytes())
+            out.buffer.flush()
             pos = end
-        else:
-            stdout.write(arg[pos:])
-            continue
-        break
-    else:
-        if write_newline:
-            stdout.write("\n")
+        out.write(arg[pos:])
+        return False
+
+    for idx, arg in enumerate(args):
+        if idx > 0:
+            stdout.write(" ")
+        if maybeUnescape(stdout, arg):
+            write_newline = False
+            break
+    if write_newline:
+        stdout.write("\n")
 
     for name, mode, f, path in opened_files:
         f.close()
