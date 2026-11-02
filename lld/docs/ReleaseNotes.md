@@ -31,6 +31,12 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 * `--mmap-output-file` and `--no-mmap-output-file` were swapped in LLVM 21 and 22.
   They now mean what they say again; the default behavior is unchanged.
+* `.ctors`/`.dtors` sections with relocations are now placed in
+  `.init_array`/`.fini_array` when the link has `.init_array`/`.fini_array`
+  input, and the entries of each moved section are reversed, matching GNU ld
+  and mold. Previously such constructors were silently never run with a modern
+  `crtbegin.o`. A linker script that places `.ctors` in `.init_array` gets the
+  same reversal. Use `--no-ctors-in-init-array` for the old behavior.
 
 ### Breaking changes
 

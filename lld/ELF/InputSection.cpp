@@ -59,7 +59,7 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
                                    Kind sectionKind)
     : SectionBase(sectionKind, file, name, type, flags, link, info, addralign,
                   entsize),
-      bss(0), decodedCrel(0), keepUnique(0), nopFiller(0),
+      bss(0), decodedCrel(0), keepUnique(0), nopFiller(0), overridesRelocs(0),
       content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable and
   // .eh_frame sections are smaller than 4 GiB.
@@ -144,6 +144,14 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
     return {};
   RelsOrRelas<ELFT> ret;
   auto *f = cast<ObjFile<ELFT>>(file);
+  if (InputSectionBase *relSec = f->getSections()[relSecIdx];
+      LLVM_UNLIKELY(relSec && relSec->overridesRelocs)) {
+    if (relSec->type == SHT_REL)
+      ret.rels = {relSec->getDataAs<typename ELFT::Rel>()};
+    else
+      ret.relas = {relSec->getDataAs<typename ELFT::Rela>()};
+    return ret;
+  }
   typename ELFT::Shdr shdr = f->template getELFShdrs<ELFT>()[relSecIdx];
   if (shdr.sh_type == SHT_CREL) {
     // Return an iterator if supported by caller.
@@ -190,6 +198,95 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
                  size / sizeof(typename ELFT::Rela))};
   }
   return ret;
+}
+
+// Returns a writable copy of `rels` with each r_offset moved to the slot that
+// its word occupies after the section's words are reversed, sorted by offset.
+template <class RelTy>
+static MutableArrayRef<RelTy> reverseRelocs(Ctx &ctx, InputSectionBase &sec,
+                                            ArrayRef<RelTy> rels,
+                                            uint64_t wordsize) {
+  auto *copy = makeThreadLocalN<RelTy>(rels.size());
+  llvm::copy(rels, copy);
+  MutableArrayRef<RelTy> ret(copy, rels.size());
+  for (RelTy &r : ret) {
+    uint64_t off = r.r_offset;
+    if (off % wordsize != 0 || off >= sec.size) {
+      Err(ctx) << sec.getLocation(off) << ": relocation is not aligned to a "
+               << wordsize << "-byte entry; cannot place " << sec.name << " in "
+               << sec.getOutputSection()->name;
+      continue;
+    }
+    r.r_offset = sec.size - wordsize - off;
+  }
+  llvm::stable_sort(ret, [](const RelTy &a, const RelTy &b) {
+    return a.r_offset < b.r_offset;
+  });
+  return ret;
+}
+
+// The runtime calls the entries of .ctors/.dtors from the last to the first,
+// and the entries of .init_array/.fini_array from the first to the last. A
+// .ctors/.dtors section placed in .init_array/.fini_array therefore needs its
+// entries reversed to keep their execution order. GNU ld and mold do the same.
+//
+// The section contents and relocations are rewritten up front, so that
+// relocation scanning, ICF and --emit-relocs all see an ordinary section.
+template <class ELFT> void InputSectionBase::reverseCtorsDtors() {
+  Ctx &ctx = getCtx();
+  const uint64_t wordsize = sizeof(typename ELFT::uint);
+  ArrayRef<uint8_t> data = contentMaybeDecompress();
+  // Nothing to reverse in a section of at most one entry, the common case.
+  if (data.size() <= wordsize)
+    return;
+  if (data.size() % wordsize != 0) {
+    Err(ctx) << this << ": section size (0x" << utohexstr(data.size())
+             << ") is not a multiple of " << wordsize << "; cannot place "
+             << name << " in " << getOutputSection()->name;
+    return;
+  }
+
+  uint8_t *buf = makeThreadLocalN<uint8_t>(data.size());
+  for (uint64_t off = 0; off < data.size(); off += wordsize)
+    memcpy(buf + data.size() - wordsize - off, data.data() + off, wordsize);
+  content_ = buf;
+  if (relSecIdx == 0)
+    return;
+
+  // Install the rewritten relocations where relsOrRelas finds them. Under
+  // --emit-relocs the slot holds the relocation section that is copied to the
+  // output; update it in place so that the copy has the new offsets too.
+  // Otherwise (or if the slot only caches decoded CREL), use a new section.
+  auto *f = getFile<ELFT>();
+  InputSectionBase *emitted = f->getSections()[relSecIdx];
+  if (emitted && (emitted == &InputSection::discarded ||
+                  cast<InputSection>(emitted)->decodedCrel))
+    emitted = nullptr;
+
+  // CREL is decoded to RELA, as there is no point in re-encoding it.
+  const typename ELFT::Shdr &shdr = f->template getELFShdrs<ELFT>()[relSecIdx];
+  const RelsOrRelas<ELFT> rels = relsOrRelas<ELFT>(/*supportsCrel=*/false);
+  auto asBytes = [](auto rels) {
+    return ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(rels.data()),
+                             rels.size() * sizeof(rels[0]));
+  };
+  ArrayRef<uint8_t> relData;
+  if (shdr.sh_type == SHT_REL)
+    relData = asBytes(reverseRelocs(ctx, *this, rels.rels, wordsize));
+  else
+    relData = asBytes(reverseRelocs(ctx, *this, rels.relas, wordsize));
+
+  // relsOrRelas may have cached a newly decoded CREL section. Reuse it unless
+  // --emit-relocs requires updating the original emitted section in place.
+  InputSectionBase *relSec = emitted ? emitted : f->getSections()[relSecIdx];
+  if (relSec == &InputSection::discarded)
+    relSec = nullptr;
+  if (!relSec)
+    relSec = makeThreadLocal<InputSection>(*f, shdr, name);
+  relSec->content_ = relData.data();
+  relSec->size = relData.size();
+  relSec->overridesRelocs = true;
+  f->cacheDecodedCrel(relSecIdx, relSec);
 }
 
 Ctx &SectionBase::getCtx() const { return file->ctx; }
@@ -1598,6 +1695,11 @@ template RelsOrRelas<ELF64LE>
 InputSectionBase::relsOrRelas<ELF64LE>(bool) const;
 template RelsOrRelas<ELF64BE>
 InputSectionBase::relsOrRelas<ELF64BE>(bool) const;
+
+template void InputSectionBase::reverseCtorsDtors<ELF32LE>();
+template void InputSectionBase::reverseCtorsDtors<ELF32BE>();
+template void InputSectionBase::reverseCtorsDtors<ELF64LE>();
+template void InputSectionBase::reverseCtorsDtors<ELF64BE>();
 
 template MergeInputSection::MergeInputSection(ObjFile<ELF32LE> &,
                                               const ELF32LE::Shdr &, StringRef);

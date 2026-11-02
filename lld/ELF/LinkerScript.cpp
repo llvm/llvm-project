@@ -163,6 +163,18 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
       }
     }
 
+  // Like GNU ld and mold, place .ctors/.dtors in .init_array/.fini_array.
+  // reverseCtorsDtors reverses their entries later. Sections without
+  // relocations are left alone: crtbegin.o and crtend.o use them to hold the
+  // -1 and 0 sentinels of __CTOR_LIST__/__DTOR_LIST__, which are not valid
+  // function pointers.
+  if (ctorsInInitArray && s->relSecIdx != 0 && s->type != SHT_NOBITS) {
+    if (isSectionPrefix(".ctors", s->name))
+      return ".init_array";
+    if (isSectionPrefix(".dtors", s->name))
+      return ".fini_array";
+  }
+
   for (StringRef v : {".data.rel.ro", ".data",       ".rodata",
                       ".bss.rel.ro",  ".bss",        ".ldata",
                       ".lrodata",     ".lbss",       ".gcc_except_table",
@@ -1081,6 +1093,24 @@ void LinkerScript::addOrphanSections() {
 
   const bool copyRelocs = ctx.arg.copyRelocs;
   const bool relocatable = ctx.arg.relocatable;
+
+  // Only move .ctors/.dtors if the program uses .init_array/.fini_array
+  // (modern crtbegin.o has one), so that a link against a legacy toolchain
+  // that runs .ctors/.dtors is not affected.
+  if (ctx.arg.ctorsInInitArray && !relocatable && !hasSectionsCommand) {
+    bool hasCtors = false, hasInitArray = false;
+    for (InputSectionBase *s : ctx.inputSections) {
+      if (!s->isLive())
+        continue;
+      hasCtors |= (isSectionPrefix(".ctors", s->name) ||
+                   isSectionPrefix(".dtors", s->name)) &&
+                  s->type != SHT_NOBITS;
+      hasInitArray |= s->type == SHT_INIT_ARRAY || s->type == SHT_FINI_ARRAY ||
+                      s->type == SHT_PREINIT_ARRAY;
+    }
+    ctorsInInitArray = hasCtors && hasInitArray;
+  }
+
   // Under --emit-relocs/-r, getOutputSectionName derives the name from the
   // relocated section, and saving it is not thread-safe. Otherwise, the names
   // can be precomputed in parallel.

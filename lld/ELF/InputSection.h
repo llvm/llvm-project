@@ -183,6 +183,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   uint8_t nopFiller : 1;
 
+  // Whether this is a relocation section whose content replaces the
+  // relocations read from the object file. See reverseCtorsDtors.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t overridesRelocs : 1;
+
   mutable bool compressed = false;
 
   // Input sections are part of an output section. Special sections
@@ -234,6 +239,11 @@ public:
 
   template <class ELFT>
   RelsOrRelas<ELFT> relsOrRelas(bool supportsCrel = true) const;
+
+  // Reverses the order of the word-sized entries of a .ctors or .dtors section
+  // that has been placed in .init_array or .fini_array, together with its
+  // relocations.
+  template <class ELFT> void reverseCtorsDtors();
 
   // InputSections that are dependent on us (reverse dependency for GC)
   llvm::TinyPtrVector<InputSection *> dependentSections;

@@ -701,7 +701,7 @@ template <bool is64> void OutputSection::finalizeNonAllocCrel(Ctx &ctx) {
   for (InputSection *relSec : isd->sections) {
     const auto &file = *cast<ELFFileBase>(relSec->file);
     InputSectionBase *sec = relSec->getRelocatedSection();
-    if (relSec->type == SHT_CREL) {
+    if (relSec->type == SHT_CREL && !relSec->overridesRelocs) {
       RelocsCrel<is64> entries(relSec->content_);
       totalCount += entries.size();
       for (Elf_Crel_Impl<is64> r : entries) {

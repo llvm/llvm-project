@@ -418,6 +418,9 @@ public:
   SmallVector<PhdrsCommand, 0> phdrsCommands;
 
   bool hasSectionsCommand = false;
+  // Whether orphan .ctors/.dtors sections are placed in .init_array and
+  // .fini_array. Set by addOrphanSections.
+  bool ctorsInInitArray = false;
   bool seenDataAlign = false;
   bool seenRelroEnd = false;
   bool errorOnMissingSection = false;

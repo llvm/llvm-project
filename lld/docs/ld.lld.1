@@ -180,6 +180,22 @@ This is like a generalized
 Output cross reference table. If
 .Fl Map
 is specified, print to the map file.
+.It Fl -ctors-in-init-array , Fl -no-ctors-in-init-array
+Place
+.Li .ctors
+and
+.Li .dtors
+sections that have relocations in
+.Li .init_array
+and
+.Li .fini_array ,
+reversing their entries, if the link has
+.Li .init_array
+or
+.Li .fini_array
+input.
+Sections placed there by a linker script are reversed as well.
+This is the default.
 .It Fl -debug-names
 Generate a merged
 .Li .debug_names

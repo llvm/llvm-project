@@ -167,6 +167,10 @@ def : Flag<["--"], "no-color-diagnostics">, Alias<color_diagnostics>, AliasArgs<
 def cref: FF<"cref">,
   HelpText<"Output cross reference table. If -Map is specified, print to the map file">;
 
+defm ctors_in_init_array: B<"ctors-in-init-array",
+    "Put .ctors/.dtors in .init_array/.fini_array (default)",
+    "Do not put .ctors/.dtors in .init_array/.fini_array">;
+
 defm debug_names: BB<"debug-names",
     "Generate a merged .debug_names section",
     "Do not generate a merged .debug_names section (default)">;
@@ -814,7 +818,6 @@ def: Flag<["-"], "g">;
 def: F<"long-plt">;
 def: FF<"no-add-needed">;
 def: F<"no-copy-dt-needed-entries">;
-def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
 def: Separate<["--", "-"], "rpath-link">;
 def: J<"rpath-link=">;

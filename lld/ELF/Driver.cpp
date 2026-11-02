@@ -1438,6 +1438,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         getCompressionType(ctx, arg->getValue(), "--compress-debug-sections");
   }
   ctx.arg.cref = args.hasArg(OPT_cref);
+  ctx.arg.ctorsInInitArray =
+      args.hasFlag(OPT_ctors_in_init_array, OPT_no_ctors_in_init_array, true);
   ctx.arg.optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
   ctx.arg.debugNames = args.hasFlag(OPT_debug_names, OPT_no_debug_names, false);
@@ -3005,6 +3007,38 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
     ctx.symtab->wrap(w.sym, w.real, w.wrap);
 }
 
+// Reverses the entries of the .ctors/.dtors sections that have been placed in
+// .init_array/.fini_array, either by the default rule or by a linker script.
+template <class ELFT> static void reverseCtorsDtors(Ctx &ctx) {
+  for (SectionCommand *cmd : ctx.script->sectionCommands) {
+    auto *osd = dyn_cast<OutputDesc>(cmd);
+    if (!osd)
+      continue;
+    OutputSection &osec = osd->osec;
+    StringRef prefix;
+    uint32_t type;
+    if (osec.name == ".init_array") {
+      prefix = ".ctors";
+      type = SHT_INIT_ARRAY;
+    } else if (osec.name == ".fini_array") {
+      prefix = ".dtors";
+      type = SHT_FINI_ARRAY;
+    } else {
+      continue;
+    }
+    for (SectionCommand *c : osec.commands)
+      if (auto *isd = dyn_cast<InputSectionDescription>(c))
+        for (InputSectionBase *s : isd->sectionBases) {
+          StringRef name = s->name;
+          if (s->kind() == SectionBase::Regular && s->type != SHT_NOBITS &&
+              name.consume_front(prefix) && (name.empty() || name[0] == '.')) {
+            s->reverseCtorsDtors<ELFT>();
+            s->type = type;
+          }
+        }
+  }
+}
+
 // To enable CET (x86's hardware-assisted control flow enforcement), each
 // source file must be compiled with -fcf-protection. Object files compiled
 // with the flag contain feature flags indicating that they are compatible
@@ -3629,6 +3663,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // Process that.
     ctx.script->addOrphanSections();
   }
+
+  // .ctors/.dtors placed in .init_array/.fini_array, by the default rule or
+  // by a linker script, need their entries reversed. This must happen before
+  // finalizeInputSections (which derives the output section type) and before
+  // ICF and relocation scanning (which read the relocations).
+  if (ctx.arg.ctorsInInitArray && !ctx.arg.relocatable)
+    reverseCtorsDtors<ELFT>(ctx);
 
   {
     llvm::TimeTraceScope timeScope("Merge/finalize input sections");

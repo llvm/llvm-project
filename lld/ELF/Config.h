@@ -351,6 +351,7 @@ struct Config {
       std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0>
       compressSections;
   bool cref;
+  bool ctorsInInitArray;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
   bool debugNames;
