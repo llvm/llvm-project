@@ -8,79 +8,30 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @extractvalue_sunk_apart_from_scalarized_call(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: define void @extractvalue_sunk_apart_from_scalarized_call(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[INDEX]], i64 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP0]], i64 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP1]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP2]], i64 1)
-; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i1 } [[TMP3]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i1> poison, i1 [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i1> [[TMP9]], i1 [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[TMP36:%.*]] = extractvalue { i64, i1 } [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i1> poison, i1 [[TMP11]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i1> [[TMP13]], i1 [[TMP12]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP15]], i64 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i64>
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <2 x i1> [[TMP14]] to <2 x i64>
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[TMP19]], i64 2
-; CHECK-NEXT:    store <2 x i64> [[TMP17]], ptr [[TMP19]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP18]], ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD1]], zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP21]], i64 0
-; CHECK-NEXT:    br i1 [[TMP23]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { i64, i1 } [[TMP3]], 0
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    store i64 [[TMP26]], ptr [[TMP25]], align 8
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x i1> [[TMP21]], i64 1
-; CHECK-NEXT:    br i1 [[TMP27]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
-; CHECK:       [[PRED_STORE_IF2]]:
-; CHECK-NEXT:    [[TMP28:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    store i64 [[TMP30]], ptr [[TMP29]], align 8
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
-; CHECK:       [[PRED_STORE_CONTINUE3]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <2 x i1> [[TMP22]], i64 0
-; CHECK-NEXT:    br i1 [[TMP31]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
-; CHECK:       [[PRED_STORE_IF4]]:
-; CHECK-NEXT:    [[TMP32:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP32]]
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i64 0
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP38:%.*]] = load i64, ptr [[GEP_A]], align 8
+; CHECK-NEXT:    [[TMP34:%.*]] = zext i1 [[TMP12]] to i64
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i64, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i64 [[TMP34]], ptr [[TMP33]], align 8
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
-; CHECK:       [[PRED_STORE_CONTINUE5]]:
-; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP22]], i64 1
+; CHECK-NEXT:    [[TMP35:%.*]] = icmp sgt i64 [[TMP38]], 0
 ; CHECK-NEXT:    br i1 [[TMP35]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7]]
 ; CHECK:       [[PRED_STORE_IF6]]:
-; CHECK-NEXT:    [[TMP36:%.*]] = extractvalue { i64, i1 } [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP36]]
-; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i64 1
 ; CHECK-NEXT:    store i64 [[TMP38]], ptr [[TMP37]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
 ; CHECK:       [[PRED_STORE_CONTINUE7]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP39]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP39]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -144,7 +95,7 @@ define void @extractvalue_of_hoisted_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD1]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -213,7 +164,7 @@ define void @narrow_extractvalue_of_scalarized_call(ptr noalias %a, ptr noalias 
 ; CHECK-NEXT:    store <4 x i32> [[TMP20]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -312,7 +263,7 @@ define void @extractvalues_sunk_with_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK:       [[PRED_STORE_CONTINUE7]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
 entry:

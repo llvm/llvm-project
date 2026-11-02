@@ -185,49 +185,20 @@ exit:
 define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; NEON-LABEL: define float @simple_csa_float_select(
 ; NEON-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], float [[A:%.*]]) {
-; NEON-NEXT:  [[ENTRY:.*]]:
-; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 20
-; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; NEON:       [[VECTOR_PH]]:
-; NEON-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
-; NEON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NEON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
-; NEON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; NEON-NEXT:    br label %[[LOOP:.*]]
-; NEON:       [[LOOP]]:
-; NEON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
-; NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
-; NEON-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
-; NEON-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds float, ptr [[DATA]], i64 [[IV]]
-; NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[LD_ADDR]], align 4
-; NEON-NEXT:    [[TMP2:%.*]] = fcmp olt <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
-; NEON-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
-; NEON-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
-; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP3]], <4 x i1> [[TMP0]]
-; NEON-NEXT:    [[TMP6]] = select i1 [[TMP4]], <4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]]
-; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
-; NEON-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NEON-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; NEON:       [[MIDDLE_BLOCK]]:
-; NEON-NEXT:    [[TMP8:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[TMP6]], <4 x i1> [[TMP5]], float -1.000000e+00)
-; NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; NEON-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; NEON:       [[SCALAR_PH]]:
-; NEON-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; NEON-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ -1.000000e+00, %[[ENTRY]] ]
+; NEON-NEXT:  [[SCALAR_PH:.*]]:
 ; NEON-NEXT:    br label %[[LOOP1:.*]]
 ; NEON:       [[LOOP1]]:
-; NEON-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
-; NEON-NEXT:    [[DATA_PHI:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SELECT_DATA:%.*]], %[[LOOP1]] ]
+; NEON-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; NEON-NEXT:    [[DATA_PHI:%.*]] = phi float [ -1.000000e+00, %[[SCALAR_PH]] ], [ [[SELECT_DATA:%.*]], %[[LOOP1]] ]
 ; NEON-NEXT:    [[LD_ADDR1:%.*]] = getelementptr inbounds float, ptr [[DATA]], i64 [[IV1]]
 ; NEON-NEXT:    [[LD:%.*]] = load float, ptr [[LD_ADDR1]], align 4
 ; NEON-NEXT:    [[SELECT_CMP:%.*]] = fcmp olt float [[A]], [[LD]]
 ; NEON-NEXT:    [[SELECT_DATA]] = select i1 [[SELECT_CMP]], float [[LD]], float [[DATA_PHI]]
 ; NEON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NEON-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
+; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT:.*]], label %[[LOOP1]]
 ; NEON:       [[EXIT]]:
-; NEON-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi float [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ]
+; NEON-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi float [ [[SELECT_DATA]], %[[LOOP1]] ]
 ; NEON-NEXT:    ret float [[SELECT_DATA_LCSSA]]
 ;
 ; SVE-LABEL: define float @simple_csa_float_select(
@@ -604,7 +575,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-LABEL: define i32 @int_select_with_extra_arith_payload(
 ; NEON-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[THRESHOLD:%.*]]) {
 ; NEON-NEXT:  [[ENTRY:.*]]:
-; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 20
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NEON:       [[VECTOR_PH]]:
 ; NEON-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
@@ -632,7 +603,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-NEXT:    [[TMP11]] = select i1 [[TMP9]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; NEON-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NEON-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; NEON-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NEON:       [[MIDDLE_BLOCK]]:
 ; NEON-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP11]], <4 x i1> [[TMP10]], i32 -1)
 ; NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
@@ -657,7 +628,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-NEXT:    [[SELECT_A]] = select i1 [[SELECT_CMP]], i32 [[LD_A]], i32 [[A_PHI]]
 ; NEON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NEON-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; NEON:       [[EXIT]]:
 ; NEON-NEXT:    [[SELECT_A_LCSSA:%.*]] = phi i32 [ [[SELECT_A]], %[[LOOP]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; NEON-NEXT:    ret i32 [[SELECT_A_LCSSA]]
@@ -870,7 +841,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; NEON-NEXT:    [[TMP13]] = select i1 [[TMP4]], <4 x i32> [[WIDE_LOAD2]], <4 x i32> [[VEC_PHI1]]
 ; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
 ; NEON-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NEON-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; NEON-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; NEON:       [[MIDDLE_BLOCK]]:
 ; NEON-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 -1)
 ; NEON-NEXT:    [[TMP16:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP13]], <4 x i1> [[TMP11]], i32 [[TMP8]])
@@ -889,7 +860,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; NEON-NEXT:    [[SELECT_DATA]] = select i1 [[SELECT_CMP]], i32 [[LD]], i32 [[DATA_PHI]]
 ; NEON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; NEON-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; NEON:       [[EXIT]]:
 ; NEON-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LOOP]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
 ; NEON-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]

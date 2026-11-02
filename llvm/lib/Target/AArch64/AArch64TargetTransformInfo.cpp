@@ -5585,9 +5585,9 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
       !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
     return NumVectorInstToHideOverhead;
 
-  // In many cases the address computation is not merged into the instruction
-  // addressing mode.
-  return 1;
+  // In many cases the address computation is merged into the addressing mode or
+  // equivalent between scalar and vector.
+  return PtrTy->isVectorTy() ? 1 : 0;
 }
 
 /// Check whether Opcode1 has less throughput according to the scheduling

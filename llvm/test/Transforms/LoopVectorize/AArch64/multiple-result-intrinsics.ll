@@ -27,11 +27,26 @@ define void @sincos_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noali
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP6:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> [[WIDE_LOAD1:%.*]])
-; CHECK:    [[TMP8:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP6]], 0
-; CHECK:    [[TMP10:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP6]], 1
-; CHECK:    store <2 x float> [[TMP8]], ptr [[TMP12:%.*]], align 4
-; CHECK:    store <2 x float> [[TMP10]], ptr [[TMP11:%.*]], align 4
+; CHECK:    [[TMP11:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[TMP7:%.*]])
+; CHECK:    [[TMP12:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[TMP8:%.*]])
+; CHECK:    [[TMP13:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[TMP9:%.*]])
+; CHECK:    [[TMP14:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[TMP10:%.*]])
+; CHECK:    [[TMP15:%.*]] = extractvalue { float, float } [[TMP11]], 0
+; CHECK:    [[TMP16:%.*]] = extractvalue { float, float } [[TMP12]], 0
+; CHECK:    [[TMP17:%.*]] = extractvalue { float, float } [[TMP13]], 0
+; CHECK:    [[TMP18:%.*]] = extractvalue { float, float } [[TMP14]], 0
+; CHECK:    [[TMP19:%.*]] = extractvalue { float, float } [[TMP11]], 1
+; CHECK:    [[TMP20:%.*]] = extractvalue { float, float } [[TMP12]], 1
+; CHECK:    [[TMP21:%.*]] = extractvalue { float, float } [[TMP13]], 1
+; CHECK:    [[TMP22:%.*]] = extractvalue { float, float } [[TMP14]], 1
+; CHECK:    store float [[TMP15]], ptr [[TMP23:%.*]], align 4
+; CHECK:    store float [[TMP16]], ptr [[TMP24:%.*]], align 4
+; CHECK:    store float [[TMP17]], ptr [[TMP25:%.*]], align 4
+; CHECK:    store float [[TMP18]], ptr [[TMP26:%.*]], align 4
+; CHECK:    store float [[TMP19]], ptr [[TMP27:%.*]], align 4
+; CHECK:    store float [[TMP20]], ptr [[TMP28:%.*]], align 4
+; CHECK:    store float [[TMP21]], ptr [[TMP29:%.*]], align 4
+; CHECK:    store float [[TMP22]], ptr [[TMP30:%.*]], align 4
 ; CHECK:  [[FOR_BODY:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -100,11 +115,26 @@ define void @sincos_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noali
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP6:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[WIDE_LOAD1:%.*]])
-; CHECK:    [[TMP8:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP6]], 0
-; CHECK:    [[TMP10:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP6]], 1
-; CHECK:    store <2 x double> [[TMP8]], ptr [[TMP12:%.*]], align 8
-; CHECK:    store <2 x double> [[TMP10]], ptr [[TMP11:%.*]], align 8
+; CHECK:    [[TMP11:%.*]] = tail call { double, double } @llvm.sincos.f64(double [[TMP7:%.*]])
+; CHECK:    [[TMP12:%.*]] = tail call { double, double } @llvm.sincos.f64(double [[TMP8:%.*]])
+; CHECK:    [[TMP13:%.*]] = tail call { double, double } @llvm.sincos.f64(double [[TMP9:%.*]])
+; CHECK:    [[TMP14:%.*]] = tail call { double, double } @llvm.sincos.f64(double [[TMP10:%.*]])
+; CHECK:    [[TMP15:%.*]] = extractvalue { double, double } [[TMP11]], 0
+; CHECK:    [[TMP16:%.*]] = extractvalue { double, double } [[TMP12]], 0
+; CHECK:    [[TMP17:%.*]] = extractvalue { double, double } [[TMP13]], 0
+; CHECK:    [[TMP18:%.*]] = extractvalue { double, double } [[TMP14]], 0
+; CHECK:    [[TMP19:%.*]] = extractvalue { double, double } [[TMP11]], 1
+; CHECK:    [[TMP20:%.*]] = extractvalue { double, double } [[TMP12]], 1
+; CHECK:    [[TMP21:%.*]] = extractvalue { double, double } [[TMP13]], 1
+; CHECK:    [[TMP22:%.*]] = extractvalue { double, double } [[TMP14]], 1
+; CHECK:    store double [[TMP15]], ptr [[TMP23:%.*]], align 8
+; CHECK:    store double [[TMP16]], ptr [[TMP24:%.*]], align 8
+; CHECK:    store double [[TMP17]], ptr [[TMP25:%.*]], align 8
+; CHECK:    store double [[TMP18]], ptr [[TMP26:%.*]], align 8
+; CHECK:    store double [[TMP19]], ptr [[TMP27:%.*]], align 8
+; CHECK:    store double [[TMP20]], ptr [[TMP28:%.*]], align 8
+; CHECK:    store double [[TMP21]], ptr [[TMP29:%.*]], align 8
+; CHECK:    store double [[TMP22]], ptr [[TMP30:%.*]], align 8
 ; CHECK:  [[FOR_BODY:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -249,11 +279,26 @@ define void @modf_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[TMP4:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 0
-; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 1
-; CHECK:    store <2 x float> [[TMP4]], ptr [[TMP7:%.*]], align 4
-; CHECK:    store <2 x float> [[TMP5]], ptr [[TMP9:%.*]], align 4
+; CHECK:    [[TMP11:%.*]] = tail call { float, float } @llvm.modf.f32(float [[TMP7:%.*]])
+; CHECK:    [[TMP12:%.*]] = tail call { float, float } @llvm.modf.f32(float [[TMP8:%.*]])
+; CHECK:    [[TMP13:%.*]] = tail call { float, float } @llvm.modf.f32(float [[TMP9:%.*]])
+; CHECK:    [[TMP14:%.*]] = tail call { float, float } @llvm.modf.f32(float [[TMP10:%.*]])
+; CHECK:    [[TMP15:%.*]] = extractvalue { float, float } [[TMP11]], 0
+; CHECK:    [[TMP16:%.*]] = extractvalue { float, float } [[TMP12]], 0
+; CHECK:    [[TMP17:%.*]] = extractvalue { float, float } [[TMP13]], 0
+; CHECK:    [[TMP18:%.*]] = extractvalue { float, float } [[TMP14]], 0
+; CHECK:    [[TMP19:%.*]] = extractvalue { float, float } [[TMP11]], 1
+; CHECK:    [[TMP20:%.*]] = extractvalue { float, float } [[TMP12]], 1
+; CHECK:    [[TMP21:%.*]] = extractvalue { float, float } [[TMP13]], 1
+; CHECK:    [[TMP22:%.*]] = extractvalue { float, float } [[TMP14]], 1
+; CHECK:    store float [[TMP15]], ptr [[TMP23:%.*]], align 4
+; CHECK:    store float [[TMP16]], ptr [[TMP24:%.*]], align 4
+; CHECK:    store float [[TMP17]], ptr [[TMP25:%.*]], align 4
+; CHECK:    store float [[TMP18]], ptr [[TMP26:%.*]], align 4
+; CHECK:    store float [[TMP19]], ptr [[TMP27:%.*]], align 4
+; CHECK:    store float [[TMP20]], ptr [[TMP28:%.*]], align 4
+; CHECK:    store float [[TMP21]], ptr [[TMP29:%.*]], align 4
+; CHECK:    store float [[TMP22]], ptr [[TMP30:%.*]], align 4
 ; CHECK:  [[FOR_BODY:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -322,11 +367,26 @@ define void @modf_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = call { <2 x double>, <2 x double> } @llvm.modf.v2f64(<2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[TMP4:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 0
-; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 1
-; CHECK:    store <2 x double> [[TMP4]], ptr [[TMP7:%.*]], align 8
-; CHECK:    store <2 x double> [[TMP5]], ptr [[TMP9:%.*]], align 8
+; CHECK:    [[TMP11:%.*]] = tail call { double, double } @llvm.modf.f64(double [[TMP7:%.*]])
+; CHECK:    [[TMP12:%.*]] = tail call { double, double } @llvm.modf.f64(double [[TMP8:%.*]])
+; CHECK:    [[TMP13:%.*]] = tail call { double, double } @llvm.modf.f64(double [[TMP9:%.*]])
+; CHECK:    [[TMP14:%.*]] = tail call { double, double } @llvm.modf.f64(double [[TMP10:%.*]])
+; CHECK:    [[TMP15:%.*]] = extractvalue { double, double } [[TMP11]], 0
+; CHECK:    [[TMP16:%.*]] = extractvalue { double, double } [[TMP12]], 0
+; CHECK:    [[TMP17:%.*]] = extractvalue { double, double } [[TMP13]], 0
+; CHECK:    [[TMP18:%.*]] = extractvalue { double, double } [[TMP14]], 0
+; CHECK:    [[TMP19:%.*]] = extractvalue { double, double } [[TMP11]], 1
+; CHECK:    [[TMP20:%.*]] = extractvalue { double, double } [[TMP12]], 1
+; CHECK:    [[TMP21:%.*]] = extractvalue { double, double } [[TMP13]], 1
+; CHECK:    [[TMP22:%.*]] = extractvalue { double, double } [[TMP14]], 1
+; CHECK:    store double [[TMP15]], ptr [[TMP23:%.*]], align 8
+; CHECK:    store double [[TMP16]], ptr [[TMP24:%.*]], align 8
+; CHECK:    store double [[TMP17]], ptr [[TMP25:%.*]], align 8
+; CHECK:    store double [[TMP18]], ptr [[TMP26:%.*]], align 8
+; CHECK:    store double [[TMP19]], ptr [[TMP27:%.*]], align 8
+; CHECK:    store double [[TMP20]], ptr [[TMP28:%.*]], align 8
+; CHECK:    store double [[TMP21]], ptr [[TMP29:%.*]], align 8
+; CHECK:    store double [[TMP22]], ptr [[TMP30:%.*]], align 8
 ; CHECK:  [[FOR_BODY:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -399,11 +459,26 @@ define void @sincospi_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincospi.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[TMP4:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 0
-; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 1
-; CHECK:    store <2 x float> [[TMP4]], ptr [[TMP7:%.*]], align 4
-; CHECK:    store <2 x float> [[TMP5]], ptr [[TMP9:%.*]], align 4
+; CHECK:    [[TMP11:%.*]] = tail call { float, float } @llvm.sincospi.f32(float [[TMP7:%.*]])
+; CHECK:    [[TMP12:%.*]] = tail call { float, float } @llvm.sincospi.f32(float [[TMP8:%.*]])
+; CHECK:    [[TMP13:%.*]] = tail call { float, float } @llvm.sincospi.f32(float [[TMP9:%.*]])
+; CHECK:    [[TMP14:%.*]] = tail call { float, float } @llvm.sincospi.f32(float [[TMP10:%.*]])
+; CHECK:    [[TMP15:%.*]] = extractvalue { float, float } [[TMP11]], 0
+; CHECK:    [[TMP16:%.*]] = extractvalue { float, float } [[TMP12]], 0
+; CHECK:    [[TMP17:%.*]] = extractvalue { float, float } [[TMP13]], 0
+; CHECK:    [[TMP18:%.*]] = extractvalue { float, float } [[TMP14]], 0
+; CHECK:    [[TMP19:%.*]] = extractvalue { float, float } [[TMP11]], 1
+; CHECK:    [[TMP20:%.*]] = extractvalue { float, float } [[TMP12]], 1
+; CHECK:    [[TMP21:%.*]] = extractvalue { float, float } [[TMP13]], 1
+; CHECK:    [[TMP22:%.*]] = extractvalue { float, float } [[TMP14]], 1
+; CHECK:    store float [[TMP15]], ptr [[TMP23:%.*]], align 4
+; CHECK:    store float [[TMP16]], ptr [[TMP24:%.*]], align 4
+; CHECK:    store float [[TMP17]], ptr [[TMP25:%.*]], align 4
+; CHECK:    store float [[TMP18]], ptr [[TMP26:%.*]], align 4
+; CHECK:    store float [[TMP19]], ptr [[TMP27:%.*]], align 4
+; CHECK:    store float [[TMP20]], ptr [[TMP28:%.*]], align 4
+; CHECK:    store float [[TMP21]], ptr [[TMP29:%.*]], align 4
+; CHECK:    store float [[TMP22]], ptr [[TMP30:%.*]], align 4
 ; CHECK:  [[FOR_BODY:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -472,11 +547,26 @@ define void @sincospi_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincospi.v2f64(<2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[TMP4:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 0
-; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 1
-; CHECK:    store <2 x double> [[TMP4]], ptr [[TMP7:%.*]], align 8
-; CHECK:    store <2 x double> [[TMP5]], ptr [[TMP9:%.*]], align 8
+; CHECK:    [[TMP11:%.*]] = tail call { double, double } @llvm.sincospi.f64(double [[TMP7:%.*]])
+; CHECK:    [[TMP12:%.*]] = tail call { double, double } @llvm.sincospi.f64(double [[TMP8:%.*]])
+; CHECK:    [[TMP13:%.*]] = tail call { double, double } @llvm.sincospi.f64(double [[TMP9:%.*]])
+; CHECK:    [[TMP14:%.*]] = tail call { double, double } @llvm.sincospi.f64(double [[TMP10:%.*]])
+; CHECK:    [[TMP15:%.*]] = extractvalue { double, double } [[TMP11]], 0
+; CHECK:    [[TMP16:%.*]] = extractvalue { double, double } [[TMP12]], 0
+; CHECK:    [[TMP17:%.*]] = extractvalue { double, double } [[TMP13]], 0
+; CHECK:    [[TMP18:%.*]] = extractvalue { double, double } [[TMP14]], 0
+; CHECK:    [[TMP19:%.*]] = extractvalue { double, double } [[TMP11]], 1
+; CHECK:    [[TMP20:%.*]] = extractvalue { double, double } [[TMP12]], 1
+; CHECK:    [[TMP21:%.*]] = extractvalue { double, double } [[TMP13]], 1
+; CHECK:    [[TMP22:%.*]] = extractvalue { double, double } [[TMP14]], 1
+; CHECK:    store double [[TMP15]], ptr [[TMP23:%.*]], align 8
+; CHECK:    store double [[TMP16]], ptr [[TMP24:%.*]], align 8
+; CHECK:    store double [[TMP17]], ptr [[TMP25:%.*]], align 8
+; CHECK:    store double [[TMP18]], ptr [[TMP26:%.*]], align 8
+; CHECK:    store double [[TMP19]], ptr [[TMP27:%.*]], align 8
+; CHECK:    store double [[TMP20]], ptr [[TMP28:%.*]], align 8
+; CHECK:    store double [[TMP21]], ptr [[TMP29:%.*]], align 8
+; CHECK:    store double [[TMP22]], ptr [[TMP30:%.*]], align 8
 ; CHECK:  [[FOR_BODY:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;

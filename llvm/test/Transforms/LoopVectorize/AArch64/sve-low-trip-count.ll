@@ -431,19 +431,21 @@ exit:
 define void @tc3_smin_i8_accept(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc3_smin_i8_accept(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[B]], align 1
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr [[A]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[WIDE_LOAD]], <2 x i8> [[WIDE_LOAD1]])
-; CHECK-NEXT:    store <2 x i8> [[TMP0]], ptr [[B]], align 1
+; CHECK-NEXT:  [[VECTOR_BODY:.*]]:
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[IV_NEXT:%.*]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[MIN:%.*]] = tail call i8 @llvm.smin.i8(i8 [[TMP0]], i8 [[TMP1]])
+; CHECK-NEXT:    store i8 [[MIN]], ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[SCALAR_PH:.*]], label %[[MIDDLE_BLOCK]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -469,18 +471,20 @@ exit:
 define void @tc5_sin_f32_dont_select_smaller_vf(ptr noalias %a, ptr noalias %c) #0 {
 ; CHECK-LABEL: define void @tc5_sin_f32_dont_select_smaller_vf(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.sin.v4f32(<4 x float> [[WIDE_LOAD]])
-; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[C]], align 4
+; CHECK-NEXT:  [[VECTOR_BODY:.*]]:
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[IV_NEXT:%.*]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[PC:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV]]
+; CHECK-NEXT:    [[VA:%.*]] = load float, ptr [[PA]], align 4
+; CHECK-NEXT:    [[SIN:%.*]] = tail call float @llvm.sin.f32(float [[VA]])
+; CHECK-NEXT:    store float [[SIN]], ptr [[PC]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[SCALAR_PH:.*]], label %[[MIDDLE_BLOCK]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
