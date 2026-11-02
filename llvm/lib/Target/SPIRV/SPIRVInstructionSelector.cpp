@@ -500,6 +500,8 @@ private:
   bool wrapIntoSpecConstantOp(MachineInstr &I,
                               SmallVector<Register> &CompositeArgs) const;
 
+  SPIRVTypeInst getUcharPtrType(MachineInstr &I,
+                                SPIRV::StorageClass::StorageClass SC) const;
   Register getUcharPtrTypeReg(MachineInstr &I,
                               SPIRV::StorageClass::StorageClass SC) const;
   MachineInstrBuilder buildSpecConstantOp(MachineInstr &I, Register Dest,
@@ -2904,10 +2906,15 @@ static bool isASCastInGVar(MachineRegisterInfo *MRI, Register ResVReg) {
   return IsAllowedRefs && IsGRef;
 }
 
+SPIRVTypeInst SPIRVInstructionSelector::getUcharPtrType(
+    MachineInstr &I, SPIRV::StorageClass::StorageClass SC) const {
+  return GR.getOrCreateSPIRVPointerType(
+      Type::getInt8Ty(I.getMF()->getFunction().getContext()), I, SC);
+}
+
 Register SPIRVInstructionSelector::getUcharPtrTypeReg(
     MachineInstr &I, SPIRV::StorageClass::StorageClass SC) const {
-  return GR.getSPIRVTypeID(GR.getOrCreateSPIRVPointerType(
-      Type::getInt8Ty(I.getMF()->getFunction().getContext()), I, SC));
+  return GR.getSPIRVTypeID(getUcharPtrType(I, SC));
 }
 
 MachineInstrBuilder
@@ -2980,10 +2987,12 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
     // be addressed in the emit-intrinsic step to infer a correct
     // OpConstantComposite type.
     // Generic casts require matching pointee types, so cast the source to i8*
-    // first.
-    if (SrcSC != SPIRV::StorageClass::CodeSectionINTEL) {
-      SPIRVTypeInst UcharSrcPtrTy = GR.getOrCreateSPIRVPointerType(
-          Type::getInt8Ty(I.getMF()->getFunction().getContext()), I, SrcSC);
+    // too, but only if a cast is emitted below.
+    bool ViaGeneric =
+        isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC);
+    if (SrcSC != SPIRV::StorageClass::CodeSectionINTEL &&
+        (SpecOpcode || ViaGeneric)) {
+      SPIRVTypeInst UcharSrcPtrTy = getUcharPtrType(I, SrcSC);
       if (SrcPtrTy != UcharSrcPtrTy) {
         Register Tmp =
             createVirtualRegister(UcharSrcPtrTy, &GR, MRI, *I.getMF());
@@ -3000,7 +3009,7 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
       buildSpecConstantOp(I, ResVReg, SrcPtr, getUcharPtrTypeReg(I, DstSC),
                           SpecOpcode)
           .constrainAllUses(TII, TRI, RBI);
-    } else if (isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC)) {
+    } else if (ViaGeneric) {
       MachineInstrBuilder MIB = buildConstGenericPtr(I, SrcPtr, SrcPtrTy);
       MIB.constrainAllUses(TII, TRI, RBI);
       buildSpecConstantOp(
