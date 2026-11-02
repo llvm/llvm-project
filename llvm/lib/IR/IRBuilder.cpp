@@ -1452,14 +1452,14 @@ Value *IRBuilderBase::CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
     Type *IdxTy = Op->getType()->getWithNewBitWidth(IdxSize);
     if (auto *OpC = dyn_cast<Constant>(Op)) {
       // Skip zero indices, except for vector splats.
-      if (OpC->isNullValue() &&
-          (Ptr->getType()->isVectorTy() || !IdxTy->isVectorTy()))
+      bool IsSplat = IdxTy->isVectorTy() && !Ptr->getType()->isVectorTy();
+      if (OpC->isNullValue() && !IsSplat)
         continue;
 
       if (StructType *STy = GTI.getStructTypeOrNull()) {
         uint64_t OpValue = OpC->getUniqueInteger().getZExtValue();
         uint64_t Offset = DL.getStructLayout(STy)->getElementOffset(OpValue);
-        if (!Offset)
+        if (!Offset && !IsSplat)
           continue;
 
         Ptr = CreatePtrAdd(Ptr, ConstantInt::get(IdxTy, Offset), Name, NW);

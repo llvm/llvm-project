@@ -2163,8 +2163,12 @@ public:
     assert(Offset->getType()->isIntOrIntVectorTy(
                getDataLayout().getIndexTypeSizeInBits(Ptr->getType())) &&
            "Offset must match index type");
-    if (Scale.isScalable())
-      Offset = CreateMul(CreateVScale(Offset->getType()), Offset);
+    if (Scale.isScalable()) {
+      Value *VScale = CreateVScale(Offset->getType()->getScalarType());
+      if (auto *VT = dyn_cast<VectorType>(Offset->getType()))
+        VScale = CreateVectorSplat(VT->getElementCount(), VScale);
+      Offset = CreateMul(VScale, Offset);
+    }
     return CreateScaledPtrAdd(Ptr, Scale.getKnownMinValue(), Offset, Name, NW);
   }
 
