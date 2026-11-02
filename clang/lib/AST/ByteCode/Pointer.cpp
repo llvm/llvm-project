@@ -1402,7 +1402,7 @@ OpaquePointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   for (const PointerPathEntry &Entry : path()) {
     switch (Entry.Kind) {
     case PointerPathEntry::Base: {
-      const CXXRecordDecl *RD = CurType->getAsCXXRecordDecl();
+      const CXXRecordDecl *RD = CurType->castAsCXXRecordDecl();
       if (!ASTContext::hasLayout(RD))
         return std::nullopt;
 

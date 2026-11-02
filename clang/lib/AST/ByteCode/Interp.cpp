@@ -2416,7 +2416,7 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   {
     CXXBasePaths Paths;
     getRecord(LimitedPtr)
-        ->isDerivedFrom(TargetType->getAsCXXRecordDecl(), Paths);
+        ->isDerivedFrom(TargetType->castAsCXXRecordDecl(), Paths);
     if (std::distance(Paths.begin(), Paths.end()) == 0 &&
         !typesMatch(LimitedPtr.getType(), TargetType)) {
       return diag(DiagNoBase, TargetType);
@@ -2548,7 +2548,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     Func = S.getContext().getOrCreateFunction(Overrider);
 
     const CXXRecordDecl *ThisFieldDecl =
-        ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
+        ThisPtr.getFieldDesc()->getType()->castAsCXXRecordDecl();
     if (Func->getParentDecl()->isDerivedFrom(ThisFieldDecl)) {
       // If the function we call is further DOWN the hierarchy than the
       // FieldDesc of our pointer, just go up the hierarchy of this field
