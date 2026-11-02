@@ -15,12 +15,17 @@ __device__ int reduce(int V) {
 // CHECK-NOT: runtime error
 __global__ void clean(int *Out) {
   int Lane = __lane_id();
-  int X = Out[TID];
+  int X = TID;
   int V = __builtin_amdgcn_readlane(X, 5);
   V += __shfl(X, Lane + 1) + __shfl_up(X, 1) + __shfl_xor(X, 1) + reduce(X);
   if (Lane < 16)
     V += __shfl(X, Lane ^ 1);
   Out[TID] = V;
+}
+
+// warpSize + 5 wraps to lane 5. The wavefront is fully active.
+__global__ void shuffle_wrap(int *Out) {
+  Out[TID] = __builtin_amdgcn_wave_shuffle(TID, warpSize + 5);
 }
 
 __global__ void readlane(int *Out) {
@@ -53,6 +58,8 @@ int main() {
   int *P = nullptr;
   CHECK_HIP(hipMalloc((void **)&P, 64 * sizeof(int)));
   clean<<<1, 64>>>(P);
+  CHECK_HIP(hipDeviceSynchronize());
+  shuffle_wrap<<<1, 64>>>(P);
   CHECK_HIP(hipDeviceSynchronize());
   readlane<<<1, 64>>>(P);
   CHECK_HIP(hipDeviceSynchronize());
