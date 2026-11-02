@@ -3,9 +3,13 @@
 // RUN:     -buffer-deallocation-pipeline=private-function-dynamic-ownership \
 // RUN:     -test-cf-assert \
 // RUN:     -convert-scf-to-cf \
-// RUN:     -convert-to-llvm | \
+// RUN:     -expand-strided-metadata \
+// RUN:     -lower-affine \
+// RUN:     -convert-to-llvm \
+// RUN:     -finalize-memref-to-llvm \
+// RUN:     -reconcile-unrealized-casts | \
 // RUN: mlir-runner -e main -entry-point-result=void \
-// RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
+// RUN:     -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
 // RUN: mlir-opt %s -generate-runtime-verification \
@@ -13,10 +17,13 @@
 // RUN:     -buffer-deallocation-pipeline=private-function-dynamic-ownership \
 // RUN:     -test-cf-assert \
 // RUN:     -convert-scf-to-cf \
+// RUN:     -expand-strided-metadata \
+// RUN:     -lower-affine \
 // RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
+// RUN:     -finalize-memref-to-llvm \
 // RUN:     -reconcile-unrealized-casts | \
 // RUN: mlir-runner -e main -entry-point-result=void \
-// RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
+// RUN:     -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
 func.func private @expand(%a: tensor<?xf32>, %n: index) -> tensor<?x2xf32> {
