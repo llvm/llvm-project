@@ -621,7 +621,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
       if (!PaddingByte.areBitsFilledWithZeroOrPoison(PaddingMask,
                                                      /*IsPoison=*/false)) {
         SavedPaddingByte = PaddingByte;
-        PaddingByte.poisonBits(static_cast<uint8_t>(~PaddingMask));
+        PaddingByte = Byte::poison();
         ModifiedPaddingByte = true;
         if (ContainsUndefinedBits)
           *ContainsUndefinedBits = true;
