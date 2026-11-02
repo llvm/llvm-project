@@ -464,9 +464,20 @@ void coro::BaseCloner::handleFinalSuspend() {
   auto FinalCaseIt = std::prev(Switch->case_end());
   BasicBlock *ResumeBB = FinalCaseIt->getCaseSuccessor();
 
+  // Null means the final suspend. Save its weight before the case is removed.
+  SwitchInstProfUpdateWrapper SwitchWrapper(*Switch);
+  std::optional<uint64_t> FinalSuspendWeight;
+  uint64_t RemainingWeight = 0;
+  unsigned FinalSuspendIndex = FinalCaseIt->getCaseIndex() + 1;
+  if (auto CaseWeight = SwitchWrapper.getSuccessorWeight(FinalSuspendIndex)) {
+    FinalSuspendWeight = *CaseWeight;
+    for (unsigned I = 0, E = Switch->getNumSuccessors(); I != E; ++I)
+      if (I != FinalSuspendIndex)
+        RemainingWeight += *SwitchWrapper.getSuccessorWeight(I);
+  }
+
   // Use SwitchInstProfUpdateWrapper to remove the case, keeping the profile
   // branch weights in sync with the switch successors.
-  SwitchInstProfUpdateWrapper SwitchWrapper(*Switch);
   SwitchWrapper.removeCase(FinalCaseIt);
   if (isSwitchDestroyFunction()) {
     BasicBlock *OldSwitchBB = Switch->getParent();
@@ -484,8 +495,13 @@ void coro::BaseCloner::handleFinalSuspend() {
       auto *Cond = Builder.CreateIsNull(Load);
       auto *Br = Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
       applyProfMetadataIfEnabled(Br, [&](Instruction *Inst) {
-        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
-                                                    Inst->getFunction());
+        // Do not use this weight unless the coroutine was actually profiled.
+        if (FinalSuspendWeight && Inst->getFunction()->hasProfileData())
+          setFittedBranchWeights(*Inst, {*FinalSuspendWeight, RemainingWeight},
+                                 /*IsExpected=*/false);
+        else
+          setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                      Inst->getFunction());
       });
     }
     OldSwitchBB->getTerminator()->eraseFromParent();

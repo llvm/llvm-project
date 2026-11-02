@@ -1580,12 +1580,23 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
                                           const FunctionArgList *Args,
                                           ArrayRef<const Attr *> ForAttrs) {
-  JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
 
   std::optional<LexicalScope> ForScope;
-  if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+  JumpDest LoopExit;
+  if (getLangOpts().C99 || getLangOpts().CPlusPlus) {
+    LoopExit = getJumpDestInCurrentScope("for.end");
     ForScope.emplace(*this, S.getSourceRange());
 
+    // Evaluate the first part before the loop.
+    if (S.getInit())
+      EmitStmt(S.getInit());
+  } else {
+    // Before C99 the init variable belongs to the enclosing scope, so create
+    // the loop exit after its cleanups: leaving the loop must not run them.
+    if (S.getInit())
+      EmitStmt(S.getInit());
+    LoopExit = getJumpDestInCurrentScope("for.end");
+  }
   Address BigJumpLoopIvAddr = Address::invalid();
   const VarDecl *LoopVar = nullptr;
   const OMPLoopDirective *BigJumpLoopLD = nullptr;
@@ -1607,7 +1618,6 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
   }
 
   const Expr *CondExpr = BigJumpLoopLD ? BigJumpLoopLD->getCond() : S.getCond();
-
   // Start the loop with a block that tests the condition.
   // If there's an increment, the continue scope will be overwritten
   // later.
