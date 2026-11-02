@@ -1,5 +1,6 @@
 // Test that the use of thread local variables would be wrapped by @llvm.threadlocal.address intrinsics.
 // RUN: %clang_cc1 -std=c++11 -emit-llvm -triple x86_64 -o - %s -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm -triple amdgpu-amd-amdhsa -o - %s -disable-llvm-passes | FileCheck --check-prefix=NON-ZERO-GLOBAL-AS %s
 // RUN: %clang_cc1 -std=c++11 -emit-llvm -triple aarch64 -o - -O1 %s | FileCheck %s -check-prefix=CHECK-O1
 thread_local int i;
 int g() {
@@ -8,6 +9,8 @@ int g() {
 }
 // CHECK: @i = {{.*}}thread_local global i32 0
 // CHECK: @_ZZ1fvE1j = internal thread_local global i32 0
+// NON-ZERO-GLOBAL-AS: @i = {{.*}}thread_local addrspace(1) global i32 0
+// NON-ZERO-GLOBAL-AS: @_ZZ1fvE1j = internal thread_local addrspace(1) global i32 0
 //
 // CHECK: @_Z1gv()
 // CHECK-NEXT: entry
@@ -19,7 +22,15 @@ int g() {
 // CHECK-NEXT: %[[RET:.+]] = load i32, ptr %[[IA2]], align 4
 // CHECK-NEXT: ret i32 %[[RET]]
 //
+// NON-ZERO-GLOBAL-AS: %[[IA:.+]] = call align 4 ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) align 4 @i)
+// NON-ZERO-GLOBAL-AS-NEXT: %[[ASC:.+]] = addrspacecast ptr addrspace(1) %[[IA]] to ptr
+// NON-ZERO-GLOBAL-AS-NEXT: %[[VA:.+]] = load i32, ptr %[[ASC]]
+// NON-ZERO-GLOBAL-AS: %[[IA2:.+]] = call align 4 ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) align 4 @i)
+// NON-ZERO-GLOBAL-AS-NEXT: %[[ASC2:.+]] = addrspacecast ptr addrspace(1) %[[IA2]] to ptr
+// NON-ZERO-GLOBAL-AS-NEXT: %[[RET:.+]] = load i32, ptr %[[ASC2]]
+//
 // CHECK: declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull) #[[ATTR_NUM:.+]]
+// NON-ZERO-GLOBAL-AS: declare nonnull ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) nonnull) #[[ATTR_NUM:.+]]
 //
 // CHECK-O1-LABEL: @_Z1gv
 // CHECK-O1-NEXT: entry:
