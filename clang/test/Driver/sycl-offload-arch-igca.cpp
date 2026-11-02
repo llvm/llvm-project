@@ -33,3 +33,13 @@
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMDGPU %s
 // CHK-AMDGPU: error: unsupported HIP gpu architecture: igca_20ca
 // CHK-AMDGPU-NOT: llvm-offload-binary
+
+/// A valid IGCA target, like an Intel GPU name, needs a plain SPIR-V target:
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-amd-amdhsa --offload-arch=igca_20ca \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-NOT-PLAIN -DTRIPLE=spirv64-amd-amdhsa %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=igca_20ca \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-NOT-PLAIN -DTRIPLE=spirv64-unknown-amdhsa %s
+// CHK-NOT-PLAIN: error: the target architecture 'igca_20ca' is not supported by the target '[[TRIPLE]]'
+// CHK-NOT-PLAIN-NOT: llvm-offload-binary
