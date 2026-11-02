@@ -151,7 +151,19 @@ bool InlinerInterface::allowSingleBlockOptimization(
   }
   auto *handler = getInterfaceFor(inlinedBlocks.begin()->getParentOp());
   assert(handler && "expected valid dialect handler");
-  return handler->allowSingleBlockOptimization(inlinedBlocks);
+  if (!handler->allowSingleBlockOptimization(inlinedBlocks))
+    return false;
+
+  // The terminator is handled by the interface of its own dialect, which may
+  // differ from the dialect of the parent operation, so it must also allow the
+  // fast path.
+  Block &firstBlock = *inlinedBlocks.begin();
+  if (!firstBlock.mightHaveTerminator())
+    return true;
+  auto *terminatorHandler = getInterfaceFor(firstBlock.getTerminator());
+  if (!terminatorHandler || terminatorHandler == handler)
+    return true;
+  return terminatorHandler->allowSingleBlockOptimization(inlinedBlocks);
 }
 
 Value InlinerInterface::handleArgument(OpBuilder &builder, Operation *call,
