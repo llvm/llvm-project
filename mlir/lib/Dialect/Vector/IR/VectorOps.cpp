@@ -1264,18 +1264,18 @@ static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
 }
 
 // For every contraction `dim` for which:
-//  * the corresponding iteratory type matches `targetIteratorTy`,
+//  * the corresponding iteratory type matches `targetIteratorType`,
 // returns a pair: <lhsIdx, rhsIdx>, where:
 //  * {lhs|rhs}Idx is the index of `dim` in the (result of) indexing map for
 //    {lhs|rhs}.
 static std::vector<std::pair<int64_t, int64_t>>
-getDimPairForIterTy(ContractionOp *contract, IteratorType targetIteratorTy) {
+getDimPairForIterTy(ContractionOp *contract, IteratorType targetIteratorType) {
   SmallVector<AffineMap, 4> indexingMaps(contract->getIndexingMapsArray());
   ArrayAttr iteratorTypes = contract->getIteratorTypes();
   std::vector<std::pair<int64_t, int64_t>> dimMap;
   for (const auto &it : llvm::enumerate(iteratorTypes)) {
     auto iteratorType = llvm::cast<IteratorTypeAttr>(it.value()).getValue();
-    if (iteratorType != targetIteratorTy)
+    if (iteratorType != targetIteratorType)
       continue;
     // Search lhs/rhs map results for 'targetExpr'.
     auto targetExpr = getAffineDimExpr(it.index(), contract->getContext());
