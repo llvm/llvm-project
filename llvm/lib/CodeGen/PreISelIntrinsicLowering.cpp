@@ -123,11 +123,14 @@ static bool lowerLoadRelative(Function &F) {
       continue;
 
     IRBuilder<> B(CI);
+    Value *Ptr = CI->getArgOperand(0);
+    Type *IdxTy = F.getDataLayout().getIndexType(Ptr->getType());
     Value *OffsetPtr =
-        B.CreatePtrAdd(CI->getArgOperand(0), CI->getArgOperand(1));
+        B.CreatePtrAdd(Ptr, B.CreateSExtOrTrunc(CI->getArgOperand(1), IdxTy));
     Value *OffsetI32 = B.CreateAlignedLoad(Int32Ty, OffsetPtr, Align(4));
 
-    Value *ResultPtr = B.CreatePtrAdd(CI->getArgOperand(0), OffsetI32);
+    Value *ResultPtr =
+        B.CreatePtrAdd(Ptr, B.CreateSExtOrTrunc(OffsetI32, IdxTy));
 
     CI->replaceAllUsesWith(ResultPtr);
     CI->eraseFromParent();
