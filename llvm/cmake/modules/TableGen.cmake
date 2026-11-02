@@ -1,3 +1,7 @@
+# tablegen_internal(project ofn ...) runs ${project}_TABLEGEN_EXE. It is the
+# shared implementation behind the project-specific wrappers such as
+# llvm_tablegen, clang_tablegen and mlir_tablegen; use those instead where
+# one exists.
 # LLVM_TARGET_DEFINITIONS must contain the name of the .td file to process,
 # while LLVM_TARGET_DEPENDS may contain additional file dependencies.
 # Extra parameters for `tblgen' may come after `ofn' parameter.
@@ -9,7 +13,7 @@ include(LLVMDistributionSupport)
 set(LLVM_TABLEGEN_LAUNCHER "" CACHE STRING
   "Semicolon-separated command prefix for TableGen invocations")
 
-function(tablegen project ofn)
+function(tablegen_internal project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES;EXTRA_OUTPUTS" ${ARGN})
 
   # Override ${project} with ${project}_TABLEGEN_PROJECT
@@ -155,7 +159,7 @@ function(tablegen project ofn)
     GENERATED 1)
 endfunction()
 
-# Invokes llvm-tblgen; see tablegen() for the calling convention.
+# Invokes llvm-tblgen; see tablegen_internal() for the calling convention.
 function(llvm_tablegen ofn)
   set(extra_flags)
   if (LLVM_ENABLE_DAGISEL_COV AND "-gen-dag-isel" IN_LIST ARGN)
@@ -181,14 +185,14 @@ function(llvm_tablegen ofn)
 
   # Pass extra_flags before ARGN: after they could land in a trailing
   # DEPENDS or EXTRA_INCLUDES list.
-  tablegen(LLVM ${ofn} ${extra_flags} ${ARGN} EXTRA_OUTPUTS ${extra_outputs})
+  tablegen_internal(LLVM ${ofn} ${extra_flags} ${ARGN} EXTRA_OUTPUTS ${extra_outputs})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
 endfunction()
 
 # Creates a target for publicly exporting tablegen dependencies.
 function(add_public_tablegen_target target)
   if(NOT TABLEGEN_OUTPUT)
-    message(FATAL_ERROR "Requires tablegen() definitions as TABLEGEN_OUTPUT.")
+    message(FATAL_ERROR "Requires tablegen_internal() definitions as TABLEGEN_OUTPUT.")
   endif()
   add_custom_target(${target}
     DEPENDS ${TABLEGEN_OUTPUT})
