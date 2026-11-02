@@ -635,8 +635,8 @@ private:
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
   struct SafeAccessInfo {
-    uint64_t MaxSize = 0;
-    Align Alignment = Align(1);
+    uint64_t MaxSizeInBytes = 0;
+    Align MaxAlign = Align(1);
   };
 
   /// Maps a pointer to its maximum fixed access size and safe alignment.
@@ -646,7 +646,7 @@ private:
   /// executed, and record the loads/stores that require masking.
   /// \p SafeAccesses records pointers that can be accessed unconditionally,
   /// together with the fixed access sizes and alignments justified for each
-  /// pointer. Scalable accesses are not recorded.
+  /// pointer.
   /// \p MaskedOp is a list of instructions that have to be transformed into
   /// calls to the appropriate masked intrinsic when the loop is vectorized
   /// or dropped if the instruction is a conditional assume intrinsic.
