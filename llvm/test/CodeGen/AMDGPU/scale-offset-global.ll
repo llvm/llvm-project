@@ -776,7 +776,8 @@ entry:
   ret <4 x float> %ret
 }
 
-; The zext is matched as a sext. Only SelectionDAG proves the shift can't wrap.
+; The zext is matched as a sext. SelectionDAG keeps scale_offset because it
+; narrows the mask to 0x7ffffff, so the shift can not wrap.
 define amdgpu_ps <4 x float> @global_load_b128_idx32_zext_shl_wrap(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
 ; GFX1250-SDAG-LABEL: global_load_b128_idx32_zext_shl_wrap:
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
