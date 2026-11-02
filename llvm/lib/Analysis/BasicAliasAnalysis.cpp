@@ -1493,41 +1493,11 @@ static bool areDistinctObjectsNoAlias(const Value *O1, const Value *O2,
   return false;
 }
 
-/// Return true if no underlying object of \p V, looking through phis and
-/// selects, can alias \p Obj. Unlike getUnderlyingObjects, this bounds compile
-/// time by visiting at most MaxVisited values and giving up on phis with more
-/// incoming values.
-static bool allUnderlyingObjectsNoAlias(const Value *V, const Value *Obj,
-                                        const AAQueryInfo &AAQI) {
-  constexpr unsigned MaxVisited = 8;
-  SmallPtrSet<const Value *, 8> Visited;
-  SmallVector<const Value *> Worklist({V});
-  do {
-    const Value *P = getUnderlyingObject(Worklist.pop_back_val());
-    if (!Visited.insert(P).second)
-      continue;
-    if (Visited.size() > MaxVisited)
-      return false;
-    if (const auto *SI = dyn_cast<SelectInst>(P)) {
-      Worklist.append({SI->getTrueValue(), SI->getFalseValue()});
-      continue;
-    }
-    if (const auto *PN = dyn_cast<PHINode>(P)) {
-      if (PN->getNumIncomingValues() > MaxVisited)
-        return false;
-      append_range(Worklist, PN->incoming_values());
-      continue;
-    }
-    if (!areDistinctObjectsNoAlias(P, Obj, AAQI))
-      return false;
-  } while (!Worklist.empty());
-  return true;
-}
-
 /// Provide a bunch of ad-hoc rules to disambiguate a PHI instruction against
 /// another.
 AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
                                     const Value *V2, LocationSize V2Size,
+                                    const Value *UnderlyingV2,
                                     AAQueryInfo &AAQI) {
   if (!PN->getNumIncomingValues())
     return AliasResult::NoAlias;
@@ -1584,9 +1554,14 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
 
   // To control compile time, only allow a phi source if there is either single
   // source or all sources are not phis, e.g. LCSSA phis or phi start values of
-  // pointer IVs. Otherwise, check the underlying objects of the phi instead.
+  // pointer IVs. Otherwise, check the phi's underlying objects.
   if (V1Srcs.size() > 1 && any_of(V1Srcs, IsaPred<PHINode>))
-    return allUnderlyingObjectsNoAlias(PN, getUnderlyingObject(V2), AAQI)
+    return getUnderlyingObjects(
+               PN,
+               [&](const Value *O1) {
+                 return areDistinctObjectsNoAlias(O1, UnderlyingV2, AAQI);
+               },
+               /*LI=*/nullptr, MaxLookupSearchDepth, /*MaxVisited=*/8)
                ? AliasResult::NoAlias
                : AliasResult::MayAlias;
 
@@ -1852,11 +1827,11 @@ AliasResult BasicAAResult::aliasCheckRecursive(
   }
 
   if (const PHINode *PN = dyn_cast<PHINode>(V1)) {
-    AliasResult Result = aliasPHI(PN, V1Size, V2, V2Size, AAQI);
+    AliasResult Result = aliasPHI(PN, V1Size, V2, V2Size, O2, AAQI);
     if (Result != AliasResult::MayAlias)
       return Result;
   } else if (const PHINode *PN = dyn_cast<PHINode>(V2)) {
-    AliasResult Result = aliasPHI(PN, V2Size, V1, V1Size, AAQI);
+    AliasResult Result = aliasPHI(PN, V2Size, V1, V1Size, O1, AAQI);
     Result.swap();
     if (Result != AliasResult::MayAlias)
       return Result;

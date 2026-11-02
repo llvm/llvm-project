@@ -158,8 +158,9 @@ private:
                        const Value *UnderlyingV1, const Value *UnderlyingV2,
                        AAQueryInfo &AAQI);
 
-  AliasResult aliasPHI(const PHINode *PN, LocationSize PNSize,
-                       const Value *V2, LocationSize V2Size, AAQueryInfo &AAQI);
+  AliasResult aliasPHI(const PHINode *PN, LocationSize PNSize, const Value *V2,
+                       LocationSize V2Size, const Value *UnderlyingV2,
+                       AAQueryInfo &AAQI);
 
   AliasResult aliasSelect(const SelectInst *SI, LocationSize SISize,
                           const Value *V2, LocationSize V2Size,
