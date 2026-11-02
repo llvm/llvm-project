@@ -350,10 +350,8 @@ public:
     if (ASTNodeKind::getFromNodeKind<ObjCProtocolLoc>().isSame(NodeKind)) {
       auto PLA = getUnchecked<ObjCProtocolLoc>();
       auto PLB = Other.getUnchecked<ObjCProtocolLoc>();
-      return std::make_pair(PLA.getProtocol(),
-                            PLA.getLocation().getRawEncoding()) <
-             std::make_pair(PLB.getProtocol(),
-                            PLB.getLocation().getRawEncoding());
+      return std::make_pair(PLA.getProtocol(), PLA.getLocation()) <
+             std::make_pair(PLB.getProtocol(), PLB.getLocation());
     }
 
     assert(getMemoizationData() && Other.getMemoizationData());
