@@ -509,6 +509,10 @@ void ARMPassConfig::addPreRegAlloc() {
 }
 
 void ARMPassConfig::addPreSched2() {
+  // Expand some pseudo instructions into multiple instructions to allow
+  // proper scheduling.
+  addPass(createARMExpandPseudoPass());
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableARMLoadStoreOpt)
       addPass(createARMLoadStoreOptLegacyPass());
@@ -516,10 +520,6 @@ void ARMPassConfig::addPreSched2() {
     addPass(new ARMExecutionDomainFix());
     addPass(createBreakFalseDepsLegacyPass());
   }
-
-  // Expand some pseudo instructions into multiple instructions to allow
-  // proper scheduling.
-  addPass(createARMExpandPseudoPass());
 
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
