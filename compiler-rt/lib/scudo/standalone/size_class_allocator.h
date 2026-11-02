@@ -174,8 +174,9 @@ private:
     Allocator->pushBlocks(this, ClassId, &C->Chunks[0], Count);
     // u16 will be promoted to int by arithmetic type conversion.
     C->Count = static_cast<u16>(C->Count - Count);
-    for (u16 I = 0; I < C->Count; I++)
-      C->Chunks[I] = C->Chunks[I + Count];
+    if (C->Count == 0)
+      return;
+    memmove(&C->Chunks[0], &C->Chunks[Count], sizeof(CompactPtrT) * C->Count);
   }
 };
 
