@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "VE.h"
+#include "VEInstrInfo.h"
+#include "VERegisterInfo.h"
 #include "VESubtarget.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -37,7 +39,7 @@ char VELVLGenLegacy::ID = 0;
 
 FunctionPass *llvm::createVELVLGenLegacyPass() { return new VELVLGenLegacy; }
 
-static int getVLIndex(unsigned Opcode, const TargetInstrInfo *TII) {
+static int getVLIndex(unsigned Opcode, const VEInstrInfo *TII) {
   const MCInstrDesc &MCID = TII->get(Opcode);
 
   // If an instruction has VLIndex information, return it.
@@ -49,7 +51,7 @@ static int getVLIndex(unsigned Opcode, const TargetInstrInfo *TII) {
 
 // returns a register holding a vector length. NoRegister is returned when
 // this MI does not have a vector length.
-static unsigned getVL(const MachineInstr &MI, const TargetInstrInfo *TII) {
+static unsigned getVL(const MachineInstr &MI, const VEInstrInfo *TII) {
   int Index = getVLIndex(MI.getOpcode(), TII);
   if (Index >= 0)
     return MI.getOperand(Index).getReg();
@@ -58,8 +60,8 @@ static unsigned getVL(const MachineInstr &MI, const TargetInstrInfo *TII) {
 }
 
 static bool runLVLGenOnMachineBasicBlock(MachineBasicBlock &MBB,
-                                         const TargetInstrInfo *TII,
-                                         const TargetRegisterInfo *TRI) {
+                                         const VEInstrInfo *TII,
+                                         const VERegisterInfo *TRI) {
 #define RegName(no)                                                            \
   (MBB.getParent()->getSubtarget<VESubtarget>().getRegisterInfo()->getName(no))
 
@@ -124,8 +126,8 @@ static bool runLVLGenOnMachineFunction(MachineFunction &F) {
   bool Changed = false;
 
   const VESubtarget &Subtarget = F.getSubtarget<VESubtarget>();
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const VEInstrInfo *TII = Subtarget.getInstrInfo();
+  const VERegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   for (MachineBasicBlock &MBB : F)
     Changed |= runLVLGenOnMachineBasicBlock(MBB, TII, TRI);
