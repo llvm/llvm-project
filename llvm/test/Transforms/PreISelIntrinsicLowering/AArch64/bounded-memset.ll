@@ -162,3 +162,106 @@ define void @known_bits(ptr %p, i8 %v, i64 %x) {
   call void @llvm.memset.p0.i64(ptr align 4 %p, i8 %v, i64 %len, i1 false)
   ret void
 }
+
+define void @assume(ptr %p, i64 %len) {
+; EXPAND-LABEL: define void @assume(
+; EXPAND-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) {
+; EXPAND-NEXT:    [[CMP:%.*]] = icmp ule i64 [[LEN]], 4
+; EXPAND-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; EXPAND-NEXT:    [[LEN_GE4:%.*]] = icmp uge i64 [[LEN]], 4
+; EXPAND-NEXT:    br i1 [[LEN_GE4]], label %[[MEMSET_STORE4:.*]], label %[[MEMSET_LT4:.*]]
+; EXPAND:       [[MEMSET_STORE4]]:
+; EXPAND-NEXT:    store i32 0, ptr [[P]], align 1
+; EXPAND-NEXT:    br label %[[MEMSET_DONE:.*]]
+; EXPAND:       [[MEMSET_LT4]]:
+; EXPAND-NEXT:    [[LEN_GE2:%.*]] = icmp uge i64 [[LEN]], 2
+; EXPAND-NEXT:    br i1 [[LEN_GE2]], label %[[MEMSET_STORE2:.*]], label %[[MEMSET_LT2:.*]]
+; EXPAND:       [[MEMSET_STORE2]]:
+; EXPAND-NEXT:    store i16 0, ptr [[P]], align 1
+; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[LEN]], 2
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    store i16 0, ptr [[TAIL]], align 1
+; EXPAND-NEXT:    br label %[[BB2:.*]]
+; EXPAND:       [[MEMSET_LT2]]:
+; EXPAND-NEXT:    [[LEN_GE1:%.*]] = icmp uge i64 [[LEN]], 1
+; EXPAND-NEXT:    br i1 [[LEN_GE1]], label %[[MEMSET_STORE1:.*]], label %[[BB1:.*]]
+; EXPAND:       [[MEMSET_STORE1]]:
+; EXPAND-NEXT:    store i8 0, ptr [[P]], align 1
+; EXPAND-NEXT:    br label %[[BB1]]
+; EXPAND:       [[BB1]]:
+; EXPAND-NEXT:    br label %[[BB2]]
+; EXPAND:       [[BB2]]:
+; EXPAND-NEXT:    br label %[[MEMSET_DONE]]
+; EXPAND:       [[MEMSET_DONE]]:
+; EXPAND-NEXT:    ret void
+;
+; CALL-LABEL: define void @assume(
+; CALL-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) {
+; CALL-NEXT:    [[CMP:%.*]] = icmp ule i64 [[LEN]], 4
+; CALL-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[LEN]], i1 false)
+; CALL-NEXT:    ret void
+;
+  %cmp = icmp ule i64 %len, 4
+  call void @llvm.assume(i1 %cmp)
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 %len, i1 false)
+  ret void
+}
+
+; Without a dominator tree, an assumption is only used from the same block, the
+; single predecessor or the entry block.
+define void @assume_dominating_block(ptr %p, i64 %len, i1 %c) {
+; COMMON-LABEL: define void @assume_dominating_block(
+; COMMON-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]], i1 [[C:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    br label %[[AA:.*]]
+; COMMON:       [[AA]]:
+; COMMON-NEXT:    [[CMP:%.*]] = icmp ule i64 [[LEN]], 4
+; COMMON-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; COMMON-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; COMMON:       [[BB]]:
+; COMMON-NEXT:    br label %[[CC:.*]]
+; COMMON:       [[CC]]:
+; COMMON-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[LEN]], i1 false)
+; COMMON-NEXT:    br label %[[EXIT]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
+;
+entry:
+  br label %aa
+aa:
+  %cmp = icmp ule i64 %len, 4
+  call void @llvm.assume(i1 %cmp)
+  br i1 %c, label %bb, label %exit
+bb:
+  br label %cc
+cc:
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 %len, i1 false)
+  br label %exit
+exit:
+  ret void
+}
+
+define void @assume_not_dominating(ptr %p, i64 %len, i1 %c) {
+; COMMON-LABEL: define void @assume_not_dominating(
+; COMMON-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]], i1 [[C:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    br i1 [[C]], label %[[AA:.*]], label %[[BB:.*]]
+; COMMON:       [[AA]]:
+; COMMON-NEXT:    [[CMP:%.*]] = icmp ule i64 [[LEN]], 4
+; COMMON-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; COMMON-NEXT:    br label %[[BB]]
+; COMMON:       [[BB]]:
+; COMMON-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[LEN]], i1 false)
+; COMMON-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %aa, label %bb
+aa:
+  %cmp = icmp ule i64 %len, 4
+  call void @llvm.assume(i1 %cmp)
+  br label %bb
+bb:
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 %len, i1 false)
+  ret void
+}
