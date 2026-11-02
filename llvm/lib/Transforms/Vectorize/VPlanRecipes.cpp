@@ -1841,13 +1841,40 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
 
 bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  // We cannot check opcodes that don't have a result against onlyFirstPartUsed.
+  // Further, we must disallow opcodes that combine multiple parts.
+  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
+    return vputils::onlyFirstPartUsed(this);
+
   switch (getOpcode()) {
   default:
-    return hasResult() && vputils::onlyFirstPartUsed(this);
+    return false;
+  case Instruction::FCmp:
+  case Instruction::ICmp:
+  case Instruction::Select:
+  case Instruction::Load:
+  case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
+  case VPInstruction::Not:
+  case VPInstruction::Reverse:
+  case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
+  case VPInstruction::WideVectorLoad:
+  case VPInstruction::ActiveLaneMask:
+  case VPInstruction::WideActiveLaneMask:
+  case VPInstruction::ExtractLane:
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractLastActive:
+  case VPInstruction::LastActiveLane:
+    return vputils::onlyFirstPartUsed(this);
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ExtractVectorForPart:
+  case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::NumActiveLanes:
+  case VPInstruction::ResumeForEpilogue:
     return true;
   };
 }

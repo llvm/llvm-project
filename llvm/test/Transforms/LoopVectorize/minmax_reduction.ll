@@ -771,9 +771,11 @@ for.body:
 
 ; This can be vectorized with additional runtime checks for NaNs.
 ; CHECK-LABEL: @fmin_intrinsic_nofast(
-; CHECK: [[FREEZE:%.*]] = freeze <2 x float> [[OP0:%.+]]
-; CHECK-NEXT: <2 x float> @llvm.minnum.v2f32(<2 x float> {{%.+}}, <2 x float> [[FREEZE]])
-; CHECK: fcmp uno <2 x float> [[FREEZE]], [[FREEZE]]
+; CHECK: [[FREEZE0:%.*]] = freeze <2 x float> [[OP0:%.+]]
+; CHECK-NEXT: [[FREEZE1:%.*]] = freeze <2 x float> [[OP1:%.+]]
+; CHECK-NEXT: <2 x float> @llvm.minnum.v2f32(<2 x float> {{%.+}}, <2 x float> [[FREEZE0]])
+; CHECK-NEXT: <2 x float> @llvm.minnum.v2f32(<2 x float> {{%.+}}, <2 x float> [[FREEZE1]])
+; CHECK: fcmp uno <2 x float> [[FREEZE0]], [[FREEZE1]]
 define float @fmin_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body
@@ -794,9 +796,11 @@ for.body:
 
 ; This can be vectorized with additional runtime checks for NaNs.
 ; CHECK-LABEL: @fmax_intrinsic_nofast(
-; CHECK: [[FREEZE:%.*]] = freeze <2 x float> [[OP0:%.+]]
-; CHECK-NEXT: <2 x float> @llvm.maxnum.v2f32(<2 x float> {{%.+}}, <2 x float> [[FREEZE]])
-; CHECK: fcmp uno <2 x float> [[FREEZE]], [[FREEZE]]
+; CHECK: [[FREEZE0:%.*]] = freeze <2 x float> [[OP0:%.+]]
+; CHECK-NEXT: [[FREEZE1:%.*]] = freeze <2 x float> [[OP1:%.+]]
+; CHECK-NEXT: <2 x float> @llvm.maxnum.v2f32(<2 x float> {{%.+}}, <2 x float> [[FREEZE0]])
+; CHECK-NEXT: <2 x float> @llvm.maxnum.v2f32(<2 x float> {{%.+}}, <2 x float> [[FREEZE1]])
+; CHECK: fcmp uno <2 x float> [[FREEZE0]], [[FREEZE1]]
 define float @fmax_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body
