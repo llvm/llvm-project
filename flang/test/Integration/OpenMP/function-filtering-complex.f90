@@ -6,6 +6,8 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
+! REQUIRES: flang-supports-f128-math
+
 ! RUN: %if x86-registered-target %{ %flang_fc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST %}
 ! RUN: %if amdgpu-registered-target %{ %flang_fc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device -emit-llvm %s -o - | FileCheck %s --check-prefix=DEVICE --implicit-check-not=@_FortranACAbsF128 %}
 
