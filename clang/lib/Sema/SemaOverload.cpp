@@ -8617,7 +8617,8 @@ void Sema::AddConversionCandidate(
     CXXConversionDecl *Conversion, DeclAccessPair FoundDecl,
     CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
     OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
-    bool AllowExplicit, bool AllowResultConversion, bool StrictPackMatch) {
+    bool AllowExplicit, bool AllowResultConversion, bool StrictPackMatch,
+    bool AllowRValues) {
   assert(!Conversion->getDescribedFunctionTemplate() &&
          "Conversion function templates use AddTemplateConversionCandidate");
   QualType ConvType = Conversion->getConversionType().getNonReferenceType();
@@ -8636,6 +8637,12 @@ void Sema::AddConversionCandidate(
   // functions that don't convert to exactly (possibly cv-qualified) T.
   if (!AllowResultConversion &&
       !Context.hasSameUnqualifiedType(Conversion->getConversionType(), ToType))
+    return;
+
+  // Ignore conversion functions that don't return a reference type
+  // if we are not allowed to consider rvalues.
+  if (!AllowRValues &&
+      !Conversion->getConversionType()->isLValueReferenceType())
     return;
 
   // Per C++ [over.match.conv]p1, [over.match.ref]p1, an explicit conversion
@@ -8852,17 +8859,13 @@ static void AddTemplateConversionCandidateImmediately(
     return;
   }
 
-  assert(Specialization && "Missing function template specialization?");
-  // Reject invalid template specialization.
-  if (!AllowRValues &&
-      !Specialization->getConversionType()->isLValueReferenceType())
-    return;
   // Add the conversion function template specialization produced by
   // template argument deduction as a candidate.
+  assert(Specialization && "Missing function template specialization?");
   S.AddConversionCandidate(Specialization, FoundDecl, ActingContext, From,
                            ToType, CandidateSet, AllowObjCConversionOnExplicit,
                            AllowExplicit, AllowResultConversion,
-                           Info.hasStrictPackMatch());
+                           Info.hasStrictPackMatch(), AllowRValues);
 }
 
 void Sema::AddTemplateConversionCandidate(

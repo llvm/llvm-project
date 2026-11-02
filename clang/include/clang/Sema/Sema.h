@@ -10732,7 +10732,7 @@ public:
       CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
       OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
       bool AllowExplicit, bool AllowResultConversion = true,
-      bool StrictPackMatch = false);
+      bool StrictPackMatch = false, bool AllowRValues = true);
 
   /// Adds a conversion function template specialization
   /// candidate to the overload set, using template argument deduction
