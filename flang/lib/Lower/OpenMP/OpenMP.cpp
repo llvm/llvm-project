@@ -1858,7 +1858,7 @@ struct OpWithBodyGenInfo {
   int collapseValue = 0;
 };
 
-static bool isNonDerivedNonPointer(const mlir::Value &variable) {
+static bool canAssumeBoundedRecipeEffects(const mlir::Value &variable) {
   mlir::Type type = variable.getType();
   if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
     if (mlir::isa<fir::BoxCharType, fir::BoxType>(refType.getEleTy()))
@@ -1868,22 +1868,23 @@ static bool isNonDerivedNonPointer(const mlir::Value &variable) {
          !fir::isPointerType(type);
 }
 
-static bool isNonDerivedNonPointer(lower::AbstractConverter &converter,
-                                   const semantics::Symbol &sym) {
+static bool canAssumeBoundedRecipeEffects(lower::AbstractConverter &converter,
+                                          const semantics::Symbol &sym) {
   mlir::Value variable = converter.getSymbolAddress(sym);
-  return variable && isNonDerivedNonPointer(variable);
+  return variable && canAssumeBoundedRecipeEffects(variable);
 }
 
-static bool isNonDerivedNonPointerItem(lower::AbstractConverter &converter,
-                                       const semantics::Symbol &sym) {
+static bool
+canAssumeBoundedRecipeEffectsForItem(lower::AbstractConverter &converter,
+                                   const semantics::Symbol &sym) {
   const auto &ultimate = sym.GetUltimate();
   if (const auto *common =
           ultimate.detailsIf<semantics::CommonBlockDetails>()) {
     return llvm::all_of(common->objects(), [&converter](const auto &member) {
-      return isNonDerivedNonPointer(converter, *member);
+      return canAssumeBoundedRecipeEffects(converter, *member);
     });
   }
-  return isNonDerivedNonPointer(converter, sym);
+  return canAssumeBoundedRecipeEffects(converter, sym);
 }
 
 /// Create the body (block) for an OpenMP Operation.
@@ -1961,7 +1962,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     if (auto singleOp = llvm::dyn_cast<mlir::omp::SingleOp>(op)) {
       const auto &privateSyms = tempDsp->getAllSymbolsToPrivatize();
       if (llvm::all_of(privateSyms, [&info](const semantics::Symbol *sym) {
-            return isNonDerivedNonPointerItem(info.converter, *sym);
+            return canAssumeBoundedRecipeEffectsForItem(info.converter, *sym);
           }))
         singleOp.setPrivateAssumeBoundedRecipeEffects(true);
     }
@@ -3701,7 +3702,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
   if (!privateSyms.empty() &&
       llvm::all_of(privateSyms, [&converter](const semantics::Symbol *sym) {
-        return isNonDerivedNonPointerItem(converter, *sym);
+        return canAssumeBoundedRecipeEffectsForItem(converter, *sym);
       }))
     sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
 
@@ -3710,7 +3711,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         // The generated conditional-lastprivate recipe only accesses the
         // intrinsic value and index fields of its accumulator, despite its
         // record type.
-        return variable == lpAlloca || isNonDerivedNonPointer(variable);
+        return variable == lpAlloca || canAssumeBoundedRecipeEffects(variable);
       }))
     sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
@@ -3967,7 +3968,7 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 
   if (llvm::all_of(clauseOps.copyprivateVars, [](mlir::Value variable) {
-        return isNonDerivedNonPointer(variable);
+        return canAssumeBoundedRecipeEffects(variable);
       }))
     singleOp.setCopyprivateAssumeBoundedRecipeEffects(true);
 
