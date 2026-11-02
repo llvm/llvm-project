@@ -80,6 +80,43 @@ contains
     !$omp end sections
   end subroutine
 
+  ! An assumed-shape array reduction uses a referenced descriptor. It prevents
+  ! the assumption for the reduction clause.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsections_array_descriptor_reduction(
+  ! CHECK: omp.sections nowait reduction(
+  ! CHECK-SAME: : !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.ref<f32>) {
+  ! CHECK-NOT: reduction_assume_bounded_recipe_effects
+  ! CHECK-NOT: reduction_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine sections_array_descriptor_reduction(a, x)
+    real :: a(:), x
+    !$omp sections reduction(+:a,x)
+      a = a + 1
+      x = x + 2
+    !$omp end sections nowait
+  end subroutine
+
+  ! Eager sections privatization creates character and array storage directly,
+  ! including when the enclosing parallel uses a referenced array descriptor.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsections_character_array_private(
+  ! CHECK: omp.parallel private(
+  ! CHECK-SAME: : !fir.boxchar<1>, !fir.ref<!fir.box<!fir.array<?xf32>>>) {
+  ! CHECK: omp.sections nowait reduction(
+  ! CHECK-SAME: : !fir.ref<f32>) {
+  ! CHECK: } <private_assume_bounded_recipe_effects, reduction_assume_bounded_recipe_effects>{{$}}
+  ! CHECK: return
+  subroutine sections_character_array_private(c, a, x)
+    character(*) :: c
+    real :: a(:), x
+    !$omp parallel private(c,a)
+      !$omp sections private(c,a) reduction(+:x)
+        c = 'x'
+        a = 1.0
+        x = x + a(1)
+      !$omp end sections nowait
+    !$omp end parallel
+  end subroutine
+
   ! A derived private variable prevents the assumption for the private clause.
   ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPderived_private(
   ! CHECK: omp.sections {
@@ -254,6 +291,34 @@ contains
     !$omp parallel private(i, a, r, c, l, s)
       !$omp single
       !$omp end single copyprivate(i, a, r, c, l, s)
+    !$omp end parallel
+  end subroutine
+
+  ! Copying through a referenced descriptor accesses its pointee even when
+  ! the Fortran variable is neither allocatable nor a pointer.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPcharacter_descriptor_copyprivate(
+  ! CHECK: omp.single copyprivate({{.*}} : !fir.ref<!fir.boxchar<1>>) {
+  ! CHECK-NOT: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine character_descriptor_copyprivate(c)
+    character(*) :: c
+    !$omp parallel private(c)
+      !$omp single
+        c = 'x'
+      !$omp end single copyprivate(c)
+    !$omp end parallel
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsParray_descriptor_copyprivate(
+  ! CHECK: omp.single copyprivate({{.*}} : !fir.ref<!fir.box<!fir.array<?xf32>>>) {
+  ! CHECK-NOT: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine array_descriptor_copyprivate(a)
+    real :: a(:)
+    !$omp parallel private(a)
+      !$omp single
+        a = 1.0
+      !$omp end single copyprivate(a)
     !$omp end parallel
   end subroutine
 

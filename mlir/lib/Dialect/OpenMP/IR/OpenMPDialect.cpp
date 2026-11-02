@@ -3625,11 +3625,6 @@ void SingleOp::getEffects(
     getBarrierEffects(effects);
   }
 
-  // Eager privatisation emits explicit operations and leaves privateVars
-  // empty. Since the privatisation operations are emitted explicitly, their
-  // memory effects are accounted for by recursive analysis.
-  // Once single uses delayed privatisation `!getPrivateVars().empty()` will no
-  // longer be redundant.
   bool hasUnknownRecipeEffects =
       (!getPrivateVars().empty() && !getPrivateAssumeBoundedRecipeEffects()) ||
       (!getCopyprivateVars().empty() &&
