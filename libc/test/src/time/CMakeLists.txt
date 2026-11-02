@@ -361,3 +361,24 @@ add_libc_test(
     libc.src.time.tz_variables
     libc.src.time.tzset
 )
+
+# Depending on the gmtime entrypoint skips this test on targets that don't
+# enable the time functions. time_utils requires a 64-bit time_t and does not
+# compile on overlay builds whose system time_t is 32-bit (e.g. armhf).
+add_libc_test(
+  time_utils_test
+  SUITE
+    libc-time-tests
+  SRCS
+    time_utils_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_tm
+    libc.hdr.types.time_t
+    libc.src.time.gmtime
+    libc.src.time.time_constants
+    libc.src.time.time_utils
+)
