@@ -1825,11 +1825,13 @@ namespace Strchr {
   static_assert(__builtin_strchr(kStr, 'd') == nullptr);
   static_assert(__builtin_strchr(kStr, 'e') == nullptr);
   static_assert(__builtin_strchr(kStr, '\0') == kStr + 5);
-  static_assert(__builtin_strchr(kStr, 'a' + 256) == nullptr);
-  static_assert(__builtin_strchr(kStr, 'a' - 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, 'a' + 256) == kStr); // adding 256 should wrap around to same character
+  static_assert(__builtin_strchr(kStr, 'a' - 256) == kStr); // subtracting 256 should wrap around to same character
   static_assert(__builtin_strchr(kStr, '\xff') == kStr + 4);
-  static_assert(__builtin_strchr(kStr, '\xff' + 256) == nullptr);
-  static_assert(__builtin_strchr(kStr, '\xff' - 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, '\xff' + 256) == kStr + 4);
+  static_assert(__builtin_strchr(kStr, '\xff' - 256) == kStr + 4);
+  constexpr char kStr2[] = "\x80\x41";
+  static_assert(__builtin_strchr(kStr2, 128) == kStr2);
   static_assert(__builtin_strchr(kFoo, 'o') == kFoo + 1);
   static_assert(__builtin_strchr(kFoo, 'x') == nullptr); // both-error {{not an integral constant}} \
                                                          // both-note {{dereferenced one-past-the-end}}
@@ -1911,6 +1913,11 @@ namespace WMemCpy {
                                                                     // both-note {{source of 'wmemcpy' is nullptr}}
   static_assert(__builtin_wmemcpy(null, &global, sizeof(wchar_t))); // both-error {{}} \
                                                                     // both-note {{destination of 'wmemcpy' is nullptr}}
+
+  static_assert(__builtin_wmemcpy(L"foobar", L"bazqux", 6), ""); // both-warning {{conversion from string literal}} \
+                                                                 // both-error {{}} \
+                                                                 // both-note {{assignment to object}} \
+                                                                 // both-note {{temporary created here}}
 }
 
 namespace WMemMove {
@@ -2044,6 +2051,12 @@ namespace WithinLifetime {
     static_assert(__builtin_is_within_lifetime(&temp)); // both-error {{not an integral constant expression}} \
                                                         // both-note {{initializer of 'temp' is not a constant expression}}
   }
+
+
+  static_assert(__builtin_is_within_lifetime("")); // both-error {{not an integral constant expression}} \
+                                                   // both-note-re {{read of object {{.*}} whose value is not known}} \
+                                                   // both-note {{temporary created here}}
+
 }
 
 #ifdef __SIZEOF_INT128__

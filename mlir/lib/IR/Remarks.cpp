@@ -86,7 +86,7 @@ void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
     os << "Function=" << getFunction() << " | ";
 
   if (printLocation) {
-    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation())) {
+    if (auto flc = getLocation()->findInstanceOf<FileLineColLoc>()) {
       os << " @" << flc.getFilename() << ":" << flc.getLine() << ":"
          << flc.getColumn();
     }
@@ -137,7 +137,9 @@ llvm::remarks::Type Remark::getRemarkType() const {
 
 llvm::remarks::Remark Remark::generateRemark() const {
   auto locLambda = [&]() -> llvm::remarks::RemarkLocation {
-    if (auto flc = dyn_cast<FileLineColLoc>(getLocation()))
+    // Remarks are often emitted at name, fused or call-site locations wrapping
+    // a file location; use the first file location found inside.
+    if (auto flc = getLocation()->findInstanceOf<FileLineColLoc>())
       return {flc.getFilename(), flc.getLine(), flc.getColumn()};
     return {"<unknown file>", 0, 0};
   };
