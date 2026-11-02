@@ -50,6 +50,7 @@
 ; AFTER-PEI-NEXT: scratchReservedForDynamicVGPRs: 0
 ; AFTER-PEI-NEXT: numKernargPreloadSGPRs: 0
 ; AFTER-PEI-NEXT: isWholeWaveFunction: false
+; AFTER-PEI-NEXT: hasVGPRAsMemoryAccess: false
 ; AFTER-PEI-NEXT: minNumAGPRs: 4294967295
 ; AFTER-PEI-NEXT: body:
 define amdgpu_kernel void @scavenge_fi(ptr addrspace(1) %out, i32 %in) #0 {

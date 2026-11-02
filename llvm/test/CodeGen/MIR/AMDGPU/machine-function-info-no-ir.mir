@@ -59,6 +59,7 @@
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: hasVGPRAsMemoryAccess: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
@@ -172,6 +173,7 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: hasVGPRAsMemoryAccess: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
@@ -257,6 +259,7 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: hasVGPRAsMemoryAccess: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
@@ -343,6 +346,7 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: hasVGPRAsMemoryAccess: false
 # FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
