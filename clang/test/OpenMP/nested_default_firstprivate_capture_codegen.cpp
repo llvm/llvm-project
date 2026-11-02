@@ -21,6 +21,20 @@
 int G;
 static volatile int Sink;
 
+// A reduction under a nested default(firstprivate).
+int reduction_firstprivate(int seed) {
+  int x = seed;
+  int res = 0;
+#pragma omp parallel
+#pragma omp single
+  {
+#pragma omp taskloop num_tasks(4) default(firstprivate) reduction(+ : res)
+    for (int i = 0; i < 8; ++i)
+      res += x + i;
+  }
+  return res;
+}
+
 // A reduction under a nested default(private).
 int reduction_private(int seed) {
   int x = seed;
@@ -104,6 +118,11 @@ int static_outer_write() {
 }
 
 #endif
+
+// CHECK-LABEL: define {{.*}}@_Z22reduction_firstprivatei(
+// CHECK:         call {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr @_Z22reduction_firstprivatei.omp_outlined, ptr %[[RES:[0-9a-z._]+]], ptr %{{[0-9a-z._]+}})
+// CHECK:         %[[RET:.*]] = load i32, ptr %[[RES]], align 4
+// CHECK-NEXT:    ret i32 %[[RET]]
 
 // CHECK-LABEL: define {{.*}}@_Z17reduction_privatei(
 // CHECK:         call {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr @_Z17reduction_privatei.omp_outlined, ptr %{{[0-9a-z._]+}}, ptr %[[RES:[0-9a-z._]+]])
