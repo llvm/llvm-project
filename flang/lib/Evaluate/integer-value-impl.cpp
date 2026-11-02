@@ -529,6 +529,23 @@ bool IntegerValueImpl::POPPAR() const {
   return WithWord([](const auto &x) { return x.POPPAR(); });
 }
 
+// Not a nested lambda inside ConvertSigned/ConvertUnsigned: GCC 7 wrongly
+// requires 'this' to be captured there.
+template <bool IS_SIGNED, typename S>
+static IntegerValueImpl::ValueWithOverflow ConvertWord(int toKind, const S &x) {
+  return IntegerValueImpl::WithWordProto(
+      toKind, [&](auto proto) -> IntegerValueImpl::ValueWithOverflow {
+        using T = decltype(proto);
+        if constexpr (IS_SIGNED) {
+          auto r{T::template ConvertSigned<S>(x)};
+          return {IntegerValueImpl::FromWord(r.value), r.overflow};
+        } else {
+          auto r{T::template ConvertUnsigned<S>(x)};
+          return {IntegerValueImpl::FromWord(r.value), r.overflow};
+        }
+      });
+}
+
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertSigned(
     int toKind, const IntegerValueImpl &from) {
   if (from.IsNull()) {
@@ -536,12 +553,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertSigned(
     return {Zero(toKind), false};
   }
   return from.WithWord([&](const auto &x) -> ValueWithOverflow {
-    using S = std::decay_t<decltype(x)>;
-    return WithWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
-      using T = decltype(proto);
-      auto r{T::template ConvertSigned<S>(x)};
-      return {FromWord(r.value), r.overflow};
-    });
+    return ConvertWord</*IS_SIGNED=*/true>(toKind, x);
   });
 }
 
@@ -552,12 +564,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertUnsigned(
     return {Zero(toKind), false};
   }
   return from.WithWord([&](const auto &x) -> ValueWithOverflow {
-    using S = std::decay_t<decltype(x)>;
-    return WithWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
-      using T = decltype(proto);
-      auto r{T::template ConvertUnsigned<S>(x)};
-      return {FromWord(r.value), r.overflow};
-    });
+    return ConvertWord</*IS_SIGNED=*/false>(toKind, x);
   });
 }
 
