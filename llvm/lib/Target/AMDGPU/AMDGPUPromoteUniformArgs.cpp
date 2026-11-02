@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Promote scalar and pointer arguments of internal callees to \c inreg when
-// every visible call-site operand is trivially uniform: a constant, an
-// argument passed in an SGPR, or an always-uniform value in the same block as
-// the call. Vectors are not promoted.
+// Promote arguments of internal callees to \c inreg when every visible
+// call-site operand is trivially uniform: a constant, an argument passed in an
+// SGPR, or an always-uniform value in the same block as the call.
 //
 // FIXME: Promotion is monotone -- marking an argument \c inreg can make a
 // call-site operand that forwards it uniform in turn -- but the module is
@@ -33,8 +32,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Type.h"
-
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-promote-uniform-args"
@@ -45,8 +42,7 @@ STATISTIC(NumPromotedInRegFuncs,
           "Number of functions with a promoted uniform argument");
 
 static bool canPromoteArgToInReg(const Argument &A) {
-  Type *Ty = A.getType();
-  if ((!Ty->isIntOrPtrTy() && !Ty->isFloatingPointTy()) || A.hasInRegAttr())
+  if (A.hasInRegAttr())
     return false;
   // inreg is mutually exclusive with byval, inalloca, preallocated, byref,
   // sret, and nest. The first five are covered by hasPointeeInMemoryValueAttr.

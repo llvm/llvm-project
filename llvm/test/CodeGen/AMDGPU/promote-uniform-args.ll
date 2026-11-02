@@ -776,11 +776,12 @@ define amdgpu_kernel void @k_asm_divergent() {
   ret void
 }
 
-; Vectors are not promoted.
+; Vectors, wide integers and aggregates are promoted like scalars; the backend
+; splits them across SGPRs.
 
 define internal fastcc void @callee_vecptr(<2 x ptr> %p) {
 ; CHECK-LABEL: define internal fastcc void @callee_vecptr(
-; CHECK-SAME: <2 x ptr> [[P:%.*]]) {
+; CHECK-SAME: <2 x ptr> inreg [[P:%.*]]) {
 ; CHECK-NEXT:    ret void
 ;
   ret void
@@ -789,7 +790,7 @@ define internal fastcc void @callee_vecptr(<2 x ptr> %p) {
 define amdgpu_kernel void @k_vecptr(<2 x ptr> %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_vecptr(
 ; CHECK-SAME: <2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @callee_vecptr(<2 x ptr> [[P]])
+; CHECK-NEXT:    call fastcc void @callee_vecptr(<2 x ptr> inreg [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @callee_vecptr(<2 x ptr> %p)
@@ -798,7 +799,7 @@ define amdgpu_kernel void @k_vecptr(<2 x ptr> %p) {
 
 define internal fastcc void @callee_vecint(<2 x i32> %v, ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @callee_vecint(
-; CHECK-SAME: <2 x i32> [[V:%.*]], ptr inreg [[P:%.*]]) {
+; CHECK-SAME: <2 x i32> inreg [[V:%.*]], ptr inreg [[P:%.*]]) {
 ; CHECK-NEXT:    store <2 x i32> [[V]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -809,10 +810,59 @@ define internal fastcc void @callee_vecint(<2 x i32> %v, ptr %p) {
 define amdgpu_kernel void @k_vecint(<2 x i32> %v, ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_vecint(
 ; CHECK-SAME: <2 x i32> [[V:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @callee_vecint(<2 x i32> [[V]], ptr inreg [[P]])
+; CHECK-NEXT:    call fastcc void @callee_vecint(<2 x i32> inreg [[V]], ptr inreg [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @callee_vecint(<2 x i32> %v, ptr %p)
+  ret void
+}
+
+define internal fastcc void @callee_wide(<16 x i32> %v, i128 %i, { i32, float } %s, [2 x i32] %a, ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_wide(
+; CHECK-SAME: <16 x i32> inreg [[V:%.*]], i128 inreg [[I:%.*]], { i32, float } inreg [[S:%.*]], [2 x i32] inreg [[A:%.*]], ptr inreg [[P:%.*]]) {
+; CHECK-NEXT:    store <16 x i32> [[V]], ptr [[P]], align 64
+; CHECK-NEXT:    store i128 [[I]], ptr [[P]], align 8
+; CHECK-NEXT:    store { i32, float } [[S]], ptr [[P]], align 4
+; CHECK-NEXT:    store [2 x i32] [[A]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store <16 x i32> %v, ptr %p
+  store i128 %i, ptr %p
+  store { i32, float } %s, ptr %p
+  store [2 x i32] %a, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_wide(<16 x i32> %v, i128 %i, { i32, float } %s, [2 x i32] %a, ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_wide(
+; CHECK-SAME: <16 x i32> [[V:%.*]], i128 [[I:%.*]], { i32, float } [[S:%.*]], [2 x i32] [[A:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @callee_wide(<16 x i32> inreg [[V]], i128 inreg [[I]], { i32, float } inreg [[S]], [2 x i32] inreg [[A]], ptr inreg [[P]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_wide(<16 x i32> %v, i128 %i, { i32, float } %s, [2 x i32] %a, ptr %p)
+  ret void
+}
+
+; A constant of any type is trivially uniform.
+
+define internal fastcc void @callee_wide_const(<8 x i64> %v, { i32, float } %s) {
+; CHECK-LABEL: define internal fastcc void @callee_wide_const(
+; CHECK-SAME: <8 x i64> inreg [[V:%.*]], { i32, float } inreg [[S:%.*]]) {
+; CHECK-NEXT:    store <8 x i64> [[V]], ptr null, align 64
+; CHECK-NEXT:    store { i32, float } [[S]], ptr null, align 4
+; CHECK-NEXT:    ret void
+;
+  store <8 x i64> %v, ptr null
+  store { i32, float } %s, ptr null
+  ret void
+}
+
+define amdgpu_kernel void @k_wide_const() {
+; CHECK-LABEL: define amdgpu_kernel void @k_wide_const() {
+; CHECK-NEXT:    call fastcc void @callee_wide_const(<8 x i64> inreg zeroinitializer, { i32, float } inreg { i32 1, float 2.000000e+00 })
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_wide_const(<8 x i64> zeroinitializer, { i32, float } { i32 1, float 2.0 })
   ret void
 }
 
