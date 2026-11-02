@@ -13,9 +13,17 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("ve-asm-printer-begin", VEAsmPrinterBeginPass())
+MODULE_PASS("ve-asm-printer-end", VEAsmPrinterEndPass())
+#undef MODULE_PASS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("ve-asm-printer", VEAsmPrinterPass())
 MACHINE_FUNCTION_PASS("ve-isel", VEDAGToDAGISelPass(*this))
 MACHINE_FUNCTION_PASS("ve-lvl-gen", VELVLGenPass())
 #undef MACHINE_FUNCTION_PASS

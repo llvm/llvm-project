@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VE.h"
+#include "VEAsmPrinter.h"
 #include "VETargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -52,15 +53,15 @@ void VECodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 }
 
 void VECodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add VEAsmPrinterBeginPass
+  addModulePass(VEAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void VECodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add VEAsmPrinterPass
+  addMachineFunctionPass(VEAsmPrinterPass(), PMW);
 }
 
 void VECodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add VEAsmPrinterEndPass
+  addModulePass(VEAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace

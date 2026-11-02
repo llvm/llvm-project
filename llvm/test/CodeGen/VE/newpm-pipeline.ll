@@ -33,6 +33,7 @@
 ; CHECK-NEXT:   safe-stack
 ; CHECK-NEXT:   stack-protector
 ; CHECK-NEXT:   verify
+; CHECK-NEXT: ve-asm-printer-begin
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     ve-isel
@@ -86,4 +87,6 @@
 ; CHECK-NEXT:     machine-sanmd
 ; CHECK-NEXT:     stack-frame-layout
 ; CHECK-NEXT:     verify
+; CHECK-NEXT:     ve-asm-printer
 ; CHECK-NEXT:   free-machine-function
+; CHECK-NEXT: ve-asm-printer-end
