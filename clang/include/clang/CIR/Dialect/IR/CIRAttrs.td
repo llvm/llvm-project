@@ -537,9 +537,9 @@ def CIR_ConstRecordAttr : CIR_ValueLikeAttr<"ConstRecord", "const_record"> {
 
     Example:
     ```
-    cir.global external @rgb2 = #cir.const_record<{0 : i8,
-                                                   5 : i64, #cir.null : !cir.ptr<i8>
-                                                  }> : !cir.record<"", i8, i64, !cir.ptr<i8>>
+    cir.global external @rgb2 = #cir.const_record<{#cir.int<0> : !s8i,
+        #cir.int<5> : !s64i, #cir.ptr<null> : !cir.ptr<!s8i>
+      }> : !cir.struct<{data !s8i, data !s64i, data !cir.ptr<!s8i>}>
     ```
   }];
 
@@ -1002,7 +1002,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     - `must_progress`: the loop must eventually terminate or have an
       observable side effect (the forward-progress guarantee of C++11 and
       later, and C11 loops with a non-constant condition).
-    - `vectorize_enable`: force vectorization on.
+    - `vectorize_enable`: force vectorization on/off.
     - `vectorize_width`: the vectorization factor. A width of 1 disables
       vectorization.
     - `vectorize_scalable`: whether the vectorization factor is
@@ -1025,14 +1025,14 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     ```
     #cir.loop_hint<>
     #cir.loop_hint< must_progress>
-    #cir.loop_hint< must_progress vectorize_enable interleave_count = 2
+    #cir.loop_hint< must_progress vectorize_enable = true interleave_count = 2
                     unroll_count = 4>
     ```
   }];
 
   let parameters = (ins
     CIR_FlagParam<"must_progress">:$must_progress,
-    CIR_FlagParam<"vectorize_enable">:$vectorize_enable,
+    OptionalParameter<"mlir::BoolAttr">:$vectorize_enable,
     OptionalParameter<"uint32_t">:$vectorize_width,
     OptionalParameter<"mlir::BoolAttr">:$vectorize_scalable,
     OptionalParameter<"mlir::BoolAttr">:$vectorize_predicate,
@@ -1051,7 +1051,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
   let assemblyFormat = [{
     `<`
       (` ` $must_progress^)?
-      (` ` $vectorize_enable^)?
+      (` ` `vectorize_enable` `=` $vectorize_enable^)?
       (` ` `vectorize_width` `=` $vectorize_width^)?
       (` ` `vectorize_scalable` `=` $vectorize_scalable^)?
       (` ` `vectorize_predicate` `=` $vectorize_predicate^)?
@@ -1149,13 +1149,13 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
     Example:
 
     ```
-      cir.global external @s = @".str2": !cir.ptr<i8>
-      cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
+      cir.global external @s = @".str2": !cir.ptr<!s8i>
+      cir.global external @x = #cir.global_view<@s> : !cir.ptr<!s8i>
       cir.global external @s_addr = #cir.global_view<@s> : !s64i
 
-      cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8]
-                                                   : !cir.array<i8 x 3>>
-      cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
+      cir.global external @rgb = #cir.const_array<[#cir.int<0> : !s8i,
+          #cir.int<-23> : !s8i, #cir.int<33> : !s8i]> : !cir.array<!s8i x 3>
+      cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<!s8i>
     ```
 
     Note, that unlike LLVM IR's gep instruction, CIR doesn't add the leading
@@ -2092,7 +2092,7 @@ def CIR_TypeInfoAttr : CIR_ValueLikeAttr<"TypeInfo", "typeinfo"> {
 
     ```
     cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE
-      : !cir.ptr<i32>
+      : !cir.ptr<!s32i>
 
     !rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>,
       !cir.ptr<!u8i>}>
@@ -2690,13 +2690,14 @@ def CIR_LoweringLangOptionsAttr
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
-    "int32_t":$clang_abi_compat
+    "int32_t":$clang_abi_compat,
+    "int32_t":$long_double_size
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
                $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat) `>`
+               $clang_abi_compat, $long_double_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

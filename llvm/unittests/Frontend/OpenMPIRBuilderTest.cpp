@@ -10,6 +10,7 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -2076,7 +2077,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
     AssumeInst *AssumeInstruction = cast<AssumeInst>(&Instr);
     if (AssumeInstruction->getNumTotalBundleOperands()) {
       auto Bundle = AssumeInstruction->getOperandBundleAt(0);
-      if (Bundle.getTagName() == "align") {
+      if (getBundleAttrFromOBU(Bundle) == BundleAttr::Align) {
         EXPECT_TRUE(isa<ConstantInt>(Bundle.Inputs[1]));
         auto ConstIntVal = dyn_cast<ConstantInt>(Bundle.Inputs[1]);
         EXPECT_EQ(ConstIntVal->getSExtValue(), AlignmentValue);
@@ -3354,7 +3355,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  EXPECT_NE(EntryBB->getTerminator(), nullptr);
+  EXPECT_TRUE(EntryBB->hasTerminator());
 
   CallInst *OrderedEntryCI = nullptr;
   for (auto &EI : *EntryBB) {
@@ -3427,7 +3428,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveSimd) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  EXPECT_NE(EntryBB->getTerminator(), nullptr);
+  EXPECT_TRUE(EntryBB->hasTerminator());
 
   CallInst *OrderedEntryCI = nullptr;
   for (auto &EI : *EntryBB) {
@@ -3469,7 +3470,7 @@ TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
   OMPBuilder.createCopyinClauseBlocks(Builder.saveIP(), MasterAddress,
                                       PrivAddress, Int32, /*BranchtoEnd*/ true);
 
-  CondBrInst *EntryBr = dyn_cast_or_null<CondBrInst>(EntryBB->getTerminator());
+  CondBrInst *EntryBr = dyn_cast<CondBrInst>(EntryBB->getTerminator());
 
   EXPECT_NE(EntryBr, nullptr);
 
@@ -3481,8 +3482,9 @@ TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
   EXPECT_NE(NotMasterBB, nullptr);
   EXPECT_NE(CopyinEnd, nullptr);
 
+  EXPECT_TRUE(NotMasterBB->hasTerminator());
   UncondBrInst *NotMasterBr =
-      dyn_cast_or_null<UncondBrInst>(NotMasterBB->getTerminator());
+      dyn_cast<UncondBrInst>(NotMasterBB->getTerminator());
   EXPECT_NE(NotMasterBr, nullptr);
   EXPECT_EQ(CopyinEnd, NotMasterBr->getSuccessor());
 }
@@ -5881,7 +5883,7 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
                                                  PrivCB, FiniCB, false, false));
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid(); // Required at the end of the function
-  EXPECT_NE(F->getEntryBlock().getTerminator(), nullptr);
+  EXPECT_TRUE(F->getEntryBlock().hasTerminator());
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
@@ -5987,7 +5989,7 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
   EXPECT_EQ(FoundBarrier, true);
 
   EXPECT_NE(SwitchBB, nullptr);
-  EXPECT_NE(SwitchBB->getTerminator(), nullptr);
+  EXPECT_TRUE(SwitchBB->hasTerminator());
   EXPECT_EQ(isa<SwitchInst>(SwitchBB->getTerminator()), true);
   Switch = cast<SwitchInst>(SwitchBB->getTerminator());
   EXPECT_EQ(Switch->getNumCases(), 2U);
