@@ -2494,14 +2494,17 @@ bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
       ScaleOffset = C->getZExtValue() == Size;
   }
 
+  if (!ScaleOffset)
+    return false;
+
   // SMEM scales the offset in 32 bits, other instructions in 64 bits.
   unsigned Bits = Log2_32_Ceil(Size);
-  if (ScaleOffset && IsSMEM) {
+  if (IsSMEM) {
     if (Off.getValueType() == MVT::i64) {
       KnownBits Known = CurDAG->computeKnownBits(Off.getOperand(0));
       ScaleOffset = Known.countMaxActiveBits() + Bits <= 32;
     }
-  } else if (ScaleOffset && Off != Offset) {
+  } else if (Off != Offset) {
     SDNodeFlags Flags = Off->getFlags();
     SDValue Idx = Off.getOperand(0);
     if (IsSigned)

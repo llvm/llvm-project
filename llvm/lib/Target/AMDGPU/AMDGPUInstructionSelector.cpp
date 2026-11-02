@@ -5944,14 +5944,17 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
                                   m_Copy(m_SpecificICst(Size))))) &&
        mi_match(Mul->getOperand(2).getReg(), *MRI, m_Reg(Op0)));
 
+  if (!ScaleOffset)
+    return false;
+
   // SMEM scales the offset in 32 bits, other instructions in 64 bits.
   unsigned Bits = Log2_64_Ceil(Size);
-  if (ScaleOffset && IsSMEM) {
+  if (IsSMEM) {
     if (!IsExtended && MRI->getType(Offset).getSizeInBits() == 64) {
       KnownBits Known = VT->getKnownBits(Op0);
       ScaleOffset = Known.countMaxActiveBits() + Bits <= 32;
     }
-  } else if (ScaleOffset && IsExtended) {
+  } else if (IsExtended) {
     const MachineInstr *Scale = MRI->getVRegDef(OffsetReg);
     if (IsSigned)
       ScaleOffset = Scale->getFlag(MachineInstr::NoSWrap) ||
