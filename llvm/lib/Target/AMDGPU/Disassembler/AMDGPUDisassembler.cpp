@@ -3196,17 +3196,19 @@ void AMDGPUSymbolizer::tryAddingPcLoadReferenceComment(raw_ostream &cStream,
   llvm_unreachable("unimplemented");
 }
 
+namespace {
 class AMDGPUExternalSymbolizer : public MCExternalSymbolizer {
 public:
   using MCExternalSymbolizer::MCExternalSymbolizer;
 
+  // Only SOPP branch targets are symbolized. They have no relocations, so
+  // GetOpInfo is not used.
   bool tryAddingSymbolicOperand(MCInst &Inst, raw_ostream &cStream,
                                 int64_t Value, uint64_t Address, bool IsBranch,
                                 uint64_t Offset, uint64_t OpSize,
                                 uint64_t InstSize) override {
     if (!IsBranch)
-      return MCExternalSymbolizer::tryAddingSymbolicOperand(
-          Inst, cStream, Value, Address, IsBranch, Offset, OpSize, InstSize);
+      return false;
 
     if (SymbolLookUp) {
       uint64_t ReferenceType = LLVMDisassembler_ReferenceType_In_Branch;
@@ -3215,17 +3217,18 @@ public:
                                           Address, &ReferenceName)) {
         if (ReferenceType == LLVMDisassembler_ReferenceType_DeMangled_Name &&
             ReferenceName)
-          cStream << ReferenceName << '\n';
+          cStream << ReferenceName;
         else
-          cStream << Name << '\n';
+          cStream << Name;
         return false;
       }
     }
 
-    cStream << format_hex(static_cast<uint64_t>(Value), 0) << '\n';
+    cStream << format_hex(static_cast<uint64_t>(Value), 0);
     return false;
   }
 };
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Initialization
@@ -3236,10 +3239,13 @@ createAMDGPUSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                        LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
                        MCContext *Ctx,
                        std::unique_ptr<MCRelocationInfo> &&RelInfo) {
-  if (GetOpInfo || SymbolLookUp)
+  if (GetOpInfo || SymbolLookUp) {
     return new AMDGPUExternalSymbolizer(*Ctx, std::move(RelInfo), GetOpInfo,
                                         SymbolLookUp, DisInfo);
+  }
 
+  // Without callbacks, DisInfo must be a SectionSymbolsTy (llvm-objdump and
+  // Mesa ACO).
   return new AMDGPUSymbolizer(*Ctx, std::move(RelInfo), DisInfo);
 }
 

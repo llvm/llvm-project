@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Disassembler.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -21,6 +22,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -36,6 +38,9 @@ struct SymbolLookupRecorder {
   unsigned NumCalls = 0;
   uint64_t ReferenceValue = 0;
   uint64_t ReferencePC = 0;
+  // What the callback answers.
+  const char *Name = nullptr;
+  const char *DemangledName = nullptr;
 };
 
 static const char *recordingSymbolLookupCallback(void *DisInfo,
@@ -47,8 +52,13 @@ static const char *recordingSymbolLookupCallback(void *DisInfo,
   ++Recorder->NumCalls;
   Recorder->ReferenceValue = ReferenceValue;
   Recorder->ReferencePC = ReferencePC;
-  *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
-  return nullptr;
+  if (Recorder->DemangledName) {
+    *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
+    *ReferenceName = Recorder->DemangledName;
+  } else {
+    *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
+  }
+  return Recorder->Name;
 }
 
 static constexpr char TripleName[] = "amdgpu10.30--amdpal";
@@ -83,38 +93,97 @@ TEST(AMDGPUDisassembler, Basic) {
   LLVMDisasmDispose(DCR);
 }
 
-TEST(AMDGPUDisassembler, SymbolLookupCallback) {
+// s_branch 0xfff0 at BranchPC jumps to BranchTarget.
+static constexpr uint64_t BranchPC = 0x7d5210317ffc;
+static constexpr uint64_t BranchTarget = 0x7d5210317fc0;
+
+// Disassembles the branch through the C API. Returns std::nullopt if AMDGPU is
+// not built.
+static std::optional<std::string>
+disassembleBranch(void *DisInfo, LLVMSymbolLookupCallback SymbolLookUp,
+                  bool InstrComments) {
   LLVMInitializeAMDGPUTargetInfo();
   LLVMInitializeAMDGPUTargetMC();
   LLVMInitializeAMDGPUDisassembler();
 
-  SymbolLookupRecorder Recorder;
-  LLVMDisasmContextRef DCR =
-      LLVMCreateDisasmCPU(TripleName, CPUName, &Recorder, 0, nullptr,
-                          recordingSymbolLookupCallback);
-
-  // Skip test if AMDGPU not built.
+  LLVMDisasmContextRef DCR = LLVMCreateDisasmCPU(TripleName, CPUName, DisInfo,
+                                                 0, nullptr, SymbolLookUp);
   if (!DCR)
+    return std::nullopt;
+  if (InstrComments) {
+    EXPECT_NE(
+        LLVMSetDisasmOptions(DCR, LLVMDisassembler_Option_SetInstrComments), 0);
+  }
+
+  uint8_t Bytes[] = {0xf0, 0xff, 0x82, 0xbf};
+  char OutString[100];
+  EXPECT_EQ(LLVMDisasmInstruction(DCR, Bytes, sizeof(Bytes), BranchPC,
+                                  OutString, sizeof(OutString)),
+            4U);
+  LLVMDisasmDispose(DCR);
+  return std::string(OutString);
+}
+
+TEST(AMDGPUDisassembler, SymbolLookupCallback) {
+  SymbolLookupRecorder Recorder;
+  std::optional<std::string> Output = disassembleBranch(
+      &Recorder, recordingSymbolLookupCallback, /*InstrComments=*/false);
+  if (!Output)
     GTEST_SKIP();
 
-  ASSERT_NE(LLVMSetDisasmOptions(DCR, LLVMDisassembler_Option_SetInstrComments),
-            0);
-
-  uint8_t Bytes[] = {0xf0, 0xff, 0x82, 0xbf}; // s_branch 0xfff0
-  constexpr uint64_t PC = 0x7d5210317ffc;
-  char OutString[100];
-  size_t InstSize = LLVMDisasmInstruction(DCR, Bytes, sizeof(Bytes), PC,
-                                          OutString, sizeof(OutString));
-
-  EXPECT_EQ(InstSize, 4U);
   EXPECT_EQ(Recorder.NumCalls, 1U);
-  EXPECT_EQ(Recorder.ReferenceValue, 0x7d5210317fc0U);
-  EXPECT_EQ(Recorder.ReferencePC, PC);
-  StringRef Output(OutString);
-  EXPECT_TRUE(Output.starts_with("\ts_branch 65520"));
-  EXPECT_TRUE(Output.contains("0x7d5210317fc0"));
+  EXPECT_EQ(Recorder.ReferenceValue, BranchTarget);
+  EXPECT_EQ(Recorder.ReferencePC, BranchPC);
+  EXPECT_EQ(*Output, "\ts_branch 65520 ; 0x7d5210317fc0");
+}
 
-  LLVMDisasmDispose(DCR);
+TEST(AMDGPUDisassembler, SymbolLookupCallbackInstrComments) {
+  SymbolLookupRecorder Recorder;
+  std::optional<std::string> Output = disassembleBranch(
+      &Recorder, recordingSymbolLookupCallback, /*InstrComments=*/true);
+  if (!Output)
+    GTEST_SKIP();
+
+  EXPECT_EQ(Recorder.NumCalls, 1U);
+  // The comment is padded out to the comment column.
+  StringRef Rest(*Output);
+  EXPECT_TRUE(Rest.consume_front("\ts_branch 65520"));
+  EXPECT_EQ(Rest.ltrim(' '), "; 0x7d5210317fc0");
+}
+
+TEST(AMDGPUDisassembler, SymbolLookupCallbackName) {
+  SymbolLookupRecorder Recorder;
+  Recorder.Name = "target";
+  std::optional<std::string> Output = disassembleBranch(
+      &Recorder, recordingSymbolLookupCallback, /*InstrComments=*/false);
+  if (!Output)
+    GTEST_SKIP();
+
+  EXPECT_EQ(*Output, "\ts_branch 65520 ; target");
+}
+
+TEST(AMDGPUDisassembler, SymbolLookupCallbackDemangledName) {
+  SymbolLookupRecorder Recorder;
+  Recorder.Name = "_Z6targetv";
+  Recorder.DemangledName = "target()";
+  std::optional<std::string> Output = disassembleBranch(
+      &Recorder, recordingSymbolLookupCallback, /*InstrComments=*/false);
+  if (!Output)
+    GTEST_SKIP();
+
+  EXPECT_EQ(*Output, "\ts_branch 65520 ; target()");
+}
+
+// llvm-objdump and Mesa pass a SectionSymbolsTy as DisInfo and no callbacks.
+TEST(AMDGPUDisassembler, SectionSymbolsWithoutCallbacks) {
+  SectionSymbolsTy Symbols;
+  Symbols.emplace_back(BranchTarget, "target", ELF::STT_NOTYPE);
+  std::optional<std::string> Output =
+      disassembleBranch(&Symbols, nullptr, /*InstrComments=*/false);
+  if (!Output)
+    GTEST_SKIP();
+
+  EXPECT_EQ(*Output, "\ts_branch target");
 }
 
 // Check multiple disassemblers in same MCContext.
