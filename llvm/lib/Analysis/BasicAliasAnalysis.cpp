@@ -286,6 +286,19 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
   }
 }
 
+void EarliestEscapeAnalysis::insertInstructionTo(const Instruction *I,
+                                                 const BasicBlock *BB) {
+  for (const Use &U : I->operands()) {
+    if (!U->getType()->isPtrOrPtrVectorTy())
+      continue;
+    if (capturesAnything(DetermineUseCaptureKind(U, /*Base=*/nullptr).UseCC)) {
+      EarliestEscapes.clear();
+      Inst2Obj.clear();
+      return;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // GetElementPtr Instruction Decomposition and Analysis
 //===----------------------------------------------------------------------===//

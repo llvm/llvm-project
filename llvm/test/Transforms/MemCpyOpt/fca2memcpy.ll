@@ -195,7 +195,7 @@ define void @addrproducer_captures(i64 %x, i64 %y, ptr %out) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[S]], i64 8, i1 false)
 ; CHECK-NEXT:    store i32 0, ptr [[S]], align 4
 ; CHECK-NEXT:    call void @esc(ptr [[A]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[ORIG]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[A]], i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca { i32, i32 }, align 8
