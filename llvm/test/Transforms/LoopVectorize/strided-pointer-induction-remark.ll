@@ -1,7 +1,8 @@
-; RUN: opt -passes=loop-vectorize -pass-remarks-output=%t.yaml -disable-output %s
-; RUN: FileCheck %s --input-file=%t.yaml
+; RUN: opt -passes=loop-vectorize -pass-remarks-output=- -disable-output %s | FileCheck %s
 
 define void @strided_pointer_induction(ptr noalias %d, ptr noalias %s, i64 %n, i64 %st) {
+; CHECK-LABEL: Function: strided_pointer_induction
+; CHECK:         - String: disallowed pointer induction
 entry:
   br label %loop
 loop:
@@ -19,6 +20,8 @@ exit:
 }
 
 define i32 @unidentified_phi(ptr %p, i64 %n) {
+; CHECK-LABEL: Function: unidentified_phi
+; CHECK:         - String: value that could not be identified as reduction is used outside the loop
 entry:
   br label %loop
 loop:
@@ -36,8 +39,3 @@ loop:
 exit:
   ret i32 %sel
 }
-
-; CHECK-LABEL: Function: strided_pointer_induction{{$}}
-; CHECK:         - String: pointer induction with a non-constant step
-; CHECK-LABEL: Function: unidentified_phi{{$}}
-; CHECK:         - String: value that could not be identified as reduction is used outside the loop
