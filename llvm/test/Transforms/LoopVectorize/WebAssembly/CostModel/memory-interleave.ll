@@ -3632,3 +3632,139 @@ for.body:
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+define hidden void @mac_3d_i32_s8(ptr dead_on_unwind noalias nofree writable writeonly sret(%struct.ThreeInts) align 4 captures(none) %0, ptr nofree noundef readonly captures(none) %1, ptr nofree noundef readonly captures(none) %2, i32 noundef %3) {
+; CHECK-LABEL: 'mac_3d_i32_s8'
+; CHECK:  LV: Scalar loop costs: 19.
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%12> = load ir<%11>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%15> = load ir<%14>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%20> = load ir<%19>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%23> = load ir<%22>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%28> = load ir<%27>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%31> = load ir<%30>
+; CHECK:  Cost for VF 2: 49 (Estimated cost per lane: 24.5)
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%12> = load ir<%11>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%15> = load ir<%14>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%20> = load ir<%19>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%23> = load ir<%22>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%28> = load ir<%27>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%31> = load ir<%30>
+; CHECK:  Cost for VF 4: 91 (Estimated cost per lane: 22.8)
+; CHECK:  LV: Selecting VF: 1.
+;
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %37, label %6
+
+6:                                                ; preds = %4, %6
+  %7 = phi i32 [ %35, %6 ], [ 0, %4 ]
+  %8 = phi i32 [ %18, %6 ], [ 0, %4 ]
+  %9 = phi i32 [ %26, %6 ], [ 0, %4 ]
+  %10 = phi i32 [ %34, %6 ], [ 0, %4 ]
+  %11 = getelementptr inbounds nuw [3 x i8], ptr %1, i32 %7
+  %12 = load i8, ptr %11, align 1
+  %13 = sext i8 %12 to i32
+  %14 = getelementptr inbounds nuw [3 x i8], ptr %2, i32 %7
+  %15 = load i8, ptr %14, align 1
+  %16 = sext i8 %15 to i32
+  %17 = mul nsw i32 %16, %13
+  %18 = add nsw i32 %17, %8
+  %19 = getelementptr inbounds nuw i8, ptr %11, i32 1
+  %20 = load i8, ptr %19, align 1
+  %21 = sext i8 %20 to i32
+  %22 = getelementptr inbounds nuw i8, ptr %14, i32 1
+  %23 = load i8, ptr %22, align 1
+  %24 = sext i8 %23 to i32
+  %25 = mul nsw i32 %24, %21
+  %26 = add nsw i32 %25, %9
+  %27 = getelementptr inbounds nuw i8, ptr %11, i32 2
+  %28 = load i8, ptr %27, align 1
+  %29 = sext i8 %28 to i32
+  %30 = getelementptr inbounds nuw i8, ptr %14, i32 2
+  %31 = load i8, ptr %30, align 1
+  %32 = sext i8 %31 to i32
+  %33 = mul nsw i32 %32, %29
+  %34 = add nsw i32 %33, %10
+  %35 = add nuw i32 %7, 1
+  %36 = icmp eq i32 %35, %3
+  br i1 %36, label %37, label %6
+
+37:                                               ; preds = %6, %4
+  %38 = phi i32 [ 0, %4 ], [ %34, %6 ]
+  %39 = phi i32 [ 0, %4 ], [ %26, %6 ]
+  %40 = phi i32 [ 0, %4 ], [ %18, %6 ]
+  %41 = getelementptr inbounds nuw i8, ptr %0, i32 8
+  %42 = getelementptr inbounds nuw i8, ptr %0, i32 4
+  store i32 %40, ptr %0, align 4
+  store i32 %39, ptr %42, align 4
+  store i32 %38, ptr %41, align 4
+  ret void
+}
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+define hidden void @mac_3d_u32_s8(ptr dead_on_unwind noalias nofree writable writeonly sret(%struct.ThreeInts) align 4 captures(none) %0, ptr nofree noundef readonly captures(none) %1, ptr nofree noundef readonly captures(none) %2, i32 noundef %3) {
+; CHECK-LABEL: 'mac_3d_u32_s8'
+; CHECK:  LV: Scalar loop costs: 19.
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%12> = load ir<%11>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%15> = load ir<%14>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%20> = load ir<%19>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%23> = load ir<%22>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%28> = load ir<%27>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%31> = load ir<%30>
+; CHECK:  Cost for VF 2: 49 (Estimated cost per lane: 24.5)
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%12> = load ir<%11>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%15> = load ir<%14>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%20> = load ir<%19>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%23> = load ir<%22>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%28> = load ir<%27>
+; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%31> = load ir<%30>
+; CHECK:  Cost for VF 4: 91 (Estimated cost per lane: 22.8)
+; CHECK:  LV: Selecting VF: 1.
+;
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %37, label %6
+
+6:                                                ; preds = %4, %6
+  %7 = phi i32 [ %35, %6 ], [ 0, %4 ]
+  %8 = phi i32 [ %18, %6 ], [ 0, %4 ]
+  %9 = phi i32 [ %26, %6 ], [ 0, %4 ]
+  %10 = phi i32 [ %34, %6 ], [ 0, %4 ]
+  %11 = getelementptr inbounds nuw [3 x i8], ptr %1, i32 %7
+  %12 = load i8, ptr %11, align 1
+  %13 = sext i8 %12 to i32
+  %14 = getelementptr inbounds nuw [3 x i8], ptr %2, i32 %7
+  %15 = load i8, ptr %14, align 1
+  %16 = sext i8 %15 to i32
+  %17 = mul nsw i32 %16, %13
+  %18 = add i32 %17, %8
+  %19 = getelementptr inbounds nuw i8, ptr %11, i32 1
+  %20 = load i8, ptr %19, align 1
+  %21 = sext i8 %20 to i32
+  %22 = getelementptr inbounds nuw i8, ptr %14, i32 1
+  %23 = load i8, ptr %22, align 1
+  %24 = sext i8 %23 to i32
+  %25 = mul nsw i32 %24, %21
+  %26 = add i32 %25, %9
+  %27 = getelementptr inbounds nuw i8, ptr %11, i32 2
+  %28 = load i8, ptr %27, align 1
+  %29 = sext i8 %28 to i32
+  %30 = getelementptr inbounds nuw i8, ptr %14, i32 2
+  %31 = load i8, ptr %30, align 1
+  %32 = sext i8 %31 to i32
+  %33 = mul nsw i32 %32, %29
+  %34 = add i32 %33, %10
+  %35 = add nuw i32 %7, 1
+  %36 = icmp eq i32 %35, %3
+  br i1 %36, label %37, label %6
+
+37:                                               ; preds = %6, %4
+  %38 = phi i32 [ 0, %4 ], [ %34, %6 ]
+  %39 = phi i32 [ 0, %4 ], [ %26, %6 ]
+  %40 = phi i32 [ 0, %4 ], [ %18, %6 ]
+  %41 = getelementptr inbounds nuw i8, ptr %0, i32 8
+  %42 = getelementptr inbounds nuw i8, ptr %0, i32 4
+  store i32 %40, ptr %0, align 4
+  store i32 %39, ptr %42, align 4
+  store i32 %38, ptr %41, align 4
+  ret void
+}

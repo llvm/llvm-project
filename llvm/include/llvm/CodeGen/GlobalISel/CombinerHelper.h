@@ -292,8 +292,10 @@ public:
   LLVM_ABI void applyCombineShuffleConcat(MachineInstr &MI,
                                           SmallVector<Register> &Ops) const;
 
-  /// Replace \p MI with a build_vector.
+  /// Replace shuffle \p MI with a build_vector.
   LLVM_ABI void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
+  /// Replace shuffle of build_vector with a build_vector.
+  LLVM_ABI void applyCombineShuffleOfBuildVector(MachineInstr &MI) const;
 
   /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
   /// G_BITCAST(G_BUILD_VECTOR(..))
