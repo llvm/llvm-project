@@ -43,6 +43,7 @@ types:
   - type_name: stack_t
   - type_name: struct_sigaction
   - type_name: struct_sigevent
+  - type_name: struct_timespec
   - type_name: union_sigval
   - type_name: pthread_t
     standards:
@@ -127,6 +128,14 @@ functions:
       - type: int
       - type: const sigset_t *__restrict
       - type: sigset_t *__restrict
+  - name: sigtimedwait
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const sigset_t *__restrict
+      - type: siginfo_t *__restrict
+      - type: const struct timespec *__restrict
   - name: pthread_sigmask
     standards:
       - posix
