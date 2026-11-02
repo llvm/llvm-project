@@ -6567,17 +6567,17 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
 };
 } // namespace
 
-/// Clear the tail markers in the function of \p QueryingAA, as tail calls
-/// cannot access new allocas of the function. Musttail calls are skipped as
-/// their tail marker cannot be removed.
+/// Collect the non-musttail tail calls in the function of \p QueryingAA. Tail
+/// calls cannot access allocas of the caller.
 /// TODO: Be smarter about new allocas escaping into tail calls.
-static bool clearTailCalls(Attributor &A, const AbstractAttribute &QueryingAA) {
+static bool collectTailCalls(Attributor &A, const AbstractAttribute &QueryingAA,
+                             SmallVectorImpl<CallInst *> &TailCalls) {
   bool UsedAssumedInformation = false;
   return A.checkForAllInstructions(
-      [](Instruction &I) {
+      [&](Instruction &I) {
         auto &CI = cast<CallInst>(I);
         if (CI.isTailCall() && !CI.isMustTailCall())
-          CI.setTailCall(false);
+          TailCalls.push_back(&CI);
         return true;
       },
       QueryingAA, {Instruction::Call}, UsedAssumedInformation);
@@ -6744,6 +6744,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
+    // The new allocas may escape into tail calls.
+    SmallVector<CallInst *, 16> TailCalls;
+    if (any_of(AllocationInfos,
+               [](const auto &It) {
+                 return It.second->Status != AllocationInfo::INVALID;
+               }) &&
+        !collectTailCalls(A, *this, TailCalls))
+      return ChangeStatus::UNCHANGED;
+
     for (auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
       if (AI.Status == AllocationInfo::INVALID)
@@ -6833,10 +6842,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       HasChanged = ChangeStatus::CHANGED;
     }
 
-    // Tail calls cannot access allocas of the caller, but any call may access
-    // the new allocas, which may escape until they are freed.
-    if (HasChanged == ChangeStatus::CHANGED)
-      clearTailCalls(A, *this);
+    for (CallInst *CI : TailCalls)
+      CI->setTailCall(false);
 
     return HasChanged;
   }
@@ -7570,7 +7577,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return ChangeStatus::UNCHANGED;
     assert(*PrivatizableType && "Expected privatizable type!");
 
-    if (!clearTailCalls(A, *this))
+    // The new alloca may escape into tail calls.
+    SmallVector<CallInst *, 16> TailCalls;
+    if (!collectTailCalls(A, *this, TailCalls))
       return ChangeStatus::UNCHANGED;
 
     Argument *Arg = getAssociatedArgument();
@@ -7598,6 +7607,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             AI = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
                 AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
+
+          for (CallInst *CI : TailCalls)
+            CI->setTailCall(false);
         };
 
     // Callback to repair a call site of the associated function. The elements
