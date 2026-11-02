@@ -5105,6 +5105,7 @@ public:
 
   /// Returns VF * UF of the vector loop region.
   VPSymbolicValue &getVFxUF() { return VFxUF; }
+  const VPSymbolicValue &getVFxUF() const { return VFxUF; }
 
   LLVMContext &getContext() const {
     return getScalarHeader()->getIRBasicBlock()->getContext();
