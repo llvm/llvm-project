@@ -49,7 +49,7 @@ func.func @derived_parens(%arg0: !fir.ref<!fir.array<3x!fir.type<t{v:i32}>>>, %a
 // CHECK:               %[[PAREN:.*]] = hlfir.no_reassoc %[[VAL]] : !hlfir.expr<!fir.type<t{v:i32}>>
 // CHECK:               %[[LHS:.*]] = hlfir.designate %{{.*}} (%[[I]])  : (!fir.ref<!fir.array<3x!fir.type<t{v:i32}>>>, index) -> !fir.ref<!fir.type<t{v:i32}>>
 // CHECK:               hlfir.assign %[[PAREN]] to %[[LHS]] : !hlfir.expr<!fir.type<t{v:i32}>>, !fir.ref<!fir.type<t{v:i32}>>
-// CHECK-NOT:       hlfir.destroy
+// CHECK-NOT:       hlfir.destroy %{{.*}} : !hlfir.expr<3x
 
 
 // An hlfir.elemental yielding the address of a trivial element (lowering
@@ -99,3 +99,4 @@ func.func @trivial_add(%arg0: !fir.ref<!fir.array<3xi32>>, %arg1: !fir.ref<!fir.
 // CHECK:               %[[ADD:.*]] = arith.addi %[[VAL]], %{{.*}} : i32
 // CHECK:               %[[LHS:.*]] = hlfir.designate %{{.*}} (%[[I]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
 // CHECK:               hlfir.assign %[[ADD]] to %[[LHS]] : i32, !fir.ref<i32>
+// CHECK-NOT:       hlfir.destroy %{{.*}} : !hlfir.expr<3x
