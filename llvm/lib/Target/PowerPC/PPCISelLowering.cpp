@@ -8303,8 +8303,6 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       if (LHS.getValueType() == MVT::f32)   // Comparison is always 64-bits
         LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, LHS);
       Sel1 = DAG.getNode(PPCISD::FSEL, dl, ResVT, LHS, TV, FV);
-      if (Sel1.getValueType() == MVT::f32)   // Comparison is always 64-bits
-        Sel1 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Sel1);
       return DAG.getNode(PPCISD::FSEL, dl, ResVT,
                          DAG.getNode(ISD::FNEG, dl, MVT::f64, LHS), Sel1, FV);
     case ISD::SETULT:
@@ -8339,8 +8337,6 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
       Cmp = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Cmp);
     Sel1 = DAG.getNode(PPCISD::FSEL, dl, ResVT, Cmp, TV, FV);
-    if (Sel1.getValueType() == MVT::f32)   // Comparison is always 64-bits
-      Sel1 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Sel1);
     return DAG.getNode(PPCISD::FSEL, dl, ResVT,
                        DAG.getNode(ISD::FNEG, dl, MVT::f64, Cmp), Sel1, FV);
   case ISD::SETULT:
@@ -9525,19 +9521,27 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(PPCISD::BUILD_FP128, dl, MVT::f128, Lo, Hi);
 }
 
+// Look through bitcasts and scalar_to_vector ops to find the input load.
+// If any of the nodes in the chain have multiple uses, stop searching as
+// the input load won't be removable (due to the other uses).
 static const SDValue *getNormalLoadInput(const SDValue &Op, bool &IsPermuted) {
   const SDValue *InputLoad = &Op;
-  while (InputLoad->getOpcode() == ISD::BITCAST)
+  while (InputLoad->getOpcode() == ISD::BITCAST) {
+    if (!InputLoad->hasOneUse())
+      return nullptr;
     InputLoad = &InputLoad->getOperand(0);
+  }
   if (InputLoad->getOpcode() == ISD::SCALAR_TO_VECTOR ||
       InputLoad->getOpcode() == PPCISD::SCALAR_TO_VECTOR_PERMUTED) {
+    if (!InputLoad->hasOneUse())
+      return nullptr;
     IsPermuted = InputLoad->getOpcode() == PPCISD::SCALAR_TO_VECTOR_PERMUTED;
     InputLoad = &InputLoad->getOperand(0);
   }
   if (InputLoad->getOpcode() != ISD::LOAD)
     return nullptr;
   LoadSDNode *LD = cast<LoadSDNode>(*InputLoad);
-  return ISD::isNormalLoad(LD) ? InputLoad : nullptr;
+  return (ISD::isNormalLoad(LD) && LD->hasOneUse()) ? InputLoad : nullptr;
 }
 
 // Convert the argument APFloat to a single precision APFloat if there is no
@@ -10453,12 +10457,13 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // If this is a load-and-splat, we can do that with a single instruction
   // in some cases. However if the load has multiple uses, we don't want to
-  // combine it because that will just produce multiple loads.
+  // combine it because that will just produce multiple loads. Since we are
+  // looking through bitcasts and scalar_to_vector, we must also ensure that
+  // the intermediate nodes have a single use.
   bool IsPermutedLoad = false;
   const SDValue *InputLoad = getNormalLoadInput(V1, IsPermutedLoad);
   if (InputLoad && Subtarget.hasVSX() && V2.isUndef() &&
-      (PPC::isSplatShuffleMask(SVOp, 4) || PPC::isSplatShuffleMask(SVOp, 8)) &&
-      InputLoad->hasOneUse()) {
+      (PPC::isSplatShuffleMask(SVOp, 4) || PPC::isSplatShuffleMask(SVOp, 8))) {
     bool IsFourByte = PPC::isSplatShuffleMask(SVOp, 4);
     int SplatIdx =
       PPC::getSplatIdxForPPCMnemonics(SVOp, IsFourByte ? 4 : 8, DAG);
@@ -13330,6 +13335,10 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   return nullptr;
 }
 
+bool PPCTargetLowering::fenceClearsLoadLinkedReservation() const {
+  return !Subtarget.fenceKeepsReservation();
+}
+
 MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
                                                        MachineBasicBlock *BB,
                                                        unsigned BinOpcode,
@@ -13514,7 +13523,7 @@ static bool isSignExtended(MachineInstr &MI, const PPCInstrInfo *TII) {
 }
 
 // Sign extend operand OpIdx if the value is not known to be sign extended.
-// Assumes the operand is a register. The flag IsByte controls which intruction
+// Assumes the operand is a register. The flag IsByte controls which instruction
 // is used for the sign extension.
 static void signExtendOperandIfUnknown(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned OpIdx, bool IsByte,
@@ -16505,7 +16514,7 @@ SDValue PPCTargetLowering::combineBVLoadsSpecialValue(SDValue Op,
     return SDValue();
 
   LLVM_DEBUG(llvm::dbgs() << "\ncombineBVLoadsSpecialValue: Build vector ("
-                          << VT.getEVTString() << "): ";
+                          << VT << "): ";
              Op->dump());
 
   unsigned NumElems = VT.getVectorNumElements();
@@ -19922,21 +19931,22 @@ bool PPCTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return TargetLowering::useLoadStackGuardNode(M);
 }
 
-bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                     bool ForCodeSize) const {
+TargetLowering::FPImmAction
+PPCTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                  bool ForCodeSize) const {
   if (!VT.isSimple() || !Subtarget.hasVSX())
-    return false;
+    return FPImmAction::ConstantPool;
 
   switch(VT.getSimpleVT().SimpleTy) {
   default:
     // For FP types that are currently not supported by PPC backend, return
     // false. Examples: f16, f80.
-    return false;
+    return FPImmAction::ConstantPool;
   case MVT::f32:
   case MVT::f64: {
     if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
       // we can materialize all immediatess via XXSPLTI32DX and XXSPLTIDP.
-      return true;
+      return FPImmAction::Legal;
     }
     bool IsExact;
     APSInt IntResult(16, false);
@@ -19945,11 +19955,11 @@ bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     Imm.convertToInteger(IntResult, APFloat::rmTowardZero, &IsExact);
     // For exact values in the range [-16, 15] we can materialize the float.
     if (IsExact && IntResult <= 15 && IntResult >= -16)
-      return true;
-    return Imm.isZero();
+      return FPImmAction::Legal;
+    return Imm.isZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
   }
   case MVT::ppcf128:
-    return Imm.isPosZero();
+    return Imm.isPosZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
   }
 }
 

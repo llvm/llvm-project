@@ -165,7 +165,7 @@ private:
   bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
-  void issueFieldPlaceholderLoans(const CXXMethodDecl *MD,
+  void issueFieldPlaceholderLoans(const CXXRecordDecl *ClassDef,
                                   llvm::SmallVectorImpl<Fact *> &Facts);
   FactManager &FactMgr;
   AnalysisDeclContext &AC;

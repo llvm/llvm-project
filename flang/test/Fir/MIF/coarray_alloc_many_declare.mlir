@@ -37,7 +37,8 @@ fir.global internal @_QFEa : !fir.box<!fir.heap<i32>, corank:1> {
 
 //CHECK-LABEL: @_QQmain
 //CHECK-NEXT:  %[[VAL_0:.*]] = fir.alloca i64
-//CHECK-NEXT:  %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__c_ptr_c_address:i64}>}>
+//CHECK-NEXT:  %[[VAL_C_PTR:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+//CHECK-NEXT:  %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
 //CHECK-NEXT:  %[[VAL_2:.*]] = fir.alloca !fir.boxproc<(!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()>
 //CHECK-NEXT:  %[[VAL_3:.*]] = fir.alloca !fir.array<0xi64>
 //CHECK-NEXT:  %[[VAL_4:.*]] = fir.alloca !fir.array<1xi64>
@@ -54,7 +55,6 @@ fir.global internal @_QFEa : !fir.box<!fir.heap<i32>, corank:1> {
 //CHECK-NEXT:  %[[VAL_12:.*]] = fir.zero_bits (!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()
 //CHECK-NEXT:  %[[VAL_13:.*]] = fir.emboxproc %[[VAL_12]] : ((!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()) -> !fir.boxproc<(!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()>
 //CHECK-NEXT:  fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<!fir.boxproc<(!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()>>
-//CHECK-NEXT:  %[[VAL_14:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> !fir.ptr<none>
 //CHECK-NEXT:  %[[VAL_15:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
 //CHECK-NEXT:  %[[VAL_16:.*]] = fir.box_elesize %[[VAL_15]] : (!fir.box<!fir.heap<i32>, corank:1>) -> i64
 //CHECK-NEXT:  fir.store %[[VAL_16]] to %[[VAL_0]] : !fir.ref<i64>
@@ -63,11 +63,17 @@ fir.global internal @_QFEa : !fir.box<!fir.heap<i32>, corank:1> {
 //CHECK-NEXT:  %[[VAL_19:.*]] = fir.convert %[[VAL_10]] : (!fir.box<!fir.array<1xi64>>) -> !fir.box<!fir.array<?xi64>>
 //CHECK-NEXT:  %[[VAL_20:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.array<0xi64>>) -> !fir.box<!fir.array<?xi64>>
 //CHECK-NEXT:  %[[VAL_21:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.boxproc<(!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()>>) -> !fir.ref<none>
-//CHECK-NEXT:  %[[VAL_22:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__c_ptr_c_address:i64}>}>>) -> !fir.ref<none>
+//CHECK-NEXT:  %[[VAL_22:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<none>
 //CHECK-NEXT:  %[[VAL_23:.*]] = fir.convert %[[VAL_8]] : (!fir.box<none>) -> !fir.box<!fir.char<1,?>>
-//CHECK-NEXT:  fir.call @_QMprifPprif_allocate_coarray(%[[VAL_19]], %[[VAL_20]], %[[VAL_0]], %[[VAL_21]], %[[VAL_22]], %[[VAL_14]], %[[VAL_17]], %[[VAL_23]], %[[VAL_18]]) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
-//CHECK-NEXT:  %[[VAL_24:.*]] = fir.address_of(@_QFEa_coarray_handle) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__c_ptr_c_address:i64}>}>>
-//CHECK-NEXT:  fir.copy %[[VAL_1]] to %[[VAL_24]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__c_ptr_c_address:i64}>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__c_ptr_c_address:i64}>}>>
+//CHECK-NEXT:  fir.call @_QMprifPprif_allocate_coarray(%[[VAL_19]], %[[VAL_20]], %[[VAL_0]], %[[VAL_21]], %[[VAL_22]], %[[VAL_C_PTR]], %[[VAL_17]], %[[VAL_23]], %[[VAL_18]]) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+//CHECK-NEXT:  %[[VAL_24:.*]] = fir.address_of(@_QFEa_coarray_handle) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>
+//CHECK-NEXT:  fir.copy %[[VAL_1]] to %[[VAL_24]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>
+//CHECK-NEXT:  %[[VAL_25:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+//CHECK-NEXT:   %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_C_PTR]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
+//CHECK-NEXT:   %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<i64>
+//CHECK-NEXT:   %[[VAL_28:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> !fir.ref<!fir.box<none>>
+//CHECK-NEXT:   %[[VAL_29:.*]] = fir.convert %[[VAL_27]] : (i64) -> !fir.llvm_ptr<i8>
+//CHECK-NEXT:   fir.call @_FortranAAllocatableSetBaseAddr(%[[VAL_28]], %[[VAL_29]]) : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 //CHECK-NEXT:  fir.call @_QFPinner() fastmath<contract> : () -> ()
 
 //CHECK-LABEL: func.func private @_QFPinner() attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>}
@@ -77,6 +83,6 @@ fir.global internal @_QFEa : !fir.box<!fir.heap<i32>, corank:1> {
 //CHECK-NEXT:  %c1_i32 = arith.constant 1 : i32
 //CHECK-NEXT:  hlfir.assign %c1_i32 to %[[VAL_2]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
 
-//CHECK-LABEL:  fir.global linkonce @_QFEa_coarray_handle : !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__c_ptr_c_address:i64}>}>
-//CHECK:    %[[VAL_0:.*]] = fir.zero_bits !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__c_ptr_c_address:i64}>}>
-//CHECK-NEXT:    fir.has_value %[[VAL_0]] : !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__c_ptr_c_address:i64}>}>
+//CHECK-LABEL:  fir.global linkonce @_QFEa_coarray_handle : !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
+//CHECK:        %[[VAL_0]] = fir.zero_bits !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
+//CHECK-NEXT:   fir.has_value %[[VAL_0]] : !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{info:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>

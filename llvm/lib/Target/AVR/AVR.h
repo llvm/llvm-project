@@ -14,9 +14,13 @@
 #ifndef LLVM_AVR_H
 #define LLVM_AVR_H
 
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -25,15 +29,27 @@ class AVRTargetMachine;
 class FunctionPass;
 class PassRegistry;
 
-Pass *createAVRShiftExpandPass();
-FunctionPass *createAVRISelDag(AVRTargetMachine &TM, CodeGenOptLevel OptLevel);
+class AVRShiftExpandPass : public RequiredPassInfoMixin<AVRShiftExpandPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+Pass *createAVRShiftExpandLegacyPass();
+
+class AVRISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  AVRISelDAGToDAGPass(AVRTargetMachine &TM, CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createAVRISelDagLegacyPass(AVRTargetMachine &TM,
+                                         CodeGenOptLevel OptLevel);
 FunctionPass *createAVRExpandPseudoPass();
 FunctionPass *createAVRFrameAnalyzerPass();
 
 void initializeAVRAsmPrinterPass(PassRegistry &);
 void initializeAVRDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAVRExpandPseudoPass(PassRegistry &);
-void initializeAVRShiftExpandPass(PassRegistry &);
+void initializeAVRShiftExpandLegacyPass(PassRegistry &);
 
 /// Contains the AVR backend.
 namespace AVR {
