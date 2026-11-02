@@ -62,6 +62,20 @@ struct VectorTransformsOptions {
   }
 };
 
+/// Options controlling the lowering of fixed-size transposes of the final two
+/// dimensions to scalable vector operations.
+struct VectorTransposeToScalableLoweringOptions {
+  /// Minimum size of a target scalable vector in bits. The lowering uses this
+  /// to derive the minimum number of lanes in its scalable vector types.
+  unsigned targetVectorBitWidth = 0;
+
+  VectorTransposeToScalableLoweringOptions &
+  setTargetVectorBitWidth(unsigned bitWidth) {
+    targetVectorBitWidth = bitWidth;
+    return *this;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Standalone transformations and helpers.
 //===----------------------------------------------------------------------===//
