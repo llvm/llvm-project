@@ -1638,6 +1638,146 @@ define float @reduce_fminimum_float_reassoc_nonpow2(<7 x float> %in) {
   ret float %res
 }
 
+define float @reduce_fmaximumnum_float(<8 x float> %in) {
+; CHECK-SM80-LABEL: reduce_fmaximumnum_float(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b32 %r<16>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmaximumnum_float_param_0];
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fmaximumnum_float_param_0+16];
+; CHECK-SM80-NEXT:    max.f32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    max.f32 %r10, %r5, %r6;
+; CHECK-SM80-NEXT:    max.f32 %r11, %r10, %r9;
+; CHECK-SM80-NEXT:    max.f32 %r12, %r3, %r4;
+; CHECK-SM80-NEXT:    max.f32 %r13, %r1, %r2;
+; CHECK-SM80-NEXT:    max.f32 %r14, %r13, %r12;
+; CHECK-SM80-NEXT:    max.f32 %r15, %r14, %r11;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r15;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_fmaximumnum_float(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<13>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmaximumnum_float_param_0+16];
+; CHECK-SM100-NEXT:    ld.param::func.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fmaximumnum_float_param_0];
+; CHECK-SM100-NEXT:    max.f32 %r9, %r8, %r1, %r2;
+; CHECK-SM100-NEXT:    max.f32 %r10, %r5, %r6, %r7;
+; CHECK-SM100-NEXT:    max.f32 %r11, %r10, %r9, %r3;
+; CHECK-SM100-NEXT:    max.f32 %r12, %r11, %r4;
+; CHECK-SM100-NEXT:    st.param::func.b32 [func_retval0], %r12;
+; CHECK-SM100-NEXT:    ret;
+  %res = call float @llvm.vector.reduce.fmaximumnum(<8 x float> %in)
+  ret float %res
+}
+
+define float @reduce_fmaximumnum_float_nonpow2(<7 x float> %in) {
+; CHECK-SM80-LABEL: reduce_fmaximumnum_float_nonpow2(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b32 %r<14>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmaximumnum_float_nonpow2_param_0];
+; CHECK-SM80-NEXT:    ld.param.b32 %r5, [reduce_fmaximumnum_float_nonpow2_param_0+24];
+; CHECK-SM80-NEXT:    ld.param.v2.b32 {%r6, %r7}, [reduce_fmaximumnum_float_nonpow2_param_0+16];
+; CHECK-SM80-NEXT:    max.f32 %r8, %r6, %r7;
+; CHECK-SM80-NEXT:    max.f32 %r9, %r8, %r5;
+; CHECK-SM80-NEXT:    max.f32 %r10, %r3, %r4;
+; CHECK-SM80-NEXT:    max.f32 %r11, %r1, %r2;
+; CHECK-SM80-NEXT:    max.f32 %r12, %r11, %r10;
+; CHECK-SM80-NEXT:    max.f32 %r13, %r12, %r9;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r13;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_fmaximumnum_float_nonpow2(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param::func.b32 %r1, [reduce_fmaximumnum_float_nonpow2_param_0+24];
+; CHECK-SM100-NEXT:    ld.param::func.v2.b32 {%r2, %r3}, [reduce_fmaximumnum_float_nonpow2_param_0+16];
+; CHECK-SM100-NEXT:    ld.param::func.v4.b32 {%r4, %r5, %r6, %r7}, [reduce_fmaximumnum_float_nonpow2_param_0];
+; CHECK-SM100-NEXT:    max.f32 %r8, %r7, %r2, %r3;
+; CHECK-SM100-NEXT:    max.f32 %r9, %r4, %r5, %r6;
+; CHECK-SM100-NEXT:    max.f32 %r10, %r9, %r8, %r1;
+; CHECK-SM100-NEXT:    st.param::func.b32 [func_retval0], %r10;
+; CHECK-SM100-NEXT:    ret;
+  %res = call float @llvm.vector.reduce.fmaximumnum(<7 x float> %in)
+  ret float %res
+}
+
+define float @reduce_fminimumnum_float(<8 x float> %in) {
+; CHECK-SM80-LABEL: reduce_fminimumnum_float(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b32 %r<16>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fminimumnum_float_param_0];
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fminimumnum_float_param_0+16];
+; CHECK-SM80-NEXT:    min.f32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    min.f32 %r10, %r5, %r6;
+; CHECK-SM80-NEXT:    min.f32 %r11, %r10, %r9;
+; CHECK-SM80-NEXT:    min.f32 %r12, %r3, %r4;
+; CHECK-SM80-NEXT:    min.f32 %r13, %r1, %r2;
+; CHECK-SM80-NEXT:    min.f32 %r14, %r13, %r12;
+; CHECK-SM80-NEXT:    min.f32 %r15, %r14, %r11;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r15;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_fminimumnum_float(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<13>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fminimumnum_float_param_0+16];
+; CHECK-SM100-NEXT:    ld.param::func.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fminimumnum_float_param_0];
+; CHECK-SM100-NEXT:    min.f32 %r9, %r8, %r1, %r2;
+; CHECK-SM100-NEXT:    min.f32 %r10, %r5, %r6, %r7;
+; CHECK-SM100-NEXT:    min.f32 %r11, %r10, %r9, %r3;
+; CHECK-SM100-NEXT:    min.f32 %r12, %r11, %r4;
+; CHECK-SM100-NEXT:    st.param::func.b32 [func_retval0], %r12;
+; CHECK-SM100-NEXT:    ret;
+  %res = call float @llvm.vector.reduce.fminimumnum(<8 x float> %in)
+  ret float %res
+}
+
+define float @reduce_fminimumnum_float_nonpow2(<7 x float> %in) {
+; CHECK-SM80-LABEL: reduce_fminimumnum_float_nonpow2(
+; CHECK-SM80:       {
+; CHECK-SM80-NEXT:    .reg .b32 %r<14>;
+; CHECK-SM80-EMPTY:
+; CHECK-SM80-NEXT:  // %bb.0:
+; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fminimumnum_float_nonpow2_param_0];
+; CHECK-SM80-NEXT:    ld.param.b32 %r5, [reduce_fminimumnum_float_nonpow2_param_0+24];
+; CHECK-SM80-NEXT:    ld.param.v2.b32 {%r6, %r7}, [reduce_fminimumnum_float_nonpow2_param_0+16];
+; CHECK-SM80-NEXT:    min.f32 %r8, %r6, %r7;
+; CHECK-SM80-NEXT:    min.f32 %r9, %r8, %r5;
+; CHECK-SM80-NEXT:    min.f32 %r10, %r3, %r4;
+; CHECK-SM80-NEXT:    min.f32 %r11, %r1, %r2;
+; CHECK-SM80-NEXT:    min.f32 %r12, %r11, %r10;
+; CHECK-SM80-NEXT:    min.f32 %r13, %r12, %r9;
+; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r13;
+; CHECK-SM80-NEXT:    ret;
+;
+; CHECK-SM100-LABEL: reduce_fminimumnum_float_nonpow2(
+; CHECK-SM100:       {
+; CHECK-SM100-NEXT:    .reg .b32 %r<11>;
+; CHECK-SM100-EMPTY:
+; CHECK-SM100-NEXT:  // %bb.0:
+; CHECK-SM100-NEXT:    ld.param::func.b32 %r1, [reduce_fminimumnum_float_nonpow2_param_0+24];
+; CHECK-SM100-NEXT:    ld.param::func.v2.b32 {%r2, %r3}, [reduce_fminimumnum_float_nonpow2_param_0+16];
+; CHECK-SM100-NEXT:    ld.param::func.v4.b32 {%r4, %r5, %r6, %r7}, [reduce_fminimumnum_float_nonpow2_param_0];
+; CHECK-SM100-NEXT:    min.f32 %r8, %r7, %r2, %r3;
+; CHECK-SM100-NEXT:    min.f32 %r9, %r4, %r5, %r6;
+; CHECK-SM100-NEXT:    min.f32 %r10, %r9, %r8, %r1;
+; CHECK-SM100-NEXT:    st.param::func.b32 [func_retval0], %r10;
+; CHECK-SM100-NEXT:    ret;
+  %res = call float @llvm.vector.reduce.fminimumnum(<7 x float> %in)
+  ret float %res
+}
+
 define i16 @reduce_add_i16(<8 x i16> %in) {
 ; CHECK-SM80-LABEL: reduce_add_i16(
 ; CHECK-SM80:       {

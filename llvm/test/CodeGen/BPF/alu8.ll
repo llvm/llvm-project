@@ -31,7 +31,7 @@ define i8 @bis(i8 %a, i8 %b) nounwind {
 
 define i8 @xorand(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: xorand:
-; CHECK: r2 ^= -1 # encoding: [0xa7,0x02,0x00,0x00,0xff,0xff,0xff,0xff]
+; CHECK: r0 ^= -1 # encoding: [0xa7,0x00,0x00,0x00,0xff,0xff,0xff,0xff]
   %1 = xor i8 %b, -1
   %2 = and i8 %a, %1
   ret i8 %2

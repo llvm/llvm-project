@@ -14,10 +14,10 @@ using namespace lldb;
 using namespace lldb_private;
 
 TypeCategoryImpl::TypeCategoryImpl(IFormatChangeListener *clist,
-                                   ConstString name)
+                                   std::string name)
     : m_format_cont(clist), m_summary_cont(clist), m_filter_cont(clist),
       m_synth_cont(clist), m_enabled(false), m_change_listener(clist),
-      m_mutex(), m_name(name), m_languages() {}
+      m_mutex(), m_name(std::move(name)), m_languages() {}
 
 static bool IsApplicable(lldb::LanguageType category_lang,
                          lldb::LanguageType valobj_lang) {
@@ -148,7 +148,7 @@ void TypeCategoryImpl::Clear(FormatCategoryItems items) {
     m_synth_cont.Clear();
 }
 
-bool TypeCategoryImpl::Delete(ConstString name, FormatCategoryItems items) {
+bool TypeCategoryImpl::Delete(llvm::StringRef name, FormatCategoryItems items) {
   bool success = false;
 
   if (items & eFormatCategoryItemFormat)

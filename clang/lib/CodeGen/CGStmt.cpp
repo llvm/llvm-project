@@ -1245,15 +1245,22 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 
 void CodeGenFunction::EmitForStmt(const ForStmt &S,
                                   ArrayRef<const Attr *> ForAttrs) {
-  JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
-
   std::optional<LexicalScope> ForScope;
-  if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+  JumpDest LoopExit;
+  if (getLangOpts().C99 || getLangOpts().CPlusPlus) {
+    LoopExit = getJumpDestInCurrentScope("for.end");
     ForScope.emplace(*this, S.getSourceRange());
 
-  // Evaluate the first part before the loop.
-  if (S.getInit())
-    EmitStmt(S.getInit());
+    // Evaluate the first part before the loop.
+    if (S.getInit())
+      EmitStmt(S.getInit());
+  } else {
+    // Before C99 the init variable belongs to the enclosing scope, so create
+    // the loop exit after its cleanups: leaving the loop must not run them.
+    if (S.getInit())
+      EmitStmt(S.getInit());
+    LoopExit = getJumpDestInCurrentScope("for.end");
+  }
 
   // Start the loop with a block that tests the condition.
   // If there's an increment, the continue scope will be overwritten
@@ -1699,11 +1706,11 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
 
 auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
     -> const BreakContinue * {
-  if (!S.hasLabelTarget())
+  if (!S.isNamed())
     return &BreakContinueStack.back();
 
   const Stmt *LoopOrSwitch = S.getNamedLoopOrSwitch();
-  assert(LoopOrSwitch && "break/continue target not set?");
+  assert(LoopOrSwitch && "break/continue target label not available?");
   for (const BreakContinue &BC : llvm::reverse(BreakContinueStack))
     if (BC.LoopOrSwitch == LoopOrSwitch)
       return &BC;
@@ -1848,18 +1855,14 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
     Builder.getInt(S.getLHS()->EvaluateKnownConstInt(getContext()));
 
   // Emit debuginfo for the case value if it is an enum value.
-  const ConstantExpr *CE;
-  if (auto ICE = dyn_cast<ImplicitCastExpr>(S.getLHS()))
-    CE = dyn_cast<ConstantExpr>(ICE->getSubExpr());
-  else
-    CE = dyn_cast<ConstantExpr>(S.getLHS());
-  if (CE) {
-    if (auto DE = dyn_cast<DeclRefExpr>(CE->getSubExpr()))
-      if (CGDebugInfo *Dbg = getDebugInfo())
-        if (CGM.getCodeGenOpts().hasReducedDebugInfo())
-          Dbg->EmitGlobalVariable(DE->getDecl(),
-              APValue(llvm::APSInt(CaseVal->getValue())));
-  }
+  // Look through implicit casts and check the subexpression of ConstantExpr.
+  const auto *CE = dyn_cast<ConstantExpr>(S.getLHS()->IgnoreImpCasts());
+  const Expr *SubExpr = CE ? CE->getSubExpr() : S.getLHS()->IgnoreImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr))
+    if (CGDebugInfo *Dbg = getDebugInfo())
+      if (CGM.getCodeGenOpts().hasReducedDebugInfo())
+        Dbg->EmitGlobalVariable(DRE->getDecl(),
+                                APValue(llvm::APSInt(CaseVal->getValue())));
 
   if (SwitchLikelihood)
     SwitchLikelihood->push_back(Stmt::getLikelihood(Attrs));
@@ -3393,7 +3396,11 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
-      Dest = CGF.MakeAddrLValue(A, Ty);
+      // The store writes all of the destination's members at once, so it must
+      // be allowed to alias an access to any of them. A TBAA access type must
+      // be a scalar, so use may-alias (char), which aliases any access.
+      Dest = CGF.MakeAddrLValue(A, Ty, Dest.getBaseInfo(),
+                                TBAAAccessInfo::getMayAliasInfo());
     }
 
     CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);

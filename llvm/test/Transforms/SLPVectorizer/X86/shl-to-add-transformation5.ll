@@ -7,7 +7,8 @@ define i32 @test(i32 %0, i32 %1) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP3]], [[TMP4]]
@@ -15,10 +16,13 @@ define i32 @test(i32 %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr getelementptr inbounds nuw (i8, ptr @st, i64 8), align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @st, i64 12), align 4
 ; CHECK-NEXT:    [[SUB120_3:%.*]] = or i32 [[TMP5]], [[DOTNEG_NEG]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 0, i32 poison, i32 poison, i32 0, i32 0>, <8 x i32> <i32 0, i32 1, i32 poison, i32 11, i32 poison, i32 poison, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[TMP9]], i32 [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i32> [[TMP10]], i32 [[SUB120_3]], i64 5
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> [[TMP21]], i32 [[SUB120_3]], i64 1
+; CHECK-NEXT:    [[TMP23:%.*]] = freeze <2 x i32> [[TMP22]]
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP25]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 0, i32 poison, i32 poison, i32 0, i32 0>, <8 x i32> <i32 0, i32 1, i32 poison, i32 11, i32 poison, i32 poison, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x i32> [[TMP23]], <2 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> [[TMP24]], <8 x i32> <i32 0, i32 1, i32 8, i32 3, i32 4, i32 11, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> poison, <8 x i32> <i32 2, i32 poison, i32 2, i32 poison, i32 2, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i32> [[TMP13]], i32 [[DOTNEG_NEG]], i64 1
@@ -121,14 +125,16 @@ define i32 @test2(i32 %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> <i32 0, i32 1, i32 0, i32 1>, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i32> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i32 [[TMP0]], 1
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr getelementptr inbounds nuw (i8, ptr @st, i64 20), align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>, <4 x i32> <i32 4, i32 1, i32 6, i32 2>
-; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i32> [[TMP3]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>, <4 x i32> <i32 4, i32 1, i32 6, i32 2>
+; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i32> [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sub <4 x i32> [[TMP15]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <4 x i32> [[TMP15]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i32> [[TMP18]], <4 x i32> [[TMP19]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
@@ -155,3 +161,96 @@ entry:
   ret i32 0
 }
 
+define void @shl_add(ptr %p, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define void @shl_add(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i32 [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[C]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = shl i32 %a, 1
+  %x1 = add i32 %b, %c
+  store i32 %x0, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %x1, ptr %p1, align 4
+  ret void
+}
+
+define void @shl_add_noundef(ptr %p, i32 noundef %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define void @shl_add_noundef(
+; CHECK-SAME: ptr [[P:%.*]], i32 noundef [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = shl i32 %a, 1
+  %x1 = add i32 %b, %c
+  store i32 %x0, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %x1, ptr %p1, align 4
+  ret void
+}
+
+define void @shl_add_dom_switch(ptr %p, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define void @shl_add_dom_switch(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    switch i32 [[A]], label %[[BB:.*]] [
+; CHECK-NEXT:      i32 0, label %[[EXIT:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[B]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  switch i32 %a, label %bb [
+  i32 0, label %exit
+  ]
+
+bb:
+  %x0 = shl i32 %a, 1
+  %x1 = add i32 %b, %c
+  store i32 %x0, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %x1, ptr %p1, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @shl_add_noundef_use(ptr %p, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define void @shl_add_noundef_use(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[X0:%.*]] = shl i32 [[A]], 1
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[P]], align 4
+; CHECK-NEXT:    call void @use(i32 noundef [[X0]])
+; CHECK-NEXT:    ret void
+;
+  %x0 = shl i32 %a, 1
+  %x1 = add i32 %b, %c
+  store i32 %x0, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %x1, ptr %p1, align 4
+  call void @use(i32 noundef %x0)
+  ret void
+}
+
+declare void @use(i32)

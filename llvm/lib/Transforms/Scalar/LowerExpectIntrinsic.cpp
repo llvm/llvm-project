@@ -343,8 +343,7 @@ static bool handleBrSelExpect(const ScalarOptions &Opts, BrSelInst &BSI) {
 }
 
 static bool lowerExpectIntrinsic(Function &F) {
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Changed = false;
 
   for (BasicBlock &BB : F) {

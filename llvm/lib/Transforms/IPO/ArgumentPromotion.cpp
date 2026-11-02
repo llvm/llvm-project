@@ -100,7 +100,7 @@ using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
 } // end anonymous namespace
 
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
-                            Value *Ptr, Type *ResElemTy, int64_t Offset) {
+                            Value *Ptr, int64_t Offset) {
   if (Offset != 0) {
     APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset,
                    /*isSigned=*/true);
@@ -244,8 +244,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
         Value *V = *AI;
         for (const auto &Pair : ArgIt->second) {
           LoadInst *LI = IRB.CreateAlignedLoad(
-              Pair.second.Ty,
-              createByteGEP(IRB, DL, V, Pair.second.Ty, Pair.first),
+              Pair.second.Ty, createByteGEP(IRB, DL, V, Pair.first),
               Pair.second.Alignment, V->getName() + ".val");
           if (Pair.second.MustExecInstr) {
             LI->setAAMetadata(Pair.second.MustExecInstr->getAAMetadata());

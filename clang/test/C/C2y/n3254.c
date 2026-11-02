@@ -37,7 +37,7 @@ int foo() {
   return s_ptr->x;
 }
 
-// CHECK-LABEL: define dso_local signext i8 @bar(
+// CHECK-LABEL: define dso_local i8 @bar(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BUFFER:%.*]] = alloca [12 x i8], align 4
@@ -77,7 +77,7 @@ struct T {
   DECL_BUFFER(struct S, buffer);
 };
 
-// CHECK-LABEL: define dso_local signext i8 @quux(
+// CHECK-LABEL: define dso_local i8 @quux(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[T:%.*]] = alloca [[STRUCT_T:%.*]], align 4
