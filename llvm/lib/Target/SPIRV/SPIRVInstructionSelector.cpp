@@ -4017,10 +4017,12 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
 bool SPIRVInstructionSelector::selectWaveMultiPrefixBitAnd(
     Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
   if (!STI.canUseExtension(
+          SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned) &&
+      !STI.canUseExtension(
           SPIRV::Extension::SPV_NV_shader_subgroup_partitioned))
     return diagnoseUnsupported(
-        I, "WaveMultiPrefixBitAnd requires the SPIR-V extension "
-           "SPV_NV_shader_subgroup_partitioned");
+        I, "WaveMultiPrefixBitAnd requires SPV_EXT_shader_subgroup_partitioned "
+           "or SPV_NV_shader_subgroup_partitioned");
 
   assert(I.getNumOperands() == 7);
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);

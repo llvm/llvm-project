@@ -1,15 +1,28 @@
+; DEFINE: %{nv} = SPV_NV_shader_subgroup_partitioned
+; DEFINE: %{ext} = SPV_EXT_shader_subgroup_partitioned
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-unknown \
-; RUN:   --spirv-ext=+SPV_NV_shader_subgroup_partitioned %s -o - | FileCheck %s
+; RUN:   --spirv-ext=+%{nv} %s -o - | FileCheck %s -DEXTENSION=NV \
+; RUN:   --implicit-check-not=%{ext}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-unknown \
+; RUN:   --spirv-ext=+%{ext} %s -o - | FileCheck %s -DEXTENSION=EXT \
+; RUN:   --implicit-check-not=%{nv}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-unknown \
+; RUN:   --spirv-ext=+%{nv},+%{ext} %s -o - | FileCheck %s -DEXTENSION=EXT \
+; RUN:   --implicit-check-not=%{nv}
 ; RUN: not llc -O0 -mtriple=spirv-vulkan-unknown %s -o - 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=NO-EXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown \
-; RUN:   --spirv-ext=+SPV_NV_shader_subgroup_partitioned %s -o - \
+; RUN:   --spirv-ext=+%{nv} %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown \
+; RUN:   --spirv-ext=+%{ext} %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown \
+; RUN:   --spirv-ext=+%{nv},+%{ext} %s -o - \
 ; RUN:   -filetype=obj | spirv-val %}
 
-; NO-EXT: WaveMultiPrefixBitAnd requires the SPIR-V extension SPV_NV_shader_subgroup_partitioned
+; NO-EXT: WaveMultiPrefixBitAnd requires SPV_EXT_shader_subgroup_partitioned or SPV_NV_shader_subgroup_partitioned
 
 ; CHECK-DAG: OpCapability GroupNonUniformPartitionedNV
-; CHECK-DAG: OpExtension "SPV_NV_shader_subgroup_partitioned"
+; CHECK-DAG: OpExtension "SPV_[[EXTENSION]]_shader_subgroup_partitioned"
 ; CHECK-DAG: %[[#I16:]] = OpTypeInt 16 0
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#I64:]] = OpTypeInt 64 0
