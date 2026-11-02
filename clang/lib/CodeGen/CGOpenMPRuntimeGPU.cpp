@@ -1891,7 +1891,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
                               SSID](InsertPointTy IP, llvm::Type *EltTy,
                                     llvm::Value *LHS, llvm::Value *RHS)
             -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
-          llvm::IRBuilder<> Builder(IP.getNodeParent(), IP);
+          llvm::IRBuilder<> Builder(IP);
           llvm::Value *Val = Builder.CreateLoad(EltTy, RHS);
           Builder.CreateAtomicRMW(Op, LHS, Val, Alignment,
                                   llvm::AtomicOrdering::Monotonic, SSID);

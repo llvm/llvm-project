@@ -19,16 +19,21 @@ class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class SCEVNAryExpr;
 class PredicatedScalarEvolution;
 } // namespace llvm
 
 namespace llvm {
 
 namespace vputils {
-/// Returns true if only the first lane of \p Def is used.
+/// Returns true if checking whether \p U uses the first lane of \p Op requires
+/// recursively checking \p Op's users.
+bool propagatesFirstLaneUse(const VPUser *U, const VPValue *Op);
+
+/// Returns true if only the first lane of \p Def is used by all users.
 bool onlyFirstLaneUsed(const VPValue *Def);
 
-/// Returns true if only the first part of \p Def is used.
+/// Returns true if only the first part of \p Def is used by all users.
 bool onlyFirstPartUsed(const VPValue *Def);
 
 /// Returns true if only scalar values of \p Def are used by all users.
@@ -38,8 +43,9 @@ bool onlyScalarValuesUsed(const VPValue *Def);
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
 /// pre-header already contains a recipe expanding \p Expr, return it. If not,
-/// create a new one.
-VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
+/// create a new one. \p ExpandInIR is forwarded to the VPExpandSCEVRecipe.
+VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                       bool ExpandInIR = false);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
@@ -113,8 +119,7 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
       return GetCalleeIntrinsic(
           VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     if (VPI->getOpcode() == VPInstruction::Intrinsic) {
-      return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
-          ->getZExtValue();
+      return cast<VPConstantInt>(VPI->getLastOperand())->getZExtValue();
     }
   }
   return Intrinsic::not_intrinsic;
@@ -187,13 +192,14 @@ getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 
 /// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
-/// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
-/// non-null, inserting recipes via \p Builder.
-VPScalarIVStepsRecipe *createScalarIVSteps(
-    VPlan &Plan, InductionDescriptor::InductionKind Kind,
-    Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
+/// StartV and step \p Step, truncated to \p ResultTy, inserting recipes via \p
+/// Builder.
+VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Type *ResultTy, VPValue *StartV,
+                    VPValue *Step, DebugLoc DL, VPBuilder &Builder,
+                    const VPIRFlags::WrapFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
@@ -263,8 +269,10 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
-/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
-/// VPExpandSCEVRecipe to be expanded to IR later.
+/// VPInstructions and live-ins. Canonical IVs and non-affine SCEVAddRecExprs
+/// are wrapped in a VPExpandSCEVRecipe to be expanded to IR later. Expansions
+/// are reused across calls to expand(), so the builder's insert point must
+/// only move to positions dominated by all earlier insert points.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
@@ -274,17 +282,36 @@ class VPSCEVExpander {
   /// zero, matching SCEVExpander's SafeUDivMode.
   bool SafeUDivMode = false;
 
+  /// If set, expressions invariant in this loop are expanded in IR via
+  /// VPExpandSCEVRecipes, which hoists them out of it.
+  const Loop *HoistOutOf;
+
+  DenseMap<PointerIntPair<const SCEV *, 1, bool>, VPValue *>
+      InsertedExpressions;
+
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
 
+  /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
+  VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
+
+  VPValue *expandImpl(const SCEV *S);
+
 public:
-  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
-      : Builder(Builder), SE(SE), DL(DL) {}
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL,
+                 const Loop *HoistOutOf = nullptr)
+      : Builder(Builder), SE(SE), DL(DL), HoistOutOf(HoistOutOf) {}
 
   /// Expand \p S into recipes and live-ins using the builder.
   VPValue *expand(const SCEV *S);
+
+  /// Expand the expression of \p R, or return \p R if it must be expanded in
+  /// IR.
+  VPValue *expand(VPExpandSCEVRecipe &R) {
+    return R.expandInIR() ? &R : expand(R.getSCEV());
+  }
 };
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.

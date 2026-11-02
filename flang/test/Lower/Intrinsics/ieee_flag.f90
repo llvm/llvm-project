@@ -1,3 +1,4 @@
+! UNSUPPORTED: target=powerpc{{.*}}
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
 ! CHECK-LABEL: c.func @_QQmain

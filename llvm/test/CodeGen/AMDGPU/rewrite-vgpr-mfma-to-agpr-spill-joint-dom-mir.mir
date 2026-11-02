@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa \
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -stress-regalloc=176 \
 # RUN:   -start-before=register-coalescer \
 # RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
 # RUN:   -debug-only=amdgpu-rewrite-agpr-copy-mfma -filetype=null %s 2>&1 \
@@ -7,9 +7,10 @@
 
 # It is legal for a spill reload to not be jointly dominated by the slot's
 # spill stores. The AGPR rewrite pass must not unspill such a slot into a
-# vreg, otherwise the compiler will crash.
+# vreg, otherwise the compiler will crash. -stress-regalloc keeps enough
+# pressure to produce such reloads regardless of live range priority order.
 
-# CHECK: Skipping ${{[a-zA-Z0-9_]+}}: some reachable load not jointly dominated by stores
+# CHECK: Skipping SS#{{[0-9]+}}: some reachable load not jointly dominated by stores
 
 --- |
   define amdgpu_kernel void @rewrite_vgpr_mfma_to_agpr_spill_joint_dom() #0 {

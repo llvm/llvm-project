@@ -4,6 +4,7 @@ Test lldb data formatter subsystem.
 
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -15,6 +16,7 @@ class PtrRef2TypedefTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set breakpoint here")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_with_run_command(self):
         """Test that a pointer/reference to a typedef is formatted as we want."""
         self.build()

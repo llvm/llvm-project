@@ -7,6 +7,7 @@ add_header_library(
     libc_errno.h
   DEPENDS
     libc.hdr.errno_macros
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -237,13 +238,16 @@ add_header_library(
     integer_to_string.h
   DEPENDS
     .big_int
+    .common
+    .ctype_utils
+    .wctype_utils
     libc.hdr.stdint_proxy
-    libc.src.__support.common
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -413,6 +417,7 @@ add_header_library(
     frac64.h
   DEPENDS
     .big_int
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 

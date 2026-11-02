@@ -55,9 +55,10 @@ def Tosa_Int32 : I<32>;
 def Tosa_Int64 : I<64>;
 
 // The TOSA dialect allows more types than the TOSA standard to allow for
-// experimentation. For historical reasons, signless is used in the place of
-// signed.
-// The TosaValidation pass can be used to check for standard conformance.
+// experimentation.
+// TOSA integer values are signless and interpreted as signed two's-complement
+// unless an operation specifies otherwise.
+// Use TosaValidation with strict-op-spec-alignment to check standard conformance.
 def Tosa_Int : AnyTypeOf<[AnyUnsignedInteger,
                           AnySignlessInteger]>;
 
