@@ -41,9 +41,9 @@ SanitizerStats
 SanitizerSpecialCaseList
 AllocToken
 OverflowBehaviorTypes
-BoundsSafety
-BoundsSafetyAdoptionGuide
-BoundsSafetyImplPlans
+BoundsSafety/BoundsSafety
+BoundsSafety/BoundsSafetyAdoptionGuide
+BoundsSafety/BoundsSafetyImplPlans
 ControlFlowIntegrity
 LTOVisibility
 ReturnAddressAuthenticationHardening
@@ -138,9 +138,9 @@ LLVMExceptionHandlingCodeGen
 * {doc}`SanitizerSpecialCaseList`
 * {doc}`AllocToken`
 * {doc}`OverflowBehaviorTypes`
-* {doc}`BoundsSafety`
-* {doc}`BoundsSafetyAdoptionGuide`
-* {doc}`BoundsSafetyImplPlans`
+* {doc}`BoundsSafety/BoundsSafety`
+* {doc}`BoundsSafety/BoundsSafetyAdoptionGuide`
+* {doc}`BoundsSafety/BoundsSafetyImplPlans`
 * {doc}`ControlFlowIntegrity`
 * {doc}`LTOVisibility`
 * {doc}`PointerAuthentication`
