@@ -878,7 +878,9 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc, mlir::Type boxType,
       tdesc);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void fir::FirOpBuilder::dumpFunc() { getFunction().dump(); }
+#endif
 
 static mlir::Value
 genNullPointerComparison(fir::FirOpBuilder &builder, mlir::Location loc,

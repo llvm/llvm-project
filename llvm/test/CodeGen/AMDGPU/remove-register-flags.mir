@@ -4,6 +4,7 @@
 ---
 # Should remove killed flags from S_ALLOC and C_SELECT
 name: remove_killed
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19

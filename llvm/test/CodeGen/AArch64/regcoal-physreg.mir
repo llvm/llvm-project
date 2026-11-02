@@ -10,6 +10,7 @@
 # Check coalescing of COPYs from reserved physregs.
 # CHECK-LABEL: name: func0
 name: func0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; We usually should not coalesce copies from allocatable physregs.
@@ -91,6 +92,7 @@ body: |
 # Check coalescing of COPYs from reserved physregs.
 # CHECK-LABEL: name: func1
 name: func1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; Cannot coalesce physreg because we have reads on other CFG paths (we
@@ -114,6 +116,7 @@ body: |
 ---
 # CHECK-LABEL: name: func2
 name: func2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; We can coalesce copies from physreg to vreg across multiple blocks.

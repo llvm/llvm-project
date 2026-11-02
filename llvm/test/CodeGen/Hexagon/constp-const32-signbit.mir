@@ -18,5 +18,5 @@ body: |
   bb.0:
     %0:intregs = IMPLICIT_DEF
     %1:intregs = CONST32 2147483648
-    S2_storeri_io %0, 0, killed %1
+    S2_storeri_io %0, 0, %1
 ...

@@ -24,6 +24,7 @@ body:             |
 
 ---
 name: expand_mls_to_msb
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK: name: expand_mls_to_msb
@@ -35,6 +36,7 @@ body:             |
 
 ---
 name: expand_mla_to_mad
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK: name: expand_mla_to_mad
@@ -46,6 +48,7 @@ body:             |
 
 ---
 name: expand_transfer_implicit_defs
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK: name: expand_transfer_implicit_defs
@@ -58,6 +61,7 @@ body:             |
 
 ---
 name: unary_undef_operand
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $p0, $z0
@@ -73,6 +77,7 @@ body:             |
 
 ---
 name: binop_undef_operand
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $p0, $z1
@@ -87,6 +92,7 @@ body:             |
 
 ---
 name: binop_undef_operand_requires_movpfrx
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $p0, $z1
@@ -101,6 +107,7 @@ body:             |
 
 ---
 name: binop_undef_operand_requires_zeroing_movpfrx
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $p0, $z1
@@ -115,6 +122,7 @@ body:             |
 
 ---
 name: ternaryop_undef_operand
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $p0, $z1, $z2
@@ -127,6 +135,7 @@ body:             |
 
 ---
 name: ternaryop_undef_operand_requires_movprfx
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $p0, $z1, $z2

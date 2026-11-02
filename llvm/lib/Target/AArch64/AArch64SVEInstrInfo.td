@@ -853,6 +853,17 @@ let Predicates = [HasSVE_or_SME] in {
   foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in
     def : Pat<(VT (vnot VT:$op)), (SUBR_ZI_B_PSEUDO ZPR8:$op, (i32 255), (i32 0))>;
 
+  // An all-active NOT intrinsic also produces ~op in every lane.
+  multiclass SVEAllActiveNotPat<ValueType VT, ValueType PT> {
+    def : Pat<(VT (int_aarch64_sve_not (VT srcvalue),
+                    (PT (SVEAllActive)), VT:$op)),
+              (SUBR_ZI_B_PSEUDO ZPR8:$op, (i32 255), (i32 0))>;
+  }
+  defm : SVEAllActiveNotPat<nxv16i8, nxv16i1>;
+  defm : SVEAllActiveNotPat<nxv8i16, nxv8i1>;
+  defm : SVEAllActiveNotPat<nxv4i32, nxv4i1>;
+  defm : SVEAllActiveNotPat<nxv2i64, nxv2i1>;
+
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", AArch64mad_m1, "MLA_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", AArch64msb_m1, "MLS_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", AArch64mla_m1, "MAD_ZPmZZ">;
@@ -1272,6 +1283,12 @@ let Predicates = [HasSVE_or_SME] in {
   defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext>;
 
   def EXT_ZZI_CONSTRUCTIVE : UnpredRegImmPseudo<EXT_ZZI, ZPR8, imm0_255>;
+
+  // We only expect AArch64ext nodes for nxv16i8 types, since the offset is
+  // adjusted to be a byte offset for other element types.
+  let AddedComplexity = 3 in
+  def : Pat<(nxv16i8 (AArch64ext nxv16i8:$Zs, nxv16i8:$Zs, (i32 imm0_255:$imm))),
+            (EXT_ZZI_CONSTRUCTIVE ZPR:$Zs, imm0_255:$imm)>;
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;
@@ -3329,15 +3346,46 @@ let Predicates = [HasSVE_or_SME] in {
   // 16-element contiguous stores
   defm : pred_store<nxv16i8, nxv16i1, nontrunc_masked_store, ST1B, ST1B_IMM, am_sve_regreg_lsl0>;
 
+  // non-temporal loads for packed integer types
   defm : pred_load<nxv16i8, nxv16i1, non_temporal_load, LDNT1B_ZRR, LDNT1B_ZRI, am_sve_regreg_lsl0>;
   defm : pred_load<nxv8i16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1>;
   defm : pred_load<nxv4i32, nxv4i1,  non_temporal_load, LDNT1W_ZRR, LDNT1W_ZRI, am_sve_regreg_lsl2>;
   defm : pred_load<nxv2i64, nxv2i1,  non_temporal_load, LDNT1D_ZRR, LDNT1D_ZRI, am_sve_regreg_lsl3>;
 
+  // non-temporal loads for packed float types
+  defm : pred_load<nxv8f16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv8bf16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4f32, nxv4i1,  non_temporal_load, LDNT1W_ZRR, LDNT1W_ZRI, am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2f64, nxv2i1,  non_temporal_load, LDNT1D_ZRR, LDNT1D_ZRI, am_sve_regreg_lsl3>;
+
+  // non-temporal loads for unpacked types. Unpacked integer types will be legalized to packed types
+  // in previous instruction selection phase, so only add patterns for unpacked float types.
+  // Since SVE has no non-temporal extending loads, use regular extending loads instead.
+  defm : pred_load<nxv4f16,  nxv4i1, non_temporal_load, LD1H_S, LD1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4bf16, nxv4i1, non_temporal_load, LD1H_S, LD1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2f32,  nxv2i1, non_temporal_load, LD1W_D, LD1W_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2f16,  nxv2i1, non_temporal_load, LD1H_D, LD1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2bf16, nxv2i1, non_temporal_load, LD1H_D, LD1H_D_IMM, am_sve_regreg_lsl1>;
+
+  // non-temporal stores for packed integer types
   defm : pred_store<nxv16i8, nxv16i1, non_temporal_store, STNT1B_ZRR, STNT1B_ZRI, am_sve_regreg_lsl0>;
   defm : pred_store<nxv8i16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1>;
   defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2>;
   defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3>;
+
+  // non-temporal stores for packed float types
+  defm : pred_store<nxv8f16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv8bf16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4f32, nxv4i1,  non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2f64, nxv2i1,  non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3>;
+
+  // non-temporal stores for unpacked types. Since SVE has no non-temporal truncating stores, use regular
+  // truncating stores instead.
+  defm : pred_store<nxv2f32,  nxv2i1, non_temporal_store,  ST1W_D, ST1W_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2f16,  nxv2i1, non_temporal_store,  ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv2bf16, nxv2i1, non_temporal_store,  ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4f16,  nxv4i1, non_temporal_store,  ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4bf16, nxv4i1, non_temporal_store,  ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
 
   multiclass unpred_store<PatFrag Store, ValueType Ty, Instruction RegRegInst,
                           Instruction RegImmInst, Instruction PTrue,
