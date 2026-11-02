@@ -113,7 +113,7 @@ inline const DeviceInfoProperties Uint64Properties =
 // for support.
 inline const DeviceInfoProp PropUint64MayBeZero{
     OL_DEVICE_INFO_HARDWARE_PARALLELISM, OL_DEVICE_INFO_TIMESTAMP_FREQUENCY,
-    OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE};
+    OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE, OL_DEVICE_INFO_MAX_DIRECT_WRITE_SIZE};
 inline const DeviceInfoProperties Uint64MayBeZeroProperties =
     createPropertiesWithSizeContainer(sizeof(uint64_t), PropUint64MayBeZero);
 
