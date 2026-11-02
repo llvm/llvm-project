@@ -19,6 +19,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -49,6 +50,11 @@ static cl::opt<unsigned> UnrollThresholdIf(
   "amdgpu-unroll-threshold-if",
   cl::desc("Unroll threshold increment for AMDGPU for each if statement inside loop"),
   cl::init(200), cl::Hidden);
+
+static cl::opt<bool>
+    UnrollRuntimeDefault("amdgpu-unroll-runtime-default",
+                         cl::desc("Set default runtime unrolling for AMDGPU "),
+                         cl::init(true), cl::Hidden);
 
 static cl::opt<bool> UnrollRuntimeLocal(
   "amdgpu-unroll-runtime-local",
@@ -129,9 +135,36 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   // We want to run unroll even for the loops which have been vectorized.
   UP.UnrollVectorizedLoop = true;
 
-  // Enable runtime unrolling for loops whose trip count is not known at
-  // compile time.
-  UP.Runtime = true;
+  // If selected, enable runtime unrolling for loops whose trip count
+  // is not known at compile time.
+  UP.Runtime = UnrollRuntimeDefault;
+
+  // A loop whose own blocks access LDS is runtime unrolled only where the LDS
+  // check in the loop below admits it, as it was before runtime unrolling was
+  // enabled by default: LDSAdmitted takes the place of setting UP.Runtime
+  // there, and the verdict is applied on every exit path. A loop that accesses
+  // LDS but is never admitted, including one whose LDS GEPs the loop below
+  // skips or never reaches, is not runtime unrolled.
+  bool AccessesLDS = llvm::any_of(L->getBlocks(), [L](const BasicBlock *BB) {
+    if (llvm::any_of(L->getSubLoops(), [BB](const Loop *SubLoop) {
+          return SubLoop->contains(BB);
+        }))
+      return false; // Block belongs to an inner loop.
+    return llvm::any_of(*BB, [](const Instruction &I) {
+      const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I);
+      return GEP && (GEP->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
+                     GEP->getAddressSpace() == AMDGPUAS::REGION_ADDRESS);
+    });
+  });
+  bool LDSAdmitted = false;
+  scope_exit ApplyLDSRuntime([&] {
+    if (!AccessesLDS)
+      return;
+    UP.Runtime = UnrollRuntimeLocal && LDSAdmitted;
+    LLVM_DEBUG(dbgs() << (UP.Runtime ? "Allow" : "Disallow")
+                      << " unroll runtime for loop:\n"
+                      << *L << " due to LDS use.\n");
+  });
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;
@@ -228,9 +261,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
             (!isa<GlobalVariable>(GEP->getPointerOperand()) &&
              !isa<Argument>(GEP->getPointerOperand())))
           continue;
-        LLVM_DEBUG(dbgs() << "Allow unroll runtime for loop:\n"
-                          << *L << " due to LDS use.\n");
-        UP.Runtime = UnrollRuntimeLocal;
+        LDSAdmitted = true;
       }
 
       // Check if GEP depends on a value defined by this loop itself.
