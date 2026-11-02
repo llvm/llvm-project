@@ -1007,7 +1007,7 @@ public:
 
     // Just a pointer in the form '0xddd'.
     case analyze_format_string::ConversionSpecifier::pArg:
-      // Linux kernel has its own extesion for `%p` specifier.
+      // Linux kernel has its own extension for `%p` specifier.
       // Kernel Document:
       // https://docs.kernel.org/core-api/printk-formats.html#pointer-types
       IsKernelCompatible = false;

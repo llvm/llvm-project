@@ -4,23 +4,27 @@ lldb-dap implements the
 [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/specification)
 (DAP). This page specifies what lldb-dap adds to the protocol, such as new requests and additional fields in protocol types.
 
-Conventions:
+## Naming rules
 
-- New requests should be prefixed with `__lldb_`.
-- Added properties on standard messages are prefixed with `$__lldb_` if the field
-  would not make sense for any other debugger (e.g. `$__lldb_version`);
-  otherwise, they use plain names (e.g. `compileUnitId`).
-
+- The `command` field of an extension request must have the `__lldb_` prefix
+  (e.g. `__lldb_moduleSymbols`).
+- The `event` field of an extension event must have the `__lldb_` prefix.
+- An extension field on an official
+  [DAP type](https://microsoft.github.io/debug-adapter-protocol/specification#Types)
+  must have the `$__lldb_` prefix (e.g. `$__lldb_version` on `Capabilities`).
+- A field of an extension type **must not have** a prefix. Extension types are the
+  arguments, response body and event body of an extension request or event,
+  and the types they use (e.g. `startIndex` on `ModuleSymbolsArguments`).
 
 ## Summary
 
 :::{table}
 :width: 100%
 
-| Request | Added in |
-| -------------------------- | --- |
-| [compileUnits](#compileunits-request) | LLDB 11 |
-| [moduleSymbols](#modulesymbols-request) | LLDB 22 |
+| Request                                 | Added in |
+| --------------------------------------- | -------- |
+| [compileUnits](#compileunits-request)   | LLDB 11  |
+| [moduleSymbols](#modulesymbols-request) | LLDB 22  |
 
 :::
 
@@ -37,7 +41,7 @@ and the `id` of a [`Module`](#module).
 
 ```typescript
 interface CompileUnitsRequest extends Request {
-  command: 'compileUnits';
+  command: "compileUnits";
 
   arguments: CompileUnitsArguments;
 }
@@ -75,6 +79,12 @@ interface CompileUnit {
    * The path of the compile unit.
    */
   compileUnitPath: string;
+
+  /**
+   * The language of the compile unit, with its version where known, for
+   * example `c11` or `c++17`. Omitted if the language is unknown.
+   */
+  language?: string;
 }
 ```
 
@@ -89,7 +99,7 @@ is true.
 
 ```typescript
 interface ModuleSymbolsRequest extends Request {
-  command: '__lldb_moduleSymbols';
+  command: "__lldb_moduleSymbols";
 
   arguments: ModuleSymbolsArguments;
 }
@@ -122,8 +132,8 @@ interface ModuleSymbolsArguments {
 interface ModuleSymbolsResponse extends Response {
   body: {
     /**
-    * All symbols or range of symbols.
-    */
+     * All symbols or range of symbols.
+     */
     symbols: Symbol[];
   };
 }
@@ -263,5 +273,13 @@ interface StackFrame {
    * @since LLDB 24
    */
   compileUnitId?: number;
+
+  /**
+   * Language specific data about the frame, as returned by
+   * `SBFrame::GetLanguageSpecificData`, for example `Objective-C runtime
+   * version`. Each language runtime defines its keys and clients must ignore
+   * keys they do not know. Omitted if the runtime reports nothing.
+   */
+  $__lldb_languageSpecificData?: any;
 }
 ```
