@@ -1580,11 +1580,13 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
                                           const FunctionArgList *Args,
                                           ArrayRef<const Attr *> ForAttrs) {
-  JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
-
   std::optional<LexicalScope> ForScope;
-  if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+  JumpDest LoopExit;
+  const bool HasForScope = getLangOpts().C99 || getLangOpts().CPlusPlus;
+  if (HasForScope) {
+    LoopExit = getJumpDestInCurrentScope("for.end");
     ForScope.emplace(*this, S.getSourceRange());
+  }
 
   Address BigJumpLoopIvAddr = Address::invalid();
   const VarDecl *LoopVar = nullptr;
@@ -1605,6 +1607,11 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
     if (S.getInit())
       EmitStmt(S.getInit());
   }
+
+  // Before C99 the init variable belongs to the enclosing scope, so create
+  // the loop exit after its cleanups: leaving the loop must not run them.
+  if (!HasForScope)
+    LoopExit = getJumpDestInCurrentScope("for.end");
 
   const Expr *CondExpr = BigJumpLoopLD ? BigJumpLoopLD->getCond() : S.getCond();
 
