@@ -830,9 +830,8 @@ define amdgpu_kernel void @k_vararg(ptr %p) {
   ret void
 }
 
-; A direct call whose signature disagrees with the callee. hasAddressTaken is
-; queried with IgnoreCastedDirectCall left off, so it reports such a call as an
-; address-taken use and the callee is rejected outright.
+; A direct call whose signature disagrees with the callee. That use is not a
+; call of this function type, so the callee is rejected outright.
 
 define internal fastcc void @callee_sig_mismatch(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @callee_sig_mismatch(
@@ -895,6 +894,32 @@ define amdgpu_kernel void @k_assume_two_args(ptr %p, float %f) {
 ;
   call void @llvm.assume(i1 true) ["align"(ptr @callee_assume_two_args, i64 4)]
   call fastcc void @callee_assume_two_args(ptr %p, float %f)
+  ret void
+}
+
+; An addrspacecast of the function sits between it and llvm.assume. The cast is
+; the use of the function; the assume uses the cast. That is not a call, so the
+; function is not promoted.
+
+define internal fastcc void @callee_assume_cast(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_assume_cast(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_assume_cast(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_assume_cast(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr @callee_assume_cast to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) [[CAST]], i64 4) ]
+; CHECK-NEXT:    call fastcc void @callee_assume_cast(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  %cast = addrspacecast ptr @callee_assume_cast to ptr addrspace(1)
+  call void @llvm.assume(i1 true) ["align"(ptr addrspace(1) %cast, i64 4)]
+  call fastcc void @callee_assume_cast(ptr %p)
   ret void
 }
 

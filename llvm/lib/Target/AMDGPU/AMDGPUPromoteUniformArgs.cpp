@@ -75,17 +75,19 @@ static bool collectDirectCallSites(Function &F,
   if (!any_of(F.args(), canPromoteArgToInReg))
     return false;
 
-  // Assume-like intrinsics can mention
-  // F without calling it. They are not call sites and do not block promotion.
-  if (F.hasAddressTaken(/*PutOffender=*/nullptr, /*IgnoreCallbackUses=*/false,
-                        /*IgnoreAssumeLikeCalls=*/true))
-    return false;
-
-  for (User *U : F.users()) {
-    if (const auto *II = dyn_cast<IntrinsicInst>(U))
+  // A use is a call site only when it is the callee of a direct call with this
+  // function type. Assume-like intrinsics can mention F without calling it, so
+  // they are skipped.
+  for (Use &U : F.uses()) {
+    if (const auto *II = dyn_cast<IntrinsicInst>(U.getUser()))
       if (II->isAssumeLikeIntrinsic())
         continue;
-    auto *CB = cast<CallBase>(U);
+
+    CallBase *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U) ||
+        CB->getFunctionType() != F.getFunctionType())
+      return false;
+    // Invoke stays rejected: AMDGPU still treats an invoke as divergent.
     if (CB->isMustTailCall() || isa<InvokeInst>(CB))
       return false;
     Calls.push_back(CB);
