@@ -456,9 +456,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, VT, Expand);
 
     setOperationAction({ISD::BSWAP, ISD::CTTZ, ISD::CTLZ}, VT, Expand);
-
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
-                       Expand);
   }
 
   // The hardware supports 32-bit FSHR, but not FSHL.
@@ -593,7 +590,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemset  = 0xffffffff;
 
   // The expansion for 64-bit division is enormous.
-  if (AMDGPUSTI.getCLOpts().bypass_slow_div)
+  if (static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts().bypass_slow_div)
     addBypassSlowDiv(64, 32);
 
   setTargetDAGCombine({ISD::BITCAST,    ISD::SHL,
@@ -777,9 +774,11 @@ bool AMDGPUTargetLowering::isSelectSupported(SelectSupportKind SelType) const {
 
 // The backend supports 32 and 64 bit floating point immediates.
 // FIXME: Why are we reporting vectors of FP immediates as legal?
-bool AMDGPUTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return isTypeLegal(VT.getScalarType());
+TargetLowering::FPImmAction
+AMDGPUTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return isTypeLegal(VT.getScalarType()) ? FPImmAction::Legal
+                                         : FPImmAction::ConstantPool;
 }
 
 // We don't want to shrink f64 / f32 constants.

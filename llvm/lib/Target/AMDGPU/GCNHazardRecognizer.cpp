@@ -4189,7 +4189,6 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     }
   };
 
-  SmallVector<const MachineInstr *> WaitInstrs;
   StateType InitialState;
 
   // Look for SGPR write.

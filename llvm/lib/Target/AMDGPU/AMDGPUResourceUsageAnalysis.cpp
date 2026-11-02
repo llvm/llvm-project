@@ -62,12 +62,12 @@ bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
   if (!TPC)
     return false;
 
-  const TargetMachine &TM = TPC->getTM<TargetMachine>();
+  const auto &TM = TPC->getTM<GCNTargetMachine>();
   const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
-  const AMDGPUOptions &CLOpts = MF.getSubtarget<GCNSubtarget>().getCLOpts();
+  const AMDGPUOptions &CLOpts = TM.getCLOpts();
   bool MinScratch = AMDGPU::getAMDHSACodeObjectVersion(
                         *MF.getFunction().getParent()) >= AMDGPU::AMDHSA_COV5 ||
                     STI.getTargetTriple().getOS() == Triple::AMDPAL;
@@ -91,7 +91,7 @@ AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
-  const AMDGPUOptions &CLOpts = MF.getSubtarget<GCNSubtarget>().getCLOpts();
+  const AMDGPUOptions &CLOpts = TM.getCLOpts();
   bool MinScratch = AMDGPU::getAMDHSACodeObjectVersion(
                         *MF.getFunction().getParent()) >= AMDGPU::AMDHSA_COV5 ||
                     STI.getTargetTriple().getOS() == Triple::AMDPAL;

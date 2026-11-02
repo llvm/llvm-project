@@ -227,8 +227,6 @@ defm : OptionalBoolField<"amdgpu-enable-image-intrinsic-optimizer",
   "Enable image intrinsic optimizer pass">;
 defm : BoolField<"amdgpu-enable-lower-exec-sync", "true",
   "Enable lowering of execution synchronization">;
-defm : BoolField<"amdgpu-enable-pipeliner", "false",
-  "Enable Machine Pipeliner for AMDGCN">;
 defm : OptionalBoolField<"amdgpu-enable-pre-ra-optimizations",
   "Enable Pre-RA optimizations pass">;
 defm : BoolField<"amdgpu-enable-promote-kernel-arguments", "true",

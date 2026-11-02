@@ -1926,7 +1926,7 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp"]]} {
   llvm.return
 }
 
@@ -1934,6 +1934,7 @@ llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_p
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
+// CHECK-DAG: "llvm.assume"="omp_no_openmp"
 
 // -----
 
@@ -2248,6 +2249,9 @@ llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
 
   // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}}) #[[$CONVERGENT:.*]]
   %9 = llvm.inline_asm convergent "foo", "=r,r" %arg0 : (i32) -> i8
+
+  // CHECK-NEXT:  call void asm "", "*m"(ptr elementtype(ptr) %1) #[[$CONVERGENT]]
+  llvm.inline_asm convergent operand_attrs = [{elementtype = !llvm.ptr}] "", "*m" %arg1 : (!llvm.ptr) -> !llvm.void
 
   llvm.return
 }

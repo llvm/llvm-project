@@ -462,11 +462,13 @@ diagnoseUnsupportedCoExecSchedulerSelection(const Function &F,
       DiagnosticLocation(), DS_Warning));
 }
 
-static bool useNoopPostScheduler(const Function &F) {
+static bool useNoopPostScheduler(const AMDGPUOptions &CLOpts,
+                                 const Function &F) {
   Attribute PostSchedStrategyAttr =
       F.getFnAttribute("amdgpu-post-sched-strategy");
-  return PostSchedStrategyAttr.isValid() &&
-         PostSchedStrategyAttr.getValueAsString() == "nop";
+  if (PostSchedStrategyAttr.isValid())
+    return PostSchedStrategyAttr.getValueAsString() == "nop";
+  return AMDGPU::getSchedStrategy(CLOpts, F) == "coexec";
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
@@ -1253,7 +1255,7 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  if (useNoopPostScheduler(C->MF->getFunction()))
+  if (useNoopPostScheduler(CLOpts, C->MF->getFunction()))
     return createGCNNoopPostMachineScheduler(C);
 
   ScheduleDAGMI *DAG =
@@ -1649,8 +1651,6 @@ void GCNPassConfig::addFastRegAlloc() {
 void GCNPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
-  if (getOptLevel() >= CodeGenOptLevel::Default && CLOpts.enable_pipeliner)
-    addPass(&MachinePipelinerID);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -1814,6 +1814,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   addPreRewrite();
   addPass(&VirtRegRewriterID);
+
+  addPass(createRegAllocScoringPass());
 
   addPass(&AMDGPUMarkLastScratchLoadID);
 
@@ -2513,8 +2515,6 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
-  if (getOptLevel() >= CodeGenOptLevel::Default && CLOpts.enable_pipeliner)
-    addMachineFunctionPass(MachinePipelinerPass(), PMW);
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(

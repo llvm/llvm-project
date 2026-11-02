@@ -334,6 +334,7 @@ class SPIRVEmitIntrinsicsImpl
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
+  bool foldStaticArrayAllocas(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
@@ -770,8 +771,12 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
                                       Function *CalledF, unsigned OpIdx) {
   // OpenCL.std printf takes its format string as a pointer to i8. Match the
   // bare builtin name, as lowering does, to also cover unmangled `printf`.
-  if (OpIdx == 0 && SPIRV::lookupBuiltinNameHelper(DemangledName) == "printf")
-    return IntegerType::getInt8Ty(CalledF->getContext());
+  // OpenCL get_fence only has void* overloads.
+  if (OpIdx == 0) {
+    std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
+    if (Name == "printf" || Name == "get_fence")
+      return IntegerType::getInt8Ty(CalledF->getContext());
+  }
   return nullptr;
 }
 
@@ -1158,7 +1163,8 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(User *U,
 Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
     User *U, Type *OrigTy, SmallPtrSetImpl<Value *> &Visited,
     bool UnknownElemTypeI8) {
-  if (!U)
+  // Only constant aggregate operands map to aggregate elements.
+  if (!isa_and_nonnull<ConstantAggregate>(U))
     return OrigTy;
 
   // maybe already known
@@ -4305,9 +4311,37 @@ bool SPIRVEmitIntrinsicsImpl::convertMaskedMemIntrinsics(Module &M) {
   return Changed;
 }
 
-bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
   bool Changed = false;
+  Type *I32Ty = Type::getInt32Ty(M.getContext());
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    // Only entry-block allocations execute once per call, so a single array
+    // object has the same meaning as the counted allocation. Allocations in
+    // other blocks keep their lowering.
+    for (Instruction &I : F.getEntryBlock()) {
+      auto *AI = dyn_cast<AllocaInst>(&I);
+      if (!AI || !AI->isStaticAlloca() || !AI->isArrayAllocation() ||
+          AI->getAddressSpace() !=
+              storageClassToAddressSpace(SPIRV::StorageClass::Function))
+        continue;
+      auto *Count = cast<ConstantInt>(AI->getArraySize());
+      // Zero sizes are legalized earlier; array lengths must fit in 32 bits.
+      if (Count->isZero() || !Count->getValue().isIntN(32))
+        continue;
+      AI->setAllocatedType(
+          ArrayType::get(AI->getAllocatedType(), Count->getZExtValue()));
+      AI->setOperand(0, ConstantInt::get(I32Ty, 1));
+      Changed = true;
+    }
+  }
+  return Changed;
+}
 
+bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+  // Fold static allocation counts before pointer type inference.
+  bool Changed = foldStaticArrayAllocas(M);
   Changed |= convertMaskedMemIntrinsics(M);
 
   parseFunDeclarations(M);

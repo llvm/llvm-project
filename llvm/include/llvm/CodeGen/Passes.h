@@ -149,9 +149,6 @@ LLVM_ABI extern char &MachineRegionInfoPassID;
 /// EdgeBundles analysis - Bundle machine CFG edges.
 LLVM_ABI extern char &EdgeBundlesWrapperLegacyID;
 
-/// LiveVariables pass - This pass sets dead flags on register definitions.
-LLVM_ABI extern char &LiveVariablesID;
-
 /// PHIElimination - This pass eliminates machine instruction PHI nodes
 /// by inserting copy instructions.  This destroys SSA information, but is the
 /// desired input for some register allocators.  This pass is "required" by
@@ -568,7 +565,7 @@ LLVM_ABI FunctionPass *createEHContGuardTargetsLegacy();
 LLVM_ABI FunctionPass *createHardwareLoopsLegacyPass();
 
 /// This pass inserts pseudo probe annotation for callsite profiling.
-LLVM_ABI FunctionPass *createPseudoProbeInserter();
+LLVM_ABI FunctionPass *createPseudoProbeInserterLegacyPass();
 
 /// Create IR Type Promotion pass. \see TypePromotion.cpp
 LLVM_ABI FunctionPass *createTypePromotionLegacyPass();
