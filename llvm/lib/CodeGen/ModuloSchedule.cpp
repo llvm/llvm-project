@@ -27,7 +27,12 @@ static cl::opt<bool> SwapBranchTargetsMVE(
     "pipeliner-swap-branch-targets-mve", cl::Hidden, cl::init(false),
     cl::desc("Swap target blocks of a conditional branch for MVE expander"));
 
-static void eraseBlock(MachineBasicBlock *MBB, MachineDomTreeUpdater &MDTU) {
+static void eraseBlock(MachineBasicBlock *MBB, LiveIntervals &LIS,
+                       MachineDomTreeUpdater &MDTU) {
+  for (MachineInstr &MI : *MBB)
+    LIS.RemoveMachineInstrFromMaps(MI);
+  MBB->clear();
+
   SmallVector<MachineDominatorTree::UpdateType, 4> Updates;
   while (!MBB->succ_empty()) {
     Updates.push_back({MachineDominatorTree::Delete, MBB, *MBB->succ_begin()});
@@ -212,10 +217,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
 
 void ModuloScheduleExpander::cleanup() {
   // Remove the original loop since it's no longer referenced.
-  for (auto &I : *BB)
-    LIS.RemoveMachineInstrFromMaps(I);
-  BB->clear();
-  eraseBlock(BB, MDTU);
+  eraseBlock(BB, LIS, MDTU);
 }
 
 /// Generate the pipeline prolog code.
@@ -933,16 +935,9 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
         LoopInfo->disposed(&LIS);
         NewKernel = nullptr;
       }
-      for (auto &MI : *LastPro)
-        LIS.RemoveMachineInstrFromMaps(MI);
-      LastPro->clear();
-      eraseBlock(LastPro, MDTU);
-      if (LastPro != LastEpi) {
-        for (auto &MI : *LastEpi)
-          LIS.RemoveMachineInstrFromMaps(MI);
-        LastEpi->clear();
-        eraseBlock(LastEpi, MDTU);
-      }
+      eraseBlock(LastPro, LIS, MDTU);
+      if (LastPro != LastEpi)
+        eraseBlock(LastEpi, LIS, MDTU);
     } else {
       numAdded = TII->insertBranch(*Prolog, LastPro, nullptr, Cond, DebugLoc());
       Epilog->removePHIsIncomingValuesForPredecessor(*Prolog);
@@ -2344,10 +2339,10 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
   Epilog->addSuccessor(NewExit);
 
   MDTU.applyUpdates(
-      {{MachineDominatorTree::Insert, OrigPreheader, Check},
+      {{MachineDominatorTree::Insert, NewPreheader, OrigKernel},
+       {MachineDominatorTree::Insert, OrigPreheader, Check},
        {MachineDominatorTree::Insert, Check, Prolog},
        {MachineDominatorTree::Insert, Check, NewPreheader},
-       {MachineDominatorTree::Insert, NewPreheader, OrigKernel},
        {MachineDominatorTree::Insert, Prolog, NewKernel},
        {MachineDominatorTree::Insert, NewKernel, NewKernel},
        {MachineDominatorTree::Insert, NewKernel, Epilog},

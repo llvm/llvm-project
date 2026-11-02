@@ -59,7 +59,6 @@ namespace llvm {
 
 class AAResults;
 class LiveIntervals;
-class MachineDominatorTree;
 class NodeSet;
 class SMSchedule;
 
