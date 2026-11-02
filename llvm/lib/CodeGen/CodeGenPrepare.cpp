@@ -8608,7 +8608,7 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
     // Check if Usr in the same block as GEPIOp, which is fine, skip.
     if (UI->getParent() == SrcBlock)
       continue;
-    // CHECk if Usr is also a constant ptradd with GEPIOp as pointer operand.
+    // Check if Usr is also a constant ptradd with GEPIOp as pointer operand.
     // If so, record it in the vector. If not, give up.
     ConstantInt *UGEPIIdx;
     if (!match(Usr, m_PtrAdd(m_Specific(GEPIOp), m_ConstantInt(UGEPIIdx))))
