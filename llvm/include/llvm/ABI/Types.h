@@ -226,10 +226,7 @@ public:
               bool HasAddressSpaceQualifier = false)
       : PointerLikeType(TypeKind::Pointer, TypeSize::getFixed(Size), ABIAlign,
                         AddressSpace),
-        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {
-    assert((HasAddressSpaceQualifier || AddressSpace == 0) &&
-           "an unqualified pointer is in address space 0");
-  }
+        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {}
 
   bool hasAddressSpaceQualifier() const { return HasAddressSpaceQualifier; }
 
