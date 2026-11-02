@@ -36,6 +36,7 @@ void run() {
   globalMemCounter.reset();
 #if TEST_STD_VER >= 17
   T* arr = new T[N];
+  DoNotOptimize(arr);
   assert(globalMemCounter.checkOutstandingArrayNewEq(1));
   globalMemCounter.throw_after = 0;
 
@@ -47,7 +48,8 @@ void run() {
     assert(globalMemCounter.outstanding_array_new == 0);
   }
 #else
-  T* p                         = new T;
+  T* p = new T;
+  DoNotOptimize(p);
   globalMemCounter.throw_after = 0;
   try {
     std::shared_ptr<T> sp(p);
