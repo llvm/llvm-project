@@ -16,7 +16,7 @@
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
-      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
+      "refinement": {"metric": "execution_time", "direction": "increase", "min-change": 0.1, "max-commits": 4}
     }
   },
   {
@@ -36,7 +36,7 @@
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
-      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
+      "refinement": {"metric": "execution_time", "direction": "increase", "min-change": 0.1, "max-commits": 4}
     }
   },
   {
@@ -56,7 +56,7 @@
       "every": "week",
       "samples": 3,
       "max-in-flight": 8,
-      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
+      "refinement": {"metric": "execution_time", "direction": "increase", "min-change": 0.1, "max-commits": 4}
     }
   },
   {

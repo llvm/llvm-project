@@ -28,6 +28,7 @@ exports_files([
     "LICENSE.TXT",
     "source/API/liblldb-private.exports",
     "source/API/liblldb.exports",
+    "test/lldbflakes.py",
 ])
 
 bool_flag(
