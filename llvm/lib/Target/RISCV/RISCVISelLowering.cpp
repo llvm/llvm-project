@@ -12464,10 +12464,12 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   }
 }
 
-static unsigned getRVScalarAveragingOpcode(unsigned IntNo) {
+static unsigned getRVPScalarOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
-    llvm_unreachable("Unexpected RISC-V scalar averaging intrinsic");
+    llvm_unreachable(
+        "Unexpected RISC-V scalar averaging, multiply high, Q-format "
+        "multiply or multiply high accumulate intrinsic");
   case Intrinsic::riscv_aadd_i32:
     return ISD::AVGFLOORS;
   case Intrinsic::riscv_aaddu_u32:
@@ -12476,13 +12478,6 @@ static unsigned getRVScalarAveragingOpcode(unsigned IntNo) {
     return ISD::AVGSUBFLOORS;
   case Intrinsic::riscv_asubu_u32:
     return ISD::AVGSUBFLOORU;
-  }
-}
-
-static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable("Unexpected RISC-V scalar multiply high intrinsic");
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
   case Intrinsic::riscv_mulhru_u32:
@@ -12491,14 +12486,10 @@ static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
     return RISCVISD::MULHSU;
   case Intrinsic::riscv_mulhrsu_i32:
     return RISCVISD::MULHRSU;
-  }
-}
-
-static unsigned getRVScalarMulHighAccumulateOpcode(unsigned IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable(
-        "Unexpected RISC-V scalar multiply high accumulate intrinsic");
+  case Intrinsic::riscv_mulq_i32:
+    return RISCVISD::MULQ;
+  case Intrinsic::riscv_mulqr_i32:
+    return RISCVISD::MULQR;
   case Intrinsic::riscv_mhacc_i32:
     return RISCVISD::MHACC;
   case Intrinsic::riscv_mhracc_i32:
@@ -12511,17 +12502,6 @@ static unsigned getRVScalarMulHighAccumulateOpcode(unsigned IntNo) {
     return RISCVISD::MHACCSU;
   case Intrinsic::riscv_mhraccsu_i32:
     return RISCVISD::MHRACCSU;
-  }
-}
-
-static unsigned getRVScalarQFormatMulOpcode(unsigned IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable("Unexpected RISC-V scalar Q-format multiply intrinsic");
-  case Intrinsic::riscv_mulq_i32:
-    return RISCVISD::MULQ;
-  case Intrinsic::riscv_mulqr_i32:
-    return RISCVISD::MULQR;
   }
 }
 
@@ -13498,38 +13478,24 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_aadd_i32:
   case Intrinsic::riscv_aaddu_u32:
   case Intrinsic::riscv_asub_i32:
-  case Intrinsic::riscv_asubu_u32: {
-    // RV32 selects the scalar P instructions directly. RV64 goes via
-    // ReplaceNodeResults.
-    unsigned Opc = getRVScalarAveragingOpcode(IntNo);
-    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
-  }
+  case Intrinsic::riscv_asubu_u32:
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
-  case Intrinsic::riscv_mulhrsu_i32: {
-    // RV32 maps the non-rounding forms onto the M extension and the rounding
-    // forms onto the scalar P instructions. RV64 goes via ReplaceNodeResults.
-    unsigned Opc = getRVScalarMulHighOpcode(IntNo);
-    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
-  }
+  case Intrinsic::riscv_mulhrsu_i32:
+  case Intrinsic::riscv_mulq_i32:
+  case Intrinsic::riscv_mulqr_i32:
   case Intrinsic::riscv_mhacc_i32:
   case Intrinsic::riscv_mhracc_i32:
   case Intrinsic::riscv_mhaccu_u32:
   case Intrinsic::riscv_mhraccu_u32:
   case Intrinsic::riscv_mhaccsu_i32:
   case Intrinsic::riscv_mhraccsu_i32: {
-    // RV64 goes via ReplaceNodeResults.
-    unsigned Opc = getRVScalarMulHighAccumulateOpcode(IntNo);
-    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2),
-                       Op.getOperand(3));
-  }
-  case Intrinsic::riscv_mulq_i32:
-  case Intrinsic::riscv_mulqr_i32: {
     // RV32 selects the scalar P instructions directly. RV64 goes via
     // ReplaceNodeResults.
-    unsigned Opc = getRVScalarQFormatMulOpcode(IntNo);
-    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
+    unsigned Opc = getRVPScalarOpcode(IntNo);
+    SmallVector<SDValue, 3> Ops(drop_begin(Op->ops()));
+    return DAG.getNode(Opc, DL, MVT::i32, Ops);
   }
   case Intrinsic::riscv_mqwacc_i64:
   case Intrinsic::riscv_mqrwacc_i64: {
@@ -18437,18 +18403,29 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_aadd_i32:
     case Intrinsic::riscv_aaddu_u32:
     case Intrinsic::riscv_asub_i32:
-    case Intrinsic::riscv_asubu_u32: {
-      // RV64 has no scalar averaging instructions; reuse the packed .w
-      // family on the low words, whose element 0 is the scalar result.
-      MVT VT = N->getSimpleValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::i32)
-        return;
-      unsigned Opc = getRVScalarAveragingOpcode(IntNo);
-      SDValue Rs1 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
-      SDValue Rs2 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
-      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
+    case Intrinsic::riscv_asubu_u32:
+    case Intrinsic::riscv_mulhr_i32:
+    case Intrinsic::riscv_mulhru_u32:
+    case Intrinsic::riscv_mulhsu_i32:
+    case Intrinsic::riscv_mulhrsu_i32:
+    case Intrinsic::riscv_mulq_i32:
+    case Intrinsic::riscv_mulqr_i32:
+    case Intrinsic::riscv_mhacc_i32:
+    case Intrinsic::riscv_mhracc_i32:
+    case Intrinsic::riscv_mhaccu_u32:
+    case Intrinsic::riscv_mhraccu_u32:
+    case Intrinsic::riscv_mhaccsu_i32:
+    case Intrinsic::riscv_mhraccsu_i32: {
+      // RV64 has no scalar averaging, mulh, mulq or mhacc instructions; reuse
+      // the packed .w family on the low words, whose element 0 is the scalar
+      // result.
+      assert(Subtarget.is64Bit() && N->getValueType(0) == MVT::i32 &&
+             "Unexpected subtarget or result type");
+      unsigned Opc = getRVPScalarOpcode(IntNo);
+      SmallVector<SDValue, 3> Ops;
+      for (SDValue Op : drop_begin(N->ops()))
+        Ops.push_back(DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, Op));
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Ops);
       Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
@@ -18465,61 +18442,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           Opc, DL, MVT::i64, Rs1,
           DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      return;
-    }
-    case Intrinsic::riscv_mulhr_i32:
-    case Intrinsic::riscv_mulhru_u32:
-    case Intrinsic::riscv_mulhsu_i32:
-    case Intrinsic::riscv_mulhrsu_i32: {
-      // RV64 has no scalar mulh instructions; reuse the packed pmulh.w
-      // family on the low words, whose element 0 is the scalar product.
-      MVT VT = N->getSimpleValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::i32)
-        return;
-      unsigned Opc = getRVScalarMulHighOpcode(IntNo);
-      SDValue Rs1 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
-      SDValue Rs2 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
-      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
-      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
-      return;
-    }
-    case Intrinsic::riscv_mhacc_i32:
-    case Intrinsic::riscv_mhracc_i32:
-    case Intrinsic::riscv_mhaccu_u32:
-    case Intrinsic::riscv_mhraccu_u32:
-    case Intrinsic::riscv_mhaccsu_i32:
-    case Intrinsic::riscv_mhraccsu_i32: {
-      // RV64 has no scalar mhacc; use pmhacc.w on the low words.
-      MVT VT = N->getSimpleValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::i32)
-        return;
-      unsigned Opc = getRVScalarMulHighAccumulateOpcode(IntNo);
-      SDValue Rd =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
-      SDValue Rs1 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
-      SDValue Rs2 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(3));
-      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs1, Rs2);
-      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
-      return;
-    }
-    case Intrinsic::riscv_mulq_i32:
-    case Intrinsic::riscv_mulqr_i32: {
-      // RV64 has no scalar Q-format multiply instructions; reuse the packed
-      // pmulq.w family on the low words, whose element 0 is the scalar result.
-      MVT VT = N->getSimpleValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::i32)
-        return;
-      unsigned Opc = getRVScalarQFormatMulOpcode(IntNo);
-      SDValue Rs1 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
-      SDValue Rs2 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
-      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
-      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
     case Intrinsic::riscv_mqwacc_i64:
