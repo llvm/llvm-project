@@ -247,7 +247,9 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     bool AllPoison = true;
     for (auto [BB, Succ0, Succ1] : Incoming) {
       Value *V = PoisonValue::get(Phi->getType());
-      if  (Phi->getBasicBlockIndex(BB) != -1) {
+      // Only edges from BB to Out that go through the hub move their value.
+      // BB may have another edge to Out that is not redirected.
+      if ((Succ0 == Out || Succ1 == Out) && Phi->getBasicBlockIndex(BB) != -1) {
         V = Phi->removeIncomingValue(BB, false);
         // When both successors are the same (Succ0 == Succ1), there are two
         // edges from BB to Out, so we need to remove the second PHI entry too.
