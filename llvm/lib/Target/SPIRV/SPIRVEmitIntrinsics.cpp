@@ -266,6 +266,7 @@ class SPIRVEmitIntrinsicsImpl
   Value *lowerUndefOrPoison(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
   void preprocessUndefsAndPoisons(IRBuilder<> &B);
   void insertCompositeAggregateArms(Instruction *I, IRBuilder<> &B);
+  void insertPointerConstantArms(Function &Func);
   void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
@@ -1805,6 +1806,33 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
       Composite = B.CreateInsertValue(Composite, Field, Idx);
     }
     U.set(Composite);
+  }
+}
+
+// Rebuild each constant arm of an aggregate PHI/select/freeze that holds
+// pointers as an insertvalue chain. A constant's pointer members carry the
+// pointee types deduced for them anywhere in the module, so the constant can be
+// a different SPIR-V type than the result; insertvalue casts each member to the
+// result's member type.
+void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
+  for (Instruction &I : instructions(Func)) {
+    if (!isAggregateValueIdInstr(I))
+      continue;
+    auto *Phi = dyn_cast<PHINode>(&I);
+    for (Use &U : I.operands()) {
+      auto *C = dyn_cast<ConstantAggregate>(U.get());
+      if (!C || none_of(C->operands(), [](const Use &E) {
+            return E->getType()->isPointerTy();
+          }))
+        continue;
+      Instruction *InsertPt =
+          Phi ? Phi->getIncomingBlock(U)->getTerminator() : &I;
+      Value *Composite = PoisonValue::get(C->getType());
+      for (unsigned Idx = 0, E = C->getNumOperands(); Idx != E; ++Idx)
+        Composite = InsertValueInst::Create(Composite, C->getOperand(Idx), Idx,
+                                            "", InsertPt->getIterator());
+      U.set(Composite);
+    }
   }
 }
 
@@ -3884,6 +3912,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     processGlobalValue(GV, B);
 
   reconstructAggregateReturns(Func, B);
+  insertPointerConstantArms(Func);
   preprocessUndefsAndPoisons(B);
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
