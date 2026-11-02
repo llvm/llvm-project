@@ -206,6 +206,8 @@ struct OffloadDeviceTestWithParam
 
     for (const auto &DeviceParam : std::get<0>(this->GetParam()))
       Devices.push_back(DeviceParam.Handle);
+
+    ASSERT_FALSE(Devices.empty()) << "Device set in test fixture is empty!";
     Device = Devices.front();
 
     ASSERT_SUCCESS(olCreateContext(Devices.size(), Devices.data(), &Context));
