@@ -98,9 +98,9 @@ int main(int, char**) {
     // reader state. If lock() lacks a seq_cst fence, the reads in the region can
     // complete before that store is visible, rcu_synchronize misses the reader,
     // and one of the asserts fires.
-    constexpr std::size_t num_reader_threads = 4;
+    constexpr std::size_t num_reader_threads    = 4;
     constexpr std::uint32_t max_reads_in_region = 1024;
-    constexpr auto test_duration = std::chrono::seconds(1);
+    constexpr auto test_duration                = std::chrono::seconds(1);
 
     PaddedVersion published;
     PaddedVersion reclaimed;
@@ -147,7 +147,8 @@ int main(int, char**) {
 
         for (std::size_t i = 0; i < num_reader_threads; ++i) {
           const std::uint64_t v = inside[i].value.load(std::memory_order_relaxed);
-          assert((v == 0 || v > old) && "a reader region that saw the old version was still visible after rcu_synchronize");
+          assert((v == 0 || v > old) &&
+                 "a reader region that saw the old version was still visible after rcu_synchronize");
         }
 
         std::uint64_t current = reclaimed.value.load(std::memory_order_relaxed);
@@ -162,7 +163,6 @@ int main(int, char**) {
     writer.join();
     readers.clear();
   }
-
 
   {
     // Lost wake-up test. rcu_synchronize sets a "waiting" flag, scans the
@@ -180,10 +180,10 @@ int main(int, char**) {
     // writes miss in the cache and delay the visibility of the flag store,
     // which widens the window. The main thread fails the test if a round does
     // not finish within `hang_timeout`.
-    constexpr std::uint32_t max_unlock_delay = 200;
+    constexpr std::uint32_t max_unlock_delay  = 200;
     constexpr std::size_t num_contended_lines = 16;
-    constexpr auto test_duration = std::chrono::seconds(1);
-    constexpr auto hang_timeout  = std::chrono::seconds(120);
+    constexpr auto test_duration              = std::chrono::seconds(1);
+    constexpr auto hang_timeout               = std::chrono::seconds(120);
 
     PaddedVersion round;
     PaddedVersion entered;
