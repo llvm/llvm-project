@@ -226,10 +226,11 @@ static void convertToGuardPredicates(
 }
 
 // After creating a control flow hub, the operands of PHINodes in an outgoing
-// block Out no longer match the predecessors of that block. Predecessors of Out
-// that are incoming blocks to the hub are now replaced by just one edge from
-// the hub. To match this new control flow, the corresponding values from each
-// PHINode must now be moved a new PHINode in the first guard block of the hub.
+// block Out no longer match the predecessors of that block. The edges to Out
+// that are redirected through the hub are now replaced by just one edge from
+// the hub; other edges to Out, even from incoming blocks of the hub, are kept.
+// To match this new control flow, the values for the redirected edges are
+// moved from each PHINode to a new PHINode in the first guard block of the hub.
 //
 // This operation cannot be performed with SSAUpdater, because it involves one
 // new use: If the block Out is in the list of Incoming blocks, then the newly
