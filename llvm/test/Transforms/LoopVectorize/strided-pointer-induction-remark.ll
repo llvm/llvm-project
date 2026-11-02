@@ -5,6 +5,7 @@ define void @strided_pointer_induction(ptr noalias %d, ptr noalias %s, i64 %n, i
 ; CHECK:         - String: disallowed pointer induction
 entry:
   br label %loop
+
 loop:
   %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
   %p = phi ptr [ %s, %entry ], [ %p.next, %loop ]
@@ -15,6 +16,7 @@ loop:
   %i.next = add i64 %i, 1
   %ec = icmp eq i64 %i.next, %n
   br i1 %ec, label %exit, label %loop
+
 exit:
   ret void
 }
@@ -24,6 +26,7 @@ define i32 @unidentified_phi(ptr %p, i64 %n) {
 ; CHECK:         - String: value that could not be identified as reduction is used outside the loop
 entry:
   br label %loop
+
 loop:
   %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
   %acc = phi i32 [ 0, %entry ], [ %sel, %loop ]
@@ -36,6 +39,7 @@ loop:
   %i.next = add i64 %i, 1
   %ec = icmp eq i64 %i.next, %n
   br i1 %ec, label %exit, label %loop
+
 exit:
   ret i32 %sel
 }
