@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/TargetFolder.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -802,11 +803,9 @@ ModuleTranslation::ModuleTranslation(Operation *module,
 }
 
 ModuleTranslation::~ModuleTranslation() {
-  // Destroy extensions while the rest of the translation state is still alive.
-  extensions.clear();
+  if (ompBuilder && !ompBuilder->isFinalized())
+    ompBuilder->finalize();
 }
-
-ModuleTranslation::Extension::~Extension() = default;
 
 void ModuleTranslation::forgetMapping(Region &region) {
   SmallVector<Region *> toProcess;
@@ -2596,6 +2595,32 @@ void ModuleTranslation::remapAllValuesWith(llvm::Value *oldValue,
       entry.second = newValue;
 }
 
+llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
+  if (!ompBuilder) {
+    ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
+
+    // Flags represented as top-level OpenMP dialect attributes are set in
+    // `OpenMPDialectLLVMIRTranslationInterface::amendOperation()`. Here we set
+    // the default configuration.
+    llvm::OpenMPIRBuilderConfig config(
+        /* IsTargetDevice = */ false, /* IsGPU = */ false,
+        /* OpenMPOffloadMandatory = */ false,
+        /* HasRequiresReverseOffload = */ false,
+        /* HasRequiresUnifiedAddress = */ false,
+        /* HasRequiresUnifiedSharedMemory = */ false,
+        /* HasRequiresDynamicAllocators = */ false);
+    unsigned int defaultAS =
+        llvmModule->getDataLayout().getProgramAddressSpace();
+    config.setDefaultTargetAS(defaultAS);
+    config.setRuntimeCC(llvmModule->getTargetTriple().isSPIRV()
+                            ? llvm::CallingConv::SPIR_FUNC
+                            : llvm::CallingConv::C);
+    ompBuilder->setConfig(std::move(config));
+    ompBuilder->initialize();
+  }
+  return ompBuilder.get();
+}
+
 llvm::vfs::FileSystem &ModuleTranslation::getFileSystem() {
   if (fileSystem)
     return *fileSystem;
@@ -2765,12 +2790,9 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // beforehand.
   translator.debugTranslation->addModuleFlagsIfNotPresent();
 
-  // Let dialect translations complete their pending work (e.g. OpenMP region
-  // outlining) prior to verifying the module. Index-based iteration tolerates
-  // extensions created during finalization.
-  for (size_t i = 0; i < translator.extensions.size(); ++i)
-    if (failed(translator.extensions.begin()[i].second->finalize()))
-      return nullptr;
+  // Call the OpenMP IR Builder callbacks prior to verifying the module
+  if (auto *ompBuilder = translator.getOpenMPBuilder())
+    ompBuilder->finalize();
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))
