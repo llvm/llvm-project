@@ -2567,7 +2567,7 @@ public:
       return rewriter.notifyMatchFailure(op, "operand may be volatile");
 
     fir::FirOpBuilder builder{rewriter, op.getOperation()};
-    const mlir::Location &loc = op->getLoc();
+    mlir::Location loc = op->getLoc();
     mlir::MLIRContext *ctx = builder.getContext();
 
     // Decide where the temporary lives before emitting any IR. Only a
