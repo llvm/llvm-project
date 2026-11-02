@@ -7,12 +7,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExceptionAnalyzer.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang::tidy::utils {
 
 struct ExceptionAnalyzer::AnalysisContext {
   llvm::DenseMap<const FunctionDecl *, ExceptionInfo> Completed;
-  unsigned RecursionGeneration = 0;
+  llvm::DenseMap<const FunctionDecl *,
+                 llvm::SmallPtrSet<const FunctionDecl *, 4>>
+      Callees;
+  llvm::SmallVector<llvm::SmallPtrSet<const FunctionDecl *, 8>, 16>
+      RecursiveDependencies;
+
+  bool hasActiveCallee(const FunctionDecl *Root,
+                       const CallStack &Caller) const {
+    if (Caller.empty())
+      return false;
+    llvm::SmallPtrSet<const FunctionDecl *, 32> Visited;
+    llvm::SmallVector<const FunctionDecl *, 32> Pending{Root};
+    while (!Pending.empty()) {
+      const auto *Current = Pending.pop_back_val();
+      if (!Visited.insert(Current).second)
+        continue;
+      if (Caller.contains(Current))
+        return true;
+      const auto Children = Callees.find(Current);
+      if (Children != Callees.end())
+        Pending.append(Children->second.begin(), Children->second.end());
+    }
+    return false;
+  }
 };
 
 ExceptionAnalyzer::ExceptionInfo
@@ -497,21 +523,33 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     CallStack &CallStack, SourceLocation CallLoc, AnalysisContext &Analysis) {
   if (!Func || (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
+  if (!CallStack.empty())
+    Analysis.Callees[CallStack.back().first].insert(Func);
   if (CallStack.contains(Func)) {
-    ++Analysis.RecursionGeneration;
+    Analysis.RecursiveDependencies.back().insert(Func);
     return ExceptionInfo::createNonThrowing();
   }
 
-  // A caught exception and a recursive back edge depend on the current path.
-  // Reuse only complete analyses without either dependency.
+  // The shared direct call graph avoids storing a transitive callee set in
+  // every cache entry. A new caller must not cut off a traversed function.
   if (Caught.empty()) {
     const auto Cached = Analysis.Completed.find(Func);
-    if (Cached != Analysis.Completed.end())
+    if (Cached != Analysis.Completed.end() &&
+        !Analysis.hasActiveCallee(Func, CallStack))
       return Cached->second.withCallerStack(Func, CallStack, CallLoc);
   }
-  const unsigned Generation = Analysis.RecursionGeneration;
+
+  Analysis.RecursiveDependencies.emplace_back();
   const auto Finish = [&](ExceptionInfo Result) {
-    if (Caught.empty() && Generation == Analysis.RecursionGeneration)
+    auto Dependencies = std::move(Analysis.RecursiveDependencies.back());
+    Analysis.RecursiveDependencies.pop_back();
+    // A back edge to this root is resolved by its complete traversal. Edges
+    // to an ancestor still depend on that caller's unfinished analysis.
+    Dependencies.erase(Func);
+    if (!Analysis.RecursiveDependencies.empty())
+      Analysis.RecursiveDependencies.back().insert(Dependencies.begin(),
+                                                   Dependencies.end());
+    if (Caught.empty() && Dependencies.empty())
       Analysis.Completed.try_emplace(
           Func, Result.withCallerStack(Func, {}, Func->getLocation()));
     return Result;
@@ -544,13 +582,13 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   // Functions without a visible body can still be known non-throwing from their
   // exception specification.
   if (!canThrow(Func))
-    return ExceptionInfo::createNonThrowing();
+    return Finish(ExceptionInfo::createNonThrowing());
 
   auto Result = ExceptionInfo::createUnknown();
 
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
     if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
-      return ExceptionInfo::createNonThrowing();
+      return Finish(ExceptionInfo::createNonThrowing());
 
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});

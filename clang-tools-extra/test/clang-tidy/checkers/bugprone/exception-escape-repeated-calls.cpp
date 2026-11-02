@@ -79,3 +79,52 @@ void all_caught() noexcept {
   } catch (...) {
   }
 }
+
+void recursive_leaf() {
+  recursive_leaf();
+  throw 1;
+}
+
+template <int N> void repeated_recursive() {
+  repeated_recursive<N - 1>();
+  repeated_recursive<N - 1>();
+}
+template <> void repeated_recursive<0>() { recursive_leaf(); }
+
+void repeated_recursive_escape() noexcept { repeated_recursive<30>(); }
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'repeated_recursive_escape' which should not throw exceptions [bugprone-exception-escape]
+
+void recursive_all_caught() noexcept {
+// CHECK-MESSAGES-NOT: warning: an exception may be thrown in function 'recursive_all_caught'
+  try {
+    repeated_recursive<30>();
+  } catch (int) {
+  }
+}
+
+void cache_context_a();
+void cache_context_b();
+void enter_b() { cache_context_b(); }
+void cache_context_a() { cache_context_b(); }
+void cache_context_b() {
+  try {
+    cache_context_a();
+  } catch (double) {
+    throw 1;
+  }
+  throw 2.0;
+}
+
+// The first call caches a complete component. A callee is active during the
+// second call, so reusing that result would invent an escaping int exception.
+void active_caller_caught() noexcept {
+// CHECK-MESSAGES-NOT: warning: an exception may be thrown in function 'active_caller_caught'
+  try {
+    cache_context_a();
+  } catch (...) {
+  }
+  try {
+    enter_b();
+  } catch (double) {
+  }
+}
