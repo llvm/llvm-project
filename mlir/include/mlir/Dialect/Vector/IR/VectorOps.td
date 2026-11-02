@@ -328,7 +328,7 @@ def Vector_ReductionOp :
 
 def Vector_MultiDimReductionOp :
   Vector_Op<"multi_reduction", [Pure,
-     AllTypesMatch<["dest", "acc"]>,
+     AllTypesMatch<["result", "acc"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      DeclareOpInterfaceMethods<ArithFastMathInterface>,
@@ -343,7 +343,7 @@ def Vector_MultiDimReductionOp :
                    DefaultValuedAttr<
                      Arith_FastMathAttr,
                      "::mlir::arith::FastMathFlags::none">:$fastmath)>,
-    Results<(outs AnyType:$dest)> {
+    Results<(outs AnyType:$result)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
     Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
@@ -382,7 +382,7 @@ def Vector_MultiDimReductionOp :
       return ::llvm::cast<VectorType>(getSource().getType());
     }
     Type getDestType() {
-      return getDest().getType();
+      return getResult().getType();
     }
 
     bool isReducedDim(int64_t d) {
@@ -407,7 +407,7 @@ def Vector_MultiDimReductionOp :
   }];
   let assemblyFormat =
     "$kind `,` $source `,` $acc (`fastmath` `` $fastmath^)? attr-dict "
-    "$reduction_dims `:` type($source) `to` type($dest)";
+    "$reduction_dims `:` type($source) `to` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -666,8 +666,8 @@ def SourceVectorEvenElementCount : PredOpTrait<
 def Vector_DeinterleaveOp :
   Vector_Op<"deinterleave", [Pure,
     SourceVectorEvenElementCount,
-    ResultIsHalfSourceVectorType<"res1">,
-    AllTypesMatch<["res1", "res2"]>,
+    ResultIsHalfSourceVectorType<"resultEven">,
+    AllTypesMatch<["resultEven", "resultOdd"]>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
     ]> {
       let summary = "constructs two vectors by deinterleaving an input vector";
@@ -702,10 +702,10 @@ def Vector_DeinterleaveOp :
       }];
 
       let arguments = (ins AnyVectorOfNonZeroRank:$source);
-      let results = (outs AnyVectorOfNonZeroRank:$res1, AnyVectorOfNonZeroRank:$res2);
+      let results = (outs AnyVectorOfNonZeroRank:$resultEven, AnyVectorOfNonZeroRank:$resultOdd);
 
       let assemblyFormat = [{
-        $source attr-dict `:` type($source) `->` type($res1)
+        $source attr-dict `:` type($source) `->` type($resultEven)
       }];
 
       let extraClassDeclaration = [{
@@ -713,7 +713,7 @@ def Vector_DeinterleaveOp :
           return ::llvm::cast<VectorType>(getSource().getType());
         }
         VectorType getResultVectorType() {
-          return ::llvm::cast<VectorType>(getRes1().getType());
+          return ::llvm::cast<VectorType>(getResultEven().getType());
         }
       }];
     }
@@ -877,7 +877,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
     Pure,
-    ShapedTypeMatchesElementCountAndTypes<"dest", "elements">]> {
+    ShapedTypeMatchesElementCountAndTypes<"result", "elements">]> {
   let summary = "operation that defines a vector from scalar elements";
   let description = [{
     This operation defines a vector from one or multiple scalar elements. The
@@ -908,8 +908,8 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyFixedVectorOfAnyRank:$dest);
-  let assemblyFormat = "$elements attr-dict `:` type($dest)";
+  let results = (outs AnyFixedVectorOfAnyRank:$result);
+  let assemblyFormat = "$elements attr-dict `:` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
@@ -3051,7 +3051,7 @@ def VectorScaleOp : Vector_Op<"vscale",
     Right now we only support one contiguous set of scalable dimensions, all of
     them grouped and scaled with the value returned by 'vscale'.
   }];
-  let results = (outs Index:$res);
+  let results = (outs Index:$result);
   let assemblyFormat = "attr-dict";
 
   let extraClassDefinition = [{
