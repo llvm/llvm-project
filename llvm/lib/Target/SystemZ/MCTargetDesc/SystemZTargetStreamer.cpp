@@ -314,8 +314,9 @@ const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(
                                   MCConstantExpr::create(1, Ctx), Ctx);
 }
 
-const MCExpr *SystemZTargetGOFFStreamer::createWordDiffExpr(
-    MCContext &Ctx, const MCSymbol *Hi, const MCSymbol *Lo) {
+const MCExpr *SystemZTargetzOSStreamer::createWordDiffExpr(MCContext &Ctx,
+                                                           const MCSymbol *Hi,
+                                                           const MCSymbol *Lo) {
   assert(Hi && Lo && "Symbols required to calculate expression");
   return MCBinaryExpr::createLShr(
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(Hi, Ctx),

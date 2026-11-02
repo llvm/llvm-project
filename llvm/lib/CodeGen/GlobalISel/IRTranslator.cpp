@@ -124,8 +124,6 @@ class IRTranslatorImpl {
 
     using const_vreg_iterator =
         DenseMap<const Value *, VRegListT *>::const_iterator;
-    using const_offset_iterator =
-        DenseMap<const Value *, OffsetListT *>::const_iterator;
 
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
