@@ -623,8 +623,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
   StringRef IncPath = getIncludePath();
   SmallString<128> SysUsr(D.SysRoot);
   SysUsr.append("/usr/");
-  const char *IncFlag = IncPath.starts_with(SysUsr) ? "-idirafter"
-                                                    : "-internal-isystem";
+  const char *IncFlag =
+      IncPath.starts_with(SysUsr) ? "-idirafter" : "-internal-isystem";
   CC1Args.push_back(IncFlag);
   CC1Args.push_back(DriverArgs.MakeArgString(IncPath));
   SmallString<128> LibHipCxxPath(IncPath);
