@@ -1106,6 +1106,18 @@ public:
   /// @}
 
   /// @}
+  /// @name Utility function for querying and setting the debugger tuning
+  /// @{
+
+  /// Returns the debugger tuning recorded by the "debugger-tuning" module flag,
+  /// or Default is absent or an unrecognized kind.
+  DebuggerKind getDebuggerTuning() const;
+
+  /// Set the debugger tuning.
+  void setDebuggerTuning(DebuggerKind Tuning);
+  /// @}
+
+  /// @}
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 

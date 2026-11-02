@@ -505,7 +505,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
   for (auto &RE : Regs) {
     const Record *Reg = RE.TheDef;
     const RecordVal *V = Reg->getValue("DwarfAlias");
-    if (!V || !V->getValue())
+    if (!V)
       continue;
 
     const DefInit *DI = cast<DefInit>(V->getValue());
