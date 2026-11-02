@@ -170,6 +170,8 @@ static void cloneFrameInfo(
     DstMFI.setStackProtectorIndex(SrcMFI.getStackProtectorIndex());
   }
 
+  DstMFI.setStackProtectorLayoutOnly(SrcMFI.hasStackProtectorLayoutOnly());
+
   // FIXME: Needs test, missing MIR serialization.
   if (SrcMFI.hasFunctionContextIndex()) {
     DstMFI.setFunctionContextIndex(SrcMFI.getFunctionContextIndex());
