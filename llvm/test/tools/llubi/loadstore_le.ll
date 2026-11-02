@@ -113,8 +113,11 @@ define void @main() {
   %alloc_vec_padding = alloca i16
   store <3 x b4> poison, ptr %alloc_vec_padding
   %all_poison_vec_bytes = load b16, ptr %alloc_vec_padding
+  ; The padding byte's non-padding bits are all poison, so the padding is
+  ; poison.
   store <3 x b4> <b4 1, b4 poison, b4 poison>, ptr %alloc_vec_padding
   %mixed_poison_vec_bytes = load b16, ptr %alloc_vec_padding
+  ; The padding byte has a concrete non-padding bit, so the padding is zero.
   store <3 x b4> <b4 poison, b4 poison, b4 1>, ptr %alloc_vec_padding
   %mixed_poison_vec_bytes2 = load b16, ptr %alloc_vec_padding
 
