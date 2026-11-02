@@ -536,6 +536,18 @@ def STriw_ctr : STInst<(outs),
       (ins IntRegs:$addr, s32_0Imm:$off, CtrRegs:$src1),
       ".error \"should not emit\"", []>;
 
+// Load circular pseudo-register.
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
+def LDriw_circ : LDInst<(outs CircRegs:$dst),
+                        (ins IntRegs:$addr),
+                        ".error \"should not emit\"", []>;
+
+// Store circular pseudo-register.
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
+def STriw_circ : STInst<(outs),
+      (ins IntRegs:$addr, CircRegs:$src1),
+      ".error \"should not emit\"", []>;
+
 let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
     isAsmParserOnly = 1 in
 def TFRI64_V4 : InstHexagon<(outs DoubleRegs:$dst),
@@ -579,16 +591,16 @@ def DuplexIClassF:  InstDuplex < 0xF >;
 // allocate the correct pair of CSx and Mx registers.
 multiclass NewCircularLoad<RegisterClass RC, MemAccessSize MS> {
 
-let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
+let isCodeGenOnly = 1, isPseudo = 1,
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
   // Use timing class of L2_loadrb_pci.
   def NAME#_pci : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
-       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, IntRegs:$Cs),
+       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, CircRegs:$CSMu2),
        ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_5ceb2f9e>;
 
   // Use timing class of L2_loadrb_pcr.
   def NAME#_pcr : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
-       (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Cs),
+       (ins IntRegs:$Rx32in, CircRegs:$CSMu2),
        ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_075c8dd8>;
 }
 }
@@ -602,16 +614,16 @@ defm PS_loadrd : NewCircularLoad<DoubleRegs, DoubleWordAccess>;
 
 multiclass NewCircularStore<RegisterClass RC, MemAccessSize MS> {
 
-let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
+let isCodeGenOnly = 1, isPseudo = 1,
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
   // Use timing class of S2_storerb_pci.
   def NAME#_pci : STInst<(outs IntRegs:$Rx32),
-       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
+       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, CircRegs:$CSMu2, RC:$Rt32),
        ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_b4dc7630>;
 
   // Use timing class of S2_storerb_pcr.
   def NAME#_pcr : STInst<(outs IntRegs:$Rx32),
-       (ins IntRegs:$Rx32in, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
+       (ins IntRegs:$Rx32in, CircRegs:$CSMu2, RC:$Rt32),
        ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_a2b365d2>;
 }
 }

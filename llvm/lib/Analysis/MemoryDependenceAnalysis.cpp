@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -45,7 +46,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
@@ -68,22 +68,6 @@ STATISTIC(NumCacheDirtyNonLocalPtr,
 STATISTIC(NumUncacheNonLocalPtr, "Number of uncached non-local ptr responses");
 STATISTIC(NumCacheCompleteNonLocalPtr,
           "Number of block queries that were completely cached");
-
-// Limit for the number of instructions to scan in a block.
-
-static cl::opt<unsigned> BlockScanLimit(
-    "memdep-block-scan-limit", cl::Hidden, cl::init(100),
-    cl::desc("The number of instructions to scan in a block in memory "
-             "dependency analysis (default = 100)"));
-
-static cl::opt<unsigned>
-    BlockNumberLimit("memdep-block-number-limit", cl::Hidden, cl::init(200),
-                     cl::desc("The number of blocks to scan during memory "
-                              "dependency analysis (default = 200)"));
-
-static cl::opt<unsigned> CacheGlobalLimit(
-    "memdep-cache-global-limit", cl::Hidden, cl::init(10000),
-    cl::desc("The max number of entries allowed in a cache (default = 10000)"));
 
 // Limit on the number of memdep results to process.
 static const unsigned int NumResultsLimit = 100;
@@ -304,11 +288,11 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   // cast graph down only.
   Value *LoadOperand = LI->getPointerOperand()->stripPointerCasts();
 
-  // It's is not safe to walk the use list of global value, because function
+  // It's is not safe to walk the use list of constant, because function
   // passes aren't allowed to look outside their functions.
   // FIXME: this could be fixed by filtering instructions from outside
   // of current function.
-  if (isa<GlobalValue>(LoadOperand))
+  if (isa<Constant>(LoadOperand))
     return MemDepResult::getUnknown();
 
   Instruction *ClosestDependency = nullptr;
@@ -349,39 +333,6 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
                             MemDepResult::getDef(ClosestDependency), nullptr));
   ReverseNonLocalDefsCache[ClosestDependency].insert(LI);
   return MemDepResult::getNonLocal();
-}
-
-// Check if SI that may alias with MemLoc can be safely skipped. This is
-// possible in case if SI can only must alias or no alias with MemLoc (no
-// partial overlapping possible) and it writes the same value that MemLoc
-// contains now (it was loaded before this store and was not modified in
-// between).
-static bool canSkipClobberingStore(const StoreInst *SI,
-                                   const MemoryLocation &MemLoc,
-                                   Align MemLocAlign, BatchAAResults &BatchAA,
-                                   unsigned ScanLimit) {
-  if (!MemLoc.Size.hasValue())
-    return false;
-  if (MemoryLocation::get(SI).Size != MemLoc.Size)
-    return false;
-  if (MemLoc.Size.isScalable())
-    return false;
-  if (std::min(MemLocAlign, SI->getAlign()).value() <
-      MemLoc.Size.getValue().getKnownMinValue())
-    return false;
-
-  auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
-  if (!LI || LI->getParent() != SI->getParent())
-    return false;
-  if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
-    return false;
-  unsigned NumVisitedInsts = 0;
-  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
-    if (++NumVisitedInsts > ScanLimit ||
-        isModSet(BatchAA.getModRefInfo(I, MemLoc)))
-      return false;
-
-  return true;
 }
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
@@ -598,7 +549,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         return MemDepResult::getDef(Inst);
       if (isInvariantLoad)
         continue;
-      if (canSkipClobberingStore(SI, MemLoc, MemLocAlign, BatchAA, *Limit))
+      if (isStorePreservingMemoryLocation(SI, MemLoc, MemLocAlign, BatchAA,
+                                          *Limit))
         continue;
       return MemDepResult::getClobber(Inst);
     }
@@ -1185,7 +1137,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   }
 
   // If the size of this cache has surpassed the global limit, stop here.
-  if (Cache->size() > CacheGlobalLimit)
+  if (Cache->size() > Opts.memdep_cache_global_limit)
     return false;
 
   // Otherwise, either this is a new block, a block with an invalid cache
@@ -1214,7 +1166,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // won't get any reuse from currently inserted values, because we don't
   // revisit blocks after we insert info for them.
   unsigned NumSortedEntries = Cache->size();
-  unsigned WorklistEntries = BlockNumberLimit;
+  unsigned WorklistEntries = Opts.memdep_block_number_limit;
   bool GotWorklistLimit = false;
   LLVM_DEBUG(AssertSorted(*Cache));
 
@@ -1376,16 +1328,17 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       if (!PredPtrVal) {
         // If translation failed but the (partially) translated address
         // expression depends on a select instruction, try to translate both
-        // sides of that select.  The select condition is recovered from the
+        // sides of that select.  The select instruction is recovered from the
         // failed `PredPointer` (the phi has already been resolved to the
         // select there), but the two sides must be translated from the
         // original, untranslated `Pointer`.
-        if (Value *Cond = PredPointer.getSelectCondition()) {
+        if (SelectInst *Sel = PredPointer.getSelect()) {
           SelectAddr::SelectAddrs SelAddrs =
-              PHITransAddr(Pointer).translateValue(BB, Pred, &DT, Cond);
+              PHITransAddr(Pointer).translateValue(BB, Pred, &DT,
+                                                   Sel->getCondition());
           if (SelAddrs.first && SelAddrs.second) {
             Result.push_back(NonLocalDepResult(Pred, MemDepResult::getSelect(),
-                                               SelectAddr(Cond, SelAddrs)));
+                                               SelectAddr(Sel, SelAddrs)));
             NonLocalPointerInfo &NLPI = NonLocalPointerDeps[CacheKey];
             NLPI.Pair = BBSkipFirstBlockPair();
             continue;
@@ -1779,8 +1732,7 @@ void MemoryDependenceResults::verifyRemoved(Instruction *D) const {
 
 AnalysisKey MemoryDependenceAnalysis::Key;
 
-MemoryDependenceAnalysis::MemoryDependenceAnalysis()
-    : DefaultBlockScanLimit(BlockScanLimit) {}
+MemoryDependenceAnalysis::MemoryDependenceAnalysis() = default;
 
 MemoryDependenceResults
 MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
@@ -1788,7 +1740,10 @@ MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  return MemoryDependenceResults(AA, AC, TLI, DT, DefaultBlockScanLimit);
+  return MemoryDependenceResults(
+      AA, AC, TLI, DT,
+      DefaultBlockScanLimit.value_or(
+          getAnalysisOptions(F).memdep_block_scan_limit));
 }
 
 char MemoryDependenceWrapperPass::ID = 0;
@@ -1818,6 +1773,14 @@ void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
 }
 
+MemoryDependenceResults::MemoryDependenceResults(AAResults &AA,
+                                                 AssumptionCache &AC,
+                                                 const TargetLibraryInfo &TLI,
+                                                 DominatorTree &DT,
+                                                 unsigned DefaultBlockScanLimit)
+    : Opts(getAnalysisOptions(*DT.getRoot()->getParent())), AA(AA), AC(AC),
+      TLI(TLI), DT(DT), EEA(DT), DefaultBlockScanLimit(DefaultBlockScanLimit) {}
+
 bool MemoryDependenceResults::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &Inv) {
   // Check whether our analysis is preserved.
@@ -1845,6 +1808,7 @@ bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  MemDep.emplace(AA, AC, TLI, DT, BlockScanLimit);
+  MemDep.emplace(AA, AC, TLI, DT,
+                 getAnalysisOptions(F).memdep_block_scan_limit);
   return false;
 }

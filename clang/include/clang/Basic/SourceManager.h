@@ -52,6 +52,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -1211,9 +1212,14 @@ public:
   /// Given \p Loc, if it is a macro location return the expansion
   /// location or the spelling location, depending on if it comes from a
   /// macro argument or not.
-  SourceLocation getFileLoc(SourceLocation Loc) const {
+  ///
+  /// If resolving \p Loc requires walking through more than \p MaxDepth
+  /// macro expansions, an invalid location is returned instead.
+  SourceLocation
+  getFileLoc(SourceLocation Loc,
+             unsigned MaxDepth = std::numeric_limits<unsigned>::max()) const {
     if (Loc.isFileID()) return Loc;
-    return getFileLocSlowCase(Loc);
+    return getFileLocSlowCase(Loc, MaxDepth);
   }
 
   /// Return the start/end of the expansion information for an
@@ -1987,7 +1993,8 @@ private:
 
   SourceLocation getExpansionLocSlowCase(SourceLocation Loc) const;
   SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
-  SourceLocation getFileLocSlowCase(SourceLocation Loc) const;
+  SourceLocation getFileLocSlowCase(SourceLocation Loc,
+                                    unsigned MaxDepth) const;
 
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
   void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,

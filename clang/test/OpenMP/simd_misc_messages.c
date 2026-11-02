@@ -274,6 +274,38 @@ void test_safelen_simdlen(void) {
 #pragma omp simd safelen(5) simdlen(6)
   for (i = 0; i < 16; ++i)
     ;
+#pragma omp simd safelen(8) simdlen(4)
+  for (i = 0; i < 16; ++i)
+    ;
+// expected-error@+1 {{the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter}}
+#pragma omp simd safelen(4) simdlen(8)
+  for (i = 0; i < 16; ++i)
+    ;
+}
+
+// GH108367
+void test_safelen_simdlen_types(void) {
+#pragma omp simd safelen(11111111111) simdlen(1)
+  for (int i = 0; i < 10; i++)
+    ;
+// expected-error@+1 {{the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter}}
+#pragma omp simd simdlen(11111111111) safelen(1)
+  for (int i = 0; i < 10; i++)
+    ;
+// expected-error@+1 {{the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter}}
+#pragma omp simd safelen(11111111111) simdlen(22222222222)
+  for (int i = 0; i < 10; i++)
+    ;
+#pragma omp simd safelen(22222222222) simdlen(11111111111)
+  for (int i = 0; i < 10; i++)
+    ;
+#pragma omp simd safelen(8u) simdlen(4)
+  for (int i = 0; i < 10; i++)
+    ;
+// expected-error@+1 {{the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter}}
+#pragma omp simd safelen(4u) simdlen(8)
+  for (int i = 0; i < 10; i++)
+    ;
 }
 
 void test_collapse(void) {

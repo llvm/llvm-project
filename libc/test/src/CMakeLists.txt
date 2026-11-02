@@ -1,72 +1,3 @@
-function(add_fp_unittest name)
-  cmake_parse_arguments(
-    "MATH_UNITTEST"
-    "NEED_MPFR;NEED_MPFR_F128;NEED_MPC;FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
-    "" # Single value arguments
-    "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  if(MATH_UNITTEST_NEED_MPC)
-    set(MATH_UNITTEST_NEED_MPFR TRUE)
-    if(NOT LIBC_TESTS_CAN_USE_MPC)
-      message(VERBOSE "Complex test ${name} will be skipped as MPC library is not available.")
-      return()
-    endif()
-    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPCWrapper)
-  endif()
-
-  # TODO: To be removed when we find a workaround to run MPFR tests for
-  # emulated type where compiler doesn't support the native float128
-  # TODO: Check mpfr_buildopt_float128_p() returns non-zero.
-  if(MATH_UNITTEST_NEED_MPFR_F128)
-    set(MATH_UNITTEST_NEED_MPFR TRUE)
-    if(NOT LIBC_TYPES_HAS_NATIVE_FLOAT128)
-      message(VERBOSE "Math test ${name} will be skipped as native float128 support in MPFR is not available.")
-      return()
-    endif()
-  endif()
-
-  if(MATH_UNITTEST_NEED_MPFR)
-    if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message(VERBOSE "Math test ${name} will be skipped as MPFR library is not available.")
-      return()
-    endif()
-  endif()
-
-  if(MATH_UNITTEST_FULL_BUILD_ONLY)
-    set(test_type FULL_BUILD_ONLY)
-  elseif(MATH_UNITTEST_OVERLAY_BUILD_ONLY)
-    set(test_type OVERLAY_BUILD_ONLY)
-  endif()
-  if(MATH_UNITTEST_NEED_MPFR)
-    if(MATH_UNITTEST_FULL_BUILD_ONLY)
-      message(FATAL_ERROR "Full-build math test cannot require MPFR.")
-    endif()
-    set(test_type OVERLAY_BUILD_ONLY)
-    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
-    if(NOT(LIBC_TARGET_OS_IS_DARWIN) AND NOT(LIBC_TARGET_OS_IS_FREEBSD))
-      # macOS/FreeBSD does not have libatomic.
-      list(APPEND MATH_UNITTEST_LINK_LIBRARIES -latomic)
-    endif()
-  endif()
-
-  set(deps libc.hdr.math_macros libc.test.UnitTest.FPTestHelpers)
-  if(MATH_UNITTEST_DEPENDS)
-    list(APPEND deps ${MATH_UNITTEST_DEPENDS})
-  endif()
-
-  add_libc_test(
-    ${name}
-    ${test_type}
-    LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
-      "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
-    DEPENDS
-      libc.hdr.stdint_proxy
-      "${deps}"
-  )
-endfunction()
-
 add_subdirectory(__support)
 add_subdirectory(arpa)
 add_subdirectory(complex)
@@ -100,6 +31,7 @@ add_subdirectory(inttypes)
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(err)
   add_subdirectory(fcntl)
+  add_subdirectory(grp)
   add_subdirectory(poll)
   add_subdirectory(sched)
   add_subdirectory(sys)
@@ -117,6 +49,7 @@ endif()
 add_subdirectory(assert)
 add_subdirectory(compiler)
 add_subdirectory(dirent)
+add_subdirectory(libintl)
 add_subdirectory(locale)
 add_subdirectory(netdb)
 add_subdirectory(nl_types)

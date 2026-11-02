@@ -145,6 +145,13 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   bool prefersFPUse(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                     const AArch64RegisterInfo &TRI, unsigned Depth = 0) const;
 
+  /// \returns true if a conversion operand should use FPRs based on operand
+  /// sizes and constraints from its defs or uses.
+  bool shouldUseFPRForCvtOperand(const MachineInstr &MI, bool BankedOpIsDef,
+                                 bool ForceFPRForBankedOp16,
+                                 bool ForceFPRForOtherOp16, bool AllowFPRCVT,
+                                 bool CheckBankedOpUses) const;
+
   /// \returns true if the load \p MI is likely loading from a floating-point
   /// type.
   bool isLoadFromFPType(const MachineInstr &MI) const;

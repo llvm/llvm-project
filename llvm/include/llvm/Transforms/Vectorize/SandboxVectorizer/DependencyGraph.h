@@ -29,6 +29,7 @@
 #include "llvm/SandboxIR/IntrinsicInst.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm::sandboxir {
 
@@ -561,7 +562,7 @@ public:
   }
   /// Build/extend the dependency graph such that it includes \p Instrs. Returns
   /// the range of instructions added to the DAG.
-  LLVM_ABI Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
+  LLVM_ABI Interval<Instruction> extend(BndlRef<Instruction *> Instrs);
   /// \Returns the range of instructions included in the DAG.
   Interval<Instruction> getInterval() const { return DAGInterval; }
   void clear() {

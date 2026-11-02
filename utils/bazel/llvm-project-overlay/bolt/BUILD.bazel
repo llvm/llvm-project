@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load(":targets.bzl", "bolt_targets")
 
@@ -21,10 +22,14 @@ package(
 
 licenses(["notice"])
 
-genrule(
+write_file(
     name = "generate_vcs_revision",
-    outs = ["include/VCSVersion.inc"],
-    cmd = "echo '#undef BOLT_REVISION' >> $@\n",
+    out = "include/VCSVersion.inc",
+    content = [
+        "#undef BOLT_REVISION",
+        "",
+    ],
+    newline = "unix",
 )
 
 expand_template(

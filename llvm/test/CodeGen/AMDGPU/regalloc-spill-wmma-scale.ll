@@ -1,4 +1,10 @@
 ; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck %s
+; RUN: %if asserts %{ llc -mtriple=amdgpu12.50 -mcpu=gfx1250 -stress-regalloc=16 -verify-machineinstrs -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=REASSIGN %}
+; RUN: %if asserts %{ llc -mtriple=amdgpu12.50 -mcpu=gfx1250 -stress-regalloc=16 -verify-machineinstrs -enable-local-reassign=true -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=REASSIGN %}
+; RUN: %if asserts %{ llc -mtriple=amdgpu12.50 -mcpu=gfx1250 -stress-regalloc=16 -verify-machineinstrs -enable-local-reassign=false -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=NO-REASSIGN --implicit-check-not="can reassign:" %}
+
+; REASSIGN: can reassign:
+; NO-REASSIGN: GREEDY REGISTER ALLOCATION
 
 ; Scale operands of WMMA are limited to low 256 VGPRs
 ; Make sure we do not spill scale operands because of the low 256 restriction.

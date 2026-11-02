@@ -7,8 +7,11 @@
 #include <cstdint>
 #include <thread>
 
+static volatile int Runs;
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   std::this_thread::sleep_for(std::chrono::seconds(1));
+  if (++Runs >= 3)
+    Runs = 3;
   return 0;
 }
-

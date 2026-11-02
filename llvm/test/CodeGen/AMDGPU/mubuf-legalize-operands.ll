@@ -723,7 +723,7 @@ define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, 
 ; GFX9_W64-NEXT:    ;;#ASMSTART
 ; GFX9_W64-NEXT:    s_mov_b32 s4, 17
 ; GFX9_W64-NEXT:    ;;#ASMEND
-; GFX9_W64-NEXT:    v_mov_b32_e32 v8, s4
+; GFX9_W64-NEXT:    v_mov_b32_e32 v9, s4
 ; GFX9_W64-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX9_W64-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v0
@@ -735,9 +735,9 @@ define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, 
 ; GFX9_W64-NEXT:    s_and_b64 s[6:7], vcc, s[6:7]
 ; GFX9_W64-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
 ; GFX9_W64-NEXT:    s_nop 0
-; GFX9_W64-NEXT:    buffer_load_format_x v9, v8, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    buffer_load_format_x v8, v9, s[8:11], 0 idxen
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX9_W64-NEXT:    ; implicit-def: $vgpr8
+; GFX9_W64-NEXT:    ; implicit-def: $vgpr9
 ; GFX9_W64-NEXT:    s_xor_b64 exec, exec, s[6:7]
 ; GFX9_W64-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX9_W64-NEXT:  ; %bb.2:
@@ -759,7 +759,7 @@ define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, 
 ; GFX9_W64-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX9_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX9_W64-NEXT:    s_nop 0
-; GFX9_W64-NEXT:    buffer_load_format_x v9, v0, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    buffer_load_format_x v8, v0, s[8:11], 0 idxen
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr0
 ; GFX9_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -769,7 +769,7 @@ define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, 
 ; GFX9_W64-NEXT:  .LBB2_6: ; %bb2
 ; GFX9_W64-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
-; GFX9_W64-NEXT:    global_store_dword v[11:12], v9, off
+; GFX9_W64-NEXT:    global_store_dword v[11:12], v8, off
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9_W64-NEXT:    s_setpc_b64 s[30:31]
 ;

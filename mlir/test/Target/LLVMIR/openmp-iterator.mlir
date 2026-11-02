@@ -260,9 +260,12 @@ llvm.func @task_affinity_iterator_dynamic_tripcount(
 }
 
 // CHECK-LABEL: define internal void @task_affinity_iterator_dynamic_tripcount
-// CHECK: [[DIFF:%.*]] = sub i64 {{.*}}, {{.*}}
-// CHECK: [[DIV:%.*]] = sdiv i64 [[DIFF]], {{.*}}
-// CHECK: [[TRIPS:%.*]] = add i64 [[DIV]], 1
+// CHECK: [[DIFF:%.*]] = sub nsw i65 {{.*}}, {{.*}}
+// CHECK: [[EMPTY:%.*]] = icmp slt i65 {{.*}}, {{.*}}
+// CHECK: [[DIV:%.*]] = udiv i65 [[DIFF]], {{.*}}
+// CHECK: [[COUNT:%.*]] = add i65 [[DIV]], 1
+// CHECK: [[CLAMPED:%.*]] = select i1 [[EMPTY]], i65 0, i65 [[COUNT]]
+// CHECK: [[TRIPS:%.*]] = trunc i65 [[CLAMPED]] to i64
 // CHECK: [[SCALED:%.*]] = mul i64 1, [[TRIPS]]
 // CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 [[SCALED]]
 
@@ -323,7 +326,7 @@ llvm.func @omp_task_depend_iterator_simple(%addr : !llvm.ptr) {
 
 // CHECK-LABEL: define void @omp_task_depend_iterator_simple
 // CHECK-SAME: (ptr %[[ADDR:[0-9]+]])
-// CHECK: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
+// CHECK: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 200)
 //
 // Iterator loop: preheader -> header -> cond -> body -> inc -> header...
 // CHECK: omp_dep_iterator.header:
@@ -369,7 +372,7 @@ llvm.func @omp_task_depend_iterator_mixed(%addr : !llvm.ptr, %plain : !llvm.ptr)
 
 // CHECK-LABEL: define void @omp_task_depend_iterator_mixed
 // CHECK-SAME: (ptr %[[ADDR2:[0-9]+]], ptr %[[PLAIN:[0-9]+]])
-// CHECK: %[[DEP_ARR2:.*]] = tail call ptr @malloc(i64 %mallocsize)
+// CHECK: %[[DEP_ARR2:.*]] = tail call ptr @malloc(i64 220)
 //
 // Plain entry at index 0
 // CHECK: %[[PLAIN_ENTRY:.*]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR2]], i64 0
@@ -409,9 +412,20 @@ llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
 // CHECK-LABEL: define void @omp_task_depend_iterator_dynamic
 //
 // Tripcount computation from dynamic bounds
-// CHECK: %[[DIFF:.*]] = sub i64 %{{.*}}, %{{.*}}
-// CHECK: %[[DIV:.*]] = sdiv i64 %[[DIFF]], %{{.*}}
-// CHECK: %[[TRIPS:.*]] = add i64 %[[DIV]], 1
+// CHECK: %[[START:.*]] = sext i64 %{{.*}} to i65
+// CHECK: %[[STOP:.*]] = sext i64 %{{.*}} to i65
+// CHECK: %[[STEP:.*]] = sext i64 %{{.*}} to i65
+// CHECK: %[[NEG:.*]] = icmp slt i65 %[[STEP]], 0
+// CHECK: %[[MAG:.*]] = sub i65 0, %[[STEP]]
+// CHECK: %[[INCR:.*]] = select i1 %[[NEG]], i65 %[[MAG]], i65 %[[STEP]]
+// CHECK: %[[LOW:.*]] = select i1 %[[NEG]], i65 %[[STOP]], i65 %[[START]]
+// CHECK: %[[HIGH:.*]] = select i1 %[[NEG]], i65 %[[START]], i65 %[[STOP]]
+// CHECK: %[[DIFF:.*]] = sub nsw i65 %[[HIGH]], %[[LOW]]
+// CHECK: %[[EMPTY:.*]] = icmp slt i65 %[[HIGH]], %[[LOW]]
+// CHECK: %[[DIV:.*]] = udiv i65 %[[DIFF]], %[[INCR]]
+// CHECK: %[[COUNT:.*]] = add i65 %[[DIV]], 1
+// CHECK: %[[CLAMPED:.*]] = select i1 %[[EMPTY]], i65 0, i65 %[[COUNT]]
+// CHECK: %[[TRIPS:.*]] = trunc i65 %[[CLAMPED]] to i64
 // CHECK: %[[SCALED:.*]] = mul i64 1, %[[TRIPS]]
 // Dynamic total = 0 + scaled trip count
 // CHECK: %[[TOTAL:.*]] = add i64 0, %[[SCALED]]
@@ -453,6 +467,47 @@ llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
 // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 %[[NDEPS2]], ptr %[[DEP_ARR2]], i32 0, ptr null)
 // CHECK: tail call void @free(ptr %[[DEP_ARR2]])
 
+// A signed i64 subtraction cannot represent this span. The two iterator
+// values are INT64_MIN and -1. The final increment to INT64_MAX - 1 is also
+// representable, as required by OpenMP 5.2 section 3.2.6.
+llvm.func @omp_task_depend_iterator_wide_span(%addr : !llvm.ptr) {
+  %min = llvm.mlir.constant(-9223372036854775808 : i64) : i64
+  %zero = llvm.mlir.constant(0 : i64) : i64
+  %max = llvm.mlir.constant(9223372036854775807 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%min to %zero step %max) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: define void @omp_task_depend_iterator_wide_span
+// CHECK: call ptr @malloc(i64 40)
+// CHECK: icmp ult i64 {{.*}}, 2
+// CHECK: call i32 @__kmpc_omp_task_with_deps(
+// CHECK-SAME: ptr {{.*}}, i32 {{.*}}, ptr {{.*}}, i32 2,
+
+// Exercise the most negative step with one iterator value, zero. The final
+// increment to INT64_MIN remains representable in the iterator type.
+llvm.func @omp_task_depend_iterator_min_step(%addr : !llvm.ptr) {
+  %zero = llvm.mlir.constant(0 : i64) : i64
+  %end = llvm.mlir.constant(-1 : i64) : i64
+  %min = llvm.mlir.constant(-9223372036854775808 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%zero to %end step %min) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: define void @omp_task_depend_iterator_min_step
+// CHECK: call ptr @malloc(i64 20)
+// CHECK: icmp ult i64 {{.*}}, 1
+// CHECK: call i32 @__kmpc_omp_task_with_deps(
+// CHECK-SAME: ptr {{.*}}, i32 {{.*}}, ptr {{.*}}, i32 1,
+
 //--- target.mlir
 
 // --------------------------------------------------------------------
@@ -482,7 +537,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // TARGET-LABEL: define void @omp_target_depend_iterator
 // TARGET-SAME: (ptr %[[ADDR:[0-9]+]])
-// TARGET-DAG: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
+// TARGET-DAG: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 200)
 //
 // Iterator loop: preheader -> header -> cond -> body -> inc -> header...
 // TARGET: omp_dep_iterator.header:

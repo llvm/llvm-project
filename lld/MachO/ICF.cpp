@@ -163,13 +163,13 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       // ICF runs before Undefineds are treated (and potentially converted into
       // DylibSymbols).
       if (isa<DylibSymbol>(sa) || isa<Undefined>(sa))
-        return sa == sb && ra.addend == rb.addend;
+        return sa == sb && ra.getAddend() == rb.getAddend();
       assert(isa<Defined>(sa));
       const auto *da = cast<Defined>(sa);
       const auto *db = cast<Defined>(sb);
       if (!da->isec() || !db->isec()) {
         assert(da->isAbsolute() && db->isAbsolute());
-        return da->value + ra.addend == db->value + rb.addend;
+        return da->value + ra.getAddend() == db->value + rb.getAddend();
       }
       isecA = da->isec();
       valueA = da->value;
@@ -197,7 +197,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     assert(isecA->kind() == isecB->kind());
     // We will compare ConcatInputSection contents in equalsVariable.
     if (isa<ConcatInputSection>(isecA))
-      return valueA + ra.addend == valueB + rb.addend;
+      return valueA + ra.getAddend() == valueB + rb.getAddend();
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
     if (isa<Symbol *>(ra.referent))
@@ -205,10 +205,10 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       // don't do `getOffset(value + addend)` because value + addend may not be
       // a valid offset in the literal section.
       return isecA->getOffset(valueA) == isecB->getOffset(valueB) &&
-             ra.addend == rb.addend;
+             ra.getAddend() == rb.getAddend();
     assert(valueA == 0 && valueB == 0);
     // For section relocs, we compare the content at the section offset.
-    return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
+    return isecA->getOffset(ra.getAddend()) == isecB->getOffset(rb.getAddend());
   };
   if (!llvm::equal(ia->relocs, ib->relocs, f))
     return false;
@@ -426,7 +426,7 @@ void ICF::run() {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
       uint32_t hash = isec->icfEqClass[icfPass % 2];
       for (const Relocation &r : isec->relocs) {
-        if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+        if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec()) {
               if (auto *referentIsec =
@@ -449,16 +449,25 @@ void ICF::run() {
     });
   }
   const bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
-  llvm::stable_sort(
-      icfInputs, [&](const ConcatInputSection *a, const ConcatInputSection *b) {
-        // When using safe_thunks, ensure that we first sort by icfEqClass and
-        // then by keepUnique (descending). This guarantees that within an
-        // equivalence class, the keepUnique inputs are always first.
-        if (useSafeThunks)
-          if (a->icfEqClass[0] == b->icfEqClass[0])
-            return a->keepUnique > b->keepUnique;
-        return a->icfEqClass[0] < b->icfEqClass[0];
-      });
+  // Sort by icfEqClass so that inputs in the same equivalence class are
+  // consecutive. When using safe_thunks, also sort by keepUnique (descending)
+  // within a class. This guarantees that within an equivalence class, the
+  // keepUnique inputs are always first. The index in the low bits keeps the
+  // order stable.
+  assert(icfInputs.size() <= (1u << 31));
+  SmallVector<uint64_t, 0> keys(icfInputs.size());
+  parallelFor(0, icfInputs.size(), [&](size_t i) {
+    uint64_t key = uint64_t(icfInputs[i]->icfEqClass[0]) << 32 | i;
+    if (useSafeThunks && !icfInputs[i]->keepUnique)
+      key |= 1u << 31;
+    keys[i] = key;
+  });
+  parallelSort(keys.begin(), keys.end());
+  std::vector<ConcatInputSection *> sorted;
+  sorted.reserve(keys.size());
+  for (uint64_t k : keys)
+    sorted.push_back(icfInputs[k & ((1u << 31) - 1)]);
+  icfInputs = std::move(sorted);
   forEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, &ICF::equalsConstant);
   });
@@ -478,7 +487,7 @@ void ICF::run() {
 
   // When using safe_thunks, we need to create thunks for all keepUnique
   // functions that can be deduplicated. Since we're creating / adding new
-  // InputSections, we can't paralellize this.
+  // InputSections, we can't parallelize this.
   if (useSafeThunks)
     forEachClassRange(0, icfInputs.size(), [&](size_t begin, size_t end) {
       applySafeThunksToRange(begin, end);
@@ -561,7 +570,7 @@ void macho::markAddrSigSymbols() {
     const InputSection *isec = addrSigSection->subsections[0].isec;
 
     for (const Relocation &r : isec->relocs) {
-      if (auto *sym = r.referent.dyn_cast<Symbol *>())
+      if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent))
         markSymAsAddrSig(sym);
       else
         error(toString(isec) + ": unexpected section relocation");
@@ -585,9 +594,18 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
 
   // The symbol of the merged body of the function that the thunk jumps to. This
   // will end up in the final binary.
-  Symbol *targetSym = target->getThunkBranchTarget(thunkBody);
+  Defined *bodySym = cast<Defined>(target->getThunkBranchTarget(thunkBody));
+  if (bodySym->branchExtensionThunk) {
+    // For branch extension thunks, follow relocations to get the original body
+    InputSection *thunk = bodySym->isec();
+    assert(thunk && !thunk->relocs.empty());
+    const Relocation &r = thunk->relocs.front();
+    assert(r.getAddend() == 0);
+    bodySym = cast<Defined>(cast<Symbol *>(r.referent));
+    assert(!bodySym->branchExtensionThunk);
+  }
 
-  return cast<Defined>(targetSym);
+  return bodySym;
 }
 void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
@@ -640,21 +658,23 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
                       (isCodeSec || isFoldableIgnoringRelocatedBytes(isec)) &&
                       keepUniqueAllowsFolding && !isec->hasAltEntry &&
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
-    if (isFoldable) {
-      foldable.push_back(isec);
-      for (Defined *d : isec->symbols)
-        if (d->unwindEntry())
-          foldable.push_back(d->unwindEntry());
-    } else if (isEhFrameSection(isec)) {
+    // Check __eh_frame before isFoldable: `ld -r` output marks it S_REGULAR
+    // instead of S_COALESCED, so it can pass hasFoldableFlags, which would
+    // collect its FDEs a second time.
+    if (isEhFrameSection(isec)) {
       // __eh_frame contains two types of records: FDEs and CIEs.
-      // Functions point to FDEs, which are already collected above via
-      // unwindEntry(). CIEs are shared headers and are not attached to
-      // individual functions. Collect only CIEs here so they can also be hashed
-      // and deduplicated.
+      // Functions point to FDEs, which are collected below via unwindEntry().
+      // CIEs are shared headers and are not attached to individual functions.
+      // Collect only CIEs here so they can also be hashed and deduplicated.
       auto *obj = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!onlyCfStrings && obj && !obj->fdes.contains(isec) &&
           !isec->shouldOmitFromOutput())
         foldable.push_back(isec);
+    } else if (isFoldable) {
+      foldable.push_back(isec);
+      for (Defined *d : isec->symbols)
+        if (d->unwindEntry())
+          foldable.push_back(d->unwindEntry());
     } else {
       // Give a unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;

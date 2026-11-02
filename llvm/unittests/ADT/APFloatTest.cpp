@@ -143,6 +143,17 @@ TEST(APFloatTest, IsLosslesslyConvertibleToKnownWiderSemantics) {
       {APFloat::S_Float6E2M3FN, APFloat::S_IEEEhalf, false},
       {APFloat::S_Float4E2M1FN, APFloat::S_IEEEhalf, false},
       {APFloat::S_x87DoubleExtended, APFloat::S_IEEEquad, true},
+      // Anything that fits in a double fits in PPC double-double's high
+      // double, so the conversion will be lossless.
+      {APFloat::S_IEEEhalf, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_BFloat, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_IEEEsingle, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_IEEEdouble, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_Float8E5M2, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_Float8E5M2FNUZ, APFloat::S_PPCDoubleDouble, false},
+      {APFloat::S_Float8E4M3FN, APFloat::S_PPCDoubleDouble, false},
+      {APFloat::S_Float8E8M0FNU, APFloat::S_PPCDoubleDouble, false},
+      {APFloat::S_Float4E2M1FN, APFloat::S_PPCDoubleDouble, false},
   };
 
   for (const TestCase &Case : Cases) {
@@ -182,12 +193,27 @@ TEST(APFloatTest, IsLosslesslyConvertibleToRejectsInformationLoss) {
   EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(NarrowNanOnly,
                                                       WiderFiniteOnly, true));
 
-  // PPC double-double's low component is not described by its fltSemantics
-  // exponent and precision fields, so only identity is known to be lossless.
+  // Converting from PPC double-double drops its low component, which is not
+  // described by its fltSemantics exponent and precision fields, so only
+  // identity is known to be lossless.
   EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
       APFloat::PPCDoubleDouble(), APFloat::IEEEquad(), true));
   EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::PPCDoubleDouble(), APFloat::IEEEdouble(), true));
+
+  // Converting to PPC double-double is only lossless for sources that fit
+  // in its high double, because converting back recovers just that double.
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
       APFloat::IEEEquad(), APFloat::PPCDoubleDouble(), true));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::x87DoubleExtended(), APFloat::PPCDoubleDouble(), true));
+
+  // A source IEEE signaling NaN is quieted by the conversion, so a double
+  // source needs IgnoreNaNs even though its value range fits exactly.
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::IEEEdouble(), APFloat::PPCDoubleDouble(), false));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::IEEEsingle(), APFloat::PPCDoubleDouble(), false));
 }
 
 TEST(APFloatTest, LosslessConversionsPreserveRepresentativeValues) {
@@ -1393,6 +1419,34 @@ TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
   EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), StringRef("0e1234" "\0" "2", 6)).convertToDouble());
 }
 
+TEST(APFloatTest, DecimalStringsUseLargePowersOfFive) {
+  // These values are just below one, so they cannot take the early obvious
+  // underflow path. The number of fractional digits is the power passed to
+  // powerOf5(). Together, the cases exercise the high entries and different
+  // combinations of the precomputed powers-of-five table.
+  struct TestCase {
+    const fltSemantics &Sem;
+    unsigned FractionalDigits;
+  };
+  const TestCase Tests[] = {
+      {APFloat::IEEEhalf(), 8192},
+      {APFloat::IEEEsingle(), 12288},
+      {APFloat::IEEEdouble(), 16376},
+      {APFloat::IEEEquad(), 16383},
+  };
+
+  for (const TestCase &Test : Tests) {
+    std::string Input = "0." + std::string(Test.FractionalDigits, '9');
+    APFloat Value(Test.Sem);
+    auto StatusOr =
+        Value.convertFromString(Input, APFloat::rmNearestTiesToEven);
+    ASSERT_TRUE(!!StatusOr) << Test.FractionalDigits;
+    EXPECT_TRUE(*StatusOr & APFloat::opInexact) << Test.FractionalDigits;
+    EXPECT_TRUE(Value.bitwiseIsEqual(APFloat::getOne(Test.Sem, false)))
+        << Test.FractionalDigits;
+  }
+}
+
 TEST(APFloatTest, fromZeroHexadecimalString) {
   EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0p1").convertToDouble());
   EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0p1").convertToDouble());
@@ -1774,6 +1828,17 @@ TEST(APFloatTest, toString) {
     APFloat UnnormalZero(APFloat::x87DoubleExtended(), APInt(80, {0, 1}));
     UnnormalZero.toString(Str);
     ASSERT_EQ("NaN", Str);
+  }
+
+  {
+    // The first double determines the category, so a signaling NaN second
+    // double is ignored.
+    SmallString<64> Str;
+    APFloat F(APFloat::PPCDoubleDouble(),
+              APInt(128, {0x3ff0000000000000ULL, 0x7ff0000000000001ULL}));
+    F.toString(Str, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
+               /*TruncateZero=*/false);
+    EXPECT_EQ("1.000000e+00", Str);
   }
 }
 
@@ -2494,23 +2559,27 @@ TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
 
   for (const fltSemantics *Sem : NoSignSemantics) {
     // The magnitude converts exactly, so the sign is the whole of the loss.
-    APFloat test(-2.0);
+    APFloat test(-1.0);
     bool losesInfo = false;
     APFloat::opStatus status =
         test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
     EXPECT_TRUE(losesInfo);
     EXPECT_EQ(status, APFloat::opInexact);
     EXPECT_TRUE(test.isNegative());
-    EXPECT_EQ(-2.0, test.convertToDouble());
+    EXPECT_EQ(-1.0, test.convertToDouble());
+    APInt negBits = test.bitcastToAPInt();
 
     // The same magnitude without the sign has nothing to report.
-    test = APFloat(2.0);
+    test = APFloat(1.0);
     losesInfo = true;
     status = test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
     EXPECT_FALSE(losesInfo);
     EXPECT_EQ(status, APFloat::opOK);
     EXPECT_FALSE(test.isNegative());
-    EXPECT_EQ(2.0, test.convertToDouble());
+    EXPECT_EQ(1.0, test.convertToDouble());
+
+    // No sign bit exists, so the bits must match the positive magnitude.
+    EXPECT_EQ(test.bitcastToAPInt(), negBits);
   }
 
   // Float8E8M0FNU has no zero either, and substitutes 2^-127 for one. That

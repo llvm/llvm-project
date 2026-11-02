@@ -178,9 +178,6 @@ protected:
   }
 
 private:
-  static unsigned getPointerSize(const object::MachOObjectFile &Obj);
-  static llvm::endianness getEndianness(const object::MachOObjectFile &Obj);
-
   void setCanonicalSymbol(NormalizedSection &NSec, Symbol &Sym) {
     auto *&CanonicalSymEntry = NSec.CanonicalSymbols[Sym.getAddress()];
     // There should be no symbol at this address, or, if there is,

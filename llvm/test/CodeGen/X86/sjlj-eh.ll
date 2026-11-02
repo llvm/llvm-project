@@ -1,5 +1,5 @@
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39439.
-; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s
+; RUN: llc -mtriple i386-windows-gnu -regalloc-csr-cost-scale=0 -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s
 ; RUN: llc -mtriple x86_64-windows-gnu -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s -check-prefix CHECK-X64
 ; RUN: llc -mtriple x86_64-linux -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s -check-prefix CHECK-X64-LINUX
 

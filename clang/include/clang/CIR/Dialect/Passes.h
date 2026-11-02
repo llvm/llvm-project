@@ -20,12 +20,8 @@ namespace cir {
 /// The ABI target whose calling-convention rules drive CallConvLowering.
 /// None is the unset state used when the pass runs in classification-attr
 /// mode instead of selecting a target.
-enum class CallConvTarget { None, Test, X86_64 };
+enum class CallConvTarget { None, Test, X86_64, AMDGPU };
 } // namespace cir
-
-namespace clang {
-class ASTContext;
-}
 
 namespace mlir {
 
@@ -36,16 +32,16 @@ std::unique_ptr<Pass> createCIREHABILoweringPass();
 std::unique_ptr<Pass> createCXXABILoweringPass();
 std::unique_ptr<Pass> createTargetLoweringPass();
 std::unique_ptr<Pass> createCallConvLoweringPass();
-std::unique_ptr<Pass> createCallConvLoweringPass(
-    cir::CallConvTarget target, llvm::abi::X86AVXABILevel x86AvxAbiLevel,
-    bool allowsX86TargetAttrAvx, const llvm::abi::ABICompatInfo &x86AbiCompat);
+std::unique_ptr<Pass>
+createCallConvLoweringPass(cir::CallConvTarget target,
+                           llvm::abi::X86AVXABILevel x86AvxAbiLevel,
+                           bool allowsX86TargetAttrAvx,
+                           const llvm::abi::X86ABICompatInfo &x86AbiCompat);
 std::unique_ptr<Pass> createHoistAllocasPass();
 std::unique_ptr<Pass> createLoweringPreparePass();
-std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createGotoSolverPass();
 std::unique_ptr<Pass> createIdiomRecognizerPass();
 std::unique_ptr<Pass> createLibOptPass();
-std::unique_ptr<Pass> createLibOptPass(clang::ASTContext *astCtx);
 
 void populateCIRPreLoweringPasses(mlir::OpPassManager &pm);
 

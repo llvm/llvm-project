@@ -376,16 +376,11 @@ static void registerEPCallbacks(PassBuilder &PB) {
         });
 }
 
-#define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
-
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
     ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<PassPluginLibraryInfo> Extensions,
     ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
@@ -452,8 +447,7 @@ bool llvm::runPassPipeline(
 
     MAM.registerPass([&] {
       const TargetOptions &Options = TM->Options;
-      return RuntimeLibraryAnalysis(Options.ExceptionModel, Options.EABIVersion,
-                                    Options.MCOptions.ABIName, Options.VecLib);
+      return RuntimeLibraryAnalysis(Options.MCOptions.ABIName, Options.VecLib);
     });
   }
 
@@ -479,28 +473,24 @@ bool llvm::runPassPipeline(
     Debugify.registerCallbacks(PIC, MAM);
   }
 
-  PipelineTuningOptions PTO;
+  PipelineTuningOptions PTO(&M.getContext().getLibraryOptions());
   // LoopUnrolling defaults on to true and DisableLoopUnrolling is initialized
   // to false above so we shouldn't necessarily need to check whether or not the
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
   PTO.LoopFusion = EnableLoopFusion;
-  PassBuilder PB(TM, PTO, P, &PIC);
+  PassBuilder PB(M.getContext(), TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
-  // For any loaded plugins, let them register pass builder callbacks.
-  for (auto &PassPlugin : PassPlugins)
-    PassPlugin.registerPassBuilderCallbacks(PB);
+  // Let plugins and linked extensions register pass builder callbacks.
+  for (const PassPluginLibraryInfo &Info : Extensions)
+    if (Info.RegisterPassBuilderCallbacks)
+      Info.RegisterPassBuilderCallbacks(PB);
 
   // Load any explicitly specified plugins.
   for (auto &PassCallback : PassBuilderCallbacks)
     PassCallback(PB);
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
@@ -581,14 +571,15 @@ bool llvm::runPassPipeline(
 
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
-  if (PrintPipelinePasses) {
+  if (std::optional<PrintPipelinePassesFormat> Format =
+          PB.getPrintPipelinePasses()) {
     std::string Pipeline;
     raw_string_ostream SOS(Pipeline);
     MPM.printPipeline(SOS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    printFormattedPipelinePasses(outs(), Pipeline, *PrintPipelinePasses);
+    printFormattedPipelinePasses(outs(), Pipeline, *Format);
     outs() << "\n";
 
     if (!DisablePipelineVerification) {
@@ -634,7 +625,7 @@ bool llvm::runPassPipeline(
   return true;
 }
 
-void llvm::printPasses(raw_ostream &OS) {
-  PassBuilder PB;
+void llvm::printPasses(LLVMContext &Context, raw_ostream &OS) {
+  PassBuilder PB(Context);
   PB.printPassNames(OS);
 }

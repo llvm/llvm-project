@@ -642,3 +642,27 @@ define <64 x i1> @invert_i64_mask_extract_64(i64 %mask) {
   ret <64 x i1> %cmp.45
 }
 
+define <8 x i1> @i64_mask_extract_8_undef_last_element(i64 %mask) {
+; X64-AVX512-LABEL: i64_mask_extract_8_undef_last_element:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    shrq $57, %rdi
+; X64-AVX512-NEXT:    kmovd %edi, %k0
+; X64-AVX512-NEXT:    knotb %k0, %k0
+; X64-AVX512-NEXT:    vpmovm2w %k0, %xmm0
+; X64-AVX512-NEXT:    retq
+;
+; X64-KNL-LABEL: i64_mask_extract_8_undef_last_element:
+; X64-KNL:       # %bb.0:
+; X64-KNL-NEXT:    shrq $57, %rdi
+; X64-KNL-NEXT:    kmovw %edi, %k0
+; X64-KNL-NEXT:    knotw %k0, %k1
+; X64-KNL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+; X64-KNL-NEXT:    vpmovdw %zmm0, %ymm0
+; X64-KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; X64-KNL-NEXT:    retq
+  %.splatinsert = insertelement <8 x i64> poison, i64 %mask, i64 0
+  %.splat = shufflevector <8 x i64> %.splatinsert, <8 x i64> poison, <8 x i32> zeroinitializer
+  %1 = and <8 x i64> %.splat, <i64 144115188075855872, i64 288230376151711744, i64 576460752303423488, i64 1152921504606846976, i64 2305843009213693952, i64 4611686018427387904, i64 -9223372036854775808, i64 poison>
+  %cmp = icmp eq <8 x i64> %1, zeroinitializer
+  ret <8 x i1> %cmp
+}
