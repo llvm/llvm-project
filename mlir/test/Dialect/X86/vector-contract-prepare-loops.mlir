@@ -80,7 +80,7 @@ func.func @negative_interleaved_different_sources(%a: memref<?x32x32xbf16>, %b: 
 // CHECK: scf.for %[[IV:[^ ]+]] =
 // CHECK: %[[LHS:.+]] = vector.transfer_read %[[AP]][%{{.+}}, %[[IV]], {{.*}} vector<32x16x2xbf16>
 // CHECK-NEXT: %[[RHS:.+]] = vector.transfer_read %[[BP]][%{{.+}}, %[[IV]], {{.*}} vector<16x32x2xbf16>
-// CHECK-NEXT: vector.contract {{.*}} %[[LHS]], %[[RHS]], %{{.+}} : vector<32x16x2xbf16>, vector<16x32x2xbf16> into vector<32x32xf32>
+// CHECK-NEXT: vector.contract {fastmath = #arith.fastmath<reassoc>, indexing_maps = [#[[$VNNI_LHS]], #[[$VNNI_RHS]], #[[$VNNI_ACC]]], iterator_types = ["parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<add>} %[[LHS]], %[[RHS]], %{{.+}} : vector<32x16x2xbf16>, vector<16x32x2xbf16> into vector<32x32xf32>
 // CHECK-NEXT: scf.yield
 // NANO-LABEL: func.func @split_join_bf16(
 // NANO-NOT: vector.contract
@@ -115,7 +115,7 @@ func.func @split_join_bf16(%a: memref<?x?x?x?xbf16, strided<[?, ?, ?, 1], offset
     %join = vector.insert_strided_slice %even_t3, %join0 offsets = [0, 0, 0], strides = [1, 1, 1] : vector<32x16x1xbf16> into vector<32x16x2xbf16>
     %interleaved = vector.shape_cast %join : vector<32x16x2xbf16> to vector<32x32xbf16>
     %flat = vector.transpose %interleaved, [1, 0] : vector<32x32xbf16> to vector<32x32xbf16>
-    %dot = vector.contract {indexing_maps = [#lhs, #rhs, #acc], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs, %flat, %accum : vector<32x32xbf16>, vector<32x32xbf16> into vector<32x32xf32>
+    %dot = vector.contract {indexing_maps = [#lhs, #rhs, #acc], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>, fastmath = #arith.fastmath<reassoc>} %lhs, %flat, %accum : vector<32x32xbf16>, vector<32x32xbf16> into vector<32x32xf32>
     scf.yield %dot : vector<32x32xf32>
   }
   return %result : vector<32x32xf32>
@@ -260,7 +260,7 @@ func.func @direct_vnni_int8(%a: memref<?x32x64xi8>,
 // CHECK: scf.for %[[K:.+]] = %{{.+}} to %{{.+}} step %{{.+}}
 // CHECK: %[[LHS:.+]] = vector.transfer_read %[[A_PACKED]][%[[K]], {{.*}} vector<32x16x2xbf16>
 // CHECK-NEXT: %[[RHS:.+]] = vector.transfer_read %[[B]][%[[K]], {{.*}} vector<16x32x2xbf16>
-// CHECK-NEXT: vector.contract {indexing_maps = [#[[$VNNI_LHS]], #[[$VNNI_RHS]], #[[$VNNI_ACC]]], iterator_types = ["parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<add>} %[[LHS]], %[[RHS]], %{{.+}} : vector<32x16x2xbf16>, vector<16x32x2xbf16> into vector<32x32xf32>
+// CHECK-NEXT: vector.contract {fastmath = #arith.fastmath<reassoc>, indexing_maps = [#[[$VNNI_LHS]], #[[$VNNI_RHS]], #[[$VNNI_ACC]]], iterator_types = ["parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<add>} %[[LHS]], %[[RHS]], %{{.+}} : vector<32x16x2xbf16>, vector<16x32x2xbf16> into vector<32x32xf32>
 // CHECK-NEXT: scf.yield
 func.func @packed_vnni_bf16(%a: memref<?x32x?xbf16>,
                             %b: memref<?x16x32x2xbf16>,
@@ -275,7 +275,7 @@ func.func @packed_vnni_bf16(%a: memref<?x32x?xbf16>,
     %broadcast = vector.broadcast %rhs : vector<16x32x2xbf16> to vector<1x16x32x2xbf16>
     %transpose = vector.transpose %broadcast, [0, 1, 3, 2] : vector<1x16x32x2xbf16> to vector<1x16x2x32xbf16>
     %flat = vector.shape_cast %transpose : vector<1x16x2x32xbf16> to vector<32x32xbf16>
-    %dot = vector.contract {indexing_maps = [#lhs, #rhs, #acc], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs, %flat, %accum : vector<32x32xbf16>, vector<32x32xbf16> into vector<32x32xf32>
+    %dot = vector.contract {indexing_maps = [#lhs, #rhs, #acc], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>, fastmath = #arith.fastmath<reassoc>} %lhs, %flat, %accum : vector<32x32xbf16>, vector<32x32xbf16> into vector<32x32xf32>
     scf.yield %dot : vector<32x32xf32>
   }
   return %result : vector<32x32xf32>
