@@ -15832,8 +15832,7 @@ static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
 static bool isGeneratedLoopCounter(const Expr *Counter) {
   const auto *DRE = dyn_cast<DeclRefExpr>(Counter);
   const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
-  return VD && VD->isImplicit() && !isa<OMPCapturedExprDecl>(VD) &&
-         !VD->isCXXForRangeImplicitVar();
+  return VD && VD->isImplicit() && !isa<OMPCapturedExprDecl>(VD);
 }
 
 /// Wrap \p S so it runs only if every loop in \p Loops has iterations.
@@ -17456,7 +17455,7 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
   return OMPInterchangeDirective::Create(
       Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/false,
+      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/true,
                             NestedFinals));
 }
 
@@ -17558,6 +17557,7 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
     assert(LoopHelper.Counters.size() == 1 &&
            "Single-dimensional loop iteration space expected");
+    guardNestedLoopInit(Context, LoopHelpers, I, OriginalInits[I]);
     addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
                     PreInits);
   }

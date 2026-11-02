@@ -24,15 +24,18 @@ extern "C" void test_fuse_range_for(void) {
   // q = start + trip count, computed from the captured bounds.
   // CHECK: [[QEND:%.*]] = getelementptr inbounds i32, ptr %{{.*}}, i64 %{{.*}}
   // CHECK-NEXT: store ptr [[QEND]], ptr %q
-  // CHECK: store ptr {{.*}}, ptr %__begin
+  // CHECK-NOT: store ptr {{.*}}, ptr %__begin
+  // CHECK: ret void
 }
 
-// Control: tile restores the range-for iterator as well.
 extern "C" void test_tile_range_for(void) {
   // CHECK-LABEL: define {{.*}} @test_tile_range_for
   int arr[8];
   #pragma omp tile sizes(2)
   for (int &x : arr)
     ;
-  // CHECK: store ptr {{.*}}, ptr %__begin
+  // CHECK: store ptr {{.*}}, ptr %__begin2
+  // CHECK: store ptr {{.*}}, ptr %__begin2
+  // CHECK-NOT: store ptr {{.*}}, ptr %__begin2
+  // CHECK: ret void
 }
