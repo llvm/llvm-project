@@ -9,7 +9,6 @@
 #ifndef LLDB_SYMBOL_TYPEMAP_H
 #define LLDB_SYMBOL_TYPEMAP_H
 
-#include "lldb/Symbol/Type.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/lldb-private.h"
 #include <functional>

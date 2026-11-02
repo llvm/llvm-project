@@ -455,6 +455,19 @@ spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Atan2
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @atan2
+spirv.func @atan2(%arg0: f32, %arg1: f32, %arg2: vector<3xf16>, %arg3: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.atan2(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.Atan2 %arg0, %arg1 : f32
+  // CHECK: llvm.intr.atan2(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Atan2 %arg2, %arg3 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Fract
 //===----------------------------------------------------------------------===//
 

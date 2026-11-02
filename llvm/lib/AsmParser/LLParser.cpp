@@ -2376,6 +2376,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'amdgpu_kernel'
 ///   ::= 'tailcc'
 ///   ::= 'm68k_rtdcc'
+///   ::= 'wasm_emscripten_invokecc'
 ///   ::= 'graalcc'
 ///   ::= 'riscv_vector_cc'
 ///   ::= 'riscv_vls_cc'
@@ -2454,6 +2455,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
   case lltok::kw_m68k_rtdcc:     CC = CallingConv::M68k_RTD; break;
+  case lltok::kw_wasm_emscripten_invokecc:
+    CC = CallingConv::WASM_EmscriptenInvoke;
+    break;
   case lltok::kw_graalcc:        CC = CallingConv::GRAAL; break;
   case lltok::kw_riscv_vector_cc:
     CC = CallingConv::RISCV_VectorCall;
@@ -9551,11 +9555,6 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   if (!Indices.empty() && !Ty->isSized())
     return error(Loc, "base element of getelementptr must be sized");
 
-  auto *STy = dyn_cast<StructType>(Ty);
-  if (STy && STy->isScalableTy())
-    return error(Loc, "getelementptr cannot target structure that contains "
-                      "scalable vector type");
-
   if (!GetElementPtrInst::getIndexedType(Ty, Indices))
     return error(Loc, "invalid getelementptr indices");
   GetElementPtrInst *GEP = GetElementPtrInst::Create(Ty, Ptr, Indices);
@@ -10706,6 +10705,7 @@ bool LLParser::parseOptionalCalls(
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     unsigned RelBF = 0;
     unsigned HasTailCall = false;
+    unsigned HasIndirectCall = false;
 
     // parse optional fields
     while (EatIfPresent(lltok::comma)) {
@@ -10726,8 +10726,15 @@ bool LLParser::parseOptionalCalls(
         if (parseToken(lltok::colon, "expected ':'") || parseFlag(HasTailCall))
           return true;
         break;
+      case lltok::kw_indirect:
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':'") ||
+            parseFlag(HasIndirectCall))
+          return true;
+        break;
       default:
-        return error(Lex.getLoc(), "expected hotness, relbf, or tail");
+        return error(Lex.getLoc(),
+                     "expected hotness, relbf, tail, or indirect");
       }
     }
     // Keep track of the Call array index needing a forward reference.
@@ -10735,8 +10742,8 @@ bool LLParser::parseOptionalCalls(
     // can only do so once the std::vector is finalized.
     if (VI.getRef() == FwdVIRef)
       IdToIndexMap[GVId].push_back(std::make_pair(Calls.size(), Loc));
-    Calls.push_back(
-        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall)});
+    Calls.push_back(FunctionSummary::EdgeTy{
+        VI, CalleeInfo(Hotness, HasTailCall, HasIndirectCall)});
 
     if (parseToken(lltok::rparen, "expected ')' in call"))
       return true;

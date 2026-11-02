@@ -99,7 +99,6 @@ private:
                   MachineFunction &MF) const;
   bool selectUAddSub(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
-  bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI,
                            MachineFunction &MF);
@@ -247,38 +246,6 @@ static const TargetRegisterClass *getRegClassFromGRPhysReg(Register Reg) {
   llvm_unreachable("Unknown RegClass for PhysReg!");
 }
 
-// FIXME: We need some sort of API in RBI/TRI to allow generic code to
-// constrain operands of simple instructions given a TargetRegisterClass
-// and LLT
-bool X86InstructionSelector::selectDebugInstr(MachineInstr &I,
-                                              MachineRegisterInfo &MRI) const {
-  for (MachineOperand &MO : I.operands()) {
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (!Reg)
-      continue;
-    if (Reg.isPhysical())
-      continue;
-    LLT Ty = MRI.getType(Reg);
-    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-    const TargetRegisterClass *RC =
-        dyn_cast_if_present<const TargetRegisterClass *>(RegClassOrBank);
-    if (!RC) {
-      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-      RC = getRegClass(Ty, RB);
-      if (!RC) {
-        LLVM_DEBUG(
-            dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
-        break;
-      }
-    }
-    RBI.constrainGenericRegister(Reg, *RC, MRI);
-  }
-
-  return true;
-}
-
 // Set X86 Opcode and constrain DestReg.
 bool X86InstructionSelector::selectCopy(MachineInstr &I,
                                         MachineRegisterInfo &MRI) const {
@@ -419,9 +386,6 @@ bool X86InstructionSelector::select(MachineInstr &I) {
 
     if (I.isCopy())
       return selectCopy(I, MRI);
-
-    if (I.isDebugInstr())
-      return selectDebugInstr(I, MRI);
 
     return true;
   }
@@ -1128,6 +1092,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   assert((LhsBank == RhsBank) &&
          "Both banks assigned to FCMP arguments need to be same!");
 
+  bool IsX87 = LhsBank->getID() == X86::PSRRegBankID;
+
   // Compute the opcode for the CMP instruction.
   unsigned OpCmp;
   LLT Ty = MRI.getType(LhsReg);
@@ -1135,12 +1101,10 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   default:
     return false;
   case 32:
-    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr32
-                                                  : X86::UCOMISSrr;
+    OpCmp = IsX87 ? X86::UCOM_FpIr32 : X86::UCOMISSrr;
     break;
   case 64:
-    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr64
-                                                  : X86::UCOMISDrr;
+    OpCmp = IsX87 ? X86::UCOM_FpIr64 : X86::UCOMISDrr;
     break;
   case 80:
     OpCmp = X86::UCOM_FpIr80;
@@ -1156,6 +1120,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
         *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpCmp))
              .addReg(LhsReg)
              .addReg(RhsReg);
+    if (IsX87)
+      CmpInst.getOperand(3).setIsDead(); // Mark unused FPSW def dead.
 
     Register FlagReg1 = MRI.createVirtualRegister(&X86::GR8RegClass);
     Register FlagReg2 = MRI.createVirtualRegister(&X86::GR8RegClass);
@@ -1166,7 +1132,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
     MachineInstr &Set3 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
                                   TII.get(SETFOpc[2]), ResultReg)
                               .addReg(FlagReg1)
-                              .addReg(FlagReg2);
+                              .addReg(FlagReg2)
+                              .setOperandDead(3);
     constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
     constrainSelectedInstRegOperands(Set1, TII, TRI, RBI);
     constrainSelectedInstRegOperands(Set2, TII, TRI, RBI);
@@ -1189,6 +1156,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpCmp))
            .addReg(LhsReg)
            .addReg(RhsReg);
+  if (IsX87)
+    CmpInst.getOperand(3).setIsDead(); // Mark unused FPSW def dead.
 
   MachineInstr &Set =
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr), ResultReg).addImm(CC);

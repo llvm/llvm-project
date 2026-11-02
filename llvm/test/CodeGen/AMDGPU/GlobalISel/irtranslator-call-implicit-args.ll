@@ -25,7 +25,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
   ; GFX900-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GFX900-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -59,7 +59,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ;
   ; GFX908-LABEL: name: test_call_external_void_func_i32
@@ -78,7 +78,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
   ; GFX908-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -112,7 +112,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
   ret void
@@ -133,7 +133,7 @@ define void @test_func_call_external_void_func_i32() #0 {
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 99
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -157,7 +157,7 @@ define void @test_func_call_external_void_func_i32() #0 {
   ; GFX900-NEXT:   $sgpr15 = COPY [[COPY16]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[COPY17]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   SI_RETURN
   ;
   ; GFX908-LABEL: name: test_func_call_external_void_func_i32
@@ -174,7 +174,7 @@ define void @test_func_call_external_void_func_i32() #0 {
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 99
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -198,7 +198,7 @@ define void @test_func_call_external_void_func_i32() #0 {
   ; GFX908-NEXT:   $sgpr15 = COPY [[COPY16]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[COPY17]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   SI_RETURN
   call void @external_void_func_i32(i32 99)
   ret void
@@ -224,7 +224,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; GFX900-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
   ; GFX900-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
   ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GFX900-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -293,7 +293,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def dead $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ;
   ; GFX908-LABEL: name: test_call_external_void_func_v32i32
@@ -313,7 +313,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
   ; GFX908-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -382,7 +382,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def dead $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_v32i32(<32 x i32> zeroinitializer)
   ret void
@@ -455,7 +455,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   [[TRUNC33:%[0-9]+]]:_(i8) = G_TRUNC [[TRUNC32]](i16)
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; GFX900-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
   ; GFX900-NEXT:   [[COPY26:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GFX900-NEXT:   [[COPY27:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -514,7 +514,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $sgpr15 = COPY [[COPY33]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[COPY34]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def dead $scc
   ; GFX900-NEXT:   SI_RETURN
   ;
   ; GFX908-LABEL: name: test_func_call_external_void_func_v32i32
@@ -583,7 +583,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   [[TRUNC33:%[0-9]+]]:_(i8) = G_TRUNC [[TRUNC32]](i16)
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
   ; GFX908-NEXT:   [[COPY26:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GFX908-NEXT:   [[COPY27:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -642,7 +642,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $sgpr15 = COPY [[COPY33]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[COPY34]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def dead $scc
   ; GFX908-NEXT:   SI_RETURN
   call void @external_void_func_v32i32(<32 x i32> zeroinitializer)
   ret void
@@ -662,7 +662,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -688,7 +688,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[COPY15]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ;
   ; GFX908-LABEL: name: test_only_workitem_id_x
@@ -704,7 +704,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -730,7 +730,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[COPY15]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
   ret void
@@ -750,7 +750,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -780,7 +780,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ;
   ; GFX908-LABEL: name: test_only_workitem_id_y
@@ -796,7 +796,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -826,7 +826,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
   ret void
@@ -846,7 +846,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -876,7 +876,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ;
   ; GFX908-LABEL: name: test_only_workitem_id_z
@@ -892,7 +892,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -922,7 +922,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
   ret void
@@ -943,7 +943,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -973,7 +973,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ;
   ; GFX908-LABEL: name: test_only_workitem_id_xy
@@ -990,7 +990,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -1020,7 +1020,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
   ret void
@@ -1041,7 +1041,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -1075,7 +1075,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ;
   ; GFX908-LABEL: name: test_only_workitem_id_yz
@@ -1092,7 +1092,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -1126,7 +1126,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
   ret void
@@ -1147,7 +1147,7 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX900-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX900-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX900-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GFX900-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -1177,7 +1177,7 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](i32)
   ; GFX900-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ;
   ; GFX908-LABEL: name: test_only_workitem_id_xz
@@ -1194,7 +1194,7 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GFX908-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
-  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i32
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -1224,7 +1224,7 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](i32)
   ; GFX908-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
   ret void

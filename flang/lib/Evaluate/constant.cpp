@@ -87,7 +87,7 @@ std::optional<uint64_t> TotalElementCount(const ConstantSubscripts &shape) {
     CHECK(dim >= 0);
     uint64_t osize{size};
     size = osize * dim;
-    if (size > std::numeric_limits<decltype(dim)>::max() ||
+    if (size > common::numeric_limits<decltype(dim)>::max() ||
         (dim != 0 && size / dim != osize)) {
       return std::nullopt;
     }

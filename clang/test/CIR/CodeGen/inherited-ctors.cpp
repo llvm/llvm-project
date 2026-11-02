@@ -36,6 +36,22 @@ void fallsthrough() {
   VirtualDelegatingCtor noInheritingCtorHasParams{1};
 }
 
+struct VBaseInheriting : VirtDerived {
+  using VirtDerived::VirtDerived;
+};
+
+struct IndirectVBaseInheriting : VBaseInheriting {
+  using VBaseInheriting::VBaseInheriting;
+};
+
+void inheritedFromVBase() {
+  // VirtDerived's and VBaseInheriting's inheriting constructors take only
+  // 'this' and the VTT when called to construct a base subobject.
+  VBaseInheriting delegating{1};
+  VBaseInheriting inlined{1.1f, 2, 3.0};
+  IndirectVBaseInheriting indirect{1};
+}
+
 
 // CIR-LABEL: cir.func no_inline dso_local @_Z20emitDelegateCallArgsv()
 // CIR: cir.call @_ZN7DerivedCI14BaseEi(%{{.*}}, %{{.*}}) : (!cir.ptr<!rec_Derived>{{.*}}, !s32i{{.*}}) -> ()
@@ -101,6 +117,97 @@ void fallsthrough() {
 // OGCG: call void @_ZN11VirtDerivedCI24BaseEi(ptr {{.*}}%[[THIS_LOAD]], ptr {{.*}}(i8, ptr @_ZTT21VirtualDelegatingCtor, i64 8), i32{{.*}}%[[X_LOAD]])
 // OGCG: store ptr getelementptr inbounds inrange(-24, 0) (i8, ptr @_ZTV21VirtualDelegatingCtor, i64 24), ptr %[[THIS_LOAD]]
 //
+// CIR-LABEL: cir.func no_inline dso_local @_Z18inheritedFromVBasev()
+// CIR: %[[DELEGATING:.*]] = cir.alloca "delegating" align(8) init : !cir.ptr<!rec_VBaseInheriting>
+// CIR: %[[INLINED:.*]] = cir.alloca "inlined" align(8) init : !cir.ptr<!rec_VBaseInheriting>
+// CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "tmp" align(8) init : !cir.ptr<!cir.ptr<!rec_VBaseInheriting>>
+// CIR: %[[INDIRECT:.*]] = cir.alloca "indirect" align(8) init : !cir.ptr<!rec_IndirectVBaseInheriting>
+// CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.call @_ZN15VBaseInheritingCI14BaseEi(%[[DELEGATING]], %[[ONE]]) : (!cir.ptr<!rec_VBaseInheriting> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> ()
+// CIR: %[[FP_1_1:.*]] = cir.const #cir.fp<1.100000e+00> : !cir.float
+// CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.double
+// CIR: cir.store align(8) %[[INLINED]], %[[TMP_ALLOCA]] : !cir.ptr<!rec_VBaseInheriting>, !cir.ptr<!cir.ptr<!rec_VBaseInheriting>>
+// CIR: %[[TMP_LOAD:.*]] = cir.load %[[TMP_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VBaseInheriting>>, !cir.ptr<!rec_VBaseInheriting>
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[TMP_LOAD]] [0] : !cir.ptr<!rec_VBaseInheriting> -> !cir.ptr<!rec_Base>
+// CIR: cir.call @_ZN4BaseC2Efz(%[[BASE_ADDR]], %[[FP_1_1]], %[[TWO]], %[[THREE]]) : (!cir.ptr<!rec_Base> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.float {llvm.noundef}, !s32i {llvm.noundef}, !cir.double {llvm.noundef}) -> ()
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[TMP_LOAD]] [0] : !cir.ptr<!rec_VBaseInheriting> -> !cir.ptr<!rec_VirtDerived>
+// CIR: %[[VTT_ADDR:.*]] = cir.vtt.address_point @_ZTT15VBaseInheriting, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+// CIR: cir.call @_ZN11VirtDerivedCI24BaseEfz(%[[BASE_ADDR]], %[[VTT_ADDR]]) : (!cir.ptr<!rec_VirtDerived> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!cir.ptr<!void>> {llvm.noundef}) -> ()
+// CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.call @_ZN23IndirectVBaseInheritingCI14BaseEi(%[[INDIRECT]], %[[ONE]]) : (!cir.ptr<!rec_IndirectVBaseInheriting> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> ()
+//
+// CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN15VBaseInheritingCI14BaseEi(%{{[a-z0-9]+}}: !cir.ptr<!rec_VBaseInheriting> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef} loc({{[^)]+}}), %{{[a-z0-9]+}}: !s32i {llvm.noundef} loc({{[^)]+}})) func_info<#cir.cxx_ctor<!rec_VBaseInheriting, custom>>
+// CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_VBaseInheriting>>
+// CIR: %[[INT_ALLOCA:.*]] = cir.alloca "" align(4) init : !cir.ptr<!s32i>
+// CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VBaseInheriting>>, !cir.ptr<!rec_VBaseInheriting>
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_VBaseInheriting> -> !cir.ptr<!rec_Base>
+// CIR: %[[INT:.*]] = cir.load align(4) %[[INT_ALLOCA]] : !cir.ptr<!s32i>, !s32i
+// CIR: cir.call @_ZN4BaseC2Ei(%[[BASE_ADDR]], %[[INT]]) : (!cir.ptr<!rec_Base> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> ()
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_VBaseInheriting> -> !cir.ptr<!rec_VirtDerived>
+// CIR: %[[VTT_ADDR:.*]] = cir.vtt.address_point @_ZTT15VBaseInheriting, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+// CIR: cir.call @_ZN11VirtDerivedCI24BaseEi(%[[BASE_ADDR]], %[[VTT_ADDR]]) : (!cir.ptr<!rec_VirtDerived> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!cir.ptr<!void>> {llvm.noundef}) -> ()
+//
+// CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN11VirtDerivedCI24BaseEfz(%{{[a-z0-9]+}}: !cir.ptr<!rec_VirtDerived> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef} loc({{[^)]+}}), %{{[a-z0-9]+}}: !cir.ptr<!cir.ptr<!void>> {llvm.noundef} loc({{[^)]+}})) func_info<#cir.cxx_ctor<!rec_VirtDerived, custom>>
+// CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_VirtDerived>>
+// CIR: %[[VTT_ALLOCA:.*]] = cir.alloca "vtt" align(8) init : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+// CIR: %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtDerived>>, !cir.ptr<!rec_VirtDerived>
+// CIR-NEXT: %[[VTT:.*]] = cir.load align(8) %[[VTT_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>, !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT: %[[VTT_ADDR:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT: %[[VTT_ADDR_CAST:.*]] = cir.cast bitcast %[[VTT_ADDR]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
+// CIR-NEXT: %[[VTT_ADDR_LOAD:.*]] = cir.load align(8) %[[VTT_ADDR_CAST]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR-NEXT: %[[VPTR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_VirtDerived> -> !cir.ptr<!cir.vptr>
+// CIR-NEXT: cir.store align(8) %[[VTT_ADDR_LOAD]], %[[VPTR]] : !cir.vptr, !cir.ptr<!cir.vptr>
+// CIR-NEXT: cir.return
+//
+// CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN23IndirectVBaseInheritingCI14BaseEi(%{{[a-z0-9]+}}: !cir.ptr<!rec_IndirectVBaseInheriting> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef} loc({{[^)]+}}), %{{[a-z0-9]+}}: !s32i {llvm.noundef} loc({{[^)]+}})) func_info<#cir.cxx_ctor<!rec_IndirectVBaseInheriting, custom>>
+// CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_IndirectVBaseInheriting>>
+// CIR: %[[INT_ALLOCA:.*]] = cir.alloca "" align(4) init : !cir.ptr<!s32i>
+// CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_IndirectVBaseInheriting>>, !cir.ptr<!rec_IndirectVBaseInheriting>
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_IndirectVBaseInheriting> -> !cir.ptr<!rec_Base>
+// CIR: %[[INT:.*]] = cir.load align(4) %[[INT_ALLOCA]] : !cir.ptr<!s32i>, !s32i
+// CIR: cir.call @_ZN4BaseC2Ei(%[[BASE_ADDR]], %[[INT]]) : (!cir.ptr<!rec_Base> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> ()
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_IndirectVBaseInheriting> -> !cir.ptr<!rec_VBaseInheriting>
+// CIR: %[[VTT_ADDR:.*]] = cir.vtt.address_point @_ZTT23IndirectVBaseInheriting, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+// CIR: cir.call @_ZN15VBaseInheritingCI24BaseEi(%[[BASE_ADDR]], %[[VTT_ADDR]]) : (!cir.ptr<!rec_VBaseInheriting> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!cir.ptr<!void>> {llvm.noundef}) -> ()
+//
+// LLVM-LABEL: define dso_local void @_Z18inheritedFromVBasev()
+// LLVM: %[[DELEGATING:.*]] = alloca %struct.VBaseInheriting
+// LLVM: %[[INLINED:.*]] = alloca %struct.VBaseInheriting
+// LLVM: %[[TMP_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[INDIRECT:.*]] = alloca %struct.IndirectVBaseInheriting
+// LLVM: call void @_ZN15VBaseInheritingCI14BaseEi(ptr noundef nonnull align 8 dereferenceable(8) %[[DELEGATING]], i32 noundef 1)
+// LLVM: store ptr %[[INLINED]], ptr %[[TMP_ALLOCA]]
+// LLVM: %[[TMP_LOAD:.*]] = load ptr, ptr %[[TMP_ALLOCA]]
+// LLVM: call void (ptr, float, ...) @_ZN4BaseC2Efz(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_LOAD]], float noundef 1.100000e+00, i32 noundef 2, double noundef 3.000000e+00)
+// LLVM: call void @_ZN11VirtDerivedCI24BaseEfz(ptr noundef nonnull align 8 dereferenceable(8) %[[TMP_LOAD]], ptr noundef getelementptr inbounds nuw (i8, ptr @_ZTT15VBaseInheriting, i64 8))
+// LLVM: call void @_ZN23IndirectVBaseInheritingCI14BaseEi(ptr noundef nonnull align 8 dereferenceable(8) %[[INDIRECT]], i32 noundef 1)
+//
+// LLVM-LABEL: define linkonce_odr void @_ZN15VBaseInheritingCI14BaseEi(ptr noundef nonnull align 8 dereferenceable(8) %{{[a-z0-9]+}}, i32 noundef %{{[a-z0-9]+}})
+// LLVM: %[[THIS_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[INT_ALLOCA:.*]] = alloca i32
+// LLVM: %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
+// LLVM: %[[INT:.*]] = load i32, ptr %[[INT_ALLOCA]]
+// LLVM: call void @_ZN4BaseC2Ei(ptr noundef nonnull align 1 dereferenceable(1) %[[THIS_LOAD]], i32 noundef %[[INT]])
+// LLVM: call void @_ZN11VirtDerivedCI24BaseEi(ptr noundef nonnull align 8 dereferenceable(8) %[[THIS_LOAD]], ptr noundef getelementptr inbounds nuw (i8, ptr @_ZTT15VBaseInheriting, i64 8))
+//
+// LLVM-LABEL: define linkonce_odr void @_ZN11VirtDerivedCI24BaseEfz(ptr noundef nonnull align 8 dereferenceable(8) %{{[a-z0-9]+}}, ptr noundef %{{[a-z0-9]+}})
+// LLVM: %[[THIS_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[VTT_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
+// LLVM-NEXT: %[[VTT:.*]] = load ptr, ptr %[[VTT_ALLOCA]]
+// LLVM-NEXT: %[[VTT_ADDR_LOAD:.*]] = load ptr, ptr %[[VTT]]
+// LLVM-NEXT: store ptr %[[VTT_ADDR_LOAD]], ptr %[[THIS]]
+// LLVM-NEXT: ret void
+//
+// LLVM-LABEL: define linkonce_odr void @_ZN23IndirectVBaseInheritingCI14BaseEi(ptr noundef nonnull align 8 dereferenceable(8) %{{[a-z0-9]+}}, i32 noundef %{{[a-z0-9]+}})
+// LLVM: %[[THIS_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[INT_ALLOCA:.*]] = alloca i32
+// LLVM: %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
+// LLVM: %[[INT:.*]] = load i32, ptr %[[INT_ALLOCA]]
+// LLVM: call void @_ZN4BaseC2Ei(ptr noundef nonnull align 1 dereferenceable(1) %[[THIS_LOAD]], i32 noundef %[[INT]])
+// LLVM: call void @_ZN15VBaseInheritingCI24BaseEi(ptr noundef nonnull align 8 dereferenceable(8) %[[THIS_LOAD]], ptr noundef getelementptr inbounds nuw (i8, ptr @_ZTT23IndirectVBaseInheriting, i64 8))
+//
 
 // CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN7DerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_Derived>{{.*}}, %{{.*}}: !s32i{{.*}}) func_info<#cir.cxx_ctor<!rec_Derived, custom>>
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
@@ -140,3 +247,17 @@ void fallsthrough() {
 // LLVM: %[[VTT:.*]] = load ptr, ptr %[[VTT_ALLOCA]]
 // LLVM: %[[VTT_ADDR_LOAD:.*]] = load ptr, ptr %[[VTT]]
 // LLVM: store ptr %[[VTT_ADDR_LOAD]], ptr %[[THIS]]
+
+// CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN15VBaseInheritingCI24BaseEi(%{{[a-z0-9]+}}: !cir.ptr<!rec_VBaseInheriting> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef} loc({{[^)]+}}), %{{[a-z0-9]+}}: !cir.ptr<!cir.ptr<!void>> {llvm.noundef} loc({{[^)]+}})) func_info<#cir.cxx_ctor<!rec_VBaseInheriting, custom>>
+// CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_VBaseInheriting>>
+// CIR: %[[VTT_ALLOCA:.*]] = cir.alloca "vtt" align(8) init : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+// CIR: %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VBaseInheriting>>, !cir.ptr<!rec_VBaseInheriting>
+// CIR-NEXT: %[[VTT:.*]] = cir.load align(8) %[[VTT_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>, !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_VBaseInheriting> -> !cir.ptr<!rec_VirtDerived>
+// CIR-NEXT: %[[SUB_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT: cir.call @_ZN11VirtDerivedCI24BaseEi(%[[BASE_ADDR]], %[[SUB_VTT]]) : (!cir.ptr<!rec_VirtDerived> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!cir.ptr<!void>> {llvm.noundef}) -> ()
+
+// LLVM-LABEL: define linkonce_odr void @_ZN15VBaseInheritingCI24BaseEi(ptr noundef nonnull align 8 dereferenceable(8) %{{[a-z0-9]+}}, ptr noundef %{{[a-z0-9]+}})
+// LLVM: %[[THIS_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
+// LLVM: call void @_ZN11VirtDerivedCI24BaseEi(ptr noundef nonnull align 8 dereferenceable(8) %[[THIS]], ptr noundef %{{[a-z0-9]+}})

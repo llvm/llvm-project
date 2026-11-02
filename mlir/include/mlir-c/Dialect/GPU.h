@@ -71,6 +71,10 @@ mlirGPUObjectAttrGetKernels(MlirAttribute mlirObjectAttr);
 }
 #endif
 
+#include "mlir/Dialect/GPU/Transforms/NVVM/Passes.capi.h.inc"
 #include "mlir/Dialect/GPU/Transforms/Passes.capi.h.inc"
+#include "mlir/Dialect/GPU/Transforms/ROCDL/Passes.capi.h.inc"
+#include "mlir/Dialect/GPU/Transforms/SPIRV/Passes.capi.h.inc"
+#include "mlir/Dialect/GPU/Transforms/XeVM/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_GPU_H
