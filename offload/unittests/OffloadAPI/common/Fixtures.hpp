@@ -204,13 +204,8 @@ struct OffloadDeviceTestWithParam
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
 
-    for (const auto &DeviceParam : std::get<0>(this->GetParam())) {
-      if (DeviceParam.Handle == nullptr)
-        GTEST_SKIP() << "No available devices.";
+    for (const auto &DeviceParam : std::get<0>(this->GetParam()))
       Devices.push_back(DeviceParam.Handle);
-    }
-    if (Devices.empty())
-      GTEST_SKIP() << "No available devices.";
     Device = Devices.front();
 
     ASSERT_SUCCESS(olCreateContext(Devices.size(), Devices.data(), &Context));
