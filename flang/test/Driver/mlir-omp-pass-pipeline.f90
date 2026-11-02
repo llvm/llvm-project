@@ -34,8 +34,9 @@ end program
 ! FULL: LowerWorkshare
 ! FULL: LowerWorkdistribute
 ! FULL-NOT: SimdOnlyPass
-! FULL: LowerNontemporalPass
 ! FULL: MarkDeclareTargetPass
+! FULL-NEXT: TargetRewrite
+! FULL: LowerNontemporalPass
 ! FULL: UnimplementedDeviceCheckPass
 ! FULL: MarkDeclareTargetPass
 ! FULL: FunctionFilteringPass
@@ -67,8 +68,9 @@ end program
 ! DEVICE: LowerWorkshare
 ! DEVICE: LowerWorkdistribute
 ! DEVICE-NOT: SimdOnlyPass
-! DEVICE: LowerNontemporalPass
 ! DEVICE: MarkDeclareTargetPass
+! DEVICE-NEXT: TargetRewrite
+! DEVICE: LowerNontemporalPass
 ! DEVICE: UnimplementedDeviceCheckPass
 ! DEVICE: MarkDeclareTargetPass
 ! DEVICE: FunctionFilteringPass
