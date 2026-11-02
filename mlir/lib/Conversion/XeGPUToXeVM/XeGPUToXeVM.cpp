@@ -21,12 +21,17 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -1658,6 +1663,104 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
   }
 };
 
+// Hoist the i4-to-i8 part of compatible extensions through a closed
+// data-movement graph and lane shuffle. Widening all the way to the extension's
+// result type could exceed the bitcast-shuffle lowering's 64-bit fragment
+// limit. Signed widening preserves the eventual signed interpretation of each
+// nibble; unsigned widening preserves its unsigned interpretation.
+template <typename ExtOp>
+class HoistI4ExtensionAboveLaneShuffle final : public OpRewritePattern<ExtOp> {
+public:
+  using OpRewritePattern<ExtOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtOp op,
+                                PatternRewriter &rewriter) const override {
+    auto srcTy = dyn_cast<VectorType>(op.getIn().getType());
+    auto dstTy = dyn_cast<VectorType>(op.getType());
+    if (!srcTy || !srcTy.getElementType().isInteger(4) || !dstTy ||
+        dstTy.getElementTypeBitWidth() < 8)
+      return failure();
+
+    auto isMover = [](Operation *def) {
+      return isa<vector::ShapeCastOp, vector::ExtractStridedSliceOp,
+                 vector::ExtractOp, vector::BroadcastOp, vector::TransposeOp>(
+          def);
+    };
+    Value source = op.getIn();
+    while (Operation *def = source.getDefiningOp()) {
+      if (isa<xegpu::LaneShuffleOp>(def))
+        break;
+      if (!isMover(def))
+        return failure();
+      source = def->getOperand(0);
+    }
+    auto shuffle = source.getDefiningOp<xegpu::LaneShuffleOp>();
+    if (!shuffle)
+      return failure();
+    VectorType fragmentTy = shuffle.getSourceType();
+    int64_t numElements = fragmentTy.getNumElements();
+    if (!fragmentTy.getElementType().isInteger(4) || numElements < 2 ||
+        numElements > 8 || !llvm::isPowerOf2_64(numElements))
+      return failure();
+
+    // Validate every use before changing IR. Widening a shared fragment is
+    // safe only when all paths end in extensions with the same signedness.
+    SmallVector<Operation *> movers;
+    SmallVector<ExtOp> extensions;
+    SmallPtrSet<Operation *, 16> visited;
+    auto visit = [&](auto &&visit, Value value) -> LogicalResult {
+      for (Operation *user : value.getUsers()) {
+        if (!visited.insert(user).second)
+          continue;
+        if (auto ext = dyn_cast<ExtOp>(user)) {
+          auto type = dyn_cast<VectorType>(ext.getType());
+          if (!type || type.getElementTypeBitWidth() < 8)
+            return failure();
+          extensions.push_back(ext);
+          continue;
+        }
+        if (!isMover(user) || user->getOperand(0) != value ||
+            user->getNumResults() != 1 ||
+            failed(visit(visit, user->getResult(0))))
+          return failure();
+        movers.push_back(user);
+      }
+      return success();
+    };
+    if (failed(visit(visit, shuffle.getResult())))
+      return failure();
+
+    rewriter.setInsertionPoint(shuffle);
+    VectorType wideTy = fragmentTy.clone(rewriter.getI8Type());
+    Value wide =
+        ExtOp::create(rewriter, op.getLoc(), wideTy, shuffle.getSource());
+    Value result = xegpu::LaneShuffleOp::create(
+        rewriter, shuffle.getLoc(), wideTy, wide, shuffle.getMode());
+    IRMapping mapping;
+    mapping.map(shuffle.getResult(), result);
+    for (Operation *mover : llvm::reverse(movers)) {
+      rewriter.setInsertionPoint(mover);
+      Operation *clone = rewriter.clone(*mover, mapping);
+      Type type = rewriter.getI8Type();
+      if (auto vectorTy = dyn_cast<VectorType>(mover->getResult(0).getType()))
+        type = vectorTy.clone(type);
+      clone->getResult(0).setType(type);
+    }
+    for (ExtOp ext : extensions) {
+      Value input = mapping.lookup(ext.getIn());
+      if (input.getType() == ext.getType())
+        rewriter.replaceOp(ext, input);
+      else
+        rewriter.modifyOpInPlace(ext,
+                                 [&] { ext.getInMutable().assign(input); });
+    }
+    for (Operation *mover : movers)
+      rewriter.eraseOp(mover);
+    rewriter.eraseOp(shuffle);
+    return success();
+  }
+};
+
 // Lowers `xegpu.lane_shuffle` to `xevm.bitcast_shuffle`.
 //
 // `xevm.bitcast_shuffle` concatenates the components of its operand across the
@@ -1734,6 +1837,42 @@ struct ConvertXeGPUToXeVMPass
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
+
+    // Restrict greedy rewriting to casts and newly generated operations so
+    // unrelated dead XeGPU ops still receive conversion diagnostics.
+    GreedyRewriteConfig config;
+    config.setStrictness(GreedyRewriteStrictness::ExistingAndNewOps);
+    // Preserve extension consumers until hoisting has finished: narrow-type
+    // legalization would otherwise obscure the chains this peephole matches.
+    {
+      RewritePatternSet patterns(context);
+      patterns.add<HoistI4ExtensionAboveLaneShuffle<arith::ExtUIOp>,
+                   HoistI4ExtensionAboveLaneShuffle<arith::ExtSIOp>>(context);
+      SmallVector<Operation *> extensions;
+      getOperation()->walk([&](Operation *op) {
+        if (isa<arith::ExtUIOp, arith::ExtSIOp>(op))
+          extensions.push_back(op);
+      });
+      if (failed(
+              applyOpPatternsGreedily(extensions, std::move(patterns), config)))
+        return signalPassFailure();
+    }
+    // Expand the new i4-to-i8 casts into byte-level masks and shifts before
+    // lowering. LLVM extensions on i4 vectors are not legal in the backend.
+    {
+      RewritePatternSet patterns(context);
+      vector::populateVectorNarrowTypeRewritePatterns(patterns);
+      vector::populateVectorInterleaveToShufflePatterns(patterns);
+      vector::populateVectorDeinterleaveToShufflePatterns(patterns);
+      SmallVector<Operation *> casts;
+      getOperation()->walk([&](Operation *op) {
+        if (isa<arith::ExtUIOp, arith::ExtSIOp, arith::TruncIOp,
+                vector::BitCastOp>(op))
+          casts.push_back(op);
+      });
+      if (failed(applyOpPatternsGreedily(casts, std::move(patterns), config)))
+        return signalPassFailure();
+    }
 
     // XeVM type converter is based on LLVM type converter with the
     // following customizations.
