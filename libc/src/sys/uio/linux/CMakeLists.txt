@@ -1,24 +1,25 @@
 add_entrypoint_object(
-  writev
-  SRCS
-    writev.cpp
-  HDRS
-    ../writev.h
-  DEPENDS
-    libc.hdr.types.ssize_t
-    libc.hdr.types.struct_iovec
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.common
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
   readv
   SRCS
     readv.cpp
   HDRS
     ../readv.h
+  DEPENDS
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.readv
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  writev
+  SRCS
+    writev.cpp
+  HDRS
+    ../writev.h
   DEPENDS
     libc.hdr.types.ssize_t
     libc.hdr.types.struct_iovec
