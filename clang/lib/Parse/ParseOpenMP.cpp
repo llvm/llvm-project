@@ -2736,10 +2736,13 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // was specified without an associated directive variant. Only
       // 'otherwise' (or the deprecated 'default') has no context selectors.
       unsigned NumClauses = TraitInfos.size();
-      bool HasImplicitOtherwise = llvm::none_of(
-          TraitInfos, [](const OMPTraitInfo *TI) { return TI->Sets.empty(); });
-      if (HasImplicitOtherwise)
-        TraitInfos.push_back(&ASTContext.getNewOMPTraitInfo());
+      unsigned NumVariants =
+          NumClauses + (llvm::none_of(TraitInfos,
+                                      [](const OMPTraitInfo *TI) {
+                                        return TI->Sets.empty();
+                                      })
+                            ? 1
+                            : 0);
 
       // Reuse the normal metadirective variant parse per clause so every
       // variant is a complete directive node with its own body and its own
@@ -2747,7 +2750,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // reported once per variant.
       SmallVector<Stmt *, 4> Variants;
       bool HasError = false;
-      for (unsigned I : llvm::seq<unsigned>(TraitInfos.size())) {
+      for (unsigned I : llvm::seq<unsigned>(NumVariants)) {
         bool HasDirective = false;
         if (I < NumClauses) {
           OpenMPClauseKind CKind = getOpenMPClauseKind(PP.getSpelling(Tok));
@@ -2764,7 +2767,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         }
         // Re-parse the directive and body for every variant but the last.
         std::optional<TentativeParsingAction> VariantTPA;
-        if (I + 1 < TraitInfos.size())
+        if (I + 1 < NumVariants)
           VariantTPA.emplace(*this, /*Unannotated=*/true);
 
         StmtResult Variant;
@@ -2802,8 +2805,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       }
       if (HasError)
         return StmtError();
-      return Actions.OpenMP().ActOnOpenMPMetaDirective(
-          Loc, EndLoc, TraitInfos, Variants, HasImplicitOtherwise);
+      return Actions.OpenMP().ActOnOpenMPMetaDirective(Loc, EndLoc, TraitInfos,
+                                                       Variants);
     }
 
     int Idx = 0;

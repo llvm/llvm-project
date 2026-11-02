@@ -3845,13 +3845,17 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
 
 StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants,
-    bool HasImplicitOtherwise) {
-  assert(TraitInfos.size() == Variants.size() &&
+    ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants) {
+  // Without an 'otherwise' clause, the last variant is the implicit one.
+  bool HasImplicitOtherwise = Variants.size() == TraitInfos.size() + 1;
+  assert((HasImplicitOtherwise || Variants.size() == TraitInfos.size()) &&
          "Expected one variant per metadirective clause");
+  SmallVector<OMPTraitInfo *, 4> AllTraitInfos(TraitInfos);
+  if (HasImplicitOtherwise)
+    AllTraitInfos.push_back(&getASTContext().getNewOMPTraitInfo());
   // The user condition of each variant; null for 'otherwise'.
   SmallVector<Expr *, 4> Conditions;
-  for (OMPTraitInfo *TI : TraitInfos) {
+  for (OMPTraitInfo *TI : AllTraitInfos) {
     Expr *Cond = nullptr;
     TI->anyScoreOrCondition([&](Expr *&E, bool IsScore) {
       if (!IsScore)
@@ -3867,7 +3871,8 @@ StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     Conditions.push_back(Cond);
   }
   return OMPMetaDirective::Create(getASTContext(), StartLoc, EndLoc, Variants,
-                                  Conditions, TraitInfos, HasImplicitOtherwise);
+                                  Conditions, AllTraitInfos,
+                                  HasImplicitOtherwise);
 }
 
 OMPRequiresDecl *

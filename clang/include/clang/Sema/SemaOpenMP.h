@@ -217,8 +217,7 @@ public:
   StmtResult ActOnOpenMPMetaDirective(SourceLocation StartLoc,
                                       SourceLocation EndLoc,
                                       ArrayRef<OMPTraitInfo *> TraitInfos,
-                                      ArrayRef<Stmt *> Variants,
-                                      bool HasImplicitOtherwise);
+                                      ArrayRef<Stmt *> Variants);
 
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp
