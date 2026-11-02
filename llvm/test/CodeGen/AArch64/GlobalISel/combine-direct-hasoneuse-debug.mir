@@ -1,4 +1,7 @@
-# RUN: llc -mtriple=aarch64 -debugify-and-strip-all-safe -run-pass=aarch64-prelegalizer-combiner -aarch64prelegalizercombiner-only-enable-rule=lshr_of_trunc_of_lshr,combine_insert_vec_elts_build_vector %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -debugify-and-strip-all-safe \
+# RUN:   -run-pass=aarch64-prelegalizer-combiner \
+# RUN:   -aarch64prelegalizercombiner-only-enable-rule=lshr_of_trunc_of_lshr,combine_insert_vec_elts_build_vector \
+# RUN:   %s -o - | FileCheck %s
 # REQUIRES: asserts
 
 # CHECK-LABEL: name: lshr_trunc_lshr_debug_uses
