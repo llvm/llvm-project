@@ -1453,18 +1453,21 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
         return std::move(Err);
       }
 
-      // The host address is optional: variables without contents in the image
-      // (e.g. `.bss`) have none.
-      void *HostAddress = nullptr;
+      // The host address is null for variables without contents in the image
+      // (e.g. `.bss`).
       GlobalTy ImageObj{Name};
       if (auto Err = GlobalHandler.getGlobalMetadataFromImage(
               Device, *Program->Image, ImageObj)) {
-        consumeError(std::move(Err));
-      } else {
+        Program->GlobalSymbols.erase(Name);
+        return std::move(Err);
+      }
+
+      void *HostAddress = ImageObj.getPtr();
+      if (HostAddress) {
         // The address is a host pointer; make sure it lies inside the image.
         uintptr_t Start = uintptr_t(Program->Image->getStart());
         uintptr_t End = Start + Program->Image->getSize();
-        uintptr_t Ptr = (uintptr_t)ImageObj.getPtr();
+        uintptr_t Ptr = (uintptr_t)HostAddress;
         if (Ptr < Start || Ptr > End || ImageObj.getSize() > End - Ptr) {
           Program->GlobalSymbols.erase(Name);
           return createOffloadError(
@@ -1485,7 +1488,6 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
               "(image)",
               Name.str().c_str(), GlobalObj.getSize(), ImageObj.getSize());
         }
-        HostAddress = ImageObj.getPtr();
       }
 
       Global =
@@ -1575,11 +1577,6 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS:
     if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
-    if (!Symbol->HostAddress)
-      return createOffloadError(
-          ErrorCode::NOT_FOUND,
-          "global variable '%s' has no contents in the program image",
-          Symbol->Name.str().c_str());
     return Info.write<void *>(Symbol->HostAddress);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
     if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))

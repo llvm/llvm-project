@@ -154,9 +154,10 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
         ErrorCode::NOT_FOUND, "failed to get ELF symbol from global '%s': %s",
         ImageGlobal.getName().data(), toString(AddrOrErr.takeError()).data());
 
-  // Setup the global symbol's address and size.
+  // Setup the global symbol's address and size. A symbol that exists but has
+  // no contents in the image (e.g. `.bss`) has a null address and size 0.
   ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
-  ImageGlobal.setSize((*SymOrErr)->getSize());
+  ImageGlobal.setSize(*AddrOrErr ? (*SymOrErr)->getSize() : 0);
 
   return Plugin::success();
 }

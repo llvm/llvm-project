@@ -130,14 +130,14 @@ TEST_P(olGetSymbolImageVariableTest, InvalidName) {
 }
 
 // Zero-initialized globals live in `.bss` and have no contents in the image,
-// so only the host address query fails.
-TEST_P(olGetSymbolGlobalTest, InvalidHostAddressNoContents) {
+// so the host address is NULL rather than an error.
+TEST_P(olGetSymbolGlobalTest, HostAddressNoContents) {
   ol_symbol_handle_t Global = nullptr;
   ASSERT_SUCCESS(
       olGetSymbol(Program, "global", OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
-  void *Addr = nullptr;
-  ASSERT_ERROR(OL_ERRC_NOT_FOUND,
-               olGetSymbolInfo(Global,
-                               OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS,
-                               sizeof(Addr), &Addr));
+  void *Addr = reinterpret_cast<void *>(1);
+  ASSERT_SUCCESS(olGetSymbolInfo(Global,
+                                 OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS,
+                                 sizeof(Addr), &Addr));
+  ASSERT_EQ(Addr, nullptr);
 }

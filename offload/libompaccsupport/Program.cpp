@@ -87,6 +87,11 @@ Error ProgramTy::readGlobalFromImage(const char *Name, void *Dst,
         "global symbol %s has %zu bytes in the image but %zu were requested",
         Name, SymbolSize, Size);
 
+  if (!ImageAddress)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "global symbol %s has no contents in the program image", Name);
+
   std::memcpy(Dst, ImageAddress, Size);
   return Error::success();
 }
