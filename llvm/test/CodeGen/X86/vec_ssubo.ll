@@ -1175,17 +1175,16 @@ define <2 x i32> @ssubo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512-LABEL: ssubo_v2i128:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    subq {{[0-9]+}}(%rsp), %rdx
-; AVX512-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
-; AVX512-NEXT:    seto %r10b
-; AVX512-NEXT:    kmovd %r10d, %k0
 ; AVX512-NEXT:    subq %r8, %rdi
 ; AVX512-NEXT:    sbbq %r9, %rsi
 ; AVX512-NEXT:    seto %r8b
-; AVX512-NEXT:    andl $1, %r8d
-; AVX512-NEXT:    kmovw %r8d, %k1
-; AVX512-NEXT:    kshiftlw $1, %k0, %k0
-; AVX512-NEXT:    korw %k0, %k1, %k1
+; AVX512-NEXT:    subq {{[0-9]+}}(%rsp), %rdx
+; AVX512-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
+; AVX512-NEXT:    seto %r9b
+; AVX512-NEXT:    vmovd %r8d, %xmm0
+; AVX512-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    movq %rdx, 16(%rax)
