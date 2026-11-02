@@ -3311,18 +3311,19 @@ FunctionDecl::getDefaultedFunctionKind() const {
       return CXXSpecialMemberKind::Destructor;
   }
 
-  switch (OverloadedOperatorKind OO =
-              getDeclName().getCXXOverloadedOperator()) {
+  // Only the postfix forms of ++ and -- can be defaulted. They are
+  // distinguished from the prefix forms by their trailing 'int' parameter, so
+  // they have exactly two parameters including implicit or explicit 'this'.
+  switch (getDeclName().getCXXOverloadedOperator()) {
   case OO_PlusPlus:
-  case OO_MinusMinus: {
-    // Only the postfix forms can be defaulted. They are distinguished from the
-    // prefix forms by their trailing 'int' parameter, so they have exactly two
-    // parameters including implicit or explicit 'this'.
-    if (getNumParamsIncludingThis() != 2)
-      break;
-    return OO == OO_PlusPlus ? PostfixOperatorKind::Increment
-                             : PostfixOperatorKind::Decrement;
-  }
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Increment;
+    break;
+
+  case OO_MinusMinus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Decrement;
+    break;
 
   case OO_EqualEqual:
     return DefaultedComparisonKind::Equal;
