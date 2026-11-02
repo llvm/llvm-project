@@ -1134,8 +1134,8 @@ public:
   }
 };
 
-/// Converts the GLSL clamp ops (FClamp, SClamp, UClamp) into a nested
-/// min/max sequence, following the op semantics `min(max(x, minVal), maxVal)`.
+/// Converts the GL and CL clamp ops into a nested min/max sequence, following
+/// the op semantics `min(max(x, minVal), maxVal)`.
 template <typename SPIRVOp, typename LLVMMinOp, typename LLVMMaxOp>
 class ClampPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
@@ -2525,6 +2525,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
       InverseSqrtPattern<spirv::CLRsqrtOp>, SAbsPattern<spirv::CLSAbsOp>,
+      ClampPattern<spirv::CLFClampOp, LLVM::MinNumOp, LLVM::MaxNumOp>,
+      ClampPattern<spirv::CLSClampOp, LLVM::SMinOp, LLVM::SMaxOp>,
+      ClampPattern<spirv::CLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
       CountZerosPattern<spirv::CLClzOp, LLVM::CountLeadingZerosOp>,
       CountZerosPattern<spirv::CLCtzOp, LLVM::CountTrailingZerosOp>,
 
