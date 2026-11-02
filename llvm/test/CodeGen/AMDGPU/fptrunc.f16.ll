@@ -732,10 +732,10 @@ define half @fptrunc_f64_to_f16(double %a) {
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_nc_u32_e32 v3, v3, v4
-; GFX11-GISEL-TRUE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v2
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v2
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7c00, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v3, 0x7c00, v3, vcc_lo
 ; GFX11-GISEL-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v2
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -781,10 +781,10 @@ define half @fptrunc_f64_to_f16(double %a) {
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-FAKE16-NEXT:    v_add_nc_u32_e32 v3, v3, v4
-; GFX11-GISEL-FAKE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v2
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v2
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7c00, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v3, 0x7c00, v3, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v2
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -925,10 +925,10 @@ define half @fptrunc_f64_to_f16(double %a) {
 ; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-TRUE16-NEXT:    v_add_nc_u32_e32 v3, v3, v4
-; GFX1250-GISEL-TRUE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v2
+; GFX1250-GISEL-TRUE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v2
 ; GFX1250-GISEL-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7c00, vcc_lo
+; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v3, 0x7c00, v3, vcc_lo
 ; GFX1250-GISEL-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v2
 ; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -974,10 +974,10 @@ define half @fptrunc_f64_to_f16(double %a) {
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_add_nc_u32_e32 v3, v3, v4
-; GFX1250-GISEL-FAKE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v2
+; GFX1250-GISEL-FAKE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v2
 ; GFX1250-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7c00, vcc_lo
+; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v3, 0x7c00, v3, vcc_lo
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v2
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2182,13 +2182,13 @@ define <2 x half> @fptrunc_v2f64_to_v2f16(<2 x double> %a) {
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v9, 0, 1, s0
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshl_or_b32 v2, v2, 9, 0x7c00
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-GISEL-TRUE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v5
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v5
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_nc_u32_e32 v6, v6, v9
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
-; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v7, v7, 0x7c00, vcc_lo
-; GFX11-GISEL-TRUE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v4
-; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v6, v6, 0x7c00, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v7, 0x7c00, v7, vcc_lo
+; GFX11-GISEL-TRUE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v4
+; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v6, 0x7c00, v6, vcc_lo
 ; GFX11-GISEL-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v5
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v7, v2, vcc_lo
@@ -2262,13 +2262,13 @@ define <2 x half> @fptrunc_v2f64_to_v2f16(<2 x double> %a) {
 ; GFX11-GISEL-FAKE16-NEXT:    v_add_nc_u32_e32 v7, v7, v8
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX11-GISEL-FAKE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v4
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v4
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v2, v2, 9, 0x7c00
-; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v7, v7, 0x7c00, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v7, 0x7c00, v7, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v9, 7, v5
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 2, v5
-; GFX11-GISEL-FAKE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v6
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v6
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_eq_u32_e64 s1, 3, v9
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_lt_i32_e64 s2, 5, v9
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s0, s1, s2
@@ -2276,7 +2276,7 @@ define <2 x half> @fptrunc_v2f64_to_v2f16(<2 x double> %a) {
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v9, 0, 1, s0
 ; GFX11-GISEL-FAKE16-NEXT:    v_add_nc_u32_e32 v5, v5, v9
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v5, v5, 0x7c00, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v5, 0x7c00, v5, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v4
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v7, v0, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v6
@@ -2524,11 +2524,11 @@ define <2 x half> @fptrunc_v2f64_to_v2f16(<2 x double> %a) {
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-GISEL-TRUE16-NEXT:    v_lshl_or_b32 v2, v2, 9, 0x7c00
 ; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-GISEL-TRUE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v5
+; GFX1250-GISEL-TRUE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v5
 ; GFX1250-GISEL-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
-; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v7, v7, 0x7c00, vcc_lo
-; GFX1250-GISEL-TRUE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v4
-; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v6, v6, 0x7c00, vcc_lo
+; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v7, 0x7c00, v7, vcc_lo
+; GFX1250-GISEL-TRUE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v4
+; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v6, 0x7c00, v6, vcc_lo
 ; GFX1250-GISEL-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v5
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1250-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v7, v2, vcc_lo
@@ -2605,11 +2605,11 @@ define <2 x half> @fptrunc_v2f64_to_v2f16(<2 x double> %a) {
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 9, 0x7c00
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX1250-GISEL-FAKE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v4
+; GFX1250-GISEL-FAKE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v2, v2, 9, 0x7c00
-; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v7, v7, 0x7c00, vcc_lo
-; GFX1250-GISEL-FAKE16-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 30, v6
-; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v5, v5, 0x7c00, vcc_lo
+; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v7, 0x7c00, v7, vcc_lo
+; GFX1250-GISEL-FAKE16-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 30, v6
+; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v5, 0x7c00, v5, vcc_lo
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v7, v0, vcc_lo

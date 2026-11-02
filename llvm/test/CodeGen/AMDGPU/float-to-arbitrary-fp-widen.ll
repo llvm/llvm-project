@@ -309,11 +309,11 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v10, 1, v9
 ; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v5, v8, v5
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v5
 ; GFX950-NEXT:    v_and_b32_sdwa v8, v2, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    s_movk_i32 s2, 0xff
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v7, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v8, v5, v7 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v7, 6, v4
 ; GFX950-NEXT:    v_and_b32_e32 v4, 63, v4
@@ -323,12 +323,12 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v4, v7, v4, v10 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v4, v9, v4
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v4
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v4
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v7, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v6, v6, v7
 ; GFX950-NEXT:    v_add_u16_e32 v6, 6, v6
-; GFX950-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v7, 3, v6
 ; GFX950-NEXT:    v_bitop3_b16 v4, v8, v4, v7 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v6
@@ -360,11 +360,11 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v12, 1, v11
 ; GFX950-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v7, v10, v7
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v7
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v7
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v10, 31, v2
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v10, 7, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, v7, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v10, v7, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v9, 6, v6
 ; GFX950-NEXT:    v_and_b32_e32 v6, 63, v6
@@ -373,12 +373,12 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v9, v6, v12 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v6, v11, v6
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v6
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v8, v8, v9
 ; GFX950-NEXT:    v_add_u16_e32 v8, 6, v8
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v9, 3, v8
 ; GFX950-NEXT:    v_bitop3_b16 v6, v10, v6, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v8
@@ -413,11 +413,11 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v13, 1, v12
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v6, v11, v6
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v6
 ; GFX950-NEXT:    v_and_b32_sdwa v11, v1, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v10, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v10, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v11, v6, v10 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v10, 6, v2
 ; GFX950-NEXT:    v_and_b32_e32 v2, 63, v2
@@ -426,12 +426,12 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v2, v10, v2, v13 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v2, v12, v2
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v2
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v2
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v10, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v9, v9, v10
 ; GFX950-NEXT:    v_add_u16_e32 v9, 6, v9
-; GFX950-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v10, 3, v9
 ; GFX950-NEXT:    v_bitop3_b16 v2, v11, v2, v10 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v9
@@ -463,11 +463,11 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v14, 1, v13
 ; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v9, v12, v9
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v9
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v9
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v12, 31, v1
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 7, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, v9, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v9, v12, v9, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v11, 6, v6
 ; GFX950-NEXT:    v_and_b32_e32 v6, 63, v6
@@ -476,12 +476,12 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v11, v6, v14 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v6, v13, v6
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v6
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v10, v10, v11
 ; GFX950-NEXT:    v_add_u16_e32 v10, 6, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v11, 3, v10
 ; GFX950-NEXT:    v_bitop3_b16 v6, v12, v6, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v10
@@ -515,11 +515,11 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v14, 1, v13
 ; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v9, v12, v9
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v9
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v9
 ; GFX950-NEXT:    v_and_b32_sdwa v12, v0, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    v_lshrrev_b64 v[6:7], 24, v[6:7]
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, v9, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v9, v12, v9, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v11, 6, v1
 ; GFX950-NEXT:    v_and_b32_e32 v1, 63, v1
@@ -528,12 +528,12 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v1, v11, v1, v14 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v1, v13, v1
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v1
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v1
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v10, v10, v11
 ; GFX950-NEXT:    v_add_u16_e32 v10, 6, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v11, 3, v10
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v10
 ; GFX950-NEXT:    v_frexp_exp_i16_f16_sdwa v10, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
@@ -564,11 +564,11 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v14, 1, v13
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v3, v12, v3
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v3
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v3
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v12, 31, v0
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 7, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v12, v3, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v11, 6, v9
 ; GFX950-NEXT:    v_and_b32_e32 v9, 63, v9
@@ -577,12 +577,12 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v9, v11, v9, v14 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v9, v13, v9
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v9
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v9
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v10, v10, v11
 ; GFX950-NEXT:    v_add_u16_e32 v10, 6, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, v9, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v11, 3, v10
 ; GFX950-NEXT:    v_bitop3_b16 v9, v12, v9, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v10
@@ -653,17 +653,17 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 1, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v8.h, v9.h, -1
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v3.h
 ; GFX1200-NEXT:    v_or_b16 v8.l, v8.l, v12.h
 ; GFX1200-NEXT:    v_and_b16 v9.l, v10.h, 1
 ; GFX1200-NEXT:    v_or_b16 v6.h, v6.h, v12.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v4.h, v4.h, v8.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_and_b16 v6.l, v6.l, v6.h
 ; GFX1200-NEXT:    v_and_b16 v6.h, v10.l, v8.h
-; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.h, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v5.h
 ; GFX1200-NEXT:    v_add_nc_u16 v4.h, v7.l, v4.h
 ; GFX1200-NEXT:    v_add_nc_u16 v3.l, v3.l, v8.h
@@ -671,24 +671,24 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v6.l, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v6.h
 ; GFX1200-NEXT:    v_lshrrev_b16 v6.h, v11.h, v10.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s0, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s0, 7, v4.h
 ; GFX1200-NEXT:    v_add_nc_u16 v3.l, v3.l, 6
 ; GFX1200-NEXT:    v_add_nc_u16 v5.h, v11.l, v5.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 1, vcc_lo
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v8.l, 0, 1, s0
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.h
+; GFX1200-NEXT:    v_cndmask_b16 v8.l, 1, 0, s0
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, s0
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.h
 ; GFX1200-NEXT:    v_or_b16 v6.l, v6.l, v9.l
 ; GFX1200-NEXT:    v_cmp_gt_i16_e64 s0, 1, v3.l
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v5.l, v8.l
 ; GFX1200-NEXT:    v_lshrrev_b32_e32 v9, 31, v2
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, v5.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v5.h, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v6.l, v6.h, v6.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v6.h, 3, v3.l
-; GFX1200-NEXT:    v_cndmask_b16 v7.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v7.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v7.h
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v5.l, 6
 ; GFX1200-NEXT:    v_frexp_mant_f16_e32 v8.l, v1.l
@@ -705,11 +705,11 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_lshlrev_b16 v7.l, 7, v9.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v3.l, v3.h, v5.h, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v6.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v6.l
 ; GFX1200-NEXT:    v_sub_nc_u16 v5.h, 2, v6.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v6.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v6.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_min_u16 v5.h, v5.h, 15
 ; GFX1200-NEXT:    v_cmp_eq_f16_e32 vcc_lo, 0, v2.l
@@ -765,28 +765,28 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_and_b16 v3.h, v3.h, v4.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v2.h, 8, v2.h
 ; GFX1200-NEXT:    v_min_u16 v3.l, v3.l, 15
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.h
 ; GFX1200-NEXT:    v_and_b16 v7.l, v5.l, 0x3ff
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, s0
 ; GFX1200-NEXT:    v_or_b16 v4.l, v2.l, v2.h
 ; GFX1200-NEXT:    v_sub_nc_u16 v6.l, v3.l, 1 clamp
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_or_b16 v2.h, v7.l, 0x400
 ; GFX1200-NEXT:    v_add_nc_u16 v3.h, v7.h, v3.h
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
 ; GFX1200-NEXT:    v_lshlrev_b16 v8.h, v6.l, 1
 ; GFX1200-NEXT:    v_add_nc_u16 v2.l, v6.h, v5.h
 ; GFX1200-NEXT:    v_lshrrev_b16 v6.h, 8, v1.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v3.h
 ; GFX1200-NEXT:    v_lshrrev_b16 v7.h, v3.l, v2.h
 ; GFX1200-NEXT:    v_add_nc_u16 v5.h, v8.h, -1
 ; GFX1200-NEXT:    v_add_nc_u16 v2.l, v2.l, 6
 ; GFX1200-NEXT:    v_and_b16 v6.h, v6.h, 0x80
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.h, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v5.h, v2.h, v5.h
 ; GFX1200-NEXT:    v_and_b16 v9.h, v7.h, 1
 ; GFX1200-NEXT:    v_lshrrev_b16 v2.h, v6.l, v2.h
@@ -829,20 +829,20 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_frexp_mant_f16_e32 v4.h, v0.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.l, v2.l, v6.h, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v2.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v2.h
 ; GFX1200-NEXT:    v_add_nc_u16 v3.h, v6.l, v3.h
 ; GFX1200-NEXT:    v_and_b16 v5.h, v4.h, 0x3ff
 ; GFX1200-NEXT:    v_lshlrev_b16 v6.l, v5.l, 1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v2.h, v2.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 8, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v3.h
+; GFX1200-NEXT:    v_cndmask_b16 v2.h, 0, v2.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.h, 8, 0, vcc_lo
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v3.h
 ; GFX1200-NEXT:    v_or_b16 v7.l, v5.h, 0x400
 ; GFX1200-NEXT:    v_add_nc_u16 v6.l, v6.l, -1
 ; GFX1200-NEXT:    v_lshrrev_b16 v5.h, 7, v5.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v9.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v9.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v6.l, v7.l, v6.l
 ; GFX1200-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1.l, v1.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v9.h, v3.l, v7.l
@@ -899,27 +899,27 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v5.l
 ; GFX1200-NEXT:    v_or_b16 v3.h, v11.h, v3.h
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s0, 7, v3.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s0, 7, v3.l
 ; GFX1200-NEXT:    v_and_b16 v5.h, v7.l, v10.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.h
 ; GFX1200-NEXT:    v_lshrrev_b16 v7.l, 8, v0.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.l, v3.l, 0, s0
+; GFX1200-NEXT:    v_cndmask_b16 v3.l, 0, v3.l, s0
 ; GFX1200-NEXT:    v_add_nc_u16 v5.h, v10.h, v5.h
 ; GFX1200-NEXT:    v_or_b16 v5.l, v5.l, v6.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v6.l, v11.l, v8.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.l, 0, 8, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s1, 7, v5.h
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.l, 8, 0, s0
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s1, 7, v5.h
 ; GFX1200-NEXT:    v_and_b16 v7.l, v7.l, 0x80
 ; GFX1200-NEXT:    v_and_b16 v5.l, v6.l, v5.l
-; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v6.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 1, s1
+; GFX1200-NEXT:    v_cndmask_b16 v6.h, 1, 0, s1
 ; GFX1200-NEXT:    v_lshrrev_b32_e32 v10, 31, v0
 ; GFX1200-NEXT:    v_or_b16 v8.l, v7.l, v8.l
 ; GFX1200-NEXT:    v_add_nc_u16 v6.l, v8.h, v6.l
@@ -927,19 +927,19 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v5.l, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v6.h, v9.l, v6.h
 ; GFX1200-NEXT:    v_lshlrev_b16 v9.h, 7, v10.l
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, v5.h, 0, s1
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v5.h, s1
 ; GFX1200-NEXT:    v_add_nc_u16 v6.l, v6.l, 6
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v12.h, v5.l
 ; GFX1200-NEXT:    v_add_nc_u16 v6.h, v6.h, 6
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_lshlrev_b16 v8.h, 3, v6.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_lshlrev_b16 v10.l, 3, v6.h
 ; GFX1200-NEXT:    v_or_b16 v8.h, v7.l, v8.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.l, v5.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v9.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v5.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v9.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 1, v2.h
 ; GFX1200-NEXT:    v_or_b16 v10.l, v9.h, v10.l
 ; GFX1200-NEXT:    v_or_b16 v2.h, v8.l, v3.l
@@ -1086,11 +1086,11 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v10, 1, v9
 ; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v5, v8, v5
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v5
 ; GFX950-NEXT:    v_and_b32_sdwa v8, v2, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    s_movk_i32 s2, 0xff
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v7, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v8, v5, v7 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v7, 6, v4
 ; GFX950-NEXT:    v_and_b32_e32 v4, 63, v4
@@ -1100,12 +1100,12 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v4, v7, v4, v10 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v4, v9, v4
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v4
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v4
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v7, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v6, v6, v7
 ; GFX950-NEXT:    v_add_u16_e32 v6, 6, v6
-; GFX950-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v7, 3, v6
 ; GFX950-NEXT:    v_bitop3_b16 v4, v8, v4, v7 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v6
@@ -1137,11 +1137,11 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v12, 1, v11
 ; GFX950-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v7, v10, v7
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v7
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v7
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v10, 31, v2
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v10, 7, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, v7, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v10, v7, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v9, 6, v6
 ; GFX950-NEXT:    v_and_b32_e32 v6, 63, v6
@@ -1150,12 +1150,12 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v9, v6, v12 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v6, v11, v6
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v6
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v8, v8, v9
 ; GFX950-NEXT:    v_add_u16_e32 v8, 6, v8
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v9, 3, v8
 ; GFX950-NEXT:    v_bitop3_b16 v6, v10, v6, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v8
@@ -1190,11 +1190,11 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v13, 1, v12
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v6, v11, v6
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v6
 ; GFX950-NEXT:    v_and_b32_sdwa v11, v1, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v10, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v10, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v11, v6, v10 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v10, 6, v2
 ; GFX950-NEXT:    v_and_b32_e32 v2, 63, v2
@@ -1203,12 +1203,12 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v2, v10, v2, v13 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v2, v12, v2
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v2
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v2
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v10, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v9, v9, v10
 ; GFX950-NEXT:    v_add_u16_e32 v9, 6, v9
-; GFX950-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v10, 3, v9
 ; GFX950-NEXT:    v_bitop3_b16 v2, v11, v2, v10 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v9
@@ -1240,11 +1240,11 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v14, 1, v13
 ; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v9, v12, v9
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v9
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v9
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v12, 31, v1
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 7, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, v9, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v9, v12, v9, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v11, 6, v6
 ; GFX950-NEXT:    v_and_b32_e32 v6, 63, v6
@@ -1253,12 +1253,12 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v11, v6, v14 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v6, v13, v6
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v6
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v10, v10, v11
 ; GFX950-NEXT:    v_add_u16_e32 v10, 6, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v11, 3, v10
 ; GFX950-NEXT:    v_bitop3_b16 v6, v12, v6, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v10
@@ -1292,11 +1292,11 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v14, 1, v13
 ; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v9, v12, v9
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v9
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v9
 ; GFX950-NEXT:    v_and_b32_sdwa v12, v0, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, v9, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v9, v12, v9, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v11, 6, v1
 ; GFX950-NEXT:    v_and_b32_e32 v1, 63, v1
@@ -1305,12 +1305,12 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v1, v11, v1, v14 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v1, v13, v1
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v1
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v1
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v10, v10, v11
 ; GFX950-NEXT:    v_add_u16_e32 v10, 6, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v11, 3, v10
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v10
 ; GFX950-NEXT:    v_frexp_exp_i16_f16_sdwa v10, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
@@ -1341,11 +1341,11 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v14, 1, v13
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v3, v12, v3
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v3
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v3
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v12, 31, v0
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 7, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v12, v3, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v11, 6, v9
 ; GFX950-NEXT:    v_and_b32_e32 v9, 63, v9
@@ -1354,12 +1354,12 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v9, v11, v9, v14 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v9, v13, v9
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v9
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v9
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v10, v10, v11
 ; GFX950-NEXT:    v_add_u16_e32 v10, 6, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, v9, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v9, 0, v9, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v11, 3, v10
 ; GFX950-NEXT:    v_bitop3_b16 v9, v12, v9, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v10
@@ -1432,17 +1432,17 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 1, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v8.h, v9.h, -1
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v3.h
 ; GFX1200-NEXT:    v_or_b16 v8.l, v8.l, v12.h
 ; GFX1200-NEXT:    v_and_b16 v9.l, v10.h, 1
 ; GFX1200-NEXT:    v_or_b16 v6.h, v6.h, v12.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v4.h, v4.h, v8.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_and_b16 v6.l, v6.l, v6.h
 ; GFX1200-NEXT:    v_and_b16 v6.h, v10.l, v8.h
-; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.h, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v5.h
 ; GFX1200-NEXT:    v_add_nc_u16 v4.h, v7.l, v4.h
 ; GFX1200-NEXT:    v_add_nc_u16 v3.l, v3.l, v8.h
@@ -1450,24 +1450,24 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v6.l, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v6.h
 ; GFX1200-NEXT:    v_lshrrev_b16 v6.h, v11.h, v10.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s0, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s0, 7, v4.h
 ; GFX1200-NEXT:    v_add_nc_u16 v3.l, v3.l, 6
 ; GFX1200-NEXT:    v_add_nc_u16 v5.h, v11.l, v5.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 1, vcc_lo
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v8.l, 0, 1, s0
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.h
+; GFX1200-NEXT:    v_cndmask_b16 v8.l, 1, 0, s0
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, s0
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.h
 ; GFX1200-NEXT:    v_or_b16 v6.l, v6.l, v9.l
 ; GFX1200-NEXT:    v_cmp_gt_i16_e64 s0, 1, v3.l
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v5.l, v8.l
 ; GFX1200-NEXT:    v_lshrrev_b32_e32 v9, 31, v2
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, v5.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v5.h, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v6.l, v6.h, v6.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v6.h, 3, v3.l
-; GFX1200-NEXT:    v_cndmask_b16 v7.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v7.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v7.h
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v5.l, 6
 ; GFX1200-NEXT:    v_frexp_mant_f16_e32 v8.l, v1.l
@@ -1484,11 +1484,11 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1200-NEXT:    v_lshlrev_b16 v7.l, 7, v9.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v3.l, v3.h, v5.h, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v6.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v6.l
 ; GFX1200-NEXT:    v_sub_nc_u16 v5.h, 2, v6.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v6.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v6.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_min_u16 v5.h, v5.h, 15
 ; GFX1200-NEXT:    v_cmp_eq_f16_e32 vcc_lo, 0, v2.l
@@ -1544,28 +1544,28 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1200-NEXT:    v_and_b16 v3.h, v3.h, v4.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v2.h, 8, v2.h
 ; GFX1200-NEXT:    v_min_u16 v3.l, v3.l, 15
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.h
 ; GFX1200-NEXT:    v_and_b16 v7.l, v5.l, 0x3ff
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, s0
 ; GFX1200-NEXT:    v_or_b16 v4.l, v2.l, v2.h
 ; GFX1200-NEXT:    v_sub_nc_u16 v6.l, v3.l, 1 clamp
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_or_b16 v2.h, v7.l, 0x400
 ; GFX1200-NEXT:    v_add_nc_u16 v3.h, v7.h, v3.h
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
 ; GFX1200-NEXT:    v_lshlrev_b16 v8.h, v6.l, 1
 ; GFX1200-NEXT:    v_add_nc_u16 v2.l, v6.h, v5.h
 ; GFX1200-NEXT:    v_lshrrev_b16 v6.h, 8, v1.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v3.h
 ; GFX1200-NEXT:    v_lshrrev_b16 v7.h, v3.l, v2.h
 ; GFX1200-NEXT:    v_add_nc_u16 v5.h, v8.h, -1
 ; GFX1200-NEXT:    v_add_nc_u16 v2.l, v2.l, 6
 ; GFX1200-NEXT:    v_and_b16 v6.h, v6.h, 0x80
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.h, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v5.h, v2.h, v5.h
 ; GFX1200-NEXT:    v_and_b16 v9.h, v7.h, 1
 ; GFX1200-NEXT:    v_lshrrev_b16 v2.h, v6.l, v2.h
@@ -1608,20 +1608,20 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1200-NEXT:    v_frexp_mant_f16_e32 v4.h, v0.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.l, v2.l, v6.h, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v2.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v2.h
 ; GFX1200-NEXT:    v_add_nc_u16 v3.h, v6.l, v3.h
 ; GFX1200-NEXT:    v_and_b16 v5.h, v4.h, 0x3ff
 ; GFX1200-NEXT:    v_lshlrev_b16 v6.l, v5.l, 1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v2.h, v2.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 8, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v3.h
+; GFX1200-NEXT:    v_cndmask_b16 v2.h, 0, v2.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.h, 8, 0, vcc_lo
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v3.h
 ; GFX1200-NEXT:    v_or_b16 v7.l, v5.h, 0x400
 ; GFX1200-NEXT:    v_add_nc_u16 v6.l, v6.l, -1
 ; GFX1200-NEXT:    v_lshrrev_b16 v5.h, 7, v5.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v9.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v9.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v6.l, v7.l, v6.l
 ; GFX1200-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1.l, v1.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v9.h, v3.l, v7.l
@@ -1678,27 +1678,27 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v5.l
 ; GFX1200-NEXT:    v_or_b16 v3.h, v11.h, v3.h
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s0, 7, v3.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s0, 7, v3.l
 ; GFX1200-NEXT:    v_and_b16 v5.h, v7.l, v10.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.h
 ; GFX1200-NEXT:    v_lshrrev_b16 v7.l, 8, v0.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.l, v3.l, 0, s0
+; GFX1200-NEXT:    v_cndmask_b16 v3.l, 0, v3.l, s0
 ; GFX1200-NEXT:    v_add_nc_u16 v5.h, v10.h, v5.h
 ; GFX1200-NEXT:    v_or_b16 v5.l, v5.l, v6.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v6.l, v11.l, v8.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.l, 0, 8, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s1, 7, v5.h
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.l, 8, 0, s0
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s1, 7, v5.h
 ; GFX1200-NEXT:    v_and_b16 v7.l, v7.l, 0x80
 ; GFX1200-NEXT:    v_and_b16 v5.l, v6.l, v5.l
-; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v6.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 1, s1
+; GFX1200-NEXT:    v_cndmask_b16 v6.h, 1, 0, s1
 ; GFX1200-NEXT:    v_lshrrev_b32_e32 v10, 31, v0
 ; GFX1200-NEXT:    v_or_b16 v8.l, v7.l, v8.l
 ; GFX1200-NEXT:    v_add_nc_u16 v6.l, v8.h, v6.l
@@ -1706,19 +1706,19 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v5.l, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v6.h, v9.l, v6.h
 ; GFX1200-NEXT:    v_lshlrev_b16 v9.h, 7, v10.l
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, v5.h, 0, s1
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v5.h, s1
 ; GFX1200-NEXT:    v_add_nc_u16 v6.l, v6.l, 6
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v12.h, v5.l
 ; GFX1200-NEXT:    v_add_nc_u16 v6.h, v6.h, 6
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_lshlrev_b16 v8.h, 3, v6.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_lshlrev_b16 v10.l, 3, v6.h
 ; GFX1200-NEXT:    v_or_b16 v8.h, v7.l, v8.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.l, v5.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v9.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v5.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v9.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 1, v2.h
 ; GFX1200-NEXT:    v_or_b16 v10.l, v9.h, v10.l
 ; GFX1200-NEXT:    v_or_b16 v2.h, v8.l, v3.l
@@ -1869,11 +1869,11 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v11, 1, v10
 ; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v5, v9, v5
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v5
 ; GFX950-NEXT:    v_and_b32_sdwa v9, v3, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    s_movk_i32 s2, 0xff
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v8, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v8, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v9, v5, v8 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v8, 6, v4
 ; GFX950-NEXT:    v_and_b32_e32 v4, 63, v4
@@ -1882,13 +1882,13 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v4, v8, v4, v11 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v4, v10, v4
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v4
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v4
 ; GFX950-NEXT:    v_mov_b32_e32 v10, 0x7f
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v8, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v6, v6, v8
 ; GFX950-NEXT:    v_add_u16_e32 v6, 6, v6
-; GFX950-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v8, 3, v6
 ; GFX950-NEXT:    v_bitop3_b16 v4, v9, v4, v8 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v6
@@ -1919,11 +1919,11 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v6, v11, v6
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v6
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v11, 31, v3
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 7, v11
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v12, v6, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v9, 6, v5
 ; GFX950-NEXT:    v_and_b32_e32 v5, 63, v5
@@ -1934,13 +1934,13 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v9, v5, v13 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v5, v11, v5
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v5
 ; GFX950-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v8, v8, v9
 ; GFX950-NEXT:    v_add_u16_e32 v8, 6, v8
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v9, 3, v8
 ; GFX950-NEXT:    v_bitop3_b16 v5, v12, v5, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v8
@@ -1976,11 +1976,11 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v13, 1, v12
 ; GFX950-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v4, v9, v4
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v4
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v4
 ; GFX950-NEXT:    v_and_b32_sdwa v9, v2, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v8, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v8, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v4, v9, v4, v8 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v8, 6, v3
 ; GFX950-NEXT:    v_and_b32_e32 v3, 63, v3
@@ -1989,12 +1989,12 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v8, v3, v13 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v3, v12, v3
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v3
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v3
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v8, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v5, v5, v8
 ; GFX950-NEXT:    v_add_u16_e32 v5, 6, v5
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v8, 3, v5
 ; GFX950-NEXT:    v_bitop3_b16 v3, v9, v3, v8 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v5
@@ -2026,11 +2026,11 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v14, 1, v13
 ; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v5, v12, v5
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v5
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v12, 31, v2
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 7, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v12, v5, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v9, 6, v4
 ; GFX950-NEXT:    v_and_b32_e32 v4, 63, v4
@@ -2039,12 +2039,12 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v4, v9, v4, v14 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v4, v13, v4
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v4
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v4
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v8, v8, v9
 ; GFX950-NEXT:    v_add_u16_e32 v8, 6, v8
-; GFX950-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v9, 3, v8
 ; GFX950-NEXT:    v_bitop3_b16 v4, v12, v4, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v8
@@ -2080,11 +2080,11 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v14, 1, v13
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v3, v12, v3
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v3
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v3
 ; GFX950-NEXT:    v_and_b32_sdwa v12, v1, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v8, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v8, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v12, v3, v8 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v8, 6, v2
 ; GFX950-NEXT:    v_and_b32_e32 v2, 63, v2
@@ -2093,12 +2093,12 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v2, v8, v2, v14 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v2, v13, v2
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v2
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v2
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v8, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v5, v5, v8
 ; GFX950-NEXT:    v_add_u16_e32 v5, 6, v5
-; GFX950-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v8, 3, v5
 ; GFX950-NEXT:    v_bitop3_b16 v2, v12, v2, v8 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v5
@@ -2130,11 +2130,11 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v15, 1, v14
 ; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v5, v13, v5
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v5
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v13, 31, v1
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v13, 7, v13
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v12, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v12, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v13, v5, v12 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v12, 6, v3
 ; GFX950-NEXT:    v_and_b32_e32 v3, 63, v3
@@ -2143,12 +2143,12 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v12, v3, v15 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v3, v14, v3
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v3
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v3
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v12, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v8, v8, v12
 ; GFX950-NEXT:    v_add_u16_e32 v8, 6, v8
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 3, v8
 ; GFX950-NEXT:    v_bitop3_b16 v3, v13, v3, v12 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v8
@@ -2184,11 +2184,11 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v16, 1, v15
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v3, v14, v3
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v3
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v3
 ; GFX950-NEXT:    v_and_b32_sdwa v14, v0, s1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX950-NEXT:    v_lshrrev_b64 v[8:9], 24, v[8:9]
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v13, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v13, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v14, v3, v13 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v13, 6, v1
 ; GFX950-NEXT:    v_and_b32_e32 v1, 63, v1
@@ -2197,12 +2197,12 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v1, v13, v1, v16 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v1, v15, v1
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v1
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v1
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v13, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v12, v12, v13
 ; GFX950-NEXT:    v_add_u16_e32 v12, 6, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v13, 3, v12
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v12
 ; GFX950-NEXT:    v_frexp_exp_i16_f16_sdwa v12, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
@@ -2233,11 +2233,11 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v16, 1, v15
 ; GFX950-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v7, v14, v7
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v7
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v7
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v14, 31, v0
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v14, 7, v14
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, v7, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v13, 0, 8, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v13, 8, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v14, v7, v13 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v13, 6, v3
 ; GFX950-NEXT:    v_and_b32_e32 v3, 63, v3
@@ -2246,12 +2246,12 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v13, v3, v16 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_e32 v3, v15, v3
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v3
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 7, v3
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v13, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v12, v12, v13
 ; GFX950-NEXT:    v_add_u16_e32 v12, 6, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v13, 3, v12
 ; GFX950-NEXT:    v_bitop3_b16 v3, v14, v3, v13 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v12
@@ -2322,16 +2322,16 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v8.l, 0, 1, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v9.h, v11.l, -1
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.h
 ; GFX1200-NEXT:    v_and_b16 v11.l, v13.h, 1
 ; GFX1200-NEXT:    v_and_b16 v5.l, v5.l, 0x80
 ; GFX1200-NEXT:    v_or_b16 v8.l, v8.l, v13.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_and_b16 v7.h, v7.h, v8.l
 ; GFX1200-NEXT:    v_and_b16 v8.l, v11.h, v9.h
-; GFX1200-NEXT:    v_cndmask_b16 v9.h, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v9.h, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v6.l
 ; GFX1200-NEXT:    v_add_nc_u16 v4.l, v4.l, v9.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -2345,16 +2345,16 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_cndmask_b16 v7.h, 0, 1, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v5.h, v5.h, v9.h
 ; GFX1200-NEXT:    v_sub_nc_u16 v10.l, 2, v7.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v6.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v6.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1200-NEXT:    v_or_b16 v7.h, v7.h, v11.l
 ; GFX1200-NEXT:    v_add_nc_u16 v5.h, v8.h, v5.h
 ; GFX1200-NEXT:    v_lshrrev_b32_e32 v11, 31, v3
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v6.l, v6.l, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, v6.l, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v7.h, v8.l, v7.h
 ; GFX1200-NEXT:    v_lshlrev_b16 v8.l, 3, v4.l
-; GFX1200-NEXT:    v_cndmask_b16 v9.h, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v9.h, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v9.l
 ; GFX1200-NEXT:    v_min_u16 v9.l, v10.l, 15
 ; GFX1200-NEXT:    v_lshlrev_b16 v10.h, 7, v11.l
@@ -2362,14 +2362,14 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_or_b16 v8.h, v5.l, v9.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v7.h, 0, v7.h, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.h
 ; GFX1200-NEXT:    v_sub_nc_u16 v9.h, v9.l, 1 clamp
 ; GFX1200-NEXT:    v_or_b16 v4.h, v8.l, v4.h
 ; GFX1200-NEXT:    v_or_b16 v6.l, v8.h, v6.l
 ; GFX1200-NEXT:    v_frexp_mant_f16_e32 v8.h, v2.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, v5.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v5.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 1, v4.l
 ; GFX1200-NEXT:    v_add_nc_u16 v7.h, v13.h, v7.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -2377,15 +2377,15 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_add_nc_u16 v4.h, v6.h, v8.l
 ; GFX1200-NEXT:    v_and_b16 v6.l, v8.h, 0x3ff
 ; GFX1200-NEXT:    v_lshlrev_b16 v6.h, v9.h, 1
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v7.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v7.h
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1200-NEXT:    v_add_nc_u16 v4.h, v4.h, 6
 ; GFX1200-NEXT:    v_or_b16 v8.l, v6.l, 0x400
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1200-NEXT:    v_add_nc_u16 v6.h, v6.h, -1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v7.h, v7.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v10.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v7.h, 0, v7.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v10.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_eq_f16_e32 vcc_lo, 0, v3.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v11.l, 3, v4.h
 ; GFX1200-NEXT:    v_and_b16 v6.h, v8.l, v6.h
@@ -2438,23 +2438,23 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_sub_nc_u16 v4.l, 2, v6.h
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v6.l, v5.l
 ; GFX1200-NEXT:    v_and_b16 v8.h, v5.h, 0x3ff
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.h
 ; GFX1200-NEXT:    v_and_b16 v10.h, v5.h, 63
 ; GFX1200-NEXT:    v_min_u16 v4.l, v4.l, 15
 ; GFX1200-NEXT:    v_lshrrev_b16 v5.h, 6, v5.h
 ; GFX1200-NEXT:    v_or_b16 v10.l, v8.h, 0x400
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_sub_nc_u16 v6.l, v4.l, 1 clamp
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v8.h, 7, v8.h
 ; GFX1200-NEXT:    v_lshlrev_b16 v3.h, 8, v3.h
 ; GFX1200-NEXT:    v_or_b16 v8.l, v7.h, v8.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v9.l, v6.l, 1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v9.h, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v5.l, v5.l, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v9.h, 1, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v5.l, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v10.h
 ; GFX1200-NEXT:    v_and_b16 v11.l, v8.h, 1
 ; GFX1200-NEXT:    v_add_nc_u16 v9.l, v9.l, -1
@@ -2491,13 +2491,13 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_and_b16 v11.h, v7.l, 63
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v4.l, 0, v6.l, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.h
 ; GFX1200-NEXT:    v_sub_nc_u16 v8.l, v5.l, 1 clamp
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1200-NEXT:    v_add_nc_u16 v4.l, v9.h, v4.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, v5.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v5.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_eq_f16_e32 vcc_lo, 0, v2.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v9.h, 7, v11.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3)
@@ -2506,14 +2506,14 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, v7.h, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v6.h, v7.l, 0x3ff
 ; GFX1200-NEXT:    v_lshlrev_b16 v7.h, v8.l, 1
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.l
 ; GFX1200-NEXT:    v_add_nc_u16 v6.l, v6.l, 6
 ; GFX1200-NEXT:    v_lshrrev_b16 v7.l, 6, v7.l
 ; GFX1200-NEXT:    v_or_b16 v8.h, v6.h, 0x400
 ; GFX1200-NEXT:    v_add_nc_u16 v7.h, v7.h, -1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v4.l, v4.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v9.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v4.l, 0, v4.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v9.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_lshlrev_b16 v11.l, 3, v6.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v10.l, v5.l, v8.h
 ; GFX1200-NEXT:    v_and_b16 v7.h, v8.h, v7.h
@@ -2560,26 +2560,26 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v10.l, v5.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v4.l, v4.l, v9.h, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.h
 ; GFX1200-NEXT:    v_lshlrev_b16 v8.l, v6.h, 1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v7.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v7.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_o_f16_e32 vcc_lo, v2.h, v2.h
 ; GFX1200-NEXT:    v_add_nc_u16 v8.l, v8.l, -1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.h, 0x7f, v4.l, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v4.l, v10.h, v7.l
 ; GFX1200-NEXT:    v_or_b16 v7.l, v7.h, 0x400
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1200-NEXT:    v_lshlrev_b16 v2.h, 8, v2.h
 ; GFX1200-NEXT:    v_add_nc_u16 v4.l, v4.l, 6
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1200-NEXT:    v_and_b16 v8.l, v7.l, v8.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v10.l, 0, 8, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v5.l, v5.l, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v10.l, 8, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v5.l, vcc_lo
 ; GFX1200-NEXT:    v_lshrrev_b16 v9.h, v5.h, v7.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v10.h, 3, v4.l
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v8.l
@@ -2622,20 +2622,20 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_frexp_mant_f16_e32 v4.h, v0.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.l, v2.l, v9.l, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v5.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v5.l
 ; GFX1200-NEXT:    v_add_nc_u16 v4.l, v7.l, v4.l
 ; GFX1200-NEXT:    v_and_b16 v6.h, v4.h, 0x3ff
 ; GFX1200-NEXT:    v_lshlrev_b16 v7.l, v6.l, 1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.l, v5.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v7.h, 0, 8, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.l
+; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v5.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v7.h, 8, 0, vcc_lo
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.l
 ; GFX1200-NEXT:    v_or_b16 v9.l, v6.h, 0x400
 ; GFX1200-NEXT:    v_add_nc_u16 v7.l, v7.l, -1
 ; GFX1200-NEXT:    v_lshrrev_b16 v6.h, 7, v6.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v4.l, v4.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v10.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v4.l, 0, v4.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v10.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v7.l, v9.l, v7.l
 ; GFX1200-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1.l, v1.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v10.h, v5.h, v9.l
@@ -2692,28 +2692,28 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v6.l
 ; GFX1200-NEXT:    v_or_b16 v4.l, v13.l, v4.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s0, 7, v5.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s0, 7, v5.h
 ; GFX1200-NEXT:    v_and_b16 v6.h, v9.l, v11.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v4.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, v5.h, 0, s0
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, v5.h, s0
 ; GFX1200-NEXT:    v_add_nc_u16 v6.h, v12.l, v6.h
 ; GFX1200-NEXT:    v_or_b16 v6.l, v6.l, v7.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v7.l, v12.h, v8.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 8, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s1, 7, v6.h
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.h, 8, 0, s0
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s1, 7, v6.h
 ; GFX1200-NEXT:    v_lshrrev_b32_e32 v12, 31, v0
 ; GFX1200-NEXT:    v_and_b16 v6.l, v7.l, v6.l
-; GFX1200-NEXT:    v_cndmask_b16 v7.l, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v7.l, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v7.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v7.h, 0, 1, s1
+; GFX1200-NEXT:    v_cndmask_b16 v7.h, 1, 0, s1
 ; GFX1200-NEXT:    v_lshlrev_b16 v10.h, 7, v12.l
-; GFX1200-NEXT:    v_cndmask_b16 v6.h, v6.h, 0, s1
+; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, v6.h, s1
 ; GFX1200-NEXT:    v_add_nc_u16 v7.l, v8.l, v7.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, v6.l, vcc_lo
@@ -2727,14 +2727,14 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_add_nc_u16 v7.h, v7.h, 6
 ; GFX1200-NEXT:    v_lshlrev_b16 v9.l, 3, v7.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v6.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 7, v6.l
 ; GFX1200-NEXT:    v_or_b16 v8.h, v8.l, v8.h
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1200-NEXT:    v_lshlrev_b16 v11.l, 3, v7.h
 ; GFX1200-NEXT:    v_or_b16 v9.l, v8.l, v9.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v6.l, v6.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v10.l, 0, 8, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, v6.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v10.l, 8, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 1, v5.l
 ; GFX1200-NEXT:    v_or_b16 v11.l, v10.h, v11.l
 ; GFX1200-NEXT:    v_or_b16 v4.h, v9.l, v4.h
@@ -2888,11 +2888,11 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_and_b32_e32 v4, 0x7f, v4
 ; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v5, v8, v5
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v5
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v5
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v8, 8, v2
 ; GFX950-NEXT:    v_and_b32_e32 v10, 0x80, v8
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, 0, 4, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v7, 4, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v10, v5, v7 bitop3:0xfe
 ; GFX950-NEXT:    v_mov_b32_e32 v5, 1
 ; GFX950-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v4
@@ -2901,13 +2901,13 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v4, v9, v4, v12 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_sdwa v4, v11, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v4
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v4
 ; GFX950-NEXT:    s_movk_i32 s5, 0xff
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v6, v6, v9
 ; GFX950-NEXT:    v_add_u16_e32 v6, 14, v6
-; GFX950-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v9, 2, v6
 ; GFX950-NEXT:    v_bitop3_b16 v9, v10, v4, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v6
@@ -2951,11 +2951,11 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v7, v12, v7
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v7
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v7
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v12, 31, v2
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 7, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v7, v7, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 4, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 4, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v12, v7, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v11, 7, v6
 ; GFX950-NEXT:    v_and_b32_e32 v6, 0x7f, v6
@@ -2964,12 +2964,12 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v11, v6, v13 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_sdwa v6, v15, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v6
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v11, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v10, v10, v11
 ; GFX950-NEXT:    v_add_u16_e32 v10, 14, v10
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v11, 2, v10
 ; GFX950-NEXT:    v_bitop3_b16 v11, v12, v6, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v10
@@ -3014,11 +3014,11 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_or_b32_sdwa v7, v4, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v6, v13, v6
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v6
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v13, 8, v1
 ; GFX950-NEXT:    v_and_b32_e32 v14, 0x80, v13
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v12, 0, 4, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v12, 4, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v14, v6, v12 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v12, 7, v2
 ; GFX950-NEXT:    v_and_b32_e32 v2, 0x7f, v2
@@ -3027,12 +3027,12 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v2, v12, v2, v15 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_sdwa v2, v16, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v2
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v2
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v12, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v11, v11, v12
 ; GFX950-NEXT:    v_add_u16_e32 v11, 14, v11
-; GFX950-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v12, 2, v11
 ; GFX950-NEXT:    v_bitop3_b16 v12, v14, v2, v12 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v11
@@ -3073,11 +3073,11 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v11, v14, v11
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v11
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v11
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v14, 31, v1
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v14, 7, v14
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, v11, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v13, 0, 4, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v13, 4, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v11, v14, v11, v13 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v13, 7, v6
 ; GFX950-NEXT:    v_and_b32_e32 v6, 0x7f, v6
@@ -3086,12 +3086,12 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v13, v6, v15 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_sdwa v6, v17, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v6
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v6
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v13, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v12, v12, v13
 ; GFX950-NEXT:    v_add_u16_e32 v12, 14, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v13, 2, v12
 ; GFX950-NEXT:    v_bitop3_b16 v13, v14, v6, v13 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v12
@@ -3134,11 +3134,11 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_lshrrev_b64 v[6:7], 24, v[6:7]
 ; GFX950-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v11, v14, v11
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v11
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v11
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v14, 8, v0
 ; GFX950-NEXT:    v_and_b32_e32 v15, 0x80, v14
-; GFX950-NEXT:    v_cndmask_b32_e64 v11, v11, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v13, 0, 4, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v11, 0, v11, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v13, 4, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v11, v15, v11, v13 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v13, 7, v1
 ; GFX950-NEXT:    v_and_b32_e32 v1, 0x7f, v1
@@ -3147,12 +3147,12 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v1, v13, v1, v16 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_sdwa v1, v17, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v1
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v1
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v13, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v12, v12, v13
 ; GFX950-NEXT:    v_add_u16_e32 v12, 14, v12
-; GFX950-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v13, 2, v12
 ; GFX950-NEXT:    v_bitop3_b16 v13, v15, v1, v13 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v12
@@ -3193,11 +3193,11 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v3, v13, v3
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v3
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v3
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v13, 31, v0
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v13, 7, v13
-; GFX950-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e64 v12, 0, 4, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v12, 4, 0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v13, v3, v12 bitop3:0xfe
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v12, 7, v9
 ; GFX950-NEXT:    v_and_b32_e32 v9, 0x7f, v9
@@ -3206,12 +3206,12 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v12, v9, v5 bitop3:0xe0
 ; GFX950-NEXT:    v_add_u16_sdwa v5, v16, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX950-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v5
+; GFX950-NEXT:    v_cmp_ge_i16_e32 vcc, 3, v5
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v9, 1, 0, vcc
 ; GFX950-NEXT:    v_add_u16_e32 v9, v11, v9
 ; GFX950-NEXT:    v_add_u16_e32 v9, 14, v9
-; GFX950-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v11, 2, v9
 ; GFX950-NEXT:    v_bitop3_b16 v11, v13, v5, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v9
@@ -3293,14 +3293,14 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_or_b16 v6.h, v6.h, v10.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v3.h
 ; GFX1200-NEXT:    v_lshlrev_b16 v10.l, v9.h, 1
 ; GFX1200-NEXT:    v_and_b16 v6.l, v6.l, v6.h
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1200-NEXT:    v_or_b16 v6.h, v8.h, v7.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v7.h, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v7.h, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v4.h
 ; GFX1200-NEXT:    v_and_b16 v8.h, v9.l, 1
 ; GFX1200-NEXT:    v_and_b16 v5.l, v5.l, v6.h
@@ -3316,24 +3316,24 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_and_b16 v6.l, v11.l, v6.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_lshlrev_b16 v7.l, 2, v3.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v4.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v4.h
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1200-NEXT:    v_cmp_ne_u16_e64 s0, 0, v6.l
 ; GFX1200-NEXT:    v_cmp_gt_i16_e64 s2, 1, v3.l
 ; GFX1200-NEXT:    v_cmp_lt_i16_e64 s1, 30, v3.l
 ; GFX1200-NEXT:    v_or_b16 v7.l, v4.l, v7.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v7.h, 0, 4, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v7.h, 4, 0, vcc_lo
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v6.l, 0, 1, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s0, 3, v5.l
-; GFX1200-NEXT:    v_cndmask_b16 v4.h, v4.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s0, 3, v5.l
+; GFX1200-NEXT:    v_cndmask_b16 v4.h, 0, v4.h, vcc_lo
 ; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v3.h
 ; GFX1200-NEXT:    v_or_b16 v7.h, v4.l, v7.h
 ; GFX1200-NEXT:    v_or_b16 v6.l, v6.l, v8.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.l, v5.l, 0, s0
-; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 1, s0
+; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v5.l, s0
+; GFX1200-NEXT:    v_cndmask_b16 v8.h, 1, 0, s0
 ; GFX1200-NEXT:    v_cmp_ne_u16_e64 s0, 0, v8.l
 ; GFX1200-NEXT:    v_or_b16 v3.h, v7.l, v3.h
 ; GFX1200-NEXT:    v_and_b16 v6.l, v6.h, v6.l
@@ -3354,16 +3354,16 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_sub_nc_u16 v7.l, -5, v4.h
 ; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v3.l, v3.l, v10.h, s0
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v3.h
 ; GFX1200-NEXT:    v_cmp_eq_f16_e64 s0, 0, v2.l
 ; GFX1200-NEXT:    v_lshlrev_b16 v6.h, 2, v5.h
 ; GFX1200-NEXT:    v_min_u16 v7.l, v7.l, 15
 ; GFX1200-NEXT:    v_cmp_gt_i16_e64 s1, 1, v5.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v3.l, v3.l, v4.l, s0
-; GFX1200-NEXT:    v_cndmask_b16 v4.l, 0, 4, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v4.l, 4, 0, vcc_lo
 ; GFX1200-NEXT:    v_cmp_class_f16_e64 s0, v2.l, 0x204
 ; GFX1200-NEXT:    v_cmp_o_f16_e32 vcc_lo, v2.l, v2.l
 ; GFX1200-NEXT:    v_or_b16 v6.h, v6.l, v6.h
@@ -3424,26 +3424,26 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_frexp_mant_f16_e32 v7.l, v1.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v4.l, 0, v4.l, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v3.h
 ; GFX1200-NEXT:    v_and_b16 v6.l, v6.l, 0x80
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.h, 0x7e, v3.l, s0
 ; GFX1200-NEXT:    v_frexp_exp_i16_f16_e32 v3.l, v1.h
 ; GFX1200-NEXT:    v_add_nc_u16 v4.l, v5.h, v4.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.l, 1, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
 ; GFX1200-NEXT:    v_lshlrev_b16 v2.h, 8, v2.h
 ; GFX1200-NEXT:    v_sub_nc_u16 v5.h, -5, v3.l
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v4.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v4.l
 ; GFX1200-NEXT:    v_add_nc_u16 v4.h, v4.h, v5.l
 ; GFX1200-NEXT:    v_and_b16 v8.h, v7.l, 0x7f
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1200-NEXT:    v_min_u16 v5.h, v5.h, 15
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 4, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.h, 4, 0, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v4.h, v4.h, 14
-; GFX1200-NEXT:    v_cndmask_b16 v5.l, v4.l, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.l, 0, v4.l, vcc_lo
 ; GFX1200-NEXT:    v_or_b16 v4.l, v2.l, v2.h
 ; GFX1200-NEXT:    v_sub_nc_u16 v7.h, v5.h, 1 clamp
 ; GFX1200-NEXT:    v_or_b16 v2.l, v6.l, v6.h
@@ -3492,28 +3492,28 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_cmp_eq_f16_e64 s0, 0, v1.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.h, 0, v2.h, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v3.h
 ; GFX1200-NEXT:    v_cvt_u32_u16_e32 v11, v4.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.l, v2.l, v6.l, s0
 ; GFX1200-NEXT:    v_sub_nc_u16 v6.l, -5, v5.l
 ; GFX1200-NEXT:    v_cmp_class_f16_e64 s0, v1.l, 0x204
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v5.h, 0, 1, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v5.h, 1, 0, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v2.h, v9.l, v2.h
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, vcc_lo
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.l, v2.l, v4.h, s0
 ; GFX1200-NEXT:    v_min_u16 v4.h, v6.l, 15
 ; GFX1200-NEXT:    v_add_nc_u16 v3.l, v3.l, v5.h
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v2.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v2.h
 ; GFX1200-NEXT:    v_frexp_mant_f16_e32 v5.h, v0.l
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1200-NEXT:    v_sub_nc_u16 v6.l, v4.h, 1 clamp
 ; GFX1200-NEXT:    v_add_nc_u16 v3.l, v3.l, 14
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v2.h, v2.h, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 4, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v2.h, 0, v2.h, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.h, 4, 0, vcc_lo
 ; GFX1200-NEXT:    v_and_b16 v7.h, v5.h, 0x3ff
 ; GFX1200-NEXT:    v_lshlrev_b16 v8.l, v6.l, 1
 ; GFX1200-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1.l, v1.l
@@ -3583,33 +3583,33 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v9.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v7.h, v8.h, v7.h
 ; GFX1200-NEXT:    v_and_b16 v4.h, v5.h, 1
-; GFX1200-NEXT:    v_cmp_lt_i16_e64 s0, 3, v3.h
+; GFX1200-NEXT:    v_cmp_ge_i16_e64 s0, 3, v3.h
 ; GFX1200-NEXT:    v_or_b16 v10.l, v10.l, v10.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v9.l, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v2.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v2.l
 ; GFX1200-NEXT:    v_lshrrev_b16 v10.h, 8, v0.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, s0
+; GFX1200-NEXT:    v_cndmask_b16 v3.h, 0, v3.h, s0
 ; GFX1200-NEXT:    v_and_b16 v8.l, v8.l, v10.l
 ; GFX1200-NEXT:    v_or_b16 v4.h, v9.l, v4.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v2.l, v2.l, 0, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 1, s0
-; GFX1200-NEXT:    v_cndmask_b16 v9.l, 0, 4, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v2.l, 0, v2.l, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.h, 1, 0, s0
+; GFX1200-NEXT:    v_cndmask_b16 v9.l, 4, 0, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v8.l, v9.h, v8.l
 ; GFX1200-NEXT:    v_and_b16 v4.h, v7.h, v4.h
 ; GFX1200-NEXT:    v_cmp_ne_u16_e64 s0, 0, v3.l
 ; GFX1200-NEXT:    v_and_b16 v7.h, v10.h, 0x80
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v5.l, v8.h
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v8.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v8.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v3.l, 0, v4.h, s0
 ; GFX1200-NEXT:    v_or_b16 v4.h, v7.h, v9.l
 ; GFX1200-NEXT:    v_add_nc_u16 v5.l, v5.l, 14
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v8.h, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_cndmask_b16 v8.l, v8.l, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.h, 1, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v8.l, 0, v8.l, vcc_lo
 ; GFX1200-NEXT:    v_add_nc_u16 v3.l, v5.h, v3.l
 ; GFX1200-NEXT:    v_cmp_eq_f16_e32 vcc_lo, 0, v1.h
 ; GFX1200-NEXT:    v_or_b16 v2.l, v4.h, v2.l
@@ -3618,15 +3618,15 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_lshrrev_b32_e32 v9, 31, v0
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.h, v2.h, v7.l, vcc_lo
-; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v3.l
+; GFX1200-NEXT:    v_cmp_ge_i16_e32 vcc_lo, 3, v3.l
 ; GFX1200-NEXT:    v_add_nc_u16 v4.h, v5.h, 14
 ; GFX1200-NEXT:    v_or_b16 v5.h, v7.h, v6.h
 ; GFX1200-NEXT:    v_lshlrev_b16 v7.l, 7, v9.l
 ; GFX1200-NEXT:    v_cmp_eq_u16_e64 s0, 30, v5.l
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    v_cndmask_b16 v6.h, 0, 4, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v6.h, 4, 0, vcc_lo
 ; GFX1200-NEXT:    v_lshlrev_b16 v8.h, 2, v4.h
-; GFX1200-NEXT:    v_cndmask_b16 v3.l, v3.l, 0, vcc_lo
+; GFX1200-NEXT:    v_cndmask_b16 v3.l, 0, v3.l, vcc_lo
 ; GFX1200-NEXT:    v_or_b16 v5.h, v5.h, v3.h
 ; GFX1200-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 3, v3.h
 ; GFX1200-NEXT:    v_or_b16 v3.h, v7.l, v6.h
