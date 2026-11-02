@@ -611,3 +611,13 @@ foreach(target ${TARGET_PUBLIC_HEADERS})
     )
   endforeach()
 endforeach()
+
+add_libc_test(
+  netinet_tcp_test
+  SUITE
+    libc-include-tests
+  SRCS
+    netinet_tcp_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.netinet_tcp_macros
+)
