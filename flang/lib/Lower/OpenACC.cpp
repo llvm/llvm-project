@@ -207,6 +207,7 @@ static mlir::func::FuncOp createDeclareFunc(
   auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, funcName, funcTy);
   funcOp.setVisibility(linkable ? mlir::SymbolTable::Visibility::Public
                                 : mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(builder.getMLIRSymbolTable(), funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       locs);
   builder.setInsertionPointToEnd(&funcOp.getRegion().back());
@@ -4487,7 +4488,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
       copyinEntryOperands, createEntryOperands, copyoutEntryOperands,
-      presentEntryOperands, deviceResidentEntryOperands;
+      presentEntryOperands, deviceResidentEntryOperands, devicePtrEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -4551,11 +4552,16 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *devicePtrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::DevicePtrOp,
                                       mlir::acc::DevicePtrOp>(
           devicePtrClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
           /*structured=*/true, /*implicit=*/false);
+      // No exit action, but the exit still names the object so the runtime
+      // closes the region it opened at the enter.
+      devicePtrEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                    dataClauseOperands.end());
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
       genDeclareDataOperandOperations<mlir::acc::DeclareLinkOp,
@@ -4606,7 +4612,8 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
                             copyEntryOperands, copyinEntryOperands,
                             copyoutEntryOperands, presentEntryOperands,
-                            deviceResidentEntryOperands, declareToken]() {
+                            deviceResidentEntryOperands, devicePtrEntryOperands,
+                            declareToken]() {
     llvm::SmallVector<mlir::Value> operands;
     operands.append(createEntryOperands);
     operands.append(deviceResidentEntryOperands);
@@ -4614,6 +4621,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     operands.append(copyinEntryOperands);
     operands.append(copyoutEntryOperands);
     operands.append(presentEntryOperands);
+    operands.append(devicePtrEntryOperands);
 
     mlir::func::FuncOp funcOp = builder.getFunction();
     auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();
@@ -5348,19 +5356,14 @@ void Fortran::lower::declareExternalAccModuleDeclareActionRecipes(
   if (isUnifiedMemoryMode(converter))
     return;
 
-  mlir::ModuleOp module = builder.getModule();
   mlir::Location loc = converter.genLocation(sym.name());
   std::string prefix = converter.mangleName(ultimate);
 
   auto declareExternalRecipe = [&](llvm::StringRef suffix) {
     std::string name = prefix + suffix.str();
-    if (module.lookupSymbol<mlir::func::FuncOp>(name))
-      return;
     auto funcTy = mlir::FunctionType::get(builder.getContext(), {}, {});
-    mlir::OpBuilder modBuilder(module.getBodyRegion());
-    modBuilder.setInsertionPointToEnd(module.getBody());
-    auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, name, funcTy);
-    funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+    // Get-or-create: a private declaration at the end of the module.
+    builder.createFunction(loc, name, funcTy);
   };
 
   declareExternalRecipe(declarePostAllocSuffix);

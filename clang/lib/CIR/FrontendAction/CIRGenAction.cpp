@@ -370,9 +370,8 @@ public:
 
 void CIRGenConsumer::anchor() {}
 
-CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
-    : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext),
-      Ctx(std::make_unique<llvm::LLVMContext>()), Action(Act) {}
+CIRGenAction::CIRGenAction(OutputType Act)
+    : Ctx(std::make_unique<llvm::LLVMContext>()), Action(Act) {}
 
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
@@ -492,25 +491,20 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 void EmitAssemblyAction::anchor() {}
-EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitAssembly, MLIRCtx) {}
+EmitAssemblyAction::EmitAssemblyAction()
+    : CIRGenAction(OutputType::EmitAssembly) {}
 
 void EmitCIRAction::anchor() {}
-EmitCIRAction::EmitCIRAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitCIR, MLIRCtx) {}
+EmitCIRAction::EmitCIRAction() : CIRGenAction(OutputType::EmitCIR) {}
 
 void EmitCIRBCAction::anchor() {}
-EmitCIRBCAction::EmitCIRBCAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitCIRBC, MLIRCtx) {}
+EmitCIRBCAction::EmitCIRBCAction() : CIRGenAction(OutputType::EmitCIRBC) {}
 
 void EmitLLVMAction::anchor() {}
-EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitLLVM, MLIRCtx) {}
+EmitLLVMAction::EmitLLVMAction() : CIRGenAction(OutputType::EmitLLVM) {}
 
 void EmitBCAction::anchor() {}
-EmitBCAction::EmitBCAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitBC, MLIRCtx) {}
+EmitBCAction::EmitBCAction() : CIRGenAction(OutputType::EmitBC) {}
 
 void EmitObjAction::anchor() {}
-EmitObjAction::EmitObjAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitObj, MLIRCtx) {}
+EmitObjAction::EmitObjAction() : CIRGenAction(OutputType::EmitObj) {}
