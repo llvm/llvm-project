@@ -88,22 +88,22 @@ define void @sub() #0 {
 define void @sdiv() #0 {
 ; CHECK-LABEL: function 'sdiv'
 
-; CHECK: cost of 5 for instruction:  %sdiv16.i8   = sdiv <2 x i8> undef, undef
+; CHECK: cost of 11 for instruction:  %sdiv16.i8   = sdiv <2 x i8> undef, undef
   %sdiv16.i8   = sdiv <2 x i8> undef, undef
 
-; CHECK: cost of 8 for instruction:  %sdiv32.i8   = sdiv <4 x i8> undef, undef
+; CHECK: cost of 14 for instruction:  %sdiv32.i8   = sdiv <4 x i8> undef, undef
   %sdiv32.i8   = sdiv <4 x i8> undef, undef
 
-; CHECK: cost of 5 for instruction:  %sdiv32.i16   = sdiv <2 x i16> undef, undef
+; CHECK: cost of 11 for instruction:  %sdiv32.i16   = sdiv <2 x i16> undef, undef
   %sdiv32.i16  = sdiv <2 x i16> undef, undef
 
-; CHECK: cost of 8 for instruction:  %sdiv64.i8   = sdiv <8 x i8> undef, undef
+; CHECK: cost of 14 for instruction:  %sdiv64.i8   = sdiv <8 x i8> undef, undef
   %sdiv64.i8   = sdiv <8 x i8> undef, undef
 
-; CHECK: cost of 5 for instruction:  %sdiv64.i16   = sdiv <4 x i16> undef, undef
+; CHECK: cost of 11 for instruction:  %sdiv64.i16   = sdiv <4 x i16> undef, undef
   %sdiv64.i16  = sdiv <4 x i16> undef, undef
 
-; CHECK: cost of 1 for instruction:  %sdiv64.i32   = sdiv <2 x i32> undef, undef
+; CHECK: cost of 7 for instruction:  %sdiv64.i32   = sdiv <2 x i32> undef, undef
   %sdiv64.i32  = sdiv <2 x i32> undef, undef
 
 ; CHECK: cost of [[#mul(mul(div(128-1, VBITS)+1, 2), 8)]] for instruction:  %sdiv128.i8   = sdiv <16 x i8> undef, undef
@@ -137,22 +137,22 @@ define void @sdiv() #0 {
 define void @udiv() #0 {
 ; CHECK-LABEL: function 'udiv'
 
-; CHECK: cost of 5 for instruction:  %udiv16.i8   = udiv <2 x i8> undef, undef
+; CHECK: cost of 11 for instruction:  %udiv16.i8   = udiv <2 x i8> undef, undef
   %udiv16.i8   = udiv <2 x i8> undef, undef
 
-; CHECK: cost of 8 for instruction:  %udiv32.i8   = udiv <4 x i8> undef, undef
+; CHECK: cost of 14 for instruction:  %udiv32.i8   = udiv <4 x i8> undef, undef
   %udiv32.i8   = udiv <4 x i8> undef, undef
 
-; CHECK: cost of 5 for instruction:  %udiv32.i16   = udiv <2 x i16> undef, undef
+; CHECK: cost of 11 for instruction:  %udiv32.i16   = udiv <2 x i16> undef, undef
   %udiv32.i16  = udiv <2 x i16> undef, undef
 
-; CHECK: cost of 8 for instruction:  %udiv64.i8   = udiv <8 x i8> undef, undef
+; CHECK: cost of 14 for instruction:  %udiv64.i8   = udiv <8 x i8> undef, undef
   %udiv64.i8   = udiv <8 x i8> undef, undef
 
-; CHECK: cost of 5 for instruction:  %udiv64.i16   = udiv <4 x i16> undef, undef
+; CHECK: cost of 11 for instruction:  %udiv64.i16   = udiv <4 x i16> undef, undef
   %udiv64.i16  = udiv <4 x i16> undef, undef
 
-; CHECK: cost of 1 for instruction:  %udiv64.i32   = udiv <2 x i32> undef, undef
+; CHECK: cost of 7 for instruction:  %udiv64.i32   = udiv <2 x i32> undef, undef
   %udiv64.i32  = udiv <2 x i32> undef, undef
 
 ; CHECK: cost of [[#mul(mul(div(128-1, VBITS)+1, 2), 8)]] for instruction:  %udiv128.i8   = udiv <16 x i8> undef, undef

@@ -23,7 +23,7 @@ target triple = "aarch64--linux-gnu"
 ;   (udiv(2) + extractelement(8) + insertelement(4)) / 2 = 7
 ;
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
-; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
+; CHECK: Cost of 13 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
 ; CHECK: Precomputed costs for VF 2: 0
 ; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
@@ -146,7 +146,7 @@ for.end:
 ; CHECK: Scalarizing: %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp3 = add nsw i32 %tmp2, %x
-; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
+; CHECK: Cost of 11 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
 ; CHECK: Precomputed costs for VF 2: 3
 ; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
@@ -251,8 +251,8 @@ for.end:
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp5, ptr %tmp0, align 4
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp5 = sub i32 %tmp4, %x
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%tmp2> = add ir<%tmp1>, ir<%x>
-; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
-; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
+; CHECK: Cost of 13 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
+; CHECK: Cost of 11 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
 ; CHECK: Precomputed costs for VF 2: 5
 ; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;

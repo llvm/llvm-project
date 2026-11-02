@@ -435,7 +435,18 @@ define <8 x i16> @slp_v8i16_Op1_Op2_unknown(<8 x i16> %a, <8 x i16> %b)
 define <4 x i32> @slp_v4i32_Op1_unknown_Op2_const(<4 x i32> %a)
 ; CHECK-LABEL: define <4 x i32> @slp_v4i32_Op1_unknown_Op2_const(
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> [[A]], <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x i32> [[A]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i32> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i32> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i32> [[A]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i32 [[A0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[A1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[A2]], 5
+; CHECK-NEXT:    [[TMP4:%.*]] = sdiv i32 [[A3]], 7
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x i32> [[R0]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x i32> [[R1]], i32 [[TMP3]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[R2]], i32 [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
 {
@@ -501,7 +512,18 @@ define <4 x i32> @slp_v4i32_Op1_unknown_Op2_uniform_const_pow2(<4 x i32> %a)
 define <4 x i32> @slp_v4i32_Op1_unknown_Op2_const_pow2(<4 x i32> %a)
 ; CHECK-LABEL: define <4 x i32> @slp_v4i32_Op1_unknown_Op2_const_pow2(
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> [[A]], <i32 1, i32 2, i32 4, i32 8>
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x i32> [[A]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i32> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i32> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i32> [[A]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i32 [[A0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[A1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[A2]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = sdiv i32 [[A3]], 8
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x i32> [[R0]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x i32> [[R1]], i32 [[TMP3]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[R2]], i32 [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
 {
@@ -521,28 +543,13 @@ define <4 x i32> @slp_v4i32_Op1_unknown_Op2_const_pow2(<4 x i32> %a)
 }
 
 define <2 x i32> @sdiv_v2i32_unknown_divisor(<2 x i32> %a, <2 x i32> %x, <2 x i32> %y, <2 x i32> %z)
-; NO-SVE-LABEL: define <2 x i32> @sdiv_v2i32_unknown_divisor(
-; NO-SVE-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; NO-SVE-NEXT:    [[A0:%.*]] = extractelement <2 x i32> [[A]], i64 0
-; NO-SVE-NEXT:    [[A1:%.*]] = extractelement <2 x i32> [[A]], i64 1
-; NO-SVE-NEXT:    [[X0:%.*]] = extractelement <2 x i32> [[X]], i64 0
-; NO-SVE-NEXT:    [[X1:%.*]] = extractelement <2 x i32> [[X]], i64 1
-; NO-SVE-NEXT:    [[TMP7:%.*]] = sdiv i32 [[A0]], [[X0]]
-; NO-SVE-NEXT:    [[TMP8:%.*]] = sdiv i32 [[A1]], [[X1]]
-; NO-SVE-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
-; NO-SVE-NEXT:    [[RES1:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP8]], i64 1
-; NO-SVE-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[RES1]], [[X]]
-; NO-SVE-NEXT:    [[TMP6:%.*]] = sub <2 x i32> [[TMP5]], [[Y]]
-; NO-SVE-NEXT:    [[TMP9:%.*]] = mul <2 x i32> [[TMP6]], [[Z]]
-; NO-SVE-NEXT:    ret <2 x i32> [[TMP9]]
-;
-; SVE-LABEL: define <2 x i32> @sdiv_v2i32_unknown_divisor(
-; SVE-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; SVE-NEXT:    [[TMP2:%.*]] = sdiv <2 x i32> [[A]], [[X]]
-; SVE-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], [[X]]
-; SVE-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP3]], [[Y]]
-; SVE-NEXT:    [[TMP5:%.*]] = mul <2 x i32> [[TMP4]], [[Z]]
-; SVE-NEXT:    ret <2 x i32> [[TMP5]]
+; CHECK-LABEL: define <2 x i32> @sdiv_v2i32_unknown_divisor(
+; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> [[TMP3]], [[Z]]
+; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
 {
   %a0 = extractelement <2 x i32> %a, i64 0
@@ -570,7 +577,12 @@ define <2 x i32> @sdiv_v2i32_unknown_divisor(<2 x i32> %a, <2 x i32> %x, <2 x i3
 define <2 x i32> @sdiv_v2i32_const_divisor(<2 x i32> %a, <2 x i32> %x, <2 x i32> %y, <2 x i32> %z)
 ; CHECK-LABEL: define <2 x i32> @sdiv_v2i32_const_divisor(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[A]], <i32 2, i32 4>
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x i32> [[A]], i64 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x i32> [[A]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i32 [[A0]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = sdiv i32 [[A1]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> [[TMP3]], [[Z]]
