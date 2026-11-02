@@ -6653,10 +6653,7 @@ bool SROA::unfoldTwoSlotGEPs(Function &F) {
   bool Changed = false;
   for (Instruction &I : F.getEntryBlock()) {
     auto *AI = dyn_cast<AllocaInst>(&I);
-    if (!AI || none_of(AI->users(), [](User *U) {
-          auto *GEP = dyn_cast<GetElementPtrInst>(U);
-          return GEP && !GEP->hasAllConstantIndices();
-        }))
+    if (!AI)
       continue;
 
     std::optional<TypeSize> Size = AI->getAllocationSize(DL);
