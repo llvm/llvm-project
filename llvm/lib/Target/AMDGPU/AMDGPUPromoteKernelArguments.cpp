@@ -206,10 +206,6 @@ INITIALIZE_PASS_END(AMDGPUPromoteKernelArguments, DEBUG_TYPE,
 
 char AMDGPUPromoteKernelArguments::ID = 0;
 
-FunctionPass *llvm::createAMDGPUPromoteKernelArgumentsPass() {
-  return new AMDGPUPromoteKernelArguments();
-}
-
 PreservedAnalyses
 AMDGPUPromoteKernelArgumentsPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {

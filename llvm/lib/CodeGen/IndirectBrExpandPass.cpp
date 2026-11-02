@@ -42,6 +42,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Target/TargetMachine.h"
@@ -58,13 +59,20 @@ extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 namespace {
 
 class IndirectBrExpandLegacyPass : public FunctionPass {
+  CodeGenOptLevel OptLevel;
+
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  IndirectBrExpandLegacyPass() : FunctionPass(ID) {}
+  IndirectBrExpandLegacyPass(CodeGenOptLevel OptLevel)
+      : FunctionPass(ID), OptLevel(OptLevel) {}
+
+  IndirectBrExpandLegacyPass()
+      : IndirectBrExpandLegacyPass(CodeGenOptLevel::None) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+    if (OptLevel != CodeGenOptLevel::None)
+      LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
@@ -74,7 +82,8 @@ public:
 } // end anonymous namespace
 
 static bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
-                    function_ref<BlockFrequencyInfo *()> GetBFI);
+                    function_ref<BlockFrequencyInfo *()> GetBFI,
+                    bool PreserveProfile);
 
 PreservedAnalyses IndirectBrExpandPass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
@@ -86,9 +95,10 @@ PreservedAnalyses IndirectBrExpandPass::run(Function &F,
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-  bool Changed = runImpl(F, TLI, DT ? &DTU : nullptr, [&]() {
-    return &FAM.getResult<BlockFrequencyAnalysis>(F);
-  });
+  bool Changed = runImpl(
+      F, TLI, DT ? &DTU : nullptr,
+      [&]() { return &FAM.getResult<BlockFrequencyAnalysis>(F); },
+      /*PreserveProfile=*/true);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -104,18 +114,19 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(IndirectBrExpandLegacyPass, DEBUG_TYPE,
                     "Expand indirectbr instructions", false, false)
 
-FunctionPass *llvm::createIndirectBrExpandPass() {
-  return new IndirectBrExpandLegacyPass();
+FunctionPass *llvm::createIndirectBrExpandPass(CodeGenOptLevel OptLevel) {
+  return new IndirectBrExpandLegacyPass(OptLevel);
 }
 
 bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
-             function_ref<BlockFrequencyInfo *()> GetBFI) {
+             function_ref<BlockFrequencyInfo *()> GetBFI,
+             bool PreserveProfile) {
   auto &DL = F.getDataLayout();
 
   SmallVector<IndirectBrInst *, 1> IndirectBrs;
   SmallVector<uint64_t, 1> IndirectBrsBlockFrequencies;
   SmallVector<uint64_t, 1> IndirectBrsBranchWeightSums;
-  bool SkipProfileUpdates = false;
+  bool SkipProfileUpdates = !PreserveProfile;
   BlockFrequencyInfo *BFI = nullptr;
 
   struct IndirectBrSuccessor {
@@ -375,7 +386,8 @@ bool IndirectBrExpandLegacyPass::runOnFunction(Function &F) {
   if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
 
-  return runImpl(F, TLI, DTU ? &*DTU : nullptr, [&]() {
-    return &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
-  });
+  return runImpl(
+      F, TLI, DTU ? &*DTU : nullptr,
+      [&]() { return &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI(); },
+      OptLevel != CodeGenOptLevel::None);
 }

@@ -1,11 +1,17 @@
-//===-- Unittests for clock_getres- ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for clock_getres.
+///
+//===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/time_macros.h"
 #include "src/time/clock_getres.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"

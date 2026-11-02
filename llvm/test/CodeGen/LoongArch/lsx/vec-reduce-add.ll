@@ -194,8 +194,7 @@ define void @vec_reduce_add_v4i32(ptr %src, ptr %dst) nounwind {
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
 ; LA32-NEXT:    vhaddw.q.d $vr0, $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vec_reduce_add_v4i32:
@@ -220,8 +219,7 @@ define void @vec_reduce_add_v2i32(ptr %src, ptr %dst) nounwind {
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vec_reduce_add_v2i32:

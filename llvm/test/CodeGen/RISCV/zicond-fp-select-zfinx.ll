@@ -267,17 +267,17 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV32ZFINX_NOZICOND-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32ZFINX_NOZICOND-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32ZFINX_NOZICOND-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX_NOZICOND-NEXT:    mv s1, a7
+; RV32ZFINX_NOZICOND-NEXT:    mv s2, a7
 ; RV32ZFINX_NOZICOND-NEXT:    mv s3, a6
 ; RV32ZFINX_NOZICOND-NEXT:    mv s0, a5
-; RV32ZFINX_NOZICOND-NEXT:    mv s2, a4
+; RV32ZFINX_NOZICOND-NEXT:    mv s1, a4
 ; RV32ZFINX_NOZICOND-NEXT:    call __gtdf2
 ; RV32ZFINX_NOZICOND-NEXT:    bgtz a0, .LBB2_2
 ; RV32ZFINX_NOZICOND-NEXT:  # %bb.1: # %entry
-; RV32ZFINX_NOZICOND-NEXT:    mv s2, s3
-; RV32ZFINX_NOZICOND-NEXT:    mv s0, s1
+; RV32ZFINX_NOZICOND-NEXT:    mv s1, s3
+; RV32ZFINX_NOZICOND-NEXT:    mv s0, s2
 ; RV32ZFINX_NOZICOND-NEXT:  .LBB2_2: # %entry
-; RV32ZFINX_NOZICOND-NEXT:    mv a0, s2
+; RV32ZFINX_NOZICOND-NEXT:    mv a0, s1
 ; RV32ZFINX_NOZICOND-NEXT:    mv a1, s0
 ; RV32ZFINX_NOZICOND-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ZFINX_NOZICOND-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload

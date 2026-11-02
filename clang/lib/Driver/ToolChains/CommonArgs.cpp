@@ -211,10 +211,10 @@ static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
     return false;
 
   case llvm::Triple::aarch64:
-    // Arm64 Windows requires that the frame chain is valid, as there is no
-    // way to indicate during a stack walk that a frame has used the frame
-    // pointer as a general purpose register.
-    return Triple.isOSWindows();
+    // Arm64 Windows (and UEFI, which follows the same ABI) requires that the
+    // frame chain is valid, as there is no way to indicate during a stack walk
+    // that a frame has used the frame pointer as a general purpose register.
+    return Triple.isOSWindowsOrUEFI();
   }
 }
 
@@ -1303,7 +1303,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                 options::OPT_fno_split_machine_functions)) {
     if (A->getOption().matches(options::OPT_fsplit_machine_functions))
       CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
-                                           "-split-machine-functions"));
+                                           "-function-splitting=all"));
   }
 
   if (auto *A =
@@ -2937,7 +2937,7 @@ bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
       CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
       return true;
     }
-    D.Diag(diag::err_drv_libclc_not_found) << LibclcFile;
+    D.Diag(diag::err_drv_device_lib_not_found) << "libclc" << LibclcFile;
     return false;
   }
 
@@ -3004,7 +3004,7 @@ bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
       return true;
   }
 
-  D.Diag(diag::err_drv_libclc_not_found) << "libclc.bc";
+  D.Diag(diag::err_drv_device_lib_not_found) << "libclc" << "libclc.bc";
   return false;
 }
 
@@ -3034,15 +3034,24 @@ void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
 }
 
 void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
-                                   llvm::opt::ArgStringList &CmdArgs) {
+                                   llvm::opt::ArgStringList &CmdArgs,
+                                   bool EmitCompressionFormat) {
   if (TCArgs.hasFlag(options::OPT_offload_compress,
                      options::OPT_no_offload_compress, false))
     CmdArgs.push_back("--compress");
-  if (TCArgs.hasArg(options::OPT_v))
-    CmdArgs.push_back("--verbose");
-  if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
+  if (auto *Arg =
+          TCArgs.getLastArg(options::OPT_offload_compression_level_EQ)) {
+    // llvm-offload-binary rejects a level unless the format is named. Pick the
+    // same default the tool would: zstd, or zlib when zstd is not built.
+    if (EmitCompressionFormat) {
+      const char *Format =
+          llvm::compression::zstd::isAvailable() ? "zstd" : "zlib";
+      CmdArgs.push_back(
+          TCArgs.MakeArgString(Twine("--compression-format=") + Format));
+    }
     CmdArgs.push_back(
         TCArgs.MakeArgString(Twine("--compression-level=") + Arg->getValue()));
+  }
 }
 
 void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
