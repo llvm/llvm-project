@@ -51,7 +51,7 @@ static cl::opt<bool> SPIRVDebugScopeForwardRefs(
     "spirv-debug-scope-forward-refs",
     cl::desc("Forward-reference debug scopes when "
              "SPV_KHR_relaxed_extended_instruction is enabled"),
-    cl::init(false));
+    cl::init(true));
 
 namespace {
 
