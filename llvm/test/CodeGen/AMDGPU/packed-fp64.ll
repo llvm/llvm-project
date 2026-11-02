@@ -2,8 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.51 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1251,GFX1251-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.51 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1251,GFX1251-GISEL %s
 
-declare <2 x double> @llvm.canonicalize.v2f64(<2 x double>)
-
 define amdgpu_kernel void @fadd_v2_vv(ptr addrspace(1) %a) {
 ; GFX1251-LABEL: fadd_v2_vv:
 ; GFX1251:       ; %bb.0:
