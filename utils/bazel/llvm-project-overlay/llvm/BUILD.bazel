@@ -7146,6 +7146,7 @@ write_file(
         "",
         "VALUES = {",
         "    '--assertion-mode': 'ON',",
+        "    '--build-mode': 'Release',",
         "    '--targets-built': '{}',".format(" ".join(llvm_targets)),
         "}",
         "",
@@ -7162,7 +7163,10 @@ py_binary(
     testonly = True,
     srcs = [":llvm_config_lit_py_gen"],
     main = "utils/bazel/llvm_config_lit.py",
-    visibility = ["//lld/test:__pkg__"],
+    visibility = [
+        "//lld/test:__pkg__",
+        "//lldb/test/Shell:__pkg__",
+    ],
 )
 
 filegroup(
