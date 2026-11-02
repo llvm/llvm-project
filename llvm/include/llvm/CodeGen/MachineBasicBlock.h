@@ -747,6 +747,11 @@ public:
   /// Returns true if it is legal to hoist instructions into this block.
   LLVM_ABI bool isLegalToHoistInto() const;
 
+  /// Returns true if none of this block's terminators define or use a physical
+  /// register. Hoisting an instruction before such terminators cannot clobber
+  /// a physical register value (e.g. a condition code) that they read.
+  LLVM_ABI bool hasNoTerminatorWithPhysregDefsOrUses() const;
+
   // Code Layout methods.
 
   /// Move 'this' block before or after the specified block.  This only moves

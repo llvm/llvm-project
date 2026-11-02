@@ -318,6 +318,14 @@ bool MachineBasicBlock::isLegalToHoistInto() const {
   return true;
 }
 
+bool MachineBasicBlock::hasNoTerminatorWithPhysregDefsOrUses() const {
+  for (const MachineInstr &Terminator : terminators())
+    for (const MachineOperand &Op : Terminator.operands())
+      if (Op.isReg() && Op.getReg().isPhysical())
+        return false;
+  return true;
+}
+
 bool MachineBasicBlock::hasName() const {
   if (const BasicBlock *LBB = getBasicBlock())
     return LBB->hasName();
