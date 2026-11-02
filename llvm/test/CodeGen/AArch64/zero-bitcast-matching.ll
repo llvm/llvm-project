@@ -48,6 +48,32 @@ define <1 x i64> @sat_neg_high(<2 x i64> %x) {
   ret <1 x i64> %high
 }
 
+define <1 x i64> @positive_part_low(<2 x i64> %x) {
+; CHECK-LABEL: positive_part_low:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    cmgt d1, d0, d1
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt <2 x i64> %x, zeroinitializer
+  %sel = select <2 x i1> %cmp, <2 x i64> %x, <2 x i64> zeroinitializer
+  %low = shufflevector <2 x i64> %sel, <2 x i64> poison, <1 x i32> zeroinitializer
+  ret <1 x i64> %low
+}
+
+define <1 x i64> @negative_part_low(<2 x i64> %x) {
+; CHECK-LABEL: negative_part_low:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    cmgt d1, d1, d0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <2 x i64> %x, zeroinitializer
+  %sel = select <2 x i1> %cmp, <2 x i64> %x, <2 x i64> zeroinitializer
+  %low = shufflevector <2 x i64> %sel, <2 x i64> poison, <1 x i32> zeroinitializer
+  ret <1 x i64> %low
+}
+
 define <2 x i64> @reduce_smax_v1i64_zero_fill(<1 x i64> %a) {
 ; CHECK-LABEL: reduce_smax_v1i64_zero_fill:
 ; CHECK:       // %bb.0:
