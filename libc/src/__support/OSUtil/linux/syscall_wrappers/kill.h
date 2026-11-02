@@ -32,4 +32,3 @@ LIBC_INLINE ErrorOr<int> kill(pid_t pid, int sig) {
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_KILL_H
-
