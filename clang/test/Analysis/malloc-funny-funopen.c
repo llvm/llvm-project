@@ -2,10 +2,10 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=unix.Malloc -verify %t/source.c
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify %t/source.c
 
 //--- header.h
-
+#pragma once
 #pragma clang system_header
 
 // A non-standard function named "funopen" with four parameters:
