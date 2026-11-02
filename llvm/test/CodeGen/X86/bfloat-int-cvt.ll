@@ -759,3 +759,64 @@ define <8 x i64> @fptoui_v8bf16_to_v8i64(<8 x bfloat> %a) {
   %cvt = fptoui <8 x bfloat> %a to <8 x i64>
   ret <8 x i64> %cvt
 }
+
+;
+; Signed/Unsigned int to bfloat with afn (no libcall)
+;
+
+define bfloat @sitofp_afn_i32_to_bf16(i32 %a) {
+; CHECK-LABEL: sitofp_afn_i32_to_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %cvt = sitofp afn i32 %a to bfloat
+  ret bfloat %cvt
+}
+
+define bfloat @uitofp_afn_i32_to_bf16(i32 %a) {
+; CHECK-LABEL: uitofp_afn_i32_to_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %cvt = uitofp afn i32 %a to bfloat
+  ret bfloat %cvt
+}
+
+;
+; 25..53-bit sources: converted through f64
+;
+
+define bfloat @sitofp_i25_to_bf16(i25 %a) {
+; CHECK-LABEL: sitofp_i25_to_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    shll $7, %edi
+; CHECK-NEXT:    sarl $7, %edi
+; CHECK-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  %cvt = sitofp i25 %a to bfloat
+  ret bfloat %cvt
+}
+
+define bfloat @uitofp_i48_to_bf16(i48 %a) {
+; CHECK-LABEL: uitofp_i48_to_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movabsq $281474976710655, %rax # imm = 0xFFFFFFFFFFFF
+; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  %cvt = uitofp i48 %a to bfloat
+  ret bfloat %cvt
+}
+
