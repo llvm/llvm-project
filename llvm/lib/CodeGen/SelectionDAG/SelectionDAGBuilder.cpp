@@ -10786,7 +10786,7 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         InlineAsm::Flag ResOpType(InlineAsm::Kind::Mem, 1);
 
         SDValue AsmOp = InOperandVal;
-        if (isFunction(InOperandVal)) {
+        if (TLI.supportsInlineAsmFuncOperands() && isFunction(InOperandVal)) {
           auto *GA = cast<GlobalAddressSDNode>(InOperandVal);
           ResOpType = InlineAsm::Flag(InlineAsm::Kind::Func, 1);
           AsmOp = DAG.getTargetGlobalAddress(GA->getGlobal(), DL,

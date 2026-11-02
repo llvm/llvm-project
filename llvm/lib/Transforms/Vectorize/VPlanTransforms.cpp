@@ -3542,13 +3542,24 @@ static bool handleUncountableExitsWithSideEffects(
   return true;
 }
 
-// Returns true if any non-branch recipe in the loop may have side effects.
-// For now this relies on LoopVectorizationLegality::isVectorizableEarlyExitLoop
-// rejecting loops with side effects other than stores.
-static bool loopMayHaveSideEffects(VPBasicBlock *HeaderVPBB) {
+// Returns true if the loop contains stores, the only writes legality accepts in
+// early-exit loops.
+static bool loopHasStores(VPBasicBlock *HeaderVPBB) {
   return any_of(vp_rpo_plain_cfg_loop_body(HeaderVPBB), [](VPBasicBlock *VPBB) {
-    return any_of(*VPBB, [](VPRecipeBase &R) {
-      return match(&R, m_VPInstruction<Instruction::Store>());
+    return any_of(*VPBB, [VPBB](VPRecipeBase &R) {
+      (void)VPBB;
+      if (match(&R, m_Intrinsic<Intrinsic::pseudoprobe>()))
+        return false;
+      if (!R.mayWriteToMemory()) {
+        assert((!R.mayHaveSideEffects() || &R == VPBB->getTerminator() ||
+                R.isSafeToSpeculativelyExecute()) &&
+               "legality only accepts recipes with side effects that are "
+               "safe to speculate");
+        return false;
+      }
+      assert(match(&R, m_VPInstruction<Instruction::Store>()) &&
+             "legality only accepts stores as writes in early-exit loops");
+      return true;
     });
   });
 }
@@ -3564,7 +3575,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
 
-  if (loopMayHaveSideEffects(HeaderVPBB))
+  if (loopHasStores(HeaderVPBB))
     Style = UncountableExitStyle::MaskedHandleExitInScalarLoop;
 
   // Dereferenceability is checked separately for uncountable exit loops with
@@ -4552,10 +4563,11 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
   if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
     // Narrow interleave group to wide load, as transformed VPlan will only
     // process one original iteration.
-    auto *LI = cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
+    const InterleaveGroup<Instruction> *IG = LoadGroup->getInterleaveGroup();
+    auto *LI = cast<LoadInst>(IG->getInsertPos());
     auto *L = VPBuilder(LoadGroup).createWidenLoad(
         *LI, LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-        LI->getAlign(), *LoadGroup, LoadGroup->getDebugLoc());
+        IG->getAlign(), *LoadGroup, LoadGroup->getDebugLoc());
     NarrowedOps.insert(L);
     return L;
   }
@@ -4714,11 +4726,11 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   for (auto *StoreGroup : StoreGroups) {
     VPValue *Res = narrowInterleaveGroupOp(StoreGroup->getStoredValues(),
                                            NarrowedOps, Preheader);
-    auto *SI =
-        cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
+    const InterleaveGroup<Instruction> *IG = StoreGroup->getInterleaveGroup();
+    auto *SI = cast<StoreInst>(IG->getInsertPos());
     VPBuilder(StoreGroup)
         .createWidenStore(*SI, StoreGroup->getAddr(), Res, nullptr,
-                          /*Consecutive=*/true, SI->getAlign(), *StoreGroup,
+                          /*Consecutive=*/true, IG->getAlign(), *StoreGroup,
                           StoreGroup->getDebugLoc());
     StoreGroup->eraseFromParent();
   }
