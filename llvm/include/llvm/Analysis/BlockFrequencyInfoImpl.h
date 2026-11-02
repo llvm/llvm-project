@@ -1716,7 +1716,7 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
 // Graph trait base class for block frequency information graph
 // viewer.
 
-enum GVDAGType { GVDT_None, GVDT_Fraction, GVDT_Integer, GVDT_Count };
+enum class GVDAGType { None, Fraction, Integer, Count };
 
 template <class BlockFrequencyInfoT, class BranchProbabilityInfoT>
 struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
@@ -1772,13 +1772,13 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     else
       OS << Node->getName() << " : ";
     switch (GType) {
-    case GVDT_Fraction:
+    case GVDAGType::Fraction:
       OS << printBlockFreq(*Graph, *Node);
       break;
-    case GVDT_Integer:
+    case GVDAGType::Integer:
       OS << Graph->getBlockFreq(Node).getFrequency();
       break;
-    case GVDT_Count: {
+    case GVDAGType::Count: {
       auto Count = Graph->getBlockProfileCount(Node);
       if (Count)
         OS << *Count;
@@ -1786,7 +1786,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
         OS << "Unknown";
       break;
     }
-    case GVDT_None:
+    case GVDAGType::None:
       llvm_unreachable("If we are not supposed to render a graph we should "
                        "never reach this point.");
     }

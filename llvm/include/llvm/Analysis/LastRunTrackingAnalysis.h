@@ -37,6 +37,8 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
+
 /// This class is used to track the last run of a set of module/function passes.
 /// Invalidation are conservatively handled by the pass manager if a pass
 /// doesn't explicitly preserve the result.
@@ -46,6 +48,8 @@ namespace llvm {
 /// bool isCompatibleWith(const OptionT& LastOpt) const to check compatibility.
 class LastRunTrackingInfo {
 public:
+  explicit LastRunTrackingInfo(const AnalysisOptions &Opts) : Opts(Opts) {}
+
   using PassID = const void *;
   using OptionPtr = const void *;
   // CompatibilityCheckFn is a closure that stores the parameters of last run.
@@ -85,6 +89,7 @@ private:
   LLVM_ABI void updateImpl(PassID ID, bool Changed,
                            CompatibilityCheckFn CheckFn);
 
+  const AnalysisOptions &Opts;
   DenseMap<PassID, CompatibilityCheckFn> TrackedPasses;
 };
 
@@ -96,12 +101,8 @@ class LastRunTrackingAnalysis final
 
 public:
   using Result = LastRunTrackingInfo;
-  LastRunTrackingInfo run(Function &F, FunctionAnalysisManager &) {
-    return LastRunTrackingInfo();
-  }
-  LastRunTrackingInfo run(Module &M, ModuleAnalysisManager &) {
-    return LastRunTrackingInfo();
-  }
+  LLVM_ABI LastRunTrackingInfo run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI LastRunTrackingInfo run(Module &M, ModuleAnalysisManager &);
 };
 
 } // namespace llvm
