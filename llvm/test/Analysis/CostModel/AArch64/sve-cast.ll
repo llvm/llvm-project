@@ -1768,6 +1768,8 @@ define i32 @bitcasts() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %f = bitcast <vscale x 4 x double> poison to <vscale x 4 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %g = bitcast <vscale x 4 x half> poison to <vscale x 4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %h = bitcast <vscale x 4 x i16> poison to <vscale x 4 x half>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v = bitcast <vscale x 16 x i1> poison to <vscale x 2 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %w = bitcast <vscale x 2 x i8> poison to <vscale x 16 x i1>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %a = bitcast <vscale x 4 x i32> poison to <vscale x 4 x i32>
@@ -1778,6 +1780,9 @@ define i32 @bitcasts() {
   %f = bitcast <vscale x 4 x double> poison to <vscale x 4 x i64>
   %g = bitcast <vscale x 4 x half> poison to <vscale x 4 x i16>
   %h = bitcast <vscale x 4 x i16> poison to <vscale x 4 x half>
+
+  %v = bitcast <vscale x 16 x i1> poison to <vscale x 2 x i8>
+  %w = bitcast <vscale x 2 x i8> poison to <vscale x 16 x i1>
   ret i32 undef
 }
 

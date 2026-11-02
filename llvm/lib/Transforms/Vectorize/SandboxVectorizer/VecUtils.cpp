@@ -69,8 +69,7 @@ VecUtils::getNextUserBundles(ArrayRef<Value *> Bndl, const InstrMaps &IMaps,
 
   Value *V0 = Bndl[0];
   DenseSet<User *> SeenUsers;
-  const VectorizeOptions &Opts =
-      V0->getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(V0->getContext());
   // For each user U0 of lane 0, try to form a bundle of matching users across
   // all lanes. Cap the number of users considered to bound compilation time,
   // since each one may trigger an O(Bndl.size()) search across the other
