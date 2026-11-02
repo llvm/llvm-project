@@ -3,6 +3,7 @@
 
 ---
 name:            test_combine_nan_rhs_fminimum_half
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -16,6 +17,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fminimum_float
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -29,6 +31,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fminimum_double
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -42,6 +45,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fminimum_half
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -55,6 +59,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fminimum_float
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -68,6 +73,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fminimum_double
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -81,6 +87,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fmaximum_half
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -94,6 +101,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fmaximum_float
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -107,6 +115,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fmaximum_double
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -120,6 +129,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fmaximum_half
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -133,6 +143,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fmaximum_float
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:
@@ -146,6 +157,7 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fmaximum_double
+tracksRegLiveness: false
 body:             |
   bb.1:
   liveins:

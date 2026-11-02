@@ -10,14 +10,12 @@
 
 #include "mlir/Dialect/Linalg/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/Transforms/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Transforms/SubsetInsertionOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Transforms/TilingInterfaceImpl.h"
 
 void mlir::linalg::registerAllDialectInterfaceImplementations(
     DialectRegistry &registry) {
   registerBufferizableOpInterfaceExternalModels(registry);
-  registerShardingInterfaceExternalModels(registry);
   registerSubsetOpInterfaceExternalModels(registry);
   registerTilingInterfaceExternalModels(registry);
   registerValueBoundsOpInterfaceExternalModels(registry);
