@@ -940,17 +940,6 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   return RT;
 }
 
-/// \return the OffloadArch \p Arch names. An AMD GPU may come with target
-/// features, which are ignored, e.g. "gfx90a:sramecc+:xnack-" is gfx90a.
-static OffloadArch getOffloadArchIgnoringFeatures(StringRef Arch) {
-  OffloadArch ID = StringToOffloadArch(Arch);
-  if (!ID.isUnknown())
-    return ID;
-  llvm::Triple AMDGPUTriple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
-                            llvm::Triple::AMD, llvm::Triple::AMDHSA);
-  return StringToOffloadArch(getProcessorFromTargetID(AMDGPUTriple, Arch));
-}
-
 // Handles `native` offload architectures by using the 'offload-arch' utility.
 static llvm::SmallVector<std::string>
 getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
@@ -969,6 +958,8 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
         Args.push_back("--only=amdgpu");
       else if (Kind == Action::OFK_Cuda)
         Args.push_back("--only=nvptx");
+      else if (Kind == Action::OFK_SYCL)
+        Args.push_back("--only=intel");
     }
     auto StdoutOrErr = C.getDriver().executeProgram(Args);
 
@@ -985,18 +976,9 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
       return GPUArchs;
     }
 
-    for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n")) {
-      if (Arch.empty())
-        continue;
-      // Skip NVIDIA and AMD GPUs, since clang does not support SYCL offloading
-      // to them.
-      if (Kind == Action::OFK_SYCL) {
-        OffloadArch ID = getOffloadArchIgnoringFeatures(Arch);
-        if (ID.isNVPTX() || ID.isAMDGPU() || ID.isAMDGCNSPIRV())
-          continue;
-      }
-      GPUArchs.push_back(Arch.str());
-    }
+    for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
+      if (!Arch.empty())
+        GPUArchs.push_back(Arch.str());
   } else {
     C.getDriver().Diag(diag::err_drv_command_failure) << "offload-arch";
   }
@@ -1037,7 +1019,12 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
   TripleSet Triples;
   for (llvm::StringRef Arch : Archs) {
-    OffloadArch ID = getOffloadArchIgnoringFeatures(Arch);
+    OffloadArch ID = StringToOffloadArch(Arch);
+    if (ID.isUnknown()) {
+      llvm::Triple AMDGPUTriple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                                llvm::Triple::AMD, llvm::Triple::AMDHSA);
+      ID = StringToOffloadArch(getProcessorFromTargetID(AMDGPUTriple, Arch));
+    }
 
     bool UsesLLVMOffloading =
         C.getArgs().hasFlag(options::OPT_foffload_via_llvm,

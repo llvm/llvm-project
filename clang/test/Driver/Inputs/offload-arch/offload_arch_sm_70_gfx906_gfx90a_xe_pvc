@@ -1,4 +1,9 @@
 #!/bin/sh
+# Like offload-arch, print only the Intel GPU for --only=intel.
+if [ "$1" = "--only=intel" ]; then
+  echo "xe-pvc"
+  exit 0
+fi
 echo "sm_70"
 echo "gfx906"
 echo "gfx90a:sramecc+:xnack-"
