@@ -15,6 +15,7 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.readv
 )
+
 add_entrypoint_object(
   process_vm_readv
   ALIAS

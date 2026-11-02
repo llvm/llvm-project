@@ -31,6 +31,7 @@ add_libc_test(
     libc.src.unistd.write
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
 add_libc_test(
   process_vm_readv_test
   SUITE
@@ -40,7 +41,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.struct_iovec
     libc.src.__support.common
-    libc.src.errno.errno
     libc.src.sys.uio.process_vm_readv
     libc.src.unistd.getpid
     libc.test.UnitTest.ErrnoSetterMatcher
@@ -55,7 +55,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.struct_iovec
     libc.src.__support.common
-    libc.src.errno.errno
     libc.src.sys.uio.process_vm_writev
     libc.src.unistd.getpid
     libc.test.UnitTest.ErrnoSetterMatcher

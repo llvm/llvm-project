@@ -27,6 +27,7 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.errno.errno
 )
+
 add_entrypoint_object(
   process_vm_readv
   SRCS
