@@ -1,5 +1,8 @@
-# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner \
-# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs %s -o - | \
+# RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-SYNC
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs \
+# RUN:     -aarch64-enable-async-unwind-for-minsize %s -o - | \
+# RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-ASYNC
 
 # Ensure that we can outline candidates with compatible call/frame classes.
 #
@@ -12,7 +15,7 @@
   define void @no-save2() #0 { ret void }
   define void @reg-save() #0 { ret void }
   define void @stack-save() #0 { ret void }
-  attributes #0 = { minsize noinline noredzone "frame-pointer"="all" }
+  attributes #0 = { minsize noinline noredzone "frame-pointer"="all" uwtable }
 ...
 ---
 
@@ -67,10 +70,17 @@ body:             |
   $lr = ORRXri $xzr, 1
   bb.1:
   liveins: $lr
-    ; CHECK-LABEL: name:            reg-save
-    ; CHECK: $[[REG:x[0-9]+]] = ORRXrs $xzr, $lr, 0
-    ; CHECK-NEXT: BL [[FN]]
-    ; CHECK-NEXT: $lr = ORRXrs $xzr, $[[REG]], 0
+    ; CHECK-SYNC-LABEL: name:            reg-save
+    ; CHECK-SYNC: $x[[REG:[0-9]+]] = ORRXrs $xzr, $lr, 0
+    ; CHECK-SYNC-NEXT: BL [[FN]]
+    ; CHECK-SYNC-NEXT: $lr = ORRXrs $xzr, $x[[REG]], 0
+    ;
+    ; CHECK-ASYNC-LABEL: name:            reg-save
+    ; CHECK-ASYNC: $x[[REG:[0-9]+]] = ORRXrs $xzr, $lr, 0
+    ; CHECK-ASYNC-NEXT: CFI_INSTRUCTION register $w30, $w[[REG]]
+    ; CHECK-ASYNC-NEXT: BL [[FN]]
+    ; CHECK-ASYNC-NEXT: $lr = ORRXrs $xzr, $x[[REG]], 0
+    ; CHECK-ASYNC-NEXT: CFI_INSTRUCTION restore $w30
     $w11 = ORRWri $wzr, 1
     $w11 = ORRWri $wzr, 1
     $w11 = ORRWri $wzr, 1
@@ -90,10 +100,13 @@ body:             |
   $lr = ORRXri $xzr, 1
   bb.1:
   liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
-    ; CHECK-LABEL: name:            stack-save
-    ; CHECK: $sp = STRXpre $lr, $sp, -16
-    ; CHECK-NEXT: BL [[FN]]
-    ; CHECK-NEXT: $sp, $lr = LDRXpost $sp, 16
+    ; CHECK-SYNC-LABEL: name:            stack-save
+    ; CHECK-SYNC: $sp = STRXpre $lr, $sp, -16
+    ; CHECK-SYNC-NEXT: BL [[FN]]
+    ; CHECK-SYNC-NEXT: $sp, $lr = LDRXpost $sp, 16
+    ;
+    ; CHECK-ASYNC-LABEL: name:            stack-save
+    ; CHECK-ASYNC-NOT: BL
     $w11 = ORRWri $wzr, 1
     $w11 = ORRWri $wzr, 1
     $w11 = ORRWri $wzr, 1
