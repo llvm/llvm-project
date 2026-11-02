@@ -239,9 +239,26 @@ jobs:
            ${{ steps.stage_config.outputs.cmake_args }} \
            ${{ env.extra_cmake_options }}
 
+      - name: Reset ccache stats for clean measurement
+        run: |
+          ccache --zero-stats
+          echo "ccache remote_only: $(ccache --get-config remote_only)"
+
       - name: Build stage
         run: |
           cmake --build "${BUILD_DIR}" --target stage-${STAGE_NAME} therock-artifacts -- -k 0
+
+      - name: Show ccache stats for build
+        if: always()
+        run: |
+          echo "========================================="
+          echo "CCache Stats (Build Step Only)"
+          echo "========================================="
+          ccache --show-stats
+          
+          echo ""
+          echo "Key metrics:"
+          ccache --show-stats | grep -E "Cacheable calls|cache hits|Cache misses|hit rate"
 
       - name: Generate failed log summaries
         if: ${{ !cancelled() }}
