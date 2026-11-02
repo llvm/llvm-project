@@ -184,6 +184,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` check by adding the
+  {option}`IgnoredParameterNames` option to skip parameters by name.
+
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
   assignments inside GNU statement expressions unless they form the value of
