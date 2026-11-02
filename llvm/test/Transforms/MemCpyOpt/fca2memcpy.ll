@@ -182,4 +182,38 @@ define void @multiple_clobbering(ptr %ptr, ptr %ptr.copy) {
   ret void
 }
 
+define void @addrproducer_captures(i64 %x, i64 %y, ptr %out) {
+; CHECK-LABEL: @addrproducer_captures(
+; CHECK-NEXT:    [[A:%.*]] = alloca { i32, i32 }, align 8
+; CHECK-NEXT:    [[ORIG:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    [[S:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 [[X:%.*]], ptr [[ORIG]], align 8
+; CHECK-NEXT:    store i64 [[Y:%.*]], ptr [[S]], align 8
+; CHECK-NEXT:    call void @call()
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A]], ptr [[ORIG]], i64 8, i1 false)
+; CHECK-NEXT:    [[DST:%.*]] = call ptr @opaque(ptr [[A]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[S]], i64 8, i1 false)
+; CHECK-NEXT:    store i32 0, ptr [[S]], align 4
+; CHECK-NEXT:    call void @esc(ptr [[A]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[ORIG]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca { i32, i32 }, align 8
+  %orig = alloca i64, align 8
+  %s = alloca i64, align 8
+  store i64 %x, ptr %orig, align 8
+  store i64 %y, ptr %s, align 8
+  call void @call()
+  call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %orig, i64 8, i1 false)
+  %v = load { i32, i32 }, ptr %s, align 4
+  store i32 0, ptr %s, align 4
+  call void @esc(ptr %a) memory(inaccessiblemem: write) nounwind willreturn
+  %dst = call ptr @opaque(ptr %a) memory(none) nounwind willreturn
+  store { i32, i32 } %v, ptr %dst, align 4
+  call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %a, i64 8, i1 false)
+  ret void
+}
+
 declare void @call()
+declare void @esc(ptr)
+declare ptr @opaque(ptr)
