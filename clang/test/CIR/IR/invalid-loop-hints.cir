@@ -175,3 +175,15 @@ cir.func @inner_hints_nested(%c: !cir.bool) {
   } loop_id distinct[0]<> loop_hints < unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>>
   cir.return
 }
+
+// -----
+
+cir.func @vectorized_outside_inner(%c: !cir.bool) {
+  // expected-error@+1 {{failed to verify that 'loop_hints' can only have 'vectorized' in 'unroll_and_jam_inner'}}
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  } loop_id distinct[0]<> loop_hints < vectorized>
+  cir.return
+}

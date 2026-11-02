@@ -318,8 +318,7 @@ LogicalResult LoopHintAttr::verify(
     uint32_t unrollAndJamCount, mlir::BoolAttr distribute,
     mlir::UnitAttr pipelineDisabled, uint32_t pipelineInitiationInterval,
     mlir::UnitAttr licmDisabled, mlir::UnitAttr parallel, uint32_t codeAlign,
-    mlir::UnitAttr vectorized, mlir::DistinctAttr loopId,
-    mlir::Attribute unrollAndJamInner) {
+    mlir::UnitAttr vectorized, mlir::Attribute unrollAndJamInner) {
   if (!unrollAndJamInner)
     return success();
 

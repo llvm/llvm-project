@@ -1058,8 +1058,7 @@ cir::LoopHintAttr CIRGenFunction::getLoopHints(ArrayRef<const Attr *> attrs,
       convertFlag(loopAttrs.PipelineDisabled),
       loopAttrs.PipelineInitiationInterval, convertFlag(loopAttrs.LICMDisabled),
       convertFlag(loopAttrs.IsParallel), loopAttrs.CodeAlign,
-      /*vectorized=*/mlir::UnitAttr(), /*loop_id=*/mlir::DistinctAttr(),
-      /*unroll_and_jam_inner=*/nullptr);
+      /*vectorized=*/mlir::UnitAttr(), /*unroll_and_jam_inner=*/nullptr);
 
   if (hints.isEmpty())
     return {};
@@ -1084,15 +1083,11 @@ static cir::LoopHintAttr getHintsBeforeJam(cir::LoopHintAttr hints) {
       hints.getDistribute(), /*pipeline_disabled=*/mlir::UnitAttr(),
       /*pipeline_initiation_interval=*/0, hints.getLicmDisabled(),
       hints.getParallel(), /*code_align=*/0, /*vectorized=*/mlir::UnitAttr(),
-      /*loop_id=*/mlir::DistinctAttr(), /*unroll_and_jam_inner=*/nullptr);
+      /*unroll_and_jam_inner=*/nullptr);
 }
 
-// 'loopId' is the id of the loop that the hints are for. As these are for a
-// loop that isn't the one the hints end up being attached to, it has to be
-// recorded.
 static cir::LoopHintAttr getHintsAfterJam(cir::LoopHintAttr hints,
-                                          bool vectorizedBeforeJam,
-                                          mlir::DistinctAttr loopId) {
+                                          bool vectorizedBeforeJam) {
   // Unrolling happens after the jam unless it is full.
   std::optional<cir::LoopUnrollMode> unroll = hints.getUnroll();
   if (unroll == cir::LoopUnrollMode::Full)
@@ -1111,7 +1106,7 @@ static cir::LoopHintAttr getHintsAfterJam(cir::LoopHintAttr hints,
       // Splitting the hints stops the vectorization that happens before the
       // jam from being known after it, so it has to be recorded.
       /*vectorized=*/
-      vectorizedBeforeJam ? mlir::UnitAttr::get(ctx) : mlir::UnitAttr(), loopId,
+      vectorizedBeforeJam ? mlir::UnitAttr::get(ctx) : mlir::UnitAttr(),
       /*unroll_and_jam_inner=*/nullptr);
 }
 
@@ -1158,8 +1153,7 @@ CIRGenFunction::LoopHintsScope::LoopHintsScope(CIRGenFunction &cgf,
 
   // Only the first loop that has something to do after the jam is kept.
   if (!parent->unrollAndJamInnerHints) {
-    cir::LoopHintAttr afterJam =
-        getHintsAfterJam(hints, vectorizes(hints), loopId);
+    cir::LoopHintAttr afterJam = getHintsAfterJam(hints, vectorizes(hints));
     if (hasTransformsAfterJam(afterJam))
       parent->unrollAndJamInnerHints = afterJam;
   }
@@ -1185,8 +1179,7 @@ void CIRGenFunction::LoopHintsScope::setLoopHints(
       hints.getUnrollAndJamCount(), hints.getDistribute(),
       hints.getPipelineDisabled(), hints.getPipelineInitiationInterval(),
       hints.getLicmDisabled(), hints.getParallel(), hints.getCodeAlign(),
-      hints.getVectorized(), /*loop_id=*/mlir::DistinctAttr(),
-      unrollAndJamInnerHints));
+      hints.getVectorized(), unrollAndJamInnerHints));
 }
 
 mlir::LogicalResult

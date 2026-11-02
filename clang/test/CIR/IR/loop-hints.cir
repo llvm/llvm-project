@@ -66,8 +66,8 @@ cir.func @loops(%c: !cir.bool) {
     cir.yield
   } step {
     cir.yield
-  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam = enable unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 parallel vectorized loop_id = distinct{{\[[0-9]+\]}}<>>>
-  } loop_id distinct[8]<> loop_hints < must_progress unroll_and_jam = enable unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 parallel vectorized loop_id = distinct[9]<>>>
+  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam = enable unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 parallel vectorized>>
+  } loop_id distinct[8]<> loop_hints < must_progress unroll_and_jam = enable unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 parallel vectorized>>
   cir.return
 }
 

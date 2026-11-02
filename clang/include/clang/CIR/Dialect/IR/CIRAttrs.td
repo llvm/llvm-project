@@ -1021,15 +1021,11 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
       accesses are parallel accesses.
     - `code_align`: the alignment of the loop, in bytes.
     - `vectorized`: the loop is the result of vectorizing another one. This is
-      only set on the hints in `unroll_and_jam_inner`.
-    - `loop_id`: the id of the loop that the hints are for. A loop op's hints
-      are for the loop itself, so this is only set on the hints in
-      `unroll_and_jam_inner`, which are for a different loop than the one the
-      attribute is attached to.
+      only valid on the hints in `unroll_and_jam_inner`.
     - `unroll_and_jam_inner`: only valid when the loop is unrolled and jammed.
       It holds the hints that apply to the first loop inside of this one after
-      it has been jammed, and the id of that loop. That loop's own hints only
-      have what happens before the jam.
+      it has been jammed. That loop's own hints only have what happens before
+      the jam.
 
     Example:
     ```
@@ -1038,8 +1034,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     #cir.loop_hint< must_progress vectorize_enable interleave_count = 2
                     unroll_count = 4>
     #cir.loop_hint< must_progress unroll_and_jam = enable
-                    unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4
-                    loop_id = distinct[0]<>>>
+                    unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
     ```
   }];
 
@@ -1061,7 +1056,6 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     CIR_FlagParam<"parallel">:$parallel,
     OptionalParameter<"uint32_t">:$code_align,
     CIR_FlagParam<"vectorized">:$vectorized,
-    OptionalParameter<"mlir::DistinctAttr">:$loop_id,
     // This is a LoopHintAttr, but the attribute can't have a parameter of its
     // own type, so this is checked by the verifier.
     OptionalParameter<"mlir::Attribute">:$unroll_and_jam_inner);
@@ -1087,7 +1081,6 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
       (` ` $parallel^)?
       (` ` `code_align` `=` $code_align^)?
       (` ` $vectorized^)?
-      (` ` `loop_id` `=` $loop_id^)?
       (` ` `unroll_and_jam_inner` `=` $unroll_and_jam_inner^)?
     `>`
   }];
@@ -1104,7 +1097,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
              !getUnrollAndJamCount() && !getDistribute() &&
              !getPipelineDisabled() && !getPipelineInitiationInterval() &&
              !getLicmDisabled() && !getParallel() && !getCodeAlign() &&
-             !getVectorized() && !getLoopId() && !getUnrollAndJamInner();
+             !getVectorized() && !getUnrollAndJamInner();
     }
 
     /// The hints for the first loop inside of this one, after this one has

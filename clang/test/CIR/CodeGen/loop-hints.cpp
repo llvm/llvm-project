@@ -552,12 +552,12 @@ void inner_jam_unroll(int n) {
 #pragma unroll 4
     for (int j = 0; j < n; ++j)
       use(j);
-  // BEFORE-NOOPT: } loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
-  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
-  // BEFORE-OPT: } loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
-  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam_count = 2 code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam_count = 2 code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z20inner_jam_vectorizedi
@@ -567,12 +567,12 @@ void inner_jam_vectorized(int n) {
 #pragma clang loop vectorize(enable) unroll_count(4) pipeline_initiation_interval(3)
     for (int j = 0; j < n; ++j)
       use(j);
-  // BEFORE-NOOPT: } loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints < vectorize_enable>
-  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
-  // BEFORE-OPT: } loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints < vectorize_enable>
-  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam_count = 2 code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints < vectorize_enable>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized>>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam_count = 2 code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized>>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized>>
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z26inner_jam_first_inner_onlyi
@@ -589,17 +589,17 @@ void inner_jam_first_inner_only(int n) {
       use(j);
   }
   // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
-  // BEFORE-NOOPT: } loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
   // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
-  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 8 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 8>>
   // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < unroll = disable>
-  // BEFORE-OPT: } loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
   // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
-  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam_count = 2 code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 8 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam_count = 2 code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 8>>
   // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
   // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 8 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 8>>
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z18inner_jam_disabledi
@@ -609,12 +609,12 @@ void inner_jam_disabled(int n) {
 #pragma unroll 4
     for (int j = 0; j < n; ++j)
       use(j);
-  // BEFORE-NOOPT: } loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
-  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam = disable unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
-  // BEFORE-OPT: } loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
-  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam = disable code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[}}[[INNER_ID:[0-9]+]]{{\]}}<> loop_hints <>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam = disable unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 loop_id = distinct{{\[}}[[INNER_ID]]{{\]}}<>>>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam = disable unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam = disable code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam = disable unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z20inner_jam_grandchildi
