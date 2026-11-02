@@ -325,7 +325,7 @@ struct OffloadImageVariableTest : OffloadProgramTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadProgramTest::SetUpWith("global_init"));
     ASSERT_SUCCESS(olGetSymbol(Program, "global_init",
-                               OL_SYMBOL_KIND_IMAGE_VARIABLE, &Image));
+                               OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Image));
   }
 
   ol_symbol_handle_t Image = nullptr;

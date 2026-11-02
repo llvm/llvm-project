@@ -15,7 +15,6 @@ def ol_symbol_kind_t : Enum {
   let etors =[
     Etor<"KERNEL", "a kernel object">,
     Etor<"GLOBAL_VARIABLE", "a global variable">,
-    Etor<"IMAGE_VARIABLE", "a global variable looked up in the host-side program image, rather than on the device">,
   ];
 }
 
@@ -69,7 +68,8 @@ def ol_symbol_info_t : Enum {
   let is_typed = 1;
   let etors = [
     TaggedEtor<"KIND", "ol_symbol_kind_t", "The kind of this symbol.">,
-    TaggedEtor<"GLOBAL_VARIABLE_ADDRESS", "void *", "The address in memory for this global variable. For image variables, this is a host address within the program image.">,
+    TaggedEtor<"GLOBAL_VARIABLE_ADDRESS", "void *", "The address in memory for this global variable. This is resolved lazily on first query.">,
+    TaggedEtor<"GLOBAL_VARIABLE_HOST_ADDRESS", "void *", "The host address of this global variable within the host-side program image. This is resolved lazily on first query.">,
     TaggedEtor<"GLOBAL_VARIABLE_SIZE", "size_t", "The size in bytes for this global variable.">,
     TaggedEtor<"NAME", "char[]", "The name of this symbol.">,
     TaggedEtor<"KERNEL_STATIC_BLOCK_MEM_SIZE", "uint32_t", "The size in bytes of the static per-block memory used by this kernel.">,

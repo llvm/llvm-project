@@ -18,6 +18,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
 
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <mutex>
@@ -173,20 +174,105 @@ struct ol_program_impl_t {
   llvm::MemoryBufferRef DeviceImage;
   llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> KernelSymbols;
   llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> GlobalSymbols;
-  llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> ImageSymbols;
 };
 
 struct ol_symbol_impl_t {
   ol_symbol_impl_t(GenericKernelTy *Kernel)
       : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL),
         Name(Kernel->getName()) {}
-  ol_symbol_impl_t(GlobalTy &&Global,
-                   ol_symbol_kind_t Kind = OL_SYMBOL_KIND_GLOBAL_VARIABLE)
-      : PluginImpl(std::move(Global)), Kind(Kind),
-        Name(std::get<GlobalTy>(PluginImpl).getName()) {}
+  /// Global variable symbol. Its device and host addresses are resolved
+  /// lazily, the first time they are queried.
+  ol_symbol_impl_t(GlobalTy &&Global, GenericDeviceTy &Device,
+                   DeviceImageTy &Image)
+      : PluginImpl(std::move(Global)), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE),
+        Name(std::get<GlobalTy>(PluginImpl).getName()), Device(&Device),
+        Image(&Image) {}
+
+  /// Return the device address of the global.
+  llvm::Expected<void *> getDeviceAddress() {
+    if (void *Addr = DeviceAddress.load(std::memory_order_acquire))
+      return Addr;
+    GlobalTy Tmp{Name};
+    if (auto Err =
+            Device->Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
+                *Device, *Image, Tmp))
+      return std::move(Err);
+    // Some plugins only report the address; a zero size means unknown, so
+    // skip the size check for the device side.
+    if (Tmp.getSize())
+      if (auto Err = recordSize("device", Tmp.getSize()))
+        return std::move(Err);
+    DeviceAddress.store(Tmp.getPtr(), std::memory_order_release);
+    return Tmp.getPtr();
+  }
+
+  /// Return the address of the global within the host-side program image.
+  llvm::Expected<void *> getHostAddress() {
+    if (void *Addr = HostAddress.load(std::memory_order_acquire))
+      return Addr;
+    GlobalTy Tmp{Name};
+    if (auto Err = Device->Plugin.getGlobalHandler().getGlobalMetadataFromImage(
+            *Device, *Image, Tmp))
+      return std::move(Err);
+
+    // The address is a host pointer; make sure it lies inside the image.
+    uintptr_t Start = uintptr_t(Image->getStart());
+    uintptr_t End = Start + Image->getSize();
+    uintptr_t Ptr = (uintptr_t)Tmp.getPtr();
+    if (Ptr < Start || Ptr > End || Tmp.getSize() > End - Ptr)
+      return createOffloadError(
+          ErrorCode::INVALID_BINARY,
+          "global variable '%s' lies outside of the program image",
+          Name.str().c_str());
+    if (auto Err = recordSize("host", Tmp.getSize()))
+      return std::move(Err);
+    HostAddress.store(Tmp.getPtr(), std::memory_order_release);
+    return Tmp.getPtr();
+  }
+
+  /// Return the size of the global. It is taken from whichever of the device
+  /// or host lookups happens first; if both happen they must agree.
+  llvm::Expected<size_t> getSize() {
+    size_t Cur = Size.load(std::memory_order_acquire);
+    if (Cur != UnknownSize)
+      return Cur;
+    if (auto AddrOrErr = getDeviceAddress(); !AddrOrErr)
+      return AddrOrErr.takeError();
+    Cur = Size.load(std::memory_order_acquire);
+    if (Cur != UnknownSize)
+      return Cur;
+    // The device did not report a size; fall back to the host lookup.
+    if (auto AddrOrErr = getHostAddress(); !AddrOrErr)
+      return AddrOrErr.takeError();
+    return Size.load(std::memory_order_acquire);
+  }
+
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
   llvm::StringRef Name;
+
+private:
+  GenericDeviceTy *Device = nullptr;
+  DeviceImageTy *Image = nullptr;
+  static constexpr size_t UnknownSize = SIZE_MAX;
+  std::atomic<void *> DeviceAddress{nullptr};
+  std::atomic<void *> HostAddress{nullptr};
+  std::atomic<size_t> Size{UnknownSize};
+
+  /// Record the size seen by the \p Source lookup, checking it against the
+  /// size seen by the other lookup, if any.
+  llvm::Error recordSize(const char *Source, size_t NewSize) {
+    size_t Expected = UnknownSize;
+    if (Size.compare_exchange_strong(Expected, NewSize,
+                                     std::memory_order_acq_rel) ||
+        Expected == NewSize)
+      return llvm::Error::success();
+    return createOffloadError(
+        ErrorCode::INVALID_BINARY,
+        "global variable '%s' has inconsistent sizes: %zu (previous lookup) "
+        "vs %zu (%s lookup)",
+        Name.str().c_str(), Expected, NewSize, Source);
+  }
 };
 
 struct ol_context_impl_t {
@@ -1440,47 +1526,20 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
     auto &Global = Program->GlobalSymbols[Name];
     if (!Global) {
-      GlobalTy GlobalObj{Name};
-      if (auto Res =
-              Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
-                  Device, *Program->Image, GlobalObj)) {
+      // Only check that the symbol exists; addresses are resolved lazily.
+      if (!Device.Plugin.getGlobalHandler().isSymbolInImage(
+              Device, *Program->Image, Name)) {
         Program->GlobalSymbols.erase(Name);
-        return Res;
+        return createOffloadError(ErrorCode::NOT_FOUND,
+                                  "global variable '%s' not found in image",
+                                  Name.str().c_str());
       }
 
-      Global = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj));
+      Global = std::make_unique<ol_symbol_impl_t>(GlobalTy{Name}, Device,
+                                                  *Program->Image);
     }
 
     return Global.get();
-  }
-  case OL_SYMBOL_KIND_IMAGE_VARIABLE: {
-    auto &Image = Program->ImageSymbols[Name];
-    if (!Image) {
-      GlobalTy GlobalObj{Name};
-      if (auto Res =
-              Device.Plugin.getGlobalHandler().getGlobalMetadataFromImage(
-                  Device, *Program->Image, GlobalObj)) {
-        Program->ImageSymbols.erase(Name);
-        return Res;
-      }
-
-      // The address is a host pointer; make sure it lies inside the image.
-      uintptr_t Start = uintptr_t(Program->Image->getStart());
-      uintptr_t End = Start + Program->Image->getSize();
-      uintptr_t Ptr = (uintptr_t)GlobalObj.getPtr();
-      if (Ptr < Start || Ptr > End || GlobalObj.getSize() > End - Ptr) {
-        Program->ImageSymbols.erase(Name);
-        return createOffloadError(
-            ErrorCode::INVALID_BINARY,
-            "image variable '%s' lies outside of the program image",
-            Name.str().c_str());
-      }
-
-      Image = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj),
-                                                 OL_SYMBOL_KIND_IMAGE_VARIABLE);
-    }
-
-    return Image.get();
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -1556,16 +1615,30 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
     return Info.write<ol_symbol_kind_t>(Symbol->Kind);
   case OL_SYMBOL_INFO_NAME:
     return Info.writeString(Symbol->Name);
-  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
-    if (auto Err = CheckKind(
-            {OL_SYMBOL_KIND_GLOBAL_VARIABLE, OL_SYMBOL_KIND_IMAGE_VARIABLE}))
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS: {
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
-    return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
-  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
-    if (auto Err = CheckKind(
-            {OL_SYMBOL_KIND_GLOBAL_VARIABLE, OL_SYMBOL_KIND_IMAGE_VARIABLE}))
+    auto AddrOrErr = Symbol->getDeviceAddress();
+    if (!AddrOrErr)
+      return AddrOrErr.takeError();
+    return Info.write<void *>(*AddrOrErr);
+  }
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS: {
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
-    return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+    auto AddrOrErr = Symbol->getHostAddress();
+    if (!AddrOrErr)
+      return AddrOrErr.takeError();
+    return Info.write<void *>(*AddrOrErr);
+  }
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE: {
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
+      return Err;
+    auto SizeOrErr = Symbol->getSize();
+    if (!SizeOrErr)
+      return SizeOrErr.takeError();
+    return Info.write<size_t>(*SizeOrErr);
+  }
   case OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE:
     if (auto Err = CheckKind({OL_SYMBOL_KIND_KERNEL}))
       return Err;
