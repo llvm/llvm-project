@@ -1095,7 +1095,12 @@ std::pair<unsigned, unsigned> GVNHoist::hoist(HoistingPointList &HPL) {
     }
 
     // Drop the source position as per the debug info update guide, keeping
-    // the intermediate-IR layers.
+    // only the intermediate-IR layers all the hoisted instructions share (or,
+    // with -pick-merged-source-locations, the picked location's layers).
+    SmallVector<DebugLoc> Locs;
+    for (Instruction *I : InstructionsToHoist)
+      Locs.push_back(I->getDebugLoc());
+    Repl->setDebugLoc(DebugLoc::getMergedLocations(Locs));
     Repl->dropSourcePositionKeepIRLayers();
     NR += removeAndReplace(InstructionsToHoist, Repl, DestBB, MoveAccess);
 
