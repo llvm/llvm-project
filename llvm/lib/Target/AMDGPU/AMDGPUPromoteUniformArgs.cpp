@@ -29,6 +29,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -74,14 +75,16 @@ static bool collectDirectCallSites(Function &F,
   if (!any_of(F.args(), canPromoteArgToInReg))
     return false;
 
-  // IgnoreAssumeLikeCalls must be off. An assume-like intrinsic taking F as an
-  // operand is a use of F but not a call to it, and the loop below would read
-  // the wrong operand from it.
+  // Assume-like intrinsics can mention
+  // F without calling it. They are not call sites and do not block promotion.
   if (F.hasAddressTaken(/*PutOffender=*/nullptr, /*IgnoreCallbackUses=*/false,
-                        /*IgnoreAssumeLikeCalls=*/false))
+                        /*IgnoreAssumeLikeCalls=*/true))
     return false;
 
   for (User *U : F.users()) {
+    if (const auto *II = dyn_cast<IntrinsicInst>(U))
+      if (II->isAssumeLikeIntrinsic())
+        continue;
     auto *CB = cast<CallBase>(U);
     if (CB->isMustTailCall() || isa<InvokeInst>(CB))
       return false;

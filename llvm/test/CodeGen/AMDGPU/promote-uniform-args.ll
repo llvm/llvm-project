@@ -851,11 +851,12 @@ define amdgpu_kernel void @k_sig_mismatch() {
   ret void
 }
 
-; An assume-like intrinsic is a use of the function but not a call to it.
+; An assume-like intrinsic mentions the function without calling it. That should not
+; block promotion of the direct call.
 
 define internal fastcc void @callee_assume_operand(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @callee_assume_operand(
-; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-SAME: ptr inreg [[P:%.*]]) {
 ; CHECK-NEXT:    ret void
 ;
   ret void
@@ -865,11 +866,35 @@ define amdgpu_kernel void @k_assume_operand(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_assume_operand(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr @callee_assume_operand, i64 4) ]
-; CHECK-NEXT:    call fastcc void @callee_assume_operand(ptr [[P]])
+; CHECK-NEXT:    call fastcc void @callee_assume_operand(ptr inreg [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) ["align"(ptr @callee_assume_operand, i64 4)]
   call fastcc void @callee_assume_operand(ptr %p)
+  ret void
+}
+
+; Two promotion-eligible parameters, plus an assume-like use of the function.
+; The assume is not a call to this function. Treating it as one asks operand 1
+; of llvm.assume, which has only the i1 condition.
+
+define internal fastcc void @callee_assume_two_args(ptr %p, float %f) {
+; CHECK-LABEL: define internal fastcc void @callee_assume_two_args(
+; CHECK-SAME: ptr inreg [[P:%.*]], float inreg [[F:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_assume_two_args(ptr %p, float %f) {
+; CHECK-LABEL: define amdgpu_kernel void @k_assume_two_args(
+; CHECK-SAME: ptr [[P:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr @callee_assume_two_args, i64 4) ]
+; CHECK-NEXT:    call fastcc void @callee_assume_two_args(ptr inreg [[P]], float inreg [[F]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["align"(ptr @callee_assume_two_args, i64 4)]
+  call fastcc void @callee_assume_two_args(ptr %p, float %f)
   ret void
 }
 
