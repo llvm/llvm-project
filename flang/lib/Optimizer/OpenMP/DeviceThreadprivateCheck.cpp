@@ -47,9 +47,9 @@ static bool isDeviceCode(Operation *op) {
 /// Operations that only compute an address or a descriptor from their operands
 /// without accessing the memory behind them.
 static bool isAddressComputation(Operation *op) {
-  return isa<fir::FortranVariableOpInterface, fir::CoordinateOp,
-             fir::ConvertOp, fir::EmboxOp, fir::ReboxOp, fir::BoxAddrOp,
-             fir::ArrayCoorOp, hlfir::DesignateOp>(op);
+  return isa<fir::FortranVariableOpInterface, fir::CoordinateOp, fir::ConvertOp,
+             fir::EmboxOp, fir::ReboxOp, fir::BoxAddrOp, fir::ArrayCoorOp,
+             hlfir::DesignateOp>(op);
 }
 
 /// Follow the uses of \p value through address computations, which are added
@@ -110,9 +110,9 @@ static std::string describeThreadprivate(fir::GlobalOp global) {
   }
 
   auto [kind, deconstructed] = fir::NameUniquer::deconstruct(symName);
-  llvm::StringRef name =
-      kind == fir::NameUniquer::NameKind::VARIABLE ? deconstructed.name
-                                                   : symName;
+  llvm::StringRef name = kind == fir::NameUniquer::NameKind::VARIABLE
+                             ? deconstructed.name
+                             : symName;
   return ("THREADPRIVATE variable '" + name + "'").str();
 }
 
@@ -156,8 +156,9 @@ class DeviceThreadprivateCheckPass
       llvm::SmallVector<Operation *> pending(addressOps.begin(),
                                              addressOps.end());
       while (!pending.empty()) {
-        auto *unused = llvm::find_if(
-            pending, [](Operation *addressOp) { return addressOp->use_empty(); });
+        auto *unused = llvm::find_if(pending, [](Operation *addressOp) {
+          return addressOp->use_empty();
+        });
         assert(unused != pending.end() && "expected an unused operation");
         (*unused)->erase();
         pending.erase(unused);

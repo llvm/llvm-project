@@ -5342,16 +5342,15 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
       converter, loc, wsloopClauseOps, wsloopArgs);
   wsloopOp.setComposite(/*val=*/true);
 
-  genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, doItem,
-                loopNestClauseOps, iv,
-                {{distributeOp, distributeArgs}, {wsloopOp, wsloopArgs}},
-                llvm::omp::Directive::OMPD_distribute_parallel_do, dsp,
-                [&](mlir::Operation *loopNestOp) {
-                  // Threadprivate variables cannot be bound in the composite
-                  // omp.parallel, so do it at the start of the loop body.
-                  threadPrivatizeVars(converter, eval,
-                                      &loopNestOp->getRegion(0).front());
-                });
+  genLoopNestOp(
+      converter, symTable, semaCtx, eval, loc, queue, doItem, loopNestClauseOps,
+      iv, {{distributeOp, distributeArgs}, {wsloopOp, wsloopArgs}},
+      llvm::omp::Directive::OMPD_distribute_parallel_do, dsp,
+      [&](mlir::Operation *loopNestOp) {
+        // Threadprivate variables cannot be bound in the composite
+        // omp.parallel, so do it at the start of the loop body.
+        threadPrivatizeVars(converter, eval, &loopNestOp->getRegion(0).front());
+      });
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   fir::FirOpBuilder::InsertionGuard guard(builder);
