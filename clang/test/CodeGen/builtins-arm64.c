@@ -242,6 +242,70 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
   // Invalid hint should be dropped
   __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 5); // Invalid Hint
   // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
+  // CHECK-NOT: !mem.cache_hint
+  // CHECK-NEXT: ret void
+}
+
+// CHECK-LABEL: @atomic_fetch_add_with_hint(
+// CHECK: [[OLD:%.*]] = atomicrmw add ptr {{.*}}, i64 {{.*}} monotonic, align 8, !mem.cache_hint ![[F1:[0-9]+]]
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_add_with_hint(int64_t *a, int64_t b) {
+  return __builtin_arm_atomic_fetch_add_with_hint(a, b, __ATOMIC_RELAXED, 3);
+}
+
+// CHECK-LABEL: @atomic_fetch_sub_with_hint(
+// CHECK: [[OLD:%.*]] = atomicrmw sub ptr {{.*}}, i64 {{.*}} release, align 8, !mem.cache_hint ![[F3:[0-9]+]]
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_sub_with_hint(int64_t *a, int64_t b) {
+  return __builtin_arm_atomic_fetch_sub_with_hint(a, b, __ATOMIC_RELEASE, 4);
+}
+
+// CHECK-LABEL: @atomic_fetch_and_with_hint(
+// CHECK: [[OLD:%.*]] = atomicrmw and ptr {{.*}}, i64 {{.*}} acquire, align 8, !mem.cache_hint ![[F1]]
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_and_with_hint(int64_t *a, int64_t b) {
+  return __builtin_arm_atomic_fetch_and_with_hint(a, b, __ATOMIC_ACQUIRE, 3);
+}
+
+// CHECK-LABEL: @atomic_fetch_xor_with_hint(
+// CHECK: [[OLD:%.*]] = atomicrmw xor ptr {{.*}}, i64 {{.*}} acq_rel, align 8, !mem.cache_hint ![[F1]]
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_xor_with_hint(int64_t *a, int64_t b) {
+  return __builtin_arm_atomic_fetch_xor_with_hint(a, b, __ATOMIC_ACQ_REL, 3);
+}
+
+// CHECK-LABEL: @atomic_fetch_or_with_hint(
+// CHECK: [[OLD:%.*]] = atomicrmw or ptr {{.*}}, i64 {{.*}} seq_cst, align 8, !mem.cache_hint ![[F3]]
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_or_with_hint(int64_t *a, int64_t b) {
+  return __builtin_arm_atomic_fetch_or_with_hint(a, b, __ATOMIC_SEQ_CST, 4);
+}
+
+// CHECK-LABEL: @atomic_fetch_with_hint_consume(
+// CHECK: [[OLD:%.*]] = atomicrmw add ptr {{.*}}, i64 {{.*}} acquire, align 8, !mem.cache_hint ![[F1]]
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_with_hint_consume(int64_t *a, int64_t b) {
+  return __builtin_arm_atomic_fetch_add_with_hint(a, b, __ATOMIC_CONSUME, 3);
+}
+
+// CHECK-LABEL: @atomic_fetch_add_with_hint_ph(
+// CHECK: [[OLD:%.*]] = atomicrmw add ptr {{.*}}, i64 {{.*}} monotonic, align 8, !mem.cache_hint ![[F3]]
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_add_with_hint_ph(int64_t *a, int64_t b) {
+  return __builtin_arm_atomic_fetch_add_with_hint(a, b, __ATOMIC_RELAXED, 4);
+}
+
+// CHECK-LABEL: @atomic_fetch_with_invalid_hint(
+// CHECK: atomicrmw add ptr {{.*}}, i64 {{.*}} monotonic, align 8{{$}}
+// CHECK-NEXT: atomicrmw sub ptr {{.*}}, i64 {{.*}} monotonic, align 8{{$}}
+// CHECK-NEXT: atomicrmw and ptr {{.*}}, i64 {{.*}} monotonic, align 8{{$}}
+// CHECK-NEXT: [[OLD:%.*]] = atomicrmw add ptr {{.*}}, i64 {{.*}} monotonic, align 8{{$}}
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_with_invalid_hint(int64_t *a, int64_t b) {
+  __builtin_arm_atomic_fetch_add_with_hint(a, b, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
+  __builtin_arm_atomic_fetch_sub_with_hint(a, b, __ATOMIC_RELAXED, HINT_STSHH_STRM);
+  __builtin_arm_atomic_fetch_and_with_hint(a, b, __ATOMIC_RELAXED, HINT_STCPH);
+  return __builtin_arm_atomic_fetch_add_with_hint(a, b, __ATOMIC_RELAXED, 5);
 }
 
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}
@@ -255,3 +319,5 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
 // CHECK: ![[M8]] = !{!"aarch64.mem_hint", i32 3}
 // CHECK: ![[M9]] = !{i32 1, ![[M10:[0-9]+]]}
 // CHECK: ![[M10]] = !{!"aarch64.mem_hint", i32 4}
+// CHECK: ![[F1]] = !{i32 0, ![[M8]]}
+// CHECK: ![[F3]] = !{i32 0, ![[M10]]}

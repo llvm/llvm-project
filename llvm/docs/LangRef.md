@@ -1940,6 +1940,8 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+(attr_range)=
+
 `range(<ty> <a>, <b>)`
 :   This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -2383,7 +2385,7 @@ define void @f() "no-sse" { ... }
     stops inside an inlined call site, it will appear to be stopped at the
     outermost inlined call site.
 
-`no-jump-tables`
+`"no-jump-tables"`
 :   When this attribute is set to true, the jump tables and lookup tables that
     can be generated from a switch case lowering are disabled.
 
@@ -2495,7 +2497,7 @@ define void @f() "no-sse" { ... }
 :   This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.
 
-`indirect-tls-seg-refs`
+`"indirect-tls-seg-refs"`
 :   This attribute indicates that the code generator should not use
     direct TLS access through segment registers, even if the
     target-specific ABI normally permits it.
@@ -2719,6 +2721,10 @@ fn -> other_fn -> other_fn ; fn is norecurse
 :   This attribute indicates that ThreadSanitizer checks
     (dynamic thread safety analysis) are enabled for this function.
 
+`sanitize_concurrency`
+:   This attribute indicates that ConcurrencySanitizer checks
+    (probabilistic data race detection) are enabled for this function.
+
 `sanitize_hwaddress`
 :   This attribute indicates that HWAddressSanitizer checks
     (dynamic address safety analysis based on tagged pointers) are enabled for
@@ -2743,6 +2749,14 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `sanitize_alloc_token`
 :   This attribute indicates that implicit allocation token instrumentation
     is enabled for this function.
+
+(attr_speculative_load_oracle)=
+
+`"oracle-function"`
+:   This attribute indicates that the function is an oracle function of
+    '`llvm.speculative.load`'. A function with this attribute must have local
+    linkage, and it may only be used as the oracle argument of
+    '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
 :   This attribute indicates that
@@ -2864,7 +2878,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     bitcode, if the second value is omitted, both input and output
     modes will assume the same mode.
 
-    If this is attribute is not specified, the default is `ieee|ieee`.
+    If this attribute is not specified, the default is `ieee|ieee`.
 
     If the output mode is `preservesign`, or `positivezero`,
     denormal outputs may be flushed to zero by standard floating-point
@@ -2882,10 +2896,6 @@ fn -> other_fn -> other_fn ; fn is norecurse
     the mode is consistent. User or platform code is expected to set
     the floating point mode appropriately before function entry.
 
-    This may optionally specify a second pair, prefixed with
-    `float:`. This provides an override for the behavior of 32-bit
-    float type (or vectors of 32-bit floats).
-
     If the input mode is `preservesign`, or `positivezero`,
     a floating-point operation must treat any input denormal value as
     zero. In some situations, if an instruction does not respect this
@@ -2894,11 +2904,10 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
     This may optionally specify a second pair, prefixed with
     `float:`. This provides an override for the behavior of 32-bit
-    float type. (or vectors of 32-bit floats). If this is present,
-    this overrides the base handling of the default mode. Not all
+    float type (or vectors of 32-bit floats). Not all
     targets support separately setting the denormal mode per type, and
-    no attempt is made to diagnose unsupported uses. Currently this
-    attribute is respected by the AMDGPU and NVPTX backends.
+    no attempt is made to diagnose unsupported uses. Currently the separate
+    `float:` attribute is respected by the AMDGPU and NVPTX backends.
 
     **Examples:**
 
@@ -3323,6 +3332,10 @@ The following attributes are currently accepted:
 `"separate_storage"(ptr %p1, ptr %p2)`
 :   This indicates that no pointer {ref}`based <pointeraliasing>` on one of its
     arguments can alias any pointer based on the other.
+
+`"range"(iN %val, iN %lower_bound, iN %upper_bound)`
+:   Equivalent to {ref}`range(iN %lower_bound, %upper_bound) <attr_range>` on
+    `%val`.
 
 For example:
 
@@ -9765,6 +9778,21 @@ models is rejected. For example:
 !0 = !{i32 1, !"exception-model", !"sjlj"}
 ```
 
+### Debugger Tuning Module Flags Metadata
+
+This module flag names the debugger that the module's debug info should be
+tuned for, which may affect the choice of DWARF extensions and accelerator
+tables that are emitted. The value is an `MDString` and is typically one of
+`"gdb"`, `"lldb"`, `"sce"`, or `"dbx"`.
+
+When the flag is absent, the tuning implied by the target triple is
+used.
+
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"debugger-tuning", !"lldb"}
+```
+
 ### Long Double Type Module Flags Metadata
 
 Describe the floating-point format used by libm for `long double`. The
@@ -9941,6 +9969,37 @@ for an integer access:
 
 Multiple TBAA operands are allowed to support merging of modules that may use
 different TBAA hierarchies (e.g., when mixing C and C++).
+
+## '`llvm.raw.sections`' Named Metadata
+
+The module-level `!llvm.raw.sections` metadata allows embedding arbitrary
+binary data into named sections of the output object file. A
+`!llvm.raw.sections` metadata node is a list of metadata nodes with the
+following fields:
+
+```
+!0 = !{!"section_name", i32 alignment, i32 flags, !"raw data"}
+```
+
+- **section_name**: The name of the output section.
+- **alignment**: The byte alignment of the section data. Must be a power-of-two.
+- **flags**: A bitmask describing the properties of the section. Each target
+  maps this onto format-appropriate section flags. The value `0` specifies that
+  the section is present in the object file but is not loaded into memory.
+  Other values are reserved for future use and are currently rejected by the
+  verifier.
+- **raw data**: The binary contents of the section.
+
+Example:
+```
+!llvm.raw.sections = !{!0}
+!0 = !{!"__mydata", i32 8, i32 0, !"\DE\AD\BE\EF"}
+```
+
+Each of the nodes inside a `!llvm.raw.sections` metadata node gets lowered to
+a target-specific named data section. It is an error to use
+`!llvm.raw.sections` on a target that does not support arbitrary named
+sections.
 
 (summary)=
 
@@ -14308,9 +14367,10 @@ the `va_arg` macro in C.
 ##### Arguments:
 
 This instruction takes a `va_list*` value and the type of the
-argument. It returns a value of the specified argument type and
-increments the `va_list` to point to the next argument. The actual
-type of `va_list` is target specific.
+argument, which must not be an {ref}`aggregate <t_aggregate>` type. It
+returns a value of the specified argument type and increments the
+`va_list` to point to the next argument. The actual type of `va_list` is
+target specific.
 
 ##### Semantics:
 
@@ -14330,8 +14390,7 @@ function.
 See the {ref}`variable argument processing <int_varargs>` section.
 
 Note that the code generator does not yet fully support `va_arg` on many
-targets. Also, it does not currently support `va_arg` with aggregate
-types on any target.
+targets.
 
 (i_landingpad)=
 
@@ -24417,6 +24476,8 @@ directly. In the **oracle form**, the third argument must be a direct
 reference to a non-variadic function returning `i64` that is `nounwind`,
 `nosync` and `willreturn` and may only read memory through its arguments;
 the remaining arguments are forwarded to it, and its return value is `N`.
+The oracle function must have the
+{ref}`"oracle-function" <attr_speculative_load_oracle>` attribute.
 
 ##### Semantics:
 
@@ -26903,7 +26964,7 @@ The '`llvm.ubsantrap`' intrinsic.
 
 ##### Arguments:
 
-An integer describing the kind of failure detected.
+An unsigned integer describing the kind of failure detected.
 
 ##### Semantics:
 

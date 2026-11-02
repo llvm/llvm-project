@@ -26,7 +26,7 @@ struct BuiltinDialectVersion : public mlir::DialectVersion {
 
   int64_t getVersion() const { return version; }
 
-  static BuiltinDialectVersion getCurrentVersion() { return {0}; }
+  static BuiltinDialectVersion getCurrentVersion() { return {1}; }
 
   bool operator<(const BuiltinDialectVersion &other) const {
     return version < other.version;

@@ -6,6 +6,7 @@
 ---
 name: mad_u64_u32_sss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -71,6 +72,7 @@ body: |
 ---
 name: mad_u64_u32_ssv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -135,6 +137,7 @@ body: |
 ---
 name: mad_u64_u32_svs
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -161,6 +164,7 @@ body: |
 ---
 name: mad_u64_u32_svv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -186,6 +190,7 @@ body: |
 ---
 name: mad_u64_u32_vss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -212,6 +217,7 @@ body: |
 ---
 name: mad_u64_u32_vsv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -237,6 +243,7 @@ body: |
 ---
 name: mad_u64_u32_vvs
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -262,6 +269,7 @@ body: |
 ---
 name: mad_u64_u32_vvv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -286,6 +294,7 @@ body: |
 ---
 name: mad_i64_i32_sss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -366,6 +375,7 @@ body: |
 ---
 name: mad_i64_i32_ssv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -441,6 +451,7 @@ body: |
 ---
 name: mad_u64_u32_ss0
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -492,6 +503,7 @@ body: |
 ---
 name: mad_u64_u32_vv0
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -513,6 +525,7 @@ body: |
 ---
 name: mad_i64_i32_ss0
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -567,6 +580,7 @@ body: |
 ---
 name: mad_i64_i32_vv0
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

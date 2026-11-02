@@ -314,7 +314,7 @@ func.func @clamp_i8_nan_ignore_noop(%arg0: tensor<4xi8>) -> tensor<4xi8> {
   return %0 : tensor<4xi8>
 }
 
-// ----
+// -----
 
 // CHECK-LABEL: @clamp_boolean_is_noop
 func.func @clamp_boolean_is_noop(%arg0: tensor<4xi1>) -> tensor<4xi1> {
@@ -870,6 +870,17 @@ func.func @slice_fold_static_dynamic(%arg0: tensor<?x4xf32>) -> tensor<?x4xf32> 
   // CHECK: return %arg0
   %3 = tosa.slice %arg0, %0, %1 : (tensor<?x4xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x4xf32>
   return %3 : tensor<?x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @slice_nofold_static_to_dynamic
+func.func @slice_nofold_static_to_dynamic(%arg0: tensor<3x4xf32>) -> tensor<?x4xf32> {
+  %start = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %size = tosa.const_shape values(dense<[3, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: tosa.slice
+  %slice = tosa.slice %arg0, %start, %size : (tensor<3x4xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x4xf32>
+  return %slice : tensor<?x4xf32>
 }
 
 // -----
@@ -1462,6 +1473,39 @@ func.func @fold_mul_no_shift() -> tensor<i32> {
 
 // -----
 
+// CHECK-LABEL: @fold_mul_max_shift
+// CHECK: tosa.const values(dense<0> : tensor<i32>)
+func.func @fold_mul_max_shift() -> tensor<i32> {
+  %c = tosa.const values(dense<2147483647> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<63> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_mul_negative_shift
+// CHECK: tosa.mul
+func.func @no_fold_mul_negative_shift() -> tensor<i32> {
+  %c = tosa.const values(dense<2> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<-1> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_mul_shift_64
+// CHECK: tosa.mul
+func.func @no_fold_mul_shift_64() -> tensor<i32> {
+  %c = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<64> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
+}
+
+// -----
+
 // CHECK-LABEL: @no_fold_mul_result_exceeds_i32
 // CHECK-DAG: %[[LHS:.*]] = tosa.const values(dense<23661> : tensor<i32>) : () -> tensor<i32>
 // CHECK-DAG: %[[RHS:.*]] = tosa.const values(dense<330222> : tensor<i32>) : () -> tensor<i32>
@@ -1520,6 +1564,33 @@ func.func @test_fold_i32_to_i1_cast() -> tensor<i1> {
   %0 = "tosa.const"() <{values = dense<10> : tensor<i32>}> : () -> tensor<i32>
   %1 = "tosa.cast"(%0) <{input_unsigned = false}> : (tensor<i32>) -> tensor<i1>
   return %1 : tensor<i1>
+}
+
+// -----
+
+// Fold both signed zeros to false and nonzero fractions, infinities and NaN to true.
+// CHECK-LABEL: @test_fold_f32_to_i1_cast
+// CHECK-DAG: %[[FALSE:.*]] = tosa.const values(dense<false> : tensor<i1>)
+// CHECK-DAG: %[[TRUE:.*]] = tosa.const values(dense<true> : tensor<i1>)
+// CHECK: return %[[FALSE]], %[[FALSE]], %[[TRUE]], %[[TRUE]], %[[TRUE]], %[[TRUE]], %[[TRUE]]
+func.func @test_fold_f32_to_i1_cast() ->
+    (tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>) {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<f32>}> : () -> tensor<f32>
+  %neg_zero = "tosa.const"() <{values = dense<-0.0> : tensor<f32>}> : () -> tensor<f32>
+  %positive = "tosa.const"() <{values = dense<0.01> : tensor<f32>}> : () -> tensor<f32>
+  %negative = "tosa.const"() <{values = dense<-0.01> : tensor<f32>}> : () -> tensor<f32>
+  %0 = tosa.cast %zero : (tensor<f32>) -> tensor<i1>
+  %1 = tosa.cast %neg_zero : (tensor<f32>) -> tensor<i1>
+  %2 = tosa.cast %positive : (tensor<f32>) -> tensor<i1>
+  %3 = tosa.cast %negative : (tensor<f32>) -> tensor<i1>
+  %inf = "tosa.const"() <{values = dense<0x7F800000> : tensor<f32>}> : () -> tensor<f32>
+  %neg_inf = "tosa.const"() <{values = dense<0xFF800000> : tensor<f32>}> : () -> tensor<f32>
+  %nan = "tosa.const"() <{values = dense<0x7FC00000> : tensor<f32>}> : () -> tensor<f32>
+  %4 = tosa.cast %inf : (tensor<f32>) -> tensor<i1>
+  %5 = tosa.cast %neg_inf : (tensor<f32>) -> tensor<i1>
+  %6 = tosa.cast %nan : (tensor<f32>) -> tensor<i1>
+  return %0, %1, %2, %3, %4, %5, %6 :
+      tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>
 }
 
 // -----
