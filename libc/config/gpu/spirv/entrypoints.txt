@@ -92,7 +92,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
-
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
