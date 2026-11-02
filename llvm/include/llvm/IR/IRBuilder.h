@@ -2145,6 +2145,9 @@ public:
   Value *CreateScaledPtrAdd(Value *Ptr, uint64_t Scale, Value *Offset,
                             const Twine &Name = "",
                             GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    assert(Offset->getType()->isIntOrIntVectorTy(
+               getDataLayout().getIndexTypeSizeInBits(Ptr->getType())) &&
+           "Offset must match index type");
     if (Scale == 1)
       return CreatePtrAdd(Ptr, Offset, Name, NW);
 
@@ -2157,6 +2160,9 @@ public:
   Value *CreateScaledPtrAdd(Value *Ptr, TypeSize Scale, Value *Offset,
                             const Twine &Name = "",
                             GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    assert(Offset->getType()->isIntOrIntVectorTy(
+               getDataLayout().getIndexTypeSizeInBits(Ptr->getType())) &&
+           "Offset must match index type");
     if (Scale.isScalable())
       Offset = CreateMul(CreateVScale(Offset->getType()), Offset);
     return CreateScaledPtrAdd(Ptr, Scale.getKnownMinValue(), Offset, Name, NW);
