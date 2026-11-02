@@ -250,9 +250,34 @@ struct CharSet {
       if (Cur == End)
         return false;
 
+      static const UTF32(&LookupTable)[0x100] = [&]() -> const UTF32(&)[0x100] {
+        static UTF32 LookupTable[0x100];
+
+        for (int I = 0; I < 0x100; ++I) {
+          const unsigned char Ch = I;
+          const char *Cur = reinterpret_cast<const char *>(&Ch);
+          char_t UCh;
+          std::mbstate_t InitialMBState{};
+          if (mbrtoc(&UCh, Cur, 1, &InitialMBState) == 1)
+            LookupTable[Ch] = UCh;
+        }
+
+        return LookupTable;
+      }();
+
+      char_t UCh;
+
+      if (std::mbsinit(&InMBState)) {
+        UCh = LookupTable[static_cast<unsigned char>(*Cur)];
+        if (UCh || !*Cur) {
+          ++Cur;
+          Ch = UCh;
+          return true;
+        }
+      }
+
       const char *Next = Cur;
       std::mbstate_t NextMBState = InMBState;
-      char_t UCh;
       for (;;) {
         // Read one byte at a time. This is usually not the best way to use
         // mbrtoc32(): usually passing the size of the buffer reduces the
@@ -369,6 +394,11 @@ struct CharSet {
                          CharT &Ch) {
       if (Cur == End)
         return false;
+
+      if (static_cast<unsigned char>(*Cur) <= 0x7F) {
+        Ch = *Cur++;
+        return true;
+      }
 
       const UTF8 *UTF8Cur = reinterpret_cast<const UTF8 *>(Cur);
       const UTF8 *UTF8Next = UTF8Cur;
