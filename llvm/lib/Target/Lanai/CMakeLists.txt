@@ -13,10 +13,14 @@ tablegen(LLVM LanaiGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM LanaiGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM LanaiGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS LanaiOptions.td)
+tablegen(LLVM LanaiOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(LanaiCommonTableGen)
 
 add_llvm_target(LanaiCodeGen
   LanaiAsmPrinter.cpp
+  LanaiCodeGenPassBuilder.cpp
   LanaiDelaySlotFiller.cpp
   LanaiFrameLowering.cpp
   LanaiInstrInfo.cpp
@@ -41,6 +45,8 @@ add_llvm_target(LanaiCodeGen
   LanaiDesc
   LanaiInfo
   MC
+  Option
+  Passes
   SelectionDAG
   Support
   Target

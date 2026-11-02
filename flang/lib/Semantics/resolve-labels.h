@@ -16,10 +16,12 @@ struct Program;
 namespace Fortran::semantics {
 class SemanticsContext;
 
-/// \brief Validate the labels in the program
+/// \brief Analyze the labels in the program: check them, and record the
+/// statements that a branch may name so that lowering can consult the same
+/// classification rather than deriving it again.
 /// \param context   semantic context for errors
 /// \param program    the parse tree of the program
 /// \return true, iff the program's labels pass semantics checks
-bool ValidateLabels(SemanticsContext &context, const parser::Program &program);
+bool AnalyzeLabels(SemanticsContext &context, const parser::Program &program);
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RESOLVE_LABELS_H_

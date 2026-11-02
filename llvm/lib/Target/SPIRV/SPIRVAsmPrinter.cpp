@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVAsmPrinter.h"
 #include "MCTargetDesc/SPIRVInstPrinter.h"
 #include "SPIRV.h"
 #include "SPIRVAuxDataHandler.h"
@@ -25,10 +26,15 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCInst.h"
@@ -37,6 +43,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -45,6 +52,20 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
+enum class SPIRVFPContractMode { On, Off, Fast };
+
+static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
+    "spirv-fp-contract",
+    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
+    cl::values(
+        clEnumValN(SPIRVFPContractMode::On, "on",
+                   "Follow IR metadata (default)"),
+        clEnumValN(SPIRVFPContractMode::Off, "off",
+                   "Force ContractionOff on all kernel entry points"),
+        clEnumValN(SPIRVFPContractMode::Fast, "fast",
+                   "Suppress ContractionOff on all kernel entry points")),
+    cl::init(SPIRVFPContractMode::On));
+
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
@@ -53,7 +74,11 @@ public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer), ID), ModuleSectionsEmitted(false),
-        ST(nullptr), TII(nullptr), MAI(nullptr) {}
+        ST(nullptr), TII(nullptr), MAI(nullptr) {
+    GetMAI = [this] {
+      return &getAnalysis<SPIRVModuleAnalysisWrapperPass>().MAI;
+    };
+  }
   static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
@@ -82,6 +107,8 @@ public:
       SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionModeFromEnableMaximalReconvergenceAttr(
       const MCRegister &Reg, const SPIRVSubtarget &ST);
+  void emitSimpleExecutionMode(MCRegister Reg,
+                               SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
@@ -106,6 +133,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
+  std::function<SPIRV::ModuleAnalysisInfo *()> GetMAI;
 
   // Non-owning pointer to the NSDI handler registered via addAsmPrinterHandler.
   // The handler's lifetime is managed by AsmPrinter (the base class of this
@@ -120,8 +148,8 @@ protected:
 } // namespace
 
 void SPIRVAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<SPIRVModuleAnalysis>();
-  AU.addPreserved<SPIRVModuleAnalysis>();
+  AU.addRequired<SPIRVModuleAnalysisWrapperPass>();
+  AU.addPreserved<SPIRVModuleAnalysisWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);
 }
 
@@ -305,16 +333,24 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SPIRV_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
 
-  if (!MAI->getSkipEmission(MI))
+  bool InstructionEmitted = !MAI->getSkipEmission(MI);
+  if (InstructionEmitted)
     outputInstruction(MI);
 
   // Output OpLabel after OpFunction and OpFunctionParameter in the first MBB.
   const MachineInstr *NextMI = MI->getNextNode();
-  if (!LabeledMBB.contains(MI->getParent()) && isFuncOrHeaderInstr(MI, TII) &&
-      (!NextMI || !isFuncOrHeaderInstr(NextMI, TII))) {
+  bool BlockHasLabel = LabeledMBB.contains(MI->getParent());
+  bool IsFunctionPreambleInstruction = isFuncOrHeaderInstr(MI, TII);
+  bool IsNextInstructionFunctionPreamble =
+      NextMI && isFuncOrHeaderInstr(NextMI, TII);
+  bool ShouldEmitEntryLabel = !BlockHasLabel && IsFunctionPreambleInstruction &&
+                              !IsNextInstructionFunctionPreamble;
+  if (ShouldEmitEntryLabel) {
     assert(MI->getParent()->getNumber() == MF->front().getNumber() &&
            "OpFunction is not in the front MBB of MF");
     emitOpLabel(*MI->getParent());
+    if (NSDebugHandler && !isHidden())
+      NSDebugHandler->notifyEntryLabelEmitted(*MF);
   }
 }
 
@@ -381,7 +417,8 @@ void SPIRVAsmPrinter::outputEntryPoints() {
   // Find all OpVariable IDs with required StorageClass.
   DenseSet<MCRegister> InterfaceIDs;
   for (const MachineInstr *MI : MAI->GlobalVarList) {
-    assert(MI->getOpcode() == SPIRV::OpVariable);
+    assert(MI->getOpcode() == SPIRV::OpVariable ||
+           MI->getOpcode() == SPIRV::OpUntypedVariableKHR);
     auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
         MI->getOperand(2).getImm());
     // Before version 1.4, the interface's storage classes are limited to
@@ -530,18 +567,21 @@ void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
   outputMCInst(Inst);
 }
 
+void SPIRVAsmPrinter::emitSimpleExecutionMode(
+    MCRegister Reg, SPIRV::ExecutionMode::ExecutionMode EM) {
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpExecutionMode);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(EM)));
+  outputMCInst(Inst);
+}
+
 void SPIRVAsmPrinter::outputExecutionModeFromEnableMaximalReconvergenceAttr(
     const MCRegister &Reg, const SPIRVSubtarget &ST) {
   assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence) &&
          "Function called when SPV_KHR_maximal_reconvergence is not enabled.");
 
-  MCInst Inst;
-  Inst.setOpcode(SPIRV::OpExecutionMode);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  unsigned EM =
-      static_cast<unsigned>(SPIRV::ExecutionMode::MaximallyReconvergesKHR);
-  Inst.addOperand(MCOperand::createImm(EM));
-  outputMCInst(Inst);
+  emitSimpleExecutionMode(Reg, SPIRV::ExecutionMode::MaximallyReconvergesKHR);
 }
 
 void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
@@ -588,13 +628,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       // VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment must declare
       // OriginUpperLeft.
       if (Attr.getValueAsString() == "pixel") {
-        MCInst Inst;
-        Inst.setOpcode(SPIRV::OpExecutionMode);
-        Inst.addOperand(MCOperand::createReg(FReg));
-        unsigned EM =
-            static_cast<unsigned>(SPIRV::ExecutionMode::OriginUpperLeft);
-        Inst.addOperand(MCOperand::createImm(EM));
-        outputMCInst(Inst);
+        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::OriginUpperLeft);
       }
     }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
@@ -635,16 +669,16 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     // all entry points must use the ArithmeticPoisonKHR execution mode".
     if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
                            SPIRV::Capability::PoisonFreezeKHR)) {
-      MCInst Inst;
-      Inst.setOpcode(SPIRV::OpExecutionMode);
-      Inst.addOperand(MCOperand::createReg(FReg));
-      unsigned EM =
-          static_cast<unsigned>(SPIRV::ExecutionMode::ArithmeticPoisonKHR);
-      Inst.addOperand(MCOperand::createImm(EM));
-      outputMCInst(Inst);
+      emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ArithmeticPoisonKHR);
     }
-    if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+    // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
+    // entry point, --spirv-fp-contract=fast suppresses it.
+    bool EmitContractionOff =
+        ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+        SPIRVFPContract != SPIRVFPContractMode::Fast &&
+        (SPIRVFPContract == SPIRVFPContractMode::Off ||
+         !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
+    if (EmitContractionOff) {
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
         // When SPV_KHR_float_controls2 is enabled, ContractionOff is
         // deprecated. We need to use FPFastMathDefault with the appropriate
@@ -716,13 +750,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
           outputMCInst(Inst);
         }
       } else {
-        MCInst Inst;
-        Inst.setOpcode(SPIRV::OpExecutionMode);
-        Inst.addOperand(MCOperand::createReg(FReg));
-        unsigned EM =
-            static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
-        Inst.addOperand(MCOperand::createImm(EM));
-        outputMCInst(Inst);
+        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ContractionOff);
       }
     }
   }
@@ -731,10 +759,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
 void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
   outputModuleSection(SPIRV::MB_Annotations);
   // Process llvm.global.annotations special global variable.
-  for (auto F = M.global_begin(), E = M.global_end(); F != E; ++F) {
-    if ((*F).getName() != "llvm.global.annotations")
-      continue;
-    const GlobalVariable *V = &(*F);
+  if (const GlobalVariable *V = M.getNamedGlobal("llvm.global.annotations")) {
     const ConstantArray *CA = cast<ConstantArray>(V->getOperand(0));
     for (Value *Op : CA->operands()) {
       ConstantStruct *CS = cast<ConstantStruct>(Op);
@@ -870,14 +895,11 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // Get the global subtarget to output module-level info.
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
   TII = ST->getInstrInfo();
-  MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
+  MAI = GetMAI();
   assert(ST && TII && MAI && M && "Module analysis is required");
 
-  if (!AuxDataHandler) {
-    auto Handler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
-    if (Handler->hasWork())
-      AuxDataHandler = std::move(Handler);
-  }
+  if (!AuxDataHandler && spirvPreserveAuxData(M->getTargetTriple()))
+    AuxDataHandler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
 
   // Let the NSDI handler add its extension and ext inst import entry to MAI
   // before the module header sections are emitted.
@@ -904,6 +926,13 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputDebugSourceAndStrings(*M);
   // 7b. Debug: all OpName and all OpMemberName.
   outputModuleSection(SPIRV::MB_DebugNames);
+  for (const auto &[Reg, Name] : MAI->MBBNames) {
+    MCInst Inst;
+    Inst.setOpcode(SPIRV::OpName);
+    Inst.addOperand(MCOperand::createReg(Reg));
+    addStringImm(Name, Inst);
+    outputMCInst(Inst);
+  }
   // 7c. Debug: all OpModuleProcessed instructions.
   outputModuleSection(SPIRV::MB_DebugModuleProcessed);
   // xxx. SPV_INTEL_memory_access_aliasing instructions go before 8.
@@ -934,7 +963,7 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   if (!M.getModuleInlineAsm().empty()) {
     M.getContext().emitError(
         "SPIR-V does not support module-level inline assembly");
-    M.setModuleInlineAsm("");
+    M.removeModuleInlineAsm();
   }
 
   // Register the NSDI handler before calling the base class so that
@@ -959,4 +988,41 @@ LLVMInitializeSPIRVAsmPrinter() {
   RegisterAsmPrinter<SPIRVAsmPrinter> X(getTheSPIRV32Target());
   RegisterAsmPrinter<SPIRVAsmPrinter> Y(getTheSPIRV64Target());
   RegisterAsmPrinter<SPIRVAsmPrinter> Z(getTheSPIRVLogicalTarget());
+}
+
+PreservedAnalyses SPIRVAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  SPIRVAsmPrinter &AsmPrinter = static_cast<SPIRVAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+SPIRVAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  SPIRVAsmPrinter &AsmPrinter = static_cast<SPIRVAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.GetMAI = [&MFAM, &MF] {
+    return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+        .getCachedResult<SPIRVModuleAnalysis>(*MF.getFunction().getParent());
+  };
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses SPIRVAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  SPIRVAsmPrinter &AsmPrinter = static_cast<SPIRVAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.GetMAI = [&MAM, &M] {
+    return MAM.getCachedResult<SPIRVModuleAnalysis>(M);
+  };
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

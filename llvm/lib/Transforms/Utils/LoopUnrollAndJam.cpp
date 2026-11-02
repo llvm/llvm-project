@@ -345,7 +345,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       !EnableFSDiscriminator)
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
-        if (!I.isDebugOrPseudoInst())
+        if (!isa<PseudoProbeInst>(I))
           if (const DILocation *DIL = I.getDebugLoc()) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(Count);
             if (NewDIL)
@@ -611,7 +611,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                                : SubLoop->getParentLoop()
                          : SubLoop;
   assert(DT->verify());
-  LI->verify(*DT);
+  LI->verify();
   assert(OutestLoop->isRecursivelyLCSSAForm(*DT, *LI));
   if (!CompletelyUnroll)
     assert(L->isLoopSimplifyForm());
@@ -948,8 +948,7 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   }
 
   // Check the loop safety info for exceptions.
-  SimpleLoopSafetyInfo LSI;
-  LSI.computeLoopSafetyInfo(L);
+  SimpleLoopSafetyInfo LSI(L);
   if (LSI.anyBlockMayThrow()) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Something may throw\n");
     return false;

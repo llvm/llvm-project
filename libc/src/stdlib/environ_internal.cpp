@@ -18,6 +18,7 @@
 #include "src/__support/alloc-checker.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/memory_utils/inline_strcmp.h"
 #ifdef LIBC_COPT_SUPPORT_ENVIRON
 #include "src/unistd/environ.h"
 #endif
@@ -65,7 +66,8 @@ char **EnvironmentManager::get_array() {
 EnvironmentManager::iterator EnvironmentManager::begin() { return get_array(); }
 
 EnvironmentManager::iterator EnvironmentManager::end() {
-  return get_array() + count;
+  char **env_array = get_array();
+  return env_array ? env_array + count : nullptr;
 }
 
 size_t EnvironmentManager::size() const { return count; }
@@ -82,10 +84,24 @@ cpp::optional<size_t> EnvironmentManager::find_var(cpp::string_view name) {
   if (!env_array)
     return cpp::nullopt;
 
-  for (size_t i = 0; i < count; i++) {
-    cpp::string_view current(env_array[i]);
-    if (current.starts_with(name) && current.size() > name.size() &&
-        current[name.size()] == '=')
+  auto comp = [](char l, char r) -> int {
+    return static_cast<unsigned char>(l) - static_cast<unsigned char>(r);
+  };
+
+  // Empty names, supported by putenv, match entries starting with '='.
+  const char first = name.empty() ? '=' : name.front();
+  if (first == '\0')
+    return cpp::nullopt;
+  const size_t start = name.empty() ? 0 : 1;
+
+  for (size_t i = 0; i < count; ++i) {
+    const char *entry = env_array[i];
+    if (entry[0] != first)
+      continue;
+
+    if (inline_strncmp(entry + start, name.data() + start, name.size() - start,
+                       comp) == 0 &&
+        entry[name.size()] == '=')
       return i;
   }
 
@@ -261,6 +277,63 @@ int EnvironmentManager::unset(cpp::string_view name) {
 
     idx = find_var(name);
   }
+
+  return 0;
+}
+
+int EnvironmentManager::put(char *string) {
+  cpp::string_view sv(string);
+  size_t eq_pos = sv.find_first_of('=');
+
+  // No '=' found: treat as unset (POSIX behavior).
+  if (eq_pos == cpp::string_view::npos)
+    return unset(sv);
+
+  cpp::string_view name = sv.substr(0, eq_pos);
+
+  cpp::optional<size_t> idx = find_var(name);
+
+  size_t needed = idx ? count : count + 1;
+  if (!ensure_capacity(needed))
+    return -1;
+
+  char **env_array = get_array();
+
+  if (idx) {
+    // Replace existing variable. Free old string if we own it.
+    if (ownership[*idx].can_free())
+      delete[] env_array[*idx];
+
+    env_array[*idx] = string;
+    ownership[*idx].allocated_by_us = false; // Caller owns this string.
+  } else {
+    // Add new variable at the end.
+    env_array[count] = string;
+    ownership[count].allocated_by_us = false;
+    count++;
+    env_array[count] = nullptr;
+  }
+
+  return 0;
+}
+
+int EnvironmentManager::clear() {
+  init_once();
+
+  // Free the pointer array, but leave the string buffers intact so that
+  // existing getenv pointers remain valid.
+  delete[] storage;
+  delete[] ownership;
+  storage = nullptr;
+  ownership = nullptr;
+  capacity = 0;
+  count = 0;
+  is_ours = false;
+
+  app.env_ptr = nullptr;
+#ifdef LIBC_COPT_SUPPORT_ENVIRON
+  environ = nullptr;
+#endif
 
   return 0;
 }

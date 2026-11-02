@@ -1,4 +1,5 @@
 header: sys/ucontext.h
-header_template: ucontext.h.def
+public_includes:
+  - ucontext.h
 standards:
   - gnu

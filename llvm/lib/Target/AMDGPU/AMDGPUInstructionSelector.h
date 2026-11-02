@@ -43,7 +43,8 @@ class MachineRegisterInfo;
 class RegisterBank;
 class SIInstrInfo;
 class SIRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
@@ -101,6 +102,7 @@ private:
   bool selectG_AMDGPU_MAD_64_32(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectS16MergeToS32(MachineInstr &MI) const;
+  bool selectS16MergeToWide(MachineInstr &MI) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
   bool selectG_BUILD_VECTOR(MachineInstr &I) const;
@@ -111,7 +113,6 @@ private:
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectWritelane(MachineInstr &MI) const;
   bool selectDivScale(MachineInstr &MI) const;
-  bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
@@ -128,7 +129,7 @@ private:
   bool selectImageIntrinsic(MachineInstr &MI,
                             const AMDGPU::ImageDimIntrinsicInfo *Intr) const;
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I) const;
-  int getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) const;
+  int getS_CMPOpcode(CmpInst::Predicate P, uint64_t Size) const;
   bool selectG_ICMP_or_FCMP(MachineInstr &I) const;
   bool hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const;
   void getAddrModeInfo(const MachineInstr &Load, const MachineRegisterInfo &MRI,
@@ -150,6 +151,7 @@ private:
   bool selectPermlaneSwapIntrin(MachineInstr &I, Intrinsic::ID IntrID) const;
   bool selectWaveAddress(MachineInstr &I) const;
   bool selectBITOP3(MachineInstr &I) const;
+  bool selectWriteRegister(MachineInstr &MI) const;
   bool selectStackRestore(MachineInstr &MI) const;
   bool selectNamedBarrierInit(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
@@ -166,6 +168,8 @@ private:
   Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
                                  MachineOperand Root, MachineInstr *InsertPt,
                                  bool ForceVGPR = false) const;
+
+  Register widenSrcIfVGPR16(Register Src, MachineInstr *InsertPt) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
@@ -245,7 +249,7 @@ private:
   InstructionSelector::ComplexRendererFns
   selectSmrdSgprImm(MachineOperand &Root) const;
 
-  std::pair<Register, int>
+  std::pair<Register, int64_t>
   selectFlatOffsetImpl(MachineOperand &Root,
                        AMDGPU::FlatAddrSpace FlatVariant) const;
 
@@ -291,7 +295,7 @@ private:
   bool isFlatScratchBaseLegalSV(Register Addr) const;
   bool isFlatScratchBaseLegalSVImm(Register Addr) const;
 
-  std::pair<Register, unsigned>
+  std::pair<Register, int64_t>
   selectDS1Addr1OffsetImpl(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
@@ -302,8 +306,8 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS128Bit8ByteAligned(MachineOperand &Root) const;
 
-  std::pair<Register, unsigned> selectDSReadWrite2Impl(MachineOperand &Root,
-                                                       unsigned size) const;
+  std::pair<Register, int64_t> selectDSReadWrite2Impl(MachineOperand &Root,
+                                                      unsigned size) const;
   InstructionSelector::ComplexRendererFns
   selectDSReadWrite2(MachineOperand &Root, unsigned size) const;
 
@@ -350,9 +354,8 @@ private:
                                                           bool &Matched) const;
   ComplexRendererFns selectVOP3PMadMixModsExt(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
-
-  void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx = -1) const;
+  ComplexRendererFns selectVOP3PMadMixModsExtNeg(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3PMadMixModsNeg(MachineOperand &Root) const;
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
@@ -414,9 +417,6 @@ private:
                         int OpIdx) const;
   void renderExtractCpolSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
                                int OpIdx) const;
-
-  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
 
   void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
                               int OpIdx) const;

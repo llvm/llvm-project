@@ -12,7 +12,7 @@
 
 // class multiset
 
-// multiset(initializer_list<value_type> il, const key_compare& comp, const allocator_type& a);
+// multiset(initializer_list<value_type> il, const key_compare& comp, const allocator_type& a); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -22,7 +22,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   typedef test_less<int> Cmp;
   typedef test_allocator<int> A;
   typedef std::multiset<int, Cmp, A> C;
@@ -40,5 +40,13 @@ int main(int, char**) {
   assert(m.key_comp() == Cmp(10));
   assert(m.get_allocator() == A(4));
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

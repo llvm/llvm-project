@@ -163,6 +163,8 @@ public:
 
   static void Terminate();
 
+  static void DebuggerInitialize(Debugger &debugger);
+
   static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
   /// Returns the display name of this TypeSystemClang that indicates what
@@ -511,6 +513,8 @@ public:
   CompilerType GetPointerSizedIntType(bool is_signed);
 
   CompilerType GetPointerDiffType(bool is_signed) override;
+
+  CompilerType GetSizeType() override;
 
   // Floating point functions
 

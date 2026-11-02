@@ -17,7 +17,7 @@ namespace clang::ssaf {
 volatile int SSAFSourceTransformationAnchorSource = 0;
 } // namespace clang::ssaf
 
-LLVM_DEFINE_REGISTRY(clang::ssaf::TransformationRegistry)
+LLVM_DEFINE_REGISTRY_EX(CLANG_ABI_EXPORT, clang::ssaf::TransformationRegistry)
 
 bool ssaf::isTransformationRegistered(llvm::StringRef Name) {
   for (const auto &Entry : TransformationRegistry::entries())
@@ -28,11 +28,11 @@ bool ssaf::isTransformationRegistered(llvm::StringRef Name) {
 
 std::unique_ptr<Transformation>
 ssaf::makeTransformation(llvm::StringRef Name, const WPASuite &Suite,
-                         SourceEditEmitter &Edits,
+                         const SSAFOptions &Opts, SourceEditEmitter &Edits,
                          TransformationReportEmitter &Report) {
   for (const auto &Entry : TransformationRegistry::entries())
     if (Entry.getName() == Name)
-      return Entry.instantiate(Suite, Edits, Report);
+      return Entry.instantiate(Suite, Opts, Edits, Report);
   assert(false && "Unknown Transformation name");
   return nullptr;
 }

@@ -83,9 +83,10 @@ entry:
 define arm_aapcs_vfpcc <8 x bfloat> @test_vcombine_bf16(<4 x bfloat> %low, <4 x bfloat> %high) {
 ; CHECK-LABEL: test_vcombine_bf16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d16, d1
-; CHECK-NEXT:    vorr d17, d0, d0
-; CHECK-NEXT:    vorr q0, q8, q8
+; CHECK-NEXT:    @ kill: def $d1 killed $d1 def $d1_d2
+; CHECK-NEXT:    vmov.f64 d2, d0
+; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vmov.f64 d1, d2
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle.i = shufflevector <4 x bfloat> %high, <4 x bfloat> %low, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

@@ -22,6 +22,23 @@ class TestFrameVar(TestBase):
         self.build()
         self.do_test()
 
+    def test_legacy_expression_path_malformed_trailing_operator(self):
+        """
+        A '-' or '>' with no matching partner is not a valid variable
+        expression path.
+        """
+        self.build()
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.c")
+        )
+        self.runCmd("settings set target.experimental.use-DIL false")
+        for expr in ("test_var-", "test_var>", "test_var-x"):
+            # Make sure parser reprots an error instead of assert.
+            self.expect(
+                f"frame variable {expr}",
+                error=True,
+            )
+
     def do_test(self):
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.c")
@@ -112,7 +129,7 @@ class TestFrameVar(TestBase):
             self.assertIn(s, message)
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_missing_obj(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove
@@ -136,7 +153,7 @@ class TestFrameVar(TestBase):
         self.check_frame_variable_errors(thread, error_strings)
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_obj_mod_time_mismatch(self):
         """
         Test that if we build a binary with DWARF in .o files and we update
@@ -170,6 +187,7 @@ class TestFrameVar(TestBase):
 
     @skipIfRemote
     @skipIfWindows  # Windows can't set breakpoints by name 'main' in this case.
+    @requireClang
     def test_gline_tables_only(self):
         """
         Test that if we build a binary with "-gline-tables-only" that we can

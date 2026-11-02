@@ -2,7 +2,7 @@
 ;; Test that carryout from 64-bit add/sub (synthesized from two 32-bit adds/subs) is utilized
 ;; (i.e. no additional compare is generated).
 
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdpal < %s | FileCheck %s
 
 %struct.uint96 = type { i64, i32 }
 %struct.uint64pair = type { i64, i64 }
@@ -197,19 +197,17 @@ define amdgpu_ps <2 x i64> @s_uadd_v2i64(<2 x i64> inreg %val0, <2 x i64> inreg 
 ; CHECK-NEXT:    s_add_u32 s6, s2, s6
 ; CHECK-NEXT:    s_addc_u32 s7, s3, s7
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; CHECK-NEXT:    s_add_u32 s0, s0, s4
-; CHECK-NEXT:    s_addc_u32 s1, s1, s5
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    s_add_u32 s4, s0, s4
+; CHECK-NEXT:    s_addc_u32 s5, s1, s5
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, -1, s[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0, -1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v7
-; CHECK-NEXT:    v_readfirstlane_b32 s2, v6
+; CHECK-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s7
-; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    s_mov_b32 s3, s2
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -227,19 +225,17 @@ define amdgpu_ps <2 x i64> @s_usub_v2i64(<2 x i64> inreg %val0, <2 x i64> inreg 
 ; CHECK-NEXT:    s_sub_u32 s6, s2, s6
 ; CHECK-NEXT:    s_subb_u32 s7, s3, s7
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; CHECK-NEXT:    s_sub_u32 s0, s0, s4
-; CHECK-NEXT:    s_subb_u32 s1, s1, s5
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    s_sub_u32 s4, s0, s4
+; CHECK-NEXT:    s_subb_u32 s5, s1, s5
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, -1, s[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0, -1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v7
-; CHECK-NEXT:    v_readfirstlane_b32 s2, v6
+; CHECK-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s7
-; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    s_mov_b32 s3, s2
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -254,15 +250,15 @@ define amdgpu_ps <2 x i64> @s_usub_v2i64(<2 x i64> inreg %val0, <2 x i64> inreg 
 define amdgpu_ps i64 @s_uadd_i64(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
 ; CHECK-LABEL: s_uadd_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s0, s0, s2
-; CHECK-NEXT:    s_addc_u32 s1, s1, s3
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    s_add_u32 s2, s0, s2
+; CHECK-NEXT:    s_addc_u32 s3, s1, s3
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %pair = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %val0, i64 %val1)
@@ -276,15 +272,15 @@ define amdgpu_ps i64 @s_uadd_i64(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) 
 define amdgpu_ps i64 @s_uadd_p1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
 ; CHECK-LABEL: s_uadd_p1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s0, s0, 1
-; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    s_add_u32 s2, s0, 1
+; CHECK-NEXT:    s_addc_u32 s3, s1, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %pair = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %val0, i64 1)
@@ -298,15 +294,15 @@ define amdgpu_ps i64 @s_uadd_p1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
 define amdgpu_ps i64 @s_uadd_n1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
 ; CHECK-LABEL: s_uadd_n1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s0, s0, -1
-; CHECK-NEXT:    s_addc_u32 s1, s1, -1
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    s_add_u32 s2, s0, -1
+; CHECK-NEXT:    s_addc_u32 s3, s1, -1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %pair = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %val0, i64 -1)
@@ -320,15 +316,15 @@ define amdgpu_ps i64 @s_uadd_n1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
 define amdgpu_ps i64 @s_usub_p1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
 ; CHECK-LABEL: s_usub_p1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_sub_u32 s0, s0, 1
-; CHECK-NEXT:    s_subb_u32 s1, s1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    s_sub_u32 s2, s0, 1
+; CHECK-NEXT:    s_subb_u32 s3, s1, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %pair = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %val0, i64 1)
@@ -342,15 +338,15 @@ define amdgpu_ps i64 @s_usub_p1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
 define amdgpu_ps i64 @s_usub_n1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
 ; CHECK-LABEL: s_usub_n1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_sub_u32 s0, s0, -1
-; CHECK-NEXT:    s_subb_u32 s1, s1, -1
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    s_sub_u32 s2, s0, -1
+; CHECK-NEXT:    s_subb_u32 s3, s1, -1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %pair = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %val0, i64 -1)

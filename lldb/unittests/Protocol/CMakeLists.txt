@@ -1,4 +1,5 @@
 add_lldb_unittest(ProtocolTests
+  MCPClientTest.cpp
   MCPErrorTest.cpp
   MCPPluginTest.cpp
   MCPServerInfoTest.cpp
@@ -7,6 +8,7 @@ add_lldb_unittest(ProtocolTests
   ProtocolMCPServerTest.cpp
 
   LINK_COMPONENTS
+    Option
     Support
   LINK_LIBS
     lldbCore

@@ -22,12 +22,9 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
   if (!Base.isBlockPointer())
     return std::nullopt;
 
-  unsigned BlockMDSize = Base.block()->getDescriptor()->getMetadataSize();
-
   if (PtrOffset >= 0) {
     // If the resulting base would be too small, return nullopt.
-    if (Base.BS.Base < static_cast<unsigned>(PtrOffset) ||
-        (Base.BS.Base - PtrOffset < BlockMDSize))
+    if (Base.BS.Base < static_cast<unsigned>(PtrOffset))
       return std::nullopt;
   }
 
@@ -39,7 +36,6 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
     return std::nullopt;
 
   unsigned Offset = 0;
-  Offset += BlockMDSize;
 
   if (const auto *FD = dyn_cast<FieldDecl>(getDecl())) {
     if (FD->getParent() == BaseRecord->getDecl())
@@ -89,8 +85,20 @@ APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
 
 ComparisonCategoryResult
 MemberPointer::compare(const MemberPointer &RHS) const {
-  if (this->getDecl() == RHS.getDecl()) {
+  assert(!isZero());
+  assert(!RHS.isZero());
 
+  const auto getCmpDecl = [](const MemberPointer &P) -> const Decl * {
+    const Decl *D = P.getDecl()->getMostRecentDecl();
+    if (const auto *FD = dyn_cast<FieldDecl>(D))
+      D = FD->getFirstDecl();
+    return D;
+  };
+
+  const Decl *LHSCmpDecl = getCmpDecl(*this);
+  const Decl *RHSCmpDecl = getCmpDecl(RHS);
+
+  if (LHSCmpDecl == RHSCmpDecl) {
     if (this->PathLength != RHS.PathLength)
       return ComparisonCategoryResult::Unordered;
 

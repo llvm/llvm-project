@@ -694,6 +694,138 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
 
+TEST(KnownBitsTest, NonZeroDenomSDiv) {
+  KnownBits Num = KnownBits::makeConstant(APInt(4, -8, true));
+
+  KnownBits X(4);
+  KnownBits Mask = KnownBits::makeConstant(APInt(4, 0b0100));
+  KnownBits Denom = X & Mask;
+
+  KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+  KnownBits Answer(4);
+  Answer.One.setHighBits(3);
+
+  EXPECT_EQ(Result, Answer);
+}
+
+TEST(KnownBitsTest, NonZeroDenomSDivI8) {
+  KnownBits Num = KnownBits::makeConstant(APInt(8, -128, true));
+
+  // 0b0??????? -> minimum non-zero denominator is 1.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b01111111));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(1);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b0??????0 -> minimum non-zero denominator is 2.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b01111110));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(2);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b0000000? -> minimum non-zero denominator is 1.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b00000001));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(1);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b000000?? -> minimum non-zero denominator is 1.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b00000011));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(1);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b00000?0? -> minimum non-zero denominator is 1.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b00000101));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(1);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b000000?0 -> minimum non-zero denominator is 2.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b00000010));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(2);
+
+    EXPECT_EQ(Result, Answer);
+  }
+
+  // 0b0?000000 -> minimum non-zero denominator is 64.
+  {
+    KnownBits X(8);
+    KnownBits Mask = KnownBits::makeConstant(APInt(8, 0b01000000));
+    KnownBits Denom = X & Mask;
+
+    KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+    KnownBits Answer(8);
+    Answer.One.setHighBits(7);
+
+    EXPECT_EQ(Result, Answer);
+  }
+}
+
+TEST(KnownBitsTest, NonZeroDenomSDivI32) {
+  KnownBits Num = KnownBits::makeConstant(APInt(32, INT32_MIN, true));
+
+  KnownBits X(32);
+  KnownBits Mask = KnownBits::makeConstant(APInt(32, 0x00000002));
+  KnownBits Denom = X & Mask;
+
+  KnownBits Result = KnownBits::sdiv(Num, Denom);
+
+  KnownBits Answer(32);
+  Answer.One.setHighBits(2);
+
+  EXPECT_EQ(Result, Answer);
+}
+
 TEST(KnownBitsTest, FunnelShiftExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {

@@ -224,7 +224,7 @@ protected:
   static const bool is_bounded = true;
   static const bool is_modulo  = !std::is_signed<_Tp>::value;
 
-#if defined(__i386__) || defined(__x86_64__) || defined(__pnacl__) || defined(__wasm__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__wasm__)
   static const bool traps = is_same<decltype(+_Tp(0)), _Tp>::value;
 #else
   static const bool traps = false;

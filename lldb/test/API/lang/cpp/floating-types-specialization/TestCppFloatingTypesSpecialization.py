@@ -5,9 +5,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # _Float16/__bf16 are unsupported on the wasm target
+@requireNotWasm("_Float16/__bf16 are unsupported on the wasm target")
 class TestCase(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

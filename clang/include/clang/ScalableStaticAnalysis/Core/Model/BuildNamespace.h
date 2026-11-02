@@ -27,7 +27,12 @@
 
 namespace clang::ssaf {
 
-enum class BuildNamespaceKind : unsigned short { CompilationUnit, LinkUnit };
+enum class BuildNamespaceKind : unsigned short {
+  CompilationUnit,
+  LinkUnit,
+  StaticLibrary,
+  MultiArchStaticLibrary
+};
 
 /// Represents a single namespace in the build process.
 ///
@@ -54,6 +59,10 @@ public:
   /// \param CompilationId The unique identifier for the compilation unit.
   /// \returns A BuildNamespace with CompilationUnit kind.
   static BuildNamespace makeCompilationUnit(llvm::StringRef CompilationId);
+
+  /// Returns a copy of this namespace with its kind replaced by \p Kind,
+  /// preserving the name.
+  BuildNamespace withKind(BuildNamespaceKind Kind) const;
 
   bool operator==(const BuildNamespace &Other) const;
   bool operator!=(const BuildNamespace &Other) const;
@@ -95,6 +104,13 @@ public:
   ///          BuildNamespace.
   static NestedBuildNamespace
   makeCompilationUnit(llvm::StringRef CompilationId);
+
+  /// Creates a NestedBuildNamespace representing a link unit.
+  ///
+  /// \param LinkUnitId The unique identifier for the link unit.
+  /// \returns A NestedBuildNamespace containing a single LinkUnit
+  ///          BuildNamespace.
+  static NestedBuildNamespace makeLinkUnit(llvm::StringRef LinkUnitId);
 
   /// Creates a new NestedBuildNamespace by appending additional namespace.
   ///

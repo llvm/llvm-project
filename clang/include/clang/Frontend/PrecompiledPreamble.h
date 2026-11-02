@@ -18,6 +18,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <cstddef>
 #include <memory>
 #include <system_error>
@@ -26,9 +27,6 @@
 namespace llvm {
 class MemoryBuffer;
 class MemoryBufferRef;
-namespace vfs {
-class FileSystem;
-}
 } // namespace llvm
 
 namespace clang {

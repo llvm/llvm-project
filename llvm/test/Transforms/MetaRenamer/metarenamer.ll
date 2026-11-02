@@ -98,7 +98,7 @@ declare void @free(ptr nocapture)
 
 define void @dont_rename_lib_funcs() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:  bb:
+; CHECK-NEXT:  bbl:
 ; CHECK-NEXT:    [[TMP:%.*]] = call ptr @malloc(i64 23)
 ; CHECK-NEXT:    call void @free(ptr [[TMP]])
 ; CHECK-NEXT:    ret void

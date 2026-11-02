@@ -47,8 +47,8 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, getCPU(CPU), FS,
-                               Options, getEffectiveRelocModel(RM),
+    : CodeGenTargetMachineImpl(T, TT, getCPU(CPU), FS, Options,
+                               getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       SubTarget(TT, std::string(getCPU(CPU)), std::string(FS), *this) {
   this->TLOF = std::make_unique<AVRTargetObjectFile>();
@@ -83,7 +83,8 @@ void AVRPassConfig::addIRPasses() {
   // Expand instructions like
   //   %result = shl i32 %n, %amount
   // to a loop so that library calls are avoided.
-  addPass(createAVRShiftExpandPass());
+  addPass(createAVRShiftExpandLegacyPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }
@@ -95,7 +96,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeAVRAsmPrinterPass(PR);
   initializeAVRExpandPseudoPass(PR);
-  initializeAVRShiftExpandPass(PR);
+  initializeAVRShiftExpandLegacyPass(PR);
   initializeAVRDAGToDAGISelLegacyPass(PR);
 }
 
@@ -125,7 +126,7 @@ MachineFunctionInfo *AVRTargetMachine::createMachineFunctionInfo(
 
 bool AVRPassConfig::addInstSelector() {
   // Install an instruction selector.
-  addPass(createAVRISelDag(getAVRTargetMachine(), getOptLevel()));
+  addPass(createAVRISelDagLegacyPass(getAVRTargetMachine(), getOptLevel()));
   // Create the frame analyzer pass used by the PEI pass.
   addPass(createAVRFrameAnalyzerPass());
 

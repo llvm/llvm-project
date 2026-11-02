@@ -65,7 +65,7 @@ void simple(float *a, float *b, int *c) {
 // CHECK: ![[META3:[0-9]+]] = distinct !{}
 // CHECK-NEXT: ![[META4]]  = distinct !{![[META4]], ![[META5:[0-9]+]], ![[META6:[0-9]+]]}
 // CHECK-NEXT: ![[META5]]  = !{!"llvm.loop.parallel_accesses", ![[META3]]}
-// CHECK-NEXT: ![[META6]]  = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK-NEXT: ![[META6]]  = !{!"llvm.loop.vectorize.enable"}
 // CHECK-NEXT: ![[META7:[0-9]+]] = distinct !{}
 // CHECK-NEXT: ![[META8]]  = distinct !{![[META8]], ![[META9:[0-9]+]], ![[META6]]}
 // CHECK-NEXT: ![[META9]]  = !{!"llvm.loop.parallel_accesses", ![[META7]]}

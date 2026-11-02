@@ -27,11 +27,13 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llc
   llc.cpp
-  NewPMDriver.cpp
 
   DEPENDS
   intrinsics_gen
   SUPPORT_PLUGINS
   )
+
+add_subdirectory(lib)
+target_link_libraries(llc PRIVATE LLVMLlcDriver)
 
 export_executable_symbols_for_plugins(llc)

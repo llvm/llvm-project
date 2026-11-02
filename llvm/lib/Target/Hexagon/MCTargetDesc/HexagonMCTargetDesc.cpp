@@ -724,7 +724,8 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
 }
 
 llvm::ArrayRef<MCPhysReg> Hexagon_MC::GetVectRegRev() {
-  return ArrayRef(VectRegRev);
+  const auto &RC = getHexagonMCRegisterClass(Hexagon::VectRegRevRegClassID);
+  return ArrayRef(RC.begin(), RC.end());
 }
 
 namespace {

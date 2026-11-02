@@ -187,3 +187,149 @@ func.func @f() {
   %0 = "test.test_effects_result"() : () -> i32
   return
 }
+
+// -----
+
+// Test case: Terminate when a block becomes unreachable while patterns run.
+
+// CHECK-LABEL: func @unreachable_loop_terminates
+// CHECK-NEXT:   return
+
+func.func @unreachable_loop_terminates(%cond: i1, %init: i32) {
+  %true = arith.constant true
+  %c1 = arith.constant 1 : i32
+  cf.cond_br %true, ^exit, ^header(%init : i32)
+^header(%iv: i32):
+  cf.cond_br %cond, ^exit, ^latch
+^latch:
+  %next = arith.addi %iv, %c1 : i32
+  cf.br ^header(%next : i32)
+^exit:
+  return
+}
+
+// -----
+
+// A constant branch disconnects a loop with two latches and three block
+// arguments. Folding in the dead loop must not produce an infinite rewrite.
+// Reduced from a Fortran GOTO loop after inlining a constant argument.
+// CHECK-LABEL: func @unreachable_two_latch_loop
+// CHECK-NEXT: %[[C1:.*]] = arith.constant 1 : i32
+// CHECK-NEXT: return %[[C1]]
+func.func @unreachable_two_latch_loop(%p: i1, %n: i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %true = arith.constant true
+  cf.cond_br %true, ^bb3(%c1 : i32), ^bb1(%c1, %c1, %c1 : i32, i32, i32)
+^bb1(%a: i32, %b: i32, %c: i32):
+  %j = arith.addi %a, %c1 : i32
+  cf.cond_br %p, ^bb2, ^bb4
+^bb2:
+  %b1 = arith.addi %b, %c1 : i32
+  %gt = arith.cmpi sgt, %b1, %n : i32
+  cf.cond_br %gt, ^bb3(%j : i32), ^bb1(%j, %b1, %c : i32, i32, i32)
+^bb4:
+  %c2 = arith.addi %c, %c1 : i32
+  %le = arith.cmpi sle, %c2, %c0 : i32
+  cf.cond_br %le, ^bb1(%j, %b, %c2 : i32, i32, i32), ^bb3(%j : i32)
+^bb3(%r: i32):
+  return %r : i32
+}
+
+// -----
+
+// The lost edge into ^dead cannot be decided incrementally: ^dead keeps ^pass
+// as a predecessor, which is only reachable from ^dead itself. The blocks
+// behind ^dead hold an SSA cycle through block arguments.
+// CHECK-LABEL: func.func @uncertain_chain
+// CHECK-NOT: arith.addi
+// CHECK: return
+func.func @uncertain_chain(%c: i1, %x: i32) -> i32 {
+  %true = arith.constant true
+  %zero = arith.constant 0 : i32
+  cf.br ^header(%x : i32)
+^header(%h: i32):
+  cf.cond_br %true, ^next(%h : i32), ^dead(%h : i32)
+^pass:
+  cf.br ^dead(%x : i32)
+^dead(%d: i32):
+  %s = arith.addi %d, %d : i32
+  cf.cond_br %c, ^dead2(%s : i32), ^pass
+^dead2(%e: i32):
+  %t = arith.addi %e, %s : i32
+  cf.br ^dead(%t : i32)
+^next(%a: i32):
+  %r = arith.addi %a, %zero : i32
+  cf.cond_br %c, ^header(%r : i32), ^exit
+^exit:
+  return %r : i32
+}
+
+// -----
+
+// Nested regions: a constant scf.if whose region holds a CFG is inlined, so
+// its cached state must be dropped, and a block that becomes unreachable holds
+// nested CFG and scf.if regions whose operations must be skipped.
+// CHECK-LABEL: func.func @nested_two_level
+// CHECK-NEXT: return %arg1
+func.func @nested_two_level(%c: i1, %x: i32) -> i32 {
+  %true = arith.constant true
+  %zero = arith.constant 0 : i32
+  cf.br ^header(%x : i32)
+^header(%h: i32):
+  %v = scf.if %true -> i32 {
+    %w = scf.execute_region -> i32 {
+      cf.br ^a
+    ^a:
+      cf.cond_br %true, ^b(%h : i32), ^c(%h : i32)
+    ^b(%bb: i32):
+      scf.yield %bb : i32
+    ^c(%cc: i32):
+      %q = arith.addi %cc, %cc : i32
+      cf.br ^c(%q : i32)
+    }
+    scf.yield %w : i32
+  } else {
+    scf.yield %zero : i32
+  }
+  cf.cond_br %true, ^exit(%v : i32), ^dead(%v : i32)
+^dead(%d: i32):
+  %r = scf.execute_region -> i32 {
+    cf.br ^l(%d : i32)
+  ^l(%iv: i32):
+    %n = arith.addi %iv, %d : i32
+    %m = scf.if %c -> i32 {
+      %mm = arith.addi %n, %iv : i32
+      scf.yield %mm : i32
+    } else {
+      scf.yield %n : i32
+    }
+    cf.cond_br %c, ^l(%m : i32), ^done(%m : i32)
+  ^done(%z: i32):
+    scf.yield %z : i32
+  }
+  cf.br ^dead(%r : i32)
+^exit(%o: i32):
+  return %o : i32
+}
+
+// -----
+
+// The same CFG change can occur in a region nested below the driver root.
+// CHECK-LABEL: func.func @nested_unreachable
+// CHECK-NOT: arith.addi
+// CHECK: return
+func.func @nested_unreachable(%cond: i1, %init: i32) {
+  scf.execute_region {
+    %true = arith.constant true
+    cf.cond_br %true, ^exit, ^header(%init : i32)
+  ^header(%iv: i32):
+    cf.cond_br %cond, ^exit, ^latch
+  ^latch:
+    %next = arith.addi %iv, %iv : i32
+    cf.br ^header(%next : i32)
+  ^exit:
+    scf.yield
+  }
+  return
+}

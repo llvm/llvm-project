@@ -37,6 +37,7 @@ add_llvm_target(DirectXCodeGen
   DXILResourceAccess.cpp
   DXILResourceImplicitBinding.cpp
   DXILShaderFlags.cpp
+  DXILSignatureAnalysis.cpp
   DXILTranslateMetadata.cpp
   DXILRootSignature.cpp
   DXILLegalizePass.cpp

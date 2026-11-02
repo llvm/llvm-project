@@ -1,68 +1,58 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %p/Inputs/tls-opt-iele-i686-nopic.s -o %tso.o
-// RUN: ld.lld -shared -soname=t.so %tso.o -o %tso
-// RUN: ld.lld -shared %t.o %tso -o %t1
-// RUN: llvm-readobj -S -r -d %t1 | FileCheck --check-prefix=GOTRELSHARED %s
-// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASMSHARED %s
+# REQUIRES: x86
+## R_386_TLS_IE in a -shared link need R_386_RELATIVE dynamic relocations and GOT slots need R_386_TLS_TPOFF.
+## Two input files test ensure there is no race caught by ThreadSanitizer.
 
-// GOTRELSHARED:     Section {
-// GOTRELSHARED:      Name: .got
-// GOTRELSHARED-NEXT:   Type: SHT_PROGBITS
-// GOTRELSHARED-NEXT:   Flags [
-// GOTRELSHARED-NEXT:     SHF_ALLOC
-// GOTRELSHARED-NEXT:     SHF_WRITE
-// GOTRELSHARED-NEXT:   ]
-// GOTRELSHARED-NEXT:   Address: 0x3388
-// GOTRELSHARED-NEXT:   Offset: 0x388
-// GOTRELSHARED-NEXT:   Size: 16
-// GOTRELSHARED-NEXT:   Link: 0
-// GOTRELSHARED-NEXT:   Info: 0
-// GOTRELSHARED-NEXT:   AddressAlignment: 4
-// GOTRELSHARED-NEXT:   EntrySize: 0
-// GOTRELSHARED-NEXT: }
-// GOTRELSHARED:      0x6FFFFFFA RELCOUNT             8
-// GOTRELSHARED:      Relocations [
-// GOTRELSHARED-NEXT:   Section ({{.*}}) .rel.dyn {
-// GOTRELSHARED-NEXT:     0x22DA R_386_RELATIVE -
-// GOTRELSHARED-NEXT:     0x22E2 R_386_RELATIVE -
-// GOTRELSHARED-NEXT:     0x22EB R_386_RELATIVE -
-// GOTRELSHARED-NEXT:     0x22F4 R_386_RELATIVE -
-// GOTRELSHARED-NEXT:     0x22FC R_386_RELATIVE -
-// GOTRELSHARED-NEXT:     0x2305 R_386_RELATIVE -
-// GOTRELSHARED-NEXT:     0x230E R_386_RELATIVE -
-// GOTRELSHARED-NEXT:     0x2317 R_386_RELATIVE -
-// GOTRELSHARED-NEXT:     0x3390 R_386_TLS_TPOFF tlsshared0
-// GOTRELSHARED-NEXT:     0x3394 R_386_TLS_TPOFF tlsshared1
-// GOTRELSHARED-NEXT:     0x3388 R_386_TLS_TPOFF tlslocal0
-// GOTRELSHARED-NEXT:     0x338C R_386_TLS_TPOFF tlslocal1
-// GOTRELSHARED-NEXT:   }
-// GOTRELSHARED-NEXT: ]
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=i686-pc-linux a.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=i686-pc-linux b.s -o b.o
+# RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %p/Inputs/tls-opt-iele-i686-nopic.s -o so.o
+# RUN: ld.lld -shared -soname=t.so so.o -o t.so
+# RUN: ld.lld -shared a.o b.o t.so -o out
+# RUN: llvm-readelf -S -r -d out | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn out | FileCheck --check-prefix=DIS %s
 
-// DISASMSHARED:       Disassembly of section test:
-// DISASMSHARED-EMPTY:
-// DISASMSHARED-NEXT:  <_start>:
-// (.got)[0] = 0x3388 = 13192
-// (.got)[1] = 13196
-// (.got)[2] = 13200
-// (.got)[3] = 13204
-// DISASMSHARED-NEXT:  22d8:       movl  13192, %ecx
-// DISASMSHARED-NEXT:  22de:       movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  22e1:       movl  13192, %eax
-// DISASMSHARED-NEXT:  22e6:       movl  %gs:(%eax), %eax
-// DISASMSHARED-NEXT:  22e9:       addl  13192, %ecx
-// DISASMSHARED-NEXT:  22ef:       movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  22f2:       movl  13196, %ecx
-// DISASMSHARED-NEXT:  22f8:       movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  22fb:       movl  13196, %eax
-// DISASMSHARED-NEXT:  2300:       movl  %gs:(%eax), %eax
-// DISASMSHARED-NEXT:  2303:       addl  13196, %ecx
-// DISASMSHARED-NEXT:  2309:       movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  230c:       movl  13200, %ecx
-// DISASMSHARED-NEXT:  2312:       movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  2315:       addl  13204, %ecx
-// DISASMSHARED-NEXT:  231b:       movl  %gs:(%ecx), %eax
+# CHECK:      .got PROGBITS 00003388 000388 000010 00 WA 0 0 4
+# CHECK:      0x6ffffffa (RELCOUNT) 8
+# CHECK:      Relocation section '.rel.dyn' at offset {{.*}} contains 12 entries:
+# CHECK-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
+# CHECK-NEXT: 000022da 00000008 R_386_RELATIVE
+# CHECK-NEXT: 000022e2 00000008 R_386_RELATIVE
+# CHECK-NEXT: 000022eb 00000008 R_386_RELATIVE
+# CHECK-NEXT: 000022f4 00000008 R_386_RELATIVE
+# CHECK-NEXT: 000022fc 00000008 R_386_RELATIVE
+# CHECK-NEXT: 00002305 00000008 R_386_RELATIVE
+# CHECK-NEXT: 0000230e 00000008 R_386_RELATIVE
+# CHECK-NEXT: 00002317 00000008 R_386_RELATIVE
+# CHECK-NEXT: 00003390 0000010e R_386_TLS_TPOFF 00000000 tlsshared0
+# CHECK-NEXT: 00003394 0000020e R_386_TLS_TPOFF 00000000 tlsshared1
+# CHECK-NEXT: 00003388 0000030e R_386_TLS_TPOFF 00000000 tlslocal0
+# CHECK-NEXT: 0000338c 0000040e R_386_TLS_TPOFF 00000004 tlslocal1
 
+# DIS:       Disassembly of section test:
+# DIS-EMPTY:
+# DIS-NEXT:  <_start>:
+## (.got)[0] = 0x3388 = 13192
+## (.got)[1] = 13196
+## (.got)[2] = 13200
+## (.got)[3] = 13204
+# DIS-NEXT:              movl  13192, %ecx
+# DIS-NEXT:              movl  %gs:(%ecx), %eax
+# DIS-NEXT:              movl  13192, %eax
+# DIS-NEXT:              movl  %gs:(%eax), %eax
+# DIS-NEXT:              addl  13192, %ecx
+# DIS-NEXT:              movl  %gs:(%ecx), %eax
+# DIS-NEXT:              movl  13196, %ecx
+# DIS-NEXT:              movl  %gs:(%ecx), %eax
+# DIS-NEXT:              movl  13196, %eax
+# DIS-NEXT:              movl  %gs:(%eax), %eax
+# DIS-NEXT:              addl  13196, %ecx
+# DIS-NEXT:              movl  %gs:(%ecx), %eax
+# DIS-NEXT:              movl  13200, %ecx
+# DIS-NEXT:              movl  %gs:(%ecx), %eax
+# DIS-NEXT:              addl  13204, %ecx
+# DIS-NEXT:              movl  %gs:(%ecx), %eax
+
+#--- a.s
 .type tlslocal0,@object
 .section .tbss,"awT",@nobits
 .globl tlslocal0
@@ -99,6 +89,8 @@ movl %gs:(%ecx),%eax
 movl tlslocal1@indntpoff,%ecx
 movl %gs:(%ecx),%eax
 
+#--- b.s
+.section test, "axw"
 movl tlslocal1@indntpoff,%eax
 movl %gs:(%eax),%eax
 

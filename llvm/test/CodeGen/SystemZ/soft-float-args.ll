@@ -56,9 +56,8 @@ define fp128 @f2_fp128(fp128 %arg) {
 define <2 x double> @f3(<2 x double> %arg) {
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: %{{[fv]}}
-; CHECK: lg      %r0, 0(%r2)
-; CHECK-NEXT: lg      %r13, 8(%r2)
-; CHECK-NEXT: lgr     %r2, %r0
+; CHECK: lg      %r13, 8(%r2)
+; CHECK-NEXT: lg      %r2, 0(%r2)
 ; CHECK-NEXT: llihh   %r3, 16368
 ; CHECK-NEXT: brasl   %r14, __adddf3@PLT
 ; CHECK-NEXT: lgr     %r12, %r2
@@ -157,11 +156,10 @@ define <2 x double> @f9(<2 x double> %A, <2 x double> %B, <2 x double> %C,
 ; CHECK: aghi    %r15, -160
 ; CHECK-NEXT: .cfi_def_cfa_offset 320
 ; CHECK-NEXT: lg      %r1, 344(%r15)
-; CHECK-NEXT: lg      %r0, 0(%r2)
-; CHECK-NEXT: lg      %r3, 0(%r1)
 ; CHECK-NEXT: lg      %r13, 8(%r2)
+; CHECK-NEXT: lg      %r2, 0(%r2)
+; CHECK-NEXT: lg      %r3, 0(%r1)
 ; CHECK-NEXT: lg      %r12, 8(%r1)
-; CHECK-NEXT: lgr     %r2, %r0
 ; CHECK-NEXT: brasl   %r14, __adddf3@PLT
 ; CHECK-NEXT: lgr     %r11, %r2
 ; CHECK-NEXT: lgr     %r2, %r13

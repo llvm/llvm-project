@@ -8,12 +8,12 @@
 //           compiler-rt. Only run this test on non-asanified configurations.
 //
 // RUN: %clang++ -std=gnu++11 -O0 -glldb -fno-exceptions %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t %dexter_lldb_args -- %s
+// RUN: %dexter -w \
+// RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 //
 // RUN: %clang++ -std=gnu++11 -O1 -glldb -fno-exceptions %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t %dexter_lldb_args -- %s
+// RUN: %dexter -w \
+// RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 //
 // PR34513
 volatile int sideeffect = 0;
@@ -28,7 +28,7 @@ struct string {
 string __attribute__((noinline)) get_string() {
   string unused;
   string output = 3;
-  stop(); // DexLabel('string-nrvo')
+  stop(); // !dex_label string-nrvo
   return output;
 }
 void some_function(int) {}
@@ -43,7 +43,7 @@ string2 __attribute__((noinline)) get_string2() {
   some_function(output.i);
   // Test that the debugger can get the value of output after another
   // function is called.
-  stop(); // DexLabel('string2-nrvo')
+  stop(); // !dex_label string2-nrvo
   return output;
 }
 int main() {
@@ -51,6 +51,16 @@ int main() {
   get_string2();
 }
 
-// DexExpectWatchValue('output.i', 3, on_line=ref('string-nrvo'))
-// DexExpectWatchValue('output.i', 5, on_line=ref('string2-nrvo'))
+// CHECK-DAG: seen_values: 2
+// CHECK-DAG: correct_step_coverage: 100.0%
 
+/*
+---
+!where {lines: !label string-nrvo}:
+  !value output:
+    i: 3
+!where {lines: !label string2-nrvo}:
+  !value output:
+    i: 5
+...
+*/

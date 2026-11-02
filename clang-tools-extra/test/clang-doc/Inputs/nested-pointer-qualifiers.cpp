@@ -1,1 +1,1 @@
-void foo(const int * const * ptr);
+void foo(const int *const *ptr);

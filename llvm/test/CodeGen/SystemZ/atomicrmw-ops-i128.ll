@@ -111,11 +111,11 @@ define i128 @atomicrmw_nand(ptr %src, i128 %b) {
 ; CHECK-NEXT:    vlvgp %v1, %r0, %r1
 ; CHECK-NEXT:  .LBB4_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vnn %v2, %v1, %v0
 ; CHECK-NEXT:    vlgvg %r1, %v1, 1
 ; CHECK-NEXT:    vlgvg %r0, %v1, 0
-; CHECK-NEXT:    vlgvg %r5, %v2, 1
-; CHECK-NEXT:    vlgvg %r4, %v2, 0
+; CHECK-NEXT:    vnn %v1, %v1, %v0
+; CHECK-NEXT:    vlgvg %r5, %v1, 1
+; CHECK-NEXT:    vlgvg %r4, %v1, 0
 ; CHECK-NEXT:    cdsg %r0, %r4, 0(%r3)
 ; CHECK-NEXT:    vlvgp %v1, %r0, %r1
 ; CHECK-NEXT:    jl .LBB4_1
@@ -335,10 +335,10 @@ define i128 @atomicrmw_uinc_wrap(ptr %src, i128 %b) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r4), 3
-; CHECK-NEXT:    larl %r4, .LCPI11_0
-; CHECK-NEXT:    vl %v1, 0(%r4), 3
 ; CHECK-NEXT:    lpq %r0, 0(%r3)
 ; CHECK-NEXT:    vlvgp %v2, %r0, %r1
+; CHECK-NEXT:    larl %r1, .LCPI11_0
+; CHECK-NEXT:    vl %v1, 0(%r1), 3
 ; CHECK-NEXT:    j .LBB11_2
 ; CHECK-NEXT:  .LBB11_1: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB11_2 Depth=1
@@ -376,18 +376,18 @@ define i128 @atomicrmw_udec_wrap(ptr %src, i128 %b) {
 ; CHECK-LABEL: atomicrmw_udec_wrap:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r4), 3
-; CHECK-NEXT:    larl %r4, .LCPI12_0
-; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vgbm %v2, 65535
 ; CHECK-NEXT:    lpq %r0, 0(%r3)
 ; CHECK-NEXT:    vlvgp %v3, %r0, %r1
-; CHECK-NEXT:    vgbm %v2, 65535
+; CHECK-NEXT:    larl %r1, .LCPI12_0
+; CHECK-NEXT:    vl %v1, 0(%r1), 3
 ; CHECK-NEXT:    j .LBB12_2
 ; CHECK-NEXT:  .LBB12_1: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
 ; CHECK-NEXT:    vlgvg %r1, %v3, 1
 ; CHECK-NEXT:    vlgvg %r0, %v3, 0
-; CHECK-NEXT:    vlgvg %r5, %v5, 1
-; CHECK-NEXT:    vlgvg %r4, %v5, 0
+; CHECK-NEXT:    vlgvg %r5, %v4, 1
+; CHECK-NEXT:    vlgvg %r4, %v4, 0
 ; CHECK-NEXT:    cdsg %r0, %r4, 0(%r3)
 ; CHECK-NEXT:    vlvgp %v3, %r0, %r1
 ; CHECK-NEXT:    je .LBB12_8
@@ -403,18 +403,18 @@ define i128 @atomicrmw_udec_wrap(ptr %src, i128 %b) {
 ; CHECK-NEXT:    vchlgs %v4, %v3, %v0
 ; CHECK-NEXT:  .LBB12_4: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
-; CHECK-NEXT:    vlr %v4, %v0
+; CHECK-NEXT:    vlr %v5, %v0
 ; CHECK-NEXT:    jl .LBB12_6
 ; CHECK-NEXT:  # %bb.5: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
-; CHECK-NEXT:    vaq %v4, %v3, %v2
+; CHECK-NEXT:    vaq %v5, %v3, %v2
 ; CHECK-NEXT:  .LBB12_6: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
-; CHECK-NEXT:    vlr %v5, %v0
+; CHECK-NEXT:    vlr %v4, %v0
 ; CHECK-NEXT:    cijlh %r0, 0, .LBB12_1
 ; CHECK-NEXT:  # %bb.7: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
-; CHECK-NEXT:    vlr %v5, %v4
+; CHECK-NEXT:    vlr %v4, %v5
 ; CHECK-NEXT:    j .LBB12_1
 ; CHECK-NEXT:  .LBB12_8: # %atomicrmw.end
 ; CHECK-NEXT:    vst %v3, 0(%r2), 3

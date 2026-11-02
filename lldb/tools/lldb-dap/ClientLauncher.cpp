@@ -35,13 +35,8 @@ ClientLauncher::GetLauncher(ClientLauncher::Client client) {
 std::string VSCodeLauncher::URLEncode(llvm::StringRef str) {
   std::string out;
   llvm::raw_string_ostream os(out);
-  for (char c : str) {
-    if (std::isalnum(c) || llvm::StringRef("-_.~").contains(c))
-      os << c;
-    else
-      os << '%' << llvm::utohexstr(c, false, 2);
-  }
-  return os.str();
+  llvm::printPercentEncoded(str, os);
+  return out;
 }
 
 std::string

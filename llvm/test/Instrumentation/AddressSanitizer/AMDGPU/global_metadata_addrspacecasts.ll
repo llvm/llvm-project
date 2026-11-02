@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=asan -S | FileCheck %s
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 @g = addrspace(1) global [1 x i32] zeroinitializer, align 4
 

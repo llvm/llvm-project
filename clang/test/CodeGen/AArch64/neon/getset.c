@@ -11,6 +11,7 @@
 //  * clang/test/CodeGen/AArch64/neon-vget.c
 //  * clang/test/CodeGen/AArch64/neon-scalar-copy.c
 //  * clang/test/CodeGen/AArch64/poly64.c
+//  * clang/test/CodeGen/AArch64/fp8-intrinsics/acle_neon_fp8_untyped.c
 // The main difference is the use of RUN lines that enable ClangIR lowering;
 // therefore only builtins currently supported by ClangIR are tested here.
 //=============================================================================
@@ -589,4 +590,315 @@ mfloat8_t test_vdupb_laneq_mf8(mfloat8x16_t a) {
 // LLVM-SAME: <16 x i8> [[A:%.*]])
 // LLVM: [[VDUPQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
   return vdupb_laneq_mf8(a, 15);
+}
+
+//===------------------------------------------------------===//
+// 2.1.9.13 Set vector lane
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#set-vector-lane
+//===------------------------------------------------------===//
+
+// ALL-LABEL: @test_vset_lane_s8(
+int8x8_t test_vset_lane_s8(int8_t a, int8x8_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s8i>
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i8> [[B]], i8 [[A]], i32 7
+// LLVM: ret <8 x i8> [[VSET_LANE]]
+  return vset_lane_s8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vset_lane_s16(
+int16x4_t test_vset_lane_s16(int16_t a, int16x4_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !s16i>
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <4 x i16> [[B]], i16 [[A]], i32 3
+// LLVM: ret <4 x i16> [[VSET_LANE]]
+  return vset_lane_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vset_lane_s32(
+int32x2_t test_vset_lane_s32(int32_t a, int32x2_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !s32i>
+
+// LLVM-SAME: i32 {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <2 x i32> [[B]], i32 [[A]], i32 1
+// LLVM: ret <2 x i32> [[VSET_LANE]]
+  return vset_lane_s32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vset_lane_s64(
+int64x1_t test_vset_lane_s64(int64_t a, int64x1_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<1 x !s64i>
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <1 x i64> [[B]], i64 [[A]], i32 0
+// LLVM: ret <1 x i64> [[VSET_LANE]]
+  return vset_lane_s64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vset_lane_u8(
+uint8x8_t test_vset_lane_u8(uint8_t a, uint8x8_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s8i>
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i8> [[B]], i8 [[A]], i32 7
+// LLVM: ret <8 x i8> [[VSET_LANE]]
+  return vset_lane_u8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vset_lane_u16(
+uint16x4_t test_vset_lane_u16(uint16_t a, uint16x4_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !s16i>
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <4 x i16> [[B]], i16 [[A]], i32 3
+// LLVM: ret <4 x i16> [[VSET_LANE]]
+  return vset_lane_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vset_lane_u32(
+uint32x2_t test_vset_lane_u32(uint32_t a, uint32x2_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !s32i>
+
+// LLVM-SAME: i32 {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <2 x i32> [[B]], i32 [[A]], i32 1
+// LLVM: ret <2 x i32> [[VSET_LANE]]
+  return vset_lane_u32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vset_lane_p8(
+poly8x8_t test_vset_lane_p8(poly8_t a, poly8x8_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s8i>
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i8> [[B]], i8 [[A]], i32 7
+// LLVM: ret <8 x i8> [[VSET_LANE]]
+  return vset_lane_p8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vset_lane_p16(
+poly16x4_t test_vset_lane_p16(poly16_t a, poly16x4_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !s16i>
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <4 x i16> [[B]], i16 [[A]], i32 3
+// LLVM: ret <4 x i16> [[VSET_LANE]]
+  return vset_lane_p16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vset_lane_u64(
+uint64x1_t test_vset_lane_u64(uint64_t a, uint64x1_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<1 x !s64i>
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <1 x i64> [[B]], i64 [[A]], i32 0
+// LLVM: ret <1 x i64> [[VSET_LANE]]
+  return vset_lane_u64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vset_lane_p64(
+poly64x1_t test_vset_lane_p64(poly64_t a, poly64x1_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<1 x !s64i>
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <1 x i64> [[B]], i64 [[A]], i32 0
+// LLVM: ret <1 x i64> [[VSET_LANE]]
+  return vset_lane_p64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vset_lane_f32(
+float32x2_t test_vset_lane_f32(float32_t a, float32x2_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !cir.float>
+
+// LLVM-SAME: float {{.*}}[[A:%.*]], <2 x float> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <2 x float> [[B]], float [[A]], i32 1
+// LLVM: ret <2 x float> [[VSET_LANE]]
+  return vset_lane_f32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vset_lane_f64(
+float64x1_t test_vset_lane_f64(float64_t a, float64x1_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<1 x !cir.double>
+
+// LLVM-SAME: double {{.*}}[[A:%.*]], <1 x double> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <1 x double> [[B]], double [[A]], i32 0
+// LLVM: ret <1 x double> [[VSET_LANE]]
+  return vset_lane_f64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vset_lane_f16(
+float16x4_t test_vset_lane_f16(float16_t a, float16x4_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !s16i>
+
+// LLVM-SAME: half {{.*}}[[A:%.*]], <4 x half> {{.*}}[[B:%.*]])
+// LLVM: [[BITCAST_B:%.*]] = bitcast <4 x half> [[B]] to <4 x i16>
+// LLVM: [[BITCAST_A:%.*]] = bitcast half [[A]] to i16
+// LLVM: [[VSET_LANE:%.*]] = insertelement <4 x i16> [[BITCAST_B]], i16 [[BITCAST_A]], i32 3
+// LLVM: [[BITCAST_RES:%.*]] = bitcast <4 x i16> [[VSET_LANE]] to <4 x half>
+// LLVM: ret <4 x half> [[BITCAST_RES]]
+  return vset_lane_f16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vset_lane_mf8(
+mfloat8x8_t test_vset_lane_mf8(mfloat8_t a, mfloat8x8_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !u8i>
+
+// LLVM-SAME: {{.*}}<8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i8> [[B]], i8 {{.*}}, i32 7
+// LLVM: ret <8 x i8> [[VSET_LANE]]
+  return vset_lane_mf8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vsetq_lane_s8(
+int8x16_t test_vsetq_lane_s8(int8_t a, int8x16_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x !s8i>
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <16 x i8> [[B]], i8 [[A]], i32 15
+// LLVM: ret <16 x i8> [[VSET_LANE]]
+  return vsetq_lane_s8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vsetq_lane_s16(
+int16x8_t test_vsetq_lane_s16(int16_t a, int16x8_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s16i>
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i16> [[B]], i16 [[A]], i32 7
+// LLVM: ret <8 x i16> [[VSET_LANE]]
+  return vsetq_lane_s16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vsetq_lane_s32(
+int32x4_t test_vsetq_lane_s32(int32_t a, int32x4_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !s32i>
+
+// LLVM-SAME: i32 {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <4 x i32> [[B]], i32 [[A]], i32 3
+// LLVM: ret <4 x i32> [[VSET_LANE]]
+  return vsetq_lane_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsetq_lane_s64(
+int64x2_t test_vsetq_lane_s64(int64_t a, int64x2_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !s64i>
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <2 x i64> [[B]], i64 [[A]], i32 1
+// LLVM: ret <2 x i64> [[VSET_LANE]]
+  return vsetq_lane_s64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsetq_lane_u8(
+uint8x16_t test_vsetq_lane_u8(uint8_t a, uint8x16_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x !s8i>
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <16 x i8> [[B]], i8 [[A]], i32 15
+// LLVM: ret <16 x i8> [[VSET_LANE]]
+  return vsetq_lane_u8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vsetq_lane_u16(
+uint16x8_t test_vsetq_lane_u16(uint16_t a, uint16x8_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s16i>
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i16> [[B]], i16 [[A]], i32 7
+// LLVM: ret <8 x i16> [[VSET_LANE]]
+  return vsetq_lane_u16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vsetq_lane_u32(
+uint32x4_t test_vsetq_lane_u32(uint32_t a, uint32x4_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !s32i>
+
+// LLVM-SAME: i32 {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <4 x i32> [[B]], i32 [[A]], i32 3
+// LLVM: ret <4 x i32> [[VSET_LANE]]
+  return vsetq_lane_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsetq_lane_p8(
+poly8x16_t test_vsetq_lane_p8(poly8_t a, poly8x16_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x !s8i>
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <16 x i8> [[B]], i8 [[A]], i32 15
+// LLVM: ret <16 x i8> [[VSET_LANE]]
+  return vsetq_lane_p8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vsetq_lane_p16(
+poly16x8_t test_vsetq_lane_p16(poly16_t a, poly16x8_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s16i>
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i16> [[B]], i16 [[A]], i32 7
+// LLVM: ret <8 x i16> [[VSET_LANE]]
+  return vsetq_lane_p16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vsetq_lane_u64(
+uint64x2_t test_vsetq_lane_u64(uint64_t a, uint64x2_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !s64i>
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <2 x i64> [[B]], i64 [[A]], i32 1
+// LLVM: ret <2 x i64> [[VSET_LANE]]
+  return vsetq_lane_u64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsetq_lane_p64(
+poly64x2_t test_vsetq_lane_p64(poly64_t a, poly64x2_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !s64i>
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <2 x i64> [[B]], i64 [[A]], i32 1
+// LLVM: ret <2 x i64> [[VSET_LANE]]
+  return vsetq_lane_p64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsetq_lane_f32(
+float32x4_t test_vsetq_lane_f32(float32_t a, float32x4_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !cir.float>
+
+// LLVM-SAME: float {{.*}}[[A:%.*]], <4 x float> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <4 x float> [[B]], float [[A]], i32 3
+// LLVM: ret <4 x float> [[VSET_LANE]]
+  return vsetq_lane_f32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsetq_lane_f64(
+float64x2_t test_vsetq_lane_f64(float64_t a, float64x2_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<2 x !cir.double>
+
+// LLVM-SAME: double {{.*}}[[A:%.*]], <2 x double> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <2 x double> [[B]], double [[A]], i32 1
+// LLVM: ret <2 x double> [[VSET_LANE]]
+  return vsetq_lane_f64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsetq_lane_f16(
+float16x8_t test_vsetq_lane_f16(float16_t a, float16x8_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s16i>
+
+// LLVM-SAME: half {{.*}}[[A:%.*]], <8 x half> {{.*}}[[B:%.*]])
+// LLVM: [[BITCAST_B:%.*]] = bitcast <8 x half> [[B]] to <8 x i16>
+// LLVM: [[BITCAST_A:%.*]] = bitcast half [[A]] to i16
+// LLVM: [[VSET_LANE:%.*]] = insertelement <8 x i16> [[BITCAST_B]], i16 [[BITCAST_A]], i32 7
+// LLVM: [[BITCAST_RES:%.*]] = bitcast <8 x i16> [[VSET_LANE]] to <8 x half>
+// LLVM: ret <8 x half> [[BITCAST_RES]]
+  return vsetq_lane_f16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vsetq_lane_mf8(
+mfloat8x16_t test_vsetq_lane_mf8(mfloat8_t a, mfloat8x16_t b) {
+// CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x !u8i>
+
+// LLVM-SAME: {{.*}}<16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSET_LANE:%.*]] = insertelement <16 x i8> [[B]], i8 {{.*}}, i32 15
+// LLVM: ret <16 x i8> [[VSET_LANE]]
+  return vsetq_lane_mf8(a, b, 15);
 }

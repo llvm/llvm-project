@@ -51,6 +51,16 @@ define void @main() {
   %prov_copy = load ptr, ptr %prov_dst, align 8
   store i8 0, ptr %prov_copy, align 1
 
+  %dead_src = alloca [4 x i8], align 1
+  %dead_dst = alloca [4 x i8], align 1
+  call void @llvm.lifetime.start.p0(ptr %dead_src)
+  call void @llvm.memset.p0.i8(ptr %dead_src, i8 51, i8 4, i1 false)
+  call void @llvm.lifetime.end.p0(ptr %dead_src)
+  call void @llvm.memcpy.p0.p0.i8(ptr %dead_dst, ptr %dead_src, i8 4, i1 false)
+  %dead_copy = load i32, ptr %dead_dst, align 1
+  call void @llvm.lifetime.start.p0(ptr %dead_src)
+  %restarted = load i32, ptr %dead_src, align 1
+
   call void @llvm.memset.p0.i16(ptr poison, i8 0, i16 0, i1 false)
   call void @llvm.memcpy.p0.p0.i8(ptr poison, ptr poison, i8 0, i1 false)
 
@@ -100,6 +110,15 @@ define void @main() {
 ; CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i8(ptr %prov_dst, ptr %prov_src, i8 8, i1 false)
 ; CHECK-NEXT:   %prov_copy = load ptr, ptr %prov_dst, align 8 => ptr 0x41 [prov_ptr]
 ; CHECK-NEXT:   store i8 0, ptr %prov_copy, align 1
+; CHECK-NEXT:   %dead_src = alloca [4 x i8], align 1 => ptr 0x43 [dead_src (dead)]
+; CHECK-NEXT:   %dead_dst = alloca [4 x i8], align 1 => ptr 0x48 [dead_dst]
+; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %dead_src)
+; CHECK-NEXT:   call void @llvm.memset.p0.i8(ptr %dead_src, i8 51, i8 4, i1 false)
+; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %dead_src)
+; CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i8(ptr %dead_dst, ptr %dead_src, i8 4, i1 false)
+; CHECK-NEXT:   %dead_copy = load i32, ptr %dead_dst, align 1 => poison
+; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %dead_src)
+; CHECK-NEXT:   %restarted = load i32, ptr %dead_src, align 1 => i32 -1393641077
 ; CHECK-NEXT:   call void @llvm.memset.p0.i16(ptr poison, i8 0, i16 0, i1 false)
 ; CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i8(ptr poison, ptr poison, i8 0, i1 false)
 ; CHECK-NEXT:   ret void

@@ -40,6 +40,9 @@ define amdgpu_cs i8 @abs_sgpr_i8(i8 inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_i8:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
@@ -54,6 +57,9 @@ define amdgpu_cs i8 @abs_sgpr_i8(i8 inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_i8:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
@@ -87,6 +93,9 @@ define amdgpu_cs i8 @abs_sgpr_i8_neg(i8 inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_i8_neg:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
@@ -103,6 +112,9 @@ define amdgpu_cs i8 @abs_sgpr_i8_neg(i8 inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_i8_neg:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
@@ -135,6 +147,9 @@ define amdgpu_cs i16 @abs_sgpr_i16(i16 inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_i16:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    s_sext_i32_i16 s0, s0
 ; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
@@ -149,6 +164,9 @@ define amdgpu_cs i16 @abs_sgpr_i16(i16 inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_i16:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
@@ -183,6 +201,9 @@ define amdgpu_ps i16 @abs_sgpr_i16_neg(i16 inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_i16_neg:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    s_sext_i32_i16 s0, s0
 ; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
@@ -199,6 +220,9 @@ define amdgpu_ps i16 @abs_sgpr_i16_neg(i16 inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_i16_neg:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
@@ -228,6 +252,9 @@ define amdgpu_cs i32 @abs_sgpr_i32(i32 inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_i32:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
 ; SDAG1250-NEXT:    ; return to shader part epilog
 ;
@@ -239,6 +266,9 @@ define amdgpu_cs i32 @abs_sgpr_i32(i32 inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_i32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %res = call i32 @llvm.abs.i32(i32 %arg, i1 false)
@@ -276,12 +306,15 @@ define amdgpu_cs i64 @abs_sgpr_i64(i64 inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_i64:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; SDAG1250-NEXT:    s_sub_nc_u64 s[2:3], 0, s[0:1]
-; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG1250-NEXT:    v_max_i64 v[0:1], s[0:1], s[2:3]
-; SDAG1250-NEXT:    v_readfirstlane_b32 s0, v0
-; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; SDAG1250-NEXT:    v_readfirstlane_b32 s1, v1
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG1250-NEXT:    s_ashr_i32 s2, s1, 31
+; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; SDAG1250-NEXT:    s_mov_b32 s3, s2
+; SDAG1250-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG1250-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], s[2:3]
 ; SDAG1250-NEXT:    ; return to shader part epilog
 ;
 ; GFX-LABEL: abs_sgpr_i64:
@@ -296,6 +329,9 @@ define amdgpu_cs i64 @abs_sgpr_i64(i64 inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_i64:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_ashr_i32 s2, s1, 31
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_mov_b32 s3, s2
@@ -335,6 +371,9 @@ define amdgpu_cs <4 x i32> @abs_sgpr_v4i32(<4 x i32> inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_v4i32:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    s_abs_i32 s3, s3
 ; SDAG1250-NEXT:    s_abs_i32 s2, s2
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
@@ -352,6 +391,9 @@ define amdgpu_cs <4 x i32> @abs_sgpr_v4i32(<4 x i32> inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_v4i32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
 ; GFX1250-NEXT:    s_abs_i32 s1, s1
 ; GFX1250-NEXT:    s_abs_i32 s2, s2
@@ -535,9 +577,11 @@ define i64 @abs_vgpr_i64(i64 %arg) {
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG1250-NEXT:    s_wait_kmcnt 0x0
-; SDAG1250-NEXT:    v_sub_nc_u64_e32 v[2:3], 0, v[0:1]
-; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG1250-NEXT:    v_max_i64 v[0:1], v[0:1], v[2:3]
+; SDAG1250-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; SDAG1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_bitop2_b32 v1, v1, v2 bitop3:0x14
+; SDAG1250-NEXT:    v_xor_b32_e32 v0, v0, v2
+; SDAG1250-NEXT:    v_sub_nc_u64_e32 v[0:1], v[0:1], v[2:3]
 ; SDAG1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX6-LABEL: abs_vgpr_i64:
@@ -733,6 +777,9 @@ define amdgpu_cs <2 x i8> @abs_sgpr_v2i8(<2 x i8> inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_v2i8:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    s_bfe_i32 s1, s1, 0x80000
 ; SDAG1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
 ; SDAG1250-NEXT:    s_sext_i32_i16 s1, s1
@@ -755,6 +802,9 @@ define amdgpu_cs <2 x i8> @abs_sgpr_v2i8(<2 x i8> inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_v2i8:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX1250-NEXT:    s_sext_i32_i8 s1, s1
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
@@ -812,18 +862,15 @@ define <2 x i8> @abs_vgpr_v2i8(<2 x i8> %arg) {
 ; SDAG1250-NEXT:    v_bfe_i32 v1, v1, 0, 8
 ; SDAG1250-NEXT:    v_bfe_i32 v2, v0, 0, 8
 ; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; SDAG1250-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; SDAG1250-NEXT:    v_mov_b16_e32 v1.l, v2.l
+; SDAG1250-NEXT:    v_sub_nc_u16 v0.l, 0, v1.l
+; SDAG1250-NEXT:    v_sub_nc_u16 v0.h, 0, v2.l
 ; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; SDAG1250-NEXT:    v_sub_nc_u16 v0.h, 0, v0.l
-; SDAG1250-NEXT:    v_sub_nc_u16 v1.h, 0, v1.l
-; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; SDAG1250-NEXT:    v_max_i16 v0.h, v0.l, v0.h
-; SDAG1250-NEXT:    v_max_i16 v0.l, v1.l, v1.h
-; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG1250-NEXT:    v_lshlrev_b16 v1.l, 8, v0.h
-; SDAG1250-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; SDAG1250-NEXT:    v_and_b16 v1.l, 0xff, v0.h
+; SDAG1250-NEXT:    v_max_i16 v1.l, v1.l, v0.l
+; SDAG1250-NEXT:    v_max_i16 v0.l, v2.l, v0.h
+; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; SDAG1250-NEXT:    v_lshlrev_b16 v0.h, 8, v1.l
+; SDAG1250-NEXT:    v_and_b16 v1.l, v1.l, 0xff
+; SDAG1250-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; SDAG1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX6-LABEL: abs_vgpr_v2i8:
@@ -937,6 +984,9 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_v3i8:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    s_bfe_i32 s1, s1, 0x80000
 ; SDAG1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
 ; SDAG1250-NEXT:    s_sext_i32_i16 s1, s1
@@ -968,6 +1018,9 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_v3i8:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX1250-NEXT:    s_sext_i32_i8 s1, s1
 ; GFX1250-NEXT:    s_sext_i32_i8 s2, s2
@@ -1030,7 +1083,7 @@ define <3 x i8> @abs_vgpr_v3i8(<3 x i8>  %arg) {
 ; SDAG10-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; SDAG10-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
 ; SDAG10-NEXT:    v_or_b32_e32 v0, v0, v1
-; SDAG10-NEXT:    v_or_b32_sdwa v1, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; SDAG10-NEXT:    v_or_b32_sdwa v1, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; SDAG10-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; SDAG10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1042,20 +1095,18 @@ define <3 x i8> @abs_vgpr_v3i8(<3 x i8>  %arg) {
 ; SDAG1250-NEXT:    v_bfe_i32 v3, v0, 0, 8
 ; SDAG1250-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; SDAG1250-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; SDAG1250-NEXT:    v_mov_b16_e32 v1.l, v3.l
-; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; SDAG1250-NEXT:    v_sub_nc_u16 v0.h, 0, v0.l
-; SDAG1250-NEXT:    v_sub_nc_u16 v1.h, 0, v1.l
-; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; SDAG1250-NEXT:    v_max_i16 v0.l, v0.l, v0.h
-; SDAG1250-NEXT:    v_sub_nc_u16 v0.h, 0, v2.l
-; SDAG1250-NEXT:    v_max_i16 v1.l, v1.l, v1.h
+; SDAG1250-NEXT:    v_sub_nc_u16 v0.l, 0, v1.l
+; SDAG1250-NEXT:    v_sub_nc_u16 v0.h, 0, v3.l
+; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
+; SDAG1250-NEXT:    v_max_i16 v0.l, v1.l, v0.l
+; SDAG1250-NEXT:    v_sub_nc_u16 v1.l, 0, v2.l
 ; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; SDAG1250-NEXT:    v_max_i16 v0.h, v3.l, v0.h
 ; SDAG1250-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
-; SDAG1250-NEXT:    v_max_i16 v2.h, v2.l, v0.h
-; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG1250-NEXT:    v_or_b16 v2.l, v1.l, v0.l
+; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SDAG1250-NEXT:    v_max_i16 v2.h, v2.l, v1.l
+; SDAG1250-NEXT:    v_or_b16 v2.l, v0.h, v0.l
+; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG1250-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
 ; SDAG1250-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; SDAG1250-NEXT:    v_mov_b16_e32 v2.l, v2.h
@@ -1171,6 +1222,9 @@ define amdgpu_cs <2 x i16> @abs_sgpr_v2i16(<2 x i16> inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_v2i16:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    v_pk_sub_i16 v0, 0, s0
 ; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG1250-NEXT:    v_pk_max_i16 v0, s0, v0
@@ -1210,6 +1264,9 @@ define amdgpu_cs <2 x i16> @abs_sgpr_v2i16(<2 x i16> inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_v2i16:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_sext_i32_i16 s1, s0
 ; GFX1250-NEXT:    s_ashr_i32 s0, s0, 16
 ; GFX1250-NEXT:    s_abs_i32 s1, s1
@@ -1343,6 +1400,9 @@ define amdgpu_cs <3 x i16> @abs_sgpr_v3i16(<3 x i16> inreg %arg) {
 ; SDAG1250-LABEL: abs_sgpr_v3i16:
 ; SDAG1250:       ; %bb.0:
 ; SDAG1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG1250-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG1250-NEXT:    v_nop
+; SDAG1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG1250-NEXT:    v_pk_sub_i16 v0, 0, s0
 ; SDAG1250-NEXT:    v_pk_sub_i16 v1, 0, s1
 ; SDAG1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1392,6 +1452,9 @@ define amdgpu_cs <3 x i16> @abs_sgpr_v3i16(<3 x i16> inreg %arg) {
 ; GFX1250-LABEL: abs_sgpr_v3i16:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_sext_i32_i16 s2, s0
 ; GFX1250-NEXT:    s_ashr_i32 s0, s0, 16
 ; GFX1250-NEXT:    s_abs_i32 s2, s2
@@ -1487,11 +1550,11 @@ define <3 x i16> @abs_vgpr_v3i16(<3 x i16> %arg) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_sub_nc_u16 v2, 0, v1
+; GFX10-NEXT:    v_pk_sub_i16 v3, 0, v0
 ; GFX10-NEXT:    v_max_i16 v1, v1, v2
-; GFX10-NEXT:    v_pk_sub_i16 v2, 0, v0
-; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX10-NEXT:    v_pk_max_i16 v0, v0, v2
-; GFX10-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
+; GFX10-NEXT:    v_lshlrev_b32_e64 v2, 16, s4
+; GFX10-NEXT:    v_pk_max_i16 v0, v0, v3
+; GFX10-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: abs_vgpr_v3i16:

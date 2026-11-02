@@ -139,7 +139,9 @@ public:
     SizeClassAllocatorT &SizeClassAllocator;
   };
 
-  typedef GlobalQuarantine<QuarantineCallback, void> QuarantineT;
+  typedef GlobalQuarantine<QuarantineCallback, void,
+                           AllocatorConfig::getQuarantineDisabled()>
+      QuarantineT;
   typedef typename QuarantineT::CacheT QuarantineCacheT;
 
   void init() {
@@ -564,7 +566,7 @@ public:
                  !isAligned(reinterpret_cast<uptr>(Ptr), DeleteAlignment)))
       reportDeleteAlignmentMismatch(Ptr, DeleteAlignment);
 
-    quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
+    quarantineOrDeallocateChunk(Options, TaggedPtr, Ptr, &Header, Size);
   }
 
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
@@ -665,7 +667,8 @@ public:
                        useMemoryTagging<AllocatorConfig>(Options);
       memcpy(NewPtr, OldTaggedPtr,
              Min(NewSize, ExactSize ? OldSize : UsableSize));
-      quarantineOrDeallocateChunk(Options, OldTaggedPtr, &Header, OldSize);
+      quarantineOrDeallocateChunk(Options, OldTaggedPtr, OldPtr, &Header,
+                                  OldSize);
     }
     return NewPtr;
   }
@@ -687,11 +690,11 @@ public:
     disableRingBuffer();
   }
 
-  void enable() NO_THREAD_SAFETY_ANALYSIS {
+  void enable(bool IsChild) NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
     enableRingBuffer();
     Secondary.enable();
-    Primary.enable();
+    Primary.enable(IsChild);
     if (!AllocatorConfig::getQuarantineDisabled())
       Quarantine.enable();
     Stats.enable();
@@ -751,20 +754,15 @@ public:
     const uptr From = Base;
     const uptr To = Base + Size;
     const Options Options = Primary.Options.load();
-    bool MayHaveTaggedPrimary = useMemoryTagging<AllocatorConfig>(Options);
-    auto Lambda = [this, From, To, MayHaveTaggedPrimary, Callback,
+    bool MemoryTaggingEnabled = useMemoryTagging<AllocatorConfig>(Options);
+    auto Lambda = [this, From, To, MemoryTaggingEnabled, Callback,
                    Arg](uptr Block) {
       if (Block < From || Block >= To)
         return;
       uptr Chunk;
       Chunk::UnpackedHeader Header;
-      if (UNLIKELY(MayHaveTaggedPrimary)) {
-        // A chunk header can either have a zero tag (tagged primary) or the
-        // header tag (secondary, or untagged primary). We don't know which so
-        // try both.
-        ScopedDisableMemoryTagChecks x;
-        if (!getChunkFromBlock(Block, &Chunk, &Header) &&
-            !getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
+      if (UNLIKELY(MemoryTaggingEnabled)) {
+        if (!getChunkFromBlock(loadTag(Block), &Chunk, &Header))
           return;
       } else if (!getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header)) {
         return;
@@ -777,7 +775,7 @@ public:
       if (allocatorSupportsMemoryTagging<AllocatorConfig>())
         TaggedChunk = untagPointer(TaggedChunk);
       uptr Size;
-      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Primary.Options.load()))) {
+      if (UNLIKELY(MemoryTaggingEnabled)) {
         TaggedChunk = loadTag(Chunk);
         Size = getSize(reinterpret_cast<void *>(Chunk), &Header);
       } else if (AllocatorConfig::getExactUsableSize()) {
@@ -899,10 +897,10 @@ public:
   // Returns true if the pointer provided was allocated by the current
   // allocator instance, which is compliant with tcmalloc's ownership concept.
   // A corrupted chunk will not be reported as owned, which is WAI.
-  bool isOwned(const void *Ptr) {
+  bool isOwnedTestOnly(const void *Ptr) {
     initThreadMaybe();
     // If the allocation is not owned, the tags could be wrong.
-    ScopedDisableMemoryTagChecks x(
+    ScopedTestOnlyDisableMemoryTagChecks x(
         useMemoryTagging<AllocatorConfig>(Primary.Options.load()));
 #ifdef GWP_ASAN_HOOKS
     if (GuardedAlloc.pointerIsMine(Ptr))
@@ -919,6 +917,7 @@ public:
   bool useMemoryTaggingTestOnly() const {
     return useMemoryTagging<AllocatorConfig>(Primary.Options.load());
   }
+
   void disableMemoryTagging() {
     // If we haven't been initialized yet, we need to initialize now in order to
     // prevent a future call to initThreadMaybe() from enabling memory tagging
@@ -958,39 +957,6 @@ public:
       Primary.Options.set(OptionBit::AddLargeAllocationSlack);
     else
       Primary.Options.clear(OptionBit::AddLargeAllocationSlack);
-  }
-
-  const char *getStackDepotAddress() {
-    initThreadMaybe();
-    AllocationRingBuffer *RB = getRingBuffer();
-    return RB ? reinterpret_cast<char *>(RB->Depot) : nullptr;
-  }
-
-  uptr getStackDepotSize() {
-    initThreadMaybe();
-    AllocationRingBuffer *RB = getRingBuffer();
-    return RB ? RB->StackDepotSize : 0;
-  }
-
-  const char *getRegionInfoArrayAddress() const {
-    return Primary.getRegionInfoArrayAddress();
-  }
-
-  static uptr getRegionInfoArraySize() {
-    return PrimaryT::getRegionInfoArraySize();
-  }
-
-  const char *getRingBufferAddress() {
-    initThreadMaybe();
-    return reinterpret_cast<char *>(getRingBuffer());
-  }
-
-  uptr getRingBufferSize() {
-    initThreadMaybe();
-    AllocationRingBuffer *RB = getRingBuffer();
-    return RB && RB->RingBufferElements
-               ? ringBufferSizeInBytes(RB->RingBufferElements)
-               : 0;
   }
 
   void getErrorInfo(uptr FaultAddr, size_t MinDistance, size_t MaxDistance,
@@ -1195,6 +1161,32 @@ public:
     return reinterpret_cast<uptr>(Begin);
   }
 
+  bool getRingBufferEnabledTestOnly() {
+    initThreadMaybe();
+    return getRingBuffer() != nullptr;
+  }
+
+  const void *getRingBufferAddressTestOnly() {
+    initThreadMaybe();
+    return getRingBuffer();
+  }
+
+  bool getStackDepotEnabledTestOnly() {
+    initThreadMaybe();
+    auto *RB = getRingBuffer();
+    if (RB == nullptr)
+      return false;
+    return RB->Depot != nullptr;
+  }
+
+  const void *getStackDepotAddressTestOnly() {
+    initThreadMaybe();
+    auto *RB = getRingBuffer();
+    if (RB == nullptr)
+      return nullptr;
+    return RB->Depot;
+  }
+
 private:
   typedef typename PrimaryT::SizeClassMap SizeClassMap;
 
@@ -1232,7 +1224,7 @@ private:
   GlobalStats Stats;
   PrimaryT Primary;
   SecondaryT Secondary;
-  QuarantineT Quarantine;
+  [[no_unique_address]] QuarantineT Quarantine;
   TSDRegistryT TSDRegistry;
   pthread_once_t PostInitNonce = PTHREAD_ONCE_INIT;
 
@@ -1504,9 +1496,8 @@ private:
   }
 
   void quarantineOrDeallocateChunk(const Options &Options, void *TaggedPtr,
-                                   Chunk::UnpackedHeader *Header,
+                                   void *Ptr, Chunk::UnpackedHeader *Header,
                                    uptr Size) NO_THREAD_SAFETY_ANALYSIS {
-    void *Ptr = getHeaderTaggedPointer(TaggedPtr);
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
     // than the maximum allowed, we return a chunk directly to the backend.
     // This purposefully underflows for Size == 0.
@@ -1824,7 +1815,9 @@ private:
     MemMapT MemMap;
     MemMap.map(
         /*Addr=*/0U,
-        roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
+        roundUp(sizeof(AllocationRingBuffer) +
+                    AllocationRingBufferSize *
+                        sizeof(typename AllocationRingBuffer::Entry),
                 getPageSizeCached()),
         "scudo:ring_buffer");
     auto *RB = reinterpret_cast<AllocationRingBuffer *>(MemMap.getBase());
@@ -1851,19 +1844,6 @@ private:
     MemMapT RawRingBufferMap = RB->RawRingBufferMap;
     RawRingBufferMap.unmap();
     atomic_store(&RingBufferAddress, 0, memory_order_release);
-  }
-
-  static constexpr size_t ringBufferSizeInBytes(u32 RingBufferElements) {
-    return sizeof(AllocationRingBuffer) +
-           RingBufferElements * sizeof(typename AllocationRingBuffer::Entry);
-  }
-
-  static constexpr size_t ringBufferElementsFromBytes(size_t Bytes) {
-    if (Bytes < sizeof(AllocationRingBuffer)) {
-      return 0;
-    }
-    return (Bytes - sizeof(AllocationRingBuffer)) /
-           sizeof(typename AllocationRingBuffer::Entry);
   }
 };
 

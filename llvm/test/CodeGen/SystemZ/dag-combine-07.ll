@@ -11,11 +11,11 @@ define void @func_5(ptr %Dst) {
 ; CHECK-LABEL: func_5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lgrl %r1, G2@GOT
-; CHECK-NEXT:    lgrl %r3, G1@GOT
 ; CHECK-NEXT:    llihl %r0, 50
 ; CHECK-NEXT:    oill %r0, 2
 ; CHECK-NEXT:    stg %r0, 0(%r1)
-; CHECK-NEXT:    stg %r0, 0(%r3)
+; CHECK-NEXT:    lgrl %r1, G1@GOT
+; CHECK-NEXT:    stg %r0, 0(%r1)
 ; CHECK-NEXT:    mvhi 0(%r2), 2
 ; CHECK-NEXT:    br %r14
   store i64 214748364802, ptr @G2, align 8

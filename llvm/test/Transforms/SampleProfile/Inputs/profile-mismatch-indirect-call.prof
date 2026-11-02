@@ -1,0 +1,5 @@
+test:400:0
+ 1: 100 foo:100 unsampled:0
+ 2: 100 foo:100 unsampled:0
+ 3: 100 bar:100
+ 4: 100 qux:100

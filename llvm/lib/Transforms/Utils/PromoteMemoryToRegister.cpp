@@ -94,17 +94,6 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
       if (!II->isLifetimeStartOrEnd() && !II->isDroppable() &&
           II->getIntrinsicID() != Intrinsic::fake_use)
         return false;
-    } else if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
-      if (!onlyUsedByLifetimeMarkersOrDroppableInsts(BCI))
-        return false;
-    } else if (const GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U)) {
-      if (!GEPI->hasAllZeroIndices())
-        return false;
-      if (!onlyUsedByLifetimeMarkersOrDroppableInsts(GEPI))
-        return false;
-    } else if (const AddrSpaceCastInst *ASCI = dyn_cast<AddrSpaceCastInst>(U)) {
-      if (!onlyUsedByLifetimeMarkers(ASCI))
-        return false;
     } else {
       return false;
     }
@@ -523,6 +512,22 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
   // Knowing that this alloca is promotable, we know that it's safe to kill all
   // instructions except for load and store.
 
+  // Determine the type used by loads/stores on this alloca. Per
+  // isAllocaPromotable, all loads/stores must use the same type, and GEP/
+  // bitcast/addrspacecast derived pointers cannot have load/store users, so
+  // loads/stores are always direct users of the alloca.
+  Type *PromotedType = nullptr;
+  for (User *U : AI->users()) {
+    if (auto *LI = dyn_cast<LoadInst>(U)) {
+      PromotedType = LI->getType();
+      break;
+    }
+    if (auto *SI = dyn_cast<StoreInst>(U)) {
+      PromotedType = SI->getValueOperand()->getType();
+      break;
+    }
+  }
+
   for (Use &U : llvm::make_early_inc_range(AI->uses())) {
     Instruction *I = cast<Instruction>(U.getUser());
     if (isa<LoadInst>(I) || isa<StoreInst>(I))
@@ -534,21 +539,17 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
       continue;
     }
 
-    if (!I->getType()->isVoidTy()) {
-      // The only users of this bitcast/GEP instruction are lifetime intrinsics.
-      // Follow the use/def chain to erase them now instead of leaving it for
-      // dead code elimination later.
-      for (Use &UU : llvm::make_early_inc_range(I->uses())) {
-        Instruction *Inst = cast<Instruction>(UU.getUser());
-
-        // Drop the use of I in droppable instructions.
-        if (Inst->isDroppable()) {
-          Inst->dropDroppableUse(UU);
-          continue;
+    // If the alloca has no load/store users, PromotedType is null and the
+    // alloca will be deleted as dead, so no store is needed.
+    if (PromotedType)
+      if (auto *II = dyn_cast<IntrinsicInst>(I))
+        if (II->isLifetimeStartOrEnd()) {
+          auto *Store = new StoreInst(UndefValue::get(PromotedType), AI,
+                                      /*isVolatile=*/false, AI->getAlign(),
+                                      I->getIterator());
+          Store->setDebugLoc(II->getDebugLoc());
         }
-        Inst->eraseFromParent();
-      }
-    }
+
     I->eraseFromParent();
   }
 }
@@ -781,14 +782,19 @@ void PromoteMem2Reg::run() {
 
   NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 
-  for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
-    AllocaInst *AI = Allocas[AllocaNum];
-
+  // removeIntrinsicUsers inserts StoreInst(undef). A cache miss on
+  // LBI.getInstructionIndex lookup causes a full O(|BB|) basic block rescan.
+  // Doing all inserts in advance lets us capture all the new instructions in
+  // just a single rescan.
+  for (AllocaInst *AI : Allocas) {
     assert(isAllocaPromotable(AI) && "Cannot promote non-promotable alloca!");
     assert(AI->getParent()->getParent() == &F &&
            "All allocas should be in the same function, which is same as DF!");
-
     removeIntrinsicUsers(AI);
+  }
+
+  for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
+    AllocaInst *AI = Allocas[AllocaNum];
 
     if (AI->use_empty()) {
       // If there are no uses of the alloca, just delete it now.

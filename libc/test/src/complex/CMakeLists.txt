@@ -1,10 +1,36 @@
-add_custom_target(libc-complex-unittests)
+add_libc_testsuite(libc-complex-tests)
+
+add_fp_unittest(
+  cabs_test
+  NEED_MPC
+  SUITE
+    libc-complex-tests
+  SRCS
+    cabs_test.cpp
+  HDRS
+    CAbsTest.h
+  DEPENDS
+    libc.src.complex.cabs
+)
+
+add_fp_unittest(
+  cabsf_test
+  NEED_MPC
+  SUITE
+    libc-complex-tests
+  SRCS
+    cabsf_test.cpp
+  HDRS
+    CAbsTest.h
+  DEPENDS
+    libc.src.complex.cabsf
+)
 
 add_fp_unittest(
   carg_test
   NEED_MPC
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     carg_test.cpp
   HDRS
@@ -17,7 +43,7 @@ add_fp_unittest(
   cargf_test
   NEED_MPC
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cargf_test.cpp
   HDRS
@@ -29,7 +55,7 @@ add_fp_unittest(
 add_fp_unittest(
   conj_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     conj_test.cpp
   DEPENDS
@@ -39,7 +65,7 @@ add_fp_unittest(
 add_fp_unittest(
   conjf_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     conjf_test.cpp
   DEPENDS
@@ -49,7 +75,7 @@ add_fp_unittest(
 add_fp_unittest(
   conjl_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     conjl_test.cpp
   DEPENDS
@@ -59,7 +85,7 @@ add_fp_unittest(
 add_fp_unittest(
   conjf16_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     conjf16_test.cpp
   DEPENDS
@@ -69,7 +95,7 @@ add_fp_unittest(
 add_fp_unittest(
   conjf128_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     conjf128_test.cpp
   DEPENDS
@@ -79,7 +105,7 @@ add_fp_unittest(
 add_fp_unittest(
   cproj_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cproj_test.cpp
   DEPENDS
@@ -90,7 +116,7 @@ add_fp_unittest(
   cprojf_test
   NEED_MPC
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cprojf_test.cpp
   DEPENDS
@@ -100,7 +126,7 @@ add_fp_unittest(
 add_fp_unittest(
   cprojl_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cprojl_test.cpp
   DEPENDS
@@ -110,7 +136,7 @@ add_fp_unittest(
 add_fp_unittest(
   cprojf16_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cprojf16_test.cpp
   DEPENDS
@@ -120,7 +146,7 @@ add_fp_unittest(
 add_fp_unittest(
   cprojf128_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cprojf128_test.cpp
   DEPENDS
@@ -130,7 +156,7 @@ add_fp_unittest(
 add_fp_unittest(
   creal_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     creal_test.cpp
   DEPENDS
@@ -140,7 +166,7 @@ add_fp_unittest(
 add_fp_unittest(
   crealf_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     crealf_test.cpp
   DEPENDS
@@ -150,7 +176,7 @@ add_fp_unittest(
 add_fp_unittest(
   creall_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     creall_test.cpp
   DEPENDS
@@ -160,7 +186,7 @@ add_fp_unittest(
 add_fp_unittest(
   crealf16_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     crealf16_test.cpp
   DEPENDS
@@ -170,7 +196,7 @@ add_fp_unittest(
 add_fp_unittest(
   crealf128_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     crealf128_test.cpp
   DEPENDS
@@ -180,7 +206,7 @@ add_fp_unittest(
 add_fp_unittest(
   cimag_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cimag_test.cpp
   DEPENDS
@@ -190,7 +216,7 @@ add_fp_unittest(
 add_fp_unittest(
   cimagf_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cimagf_test.cpp
   DEPENDS
@@ -200,7 +226,7 @@ add_fp_unittest(
 add_fp_unittest(
   cimagl_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cimagl_test.cpp
   DEPENDS
@@ -210,7 +236,7 @@ add_fp_unittest(
 add_fp_unittest(
   cimagf16_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cimagf16_test.cpp
   DEPENDS
@@ -220,7 +246,7 @@ add_fp_unittest(
 add_fp_unittest(
   cimagf128_test
   SUITE
-    libc-complex-unittests
+    libc-complex-tests
   SRCS
     cimagf128_test.cpp
   DEPENDS

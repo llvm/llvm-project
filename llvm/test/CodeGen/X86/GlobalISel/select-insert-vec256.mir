@@ -88,7 +88,7 @@ body:             |
     ; AVX512VL-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vr256x = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_xmm
     ; AVX512VL-NEXT: $ymm0 = COPY [[INSERT_SUBREG]]
     ; AVX512VL-NEXT: RET 0, implicit $ymm0
-    %0(<8 x s32>) = IMPLICIT_DEF
+    %0(<8 x s32>) = G_IMPLICIT_DEF
     %1(<4 x s32>) = COPY $xmm1
     %2(<8 x s32>) = G_INSERT %0(<8 x s32>), %1(<4 x s32>), 0
     $ymm0 = COPY %2(<8 x s32>)
@@ -163,7 +163,7 @@ body:             |
     ; AVX512VL-NEXT: [[VINSERTF32X4Z256rri:%[0-9]+]]:vr256x = VINSERTF32X4Z256rri [[DEF]], [[COPY]], 1
     ; AVX512VL-NEXT: $ymm0 = COPY [[VINSERTF32X4Z256rri]]
     ; AVX512VL-NEXT: RET 0, implicit $ymm0
-    %0(<8 x s32>) = IMPLICIT_DEF
+    %0(<8 x s32>) = G_IMPLICIT_DEF
     %1(<4 x s32>) = COPY $xmm1
     %2(<8 x s32>) = G_INSERT %0(<8 x s32>), %1(<4 x s32>), 128
     $ymm0 = COPY %2(<8 x s32>)

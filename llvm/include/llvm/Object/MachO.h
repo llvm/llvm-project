@@ -668,6 +668,8 @@ public:
   getNoteLoadCommand(const LoadCommandInfo &L) const;
   MachO::build_version_command
   getBuildVersionLoadCommand(const LoadCommandInfo &L) const;
+  MachO::target_triple_command
+  getTargetTripleLoadCommand(const LoadCommandInfo &L) const;
   MachO::build_tool_version
   getBuildToolVersion(unsigned index) const;
   MachO::dylib_command
@@ -813,6 +815,8 @@ public:
     case MachO::TOOL_LD: return "ld";
     case MachO::TOOL_LLD:
       return "lld";
+    case MachO::TOOL_DSYMUTIL:
+      return "dsymutil";
     default:
       std::string ret;
       raw_string_ostream ss(ret);

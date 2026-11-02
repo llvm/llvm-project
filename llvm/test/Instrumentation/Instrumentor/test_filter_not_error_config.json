@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_"
+  },
+  "global_pre": {
+    "global": {
+      "enabled": true,
+      "name": true,
+      "filter": "!name",
+      "id": true
+    }
+  }
+}

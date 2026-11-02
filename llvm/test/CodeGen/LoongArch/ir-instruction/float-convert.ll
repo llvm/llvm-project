@@ -551,10 +551,17 @@ define float @convert_u64_to_float(i64 %a) nounwind {
 ;
 ; LA64D-LABEL: convert_u64_to_float:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64D-NEXT:    vffint.d.lu $vr0, $vr0
-; LA64D-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LA64D-NEXT:    fcvt.s.d $fa0, $fa0
+; LA64D-NEXT:    srli.d $a1, $a0, 1
+; LA64D-NEXT:    andi $a2, $a0, 1
+; LA64D-NEXT:    or $a1, $a2, $a1
+; LA64D-NEXT:    movgr2fr.d $fa0, $a1
+; LA64D-NEXT:    ffint.s.l $fa0, $fa0
+; LA64D-NEXT:    fadd.s $fa0, $fa0, $fa0
+; LA64D-NEXT:    slti $a1, $a0, 0
+; LA64D-NEXT:    movgr2fr.d $fa1, $a0
+; LA64D-NEXT:    ffint.s.l $fa1, $fa1
+; LA64D-NEXT:    movgr2cf $fcc0, $a1
+; LA64D-NEXT:    fsel $fa0, $fa1, $fa0, $fcc0
 ; LA64D-NEXT:    ret
   %1 = uitofp i64 %a to float
   ret float %1

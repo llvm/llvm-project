@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/expf.h"
+#include "src/__support/common.h"
 #include "src/__support/math/expf.h"
 
 namespace LIBC_NAMESPACE_DECL {

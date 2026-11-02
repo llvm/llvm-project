@@ -9,7 +9,7 @@ void some_function();
 namespace simple {
   void foo() {
     consume_refcntbl(provide());
-    // expected-warning@-1{{Call argument is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   }
 
   // Test that the checker works with [[clang::suppress]].
@@ -23,7 +23,7 @@ namespace multi_arg {
   void consume_refcntbl(int, CheckedObj* foo, bool);
   void foo() {
     consume_refcntbl(42, provide(), true);
-    // expected-warning@-1{{Call argument for parameter 'foo' is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (parameter 'foo' to 'multi_arg::consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   }
 }
 
@@ -47,9 +47,9 @@ namespace methods {
     Consumer c;
 
     c.consume_ptr(provide());
-    // expected-warning@-1{{Call argument for parameter 'ptr' is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (parameter 'ptr' to 'methods::Consumer::consume_ptr') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
     c.consume_ref(*provide());
-    // expected-warning@-1{{Call argument for parameter 'ref' is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument '*provide()' (parameter 'ref' to 'methods::Consumer::consume_ref') is a raw reference to CheckedPtr-capable type 'CheckedObj'}}
   }
 
   void foo2() {
@@ -57,7 +57,7 @@ namespace methods {
       void consume(CheckedObj*) { some_function(); }
       void whatever() {
         consume(provide());
-        // expected-warning@-1{{Call argument is unchecked and unsafe}}
+        // expected-warning@-1{{Function argument 'provide()' (to 'methods::foo2()::Consumer::consume') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
       }
     };
   }
@@ -67,7 +67,7 @@ namespace methods {
       void consume(CheckedObj*) { some_function(); }
       void whatever() {
         this->consume(provide());
-        // expected-warning@-1{{Call argument is unchecked and unsafe}}
+        // expected-warning@-1{{Function argument 'provide()' (to 'methods::foo3()::Consumer::consume') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
       }
     };
   }
@@ -78,22 +78,22 @@ namespace casts {
 
   void foo() {
     consume_refcntbl(provide());
-    // expected-warning@-1{{Call argument is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
     consume_refcntbl(static_cast<CheckedObj*>(provide()));
-    // expected-warning@-1{{Call argument is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'static_cast<CheckedObj *>(provide())' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
     consume_refcntbl(dynamic_cast<CheckedObj*>(provide()));
-    // expected-warning@-1{{Call argument is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'dynamic_cast<CheckedObj *>(provide())' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
     consume_refcntbl(const_cast<CheckedObj*>(provide()));
-    // expected-warning@-1{{Call argument is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'const_cast<CheckedObj *>(provide())' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
     consume_refcntbl(reinterpret_cast<CheckedObj*>(provide()));
-    // expected-warning@-1{{Call argument is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'reinterpret_cast<CheckedObj *>(provide())' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
     consume_refcntbl(downcast(provide()));
-    // expected-warning@-1{{Call argument is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'downcast(provide())' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
     consume_refcntbl(
       static_cast<CheckedObj*>(
@@ -104,7 +104,7 @@ namespace casts {
         )
       )
     );
-    // expected-warning@-8{{Call argument is unchecked and unsafe}}
+    // expected-warning@-8{{Function argument 'static_cast<CheckedObj *>(downcast(static_cast<Che...' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   }
 }
 
@@ -124,7 +124,7 @@ namespace ref_counted_lookalike {
     Decoy D;
 
     consume_refcntbl(D.get());
-    // expected-warning@-1{{Call argument is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'D.get()' (to 'consume_refcntbl') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   }
 }
 
@@ -306,7 +306,7 @@ namespace default_arg {
   CheckedObj* global;
 
   void function_with_default_arg(CheckedObj* param = global);
-  // expected-warning@-1{{Call argument for parameter 'param' is unchecked and unsafe}}
+  // expected-warning@-1{{Function argument 'global' (parameter 'param' to 'default_arg::function_with_default_arg') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
   void foo() {
     function_with_default_arg();
@@ -318,7 +318,7 @@ namespace cxx_member_func {
   void foo() {
     provide()->trivial();
     provide()->method();
-    // expected-warning@-1{{Call argument for 'this' parameter is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (parameter 'this' to 'CheckedObj::method') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
     provideProtected()->method();
     (provideProtected())->method();
   };
@@ -337,11 +337,11 @@ namespace cxx_member_operator_call {
   void foo() {
     Foo f;
     f + global;
-    // expected-warning@-1{{Call argument for parameter 'bad' is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'global' (parameter 'bad' to 'cxx_member_operator_call::Foo::operator+') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
     f - global;
-    // expected-warning@-1{{Call argument for parameter 'bad' is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'global' (parameter 'bad' to 'cxx_member_operator_call::operator-') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
     f(global);
-    // expected-warning@-1{{Call argument for parameter 'bad' is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'global' (parameter 'bad' to 'cxx_member_operator_call::Foo::operator()') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   }
 }
 
@@ -353,9 +353,9 @@ namespace call_with_ptr_on_ref {
     bar(v ? nullptr : provideProtected().ptr());
     bar(baz() ? provideProtected().ptr() : nullptr);
     bar(v ? provide() : provideProtected().ptr());
-    // expected-warning@-1{{Call argument for parameter 'bad' is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'v ? provide() : provideProtected().ptr()' (parameter 'bad' to 'call_with_ptr_on_ref::bar') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
     bar(v ? provideProtected().ptr() : provide());
-    // expected-warning@-1{{Call argument for parameter 'bad' is unchecked and unsafe}}
+    // expected-warning@-1{{Function argument 'v ? provideProtected().ptr() : provide()' (parameter 'bad' to 'call_with_ptr_on_ref::bar') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   }
 }
 

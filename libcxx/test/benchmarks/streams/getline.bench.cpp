@@ -12,8 +12,9 @@
 #include <sstream>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
-void BM_getline_string(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_getline_string(benchmark::State& state) {
   std::istringstream iss;
 
   std::string str;

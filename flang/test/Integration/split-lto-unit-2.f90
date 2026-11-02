@@ -1,4 +1,7 @@
 ! Check that -flto=thin without -fsplit-lto-unit has EnableSplitLTOUnit = 0
+
+! UNSUPPORTED: system-darwin
+
 ! RUN: %flang -flto=thin  -S -o - %s |  FileCheck %s --check-prefix=SPLIT0
 ! RUN: %if x86-registered-target %{ %flang -flto=thin --target=x86_64-linux-gnu -S -o - %s |  FileCheck %s --check-prefix=SPLIT0 %}
 ! RUN: %if x86-registered-target %{ %flang -flto=thin --target=x86_64-apple-macosx -S -o - %s | FileCheck %s --check-prefix=SPLIT0 %}

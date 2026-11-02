@@ -17,11 +17,11 @@ StructB::StructB() {
 // CHECK: store i32 42, ptr {{.*}}, !tbaa [[TAG_A_i32:!.*]]
 }
 
-// OLD-PATH: [[TYPE_INT:!.*]] = !{!"int", [[TYPE_CHAR:!.*]], i64 0}
-// OLD-PATH: [[TYPE_CHAR]] = !{!"omnipotent char", !
-// OLD-PATH: [[TAG_A_i32]] = !{[[TYPE_A:!.*]], [[TYPE_INT]], i64 0}
-// OLD-PATH: [[TYPE_A]] = !{!"?AUStructA@@", [[TYPE_INT]], i64 0}
-// NEW-PATH: [[TYPE_INT:!.*]] = !{[[TYPE_CHAR:!.*]], i64 4, !"int"}
-// NEW-PATH: [[TYPE_CHAR]] = !{{{.*}}, i64 1, !"omnipotent char"}
-// NEW-PATH: [[TAG_A_i32]] = !{[[TYPE_A:!.*]], [[TYPE_INT]], i64 0, i64 4}
-// NEW-PATH: [[TYPE_A]] = !{[[TYPE_CHAR]], i64 4, !"?AUStructA@@", [[TYPE_INT]], i64 0, i64 4}
+// OLD-PATH-DAG: [[TYPE_INT:!.*]] = !{!"int", [[TYPE_CHAR:!.*]], i64 0}
+// OLD-PATH-DAG: [[TYPE_CHAR]] = !{!"omnipotent char", !
+// OLD-PATH-DAG: [[TAG_A_i32]] = !{[[TYPE_A:!.*]], [[TYPE_INT]], i64 0}
+// OLD-PATH-DAG: [[TYPE_A]] = !{!"?AUStructA@@", [[TYPE_INT]], i64 0}
+// NEW-PATH-DAG: [[TYPE_INT:!.*]] = !{[[TYPE_CHAR:!.*]], i64 4, !"int"}
+// NEW-PATH-DAG: [[TYPE_CHAR]] = !{{{.*}}, i64 1, !"omnipotent char"}
+// NEW-PATH-DAG: [[TAG_A_i32]] = !{[[TYPE_A:!.*]], [[TYPE_INT]], i64 0, i64 4}
+// NEW-PATH-DAG: [[TYPE_A]] = !{[[TYPE_CHAR]], i64 4, !"?AUStructA@@", [[TYPE_INT]], i64 0, i64 4}

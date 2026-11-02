@@ -14,9 +14,12 @@ using namespace llvm;
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 #include "llvm/Support/Signals.h"
+namespace llvm {
+bool DebugLocOriginCollectionEnabled = false;
+} // namespace llvm
 
 DbgLocOrigin::DbgLocOrigin(bool ShouldCollectTrace) {
-  if (!ShouldCollectTrace)
+  if (!ShouldCollectTrace || !DebugLocOriginCollectionEnabled)
     return;
   auto &[Depth, StackTrace] = StackTraces.emplace_back();
   Depth = sys::getStackTrace(StackTrace);
@@ -55,6 +58,11 @@ MDNode *DebugLoc::getScope() const {
 DILocation *DebugLoc::getInlinedAt() const {
   assert(get() && "Expected valid DebugLoc");
   return get()->getInlinedAt();
+}
+
+MDNode *DebugLoc::getRawIRLayers() const {
+  DILocation *L = get();
+  return L ? cast_if_present<MDNode>(L->getRawIRLayers()) : nullptr;
 }
 
 MDNode *DebugLoc::getInlinedAtScope() const {
@@ -106,17 +114,21 @@ DebugLoc DebugLoc::replaceInlinedAtSubprogram(
     DILocation *LocToUpdate = LocChain.pop_back_val();
     DIScope *NewScope = DILocalScope::cloneScopeForSubprogram(
         *LocToUpdate->getScope(), NewSP, Ctx, Cache);
-    UpdatedLoc = DILocation::get(Ctx, LocToUpdate->getLine(),
-                                 LocToUpdate->getColumn(), NewScope);
+    UpdatedLoc = DILocation::get(
+        Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(), NewScope,
+        /*InlinedAt=*/nullptr, /*ImplicitCode=*/false, /*AtomGroup=*/0,
+        /*AtomRank=*/0, LocToUpdate->getRawIRLayers());
     Cache[LocToUpdate] = UpdatedLoc;
   }
 
   // Recreate the location chain, bottom-up, starting at the new scope (or a
-  // cached result).
+  // cached result). Each location in the chain keeps its own irlayers, as in
+  // appendInlinedAt: any of them may carry layers.
   for (const DILocation *LocToUpdate : reverse(LocChain)) {
-    UpdatedLoc =
-        DILocation::get(Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(),
-                        LocToUpdate->getScope(), UpdatedLoc);
+    UpdatedLoc = DILocation::get(
+        Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(),
+        LocToUpdate->getScope(), UpdatedLoc, /*ImplicitCode=*/false,
+        /*AtomGroup=*/0, /*AtomRank=*/0, LocToUpdate->getRawIRLayers());
     Cache[LocToUpdate] = UpdatedLoc;
   }
 
@@ -133,8 +145,9 @@ DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
   // Gather all the inlined-at nodes.
   while (DILocation *IA = CurInlinedAt->getInlinedAt()) {
     // Skip any we've already built nodes for.
-    if (auto *Found = Cache[IA]) {
-      Last = cast<DILocation>(Found);
+    auto It = Cache.find(IA);
+    if (It != Cache.end() && It->second) {
+      Last = cast<DILocation>(It->second);
       break;
     }
 
@@ -146,9 +159,13 @@ DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
   // location (then rebuilding the rest of the chain behind it) and update the
   // map of already-constructed inlined-at nodes.
   // Key Instructions: InlinedAt fields don't need atom info.
+  // Each location in the chain keeps its own irlayers; any of them may carry
+  // layers, so rebuilding the chain must not drop them.
   for (const DILocation *MD : reverse(InlinedAtLocations))
     Cache[MD] = Last = DILocation::getDistinct(
-        Ctx, MD->getLine(), MD->getColumn(), MD->getScope(), Last);
+        Ctx, MD->getLine(), MD->getColumn(), MD->getScope(), Last,
+        /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+        MD->getRawIRLayers());
 
   return Last;
 }

@@ -26,8 +26,8 @@ define i8 @test_negative_off(i16 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i16 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i1, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i1, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i1> poison, i1 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i1> [[TMP6]], i1 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i1> poison, i1 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i1> [[TMP6]], i1 [[TMP5]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[ALLOCA]], i16 [[OFFSET_IDX]]

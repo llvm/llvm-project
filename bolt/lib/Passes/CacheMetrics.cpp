@@ -14,6 +14,7 @@
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include <cmath>
 
 using namespace llvm;
 using namespace bolt;

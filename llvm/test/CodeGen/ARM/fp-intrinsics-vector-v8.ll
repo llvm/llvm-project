@@ -17,7 +17,11 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %x) #0 {
 define <4 x float> @rint_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: rint_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintx.f32 q0, q0
+; CHECK-NEXT:    vrintx.f32 s7, s3
+; CHECK-NEXT:    vrintx.f32 s6, s2
+; CHECK-NEXT:    vrintx.f32 s5, s1
+; CHECK-NEXT:    vrintx.f32 s4, s0
+; CHECK-NEXT:    vorr q0, q1, q1
 ; CHECK-NEXT:    bx lr
   %val = call <4 x float> @llvm.experimental.constrained.rint.v4f32(<4 x float> %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x float> %val
@@ -85,7 +89,21 @@ define <4 x half> @nearbyint_v4f16(<4 x half> %x) #0 {
 define <4 x half> @rint_v4f16(<4 x half> %x) #0 {
 ; CHECK-LABEL: rint_v4f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintx.f16 d0, d0
+; CHECK-NEXT:    vmovx.f16 s2, s0
+; CHECK-NEXT:    vrintx.f16 s2, s2
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vrintx.f16 s2, s0
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vrintx.f16 s2, s1
+; CHECK-NEXT:    vmovx.f16 s0, s1
+; CHECK-NEXT:    vrintx.f16 s0, s0
+; CHECK-NEXT:    vmov.16 d16[0], r1
+; CHECK-NEXT:    vmov.16 d16[1], r0
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov.16 d16[2], r0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 d16[3], r0
+; CHECK-NEXT:    vorr d0, d16, d16
 ; CHECK-NEXT:    bx lr
   %val = call <4 x half> @llvm.experimental.constrained.rint.v4f16(<4 x half> %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x half> %val
@@ -130,8 +148,24 @@ define <4 x half> @ceil_v4f16(<4 x half> %x) #0 {
 define <8 x half> @nearbyint_v8f16(<8 x half> %x) #0 {
 ; CHECK-LABEL: nearbyint_v8f16:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmovx.f16 s4, s0
+; CHECK-NEXT:    vrintr.f16 s4, s4
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vrintr.f16 s4, s0
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vrintr.f16 s4, s1
+; CHECK-NEXT:    vmovx.f16 s0, s3
+; CHECK-NEXT:    vrintr.f16 s0, s0
+; CHECK-NEXT:    vmov.16 d16[0], r1
+; CHECK-NEXT:    vmov.16 d16[1], r0
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmovx.f16 s4, s1
+; CHECK-NEXT:    vrintr.f16 s4, s4
+; CHECK-NEXT:    vmov.16 d16[2], r0
+; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    vmovx.f16 s4, s2
 ; CHECK-NEXT:    vrintr.f16 s4, s4
+; CHECK-NEXT:    vmov.16 d16[3], r0
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    vrintr.f16 s4, s2
 ; CHECK-NEXT:    vmov r1, s4
@@ -139,25 +173,9 @@ define <8 x half> @nearbyint_v8f16(<8 x half> %x) #0 {
 ; CHECK-NEXT:    vmov.16 d17[0], r1
 ; CHECK-NEXT:    vmov.16 d17[1], r0
 ; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmovx.f16 s4, s3
-; CHECK-NEXT:    vrintr.f16 s4, s4
 ; CHECK-NEXT:    vmov.16 d17[2], r0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vrintr.f16 s4, s4
-; CHECK-NEXT:    vmov.16 d17[3], r0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vrintr.f16 s4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s1
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    vrintr.f16 s4, s1
-; CHECK-NEXT:    vrintr.f16 s0, s0
-; CHECK-NEXT:    vmov.16 d16[0], r1
-; CHECK-NEXT:    vmov.16 d16[1], r0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.16 d16[2], r0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov.16 d16[3], r0
+; CHECK-NEXT:    vmov.16 d17[3], r0
 ; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
   %val = call <8 x half> @llvm.experimental.constrained.nearbyint.v8f16(<8 x half> %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -167,7 +185,35 @@ define <8 x half> @nearbyint_v8f16(<8 x half> %x) #0 {
 define <8 x half> @rint_v8f16(<8 x half> %x) #0 {
 ; CHECK-LABEL: rint_v8f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintx.f16 q0, q0
+; CHECK-NEXT:    vmovx.f16 s4, s0
+; CHECK-NEXT:    vrintx.f16 s4, s4
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vrintx.f16 s4, s0
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vrintx.f16 s4, s1
+; CHECK-NEXT:    vmovx.f16 s0, s3
+; CHECK-NEXT:    vrintx.f16 s0, s0
+; CHECK-NEXT:    vmov.16 d16[0], r1
+; CHECK-NEXT:    vmov.16 d16[1], r0
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmovx.f16 s4, s1
+; CHECK-NEXT:    vrintx.f16 s4, s4
+; CHECK-NEXT:    vmov.16 d16[2], r0
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmovx.f16 s4, s2
+; CHECK-NEXT:    vrintx.f16 s4, s4
+; CHECK-NEXT:    vmov.16 d16[3], r0
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vrintx.f16 s4, s2
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vrintx.f16 s4, s3
+; CHECK-NEXT:    vmov.16 d17[0], r1
+; CHECK-NEXT:    vmov.16 d17[1], r0
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.16 d17[2], r0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 d17[3], r0
+; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
   %val = call <8 x half> @llvm.experimental.constrained.rint.v8f16(<8 x half> %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <8 x half> %val

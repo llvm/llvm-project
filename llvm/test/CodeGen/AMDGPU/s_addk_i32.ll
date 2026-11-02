@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tahiti < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -mattr=-flat-for-global,-xnack < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu6.00--amdpal < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.02--amdpal -mattr=-flat-for-global --amdgpu-xnack=false < %s | FileCheck -check-prefix=SI %s
 
 ; TODO: Some of those tests fail with OS == amdhsa due to unreasonable register
 ;       allocation differences.

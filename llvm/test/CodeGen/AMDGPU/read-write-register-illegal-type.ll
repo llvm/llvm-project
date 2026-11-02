@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu9.00 -filetype=null %s 2>&1 | FileCheck %s
 
 ; CHECK: error: <unknown>:0:0: cannot use llvm.read_register with illegal type
 define amdgpu_kernel void @test_read_register_i9(ptr addrspace(1) %out) nounwind {

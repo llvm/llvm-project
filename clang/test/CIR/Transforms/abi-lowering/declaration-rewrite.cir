@@ -6,10 +6,16 @@
 // adaptation runs.
 
 !s32i = !cir.int<s, 32>
+!rec_Incomplete = !cir.struct<"Incomplete" incomplete>
 
 #ignore_first_arg = {
   return = { kind = "direct" },
   args   = [ { kind = "ignore" }, { kind = "direct" } ]
+}
+
+#ignore_only_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "ignore" } ]
 }
 
 module attributes {
@@ -30,5 +36,11 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @caller(%arg0: !s32i) -> !s32i
   // CHECK:        %[[R:.*]] = cir.call @ext_decl(%arg0) : (!s32i) -> !s32i
+
+  // "ignore" would drop the argument, but an incomplete one is left alone.
+  cir.func private @incomplete_decl(!rec_Incomplete)
+      attributes { test_classify = #ignore_only_arg }
+
+  // CHECK:      cir.func private @incomplete_decl(!rec_Incomplete)
 
 }

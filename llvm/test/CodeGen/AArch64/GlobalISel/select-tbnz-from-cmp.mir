@@ -27,9 +27,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %cmp:gpr(s32) = G_ICMP intpred(slt), %copy(s64), %zero
+    %copy:gpr(i64) = COPY $x0
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %cmp:gpr(i32) = G_ICMP intpred(slt), %copy(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -56,9 +56,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s32) = COPY $w0
-    %zero:gpr(s32) = G_CONSTANT i32 0
-    %cmp:gpr(s32) = G_ICMP intpred(slt), %copy(s32), %zero
+    %copy:gpr(i32) = COPY $w0
+    %zero:gpr(i32) = G_CONSTANT i32 0
+    %cmp:gpr(i32) = G_ICMP intpred(slt), %copy(i32), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -85,9 +85,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %cmp:gpr(s32) = G_ICMP intpred(sge), %copy(s64), %zero
+    %copy:gpr(i64) = COPY $x0
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %cmp:gpr(i32) = G_ICMP intpred(sge), %copy(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -114,9 +114,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s32) = COPY $w0
-    %zero:gpr(s32) = G_CONSTANT i32 0
-    %cmp:gpr(s32) = G_ICMP intpred(sge), %copy(s32), %zero
+    %copy:gpr(i32) = COPY $w0
+    %zero:gpr(i32) = G_CONSTANT i32 0
+    %cmp:gpr(i32) = G_ICMP intpred(sge), %copy(i32), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -144,9 +144,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s32) = COPY $w0
-    %one:gpr(s32) = G_CONSTANT i32 1
-    %cmp:gpr(s32) = G_ICMP intpred(slt), %copy(s32), %one
+    %copy:gpr(i32) = COPY $w0
+    %one:gpr(i32) = G_CONSTANT i32 1
+    %cmp:gpr(i32) = G_ICMP intpred(slt), %copy(i32), %one
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -174,12 +174,12 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %c:gpr(s64) = G_CONSTANT i64 8
-    %and:gpr(s64) = G_AND %copy, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(slt), %and(s64), %zero
+    %copy:gpr(i64) = COPY $x0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %c:gpr(i64) = G_CONSTANT i64 8
+    %and:gpr(i64) = G_AND %copy, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(slt), %and(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -208,9 +208,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %cmp:gpr(s32) = G_ICMP intpred(slt), %zero, %copy(s64)
+    %copy:gpr(i64) = COPY $x0
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %cmp:gpr(i32) = G_ICMP intpred(slt), %zero, %copy(i64)
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:

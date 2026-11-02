@@ -4,7 +4,7 @@
 # RUN: llc -o - %s -mtriple=riscv32 -mattr=+zilsd,+zclsd,+experimental-p -simplify-mir \
 # RUN:   -run-pass=riscv-make-compressible | FileCheck --check-prefixes=RV32,RV32_P %s
 --- |
-  define void @store_common_value_double(ptr %a, ptr %b, ptr %c, i32 %d, double %e, double %f) minsize {
+  define void @store_common_value_double(ptr %a, ptr %b, ptr %c, i32 %d, double %e, double %f) optsize {
   entry:
     store double %f, ptr %a, align 8
     store double %f, ptr %b, align 8
@@ -12,7 +12,7 @@
     ret void
   }
 
-  define void @store_common_value_double_zero(ptr %a, ptr %b, ptr %c) minsize {
+  define void @store_common_value_double_zero(ptr %a, ptr %b, ptr %c) optsize {
   entry:
     store double 0.0, ptr %a, align 8
     store double 0.0, ptr %b, align 8
@@ -20,7 +20,7 @@
     ret void
   }
 
-  define void @store_common_ptr_double(double %a, double %b, double %d, ptr %p) minsize {
+  define void @store_common_ptr_double(double %a, double %b, double %d, ptr %p) optsize {
   entry:
     store volatile double %a, ptr %p, align 8
     store volatile double %b, ptr %p, align 8
@@ -28,7 +28,7 @@
     ret void
   }
 
-  define void @load_common_ptr_double(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %g) minsize {
+  define void @load_common_ptr_double(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %g) optsize {
   entry:
     %0 = load double, ptr %g, align 8
     %arrayidx1 = getelementptr inbounds { double, double, i32 }, ptr %g, i32 0, i32 1
@@ -39,9 +39,9 @@
     ret void
   }
 
-  declare void @load_common_ptr_double_1(double, double, double) minsize
+  declare void @load_common_ptr_double_1(double, double, double) optsize
 
-  define void @store_large_offset_double(ptr %p, i32 %dummy, double %a, double %b, double %c) minsize {
+  define void @store_large_offset_double(ptr %p, i32 %dummy, double %a, double %b, double %c) optsize {
   entry:
     %0 = getelementptr inbounds double, ptr %p, i32 100
     store volatile double %a, ptr %0, align 8
@@ -52,7 +52,7 @@
     ret void
   }
 
-  define void @load_large_offset_double(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) minsize {
+  define void @load_large_offset_double(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) optsize {
   entry:
     %arrayidx = getelementptr inbounds { [102 x double], i32 }, ptr %p, i32 0, i32 0, i32 100
     %0 = load double, ptr %arrayidx, align 8
@@ -64,34 +64,34 @@
     ret void
   }
 
-  declare void @load_large_offset_double_1(double, double) minsize
+  declare void @load_large_offset_double_1(double, double) optsize
 
-  define void @store_common_value_double_no_opt(ptr %a, i32 %b, double %c, double %d, double %e) minsize {
+  define void @store_common_value_double_no_opt(ptr %a, i32 %b, double %c, double %d, double %e) optsize {
   entry:
     store double %e, ptr %a, align 8
     ret void
   }
 
-  define void @store_common_value_double_no_opt2(ptr %a, i32 %b, double %c, double %d, double %e) minsize {
+  define void @store_common_value_double_no_opt2(ptr %a, i32 %b, double %c, double %d, double %e) optsize {
   entry:
     store volatile double %e, ptr %a, align 8
     store volatile double %e, ptr %a, align 8
     ret void
   }
 
-  define void @store_common_ptr_double_no_opt(double %a, i32 %b, i32 %c, i32 %d, i32 %e, ptr %p) minsize {
+  define void @store_common_ptr_double_no_opt(double %a, i32 %b, i32 %c, i32 %d, i32 %e, ptr %p) optsize {
   entry:
     store volatile double %a, ptr %p, align 8
     ret void
   }
 
-  define double @load_common_ptr_double_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %g) minsize {
+  define double @load_common_ptr_double_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %g) optsize {
   entry:
     %0 = load double, ptr %g, align 8
     ret double %0
   }
 
-  define void @store_large_offset_double_no_opt(ptr %p, double %a, double %b) minsize {
+  define void @store_large_offset_double_no_opt(ptr %p, double %a, double %b) optsize {
   entry:
     %0 = getelementptr inbounds double, ptr %p, i32 100
     store volatile double %a, ptr %0, align 8
@@ -100,7 +100,7 @@
     ret void
   }
 
-  define { double, double } @load_large_offset_double_no_opt(ptr %p) minsize {
+  define { double, double } @load_large_offset_double_no_opt(ptr %p) optsize {
   entry:
     %arrayidx = getelementptr inbounds double, ptr %p, i32 100
     %0 = load double, ptr %arrayidx, align 8

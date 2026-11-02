@@ -9,13 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_HYPOT_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_HYPOT_H
 
-#include "BasicOperations.h"
-#include "FEnvImpl.h"
-#include "FPBits.h"
-#include "cast.h"
-#include "rounding_mode.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
@@ -199,6 +199,7 @@ LIBC_INLINE T hypot(T x, T y) {
       sum >>= 2;
       ++out_exp;
       if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
+        fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         if (int round_mode = quick_get_round();
             round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
@@ -235,6 +236,9 @@ LIBC_INLINE T hypot(T x, T y) {
   bool round_bit = y_new & StorageType(1);
   bool lsb = y_new & StorageType(2);
 
+  if ((out_exp == 0) && (round_bit || sticky_bits || (r != 0)))
+    fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+
   if (y_new >= ONE) {
     y_new -= ONE;
 
@@ -252,8 +256,10 @@ LIBC_INLINE T hypot(T x, T y) {
   if (y_new >= (ONE >> 1)) {
     y_new -= ONE >> 1;
     ++out_exp;
-    if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT)
+    if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
+      fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       return FPBits_t::inf().get_val();
+    }
   }
 #else
   // Round to the nearest, tie to even.
@@ -274,6 +280,7 @@ LIBC_INLINE T hypot(T x, T y) {
     y_new -= ONE >> 1;
     ++out_exp;
     if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
+      fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
         return FPBits_t::inf().get_val();
       return FPBits_t::max_normal().get_val();
@@ -283,8 +290,10 @@ LIBC_INLINE T hypot(T x, T y) {
 
   y_new |= static_cast<StorageType>(out_exp) << FPBits_t::FRACTION_LEN;
 
-  if (!(round_bit || sticky_bits || (r != 0)))
-    fputil::clear_except_if_required(FE_INEXACT);
+  // TODO: We should only clear FE_INEXACT except if it's not set at the
+  // start of the function.
+  // if (!(round_bit || sticky_bits || (r != 0)))
+  //   fputil::clear_except_if_required(FE_INEXACT);
 
   return cpp::bit_cast<T>(y_new);
 }

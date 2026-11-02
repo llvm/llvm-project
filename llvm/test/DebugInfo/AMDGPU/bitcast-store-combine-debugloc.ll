@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s
 ;
 ; AMDGPUTargetLowering::performStoreCombine inserts a bitcast to convert
 ; <1 x float> to i32 for the store.  That synthetic bitcast must carry the

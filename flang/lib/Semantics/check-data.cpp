@@ -17,8 +17,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
-#include <algorithm>
-#include <vector>
 
 namespace Fortran::semantics {
 
@@ -267,8 +265,17 @@ void DataChecker::Leave(const parser::EntityDecl &decl) {
     const auto *list{
         std::get_if<std::list<common::Indirection<parser::DataStmtValue>>>(
             &init->u)};
-    if (name && list) {
-      AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
+    if (name && list && !exprAnalyzer_.context().HasError(*name)) {
+      // A procedure name is not a data-stmt-object (F2023 C880, R842), but
+      // procedure pointer initialization is supported as an extension, so
+      // exclude procedure pointers here.
+      if (IsProcedure(*name) && !IsProcedurePointer(*name)) {
+        exprAnalyzer_.context().Say(std::get<parser::Name>(decl.t).source,
+            "Procedure '%s' may not have a DATA-style initializer"_err_en_US,
+            name->name());
+      } else {
+        AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
+      }
     }
   }
 }

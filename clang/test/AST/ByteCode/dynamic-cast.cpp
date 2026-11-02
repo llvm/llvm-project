@@ -204,6 +204,20 @@ namespace PrivateSibling {
   static_assert(dynamic_cast<E*>((B*)&g) == nullptr);
 }
 
+namespace PrivateBase {
+  struct A {};
+  struct B : public A {};
+  struct C : private B{}; // both-note {{constrained by private inheritance here}}
+  struct D : public C{};
+  constexpr bool foo() {
+    D d;
+    A *a = dynamic_cast<A*>(&d); // both-error {{cannot cast 'PrivateBase::D' to its private base class 'PrivateBase::A'}}
+
+    return a != nullptr;
+  }
+  static_assert(foo());
+}
+
 namespace Field {
   struct X {
     mutable int n = 0;
@@ -295,6 +309,20 @@ namespace UnrelatedAndRootPtr{
   static_assert(f());
 }
 
+namespace UnrelatedAndRootReference {
+  struct A {
+    virtual void foo();
+  };
+  struct B1 : A {};
+
+  struct B2 : A {};
+  struct C : B2 {};
+
+  constexpr C c;
+  static_assert(&dynamic_cast<B2 &>((B1 &)c), ""); // both-error {{not an integral constant expression}} \
+                                                   // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}
+
 namespace Invalid {
   struct S { virtual void s(); };
   struct A : S {};
@@ -309,4 +337,47 @@ namespace Invalid {
                  // both-note {{declared here}}
   static_assert(&dynamic_cast<S&>((X&)x), ""); // both-error {{not an integral constant expression}} \
                                                // both-note {{initializer of 'x' is not a constant expression}}
+}
+
+namespace UnrelatedInitializingPtr {
+  struct A {
+    virtual void foo();
+  };
+  struct B : A {};
+  struct C : A {};
+  struct D : B {};
+
+  constexpr D d;
+  constexpr A &a = (B &)d;
+  constexpr auto p = dynamic_cast<C &>(a); // both-error {{must be initialized by a constant expression}} \
+                                           // both-note {{reference dynamic_cast failed: dynamic type 'UnrelatedInitializingPtr::D' of operand does not have a base class of type 'C'}}
+}
+
+namespace VirtualBase {
+  struct A { virtual constexpr ~A() = default; };
+  struct B : public virtual A {};
+  struct C : private virtual A {};
+  struct D : B, C {};
+
+  constexpr bool test() {
+    D d;
+    A *a = static_cast<B *>(&d);
+    return dynamic_cast<C *>(a) == static_cast<C *>(&d);
+  }
+  static_assert(test());
+}
+
+namespace RootPtr {
+  struct S {
+    constexpr virtual int foo() { return 0; }
+  };
+
+  struct T {};
+
+  struct U : virtual T {
+    constexpr S *bar() const { return (S *)this; } // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+  };
+  constexpr U u;
+  static_assert(dynamic_cast<T *>(u.bar())); // both-error {{not an integral constant expression}} \
+                                             // both-note {{in call to}}
 }

@@ -31,7 +31,7 @@ static text_encoding __make_text_encoding(const char* __name) {
 
 std::text_encoding __get_locale_encoding(const char* __name) {
   if (__name == nullptr)
-    return __make_text_encoding(__locale::__get_locale_encoding(static_cast<__locale::__locale_t>(nullptr)));
+    return __make_text_encoding(__locale::__get_locale_encoding(static_cast<__locale::__locale_t>(0)));
 
   __locale::__locale_t __l = __locale::__newlocale(_LIBCPP_CTYPE_MASK, __name, static_cast<__locale::__locale_t>(0));
 

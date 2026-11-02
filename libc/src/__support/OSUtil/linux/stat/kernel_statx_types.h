@@ -65,6 +65,9 @@ struct kernel_statx_buf {
 // stx_btime field will be filled in.
 constexpr unsigned int KERNEL_STATX_BASIC_STATS_MASK = 0x7FF;
 
+// This mask is used to check the type of the file descriptor.
+constexpr unsigned int KERNEL_STATX_TYPE_MASK = 0x008;
+
 } // namespace internal
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -16,6 +16,9 @@
 
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchSharedLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/SummaryName.h"
@@ -40,7 +43,14 @@ using Artifact = std::variant<TUSummary, LUSummary, WPASuite>;
 /// Lazily-deserialized counterpart of \c Artifact: the same on-disk
 /// artifacts but with their per-entity summary payloads left as opaque
 /// format-specific encodings rather than fully resolved analysis results.
-using ArtifactEncoding = std::variant<TUSummaryEncoding, LUSummaryEncoding>;
+///
+/// \c StaticLibrary, \c MultiArchStaticLibrary, and
+/// \c MultiArchSharedLibrary appear only in this variant: the
+/// archiver/arch tools and the linker pass member payloads through
+/// without decoding them, so fully decoded shapes would have no consumer.
+using ArtifactEncoding =
+    std::variant<TUSummaryEncoding, LUSummaryEncoding, StaticLibrary,
+                 MultiArchStaticLibrary, MultiArchSharedLibrary>;
 
 /// Abstract base class for serialization formats.
 class SerializationFormat {
@@ -93,6 +103,26 @@ public:
   virtual llvm::Error
   writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                          llvm::StringRef Path) = 0;
+
+  virtual llvm::Expected<StaticLibrary>
+  readStaticLibrary(llvm::StringRef Path) = 0;
+
+  virtual llvm::Error writeStaticLibrary(const StaticLibrary &S,
+                                         llvm::StringRef Path) = 0;
+
+  virtual llvm::Expected<MultiArchStaticLibrary>
+  readMultiArchStaticLibrary(llvm::StringRef Path) = 0;
+
+  virtual llvm::Error
+  writeMultiArchStaticLibrary(const MultiArchStaticLibrary &M,
+                              llvm::StringRef Path) = 0;
+
+  virtual llvm::Expected<MultiArchSharedLibrary>
+  readMultiArchSharedLibrary(llvm::StringRef Path) = 0;
+
+  virtual llvm::Error
+  writeMultiArchSharedLibrary(const MultiArchSharedLibrary &M,
+                              llvm::StringRef Path) = 0;
 
   virtual llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) = 0;
 

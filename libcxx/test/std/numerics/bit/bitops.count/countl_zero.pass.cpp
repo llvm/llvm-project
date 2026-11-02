@@ -167,8 +167,7 @@ int main(int, char**)
       assert(std::countl_zero(T64(T64(1) << 63)) == 0);
       assert(std::countl_zero(T64(~T64(0))) == 0);
 
-      // Odd widths: safe for nonzero inputs only (digits is the fallback
-      // for zero via __builtin_clzg).
+      // Odd widths: safe for nonzero inputs only.
       assert(std::countl_zero(T13(1)) == 12);
       assert(std::countl_zero(T13(2)) == 11);
       assert(std::countl_zero(T13(3)) == 11);

@@ -1,5 +1,5 @@
-; RUN: llc -global-isel -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=GCN %s
 
 declare void @llvm.amdgcn.s.sleep(i32) #0
 

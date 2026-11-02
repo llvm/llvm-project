@@ -29,10 +29,9 @@ public:
   const Action &getAction() const { return action; }
   int getDepth() const { return depth; }
   void print(raw_ostream &os, bool withContext) const;
-  void dump() const {
-    print(llvm::errs(), /*withContext=*/true);
-    llvm::errs() << "\n";
-  }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
   Breakpoint *getBreakpoint() const { return breakpoint; }
   void setBreakpoint(Breakpoint *breakpoint) { this->breakpoint = breakpoint; }
 
@@ -65,7 +64,15 @@ public:
   /// - Finish: The action is executed and the execution is paused only when we
   ///           reach the parent/enclosing operation. If there are no enclosing
   ///           operation, the execution continues without stopping.
-  enum Control { Apply = 1, Skip = 2, Step = 3, Next = 4, Finish = 5 };
+  /// - Rerun: The action gets executed again immediately after it finishes.
+  enum Control {
+    Apply = 1,
+    Skip = 2,
+    Step = 3,
+    Next = 4,
+    Finish = 5,
+    Rerun = 6
+  };
 
   /// The type of the callback that is used to control the execution.
   /// The callback is passed the current action.
@@ -134,6 +141,9 @@ private:
 
   /// The list of managers that are queried for breakpoints.
   SmallVector<BreakpointManager *> breakpoints;
+
+  /// Stack of depths of actions that should be rerun.
+  SmallVector<int> rerunControlStack;
 };
 
 } // namespace tracing

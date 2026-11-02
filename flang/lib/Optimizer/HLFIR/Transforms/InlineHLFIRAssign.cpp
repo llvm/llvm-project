@@ -16,7 +16,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
-#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
@@ -104,8 +103,8 @@ public:
                                          "RHS/LHS element types mismatch");
 
     bool rhsNeedsTemporary = false;
-
-    if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType())) {
+    if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType()) &&
+        !assign.getTemporaryLhs()) {
       fir::AliasAnalysis aliasAnalysis;
       mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
       if (!aliasRes.isNo()) {
@@ -162,9 +161,25 @@ public:
       builder.genIfThenElse(loc, *disjoint)
           .genThen([&]() { emitAssignFrom(rhs); })
           .genElse([&]() {
-            mlir::Value tempExpr = hlfir::AsExprOp::create(builder, loc, rhs);
-            emitAssignFrom(hlfir::Entity{tempExpr});
-            hlfir::DestroyOp::create(builder, loc, tempExpr);
+            auto [temp, isHeapAlloc] =
+                hlfir::createTempFromMold(loc, builder, lhs);
+            hlfir::genNoAliasArrayAssignment(
+                loc, builder, rhs, temp, useWorkshare,
+                /*temporaryLHS=*/true, nullptr, accessGroups);
+            emitAssignFrom(temp);
+            if (isHeapAlloc) {
+              auto seqTy = mlir::cast<fir::SequenceType>(
+                  hlfir::getFortranElementOrSequenceType(lhs.getType()));
+              auto heapTy = fir::HeapType::get(seqTy);
+              mlir::Value heapAddr;
+              if (mlir::isa<fir::BaseBoxType>(temp.getType())) {
+                mlir::Value addr = fir::BoxAddrOp::create(builder, loc, temp);
+                heapAddr = fir::ConvertOp::create(builder, loc, heapTy, addr);
+              } else {
+                heapAddr = fir::ConvertOp::create(builder, loc, heapTy, temp);
+              }
+              fir::FreeMemOp::create(builder, loc, heapAddr);
+            }
           })
           .end();
       rewriter.eraseOp(assign);
