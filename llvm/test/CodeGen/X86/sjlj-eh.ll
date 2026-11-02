@@ -99,18 +99,18 @@ try.cont:
 ; CHECK-X64: leaq .[[RESUME:LBB[0-9]+_[0-9]+]](%rip), %rax
 ; CHECK-X64: movq %rax, -256(%rbp)
 ;     _Unwind_SjLj_Register(&UFC);
-; CHECK-X64: leaq -312(%rbp), %rcx
+; CHECK-X64: leaq -328(%rbp), %rcx
 ; CHECK-X64: callq _Unwind_SjLj_Register
 ;     function_that_throws();
-; CHECK-X64: movl $1, -304(%rbp)
+; CHECK-X64: movl $1, -320(%rbp)
 ; CHECK-X64: callq _Z20function_that_throwsv
 ;     _Unwind_SjLj_Unregister(&UFC);
-; CHECK-X64: leaq -312(%rbp), %rcx
+; CHECK-X64: leaq -328(%rbp), %rcx
 ; CHECK-X64: callq _Unwind_SjLj_Unregister
 ;
 ; CHECK-X64: [[RESUME]]:
 ;     assert(UFC.__callsite < 1);
-; CHECK-X64: movl -304(%rbp), %eax
+; CHECK-X64: movl -320(%rbp), %eax
 ; CHECK-X64: cmpl $1, %eax
 ; CHECK-X64: jb .[[CONT:LBB[0-9]+_[0-9]+]]
 ; CHECK-X64: ud2
@@ -124,7 +124,7 @@ try.cont:
 
 ; CHECK-X64-LINUX: .[[RESUME:LBB[0-9]+_[0-9]+]]:
 ;     assert(UFC.__callsite < 1);
-; CHECK-X64-LINUX: movl -120(%rbp), %eax
+; CHECK-X64-LINUX: movl -136(%rbp), %eax
 ; CHECK-X64-LINUX: cmpl $1, %eax
 ; CHECK-X64-LINUX: jb .[[CONT:LBB[0-9]+_[0-9]+]]
 ; CHECK-X64-LINUX: ud2

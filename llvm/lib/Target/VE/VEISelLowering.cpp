@@ -2369,10 +2369,10 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
          "No landing pad destinations for the dispatch jump table!");
 
   // The %fn_context is allocated like below (from --print-after=sjljehprepare):
-  //   %fn_context = alloca { i8*, i64, [4 x i64], i8*, i8*, [5 x i8*] }
+  //   %fn_context = alloca { ptr, i32, [4 x i64], ptr, ptr, [5 x ptr] }
   //
-  // This `[5 x i8*]` is jmpbuf, so jmpbuf[1] is FI+72.
-  // First `i64` is callsite, so callsite is FI+8.
+  // This `[5 x ptr]` is jmpbuf, so jmpbuf[1] is FI+72.
+  // First `i32` is callsite, so callsite is FI+8.
   static const int OffsetIC = 72;
   static const int OffsetCS = 8;
 

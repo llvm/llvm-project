@@ -38814,7 +38814,7 @@ void X86TargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
   }
 
   MachineInstrBuilder MIB = BuildMI(*MBB, MI, MIMD, TII->get(Op));
-  addFrameReference(MIB, FI, Subtarget.is64Bit() ? 56 : 36);
+  addFrameReference(MIB, FI, Subtarget.is64Bit() ? 72 : 36);
   if (UseImmLabel)
     MIB.addMBB(DispatchBB);
   else
