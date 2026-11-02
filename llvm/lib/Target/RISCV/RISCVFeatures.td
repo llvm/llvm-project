@@ -2008,7 +2008,8 @@ def FeatureExactAssembly
     : SubtargetFeature<"exact-asm", "EnableExactAssembly", "true",
                        "Enable Exact Assembly (Disables Compression and Relaxation)">;
 
-foreach i = {1-31} in
+// Don't allow x0, x1, x2, x5, x6, and, x7 to be reserved.
+foreach i = {3-4,8-31} in
   def FeatureReserveX#i :
       SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",
                        "true", "Reserve X"#i>;

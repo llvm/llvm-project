@@ -5982,7 +5982,11 @@ def mno_bti_at_return_twice : Flag<["-"], "mno-bti-at-return-twice">,
   HelpText<"Do not add a BTI instruction after a setjmp or other"
            " return-twice construct (Arm/AArch64 only)">;
 
-foreach i = {1-7,9-15,18,20-28} in
+foreach i = {1,2,5-7} in
+  def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
+    HelpText<"Reserve the x"#i#" register (AArch64 only)">;
+
+foreach i = {3,4,9-15,18,20-28} in
   def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
     HelpText<"Reserve the x"#i#" register (AArch64/RISC-V only)">;
 
