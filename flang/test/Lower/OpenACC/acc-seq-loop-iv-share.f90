@@ -97,24 +97,93 @@ end subroutine
 
 ! collapse(2) on an unstructured seq loop: both IVs are shared.
 subroutine collapsed(a, n, r)
-  integer :: n, j, k
-  real :: a(n, 3), r(1)
+  integer :: n, i, j, k
+  real :: a(n, n, 3), r(n)
   !$acc parallel
-  !$acc loop seq collapse(2)
-  do j = 1, n
-    do k = 1, 3
-      if (a(j, k) .gt. 0.0) goto 50
+  !$acc loop gang
+  do i = 1, n
+    !$acc loop seq collapse(2)
+    do j = 1, n
+      do k = 1, 3
+        if (a(i, j, k) .gt. 0.0) goto 50
+      end do
     end do
+50  r(i) = j + k
   end do
-50 r(1) = j + k
   !$acc end parallel
 end subroutine
 
 ! ALL-LABEL: func.func @_QPcollapsed
-! SHARED-NOT:  acc.private
-! SHARED:      acc.loop {
-! PRIVATE:     acc.loop private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) {
-! ALL:         } collapse([2]) {{.*}} seq  unstructured
+! ALL:         acc.loop gang
+! SHARED-NOT:    acc.private
+! SHARED:        acc.loop {
+! PRIVATE:       acc.loop private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) {
+! ALL:           } collapse([2]) {{.*}} seq  unstructured
+
+! The parent is a compute construct, not a loop: the IV stays private on the
+! seq loop.
+subroutine parent_is_serial(a, r)
+  integer :: k
+  real :: a(3), r(1)
+  !$acc serial
+  !$acc loop seq
+  do k = 1, 3
+    if (a(k) .gt. 0.0) goto 50
+  end do
+50 r(1) = k
+  !$acc end serial
+end subroutine
+
+! ALL-LABEL: func.func @_QPparent_is_serial
+! ALL:         acc.serial
+! ALL:           acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) implicit(true) name("k")
+! ALL:           acc.loop private({{.*}}) {
+! ALL:           } seq  unstructured
+
+subroutine parent_is_parallel(a, n, r)
+  integer :: n, k
+  real :: a(n), r(1)
+  !$acc parallel
+  !$acc loop seq
+  do k = 1, n
+    if (a(k) .gt. 0.0) goto 50
+  end do
+50 r(1) = k
+  !$acc end parallel
+end subroutine
+
+! ALL-LABEL: func.func @_QPparent_is_parallel
+! ALL:         acc.parallel
+! ALL:           acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) implicit(true) name("k")
+! ALL:           acc.loop private({{.*}}) {
+! ALL:           } seq  unstructured
+
+! A host `do` between the parent acc.loop and the seq loop does not change
+! which loop is the parent.
+subroutine host_do_between(a, n, r)
+  integer :: n, i, j, k
+  real :: a(n, n, 3), r(n, n)
+  !$acc parallel
+  !$acc loop gang
+  do i = 1, n
+    do j = 1, n
+      !$acc loop seq
+      do k = 1, 3
+        if (a(i, j, k) .gt. 0.0) goto 50
+      end do
+50    r(i, j) = k
+    end do
+  end do
+  !$acc end parallel
+end subroutine
+
+! ALL-LABEL: func.func @_QPhost_do_between
+! ALL:         acc.loop gang
+! SHARED-NOT:    name("k")
+! SHARED:        acc.loop {
+! PRIVATE:       name("k")
+! PRIVATE:       acc.loop private({{.*}}) {
+! ALL:           } seq  unstructured
 
 ! A seq loop nested in a collapsed gang loop: the collapsed IVs stay private on
 ! the gang loop, only the seq IV is shared.
@@ -297,7 +366,7 @@ end subroutine
 ! PRIVATE:       acc.loop private({{.*}} : !fir.ref<i64>) {
 ! PRIVATE:       } seq  unstructured
 
-! No enclosing loop or compute construct at all.
+! No enclosing loop or compute construct at all: nothing to share with.
 subroutine orphan(a, r)
   integer :: k
   real :: a(3), r(1)
@@ -309,10 +378,8 @@ subroutine orphan(a, r)
 end subroutine
 
 ! ALL-LABEL: func.func @_QPorphan
-! SHARED-NOT:  acc.private
-! SHARED:      acc.loop {
-! PRIVATE:     acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) implicit(true) name("k")
-! PRIVATE:     acc.loop private({{.*}}) {
+! ALL:         acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) implicit(true) name("k")
+! ALL:         acc.loop private({{.*}}) {
 ! ALL:         } seq  unstructured
 
 ! exit makes the loop unstructured as well.
