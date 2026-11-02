@@ -7,14 +7,14 @@
 # CHECK-DAG: TRANS: 4 cycles, 2 instrs
 # CHECK-DAG: VALU(Nc): 36 cycles, 2 instrs
 # CHECK-DAG: VMEM: 3200 cycles, 10 instrs
-# CHECK-DAG: DS: 5 cycles, 4 instrs
+# CHECK-DAG: DS: 15 cycles, 4 instrs
 # CHECK-DAG: DMA: 640 cycles, 2 instrs
 
 # GFX1251: HWUI Resource Pressure:
 # GFX1251-DAG: VALU(1c): 4 cycles, 4 instrs
 # GFX1251-DAG: TRANS: 2 cycles, 2 instrs
 # GFX1251-DAG: VMEM: 3200 cycles, 10 instrs
-# GFX1251-DAG: DS: 5 cycles, 4 instrs
+# GFX1251-DAG: DS: 15 cycles, 4 instrs
 # GFX1251-DAG: DMA: 640 cycles, 2 instrs
 
 --- |
@@ -44,6 +44,9 @@
 ---
 name: test_flavor_classification
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF

@@ -37,9 +37,10 @@ public:
     unsigned LSMInstCost;      // Large stride memory instruction count
     bool HasDenseGlobalMemAcc; // Set if at least 1 basic block has relatively
                                // high global memory access
+    bool HasLDSContention; // Set if any loop has LDS loads >= 0.5 * WMMA/MFMA
     FuncInfo()
         : MemInstCost(0), InstCost(0), IAMInstCost(0), LSMInstCost(0),
-          HasDenseGlobalMemAcc(false) {}
+          HasDenseGlobalMemAcc(false), HasLDSContention(false) {}
   };
 
   typedef ValueMap<const Function *, FuncInfo> FuncInfoMap;
@@ -59,6 +60,8 @@ public:
   bool isMemoryBound(const Function *F) const;
 
   bool needsWaveLimiter(const Function *F) const;
+
+  bool hasLDSContention(const Function *F) const;
 };
 
 struct AMDGPUPerfHintAnalysisPass

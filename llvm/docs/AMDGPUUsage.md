@@ -3368,6 +3368,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
   - Set internally by backend
 * - "amdgpu-wave-limiter"
   - Set internally by backend
+* - "amdgpu-lds-contention"
+  - Set internally by backend. 
+    When this value is set, the backend scales up the latency of LDS instructions by command line option --amdgpu-lds-contention-multiplier.
 * - "amdgpu-unroll-threshold"
   - Set base cost threshold preference for loop unrolling within this function, default is 300.
     Actual threshold may be varied by per-loop metadata or reduced by heuristics.

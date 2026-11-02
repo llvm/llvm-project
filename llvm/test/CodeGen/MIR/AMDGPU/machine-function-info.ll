@@ -17,6 +17,7 @@
 ; CHECK-NEXT: isChainFunction: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
+; CHECK-NEXT: hasLDSContention: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
@@ -81,6 +82,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: isChainFunction: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
+; CHECK-NEXT: hasLDSContention: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
@@ -149,6 +151,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: isChainFunction: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
+; CHECK-NEXT: hasLDSContention: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
@@ -209,6 +212,7 @@ define void @function() {
 ; CHECK-NEXT: isChainFunction: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
+; CHECK-NEXT: hasLDSContention: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
