@@ -4031,7 +4031,7 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     PreservedAnalyses AttrOnlyPA = FuncPA;
     AttrOnlyPA.preserve<ShouldNotRunFunctionPassesAnalysis>();
 
-    const auto &IRModified = A.getModifiedFunctions();
+    const SmallSetVector<Function *, 8> &IRModified = A.getModifiedFunctions();
 
     // Also invalidate any direct callers of changed functions since analyses
     // may care about attributes of direct callees. For example, MemorySSA
@@ -4040,8 +4040,7 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     auto InvalidateCallers = [&](Function &Changed) {
       for (auto *U : Changed.users()) {
         auto *Call = dyn_cast<CallBase>(U);
-        if (Call && Call->getCalledFunction() == &Changed &&
-            !IRModified.contains(Call->getFunction()))
+        if (Call && Call->getCalledFunction() == &Changed)
           FAM.invalidate(*Call->getFunction(), AttrOnlyPA);
       }
     };
