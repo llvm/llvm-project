@@ -66,6 +66,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1217,7 +1218,8 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // If fallback checking or speculative devirtualization are enabled,
       // add support to compare the virtual function pointer to the
       // devirtualized target. In case of a mismatch, fall back to indirect
-      // call.
+      // call. The guard's weights come from the indirect call's value
+      // profile when one is available.
       if (Opts.wholeprogramdevirt_check == WPDCheckMode::Fallback ||
           DevirtSpeculatively) {
         MDBuilder MDB(M.getContext());
@@ -1225,27 +1227,25 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         SmallVector<InstrProfValueData> ValueData = getValueProfDataFromInst(
             CB, InstrProfValueKind::IPVK_IndirectCallTarget,
             std::numeric_limits<uint32_t>::max(), TotalCount);
-        MDNode *Weights;
-        if (ValueData.empty()) {
-          // Stays likely when the call has no value profile.
+        MDNode *Weights = nullptr;
+        if (ValueData.empty() || TotalCount == 0) {
           Weights = MDB.createLikelyBranchWeights();
         } else {
-          uint64_t TargetCount = 0;
-          uint64_t TargetGUID =
-              GlobalValue::getGUIDAssumingExternalLinkage(TheFn->getName());
-          for (const InstrProfValueData &VD : ValueData) {
-            if (VD.Value == TargetGUID) {
-              TargetCount = VD.Count;
-              break;
-            }
+          uint64_t TargetGUID = cast<GlobalValue>(TheFn)->getGUIDOrFallback();
+          auto It = llvm::find_if(ValueData, [&](const InstrProfValueData &VD) {
+            return VD.Value == TargetGUID;
+          });
+          if (It == ValueData.end()) {
+            // Not found is not confirmed cold. it could be a truncated
+            // profile, so do not guess a direction.
+            Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
+                *CB.getFunction(), DEBUG_TYPE);
+          } else {
+            uint64_t FallbackCount =
+                TotalCount - std::min(TotalCount, It->Count);
+            Weights =
+                MDB.createBranchWeights(fitWeights({It->Count, FallbackCount}));
           }
-
-          // Calls that still go indirect. Stays at 0 even if a sampled
-          // profile reports more hits on the target than on the whole call.
-          uint64_t FallbackCount =
-              TotalCount - std::min(TotalCount, TargetCount);
-          Weights =
-              MDB.createBranchWeights(fitWeights({TargetCount, FallbackCount}));
         }
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
