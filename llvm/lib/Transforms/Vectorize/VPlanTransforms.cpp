@@ -1806,6 +1806,31 @@ void VPlanTransforms::simplifyReverses(VPlan &Plan) {
         R.getVPSingleValue()->replaceAllUsesWith(X);
 }
 
+/// Returns true if \p U doesn't use the lanes of its operand \p V outside of
+/// the header mask \p HM, so they can be replaced by any value, even poison.
+static bool ignoresTailLanes(VPUser *U, VPValue *V, VPValue *HM,
+                             SmallPtrSetImpl<VPUser *> &Visited) {
+  if (match(U, m_LogicalAnd(m_Specific(HM), m_Specific(V))))
+    return true;
+  // Lane i of mask.beforefirst only depends on lanes 0..i of its operand, and
+  // the header mask is a prefix. It's poison if any lane is, so needs a freeze.
+  if (!match(U, m_CombineOr(m_Freeze(m_VPValue()),
+                            m_LogicalAnd(m_VPValue(), m_VPValue()),
+                            m_Not(m_VPValue()),
+                            m_Intrinsic<Intrinsic::mask_beforefirst>(
+                                m_Freeze(m_VPValue())))))
+    return false;
+  // Masks can share subexpressions, e.g. X && !(X && Y), so don't revisit users
+  // to avoid an exponential number of paths. The search stops at the first user
+  // that uses the tail lanes, so any user seen before must have ignored them.
+  if (!Visited.insert(U).second)
+    return true;
+  auto *R = cast<VPSingleDefRecipe>(U);
+  return all_of(R->users(), [&](VPUser *RU) {
+    return ignoresTailLanes(RU, R, HM, Visited);
+  });
+}
+
 /// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
 /// header mask to be simplified further when tail folding, e.g. in
 /// optimizeEVLMasks.
@@ -1830,6 +1855,20 @@ static void reassociateHeaderMask(VPlan &Plan) {
     VPBuilder Builder(R);
     R->replaceAllUsesWith(
         Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
+  }
+
+  // Replace uses of headermask && x with x if they don't use the lanes outside
+  // of the header mask.
+  for (VPUser *U : to_vector(HeaderMask->users())) {
+    VPValue *X;
+    if (!match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X))))
+      continue;
+    auto *And = cast<VPSingleDefRecipe>(U);
+    for (VPUser *AndU : to_vector(And->users())) {
+      SmallPtrSet<VPUser *, 8> Visited;
+      if (ignoresTailLanes(AndU, And, HeaderMask, Visited))
+        AndU->replaceUsesOfWith(And, X);
+    }
   }
 }
 

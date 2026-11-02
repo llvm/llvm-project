@@ -26,13 +26,12 @@ define void @foo(i32 %0, ptr %p) vscale_range(16, 1024) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <vscale x 16 x i1> [[TMP14]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = or <vscale x 16 x i1> [[TMP15]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 16 x i1> [[TMP16]], [[TMP9]]
+; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 16 x i1> [[TMP17]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[CURRENT_ITERATION_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 524, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
-; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i1> @llvm.vp.merge.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[TMP17]], <vscale x 16 x i1> zeroinitializer, i32 [[TMP18]])
-; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 16 x i1> [[TMP19]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[P]], i64 [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP23]], <vscale x 16 x i1> [[TMP20]], i32 [[TMP18]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP18]] to i64
