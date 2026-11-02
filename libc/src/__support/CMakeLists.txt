@@ -7,6 +7,7 @@ add_header_library(
     libc_errno.h
   DEPENDS
     libc.hdr.errno_macros
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -416,6 +417,7 @@ add_header_library(
     frac64.h
   DEPENDS
     .big_int
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 

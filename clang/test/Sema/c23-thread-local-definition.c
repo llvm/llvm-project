@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c23 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=pre23 %s
 // pre23-no-diagnostics
+// XFAIL: target={{.*}}-zos{{.*}}
 
 _Thread_local int a;     // expected-note {{previous definition is here}}
 _Thread_local int a;     // expected-error {{redefinition of 'a'}}

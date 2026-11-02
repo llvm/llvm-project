@@ -493,11 +493,11 @@ template <> struct ScalarTraits<FrameIndex> {
 
 /// Identifies call instruction location in machine function.
 struct MachineInstrLoc {
-  unsigned BlockNum;
+  StringValue Block;
   unsigned Offset;
 
   bool operator==(const MachineInstrLoc &Other) const {
-    return BlockNum == Other.BlockNum && Offset == Other.Offset;
+    return Block == Other.Block && Offset == Other.Offset;
   }
 };
 
@@ -520,7 +520,7 @@ struct CallSiteInfo {
   std::vector<uint64_t> CalleeTypeIds;
 
   bool operator==(const CallSiteInfo &Other) const {
-    return CallLocation.BlockNum == Other.CallLocation.BlockNum &&
+    return CallLocation.Block == Other.CallLocation.Block &&
            CallLocation.Offset == Other.CallLocation.Offset;
   }
 };
@@ -543,7 +543,7 @@ namespace yaml {
 
 template <> struct MappingTraits<CallSiteInfo> {
   static void mapping(IO &YamlIO, CallSiteInfo &CSInfo) {
-    YamlIO.mapRequired("bb", CSInfo.CallLocation.BlockNum);
+    YamlIO.mapRequired("bb", CSInfo.CallLocation.Block);
     YamlIO.mapRequired("offset", CSInfo.CallLocation.Offset);
     YamlIO.mapOptional("fwdArgRegs", CSInfo.ArgForwardingRegs,
                        std::vector<CallSiteInfo::ArgRegPair>());
@@ -645,7 +645,7 @@ struct CalledGlobal {
 
 template <> struct MappingTraits<CalledGlobal> {
   static void mapping(IO &YamlIO, CalledGlobal &CG) {
-    YamlIO.mapRequired("bb", CG.CallSite.BlockNum);
+    YamlIO.mapRequired("bb", CG.CallSite.Block);
     YamlIO.mapRequired("offset", CG.CallSite.Offset);
     YamlIO.mapRequired("callee", CG.Callee);
     YamlIO.mapRequired("flags", CG.Flags);

@@ -15,9 +15,13 @@ add_clang_library(MLIRCIRTransforms
   IdiomRecognizer.cpp
   LibOpt.cpp
   RecordTypeConverter.cpp
+  CIRABIClassifier.cpp
+  CIRABIClassifierAMDGPU.cpp
+  CIRABIClassifierX86_64.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
+  mlir-headers
 
   LINK_COMPONENTS
   ABI
