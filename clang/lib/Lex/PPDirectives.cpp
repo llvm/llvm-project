@@ -165,7 +165,8 @@ static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
   if (MI->isBuiltinMacro())
     return true;
   // C uses __STDC* macros; C++ uses __cplusplus and __cpp* feature macros.
-  // Others aren't language-defined. Checking names is cheaper than finding files.
+  // Others aren't language-defined. Checking names is cheaper than finding
+  // files.
   if (!MacroName.starts_with("__STDC") && MacroName != "__cplusplus" &&
       !MacroName.starts_with("__cpp"))
     return false;
