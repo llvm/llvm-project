@@ -4451,6 +4451,11 @@ void OmpStructureChecker::CheckReductionModifier(
           parser::ToUpperCaseLetters(
               ReductionModifier::EnumToString(modifier.v)));
     }
+    using Directive = llvm::omp::Directive;
+    llvm::ArrayRef<Directive> leafs{
+        llvm::omp::getLeafConstructsOrSelf(dirCtx.directive)};
+    // The task modifier belongs to the innermost leaf that accepts it.  A
+    // combined directive cannot be checked using only its compound name.
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
         llvm::omp::Directive::OMPD_do, //
@@ -4461,8 +4466,18 @@ void OmpStructureChecker::CheckReductionModifier(
         // "single" and "workshare" don't allow reduction clause,
         // "loop" has different restrictions (checked above).
     };
-    if (dirCtx.directive != llvm::omp::Directive::OMPD_parallel &&
-        !llvm::is_contained(worksharing, dirCtx.directive)) {
+    static const Directive excluded[]{
+        Directive::OMPD_simd,
+        Directive::OMPD_loop,
+        Directive::OMPD_taskloop,
+    };
+    bool hasAcceptingLeaf{llvm::any_of(leafs, [](Directive leaf) {
+      return leaf == Directive::OMPD_parallel ||
+          llvm::is_contained(worksharing, leaf);
+    })};
+    bool hasExcludedLeaf{llvm::any_of(leafs,
+        [](Directive leaf) { return llvm::is_contained(excluded, leaf); })};
+    if (!hasAcceptingLeaf || hasExcludedLeaf) {
       context_.Say(GetContext().clauseSource,
           "Modifier 'TASK' on REDUCTION clause is only allowed with "
           "PARALLEL or worksharing directive"_err_en_US);
