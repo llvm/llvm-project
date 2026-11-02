@@ -11,7 +11,7 @@
 @published = global ptr @yield_many
 @alias = alias { ptr, i32 } (ptr), ptr @yield_many
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)
@@ -31,9 +31,8 @@ declare void @free(ptr)
 ; EARLY: call i1 (...) @llvm.coro.suspend.retcon.i1(i32 7)
 define fastcc { ptr, i32 } @yield_many(ptr %buffer) noinline presplitcoroutine {
 entry:
-  %return.slot = alloca { ptr, i32 }, align 8
   %id = call token @llvm.coro.id.retcon(i32 16, i32 8, ptr %buffer,
-      ptr @prototype, ptr @malloc, ptr @free, ptr %return.slot)
+      ptr @prototype, ptr @malloc, ptr @free)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %again
 
@@ -47,8 +46,7 @@ abnormal:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 false, token none)
-  %result = load { ptr, i32 }, ptr %return.slot, align 8
-  ret { ptr, i32 } %result
+  unreachable
 }
 
 ; IPO-LABEL: define i32 @caller(

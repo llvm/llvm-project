@@ -12,16 +12,12 @@ define ptr @f(ptr %buffer, i32 %n) {
 ;
 ; CORO-LABEL: @f(
 ; CORO-NEXT:  entry:
-; CORO-NEXT:    [[CORO_RET:%.*]] = alloca ptr, align 8
-; CORO-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    store i32 [[N:%.*]], ptr [[N_VAL_SPILL_ADDR:%.*]], align 4
 ; CORO-NEXT:    call void @print(i32 [[N]])
-; CORO-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    ret ptr @f.coro.body.resume.0
 ;
 entry:
-  %coro.ret = alloca ptr
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -37,8 +33,7 @@ resume:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  %coro.ret.load = load ptr, ptr %coro.ret
-  ret ptr %coro.ret.load
+  unreachable
 }
 
 
@@ -86,19 +81,15 @@ define hidden { ptr, ptr } @g(ptr %buffer, ptr %ptr) {
 ;
 ; CORO-LABEL: @g(
 ; CORO-NEXT:  entry:
-; CORO-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, ptr }, align 8
-; CORO-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 8)
 ; CORO-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CORO-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
 ; CORO-NEXT:    [[PTR_RELOAD_I:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CORO-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr } { ptr @g.coro.body.resume.0, ptr poison }, ptr [[PTR_RELOAD_I]], 1
-; CORO-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    ret { ptr, ptr } [[TMP2]]
 ;
 entry:
-  %coro.ret = alloca { ptr, ptr }
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @g_prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @g_prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -111,8 +102,7 @@ resume:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  %coro.ret.load = load { ptr, ptr }, ptr %coro.ret
-  ret { ptr, ptr } %coro.ret.load
+  unreachable
 }
 
 define ptr @nosuspend(ptr %buffer, i32 %n) {
@@ -129,23 +119,19 @@ define ptr @nosuspend(ptr %buffer, i32 %n) {
 ;
 ; CORO-LABEL: @nosuspend(
 ; CORO-NEXT:  entry:
-; CORO-NEXT:    [[CORO_RET:%.*]] = alloca ptr, align 8
 ; CORO-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CORO-NEXT:    [[SAVEDSTACK:%.*]] = call ptr @llvm.stacksave.p0()
-; CORO-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CORO-NEXT:    store i32 [[N:%.*]], ptr [[A]], align 4
 ; CORO-NEXT:    call void @use_var_ptr(ptr [[A]])
 ; CORO-NEXT:    [[AL:%.*]] = load i32, ptr [[A]], align 4
 ; CORO-NEXT:    call void @use_var(i32 [[AL]])
-; CORO-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CORO-NEXT:    call void @llvm.stackrestore.p0(ptr [[SAVEDSTACK]])
 ; CORO-NEXT:    ret ptr null
 ;
 entry:
-  %coro.ret = alloca ptr
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %a = alloca i32
   store i32 %n, ptr %a
@@ -156,11 +142,10 @@ cleanup:
   %al = load i32, ptr %a
   call void @use_var(i32 %al)
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  %coro.ret.load = load ptr, ptr %coro.ret
-  ret ptr %coro.ret.load
+  ret ptr %hdl
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)

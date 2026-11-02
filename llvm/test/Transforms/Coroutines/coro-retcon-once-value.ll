@@ -6,8 +6,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 define {ptr, i32} @f(ptr %buffer, ptr %array) {
 entry:
-  %coro.ret = alloca {ptr, i32}
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %load = load i32, ptr %array
   %load.pos = icmp sgt i32 %load, 0
@@ -31,8 +30,7 @@ neg.cont:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  %coro.ret.load = load {ptr, i32}, ptr %coro.ret
-  ret {ptr, i32} %coro.ret.load
+  unreachable
 }
 
 define void @test.f(ptr %array) {
@@ -49,8 +47,7 @@ entry:
 
 define {ptr, i32} @g(ptr %buffer, ptr %array, i32 %val) {
 entry:
-  %coro.ret = alloca {ptr, i32}
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate, ptr %coro.ret)
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %load = load i32, ptr %array
   %load.pos = icmp sgt i32 %load, 0
@@ -76,8 +73,7 @@ cleanup:
   %new.val = add i32 %val, 123
   %tok = call token (...) @llvm.coro.end.results(ptr null, i32 %new.val, ptr @deallocate)
   call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
-  %coro.ret.load = load {ptr, i32}, ptr %coro.ret
-  ret {ptr, i32} %coro.ret.load
+  unreachable
 }
 
 define void @test.g(ptr %array) {
@@ -97,7 +93,7 @@ entry:
 ;   Unfortunately, we don't seem to fully optimize this right now due
 ;   to some sort of phase-ordering thing.
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)

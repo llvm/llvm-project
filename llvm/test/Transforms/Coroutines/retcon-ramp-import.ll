@@ -9,7 +9,7 @@
 declare noalias nonnull ptr @external_body(ptr) noreturn presplitcoroutine "coro-retcon-body"
 declare ptr @llvm.coro.prepare.retcon(ptr)
 ; A leftover coroutine declaration makes the cleanup pass run in this module.
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 
 ; CHECK-LABEL: define ptr @caller(
 ; CHECK: [[RESULT:%.*]] = call ptr @external_body(ptr %buffer)

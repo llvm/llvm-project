@@ -236,15 +236,7 @@ public:
 /// This represents either the llvm.coro.id.retcon or
 /// llvm.coro.id.retcon.once instruction.
 class AnyCoroIdRetconInst : public AnyCoroIdInst {
-  enum {
-    SizeArg,
-    AlignArg,
-    StorageArg,
-    PrototypeArg,
-    AllocArg,
-    DeallocArg,
-    ReturnSlotArg
-  };
+  enum { SizeArg, AlignArg, StorageArg, PrototypeArg, AllocArg, DeallocArg };
 
 public:
   LLVM_ABI void checkWellFormed() const;
@@ -258,8 +250,6 @@ public:
   }
 
   Value *getStorage() const { return getArgOperand(StorageArg); }
-
-  Value *getReturnSlot() const { return getArgOperand(ReturnSlotArg); }
 
   /// Return the prototype for the continuation function.  The type,
   /// attributes, and calling convention of the continuation function(s)

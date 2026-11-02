@@ -1,10 +1,9 @@
-; RUN: opt -verify-each -passes='ipsccp' -S %s | FileCheck %s --check-prefix=PRE
-; RUN: opt -verify-each -passes='thinlto<O2>' -S %s | FileCheck %s --check-prefix=POST
-; RUN: llvm-as %s -o - | llvm-dis -o - | FileCheck %s --check-prefix=PRE
+; RUN: opt -verify-each -passes='coro-early,ipsccp' -S %s | FileCheck %s --check-prefix=PRE
+; RUN: opt -verify-each -passes='coro-early,cgscc(function-attrs),ipsccp' -S %s | FileCheck %s --check-prefix=PRE
+; RUN: opt -verify-each -passes='thinlto-pre-link<O2>,thinlto<O2>' -S %s | FileCheck %s --check-prefix=POST
 
 ; An ICP-style direct/indirect call join must retain the direct return pair.
-; Legacy six-operand IR is upgraded to an explicit return slot, including
-; return-related attributes inferred by an older optimizer.
+; CoroEarly protects the direct call while the body is still pre-split.
 
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
@@ -36,7 +35,7 @@ entry:
 
 direct:
   %direct_pair = call swiftcc { ptr, ptr } @accessor(
-      ptr noalias %buffer, ptr swiftself %object) #1
+      ptr noalias %buffer, ptr swiftself %object)
   br label %join
 
 indirect:
@@ -55,10 +54,13 @@ join:
 }
 
 ; PRE-LABEL: define internal swiftcc { ptr, ptr } @accessor(
-; PRE: %coro.ret = alloca { ptr, ptr }
-; PRE: call token @llvm.coro.id.retcon.once({{.*}}ptr %coro.ret)
-; PRE: load { ptr, ptr }, ptr %coro.ret
-; PRE: ret { ptr, ptr }
+; PRE: [[PREPARED:%.*]] = call ptr @llvm.coro.prepare.retcon(ptr @accessor.coro.body)
+; PRE-NEXT: [[RESULT:%.*]] = musttail call swiftcc { ptr, ptr } [[PREPARED]](ptr noalias %buffer, ptr swiftself %object)
+; PRE-NEXT: ret { ptr, ptr } [[RESULT]]
+; PRE-LABEL: define internal swiftcc { ptr, ptr } @accessor.coro.body(
+; PRE: call token @llvm.coro.id.retcon.once
+; PRE: call i1 (...) @llvm.coro.suspend.retcon.i1
+; PRE: unreachable
 ; PRE-LABEL: define void @caller(
 ; PRE: %direct_pair = call swiftcc { ptr, ptr } @accessor(ptr noalias %buffer, ptr swiftself %object){{$}}
 ; PRE: %pair = phi { ptr, ptr } [ %direct_pair, %direct ], [ %indirect_pair, %indirect ]
@@ -69,5 +71,4 @@ join:
 ; POST-LABEL: define void @caller(
 ; POST: %pair = phi { ptr, ptr } [ %direct_pair, %direct ], [ %indirect_pair, %indirect ]
 
-attributes #0 = { noinline noreturn presplitcoroutine }
-attributes #1 = { noreturn }
+attributes #0 = { noinline presplitcoroutine }

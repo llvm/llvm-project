@@ -7,7 +7,7 @@
 ; Splitting must revisit the ramp and update the graph when that edge becomes
 ; a direct call. Both direct and mutually recursive entries must stay valid.
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)
@@ -18,9 +18,8 @@ declare void @free(ptr)
 
 define { ptr, i32 } @recursive(ptr %buffer, i32 %n) noinline presplitcoroutine {
 entry:
-  %return.slot = alloca { ptr, i32 }, align 8
   %id = call token @llvm.coro.id.retcon.once(i32 16, i32 8, ptr %buffer,
-      ptr @prototype, ptr @malloc, ptr @free, ptr %return.slot)
+      ptr @prototype, ptr @malloc, ptr @free)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %recurse = icmp ne i32 %n, 0
   br i1 %recurse, label %nested, label %yield
@@ -38,8 +37,7 @@ yield:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 false, token none)
-  %result = load { ptr, i32 }, ptr %return.slot, align 8
-  ret { ptr, i32 } %result
+  unreachable
 }
 
 ; CHECK-LABEL: define{{.*}} i32 @caller(
@@ -52,9 +50,8 @@ define i32 @caller(ptr %buffer, i32 %n) {
 
 define { ptr, i32 } @left(ptr %buffer, i32 %n) noinline presplitcoroutine {
 entry:
-  %return.slot = alloca { ptr, i32 }, align 8
   %id = call token @llvm.coro.id.retcon.once(i32 16, i32 8, ptr %buffer,
-      ptr @prototype, ptr @malloc, ptr @free, ptr %return.slot)
+      ptr @prototype, ptr @malloc, ptr @free)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %recurse = icmp ne i32 %n, 0
   br i1 %recurse, label %nested, label %yield
@@ -72,15 +69,13 @@ yield:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 false, token none)
-  %result = load { ptr, i32 }, ptr %return.slot, align 8
-  ret { ptr, i32 } %result
+  unreachable
 }
 
 define { ptr, i32 } @right(ptr %buffer, i32 %n) noinline presplitcoroutine {
 entry:
-  %return.slot = alloca { ptr, i32 }, align 8
   %id = call token @llvm.coro.id.retcon.once(i32 16, i32 8, ptr %buffer,
-      ptr @prototype, ptr @malloc, ptr @free, ptr %return.slot)
+      ptr @prototype, ptr @malloc, ptr @free)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %recurse = icmp ne i32 %n, 0
   br i1 %recurse, label %nested, label %yield
@@ -98,8 +93,7 @@ yield:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 false, token none)
-  %result = load { ptr, i32 }, ptr %return.slot, align 8
-  ret { ptr, i32 } %result
+  unreachable
 }
 
 ; CHECK-LABEL: define{{.*}} i32 @mutual_caller(
