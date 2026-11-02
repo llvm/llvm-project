@@ -1126,12 +1126,8 @@ OptionalFileEntryRef Preprocessor::LookupFile(
   if (FromFile) {
     // We're supposed to start looking from after a particular file. Search
     // the include path until we find that file or run out of files.
-    // The #include_next may name a different header than the current file
-    // (e.g. __mbstate_t.h doing #include_next <wchar.h>), in which case
-    // looking up Filename would never find FromFile. Look up the current
-    // file's own name to locate the directory it was found in. That name is
-    // its path relative to the search directory (e.g. "sys/inner.h"), not just
-    // the basename, so that headers in subdirectories are found too.
+    // Filename may differ from FromFile's name (e.g. #include_next <wchar.h>
+    // from __mbstate_t.h), so locate FromFile by its own name instead.
     auto FindFromFile = [&](StringRef LocateName) {
       bool SameName = LocateName == Filename;
       ConstSearchDirIterator TmpCurDir = CurDir;
@@ -1157,30 +1153,33 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       return false;
     };
 
-    // Candidate names for the current file: its path relative to the search
-    // directory it was found in, if known, else to every search directory
-    // that contains it. Search directories are matched by identity rather than
-    // by spelling, as the file may have been reached through a different path
-    // (e.g. "./x/sys/inner.h" for -Ix).
-    // FIXME: If a search directory is nested in another (-Ix -Ix/sub), the file
-    // is reachable under several names ("sys/inner.h" and "inner.h") and we
-    // cannot tell which one it was originally found as. Fixing this requires
-    // recording the search directory when a module header is entered.
+    // Candidate names for FromFile: its path relative to each search directory
+    // containing it, innermost first. Directories are matched by identity, as
+    // the file may have been reached via another spelling (e.g. "./x/...").
+    // FIXME: With nested search directories (-Ix -Ix/sub) the original name is
+    // ambiguous; we assume the innermost. Fixing this requires recording the
+    // search directory when a module header is entered.
     SmallVector<std::string, 4> Names;
     StringRef BaseName;
     if (CurPPLexer)
       if (OptionalFileEntryRef CurFE = CurPPLexer->getFileEntry()) {
         StringRef Path = CurFE->getName();
         BaseName = llvm::sys::path::filename(Path);
-        // Each ancestor directory of the file, with the file's path relative
-        // to it.
-        SmallVector<std::pair<DirectoryEntryRef, std::string>, 8> Ancestors;
+        auto IsSearchDir = [&](DirectoryEntryRef Dir) {
+          auto Matches = [&](const DirectoryLookup &DL) {
+            OptionalDirectoryEntryRef DLDir = DL.getDirRef();
+            return DLDir && *DLDir == Dir;
+          };
+          return CurDir ? Matches(*CurDir)
+                        : llvm::any_of(HeaderInfo.search_dir_range(), Matches);
+        };
         SmallString<128> Rel(BaseName);
         for (StringRef Parent = llvm::sys::path::parent_path(Path);
              !Parent.empty(); Parent = llvm::sys::path::parent_path(Parent)) {
           if (OptionalDirectoryEntryRef Dir =
                   FileMgr.getOptionalDirectoryRef(Parent))
-            Ancestors.emplace_back(*Dir, Rel.str().str());
+            if (IsSearchDir(*Dir))
+              Names.push_back(Rel.str().str());
           StringRef Name = llvm::sys::path::filename(Parent);
           if (Name.empty())
             break;
@@ -1188,22 +1187,10 @@ OptionalFileEntryRef Preprocessor::LookupFile(
           llvm::sys::path::append(NewRel, Rel);
           Rel = NewRel;
         }
-        auto AddRelPath = [&](const DirectoryLookup &DL) {
-          OptionalDirectoryEntryRef Dir = DL.getDirRef();
-          if (!Dir)
-            return;
-          for (const auto &[AncestorDir, AncestorRel] : Ancestors)
-            if (AncestorDir == *Dir) {
-              Names.push_back(AncestorRel);
-              return;
-            }
-        };
-        if (CurDir)
-          AddRelPath(*CurDir);
-        else
-          for (const DirectoryLookup &DL : HeaderInfo.search_dir_range())
-            AddRelPath(DL);
       }
+    // A same-name #include_next is most likely how the file was found.
+    if (llvm::is_contained(Names, Filename))
+      Names.insert(Names.begin(), Filename.str());
     if (!BaseName.empty() && BaseName != Filename)
       Names.push_back(BaseName.str());
     Names.push_back(Filename.str());
