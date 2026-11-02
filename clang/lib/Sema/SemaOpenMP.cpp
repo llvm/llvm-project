@@ -18131,9 +18131,10 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
       OutermostHelper.Inc->getEndLoc());
 
   // A counter only reaches its final value if its own loop and all enclosing
-  // loops execute at least one iteration; otherwise it keeps the value assigned
-  // by the pre-inits. Guarding also avoids evaluating 'start + n * step' for an
-  // empty loop, whose trip count may have wrapped.
+  // loops execute at least one iteration. Otherwise it keeps the last value
+  // from its init, or the value from before the nest if that init did not run.
+  // Guarding also avoids evaluating 'start + n * step' for an empty loop,
+  // whose trip count may have wrapped.
   SmallVector<Stmt *, 4> Finals;
   for (unsigned I = 0; I < NumLoops; ++I) {
     assert(LoopHelpers[I].Finals.size() == 1 &&

@@ -142,4 +142,16 @@ extern "C" void mixed_sign(int n) {
       body((int)i, j);
 }
 
+// Empty outer loop: the outer init still runs, the inner init must not.
+// CHECK-LABEL: define {{.*}}void @empty_outer(
+extern "C" void empty_outer() {
+  int I = -1;
+  int J = -1;
+  int Zero = 0;
+#pragma omp flatten
+  for (I = 0; I < Zero; ++I)
+    for (J = 0; J < 3; ++J)
+      body(I, J);
+}
+
 #endif
