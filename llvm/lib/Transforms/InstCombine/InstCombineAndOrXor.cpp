@@ -1420,28 +1420,6 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(
   return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
 }
 
-/// Matches canonical form of !isnan, fcmp ord x, 0
-static bool matchIsNotNaN(FCmpInst::Predicate P, Value *LHS, Value *RHS) {
-  return P == FCmpInst::FCMP_ORD && match(RHS, m_AnyZeroFP());
-}
-
-/// Matches canonical form of isnan, fcmp uno x, 0
-static bool matchIsNaN(FCmpInst::Predicate P, Value *LHS, Value *RHS) {
-  return P == FCmpInst::FCMP_UNO && match(RHS, m_AnyZeroFP());
-}
-
-/// Matches fcmp u__ x, C where C is a constant that is not NaN.
-static bool matchUnorderedNonNaNCompare(FCmpInst::Predicate P, Value *LHS,
-                                        Value *RHS) {
-  return FCmpInst::isUnordered(P) && match(RHS, m_NonNaN());
-}
-
-/// Matches fcmp o__ x, C where C is a constant that is not NaN.
-static bool matchOrderedNonNaNCompare(FCmpInst::Predicate P, Value *LHS,
-                                      Value *RHS) {
-  return FCmpInst::isOrdered(P) && match(RHS, m_NonNaN());
-}
-
 /// and (fcmp ord x, 0), (fcmp u* x, C) -> fcmp o* x, C
 /// or  (fcmp uno x, 0), (fcmp o* x, C) -> fcmp u* x, C
 /// where C is a constant that is not NaN.
@@ -1450,21 +1428,20 @@ static bool matchOrderedNonNaNCompare(FCmpInst::Predicate P, Value *LHS,
 /// __builtin_isnormal.
 static Value *foldNaNTestWithFCmp(InstCombiner::BuilderTy &Builder,
                                   FCmpInst *LHS, FCmpInst *RHS, bool IsAnd) {
-  Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
-  Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
-  FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
+  CmpPredicate PredL, PredR;
+  if (!match(LHS, m_FCmp(PredL, m_Value(), m_AnyZeroFP())) ||
+      !match(RHS, m_FCmp(PredR, m_Value(), m_NonNaN())))
+    return nullptr;
 
   FCmpInst::Predicate NewPred;
-  if (IsAnd && matchIsNotNaN(PredL, LHS0, LHS1) &&
-      matchUnorderedNonNaNCompare(PredR, RHS0, RHS1))
+  if (IsAnd && PredL == FCmpInst::FCMP_ORD && FCmpInst::isUnordered(PredR))
     NewPred = FCmpInst::getOrderedPredicate(PredR);
-  else if (!IsAnd && matchIsNaN(PredL, LHS0, LHS1) &&
-           matchOrderedNonNaNCompare(PredR, RHS0, RHS1))
+  else if (!IsAnd && PredL == FCmpInst::FCMP_UNO && FCmpInst::isOrdered(PredR))
     NewPred = FCmpInst::getUnorderedPredicate(PredR);
   else
     return nullptr;
 
-  return Builder.CreateFCmpFMF(NewPred, RHS0, RHS1,
+  return Builder.CreateFCmpFMF(NewPred, RHS->getOperand(0), RHS->getOperand(1),
                                FMFSource::intersect(LHS, RHS));
 }
 
