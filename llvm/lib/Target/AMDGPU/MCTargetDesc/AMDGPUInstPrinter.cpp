@@ -1035,8 +1035,7 @@ void AMDGPUInstPrinter::printOperandAndFPInputMods(const MCInst *MI,
   if (needsImpliedVcc(Desc, OpNo))
     printDefaultVccOperand(true, STI, O);
 
-  unsigned InputModifiers =
-      static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t InputModifiers = MI->getOperand(OpNo).getImm();
 
   // Use 'neg(...)' instead of '-' to avoid ambiguity.
   // This is important for integer literals because
@@ -1089,8 +1088,7 @@ void AMDGPUInstPrinter::printOperandAndIntInputMods(const MCInst *MI,
   if (needsImpliedVcc(Desc, OpNo))
     printDefaultVccOperand(true, STI, O);
 
-  unsigned InputModifiers =
-      static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t InputModifiers = MI->getOperand(OpNo).getImm();
   if (InputModifiers & SISrcMods::SEXT)
     O << "sext(";
   printRegularOperand(MI, OpNo + 1, STI, O);
@@ -1117,7 +1115,7 @@ void AMDGPUInstPrinter::printDPP8(const MCInst *MI, unsigned OpNo,
   if (!AMDGPU::isGFX10Plus(STI))
     llvm_unreachable("dpp8 is not supported on ASICs earlier than GFX10");
 
-  unsigned Imm = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t Imm = MI->getOperand(OpNo).getImm();
   O << "dpp8:[" << formatDec(Imm & 0x7);
   for (size_t i = 1; i < 8; ++i) {
     O << ',' << formatDec((Imm >> (3 * i)) & 0x7);
@@ -1222,7 +1220,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printDppBoundCtrl(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
-  unsigned Imm = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm) {
     O << " bound_ctrl:1";
   }
@@ -1231,7 +1229,7 @@ void AMDGPUInstPrinter::printDppBoundCtrl(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printDppFI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   using namespace llvm::AMDGPU::DPP;
-  unsigned Imm = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm == DPP_FI_1 || Imm == DPP8_FI_1) {
     O << " fi:1";
   }
@@ -1241,7 +1239,7 @@ void AMDGPUInstPrinter::printSDWASel(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
   using namespace llvm::AMDGPU::SDWA;
 
-  unsigned Imm = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t Imm = MI->getOperand(OpNo).getImm();
   switch (Imm) {
   case SdwaSel::BYTE_0: O << "BYTE_0"; break;
   case SdwaSel::BYTE_1: O << "BYTE_1"; break;
@@ -1281,7 +1279,7 @@ void AMDGPUInstPrinter::printSDWADstUnused(const MCInst *MI, unsigned OpNo,
   using namespace llvm::AMDGPU::SDWA;
 
   O << "dst_unused:";
-  unsigned Imm = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t Imm = MI->getOperand(OpNo).getImm();
   switch (Imm) {
   case DstUnused::UNUSED_PAD: O << "UNUSED_PAD"; break;
   case DstUnused::UNUSED_SEXT: O << "UNUSED_SEXT"; break;
@@ -1295,7 +1293,7 @@ void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
                                      unsigned N) {
   unsigned Opc = MI->getOpcode();
   int EnIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::en);
-  unsigned En = static_cast<unsigned>(MI->getOperand(EnIdx).getImm());
+  int64_t En = MI->getOperand(EnIdx).getImm();
 
   int ComprIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::compr);
 
@@ -1303,7 +1301,7 @@ void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
   if (MI->getOperand(ComprIdx).getImm())
     OpNo = OpNo - N + N / 2;
 
-  if (En & (1 << N))
+  if (En & (1LL << N))
     printRegOperand(MI->getOperand(OpNo).getReg(), Opc, OpNo, O, MRI);
   else
     O << "off";
@@ -1449,7 +1447,7 @@ void AMDGPUInstPrinter::printOpSel(const MCInst *MI, unsigned,
   if (isCvt_F32_Fp8_Bf8_e64(Opc)) {
     auto SrcMod =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
-    unsigned Mod = static_cast<unsigned>(MI->getOperand(SrcMod).getImm());
+    int64_t Mod = MI->getOperand(SrcMod).getImm();
     unsigned Index0 = !!(Mod & SISrcMods::OP_SEL_0);
     unsigned Index1 = !!(Mod & SISrcMods::OP_SEL_1);
     if (Index0 || Index1)
@@ -1598,7 +1596,7 @@ void AMDGPUInstPrinter::printMatrixBScaleFmt(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned Imm = static_cast<unsigned>(MI->getOperand(OpNum).getImm());
+  int64_t Imm = MI->getOperand(OpNum).getImm();
   switch (Imm) {
   case 0:
     O << "p10";
@@ -1624,7 +1622,7 @@ void AMDGPUInstPrinter::printInterpAttr(const MCInst *MI, unsigned OpNum,
 void AMDGPUInstPrinter::printInterpAttrChan(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned Chan = static_cast<unsigned>(MI->getOperand(OpNum).getImm());
+  int64_t Chan = MI->getOperand(OpNum).getImm();
   O << '.' << "xyzw"[Chan & 0x3];
 }
 
@@ -1678,7 +1676,7 @@ void AMDGPUInstPrinter::printIfSet(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printOModSI(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  int Imm = static_cast<int>(MI->getOperand(OpNo).getImm());
+  int64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm == SIOutMods::MUL2)
     O << " mul:2";
   else if (Imm == SIOutMods::MUL4)
@@ -1944,7 +1942,7 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   using namespace llvm::AMDGPU::Hwreg;
-  unsigned Val = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t Val = MI->getOperand(OpNo).getImm();
   auto [Id, Offset, Width] = HwregEncoding::decode(Val);
   StringRef HwRegName = getHwreg(Id, STI);
 

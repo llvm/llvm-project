@@ -134,8 +134,7 @@ static uint32_t getIntInlineImmEncoding(IntTy Imm) {
 }
 
 static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
-  uint16_t IntImm =
-      static_cast<uint16_t>(getIntInlineImmEncoding(static_cast<int16_t>(Val)));
+  uint32_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
   if (IntImm != 0)
     return IntImm;
 
@@ -171,8 +170,7 @@ static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
 }
 
 static uint32_t getLitBF16Encoding(uint16_t Val) {
-  uint16_t IntImm =
-      static_cast<uint16_t>(getIntInlineImmEncoding(static_cast<int16_t>(Val)));
+  uint32_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
   if (IntImm != 0)
     return IntImm;
 
