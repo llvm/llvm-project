@@ -1328,7 +1328,7 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
       NewRHS1 = RHS1;
 
     if (NewRHS0 == RHS0 && NewRHS1 == RHS1)
-    return nullptr;
+      return nullptr;
   }
 
   // Replace variable with constant value equivalence to remove a variable use:
