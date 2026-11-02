@@ -1048,7 +1048,7 @@ bool areRegionScalars(ArrayRef<Value *> VL, const DominatorTree &DT,
 }
 
 BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
-                               const DominatorTree &DT, const LoopInfo &LI) {
+                               const DominatorTree &DT) {
   if (!S || S.isAltShuffle())
     return nullptr;
   // The non-schedulable instructions are safe to speculate, they can be moved
@@ -1075,21 +1075,20 @@ BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
   // The vector code is emitted before the first scalar in the entry block, so
   // the entry must have such a scalar and the operands must be defined outside
   // of this block (or be its PHIs), the instructions of the block can be
-  // reordered by the scheduler. The entry is in the loop of the scalars.
+  // reordered by the scheduler. The EH pads are not vectorized.
   BasicBlock *Entry = InsertPt->getParent();
-  if (InsertPt->isTerminator() ||
-      LI.getLoopFor(Entry) != LI.getLoopFor(S.getMainOp()->getParent()))
+  if (InsertPt->isTerminator() || Entry->isEHPad())
     return nullptr;
-  Instruction *FirstNonPHI = &*Entry->getFirstNonPHIIt();
   SmallDenseMap<const BasicBlock *, bool, 4> DominatingBlocks;
   if (all_of(Insts, [&](Instruction *I) {
         if (S.isCopyableElement(I))
           return I->getParent() == Entry;
-        return all_of(I->operands(), [&](Value *Op) {
-          auto *OpI = dyn_cast<Instruction>(Op);
-          // The terminators (invokes) dominate only their normal successors.
-          if (!OpI || OpI->getParent() == Entry || OpI->isTerminator())
-            return !OpI || DT.dominates(OpI, FirstNonPHI);
+        // The operands dominate the scalars, so they dominate the entry if
+        // their blocks do.
+        auto Ops = make_isa_range<Instruction>(I->operands());
+        return all_of(Ops, [&](Instruction *OpI) {
+          if (OpI->getParent() == Entry)
+            return isa<PHINode>(OpI);
           auto [It, Inserted] = DominatingBlocks.try_emplace(OpI->getParent());
           if (Inserted)
             It->second = DT.dominates(OpI->getParent(), Entry);

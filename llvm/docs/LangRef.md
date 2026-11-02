@@ -2385,7 +2385,7 @@ define void @f() "no-sse" { ... }
     stops inside an inlined call site, it will appear to be stopped at the
     outermost inlined call site.
 
-`no-jump-tables`
+`"no-jump-tables"`
 :   When this attribute is set to true, the jump tables and lookup tables that
     can be generated from a switch case lowering are disabled.
 
@@ -2497,7 +2497,7 @@ define void @f() "no-sse" { ... }
 :   This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.
 
-`indirect-tls-seg-refs`
+`"indirect-tls-seg-refs"`
 :   This attribute indicates that the code generator should not use
     direct TLS access through segment registers, even if the
     target-specific ABI normally permits it.
@@ -9970,6 +9970,37 @@ for an integer access:
 
 Multiple TBAA operands are allowed to support merging of modules that may use
 different TBAA hierarchies (e.g., when mixing C and C++).
+
+## '`llvm.raw.sections`' Named Metadata
+
+The module-level `!llvm.raw.sections` metadata allows embedding arbitrary
+binary data into named sections of the output object file. A
+`!llvm.raw.sections` metadata node is a list of metadata nodes with the
+following fields:
+
+```
+!0 = !{!"section_name", i32 alignment, i32 flags, !"raw data"}
+```
+
+- **section_name**: The name of the output section.
+- **alignment**: The byte alignment of the section data. Must be a power-of-two.
+- **flags**: A bitmask describing the properties of the section. Each target
+  maps this onto format-appropriate section flags. The value `0` specifies that
+  the section is present in the object file but is not loaded into memory.
+  Other values are reserved for future use and are currently rejected by the
+  verifier.
+- **raw data**: The binary contents of the section.
+
+Example:
+```
+!llvm.raw.sections = !{!0}
+!0 = !{!"__mydata", i32 8, i32 0, !"\DE\AD\BE\EF"}
+```
+
+Each of the nodes inside a `!llvm.raw.sections` metadata node gets lowered to
+a target-specific named data section. It is an error to use
+`!llvm.raw.sections` on a target that does not support arbitrary named
+sections.
 
 (summary)=
 

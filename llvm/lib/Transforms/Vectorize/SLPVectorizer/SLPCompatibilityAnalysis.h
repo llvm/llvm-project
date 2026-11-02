@@ -383,7 +383,7 @@ bool areRegionScalars(ArrayRef<Value *> VL, const DominatorTree &DT,
 /// be vectorized before the first of them in the entry block, nullptr
 /// otherwise.
 BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
-                               const DominatorTree &DT, const LoopInfo &LI);
+                               const DominatorTree &DT);
 
 /// \returns the main or alternate operation from \p S matching \p I, together
 /// with the operands of \p I adjusted to the selected operation.
