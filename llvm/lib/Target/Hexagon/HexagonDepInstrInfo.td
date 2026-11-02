@@ -8934,7 +8934,6 @@ let Inst{31-21} = 0b10011000100;
 let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Ryy32 = $Ryy32in, $Rx32 = $Rx32in";
 }
 def L2_loadalignb_pcr : HInst<
@@ -8947,7 +8946,6 @@ let Inst{31-21} = 0b10011000100;
 let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Ryy32 = $Ryy32in, $Rx32 = $Rx32in";
 }
 def L2_loadalignb_pi : HInst<
@@ -9022,7 +9020,6 @@ let Inst{31-21} = 0b10011000010;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Ryy32 = $Ryy32in, $Rx32 = $Rx32in";
 }
 def L2_loadalignh_pcr : HInst<
@@ -9035,7 +9032,6 @@ let Inst{31-21} = 0b10011000010;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Ryy32 = $Ryy32in, $Rx32 = $Rx32in";
 }
 def L2_loadalignh_pi : HInst<
@@ -9115,7 +9111,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadbsw2_pcr : HInst<
@@ -9130,7 +9125,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadbsw2_pi : HInst<
@@ -9209,7 +9203,6 @@ let Inst{31-21} = 0b10011000111;
 let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadbsw4_pcr : HInst<
@@ -9222,7 +9215,6 @@ let Inst{31-21} = 0b10011000111;
 let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadbsw4_pi : HInst<
@@ -9301,7 +9293,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadbzw2_pcr : HInst<
@@ -9316,7 +9307,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadbzw2_pi : HInst<
@@ -9395,7 +9385,6 @@ let Inst{31-21} = 0b10011000101;
 let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadbzw4_pcr : HInst<
@@ -9408,7 +9397,6 @@ let Inst{31-21} = 0b10011000101;
 let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadbzw4_pi : HInst<
@@ -9490,7 +9478,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadrb_pcr : HInst<
@@ -9505,7 +9492,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadrb_pi : HInst<
@@ -9609,7 +9595,6 @@ let Inst{31-21} = 0b10011001110;
 let addrMode = PostInc;
 let accessSize = DoubleWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadrd_pcr : HInst<
@@ -9622,7 +9607,6 @@ let Inst{31-21} = 0b10011001110;
 let addrMode = PostInc;
 let accessSize = DoubleWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadrd_pi : HInst<
@@ -9724,7 +9708,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadrh_pcr : HInst<
@@ -9739,7 +9722,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadrh_pi : HInst<
@@ -9849,7 +9831,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadri_pcr : HInst<
@@ -9864,7 +9845,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadri_pi : HInst<
@@ -9974,7 +9954,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadrub_pcr : HInst<
@@ -9989,7 +9968,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadrub_pi : HInst<
@@ -10099,7 +10077,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadruh_pcr : HInst<
@@ -10114,7 +10091,6 @@ let opNewValue = 0;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def L2_loadruh_pi : HInst<
@@ -20982,7 +20958,6 @@ let Inst{31-21} = 0b10101001000;
 let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storerb_pci";
 let isNVStorable = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21190,7 +21165,6 @@ let Inst{31-21} = 0b10101001000;
 let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storerb_pcr";
 let isNVStorable = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21311,7 +21285,6 @@ let isNVStore = 1;
 let isNewValue = 1;
 let isRestrictNoSlot1Store = 1;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storerb_pci";
 let opNewValue = 4;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21330,7 +21303,6 @@ let isNVStore = 1;
 let isNewValue = 1;
 let isRestrictNoSlot1Store = 1;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storerb_pcr";
 let opNewValue = 3;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21448,7 +21420,6 @@ let Inst{31-21} = 0b10101001110;
 let addrMode = PostInc;
 let accessSize = DoubleWordAccess;
 let mayStore = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def S2_storerd_pcr : HInst<
@@ -21461,7 +21432,6 @@ let Inst{31-21} = 0b10101001110;
 let addrMode = PostInc;
 let accessSize = DoubleWordAccess;
 let mayStore = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def S2_storerd_pi : HInst<
@@ -21561,7 +21531,6 @@ let Inst{31-21} = 0b10101001011;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayStore = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def S2_storerf_pcr : HInst<
@@ -21574,7 +21543,6 @@ let Inst{31-21} = 0b10101001011;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayStore = 1;
-let Uses = [CS];
 let Constraints = "$Rx32 = $Rx32in";
 }
 def S2_storerf_pi : HInst<
@@ -21677,7 +21645,6 @@ let Inst{31-21} = 0b10101001010;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storerh_pci";
 let isNVStorable = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21692,7 +21659,6 @@ let Inst{31-21} = 0b10101001010;
 let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storerh_pcr";
 let isNVStorable = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21813,7 +21779,6 @@ let isNVStore = 1;
 let isNewValue = 1;
 let isRestrictNoSlot1Store = 1;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storerh_pci";
 let opNewValue = 4;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21832,7 +21797,6 @@ let isNVStore = 1;
 let isNewValue = 1;
 let isRestrictNoSlot1Store = 1;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storerh_pcr";
 let opNewValue = 3;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21953,7 +21917,6 @@ let Inst{31-21} = 0b10101001100;
 let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storeri_pci";
 let isNVStorable = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -21968,7 +21931,6 @@ let Inst{31-21} = 0b10101001100;
 let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storeri_pcr";
 let isNVStorable = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -22089,7 +22051,6 @@ let isNVStore = 1;
 let isNewValue = 1;
 let isRestrictNoSlot1Store = 1;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storeri_pci";
 let opNewValue = 4;
 let Constraints = "$Rx32 = $Rx32in";
@@ -22108,7 +22069,6 @@ let isNVStore = 1;
 let isNewValue = 1;
 let isRestrictNoSlot1Store = 1;
 let mayStore = 1;
-let Uses = [CS];
 let BaseOpcode = "S2_storeri_pcr";
 let opNewValue = 3;
 let Constraints = "$Rx32 = $Rx32in";

@@ -154,6 +154,17 @@ struct BPFUnwindLower : public MachineFunctionPass {
       MBB.addSuccessor(Succ);
   }
 
+  /// The argument of a call that goes away is poison, which is 'r1 = 0'.
+  /// Nothing reads r1 after a call.
+  static void eraseArg(MachineInstr &Call) {
+    MachineBasicBlock::iterator I = Call, Begin = Call.getParent()->begin();
+    if (I == Begin)
+      return;
+    I = prev_nodbg(I, Begin);
+    if (I->getOpcode() == BPF::MOV_ri && I->getOperand(0).getReg() == BPF::R1)
+      I->eraseFromParent();
+  }
+
   static const char *unsupported(const MachineFunction &MF) {
     if (MF.getLandingPads().empty())
       return nullptr;
@@ -194,19 +205,40 @@ struct BPFUnwindLower : public MachineFunctionPass {
       for (MCSymbol *Sym : LP.BeginLabels)
         Begin[Sym] = LP.LandingPadBlock;
 
+    // The call is not always in the block of the label: an argument that is
+    // a select is computed after the label and takes blocks of its own.
+    SmallPtrSet<MachineInstr *, 8> Invokes;
     for (MachineBasicBlock &MBB : MF) {
-      MachineBasicBlock *Pad = nullptr;
-      for (MachineInstr &MI : MBB) {
-        if (MI.isEHLabel()) {
-          Pad = Begin.lookup(MI.getOperand(0).getMCSymbol());
-          Labels.push_back(&MI);
-        } else if (MI.isCall() && Pad) {
-          Sites.push_back({&MI, Pad});
-        } else if (MI.isCall() && leavesFrame(MI)) {
-          Resumes.push_back(&MI);
+      for (MachineInstr &Label : MBB) {
+        if (!Label.isEHLabel())
+          continue;
+        Labels.push_back(&Label);
+        MachineBasicBlock *Pad =
+            Begin.lookup(Label.getOperand(0).getMCSymbol());
+        if (!Pad)
+          continue;
+        SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>,
+                    4>
+            Work{{&MBB, std::next(Label.getIterator())}};
+        SmallPtrSet<MachineBasicBlock *, 4> Seen;
+        while (!Work.empty()) {
+          auto [Cur, I] = Work.pop_back_val();
+          // The next label ends the range.
+          for (; I != Cur->end() && !I->isEHLabel(); ++I)
+            if (I->isCall() && Invokes.insert(&*I).second)
+              Sites.push_back({&*I, Pad});
+          if (I != Cur->end())
+            continue;
+          for (MachineBasicBlock *Succ : Cur->successors())
+            if (!Succ->isEHPad() && Seen.insert(Succ).second)
+              Work.push_back({Succ, Succ->begin()});
         }
       }
     }
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB)
+        if (MI.isCall() && !Invokes.count(&MI) && leavesFrame(MI))
+          Resumes.push_back(&MI);
     if (Labels.empty() && Resumes.empty())
       return false;
     // There is no unwind_goto after the calls of it.
@@ -230,6 +262,7 @@ struct BPFUnwindLower : public MachineFunctionPass {
       if (leavesFrame(*Call)) {
         endBlockAfter(*Call, Pad);
         BuildMI(MBB, DL, TII.get(BPF::JMP)).addMBB(Pad);
+        eraseArg(*Call);
         Call->eraseFromParent();
       } else if (II && II->doesNotReturn()) {
         // Nothing sensible follows the call, but something has to.
@@ -269,6 +302,7 @@ struct BPFUnwindLower : public MachineFunctionPass {
       MachineBasicBlock *MBB = Call->getParent();
       DebugLoc DL = Call->getDebugLoc();
 
+      eraseArg(*Call);
       BuildMI(*MBB, Call, DL, TII.get(BPF::MOV_ri), BPF::R0).addImm(0);
       MachineInstrBuilder Exit =
           BuildMI(*MBB, Call, DL, TII.get(BPF::UNWIND_EXIT))
