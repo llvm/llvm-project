@@ -6314,7 +6314,8 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
       return DAG.getConstantFP(1.0, DL, LHS.getValueType());
 
     // Scalable vectors cannot fall back to a scalar libcall. Constant exponents
-    // must therefore use the multiplication tree, even when optimizing for size.
+    // must therefore use the multiplication tree, even when optimizing for
+    // size.
     if (LHS.getValueType().isScalableVector() ||
         DAG.getTargetLoweringInfo().isBeneficialToExpandPowI(
             Val, DAG.shouldOptForSize())) {
