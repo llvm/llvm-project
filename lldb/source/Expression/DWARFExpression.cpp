@@ -2155,8 +2155,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         eval_ctx.loc_desc_kind = Memory;
         const uint64_t piece_bit_size = op->getRawOperand(0);
         const uint64_t piece_bit_offset = op->getRawOperand(1);
-        if (piece_bit_size == 0)
+        if (piece_bit_size == 0) {
+          // Each piece's location expression is evaluated independently.
+          stack.clear();
           break;
+        }
         switch (stack.back().GetValueType()) {
         case Value::ValueType::Invalid:
           return llvm::createStringError(
@@ -2187,7 +2190,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           }
           scalar.TruncOrExtendTo(static_cast<uint16_t>(piece_bit_size),
                                  /*sign=*/false);
-          stack.pop_back();
+          // Each piece's location expression is evaluated independently.
+          stack.clear();
           if (llvm::Error err =
                   AppendPieceToComposite(eval_ctx, curr_piece, piece_bit_size))
             return err;

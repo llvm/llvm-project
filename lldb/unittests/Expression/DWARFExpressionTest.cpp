@@ -1022,6 +1022,29 @@ TEST(DWARFExpression, DW_OP_bit_piece) {
       ExpectHostAddress({0xca, 0xdb}));
 }
 
+TEST(DWARFExpression, DW_OP_bit_piece_zero_size) {
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+
+  // A zero-sized piece consumes its source without contributing any bits.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x55, DW_OP_stack_value, DW_OP_bit_piece, 0, 0,
+                DW_OP_const1u, 0xab, DW_OP_stack_value, DW_OP_bit_piece, 8, 0},
+               {}, &dwarf5),
+      ExpectHostAddress({0xab}));
+}
+
+TEST(DWARFExpression, DW_OP_bit_piece_zero_size_clears_stack) {
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+
+  // A trailing zero-sized piece discards all values from its expression.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0xab, DW_OP_stack_value, DW_OP_bit_piece, 8, 0,
+                DW_OP_const1u, 0x55, DW_OP_dup, DW_OP_stack_value,
+                DW_OP_bit_piece, 0, 0},
+               {}, &dwarf5),
+      ExpectHostAddress({0xab}));
+}
+
 TEST(DWARFExpression, DW_OP_implicit_value) {
   unsigned char bytes = 4;
 
