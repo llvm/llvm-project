@@ -855,6 +855,50 @@ void SwingSchedulerDAG::setMAX_II() {
     MAX_II = MII + SwpIISearchRange;
 }
 
+/// Return true if the loop header contains a chained loop-carried PHI
+/// recurrence that ModuloScheduleExpander cannot rotate correctly through the
+/// epilog. The unsafe shape is a loop-carried PHI \p A whose loop-carried
+/// operand is defined by another loop-carried PHI \p B in the same header (a
+/// PHI-to-PHI "delay line"), where A is scheduled in a later stage than B and
+/// B's own loop value is produced in a still-later stage ("swapped"). For such
+/// recurrences the expander's epilog cannot materialize the required rotation,
+/// so the last iteration reads a stale value. The PeelingModuloScheduleExpander
+/// builds a correct steady-state kernel and peels, preserving the rotation.
+/// This predicate is target independent: it inspects only PHI structure and the
+/// computed schedule stages.
+static bool
+hasStaleEpilogPHIRecurrence(MachineBasicBlock &LoopHeader,
+                            const MachineRegisterInfo &MRI,
+                            function_ref<int(MachineInstr *)> GetStage) {
+  auto LoopValue = [&](const MachineInstr &Phi) -> Register {
+    for (unsigned I = 1, E = Phi.getNumOperands(); I != E; I += 2)
+      if (Phi.getOperand(I + 1).getMBB() == &LoopHeader)
+        return Phi.getOperand(I).getReg();
+    return Register();
+  };
+  for (MachineInstr &A : LoopHeader.phis()) {
+    Register AVal = LoopValue(A);
+    if (!AVal.isVirtual())
+      continue;
+    MachineInstr *B = MRI.getVRegDef(AVal);
+    if (!B || !B->isPHI() || B->getParent() != &LoopHeader)
+      continue;
+    int AStage = GetStage(&A);
+    int BStage = GetStage(B);
+    if (AStage <= BStage)
+      continue;
+    // Is B "swapped": is its loop value produced in a later stage than B?
+    Register BVal = LoopValue(*B);
+    if (!BVal.isVirtual())
+      continue;
+    MachineInstr *BDef = MRI.getVRegDef(BVal);
+    if (BDef && BDef->getParent() == &LoopHeader && !BDef->isPHI() &&
+        GetStage(BDef) > BStage)
+      return true;
+  }
+  return false;
+}
+
 SwingSchedulerDAG::SwingSchedulerDAG(MachineFunction &MF,
                                      const MachineLoopInfo *MLI,
                                      MachineOptimizationRemarkEmitter *ORE,
@@ -1046,8 +1090,24 @@ void SwingSchedulerDAG::schedule() {
     MSTI.annotate();
     return;
   }
+  // ModuloScheduleExpander cannot rotate a chained loop-carried PHI recurrence
+  // through the epilog and would emit a stale value on the last iteration.
+  // Route such loops to the peeling expander, which handles them correctly.
+  bool PreferPeeling =
+      NewInstrChanges.empty() &&
+      hasStaleEpilogPHIRecurrence(
+          *Loop.getHeader(), MF.getRegInfo(), [&](MachineInstr *MI) {
+            // getSUnit() may return null for an instruction that has no
+            // SUnit; treat that as "not scheduled" explicitly rather than
+            // relying on stageScheduled(nullptr) returning -1.
+            SUnit *SU = getSUnit(MI);
+            return SU ? Schedule.stageScheduled(SU) : -1;
+          });
+  LLVM_DEBUG(if (PreferPeeling) dbgs()
+             << "Using peeling expander for chained loop-carried PHIs\n");
+
   // The experimental code generator can't work if there are InstChanges.
-  if (ExperimentalCodeGen && NewInstrChanges.empty()) {
+  if ((ExperimentalCodeGen || PreferPeeling) && NewInstrChanges.empty()) {
     PeelingModuloScheduleExpander MSE(MF, MS, &LIS);
     MSE.expand();
   } else if (MVECodeGen && NewInstrChanges.empty() &&
