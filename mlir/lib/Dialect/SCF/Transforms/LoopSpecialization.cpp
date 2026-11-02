@@ -72,13 +72,11 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
   auto ifOp = scf::IfOp::create(b, op.getLoc(), op.getResultTypes(), cond,
                                 /*addThenBlock=*/true, /*addElseBlock=*/true);
 
-  OpBuilder thenBuilder =
-      OpBuilder::atBlockEnd(&ifOp.getThenRegion().front());
+  OpBuilder thenBuilder = OpBuilder::atBlockEnd(&ifOp.getThenRegion().front());
   Operation *thenOp = thenBuilder.clone(*op.getOperation(), map);
   scf::YieldOp::create(thenBuilder, op.getLoc(), thenOp->getResults());
 
-  OpBuilder elseBuilder =
-      OpBuilder::atBlockEnd(&ifOp.getElseRegion().front());
+  OpBuilder elseBuilder = OpBuilder::atBlockEnd(&ifOp.getElseRegion().front());
   Operation *elseOp = elseBuilder.clone(*op.getOperation());
   scf::YieldOp::create(elseBuilder, op.getLoc(), elseOp->getResults());
 
