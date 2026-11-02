@@ -188,6 +188,12 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/argument-comment>` check by adding the
   {option}`IgnoredParameterNames` option to skip parameters by name.
 
+- Improved {doc}`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` check by adding the
+  `ZeroOnly` value to the {option}`CommentIntegerLiterals` option, which only
+  adds comments to integer literals with the value zero. The option still
+  accepts `true` and `false`.
+
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
   assignments inside GNU statement expressions unless they form the value of
