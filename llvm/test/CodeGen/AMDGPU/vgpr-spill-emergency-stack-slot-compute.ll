@@ -34,10 +34,10 @@
 ; HSA: s_add_u32 s0, s0, s{{[0-9]+}}
 ; HSA-NEXT: s_addc_u32 s1, s1, 0
 ; HSA: buffer_store_dword v0, off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
-; HSA: v_mov_b32_e32 v0, 0
-; HSA-NEXT: buffer_store_dword v0, off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
-; HSA: v_mov_b32_e32 v0, 0
-; HSA-NEXT: buffer_store_dword v0, off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; HSA: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; HSA: buffer_store_dword [[ZERO]], off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; HSA: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; HSA: buffer_store_dword [[ZERO]], off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
 ; HSA: buffer_load_dword {{v[0-9]+}}, off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Reload
 
 ; GCN-NOT: flat_scr
