@@ -1405,6 +1405,7 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
              diag::err_invalid_decl_spec_combination)
           << DeclSpec::getSpecifierName(getStorageClassSpec())
           << SourceRange(getStorageClassSpecLoc());
+      // Discard the thread storage class specifier to recover.
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
     }
