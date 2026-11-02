@@ -143,7 +143,9 @@ a.bataev@outlook.com (email), [alexey-bataev](https://github.com/alexey-bataev) 
 #### SROA, Mem2Reg
 
 Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub) \
+Yonah Goldberg \
+ygoldberg@nvidia.com (email), [yonahgoldberg](https://github.com/yonahgoldberg) (GitHub)
 
 #### DFAJumpThreading
 
@@ -343,7 +345,9 @@ asb@igalia.com (email), [asb](https://github.com/asb) (GitHub) \
 Craig Topper \
 craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub) \
 Philip Reames \
-listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub)
+listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub) \
+Sam Elliott \
+aelliott@qti.qualcomm.com (email), [lenary](https://github.com/lenary) (GitHub)
 
 #### Sparc backend
 

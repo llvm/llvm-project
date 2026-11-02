@@ -115,7 +115,11 @@ bool IsLocatorListItem(
 bool IsVariableListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx);
 
-bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+// Analyzes potential substrings and retains diagnostics; may modify semantic
+// state and the parse tree. A missing result indicates an invalid designator,
+// already diagnosed.
+std::optional<bool> IsSubstringAndValidate(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
 bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
 
 const Symbol *GetHostSymbol(const Symbol &sym);
@@ -144,13 +148,6 @@ const Symbol *FindUserReductionSymbol(const Scope &scope,
 // operator from an enclosing module). type filters by supported type as above.
 const Symbol *FindOperatorUserReductionSymbol(const Scope &scope,
     const Symbol &operatorSym, const DeclTypeSpec *type = nullptr);
-
-// Mangled reduction name ("op.+", "op.*", "op.AND", ...) that semantics stores
-// an intrinsic-operator user reduction under, produced by the same
-// MakeNameFromOperator the reduction-declaration semantics use so a clause-side
-// lookup matches byte-for-byte.
-parser::CharBlock MangledIntrinsicOperatorReductionName(
-    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
@@ -279,7 +276,7 @@ struct MetadirectiveCandidate {
 
 struct MetadirectiveCandidateSet {
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
-  /// Null represents either an explicit NOTHING fallback or no fallback.
+  /// Null represents either a clause-free NOTHING fallback or no fallback.
   const parser::OmpDirectiveSpecification *fallback{nullptr};
 };
 
@@ -313,7 +310,7 @@ llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
     const OmpVariantMatchContext &matchContext, SemanticsContext &context);
 
 /// Return every replacement that can be selected, retaining lower-ranked
-/// candidates after a dynamic condition. Null represents NOTHING.
+/// candidates after a dynamic condition. Null represents clause-free NOTHING.
 llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
 GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
     const OmpVariantMatchContext &matchContext, SemanticsContext &context);

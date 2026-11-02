@@ -17,14 +17,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test() {
 ; SSE-LABEL: 'test'
-; SSE:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB>
+; SSE:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB> (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ; SSE:  Cost of 3000000 for VF 2: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ; SSE:  Cost of 3000000 for VF 4: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ; SSE:  Cost of 3000000 for VF 8: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ; SSE:  Cost of 3000000 for VF 16: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ;
 ; AVX1-LABEL: 'test'
-; AVX1:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB>
+; AVX1:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB> (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ; AVX1:  Cost of 3000000 for VF 2: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ; AVX1:  Cost of 3000000 for VF 4: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ; AVX1:  Cost of 3000000 for VF 8: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
@@ -32,7 +32,7 @@ define void @test() {
 ; AVX1:  Cost of 3000000 for VF 32: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ;
 ; AVX2-SLOWGATHER-LABEL: 'test'
-; AVX2-SLOWGATHER:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB>
+; AVX2-SLOWGATHER:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB> (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ; AVX2-SLOWGATHER:  Cost of 3000000 for VF 2: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ; AVX2-SLOWGATHER:  Cost of 3000000 for VF 4: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ; AVX2-SLOWGATHER:  Cost of 3000000 for VF 8: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
@@ -40,21 +40,21 @@ define void @test() {
 ; AVX2-SLOWGATHER:  Cost of 3000000 for VF 32: REPLICATE ir<%valB.loaded> = load ir<%inB> (S->V)
 ;
 ; AVX2-FASTGATHER-LABEL: 'test'
-; AVX2-FASTGATHER:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB>
-; AVX2-FASTGATHER:  Cost of 4 for VF 2: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX2-FASTGATHER:  Cost of 6 for VF 4: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX2-FASTGATHER:  Cost of 12 for VF 8: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX2-FASTGATHER:  Cost of 24 for VF 16: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX2-FASTGATHER:  Cost of 48 for VF 32: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
+; AVX2-FASTGATHER:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB> (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2-FASTGATHER:  Cost of 4 for VF 2: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2-FASTGATHER:  Cost of 6 for VF 4: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2-FASTGATHER:  Cost of 16 for VF 8: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2-FASTGATHER:  Cost of 36 for VF 16: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2-FASTGATHER:  Cost of 76 for VF 32: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ;
 ; AVX512-LABEL: 'test'
-; AVX512:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB>
-; AVX512:  Cost of 8 for VF 2: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX512:  Cost of 18 for VF 4: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX512:  Cost of 10 for VF 8: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX512:  Cost of 20 for VF 16: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>
+; AVX512:  Cost of 1 for VF 1: EMIT-SCALAR ir<%valB.loaded> = load ir<%inB> (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 8 for VF 2: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 18 for VF 4: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 10 for VF 8: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 24 for VF 16: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 52 for VF 32: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 108 for VF 64: WIDEN ir<%valB.loaded> = load ir<%inB>, ir<%canLoad>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ;
 entry:
   br label %for.body

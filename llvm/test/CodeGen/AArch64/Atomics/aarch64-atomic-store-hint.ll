@@ -457,7 +457,7 @@ define void @test_atomic_store_stcph_seqcst_i64(ptr %ptr, i64 %val) nounwind {
 define void @test_atomic_store_shuh_relaxed_i8(ptr %ptr, i8 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_shuh_relaxed_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shuh{{$}}
+; CHECK-NEXT:    shuh
 ; CHECK-NEXT:    strb w1, [x0]
 ; CHECK-NEXT:    ret
   store atomic i8 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !6
@@ -531,7 +531,7 @@ define void @test_atomic_store_shuh_release_i32(ptr %ptr, i32 %val) nounwind {
 define void @test_atomic_store_shuh_release_i64(ptr %ptr, i64 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_shuh_release_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shuh{{$}}
+; CHECK-NEXT:    shuh
 ; CHECK-NEXT:    stlr x1, [x0]
 ; CHECK-NEXT:    ret
   store atomic i64 %val, ptr %ptr release, align 8, !mem.cache_hint !6

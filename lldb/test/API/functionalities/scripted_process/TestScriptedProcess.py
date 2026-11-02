@@ -171,6 +171,78 @@ class ScriptedProcesTestCase(TestBase):
         self.assertIn("Failed to get scripted thread registers data.", log)
 
     @skipUnlessDarwin
+    def test_scripted_extension_instances(self):
+        """Test that the threads and frames a scripted process creates in Python
+        are listed under their own classes, not under the process's."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"] = "1"
+
+        def cleanup():
+            del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+
+        self.addTearDownHook(cleanup)
+
+        script_path = os.path.join(self.getSourceDir(), "dummy_scripted_process.py")
+        self.runCmd("command script import " + script_path)
+
+        args = lldb.SBStructuredData()
+        self.assertSuccess(args.SetFromJSON('{"answer": 42}'))
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetProcessPluginName("ScriptedProcess")
+        launch_info.SetScriptedProcessClassName(
+            "dummy_scripted_process.DummyScriptedProcess"
+        )
+        launch_info.SetScriptedProcessDictionary(args)
+
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
+        # Fetching the frames is what wraps the Python frame objects.
+        self.assertGreater(process.GetThreadAtIndex(0).GetNumFrames(), 0)
+
+        result = lldb.SBCommandReturnObject()
+        self.dbg.GetCommandInterpreter().HandleCommand(
+            "scripting extension list --instances --json", result
+        )
+        self.assertTrue(result.Succeeded(), result.GetError())
+        data = lldb.SBStructuredData()
+        self.assertSuccess(data.SetFromJSON(result.GetOutput()))
+        groups = {}
+        for i in range(data.GetSize()):
+            group = data.GetItemAtIndex(i)
+            groups[group.GetValueForKey("class_name").GetStringValue(256)] = group
+
+        def args_of(class_name):
+            instance = groups[class_name].GetValueForKey("instances").GetItemAtIndex(0)
+            return instance.GetValueForKey("args")
+
+        process_class = "dummy_scripted_process.DummyScriptedProcess"
+        thread_class = "dummy_scripted_process.DummyScriptedThread"
+        frame_class = "dummy_scripted_process.DummyScriptedFrame"
+        self.assertIn(process_class, groups)
+        self.assertIn(thread_class, groups)
+        self.assertIn(frame_class, groups)
+        self.assertEqual(groups[process_class].GetValueForKey("instances").GetSize(), 1)
+        for class_name in (thread_class, frame_class):
+            self.assertEqual(
+                os.path.realpath(
+                    groups[class_name]
+                    .GetValueForKey("source_path")
+                    .GetStringValue(4096)
+                ),
+                os.path.realpath(script_path),
+            )
+
+        # Only the process was created from the launch arguments.
+        self.assertEqual(
+            args_of(process_class).GetValueForKey("answer").GetIntegerValue(), 42
+        )
+        self.assertFalse(args_of(thread_class).IsValid())
+
+    @skipUnlessDarwin
     def test_scripted_process_and_scripted_thread(self):
         """Test that we can launch an lldb scripted process using the SBAPI,
         check its process ID, read string from memory, check scripted thread

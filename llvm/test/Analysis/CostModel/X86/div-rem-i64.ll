@@ -8,49 +8,49 @@ define void @wide(<2 x i64> %a2, <2 x i64> %b2, <4 x i64> %a4, <4 x i64> %b4, <8
 ; AVX2-LABEL: 'wide'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %sdiv2 = sdiv <2 x i64> %a2, %b2
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %udiv2 = udiv <2 x i64> %a2, %b2
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %srem2 = srem <2 x i64> %a2, %b2
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %urem2 = urem <2 x i64> %a2, %b2
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem2 = srem <2 x i64> %a2, %b2
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem2 = urem <2 x i64> %a2, %b2
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %sdiv4 = sdiv <4 x i64> %a4, %b4
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %udiv4 = udiv <4 x i64> %a4, %b4
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %sdiv8 = sdiv <8 x i64> %a8, %b8
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %udiv8 = udiv <8 x i64> %a8, %b8
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %srem8 = srem <8 x i64> %a8, %b8
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem8 = srem <8 x i64> %a8, %b8
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512BW-LABEL: 'wide'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %sdiv2 = sdiv <2 x i64> %a2, %b2
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %udiv2 = udiv <2 x i64> %a2, %b2
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %srem2 = srem <2 x i64> %a2, %b2
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %urem2 = urem <2 x i64> %a2, %b2
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem2 = srem <2 x i64> %a2, %b2
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem2 = urem <2 x i64> %a2, %b2
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %sdiv4 = sdiv <4 x i64> %a4, %b4
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %udiv4 = udiv <4 x i64> %a4, %b4
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %sdiv8 = sdiv <8 x i64> %a8, %b8
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %udiv8 = udiv <8 x i64> %a8, %b8
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %srem8 = srem <8 x i64> %a8, %b8
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem8 = srem <8 x i64> %a8, %b8
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512DQ-LABEL: 'wide'
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %sdiv2 = sdiv <2 x i64> %a2, %b2
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %udiv2 = udiv <2 x i64> %a2, %b2
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %srem2 = srem <2 x i64> %a2, %b2
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %urem2 = urem <2 x i64> %a2, %b2
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem2 = srem <2 x i64> %a2, %b2
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem2 = urem <2 x i64> %a2, %b2
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %sdiv4 = sdiv <4 x i64> %a4, %b4
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %udiv4 = udiv <4 x i64> %a4, %b4
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %sdiv8 = sdiv <8 x i64> %a8, %b8
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %udiv8 = udiv <8 x i64> %a8, %b8
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %srem8 = srem <8 x i64> %a8, %b8
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem8 = srem <8 x i64> %a8, %b8
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512DQ-SLOWMUL-LABEL: 'wide'
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %sdiv2 = sdiv <2 x i64> %a2, %b2
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %udiv2 = udiv <2 x i64> %a2, %b2
-; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %srem2 = srem <2 x i64> %a2, %b2
-; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %urem2 = urem <2 x i64> %a2, %b2
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem2 = srem <2 x i64> %a2, %b2
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem2 = urem <2 x i64> %a2, %b2
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %sdiv4 = sdiv <4 x i64> %a4, %b4
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %udiv4 = udiv <4 x i64> %a4, %b4
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %sdiv8 = sdiv <8 x i64> %a8, %b8
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %udiv8 = udiv <8 x i64> %a8, %b8
-; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %srem8 = srem <8 x i64> %a8, %b8
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem8 = srem <8 x i64> %a8, %b8
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %sdiv2 = sdiv <2 x i64> %a2, %b2
@@ -70,7 +70,7 @@ define void @narrow_ext(<2 x i32> %x2, <2 x i32> %y2, <4 x i32> %x4, <4 x i32> %
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a2 = zext <2 x i32> %x2 to <2 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %b2 = zext <2 x i32> %y2 to <2 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %udiv2 = udiv <2 x i64> %a2, %b2
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %urem2 = urem <2 x i64> %a2, %b2
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem2 = urem <2 x i64> %a2, %b2
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4 = sext <4 x i32> %x4 to <4 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t4 = sext <4 x i32> %y4 to <4 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %sdiv4 = sdiv <4 x i64> %s4, %t4
@@ -83,7 +83,7 @@ define void @narrow_ext(<2 x i32> %x2, <2 x i32> %y2, <4 x i32> %x4, <4 x i32> %
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a2 = zext <2 x i32> %x2 to <2 x i64>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %b2 = zext <2 x i32> %y2 to <2 x i64>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %udiv2 = udiv <2 x i64> %a2, %b2
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %urem2 = urem <2 x i64> %a2, %b2
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem2 = urem <2 x i64> %a2, %b2
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = sext <4 x i32> %x4 to <4 x i64>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t4 = sext <4 x i32> %y4 to <4 x i64>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %sdiv4 = sdiv <4 x i64> %s4, %t4
@@ -96,7 +96,7 @@ define void @narrow_ext(<2 x i32> %x2, <2 x i32> %y2, <4 x i32> %x4, <4 x i32> %
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a2 = zext <2 x i32> %x2 to <2 x i64>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %b2 = zext <2 x i32> %y2 to <2 x i64>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %udiv2 = udiv <2 x i64> %a2, %b2
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %urem2 = urem <2 x i64> %a2, %b2
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem2 = urem <2 x i64> %a2, %b2
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = sext <4 x i32> %x4 to <4 x i64>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t4 = sext <4 x i32> %y4 to <4 x i64>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sdiv4 = sdiv <4 x i64> %s4, %t4
@@ -109,7 +109,7 @@ define void @narrow_ext(<2 x i32> %x2, <2 x i32> %y2, <4 x i32> %x4, <4 x i32> %
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a2 = zext <2 x i32> %x2 to <2 x i64>
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %b2 = zext <2 x i32> %y2 to <2 x i64>
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %udiv2 = udiv <2 x i64> %a2, %b2
-; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %urem2 = urem <2 x i64> %a2, %b2
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem2 = urem <2 x i64> %a2, %b2
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = sext <4 x i32> %x4 to <4 x i64>
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t4 = sext <4 x i32> %y4 to <4 x i64>
 ; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sdiv4 = sdiv <4 x i64> %s4, %t4

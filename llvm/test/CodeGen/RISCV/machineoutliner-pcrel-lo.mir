@@ -7,10 +7,12 @@
 # RUN: | FileCheck -check-prefix=CHECK-FS %s
 # RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir --function-sections -verify-machineinstrs -outliner-leaf-descendants=false < %s \
 # RUN: | FileCheck -check-prefix=CHECK-FS %s
+# CHECK: define internal void @OUTLINED_FUNCTION_2() unnamed_addr {{.*}} section ".abc"
+# CHECK-FS: define internal void @OUTLINED_FUNCTION_1() unnamed_addr {{.*}} section ".abc"
 
 --- |
-  ; Cannot outline instructions with pcrel-lo operands if function section
-  ; enabled.
+  ; pcrel-lo operands stay in the source section when outlining could split
+  ; their pcrel-hi/pcrel-lo pair across sections.
   @bar = dso_local local_unnamed_addr global i32 0, align 4
   define i32 @foo(i32 %a, i32 %b) { ret i32 0 }
 
@@ -199,30 +201,21 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x11 = ORI $x11, 1023
-  ; CHECK-NEXT:   $x12 = ADDI $x10, 17
-  ; CHECK-NEXT:   $x11 = AND $x12, $x11
-  ; CHECK-NEXT:   $x10 = SUB $x10, $x11
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_2, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x11 = ORI $x11, 1023
-  ; CHECK-NEXT:   $x12 = ADDI $x10, 17
-  ; CHECK-NEXT:   $x11 = AND $x12, $x11
-  ; CHECK-NEXT:   $x10 = SUB $x10, $x11
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_2, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x11 = ORI $x11, 1023
-  ; CHECK-NEXT:   $x12 = ADDI $x10, 17
-  ; CHECK-NEXT:   $x11 = AND $x12, $x11
-  ; CHECK-NEXT:   $x10 = SUB $x10, $x11
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_2, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -233,30 +226,21 @@ body:             |
   ; CHECK-FS: bb.0:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x11 = ORI $x11, 1023
-  ; CHECK-FS-NEXT:   $x12 = ADDI $x10, 17
-  ; CHECK-FS-NEXT:   $x11 = AND $x12, $x11
-  ; CHECK-FS-NEXT:   $x10 = SUB $x10, $x11
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}
   ; CHECK-FS-NEXT: bb.1:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x11 = ORI $x11, 1023
-  ; CHECK-FS-NEXT:   $x12 = ADDI $x10, 17
-  ; CHECK-FS-NEXT:   $x11 = AND $x12, $x11
-  ; CHECK-FS-NEXT:   $x10 = SUB $x10, $x11
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}
   ; CHECK-FS-NEXT: bb.2:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x11 = ORI $x11, 1023
-  ; CHECK-FS-NEXT:   $x12 = ADDI $x10, 17
-  ; CHECK-FS-NEXT:   $x11 = AND $x12, $x11
-  ; CHECK-FS-NEXT:   $x10 = SUB $x10, $x11
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
   ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}

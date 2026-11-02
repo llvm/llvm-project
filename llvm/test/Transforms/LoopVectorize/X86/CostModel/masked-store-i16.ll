@@ -16,14 +16,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test(ptr %C) {
 ; SSE-LABEL: 'test'
-; SSE:  Cost of 1 for VF 1: EMIT store ir<%valB>, ir<%out>
+; SSE:  Cost of 1 for VF 1: EMIT store ir<%valB>, ir<%out> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ; SSE:  Cost of 2 for VF 2: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; SSE:  Cost of 4 for VF 4: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; SSE:  Cost of 8 for VF 8: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; SSE:  Cost of 16 for VF 16: profitable to scalarize store i16 %valB, ptr %out, align 2
 ;
 ; AVX1-LABEL: 'test'
-; AVX1:  Cost of 1 for VF 1: EMIT store ir<%valB>, ir<%out>
+; AVX1:  Cost of 1 for VF 1: EMIT store ir<%valB>, ir<%out> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ; AVX1:  Cost of 2 for VF 2: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; AVX1:  Cost of 4 for VF 4: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; AVX1:  Cost of 8 for VF 8: profitable to scalarize store i16 %valB, ptr %out, align 2
@@ -31,7 +31,7 @@ define void @test(ptr %C) {
 ; AVX1:  Cost of 33 for VF 32: profitable to scalarize store i16 %valB, ptr %out, align 2
 ;
 ; AVX2-LABEL: 'test'
-; AVX2:  Cost of 1 for VF 1: EMIT store ir<%valB>, ir<%out>
+; AVX2:  Cost of 1 for VF 1: EMIT store ir<%valB>, ir<%out> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ; AVX2:  Cost of 2 for VF 2: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; AVX2:  Cost of 4 for VF 4: profitable to scalarize store i16 %valB, ptr %out, align 2
 ; AVX2:  Cost of 8 for VF 8: profitable to scalarize store i16 %valB, ptr %out, align 2
@@ -39,13 +39,13 @@ define void @test(ptr %C) {
 ; AVX2:  Cost of 33 for VF 32: profitable to scalarize store i16 %valB, ptr %out, align 2
 ;
 ; AVX512-LABEL: 'test'
-; AVX512:  Cost of 1 for VF 1: EMIT store ir<%valB>, ir<%out>
-; AVX512:  Cost of 2 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
-; AVX512:  Cost of 2 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
-; AVX512:  Cost of 1 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
-; AVX512:  Cost of 1 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
-; AVX512:  Cost of 1 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
-; AVX512:  Cost of 2 for VF 64: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 1: EMIT store ir<%valB>, ir<%out> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 2 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore>, align 2 (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 2 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>, align 2 (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>, align 2 (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>, align 2 (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>, align 2 (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 6 for VF 64: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>, align 2 (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ;
 entry:
   br label %for.body

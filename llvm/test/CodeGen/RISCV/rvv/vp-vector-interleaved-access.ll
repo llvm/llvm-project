@@ -549,9 +549,8 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
 define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @gap_mask_single_field_load_factor4_mask(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: gap_mask_single_field_load_factor4_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vlseg4e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %rvl = mul nuw i32 %evl, 4
   %actual.mask = call <vscale x 8 x i1> @llvm.vector.interleave4(<vscale x 2 x i1> %m, <vscale x 2 x i1> %m, <vscale x 2 x i1> %m, <vscale x 2 x i1> %m)

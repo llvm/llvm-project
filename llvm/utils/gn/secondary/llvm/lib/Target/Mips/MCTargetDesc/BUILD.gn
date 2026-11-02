@@ -30,6 +30,12 @@ tablegen("MipsGenSubtargetInfo") {
   td_file = "../Mips.td"
 }
 
+tablegen("MipsMCOptions") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "MipsMCOptions.td"
+}
+
 # This should contain tablegen targets generating .inc files included
 # by other targets. .inc files only used by .cpp files in this directory
 # should be in deps on the static_library instead.
@@ -42,6 +48,7 @@ group("tablegen") {
     ":MipsGenInstrInfo",
     ":MipsGenRegisterInfo",
     ":MipsGenSubtargetInfo",
+    ":MipsMCOptions",
   ]
 }
 
@@ -53,6 +60,7 @@ static_library("MCTargetDesc") {
     ":MipsGenMCCodeEmitter",
     "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target/Mips/AsmParser:MipsGenAsmMatcher",
     "//llvm/lib/Target/Mips/TargetInfo",

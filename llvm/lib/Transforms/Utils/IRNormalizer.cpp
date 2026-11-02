@@ -454,14 +454,14 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     // Reorder based on the topological sort.
     while (!TopologicalSort.empty()) {
       auto *Instruction = TopologicalSort.top();
-      auto FirstNonPHIOrDbgOrAlloca = BB.getFirstNonPHIOrDbgOrAlloca();
-      if (auto *Call = dyn_cast<CallInst>(&*FirstNonPHIOrDbgOrAlloca)) {
+      auto FirstNonPHIOrAlloca = BB.getFirstNonPHIOrAlloca();
+      if (auto *Call = dyn_cast<CallInst>(&*FirstNonPHIOrAlloca)) {
         if (Call->getIntrinsicID() ==
                 Intrinsic::experimental_convergence_entry ||
             Call->getIntrinsicID() == Intrinsic::experimental_convergence_loop)
-          FirstNonPHIOrDbgOrAlloca++;
+          FirstNonPHIOrAlloca++;
       }
-      Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
+      Instruction->moveBefore(FirstNonPHIOrAlloca);
       TopologicalSort.pop();
     }
   }
@@ -476,11 +476,10 @@ void IRNormalizer::reorderDefinition(
 
   {
     const auto *BasicBlock = Definition->getParent();
-    const auto FirstNonPHIOrDbgOrAlloca =
-        BasicBlock->getFirstNonPHIOrDbgOrAlloca();
-    if (FirstNonPHIOrDbgOrAlloca == BasicBlock->end())
+    const auto FirstNonPHIOrAlloca = BasicBlock->getFirstNonPHIOrAlloca();
+    if (FirstNonPHIOrAlloca == BasicBlock->end())
       return; // TODO: Is this necessary?
-    if (Definition->comesBefore(&*FirstNonPHIOrDbgOrAlloca))
+    if (Definition->comesBefore(&*FirstNonPHIOrAlloca))
       return; // TODO: Do some kind of ordering for these instructions.
   }
 

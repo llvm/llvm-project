@@ -1,0 +1,11 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+
+---
+name: fp_infinity
+body: |
+  bb.0:
+    ; CHECK: %0:_(s32) = G_FCONSTANT float +inf
+    ; CHECK: %1:_(s32) = G_FCONSTANT float -inf
+    %0:_(s32) = G_FCONSTANT float +inf
+    %1:_(s32) = G_FCONSTANT float -inf
+...
