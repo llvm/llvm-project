@@ -13674,16 +13674,11 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
   // reach the containing dword rather than the bytes asked for.
   if (MemOp->getAlign() < Align(4))
     return reportUnsupported();
-  if (isa<LoadSDNode>(MemOp)) {
-    if (AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(BitWidth) == -1)
-      return reportUnsupported();
-  } else {
-    auto *Store = cast<StoreSDNode>(MemOp);
-    if (Store->isTruncatingStore())
-      return reportUnsupported();
-    if (AMDGPUMI::VStoreIdxInst::tryGetOpcodeForBitWidth(BitWidth) == -1)
-      return reportUnsupported();
-  }
+  if (!AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(BitWidth))
+    return reportUnsupported();
+  auto *Store = dyn_cast<StoreSDNode>(MemOp);
+  if (Store && Store->isTruncatingStore())
+    return reportUnsupported();
 
   SDValue Chain = MemOp->getChain();
   SDValue Index = DAG.getNode(ISD::SRL, DL, MVT::i32, MemOp->getBasePtr(),
@@ -13698,11 +13693,11 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
                 : EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumDwords);
   }
 
-  if (auto *StoreOp = dyn_cast<StoreSDNode>(MemOp)) {
-    SDValue Value = DAG.getBitcast(RegVT, StoreOp->getValue());
+  if (Store) {
+    SDValue Value = DAG.getBitcast(RegVT, Store->getValue());
     return DAG.getMemIntrinsicNode(
         AMDGPUISD::REG_STORE, DL, DAG.getVTList(MVT::Other),
-        {Chain, Value, Index}, MemVT, StoreOp->getMemOperand());
+        {Chain, Value, Index}, MemVT, Store->getMemOperand());
   }
 
   auto *LoadOp = cast<LoadSDNode>(MemOp);
@@ -13724,9 +13719,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   ISD::LoadExtType ExtType = Load->getExtensionType();
   EVT MemVT = Load->getMemoryVT();
   MachineMemOperand *MMO = Load->getMemOperand();
-
-  if (Load->getAddressSpace() == AMDGPUAS::VGPR)
-    return lowerLoadStoreVGPR(Op, DAG);
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
     // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
@@ -14423,9 +14415,6 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   StoreSDNode *Store = cast<StoreSDNode>(Op);
   EVT VT = Store->getMemoryVT();
-
-  if (Store->getAddressSpace() == AMDGPUAS::VGPR)
-    return lowerLoadStoreVGPR(Op, DAG);
 
   if (VT == MVT::i1) {
     return DAG.getTruncStore(

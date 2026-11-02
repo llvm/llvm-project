@@ -27,18 +27,7 @@ unsigned VLoadStoreIdxInst::getNumIndexableVGPRs(const MachineFunction &MF) {
                   ST.getAddressableNumVGPRs(DynamicVGPRBlockSize));
 }
 
-int VLoadIdxInst::tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
-  const AMDGPU::VLdStIdxOpcodeInfo *Info =
-      AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/false, IsGPRIdx);
-  if (!Info)
-    return -1;
-  return Info->Opcode;
-}
-
-int VStoreIdxInst::tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
-  const AMDGPU::VLdStIdxOpcodeInfo *Info =
-      AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/true, IsGPRIdx);
-  if (!Info)
-    return -1;
-  return Info->Opcode;
+bool VLoadStoreIdxInst::isSupportedBitWidth(unsigned Bits) {
+  return AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/false,
+                                            /*IsGPRIdx=*/false) != nullptr;
 }

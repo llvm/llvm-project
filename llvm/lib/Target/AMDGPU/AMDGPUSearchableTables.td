@@ -457,7 +457,7 @@ def VLdStIdxOpcodeInfoTable : GenericTable {
   let CppTypeName = "VLdStIdxOpcodeInfo";
   let Fields = ["Opcode", "BitWidth", "IsStore", "IsGPRIdx"];
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getVLdStIdxOpcodeInfoByOpcodeImpl";
+  let PrimaryKeyName = "getVLdStIdxOpcodeInfoByOpcode";
 }
 
 def getVLdStIdxOpcodeInfoByKeyImpl : SearchIndex {
