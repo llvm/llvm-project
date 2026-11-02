@@ -105,18 +105,22 @@ static bool collectDirectCallSites(Function &F,
   return true;
 }
 
-static bool isTriviallyUniform(const Use &U, const TargetTransformInfo &TTI) {
-  Value *V = U.get();
+static bool isTriviallyUniform(
+    CallBase &CB, unsigned ArgNo,
+    function_ref<const TargetTransformInfo &(Function &)> GetTTI) {
+  Value *V = CB.getArgOperand(ArgNo);
   if (isa<Constant>(V))
     return true;
   if (const auto *A = dyn_cast<Argument>(V))
     return AMDGPU::isArgPassedInSGPR(A);
   if (const auto *I = dyn_cast<Instruction>(V)) {
-    if (TTI.getValueUniformity(I) != ValueUniformity::AlwaysUniform)
+    // Only an instruction operand needs TTI, so it is fetched lazily.
+    if (GetTTI(*CB.getFunction()).getValueUniformity(I) !=
+        ValueUniformity::AlwaysUniform)
       return false;
-    // If I and U are in different blocks then there is a possibility of
+    // If I and the call are in different blocks then there is a possibility of
     // temporal divergence.
-    return I->getParent() == cast<Instruction>(U.getUser())->getParent();
+    return I->getParent() == CB.getParent();
   }
   return false;
 }
@@ -139,8 +143,7 @@ static bool promoteUniformArgsToInReg(
       bool AllUniform = true;
       for (CallBase *CB : Calls) {
         if (hasIncompatibleParamAttr(*CB, ArgNo) ||
-            !isTriviallyUniform(CB->getArgOperandUse(ArgNo),
-                                GetTTI(*CB->getFunction()))) {
+            !isTriviallyUniform(*CB, ArgNo, GetTTI)) {
           AllUniform = false;
           break;
         }
