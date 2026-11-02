@@ -1,0 +1,33 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler \
+# RUN:   -verify-machineinstrs \
+# RUN:   -amdgpu-print-max-reg-pressure-regusage-before-scheduler \
+# RUN:   -filetype=null %s 2>&1 | FileCheck %s
+
+# The VGPR %v is live only between AV registers. The point with the most VGPRs
+# is not the point with the most VGPRs and AV registers together, so the dump
+# must count the VGPRs on their own.
+
+# CHECK-LABEL: *** Register pressure info (VGPRs) for max_rp_class_switch ***
+# CHECK-NEXT:  Max pressure is 1 VGPRs at {{.*}} REG_SEQUENCE
+# CHECK:       Live registers with single definition (1 VGPRs):
+# CHECK-NEXT:    {{%[0-9]+}}:VGPR_32, LiveMask {{[0-9]+}} (1 VGPRs)
+# CHECK-NEXT:      def {{.*}} %v:vgpr_32 = COPY
+# CHECK-LABEL: *** Register pressure info (SGPRs) for max_rp_class_switch ***
+# CHECK-NEXT:  Max pressure is 1 SGPRs at
+
+--- |
+  define amdgpu_kernel void @max_rp_class_switch() { ret void }
+...
+---
+name: max_rp_class_switch
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %s:sgpr_32 = S_MOV_B32 1
+    %a:av_64 = IMPLICIT_DEF
+    %v:vgpr_32 = COPY %a.sub0
+    %b:av_64 = REG_SEQUENCE %v, %subreg.sub0, %v, %subreg.sub1
+    S_NOP 0, implicit %b, implicit %s
+    S_ENDPGM 0
+...

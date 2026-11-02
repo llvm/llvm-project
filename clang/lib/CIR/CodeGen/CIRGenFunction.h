@@ -42,10 +42,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 
-namespace {
-class ScalarExprEmitter;
-} // namespace
-
 namespace mlir {
 namespace acc {
 class LoopOp;
@@ -66,7 +62,6 @@ public:
   CIRGenModule &cgm;
 
 private:
-  friend class ::ScalarExprEmitter;
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
@@ -1366,6 +1361,12 @@ public:
     EHScopeStack::stable_iterator cleanupStackDepth, oldCleanupStackDepth;
     size_t lifetimeExtendedCleanupStackSize;
     CleanupDeactivationScope deactivateCleanups;
+    bool deferLifetimeExtended = false;
+
+    size_t oldLifetimeExtendedSize() const {
+      return deferLifetimeExtended ? cgf.lifetimeExtendedCleanupStack.size()
+                                   : lifetimeExtendedCleanupStackSize;
+    }
 
   protected:
     bool performCleanup;
@@ -1446,8 +1447,7 @@ public:
       // pop cir.cleanup.scope ops); they already dominate the post-scope
       // insertion point on their own.
       if (didSpillAny) {
-        cgf.popCleanupBlocks(cleanupStackDepth,
-                             lifetimeExtendedCleanupStackSize);
+        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize());
 
         // Reload the spilled values now that all cleanup popping (and
         // promotion of any lifetime-extended cleanups onto the EH stack) is
@@ -1458,8 +1458,8 @@ public:
           *valPtr = cgf.builder.createLoad(valPtr->getLoc(), addr);
         }
       } else {
-        cgf.popCleanupBlocks(cleanupStackDepth,
-                             lifetimeExtendedCleanupStackSize, valuesToReload);
+        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize(),
+                             valuesToReload);
       }
 
       performCleanup = false;
@@ -1484,7 +1484,7 @@ public:
       assert(performCleanup && "Already forced cleanup");
       assert(deactivateCleanups.deactivated &&
              "forceCleanupExceptLifetimeExtended() must be called first");
-      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize);
+      cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize());
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
@@ -1494,24 +1494,42 @@ public:
     bool hasPendingCleanups() const {
       return cgf.ehStack.stable_begin() != cleanupStackDepth;
     }
+
+    /// Leave the cleanups of lifetime-extended temporaries created in this
+    /// scope to the enclosing scope instead of pushing them onto the EH stack
+    /// when this scope ends. This is for a scope that ends in the body of a
+    /// loop, such as the construction of an array element: the cleanup scope
+    /// of such a temporary ends with that of the variable that extends its
+    /// lifetime, after the loop.
+    void deferLifetimeExtendedCleanups() { deferLifetimeExtended = true; }
   };
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
   EHScopeStack::stable_iterator currentCleanupStackDepth = ehStack.stable_end();
+
+  class ConditionalEvaluation;
 
   class FullExprCleanupScope {
     CIRGenFunction &cgf;
     RunCleanupsScope cleanups;
     cir::CleanupScopeOp scope;
     cir::CleanupScopeOp oldFullExprCleanupScope;
+    ConditionalEvaluation *oldOutermostConditional;
+    ConditionalEvaluation *oldHiddenOutermostConditional;
     size_t deferredCleanupStackSize;
     size_t conditionalScopeDepth;
     bool exited = false;
 
   public:
-    FullExprCleanupScope(CIRGenFunction &cgf, const Expr *subExpr);
+    /// \p s is the AST root for one cleanup boundary: a full-expression, an
+    /// asm statement, or the construction of one array element.
+    FullExprCleanupScope(CIRGenFunction &cgf, const Stmt *s);
 
     void exit(ArrayRef<mlir::Value *> valuesToReload = {});
+
+    void deferLifetimeExtendedCleanups() {
+      cleanups.deferLifetimeExtendedCleanups();
+    }
 
     ~FullExprCleanupScope() {
       if (!exited)
@@ -1522,6 +1540,11 @@ public:
     FullExprCleanupScope(const FullExprCleanupScope &) = delete;
     void operator=(const FullExprCleanupScope &) = delete;
   };
+
+  /// Whether the resume expression of \p s contains a construct that defers
+  /// cleanups to the end of the enclosing full-expression: a temporary with a
+  /// destructor, other than the result of await_resume(), or a conditional.
+  static bool resumeExprDefersCleanups(const CoroutineSuspendExpr &s);
 
   /// Captures cleanups for variables whose lifetime ends in a region owned by
   /// an enclosing op rather than at the end of a cir.cleanup.scope, so that
@@ -2718,6 +2741,13 @@ public:
   // we know if a temporary should be destroyed conditionally.
   ConditionalEvaluation *outermostConditional = nullptr;
 
+  // The outermost conditional that a FullExprCleanupScope in a conditional
+  // branch hides from isInConditionalBranch(), if any. The cleanups of that
+  // full-expression run at its end, so they are not conditional, but a
+  // temporary whose lifetime is extended beyond it is still created
+  // conditionally.
+  ConditionalEvaluation *hiddenOutermostConditional = nullptr;
+
   /// An RAII object to record that we're evaluating a statement
   /// expression.
   class StmtExprEvaluation {
@@ -2727,15 +2757,19 @@ public:
     /// statement expression aren't conditional just because the
     /// StmtExpr is.
     ConditionalEvaluation *savedOutermostConditional;
+    ConditionalEvaluation *savedHiddenOutermostConditional;
 
   public:
     StmtExprEvaluation(CIRGenFunction &cgf)
-        : cgf(cgf), savedOutermostConditional(cgf.outermostConditional) {
+        : cgf(cgf), savedOutermostConditional(cgf.outermostConditional),
+          savedHiddenOutermostConditional(cgf.hiddenOutermostConditional) {
       cgf.outermostConditional = nullptr;
+      cgf.hiddenOutermostConditional = nullptr;
     }
 
     ~StmtExprEvaluation() {
       cgf.outermostConditional = savedOutermostConditional;
+      cgf.hiddenOutermostConditional = savedHiddenOutermostConditional;
     }
   };
 

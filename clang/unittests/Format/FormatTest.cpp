@@ -7808,7 +7808,21 @@ TEST_F(FormatTest, EnumAssignmentContinuationIndentation) {
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
   verifyFormat("enum Flag {\n"
                "  VeryLongFlagNameThatForcesBreak =\n"
-               "          1 << 2 << 3,\n"
+               "      1 << 2 << 3,\n"
+               "};",
+               Style);
+
+  Style.ColumnLimit = 42;
+  verifyFormat("enum Flag {\n"
+               "  VeryLongFlagNameThatForcesBreak =\n"
+               "      1 << 2 << 3,\n"
+               "};",
+               Style);
+
+  Style = getLLVMStyleWithColumns(42);
+  verifyFormat("enum Flag {\n"
+               "  VeryLongFlagNameThatForcesBreak =\n"
+               "      1 << 2 << 3,\n"
                "};",
                Style);
 }

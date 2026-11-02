@@ -158,7 +158,7 @@ fma(InType x, InType y, InType z) {
     }
   }
 
-  if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0))
+  if (LIBC_UNLIKELY(x_bits.is_zero() || y_bits.is_zero() || z_bits.is_zero()))
     return cast<OutType>(x * y + z);
 
   int x_exp = 0;

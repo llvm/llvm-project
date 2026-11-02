@@ -21,6 +21,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/is_integer.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h"
@@ -182,38 +183,6 @@ LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R_DD[128] = {
     {0.0, 1.0},
 };
 
-// Check if x is an odd integer: the lowest set bit must be at the unit
-// position:
-//   x_e + lsb == UNIT_EXPONENT.
-LIBC_INLINE bool is_odd_integer(double x) {
-  using FPBits = fputil::FPBits<double>;
-  FPBits xbits(x);
-  uint64_t x_u = xbits.uintval();
-  unsigned x_e = static_cast<unsigned>(xbits.get_biased_exponent());
-  unsigned lsb =
-      static_cast<unsigned>(cpp::countr_zero(x_u | FPBits::EXP_MASK));
-  constexpr unsigned UNIT_EXPONENT =
-      static_cast<unsigned>(FPBits::EXP_BIAS + FPBits::FRACTION_LEN);
-  return (x_e + lsb == UNIT_EXPONENT);
-}
-
-// Check if x is an integer: the lowest set bit must be at or above the unit
-// position:
-//   x_e + lsb >= UNIT_EXPONENT.
-LIBC_INLINE bool is_integer(double x) {
-  if (x == 0.0)
-    return true;
-  using FPBits = fputil::FPBits<double>;
-  FPBits xbits(x);
-  uint64_t x_u = xbits.uintval();
-  unsigned x_e = static_cast<unsigned>(xbits.get_biased_exponent());
-  unsigned lsb =
-      static_cast<unsigned>(cpp::countr_zero(x_u | FPBits::EXP_MASK));
-  constexpr unsigned UNIT_EXPONENT =
-      static_cast<unsigned>(FPBits::EXP_BIAS + FPBits::FRACTION_LEN);
-  return (x_e + lsb >= UNIT_EXPONENT);
-}
-
 LIBC_INLINE double set_overflow(bool is_neg) {
   fputil::set_errno_if_required(ERANGE);
   fputil::raise_overflow_except_if_required<double>();
@@ -369,7 +338,7 @@ LIBC_ALWAYS_INLINE cpp::optional<double> check_special_inputs(double x,
         return y;
       if (y_abs.is_inf())
         return y_sign ? FPBits::inf().get_val() : 0.0;
-      bool out_is_neg = x_sign && is_odd_integer(y);
+      bool out_is_neg = x_sign && fputil::is_odd_integer(y);
       if (y_sign) {
         // pow(0, negative number) = inf
         fputil::set_errno_if_required(EDOM);
@@ -493,9 +462,9 @@ check_exceptional_cases(double &x, double &y, double &e_x, uint64_t &x_mant,
   }
 
   if (x_sign) {
-    if (is_integer(y)) {
+    if (fputil::is_integer(y)) {
       x = -x;
-      if (is_odd_integer(y)) {
+      if (fputil::is_odd_integer(y)) {
         is_neg = true;
         sign_d = -1.0;
       }
@@ -597,7 +566,7 @@ LIBC_INLINE bool is_exact_rounding_boundary(double x, double y,
   if (x_mant == 0) {
     double e = static_cast<double>(x_e);
     double ey = e * y;
-    if (is_integer(ey)) {
+    if (fputil::is_integer(ey)) {
       exact_m = 1;
       exact_exp = static_cast<int>(ey);
       return true;
@@ -629,7 +598,7 @@ LIBC_INLINE bool is_exact_rounding_boundary(double x, double y,
   if (f < 0) {
     // Non-integer exponent: y = n / 2^(-f) with -f in {1, ..., 5}.
     double ey = static_cast<double>(e) * y;
-    if (!is_integer(ey))
+    if (!fputil::is_integer(ey))
       return false;
 
     // Check if m^(2^f) is an integer by taking repeated square roots -f times.
