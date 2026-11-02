@@ -100,18 +100,19 @@ struct PeelConvert {
     return Fortran::common::visit(
         [](auto &&s) { return visit_with_category<Category>(s); }, expr.u);
   }
-  template <
-      Fortran::common::TypeCategory Category,
-      typename = std::enable_if_t<Fortran::evaluate::IsSpecificIntrinsicType<
-          Fortran::evaluate::Type<Category>>>>
-  static Fortran::semantics::MaybeExpr visit_with_category(
-      const Fortran::evaluate::Convert<Fortran::evaluate::Type<Category>,
-                                       Category> &expr) {
-    return AsGenericExpr(AsRvalueRef(expr.left()));
-  }
+  // Convert<Type<Category>, Category> must not be named for non-specific
+  // categories, not even as a parameter type in a SFINAE'd overload: GCC 7
+  // instantiates it and trips its static_assert.
   template <Fortran::common::TypeCategory Category, typename T>
-  static Fortran::semantics::MaybeExpr visit_with_category(const T &) {
-    return std::nullopt; //
+  static Fortran::semantics::MaybeExpr visit_with_category(const T &x) {
+    using Ty = Fortran::evaluate::Type<Category>;
+    if constexpr (Fortran::evaluate::IsSpecificIntrinsicType<Ty>) {
+      if constexpr (std::is_same_v<T,
+                                   Fortran::evaluate::Convert<Ty, Category>>) {
+        return AsGenericExpr(AsRvalueRef(x.left()));
+      }
+    }
+    return std::nullopt;
   }
 
   template <Fortran::common::TypeCategory Category>
