@@ -24,7 +24,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Loops.cpp
   MorphOps.cpp
   TransposeMatmul.cpp
-  ShardingInterfaceImpl.cpp
   SimplifyDepthwiseConv.cpp
   BlockPackMatmul.cpp
   PackAndUnpackPatterns.cpp
@@ -68,7 +67,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRIR
   MLIRMemRefDialect
   MLIRMemRefTransforms
-  MLIRShardTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
   MLIRSCFDialect
