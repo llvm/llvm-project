@@ -825,7 +825,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.lround
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -843,7 +842,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.lroundf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -861,7 +859,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.lroundl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -879,7 +876,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.lroundf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -897,7 +893,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.lroundbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -916,7 +911,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.llround
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -934,7 +928,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.llroundf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -952,7 +945,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.llroundl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -970,7 +962,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.llroundf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -988,7 +979,6 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.llroundbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -1346,7 +1336,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.expf
     libc.src.__support.math.expf_double_eval
     libc.src.__support.math.expf_float_eval
@@ -1403,7 +1392,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.exp2f
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
@@ -1442,7 +1430,6 @@ add_fp_unittest(
   SRCS
     exp2m1f_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.exp2m1f
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -1481,7 +1468,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.exp10f
     libc.src.__support.math.exp10f_double_eval
     libc.src.__support.math.exp10f_float_eval
@@ -1519,7 +1505,6 @@ add_fp_unittest(
     exp10m1f_test.cpp
   DEPENDS
     libc.hdr.math_macros
-    libc.src.errno.errno
     libc.src.math.exp10m1f
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -2387,7 +2372,6 @@ add_fp_unittest(
   SRCS
     expm1f_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.expm1f
     libc.src.__support.FPUtil.fp_bits
 )
@@ -2470,7 +2454,6 @@ add_fp_unittest(
   SRCS
     log2f_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.log2f
     libc.src.__support.FPUtil.fp_bits
 )
@@ -2697,6 +2680,22 @@ add_fp_unittest(
     sinhf16_test.cpp
   DEPENDS
     libc.src.math.sinhf16
+)
+
+add_fp_unittest(
+  tanh_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    tanh_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.tanh
+    libc.src.__support.math.tanh_double_eval
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(
