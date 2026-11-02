@@ -686,42 +686,6 @@ def A78Write_11c_9L01_9S_9V : SchedWriteRes<[A78UnitL01, A78UnitL01, A78UnitL01,
 //===----------------------------------------------------------------------===//
 // Define predicates
 
-// Check for LSL shift == 0
-def A78NoLSL : MCSchedPredicate<CheckAll<[CheckShiftLSL, CheckShiftBy0]>>;
-
-def A78ZeroMove : MCSchedPredicate<
-  CheckAny<[
-    // MOV Wd, #0
-    // MOV Xd, #0
-    CheckAll<[CheckOpcode<[MOVZWi, MOVZXi]>,
-	      CheckImmOperand<1, 0>,
-	      CheckImmOperand<2, 0>]>,
-    // MOV Wd, WZR
-    // MOV Xd, XZR
-    // MOV Wd, Wn
-    // MOV Xd, Xn
-    CheckAll<[CheckOpcode<[ORRWrs, ORRXrs]>,
-	      CheckAll<[CheckIsReg1Zero,
-			CheckImmOperand<3, 0>]>]>,
-    // FMOV Hd, WZR
-    // FMOV Hd, XZR
-    // FMOV Sd, WZR
-    // FMOV Dd, XZR
-    CheckAll<[CheckOpcode<[FMOVWHr, FMOVXHr,
-			   FMOVWSr, FMOVXDr]>,
-	      CheckIsReg1Zero]>,
-    // MOVI Dd, #0
-    // MOVI Vd.2D, #0
-    CheckAll<[CheckOpcode<[MOVID, MOVIv2d_ns]>,
-	      CheckImmOperand<1, 0>]>,
-    // MOV Zd, Zn
-    CheckAll<[CheckOpcode<[ORR_ZZZ]>,
-	      CheckSameRegOperand<1, 2>]>,
-    // MOV Vd, Vn
-    CheckAll<[CheckOpcode<[ORRv16i8, ORRv8i8]>,
-	      CheckSameRegOperand<1, 2>]>,
-  ]>>;
-
 // Predicates for load and store instructions.
 // For example: str x0, [x1, x2, lsl #3]
 //
@@ -738,16 +702,16 @@ def A78IsExtendedLoadStore : MCSchedPredicate<CheckImmOperand<3, 1>>;
 // Define predicate-controlled types
 
 def A78Write_0or1c_1I : SchedWriteVariant<[
-                      SchedVar<A78ZeroMove, [A78Write_0c]>,
-                      SchedVar<NoSchedPred, [A78Write_1c_1I]>]>;
+                      SchedVar<NeoverseZeroMove, [A78Write_0c]>,
+                      SchedVar<NoSchedPred,      [A78Write_1c_1I]>]>;
 
 def A78Write_0or2c_1V : SchedWriteVariant<[
-                      SchedVar<A78ZeroMove, [A78Write_0c]>,
+                      SchedVar<NeoverseZeroMove, [A78Write_0c]>,
                       SchedVar<NoSchedPred, [A78Write_2c_1V]>]>;
 
 def A78Write_0or3c_1M0 : SchedWriteVariant<[
-                      SchedVar<A78ZeroMove, [A78Write_0c]>,
-                      SchedVar<NoSchedPred, [A78Write_3c_1M0]>]>;
+                      SchedVar<NeoverseZeroMove, [A78Write_0c]>,
+                      SchedVar<NoSchedPred,      [A78Write_3c_1M0]>]>;
 
 def A78Write_Extr : SchedWriteVariant<[
                       SchedVar<IsRORImmIdiomPred, [A78Write_1c_1I]>,
@@ -764,8 +728,8 @@ def A78Write_ArithI : SchedWriteVariant<[
                       SchedVar<NoSchedPred, [A78Write_2c_1M_1Flg]>]>;
 
 def A78Write_Logical: SchedWriteVariant<[
-                      SchedVar<A78NoLSL,    [A78Write_1c_1I_1Flg]>,
-                      SchedVar<NoSchedPred, [A78Write_2c_1M_1Flg]>]>;
+                      SchedVar<NeoverseNoLSL, [A78Write_1c_1I_1Flg]>,
+                      SchedVar<NoSchedPred,   [A78Write_2c_1M_1Flg]>]>;
 
 //===----------------------------------------------------------------------===//
 // Define forwarded types
