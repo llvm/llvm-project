@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILForwardHandleAccesses.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILMemIntrinsics.h"
 #include "DirectX.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/IRBuilder.h"
