@@ -11525,7 +11525,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::ppc_fnmsub: {
     EVT VT = Op.getOperand(1).getValueType();
-    if (!Subtarget.hasVSX() || (!Subtarget.hasFloat128() && VT == MVT::f128))
+    if (!Subtarget.hasVSX())
       return DAG.getNode(
           ISD::FNEG, dl, VT,
           DAG.getNode(ISD::FMA, dl, VT, Op.getOperand(1), Op.getOperand(2),
