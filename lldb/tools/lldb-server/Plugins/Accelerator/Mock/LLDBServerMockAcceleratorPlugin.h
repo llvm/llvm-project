@@ -54,6 +54,13 @@ private:
   // Breakpoint on the dedicated "mock_gpu_accelerator_connect" hook; only the
   // connection test defines that function. See BreakpointWasHit for the hit.
   static constexpr int64_t kBreakpointIDConnect = 4;
+  // Breakpoint that asks the plugin to halt the native process after it
+  // resumes, simulating an accelerator stop.
+  static constexpr int64_t kBreakpointIDHaltNativeProcess = 5;
+
+  /// Halt the native process once it runs, checking from its main loop every
+  /// 100 ms until then.
+  void HaltNativeProcessWhenItRuns(lldb::pid_t pid);
 
   // The mock accelerator server runs on its own main loop and thread so its
   // packets don't contend with the native process. Populated by

@@ -264,6 +264,7 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
       body.reason = protocol::eStoppedReasonEntry;
       break;
     case lldb::eStopReasonInterrupt:
+    case lldb::eStopReasonTargetSync:
       body.reason = protocol::eStoppedReasonPause;
       break;
     case lldb::eStopReasonThreadExiting:
@@ -279,7 +280,8 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
   lldb::tid_t tid = thread.GetThreadID();
   body.threadId = tid;
   body.allThreadsStopped = all_threads_stopped;
-  body.preserveFocusHint = preserve_focus;
+  body.preserveFocusHint =
+      preserve_focus || thread.GetStopReason() == lldb::eStopReasonTargetSync;
 
   dap.Send(protocol::Event{"stopped", std::move(body)});
 }
@@ -310,10 +312,15 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
     if (!ThreadHasStopReason(thread))
       continue;
 
-    // Focus on the first stopped thread
+    // A target-sync stop follows a stop in another target, so prefer any
+    // thread that stopped for a reason of its own.
     if (!focused_thread.IsValid())
       focused_thread = thread;
-    else
+    else if (focused_thread.GetStopReason() == lldb::eStopReasonTargetSync &&
+             thread.GetStopReason() != lldb::eStopReasonTargetSync) {
+      stopped_threads.push_back(focused_thread);
+      focused_thread = thread;
+    } else
       stopped_threads.push_back(thread);
   }
 
@@ -330,11 +337,14 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
                      /*preserve_focus=*/true);
 
   // Notify the focused thread last to ensure the UI is focused correctly.
+  const bool target_sync =
+      focused_thread.GetStopReason() == lldb::eStopReasonTargetSync;
   SendStoppedEvent(dap, focused_thread, on_entry, /*all_threads_stopped=*/true,
-                   /*preserve_focus=*/false);
+                   /*preserve_focus=*/target_sync);
 
-  // Update focused thread.
-  dap.focus_tid = focused_thread.GetThreadID();
+  // A target-sync stop should not move the focus away from the other target.
+  if (!target_sync)
+    dap.focus_tid = focused_thread.GetThreadID();
 
   for (const auto &tid : old_thread_ids)
     if (!dap.thread_ids.contains(tid))

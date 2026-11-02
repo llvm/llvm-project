@@ -2080,6 +2080,8 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "async interrupt";
   case eStopReasonHistoryBoundary:
     return "history boundary";
+  case eStopReasonTargetSync:
+    return "target sync";
   }
 
   return "StopReason = " + std::to_string(reason);

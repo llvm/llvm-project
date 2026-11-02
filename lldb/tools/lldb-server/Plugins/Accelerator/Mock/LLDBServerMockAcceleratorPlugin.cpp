@@ -23,6 +23,7 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <chrono>
 #include <cstdlib>
 
 using namespace lldb;
@@ -76,6 +77,12 @@ LLDBServerMockAcceleratorPlugin::GetInitializeActions() {
                                            "mock_gpu_accelerator_initialize"};
   bp.symbol_names.push_back("mock_gpu_accelerator_compute");
   actions.breakpoints.push_back(std::move(bp));
+
+  AcceleratorBreakpointInfo halt_bp;
+  halt_bp.identifier = kBreakpointIDHaltNativeProcess;
+  halt_bp.by_name = AcceleratorBreakpointByName{
+      std::nullopt, "mock_accelerator_halt_native_process"};
+  actions.breakpoints.push_back(std::move(halt_bp));
 
   return actions;
 }
@@ -141,9 +148,31 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
     response.actions = std::move(actions);
     break;
   }
+  case kBreakpointIDHaltNativeProcess:
+    // The native process is stopped at this breakpoint. Wait until the client
+    // auto-resumes it, then interrupt it as an accelerator would when it stops.
+    if (std::optional<lldb::pid_t> pid =
+            m_native_gdb_server.GetCurrentProcessID())
+      HaltNativeProcessWhenItRuns(*pid);
+    break;
   }
 
   return response;
+}
+
+void LLDBServerMockAcceleratorPlugin::HaltNativeProcessWhenItRuns(
+    lldb::pid_t pid) {
+  if (!m_native_gdb_server.ProcessIsAlive(pid))
+    return;
+  // Wait out a single step as well: an interrupt that arrives during one can
+  // be lost to the stop that finishes the step.
+  if (m_native_gdb_server.ProcessIsRunning(pid)) {
+    HaltNativeProcessIfNeeded(pid);
+    return;
+  }
+  m_native_main_loop.AddCallback(
+      [this, pid](MainLoopBase &) { HaltNativeProcessWhenItRuns(pid); },
+      std::chrono::milliseconds(100));
 }
 
 std::optional<AcceleratorConnectionInfo>

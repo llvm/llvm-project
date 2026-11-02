@@ -30,6 +30,7 @@
 #include "lldb/Utility/Policy.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1687,6 +1688,37 @@ protected:
   bool m_performed_action = false;
 };
 
+/// A stop of a process that was interrupted to stay in sync with another
+/// target, for example a CPU process whose accelerator stopped. The process
+/// stays stopped, but the stop is not an interrupt the user asked for.
+class StopInfoTargetSync : public StopInfo {
+public:
+  StopInfoTargetSync(Thread &thread, TargetSP sync_target_sp)
+      : StopInfo(thread, 0), m_sync_target_wp(sync_target_sp) {}
+
+  StopReason GetStopReason() const override {
+    return lldb::eStopReasonTargetSync;
+  }
+
+  const char *GetDescription() override {
+    if (m_description.empty()) {
+      // Name the target as "target list" numbers it, for "target select".
+      m_description = "target sync";
+      if (TargetSP sync_target_sp = m_sync_target_wp.lock()) {
+        uint32_t index =
+            sync_target_sp->GetDebugger().GetTargetList().GetIndexOfTarget(
+                sync_target_sp);
+        if (index != UINT32_MAX)
+          m_description = llvm::formatv("target sync with target #{0}", index);
+      }
+    }
+    return m_description.c_str();
+  }
+
+private:
+  TargetWP m_sync_target_wp;
+};
+
 } // namespace lldb_private
 
 StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
@@ -1747,6 +1779,11 @@ StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
 StopInfoSP StopInfo::CreateStopReasonHistoryBoundary(Thread &thread,
                                                      const char *description) {
   return std::make_shared<StopInfoHistoryBoundary>(thread, description);
+}
+
+StopInfoSP StopInfo::CreateStopReasonTargetSync(Thread &thread,
+                                                TargetSP sync_target_sp) {
+  return std::make_shared<StopInfoTargetSync>(thread, sync_target_sp);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {

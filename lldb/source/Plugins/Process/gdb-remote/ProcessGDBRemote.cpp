@@ -1909,7 +1909,8 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     LazyBool associated_with_dispatch_queue, addr_t dispatch_queue_t,
     std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial,
     std::vector<lldb::addr_t> &added_binaries,
-    StructuredData::ObjectSP &detailed_binaries_info) {
+    StructuredData::ObjectSP &detailed_binaries_info,
+    llvm::StringRef sync_plugin) {
 
   if (tid == LLDB_INVALID_THREAD_ID)
     return nullptr;
@@ -2108,6 +2109,14 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonHistoryBoundary(
               *thread_sp, description.c_str()));
           handled = true;
+        } else if (reason == "target sync") {
+          TargetSP sync_target_sp;
+          if (auto it = m_accelerator_targets.find(sync_plugin.str());
+              it != m_accelerator_targets.end())
+            sync_target_sp = it->second.lock();
+          thread_sp->SetStopInfo(
+              StopInfo::CreateStopReasonTargetSync(*thread_sp, sync_target_sp));
+          handled = true;
         } else if (reason == "exec") {
           did_exec = true;
           thread_sp->SetStopInfo(
@@ -2262,6 +2271,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   static constexpr llvm::StringLiteral g_key_memory("memory");
   static constexpr llvm::StringLiteral g_key_description("description");
   static constexpr llvm::StringLiteral g_key_signal("signal");
+  static constexpr llvm::StringLiteral g_key_sync_plugin("sync-plugin");
   static constexpr llvm::StringLiteral g_key_added_binaries("added-binaries");
   static constexpr llvm::StringLiteral g_key_detailed_binaries_info(
       "detailed-binaries-info");
@@ -2272,6 +2282,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   std::string thread_name;
   std::string reason;
   std::string description;
+  std::string sync_plugin;
   uint32_t exc_type = 0;
   std::vector<addr_t> exc_data;
   addr_t thread_dispatch_qaddr = LLDB_INVALID_ADDRESS;
@@ -2289,8 +2300,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
 
   // FIXME: we're silently ignoring invalid data here
   thread_dict->ForEach([this, &tid, &expedited_register_map, &thread_name,
-                        &signo, &reason, &description, &exc_type, &exc_data,
-                        &thread_dispatch_qaddr, &queue_vars_valid,
+                        &signo, &reason, &description, &sync_plugin, &exc_type,
+                        &exc_data, &thread_dispatch_qaddr, &queue_vars_valid,
                         &associated_with_dispatch_queue, &dispatch_queue_t,
                         &queue_name, &queue_kind, &queue_serial_number,
                         &added_binaries, &detailed_binaries_info](
@@ -2347,6 +2358,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
       reason = std::string(object->GetStringValue());
     } else if (key == g_key_description) {
       description = std::string(object->GetStringValue());
+    } else if (key == g_key_sync_plugin) {
+      sync_plugin = std::string(object->GetStringValue());
     } else if (key == g_key_registers) {
       StructuredData::Dictionary *registers_dict = object->GetAsDictionary();
 
@@ -2427,7 +2440,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
       tid, expedited_register_map, signo, thread_name, reason, description,
       exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
       associated_with_dispatch_queue, dispatch_queue_t, queue_name, queue_kind,
-      queue_serial_number, added_binaries, detailed_binaries_info);
+      queue_serial_number, added_binaries, detailed_binaries_info, sync_plugin);
 }
 
 StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
@@ -2459,6 +2472,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     std::string thread_name;
     std::string reason;
     std::string description;
+    std::string sync_plugin;
     std::vector<addr_t> added_binaries;
     StructuredData::ObjectSP detailed_binaries_info;
     uint32_t exc_type = 0;
@@ -2547,6 +2561,9 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         StringExtractor desc_extractor(value);
         // Now convert the HEX bytes into a string value
         desc_extractor.GetHexByteString(description);
+      } else if (key.compare("sync-plugin") == 0) {
+        StringExtractor plugin_extractor(value);
+        plugin_extractor.GetHexByteString(sync_plugin);
       } else if (key.compare("memory") == 0) {
         // Expedited memory. GDB servers can choose to send back expedited
         // memory that can populate the L1 memory cache in the process so that
@@ -2688,8 +2705,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         tid, expedited_register_map, signo, thread_name, reason, description,
         exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
         associated_with_dispatch_queue, dispatch_queue_t, queue_name,
-        queue_kind, queue_serial_number, added_binaries,
-        detailed_binaries_info);
+        queue_kind, queue_serial_number, added_binaries, detailed_binaries_info,
+        sync_plugin);
 
     return eStateStopped;
   } break;
@@ -4442,6 +4459,7 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   restore_target_group.release();
   delete_accelerator_target.release();
   accelerator_target_sp->SetTargetSessionName(actions.session_name);
+  m_accelerator_targets[actions.plugin_name] = accelerator_target_sp;
 
   // Broadcast the new-target event so API clients can detect it.
   auto event_sp = std::make_shared<Event>(

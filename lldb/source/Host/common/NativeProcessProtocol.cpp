@@ -42,6 +42,38 @@ lldb_private::Status NativeProcessProtocol::Interrupt() {
 #endif
 }
 
+Status
+NativeProcessProtocol::InterruptWithStopReason(lldb::StopReason stop_reason) {
+  std::lock_guard<std::mutex> interrupt_guard(m_interrupt_mutex);
+  bool installed_reason = false;
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
+    // Once an interrupt is pending, another one could deliver a second stop
+    // after the process resumes. The first request owns this stop instead.
+    if (m_interrupt_stop_reason)
+      return Status();
+
+    // A stopped process does not stop again, so the reason would only replace
+    // the one of the stop it already has.
+    if (IsRunning()) {
+      m_interrupt_stop_reason = stop_reason;
+      installed_reason = true;
+    }
+  }
+  Status error = Interrupt();
+  if (error.Fail() && installed_reason) {
+    std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
+    m_interrupt_stop_reason.reset();
+  }
+  return error;
+}
+
+std::optional<lldb::StopReason>
+NativeProcessProtocol::GetInterruptStopReason() const {
+  std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
+  return m_interrupt_stop_reason;
+}
+
 Status NativeProcessProtocol::IgnoreSignals(llvm::ArrayRef<int> signals) {
   m_signals_to_ignore.clear();
   m_signals_to_ignore.insert_range(signals);
@@ -826,6 +858,11 @@ void NativeProcessProtocol::SetState(lldb::StateType state,
     return;
 
   m_state = state;
+
+  // Once the process resumes, the stop that InterruptWithStopReason asked for
+  // is over, or never came because another stop beat it.
+  if (StateIsRunningState(state))
+    m_interrupt_stop_reason.reset();
 
   if (StateIsStoppedState(state, false)) {
     ++m_stop_id;

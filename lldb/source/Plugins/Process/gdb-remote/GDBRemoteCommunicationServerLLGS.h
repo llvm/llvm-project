@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERLLGS_H
 
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -77,6 +78,40 @@ public:
   void InstallPlugin(
       std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> plugin_up);
 
+  /// Return the selected process ID. Call from this server's main loop.
+  std::optional<lldb::pid_t> GetCurrentProcessID() const {
+    if (!m_current_process)
+      return std::nullopt;
+    lldb::pid_t pid = m_current_process->GetID();
+    if (pid == LLDB_INVALID_PROCESS_ID)
+      return std::nullopt;
+    return pid;
+  }
+
+  /// Query a process owned by this server. Call from its main loop.
+  bool ProcessIsAlive(lldb::pid_t pid) const;
+  bool ProcessIsRunning(lldb::pid_t pid) const;
+
+  /// Queue an interrupt of process \p pid, which stops it if it is running, as
+  /// the client's interrupt packet does. Unlike the packet, this can be called
+  /// from any thread: the interrupt happens on this server's main loop.
+  /// Capturing a PID keeps a later multiprocess selection change from
+  /// redirecting the interrupt to another inferior.
+  ///
+  /// \param[in] pid
+  ///     The process to interrupt.
+  ///
+  /// \param[in] stop_reason
+  ///     The stop reason reported in place of the interrupt, so the client can
+  ///     tell why the process stopped. See
+  ///     NativeProcessProtocol::InterruptWithStopReason.
+  ///
+  /// \param[in] plugin_name
+  ///     The accelerator plugin asking for the interrupt. The stop reply names
+  ///     it so the client can identify the corresponding target.
+  void QueueInterrupt(lldb::pid_t pid, lldb::StopReason stop_reason,
+                      llvm::StringRef plugin_name);
+
   // NativeProcessProtocol::NativeDelegate overrides
   void InitializeDelegate(NativeProcessProtocol *process) override;
 
@@ -126,6 +161,10 @@ protected:
   NativeProcessProtocol *m_continue_process;
   std::recursive_mutex m_debugged_process_mutex;
   std::unordered_map<lldb::pid_t, DebuggedProcess> m_debugged_processes;
+  /// Plugin attribution can be read by process delegate callbacks while the
+  /// main loop updates it.
+  mutable std::mutex m_interrupt_plugin_mutex;
+  std::unordered_map<lldb::pid_t, std::string> m_interrupt_plugin_names;
 
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
@@ -344,6 +383,8 @@ protected:
                                 lldb::tid_t tid);
 
 private:
+  std::string GetInterruptPluginName(lldb::pid_t pid) const;
+
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
 
   struct BreakpointOK {};

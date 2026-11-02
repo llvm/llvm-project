@@ -239,6 +239,72 @@ TEST(NativeProcessProtocolTest, ReadCStringFromMemory_CrossPageBoundary) {
   EXPECT_EQ(bytes_read, 6UL);
 }
 
+namespace {
+class InterruptibleProcess : public MockProcess<NativeProcessProtocol> {
+public:
+  using MockProcess::MockProcess;
+  using NativeProcessProtocol::SetState;
+  MOCK_METHOD0(Interrupt, Status());
+};
+} // namespace
+
+TEST(NativeProcessProtocolTest, InterruptWithStopReason) {
+  NiceMock<MockDelegate> DummyDelegate;
+  InterruptibleProcess Process(DummyDelegate, ArchSpec("x86_64-pc-linux"));
+  Process.SetState(eStateRunning, false);
+
+  // The reason lasts from the interrupt until the process resumes.
+  EXPECT_CALL(Process, Interrupt()).WillOnce(Return(ByMove(Status())));
+  EXPECT_THAT_ERROR(
+      Process.InterruptWithStopReason(eStopReasonTargetSync).ToError(),
+      llvm::Succeeded());
+  EXPECT_EQ(Process.GetInterruptStopReason(), eStopReasonTargetSync);
+  testing::Mock::VerifyAndClearExpectations(&Process);
+
+  // Pending requests are successful no-ops, so they neither deliver another
+  // interrupt nor replace the first reason.
+  EXPECT_CALL(Process, Interrupt()).Times(0);
+  EXPECT_THAT_ERROR(
+      Process.InterruptWithStopReason(eStopReasonTargetSync).ToError(),
+      llvm::Succeeded());
+  EXPECT_THAT_ERROR(
+      Process.InterruptWithStopReason(eStopReasonBreakpoint).ToError(),
+      llvm::Succeeded());
+  EXPECT_EQ(Process.GetInterruptStopReason(), eStopReasonTargetSync);
+  testing::Mock::VerifyAndClearExpectations(&Process);
+
+  Process.SetState(eStateStopped, false);
+  EXPECT_EQ(Process.GetInterruptStopReason(), eStopReasonTargetSync);
+  Process.SetState(eStateRunning, false);
+  EXPECT_EQ(Process.GetInterruptStopReason(), std::nullopt);
+
+  // An interrupt that fails keeps no reason.
+  EXPECT_CALL(Process, Interrupt())
+      .WillOnce(Return(ByMove(Status::FromErrorString("cannot interrupt"))));
+  EXPECT_THAT_ERROR(
+      Process.InterruptWithStopReason(eStopReasonTargetSync).ToError(),
+      llvm::Failed());
+  EXPECT_EQ(Process.GetInterruptStopReason(), std::nullopt);
+
+  // With nothing pending, a request after the failure retries the backend.
+  EXPECT_CALL(Process, Interrupt()).WillOnce(Return(ByMove(Status())));
+  EXPECT_THAT_ERROR(
+      Process.InterruptWithStopReason(eStopReasonBreakpoint).ToError(),
+      llvm::Succeeded());
+  EXPECT_EQ(Process.GetInterruptStopReason(), eStopReasonBreakpoint);
+  Process.SetState(eStateStopped, false);
+  Process.SetState(eStateRunning, false);
+  EXPECT_EQ(Process.GetInterruptStopReason(), std::nullopt);
+
+  // Neither does an interrupt of a process that is already stopped.
+  Process.SetState(eStateStopped, false);
+  EXPECT_CALL(Process, Interrupt()).WillOnce(Return(ByMove(Status())));
+  EXPECT_THAT_ERROR(
+      Process.InterruptWithStopReason(eStopReasonTargetSync).ToError(),
+      llvm::Succeeded());
+  EXPECT_EQ(Process.GetInterruptStopReason(), std::nullopt);
+}
+
 void DoTestWriteMemoryPreservingTrap(
     const std::vector<lldb::addr_t> &bp_addrs,
     std::optional<lldb::addr_t> write_addr,

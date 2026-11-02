@@ -327,6 +327,10 @@ enum StopReason {
   // Indicates that execution stopped because the debugger backend relies
   // on recorded data and we reached the end of that data.
   eStopReasonHistoryBoundary,
+  /// Indicates that the process was stopped to stay in sync with another
+  /// target, for example a CPU process whose accelerator stopped. The stop is
+  /// reported as such rather than as an interrupt.
+  eStopReasonTargetSync,
 };
 
 /// Command Return Status Types.
