@@ -1690,7 +1690,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         Ctx.TTI.getCallInstrCost(CalledFn, getScalarType(), Tys, Ctx.CostKind);
     // For intrinsics, use the intrinsic cost computed from the actual
     // arguments, if cheaper.
-    if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, /*TLI=*/nullptr))
+    if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &Ctx.TLI))
       Cost = std::min(Cost, VPWidenIntrinsicRecipe::computeCallCost(
                                 ID, ArgOps, *this, VF, Ctx));
     return Cost;

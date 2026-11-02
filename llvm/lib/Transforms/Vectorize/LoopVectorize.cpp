@@ -3435,10 +3435,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
   if (LoopCost == 0) {
-    if (VF.isScalar())
-      LoopCost = computeScalarCost();
-    else
-      LoopCost = cost(Plan, VF, &R, *CM);
+    LoopCost = cost(Plan, VF, &R, *CM);
     assert(LoopCost.isValid() && "Expected to have chosen a VF with valid cost");
 
     // Loop body is free and there is no need for interleaving.
@@ -5339,32 +5336,28 @@ getRecordedExecutionFrequency(const VPBasicBlock *VPBB) {
   return cast<VPInstruction>(&VPBB->front())->getExecutionFrequency();
 }
 
-InstructionCost LoopVectorizationPlanner::computeScalarCost() const {
-  ElementCount ScalarVF = ElementCount::getFixed(1);
-  if (!UseVPlanScalarCost)
-    return CM->expectedCost(ScalarVF);
-
-  VPCostContext CostCtx(*TLI, *InitialVPlan0, *CM, Config);
-  VPBasicBlock *Header =
-      VPBlockUtils::getPlainCFGHeaderAndLatch(*InitialVPlan0).first;
-  InstructionCost Cost = 0;
-
-  for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(Header)) {
-    // In the scalar loop, we may not always execute the predicated block, if
-    // it is an if-else block. Thus, scale the block's cost by the probability
-    // of executing it.
-    Cost += VPBB->cost(ScalarVF, CostCtx) /
-            CostCtx.getCostDivisor(getRecordedExecutionFrequency(VPBB));
-  }
-  return Cost;
-}
-
 InstructionCost
 LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
                                VPRegisterUsage *RU,
                                LoopVectorizationCostModel &PlanCM) const {
   VPCostContext CostCtx(*TLI, Plan, PlanCM, Config,
                         /*ReusePrintingSlotTracker=*/true);
+  if (VF.isScalar()) {
+    if (!UseVPlanScalarCost)
+      return CM->expectedCost(VF);
+
+    // TODO: Use Plan also for scalar cost.
+    VPBasicBlock *Header =
+        VPBlockUtils::getPlainCFGHeaderAndLatch(*VPlan0).first;
+    InstructionCost Cost = 0;
+
+    for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(Header)) {
+      // Scale by the block's execution probability.
+      Cost += VPBB->cost(VF, CostCtx) /
+              CostCtx.getCostDivisor(getRecordedExecutionFrequency(VPBB));
+    }
+    return Cost;
+  }
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
   LLVM_DEBUG(dbgs() << "Precomputed costs for VF " << VF << ": " << Cost
                     << '\n');
@@ -5445,7 +5438,7 @@ LoopVectorizationPlanner::computeBestVF() {
          "More than a single plan/VF w/o any plan having scalar VF");
 
   // Compute the scalar cost from VPlan0.
-  InstructionCost ScalarCost = computeScalarCost();
+  InstructionCost ScalarCost = cost(*VPlan0, ScalarVF, nullptr, *CM);
   LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ScalarCost << ".\n");
   VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
   VectorizationFactor BestFactor = ScalarFactor;
@@ -6158,7 +6151,7 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
            "execution frequencies do not match the loop's block frequencies");
   }
   // Save copy of VPlan0 for scalar cost computation.
-  InitialVPlan0 = VPlanPtr(VPlan0->duplicate());
+  this->VPlan0 = VPlanPtr(VPlan0->duplicate());
 
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.

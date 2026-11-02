@@ -653,6 +653,108 @@ exit:
   ret void
 }
 
+; Libcalls that TLI maps to intrinsics should use the cheaper intrinsic cost.
+define void @test_vpinstruction_libcall_mapped_to_intrinsic_cost(ptr noalias %src, ptr noalias %dst) {
+; CHECK-LABEL: 'test_vpinstruction_libcall_mapped_to_intrinsic_cost'
+; CHECK:  Cost of 0 for VF 1: EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop ]
+; CHECK:  Cost of 0 for VF 1: EMIT ir<%g.src> = getelementptr inbounds ir<%src>, ir<%iv>
+; CHECK:  Cost of 1 for VF 1: EMIT-SCALAR ir<%l> = load ir<%g.src>
+; CHECK:  Cost of 2 for VF 1: EMIT ir<%abs> = call float @fabsf(ir<%l>) memory(none)
+; CHECK:  Cost of 0 for VF 1: EMIT ir<%g.dst> = getelementptr inbounds ir<%dst>, ir<%iv>
+; CHECK:  Cost of 1 for VF 1: EMIT store ir<%abs>, ir<%g.dst>
+; CHECK:  Cost of 1 for VF 1: EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK:  Cost of 1 for VF 1: EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<100>
+; CHECK:  Cost of 0 for VF 1: EMIT branch-on-cond ir<%ec>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%g.src>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>, align 4
+; CHECK:  Cost of 2 for VF 2: WIDEN-INTRINSIC ir<%abs> = call llvm.fabs(ir<%l>)
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP6]]>, ir<%abs>, align 4
+; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
+; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 2: IR %g.src = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 2: IR %l = load float, ptr %g.src, align 4
+; CHECK:  Cost of 0 for VF 2: IR %abs = call float @fabsf(float %l) #5
+; CHECK:  Cost of 0 for VF 2: IR %g.dst = getelementptr inbounds float, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 2: IR store float %abs, ptr %g.dst, align 4
+; CHECK:  Cost of 0 for VF 2: IR %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i64 %iv.next, 100
+; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds float, ir<%g.src>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>, align 4
+; CHECK:  Cost of 2 for VF 4: WIDEN-INTRINSIC ir<%abs> = call llvm.fabs(ir<%l>)
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer inbounds float, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP6]]>, ir<%abs>, align 4
+; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
+; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 4: IR %g.src = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 4: IR %l = load float, ptr %g.src, align 4
+; CHECK:  Cost of 0 for VF 4: IR %abs = call float @fabsf(float %l) #5
+; CHECK:  Cost of 0 for VF 4: IR %g.dst = getelementptr inbounds float, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 4: IR store float %abs, ptr %g.dst, align 4
+; CHECK:  Cost of 0 for VF 4: IR %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 4: IR %ec = icmp eq i64 %iv.next, 100
+; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  Cost of 0 for VF 8: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 0 for VF 8: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 8: vp<[[VP5]]> = vector-pointer inbounds float, ir<%g.src>, ir<1>
+; CHECK:  Cost of 1 for VF 8: WIDEN ir<%l> = load vp<[[VP5]]>, align 4
+; CHECK:  Cost of 2 for VF 8: WIDEN-INTRINSIC ir<%abs> = call llvm.fabs(ir<%l>)
+; CHECK:  Cost of 0 for VF 8: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 8: vp<[[VP6]]> = vector-pointer inbounds float, ir<%g.dst>, ir<1>
+; CHECK:  Cost of 1 for VF 8: WIDEN store vp<[[VP6]]>, ir<%abs>, align 4
+; CHECK:  Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK:  Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 8: vector loop backedge
+; CHECK:  Cost of 1 for VF 8: canonical IV increment
+; CHECK:  Cost of 0 for VF 8: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 8: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 8: IR %g.src = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 8: IR %l = load float, ptr %g.src, align 4
+; CHECK:  Cost of 0 for VF 8: IR %abs = call float @fabsf(float %l) #5
+; CHECK:  Cost of 0 for VF 8: IR %g.dst = getelementptr inbounds float, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 8: IR store float %abs, ptr %g.dst, align 4
+; CHECK:  Cost of 0 for VF 8: IR %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 8: IR %ec = icmp eq i64 %iv.next, 100
+; CHECK:  Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %g.src = getelementptr inbounds float, ptr %src, i64 %iv
+  %l = load float, ptr %g.src
+  %abs = call float @fabsf(float %l) readnone
+  %g.dst = getelementptr inbounds float, ptr %dst, i64 %iv
+  store float %abs, ptr %g.dst
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 define void @test_vpinstruction_ext_of_live_in_load_cost(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: 'test_vpinstruction_ext_of_live_in_load_cost'
 ; CHECK:  Cost of 0 for VF 1: EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop ]
@@ -719,3 +821,5 @@ loop:
 exit:
   ret void
 }
+
+declare float @fabsf(float)
