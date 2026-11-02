@@ -67,6 +67,45 @@ static bool shouldDisableArgRegFromCSR(CallingConv::ID CC) {
   return CC == CallingConv::X86_RegCall;
 }
 
+static bool canUseR10ForIndirectTailCallTarget(
+    MachineFunction &MF, const X86RegisterInfo *RegInfo,
+    ArrayRef<ISD::OutputArg> Outs, ArrayRef<CCValAssign> ArgLocs,
+    ArrayRef<std::pair<Register, SDValue>> RegsToPass) {
+  if (RegInfo->getReservedRegs(MF).test(X86::R10))
+    return false;
+
+  auto IsRegUsed = [&](MCPhysReg Reg) {
+    for (const auto &RegToPass : RegsToPass)
+      if (RegInfo->regsOverlap(RegToPass.first, Reg))
+        return true;
+
+    return false;
+  };
+
+  // Keep the existing GR64_TC path when it has any usable candidate. R10 is
+  // only a fallback for musttail calls whose outgoing register arguments occupy
+  // every ordinary indirect-tailcall target register.
+  for (MCPhysReg Reg : {X86::RAX, X86::RCX, X86::RDX, X86::RSI, X86::RDI,
+                        X86::R8, X86::R9, X86::R11})
+    if (!RegInfo->getReservedRegs(MF).test(Reg) && !IsRegUsed(Reg))
+      return false;
+
+  for (const CCValAssign &VA : ArgLocs) {
+    unsigned ValNo = VA.getValNo();
+    if (ValNo < Outs.size() && Outs[ValNo].Flags.isNest())
+      return false;
+
+    if (VA.isRegLoc() && RegInfo->regsOverlap(VA.getLocReg(), X86::R10))
+      return false;
+  }
+
+  for (const auto &RegToPass : RegsToPass)
+    if (RegInfo->regsOverlap(RegToPass.first, X86::R10))
+      return false;
+
+  return true;
+}
+
 static std::pair<MVT, unsigned>
 handleMaskRegisterForCallingConv(unsigned NumElts, CallingConv::ID CC,
                                  const X86Subtarget &Subtarget) {
@@ -2607,6 +2646,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         GA->getGlobal(), dl, GA->getValueType(0), 0, X86II::MO_NO_FLAG);
   }
 
+  bool UseR10TailCallTarget = false;
+  if (Is64Bit && isTailCall && IsMustTail && IsIndirectCall && !IsWin64 &&
+      !IsNoTrackIndirectCall && !IsCFICall &&
+      !M->getModuleFlag("import-call-optimization") &&
+      Callee.getValueType() == MVT::i64)
+    UseR10TailCallTarget =
+        canUseR10ForIndirectTailCallTarget(MF, RegInfo, Outs, ArgLocs,
+                                           RegsToPass);
+
+  if (UseR10TailCallTarget) {
+    Chain = DAG.getCopyToReg(Chain, dl, X86::R10, Callee, InGlue);
+    InGlue = Chain.getValue(1);
+    Callee = DAG.getRegister(X86::R10, MVT::i64);
+  }
+
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && isTailCall && !IsMustTail) {
@@ -2710,7 +2764,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // function making a tail call to a function returning int.
     MF.getFrameInfo().setHasTailCall();
     auto Opcode =
-        IsCFGuardCall ? X86ISD::TC_RETURN_GLOBALADDR : X86ISD::TC_RETURN;
+        UseR10TailCallTarget
+            ? X86ISD::TC_RETURN_R10
+            : (IsCFGuardCall ? X86ISD::TC_RETURN_GLOBALADDR
+                             : X86ISD::TC_RETURN);
     SDValue Ret = DAG.getNode(Opcode, dl, MVT::Other, Ops);
 
     if (IsCFICall)
