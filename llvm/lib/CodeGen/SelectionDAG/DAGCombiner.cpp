@@ -5979,8 +5979,10 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
                                   Add->getOperand(1))))
         return DAG.getNode(ISD::AVGCEILS, DL, VT, X, Y);
 
-      // FIXME: Use willNotOverflowAdd here?
-      if (!IsSigned && Add->getFlags().hasNoUnsignedWrap())
+      if (!IsSigned &&
+          (Add->getFlags().hasNoUnsignedWrap() ||
+           DAG.willNotOverflowAdd(/*IsSigned=*/false, Add->getOperand(0),
+                                  Add->getOperand(1))))
         return DAG.getNode(ISD::AVGCEILU, DL, VT, X, Y);
     }
   }
