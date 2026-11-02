@@ -6,6 +6,7 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin -mcpu=apple-m4                                      | FileCheck %s --check-prefixes=CHECK,ENABLED
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin -mcpu=apple-m4 -aarch64-code-layout-opt-enable=none | FileCheck %s --check-prefixes=CHECK,DISABLED
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin                                                     | FileCheck %s --check-prefixes=CHECK,DEFAULT
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-windows-msvc -mcpu=apple-m4 | FileCheck %s --check-prefixes=WINDOWS
 
 ; Test coverage for optimizeForCodeLayout function:
 ; * Basic FCMP-FCSEL instruction pair detection and function alignment (single/double precision)
@@ -37,6 +38,12 @@ define float @test_basic_fcmp_fcsel_single(float %a, float %b, float %c, float %
 ; DEFAULT-NEXT:    fcmp s0, s1
 ; DEFAULT-NEXT:    fcsel s0, s2, s3, eq
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_basic_fcmp_fcsel_single:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    fcmp s0, s1
+; WINDOWS-NEXT:    fcsel s0, s2, s3, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = fcmp oeq float %a, %b
   %sel = select i1 %cmp, float %c, float %d
@@ -63,6 +70,12 @@ define double @test_basic_fcmp_fcsel_double(double %a, double %b, double %c, dou
 ; DEFAULT-NEXT:    fcmp d0, d1
 ; DEFAULT-NEXT:    fcsel d0, d2, d3, eq
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_basic_fcmp_fcsel_double:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    fcmp d0, d1
+; WINDOWS-NEXT:    fcsel d0, d2, d3, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = fcmp oeq double %a, %b
   %sel = select i1 %cmp, double %c, double %d
@@ -97,6 +110,14 @@ define float @test_multiple_patterns(float %a, float %b, float %c, float %d, flo
 ; DEFAULT-NEXT:    fcmp s0, s4
 ; DEFAULT-NEXT:    fcsel s0, s0, s5, gt
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_multiple_patterns:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    fcmp s0, s1
+; WINDOWS-NEXT:    fcsel s0, s2, s3, eq
+; WINDOWS-NEXT:    fcmp s0, s4
+; WINDOWS-NEXT:    fcsel s0, s0, s5, gt
+; WINDOWS-NEXT:    ret
 entry:
   %cmp1 = fcmp oeq float %a, %b
   %sel1 = select i1 %cmp1, float %c, float %d
@@ -113,6 +134,12 @@ define float @test_fcmp_immediate(float %a, float %b) {
 ; CHECK-NEXT:    fcmp s0, #0.0
 ; CHECK-NEXT:    fcsel s0, s0, s1, eq
 ; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_fcmp_immediate:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    fcmp s0, #0.0
+; WINDOWS-NEXT:    fcsel s0, s0, s1, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = fcmp oeq float %a, 0.0
   %sel = select i1 %cmp, float %a, float %b
@@ -153,6 +180,16 @@ define float @test_mixed_precision(float %a, float %b, double %c, double %d) {
 ; DEFAULT-NEXT:    fcvt s1, d1
 ; DEFAULT-NEXT:    fadd s0, s0, s1
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_mixed_precision:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    fcmp s0, s1
+; WINDOWS-NEXT:    fcsel s0, s0, s1, gt
+; WINDOWS-NEXT:    fcmp d2, d3
+; WINDOWS-NEXT:    fcsel d1, d2, d3, mi
+; WINDOWS-NEXT:    fcvt s1, d1
+; WINDOWS-NEXT:    fadd s0, s0, s1
+; WINDOWS-NEXT:    ret
 entry:
   %cmp_single = fcmp ogt float %a, %b
   %sel_single = select i1 %cmp_single, float %a, float %b
@@ -203,6 +240,23 @@ define float @test_with_function_calls(float %a, float %b, float %c, float %d) {
 ; DEFAULT-NEXT:    bl _external_func
 ; DEFAULT-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_with_function_calls:
+; WINDOWS:       .seh_proc test_with_function_calls
+; WINDOWS-NEXT:  // %bb.0: // %entry
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    .seh_save_reg_x x30, 16
+; WINDOWS-NEXT:    .seh_endprologue
+; WINDOWS-NEXT:    fcmp s0, s1
+; WINDOWS-NEXT:    fcsel s0, s2, s3, gt
+; WINDOWS-NEXT:    bl external_func
+; WINDOWS-NEXT:    .seh_startepilogue
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    .seh_save_reg_x x30, 16
+; WINDOWS-NEXT:    .seh_endepilogue
+; WINDOWS-NEXT:    ret
+; WINDOWS-NEXT:    .seh_endfunclet
+; WINDOWS-NEXT:    .seh_endproc
 entry:
   %cmp = fcmp ogt float %a, %b
   %sel = select i1 %cmp, float %c, float %d
@@ -217,6 +271,12 @@ define i32 @test_fcmp_without_fcsel(float %a, float %b) {
 ; CHECK-NEXT:    fcmp s0, s1
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_fcmp_without_fcsel:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    fcmp s0, s1
+; WINDOWS-NEXT:    cset w0, gt
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = fcmp ogt float %a, %b
   %result = zext i1 %cmp to i32
@@ -232,6 +292,12 @@ define float @test_fcsel_without_fcmp(i1 %cond, float %a, float %b) {
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    fcsel s0, s0, s1, ne
 ; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_fcsel_without_fcmp:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    tst w0, #0x1
+; WINDOWS-NEXT:    fcsel s0, s0, s1, ne
+; WINDOWS-NEXT:    ret
 entry:
   %result = select i1 %cond, float %a, float %b
   ret float %result
@@ -261,6 +327,12 @@ define i32 @test_basic_cmp_csel(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; DEFAULT-NEXT:    cmp w0, w1
 ; DEFAULT-NEXT:    csel w0, w2, w3, eq
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_basic_cmp_csel:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    cmp w0, w1
+; WINDOWS-NEXT:    csel w0, w2, w3, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, %b
   %sel = select i1 %cmp, i32 %c, i32 %d
@@ -287,6 +359,12 @@ define i32 @test_cmp_small_imm_csel(i32 %a, i32 %b, i32 %c) {
 ; DEFAULT-NEXT:    cmp w0, #7
 ; DEFAULT-NEXT:    csel w0, w1, w2, eq
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_cmp_small_imm_csel:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    cmp w0, #7
+; WINDOWS-NEXT:    csel w0, w1, w2, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 7
   %sel = select i1 %cmp, i32 %b, i32 %c
@@ -300,6 +378,12 @@ define i32 @test_cmp_large_imm_csel(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    cmp w0, #100
 ; CHECK-NEXT:    csel w0, w1, w2, eq
 ; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_cmp_large_imm_csel:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    cmp w0, #100
+; WINDOWS-NEXT:    csel w0, w1, w2, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 100
   %sel = select i1 %cmp, i32 %b, i32 %c
@@ -326,6 +410,12 @@ define i32 @test_basic_cmn_csel(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; DEFAULT-NEXT:    cmn w0, w1
 ; DEFAULT-NEXT:    csel w0, w2, w3, eq
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_basic_cmn_csel:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    cmn w0, w1
+; WINDOWS-NEXT:    csel w0, w2, w3, eq
+; WINDOWS-NEXT:    ret
 entry:
   %sum = add i32 %a, %b
   %cmp = icmp eq i32 %sum, 0
@@ -353,6 +443,12 @@ define i32 @test_subtarget_m4(i32 %a, i32 %b, i32 %c) "target-cpu"="apple-m4" {
 ; DEFAULT-NEXT:    cmn w0, #7
 ; DEFAULT-NEXT:    csel w0, w1, w2, eq
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_subtarget_m4:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    cmn w0, #7
+; WINDOWS-NEXT:    csel w0, w1, w2, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, -7
   %sel = select i1 %cmp, i32 %b, i32 %c
@@ -379,6 +475,12 @@ define i32 @test_cmn_small_imm_csel(i32 %a, i32 %b, i32 %c) {
 ; DEFAULT-NEXT:    cmn w0, #7
 ; DEFAULT-NEXT:    csel w0, w1, w2, eq
 ; DEFAULT-NEXT:    ret
+;
+; WINDOWS-LABEL: test_cmn_small_imm_csel:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    cmn w0, #7
+; WINDOWS-NEXT:    csel w0, w1, w2, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, -7
   %sel = select i1 %cmp, i32 %b, i32 %c
@@ -392,6 +494,12 @@ define i32 @test_cmp_without_csel(i32 %a, i32 %b) {
 ; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_cmp_without_csel:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    cmp w0, w1
+; WINDOWS-NEXT:    cset w0, eq
+; WINDOWS-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, %b
   %result = zext i1 %cmp to i32

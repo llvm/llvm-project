@@ -262,14 +262,36 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
-        Returns true if the pointer points to device data.
+        Returns true if the pointer points to device data. `symbolTables`, when
+        non-null, caches symbol lookups (e.g. of referenced globals) across
+        repeated queries.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isDeviceData",
-      /*args=*/(ins "::mlir::Value":$var),
+      /*methodName=*/"isDeviceAccessible",
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::SymbolTableCollection *":$symbolTables),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to memory that is residing in the
+        current device. This is a subset of `isDeviceAccessible`: memory that
+        is accessible from the device but is physically shared with the host
+        (and so may migrate on demand) is accessible but not in guaranteed to
+        be in device memory, and therefore must still be mapped or attached
+        rather than treated as already resident.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isInDeviceMemory",
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::SymbolTableCollection *":$symbolTables),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::cast<::mlir::acc::PointerLikeType>($_type)
+            .isDeviceAccessible(var, symbolTables);
       }]
     >,
   ];
@@ -544,14 +566,36 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
-        Returns true if the variable represents device data.
+        Returns true if the variable represents device data. `symbolTables`,
+        when non-null, caches symbol lookups (e.g. of referenced globals)
+        across repeated queries.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isDeviceData",
-      /*args=*/(ins "::mlir::Value":$var),
+      /*methodName=*/"isDeviceAccessible",
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::SymbolTableCollection *":$symbolTables),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to memory that is residing in the
+        current device. This is a subset of `isDeviceAccessible`: memory that
+        is accessible from the device but is physically shared with the host
+        (and so may migrate on demand) is accessible but not in guaranteed to
+        be in device memory, and therefore must still be mapped or attached
+        rather than treated as already resident.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isInDeviceMemory",
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::SymbolTableCollection *":$symbolTables),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::cast<::mlir::acc::MappableType>($_type)
+            .isDeviceAccessible(var, symbolTables);
       }]
     >,
   ];

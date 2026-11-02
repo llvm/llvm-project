@@ -4,3 +4,4 @@ set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES SymbolFile)
 
 add_subdirectory(Clang)
 add_subdirectory(Fortran)
+add_subdirectory(Clike)

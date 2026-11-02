@@ -545,6 +545,13 @@ public:
   /// This method erases all operations in a block.
   virtual void eraseBlock(Block *block);
 
+  /// Erase the operands selected by `eraseIndices` and update
+  /// operandSegmentSizes if the operation has AttrSizedOperandSegments. The bit
+  /// vector must have one entry for each original operand. The caller must
+  /// select operands that the operation permits removing and update any other
+  /// dependent metadata.
+  void eraseOperands(Operation *op, const BitVector &eraseIndices);
+
   /// Erase the specified results of the given operation. Results cannot be
   /// erased directly, so the implementation creates a new replacement
   /// operation and erases the original operation. The new operation is
@@ -680,20 +687,21 @@ public:
   /// Find uses of `from` and replace them with `to` if the `functor` returns
   /// true. Also notify the listener about every in-place op modification (for
   /// every use that was replaced). The optional `allUsesReplaced` flag is set
-  /// to "true" if all uses were replaced.
-  virtual void replaceUsesWithIf(Value from, Value to,
+  /// to "true" if all uses were replaced. Returns whether any uses were
+  /// replaced.
+  virtual bool replaceUsesWithIf(Value from, Value to,
                                  function_ref<bool(OpOperand &)> functor,
                                  bool *allUsesReplaced = nullptr);
-  void replaceUsesWithIf(ValueRange from, ValueRange to,
+  bool replaceUsesWithIf(ValueRange from, ValueRange to,
                          function_ref<bool(OpOperand &)> functor,
                          bool *allUsesReplaced = nullptr);
   // Note: This function cannot be called `replaceOpUsesWithIf` because the
   // overload resolution, when called with an op that can be implicitly
   // converted to a Value, would be ambiguous.
-  void replaceOpUsesWithIf(Operation *from, ValueRange to,
+  bool replaceOpUsesWithIf(Operation *from, ValueRange to,
                            function_ref<bool(OpOperand &)> functor,
                            bool *allUsesReplaced = nullptr) {
-    replaceUsesWithIf(from->getResults(), to, functor, allUsesReplaced);
+    return replaceUsesWithIf(from->getResults(), to, functor, allUsesReplaced);
   }
 
   /// Find uses of `from` within `block` and replace them with `to`. Also notify
@@ -714,7 +722,7 @@ public:
   /// `exceptedUser`. Also notify the listener about every in-place op
   /// modification (for every use that was replaced).
   void replaceAllUsesExcept(Value from, Value to, Operation *exceptedUser) {
-    return replaceUsesWithIf(from, to, [&](OpOperand &use) {
+    replaceUsesWithIf(from, to, [&](OpOperand &use) {
       Operation *user = use.getOwner();
       return user != exceptedUser;
     });

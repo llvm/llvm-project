@@ -186,10 +186,6 @@ module std_core {
       header "__type_traits/is_equality_comparable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_execution_policy {
-      header "__type_traits/is_execution_policy.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_final {
       header "__type_traits/is_final.h"
       export std_core.type_traits.integral_constant
@@ -931,6 +927,7 @@ module std {
     module invert_if        { header "__bit/invert_if.h" }
     module popcount         { header "__bit/popcount.h" }
     module rotate           { header "__bit/rotate.h" }
+    module shift            { header "__bit/shift.h" }
 
     header "bit"
     export *
@@ -1243,6 +1240,11 @@ module std {
     export *
   }
 
+  module debugging {
+    header "debugging"
+    export *
+  }
+
   module deque {
     module fwd { header "__fwd/deque.h" }
 
@@ -1265,6 +1267,8 @@ module std {
 
   module execution {
     header "execution"
+    header "__execution/execution_policies.h"
+    header "__execution/is_execution_policy.h"
     export *
   }
 
@@ -1586,6 +1590,7 @@ module std {
     module size                       { header "__iterator/size.h" }
     module sortable                   { header "__iterator/sortable.h" }
     module static_bounded_iter        { header "__iterator/static_bounded_iter.h" }
+    module static_packed_bounded_iter { header "__iterator/static_packed_bounded_iter.h" }
     module unreachable_sentinel       { header "__iterator/unreachable_sentinel.h" }
     module capacity_aware_iterator    { header "__iterator/capacity_aware_iterator.h" }
     module wrap_iter                  { header "__iterator/wrap_iter.h" }
@@ -1608,7 +1613,6 @@ module std {
   module locale {
     header "locale"
     module check_grouping  { header "__locale_dir/check_grouping.h" }
-    module get_c_locale    { header "__locale_dir/get_c_locale.h" }
     module messages        { header "__locale_dir/messages.h" }
     module money           { header "__locale_dir/money.h" }
     module num             { header "__locale_dir/num.h" }
@@ -1627,6 +1631,7 @@ module std {
       textual header "__locale_dir/support/aix.h"
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
+      textual header "__locale_dir/support/default/get_c_locale.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
@@ -1782,11 +1787,6 @@ module std {
   module new {
     header "new"
     module align_val_t          { header "__new/align_val_t.h" }
-    module allocate {
-      header "__new/allocate.h"
-      export std.utility.element_count // used as part of the API
-      export * // TODO: Workaround for https://llvm.org/PR120108
-    }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
     module global_new_delete    {
@@ -2195,6 +2195,7 @@ module std {
 
   module thread {
     module formatter              { header "__thread/formatter.h" }
+    module hardware_concurrency   { header "__thread/hardware_concurrency.h" }
     module id                     { header "__thread/id.h" }
     module jthread                { header "__thread/jthread.h" }
     module poll_with_backoff      { header "__thread/poll_with_backoff.h" }
@@ -2256,6 +2257,7 @@ module std {
   module utility {
     module as_const                        { header "__utility/as_const.h" }
     module as_lvalue                       { header "__utility/as_lvalue.h" }
+    module assume                          { header "__utility/assume.h" }
     module auto_cast                       {
       header "__utility/auto_cast.h"
       export std_core.type_traits.decay // the macro expansion uses that trait
@@ -2413,6 +2415,69 @@ module std {
         header "__pstl/backends/serial.h"
         export std_core.utility_core.empty
       }
+      module statpart {
+        module any_of {
+          header "__pstl/backends/statpart/any_of.h"
+        }
+        module basis {
+          header "__pstl/backends/statpart/basis.h"
+        }
+        module fill {
+          header "__pstl/backends/statpart/fill.h"
+        }
+        module find_end {
+          header "__pstl/backends/statpart/find_end.h"
+        }
+        module find_if {
+          header "__pstl/backends/statpart/find_if.h"
+        }
+        module for_each {
+          header "__pstl/backends/statpart/for_each.h"
+        }
+        module is_heap_until {
+          header "__pstl/backends/statpart/is_heap_until.h"
+        }
+        module merge {
+          header "__pstl/backends/statpart/merge.h"
+        }
+        module min_element {
+          header "__pstl/backends/statpart/min_element.h"
+        }
+        module minmax_element {
+          header "__pstl/backends/statpart/minmax_element.h"
+        }
+        module mismatch {
+          header "__pstl/backends/statpart/mismatch.h"
+        }
+        module reverse {
+          header "__pstl/backends/statpart/reverse.h"
+        }
+        module search {
+          header "__pstl/backends/statpart/search.h"
+        }
+        module search_n {
+          header "__pstl/backends/statpart/search_n.h"
+        }
+        module stable_sort {
+          header "__pstl/backends/statpart/stable_sort.h"
+        }
+        module swap_ranges {
+          header "__pstl/backends/statpart/swap_ranges.h"
+        }
+        module transform {
+          header "__pstl/backends/statpart/transform.h"
+        }
+        module transform_reduce {
+          header "__pstl/backends/statpart/transform_reduce.h"
+        }
+        module uninitialized_copy {
+          header "__pstl/backends/statpart/uninitialized_copy.h"
+        }
+        module uninitialized_move {
+          header "__pstl/backends/statpart/uninitialized_move.h"
+        }
+        header "__pstl/backends/statpart.h"
+      }
       module std_thread {
         header "__pstl/backends/std_thread.h"
         export std.pstl.cpu_algos
@@ -2468,11 +2533,17 @@ module std {
         header "__pstl/cpu_algos/stable_sort.h"
         export std_core.utility_core.empty
       }
+      module swap_ranges {
+        header "__pstl/cpu_algos/swap_ranges.h"
+      }
       module transform {
         header "__pstl/cpu_algos/transform.h"
       }
       module transform_reduce {
         header "__pstl/cpu_algos/transform_reduce.h"
+      }
+      module uninitialized_algorithms {
+        header "__pstl/cpu_algos/uninitialized_algorithms.h"
       }
     }
     module dispatch           { header "__pstl/dispatch.h" }

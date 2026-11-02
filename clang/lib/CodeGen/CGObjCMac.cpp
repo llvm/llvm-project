@@ -2611,9 +2611,14 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
                           CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
                           GlobalDecl(), QualType());
 
-  // Use the hashing helper to manage the keys and sorting.
+  // Use the hashing helper to manage the keys and sorting. Sort by UTF-16
+  // code unit exactly when the keys are emitted as constant CFStrings (which
+  // store and compare keys as UTF-16); with -fno-constant-cfstrings the keys
+  // are OBJC_CLASS_$_NSConstantString compared as raw bytes, so sort by
+  // UTF-8 byte order instead.
   auto HashOpts(NSDictionaryBuilder::Options::Sorted);
-  NSDictionaryBuilder DictBuilder(E, KeysAndObjects, HashOpts);
+  NSDictionaryBuilder DictBuilder(E, KeysAndObjects, HashOpts,
+                                  !CGM.getLangOpts().NoConstantCFStrings);
 
   // Ask `HashBuilder` for the fully sorted keys / values and the count.
   uint64_t const NumElements = DictBuilder.getNumElements();
@@ -5329,7 +5334,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
       // call.  If the call throws, then this is sufficient to
       // guarantee correctness as long as it doesn't also write to any
       // locals.
-      Builder.SetInsertPoint(&BB, BI);
+      Builder.SetInsertPoint(BI);
       emitReadHazard(Builder);
     }
   }
@@ -8391,7 +8396,11 @@ CGObjCNonFragileABIMac::EmitSuperClassRef(CodeGenFunction &CGF,
                                      llvm::GlobalValue::PrivateLinkage, ClassGV,
                                      "OBJC_CLASSLIST_SUP_REFS_$_");
     Entry->setAlignment(CGF.getPointerAlign().getAsAlign());
-    Entry->setSection(SectionName);
+    // Loading a reference to a class stub calls objc_loadClassref, which
+    // updates the reference in place. We cannot use the __objc_superrefs
+    // section here because it's a constant section.
+    if (!ID->hasAttr<ObjCClassStubAttr>())
+      Entry->setSection(SectionName);
     CGM.addCompilerUsedGlobal(Entry);
   }
 
@@ -8712,9 +8721,10 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
       VTableGV->setDLLStorageClass(getStorage(CGM, VTableName));
   }
 
-  llvm::Value *VTableIdx = llvm::ConstantInt::get(CGM.Int32Ty, 2);
-  llvm::Constant *VTablePtr = llvm::ConstantExpr::getInBoundsGetElementPtr(
-      VTableGV->getValueType(), VTableGV, VTableIdx);
+  llvm::Constant *VTableIdx = llvm::ConstantInt::get(CGM.Int32Ty, 2);
+  llvm::Constant *VTablePtr = llvm::ConstantExpr::getGetElementPtr(
+      CGM.getDataLayout(), VTableGV->getValueType(), VTableGV, VTableIdx,
+      llvm::GEPNoWrapFlags::inBounds());
 
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.EHTypeTy);

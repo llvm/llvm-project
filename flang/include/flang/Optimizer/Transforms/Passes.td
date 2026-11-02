@@ -263,7 +263,12 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "Command-line flags to append to DWARF producer">,
     Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
-           "Emit fake use for debug variables to extend their lifetime">
+           "Emit fake use for debug variables to extend their lifetime">,
+    Option<"boundsInStackSlots", "bounds-in-stack-slots",
+           "bool", /*default=*/"false",
+           "Keep the bounds and length parameters of a variable in stack "
+           "slots, so that they can be described wherever the variable is "
+           "visible">
   ];
 }
 
@@ -411,6 +416,22 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
+def O0CanonicalizerPass : Pass<"fir-o0-canonicalize"> {
+  let summary = "Simplify operations while preserving statement-entry branches";
+  let description = [{
+    Clean up IR after CFG lowering at O0, using canonicalization patterns from
+    all loaded dialects except ControlFlow. CF canonicalizations can bypass
+    loop-entry branches carrying an array assignment's source location and
+    move its PHI initializations into preceding statements, losing the
+    assignment's breakpoint location outside the loop.
+
+    Both dialect-wide and operation-level CF pattern registrations are omitted.
+    Folding and dead operation elimination remain enabled; region simplification
+    is disabled. This pass does not promise to preserve arbitrary CFG structure
+    against transformations registered by other dialects.
+  }];
+}
+
 def SimplifyRegionLite : Pass<"simplify-region-lite"> {
   let summary = "Region simplification";
   let description = [{
@@ -449,9 +470,59 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     Loop Versioning pass adds a check and two variants of a loop when the input
     array is an assumed shape array, to optimize for the (often common) case where
     an array has element sized stride. The element sizes stride allows some
-    loops to be vectorized as well as other loop optimizations.
+    loops to be vectorized as well as other loop optimizations. Accesses through
+    a local POINTER associated with such an array are handled the same way. A
+    loop that is versioned anyway also checks the local POINTER arrays that it
+    accesses if their pointer assignment is not visible.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
+  let options = [
+    Option<"enableSlices", "enable-slices", "bool",
+           /*default=*/"true",
+           "Enable versioning for supported static-unit array slices; disabling "
+           "this option leaves other loop versioning active">
+  ];
+}
+
+def LoopTripCountVersioning
+    : Pass<"loop-tripcount-versioning", "mlir::func::FuncOp"> {
+  let summary = "Version innermost loops on a likely constant trip count";
+  let description = [{
+    Adds a runtime check and two variants of an innermost loop whose trip count
+    is likely to equal a compile-time constant, so that one variant has a
+    constant trip count that LLVM can fully unroll, or at least vectorize
+    without a minimum-iteration check and remainder loop. Both variants are the
+    original loop with only the bound changed, so the transformation is legal
+    wherever the runtime check is uniform across the threads executing the
+    loop. Device code is excluded: on a GPU the check could differ between
+    threads and send them to different copies of a convergent operation such
+    as a barrier.
+
+    The heuristics decide only where it is worthwhile. The first heuristic
+    takes the constant from the declared extent of an explicit-shape array
+    whose leading dimension the loop indexes: for `a(1:n, :)` on `a(4, :)` the
+    innermost loop runs `1..n`, and versioning on `n == 4` gives the fast
+    variant a trip count of 4. Further heuristics may be added in the future.
+
+    Candidates are limited by the declared extent (`max-section-extent`) and
+    by the size of the fully unrolled fast variant, extent times FIR operations
+    in the loop body (`max-unrolled-ops`). The latter is a heuristic proxy for
+    LLVM's full-unroll decision, which is made on target-costed instructions
+    after lowering. The default of 300 is a proxy for LLVM's -O3 threshold on
+    the scalar unroll path; where the vectorizer takes the loop first, LLVM
+    collapses larger products as well, so the default is conservative on
+    wide-vector targets.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::arith::ArithDialect" ];
+  let options = [
+    Option<"maxSectionExtent", "max-section-extent", "unsigned",
+           /*default=*/"32",
+           "Do not version on declared extents larger than this; 0 disables">,
+    Option<"maxUnrolledOps", "max-unrolled-ops", "unsigned",
+           /*default=*/"300",
+           "Do not version if the declared extent times the number of FIR "
+           "operations in the loop body exceeds this; 0 removes the limit">
+  ];
 }
 
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
@@ -523,6 +594,14 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               /*default=*/"false",
               "Set the use-sample-profile attribute on functions in the "
               "module.">,
+       Option<"disableTailCalls", "disable-tail-calls", "bool",
+              /*default=*/"false",
+              "Set the disable-tail-calls attribute on functions to prevent "
+              "tail call optimization.">,
+       Option<"UniqueInternalLinkageNames", "unique-internal-linkage-names",
+              "bool", /*default=*/"false",
+              "Set the sample-profile-suffix-elision-policy attribute on "
+              "internal linkage functions in the module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
        Option<"setNoCapture", "set-nocapture", "bool", /*default=*/"false",
@@ -554,7 +633,8 @@ def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
   let summary = "Delay cuf.alloc of descriptor types to just before first use";
   let description = [{
     Moves cuf.alloc operations for allocatable/pointer descriptors (box types)
-    from function entry to just before their first use. This defers
+    from function entry to just before their first use, but never into a block
+    on a CFG cycle, where the alloc would run on every trip. This defers
     cudaMallocManaged calls so that users can call cudaSetDevice before any
     CUDA context is created.
   }];
@@ -580,13 +660,23 @@ def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
 
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::gpu::GPUDialect",
+  let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
+                           "mlir::arith::ArithDialect", "mlir::gpu::GPUDialect",
                            "mlir::DLTIDialect"];
+  let options = [Option<
+      "deferAccRoutineDataTransfers", "defer-acc-routine-data-transfers",
+      "bool", /*default=*/"false",
+      "Do not convert cuf.data_transfer or cuf.on_device operations in the "
+      "host copy of an OpenACC routine. The routine is later specialized for "
+      "host and device, after which each copy can be handled according to its "
+      "execution context.">];
 }
 
 def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
   let summary = "Convert CUF operations to runtime calls late in the pipeline";
-  let dependentDialects = ["fir::FIROpsDialect"];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::arith::ArithDialect", "mlir::gpu::GPUDialect"
+  ];
 }
 
 def CUFDeviceGlobal :
@@ -607,6 +697,34 @@ def CUFDeviceGlobal :
   ];
 }
 
+def CUFSharedTypeInfo : Pass<"cuf-shared-type-info", "mlir::ModuleOp"> {
+  let summary = "Share host runtime type information with device code";
+  let description = [{
+    Under -gpu=mem:managed, a descriptor in managed memory can be written by
+    device code and read by host code, so the type descriptor address it holds
+    must be valid on both sides.
+
+    This pass makes the host runtime type information writable and places it
+    in the `__nv_type_info` section, which CUFAddConstructor registers with the
+    CUDA runtime so device code can read it through its host address. Each
+    type descriptor present in the GPU module gets a managed pointer, which
+    the CUDA Fortran constructor sets to the host address of the type
+    descriptor. The GPU module attribute `cuf.shared_type_descs` maps type
+    descriptor names to these pointers, and code generation loads the type
+    descriptor address from them in device code. The `acc.declare` attribute
+    is dropped so OpenACC does not copy the type information to the device.
+
+    Each translation unit defining such type information also ends the
+    section with a page-aligned global, so that the registered pages hold
+    nothing but type information.
+
+    Device code then sees the host binding tables, so type-bound procedures
+    cannot be called from device code.
+  }];
+  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect",
+                           "mlir::LLVM::LLVMDialect"];
+}
+
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
@@ -624,13 +742,27 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
            "time and HMM/ATS handles migration.">,
+    Option<"cudaManagedTypeInfo", "cuda-managed-type-info", "bool",
+           /*default=*/"false",
+           "Register the runtime type information shared with device code "
+           "under -gpu=mem:managed (see cuf-shared-type-info): register the "
+           "pages of its section with the CUDA runtime.">,
     Option<"priority", "priority", "int32_t", /*default=*/"0",
            "Priority for the CUDA Fortran global constructor in "
            "llvm.mlir.global_ctors.">,
     Option<"emitCudaCompiled", "emit-cuda-compiled", "bool",
            /*default=*/"false",
            "Declare an undefined cuda_compiled symbol so linking without the "
-           "CUDA Fortran runtime fails with a clear diagnostic.">
+           "CUDA Fortran runtime fails with a clear diagnostic.">,
+    ListOption<"extraConstructors", "extra-constructors",
+               "std::string",
+               "Extra functions to declare and call from the CUDA Fortran "
+               "constructor.">,
+   ListOption<"entryOnlyConstructors", "entry-only-constructors",
+               "std::string",
+               "Extra functions to declare and call from the CUDA Fortran "
+               "constructor only if the entry function is present.">
+
   ];
 }
 
@@ -657,6 +789,22 @@ def CUFComputeSharedMemoryOffsetsAndSize
   ];
 }
 
+def CUFDuplicateDeviceFunc
+    : Pass<"cuf-duplicate-device-func", "::mlir::ModuleOp"> {
+  let summary = "Give host_device procedures a device copy before optimization";
+  let description = [{
+    Creates the device copy of every attributes(host,device) procedure, and of
+    every procedure without a device attribute that device code calls, as a
+    func.func in the host module. The copy carries the device proc attribute,
+    the device allocation policy and a cuf.device_copy_of marker naming the
+    original, and device code is redirected to it while host code keeps the
+    original. Running before the FIR optimizer lets each copy be optimized for
+    its own target; cuf-transform-device-func later moves the copies into the
+    GPU module under their original name.
+  }];
+  let dependentDialects = ["cuf::CUFDialect", "fir::FIROpsDialect"];
+}
+
 def CUFDeviceFuncTransform
     : Pass<"cuf-transform-device-func", "::mlir::ModuleOp"> {
   let summary = "Transform device function to GPU func";
@@ -670,18 +818,6 @@ def CUFDeviceFuncTransform
               /*default=*/"false",
               "Report an error if device code contains a call to "
               "descriptor I/O">];
-}
-
-def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
-  let summary = "Convert some CUDA Fortran specific call";
-  let dependentDialects = ["fir::FIROpsDialect"];
-  let options = [Option<
-      "deferAccRoutines", "defer-acc-routines", "bool", /*default=*/"false",
-      "Do not fold device-detection intrinsics located in the host copy of an "
-      "OpenACC routine. Such a routine is later cloned to build its device "
-      "counterpart, so folding it to the host value here would bake that value "
-      "into the device clone. Deferred calls are folded by a later run that "
-      "executes after device specialization.">];
 }
 
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
@@ -791,6 +927,11 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
     fir.declare) and interfaces such as FortranObjectViewOpInterface.
     The pass only moves existing operations, so there are no dependent
     dialects.
+
+    With only-inside set, a loop must have an ancestor with the given operation
+    name, within the current function (including the function itself). A loop
+    matching the name does not qualify on that basis alone. No matching ancestor
+    means no hoisting. The pass and its analyses remain rooted at the function.
   }];
   let options = [Option<"hoistFromNestedRegions", "hoist-from-nested-regions",
                         "::fir::LICMNestedHoistingMode",
@@ -806,7 +947,12 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
                                 "loads"),
             clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
                        "aggressive", "Hoist all safe invariant ops")
-           )}]>];
+           )}]>,
+    Option<"onlyInside", "only-inside", "std::string",
+           /*default=*/"std::string{}",
+           "Only hoist from loops nested in an operation with this name "
+           "(empty means all loops)">
+  ];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

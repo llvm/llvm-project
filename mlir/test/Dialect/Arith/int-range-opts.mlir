@@ -5,7 +5,7 @@
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
+  %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
   %1 = arith.cmpi eq, %0, %cst1 : index
   return %1: i1
 }
@@ -17,7 +17,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
+  %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
   %1 = arith.cmpi ne, %0, %cst1 : index
   return %1: i1
 }
@@ -30,7 +30,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst = arith.constant 0 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
+  %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
   %1 = arith.cmpi sge, %0, %cst : index
   return %1: i1
 }
@@ -42,7 +42,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst = arith.constant 0 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
+  %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
   %1 = arith.cmpi slt, %0, %cst : index
   return %1: i1
 }
@@ -55,7 +55,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
+  %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
   %1 = arith.cmpi sgt, %0, %cst1 : index
   return %1: i1
 }
@@ -67,7 +67,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
+  %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
   %1 = arith.cmpi sle, %0, %cst1 : index
   return %1: i1
 }
@@ -75,10 +75,10 @@ func.func @test() -> i1 {
 // -----
 
 // CHECK-LABEL: func @test
-// CHECK: test.reflect_bounds {smax = 24 : si8, smin = 0 : si8, umax = 24 : ui8, umin = 0 : ui8}
+// CHECK: test.reflect_bounds <umin = 0 : ui8, umax = 24 : ui8, smin = 0 : si8, smax = 24 : si8>
 func.func @test() -> i8 {
   %cst1 = arith.constant 1 : i8
-  %i8val = test.with_bounds { umin = 0 : i8, umax = 12 : i8, smin = 0 : i8, smax = 12 : i8 } : i8
+  %i8val = test.with_bounds < umin = 0 : i8, umax = 12 : i8, smin = 0 : i8, smax = 12 : i8 > : i8
   %shifted = arith.shli %i8val, %cst1 : i8
   %1 = test.reflect_bounds %shifted : i8
   return %1: i8
@@ -87,10 +87,10 @@ func.func @test() -> i8 {
 // -----
 
 // CHECK-LABEL: func @test
-// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 254 : ui8, umin = 0 : ui8}
+// CHECK: test.reflect_bounds <umin = 0 : ui8, umax = 254 : ui8, smin = -128 : si8, smax = 127 : si8>
 func.func @test() -> i8 {
   %cst1 = arith.constant 1 : i8
-  %i8val = test.with_bounds { umin = 0 : i8, umax = 127 : i8, smin = 0 : i8, smax = 127 : i8 } : i8
+  %i8val = test.with_bounds < umin = 0 : i8, umax = 127 : i8, smin = 0 : i8, smax = 127 : i8 > : i8
   %shifted = arith.shli %i8val, %cst1 : i8
   %1 = test.reflect_bounds %shifted : i8
   return %1: i8
@@ -103,9 +103,48 @@ func.func @test() -> i8 {
 // CHECK: return [[val]]
 func.func @trivial_rem() -> i8 {
   %c64 = arith.constant 64 : i8
-  %val = test.with_bounds { umin = 0 : ui8, umax = 63 : ui8, smin = 0 : si8, smax = 63 : si8 } : i8
+  %val = test.with_bounds < umin = 0 : ui8, umax = 63 : ui8, smin = 0 : si8, smax = 63 : si8 > : i8
   %mod = arith.remsi %val, %c64 : i8
   return %mod : i8
+}
+
+// -----
+
+// CHECK-LABEL: func @trivial_remui_sign_bit_set_modulus
+// CHECK: [[val:%.+]] = test.with_bounds
+// CHECK-NEXT: return [[val]]
+func.func @trivial_remui_sign_bit_set_modulus() -> i8 {
+  // The i8 bit pattern for -56 represents 200 when interpreted as unsigned.
+  %c200 = arith.constant -56 : i8
+  %val = test.with_bounds < umin = 0 : ui8, umax = 63 : ui8, smin = 0 : si8, smax = 63 : si8 > : i8
+  %mod = arith.remui %val, %c200 : i8
+  return %mod : i8
+}
+
+// -----
+
+// CHECK-LABEL: func @trivial_remui_sign_bit_set_range
+// CHECK: [[val:%.+]] = test.with_bounds
+// CHECK-NEXT: return [[val]]
+func.func @trivial_remui_sign_bit_set_range() -> i8 {
+  %c200 = arith.constant -56 : i8
+  %val = test.with_bounds < umin = 128 : ui8, umax = 199 : ui8, smin = -128 : si8, smax = -57 : si8 > : i8
+  %mod = arith.remui %val, %c200 : i8
+  return %mod : i8
+}
+
+// -----
+
+// CHECK-LABEL: func @non_trivial_remui_index_sign_bit_set_modulus
+// CHECK: arith.remui
+func.func @non_trivial_remui_index_sign_bit_set_modulus(%arg: index) -> index {
+  %mask = arith.constant 255 : index
+  // This is 2^63 + 3 as an unsigned 64-bit value, but truncates to 3 when
+  // index is lowered to 32 bits.
+  %divisor = arith.constant -9223372036854775805 : index
+  %val = arith.andi %arg, %mask : index
+  %mod = arith.remui %val, %divisor : index
+  return %mod : index
 }
 
 // -----
@@ -115,8 +154,8 @@ func.func @trivial_rem() -> i8 {
 // CHECK: return [[mod]]
 func.func @non_const_rhs() -> i8 {
   %c64 = arith.constant 64 : i8
-  %val = test.with_bounds { umin = 0 : ui8, umax = 2 : ui8, smin = 0 : si8, smax = 2 : si8 } : i8
-  %rhs = test.with_bounds { umin = 63 : ui8, umax = 64 : ui8, smin = 63 : si8, smax = 64 : si8 } : i8
+  %val = test.with_bounds < umin = 0 : ui8, umax = 2 : ui8, smin = 0 : si8, smax = 2 : si8 > : i8
+  %rhs = test.with_bounds < umin = 63 : ui8, umax = 64 : ui8, smin = 63 : si8, smax = 64 : si8 > : i8
   %mod = arith.remui %val, %rhs : i8
   return %mod : i8
 }
@@ -128,7 +167,7 @@ func.func @non_const_rhs() -> i8 {
 // CHECK: return [[mod]]
 func.func @wraps() -> i8 {
   %c64 = arith.constant 64 : i8
-  %val = test.with_bounds { umin = 63 : ui8, umax = 65 : ui8, smin = 63 : si8, smax = 65 : si8 } : i8
+  %val = test.with_bounds < umin = 63 : ui8, umax = 65 : ui8, smin = 63 : si8, smax = 65 : si8 > : i8
   %mod = arith.remsi %val, %c64 : i8
   return %mod : i8
 }

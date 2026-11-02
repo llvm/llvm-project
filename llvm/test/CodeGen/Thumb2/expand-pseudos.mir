@@ -8,6 +8,12 @@
   entry:
     unreachable
   }
+
+  declare i32 @setjmp(ptr)
+
+  define void @t2call_bti() {
+    ret void
+  }
 ...
 ---
 name:            test1
@@ -29,4 +35,22 @@ body:             |
     $r0 = t2LDRpci_pic @var, 0, implicit-def $r0_r1
     BX_RET 14, $noreg, implicit $r0
 
+...
+---
+name: t2call_bti
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK-LABEL: name: t2call_bti
+    ; CHECK: liveins: $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: BUNDLE implicit-def dead $lr, implicit-def $sp, implicit-def $r0, implicit $sp, implicit $r0 {
+    ; CHECK-NEXT:   tBL 14 /* CC::al */, $noreg, @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def $r0
+    ; CHECK-NEXT:   t2BTI
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    t2CALL_BTI 14, $noreg, @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def $r0
+    tBX_RET 14, $noreg, implicit $r0
 ...

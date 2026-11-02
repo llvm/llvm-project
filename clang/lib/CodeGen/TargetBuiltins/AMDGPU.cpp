@@ -2044,10 +2044,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       llvm::MDTuple *EmptyMD = MDNode::get(getLLVMContext(), {});
       RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
 
-      // Most targets require "amdgpu.ignore.denormal.mode" to emit the native
+      // Most targets require "atomic.ignore.denormal.mode" to emit the native
       // instruction, but this only matters for float fadd.
-      if (BinOp == llvm::AtomicRMWInst::FAdd && Val->getType()->isFloatTy())
-        RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+      addAtomicIgnoreDenormalModeMetadata(*this, *RMW);
     }
 
     return Builder.CreateBitCast(RMW, OrigTy);

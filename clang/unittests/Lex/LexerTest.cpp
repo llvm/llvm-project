@@ -43,34 +43,29 @@ protected:
   LexerTest()
       : FileMgr(FileMgrOpts),
         Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
-        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
-    TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
-  }
+        SourceMgr(Diags, FileMgr), TargetOpts([] {
+          TargetOptions TargetOpts;
+          TargetOpts.Triple = "x86_64-apple-darwin11.1.0";
+          return TargetOpts;
+        }()),
+        Target(TargetInfo::CreateTargetInfo(Diags, TargetOpts)),
+        HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get()),
+        PP(std::make_unique<Preprocessor>(PPOpts, Diags, LangOpts, SourceMgr,
+                                          HeaderInfo, ModLoader)) {}
 
-  std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
-                                         TrivialModuleLoader &ModLoader) {
+  void InitializePP(StringRef Source) {
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    HeaderSearchOptions HSOpts;
-    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
-    PreprocessorOptions PPOpts;
-    std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
-        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
-        /*IILookup =*/nullptr,
-        /*OwnsHeaderSearch =*/false);
     if (!PreDefines.empty())
       PP->setPredefines(PreDefines);
     PP->Initialize(*Target);
     PP->EnterMainSourceFile();
-    return PP;
   }
 
   std::vector<Token> Lex(StringRef Source) {
-    TrivialModuleLoader ModLoader;
-    PP = CreatePP(Source, ModLoader);
+    InitializePP(Source);
 
     std::vector<Token> toks;
     PP->LexTokensUntilEOF(&toks);
@@ -130,8 +125,12 @@ protected:
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
-  std::shared_ptr<TargetOptions> TargetOpts;
+  TargetOptions TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
+  HeaderSearchOptions HSOpts;
+  HeaderSearch HeaderInfo;
+  TrivialModuleLoader ModLoader;
+  PreprocessorOptions PPOpts;
   std::unique_ptr<Preprocessor> PP;
   std::string PreDefines;
 };
@@ -471,8 +470,7 @@ TEST_F(LexerTest, DontMergeMacroArgsFromDifferentMacroFiles) {
 }
 
 TEST_F(LexerTest, DontOverallocateStringifyArgs) {
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP("\"StrArg\", 5, 'C'", ModLoader);
+  InitializePP("\"StrArg\", 5, 'C'");
 
   llvm::BumpPtrAllocator Allocator;
   std::array<IdentifierInfo *, 3> ParamList;
@@ -498,7 +496,7 @@ TEST_F(LexerTest, DontOverallocateStringifyArgs) {
       ArgTokens.push_back(tok);
   }
 
-  auto MacroArgsDeleter = [&PP](MacroArgs *M) { M->destroy(*PP); };
+  auto MacroArgsDeleter = [this](MacroArgs *M) { M->destroy(*PP); };
   std::unique_ptr<MacroArgs, decltype(MacroArgsDeleter)> MA(
       MacroArgs::create(MI, ArgTokens, false, *PP), MacroArgsDeleter);
   auto StringifyArg = [&](int ArgNo) {
@@ -571,9 +569,15 @@ TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
   }
 }
 
-TEST_F(LexerTest, AvoidPastEndOfStringDereference) {
+TEST_F(LexerTest, AvoidPastEndOfStringDereference01) {
   EXPECT_TRUE(Lex("  //  \\\n").empty());
+}
+
+TEST_F(LexerTest, AvoidPastEndOfStringDereference02) {
   EXPECT_TRUE(Lex("#include <\\\\").empty());
+}
+
+TEST_F(LexerTest, AvoidPastEndOfStringDereference03) {
   EXPECT_TRUE(Lex("#include <\\\\\n").empty());
 }
 
@@ -709,8 +713,7 @@ TEST_F(LexerTest, FindPreviousTokenIncludingComments) {
 }
 
 TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP("", ModLoader);
+  InitializePP("");
   PP->LexTokensUntilEOF();
   EXPECT_EQ(SourceMgr.getNumCreatedFIDsForFileID(PP->getPredefinesFileID()),
             1U);
@@ -804,51 +807,46 @@ TEST(LexerPreambleTest, PreambleBounds) {
   }
 }
 
-TEST_F(LexerTest, CheckFirstPPToken) {
+TEST_F(LexerTest, CheckFirstPPToken01) {
   LangOpts.CPlusPlusModules = true;
-  {
-    TrivialModuleLoader ModLoader;
-    auto PP = CreatePP("// This is a comment\n"
-                       "int a;",
-                       ModLoader);
-    Token Tok;
-    PP->Lex(Tok);
-    EXPECT_TRUE(Tok.is(tok::kw_int));
-    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc().isValid());
-    EXPECT_EQ(PP->getMainFileFirstPPTokenLoc(), Tok.getLocation());
-  }
-  {
-    TrivialModuleLoader ModLoader;
-    auto PP = CreatePP("// This is a comment\n"
-                       "#define FOO int\n"
-                       "FOO a;",
-                       ModLoader);
-    Token Tok;
-    PP->Lex(Tok);
-    EXPECT_TRUE(Tok.is(tok::kw_int));
-    EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
-                                    PP->getSourceManager(), PP->getLangOpts(),
-                                    /*IgnoreWhiteSpace=*/false));
-    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
-    EXPECT_TRUE(Tok.is(tok::hash));
-  }
+  InitializePP("// This is a comment\n"
+               "int a;");
+  Token Tok;
+  PP->Lex(Tok);
+  EXPECT_TRUE(Tok.is(tok::kw_int));
+  EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc().isValid());
+  EXPECT_EQ(PP->getMainFileFirstPPTokenLoc(), Tok.getLocation());
+}
 
-  {
-    PreDefines = "#define FOO int\n";
-    TrivialModuleLoader ModLoader;
-    auto PP = CreatePP("// This is a comment\n"
-                       "FOO a;",
-                       ModLoader);
-    Token Tok;
-    PP->Lex(Tok);
-    EXPECT_TRUE(Tok.is(tok::kw_int));
-    EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
-                                    PP->getSourceManager(), PP->getLangOpts(),
-                                    /*IgnoreWhiteSpace=*/false));
-    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
-    EXPECT_TRUE(Tok.is(tok::raw_identifier));
-    EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
-  }
+TEST_F(LexerTest, CheckFirstPPToken02) {
+  LangOpts.CPlusPlusModules = true;
+  InitializePP("// This is a comment\n"
+               "#define FOO int\n"
+               "FOO a;");
+  Token Tok;
+  PP->Lex(Tok);
+  EXPECT_TRUE(Tok.is(tok::kw_int));
+  EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
+                                  PP->getSourceManager(), PP->getLangOpts(),
+                                  /*IgnoreWhiteSpace=*/false));
+  EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
+  EXPECT_TRUE(Tok.is(tok::hash));
+}
+
+TEST_F(LexerTest, CheckFirstPPToken03) {
+  LangOpts.CPlusPlusModules = true;
+  PreDefines = "#define FOO int\n";
+  InitializePP("// This is a comment\n"
+               "FOO a;");
+  Token Tok;
+  PP->Lex(Tok);
+  EXPECT_TRUE(Tok.is(tok::kw_int));
+  EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
+                                  PP->getSourceManager(), PP->getLangOpts(),
+                                  /*IgnoreWhiteSpace=*/false));
+  EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
+  EXPECT_TRUE(Tok.is(tok::raw_identifier));
+  EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
 }
 
 TEST_F(LexerTest, FindEndOfIdentifierContinuation) {

@@ -59,8 +59,15 @@ private:
 // corresponding to an element in array element order.
 class DesignatorFolder {
 public:
-  explicit DesignatorFolder(FoldingContext &c, bool getLastComponent = false)
-      : context_{c}, getLastComponent_{getLastComponent} {}
+  // A named constant has no storage assignment, but its designators can
+  // still be folded to (offset, size) within the constant's own storage
+  // sequence, which storage sequence association checks need; opt in with
+  // foldNamedConstants.  Clients that map real memory (e.g. DATA statement
+  // initialization) must keep the default.
+  explicit DesignatorFolder(FoldingContext &c, bool getLastComponent = false,
+      bool foldNamedConstants = false)
+      : context_{c}, getLastComponent_{getLastComponent},
+        foldNamedConstants_{foldNamedConstants} {}
 
   bool isEmpty() const { return isEmpty_; }
   bool isOutOfRange() const { return isOutOfRange_; }
@@ -158,6 +165,7 @@ private:
 
   FoldingContext &context_;
   bool getLastComponent_{false};
+  bool foldNamedConstants_{false};
   ConstantSubscript elementNumber_{0}; // zero-based
   bool isEmpty_{false};
   bool isOutOfRange_{false};

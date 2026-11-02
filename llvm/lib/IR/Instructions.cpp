@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instructions.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -52,10 +53,6 @@
 #include <vector>
 
 using namespace llvm;
-
-static cl::opt<bool> DisableI2pP2iOpt(
-    "disable-i2p-p2i-opt", cl::init(false),
-    cl::desc("Disables inttoptr/ptrtoint roundtrip optimization"));
 
 //===----------------------------------------------------------------------===//
 //                            AllocaInst Class
@@ -1837,17 +1834,15 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (!isa<VectorType>(V1->getType()) || V1->getType() != V2->getType())
     return false;
 
-  // Make sure the mask elements make sense.
-  int V1Size =
-      cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-  for (int Elem : Mask)
-    if (Elem != PoisonMaskElem && Elem >= V1Size * 2)
-      return false;
-
   if (isa<ScalableVectorType>(V1->getType()))
-    if ((Mask[0] != 0 && Mask[0] != PoisonMaskElem) || !all_equal(Mask))
-      return false;
+    return (Mask[0] == 0 || Mask[0] == PoisonMaskElem) && all_equal(Mask);
 
+  // Make sure the mask elements make sense.
+  int64_t MaxMaskSz =
+      cast<FixedVectorType>(V1->getType())->getNumElements() * 2LL;
+  for (int Elem : Mask)
+    if (Elem != PoisonMaskElem && Elem >= MaxMaskSz)
+      return false;
   return true;
 }
 
@@ -1955,7 +1950,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
   return ConstantVector::get(MaskConst);
 }
 
-static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
+static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int64_t NumOpElts) {
   assert(!Mask.empty() && "Shuffle mask must contain elements");
   bool UsesLHS = false;
   bool UsesRHS = false;
@@ -2633,6 +2628,59 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
 }
 
 //===----------------------------------------------------------------------===//
+//                             BitInsert Class
+//===----------------------------------------------------------------------===//
+BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
+                             const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Base->getType(), BitInsert, AllocMarker, InsertBef) {
+  assert(!areInvalidOperands(Base, Val, Offset) &&
+         "Invalid bitinsert instruction operands!");
+  Op<0>() = Base;
+  Op<1>() = Val;
+  Op<2>() = Offset;
+  setName(Name);
+}
+
+const char *BitInsertInst::areInvalidOperands(Value *Base, Value *Val,
+                                              Value *Offset) {
+  if (!Base->getType()->isByteTy())
+    return "bitinsert base must be a byte type";
+  if (!(Val->getType()->isFloatingPointTy() || Val->getType()->isIntegerTy() ||
+        Val->getType()->isPointerTy() || Val->getType()->isByteTy()))
+    return "bitinsert value must be an integer, floating-point, pointer, or "
+           "byte type";
+  if (!Offset->getType()->isIntegerTy(32))
+    return "bitinsert offset must be i32";
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+//                             BitExtract Class
+//===----------------------------------------------------------------------===//
+BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                               const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Ty, BitExtract, AllocMarker, InsertBef) {
+  assert(!areInvalidOperands(Ty, Src, Offset) &&
+         "Invalid bitextract instruction operands!");
+  Op<0>() = Src;
+  Op<1>() = Offset;
+  setName(Name);
+}
+
+const char *BitExtractInst::areInvalidOperands(const Type *Ty, Value *Src,
+                                               Value *Offset) {
+  if (!(Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy() ||
+        Ty->isByteTy()))
+    return "bitextract result must be an integer, floating-point, pointer, or "
+           "byte type";
+  if (!Src->getType()->isByteTy())
+    return "bitextract source must be a byte type";
+  if (!Offset->getType()->isIntegerTy(32))
+    return "bitextract offset must be i32";
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 //                             UnaryOperator Class
 //===----------------------------------------------------------------------===//
 
@@ -2937,7 +2985,7 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
     {  1, 0, 0,99,99, 0, 0,99,99,99,99, 7, 3, 0}, // PtrToInt       |
     {  0, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
     { 99,99,99,99,99,99,99,99,99,11,11,99,15, 0}, // IntToPtr       |
-    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5, 1,14}, // BitCast        |
+    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5,18,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
   };
   // clang-format on
@@ -2988,8 +3036,8 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
         return secondOp;
       return 0;
     case 7: {
-      // Disable inttoptr/ptrtoint optimization if enabled.
-      if (DisableI2pP2iOpt)
+      // Skip the inttoptr/ptrtoint optimization if disabled.
+      if (!getIROptions(SrcTy->getContext()).i2p_p2i_opt)
         return 0;
 
       // Cannot simplify if address spaces are different!
@@ -3074,6 +3122,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // inttoptr can only fold through a bitcast if the result remains a
+      // pointer. A pointer-to-byte bitcast must stay as a separate bitcast.
+      if (!DstTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isIntOrIntVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3086,6 +3138,18 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (2), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // bitcast, ptrtoaddr -> bitcast, if SrcTy is a byte and the address is
+      //                                the whole pointer
+      // ptrtoint can only fold through a bitcast if the source was already a
+      // pointer, as ptrtoint exposes the provenance.
+      if (!SrcTy->isPtrOrPtrVectorTy()) {
+        // ptrtoaddr yields the address width, so the sizes only match if the
+        // address is the whole pointer.
+        if (secondOp == Instruction::PtrToAddr &&
+            SrcTy->getPrimitiveSizeInBits() == DstTy->getPrimitiveSizeInBits())
+          return Instruction::BitCast;
+        return 0;
+      }
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3097,6 +3161,31 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
     case 17:
       // (sitofp (zext x)) -> (uitofp x)
       return Instruction::UIToFP;
+    case 18:
+      // bitcast, bitcast -> bitcast, if neither SrcTy nor DstTy is a pointer,
+      //                              both are pointers in the same addrspace,
+      //                              or one is a pointer and the other a byte
+      // bitcast, bitcast -> ptrtoint, if a pointer goes through a byte to an
+      //                               integer of the pointer width
+      // bitcast, bitcast -> inttoptr, if an integer of the pointer width goes
+      //                               through a byte to a pointer
+      // A pair of bitcasts through a byte must stay separate otherwise.
+      if (!SrcTy->isPtrOrPtrVectorTy() && !DstTy->isPtrOrPtrVectorTy())
+        return Instruction::BitCast;
+      if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+          SrcTy->getPointerAddressSpace() == DstTy->getPointerAddressSpace())
+        return Instruction::BitCast;
+      if (SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy())
+        return Instruction::BitCast;
+      if (SrcTy->isVectorTy() == DstTy->isVectorTy() && DL) {
+        if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isIntOrIntVectorTy() &&
+            DL->getPointerTypeSizeInBits(SrcTy) == DstTy->getScalarSizeInBits())
+          return Instruction::PtrToInt;
+        if (SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+            SrcTy->getScalarSizeInBits() == DL->getPointerTypeSizeInBits(DstTy))
+          return Instruction::IntToPtr;
+      }
+      return 0;
     case 99:
       // Cast combination can't happen (error in input). This is for all cases
       // where the MidTy is not the same for the two cast instructions.
@@ -3445,8 +3534,15 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
       return false;
     return SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy();
   case Instruction::BitCast: {
-    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcTy->getScalarType());
-    PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
+    Type *SrcScalarTy = SrcTy->getScalarType();
+    if (SrcScalarTy->isTargetExtTy() || !SrcScalarTy->isSingleValueType())
+      return false;
+    Type *DstScalarTy = DstTy->getScalarType();
+    if (DstScalarTy->isTargetExtTy() || !DstScalarTy->isSingleValueType())
+      return false;
+
+    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcScalarTy);
+    PointerType *DstPtrTy = dyn_cast<PointerType>(DstScalarTy);
 
     // BitCast implies a no-op cast of type only. No bits change.
     // However, you can't cast pointers to anything but pointers/bytes.
@@ -4576,6 +4672,14 @@ ExtractElementInst *ExtractElementInst::cloneImpl() const {
 
 InsertElementInst *InsertElementInst::cloneImpl() const {
   return InsertElementInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitInsertInst *BitInsertInst::cloneImpl() const {
+  return BitInsertInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitExtractInst *BitExtractInst::cloneImpl() const {
+  return BitExtractInst::Create(getType(), getOperand(0), getOperand(1));
 }
 
 ShuffleVectorInst *ShuffleVectorInst::cloneImpl() const {

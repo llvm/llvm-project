@@ -112,6 +112,50 @@ __device__ void test_dispatch_ptr(__attribute__((address_space(4))) void ** out)
   *out = (__attribute__((address_space(4))) void *)__builtin_amdgcn_dispatch_ptr();
 }
 
+// CIR-LABEL: @_Z14test_grid_sizePj
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.dispatch.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[OFF:.*]] = cir.const #cir.int<12> : !u64i
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %[[OFF]]
+// CIR: %[[PTR:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!void, target_address_space(4)> -> !cir.ptr<!u32i, target_address_space(4)>
+// CIR: cir.load invariant align(4) %[[PTR]]
+// CIR: cir.const #cir.int<16> : !u64i
+// CIR: cir.const #cir.int<20> : !u64i
+// LLVM-LABEL: @_Z14test_grid_sizePj
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[P]], i{{32|64}} 12
+// LLVM: load i32, ptr addrspace(4) [[GEP]], align 4, {{.*}}!invariant.load
+// LLVM: getelementptr i8, ptr addrspace(4) %{{.*}}, i{{32|64}} 16
+// LLVM: getelementptr i8, ptr addrspace(4) %{{.*}}, i{{32|64}} 20
+__device__ void test_grid_size(unsigned *out) {
+  out[0] = __builtin_amdgcn_grid_size_x();
+  out[1] = __builtin_amdgcn_grid_size_y();
+  out[2] = __builtin_amdgcn_grid_size_z();
+}
+
+// CIR-LABEL: @_Z19test_workgroup_sizePj
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.implicitarg.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[OFF:.*]] = cir.const #cir.int<12> : !u64i
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %[[OFF]]
+// CIR: %[[PTR:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!void, target_address_space(4)> -> !cir.ptr<!u16i, target_address_space(4)>
+// CIR: %[[SIZE:.*]] = cir.load invariant align(2) %[[PTR]]
+// CIR: cir.cast integral %[[SIZE]] : !u16i -> !u32i
+// CIR: cir.const #cir.int<14> : !u64i
+// CIR: cir.const #cir.int<16> : !u64i
+// LLVM-LABEL: @_Z19test_workgroup_sizePj
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr{{.*}} i8, ptr addrspace(4) [[P]], i64 12
+// LLVM: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, {{.*}}!invariant.load
+// LLVM: zext i16 [[SIZE]] to i32
+// LLVM: getelementptr{{.*}} i8, ptr addrspace(4) %{{.*}}, i64 14
+// LLVM: getelementptr{{.*}} i8, ptr addrspace(4) %{{.*}}, i64 16
+// LLVM-NOT: @llvm.amdgcn.workgroup.id
+// LLVM: ret void
+__device__ void test_workgroup_size(unsigned *out) {
+  out[0] = __builtin_amdgcn_workgroup_size_x();
+  out[1] = __builtin_amdgcn_workgroup_size_y();
+  out[2] = __builtin_amdgcn_workgroup_size_z();
+}
+
 // CIR-LABEL: @_Z12test_rcp_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.rcp" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z12test_rcp_f32Pff
@@ -348,6 +392,14 @@ __device__ void test_class_f64(bool* out, double a, int b) {
   *out = __builtin_amdgcn_class(a, b);
 }
 
+// CIR-LABEL: @_Z14test_fmed3_f32Pffff
+// CIR: cir.call_llvm_intrinsic "amdgcn.fmed3" {{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z14test_fmed3_f32Pffff
+// LLVM: call{{.*}} float @llvm.amdgcn.fmed3.f32(float %{{.+}}, float %{{.+}}, float %{{.+}})
+__device__ void test_fmed3_f32(float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_fmed3f(a, b, c);
+}
+
 // CIR-LABEL: @_Z9test_lerpPjjjj
 // CIR: cir.call_llvm_intrinsic "amdgcn.lerp" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
 // LLVM: define{{.*}} void @_Z9test_lerpPjjjj
@@ -373,4 +425,13 @@ __device__ void test_ubfe(unsigned int* out, unsigned int src0, unsigned int src
 __device__ void test_sbfe(unsigned int* out, unsigned int src0, unsigned int src1,
                           unsigned int src2) {
   *out = __builtin_amdgcn_sbfe(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z17test_wave_shufflePiii
+// CIR: cir.call_llvm_intrinsic "amdgcn.wave.shuffle" {{.*}} : (!s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z17test_wave_shufflePiii
+// LLVM: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.shuffle.i32(i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_wave_shuffle(int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_wave_shuffle(a, b);
 }

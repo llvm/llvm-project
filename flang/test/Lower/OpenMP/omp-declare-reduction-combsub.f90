@@ -22,9 +22,9 @@ function func(x, n)
 !CHECK:    %[[OMP_PRIV:.*]] = fir.alloca i32
 !CHECK:    %[[OMP_ORIG:.*]] = fir.alloca i32
 !CHECK:    fir.store %[[OMP_ORIG_ARG_I]] to %[[OMP_ORIG]] : !fir.ref<i32>
-!CHECK:    %[[OMP_ORIG_DECL:.*]]:2 = hlfir.declare %[[OMP_ORIG]] {uniq_name = "omp_orig"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[OMP_ORIG_DECL:.*]]:2 = hlfir.declare %[[OMP_ORIG]] uniq_name("omp_orig") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    fir.store %[[OMP_ORIG_ARG_I]] to %[[OMP_PRIV]] : !fir.ref<i32>
-!CHECK:    %[[OMP_PRIV_DECL:.*]]:2 = hlfir.declare %[[OMP_PRIV]] {uniq_name = "omp_priv"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[OMP_PRIV_DECL:.*]]:2 = hlfir.declare %[[OMP_PRIV]] uniq_name("omp_priv") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[CONST_0:.*]] = arith.constant 0 : i32
 !CHECK:    omp.yield(%[[CONST_0]] : i32)
 !CHECK:  } combiner {
@@ -32,17 +32,17 @@ function func(x, n)
 !CHECK:    %[[OMP_OUT:.*]] = fir.alloca i32
 !CHECK:    %[[OMP_IN:.*]] = fir.alloca i32
 !CHECK:    fir.store %[[RHS_ARG]] to %[[OMP_IN]] : !fir.ref<i32>
-!CHECK:    %[[OMP_IN_DECL:.*]]:2 = hlfir.declare %[[OMP_IN]] {uniq_name = "omp_in"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[OMP_IN_DECL:.*]]:2 = hlfir.declare %[[OMP_IN]] uniq_name("omp_in") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    fir.store %[[LHS_ARG]] to %[[OMP_OUT]] : !fir.ref<i32>
-!CHECK:    %[[OMP_OUT_DECL:.*]]:2 = hlfir.declare %[[OMP_OUT]] {uniq_name = "omp_out"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[OMP_OUT_DECL:.*]]:2 = hlfir.declare %[[OMP_OUT]] uniq_name("omp_out") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    fir.call @_QPcombine_me(%[[OMP_OUT_DECL]]#0, %[[OMP_IN_DECL]]#0) fastmath<contract> : (!fir.ref<i32>, !fir.ref<i32>) -> ()
 !CHECK:    %[[OMP_OUT_VAL:.*]] = fir.load %[[OMP_OUT_DECL]]#0 : !fir.ref<i32>
 !CHECK:    omp.yield(%[[OMP_OUT_VAL]] : i32)
 !CHECK:  }
 !CHECK:  func.func @_QPcombine_me(%[[OUT:.*]]: !fir.ref<i32> {fir.bindc_name = "out"}, %[[IN:.*]]: !fir.ref<i32> {fir.bindc_name = "in"}) {
 !CHECK:    %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-!CHECK:    %[[IN_DECL:.*]]:2 = hlfir.declare %[[IN]] dummy_scope %[[SCOPE]] arg 2 {uniq_name = "_QFcombine_meEin"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[OUT_DECL:.*]]:2 = hlfir.declare %[[OUT]] dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QFcombine_meEout"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[IN_DECL:.*]]:2 = hlfir.declare %[[IN]] dummy_scope %[[SCOPE]] arg 2 uniq_name("_QFcombine_meEin") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[OUT_DECL:.*]]:2 = hlfir.declare %[[OUT]] dummy_scope %[[SCOPE]] arg 1 uniq_name("_QFcombine_meEout") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[OUT_VAL:.*]] = fir.load %[[OUT_DECL]]#0 : !fir.ref<i32>
 !CHECK:    %[[IN_VAL:.*]] = fir.load %[[IN_DECL]]#0 : !fir.ref<i32>
 !CHECK:    %[[SUM:.*]] = arith.addi %[[OUT_VAL]], %[[IN_VAL]] : i32
