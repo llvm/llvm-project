@@ -289,7 +289,7 @@ private:
   bool splitAlloca(AllocaInst &AI, AllocaSlices &AS);
   bool propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS);
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
-  bool unfoldTwoSlotGEPs(Function &F);
+  bool unfoldTwoSlotGEPsOfAlloca(AllocaInst &AI);
   void clobberUse(Use &U);
   bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
   bool promoteAllocas();
@@ -6620,8 +6620,8 @@ static SelectInst *unfoldTwoSlotGEP(const TwoSlotGEP &TS, IRBuilderTy &IRB) {
   return cast<SelectInst>(Sel);
 }
 
-/// Find two-slot GEPs to the allocas in the function, and unfold them to
-/// selects of GEPs, to allow promotion. Example:
+/// Find two-slot GEPs of the alloca and unfold them to selects of GEPs, to
+/// allow promotion. Example:
 ///
 ///     %alloca = alloca [2 x i32], align 4
 ///     ...
@@ -6639,43 +6639,29 @@ static SelectInst *unfoldTwoSlotGEP(const TwoSlotGEP &TS, IRBuilderTy &IRB) {
 ///     %gep.sroa.sel = select i1 %gep.sroa.idx,
 ///                       ptr %gep.sroa.slot1, ptr %gep.sroa.slot0
 ///
-/// When SROA later processes the alloca, the loads and stores through the
-/// select are speculated or predicated into loads and stores through the slot
-/// GEPs. Because GEP indices are constants, this allows the alloca to be split
-/// and the parts promoted to variables.
-bool SROA::unfoldTwoSlotGEPs(Function &F) {
-  assert(!PreserveCFG && "Predicating stores through the selects requires "
-                         "modifying the CFG");
-  const DataLayout &DL = F.getDataLayout();
+/// Rest of the pass then processes the alloca, and speculates/predicates loads
+/// and stores through the select, allowing splitting and promotion.
+bool SROA::unfoldTwoSlotGEPsOfAlloca(AllocaInst &AI) {
+  const DataLayout &DL = AI.getDataLayout();
 
-  bool Changed = false;
-  for (Instruction &I : F.getEntryBlock()) {
-    auto *AI = dyn_cast<AllocaInst>(&I);
-    if (!AI)
-      continue;
+  std::optional<TypeSize> Size = AI.getAllocationSize(DL);
+  if (AI.isArrayAllocation() || !Size || Size->isScalable() || Size->isZero())
+    return false;
 
-    std::optional<TypeSize> Size = AI->getAllocationSize(DL);
-    if (AI->isArrayAllocation() || !Size || Size->isScalable() ||
-        Size->isZero())
-      continue;
+  TwoSlotAllocaFinder Finder(DL, Size->getFixedValue());
+  TwoSlotAllocaFinder::PtrInfo PtrI = Finder.visitPtr(AI);
 
-    TwoSlotAllocaFinder Finder(DL, Size->getFixedValue());
-    TwoSlotAllocaFinder::PtrInfo PtrI = Finder.visitPtr(*AI);
+  if (PtrI.isEscaped() || PtrI.isAborted())
+    return false;
 
-    if (PtrI.isEscaped() || PtrI.isAborted())
-      continue;
+  if (Finder.TwoSlotGEPs.empty())
+    return false;
 
-    if (Finder.TwoSlotGEPs.empty())
-      continue;
+  IRBuilderTy IRB(&AI);
+  for (const TwoSlotGEP &TS : Finder.TwoSlotGEPs)
+    unfoldTwoSlotGEP(TS, IRB);
 
-    IRBuilderTy IRB(AI);
-    for (const TwoSlotGEP &TS : Finder.TwoSlotGEPs)
-      unfoldTwoSlotGEP(TS, IRB);
-
-    Changed = true;
-  }
-
-  return Changed;
+  return true;
 }
 
 /// Analyze an alloca for SROA.
@@ -6704,8 +6690,13 @@ SROA::runOnAlloca(AllocaInst &AI) {
   if (AI.isArrayAllocation() || !Size || Size->isScalable() || Size->isZero())
     return {Changed, CFGChanged};
 
-  // First, split any FCA loads and stores touching this alloca to promote
-  // better splitting and promotion opportunities.
+  // Split GEPs of the alloca that indexes one of two possible offsets into
+  // selects of constant offset GEPs, to allow splitting and promotion.
+  if (!PreserveCFG)
+    Changed |= unfoldTwoSlotGEPsOfAlloca(AI);
+
+  // Split any FCA loads and stores touching this alloca to promote better
+  // splitting and promotion opportunities.
   IRBuilderTy IRB(&AI);
   AggLoadStoreRewriter AggRewriter(DL, IRB);
   Changed |= AggRewriter.rewrite(AI);
@@ -6854,9 +6845,6 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
   // A set of deleted alloca instruction pointers which should be removed from
   // the list of promotable allocas.
   SmallPtrSet<AllocaInst *, 4> DeletedAllocas;
-
-  if (!PreserveCFG)
-    Changed |= unfoldTwoSlotGEPs(F);
 
   do {
     while (!Worklist.empty()) {
