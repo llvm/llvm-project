@@ -19,7 +19,6 @@
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/FPUtil/cast.h"
 #include "src/math/acoshbf16.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"

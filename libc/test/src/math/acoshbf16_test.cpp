@@ -22,8 +22,6 @@ using LlvmLibcAcoshBf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-// Domain: [1, +Inf]
-// The first 31 inputs above 1 exercise the polynomial fast path.
 static constexpr uint16_t START = 0x3f80U;
 static constexpr uint16_t STOP = 0x7f80U;
 
