@@ -94,16 +94,19 @@ define i128 @bitcast_f128_to_i128(fp128 %a, fp128 %b) #0 {
 define void @bitcast_f80_to_v5i16(ptr %p, ptr %q) #0 {
 ; CHECK-LABEL: bitcast_f80_to_v5i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 8(%ecx), %edx
-; CHECK-NEXT:    movl (%ecx), %esi
-; CHECK-NEXT:    movl 4(%ecx), %ecx
-; CHECK-NEXT:    movl %esi, (%eax)
-; CHECK-NEXT:    movl %ecx, 4(%eax)
-; CHECK-NEXT:    movw %dx, 8(%eax)
+; CHECK-NEXT:    movl (%ecx), %edx
+; CHECK-NEXT:    movl 4(%ecx), %esi
+; CHECK-NEXT:    movl $32768, %edi # imm = 0x8000
+; CHECK-NEXT:    xorl 8(%ecx), %edi
+; CHECK-NEXT:    movl %edx, (%eax)
+; CHECK-NEXT:    movl %esi, 4(%eax)
+; CHECK-NEXT:    movw %di, 8(%eax)
 ; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
   %a = load x86_fp80, ptr %p, align 4
   %n = fneg x86_fp80 %a
@@ -118,12 +121,13 @@ define void @bitcast_v5i16_to_f80(ptr %p, ptr %q) #0 {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzwl 8(%ecx), %edx
-; CHECK-NEXT:    movl (%ecx), %esi
-; CHECK-NEXT:    movl 4(%ecx), %ecx
-; CHECK-NEXT:    movl %esi, (%eax)
-; CHECK-NEXT:    movl %ecx, 4(%eax)
-; CHECK-NEXT:    movw %dx, 8(%eax)
+; CHECK-NEXT:    movl (%ecx), %edx
+; CHECK-NEXT:    movl 4(%ecx), %esi
+; CHECK-NEXT:    movzwl 8(%ecx), %ecx
+; CHECK-NEXT:    xorl $32768, %ecx # imm = 0x8000
+; CHECK-NEXT:    movl %edx, (%eax)
+; CHECK-NEXT:    movl %esi, 4(%eax)
+; CHECK-NEXT:    movw %cx, 8(%eax)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %v = load <5 x i16>, ptr %q, align 2

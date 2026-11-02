@@ -46,14 +46,11 @@ define x86_fp80 @soft_fabsl_computed(x86_fp80 %x, x86_fp80 %y) nounwind {
 ;
 ; SOFT-LABEL: soft_fabsl_computed:
 ; SOFT:       # %bb.0:
-; SOFT-NEXT:    subl $12, %esp
-; SOFT-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SOFT-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; SOFT-NEXT:    subl $8, %esp
-; SOFT-NEXT:    pushl %ecx
+; SOFT-NEXT:    subl $20, %esp
 ; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-NEXT:    pushl %eax
+; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFT-NEXT:    calll __addxf3
@@ -64,14 +61,11 @@ define x86_fp80 @soft_fabsl_computed(x86_fp80 %x, x86_fp80 %y) nounwind {
 ;
 ; SOFTSSE-LABEL: soft_fabsl_computed:
 ; SOFTSSE:       # %bb.0:
-; SOFTSSE-NEXT:    subl $12, %esp
-; SOFTSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SOFTSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; SOFTSSE-NEXT:    subl $8, %esp
-; SOFTSSE-NEXT:    pushl %ecx
+; SOFTSSE-NEXT:    subl $20, %esp
 ; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFTSSE-NEXT:    pushl %eax
+; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFTSSE-NEXT:    calll __addxf3
@@ -162,38 +156,84 @@ define x86_fp80 @soft_copysignl_computed(x86_fp80 %x, x86_fp80 %y) nounwind {
 ;
 ; SOFT-LABEL: soft_copysignl_computed:
 ; SOFT:       # %bb.0:
+; SOFT-NEXT:    pushl %ebp
+; SOFT-NEXT:    pushl %ebx
+; SOFT-NEXT:    pushl %edi
+; SOFT-NEXT:    pushl %esi
 ; SOFT-NEXT:    subl $12, %esp
-; SOFT-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SOFT-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SOFT-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; SOFT-NEXT:    subl $8, %esp
-; SOFT-NEXT:    pushl %ecx
+; SOFT-NEXT:    pushl %ebp
 ; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-NEXT:    pushl %eax
+; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFT-NEXT:    calll __addxf3
 ; SOFT-NEXT:    addl $32, %esp
-; SOFT-NEXT:    movzwl %cx, %ecx
+; SOFT-NEXT:    movl %eax, %esi
+; SOFT-NEXT:    movl %edx, %edi
+; SOFT-NEXT:    movl %ecx, %ebx
+; SOFT-NEXT:    subl $8, %esp
+; SOFT-NEXT:    pushl %ebp
+; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-NEXT:    calll __mulxf3
+; SOFT-NEXT:    addl $32, %esp
+; SOFT-NEXT:    andl $32768, %ecx # imm = 0x8000
+; SOFT-NEXT:    andl $32767, %ebx # imm = 0x7FFF
+; SOFT-NEXT:    orl %ebx, %ecx
+; SOFT-NEXT:    movl %esi, %eax
+; SOFT-NEXT:    movl %edi, %edx
 ; SOFT-NEXT:    addl $12, %esp
+; SOFT-NEXT:    popl %esi
+; SOFT-NEXT:    popl %edi
+; SOFT-NEXT:    popl %ebx
+; SOFT-NEXT:    popl %ebp
 ; SOFT-NEXT:    retl
 ;
 ; SOFTSSE-LABEL: soft_copysignl_computed:
 ; SOFTSSE:       # %bb.0:
+; SOFTSSE-NEXT:    pushl %ebp
+; SOFTSSE-NEXT:    pushl %ebx
+; SOFTSSE-NEXT:    pushl %edi
+; SOFTSSE-NEXT:    pushl %esi
 ; SOFTSSE-NEXT:    subl $12, %esp
-; SOFTSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SOFTSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SOFTSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; SOFTSSE-NEXT:    subl $8, %esp
-; SOFTSSE-NEXT:    pushl %ecx
+; SOFTSSE-NEXT:    pushl %ebp
 ; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFTSSE-NEXT:    pushl %eax
+; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
 ; SOFTSSE-NEXT:    calll __addxf3
 ; SOFTSSE-NEXT:    addl $32, %esp
-; SOFTSSE-NEXT:    movzwl %cx, %ecx
+; SOFTSSE-NEXT:    movl %eax, %esi
+; SOFTSSE-NEXT:    movl %edx, %edi
+; SOFTSSE-NEXT:    movl %ecx, %ebx
+; SOFTSSE-NEXT:    subl $8, %esp
+; SOFTSSE-NEXT:    pushl %ebp
+; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFTSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFTSSE-NEXT:    calll __mulxf3
+; SOFTSSE-NEXT:    addl $32, %esp
+; SOFTSSE-NEXT:    andl $32768, %ecx # imm = 0x8000
+; SOFTSSE-NEXT:    andl $32767, %ebx # imm = 0x7FFF
+; SOFTSSE-NEXT:    orl %ebx, %ecx
+; SOFTSSE-NEXT:    movl %esi, %eax
+; SOFTSSE-NEXT:    movl %edi, %edx
 ; SOFTSSE-NEXT:    addl $12, %esp
+; SOFTSSE-NEXT:    popl %esi
+; SOFTSSE-NEXT:    popl %edi
+; SOFTSSE-NEXT:    popl %ebx
+; SOFTSSE-NEXT:    popl %ebp
 ; SOFTSSE-NEXT:    retl
   %s = fadd x86_fp80 %x, %y
   %m = fmul x86_fp80 %x, %y

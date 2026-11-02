@@ -50,6 +50,14 @@ define x86_fp80 @test_copysign_f80(x86_fp80 %a, x86_fp80 %b) #0 {
 define void @test_copysign_f80_mem(ptr %p, ptr %q) #0 {
 ; CHECK-LABEL: test_copysign_f80_mem:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzwl 8(%ecx), %edx
+; CHECK-NEXT:    movzwl 8(%eax), %eax
+; CHECK-NEXT:    andl $32768, %eax # imm = 0x8000
+; CHECK-NEXT:    andl $32767, %edx # imm = 0x7FFF
+; CHECK-NEXT:    orl %eax, %edx
+; CHECK-NEXT:    movw %dx, 8(%ecx)
 ; CHECK-NEXT:    retl
   %a = load x86_fp80, ptr %p, align 4
   %b = load x86_fp80, ptr %q, align 4

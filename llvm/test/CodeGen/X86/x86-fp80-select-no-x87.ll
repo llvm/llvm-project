@@ -35,6 +35,56 @@ define x86_fp80 @select_arg_extract(i1 %c, ptr %p, x86_fp80 %x) #0 {
   ret x86_fp80 %s
 }
 
+define x86_fp80 @select_load_extract(i1 %c, ptr %p, ptr %q) #0 {
+; CHECK-LABEL: select_load_extract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    jne .LBB1_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    addl $10, %ecx
+; CHECK-NEXT:    jmp .LBB1_3
+; CHECK-NEXT:  .LBB1_1:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:    movl (%ecx), %eax
+; CHECK-NEXT:    movl 4(%ecx), %edx
+; CHECK-NEXT:    movzwl 8(%ecx), %ecx
+; CHECK-NEXT:    retl
+  %v = load <2 x x86_fp80>, ptr %p, align 16
+  %e = extractelement <2 x x86_fp80> %v, i32 1
+  %l = load x86_fp80, ptr %q, align 4
+  %s = select i1 %c, x86_fp80 %l, x86_fp80 %e
+  ret x86_fp80 %s
+}
+
+define x86_fp80 @select_canonicalize_arg(i1 %c, x86_fp80 %x, x86_fp80 %y) #0 {
+; CHECK-LABEL: select_canonicalize_arg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    pushl $16383 # imm = 0x3FFF
+; CHECK-NEXT:    pushl $-2147483648 # imm = 0x80000000
+; CHECK-NEXT:    pushl $0
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    calll __mulxf3
+; CHECK-NEXT:    addl $32, %esp
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    jne .LBB2_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    movzwl %cx, %ecx
+; CHECK-NEXT:    addl $12, %esp
+; CHECK-NEXT:    retl
+  %n = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 %x)
+  %s = select i1 %c, x86_fp80 %n, x86_fp80 %y
+  ret x86_fp80 %s
+}
+
 define x86_fp80 @select_two_extracts_fabs(i1 %c, ptr %p) #0 {
 ; CHECK-LABEL: select_two_extracts_fabs:
 ; CHECK:       # %bb.0:
@@ -43,10 +93,10 @@ define x86_fp80 @select_two_extracts_fabs(i1 %c, ptr %p) #0 {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    jne .LBB1_2
+; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    leal 10(%esi), %eax
-; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    andl $1, %ecx
 ; CHECK-NEXT:    negl %ecx
@@ -68,6 +118,50 @@ define x86_fp80 @select_two_extracts_fabs(i1 %c, ptr %p) #0 {
   ret x86_fp80 %r
 }
 
+define void @select_extract_store(i1 %c, ptr %p, ptr %q) #0 {
+; CHECK-LABEL: select_extract_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    leal 4(%ecx), %edx
+; CHECK-NEXT:    leal 8(%ecx), %esi
+; CHECK-NEXT:    leal 4(%eax), %edi
+; CHECK-NEXT:    leal 8(%eax), %ebx
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    jne .LBB4_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    movl %ebx, %esi
+; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:    jne .LBB4_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    movl %edi, %edx
+; CHECK-NEXT:  .LBB4_4:
+; CHECK-NEXT:    movl (%esi), %esi
+; CHECK-NEXT:    movl (%edx), %edx
+; CHECK-NEXT:    jne .LBB4_6
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:  .LBB4_6:
+; CHECK-NEXT:    movl (%ecx), %ecx
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    movl %edx, 4(%eax)
+; CHECK-NEXT:    movw %si, 8(%eax)
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    retl
+  %v = load <2 x x86_fp80>, ptr %p, align 16
+  %e = extractelement <2 x x86_fp80> %v, i32 0
+  %l = load x86_fp80, ptr %q, align 4
+  %s = select i1 %c, x86_fp80 %e, x86_fp80 %l
+  store x86_fp80 %s, ptr %q, align 4
+  ret void
+}
+
+declare x86_fp80 @llvm.canonicalize.f80(x86_fp80)
 declare x86_fp80 @llvm.fabs.f80(x86_fp80)
 
 attributes #0 = { nounwind "target-features"="-x87" }
