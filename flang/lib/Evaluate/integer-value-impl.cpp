@@ -529,13 +529,13 @@ bool IntegerValueImpl::POPPAR() const {
   return WithWord([](const auto &x) { return x.POPPAR(); });
 }
 
-// Not a nested lambda inside ConvertSigned/ConvertUnsigned: GCC 7 wrongly
-// requires 'this' to be captured there.
+// GCC 7 workaround: Nesting this in ConvertSigned/ConvertUnsigned wrongly
+// requires 'this' to be captured.
 template <bool IS_SIGNED, typename S>
 static IntegerValueImpl::ValueWithOverflow ConvertWord(int toKind, const S &x) {
   return IntegerValueImpl::WithWordProto(
       toKind, [&](auto proto) -> IntegerValueImpl::ValueWithOverflow {
-        using T = decltype(proto);
+        using T = std::decay_t<decltype(proto)>;
         if constexpr (IS_SIGNED) {
           auto r{T::template ConvertSigned<S>(x)};
           return {IntegerValueImpl::FromWord(r.value), r.overflow};
