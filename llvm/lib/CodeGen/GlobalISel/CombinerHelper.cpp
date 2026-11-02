@@ -492,6 +492,37 @@ void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+void CombinerHelper::applyCombineShuffleOfBuildVector(MachineInstr &MI) const {
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  Register SrcVec1 = Shuffle.getSrc1Reg();
+  Register SrcVec2 = Shuffle.getSrc2Reg();
+  auto *BuildMI1 = getOpcodeDef<GBuildVector>(SrcVec1, MRI);
+  auto *BuildMI2 = getOpcodeDef<GBuildVector>(SrcVec2, MRI);
+  assert((BuildMI1 && (BuildMI2 || MRI.getVRegDef(SrcVec2)->getOpcode() ==
+                                       TargetOpcode::G_IMPLICIT_DEF)) &&
+         "Unexpected input to applyCombineShuffleOfBuildVector");
+  LLT EltTy = MRI.getType(SrcVec1).getElementType();
+  int NumElts = MRI.getType(SrcVec1).getNumElements();
+
+  SmallVector<Register> Extracts;
+  for (int Val : Shuffle.getMask()) {
+    if (Val == -1)
+      Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
+    else if (Val < NumElts)
+      Extracts.push_back(BuildMI1->getSourceReg(Val));
+    else if (BuildMI2)
+      Extracts.push_back(BuildMI2->getSourceReg(Val - NumElts));
+    else
+      Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
+  }
+
+  if (Extracts.size() == 1)
+    Builder.buildCopy(MI.getOperand(0).getReg(), Extracts[0]);
+  else
+    Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchCombineShuffleConcat(
     MachineInstr &MI, SmallVector<Register> &Ops) const {
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
@@ -8474,6 +8505,34 @@ static APInt getDemandedBitsForLogicalOp(unsigned Opcode, const APInt &Demanded,
          ~(Opcode == TargetOpcode::G_AND ? OtherKnown.Zero : OtherKnown.One);
 }
 
+static std::optional<unsigned>
+getValidConstShiftAmt(const std::optional<APInt> &Amt, unsigned BW) {
+  if (!Amt || Amt->uge(BW))
+    return std::nullopt;
+  return Amt->getZExtValue();
+}
+
+static APInt getDemandedSrcBitsForShiftConst(unsigned Opcode,
+                                             const APInt &DemandedBits,
+                                             unsigned ShAmt) {
+  assert(ShAmt < DemandedBits.getBitWidth() &&
+         "shift amount must be less than the bit width");
+  switch (Opcode) {
+  case TargetOpcode::G_SHL:
+    return DemandedBits.lshr(ShAmt);
+  case TargetOpcode::G_LSHR:
+    return DemandedBits.shl(ShAmt);
+  case TargetOpcode::G_ASHR: {
+    APInt Src = DemandedBits.shl(ShAmt);
+    if (DemandedBits.countLeadingZeros() < ShAmt)
+      Src.setSignBit();
+    return Src;
+  }
+  default:
+    llvm_unreachable("not a shift opcode");
+  }
+}
+
 Register CombinerHelper::simplifyMultipleUseDemandedBits(
     Register R, const APInt &DemandedBits, unsigned Depth) const {
   assert(R.isVirtual() && "Expected a virtual register");
@@ -8481,7 +8540,7 @@ Register CombinerHelper::simplifyMultipleUseDemandedBits(
   if (Depth >= MaxAnalysisRecursionDepth)
     return Register();
 
-  LLT Ty = MRI.getType(R);
+  [[maybe_unused]] LLT Ty = MRI.getType(R);
   assert(Ty.isValid() && "Expected a typed register");
   assert(DemandedBits.getBitWidth() == Ty.getScalarSizeInBits() &&
          "DemandedBits width must match the register scalar type");
@@ -8692,6 +8751,58 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
                                           : LHSKnown | RHSKnown;
     return Changed;
   }
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR: {
+    std::optional<unsigned> ShAmt = getValidConstShiftAmt(
+        getConstantOrConstantSplatVector(DefMI->getOperand(2).getReg()), BW);
+    if (!ShAmt)
+      return GiveUp();
+
+    APInt SrcDemand = getDemandedSrcBitsForShiftConst(Opcode, Demanded, *ShAmt);
+    KnownBits SrcKnown(BW);
+    bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, SrcDemand,
+                                            SrcKnown, Depth + 1, DoRewrite);
+    if (Changed) {
+      DropPoisonFlags();
+      InvalidateDebugUses(Demanded);
+    }
+    KnownBits AmtKnown = KnownBits::makeConstant(APInt(BW, *ShAmt));
+    switch (Opcode) {
+    case TargetOpcode::G_SHL:
+      Known = KnownBits::shl(SrcKnown, AmtKnown);
+      break;
+    case TargetOpcode::G_LSHR:
+      Known = KnownBits::lshr(SrcKnown, AmtKnown);
+      break;
+    case TargetOpcode::G_ASHR: {
+      // ASHR and LSHR agree outside sign fill or for nonnegative inputs.
+      LLT AmtTy = MRI.getType(DefMI->getOperand(2).getReg());
+      bool LShrLegal = isPreLegalize() || !LI ||
+                       isLegal({TargetOpcode::G_LSHR, {OpTy, AmtTy}});
+      if ((Demanded.countLeadingZeros() >= *ShAmt ||
+           SrcKnown.isNonNegative()) &&
+          LShrLegal) {
+        if (DoRewrite) {
+          MachineBasicBlock &SaveMBB = Builder.getMBB();
+          MachineBasicBlock::iterator SavePt = Builder.getInsertPt();
+          DebugLoc SaveDL = Builder.getDL();
+          Builder.setInstrAndDebugLoc(*DefMI);
+          auto Lshr = Builder.buildLShr(OpTy, DefMI->getOperand(1).getReg(),
+                                        DefMI->getOperand(2).getReg());
+          Builder.setInsertPt(SaveMBB, SavePt);
+          Builder.setDebugLoc(SaveDL);
+          Rewrite(Lshr.getReg(0));
+          Known = KnownBits::lshr(SrcKnown, AmtKnown);
+        }
+        return true;
+      }
+      Known = KnownBits::ashr(SrcKnown, AmtKnown);
+      break;
+    }
+    }
+    return Changed;
+  }
   default:
     return GiveUp();
   }
@@ -8728,6 +8839,19 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
 
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR: {
+    std::optional<unsigned> ShAmt = getValidConstShiftAmt(
+        getConstantOrConstantSplatVector(MI.getOperand(2).getReg()),
+        RootDemand.getBitWidth());
+    if (!ShAmt)
+      return false;
+    APInt SrcDemand =
+        getDemandedSrcBitsForShiftConst(Opcode, RootDemand, *ShAmt);
+    KnownBits SrcKnown(RootDemand.getBitWidth());
+    return Probe(/*OpNo=*/1, SrcDemand, SrcKnown);
+  }
   default:
     return false;
   case TargetOpcode::G_AND:

@@ -28,8 +28,8 @@ define void @test_A_sub_B_add_ConstantInt(ptr %p) {
 ; CHECK-NEXT:    [[CMP26:%.*]] = icmp ult i32 [[SUB1]], 512
 ; CHECK-NEXT:    br i1 [[CMP26]], label [[COND_TRUE:%.*]], label [[COND_END]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[REM]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[SUB22:%.*]] = sub i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[SUB22]], 2
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 2044

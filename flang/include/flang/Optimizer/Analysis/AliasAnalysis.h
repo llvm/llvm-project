@@ -185,9 +185,13 @@ struct AliasAnalysis {
       /// attribute or fir.coordinate_of's field_indices (mapped through the
       /// record type). Null for non-Component steps.
       mlir::StringAttr component;
+      /// For Component steps: the record type that `component` is a field
+      /// of. Null for non-Component steps.
+      mlir::Type recordType;
 
       bool operator==(const PathStep &o) const {
-        return kind == o.kind && component == o.component;
+        return kind == o.kind && component == o.component &&
+               recordType == o.recordType;
       }
       bool operator!=(const PathStep &o) const { return !(*this == o); }
     };
@@ -211,6 +215,12 @@ struct AliasAnalysis {
       /// MustAlias.
       bool isApproximate{false};
 
+      /// The storage-associated (EQUIVALENCE/COMMON) declaration crossed by
+      /// the path, if any. Objects of the same type may partially overlap
+      /// only through storage association, so component steps are only
+      /// compared between paths crossing the same such declaration.
+      mlir::Operation *storageDecl{nullptr};
+
       /// Return true if any step is a PointerDeref.
       bool hasPointerDeref() const {
         return llvm::any_of(steps, [](const PathStep &s) {
@@ -219,7 +229,8 @@ struct AliasAnalysis {
       }
 
       bool operator==(const AccessPath &o) const {
-        return isApproximate == o.isApproximate && steps == o.steps;
+        return isApproximate == o.isApproximate &&
+               storageDecl == o.storageDecl && steps == o.steps;
       }
       bool operator!=(const AccessPath &o) const { return !(*this == o); }
 
@@ -403,6 +414,13 @@ struct AliasAnalysis {
   /// Disable getSource() memoization and drop any cached entries.
   void disableSourceCache();
 
+  /// Do not look up symbols, e.g. procedures or globals, in the enclosing
+  /// symbol table, and assume the worst about them instead. A pass that runs
+  /// on a function must not inspect other operations in the module, such as
+  /// the declaration of a callee, because other passes may modify them at the
+  /// same time.
+  void disableSymbolLookups() { symbolLookupsDisabled = true; }
+
   /// Testing only: number of entries currently held in the getSource() cache.
   std::size_t getSourceCacheSizeForTesting() const {
     return getSourceCache.size();
@@ -463,6 +481,8 @@ private:
   /// Return the symbol table nearest to the given operation.
   /// If a SymbolTable has not been cached in symTabMap,
   /// it will be created, which may be expensive.
+  /// Return nullptr if symbol lookups are disabled, see
+  /// disableSymbolLookups().
   const mlir::SymbolTable *getNearestSymbolTable(mlir::Operation *from);
 
   /// Return true if the given symbol may correspond to a Fortran variable
@@ -494,6 +514,9 @@ private:
   /// a few values that are likely not globals.
   /// We can have both modes for different clients.
   llvm::DenseMap<mlir::Operation *, mlir::SymbolTable> symTabMap;
+
+  /// Whether symbol lookups are disabled, see disableSymbolLookups().
+  bool symbolLookupsDisabled = false;
 
   /// Per-function caches used by getDeclarationScope() to map a
   /// fir.declare without an explicit dummy_scope operand to its
