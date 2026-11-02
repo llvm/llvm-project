@@ -116,6 +116,37 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
 
 // -----
 
+def SPIRV_BitcastExtractEXTOp : SPIRV_Op<"BitcastExtractEXT", [Pure]> {
+  let summary = "Extract a bit field and reinterpret it as a numerical value";
+  let description = [{
+    Extract the bits starting at offset from each component of base and
+    reinterpret them as the result type. The result has the same number of
+    components as base and narrower components.
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_EXT_ocp_microscaling_types]>,
+    Extension<[SPV_EXT_float8]>,
+    Capability<[SPIRV_C_BitcastExtractEXT]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_ExtendedNumerical>:$base,
+    SPIRV_Integer:$offset
+  );
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_ExtendedNumerical>:$result
+  );
+  let assemblyFormat = [{
+    $base `,` $offset attr-dict `:` type($base) `,` type($offset) `to` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+// -----
+
 def SPIRV_ConvertFToSOp : SPIRV_CastOp<"ConvertFToS", SPIRV_Integer, SPIRV_AnyFloat, []> {
   let summary = [{
     Convert value numerically from floating point to signed integer, with

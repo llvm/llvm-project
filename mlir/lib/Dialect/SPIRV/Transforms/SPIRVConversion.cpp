@@ -183,7 +183,7 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     // be used with logical addressing operations, not physical, and only with
     // non-externally visible shader Storage Classes: Workgroup, CrossWorkgroup,
     // Private, Function, Input, and Output."
-    if (bitWidth == 1)
+    if (bitWidth < 8)
       return std::nullopt;
     return bitWidth / 8;
   }
@@ -261,21 +261,33 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
   return std::nullopt;
 }
 
-/// Converts a scalar `type` to a suitable type under the given `targetEnv`.
-static Type
-convertScalarType(const spirv::TargetEnv &targetEnv,
-                  const SPIRVConversionOptions &options, spirv::ScalarType type,
-                  std::optional<spirv::StorageClass> storageClass = {}) {
+/// Returns whether the target environment supports a scalar type.
+static bool
+isScalarTypeSupported(const spirv::TargetEnv &targetEnv, spirv::ScalarType type,
+                      std::optional<spirv::StorageClass> storageClass = {}) {
   // Get extension and capability requirements for the given type.
   SmallVector<ArrayRef<spirv::Extension>, 1> extensions;
   SmallVector<ArrayRef<spirv::Capability>, 2> capabilities;
   type.getExtensions(extensions, storageClass);
   type.getCapabilities(capabilities, storageClass);
 
-  // If all requirements are met, then we can accept this type as-is.
-  if (succeeded(checkCapabilityRequirements(type, targetEnv, capabilities)) &&
-      succeeded(checkExtensionRequirements(type, targetEnv, extensions)))
+  return succeeded(
+             checkCapabilityRequirements(type, targetEnv, capabilities)) &&
+         succeeded(checkExtensionRequirements(type, targetEnv, extensions));
+}
+
+/// Converts a scalar `type` to a suitable type under the given `targetEnv`.
+static Type
+convertScalarType(const spirv::TargetEnv &targetEnv,
+                  const SPIRVConversionOptions &options, spirv::ScalarType type,
+                  std::optional<spirv::StorageClass> storageClass = {}) {
+  if (isScalarTypeSupported(targetEnv, type, storageClass))
     return type;
+
+  // These formats need explicit encoding or packing to emulate. Widening them
+  // to a 32-bit scalar would change their representation.
+  if (isa<Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType>(type))
+    return nullptr;
 
   // Otherwise we need to adjust the type, which really means adjusting the
   // bitwidth given this is a scalar type.
@@ -682,9 +694,10 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     }
 
     // Note that we currently only support lowering to single element texels
-    // e.g. R32f.
+    // e.g. R32f. Microscaling types have no corresponding image format.
     auto elementType = type.getElementType();
-    if (!isa<spirv::ScalarType>(elementType)) {
+    if (!isa<spirv::ScalarType>(elementType) ||
+        spirv::containsMicroscalingType(elementType)) {
       LLVM_DEBUG(llvm::dbgs() << type << " illegal: cannot lower memref of "
                               << elementType << " to a  SPIR-V Image\n");
       return nullptr;
@@ -1734,10 +1747,14 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
   });
 
   addConversion([this](FloatType floatType) -> std::optional<Type> {
+    if (floatType.getWidth() == 8) {
+      if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType);
+          scalarType && isScalarTypeSupported(this->targetEnv, scalarType))
+        return floatType;
+      return convert8BitFloatType(this->options, floatType);
+    }
     if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType))
       return convertScalarType(this->targetEnv, this->options, scalarType);
-    if (floatType.getWidth() == 8)
-      return convert8BitFloatType(this->options, floatType);
     return Type();
   });
 

@@ -9,7 +9,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 
 namespace mlir::spirv {
-
 /// Returns the bit width of the `type`.
 inline unsigned getBitWidth(Type type) {
   if (isa<spirv::PointerType>(type)) {
