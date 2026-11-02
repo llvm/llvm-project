@@ -4447,8 +4447,8 @@ void OmpStructureChecker::CheckReductionModifier(
     // included in the directive context along with the opening clauses.
     if (FindClause(llvm::omp::Clause::OMPC_nowait)) {
       context_.Say(GetContext().clauseSource,
-          "Modifier 'TASK' on REDUCTION clause may not be used with "
-          "NOWAIT"_err_en_US);
+          "'%s' modifier on REDUCTION clause may not be used with NOWAIT"_err_en_US,
+          parser::ToUpperCaseLetters(ReductionModifier::EnumToString(modifier.v)));
     }
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
