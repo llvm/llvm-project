@@ -4348,52 +4348,46 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
       std::optional<bool> Res;
       switch (Pred) {
       case FCmpInst::FCMP_OEQ:
-      case FCmpInst::FCMP_UEQ: {
+      case FCmpInst::FCMP_UEQ:
         // minnum(X, LesserC)  == C --> false
         // maxnum(X, GreaterC) == C --> false
         Res = false;
         break;
-      }
       case FCmpInst::FCMP_ONE:
-      case FCmpInst::FCMP_UNE: {
+      case FCmpInst::FCMP_UNE:
         // minnum(X, LesserC)  != C --> true
         // maxnum(X, GreaterC) != C --> true
         Res = true;
         break;
-      }
       case FCmpInst::FCMP_OGE:
       case FCmpInst::FCMP_UGE:
       case FCmpInst::FCMP_OGT:
-      case FCmpInst::FCMP_UGT: {
+      case FCmpInst::FCMP_UGT:
         // minnum(X, LesserC)  >= C --> false
         // minnum(X, LesserC)  >  C --> false
         // maxnum(X, GreaterC) >= C --> true
         // maxnum(X, GreaterC) >  C --> true
         Res = IsMax;
         break;
-      }
       case FCmpInst::FCMP_OLE:
       case FCmpInst::FCMP_ULE:
       case FCmpInst::FCMP_OLT:
-      case FCmpInst::FCMP_ULT: {
+      case FCmpInst::FCMP_ULT:
         // minnum(X, LesserC)  <= C --> true
         // minnum(X, LesserC)  <  C --> true
         // maxnum(X, GreaterC) <= C --> false
         // maxnum(X, GreaterC) <  C --> false
         Res = !IsMax;
         break;
-      }
       case FCmpInst::FCMP_ORD:
-      case FCmpInst::FCMP_UNO: {
+      case FCmpInst::FCMP_UNO:
         // Reachable because minnum/maxnum may return a NaN for an sNaN
         // operand. Nothing to fold since ord/uno do not depend on the
         // ordering of the LHS and RHS.
         break;
-      }
-      default: {
+      default:
         // TRUE/FALSE are handled before this.
         llvm_unreachable("Unexpected fcmp predicate");
-      }
       }
 
       // If we are folding to false for an ordered predicate, or true for an
