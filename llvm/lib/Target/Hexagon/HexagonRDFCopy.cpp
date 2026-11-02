@@ -1,4 +1,4 @@
-//===--- HexagonAggressiveRDFCopy.cpp -------------------------------------===//
+//===--- HexagonRDFCopy.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonAggressiveRDFCopy.h"
+#include "HexagonRDFCopy.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -69,14 +69,16 @@ using namespace llvm;
 using namespace rdf;
 
 #ifndef NDEBUG
-extern cl::opt<unsigned> RDFCpLimit;
+cl::opt<unsigned> RDFCpLimit(
+    "rdf-cp-limit", cl::init(0), cl::Hidden,
+    cl::desc(
+        "Limit number of copy propagations in RDF-based copy propagation"));
 static unsigned RDFCpCount = 0;
 #endif
 
 // Record destination and source registers in EqualityMap
 // if this is a copy instruction
-bool AggressiveCopyPropagation::interpretAsCopy(const MachineInstr *MI,
-                                                EqualityMap &EM) {
+bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
   unsigned Opc = MI->getOpcode();
   switch (Opc) {
   case TargetOpcode::COPY: {
@@ -107,8 +109,7 @@ bool AggressiveCopyPropagation::interpretAsCopy(const MachineInstr *MI,
 // Find the reaching def from DefM stack for source (LHS) registers in each
 // copy. ReachedUseToCopyMap stores each reached use (UseNode) of a copy along
 // with the copy DefNode and source register
-void AggressiveCopyPropagation::recordCopy(NodeAddr<StmtNode *> SA,
-                                           EqualityMap &EM) {
+void CopyPropagation::recordCopy(NodeAddr<StmtNode *> SA, EqualityMap &EM) {
   if (trace())
     CopyMap.insert(std::make_pair(SA.Id, EM));
 
@@ -174,7 +175,7 @@ void AggressiveCopyPropagation::recordCopy(NodeAddr<StmtNode *> SA,
 // check that reaching defs for source register and subregisters at the use
 // instruction, are the same as reaching defs for the copy. Uses that satisfy
 // this check can be replaced with the source registers of the copy.
-void AggressiveCopyPropagation::recordReplacableUses(NodeAddr<InstrNode *> IA) {
+void CopyPropagation::recordReplacableUses(NodeAddr<InstrNode *> IA) {
   for (NodeAddr<UseNode *> UA : IA.Addr->members_if(DFG.IsUse, DFG)) {
     // Check if any uses of the instruction are reached by a copy
     auto CopyUseIt = ReachedUseToCopyMap.find(UA.Id);
@@ -237,7 +238,7 @@ void AggressiveCopyPropagation::recordReplacableUses(NodeAddr<InstrNode *> IA) {
 
 // Recursively process all children in the dominator tree.
 // Find copy instructions and reached uses that are candidates for propagation
-void AggressiveCopyPropagation::scanBlock(MachineBasicBlock *B) {
+void CopyPropagation::scanBlock(MachineBasicBlock *B) {
   NodeAddr<BlockNode *> BA = DFG.findBlock(B);
   DFG.markBlock(BA.Id, DefM);
 
@@ -260,7 +261,7 @@ void AggressiveCopyPropagation::scanBlock(MachineBasicBlock *B) {
   return;
 }
 
-bool AggressiveCopyPropagation::run() {
+bool CopyPropagation::run() {
   scanBlock(MDT.getRootNode()->getBlock());
 
   if (trace()) {

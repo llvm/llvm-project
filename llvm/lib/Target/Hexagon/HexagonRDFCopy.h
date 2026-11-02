@@ -1,4 +1,4 @@
-//===--- HexagonAggressiveRDFCopy.h -----------------------------*- C++ -*-===//
+//===--- HexagonRDFCopy.h ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGON_AGGRESSIVE_RDFCOPY_H
-#define LLVM_LIB_TARGET_HEXAGON_HEXAGON_AGGRESSIVE_RDFCOPY_H
+#ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGON_RDFCOPY_H
+#define LLVM_LIB_TARGET_HEXAGON_HEXAGON_RDFCOPY_H
 
 #include "HexagonSubtarget.h"
 #include "RDFCopyBase.h"
@@ -22,12 +22,12 @@ namespace llvm {
 class HexagonRegisterInfo;
 namespace rdf {
 
-struct AggressiveCopyPropagation : CopyPropagationBase {
-  AggressiveCopyPropagation(DataFlowGraph &dfg)
+struct CopyPropagation : CopyPropagationBase {
+  CopyPropagation(DataFlowGraph &dfg)
       : CopyPropagationBase(dfg), PRI(dfg.getPRI()), TRI(dfg.getTRI()),
         HRI(*dfg.getMF().getSubtarget<HexagonSubtarget>().getRegisterInfo()) {}
 
-  virtual ~AggressiveCopyPropagation() = default;
+  virtual ~CopyPropagation() = default;
 
   bool run();
   virtual bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM);
@@ -59,4 +59,4 @@ private:
 } // end namespace rdf
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGON_AGGRESSIVE_RDFCOPY_H
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGON_RDFCOPY_H
