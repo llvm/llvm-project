@@ -4123,11 +4123,10 @@ Two accesses form a *data race* if all of the following apply:
 -  at least one of them is a write,
 -  they access overlapping sets of bytes,
 -  they are not related by *happens-before*, and
--  at least one of them is not atomic or they do not access the exact
-   same set of bytes.
-
-Targets may additionally declare accesses as *data races* based on their
-`syncscope`.
+-  at least one of them is not atomic, or they do not access the exact
+   same set of bytes, or at least one of them specifies a `syncscope` and
+   the accesses do not satisfy the target-specific requirements for that
+   `syncscope`.
 
 Given these definitions, R{sub}`byte` is defined as follows:
 
