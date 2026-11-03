@@ -14,13 +14,18 @@
 
 ; assemble_acc
 declare <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
+declare <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>)
 define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-LABEL: ass_acc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlor vs3, v2, v2
-; CHECK-NEXT:    xxlor vs2, v2, v2
-; CHECK-NEXT:    xxlor vs0, vs2, vs2
-; CHECK-NEXT:    xxlor vs1, vs3, vs3
+; CHECK-NEXT:    vmr v3, v2
+; CHECK-NEXT:    xxlor vs0, v2, v2
+; CHECK-NEXT:    xxlor vs1, v3, v3
+; CHECK-NEXT:    xxlor vs2, vs0, vs0
+; CHECK-NEXT:    xxlor vs3, vs1, vs1
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    xvf32gerpp acc0, v2, v2
+; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
 ; CHECK-NEXT:    stxv vs1, 32(r3)
 ; CHECK-NEXT:    stxv vs2, 16(r3)
@@ -29,10 +34,14 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ;
 ; CHECK-BE-LABEL: ass_acc:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxlor vs3, v2, v2
-; CHECK-BE-NEXT:    xxlor vs2, v2, v2
-; CHECK-BE-NEXT:    xxlor vs0, vs2, vs2
-; CHECK-BE-NEXT:    xxlor vs1, vs3, vs3
+; CHECK-BE-NEXT:    vmr v3, v2
+; CHECK-BE-NEXT:    xxlor vs0, v2, v2
+; CHECK-BE-NEXT:    xxlor vs1, v3, v3
+; CHECK-BE-NEXT:    xxlor vs2, vs0, vs0
+; CHECK-BE-NEXT:    xxlor vs3, vs1, vs1
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    xvf32gerpp acc0, v2, v2
+; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
@@ -43,6 +52,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-WACC:       # %bb.0: # %entry
 ; CHECK-WACC-NEXT:    vmr v3, v2
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp34, 0
+; CHECK-WACC-NEXT:    xvf32gerpp wacc0, v2, v2
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r3)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r3)
@@ -54,6 +64,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE-WACC:       # %bb.0: # %entry
 ; CHECK-BE-WACC-NEXT:    vmr v3, v2
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp34, 0
+; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, v2, v2
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r3)
@@ -62,7 +73,8 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc)
-  store <512 x i1> %0, ptr %ptr, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  store <512 x i1> %1, ptr %ptr, align 64
   ret void
 }
 
@@ -130,10 +142,15 @@ declare <512 x i1> @llvm.ppc.mma.xxmfacc(<512 x i1>)
 define void @int_xxmfacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-LABEL: int_xxmfacc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlor vs3, v2, v2
-; CHECK-NEXT:    xxlor vs2, v2, v2
-; CHECK-NEXT:    xxlor vs0, vs2, vs2
-; CHECK-NEXT:    xxlor vs1, vs3, vs3
+; CHECK-NEXT:    vmr v3, v2
+; CHECK-NEXT:    xxlor vs0, v2, v2
+; CHECK-NEXT:    xxlor vs1, v3, v3
+; CHECK-NEXT:    xxlor vs2, vs0, vs0
+; CHECK-NEXT:    xxlor vs3, vs1, vs1
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    xvf32gerpp acc0, v2, v2
+; CHECK-NEXT:    xxmfacc acc0
+; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
 ; CHECK-NEXT:    stxv vs1, 32(r3)
 ; CHECK-NEXT:    stxv vs2, 16(r3)
@@ -142,10 +159,15 @@ define void @int_xxmfacc(ptr %ptr, <16 x i8> %vc) {
 ;
 ; CHECK-BE-LABEL: int_xxmfacc:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxlor vs3, v2, v2
-; CHECK-BE-NEXT:    xxlor vs2, v2, v2
-; CHECK-BE-NEXT:    xxlor vs0, vs2, vs2
-; CHECK-BE-NEXT:    xxlor vs1, vs3, vs3
+; CHECK-BE-NEXT:    vmr v3, v2
+; CHECK-BE-NEXT:    xxlor vs0, v2, v2
+; CHECK-BE-NEXT:    xxlor vs1, v3, v3
+; CHECK-BE-NEXT:    xxlor vs2, vs0, vs0
+; CHECK-BE-NEXT:    xxlor vs3, vs1, vs1
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    xvf32gerpp acc0, v2, v2
+; CHECK-BE-NEXT:    xxmfacc acc0
+; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
@@ -156,6 +178,7 @@ define void @int_xxmfacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-WACC:       # %bb.0: # %entry
 ; CHECK-WACC-NEXT:    vmr v3, v2
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp34, 0
+; CHECK-WACC-NEXT:    xvf32gerpp wacc0, v2, v2
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r3)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r3)
@@ -167,6 +190,7 @@ define void @int_xxmfacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE-WACC:       # %bb.0: # %entry
 ; CHECK-BE-WACC-NEXT:    vmr v3, v2
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp34, 0
+; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, v2, v2
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r3)
@@ -177,8 +201,9 @@ entry:
 ; One xxmtacc is generated from the call to assemble.acc then one xxmfacc is
 ; generated from the call to xxmfacc then one xxmfacc is generated for the store
   %0 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc, <16 x i8> %vc)
-  %1 = tail call <512 x i1> @llvm.ppc.mma.xxmfacc(<512 x i1> %0)
-  store <512 x i1> %1, ptr %ptr, align 64
+  %1 = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
+  %2 = tail call <512 x i1> @llvm.ppc.mma.xxmfacc(<512 x i1> %1)
+  store <512 x i1> %2, ptr %ptr, align 64
   ret void
 }
 
@@ -395,7 +420,6 @@ if.end:
 }
 
 ; The following test cases check that the xxsetaccz instruction is correctly rematerialized
-declare <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1>, <16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1>, <16 x i8>, <16 x i8>)
 
