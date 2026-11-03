@@ -60,6 +60,8 @@ public:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   GetSiginfo() const override;
 
+  llvm::Error SetSiginfo(llvm::ArrayRef<uint8_t> siginfo) override;
+
 private:
   // Interface for friend classes
 

@@ -18,6 +18,7 @@
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -55,6 +56,12 @@ public:
 
   virtual llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   GetSiginfo() const {
+    return llvm::make_error<UnimplementedError>();
+  }
+
+  /// Set the siginfo of the thread. The data must be in the format returned
+  /// by GetSiginfo.
+  virtual llvm::Error SetSiginfo(llvm::ArrayRef<uint8_t> siginfo) {
     return llvm::make_error<UnimplementedError>();
   }
 
