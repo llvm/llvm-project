@@ -19,14 +19,22 @@ define i32 @load_group_reordered_with_store(ptr %a, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A6]], [[C7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[C7]], 4
+; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP6]], [[A6]]
+; CHECK-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP18]], 1
+; CHECK-NEXT:    [[DIFF_CHECK12:%.*]] = icmp ult i64 [[TMP19]], 31
+; CHECK-NEXT:    [[CONFLICT_RDX1:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK12]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[C7]], [[A6]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP5]], 31
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK8]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[C7]], -4
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[A6]]
+; CHECK-NEXT:    [[CONFLICT_RDX14:%.*]] = or i1 [[CONFLICT_RDX1]], [[DIFF_CHECK8]]
+; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[DIFF_CHECK15:%.*]] = icmp ult i64 [[TMP20]], 31
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[CONFLICT_RDX14]], [[DIFF_CHECK15]]
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[A6]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP21]], [[C7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK9:%.*]] = icmp ult i64 [[TMP8]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX10:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK9]]
@@ -91,12 +99,21 @@ define void @store_group_reordered_with_load(ptr %a, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[C4]], [[A5]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[A5]], -4
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[A5]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[C4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP4]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK6]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], [[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[A5]], [[C4]]
+; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP16]], 1
+; CHECK-NEXT:    [[DIFF_CHECK11:%.*]] = icmp ult i64 [[TMP17]], 31
+; CHECK-NEXT:    [[CONFLICT_RDX12:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK11]]
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[C4]], 4
+; CHECK-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP18]], [[A5]]
+; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP19]], 1
+; CHECK-NEXT:    [[DIFF_CHECK13:%.*]] = icmp ult i64 [[TMP20]], 31
+; CHECK-NEXT:    [[CONFLICT_RDX14:%.*]] = or i1 [[CONFLICT_RDX12]], [[DIFF_CHECK13]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX14]], [[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 0
