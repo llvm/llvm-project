@@ -133,7 +133,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   // over to a DeadBlock and simply keep the block in a separate DeadAllocations
   // list.
   if (B->hasPointers()) {
-    B->AccessFlags |= Block::DeadFlag;
+    B->markDead();
     DeadAllocations.push_back(std::move(*AllocIt));
     Site.Allocations.erase(AllocIt);
 
