@@ -69,6 +69,9 @@ add_mlir_library(MLIRFunctionInterfaces
 add_mlir_interface_library(IndexingMapOpInterface)
 add_mlir_interface_library(InferIntDivisibilityOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
+mlir_target_link_libraries(MLIRInferIntRangeInterface PUBLIC
+  MLIRDataLayoutInterfaces
+)
 
 add_mlir_library(MLIRInferStridedMetadataInterface
   InferStridedMetadataInterface.cpp

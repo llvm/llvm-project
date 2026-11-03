@@ -1478,6 +1478,7 @@ static bool isValidPositiveIndexOrPoison(int64_t index, int64_t poisonValue,
 //===----------------------------------------------------------------------===//
 
 void ExtractOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                  std::optional<unsigned> indexBitwidth,
                                   SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges.front());
 }
@@ -3126,6 +3127,7 @@ void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    std::optional<unsigned> indexBitwidth,
                                     SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges.front());
 }
@@ -3788,6 +3790,7 @@ void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 void vector::InsertOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                         std::optional<unsigned> indexBitwidth,
                                          SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges[0].rangeUnion(argRanges[1]));
 }
@@ -6951,6 +6954,7 @@ CompressStoreOp::bubbleDownCasts(OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 
 void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    std::optional<unsigned> indexBitwidth,
                                     SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges.front());
 }
@@ -7639,6 +7643,7 @@ LogicalResult vector::TransposeOp::verify() {
 }
 
 void TransposeOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    std::optional<unsigned> indexBitwidth,
                                     SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges.front());
 }
@@ -8643,12 +8648,18 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
 //===----------------------------------------------------------------------===//
 
 void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRanges) {
   auto resultType = cast<VectorType>(getType());
   if (resultType.isScalable()) {
     return;
   }
-  unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
+  auto runtimeWidth = ConstantIntRanges::getBitwidth(resultType, indexBitwidth);
+  if (!runtimeWidth)
+    return setResultRanges(
+        getResult(),
+        ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth));
+  unsigned bitwidth = *runtimeWidth;
   // The result holds the sequence [0, 1, ..., N-1], with each value truncated
   // to the result element type.
   uint64_t maxIndex = resultType.getDimSize(0) - 1;

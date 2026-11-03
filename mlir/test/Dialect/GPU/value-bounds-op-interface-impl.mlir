@@ -78,7 +78,7 @@ func.func @launch_func(%arg0 : index) {
 // constraints.
 
 // CHECK-LABEL: func @kernel
-module attributes {gpu.container_module} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>, gpu.container_module} {
   gpu.module @gpu_module {
     llvm.func @kernel() attributes {gpu.kernel} {
 
@@ -98,7 +98,7 @@ module attributes {gpu.container_module} {
 // -----
 
 // CHECK-LABEL: func @annotated_kernel
-module attributes {gpu.container_module} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>, gpu.container_module} {
   gpu.module @gpu_module {
     gpu.func @annotated_kernel() kernel
       attributes {known_block_size = array<i32: 8, 12, 16>,
@@ -127,7 +127,7 @@ module attributes {gpu.container_module} {
 // -----
 
 // CHECK-LABEL: func @local_bounds_kernel
-module attributes {gpu.container_module} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>, gpu.container_module} {
   gpu.module @gpu_module {
     gpu.func @local_bounds_kernel() kernel {
 
@@ -161,7 +161,7 @@ module attributes {gpu.container_module} {
 // -----
 
 // CHECK-LABEL: func @subgroup_broadcast
-module attributes {gpu.container_module} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>, gpu.container_module} {
   gpu.module @gpu_module {
     gpu.func @subgroup_broadcast(%arg0 : index) kernel {
       %lane = arith.constant 1 : i32
@@ -181,7 +181,7 @@ module attributes {gpu.container_module} {
 // -----
 
 // CHECK-LABEL: func @subgroup_broadcast_shaped
-module attributes {gpu.container_module} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>, gpu.container_module} {
   gpu.module @gpu_module {
     gpu.func @subgroup_broadcast_shaped(%arg0 : memref<?xf32>) kernel {
       %c0 = arith.constant 0 : index

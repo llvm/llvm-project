@@ -9,7 +9,7 @@
 #ifndef MLIR_ANALYSIS_DATAFLOW_STRIDEDMETADATARANGE_H
 #define MLIR_ANALYSIS_DATAFLOW_STRIDEDMETADATARANGE_H
 
-#include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Interfaces/InferStridedMetadataInterface.h"
 
 namespace mlir {
@@ -19,6 +19,16 @@ namespace dataflow {
 class StridedMetadataRangeLattice : public Lattice<StridedMetadataRange> {
 public:
   using Lattice::Lattice;
+
+  void setIndexBitwidth(std::optional<unsigned> width) {
+    indexBitwidth = width;
+  }
+  StridedMetadataRange getEntryState() const;
+  ChangeResult join(const StridedMetadataRange &rhs);
+  ChangeResult join(const AbstractSparseLattice &rhs) override;
+
+private:
+  std::optional<unsigned> indexBitwidth;
 };
 
 /// Strided metadata range analysis determines the strided metadata ranges of
@@ -30,8 +40,12 @@ public:
 class StridedMetadataRangeAnalysis
     : public SparseForwardDataFlowAnalysis<StridedMetadataRangeLattice> {
 public:
+  using IndexBitwidthFn = IntegerRangeAnalysis::IndexBitwidthFn;
+
+  /// Use the callback's runtime index width at each operation. An absent width
+  /// gives conservative metadata bounds.
   StridedMetadataRangeAnalysis(DataFlowSolver &solver,
-                               int32_t indexBitwidth = 64);
+                               IndexBitwidthFn getIndexBitwidth = {});
 
   /// At an entry point, we cannot reason about strided metadata ranges unless
   /// the type also encodes the data. For example, a memref with static layout.
@@ -44,9 +58,14 @@ public:
                  ArrayRef<const StridedMetadataRangeLattice *> operands,
                  ArrayRef<StridedMetadataRangeLattice *> results) override;
 
+protected:
+  StridedMetadataRangeLattice *getLatticeElement(Value value) override;
+
 private:
-  /// Index bitwidth to use when operating with the int-ranges.
-  int32_t indexBitwidth = 64;
+  std::optional<unsigned> getWidth(Operation *op) const {
+    return getIndexBitwidth ? getIndexBitwidth(op) : std::nullopt;
+  }
+  IndexBitwidthFn getIndexBitwidth;
 };
 } // namespace dataflow
 } // end namespace mlir

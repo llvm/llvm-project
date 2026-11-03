@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/APInt.h"
 #include <array>
@@ -111,8 +115,10 @@ TEST(IntRangeInference, SignedDivRemBounds) {
                   int64_t remMin, int64_t remMax) {
     std::array operands{signedRange(32, lhsMin, lhsMax),
                         signedRange(32, rhsMin, rhsMax)};
-    EXPECT_EQ(intrange::inferDivS(operands), signedRange(32, divMin, divMax));
-    EXPECT_EQ(intrange::inferRemS(operands), signedRange(32, remMin, remMax));
+    EXPECT_EQ(intrange::inferDivS(operands, operands[0].umin().getBitWidth()),
+              signedRange(32, divMin, divMax));
+    EXPECT_EQ(intrange::inferRemS(operands, operands[0].umin().getBitWidth()),
+              signedRange(32, remMin, remMax));
   };
   check(0, 127, 0, 16, 0, 127, 0, 15);
   check(-127, 0, 0, 16, -127, 0, -15, 0);
@@ -136,8 +142,10 @@ static void checkSignedDivRem(unsigned width, int64_t lhsMin, int64_t lhsMax,
                               int64_t rhsMin, int64_t rhsMax) {
   std::array operands{signedRange(width, lhsMin, lhsMax),
                       signedRange(width, rhsMin, rhsMax)};
-  ConstantIntRanges div = intrange::inferDivS(operands);
-  ConstantIntRanges rem = intrange::inferRemS(operands);
+  ConstantIntRanges div =
+      intrange::inferDivS(operands, operands[0].umin().getBitWidth());
+  ConstantIntRanges rem =
+      intrange::inferRemS(operands, operands[0].umin().getBitWidth());
   for (int64_t lhs = lhsMin; lhs <= lhsMax; ++lhs) {
     for (int64_t rhs = rhsMin; rhs <= rhsMax; ++rhs) {
       if (rhs == 0)
@@ -173,19 +181,27 @@ TEST(IntRangeInference, SignedDivRemPoisonDivisor) {
     for (ConstantIntRanges rhs :
          {signedRange(width, 0, 0), signedRange(width, 0, -1)}) {
       std::array operands{lhs, rhs};
-      EXPECT_EQ(intrange::inferDivS(operands), lhs);
-      EXPECT_EQ(intrange::inferRemS(operands), lhs);
+      EXPECT_EQ(intrange::inferDivS(operands, operands[0].umin().getBitWidth()),
+                lhs);
+      EXPECT_EQ(intrange::inferRemS(operands, operands[0].umin().getBitWidth()),
+                lhs);
     }
   }
 }
 
 TEST(IntRangeInference, RoundedSignedDivZeroEndpoint) {
   std::array positive{signedRange(32, 1, 7), signedRange(32, 0, 3)};
-  EXPECT_EQ(intrange::inferCeilDivS(positive), signedRange(32, 1, 7));
-  EXPECT_EQ(intrange::inferFloorDivS(positive), signedRange(32, 0, 7));
+  EXPECT_EQ(intrange::inferCeilDivS(positive, positive[0].umin().getBitWidth()),
+            signedRange(32, 1, 7));
+  EXPECT_EQ(
+      intrange::inferFloorDivS(positive, positive[0].umin().getBitWidth()),
+      signedRange(32, 0, 7));
   std::array negative{signedRange(32, -7, -1), signedRange(32, 0, 3)};
-  EXPECT_EQ(intrange::inferCeilDivS(negative), signedRange(32, -7, 0));
-  EXPECT_EQ(intrange::inferFloorDivS(negative), signedRange(32, -7, -1));
+  EXPECT_EQ(intrange::inferCeilDivS(negative, negative[0].umin().getBitWidth()),
+            signedRange(32, -7, 0));
+  EXPECT_EQ(
+      intrange::inferFloorDivS(negative, negative[0].umin().getBitWidth()),
+      signedRange(32, -7, -1));
 }
 
 TEST(IntRangeInference, SignedRemMinDivisor) {
@@ -194,7 +210,7 @@ TEST(IntRangeInference, SignedRemMinDivisor) {
     APInt zero = APInt::getZero(width);
     std::array operands{ConstantIntRanges::fromSigned(min, zero),
                         ConstantIntRanges::fromSigned(min, zero)};
-    EXPECT_EQ(intrange::inferRemS(operands),
+    EXPECT_EQ(intrange::inferRemS(operands, operands[0].umin().getBitWidth()),
               ConstantIntRanges::fromSigned(min + 1, zero));
   }
 }
@@ -204,8 +220,10 @@ static void checkRoundedSignedDiv(unsigned width, int64_t lhsMin,
                                   int64_t rhsMax) {
   std::array operands{signedRange(width, lhsMin, lhsMax),
                       signedRange(width, rhsMin, rhsMax)};
-  ConstantIntRanges ceil = intrange::inferCeilDivS(operands);
-  ConstantIntRanges floor = intrange::inferFloorDivS(operands);
+  ConstantIntRanges ceil =
+      intrange::inferCeilDivS(operands, operands[0].umin().getBitWidth());
+  ConstantIntRanges floor =
+      intrange::inferFloorDivS(operands, operands[0].umin().getBitWidth());
   for (int64_t lhs = lhsMin; lhs <= lhsMax; ++lhs) {
     for (int64_t rhs = rhsMin; rhs <= rhsMax; ++rhs) {
       if (rhs == 0 || (lhs == -(int64_t{1} << (width - 1)) && rhs == -1))
@@ -246,20 +264,69 @@ TEST(IntRangeInference, SignedCeilDivMinDividend) {
     APInt two(width, 2);
     std::array singleton{ConstantIntRanges::constant(min),
                          ConstantIntRanges::constant(two)};
-    EXPECT_EQ(intrange::inferCeilDivS(singleton),
-              ConstantIntRanges::constant(-min.sdiv(two)));
+    EXPECT_EQ(
+        intrange::inferCeilDivS(singleton, singleton[0].umin().getBitWidth()),
+        ConstantIntRanges::constant(-min.sdiv(two)));
 
     for (int64_t lower : {0, 1}) {
       std::array divisors{ConstantIntRanges::constant(min),
                           signedRange(width, lower, 3)};
-      EXPECT_EQ(intrange::inferCeilDivS(divisors),
-                ConstantIntRanges::fromSigned(min, -min.sdiv(two)));
+      EXPECT_EQ(
+          intrange::inferCeilDivS(divisors, divisors[0].umin().getBitWidth()),
+          ConstantIntRanges::fromSigned(min, -min.sdiv(two)));
     }
 
     std::array interval{ConstantIntRanges::fromSigned(min, min + 1),
                         ConstantIntRanges::constant(two)};
     EXPECT_EQ(
-        intrange::inferCeilDivS(interval),
+        intrange::inferCeilDivS(interval, interval[0].umin().getBitWidth()),
         ConstantIntRanges::fromSigned((min + 1).sdiv(two), -min.sdiv(two)));
+  }
+}
+
+TEST(IntRangeMatchers, IndexRuntimeWidth) {
+  MLIRContext context;
+  auto indexType = IndexType::get(&context);
+  Attribute zeroAt32 =
+      IntegerAttr::get(indexType, APInt(64, uint64_t{1} << 32));
+  EXPECT_FALSE(m_IntRangeWithoutZeroU().match(zeroAt32));
+  EXPECT_FALSE(m_IntRangeWithoutZeroU(32).match(zeroAt32));
+  EXPECT_TRUE(m_IntRangeWithoutZeroU(64).match(zeroAt32));
+  EXPECT_FALSE(m_IntRangeWithoutZeroS(32).match(zeroAt32));
+  EXPECT_TRUE(m_IntRangeWithoutZeroS(64).match(zeroAt32));
+
+  Attribute minusOneAt32 = IntegerAttr::get(indexType, APInt(64, UINT32_MAX));
+  EXPECT_FALSE(m_IntRangeWithoutNegOneS().match(minusOneAt32));
+  EXPECT_FALSE(m_IntRangeWithoutNegOneS(32).match(minusOneAt32));
+  EXPECT_TRUE(m_IntRangeWithoutNegOneS(64).match(minusOneAt32));
+
+  Attribute integer = IntegerAttr::get(IntegerType::get(&context, 64),
+                                       APInt(64, uint64_t{1} << 32));
+  EXPECT_TRUE(m_IntRangeWithoutZeroU().match(integer));
+  EXPECT_TRUE(m_IntRangeWithoutZeroS().match(integer));
+}
+
+TEST(IntRangeInference, OptionalIndexWidthDispatch) {
+  MLIRContext context;
+  context.loadDialect<arith::ArithDialect>();
+  OpBuilder builder(&context);
+  Location loc = builder.getUnknownLoc();
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  builder.setInsertionPointToStart(module->getBody());
+  auto constant =
+      arith::ConstantIndexOp::create(builder, loc, int64_t{1} << 32);
+  auto interface = cast<InferIntRangeInterface>(constant.getOperation());
+  for (std::optional<unsigned> width :
+       {std::optional<unsigned>(), std::optional<unsigned>(32)}) {
+    std::optional<IntegerValueRange> inferred;
+    interface.inferResultRangesFromOptional(
+        {}, width,
+        [&](Value, const IntegerValueRange &range) { inferred = range; });
+    ASSERT_TRUE(inferred);
+    ASSERT_FALSE(inferred->isUninitialized());
+    EXPECT_EQ(inferred->getValue(),
+              width ? ConstantIntRanges::constant(APInt(*width, 0))
+                    : ConstantIntRanges::maxRange(
+                          IndexType::kInternalStorageBitWidth));
   }
 }

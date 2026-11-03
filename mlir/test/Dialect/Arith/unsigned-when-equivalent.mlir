@@ -12,6 +12,7 @@
 // CHECK: arith.cmpi slt
 // CHECK: arith.cmpi sge
 // CHECK: arith.cmpi sgt
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @not_with_maybe_overflow(%arg0 : i32) -> (i32, i32, i32, i32, i32, i32, i64, i1, i1, i1, i1) {
     %ci32_smax = arith.constant 0x7fffffff : i32
     %c1 = arith.constant 1 : i32
@@ -113,4 +114,5 @@ func.func @gpu_func(%arg0: memref<2x32xf32>, %arg1: memref<2x32xf32>, %arg2: mem
     gpu.terminator
   } 
   return %arg1 : memref<2x32xf32> 
+}
 }

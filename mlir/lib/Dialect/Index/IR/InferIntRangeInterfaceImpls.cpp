@@ -18,17 +18,24 @@ using namespace mlir;
 using namespace mlir::index;
 using namespace mlir::intrange;
 
+static std::optional<unsigned>
+getBitwidth(Type type, std::optional<unsigned> indexBitwidth) {
+  return ConstantIntRanges::getBitwidth(type, indexBitwidth);
+}
+
 //===----------------------------------------------------------------------===//
 // Constants
 //===----------------------------------------------------------------------===//
 
 void ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                   std::optional<unsigned> indexBitwidth,
                                    SetIntRangeFn setResultRange) {
   const APInt &value = getValue();
-  setResultRange(getResult(), ConstantIntRanges::constant(value));
+  setResultRange(getResult(), inferConstant(value, indexBitwidth));
 }
 
 void BoolConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                       std::optional<unsigned> indexBitwidth,
                                        SetIntRangeFn setResultRange) {
   bool value = getValue();
   APInt asInt(/*numBits=*/1, value);
@@ -36,231 +43,180 @@ void BoolConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 }
 
 //===----------------------------------------------------------------------===//
-// Arithmec operations. All of these operations will have their results inferred
-// using both the 64-bit values and truncated 32-bit values of their inputs,
-// with the results being the union of those inferences, except where the
-// truncation of the 64-bit result is equal to the 32-bit result (at which time
-// we take the 64-bit result).
+// Arithmetic operations
 //===----------------------------------------------------------------------===//
 
-// Some arithmetic inference functions allow specifying special overflow / wrap
-// behavior. We do not require this for the IndexOps and use this helper to call
-// the inference function without any `OverflowFlags`.
-static std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>
-inferWithoutOverflowFlags(InferRangeWithOvfFlagsFn inferWithOvfFn) {
-  return [inferWithOvfFn](ArrayRef<ConstantIntRanges> argRanges) {
-    return inferWithOvfFn(argRanges, OverflowFlags::None);
-  };
-}
-
 void AddOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> indexBitwidth,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferAdd),
-                                           argRanges, CmpMode::Both));
+  setResultRange(getResult(), inferAdd(argRanges, indexBitwidth));
 }
 
 void SubOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> indexBitwidth,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferSub),
-                                           argRanges, CmpMode::Both));
+  setResultRange(getResult(), inferSub(argRanges, indexBitwidth));
 }
 
 void MulOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> indexBitwidth,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferMul),
-                                           argRanges, CmpMode::Both));
+  setResultRange(getResult(), inferMul(argRanges, indexBitwidth));
 }
 
 void DivUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferDivU, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferDivU(argRanges, indexBitwidth));
 }
 
 void DivSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferDivS, argRanges, CmpMode::Signed));
+  setResultRange(getResult(), inferDivS(argRanges, indexBitwidth));
 }
 
 void CeilDivUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                   std::optional<unsigned> indexBitwidth,
                                    SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferCeilDivU, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferCeilDivU(argRanges, indexBitwidth));
 }
 
 void CeilDivSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                   std::optional<unsigned> indexBitwidth,
                                    SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferCeilDivS, argRanges, CmpMode::Signed));
+  setResultRange(getResult(), inferCeilDivS(argRanges, indexBitwidth));
 }
 
 void FloorDivSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    std::optional<unsigned> indexBitwidth,
                                     SetIntRangeFn setResultRange) {
-  return setResultRange(
-      getResult(), inferIndexOp(inferFloorDivS, argRanges, CmpMode::Signed));
+  return setResultRange(getResult(), inferFloorDivS(argRanges, indexBitwidth));
 }
 
 void RemSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferRemS, argRanges, CmpMode::Signed));
+  setResultRange(getResult(), inferRemS(argRanges, indexBitwidth));
 }
 
 void RemUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferRemU, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferRemU(argRanges, indexBitwidth));
 }
 
 void MaxSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferMaxS, argRanges, CmpMode::Signed));
+  setResultRange(getResult(), inferMaxS(argRanges));
 }
 
 void MaxUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferMaxU, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferMaxU(argRanges));
 }
 
 void MinSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferMinS, argRanges, CmpMode::Signed));
+  setResultRange(getResult(), inferMinS(argRanges));
 }
 
 void MinUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferMinU, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferMinU(argRanges));
 }
 
 void ShlOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> indexBitwidth,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), inferIndexOp(inferWithoutOverflowFlags(inferShl),
-                                           argRanges, CmpMode::Both));
+  setResultRange(getResult(), inferShl(argRanges, indexBitwidth));
 }
 
 void ShrSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferShrS, argRanges, CmpMode::Signed));
+  setResultRange(getResult(), inferShrS(argRanges, indexBitwidth));
 }
 
 void ShrUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> indexBitwidth,
                                SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferShrU, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferShrU(argRanges, indexBitwidth));
 }
 
 void AndOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> indexBitwidth,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferAnd, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferAnd(argRanges));
 }
 
 void OrOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                             std::optional<unsigned> indexBitwidth,
                              SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferOr, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferOr(argRanges));
 }
 
 void XOrOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> indexBitwidth,
                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(),
-                 inferIndexOp(inferXor, argRanges, CmpMode::Unsigned));
+  setResultRange(getResult(), inferXor(argRanges));
 }
 
 //===----------------------------------------------------------------------===//
 // Casts
 //===----------------------------------------------------------------------===//
 
-static ConstantIntRanges makeLikeDest(const ConstantIntRanges &range,
-                                      unsigned srcWidth, unsigned destWidth,
-                                      bool isSigned) {
-  if (srcWidth < destWidth)
-    return isSigned ? extSIRange(range, destWidth)
-                    : extUIRange(range, destWidth);
-  if (srcWidth > destWidth)
-    return truncRange(range, destWidth);
-  return range;
-}
-
-// When casting to `index`, we will take the union of the possible fixed-width
-// casts.
-static ConstantIntRanges inferIndexCast(const ConstantIntRanges &range,
-                                        Type sourceType, Type destType,
-                                        bool isSigned) {
-  unsigned srcWidth = ConstantIntRanges::getStorageBitwidth(sourceType);
-  unsigned destWidth = ConstantIntRanges::getStorageBitwidth(destType);
-  if (sourceType.isIndex())
-    return makeLikeDest(range, srcWidth, destWidth, isSigned);
-  // We are casting to indexs, so use the union of the 32-bit and 64-bit casts
-  ConstantIntRanges storageRange =
-      makeLikeDest(range, srcWidth, destWidth, isSigned);
-  ConstantIntRanges minWidthRange =
-      makeLikeDest(range, srcWidth, indexMinWidth, isSigned);
-  ConstantIntRanges minWidthExt = extRange(minWidthRange, destWidth);
-  ConstantIntRanges ret = storageRange.rangeUnion(minWidthExt);
-  return ret;
-}
-
-void CastSOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                SetIntRangeFn setResultRange) {
+void CastSOp::inferResultRangesFromOptional(
+    ArrayRef<IntegerValueRange> argRanges,
+    std::optional<unsigned> indexBitwidth, SetIntLatticeFn setResultRange) {
   Type sourceType = getOperand().getType();
   Type destType = getResult().getType();
-  setResultRange(getResult(), inferIndexCast(argRanges[0], sourceType, destType,
-                                             /*isSigned=*/true));
+  setResultRange(getResult(),
+                 inferIndexCast(argRanges[0],
+                                getBitwidth(sourceType, indexBitwidth),
+                                getBitwidth(destType, indexBitwidth),
+                                /*isSigned=*/true));
 }
 
-void CastUOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                SetIntRangeFn setResultRange) {
+void CastUOp::inferResultRangesFromOptional(
+    ArrayRef<IntegerValueRange> argRanges,
+    std::optional<unsigned> indexBitwidth, SetIntLatticeFn setResultRange) {
   Type sourceType = getOperand().getType();
   Type destType = getResult().getType();
-  setResultRange(getResult(), inferIndexCast(argRanges[0], sourceType, destType,
-                                             /*isSigned=*/false));
+  setResultRange(getResult(),
+                 inferIndexCast(argRanges[0],
+                                getBitwidth(sourceType, indexBitwidth),
+                                getBitwidth(destType, indexBitwidth),
+                                /*isSigned=*/false));
 }
 
 //===----------------------------------------------------------------------===//
 // CmpOp
 //===----------------------------------------------------------------------===//
 
-void CmpOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                              SetIntRangeFn setResultRange) {
+void CmpOp::inferResultRangesFromOptional(ArrayRef<IntegerValueRange> argRanges,
+                                          std::optional<unsigned> indexBitwidth,
+                                          SetIntLatticeFn setResultRange) {
   index::IndexCmpPredicate indexPred = getPred();
   intrange::CmpPredicate pred = static_cast<intrange::CmpPredicate>(indexPred);
-  const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
-
-  APInt min = APInt::getZero(1);
-  APInt max = APInt::getAllOnes(1);
-
-  std::optional<bool> truthValue64 = intrange::evaluatePred(pred, lhs, rhs);
-
-  ConstantIntRanges lhsTrunc = truncRange(lhs, indexMinWidth),
-                    rhsTrunc = truncRange(rhs, indexMinWidth);
-  std::optional<bool> truthValue32 =
-      intrange::evaluatePred(pred, lhsTrunc, rhsTrunc);
-
-  if (truthValue64 == truthValue32) {
-    if (truthValue64.has_value() && *truthValue64)
-      min = max;
-    else if (truthValue64.has_value() && !(*truthValue64))
-      max = min;
-  }
-  setResultRange(getResult(), ConstantIntRanges::fromUnsigned(min, max));
+  setResultRange(getResult(), inferCmp(pred, argRanges, indexBitwidth));
 }
 
 //===----------------------------------------------------------------------===//
-// SizeOf, which is bounded between the two supported bitwidth (32 and 64).
+// SizeOf
 //===----------------------------------------------------------------------===//
 
 void SizeOfOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                 std::optional<unsigned> indexBitwidth,
                                  SetIntRangeFn setResultRange) {
-  unsigned storageWidth =
-      ConstantIntRanges::getStorageBitwidth(getResult().getType());
-  APInt min(/*numBits=*/storageWidth, indexMinWidth);
-  APInt max(/*numBits=*/storageWidth, indexMaxWidth);
-  setResultRange(getResult(), ConstantIntRanges::fromUnsigned(min, max));
+  if (!indexBitwidth)
+    return setResultRange(
+        getResult(),
+        ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth));
+  setResultRange(getResult(), ConstantIntRanges::constant(
+                                  APInt(*indexBitwidth, *indexBitwidth)));
 }

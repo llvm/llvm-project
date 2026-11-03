@@ -31,7 +31,10 @@ using namespace mlir::dataflow;
 /// this function sets the metadata to a top state with no offsets, sizes, or
 /// strides. For `memref` types, this function will use the metadata in the type
 /// to try to deduce as much informaiton as possible.
-static StridedMetadataRange getEntryStateImpl(Value v, int32_t indexBitwidth) {
+static StridedMetadataRange
+getEntryStateImpl(Value v, std::optional<unsigned> runtimeWidth) {
+  unsigned indexBitwidth =
+      runtimeWidth.value_or(IndexType::kInternalStorageBitWidth);
   // TODO: generalize this method with a type interface.
   auto mTy = dyn_cast<BaseMemRefType>(v.getType());
 
@@ -42,6 +45,9 @@ static StridedMetadataRange getEntryStateImpl(Value v, int32_t indexBitwidth) {
   // Get the top state.
   auto metadata =
       StridedMetadataRange::getMaxRanges(indexBitwidth, mTy.getRank());
+
+  if (!runtimeWidth)
+    return metadata;
 
   // Compute the offset and strides.
   int64_t offset;
@@ -70,25 +76,65 @@ static StridedMetadataRange getEntryStateImpl(Value v, int32_t indexBitwidth) {
   return metadata;
 }
 
+static StridedMetadataRange
+normalizeMetadata(const StridedMetadataRange &range, Value value,
+                  std::optional<unsigned> indexBitwidth) {
+  if (range.isUninitialized())
+    return range;
+  auto hasWrongWidth = [&](ArrayRef<ConstantIntRanges> bounds) {
+    return llvm::any_of(bounds, [&](const ConstantIntRanges &bound) {
+      return !indexBitwidth || bound.umin().getBitWidth() != *indexBitwidth;
+    });
+  };
+  if (hasWrongWidth(range.getOffsets()) || hasWrongWidth(range.getSizes()) ||
+      hasWrongWidth(range.getStrides()))
+    return getEntryStateImpl(value, indexBitwidth);
+  return range;
+}
+
+StridedMetadataRange StridedMetadataRangeLattice::getEntryState() const {
+  return getEntryStateImpl(cast<Value>(getAnchor()), indexBitwidth);
+}
+
+ChangeResult
+StridedMetadataRangeLattice::join(const StridedMetadataRange &rhs) {
+  return Lattice::join(
+      normalizeMetadata(rhs, cast<Value>(getAnchor()), indexBitwidth));
+}
+
+ChangeResult
+StridedMetadataRangeLattice::join(const AbstractSparseLattice &rhs) {
+  return join(static_cast<const StridedMetadataRangeLattice &>(rhs).getValue());
+}
+
 StridedMetadataRangeAnalysis::StridedMetadataRangeAnalysis(
-    DataFlowSolver &solver, int32_t indexBitwidth)
-    : SparseForwardDataFlowAnalysis(solver), indexBitwidth(indexBitwidth) {
-  assert(indexBitwidth > 0 && "invalid bitwidth");
+    DataFlowSolver &solver, IndexBitwidthFn getIndexBitwidth)
+    : SparseForwardDataFlowAnalysis(solver),
+      getIndexBitwidth(std::move(getIndexBitwidth)) {}
+
+StridedMetadataRangeLattice *
+StridedMetadataRangeAnalysis::getLatticeElement(Value value) {
+  auto *lattice = SparseForwardDataFlowAnalysis::getLatticeElement(value);
+  Operation *scope = value.getDefiningOp();
+  if (!scope)
+    scope = cast<BlockArgument>(value).getOwner()->getParentOp();
+  lattice->setIndexBitwidth(getWidth(scope));
+  return lattice;
 }
 
 void StridedMetadataRangeAnalysis::setToEntryState(
     StridedMetadataRangeLattice *lattice) {
-  propagateIfChanged(lattice, lattice->join(getEntryStateImpl(
-                                  lattice->getAnchor(), indexBitwidth)));
+  propagateIfChanged(lattice, lattice->join(lattice->getEntryState()));
 }
 
 LogicalResult StridedMetadataRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const StridedMetadataRangeLattice *> operands,
     ArrayRef<StridedMetadataRangeLattice *> results) {
   auto inferrable = dyn_cast<InferStridedMetadataOpInterface>(op);
+  std::optional<unsigned> indexBitwidth = getWidth(op);
 
   // Bail if we cannot reason about the op.
-  if (!inferrable) {
+  if (!inferrable || !indexBitwidth) {
     setAllToEntryStates(results);
     return success();
   }
@@ -100,13 +146,19 @@ LogicalResult StridedMetadataRangeAnalysis::visitOperation(
   auto getIntRange = [&](Value value) -> IntegerValueRange {
     auto lattice = getOrCreateFor<IntegerValueRangeLattice>(
         getProgramPointAfter(op), value);
-    return lattice ? lattice->getValue() : IntegerValueRange();
+    if (!lattice || lattice->getValue().isUninitialized())
+      return IntegerValueRange();
+    if (lattice->getValue().getValue().umin().getBitWidth() != *indexBitwidth)
+      return IntegerValueRange::getMaxRange(value, *indexBitwidth);
+    return lattice->getValue();
   };
 
   // Convert the arguments lattices to a vector.
   SmallVector<StridedMetadataRange> argRanges = llvm::map_to_vector(
-      operands, [](const StridedMetadataRangeLattice *lattice) {
-        return lattice->getValue();
+      llvm::zip_equal(op->getOperands(), operands),
+      [&](auto operandAndLattice) {
+        auto [value, lattice] = operandAndLattice;
+        return normalizeMetadata(lattice->getValue(), value, indexBitwidth);
       });
 
   // Callback to set metadata on a result.
@@ -122,6 +174,6 @@ LogicalResult StridedMetadataRangeAnalysis::visitOperation(
 
   // Infer the metadata.
   inferrable.inferStridedMetadataRanges(argRanges, getIntRange, joinCallback,
-                                        indexBitwidth);
+                                        *indexBitwidth);
   return success();
 }

@@ -3,6 +3,7 @@
 // CHECK-LABEL: func @test
 //       CHECK:   %[[C:.*]] = arith.constant false
 //       CHECK:   return %[[C]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
   %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
@@ -10,11 +11,13 @@ func.func @test() -> i1 {
   return %1: i1
 }
 
+}
 // -----
 
 // CHECK-LABEL: func @test
 //       CHECK:   %[[C:.*]] = arith.constant true
 //       CHECK:   return %[[C]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
   %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
@@ -22,12 +25,14 @@ func.func @test() -> i1 {
   return %1: i1
 }
 
+}
 // -----
 
 
 // CHECK-LABEL: func @test
 //       CHECK:   %[[C:.*]] = arith.constant true
 //       CHECK:   return %[[C]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @test() -> i1 {
   %cst = arith.constant 0 : index
   %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
@@ -35,11 +40,13 @@ func.func @test() -> i1 {
   return %1: i1
 }
 
+}
 // -----
 
 // CHECK-LABEL: func @test
 //       CHECK:   %[[C:.*]] = arith.constant false
 //       CHECK:   return %[[C]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @test() -> i1 {
   %cst = arith.constant 0 : index
   %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
@@ -47,12 +54,14 @@ func.func @test() -> i1 {
   return %1: i1
 }
 
+}
 // -----
 
 
 // CHECK-LABEL: func @test
 //       CHECK:   %[[C:.*]] = arith.constant true
 //       CHECK:   return %[[C]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
   %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
@@ -60,11 +69,13 @@ func.func @test() -> i1 {
   return %1: i1
 }
 
+}
 // -----
 
 // CHECK-LABEL: func @test
 //       CHECK:   %[[C:.*]] = arith.constant false
 //       CHECK:   return %[[C]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
   %0 = test.with_bounds < umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index > : index
@@ -72,6 +83,7 @@ func.func @test() -> i1 {
   return %1: i1
 }
 
+}
 // -----
 
 // CHECK-LABEL: func @test
@@ -136,7 +148,9 @@ func.func @trivial_remui_sign_bit_set_range() -> i8 {
 // -----
 
 // CHECK-LABEL: func @non_trivial_remui_index_sign_bit_set_modulus
-// CHECK: arith.remui
+// CHECK: [[VAL:%.*]] = arith.andi
+// CHECK-NEXT: return [[VAL]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @non_trivial_remui_index_sign_bit_set_modulus(%arg: index) -> index {
   %mask = arith.constant 255 : index
   // This is 2^63 + 3 as an unsigned 64-bit value, but truncates to 3 when
@@ -147,6 +161,7 @@ func.func @non_trivial_remui_index_sign_bit_set_modulus(%arg: index) -> index {
   return %mod : index
 }
 
+}
 // -----
 
 // CHECK-LABEL: func @non_const_rhs

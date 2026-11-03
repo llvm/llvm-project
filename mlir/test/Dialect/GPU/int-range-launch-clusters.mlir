@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -int-range-optimizations | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+
 // CHECK-LABEL: func @cluster_arguments
 // CHECK: gpu.launch clusters
 // CHECK-COUNT-3: test.reflect_bounds <umin = 0 : index, umax = 4294967294 : index, smin = 0 : index, smax = 4294967294 : index>
@@ -59,4 +61,5 @@ func.func @cluster_input_ranges() {
     gpu.terminator
   }
   return
+}
 }

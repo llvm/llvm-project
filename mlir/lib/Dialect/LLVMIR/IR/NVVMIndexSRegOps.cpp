@@ -43,7 +43,8 @@ static void nvvmInferResultRanges(std::optional<LLVM::ConstantRangeAttr> range,
   }
   // ConstantIntRanges cannot represent an empty set. Conservatively fall back
   // to the full range rather than deriving invalid inclusive bounds.
-  setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
+  setResultRanges(result, ConstantIntRanges::maxRange(
+                              cast<IntegerType>(result.getType()).getWidth()));
 }
 
 /// Verify the range attribute satisfies LLVM ConstantRange constructor

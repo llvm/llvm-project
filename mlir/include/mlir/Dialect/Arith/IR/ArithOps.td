@@ -1844,7 +1844,7 @@ def IndexCastTypeConstraint : TypeConstraint<Or<[
 
 def Arith_IndexCastOp
   : Arith_CastOp<"index_cast", IndexCastTypeConstraint, IndexCastTypeConstraint,
-                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>]> {
   let summary = "cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
@@ -1863,7 +1863,7 @@ def Arith_IndexCastOp
 
 def Arith_IndexCastUIOp
   : Arith_CastOp<"index_castui", IndexCastTypeConstraint, IndexCastTypeConstraint,
-                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
                   DeclareOpInterfaceMethods<ArithNonNegFlagInterface>]> {
   let summary = "unsigned cast between index and integer types";
   let description = [{
@@ -1937,7 +1937,7 @@ def Arith_BitcastOp : Arith_CastOp<"bitcast", BitcastTypeConstraint,
 
 def Arith_CmpIOp : Arith_CompareOp<"cmpi",
     [DeclareOpInterfaceMethods<InferIntRangeInterface,
-                               ["inferResultRanges"]>]> {
+                               ["inferResultRangesFromOptional"]>]> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
