@@ -6,26 +6,14 @@
 ; of the f32 scale, so computations of the sign and mantissa bits are dead.
 
 define i32 @fp32_to_e8m0_roundtrip(<8 x bfloat> %src, float %s) {
-; GFX1250-SDAG-LABEL: fp32_to_e8m0_roundtrip:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v5, v[0:3], v4
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, v5
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: fp32_to_e8m0_roundtrip:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_bfe_u32 v4, v4, 23, 8
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 23, v4
-; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: fp32_to_e8m0_roundtrip:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v5, v[0:3], v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v5
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %bits = bitcast float %s to i32
   %exp = lshr i32 %bits, 23
   %e8m0 = trunc i32 %exp to i8
@@ -37,24 +25,14 @@ define i32 @fp32_to_e8m0_roundtrip(<8 x bfloat> %src, float %s) {
 }
 
 define i32 @exponent_mask(<8 x bfloat> %src, i32 %bits) {
-; GFX1250-SDAG-LABEL: exponent_mask:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v5, v[0:3], v4
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, v5
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: exponent_mask:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v5, 0x7f800000, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: exponent_mask:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v5, v[0:3], v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v5
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %and = and i32 %bits, 2139095040
   %scale = bitcast i32 %and to float
   %r = call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> %src, float %scale)
@@ -62,27 +40,15 @@ define i32 @exponent_mask(<8 x bfloat> %src, i32 %bits) {
 }
 
 define i32 @e8m0_byte1(<8 x bfloat> %src, i32 %w) {
-; GFX1250-SDAG-LABEL: e8m0_byte1:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_lshlrev_b32_e32 v5, 15, v4
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: e8m0_byte1:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_bfe_u32 v4, v4, 8, 8
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 23, v4
-; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: e8m0_byte1:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, 15, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %b = lshr i32 %w, 8
   %m = and i32 %b, 255
   %shl = shl i32 %m, 23
@@ -92,27 +58,15 @@ define i32 @e8m0_byte1(<8 x bfloat> %src, i32 %w) {
 }
 
 define i32 @e8m0_byte3(<8 x bfloat> %src, i32 %w) {
-; GFX1250-SDAG-LABEL: e8m0_byte3:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_lshrrev_b32_e32 v5, 1, v4
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: e8m0_byte3:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 24, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 23, v4
-; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: e8m0_byte3:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_lshrrev_b32_e32 v5, 1, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %b = lshr i32 %w, 24
   %shl = shl i32 %b, 23
   %scale = bitcast i32 %shl to float
@@ -121,35 +75,19 @@ define i32 @e8m0_byte3(<8 x bfloat> %src, i32 %w) {
 }
 
 define <2 x i32> @e8m0_vector_load(<8 x bfloat> %a, <8 x bfloat> %b, ptr addrspace(1) %p) {
-; GFX1250-SDAG-LABEL: e8m0_vector_load:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    global_load_u16 v8, v[8:9], off
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_lshlrev_b32 v11, 23, v8 :: v_dual_lshlrev_b32 v12, 15, v8
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v10, v[0:3], v11
-; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v1, v[4:7], v12
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, v10
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: e8m0_vector_load:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    global_load_u16 v8, v[8:9], off
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_bfe_u32 v11, v8, 8, 8
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v10, 0xff, v8
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_dual_lshlrev_b32 v11, 23, v11 :: v_dual_lshlrev_b32 v12, 23, v10
-; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v10, v[0:3], v12
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v1, v[4:7], v11
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v10
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: e8m0_vector_load:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_u16 v8, v[8:9], off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_dual_lshlrev_b32 v11, 23, v8 :: v_dual_lshlrev_b32 v12, 15, v8
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v10, v[0:3], v11
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v1, v[4:7], v12
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v10
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %bytes = load <2 x i8>, ptr addrspace(1) %p, align 2
   %ext = zext <2 x i8> %bytes to <2 x i32>
   %shl = shl <2 x i32> %ext, splat (i32 23)
@@ -165,23 +103,38 @@ define <2 x i32> @e8m0_vector_load(<8 x bfloat> %a, <8 x bfloat> %b, ptr addrspa
 
 ; Each extracted scale feeds more than one conversion.
 define <4 x i32> @exponent_mask_vector_multi_use(<8 x bfloat> %a, <8 x bfloat> %b, ptr addrspace(1) %p) {
-; GFX1250-LABEL: exponent_mask_vector_multi_use:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b64 v[8:9], v[8:9], off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v12, 0x7f800000, v8
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v11, v[4:7], v12
-; GFX1250-NEXT:    v_and_b32_e32 v13, 0x7f800000, v9
-; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v10, v[0:3], v12
-; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v12, v[0:3], v13
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_mov_b32 v1, v11
-; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v3, v[4:7], v13
-; GFX1250-NEXT:    v_mov_b32_e32 v2, v12
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-LABEL: exponent_mask_vector_multi_use:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    global_load_b64 v[8:9], v[8:9], off
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v12, 0x7f800000, v8
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v11, v[4:7], v12
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v13, 0x7f800000, v9
+; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v10, v[0:3], v12
+; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v12, v[0:3], v13
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_mov_b32 v1, v11
+; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v3, v[4:7], v13
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v12
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: exponent_mask_vector_multi_use:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    global_load_b64 v[8:9], v[8:9], off
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v10, v[0:3], v8
+; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v11, v[4:7], v8
+; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v12, v[0:3], v9
+; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v3, v[4:7], v9
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_mov_b32 v1, v11
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, v12
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %bits = load <2 x i32>, ptr addrspace(1) %p, align 8
   %and = and <2 x i32> %bits, splat (i32 2139095040)
   %scales = bitcast <2 x i32> %and to <2 x float>
@@ -200,20 +153,35 @@ define <4 x i32> @exponent_mask_vector_multi_use(<8 x bfloat> %a, <8 x bfloat> %
 
 ; The vector mask is still needed for the store.
 define <2 x i32> @exponent_mask_vector_multi_use_store(<8 x bfloat> %a, <8 x bfloat> %b, ptr addrspace(1) %p, ptr addrspace(1) %out) {
-; GFX1250-LABEL: exponent_mask_vector_multi_use_store:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b64 v[8:9], v[8:9], off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v14, 0x7f800000, v8
-; GFX1250-NEXT:    v_and_b32_e32 v15, 0x7f800000, v9
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v12, v[0:3], v14
-; GFX1250-NEXT:    v_mov_b32_e32 v0, v12
-; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v1, v[4:7], v14
-; GFX1250-NEXT:    global_store_b64 v[10:11], v[14:15], off
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-LABEL: exponent_mask_vector_multi_use_store:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    global_load_b64 v[8:9], v[8:9], off
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v14, 0x7f800000, v8
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v15, 0x7f800000, v9
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v12, v[0:3], v14
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, v12
+; GFX1250-SDAG-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v1, v[4:7], v14
+; GFX1250-SDAG-NEXT:    global_store_b64 v[10:11], v[14:15], off
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: exponent_mask_vector_multi_use_store:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    global_load_b64 v[8:9], v[8:9], off
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v12, v[0:3], v8
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v14, 0x7f800000, v8
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v15, 0x7f800000, v9
+; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v1, v[4:7], v8
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v12
+; GFX1250-GISEL-NEXT:    global_store_b64 v[10:11], v[14:15], off
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %bits = load <2 x i32>, ptr addrspace(1) %p, align 8
   %and = and <2 x i32> %bits, splat (i32 2139095040)
   store <2 x i32> %and, ptr addrspace(1) %out
@@ -245,11 +213,11 @@ define i32 @exponent_mask_multi_use(<8 x bfloat> %src, i32 %bits, ptr addrspace(
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v5 :: v_dual_mov_b32 v9, v6
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v5, 0x7f800000, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v4, v[0:3], v5
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-GISEL-NEXT:    global_store_b32 v[8:9], v5, off
+; GFX1250-GISEL-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v5, v[0:3], v4
+; GFX1250-GISEL-NEXT:    s_mov_b32 s0, 0x7f800000
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_bitop2_b32 v6, s0, v4 bitop3:0x40
+; GFX1250-GISEL-NEXT:    global_store_b32 v[8:9], v6, off
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %and = and i32 %bits, 2139095040
   store i32 %and, ptr addrspace(1) %out
@@ -260,26 +228,15 @@ define i32 @exponent_mask_multi_use(<8 x bfloat> %src, i32 %bits, ptr addrspace(
 
 ; The masked seed must keep its mask.
 define i32 @sr_exponent_mask(<8 x bfloat> %src, i32 %x, i32 %bits) {
-; GFX1250-SDAG-LABEL: sr_exponent_mask:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v6, 0x7f800000, v4
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_cvt_scalef32_sr_pk8_fp4_bf16 v4, v[0:3], v6, v5
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: sr_exponent_mask:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v6, 0x7f800000, v4
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v5, 0x7f800000, v5
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cvt_scalef32_sr_pk8_fp4_bf16 v4, v[0:3], v6, v5
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: sr_exponent_mask:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v6, 0x7f800000, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_cvt_scalef32_sr_pk8_fp4_bf16 v4, v[0:3], v6, v5
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %seed = and i32 %x, 2139095040
   %and = and i32 %bits, 2139095040
   %scale = bitcast i32 %and to float

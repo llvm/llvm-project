@@ -97,3 +97,58 @@ body: |
     %res:_(i64) = G_AND %shift, %mask
     $vgpr0_vgpr1 = COPY %res
 ...
+
+---
+name: shl_of_ubfx
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: shl_of_ubfx
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL %x, [[C]](i32)
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 251658240
+    ; CHECK-NEXT: %out:_(i32) = G_AND [[SHL]], %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %out(i32)
+    %x:_(i32) = COPY $vgpr0
+    %lsb:_(i32) = G_CONSTANT i32 4
+    %width:_(i32) = G_CONSTANT i32 8
+    %amt:_(i32) = G_CONSTANT i32 24
+    %ubfx:_(i32) = G_UBFX %x, %lsb, %width
+    %res:_(i32) = G_SHL %ubfx, %amt
+    %mask:_(i32) = G_CONSTANT i32 251658240
+    %out:_(i32) = G_AND %res, %mask
+    $vgpr0 = COPY %out
+...
+
+---
+name: shl_of_ubfx_wide_demand
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: shl_of_ubfx_wide_demand
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %lsb:_(i32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: %width:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: %amt:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: %ubfx:_(i32) = G_UBFX %x, %lsb(i32), %width
+    ; CHECK-NEXT: %res:_(i32) = G_SHL %ubfx, %amt(i32)
+    ; CHECK-NEXT: $vgpr0 = COPY %res(i32)
+    %x:_(i32) = COPY $vgpr0
+    %lsb:_(i32) = G_CONSTANT i32 4
+    %width:_(i32) = G_CONSTANT i32 8
+    %amt:_(i32) = G_CONSTANT i32 16
+    %ubfx:_(i32) = G_UBFX %x, %lsb, %width
+    %res:_(i32) = G_SHL %ubfx, %amt
+    $vgpr0 = COPY %res
+...
