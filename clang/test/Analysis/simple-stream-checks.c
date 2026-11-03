@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.SimpleStream -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream -verify %s
 
 #include "Inputs/system-header-simulator-for-simple-stream.h"
 
@@ -10,7 +10,7 @@ void checkDoubleFClose(int *Data) {
       fclose(F);
     else
       fputc(*Data, F);
-    fclose(F); // expected-warning {{Closing a previously closed file stream}}
+    fclose(F); // expected-warning {{Use of a stream that might be already closed}}
   }
 }
 
@@ -20,7 +20,7 @@ int checkLeak(int *Data) {
     fputs ("fopen example", F);
   }
 
-  if (Data) // expected-warning {{Opened file is never closed; potential resource leak}}
+  if (Data) // expected-warning {{Opened stream never closed. Potential resource leak}}
     return *Data;
   else
     return 0;
@@ -45,11 +45,11 @@ void CloseOnlyOnValidFileHandle(void) {
 
 void leakOnEnfOfPath1(int *Data) {
   FILE *F = fopen("myfile.txt", "w");
-} // expected-warning {{Opened file is never closed; potential resource leak}}
+} // expected-warning {{Opened stream never closed. Potential resource leak}}
 
 void leakOnEnfOfPath2(int *Data) {
   FILE *F = fopen("myfile.txt", "w");
-  return; // expected-warning {{Opened file is never closed; potential resource leak}}
+  return; // expected-warning {{Opened stream never closed. Potential resource leak}}
 }
 
 FILE *leakOnEnfOfPath3(int *Data) {
@@ -73,15 +73,15 @@ void SymbolEscapedThroughAssignmentToGlobal(void) {
 
 void SymbolDoesNotEscapeThoughStringAPIs(char *Data) {
   FILE *F = fopen("myfile.txt", "w");
-  fputc(*Data, F);
-  return; // expected-warning {{Opened file is never closed; potential resource leak}}
+  fputc(*Data, F); // expected-warning {{Stream pointer might be NULL}}
+  return; // expected-warning          {{Opened stream never closed. Potential resource leak}}
 }
 
 void passConstPointer(const FILE * F);
 void testPassConstPointer(void) {
   FILE *F = fopen("myfile.txt", "w");
   passConstPointer(F);
-  return; // expected-warning {{Opened file is never closed; potential resource leak}}
+  return; // expected-warning {{Opened stream never closed. Potential resource leak}}
 }
 
 void testPassToSystemHeaderFunctionIndirectly(void) {
@@ -93,4 +93,4 @@ void testPassToSystemHeaderFunctionIndirectly(void) {
 void testOverwrite(void) {
   FILE *fp = fopen("myfile.txt", "w");
   fp = 0;
-} // expected-warning {{Opened file is never closed; potential resource leak}}
+} // expected-warning {{Opened stream never closed. Potential resource leak}}
