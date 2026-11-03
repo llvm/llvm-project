@@ -3365,7 +3365,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
             // algorithm.
             if (RecordDependences) {
               if (Type != Dependence::NoDep)
-                Dependences.emplace_back(A.second, B.second, Type);
+                Dependences.emplace_back(A.second, *A.first, B.second, *B.first,
+                                         Type);
 
               if (Dependences.size() >= Opts.max_dependences) {
                 RecordDependences = false;

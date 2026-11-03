@@ -166,11 +166,18 @@ public:
     unsigned Source;
     /// Index of the destination of the dependence in the InstMap vector.
     unsigned Destination;
+    /// Memory access of the source of the dependence.
+    MemAccessInfo SourceAccess;
+    /// Memory access of the destination of the dependence.
+    MemAccessInfo DestinationAccess;
     /// The type of the dependence.
     DepType Type;
 
-    Dependence(unsigned Source, unsigned Destination, DepType Type)
-        : Source(Source), Destination(Destination), Type(Type) {}
+    Dependence(unsigned Source, MemAccessInfo SourceAccess,
+               unsigned Destination, MemAccessInfo DestinationAccess,
+               DepType Type)
+        : Source(Source), Destination(Destination), SourceAccess(SourceAccess),
+          DestinationAccess(DestinationAccess), Type(Type) {}
 
     /// Return the source instruction of the dependence.
     Instruction *getSource(const MemoryDepChecker &DepChecker) const;
