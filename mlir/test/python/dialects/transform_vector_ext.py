@@ -5,6 +5,13 @@ from mlir.dialects import transform
 from mlir.dialects.transform import vector
 
 
+def run(f):
+    with Context(), Location.unknown():
+        print("\nTEST:", f.__name__)
+        f()
+    return f
+
+
 def run_apply_patterns(f):
     with Context(), Location.unknown():
         module = Module.create()
@@ -156,10 +163,39 @@ def enum_configurable_patterns():
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     # This is the default mode, not printed.
     vector.ApplySplitTransferFullPartialPatternsOp(
-        split_transfer_strategy=vector.VectorTransferSplit.LinalgCopy
+        split_transfer_strategy=vector.VectorTransferSplit.MemRefCopy
     )
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     # CHECK-SAME: split_transfer_strategy = "force-in-bounds"
     vector.ApplySplitTransferFullPartialPatternsOp(
         split_transfer_strategy=vector.VectorTransferSplit.ForceInBounds
     )
+
+
+# CHECK-LABEL: TEST: linearize_conversion_patterns
+@run
+def linearize_conversion_patterns():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.AnyOpType.get(),
+    )
+    with InsertionPoint(sequence.body):
+        apply = transform.ApplyConversionPatternsOp(
+            sequence.bodyTarget, 1, partial_conversion=True
+        )
+        with InsertionPoint(apply.patterns.blocks.append()):
+            vector.ApplyVectorLinearizeConversionPatternsOp(
+                shuffle_like_ops=True, target_vector_bitwidth=128
+            )
+        with InsertionPoint(apply.default_type_converter_region[0].blocks.append()):
+            vector.VectorLinearizeTypeConverterOp()
+        transform.YieldOp()
+    # CHECK: apply_conversion_patterns to
+    # CHECK-NEXT: transform.apply_conversion_patterns.vector.linearize
+    # CHECK-SAME: shuffle_like_ops = true
+    # CHECK-SAME: target_vector_bitwidth = 128
+    # CHECK-NEXT: } with type_converter {
+    # CHECK-NEXT: transform.apply_conversion_patterns.vector.linearize_type_converter
+    # CHECK-NEXT: } <partial_conversion>
+    print(sequence)

@@ -25,7 +25,7 @@ namespace Fortran::semantics {
 void DataChecker::Enter(const parser::DataImpliedDo &x) {
   const auto &name{parser::UnwrapRef<parser::Name>(
       std::get<parser::DataImpliedDo::Bounds>(x.t).Name())};
-  int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
+  int kind{evaluate::ResultKind<evaluate::ImpliedDoIndex>};
   if (const auto dynamicType{evaluate::DynamicType::From(DEREF(name.symbol))}) {
     if (dynamicType->category() == TypeCategory::Integer) {
       kind = dynamicType->kind();
@@ -266,7 +266,16 @@ void DataChecker::Leave(const parser::EntityDecl &decl) {
         std::get_if<std::list<common::Indirection<parser::DataStmtValue>>>(
             &init->u)};
     if (name && list && !exprAnalyzer_.context().HasError(*name)) {
-      AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
+      // A procedure name is not a data-stmt-object (F2023 C880, R842), but
+      // procedure pointer initialization is supported as an extension, so
+      // exclude procedure pointers here.
+      if (IsProcedure(*name) && !IsProcedurePointer(*name)) {
+        exprAnalyzer_.context().Say(std::get<parser::Name>(decl.t).source,
+            "Procedure '%s' may not have a DATA-style initializer"_err_en_US,
+            name->name());
+      } else {
+        AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
+      }
     }
   }
 }

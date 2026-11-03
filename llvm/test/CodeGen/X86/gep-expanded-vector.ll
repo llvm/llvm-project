@@ -9,7 +9,7 @@ define ptr @malloc_init_state(<64 x ptr> %tmp, i32 %ind) nounwind {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $576, %rsp # imm = 0x240
+; CHECK-NEXT:    subq $512, %rsp # imm = 0x200
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm8 = [16,16,16,16,16,16,16,16]
 ; CHECK-NEXT:    vpaddq %zmm8, %zmm0, %zmm0

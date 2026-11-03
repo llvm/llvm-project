@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LoopCacheAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,25 +36,11 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-cache-cost"
-
-static cl::opt<unsigned> DefaultTripCount(
-    "default-trip-count", cl::init(100), cl::Hidden,
-    cl::desc("Use this to specify the default trip count of a loop"));
-
-// In this analysis two array references are considered to exhibit temporal
-// reuse if they access either the same memory location, or a memory location
-// with distance smaller than a configurable threshold.
-static cl::opt<unsigned> TemporalReuseThreshold(
-    "temporal-reuse-threshold", cl::init(2), cl::Hidden,
-    cl::desc("Use this to specify the max. distance between array elements "
-             "accessed in a loop so that the elements are classified to have "
-             "temporal reuse"));
 
 /// Retrieve the innermost loop in the given loop nest \p Loops. It returns a
 /// nullptr if any loops in the loop vector supplied has more than one sibling.
@@ -117,7 +104,8 @@ static const SCEV *computeTripCount(const Loop &L, const SCEV &ElemSize,
   if (!TripCount) {
     LLVM_DEBUG(dbgs() << "Trip count of loop " << L.getName()
                << " could not be computed, using DefaultTripCount\n");
-    TripCount = SE.getConstant(ElemSize.getType(), DefaultTripCount);
+    TripCount = SE.getConstant(ElemSize.getType(),
+                               getAnalysisOptions(L).default_trip_count);
   }
 
   return TripCount;
@@ -329,7 +317,11 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
           computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
       Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
       // For the multiplication result to fit, request a type twice as wide.
-      WiderType = WiderType->getExtendedType();
+      // Bail out if doubling would exceed MAX_INT_BITS.
+      auto *WiderIntTy = cast<IntegerType>(WiderType);
+      if (WiderIntTy->getBitWidth() > IntegerType::MAX_INT_BITS / 2)
+        return CacheCostTy::getInvalid();
+      WiderType = WiderIntTy->getExtendedType();
       RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
                               SE.getNoopOrZeroExtend(TripCount, WiderType));
     }
@@ -415,9 +407,9 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       const SCEV *StepRec = AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
 
       if (StepRec && SE.isKnownNegative(StepRec))
-        AccessFn = SE.getAddRecExpr(
-            AccessFnAR->getStart(), SE.getNegativeSCEV(StepRec),
-            AccessFnAR->getLoop(), SCEV::NoWrapFlags::FlagNone);
+        AccessFn = SE.getAddRecExpr(AccessFnAR->getStart(),
+                                    SE.getNegativeSCEV(StepRec),
+                                    AccessFnAR->getLoop(), SCEVFlags::FlagNone);
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
       Sizes.push_back(ElemSize);
@@ -547,13 +539,14 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
                      ScalarEvolution &SE, TargetTransformInfo &TTI,
                      AAResults &AA, DependenceInfo &DI,
                      std::optional<unsigned> TRT)
-    : Loops(Loops), TRT(TRT.value_or(TemporalReuseThreshold)), LI(LI), SE(SE),
-      TTI(TTI), AA(AA), DI(DI) {
+    : Loops(Loops), LI(LI), SE(SE), TTI(TTI), AA(AA), DI(DI) {
   assert(!Loops.empty() && "Expecting a non-empty loop vector.");
+  const AnalysisOptions &Opts = getAnalysisOptions(*Loops.front());
+  this->TRT = TRT.value_or(Opts.temporal_reuse_threshold);
 
   for (const Loop *L : Loops) {
     unsigned TripCount = SE.getSmallConstantTripCount(L);
-    TripCount = (TripCount == 0) ? DefaultTripCount : TripCount;
+    TripCount = (TripCount == 0) ? Opts.default_trip_count : TripCount;
     TripCounts.push_back({L, TripCount});
   }
 

@@ -113,10 +113,7 @@ struct outer ret_outer() {
 
   // LLVM-LABEL: define dso_local { i64, i32 } @ret_outer()
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[RET_ALLOCA:.*]], ptr {{.*}}@__const.ret_outer.{{.*}}, i64 16, i1 false)
-  // LLVMCIR: %[[OUTER:.*]] = load %struct.outer, ptr %[[RET_ALLOCA]]
-  // LLVMCIR: store %struct.outer %[[OUTER]], ptr %[[COERCE:.*]], align 8
-  // LLVMCIR: %[[RET:.*]] = load { i64, i32 }, ptr %[[COERCE]]
-  // OGCG: %[[RET:.*]] = load { i64, i32 }, ptr %[[RET_ALLOCA]]
+  // LLVM: %[[RET:.*]] = load { i64, i32 }, ptr %[[RET_ALLOCA]], align 8
   // LLVM: ret { i64, i32 } %[[RET]]
 }
 

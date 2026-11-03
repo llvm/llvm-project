@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=bpfel -global-isel -verify-machineinstrs -stop-after=irtranslator < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -global-isel -verify-machineinstrs -stop-after=ir-translator < %s | FileCheck %s
 ; RUN: llc -mtriple=bpfel -global-isel -verify-machineinstrs < %s | FileCheck --check-prefix=ISEL %s
 
 ; CHECK: name: f

@@ -93,9 +93,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY killed $edx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY killed $esi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY killed $edi
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr16 = COPY killed [[COPY]].sub_16bit
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr16 = COPY killed [[COPY1]].sub_16bit
-  ; CHECK-NEXT:   TEST32rr killed [[COPY2]], [[COPY2]], implicit-def $eflags
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr16 = COPY [[COPY1]].sub_16bit
+  ; CHECK-NEXT:   TEST32rr [[COPY2]], [[COPY2]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.2, 4, implicit killed $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -105,19 +105,19 @@ body:             |
   ; CHECK-NEXT:   [[MOV32ri64_:%[0-9]+]]:gr64 = MOV32ri64 @buf
   ; CHECK-NEXT:   [[MOV32ri64_1:%[0-9]+]]:gr64_nosp = MOV32ri64 32
   ; CHECK-NEXT:   [[MOV16ri:%[0-9]+]]:gr16 = MOV16ri 8
-  ; CHECK-NEXT:   PLDTILECFGV %stack.3, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.3, align 4)
+  ; CHECK-NEXT:   PLDTILECFGV %stack.3, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.3, align 4)
   ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64_nosp = LEA64r %stack.2, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[COPY4]], [[MOV16ri]], [[MOV32ri64_]], 1, [[MOV32ri64_1]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.2, 1, killed [[MOV64ri]], 0, $noreg, [[PTILELOADDV]] :: (store (s8192) into %stack.2)
+  ; CHECK-NEXT:   TILESTORED %stack.2, 1, [[MOV64ri]], 0, $noreg, [[PTILELOADDV]] :: (store (s8192) into %stack.2)
   ; CHECK-NEXT:   [[LEA64r1:%[0-9]+]]:gr64_nosp = LEA64r %stack.1, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[PTILELOADDV1:%[0-9]+]]:tile = PTILELOADDV [[MOV16ri]], [[COPY3]], [[MOV32ri64_]], 1, [[MOV32ri64_1]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri1:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.1, 1, killed [[MOV64ri1]], 0, $noreg, [[PTILELOADDV1]] :: (store (s8192) into %stack.1)
+  ; CHECK-NEXT:   TILESTORED %stack.1, 1, [[MOV64ri1]], 0, $noreg, [[PTILELOADDV1]] :: (store (s8192) into %stack.1)
   ; CHECK-NEXT:   [[LEA64r2:%[0-9]+]]:gr64_nosp = LEA64r %stack.0, 1, $noreg, 0, $noreg
-  ; CHECK-NEXT:   [[PTILELOADDV2:%[0-9]+]]:tile = PTILELOADDV [[COPY4]], [[COPY3]], killed [[MOV32ri64_]], 1, killed [[MOV32ri64_1]], 0, $noreg
+  ; CHECK-NEXT:   [[PTILELOADDV2:%[0-9]+]]:tile = PTILELOADDV [[COPY4]], [[COPY3]], [[MOV32ri64_]], 1, [[MOV32ri64_1]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri2:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.0, 1, killed [[MOV64ri2]], 0, $noreg, [[PTILELOADDV2]] :: (store (s8192) into %stack.0)
+  ; CHECK-NEXT:   TILESTORED %stack.0, 1, [[MOV64ri2]], 0, $noreg, [[PTILELOADDV2]] :: (store (s8192) into %stack.0)
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.if.else:
@@ -126,19 +126,19 @@ body:             |
   ; CHECK-NEXT:   [[MOV32ri64_2:%[0-9]+]]:gr64 = MOV32ri64 @buf2
   ; CHECK-NEXT:   [[MOV32ri64_3:%[0-9]+]]:gr64_nosp = MOV32ri64 32
   ; CHECK-NEXT:   [[MOV16ri1:%[0-9]+]]:gr16 = MOV16ri 8
-  ; CHECK-NEXT:   PLDTILECFGV %stack.3, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.3, align 4)
+  ; CHECK-NEXT:   PLDTILECFGV %stack.3, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.3, align 4)
   ; CHECK-NEXT:   [[LEA64r3:%[0-9]+]]:gr64_nosp = LEA64r %stack.6, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[PTILELOADDV3:%[0-9]+]]:tile = PTILELOADDV [[COPY4]], [[MOV16ri1]], [[MOV32ri64_2]], 1, [[MOV32ri64_3]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri3:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.6, 1, killed [[MOV64ri3]], 0, $noreg, [[PTILELOADDV3]] :: (store (s8192) into %stack.6)
+  ; CHECK-NEXT:   TILESTORED %stack.6, 1, [[MOV64ri3]], 0, $noreg, [[PTILELOADDV3]] :: (store (s8192) into %stack.6)
   ; CHECK-NEXT:   [[LEA64r4:%[0-9]+]]:gr64_nosp = LEA64r %stack.5, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[PTILELOADDV4:%[0-9]+]]:tile = PTILELOADDV [[MOV16ri1]], [[COPY3]], [[MOV32ri64_2]], 1, [[MOV32ri64_3]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri4:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.5, 1, killed [[MOV64ri4]], 0, $noreg, [[PTILELOADDV4]] :: (store (s8192) into %stack.5)
+  ; CHECK-NEXT:   TILESTORED %stack.5, 1, [[MOV64ri4]], 0, $noreg, [[PTILELOADDV4]] :: (store (s8192) into %stack.5)
   ; CHECK-NEXT:   [[LEA64r5:%[0-9]+]]:gr64_nosp = LEA64r %stack.4, 1, $noreg, 0, $noreg
-  ; CHECK-NEXT:   [[PTILELOADDV5:%[0-9]+]]:tile = PTILELOADDV [[COPY4]], [[COPY3]], killed [[MOV32ri64_2]], 1, killed [[MOV32ri64_3]], 0, $noreg
+  ; CHECK-NEXT:   [[PTILELOADDV5:%[0-9]+]]:tile = PTILELOADDV [[COPY4]], [[COPY3]], [[MOV32ri64_2]], 1, [[MOV32ri64_3]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri5:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.4, 1, killed [[MOV64ri5]], 0, $noreg, [[PTILELOADDV5]] :: (store (s8192) into %stack.4)
+  ; CHECK-NEXT:   TILESTORED %stack.4, 1, [[MOV64ri5]], 0, $noreg, [[PTILELOADDV5]] :: (store (s8192) into %stack.4)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.end:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr16 = PHI [[MOV16ri]], %bb.1, [[MOV16ri1]], %bb.2
@@ -150,18 +150,18 @@ body:             |
   ; CHECK-NEXT:   [[PHI6:%[0-9]+]]:gr16 = PHI [[COPY3]], %bb.1, [[COPY3]], %bb.2
   ; CHECK-NEXT:   [[PHI7:%[0-9]+]]:gr16 = PHI [[COPY4]], %bb.1, [[COPY4]], %bb.2
   ; CHECK-NEXT:   [[PHI8:%[0-9]+]]:gr64_nosp = PHI [[LEA64r2]], %bb.1, [[LEA64r5]], %bb.2
-  ; CHECK-NEXT:   PLDTILECFGV %stack.3, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.3, align 4)
+  ; CHECK-NEXT:   PLDTILECFGV %stack.3, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.3, align 4)
   ; CHECK-NEXT:   [[MOV64ri6:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   [[PTILELOADDV6:%[0-9]+]]:tile = PTILELOADDV [[PHI1]], [[PHI]], [[PHI2]], 1, killed [[MOV64ri6]], 0, $noreg
+  ; CHECK-NEXT:   [[PTILELOADDV6:%[0-9]+]]:tile = PTILELOADDV [[PHI1]], [[PHI]], [[PHI2]], 1, [[MOV64ri6]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri7:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   [[PTILELOADDV7:%[0-9]+]]:tile = PTILELOADDV [[PHI4]], [[PHI3]], [[PHI5]], 1, killed [[MOV64ri7]], 0, $noreg
+  ; CHECK-NEXT:   [[PTILELOADDV7:%[0-9]+]]:tile = PTILELOADDV [[PHI4]], [[PHI3]], [[PHI5]], 1, [[MOV64ri7]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri8:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   [[PTILELOADDV8:%[0-9]+]]:tile = PTILELOADDV [[PHI7]], [[PHI6]], [[PHI8]], 1, killed [[MOV64ri8]], 0, $noreg
+  ; CHECK-NEXT:   [[PTILELOADDV8:%[0-9]+]]:tile = PTILELOADDV [[PHI7]], [[PHI6]], [[PHI8]], 1, [[MOV64ri8]], 0, $noreg
   ; CHECK-NEXT:   [[MOV16ri2:%[0-9]+]]:gr16 = MOV16ri 8
-  ; CHECK-NEXT:   [[PTDPBSSDV:%[0-9]+]]:tile = PTDPBSSDV [[COPY4]], [[COPY3]], killed [[MOV16ri2]], killed [[PTILELOADDV8]], killed [[PTILELOADDV6]], killed [[PTILELOADDV7]]
+  ; CHECK-NEXT:   [[PTDPBSSDV:%[0-9]+]]:tile = PTDPBSSDV [[COPY4]], [[COPY3]], [[MOV16ri2]], [[PTILELOADDV8]], [[PTILELOADDV6]], [[PTILELOADDV7]]
   ; CHECK-NEXT:   [[MOV32ri64_4:%[0-9]+]]:gr64 = MOV32ri64 @buf
   ; CHECK-NEXT:   [[MOV32ri64_5:%[0-9]+]]:gr64_nosp = MOV32ri64 32
-  ; CHECK-NEXT:   PTILESTOREDV killed [[COPY4]], killed [[COPY3]], killed [[MOV32ri64_4]], 1, killed [[MOV32ri64_5]], 0, $noreg, killed [[PTDPBSSDV]]
+  ; CHECK-NEXT:   PTILESTOREDV [[COPY4]], [[COPY3]], [[MOV32ri64_4]], 1, [[MOV32ri64_5]], 0, $noreg, [[PTDPBSSDV]]
   ; CHECK-NEXT:   RET 0
   bb.0.entry:
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
@@ -171,9 +171,9 @@ body:             |
     %11:gr32 = COPY killed $edx
     %10:gr32 = COPY killed $esi
     %9:gr32 = COPY killed $edi
-    %13:gr16 = COPY killed %11.sub_16bit
-    %12:gr16 = COPY killed %10.sub_16bit
-    TEST32rr killed %9, %9, implicit-def $eflags
+    %13:gr16 = COPY %11.sub_16bit
+    %12:gr16 = COPY %10.sub_16bit
+    TEST32rr %9, %9, implicit-def $eflags
     JCC_1 %bb.2, 4, implicit killed $eflags
     JMP_1 %bb.1
 
@@ -182,8 +182,8 @@ body:             |
     %15:gr64_nosp = MOV32ri64 32
     %16:gr16 = MOV16ri 8
     %0:tile = PTILELOADDV %12, %16, %14, 1, %15, 0, $noreg
-    %1:tile = PTILELOADDV killed %16, %13, %14, 1, %15, 0, $noreg
-    %2:tile = PTILELOADDV %12, %13, killed %14, 1, killed %15, 0, $noreg
+    %1:tile = PTILELOADDV %16, %13, %14, 1, %15, 0, $noreg
+    %2:tile = PTILELOADDV %12, %13, %14, 1, %15, 0, $noreg
     JMP_1 %bb.3
 
   bb.2.if.else:
@@ -191,8 +191,8 @@ body:             |
     %18:gr64_nosp = MOV32ri64 32
     %19:gr16 = MOV16ri 8
     %3:tile = PTILELOADDV %12, %19, %17, 1, %18, 0, $noreg
-    %4:tile = PTILELOADDV killed %19, %13, %17, 1, %18, 0, $noreg
-    %5:tile = PTILELOADDV %12, %13, killed %17, 1, killed %18, 0, $noreg
+    %4:tile = PTILELOADDV %19, %13, %17, 1, %18, 0, $noreg
+    %5:tile = PTILELOADDV %12, %13, %17, 1, %18, 0, $noreg
 
   bb.3.if.end:
 
@@ -201,10 +201,10 @@ body:             |
     %7:tile = PHI %1, %bb.1, %4, %bb.2
     %8:tile = PHI %2, %bb.1, %5, %bb.2
     %20:gr16 = MOV16ri 8
-    %21:tile = PTDPBSSDV %12, %13, killed %20, killed %8, killed %6, killed %7
+    %21:tile = PTDPBSSDV %12, %13, %20, %8, %6, %7
     %22:gr64 = MOV32ri64 @buf
     %23:gr64_nosp = MOV32ri64 32
-    PTILESTOREDV killed %12, killed %13, killed %22, 1, killed %23, 0, $noreg, killed %21
+    PTILESTOREDV %12, %13, %22, 1, %23, 0, $noreg, %21
     RET 0
 
 ...
