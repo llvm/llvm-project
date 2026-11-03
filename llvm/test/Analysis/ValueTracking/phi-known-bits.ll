@@ -1151,9 +1151,9 @@ end:
   ret i32 0
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Test bounds where phi-input is guarded by a comparison with a variable bound.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;=================================================================================
+; Test bounds where phi-input is guarded by a comparison with a variable bound.
+;=================================================================================
 
 ; Loop guard with variable bound: %n64 = zext i32 %n has 32 leading zeros.
 ; Guard: icmp ult %iv.next, %n64 implies %iv.next < 2^32 on the backedge,
