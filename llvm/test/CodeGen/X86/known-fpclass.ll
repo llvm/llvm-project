@@ -19,7 +19,7 @@ define i1 @sqrt_neginf_v4f32(<4 x float> %a0, ptr %p1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsqrtps %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
-; CHECK-NEXT:    vextractps $0, %xmm0, %eax
+; CHECK-NEXT:    vmovd %xmm0, %eax
 ; CHECK-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
