@@ -5,7 +5,7 @@
 # RUN:     -resource-dir=%S/Inputs/multilib_mingw_tree/resource \
 # RUN:   | FileCheck --check-prefix=CHECK-DEBUG %s
 # CHECK-DEBUG:      "-cc1" "-triple" "x86_64-w64-windows-gnu"
-# CHECK-DEBUG:      "-internal-isystem" "{{.*}}/resource/include"
+# CHECK-DEBUG:      "-internal-isystem" "{{.*}}resource{{[/\\]+}}include"
 # CHECK-DEBUG:      "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-w64-windows-gnu/debug"
 # CHECK-DEBUG:      "-L{{[^"]*}}/debug"
 
@@ -16,7 +16,7 @@
 # RUN:     -resource-dir=%S/Inputs/multilib_mingw_tree/resource \
 # RUN:     --rtlib=compiler-rt \
 # RUN:   | FileCheck --check-prefix=CHECK-RESOURCE-LIB %s
-# CHECK-RESOURCE-LIB: {{.*}}/resource/lib/x86_64-w64-windows-gnu/debug/libclang_rt.builtins.a
+# CHECK-RESOURCE-LIB: {{.*}}{{[/\\]}}resource{{[/\\]+}}lib{{[/\\]+}}x86_64-w64-windows-gnu/debug{{[/\\]+}}libclang_rt.builtins.a
 
 # Default behavior where no variant path is prepended.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
