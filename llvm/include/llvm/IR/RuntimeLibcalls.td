@@ -609,23 +609,26 @@ def CONVERT_PPCF128_F128 : RuntimeLibcall<FP128, [PPCFP128]>;
 // The FCMP3_PRED_*_F* libcalls return a three-way (-1/0/1) result, one symbol
 // per predicate. FCMP3_F* is a generic three-way compare for ABIs with one
 // symbol serving every predicate (e.g. MSP430's __mspabi_cmpd).
-foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
-  def OEQ_#FPTy : RuntimeLibcall;
-  def UNE_#FPTy : RuntimeLibcall;
-  def OGE_#FPTy : RuntimeLibcall;
-  def OLT_#FPTy : RuntimeLibcall;
-  def OLE_#FPTy : RuntimeLibcall;
-  def OGT_#FPTy : RuntimeLibcall;
-  def UO_#FPTy : RuntimeLibcall;
+foreach FPTy = [F32, F64, F128, PPCF128] in {
+  defvar Ty = FPTy.Type;
+  defvar CmpTy = !if(!eq(FPTy, PPCF128), Int, CmpResult);
 
-  def FCMP3_PRED_OEQ_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_UNE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OGE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OLT_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OLE_#FPTy : RuntimeLibcall;
-  def FCMP3_PRED_OGT_#FPTy : RuntimeLibcall;
+  def OEQ_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def UNE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OGE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OLT_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OLE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def OGT_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def UO_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
 
-  def FCMP3_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OEQ_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_UNE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OGE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OLT_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OLE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OGT_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+
+  def FCMP3_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
 }
 
 // Memory
