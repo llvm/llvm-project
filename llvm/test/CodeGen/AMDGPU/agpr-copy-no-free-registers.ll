@@ -182,7 +182,6 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v33, v32, a[16:31]
 ; GFX90A-NEXT:    s_nop 10
 ; GFX90A-NEXT:    buffer_store_dword a0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_store_dword a1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword a2, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword a3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
@@ -1033,7 +1032,6 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v33, v32, a[16:31]
 ; GFX90A-NEXT:    s_nop 10
 ; GFX90A-NEXT:    buffer_store_dword a0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_store_dword a1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword a2, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword a3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill

@@ -1292,8 +1292,12 @@ static void addRegsToSet(const SIRegisterInfo &TRI,
                          iterator_range<MachineInstr::const_mop_iterator> Ops,
                          BitVector &DefSet, BitVector &UseSet) {
   for (const MachineOperand &Op : Ops) {
-    if (Op.isReg())
-      addRegUnits(TRI, Op.isDef() ? DefSet : UseSet, Op.getReg().asMCReg());
+    if (!Op.isReg())
+      continue;
+    // Implicit defs are liveness bookkeeping, not real register writes.
+    if (Op.isDef() && Op.isImplicit())
+      continue;
+    addRegUnits(TRI, Op.isDef() ? DefSet : UseSet, Op.getReg().asMCReg());
   }
 }
 
