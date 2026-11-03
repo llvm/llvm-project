@@ -36,6 +36,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
 
 using namespace llvm;
@@ -50,7 +51,7 @@ static cl::opt<bool> SPIRVDebugScopeForwardRefs(
     "spirv-debug-scope-forward-refs",
     cl::desc("Forward-reference debug scopes when "
              "SPV_KHR_relaxed_extended_instruction is enabled"),
-    cl::init(false));
+    cl::init(true));
 
 namespace {
 
@@ -354,7 +355,11 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   LexicalBlocks.clear();
   DebugScopeRegs.clear();
   ScopesInProgress.clear();
-  HasRelaxedExtInst = false;
+  CanUseForwardRefs = false;
+  UsedForwardRefs = false;
+  PendingStrings.clear();
+  PendingGlobalDI.clear();
+  PendingSink = nullptr;
   FailedScopes.clear();
   DebugInlinedAtRegs.clear();
   ScopeToPathOpStringReg.clear();
@@ -370,7 +375,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   GlobalNSDIEnabled = false;
   CurrentMAI = nullptr;
 #ifndef NDEBUG
-  NonSemanticOpStringsSectionEmitted = false;
+  DebugStringsGenerated = false;
 #endif
   CachedDebugInfoNoneReg = MCRegister();
   CachedEmptyStringReg = MCRegister();
@@ -469,13 +474,10 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
   // Add the extension to requirements so OpExtension is output.
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
 
-  HasRelaxedExtInst =
+  CanUseForwardRefs =
       SPIRVDebugScopeForwardRefs &&
       ST.canUseExtension(
           SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
-  if (HasRelaxedExtInst)
-    MAI.Reqs.addExtension(
-        SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
 
   // Add the NonSemantic.Shader.DebugInfo.100 entry to ExtInstSetMap so that
   // outputOpExtInstImports() emits the OpExtInstImport instruction. Allocate a
@@ -490,7 +492,18 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
 }
 
 void SPIRVNonSemanticDebugHandler::emitMCInst(MCInst &Inst) {
+  if (PendingSink) {
+    PendingSink->push_back(Inst);
+    return;
+  }
   Asm->OutStreamer->emitInstruction(Inst, Asm->getSubtargetInfo());
+}
+
+void SPIRVNonSemanticDebugHandler::flushPendingInsts(
+    SmallVectorImpl<MCInst> &Insts) {
+  for (MCInst &Inst : Insts)
+    emitMCInst(Inst);
+  Insts.clear();
 }
 
 MCRegister
@@ -508,8 +521,8 @@ SPIRVNonSemanticDebugHandler::emitOpString(StringRef S,
 MCRegister SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
     StringRef S, SPIRV::ModuleAnalysisInfo &MAI) {
 #ifndef NDEBUG
-  assert(!NonSemanticOpStringsSectionEmitted &&
-         "emitOpStringIfNew is only valid while emitting SPIR-V section 7");
+  assert(!DebugStringsGenerated &&
+         "emitOpStringIfNew is only valid while generating NSDI OpStrings");
 #endif
   auto [It, Inserted] = OpStringContentCache.try_emplace(S, MCRegister());
   if (Inserted)
@@ -520,13 +533,13 @@ MCRegister SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
 
 MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
 #ifndef NDEBUG
-  assert(NonSemanticOpStringsSectionEmitted &&
-         "getCachedOpStringReg requires emitNonSemanticDebugStrings() first");
+  assert(DebugStringsGenerated &&
+         "getCachedOpStringReg requires generateDebugStrings() first");
 #endif
   auto It = OpStringContentCache.find(S);
   assert(It != OpStringContentCache.end() &&
-         "NSDI OpString missing from cache; emitNonSemanticDebugStrings must "
-         "cache every string used in section 10");
+         "NSDI OpString missing from cache; generateDebugStrings must cache "
+         "every string used in section 10");
   return It->second;
 }
 
@@ -544,12 +557,12 @@ MCRegister SPIRVNonSemanticDebugHandler::getCachedScopePathOpStringReg(
     assert(UseEmptyPathIfNullScope &&
            "null scope path lookup requires UseEmptyPathIfNullScope");
     assert(CachedEmptyStringReg.isValid() &&
-           "empty path OpString must be cached in emitNonSemanticDebugStrings");
+           "empty path OpString must be cached in generateDebugStrings");
     return CachedEmptyStringReg;
   }
   auto It = ScopeToPathOpStringReg.find(Scope);
   assert(It != ScopeToPathOpStringReg.end() &&
-         "path OpString must be cached in emitNonSemanticDebugStrings");
+         "path OpString must be cached in generateDebugStrings");
   MCRegister FileStrReg = It->second;
   assert(FileStrReg.isValid() && "path OpString id must be valid once cached");
   return FileStrReg;
@@ -589,7 +602,10 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
   // Tag the instruction with OpExtInstWithForwardRefsKHR and remember the id:
   // if that scope later fails, the id still needs a definition.
   bool HasForwardRef =
-      HasRelaxedExtInst && markForwardReferencedOperands(Operands);
+      CanUseForwardRefs && markForwardReferencedOperands(Operands);
+  assert((!HasForwardRef || PendingSink) &&
+         "forward reference built after OpExtension was printed");
+  UsedForwardRefs |= HasForwardRef;
 
   MCInst Inst;
   Inst.setOpcode(HasForwardRef ? SPIRV::OpExtInstWithForwardRefsKHR
@@ -825,7 +841,7 @@ auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
   // resolved/emitted.
   auto [InProgressIt, FirstVisit] = ScopesInProgress.try_emplace(S);
   if (!FirstVisit) { // We hit a back edge, it is not the first insertion.
-    if (!HasRelaxedExtInst)
+    if (!CanUseForwardRefs)
       return EmitResult<MCRegister>::inProgress(); // No support for forward
                                                    // refs.
     // Use the reserved id for the back edge when forward references are
@@ -842,7 +858,7 @@ auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
   InProgressIt->second.Id = Id;
 
   EmitResult<PreparedScope> P = emitDebugScope(S);
-  assert((!HasRelaxedExtInst || P.Status == EmitStatus::Emitted ||
+  assert((!CanUseForwardRefs || P.Status == EmitStatus::Emitted ||
           P.Status == EmitStatus::Unsupported) &&
          "InProgress is only returned when forward references are unsupported");
   if (!P) {
@@ -856,7 +872,7 @@ auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
     // supported, P can only be unsupported. Define the id only when an
     // already-emitted instruction named it.
     if (ForwardReferenced) {
-      assert(HasRelaxedExtInst &&
+      assert(CanUseForwardRefs &&
              "a forward reference requires relaxed extended instructions");
       assert(P.Status == EmitStatus::Unsupported &&
              "a forward-referenced scope fails as unsupported");
@@ -1765,16 +1781,41 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypedef(
       {NameReg, *Base.Value, SrcReg, LineReg, ColReg, *Parent.Value}});
 }
 
-void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
+void SPIRVNonSemanticDebugHandler::generateModuleDebugInfo(
     SPIRV::ModuleAnalysisInfo &MAI) {
+  if (GlobalDIEmitted)
+    return;
+  GlobalDIEmitted = true;
+
   if (CompileUnits.empty())
     return;
   // Check that prepareModuleOutput() registered the extended instruction set.
   // If the subtarget does not support the extension, neither strings nor ext
   // insts are emitted.
-  if (!MAI.getExtInstSetReg(NSSet).isValid())
+  if (!MAI.ExtInstSetMap.contains(NSSet))
     return;
 
+  generateDebugStrings(MAI);
+  generateGlobalDebugInfo(MAI);
+
+  if (UsedForwardRefs)
+    MAI.Reqs.addExtension(
+        SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
+}
+
+void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
+    SPIRV::ModuleAnalysisInfo &) {
+  flushPendingInsts(PendingStrings);
+}
+
+void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
+    SPIRV::ModuleAnalysisInfo &) {
+  flushPendingInsts(PendingGlobalDI);
+}
+
+void SPIRVNonSemanticDebugHandler::generateDebugStrings(
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  SaveAndRestore Sink(PendingSink, &PendingStrings);
   for (const CompileUnitInfo &Info : CompileUnits) {
     if (Info.TheCU) {
       MCRegister PathReg = emitOpStringIfNew(Info.FilePath, MAI);
@@ -1856,7 +1897,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   CachedEmptyStringReg = emitOpStringIfNew("", MAI);
 
 #ifndef NDEBUG
-  NonSemanticOpStringsSectionEmitted = true;
+  DebugStringsGenerated = true;
 #endif
 }
 
@@ -2417,29 +2458,16 @@ void SPIRVNonSemanticDebugHandler::collectDebugExpressions(
   });
 }
 
-void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
+void SPIRVNonSemanticDebugHandler::generateGlobalDebugInfo(
     SPIRV::ModuleAnalysisInfo &MAI) {
-  if (GlobalDIEmitted)
-    return;
-
-  GlobalDIEmitted = true;
-
-  if (CompileUnits.empty()) {
-    GlobalNSDIEnabled = false;
-    return;
-  }
-
+  SaveAndRestore Sink(PendingSink, &PendingGlobalDI);
   // Retrieve the ext inst set register allocated by prepareModuleOutput().
   MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
-  if (!ExtInstSetReg.isValid()) {
-    GlobalNSDIEnabled = false;
-    return;
-  }
+  assert(ExtInstSetReg.isValid() && "NSDI ext inst set must be registered");
 
 #ifndef NDEBUG
-  assert(NonSemanticOpStringsSectionEmitted &&
-         "emitNonSemanticDebugStrings() must run before "
-         "emitNonSemanticGlobalDebugInfo()");
+  assert(DebugStringsGenerated &&
+         "generateDebugStrings() must run before generateGlobalDebugInfo()");
 #endif
 
   CurrentMAI = &MAI;
@@ -2475,7 +2503,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   for (auto [Info, SrcLangReg] : llvm::zip(CompileUnits, SrcLangRegs)) {
     MCRegister FileStrReg = ScopeToPathOpStringReg.lookup(Info.TheCU);
     assert(FileStrReg.isValid() &&
-           "CU path OpString must be emitted in emitNonSemanticDebugStrings");
+           "CU path OpString must be emitted in generateDebugStrings");
     MCRegister DebugSourceReg = getOrEmitDebugSourceForFileStrReg(
         FileStrReg, VoidTypeReg, ExtInstSetReg, MAI);
     MCRegister CUDbgReg = emitExtInst(
