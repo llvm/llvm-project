@@ -13,6 +13,7 @@
 
 #include "src/signal/sigtimedwait.h"
 
+#include "src/__support/macros/null_check.h"
 #include "hdr/types/siginfo_t.h"
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/struct_timespec.h"
