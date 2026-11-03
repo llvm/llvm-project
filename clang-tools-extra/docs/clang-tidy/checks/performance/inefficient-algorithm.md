@@ -26,3 +26,18 @@ auto c = std::count(s.begin(), s.end(), 43);
 
 auto c = s.count(43);
 ```
+
+In a `std::set` or `std::multiset` that `std::less` orders, finding the first
+element past a fixed bound can use binary search instead of a linear scan:
+
+```cpp
+std::set<int> s;
+auto it = std::find_if(s.begin(), s.end(), [](int v) { return v > 43; });
+
+// becomes
+
+auto it = s.upper_bound(43);
+```
+
+`>` maps to `upper_bound` and `>=` to `lower_bound`. Only built-in comparison
+operators are rewritten.
