@@ -41,7 +41,6 @@ def simm22s1_nm : Operand<i32>;
 def simm32_nm : Operand<i32>;
 def simm32s12_nm : Operand<i32>;
 def simm32s12_pcrel_nm : Operand<i32>;
-def nimm7_nm : Operand<i32>;
 def nimm12_nm : Operand<i32>;
 
 def mem_nm_sp5s2 : Operand<iPTR>;
@@ -387,7 +386,7 @@ class MOVEBALC_Desc : InstNM<(outs GPRNM1R1Opnd:$rd),
 
 def MOVEBALC_NM : MOVEBALC_Desc, MOVEBALC_Enc;
 
-def LI16_NM : LoadImmAsm_Desc<"li", GPRNM16R3Opnd, nimm7_nm>,
+def LI16_NM : LoadImmAsm_Desc<"li", GPRNM16R3Opnd, li16_imm>,
               LI16_Enc<0b11000>;
 
 let isReMaterializable = 1 in {

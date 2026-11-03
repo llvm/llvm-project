@@ -690,11 +690,6 @@ def GPRMM16AsmOperandMovePPairSecond : MipsAsmRegOperand {
   let PredicateMethod = "isMM16AsmRegMovePPairSecond";
 }
 
-def GPRNM32AsmOperand : MipsAsmRegOperand {
-  let Name = "GPRNM32AsmReg";
-  let PredicateMethod = "isGPRAsmReg";
-}
-
 class GPRNMAsmOperandClass<string Cname, string RegClass,
                            list<AsmOperandClass> Supers = []>
   : MipsAsmRegOperand {
