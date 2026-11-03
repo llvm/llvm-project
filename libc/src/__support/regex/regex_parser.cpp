@@ -162,9 +162,20 @@ ErrorOr<ExprId> parse_bracket_expr(cpp::string_view &rem, int cflags,
   return Error(REG_EBRACK);
 }
 
-// Parses a single ERE atom and an optional trailing '*' quantifier.
+// Maximum parenthesized group nesting depth to prevent parser stack overflow.
+constexpr size_t MAX_GROUP_DEPTH = 128;
+
+struct ParsedAtomStack;
+
+ErrorOr<ExprId> parse_alt(cpp::string_view &rem, int cflags, ExprPool &pool,
+                          size_t depth, size_t &re_nsub,
+                          ParsedAtomStack &stack);
+
+// Parses a single ERE atom and an optional trailing '*', '+', or '?'
+// quantifier.
 ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
-                                      ExprPool &pool) {
+                                      ExprPool &pool, size_t depth,
+                                      size_t &re_nsub, ParsedAtomStack &stack) {
   char c = rem.front();
   rem.remove_prefix(1);
   ErrorOr<ExprId> atom = INVALID_EXPR_ID;
@@ -225,9 +236,9 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     atom = pool.make_anchor(ANCHOR_EOL);
     can_repeat = false;
     break;
-  // Valid postfix '*' is consumed after a repeatable atom below; reaching a
-  // quantifier at the start of an atom means it has no preceding repeatable
-  // atom (e.g. "*a", "^*", or doubled "a**").
+  // Valid postfix '*', '+', or '?' is consumed after a repeatable atom below;
+  // reaching a quantifier at the start of an atom means it has no preceding
+  // repeatable atom (e.g. "*a", "^*", or doubled "a**").
   case '*':
   case '+':
   case '?':
@@ -239,12 +250,25 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
   case '[':
     atom = parse_bracket_expr(rem, cflags, pool);
     break;
-  // TODO: Wire ERE metacharacters as each operator is implemented in
-  // subsequent patches.
-  case '(':
+  case '(': {
+    if (depth >= MAX_GROUP_DEPTH)
+      return Error(REG_ESPACE);
+    ++re_nsub;
+    ErrorOr<ExprId> inner =
+        parse_alt(rem, cflags, pool, depth + 1, re_nsub, stack);
+    if (!inner.has_value())
+      return inner;
+    if (!rem.starts_with(')'))
+      return Error(REG_EPAREN);
+    rem.remove_prefix(1);
+    atom = inner;
+    break;
+  }
   case ')':
-  case '|':
-    return Error(REG_BADPAT);
+    // At depth 0, unmatched ')' is treated as a literal character per
+    // POSIX.1-2024 9.4.3.  At depth > 0, parse_concat stops before ')'.
+    atom = pool.make_lit(')');
+    break;
   default:
     atom = pool.make_lit(c);
     break;
@@ -256,37 +280,43 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     rem.remove_prefix(1);
     return pool.make_star(*atom);
   }
-  if (rem.starts_with('+') || rem.starts_with('?') || rem.starts_with('{'))
+  if (rem.starts_with('+')) {
+    rem.remove_prefix(1);
+    ErrorOr<ExprId> star = pool.make_star(*atom);
+    if (!star.has_value())
+      return star;
+    return pool.make_concat(*atom, *star);
+  }
+  if (rem.starts_with('?')) {
+    rem.remove_prefix(1);
+    return pool.make_alt(EMPTY_STR_ID, *atom);
+  }
+  if (rem.starts_with('{'))
     return Error(REG_BADPAT);
   return atom;
 }
 
-} // namespace
-
-ErrorOr<ExprId> parse_ere(cpp::string_view pattern, int cflags,
-                          ExprPool &pool) {
-  // Collect quantified atoms in a 64-atom (256-byte) stack buffer, spilling to
-  // the heap only for longer chains, then fold right-to-left so
-  // right-associative make_concat stays O(1) without orphaned prefixes.
-  // TODO: Replace inline_atoms + heap_atoms with an AllocChecker-backed
-  // SmallVector / unique_ptr once available in src/__support/CPP/.
-  constexpr size_t INLINE_ATOM_COUNT = 64;
+// Shared stack of parsed ExprId nodes across recursive parse_alt and
+// parse_concat frames.  Keeps a 64-element (256-byte) inline buffer on the
+// top-level parse_ere frame, spilling to the heap only for larger patterns.
+// TODO: Replace ParsedAtomStack with an AllocChecker-backed SmallVector /
+// unique_ptr once available in src/__support/CPP/.
+struct ParsedAtomStack {
+  static constexpr size_t INLINE_ATOM_COUNT = 64;
   cpp::array<ExprId, INLINE_ATOM_COUNT> inline_atoms{};
   ExprId *heap_atoms = nullptr;
-  cpp::scope_exit cleanup([&heap_atoms] { delete[] heap_atoms; });
-  cpp::span<ExprId> atoms(inline_atoms);
-  size_t atom_count = 0;
+  cpp::span<ExprId> atoms{inline_atoms};
+  size_t count = 0;
 
-  cpp::string_view rem = pattern;
-  while (!rem.empty()) {
-    if (atom_count >= ExprPool::MAX_NODE_LIMIT)
-      return Error(REG_ESPACE);
-    if (atom_count == atoms.size()) {
+  bool push(ExprId id) {
+    if (count >= ExprPool::MAX_NODE_LIMIT)
+      return false;
+    if (count == atoms.size()) {
       size_t new_cap = atoms.size() * 2;
       AllocChecker ac;
       ExprId *new_atoms = new (ac) ExprId[new_cap];
       if (!ac)
-        return Error(REG_ESPACE);
+        return false;
       ExprId *dst = new_atoms;
       for (ExprId existing : atoms) {
         *dst = existing;
@@ -296,22 +326,106 @@ ErrorOr<ExprId> parse_ere(cpp::string_view pattern, int cflags,
       heap_atoms = new_atoms;
       atoms = cpp::span<ExprId>(heap_atoms, new_cap);
     }
-    ErrorOr<ExprId> atom = parse_quantified_atom(rem, cflags, pool);
+    atoms[count] = id;
+    ++count;
+    return true;
+  }
+
+  ExprId pop() {
+    --count;
+    return atoms[count];
+  }
+};
+
+// Parses a single concatenation branch (sequence of quantified atoms).
+ErrorOr<ExprId> parse_concat(cpp::string_view &rem, int cflags, ExprPool &pool,
+                             size_t depth, size_t &re_nsub,
+                             ParsedAtomStack &stack) {
+  // Collect quantified atoms for this branch on the shared stack, then fold
+  // right-to-left so right-associative make_concat stays O(1) without orphaned
+  // prefixes.
+  size_t atom_count = 0;
+  while (!rem.empty() && !rem.starts_with('|') &&
+         !(depth > 0 && rem.starts_with(')'))) {
+    ErrorOr<ExprId> atom =
+        parse_quantified_atom(rem, cflags, pool, depth, re_nsub, stack);
     if (!atom.has_value())
       return atom;
-    atoms[atom_count] = *atom;
+    if (!stack.push(*atom))
+      return Error(REG_ESPACE);
     ++atom_count;
   }
 
   ErrorOr<ExprId> acc = pool.empty_str();
   if (!acc.has_value())
     return acc;
-  for (size_t i = atom_count; i > 0; --i) {
-    acc = pool.make_concat(atoms[i - 1], *acc);
+  for (; atom_count > 0; --atom_count) {
+    acc = pool.make_concat(stack.pop(), *acc);
     if (!acc.has_value())
       return acc;
   }
   return acc;
+}
+
+// Parses an alternation expression (branches separated by '|').
+ErrorOr<ExprId> parse_alt(cpp::string_view &rem, int cflags, ExprPool &pool,
+                          size_t depth, size_t &re_nsub,
+                          ParsedAtomStack &stack) {
+  if (rem.starts_with('|'))
+    return Error(REG_BADPAT);
+
+  ErrorOr<ExprId> first =
+      parse_concat(rem, cflags, pool, depth, re_nsub, stack);
+  if (!first.has_value() || !rem.starts_with('|'))
+    return first;
+  if (!stack.push(*first))
+    return Error(REG_ESPACE);
+  size_t branch_count = 1;
+
+  while (rem.starts_with('|')) {
+    rem.remove_prefix(1);
+    if (rem.empty() || rem.starts_with('|') ||
+        (depth > 0 && rem.starts_with(')')))
+      return Error(REG_BADPAT);
+
+    ErrorOr<ExprId> branch =
+        parse_concat(rem, cflags, pool, depth, re_nsub, stack);
+    if (!branch.has_value())
+      return branch;
+    if (!stack.push(*branch))
+      return Error(REG_ESPACE);
+    ++branch_count;
+  }
+
+  // Fold alternation branches right-to-left so right-associative sorted
+  // make_alt stays O(1) per branch without orphaned spine nodes.
+  ErrorOr<ExprId> acc = EMPTY_SET_ID;
+  for (; branch_count > 0; --branch_count) {
+    acc = pool.make_alt(stack.pop(), *acc);
+    if (!acc.has_value())
+      return acc;
+  }
+  return acc;
+}
+
+} // namespace
+
+// Top-level entry point: parses an ERE pattern starting from alternation at
+// depth 0 and optionally returns the total count of parenthesized
+// subexpressions.
+ErrorOr<ExprId> parse_ere(cpp::string_view pattern, int cflags, ExprPool &pool,
+                          size_t *out_re_nsub) {
+  cpp::string_view rem = pattern;
+  size_t re_nsub = 0;
+  ParsedAtomStack stack;
+  cpp::scope_exit cleanup([&stack] { delete[] stack.heap_atoms; });
+  ErrorOr<ExprId> res =
+      parse_alt(rem, cflags, pool, /*depth=*/0, re_nsub, stack);
+  if (!res.has_value())
+    return res;
+  if (out_re_nsub != nullptr)
+    *out_re_nsub = re_nsub;
+  return res;
 }
 
 } // namespace regex
