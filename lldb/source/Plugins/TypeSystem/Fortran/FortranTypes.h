@@ -107,7 +107,7 @@ public:
     if (return_type.IsValid())
       id.AddPointer(return_type.GetOpaqueQualType());
 
-    for (const auto &param : param_types)
+    for (const CompilerType &param : param_types)
       id.AddPointer(param.GetOpaqueQualType());
   }
 
