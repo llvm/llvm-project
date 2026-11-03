@@ -214,9 +214,7 @@ class FrameContext:
     def local_scopes(self) -> list[ScopeContext]:
         """Returns all block and function local scopes from innermost to outermost."""
         return [
-            scope
-            for scope in self.scopes()
-            if scope.scope.presentationHint == "locals"
+            scope for scope in self.scopes() if scope.scope.presentationHint == "locals"
         ]
 
     @property
