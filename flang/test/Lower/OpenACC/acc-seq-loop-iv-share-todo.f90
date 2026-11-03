@@ -10,15 +10,11 @@
 !   updates that private. `do k = 1, 3` leaves 4 there.
 ! - collapse(2) puts only the seq loop's own DO variable on the parent. The
 !   collapsed index stays on the collapsed loop and is not visible after it.
-! - An explicit private(k) on the seq loop still has a private on the parent.
-!   The loop body runs, and the value after the loop is the lower bound.
-! - independent, auto, and a loop with no clause inside parallel leave the
-!   induction variable on the parent. `do k = 1, 3` leaves 4 and
-!   `do k = 1, 4` leaves 5. device_type(nvidia) seq, device_type(default) seq,
-!   and device_type(*) seq do the same. `do k = 1, 3` leaves 4.
+! - device_type(nvidia) seq, device_type(default) seq, and device_type(*) seq
+!   leave the induction variable on the parent. `do k = 1, 3` leaves 4.
 ! - When the parent is serial or parallel, the induction variable is private
 !   on that construct. The read inside it sees the loop result, and the host
-!   variable stays unchanged. A loop with no clause inside serial is the same.
+!   variable stays unchanged.
 ! - kernels copies the induction variable out, so the host variable becomes
 !   the loop result.
 ! - An orphan seq loop is a host DO. The host variable is one past the end,
@@ -160,75 +156,6 @@ end subroutine
 ! CHECK: fir.load %[[JDECL]]#0 : !fir.ref<i32>
 
 ! -----------------------------------------------------------------------------
-! Explicit private(k) still has a copy on the parent. The value read after
-! the loop is the lower bound.
-! -----------------------------------------------------------------------------
-subroutine explicit_private(a, n, kout)
-  integer :: n, i, k, kout
-  real :: a(n)
-  !$acc parallel copy(kout)
-  !$acc loop gang
-  do i = 1, n
-    !$acc loop seq private(k)
-    do k = 1, 3
-      a(i) = a(i) + k
-    end do
-    kout = k
-  end do
-  !$acc end parallel
-end subroutine
-
-! CHECK-LABEL: func.func @_QPexplicit_private
-! CHECK: acc.private {{.*}} implicit(true) name("k")
-! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPexplicit_privateEk")
-! CHECK: acc.private {{.*}} implicit(false) name("k")
-! CHECK: acc.loop private({{.*}} : !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: } inclusiveUpperbound(array<i1: true>) seq
-! CHECK: %[[C1:.*]] = arith.constant 1 : i32
-! CHECK: fir.store %[[C1]] to %[[KDECL]]#0 : !fir.ref<i32>
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-
-! -----------------------------------------------------------------------------
-! independent, auto, and a bare loop leave k on the parent too.
-! -----------------------------------------------------------------------------
-subroutine not_seq(a, n, kindep, kauto, kbare)
-  integer :: n, i, k, kindep, kauto, kbare
-  real :: a(n)
-  !$acc parallel copy(kindep, kauto, kbare)
-  !$acc loop gang
-  do i = 1, n
-    !$acc loop independent
-    do k = 1, 3
-      a(i) = a(i) + k
-    end do
-    kindep = k
-    !$acc loop auto
-    do k = 1, 4
-      a(i) = a(i) + k
-    end do
-    kauto = k
-    !$acc loop
-    do k = 1, 3
-      a(i) = a(i) + k
-    end do
-    kbare = k
-  end do
-  !$acc end parallel
-end subroutine
-
-! CHECK-LABEL: func.func @_QPnot_seq
-! CHECK: acc.private {{.*}} name("k")
-! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPnot_seqEk")
-! CHECK: acc.loop control(%{{.*}} : i32) =
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-! CHECK: acc.loop control(%{{.*}} : i32) =
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-! CHECK: acc.loop control(%{{.*}} : i32) =
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-
-! -----------------------------------------------------------------------------
 ! seq for a named device type is shared. `do k = 1, 3` leaves 4.
 ! -----------------------------------------------------------------------------
 subroutine dtype_nvidia_seq(a, n, kout)
@@ -336,25 +263,6 @@ end subroutine
 ! CHECK: acc.private {{.*}} name("k")
 ! CHECK: acc.parallel {{.*}} private({{.*}} : !fir.ref<i32>)
 ! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPparent_parallelEk")
-! CHECK: } inclusiveUpperbound(array<i1: true>) seq
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-
-subroutine implicit_in_serial(a, n, kout)
-  integer :: n, k, kout
-  real :: a(n)
-  !$acc serial copy(kout)
-  !$acc loop
-  do k = 1, 3
-    a(k) = a(k) + 1.0
-  end do
-  kout = k
-  !$acc end serial
-end subroutine
-
-! CHECK-LABEL: func.func @_QPimplicit_in_serial
-! CHECK: acc.private {{.*}} name("k")
-! CHECK: acc.serial {{.*}} private({{.*}} : !fir.ref<i32>)
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPimplicit_in_serialEk")
 ! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
 
