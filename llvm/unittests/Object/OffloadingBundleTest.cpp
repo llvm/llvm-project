@@ -10,6 +10,7 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <limits>
 #include <random>
 
 using namespace llvm;
@@ -48,6 +49,24 @@ toBinary(SmallVectorImpl<char> &Storage, StringRef Yaml) {
                              "unable to convert YAML");
   return object::ObjectFile::createELFObjectFile(
       MemoryBufferRef(OS.str(), "dummyELF"));
+}
+
+static void appendU64(SmallVectorImpl<char> &Bytes, uint64_t Value) {
+  for (unsigned I = 0; I != sizeof(Value); ++I)
+    Bytes.push_back(static_cast<char>(Value >> (I * 8)));
+}
+
+TEST(OffloadingBundleTest, RejectsOverflowingEntryOffset) {
+  SmallString<64> Bundle("__CLANG_OFFLOAD_BUNDLE__");
+  appendU64(Bundle, 1);
+  appendU64(Bundle, std::numeric_limits<uint64_t>::max());
+  appendU64(Bundle, 1);
+  appendU64(Bundle, 0);
+
+  Expected<std::unique_ptr<OffloadBundleFatBin>> BundleOrErr =
+      OffloadBundleFatBin::create(MemoryBufferRef(Bundle, "bundle"),
+                                  /*SectionOffset=*/1, "bundle");
+  EXPECT_THAT_EXPECTED(BundleOrErr, Failed());
 }
 
 TEST(OffloadingBundleTest, checkExtractOffloadBundleFatBinary) {
