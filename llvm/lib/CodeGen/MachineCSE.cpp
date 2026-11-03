@@ -14,7 +14,6 @@
 
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -23,6 +22,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -77,13 +77,15 @@ class MachineCSEImpl {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineDominatorTree *DT = nullptr;
-  std::optional<MachinePostDominatorTree> PDT;
+  MachinePostDominatorTree *PDT = nullptr;
+  MachineCycleInfo *CI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   MachineBlockFrequencyInfo *MBFI = nullptr;
 
 public:
-  MachineCSEImpl(MachineDominatorTree *DT, MachineBlockFrequencyInfo *MBFI)
-      : DT(DT), MBFI(MBFI) {}
+  MachineCSEImpl(MachineDominatorTree *DT, MachinePostDominatorTree *PDT,
+     MachineCycleInfo *CI, MachineBlockFrequencyInfo *MBFI)
+      : DT(DT),PDT(PDT), CI(CI), MBFI(MBFI) {}
   bool run(MachineFunction &MF);
 
 private:
@@ -124,6 +126,7 @@ private:
   void ExitScopeIfDone(MachineDomTreeNode *Node,
                        DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren);
   bool PerformCSE(MachineDomTreeNode *Node);
+  bool isUnsafeConvergentCSE(MachineInstr &MI, MachineInstr *CSMI);
 
   bool isPRECandidate(MachineInstr *MI, SmallSet<MCRegister, 8> &PhysRefs);
   bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
@@ -133,8 +136,6 @@ private:
   bool isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
                                MachineBasicBlock *MBB, MachineBasicBlock *MBB1);
   void releaseMemory();
-  MachinePostDominatorTree &buildOrGetPDT(MachineFunction &MF);
-  static bool isBlockInACycle(MachineBasicBlock *MBB);
 };
 
 class MachineCSELegacy : public MachineFunctionPass {
@@ -149,6 +150,8 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addRequired<MachineCycleInfoWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   }
 
@@ -165,6 +168,8 @@ char &llvm::MachineCSELegacyID = MachineCSELegacy::ID;
 INITIALIZE_PASS_BEGIN(MachineCSELegacy, DEBUG_TYPE,
                       "Machine Common Subexpression Elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_END(MachineCSELegacy, DEBUG_TYPE,
                     "Machine Common Subexpression Elimination", false, false)
 
@@ -614,12 +619,7 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
     // definition, so it's necessary to use `isConvergent` to prevent illegally
     // CSE-ing the subset of `isConvergent` instructions which do fall into this
     // extended definition.
-    if (MI.isConvergent() && MI.getParent() != CSMI->getParent() &&
-        (!(DT->dominates(CSMI, &MI) &&
-           buildOrGetPDT(*MI.getMF())
-               .dominates(MI.getParent(), CSMI->getParent())) ||
-         isBlockInACycle(MI.getParent()) ||
-         isBlockInACycle(CSMI->getParent()))) {
+    if (isUnsafeConvergentCSE(MI, CSMI)) {
       LLVM_DEBUG(
           dbgs()
           << "*** Convergent MI and subexpression exist in "
@@ -752,6 +752,19 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
   }
 
   return Changed;
+}
+
+// Check if CSE of a convergent instruction is unsafe. 
+bool MachineCSEImpl::isUnsafeConvergentCSE(MachineInstr &MI, MachineInstr *CSMI) {
+  if (!MI.isConvergent() || MI.getParent() == CSMI->getParent())
+    return false; 
+    // First check that CSMI and MI's parents are control equivalent.
+    // Then check if  either block is in a cycle.
+  return !(DT->dominates(CSMI, &MI) &&
+           PDT->dominates(MI.getParent(), CSMI->getParent())) ||
+         CI->getCycle(MI.getParent()).isValid() ||
+         CI->getCycle(CSMI->getParent()).isValid();
+
 }
 
 /// ExitScopeIfDone - Destroy scope for the MBB that corresponds to the given
@@ -945,8 +958,8 @@ void MachineCSEImpl::releaseMemory() {
   ScopeMap.clear();
   PREMap.clear();
   Exps.clear();
-  PDT.reset();
 }
+
 
 bool MachineCSEImpl::run(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
@@ -960,28 +973,17 @@ bool MachineCSEImpl::run(MachineFunction &MF) {
   return ChangedPRE || ChangedCSE;
 }
 
-MachinePostDominatorTree &MachineCSEImpl::buildOrGetPDT(MachineFunction &MF) {
-  if (!PDT)
-    PDT.emplace(MF);
-  return *PDT;
-}
-
-bool MachineCSEImpl::isBlockInACycle(MachineBasicBlock *MBB) {
-  for (MachineBasicBlock *postBB : MBB->successors())
-    for (MachineBasicBlock *B : depth_first(postBB))
-      if (B == MBB)
-        return true;
-  return false;
-}
-
 PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
 
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachinePostDominatorTree &MPDT =
+      MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
+  MachineCycleInfo &MCI = MFAM.getResult<MachineCycleAnalysis>(MF);
   MachineBlockFrequencyInfo &MBFI =
       MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  MachineCSEImpl Impl(&MDT, &MBFI);
+  MachineCSEImpl Impl(&MDT, &MPDT, &MCI, &MBFI);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -997,8 +999,12 @@ bool MachineCSELegacy::runOnMachineFunction(MachineFunction &MF) {
 
   MachineDominatorTree &MDT =
       getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachinePostDominatorTree &MPDT =
+    getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  MachineCycleInfo &MCI =
+    getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();  
   MachineBlockFrequencyInfo &MBFI =
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  MachineCSEImpl Impl(&MDT, &MBFI);
+  MachineCSEImpl Impl(&MDT, &MPDT, &MCI, &MBFI);
   return Impl.run(MF);
 }
