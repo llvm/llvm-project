@@ -938,6 +938,14 @@ protected:
   void removeRedundantConstraintsFromSimplex(const Simplex &simplex,
                                              unsigned offset);
 
+  /// Eliminates the variable at column `col` from every equality and
+  /// inequality of `this` using the equality `eq` (see
+  /// IntMatrix::eliminateColumnUsingRow). This does not change the
+  /// intersection of `this` with the set defined by `eq`. Constraints are not
+  /// normalized afterwards. `eq` must have a non-zero coefficient at `col` and
+  /// must not be a view of a constraint of `this`.
+  void eliminateVarUsingEquality(ArrayRef<DynamicAPInt> eq, unsigned col);
+
   /// Rewrites every constraint of `this` using the equalities of `eqs`, which
   /// must have the same space as `this` (including local variables). This does
   /// not change the intersection of `this` with `eqs`, but may change `this`
