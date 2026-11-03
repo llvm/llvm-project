@@ -4,8 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+save-restore -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64
 
-; Test that the __riscv_restore tail call uses the software guarded sequence
-; (t2) when cf-protection-branch is enabled.
+;; Test that the __riscv_restore tail call uses the software guarded sequence
+;; (t2) when cf-protection-branch is enabled.
 
 define void @f() nounwind {
 ; RV32-LABEL: f:
