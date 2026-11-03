@@ -63,6 +63,7 @@ exports_files([
     "include/llvm/Frontend/Directive/DirectiveBase.td",
     "include/llvm/Frontend/OpenACC/ACC.td",
     "include/llvm/Frontend/OpenMP/OMP.td",
+    "include/llvm/IR/Attributes.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
@@ -1283,8 +1284,6 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
-        # Resolves circular-dep b/w Coroutines and Core.
-        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ]),
     hdrs = glob(
         [
@@ -1300,6 +1299,8 @@ cc_library(
         "include/llvm/Analysis/WithCache.h",
         "include/llvm/ProfileData/InstrProf.h",
         "include/llvm/ProfileData/InstrProfData.inc",
+        # Resolves circular-dep b/w Coroutines, Scalar, and Core.
+        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     features = ["-parse_headers"],
@@ -1695,7 +1696,7 @@ filegroup(
         "include/llvm/Analysis/*.td",
         "include/llvm/CodeGen/*.td",
         "include/llvm/Frontend/Directive/*.td",
-        "include/llvm/IR/Intrinsics*.td",
+        "include/llvm/IR/*.td",
         "include/llvm/TableGen/*.td",
         "include/llvm/Target/*.td",
         "include/llvm/Target/GlobalISel/*.td",
