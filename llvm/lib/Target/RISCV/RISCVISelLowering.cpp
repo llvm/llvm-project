@@ -18296,6 +18296,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       case Intrinsic::riscv_pusati:
         Opc = RISCVISD::USATI;
         break;
+      case Intrinsic::riscv_pmerge:
+        Opc = RISCVISD::MERGE;
+        break;
       default:
         // pas/psa/psas/pssa/paas/pasa and pmerge: re-emit at the widened type
         // rather than lowering to a generic node.
@@ -18317,6 +18320,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         SDValue Imm = DAG.getTargetConstant(N->getConstantOperandVal(2), DL,
                                             Subtarget.getXLenVT());
         Res = DAG.getNode(Opc, DL, WideVT, Ops[1], Imm);
+      } else if (Opc == RISCVISD::MERGE) {
+        // The intrinsic is (rs1, rs2, rd) but MERGE is (mask, false, true).
+        Res = DAG.getNode(Opc, DL, WideVT, Ops[3], Ops[1], Ops[2]);
       } else {
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       }
