@@ -627,10 +627,11 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   assert(ty->isConstantSizeType() && "VLAs can't be static");
 
   // Use the label if the variable is renamed with the asm-label extension.
+  std::string name;
   if (d.hasAttr<AsmLabelAttr>())
-    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: asm label");
-
-  std::string name = getStaticDeclName(*this, d);
+    name = std::string(getMangledName(&d));
+  else
+    name = getStaticDeclName(*this, d);
 
   mlir::Type lty = getTypes().convertTypeForMem(ty);
 
