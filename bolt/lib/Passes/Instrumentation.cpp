@@ -298,7 +298,8 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
       IndCallSiteID, &*BC.Ctx);
 
   Iter = BB.eraseInstruction(Iter);
-  Iter = BB.insertInstructions(Iter, CounterInstrs.begin(), CounterInstrs.end());
+  Iter =
+      BB.insertInstructions(Iter, CounterInstrs.begin(), CounterInstrs.end());
   --Iter;
 }
 
