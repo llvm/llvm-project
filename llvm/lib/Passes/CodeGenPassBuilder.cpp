@@ -268,9 +268,6 @@ Error CodeGenPassBuilder::buildPipeline(
     addAsmPrinterBegin(PMW);
   }
 
-  if (PrintMIR)
-    addModulePass(PrintMIRPreparePass(Out), PMW, /*Force=*/true);
-
   if (auto Err = addCoreISelPasses(PMW))
     return Err;
 
@@ -289,9 +286,12 @@ Error CodeGenPassBuilder::buildPipeline(
   if (PrintAsm) {
     flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
     addAsmPrinterEnd(PMW);
+  } else if (PrintMIR) {
+    auto MIRBuffer = std::make_shared<std::string>();
+    addMachineFunctionPass(PrintMIRPass(MIRBuffer), PMW, /*Force=*/true);
+    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
+    addModulePass(PrintMIRFinalizePass(Out, MIRBuffer), PMW, /*Force=*/true);
   } else {
-    if (PrintMIR)
-      addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
     flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
   }
 

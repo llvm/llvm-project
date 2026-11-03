@@ -265,8 +265,8 @@ bool isIgnored(StringRef PassID) {
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
                         "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
                         "VerifierPass", "PrintModulePass", "PrintMIRPass",
-                        "PrintMIRPreparePass", "RequireAnalysisPass",
-                        "InvalidateAnalysisPass"});
+                        "PrintMIRPreparePass", "PrintMIRFinalizePass",
+                        "RequireAnalysisPass", "InvalidateAnalysisPass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {

@@ -44,7 +44,21 @@ PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
       },
       &MF);
   MST.renumberMetadataForAssembly();
-  printMIR(OS, FAM, MF, VRM);
+  if (Buffer) {
+    raw_string_ostream BufOS(*Buffer);
+    printMIR(BufOS, FAM, MF, VRM);
+  } else {
+    printMIR(OS, FAM, MF, VRM);
+  }
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses PrintMIRFinalizePass::run(Module &M,
+                                            ModuleAnalysisManager &) {
+  M.renumberMetadataForAssembly();
+  printMIR(OS, M);
+  OS << *Buffer;
+  Buffer->clear();
   return PreservedAnalyses::all();
 }
 
