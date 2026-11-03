@@ -41,15 +41,6 @@ using namespace llvm;
 
 namespace {
 
-// SPIR-V lowering needs PassT on optnone functions too.
-template <typename PassT>
-struct SPIRVRequiredPass : RequiredPassInfoMixin<SPIRVRequiredPass<PassT>> {
-  static StringRef name() { return PassT::name(); }
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
-    return PassT().run(F, FAM);
-  }
-};
-
 class SPIRVCodeGenPassBuilder : public CodeGenPassBuilder {
   using Base = CodeGenPassBuilder;
 
@@ -128,11 +119,11 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
     //  - loops have a single entry edge (pre-header to loop header).
     //  - all loop exits are dominated by the loop pre-header.
     //  - loops have a single back-edge.
-    addFunctionPass(SPIRVRequiredPass<LoopSimplifyPass>(), PMW);
+    addFunctionPass(LoopSimplifyPass(), PMW);
 
     // 2. Removes registers whose lifetime spans across basic blocks. Also
     // removes phi nodes. This will greatly simplify the next steps.
-    addFunctionPass(SPIRVRequiredPass<RegToMemPass>(), PMW);
+    addFunctionPass(RegToMemPass(), PMW);
 
     // 3. Merge the convergence region exit nodes into one. After this step,
     // regions are single-entry, single-exit. This will help determine the
@@ -148,9 +139,9 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
   } else {
     // Canonicalize loops so they have a single latch and preheader.
     // This enables OpLoopMerge emission for non-shader targets.
-    addFunctionPass(SPIRVRequiredPass<LoopSimplifyPass>(), PMW);
+    addFunctionPass(LoopSimplifyPass(), PMW);
   }
-  addFunctionPass(SPIRVRequiredPass<StripConvergenceIntrinsicsPass>(), PMW);
+  addFunctionPass(StripConvergenceIntrinsicsPass(), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(SPIRVLegalizeResourceBindingPass(), PMW);
   addModulePass(SPIRVLegalizeZeroSizeArraysPass(getTM()), PMW);
