@@ -1501,7 +1501,6 @@ define <2 x i16> @test_signed_v2f64_v2i16(<2 x double> %f) {
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v3, 0xffff8000
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v3, v2
 ; GFX7-GI-NEXT:    v_med3_i32 v1, v1, v3, v2
-; GFX7-GI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-GI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-GI-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -2082,15 +2081,14 @@ define <2 x i16> @test_s_signed_v2f64_v2i16(<2 x double> inreg %f) {
 ; GFX7-GI-LABEL: test_s_signed_v2f64_v2i16:
 ; GFX7-GI:       ; %bb.0:
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GI-NEXT:    v_cvt_i32_f64_e32 v1, s[18:19]
 ; GFX7-GI-NEXT:    v_cvt_i32_f64_e32 v0, s[16:17]
-; GFX7-GI-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX7-GI-NEXT:    v_cvt_i32_f64_e32 v1, s[18:19]
 ; GFX7-GI-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX7-GI-NEXT:    s_min_i32 s5, s5, 0x7fff
+; GFX7-GI-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX7-GI-NEXT:    s_min_i32 s4, s4, 0x7fff
-; GFX7-GI-NEXT:    s_max_i32 s5, s5, 0xffff8000
+; GFX7-GI-NEXT:    s_min_i32 s5, s5, 0x7fff
 ; GFX7-GI-NEXT:    s_max_i32 s4, s4, 0xffff8000
-; GFX7-GI-NEXT:    s_and_b32 s5, s5, 0xffff
+; GFX7-GI-NEXT:    s_max_i32 s5, s5, 0xffff8000
 ; GFX7-GI-NEXT:    s_and_b32 s4, s4, 0xffff
 ; GFX7-GI-NEXT:    s_lshl_b32 s5, s5, 16
 ; GFX7-GI-NEXT:    s_or_b32 s4, s4, s5

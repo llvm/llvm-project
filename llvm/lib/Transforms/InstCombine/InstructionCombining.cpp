@@ -4763,7 +4763,8 @@ static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
 
   Value *NewSel = Builder.CreateSelectFMF(
       Cond, ConstIsTrue ? ConstantMantissa : NewEV,
-      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp");
+      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp",
+      ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
   return NewSel;
 }
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
@@ -5902,7 +5903,7 @@ bool InstCombinerImpl::run() {
           // removed.
           auto II = dyn_cast<IntrinsicInst>(User);
           if (II->getIntrinsicID() != Intrinsic::assume ||
-              !II->getOperandBundle("dereferenceable"))
+              !II->hasOperandBundle(LLVMContext::OB_Dereferenceable))
             continue;
         }
 

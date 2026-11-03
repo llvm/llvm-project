@@ -1935,11 +1935,7 @@ defm DS_MAX_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d3, DS_MAX_SRC2_F64, DS
 //===----------------------------------------------------------------------===//
 
 class DS_Real_Base_vi <bits<8> op, DS_Pseudo ps> :
-  DS_Real <ps>,
-  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
-  let AssemblerPredicate = isGFX8GFX9;
-  let DecoderNamespace = "GFX8";
-
+  DS_Real <ps>, Select_vi <ps.PseudoInstr> {
   // encoding
   let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
   let Inst{15-8}  = !if(ps.has_offset1, offset1, 0);
