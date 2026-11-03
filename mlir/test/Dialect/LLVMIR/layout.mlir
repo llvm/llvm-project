@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-data-layout-query --split-input-file --verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline='builtin.module(func.func(test-data-layout-query),builtin.module(func.func(test-data-layout-query)))' --split-input-file --verify-diagnostics %s | FileCheck %s
 
 module {
   // CHECK: @no_spec
@@ -169,6 +169,27 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi32>>
 >} {
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>
+>} {
+  module attributes { dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>
+  >} {
+    // CHECK-LABEL: @nested_pointer_layout
+    func.func @nested_pointer_layout() {
+      // CHECK: alignment = 8
+      // CHECK: bitsize = 64
+      // CHECK: index = 64
+      // CHECK: preferred = 8
+      // CHECK: size = 8
+      "test.data_layout_query"() : () -> !llvm.ptr
+      return
+    }
+  }
 }
 
 // -----

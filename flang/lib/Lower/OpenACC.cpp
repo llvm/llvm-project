@@ -207,6 +207,7 @@ static mlir::func::FuncOp createDeclareFunc(
   auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, funcName, funcTy);
   funcOp.setVisibility(linkable ? mlir::SymbolTable::Visibility::Public
                                 : mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(builder.getMLIRSymbolTable(), funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       locs);
   builder.setInsertionPointToEnd(&funcOp.getRegion().back());
@@ -5355,19 +5356,14 @@ void Fortran::lower::declareExternalAccModuleDeclareActionRecipes(
   if (isUnifiedMemoryMode(converter))
     return;
 
-  mlir::ModuleOp module = builder.getModule();
   mlir::Location loc = converter.genLocation(sym.name());
   std::string prefix = converter.mangleName(ultimate);
 
   auto declareExternalRecipe = [&](llvm::StringRef suffix) {
     std::string name = prefix + suffix.str();
-    if (module.lookupSymbol<mlir::func::FuncOp>(name))
-      return;
     auto funcTy = mlir::FunctionType::get(builder.getContext(), {}, {});
-    mlir::OpBuilder modBuilder(module.getBodyRegion());
-    modBuilder.setInsertionPointToEnd(module.getBody());
-    auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, name, funcTy);
-    funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+    // Get-or-create: a private declaration at the end of the module.
+    builder.createFunction(loc, name, funcTy);
   };
 
   declareExternalRecipe(declarePostAllocSuffix);
