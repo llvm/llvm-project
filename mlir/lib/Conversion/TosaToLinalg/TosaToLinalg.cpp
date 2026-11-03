@@ -227,12 +227,13 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
       if (hasInZp && hasOutZp) {
         // Compute the maximum value that can occur in the intermediate buffer.
-        // Use 128 bits so that the computation cannot overflow for 64-bit
-        // inputs and zero points.
-        const APInt zpAdd = APInt(128, inZp, /*isSigned=*/true) +
-                            APInt(128, outZp, /*isSigned=*/true);
+        // Zero points can only be non-zero for int8, so their sum fits in
+        // int64_t. The bound is computed with 128 bits so that it cannot
+        // overflow for 64-bit inputs.
+        const int64_t zpAdd = inZp + outZp;
         const APInt maxValue =
-            APInt::getSignedMaxValue(inputBitWidth).sext(128) + zpAdd.abs() + 1;
+            APInt::getSignedMaxValue(inputBitWidth).sext(128) +
+            std::abs(zpAdd) + 1;
 
         // Convert that maximum value into the maximum bitwidth needed to
         // represent it.
@@ -244,9 +245,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
         zpAddValue = arith::ConstantOp::create(
-            rewriter, loc,
-            rewriter.getIntegerAttr(intermediateType,
-                                    zpAdd.trunc(intermediateBitWidth)));
+            rewriter, loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
       } else {
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
         Value arg1 = args[1];
