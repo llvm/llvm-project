@@ -214,6 +214,7 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   MemoryEffects Memory = P.Memory;
   list<list<EnumAttr>> ParamAttrs = P.ParamAttrs;
   list<FuncArgType> ParamPointeeTypes = P.ParamPointeeTypes;
+  bit AlignPointeesToElementType = true;
 }
 
 // Implementation of a long double function, which provides the libcall

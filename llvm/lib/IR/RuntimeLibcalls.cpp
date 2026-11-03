@@ -452,8 +452,17 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     if (Static.PointeeType != NoFuncArgType) {
       Type *PointeeTy =
           convertToIRType(Static.PointeeType, Ctx, TT, DL, LongDoubleFmt);
-      StaticAttrs = StaticAttrs.addSortedAttributes(
-          Ctx, Attribute::getWithAlignment(Ctx, DL.getABITypeAlign(PointeeTy)));
+      Type *AlignTy =
+          Static.AlignToElement ? PointeeTy->getScalarType() : PointeeTy;
+      SmallVector<Attribute, 2> PointeeAttrs = {
+          Attribute::getWithAlignment(Ctx, DL.getABITypeAlign(AlignTy))};
+      TypeSize Size = DL.getTypeStoreSize(PointeeTy);
+      if (!Size.isScalable()) {
+        PointeeAttrs.push_back(
+            Attribute::getWithDereferenceableBytes(Ctx, Size.getFixedValue()));
+      }
+
+      StaticAttrs = StaticAttrs.addSortedAttributes(Ctx, PointeeAttrs);
     }
 
     AttributeSet &ArgAttrSet = ArgAttrs[Static.ArgNo];

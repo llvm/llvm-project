@@ -431,7 +431,6 @@ defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
 foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defvar VT = !cast<VectorFuncArgType>(S);
   defvar IntVT = VT.IntType;
-  defvar EltVT = VT.ElementType;
   defm ACOS : VectorMathLibcall<S, VT, [VT]>;
   defm ACOSH : VectorMathLibcall<S, VT, [VT]>;
   defm ASIN : VectorMathLibcall<S, VT, [VT]>;
@@ -472,7 +471,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm LOG2 : VectorMathLibcall<S, VT, [VT]>;
   defm LOGB : VectorMathLibcall<S, VT, [VT]>;
   defm MODF : VectorMathLibcall<S, VT, [VT, Ptr], ArgMemWriteOnly,
-                                 [[], OutPtrAttrs], [NoneType, EltVT]>;
+                                 [[], OutPtrAttrs], [NoneType, VT]>;
   defm MODF_STRET : VectorMathLibcall<S>;
   defm NEXTAFTER : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW : VectorMathLibcall<S, VT, [VT, VT]>;
@@ -480,11 +479,11 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm REMAINDER : VectorMathLibcall<S, VT, [VT, VT]>;
   defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
                                    [[], OutPtrAttrs, OutPtrAttrs],
-                                   [NoneType, EltVT, EltVT]>;
+                                   [NoneType, VT, VT]>;
   defm SINCOS_STRET : VectorMathLibcall<S>;
   defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr], ArgMemWriteOnly,
                                      [[], OutPtrAttrs, OutPtrAttrs],
-                                     [NoneType, EltVT, EltVT]>;
+                                     [NoneType, VT, VT]>;
   defm SINCOSPI_STRET : VectorMathLibcall<S>;
   defm SIN : VectorMathLibcall<S, VT, [VT]>;
   defm SINH : VectorMathLibcall<S, VT, [VT]>;
@@ -4820,8 +4819,7 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
 
 class VectorAlignedOutPtrsImpl<RuntimeLibcall P, string Name = NAME>
     : RuntimeLibcallImpl<P, Name> {
-  let ParamPointeeTypes = !foreach(T, P.ArgumentTypes,
-                                 !if(!eq(T, Ptr), P.ArgumentTypes[0], NoneType));
+  let AlignPointeesToElementType = false;
 }
 
 defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {

@@ -317,11 +317,11 @@
 
 ; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vlogq_f64(<2 x double>) [[ATTRS]]
 
-; CHECK: declare aarch64_vector_pcs <4 x float> @armpl_vmodfq_f32(<4 x float>, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
+; CHECK: declare aarch64_vector_pcs <4 x float> @armpl_vmodfq_f32(<4 x float>, ptr noalias nonnull writeonly align 4 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare aarch64_vector_pcs void @armpl_vmodfq_f32_stret(...)
 
-; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vmodfq_f64(<2 x double>, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
+; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vmodfq_f64(<2 x double>, ptr noalias nonnull writeonly align 8 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare aarch64_vector_pcs void @armpl_vmodfq_f64_stret(...)
 
@@ -333,13 +333,13 @@
 
 ; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vpowq_f64(<2 x double>, <2 x double>) [[ATTRS]]
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vsincospiq_f32(<4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
+; CHECK: declare aarch64_vector_pcs void @armpl_vsincospiq_f32(<4 x float>, ptr noalias nonnull writeonly align 4 dereferenceable(16), ptr noalias nonnull writeonly align 4 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vsincospiq_f64(<2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
+; CHECK: declare aarch64_vector_pcs void @armpl_vsincospiq_f64(<2 x double>, ptr noalias nonnull writeonly align 8 dereferenceable(16), ptr noalias nonnull writeonly align 8 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vsincosq_f32(<4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
+; CHECK: declare aarch64_vector_pcs void @armpl_vsincosq_f32(<4 x float>, ptr noalias nonnull writeonly align 4 dereferenceable(16), ptr noalias nonnull writeonly align 4 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vsincosq_f64(<2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
+; CHECK: declare aarch64_vector_pcs void @armpl_vsincosq_f64(<2 x double>, ptr noalias nonnull writeonly align 8 dereferenceable(16), ptr noalias nonnull writeonly align 8 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare aarch64_vector_pcs <4 x float> @armpl_vsinhq_f32(<4 x float>) [[ATTRS]]
 
