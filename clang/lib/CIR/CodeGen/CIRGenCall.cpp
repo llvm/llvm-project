@@ -370,7 +370,8 @@ void CIRGenModule::constructAttributeList(
   addAttributesFromFunctionProtoType(getBuilder(), attrs,
                                      calleeInfo.getCalleeFunctionProtoType());
 
-  const Decl *targetDecl = calleeInfo.getCalleeDecl().getDecl();
+  GlobalDecl targetGlobalDecl = calleeInfo.getCalleeDecl();
+  const Decl *targetDecl = targetGlobalDecl.getDecl();
 
   // TODO(cir): OMP Assume Attributes should be here.
 
@@ -549,8 +550,7 @@ void CIRGenModule::constructAttributeList(
       addUnitAttr(cir::CIRDialect::getReturnsTwiceAttrName());
 
     llvm::StringMap<std::string> cpuAndFeatures;
-    if (getCPUAndFeaturesAttributes(calleeInfo.getCalleeDecl(),
-                                    cpuAndFeatures)) {
+    if (getCPUAndFeaturesAttributes(targetGlobalDecl, cpuAndFeatures)) {
       for (const auto &[key, val] : cpuAndFeatures)
         attrs.set(key, builder.getStringAttr(val));
     }
@@ -563,7 +563,7 @@ void CIRGenModule::constructAttributeList(
   // TODO(cir): Add loader-replaceable attribute here.
 
   constructFunctionReturnAttributes(info, targetDecl, isThunk, retAttrs);
-  constructFunctionArgumentAttributes(info, calleeInfo.getCalleeDecl(), isThunk,
+  constructFunctionArgumentAttributes(info, targetGlobalDecl, isThunk,
                                       attrOnCallSite, argAttrs);
 }
 
@@ -746,11 +746,13 @@ void CIRGenModule::constructFunctionArgumentAttributes(
           builder.getI64IntegerAttr(
               getNaturalPointeeTypeAlignment(thisPtrTy).getQuantity()));
 
-      // With strict lifetimes, the object's data is dead when a destructor
-      // returns, except for a deleting destructor, whose operator delete may
-      // still use the storage, and except where a virtual base outlives the
-      // destructor of the object holding it.  An object with no data gets no
-      // attribute.
+      // Do not annotate vector deleting destructors with dead_on_return as the
+      // this pointer in that case points to an array which we cannot
+      // statically know the size of. Also do not mark deleting destructors
+      // dead_on_return as then we might delete stores inside of a user-defined
+      // operator delete implementation if it gets inlined, which would be
+      // incorrect as the object's lifetime has already ended and the operator
+      // delete implementation is allowed to manipulate the underlying storage.
       const auto *dd = dyn_cast_if_present<CXXDestructorDecl>(targetDecl);
       if (dd && codeGenOpts.StrictLifetimes &&
           calleeDecl.getDtorType() != CXXDtorType::Dtor_VectorDeleting &&
@@ -759,6 +761,9 @@ void CIRGenModule::constructFunctionArgumentAttributes(
         uint64_t dataSize = astContext.getASTRecordLayout(classDecl)
                                 .getDataSize()
                                 .getQuantity();
+        // We cannot add dead_on_return if we have virtual base classes because
+        // they will generally still be live after the base object destructor.
+
         if (classDecl->getNumVBases() == 0 && dataSize != 0)
           argAttrs[0].set(mlir::LLVM::LLVMDialect::getDeadOnReturnAttrName(),
                           builder.getI64IntegerAttr(dataSize));
