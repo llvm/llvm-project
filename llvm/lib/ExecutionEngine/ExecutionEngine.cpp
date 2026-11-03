@@ -720,7 +720,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         case Instruction::Sub: GV.IntVal = LHS.IntVal - RHS.IntVal; break;
         case Instruction::Xor: GV.IntVal = LHS.IntVal ^ RHS.IntVal; break;
       }
-      break;
+      return GV;
     }
     default:
       break;
