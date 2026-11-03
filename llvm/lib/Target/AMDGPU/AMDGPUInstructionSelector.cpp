@@ -61,6 +61,7 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF,
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
+  SAddrOffsetAdds.clear();
   InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
 }
 
@@ -6243,19 +6244,28 @@ bool AMDGPUInstructionSelector::selectGlobalSAddrVOffset(
 Register AMDGPUInstructionSelector::buildSAddrWithOffset(MachineInstr &MI,
                                                          Register Base,
                                                          int64_t Offset) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineInstr *&Add = SAddrOffsetAdds[{MBB, Base, Offset}];
+  if (Add) {
+    // Selection is bottom-up, so the cached add is below MI.
+    MachineInstr *Mov = MRI->getVRegDef(Add->getOperand(2).getReg());
+    MBB->splice(MI.getIterator(), MBB, Mov->getIterator());
+    MBB->splice(MI.getIterator(), MBB, Add->getIterator());
+    return Add->getOperand(0).getReg();
+  }
+
   if (!RBI.constrainGenericRegister(Base, AMDGPU::SReg_64RegClass, *MRI))
     return Register();
 
-  MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   Register Imm = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
   BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_MOV_B64_IMM_PSEUDO), Imm)
       .addImm(Offset);
   Register Dst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
-  BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_ADD_U64_PSEUDO), Dst)
-      .addReg(Base)
-      .addReg(Imm)
-      .setOperandDead(3); // Dead scc
+  Add = BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_ADD_U64_PSEUDO), Dst)
+            .addReg(Base)
+            .addReg(Imm)
+            .setOperandDead(3); // Dead scc
   return Dst;
 }
 

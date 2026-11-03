@@ -366,6 +366,78 @@ body: |
 
 ...
 ---
+name: load_global_s32_x2_from_sgpr_zext_vgpr_shared_large_offset
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins:  $sgpr0_sgpr1, $vgpr0
+
+    ; GFX9-LABEL: name: load_global_s32_x2_from_sgpr_zext_vgpr_shared_large_offset
+    ; GFX9: liveins: $sgpr0_sgpr1, $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 16777216
+    ; GFX9-NEXT: [[S_ADD_U:%[0-9]+]]:sreg_64_xexec_xnull = S_ADD_U64_PSEUDO [[COPY]], [[S_MOV_B]], implicit-def dead $scc
+    ; GFX9-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_ADD_U]], [[COPY1]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX9-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_ADD_U]], [[COPY1]], 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX9-NEXT: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
+    ; GFX9-NEXT: $vgpr1 = COPY [[GLOBAL_LOAD_DWORD_SADDR1]]
+    ;
+    ; GFX10-LABEL: name: load_global_s32_x2_from_sgpr_zext_vgpr_shared_large_offset
+    ; GFX10: liveins: $sgpr0_sgpr1, $vgpr0
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 16777216
+    ; GFX10-NEXT: [[S_ADD_U:%[0-9]+]]:sreg_64_xexec_xnull = S_ADD_U64_PSEUDO [[COPY]], [[S_MOV_B]], implicit-def dead $scc
+    ; GFX10-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_ADD_U]], [[COPY1]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX10-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_ADD_U]], [[COPY1]], 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX10-NEXT: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
+    ; GFX10-NEXT: $vgpr1 = COPY [[GLOBAL_LOAD_DWORD_SADDR1]]
+    ;
+    ; GFX11-LABEL: name: load_global_s32_x2_from_sgpr_zext_vgpr_shared_large_offset
+    ; GFX11: liveins: $sgpr0_sgpr1, $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 16777216
+    ; GFX11-NEXT: [[S_ADD_U:%[0-9]+]]:sreg_64_xexec_xnull = S_ADD_U64_PSEUDO [[COPY]], [[S_MOV_B]], implicit-def dead $scc
+    ; GFX11-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_ADD_U]], [[COPY1]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX11-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_ADD_U]], [[COPY1]], 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX11-NEXT: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
+    ; GFX11-NEXT: $vgpr1 = COPY [[GLOBAL_LOAD_DWORD_SADDR1]]
+    ;
+    ; GFX12-LABEL: name: load_global_s32_x2_from_sgpr_zext_vgpr_shared_large_offset
+    ; GFX12: liveins: $sgpr0_sgpr1, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX12-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 16777216
+    ; GFX12-NEXT: [[S_ADD_U:%[0-9]+]]:sreg_64_xexec_xnull = S_ADD_U64_PSEUDO [[COPY]], [[S_MOV_B]], implicit-def dead $scc
+    ; GFX12-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_ADD_U]], [[COPY1]], 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX12-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_ADD_U]], [[COPY1]], 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX12-NEXT: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
+    ; GFX12-NEXT: $vgpr1 = COPY [[GLOBAL_LOAD_DWORD_SADDR1]]
+    %0:sgpr(p1) = COPY $sgpr0_sgpr1
+    %1:vgpr(s32) = COPY $vgpr0
+    %2:vgpr(p1) = COPY %0
+    %zero:vgpr(s32) = G_CONSTANT i32 0
+    %zext:vgpr(s64) = G_MERGE_VALUES %1, %zero
+    %4:vgpr(p1) = G_PTR_ADD %2, %zext
+    %5:vgpr(s64) = G_CONSTANT i64 16777216
+    %6:vgpr(p1) = G_PTR_ADD %4, %5
+    %7:vgpr(s32) = G_LOAD %6 :: (load (s32), align 4, addrspace 1)
+    %8:vgpr(s64) = G_CONSTANT i64 16777220
+    %9:vgpr(p1) = G_PTR_ADD %4, %8
+    %10:vgpr(s32) = G_LOAD %9 :: (load (s32), align 4, addrspace 1)
+    $vgpr0 = COPY %7
+    $vgpr1 = COPY %10
+
+...
+---
 name: load_global_s32_from_sgpr_base_offset_4096
 legalized:       true
 regBankSelected: true

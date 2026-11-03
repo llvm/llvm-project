@@ -51,6 +51,10 @@ private:
   MachineRegisterInfo *MRI;
   const GCNSubtarget *Subtarget;
 
+  mutable DenseMap<std::tuple<const MachineBasicBlock *, Register, int64_t>,
+                   MachineInstr *>
+      SAddrOffsetAdds;
+
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,
                             const AMDGPURegisterBankInfo &RBI);
