@@ -4766,6 +4766,10 @@ public:
     VisitStmt(S);
   }
 
+  // A metadirective has no associated statement; visit its variants and
+  // conditions.
+  void VisitOMPMetaDirective(OMPMetaDirective *S) { VisitStmt(S); }
+
   void VisitCallExpr(CallExpr *S) {
     for (Stmt *C : S->arguments()) {
       if (C) {

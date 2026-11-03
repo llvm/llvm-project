@@ -15,6 +15,22 @@ void when_otherwise(int flag) {
   }
 }
 
+// A dependent condition is resolved when the template is instantiated.
+// CHECK-LABEL: FunctionTemplateDecl {{.*}} tmpl
+// CHECK:      FunctionDecl {{.*}} tmpl 'void (T)'
+// CHECK:      OMPMetaDirective
+// CHECK:      FunctionDecl {{.*}} used tmpl 'void (int)' implicit_instantiation
+// CHECK:      OMPMetaDirective
+// CHECK-NEXT: OMPParallelDirective
+// CHECK:      OMPSingleDirective
+// CHECK:      DeclRefExpr {{.*}} 'flag' 'int'
+template <typename T> void tmpl(T flag) {
+#pragma omp metadirective when(user={condition(flag)}: parallel) otherwise(single)
+  {
+  }
+}
+void inst() { tmpl(1); }
+
 // Without 'otherwise', the last variant is the plain associated statement.
 // CHECK-LABEL: FunctionDecl {{.*}} no_otherwise
 // CHECK:      OMPMetaDirective

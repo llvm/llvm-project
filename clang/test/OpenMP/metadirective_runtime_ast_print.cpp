@@ -39,4 +39,14 @@ void clauses(int flag) {
   }
 }
 
+// A loop variant prints its loop, not just the loop body.
+// CHECK-LABEL: void loop(int flag, int n) {
+// CHECK-NEXT: #pragma omp metadirective when(user={condition(flag)}: parallel for) otherwise(for)
+// CHECK-NEXT: for (int i = 0; i < n; ++i)
+void loop(int flag, int n) {
+#pragma omp metadirective when(user={condition(flag)}: parallel for) otherwise(for)
+  for (int i = 0; i < n; ++i)
+    ;
+}
+
 #endif

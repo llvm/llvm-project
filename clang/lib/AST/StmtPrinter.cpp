@@ -46,6 +46,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -804,7 +805,7 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
   ArrayRef<OMPTraitInfo *> TraitInfos = Node->traitInfos();
   unsigned NumClauses =
       Node->getNumVariants() - (Node->hasImplicitOtherwise() ? 1 : 0);
-  for (unsigned I = 0; I != NumClauses; ++I) {
+  for (unsigned I : llvm::seq<unsigned>(NumClauses)) {
     if (TraitInfos[I]->Sets.empty()) {
       OS << (OpenMPVersion < 52 ? " default(" : " otherwise(");
     } else {
@@ -814,11 +815,12 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
     }
     if (auto *D = dyn_cast<OMPExecutableDirective>(Variants[I])) {
       OS << getOpenMPDirectiveName(D->getDirectiveKind(), OpenMPVersion);
-      for (OMPClause *C : D->clauses())
+      for (OMPClause *C : D->clauses()) {
         if (C && !C->isImplicit()) {
           OS << ' ';
           Printer.Visit(C);
         }
+      }
     }
     OS << ')';
   }
@@ -826,7 +828,7 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
   // Every variant has the same associated statement; print it once.
   Stmt *Body = Variants.front();
   if (auto *D = dyn_cast<OMPExecutableDirective>(Body))
-    Body = D->getStructuredBlock();
+    Body = D->getRawStmt();
   PrintStmt(Body);
 }
 
