@@ -1375,7 +1375,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   D.getMutableDeclSpec().abort();
 
   if (BodyKind != Sema::FnBodyKind::Other) {
-    Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage);
+    Actions.SetFunctionBodyKind(getCurScope(), Res, KWLoc, BodyKind,
+                                DeletedMessage);
     Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
     Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
     return Res;
