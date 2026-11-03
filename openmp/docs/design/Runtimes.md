@@ -1251,6 +1251,20 @@ output snapshots of the same recording are identical if and only if the device
 memory after the kernel execution is identical. The format of these files is
 described in `offload/include/Shared/RecordReplayDiff.h`.
 
+By default, the replay places the device memory at the same address as in the
+recording, so the pointers into that memory remain valid. The `--relocate` flag
+instead lets the device place the replay memory at any address, and only
+allocates the memory that the kernel uses. To make this possible, the recording
+logs the device locations where the runtime stores device pointers (e.g., when
+attaching a pointer to its pointee) and saves the ones pointing into the
+recorded memory in a `.pointers` file. The replay adjusts these pointers and the
+kernel arguments to the new address. Any other value in the recorded memory or
+the globals that looks like a pointer into the recorded memory, such as a
+device pointer that the program copied to the device itself, prevents the
+relocation, and the replay falls back to the recorded address. Similarly, a
+relocated replay cannot be verified if the kernel stores such values in the
+output.
+
 The recording phase, implemented by `libomptarget`, can be controlled via
 environment variables. A full list of environment variables and their definition
 is provided below.

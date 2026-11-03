@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cassert>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <limits>
@@ -490,6 +491,13 @@ llvm::Error DeviceTy::freeCtxMem(void *Ptr) {
 }
 
 // Submit data to device
+void DeviceTy::addRecordReplayPointerLocation(void *TgtPtrAddr) {
+  RecordReplayTy *RecordReplay =
+      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
+  if (RecordReplay && RecordReplay->isRecording())
+    RecordReplay->addPointerLocation(TgtPtrAddr);
+}
+
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                              AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
                              MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
@@ -844,6 +852,14 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     // Remember to free the memory later.
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
+
+  // The launch environment holds device pointers, which have to be adjusted
+  // when replaying a recorded kernel at another address.
+  char *KLEAddr = static_cast<char *>(*AllocOrErr);
+  Device.addRecordReplayPointerLocation(
+      KLEAddr + offsetof(KernelLaunchEnvironmentTy, ReductionBuffer));
+  Device.addRecordReplayPointerLocation(
+      KLEAddr + offsetof(KernelLaunchEnvironmentTy, DynCGroupMemFbPtr));
 
   if (Device.submitDataIndependently(*AllocOrErr, &LocalKLE,
                                      sizeof(KernelLaunchEnvironmentTy),

@@ -459,6 +459,7 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   }
 
   // Submit the populated source buffer to device.
+  Device.addRecordReplayPointerLocation(TgtPtrAddr);
   int SubmitResult = Device.submitData(TgtPtrAddr, SrcBuffer, HstPtrSize,
                                        AsyncInfo, PtrTPR.getEntry());
   return HandleSubmitResult(SubmitResult);
@@ -1863,6 +1864,8 @@ public:
                 ? createAndInitSourceBufferForCorrespondingPointerInitialization(
                       HstPtr, ArgSize, HstPteeBase, HstPteeBegin)
                 : HstPtr;
+        if (IsCorrespondingPointerInit)
+          Device.addRecordReplayPointerLocation(TgtPtr);
         int Ret = Device.submitData(TgtPtr, DataSource, ArgSize, AsyncInfo);
         if (Ret != OFFLOAD_SUCCESS) {
           ODBG(ODT_Mapping) << "Copying "
@@ -1984,6 +1987,8 @@ public:
         // Pad the device pointer to get the right alignment.
         TP += Info.Padding;
         Ptr = reinterpret_cast<void *>(TP);
+        if (Info.IsCorrespondingPointerInit)
+          Device.addRecordReplayPointerLocation(Ptr);
         TP += Info.Size;
         ODBG(ODT_Mapping) << "Firstprivate array "
                           << static_cast<void *>(Info.HstPtrBegin)
@@ -2091,6 +2096,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
         }
         ODBG(ODT_Mapping) << "Update lambda reference (" << PointerTgtPtrBegin
                           << ") -> [" << TgtPtrBegin << "]";
+        DeviceOrErr->addRecordReplayPointerLocation(TgtPtrBegin);
         Ret =
             DeviceOrErr->submitData(TgtPtrBegin, &PointerTgtPtrBegin,
                                     sizeof(void *), AsyncInfo, TPR.getEntry());

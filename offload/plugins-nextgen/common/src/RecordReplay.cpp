@@ -14,8 +14,10 @@
 
 #include "ErrorReporting.h"
 #include "Shared/RecordReplayDiff.h"
+#include "Shared/RecordReplayPointers.h"
 #include "Shared/Utils.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -45,10 +47,9 @@ RecordReplayTy::InstanceTy::InstanceTy(const KernelInfoTy &Kernel,
 }
 
 Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
-  if (!VAddr && isReplaying())
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "VAddr cannot be null when replaying");
-  if (!VAddr)
+  // When replaying without an address, the memory can be placed anywhere. This
+  // requires relocating the pointers into the recorded memory.
+  if (!VAddr && isRecording())
     VAddr = Device.getSuggestedVirtualAddress();
 
   auto StartAddrOrErr = Device.allocateWithVirtualAddress(MemSize, VAddr);
@@ -57,7 +58,7 @@ Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
 
   if (!*StartAddrOrErr)
     return Plugin::error(ErrorCode::OUT_OF_RESOURCES, "allocating memory");
-  if (isReplaying() && *StartAddrOrErr != VAddr)
+  if (isReplaying() && VAddr && *StartAddrOrErr != VAddr)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "could not reserve recorded virtual address");
 
@@ -168,6 +169,35 @@ Expected<void *> RecordReplayTy::allocate(uint64_t Size) {
 
 Error RecordReplayTy::deallocate(void *Ptr) { return Plugin::success(); }
 
+void RecordReplayTy::addPointerLocation(void *TgtPtrAddr) {
+  if (!isRecording())
+    return;
+
+  uint64_t Addr = reinterpret_cast<uintptr_t>(TgtPtrAddr);
+  uint64_t Start = reinterpret_cast<uintptr_t>(StartAddr);
+  if (Addr < Start || Addr + sizeof(void *) > Start + TotalSize)
+    return;
+
+  std::lock_guard<std::mutex> LG(AllocationLock);
+  PointerLocations.push_back(Addr - Start);
+}
+
+uint64_t RecordReplayTy::countUnknownPointers(const char *Data, uint64_t Size,
+                                              uint64_t Offset,
+                                              ArrayRef<uint64_t> Known,
+                                              uint64_t MemorySize) const {
+  uint64_t Count = 0;
+  for (uint64_t I = alignTo(Offset, sizeof(uint64_t)) - Offset;
+       I + sizeof(uint64_t) <= Size; I += sizeof(uint64_t)) {
+    uint64_t Value;
+    std::memcpy(&Value, Data + I, sizeof(Value));
+    if (pointsToMemory(Value, MemorySize) &&
+        !llvm::binary_search(Known, Offset + I))
+      ++Count;
+  }
+  return Count;
+}
+
 Expected<RecordReplayTy::HandleTy>
 RecordReplayTy::recordPrologue(const KernelInfoTy &Kernel,
                                const KernelRecordArgsTy &RecordArgs) {
@@ -208,6 +238,10 @@ Error RecordReplayTy::recordEpilogue(const KernelInfoTy &Kernel,
 
   if (shouldRecordEpilogue())
     if (auto Err = recordEpilogueImpl(Kernel, Instance))
+      return Err;
+
+  if (isRecording())
+    if (auto Err = recordPointersImpl(Instance))
       return Err;
 
   if (isReplaying() && Instance.ReplayOutcome)
@@ -265,9 +299,14 @@ Error NativeRecordReplayTy::recordPrologueImpl(const KernelInfoTy &Kernel,
     if (auto Err = recordSnapshot(SnapshotFilename.c_str(), Snapshot.get()))
       return Err;
 
+    findInputPointers(Instance, Snapshot.get());
+
     SmallString<128> GlobalsFilename = getFilename(Instance, FileTy::Globals);
-    if (auto Err = recordGlobals(GlobalsFilename.c_str()))
+    uint64_t NumUnknownGlobalPointers = 0;
+    if (auto Err =
+            recordGlobals(GlobalsFilename.c_str(), NumUnknownGlobalPointers))
       return Err;
+    Instance.NumUnknownInputPointers += NumUnknownGlobalPointers;
 
     SmallString<128> ImageFilename = getFilename(Instance, FileTy::Program);
 
@@ -356,6 +395,8 @@ StringRef NativeRecordReplayTy::getExtension(FileTy FileType) {
     return "image";
   case FileTy::IRImage:
     return "bc";
+  case FileTy::Pointers:
+    return "pointers";
   }
   return "";
 }
@@ -390,6 +431,59 @@ NativeRecordReplayTy::retrieveSnapshot() {
                                      RecordSize, nullptr))
     return std::move(Err);
   return std::move(DeviceMB);
+}
+
+void NativeRecordReplayTy::findInputPointers(const InstanceTy &Instance,
+                                             const MemoryBuffer *Snapshot) {
+  AllocationLock.lock();
+  SmallVector<uint64_t> Locations = PointerLocations;
+  AllocationLock.unlock();
+
+  llvm::sort(Locations);
+  Locations.erase(llvm::unique(Locations), Locations.end());
+
+  Instance.PointerOffsets.clear();
+  Instance.NumUnknownInputPointers = 0;
+  if (!Snapshot)
+    return;
+
+  // Only the logged locations that still hold a pointer into the memory need
+  // to be relocated.
+  const char *Data = Snapshot->getBufferStart();
+  uint64_t Size = Snapshot->getBufferSize();
+  for (uint64_t Location : Locations) {
+    uint64_t Value;
+    if (Location + sizeof(Value) > Size)
+      continue;
+    std::memcpy(&Value, Data + Location, sizeof(Value));
+    if (pointsToMemory(Value, Size))
+      Instance.PointerOffsets.push_back(Location);
+  }
+  Instance.NumUnknownInputPointers =
+      countUnknownPointers(Data, Size, /*Offset=*/0, Instance.PointerOffsets,
+                           /*MemorySize=*/Size);
+}
+
+Error NativeRecordReplayTy::recordPointersImpl(const InstanceTy &Instance) {
+  SmallString<128> Filename = getFilename(Instance, FileTy::Pointers);
+  std::error_code EC;
+  raw_fd_ostream OS(Filename, EC);
+  if (EC)
+    return Plugin::error(ErrorCode::HOST_IO, "saving pointers file");
+
+  RecordReplayPointersHeaderTy Header;
+  std::memcpy(Header.Magic, RecordReplayPointersMagic, sizeof(Header.Magic));
+  Header.NumPointers = Instance.PointerOffsets.size();
+  Header.NumUnknownInputPointers = Instance.NumUnknownInputPointers;
+  Header.NumUnknownOutputPointers = Instance.NumUnknownOutputPointers;
+  OS.write(reinterpret_cast<const char *>(&Header), sizeof(Header));
+  OS.write(reinterpret_cast<const char *>(Instance.PointerOffsets.data()),
+           Instance.PointerOffsets.size() * sizeof(uint64_t));
+  OS.close();
+
+  // The instance is never recorded again.
+  Instance.PointerOffsets = {};
+  return Plugin::success();
 }
 
 Error NativeRecordReplayTy::recordSnapshot(StringRef Filename,
@@ -446,6 +540,11 @@ Error NativeRecordReplayTy::recordSnapshotDiff(StringRef Filename,
   RecordReplayDiffRegionTy Region;
   uint64_t RegionFilePos = 0;
   uint64_t RegionEnd = 0;
+
+  // When recording, count the unknown pointers in the output, which prevent
+  // verifying a relocated replay.
+  if (isRecording())
+    Instance.NumUnknownOutputPointers = 0;
   auto CloseRegion = [&]() {
     Region.Size = RegionEnd - Region.Offset;
     OS.pwrite(reinterpret_cast<const char *>(&Region), sizeof(Region),
@@ -472,6 +571,10 @@ Error NativeRecordReplayTy::recordSnapshotDiff(StringRef Filename,
             Chunk, utils::advancePtr(StartAddr, ChunkOffset), ChunkSize,
             nullptr))
       return Err;
+
+    if (isRecording())
+      Instance.NumUnknownOutputPointers += countUnknownPointers(
+          Chunk, ChunkSize, ChunkOffset, Instance.PointerOffsets, OutputSize);
 
     // A byte is changed if it differs from the input snapshot or lies beyond
     // it.
@@ -547,12 +650,16 @@ Error NativeRecordReplayTy::recordImage(const KernelInfoTy &Kernel,
   return Plugin::success();
 }
 
-Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
+Error NativeRecordReplayTy::recordGlobals(StringRef Filename,
+                                          uint64_t &NumUnknownPointers) {
+  NumUnknownPointers = 0;
+
   AllocationLock.lock();
   // Copy the globals into a local vector so we can read it safely from this
   // thread. This vector should have a few entries in general. No need to lock
   // the entire function.
   SmallVector<GlobalEntryTy> Globals = GlobalEntries;
+  uint64_t MemorySize = CurrentSize;
   AllocationLock.unlock();
 
   uint64_t TotalSize = sizeof(uint32_t);
@@ -592,6 +699,12 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
     if (auto Err =
             Device.dataRetrieve(BufferPtr, Global.Addr, Global.Size, nullptr))
       return Err;
+
+    // The globals are restored by name, so a pointer into the record replay
+    // memory stored in a global cannot be relocated.
+    NumUnknownPointers +=
+        countUnknownPointers(static_cast<const char *>(BufferPtr), Global.Size,
+                             /*Offset=*/0, /*Known=*/{}, MemorySize);
     BufferPtr = utils::advancePtr(BufferPtr, Global.Size);
   }
   assert(BufferPtr == GlobalsMB->getBufferEnd() &&

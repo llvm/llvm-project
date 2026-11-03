@@ -193,6 +193,10 @@ struct DeviceTy {
                      MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
                      const ident_t *Loc = nullptr, const char *Name = nullptr);
 
+  /// Log that a device pointer is stored at the device address \p TgtPtrAddr,
+  /// so a kernel record can be replayed with its memory at another address.
+  void addRecordReplayPointerLocation(void *TgtPtrAddr);
+
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,

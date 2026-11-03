@@ -20,6 +20,7 @@
 
 #include "Shared/APITypes.h"
 #include "Shared/EnvironmentVar.h"
+#include "Shared/RecordReplayPointers.h"
 #include "Shared/Utils.h"
 
 #include "OffloadError.h"
@@ -103,7 +104,8 @@ public:
     Descriptor,
     Globals,
     Program,
-    IRImage
+    IRImage,
+    Pointers
   };
 
   struct HandleTy {
@@ -145,7 +147,11 @@ protected:
   /// List of all globals mapped to the device.
   SmallVector<GlobalEntryTy> GlobalEntries;
 
-  /// Mutex that protects dynamic allocations and globals.
+  /// The offsets, within the record replay memory, of the locations where the
+  /// runtime stored a device pointer while recording.
+  SmallVector<uint64_t> PointerLocations;
+
+  /// Mutex that protects dynamic allocations, globals and pointer locations.
   std::mutex AllocationLock;
 
   // An instance of a kernel record replay.
@@ -176,6 +182,13 @@ protected:
     /// The device memory just before the kernel execution. It is kept until
     /// the epilogue to store the output snapshot as a diff against it.
     mutable std::unique_ptr<MemoryBuffer> InputSnapshot;
+
+    /// When recording, the sorted offsets of the logged pointer locations that
+    /// point into the record replay memory before the kernel execution, and the
+    /// number of unknown pointers in the input and the output.
+    mutable SmallVector<uint64_t, 0> PointerOffsets;
+    mutable uint64_t NumUnknownInputPointers = 0;
+    mutable uint64_t NumUnknownOutputPointers = RecordReplayUnknownCount;
 
     InstanceTy(const KernelInfoTy &Kernel, uint32_t NumTeams,
                uint32_t NumThreads, uint32_t SharedMemorySize,
@@ -250,6 +263,11 @@ public:
     GlobalEntries.emplace_back(GlobalEntryTy{Name, Size, Addr});
   }
 
+  /// Log that the runtime stored a device pointer at \p TgtPtrAddr, which is
+  /// needed to relocate the replay. Only locations within the record replay
+  /// memory are logged, and only when recording.
+  void addPointerLocation(void *TgtPtrAddr);
+
   /// Register a record replay instance, record the prologue data if necessary,
   /// and return the instance's handle. The prologue is the phase just before
   /// executing the kernel. This phase can include the recording of memory
@@ -289,6 +307,26 @@ private:
   void populateReplayOutcome(const InstanceTy &Instance,
                              KernelReplayOutcomeTy &Outcome);
 
+protected:
+  /// Whether \p Value is an address within the first \p MemorySize bytes of
+  /// the record replay memory, i.e., the memory in use, or just past them.
+  /// Checking only the memory in use, rather than the whole reservation, makes
+  /// it unlikely that other data, such as two 32-bit integers, looks like a
+  /// pointer.
+  bool pointsToMemory(uint64_t Value, uint64_t MemorySize) const {
+    uint64_t Start = reinterpret_cast<uintptr_t>(StartAddr);
+    return Value >= Start && Value <= Start + MemorySize;
+  }
+
+  /// Count the 8-byte aligned values in \p Data that point into the first
+  /// \p MemorySize bytes of the record replay memory and whose location is not
+  /// in the sorted \p Known list. \p Offset is the offset of \p Data within
+  /// the record replay memory.
+  uint64_t countUnknownPointers(const char *Data, uint64_t Size,
+                                uint64_t Offset, ArrayRef<uint64_t> Known,
+                                uint64_t MemorySize) const;
+
+private:
   /// Record the prologue data.
   virtual Error recordPrologueImpl(const KernelInfoTy &Kernel,
                                    const InstanceTy &Instance) = 0;
@@ -301,6 +339,9 @@ private:
   virtual Error recordDescImpl(const KernelInfoTy &Kernel,
                                const InstanceTy &Instance,
                                const KernelRecordArgsTy &RecordArgs) = 0;
+
+  /// Record the pointers needed to relocate the replay.
+  virtual Error recordPointersImpl(const InstanceTy &Instance) = 0;
 
   /// Get a string with the filename.
   virtual SmallString<128> getFilenameImpl(const InstanceTy &Instance,
@@ -323,6 +364,7 @@ private:
                            const InstanceTy &Instance) override;
   Error recordDescImpl(const KernelInfoTy &Kernel, const InstanceTy &Instance,
                        const KernelRecordArgsTy &RecordArgs) override;
+  Error recordPointersImpl(const InstanceTy &Instance) override;
 
   /// Get a string with the filename.
   SmallString<128> getFilenameImpl(const InstanceTy &Instance, FileTy FileType,
@@ -341,8 +383,13 @@ private:
   /// the input snapshot of \p Instance.
   Error recordSnapshotDiff(StringRef Filename, const InstanceTy &Instance);
 
-  /// Record the globals to a file.
-  Error recordGlobals(StringRef Filename);
+  /// Record the globals to a file, and count the unknown pointers in them.
+  Error recordGlobals(StringRef Filename, uint64_t &NumUnknownPointers);
+
+  /// Find the logged pointer locations that point into the record replay
+  /// memory in the input \p Snapshot, and count the unknown pointers.
+  void findInputPointers(const InstanceTy &Instance,
+                         const MemoryBuffer *Snapshot);
 
   /// Record the device image to a file.
   Error recordImage(const KernelInfoTy &Kernel, StringRef Filename,
