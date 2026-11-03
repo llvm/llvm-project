@@ -21,7 +21,8 @@ char f_int_4(char x) { return x; }
 // CHECK-LABEL: define{{.*}} fp128 @f_ld(fp128 noundef %x)
 long double f_ld(long double x) { return x; }
 
-// Zero-sized structs reserves an argument register slot if passed directly.
+// Zero-sized structs reserves an argument register slot, but not argument
+// stack slots, if passed directly.
 struct empty {};
 struct emptyarr { struct empty a[10]; };
 
@@ -36,6 +37,11 @@ struct empty f_empty(struct empty x) { return x; }
 
 // CHECK-LABEL: define{{.*}} i64 @f_emptyarr(i64 %x.coerce)
 struct empty f_emptyarr(struct emptyarr x) { return x.a[0]; }
+
+// CHECK-LABEL: define{{.*}} i64 @f_emptystackarg(i64 %a0.coerce, i64 %a1.coerce, i64 %a2.coerce, i64 %a3.coerce, i64 %a4.coerce, i64 %a5.coerce, %struct.empty %a6.coerce, %struct.empty %a7.coerce)
+struct empty f_emptystackarg(struct empty a0, struct empty a1, struct empty a2, struct empty a3, struct empty a4, struct empty a5, struct empty a6, struct empty a7) {
+    return a7;
+}
 
 // CHECK-LABEL: define{{.*}} void @f_aligncaller(i64 %a.coerce0, i64 %a.coerce1)
 // CHECK-LABEL: declare{{.*}} void @f_aligncallee(i32 noundef signext, i64, i64, i64)
