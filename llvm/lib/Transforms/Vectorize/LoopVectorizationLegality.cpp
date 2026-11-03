@@ -348,12 +348,6 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                             ? LAI->getSymbolicStrides()
                             : SymbolicStrideMap();
 
-  // Check if the pointer is derived from a conditional induction PHI. If so,
-  // return a conservative stride (assuming the PHI is always updated).
-  if (std::optional<CompressedPtrInfo> PtrInfo = getCompressedPtrInfo(Ptr))
-    return getStrideFromAddRec(PtrInfo->PtrSCEV, TheLoop, AccessTy, Ptr, PSE)
-        .value_or(0);
-
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
                             AllowRuntimeSCEVChecks ? &Predicates : nullptr)

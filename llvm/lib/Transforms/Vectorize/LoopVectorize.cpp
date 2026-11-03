@@ -723,10 +723,6 @@ public:
   /// data type and alignment.
   bool isLegalGatherOrScatter(Instruction *I, ElementCount VF) const;
 
-  /// Returns true if the target machine supports a masked expand load or masked
-  /// compress store for \p I's data type and alignment.
-  bool isLegalExpandLoadOrCompressStore(Instruction *I, ElementCount VF) const;
-
   /// Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) const {
     return InterleaveInfo.isInterleaved(Instr);
@@ -2023,13 +2019,6 @@ bool LoopVectorizationCostModel::isLegalGatherOrScatter(Instruction *I,
                                        getLoadStoreAlignment(I), VF);
 }
 
-bool LoopVectorizationCostModel::isLegalExpandLoadOrCompressStore(
-    Instruction *I, ElementCount VF) const {
-  assert((isa<LoadInst, StoreInst>(I)) && "Expected load or store");
-  return Config.isLegalExpandLoadOrCompressStore(
-      isa<LoadInst>(I), getLoadStoreType(I), getLoadStoreAlignment(I), VF);
-}
-
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
   if (!isPredicatedInst(I))
@@ -2052,11 +2041,10 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   case Instruction::Store: {
     Type *ScalarTy = getLoadStoreType(I);
     Value *Ptr = getLoadStorePointerOperand(I);
-    bool IsCompressed = Legal->isCompressedLoadOrStore(I);
+    if (Legal->isCompressedLoadOrStore(I))
+      return false; // We can't scalarize compressed loads/stores.
     bool IsConsecutive = Legal->isConsecutivePtr(ScalarTy, Ptr);
-    return !(IsConsecutive && !IsCompressed &&
-             isLegalMaskedLoadOrStore(I, VF)) &&
-           !(IsCompressed && isLegalExpandLoadOrCompressStore(I, VF)) &&
+    return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
            !isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
@@ -2297,8 +2285,15 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
 
   // In order to be widened, the pointer should be consecutive or compressed.
   int Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
-  assert((Stride == 1 || !Legal->isCompressedLoadOrStore(I)) &&
-         "Compressed memory ops must be consecutive");
+
+  // Check if the pointer is derived from a conditional induction PHI, which
+  // can be widened as a compressstore/expandload.
+  if (std::optional<CompressedPtrInfo> PtrInfo =
+          Legal->getCompressedPtrInfo(Ptr)) {
+    Stride = getStrideFromAddRec(PtrInfo->PtrSCEV, TheLoop, ScalarTy, Ptr, PSE)
+                 .value_or(0);
+    assert(Stride == 1 && "Compressed memory ops must be consecutive");
+  }
 
   if (!Stride)
     return std::nullopt;
@@ -4366,6 +4361,10 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         setWideningDecision(&I, VF, *Decision, WidenCost);
         continue;
       }
+
+      assert(!Legal->isCompressedLoadOrStore(&I) &&
+             "compressed loads/stores should be handled in "
+             "memoryInstructionCanBeWidened");
 
       // Choose between Interleaving, Gather/Scatter or Scalarization.
       InstructionCost InterleaveCost = InstructionCost::getInvalid();

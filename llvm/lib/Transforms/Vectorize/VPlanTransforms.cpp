@@ -6518,10 +6518,6 @@ bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
 
     // Update the conditional induction to increment by the number of active
     // lanes in the mask.
-    VPValue *BackedgeValue = CondIndPhi.getBackedgeValue();
-    VPBasicBlock *InsertBlock = BackedgeValue->getDefiningRecipe()->getParent();
-    Builder.setInsertPoint(InsertBlock->getFirstNonPhi());
-
     Type *UpdateType = CondIndPhi.getScalarType();
     if (UpdateType->isPointerTy())
       UpdateType = Plan.getDataLayout().getIndexType(UpdateType);
@@ -6529,6 +6525,7 @@ bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
     DebugLoc DL = CondIndPhi.getDebugLoc();
     auto &CondID = CondIndPhi.getConditionalInductionDescriptor();
 
+    Builder.setInsertPoint(BlendR);
     VPValue *HandledLanes =
         Builder.createNaryOp(VPInstruction::NumActiveLanes, Mask, UpdateType,
                              {}, DL, "handled.lanes");
@@ -6540,7 +6537,7 @@ bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
         CondIndPhi.getScalarType()->isPointerTy()
             ? Builder.createPtrAdd(&CondIndPhi, Offset, DL, "conditional.step")
             : Builder.createAdd(&CondIndPhi, Offset, DL, "conditional.step");
-    BackedgeValue->replaceAllUsesWith(Update);
+    CondIndPhi.getBackedgeValue()->replaceAllUsesWith(Update);
   }
 
   return true;
