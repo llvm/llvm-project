@@ -47,7 +47,8 @@ class IntegerValueRangeLattice : public Lattice<IntegerValueRange> {
 public:
   using Lattice::Lattice;
   /// Set the runtime index width. It must agree with any stored bounds.
-  /// Without a known width, only an exact zero range is retained for index values.
+  /// Without a known width, only an exact zero range is retained for index
+  /// values.
   void setIndexBitwidth(std::optional<unsigned> width) {
     indexBitwidth = width;
   }
