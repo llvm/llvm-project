@@ -28142,6 +28142,83 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 static SDValue performLegalizedInterleavedStoreCombine(
     StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG);
 
+// At each Index look for insert_vector_elt(vec, elt, Index) and recurse into
+// vec. At Index 0 look for a scalar_to_vector. Generate a store for each elt if
+// all items match.
+static SDValue replaceStoreOfVectorInsertAt(StoreSDNode *ST, SDValue Val,
+                                            unsigned Index, SelectionDAG &DAG) {
+  SDValue Elt;
+  SDValue Chain;
+
+  if (!Val.hasOneUse())
+    return SDValue();
+
+  if (Index == 0) {
+    if (Val.getOpcode() != ISD::SCALAR_TO_VECTOR)
+      return SDValue();
+    Elt = Val.getOperand(0);
+    Chain = ST->getChain();
+  } else {
+    if (Val.getOpcode() != ISD::INSERT_VECTOR_ELT ||
+        !isa<ConstantSDNode>(Val.getOperand(2)) ||
+        Val.getConstantOperandVal(2) != Index)
+      return SDValue();
+
+    Elt = Val.getOperand(1);
+    Chain = replaceStoreOfVectorInsertAt(ST, Val.getOperand(0), Index - 1, DAG);
+    if (!Chain)
+      return SDValue();
+  }
+
+  if (!Elt.getValueType().isInteger() || Elt.getOpcode() == ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  // Generate the new store of the element
+  SDLoc DL(ST);
+  EVT EltVT = ST->getValue().getValueType().getScalarType();
+  SDValue NewPtr = DAG.getMemBasePlusOffset(
+      ST->getBasePtr(), TypeSize::getFixed(Index * EltVT.getSizeInBits() / 8),
+      DL);
+  MachinePointerInfo PointerInfo =
+      ST->getPointerInfo().getWithOffset(Index * EltVT.getSizeInBits() / 8);
+  Align NewAlign =
+      commonAlignment(ST->getAlign(), Index * EltVT.getSizeInBits() / 8);
+  return DAG.getTruncStore(Chain, DL, Elt, NewPtr, PointerInfo, EltVT, NewAlign,
+                           ST->getMemOperand()->getFlags(),
+                           ST->getMMOMetadataForSubAccess());
+}
+
+// Replace store (insert(insert(insert(...))) with separate stores per element.
+static SDValue replaceStoreOfVectorInsert(StoreSDNode *ST, SelectionDAG &DAG) {
+  SDValue Val = ST->getValue();
+  EVT VT = Val.getValueType();
+
+  if (ST->isTruncatingStore() || !ST->isSimple() || !VT.isFixedLengthVector())
+    return SDValue();
+
+  if (ST->isIndexed() && ST->getAddressingMode() != ISD::POST_INC &&
+      ST->getAddressingMode() != ISD::POST_DEC)
+    return SDValue();
+
+  SDValue NewChain =
+      replaceStoreOfVectorInsertAt(ST, Val, VT.getVectorNumElements() - 1, DAG);
+  if (!NewChain)
+    return SDValue();
+
+  SDLoc DL(ST);
+  if (ST->getAddressingMode() == ISD::POST_INC) {
+    SDValue Add = DAG.getNode(ISD::ADD, DL, ST->getBasePtr().getValueType(),
+                              ST->getBasePtr(), ST->getOffset());
+    return DAG.getMergeValues({Add, NewChain}, DL);
+  }
+  if (ST->getAddressingMode() == ISD::POST_DEC) {
+    SDValue Add = DAG.getNode(ISD::SUB, DL, ST->getBasePtr().getValueType(),
+                              ST->getBasePtr(), ST->getOffset());
+    return DAG.getMergeValues({Add, NewChain}, DL);
+  }
+  return NewChain;
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -28307,6 +28384,10 @@ static SDValue performSTORECombine(SDNode *N,
     return DAG.getStore(ST->getChain(), DL, FPSubreg, ST->getBasePtr(),
                         ST->getMemOperand());
   }
+
+  if (DCI.isAfterLegalizeDAG())
+    if (SDValue R = replaceStoreOfVectorInsert(ST, DAG))
+      return R;
 
   return SDValue();
 }
