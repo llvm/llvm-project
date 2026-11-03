@@ -593,6 +593,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `-Wlifetime-safety-experimental-field-origin-escape`, which warns when a
     member function returns a value derived from a pointer, reference, or view
     field rather than from `*this`.
+  - `-Wlifetime-safety-experimental-destructor-use`, which warns when an object
+    whose non-trivial destructor may read a borrow is destroyed after the
+    storage it borrows from.
 
 - Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
   flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
@@ -775,6 +778,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when a token followed an `#embed` parameter whose
   expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
   (#GH212075)
+- Fixed an assertion failure while recovering from invalid `__has_embed` parameters at the end of a preprocessing directive. (#GH236416)
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
@@ -982,6 +986,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a spurious unused function warning when using `operator<=>` within an anonymous namespace. (#GH125233)
 
 - Fixed a regression where the rewritten comparison operator was not instantiated properly. (#GH104720)
+
+- Fixed a crash when a defaulted comparison operator of a union with no variant members was called. (#GH140368)
 
 - Fixed an assertion failure when a parenthesized structured binding declarator
   was followed by a function declarator and body (e.g. ``([a, b])() {}``).
@@ -1219,6 +1225,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   parameter substituted through an alias template is used as the base of an
   unresolved name, such as `TT<T>::value` in a non-type template parameter's
   type. (#GH88592)
+- Fixed an assertion failure that caused clangd to crash on preprocessor 
+  directives that contain an undefined identifier and end inside an unfinished 
+  subexpression, e.g. due to unclosed parenthesis. (#GH226555)
 - Fixed an assertion when emitting base destructor as alias on targets (such
   as AVR) which have different address spaces for code and data. (#GH236285)
 
@@ -1425,6 +1434,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 ### Static Analyzer
 
 #### Crash and bug fixes
+- `unix.BlockInCriticalSection` checker now recognizes `mtx_timedlock`
+  calls with 2 arguments as a locking call. This fixes false negatives.
+  (#GH237154)
 
 % comment:
 % This is for the Static Analyzer.

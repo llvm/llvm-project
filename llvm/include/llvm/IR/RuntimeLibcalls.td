@@ -219,44 +219,55 @@ def ExceptionModelIsSjLj
 // Declare all kinds of used libcalls
 //--------------------------------------------------------------------
 
-// Integer
-foreach IntTy = ["I16", "I32", "I64", "I128"] in {
-  def SHL_#IntTy : RuntimeLibcall;
-  def SRL_#IntTy : RuntimeLibcall;
-  def SRA_#IntTy : RuntimeLibcall;
-}
-
-foreach IntTy = ["I8", "I16", "I32", "I64", "I128"] in {
-  def MUL_#IntTy : RuntimeLibcall;
-}
-
-foreach IntTy = ["I32", "I64", "I128" ] in {
-  def MULO_#IntTy : RuntimeLibcall;
-}
-
-foreach IntTy = ["I8", "I16", "I32", "I64", "I128"] in {
-  def SDIV_#IntTy : RuntimeLibcall;
-  def UDIV_#IntTy : RuntimeLibcall;
-  def SREM_#IntTy : RuntimeLibcall;
-  def UREM_#IntTy : RuntimeLibcall;
-  def SDIVREM_#IntTy : RuntimeLibcall;
-  def UDIVREM_#IntTy : RuntimeLibcall;
-}
-
-foreach IntTy = ["I32", "I64" ] in {
-  def NEG_#IntTy : RuntimeLibcall;
-}
-
-foreach IntTy = ["I32", "I64", "I128"] in {
-  def CTLZ_#IntTy : RuntimeLibcall;
-  def CTPOP_#IntTy : RuntimeLibcall;
-}
-
-
 class TypeSuffix<string S, FuncArgType Ty> {
   string Suffix = S;
   FuncArgType Type = Ty;
 }
+
+// Integer
+foreach IntTy = [TypeSuffix<"I16", Int16>, TypeSuffix<"I32", Int32>,
+                 TypeSuffix<"I64", Int64>, TypeSuffix<"I128", Int128>] in {
+  def SHL_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, Int]>;
+  def SRL_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, Int]>;
+  def SRA_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, Int]>;
+}
+
+foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
+                 TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
+                 TypeSuffix<"I128", Int128>] in {
+  def MUL_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+  def SDIV_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+  def SREM_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+}
+
+foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
+                 TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
+                 TypeSuffix<"I128", UInt128>] in {
+  def UDIV_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+  def UREM_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+}
+
+foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
+                 TypeSuffix<"I128", Int128>] in {
+  def MULO_#IntTy.Suffix
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+}
+
+foreach IntTy = ["I8", "I16", "I32", "I64", "I128"] in {
+  def SDIVREM_#IntTy : RuntimeLibcall;
+  def UDIVREM_#IntTy : RuntimeLibcall;
+}
+
+foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
+  def NEG_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type]>;
+}
+
+foreach IntTy = [TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
+                 TypeSuffix<"I128", UInt128>] in {
+  def CTLZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
+  def CTPOP_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
+}
+
 def F32 : TypeSuffix<"F32", Flt>;
 def F64 : TypeSuffix<"F64", Dbl>;
 def F80 : TypeSuffix<"F80", X86FP80>;
@@ -337,10 +348,10 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
       : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FMAXIMUM_NUM_#FPTy.Suffix
       : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def LROUND_#FPTy.Suffix : RuntimeLibcall;
-  def LLROUND_#FPTy.Suffix : RuntimeLibcall;
-  def LRINT_#FPTy.Suffix : RuntimeLibcall;
-  def LLRINT_#FPTy.Suffix : RuntimeLibcall;
+  def LROUND_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
+  def LLROUND_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
+  def LRINT_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
+  def LLRINT_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
   def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
   def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
   def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
@@ -480,11 +491,11 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm ROUND : VectorMathLibcall<S, VT, [VT]>;
 }
 
-def FEGETENV : RuntimeLibcall;
-def FESETENV : RuntimeLibcall;
+def FEGETENV : RuntimeLibcall<Int, [Ptr]>;
+def FESETENV : RuntimeLibcall<Int, [Ptr]>;
 
-def FEGETMODE : RuntimeLibcall;
-def FESETMODE : RuntimeLibcall;
+def FEGETMODE : RuntimeLibcall<Int, [Ptr]>;
+def FESETMODE : RuntimeLibcall<Int, [Ptr]>;
 
 def FPEXT_BF16_F32 : RuntimeLibcall;
 def FPEXT_F32_PPCF128 : RuntimeLibcall<PPCFP128, [Flt]>;
@@ -519,37 +530,37 @@ def FPTOSINT_F16_I64 : RuntimeLibcall;
 def FPTOSINT_F16_I128 : RuntimeLibcall;
 def FPTOSINT_F32_I32 : RuntimeLibcall<Int32, [Flt]>;
 def FPTOSINT_F32_I64 : RuntimeLibcall<Int64, [Flt]>;
-def FPTOSINT_F32_I128 : RuntimeLibcall;
+def FPTOSINT_F32_I128 : RuntimeLibcall<Int128, [Flt]>;
 def FPTOSINT_F64_I32 : RuntimeLibcall<Int32, [Dbl]>;
 def FPTOSINT_F64_I64 : RuntimeLibcall<Int64, [Dbl]>;
-def FPTOSINT_F64_I128 : RuntimeLibcall;
+def FPTOSINT_F64_I128 : RuntimeLibcall<Int128, [Dbl]>;
 def FPTOSINT_F80_I32 : RuntimeLibcall<Int32, [X86FP80]>;
 def FPTOSINT_F80_I64 : RuntimeLibcall<Int64, [X86FP80]>;
-def FPTOSINT_F80_I128 : RuntimeLibcall;
+def FPTOSINT_F80_I128 : RuntimeLibcall<Int128, [X86FP80]>;
 def FPTOSINT_F128_I32 : RuntimeLibcall<Int32, [FP128]>;
 def FPTOSINT_F128_I64 : RuntimeLibcall<Int64, [FP128]>;
-def FPTOSINT_F128_I128 : RuntimeLibcall;
+def FPTOSINT_F128_I128 : RuntimeLibcall<Int128, [FP128]>;
 def FPTOSINT_PPCF128_I32 : RuntimeLibcall<Int32, [PPCFP128]>;
 def FPTOSINT_PPCF128_I64 : RuntimeLibcall<Int64, [PPCFP128]>;
-def FPTOSINT_PPCF128_I128 : RuntimeLibcall;
+def FPTOSINT_PPCF128_I128 : RuntimeLibcall<Int128, [PPCFP128]>;
 def FPTOUINT_F16_I32 : RuntimeLibcall;
 def FPTOUINT_F16_I64 : RuntimeLibcall;
 def FPTOUINT_F16_I128 : RuntimeLibcall;
-def FPTOUINT_F32_I32 : RuntimeLibcall<Int32, [Flt]>;
-def FPTOUINT_F32_I64 : RuntimeLibcall<Int64, [Flt]>;
-def FPTOUINT_F32_I128 : RuntimeLibcall;
-def FPTOUINT_F64_I32 : RuntimeLibcall<Int32, [Dbl]>;
-def FPTOUINT_F64_I64 : RuntimeLibcall<Int64, [Dbl]>;
-def FPTOUINT_F64_I128 : RuntimeLibcall;
-def FPTOUINT_F80_I32 : RuntimeLibcall<Int32, [X86FP80]>;
-def FPTOUINT_F80_I64 : RuntimeLibcall<Int64, [X86FP80]>;
-def FPTOUINT_F80_I128 : RuntimeLibcall;
-def FPTOUINT_F128_I32 : RuntimeLibcall<Int32, [FP128]>;
-def FPTOUINT_F128_I64 : RuntimeLibcall<Int64, [FP128]>;
-def FPTOUINT_F128_I128 : RuntimeLibcall;
-def FPTOUINT_PPCF128_I32 : RuntimeLibcall<Int32, [PPCFP128]>;
-def FPTOUINT_PPCF128_I64 : RuntimeLibcall<Int64, [PPCFP128]>;
-def FPTOUINT_PPCF128_I128 : RuntimeLibcall;
+def FPTOUINT_F32_I32 : RuntimeLibcall<UInt32, [Flt]>;
+def FPTOUINT_F32_I64 : RuntimeLibcall<UInt64, [Flt]>;
+def FPTOUINT_F32_I128 : RuntimeLibcall<UInt128, [Flt]>;
+def FPTOUINT_F64_I32 : RuntimeLibcall<UInt32, [Dbl]>;
+def FPTOUINT_F64_I64 : RuntimeLibcall<UInt64, [Dbl]>;
+def FPTOUINT_F64_I128 : RuntimeLibcall<UInt128, [Dbl]>;
+def FPTOUINT_F80_I32 : RuntimeLibcall<UInt32, [X86FP80]>;
+def FPTOUINT_F80_I64 : RuntimeLibcall<UInt64, [X86FP80]>;
+def FPTOUINT_F80_I128 : RuntimeLibcall<UInt128, [X86FP80]>;
+def FPTOUINT_F128_I32 : RuntimeLibcall<UInt32, [FP128]>;
+def FPTOUINT_F128_I64 : RuntimeLibcall<UInt64, [FP128]>;
+def FPTOUINT_F128_I128 : RuntimeLibcall<UInt128, [FP128]>;
+def FPTOUINT_PPCF128_I32 : RuntimeLibcall<UInt32, [PPCFP128]>;
+def FPTOUINT_PPCF128_I64 : RuntimeLibcall<UInt64, [PPCFP128]>;
+def FPTOUINT_PPCF128_I128 : RuntimeLibcall<UInt128, [PPCFP128]>;
 def SINTTOFP_I32_F16 : RuntimeLibcall;
 def SINTTOFP_I32_F32 : RuntimeLibcall<Flt, [Int32]>;
 def SINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [Int32]>;
@@ -564,32 +575,32 @@ def SINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [Int64]>;
 def SINTTOFP_I64_F128 : RuntimeLibcall<FP128, [Int64]>;
 def SINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [Int64]>;
 def SINTTOFP_I128_F16 : RuntimeLibcall;
-def SINTTOFP_I128_F32 : RuntimeLibcall;
-def SINTTOFP_I128_F64 : RuntimeLibcall;
-def SINTTOFP_I128_F80 : RuntimeLibcall;
-def SINTTOFP_I128_F128 : RuntimeLibcall;
-def SINTTOFP_I128_PPCF128 : RuntimeLibcall;
+def SINTTOFP_I128_F32 : RuntimeLibcall<Flt, [Int128]>;
+def SINTTOFP_I128_F64 : RuntimeLibcall<Dbl, [Int128]>;
+def SINTTOFP_I128_F80 : RuntimeLibcall<X86FP80, [Int128]>;
+def SINTTOFP_I128_F128 : RuntimeLibcall<FP128, [Int128]>;
+def SINTTOFP_I128_PPCF128 : RuntimeLibcall<PPCFP128, [Int128]>;
 def UINTTOFP_I32_F16 : RuntimeLibcall;
-def UINTTOFP_I32_F32 : RuntimeLibcall<Flt, [Int32]>;
-def UINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [Int32]>;
-def UINTTOFP_I32_F80 : RuntimeLibcall<X86FP80, [Int32]>;
-def UINTTOFP_I32_F128 : RuntimeLibcall<FP128, [Int32]>;
-def UINTTOFP_I32_PPCF128 : RuntimeLibcall<PPCFP128, [Int32]>;
+def UINTTOFP_I32_F32 : RuntimeLibcall<Flt, [UInt32]>;
+def UINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [UInt32]>;
+def UINTTOFP_I32_F80 : RuntimeLibcall<X86FP80, [UInt32]>;
+def UINTTOFP_I32_F128 : RuntimeLibcall<FP128, [UInt32]>;
+def UINTTOFP_I32_PPCF128 : RuntimeLibcall<PPCFP128, [UInt32]>;
 def UINTTOFP_I64_BF16 : RuntimeLibcall;
 def UINTTOFP_I64_F16 : RuntimeLibcall;
-def UINTTOFP_I64_F32 : RuntimeLibcall<Flt, [Int64]>;
-def UINTTOFP_I64_F64 : RuntimeLibcall<Dbl, [Int64]>;
-def UINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [Int64]>;
-def UINTTOFP_I64_F128 : RuntimeLibcall<FP128, [Int64]>;
-def UINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [Int64]>;
+def UINTTOFP_I64_F32 : RuntimeLibcall<Flt, [UInt64]>;
+def UINTTOFP_I64_F64 : RuntimeLibcall<Dbl, [UInt64]>;
+def UINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [UInt64]>;
+def UINTTOFP_I64_F128 : RuntimeLibcall<FP128, [UInt64]>;
+def UINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [UInt64]>;
 def UINTTOFP_I128_F16 : RuntimeLibcall;
-def UINTTOFP_I128_F32 : RuntimeLibcall;
-def UINTTOFP_I128_F64 : RuntimeLibcall;
-def UINTTOFP_I128_F80 : RuntimeLibcall;
-def UINTTOFP_I128_F128 : RuntimeLibcall;
-def UINTTOFP_I128_PPCF128 : RuntimeLibcall;
-def CONVERT_F128_PPCF128 : RuntimeLibcall;
-def CONVERT_PPCF128_F128 : RuntimeLibcall;
+def UINTTOFP_I128_F32 : RuntimeLibcall<Flt, [UInt128]>;
+def UINTTOFP_I128_F64 : RuntimeLibcall<Dbl, [UInt128]>;
+def UINTTOFP_I128_F80 : RuntimeLibcall<X86FP80, [UInt128]>;
+def UINTTOFP_I128_F128 : RuntimeLibcall<FP128, [UInt128]>;
+def UINTTOFP_I128_PPCF128 : RuntimeLibcall<PPCFP128, [UInt128]>;
+def CONVERT_F128_PPCF128 : RuntimeLibcall<PPCFP128, [FP128]>;
+def CONVERT_PPCF128_F128 : RuntimeLibcall<FP128, [PPCFP128]>;
 
 // Comparisons.
 //
@@ -633,17 +644,20 @@ def STRLEN : RuntimeLibcall<SizeT, [Ptr]>;
 
 // Element-wise unordered-atomic memory of different sizes
 foreach MemSize = [1, 2, 4, 8, 16] in {
-  def MEMCPY_ELEMENT_UNORDERED_ATOMIC_#MemSize : RuntimeLibcall;
-  def MEMMOVE_ELEMENT_UNORDERED_ATOMIC_#MemSize : RuntimeLibcall;
-  def MEMSET_ELEMENT_UNORDERED_ATOMIC_#MemSize : RuntimeLibcall;
+  def MEMCPY_ELEMENT_UNORDERED_ATOMIC_#MemSize
+      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+  def MEMMOVE_ELEMENT_UNORDERED_ATOMIC_#MemSize
+      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+  def MEMSET_ELEMENT_UNORDERED_ATOMIC_#MemSize
+      : RuntimeLibcall<Void, [Ptr, Int, SizeT]>;
 }
 
 // Exception handling
-def UNWIND_RESUME : RuntimeLibcall;
-def UNWIND_REGISTER : RuntimeLibcall;
-def UNWIND_UNREGISTER : RuntimeLibcall;
-def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall;
-def CXA_END_CLEANUP : RuntimeLibcall;
+def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []>;
+def CXA_END_CLEANUP : RuntimeLibcall<Void, []>;
 
 // Note: there are two sets of atomics libcalls; see
 // <https://llvm.org/docs/Atomics.html> for more info on the
@@ -651,9 +665,9 @@ def CXA_END_CLEANUP : RuntimeLibcall;
 
 // Atomic '__sync_*' libcalls.
 defset list<RuntimeLibcall> LibCalls__sync = {
-  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
-                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
-                  TypeSuffix<"16", Int128>] in {
+  foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
+                  TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
+                  TypeSuffix<"16", UInt128>] in {
     def SYNC_VAL_COMPARE_AND_SWAP_#IntTy.Suffix
         : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, IntTy.Type]>;
     def SYNC_LOCK_TEST_AND_SET_#IntTy.Suffix
@@ -686,9 +700,9 @@ defset list<RuntimeLibcall> LibCalls__atomic = {
   def ATOMIC_EXCHANGE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Ptr, Int]>;
   def ATOMIC_COMPARE_EXCHANGE
       : RuntimeLibcall<Bool, [SizeT, Ptr, Ptr, Ptr, Int, Int]>;
-  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
-                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
-                  TypeSuffix<"16", Int128>] in {
+  foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
+                  TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
+                  TypeSuffix<"16", UInt128>] in {
     def ATOMIC_EXCHANGE_#IntTy.Suffix
         : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
     def ATOMIC_COMPARE_EXCHANGE_#IntTy.Suffix
@@ -697,17 +711,17 @@ defset list<RuntimeLibcall> LibCalls__atomic = {
 
   def ATOMIC_LOAD : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
   def ATOMIC_STORE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
-  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
-                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
-                  TypeSuffix<"16", Int128>] in {
+  foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
+                  TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
+                  TypeSuffix<"16", UInt128>] in {
     def ATOMIC_LOAD_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [Ptr, Int]>;
     def ATOMIC_STORE_#IntTy.Suffix
         : RuntimeLibcall<Void, [Ptr, IntTy.Type, Int]>;
   }
 
-  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
-                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
-                  TypeSuffix<"16", Int128>] in {
+  foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
+                  TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
+                  TypeSuffix<"16", UInt128>] in {
     def ATOMIC_FETCH_ADD_#IntTy.Suffix
         : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
     def ATOMIC_FETCH_SUB_#IntTy.Suffix
@@ -740,9 +754,9 @@ multiclass AtomicOrderSizeLibcallImpl<string ProvidesBase> {
 
 // Out-of-line atomics libcalls
 defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
-  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
-                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
-                  TypeSuffix<"16", Int128>] in {
+  foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
+                  TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
+                  TypeSuffix<"16", UInt128>] in {
     defm OUTLINE_ATOMIC_CAS#IntTy.Suffix
         : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
     defm OUTLINE_ATOMIC_SWP#IntTy.Suffix
@@ -759,31 +773,31 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 }
 
 // Stack Protector Fail
-def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall;
+def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []>;
 def STACK_SMASH_HANDLER : RuntimeLibcall;
 
 // Safe stack
-def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
+def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;
 
 // Really a global variable, not a function
 def SAFESTACK_UNSAFE_STACK_PTR : RuntimeLibcall;
 
 def STACK_PROBE : RuntimeLibcall;
-def SECURITY_CHECK_COOKIE : RuntimeLibcall;
+def SECURITY_CHECK_COOKIE : RuntimeLibcall<Void, [Ptr]>;
 
 // Deoptimization
 def DEOPTIMIZE : RuntimeLibcall;
 
 // Return address
-def RETURN_ADDRESS : RuntimeLibcall;
+def RETURN_ADDRESS : RuntimeLibcall<Ptr, [Int]>;
 
 // GPU profiling
 def PROFILE_INSTRUMENT_GPU : RuntimeLibcall;
 def PROFILE_SAMPLING_GPU : RuntimeLibcall;
 
 // Clear cache
-def CLEAR_CACHE : RuntimeLibcall;
-def RISCV_FLUSH_ICACHE : RuntimeLibcall;
+def CLEAR_CACHE : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def RISCV_FLUSH_ICACHE : RuntimeLibcall<Int, [Ptr, Ptr, ULong]>;
 
 // Mips16 calls
 def MIPS16_RET_DC : RuntimeLibcall;
@@ -808,10 +822,10 @@ multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
 }
 
 // AArch64 calls
-def SC_MEMCPY : RuntimeLibcall;
-def SC_MEMMOVE : RuntimeLibcall;
-def SC_MEMSET : RuntimeLibcall;
-def SC_MEMCHR: RuntimeLibcall;
+def SC_MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def SC_MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 
 // AArch64 SME ABI calls
 def SMEABI_SME_STATE : RuntimeLibcall;
@@ -824,19 +838,19 @@ def SMEABI_SME_SAVE : RuntimeLibcall;
 def SMEABI_SME_RESTORE : RuntimeLibcall;
 
 // ARM EABI calls
-def AEABI_MEMCPY4 : RuntimeLibcall; // Align 4
-def AEABI_MEMCPY8 : RuntimeLibcall; // Align 8
-def AEABI_MEMMOVE4 : RuntimeLibcall;
-def AEABI_MEMMOVE8 : RuntimeLibcall;
-def AEABI_MEMSET4 : RuntimeLibcall;
-def AEABI_MEMSET8 : RuntimeLibcall;
-def AEABI_MEMCLR : RuntimeLibcall;
-def AEABI_MEMCLR4 : RuntimeLibcall;
-def AEABI_MEMCLR8 : RuntimeLibcall;
-def AEABI_UREAD4 : RuntimeLibcall;
-def AEABI_UREAD8 : RuntimeLibcall;
-def AEABI_UWRITE4 : RuntimeLibcall;
-def AEABI_UWRITE8 : RuntimeLibcall;
+def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4
+def AEABI_MEMCPY8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 8
+def AEABI_MEMMOVE4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def AEABI_MEMMOVE8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def AEABI_MEMSET4 : RuntimeLibcall<Void, [Ptr, SizeT, Int]>;
+def AEABI_MEMSET8 : RuntimeLibcall<Void, [Ptr, SizeT, Int]>;
+def AEABI_MEMCLR : RuntimeLibcall<Void, [Ptr, SizeT]>;
+def AEABI_MEMCLR4 : RuntimeLibcall<Void, [Ptr, SizeT]>;
+def AEABI_MEMCLR8 : RuntimeLibcall<Void, [Ptr, SizeT]>;
+def AEABI_UREAD4 : RuntimeLibcall<Int, [Ptr]>;
+def AEABI_UREAD8 : RuntimeLibcall<LLong, [Ptr]>;
+def AEABI_UWRITE4 : RuntimeLibcall<Int, [Int, Ptr]>;
+def AEABI_UWRITE8 : RuntimeLibcall<LLong, [LLong, Ptr]>;
 
 // Hexagon calls
 def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
@@ -846,32 +860,32 @@ def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall;
 def MEMCPY_ALIGN_4 : RuntimeLibcall;
 
 // Objective-C calls
-def OBJC_AUTORELEASE : RuntimeLibcall;
-def OBJC_AUTORELEASEPOOLPOP : RuntimeLibcall;
-def OBJC_AUTORELEASEPOOLPUSH : RuntimeLibcall;
-def OBJC_AUTORELEASERETURNVALUE : RuntimeLibcall;
-def OBJC_COPYWEAK : RuntimeLibcall;
-def OBJC_DESTROYWEAK : RuntimeLibcall;
-def OBJC_INITWEAK : RuntimeLibcall;
-def OBJC_LOADWEAK : RuntimeLibcall;
-def OBJC_LOADWEAKRETAINED : RuntimeLibcall;
-def OBJC_MOVEWEAK : RuntimeLibcall;
-def OBJC_RELEASE : RuntimeLibcall;
-def OBJC_RETAIN : RuntimeLibcall;
-def OBJC_RETAINAUTORELEASE : RuntimeLibcall;
-def OBJC_RETAINAUTORELEASERETURNVALUE : RuntimeLibcall;
-def OBJC_RETAINAUTORELEASEDRETURNVALUE : RuntimeLibcall;
-def OBJC_CLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall;
-def OBJC_RETAINBLOCK : RuntimeLibcall;
-def OBJC_STORESTRONG : RuntimeLibcall;
-def OBJC_STOREWEAK : RuntimeLibcall;
-def OBJC_UNSAFECLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall;
-def OBJC_RETAINEDOBJECT : RuntimeLibcall;
-def OBJC_UNRETAINEDOBJECT : RuntimeLibcall;
-def OBJC_UNRETAINEDPOINTER : RuntimeLibcall;
-def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall;
-def OBJC_SYNC_ENTER : RuntimeLibcall;
-def OBJC_SYNC_EXIT : RuntimeLibcall;
+def OBJC_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_AUTORELEASEPOOLPOP : RuntimeLibcall<Void, [Ptr]>;
+def OBJC_AUTORELEASEPOOLPUSH : RuntimeLibcall<Ptr, []>;
+def OBJC_AUTORELEASERETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_COPYWEAK : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def OBJC_DESTROYWEAK : RuntimeLibcall<Void, [Ptr]>;
+def OBJC_INITWEAK : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def OBJC_LOADWEAK : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_LOADWEAKRETAINED : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_MOVEWEAK : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def OBJC_RELEASE : RuntimeLibcall<Void, [Ptr]>;
+def OBJC_RETAIN : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_RETAINAUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_RETAINAUTORELEASERETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_RETAINAUTORELEASEDRETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_CLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_RETAINBLOCK : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_STORESTRONG : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def OBJC_STOREWEAK : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def OBJC_UNSAFECLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_RETAINEDOBJECT : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_UNRETAINEDOBJECT : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_UNRETAINEDPOINTER : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
+def OBJC_SYNC_ENTER : RuntimeLibcall<Int, [Ptr]>;
+def OBJC_SYNC_EXIT : RuntimeLibcall<Int, [Ptr]>;
 
 def ABORT : RuntimeLibcall<Void, []>;
 def ABS : RuntimeLibcall<Int, [Int]>;
@@ -964,8 +978,8 @@ def GETLOGIN_R : RuntimeLibcall<Int, [Ptr, SizeT]>;
 def GETPWNAM : RuntimeLibcall<Ptr, [Ptr]>;
 def GETS : RuntimeLibcall<Ptr, [Ptr]>;
 def GETTIMEOFDAY : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def HTONL : RuntimeLibcall<Int32, [Int32]>;
-def HTONS : RuntimeLibcall<Int16, [Int16]>;
+def HTONL : RuntimeLibcall<UInt32, [UInt32]>;
+def HTONS : RuntimeLibcall<UInt16, [UInt16]>;
 def IPRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
 def ISASCII : RuntimeLibcall<Int, [Int]>;
 def ISDIGIT : RuntimeLibcall<Int, [Int]>;
@@ -987,27 +1001,27 @@ def MEMSET_PATTERN8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
 def MKDIR : RuntimeLibcall<Int, [Ptr, IntX]>;
 def MKTIME : RuntimeLibcall<IntPlus, [Ptr]>;
 def MSVC_DELETE_ARRAY_PTR32 : RuntimeLibcall<Void, [Ptr]>;
-def MSVC_DELETE_ARRAY_PTR32_INT : RuntimeLibcall<Void, [Ptr, Int]>;
+def MSVC_DELETE_ARRAY_PTR32_INT : RuntimeLibcall<Void, [Ptr, UInt]>;
 def MSVC_DELETE_ARRAY_PTR32_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def MSVC_DELETE_ARRAY_PTR64 : RuntimeLibcall<Void, [Ptr]>;
-def MSVC_DELETE_ARRAY_PTR64_LONGLONG : RuntimeLibcall<Void, [Ptr, LLong]>;
+def MSVC_DELETE_ARRAY_PTR64_LONGLONG : RuntimeLibcall<Void, [Ptr, ULLong]>;
 def MSVC_DELETE_ARRAY_PTR64_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def MSVC_DELETE_PTR32 : RuntimeLibcall<Void, [Ptr]>;
-def MSVC_DELETE_PTR32_INT : RuntimeLibcall<Void, [Ptr, Int]>;
+def MSVC_DELETE_PTR32_INT : RuntimeLibcall<Void, [Ptr, UInt]>;
 def MSVC_DELETE_PTR32_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def MSVC_DELETE_PTR64 : RuntimeLibcall<Void, [Ptr]>;
-def MSVC_DELETE_PTR64_LONGLONG : RuntimeLibcall<Void, [Ptr, LLong]>;
+def MSVC_DELETE_PTR64_LONGLONG : RuntimeLibcall<Void, [Ptr, ULLong]>;
 def MSVC_DELETE_PTR64_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def MSVC_NEW_ARRAY_INT : RuntimeLibcall<Ptr, [Int]>;
-def MSVC_NEW_ARRAY_INT_NOTHROW : RuntimeLibcall<Ptr, [Int, Ptr]>;
-def MSVC_NEW_ARRAY_LONGLONG : RuntimeLibcall<Ptr, [LLong]>;
-def MSVC_NEW_ARRAY_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [LLong, Ptr]>;
-def MSVC_NEW_INT : RuntimeLibcall<Ptr, [Int]>;
-def MSVC_NEW_INT_NOTHROW : RuntimeLibcall<Ptr, [Int, Ptr]>;
-def MSVC_NEW_LONGLONG : RuntimeLibcall<Ptr, [LLong]>;
-def MSVC_NEW_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [LLong, Ptr]>;
-def NTOHL : RuntimeLibcall<Int32, [Int32]>;
-def NTOHS : RuntimeLibcall<Int16, [Int16]>;
+def MSVC_NEW_ARRAY_INT : RuntimeLibcall<Ptr, [UInt]>;
+def MSVC_NEW_ARRAY_INT_NOTHROW : RuntimeLibcall<Ptr, [UInt, Ptr]>;
+def MSVC_NEW_ARRAY_LONGLONG : RuntimeLibcall<Ptr, [ULLong]>;
+def MSVC_NEW_ARRAY_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [ULLong, Ptr]>;
+def MSVC_NEW_INT : RuntimeLibcall<Ptr, [UInt]>;
+def MSVC_NEW_INT_NOTHROW : RuntimeLibcall<Ptr, [UInt, Ptr]>;
+def MSVC_NEW_LONGLONG : RuntimeLibcall<Ptr, [ULLong]>;
+def MSVC_NEW_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [ULLong, Ptr]>;
+def NTOHL : RuntimeLibcall<UInt32, [UInt32]>;
+def NTOHS : RuntimeLibcall<UInt16, [UInt16]>;
 def OPEN : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
 def OPEN64 : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
 def OPENDIR : RuntimeLibcall<Ptr, [Ptr]>;
@@ -1094,8 +1108,8 @@ def STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]>;
 def STRTOL : RuntimeLibcall<Long, [Ptr, Ptr, Int]>;
 def STRTOLD : RuntimeLibcall<LDbl, [Ptr, Ptr]>;
 def STRTOLL : RuntimeLibcall<LLong, [Ptr, Ptr, Int]>;
-def STRTOUL : RuntimeLibcall<Long, [Ptr, Ptr, Int]>;
-def STRTOULL : RuntimeLibcall<LLong, [Ptr, Ptr, Int]>;
+def STRTOUL : RuntimeLibcall<ULong, [Ptr, Ptr, Int]>;
+def STRTOULL : RuntimeLibcall<ULLong, [Ptr, Ptr, Int]>;
 def STRXFRM : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
 def SYSTEM : RuntimeLibcall<Int, [Ptr]>;
 def TERMINATE : RuntimeLibcall<Void, []>;
@@ -1128,45 +1142,45 @@ def VSSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def WCSLEN : RuntimeLibcall<SizeT, [Ptr]>;
 def WRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]>;
 def ZDAPV : RuntimeLibcall<Void, [Ptr]>;
-def ZDAPVJ : RuntimeLibcall<Void, [Ptr, Int]>;
-def ZDAPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Int, Int]>;
-def ZDAPVM : RuntimeLibcall<Void, [Ptr, Long]>;
-def ZDAPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Long, Long]>;
+def ZDAPVJ : RuntimeLibcall<Void, [Ptr, UInt]>;
+def ZDAPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, UInt, UInt]>;
+def ZDAPVM : RuntimeLibcall<Void, [Ptr, ULong]>;
+def ZDAPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, ULong, ULong]>;
 def ZDAPVRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def ZDAPVST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, IntPlus]>;
 def ZDAPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, IntPlus, Ptr]>;
 def ZDLPV : RuntimeLibcall<Void, [Ptr]>;
-def ZDLPVJ : RuntimeLibcall<Void, [Ptr, Int]>;
-def ZDLPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Int, Int]>;
-def ZDLPVM : RuntimeLibcall<Void, [Ptr, Long]>;
-def ZDLPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Long, Long]>;
+def ZDLPVJ : RuntimeLibcall<Void, [Ptr, UInt]>;
+def ZDLPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, UInt, UInt]>;
+def ZDLPVM : RuntimeLibcall<Void, [Ptr, ULong]>;
+def ZDLPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, ULong, ULong]>;
 def ZDLPVRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def ZDLPVST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, IntPlus]>;
 def ZDLPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, IntPlus, Ptr]>;
-def ZNAJ : RuntimeLibcall<Ptr, [Int]>;
-def ZNAJRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Int, Ptr]>;
-def ZNAJST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [Int, Int]>;
-def ZNAJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Int, Int, Ptr]>;
-def ZNAM : RuntimeLibcall<Ptr, [Long]>;
-def ZNAM12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Bool]>;
-def ZNAMRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Ptr]>;
-def ZNAMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Ptr, Bool]>;
-def ZNAMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [Long, Long]>;
-def ZNAMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Bool]>;
-def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Long, Ptr]>;
-def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Ptr, Bool]>;
-def ZNWJ : RuntimeLibcall<Ptr, [Int]>;
-def ZNWJRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Int, Ptr]>;
-def ZNWJST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [Int, Int]>;
-def ZNWJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Int, Int, Ptr]>;
-def ZNWM : RuntimeLibcall<Ptr, [Long]>;
-def ZNWM12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Bool]>;
-def ZNWMRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Ptr]>;
-def ZNWMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Ptr, Bool]>;
-def ZNWMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [Long, Long]>;
-def ZNWMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Bool]>;
-def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Long, Ptr]>;
-def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Ptr, Bool]>;
+def ZNAJ : RuntimeLibcall<Ptr, [UInt]>;
+def ZNAJRKST9NOTHROW_T : RuntimeLibcall<Ptr, [UInt, Ptr]>;
+def ZNAJST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [UInt, UInt]>;
+def ZNAJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [UInt, UInt, Ptr]>;
+def ZNAM : RuntimeLibcall<Ptr, [ULong]>;
+def ZNAM12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, UInt8]>;
+def ZNAMRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, Ptr]>;
+def ZNAMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, Ptr, UInt8]>;
+def ZNAMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [ULong, ULong]>;
+def ZNAMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, ULong, UInt8]>;
+def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, ULong, Ptr]>;
+def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, ULong, Ptr, UInt8]>;
+def ZNWJ : RuntimeLibcall<Ptr, [UInt]>;
+def ZNWJRKST9NOTHROW_T : RuntimeLibcall<Ptr, [UInt, Ptr]>;
+def ZNWJST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [UInt, UInt]>;
+def ZNWJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [UInt, UInt, Ptr]>;
+def ZNWM : RuntimeLibcall<Ptr, [ULong]>;
+def ZNWM12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, UInt8]>;
+def ZNWMRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, Ptr]>;
+def ZNWMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, Ptr, UInt8]>;
+def ZNWMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [ULong, ULong]>;
+def ZNWMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, ULong, UInt8]>;
+def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, ULong, Ptr]>;
+def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, ULong, Ptr, UInt8]>;
 def KMPC_ALLOC_SHARED : RuntimeLibcall<Ptr, [SizeT]>;
 def KMPC_FREE_SHARED : RuntimeLibcall<Void, [Ptr, SizeT]>;
 
