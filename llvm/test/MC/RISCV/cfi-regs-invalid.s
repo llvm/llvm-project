@@ -1,7 +1,10 @@
 # RUN: not llvm-mc -triple riscv32 < %s 2>&1 | FileCheck %s
-# RUN: not llvm-mc -triple riscv64 < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv64 < %s 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
 .cfi_startproc
 .cfi_offset x00, 0 # CHECK: :[[@LINE]]:16: error: invalid register name
 .cfi_offset a8, 8 # CHECK: :[[@LINE]]:15: error: invalid register name
+.cfi_same_value cycleh # RV64: :[[@LINE]]:17: error: system register 'cycleh' is RV32 only
+.cfi_same_value aif.hartid # CHECK: :[[@LINE]]:17: error: system register 'aif.hartid' requires 'xaifet' to be enabled
 .cfi_endproc
