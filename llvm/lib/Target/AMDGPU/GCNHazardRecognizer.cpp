@@ -1294,7 +1294,8 @@ static void addRegsToSet(const SIRegisterInfo &TRI,
   for (const MachineOperand &Op : Ops) {
     if (!Op.isReg())
       continue;
-    // Implicit defs are liveness bookkeeping, not real register writes.
+    // SMEM/VMEM GPR writes are explicit. Split spills also carry implicit
+    // super-register defs for liveness.
     if (Op.isDef() && Op.isImplicit())
       continue;
     addRegUnits(TRI, Op.isDef() ? DefSet : UseSet, Op.getReg().asMCReg());
