@@ -382,10 +382,10 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       // The runtime reads each non-string argument from a whole number of
       // 8-byte slots, also when the stored value is smaller.
       Value *ToStore = processNonStringArg(Args[i], Builder);
-      StoreInst *StBuff = Builder.CreateStore(ToStore, PtrToStore);
+      [[maybe_unused]] StoreInst *StBuff =
+          Builder.CreateStore(ToStore, PtrToStore);
       LLVM_DEBUG(dbgs() << "inserting store to printf buffer:" << *StBuff
                         << '\n');
-      (void)StBuff;
       PtrToStore = Builder.CreateConstInBoundsGEP1_32(
           Builder.getInt8Ty(), PtrToStore,
           alignTo(DL.getTypeAllocSize(ToStore->getType()), 8),
