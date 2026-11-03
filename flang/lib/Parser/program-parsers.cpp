@@ -99,20 +99,24 @@ static constexpr auto globalDirective{
 
 // Collapse only consecutive misplaced DECLAREs into a recovery node.
 static constexpr auto misplacedOpenACCDeclareRun{
-    construct<ProgramUnit>(MisplacedOpenACCDeclare{} >>
-        skipMany(MisplacedOpenACCDeclare{}) >> construct<ErrorRecovery>())};
+    construct<ProgramUnit>(misplacedOpenACCDeclare >>
+        skipMany(misplacedOpenACCDeclare) >> construct<ErrorRecovery>())};
 
 // Classification needs only the next Fortran statement, not the grammar or
 // parse-tree nodes of the intervening compiler directives.
-static constexpr auto skipCompilerDirectiveLines{
+static constexpr auto skipDirectiveLines{
     skipMany(skipStuffBeforeStatement >> "!"_ch >> skipToNextLineIfAny)};
 
 // At file scope, DECLARE may start an unnamed main program. Complete
 // specification statements therefore take precedence over procedure headers,
 // including CUDA ATTRIBUTES statements with keyword-shaped object names.
-// After fixed-form blank removal, a typed header with arguments can also be an
-// array declaration, and a CUDA header without arguments can be an ATTRIBUTES
-// statement; such headers retain normal parser diagnostics.
+// After fixed-form blank removal, REAL FUNCTION F can be a scalar declaration
+// and REAL FUNCTION F(N) can be an array declaration. A CUDA header without
+// arguments can be an ATTRIBUTES statement; these cases retain normal parser
+// diagnostics.
+// In fixed form, MODULE SUBROUTINE S can also start module SUBROUTINES. The
+// lookahead recognizes a prefixed header, but program-unit parsing gives the
+// module interpretation priority.
 static constexpr auto externalSubprogramStmt{skipStuffBeforeStatement >>
     !statement(Parser<OtherSpecificationStmt>{}) >>
     !statement(typeDeclarationStmt) >> maybe(label) >>
@@ -122,7 +126,7 @@ static constexpr auto externalSubprogramStmt{skipStuffBeforeStatement >>
 // by a complete procedure header. This decision does not consume input.
 static constexpr auto misplacedOpenACCDeclareAhead{
     lookAhead("!$ACC "_sptok >> "DECLARE"_tok) >>
-    lookAhead(skipCompilerDirectiveLines >> externalSubprogramStmt)};
+    lookAhead(skipDirectiveLines >> externalSubprogramStmt)};
 
 // After classification, parse the prefix once. Ordinary directives keep their
 // nodes; only DECLARE runs become recovery nodes. The final check ensures the
@@ -360,7 +364,7 @@ TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<ModuleSubprogram>(indirect(compilerDirective)) ||
     construct<ModuleSubprogram>(
-        MisplacedOpenACCDeclare{} >> construct<ErrorRecovery>()))
+        misplacedOpenACCDeclare >> construct<ErrorRecovery>()))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -449,7 +453,7 @@ TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<InterfaceSpecification>(indirect(compilerDirective)) ||
     construct<InterfaceSpecification>(
-        MisplacedOpenACCDeclare{} >> construct<ErrorRecovery>()))
+        misplacedOpenACCDeclare >> construct<ErrorRecovery>()))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
