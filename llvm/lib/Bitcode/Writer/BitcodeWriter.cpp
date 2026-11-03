@@ -118,10 +118,6 @@ static cl::opt<bool> PreserveBitcodeUseListOrder(
     "preserve-bc-uselistorder", cl::Hidden, cl::init(true),
     cl::desc("Preserve use-list order when writing LLVM bitcode."));
 
-namespace llvm {
-extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
-}
-
 namespace {
 
 /// These are manifest constants used by the bitcode writer. They do not need to
@@ -975,6 +971,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_HWADDRESS;
   case Attribute::SanitizeThread:
     return bitc::ATTR_KIND_SANITIZE_THREAD;
+  case Attribute::SanitizeConcurrency:
+    return bitc::ATTR_KIND_SANITIZE_CONCURRENCY;
   case Attribute::SanitizeType:
     return bitc::ATTR_KIND_SANITIZE_TYPE;
   case Attribute::SanitizeMemory:
@@ -3143,16 +3141,6 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
             Record.push_back(Flags);
         }
         break;
-      case Instruction::FNeg: {
-        assert(CE->getNumOperands() == 1 && "Unknown constant expr!");
-        Code = bitc::CST_CODE_CE_UNOP;
-        Record.push_back(getEncodedUnaryOpcode(CE->getOpcode()));
-        Record.push_back(VE.getValueID(C->getOperand(0)));
-        uint64_t Flags = getOptimizationFlags(CE);
-        if (Flags != 0)
-          Record.push_back(Flags);
-        break;
-      }
       case Instruction::GetElementPtr: {
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);

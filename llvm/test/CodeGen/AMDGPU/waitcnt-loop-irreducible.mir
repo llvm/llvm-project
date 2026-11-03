@@ -22,6 +22,7 @@
 # GFX9: S_WAITCNT .Lgkmcnt_0{{$}}
 # GCN: S_CMP_GE_I32
 name:            irreducible_loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.3, %bb.2
@@ -69,6 +70,7 @@ body:             |
 # GCN: FLAT_STORE_DWORD
 # GCN: S_ENDPGM 0
 name: irreducible_loop_extended
+tracksRegLiveness: false
 
 body: |
   bb.0:

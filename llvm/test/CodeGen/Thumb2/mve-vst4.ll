@@ -16,17 +16,16 @@ define void @vst4_v2i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr r0, [r0, #28]
 ; CHECK-NEXT:    vmov q1[3], q1[1], r12, r2
 ; CHECK-NEXT:    vmov q0[2], q0[0], r4, r6
-; CHECK-NEXT:    vmov.f32 s8, s4
+; CHECK-NEXT:    vmov.f32 s8, s5
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r0
-; CHECK-NEXT:    vmov.f32 s9, s6
-; CHECK-NEXT:    vmov.f32 s4, s5
-; CHECK-NEXT:    vmov.f32 s5, s7
-; CHECK-NEXT:    vmov.f32 s10, s0
-; CHECK-NEXT:    vmov.f32 s11, s2
-; CHECK-NEXT:    vmov.f32 s6, s1
-; CHECK-NEXT:    vstrw.32 q2, [r1]
-; CHECK-NEXT:    vmov.f32 s7, s3
-; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s5, s6
+; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    vmov.f32 s11, s3
+; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vstrw.32 q2, [r1, #16]
+; CHECK-NEXT:    vmov.f32 s7, s2
+; CHECK-NEXT:    vstrw.32 q1, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %l1 = load <2 x i32>, ptr %src, align 4

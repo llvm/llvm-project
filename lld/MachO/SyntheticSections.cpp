@@ -879,14 +879,13 @@ ObjCStubsSection::ObjCStubsSection()
 }
 
 bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
-  return sym->getName().starts_with(symbolPrefix);
+  return sym->getName().starts_with(objcMsgSendStubPrefix);
 }
 
 StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   assert(isObjCStubSymbol(sym) && "not an objc stub");
   auto name = sym->getName();
-  StringRef methname = name.drop_front(symbolPrefix.size());
-  return methname;
+  return name.drop_front(objcMsgSendStubPrefix.size());
 }
 
 size_t ObjCStubsSection::getStubSize() const {
@@ -904,12 +903,13 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
   size_t stubSize = getStubSize();
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
-      /*value=*/symbols.size() * stubSize,
+      /*value=*/stubsSectionSize,
       /*size=*/stubSize,
       /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
       /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
       /*noDeadStrip=*/false);
   symbols.push_back(newSym);
+  stubsSectionSize += stubSize;
 }
 
 void ObjCStubsSection::setUp() {
@@ -933,9 +933,7 @@ void ObjCStubsSection::setUp() {
   }
 }
 
-uint64_t ObjCStubsSection::getSize() const {
-  return getStubSize() * symbols.size();
-}
+uint64_t ObjCStubsSection::getSize() const { return stubsSectionSize; }
 
 void ObjCStubsSection::sortSymbols(
     const llvm::DenseMap<const Symbol *, int> &priorities) {
@@ -947,9 +945,12 @@ void ObjCStubsSection::sortSymbols(
     };
     return priority(a) < priority(b);
   });
-  size_t stubSize = getStubSize();
-  for (auto [idx, sym] : llvm::enumerate(symbols))
-    sym->value = idx * stubSize;
+  size_t stubOffset = 0;
+  for (Defined *sym : symbols) {
+    sym->value = stubOffset;
+    stubOffset += sym->size;
+  }
+  assert(stubOffset == stubsSectionSize);
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
@@ -1768,7 +1769,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       },
       /*forceInputOrder=*/true);
 
-  // Like lexigraphical sort, except we read strings in reverse and take the
+  // Like lexicographical sort, except we read strings in reverse and take the
   // longest string first
   // TODO: We could improve performance by implementing our own sort that avoids
   // comparing characters we know to be the same. See
@@ -2048,7 +2049,7 @@ void InitOffsetsSection::setUp() {
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
               ": unsupported relocation type: " + attrs.name);
-      if (rel.addend != 0)
+      if (rel.getAddend() != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
       if (isa<InputSection *>(rel.referent))
@@ -2075,6 +2076,9 @@ ObjCMethListSection::ObjCMethListSection()
 // create them early on here to ensure they are processed correctly by the lld
 // pipeline.
 void ObjCMethListSection::setUp() {
+  llvm::erase_if(inputs, [](const ConcatInputSection *isec) {
+    return isec->shouldOmitFromOutput();
+  });
   for (const ConcatInputSection *isec : inputs) {
     uint32_t structSizeAndFlags = 0, structCount = 0;
     readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
@@ -2140,6 +2144,8 @@ void ObjCMethListSection::finalize() {
 void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
   uint8_t *buf = bufStart;
   for (const ConcatInputSection *isec : inputs) {
+    assert(!isec->shouldOmitFromOutput() &&
+           "dead method list should have been dropped in setUp()");
     assert(buf - bufStart == std::ptrdiff_t(isec->outSecOff) &&
            "Writing at unexpected offset");
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
@@ -2203,7 +2209,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = def->getVA();
   } else {
     auto *isec = cast<InputSection *>(reloc->referent);
-    symVA = isec->getVA(reloc->addend);
+    symVA = isec->getVA(reloc->getAddend());
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;
@@ -2551,15 +2557,20 @@ void ChainedFixupsSection::finalizeContents() {
   for (Location &loc : locations) {
     uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
-    if (offset % pageSize + target->wordSize > pageSize) {
-      std::string msg = loc.isec->getLocation(loc.offset) +
-                        ": fixup straddles page boundary; stop packing structs "
-                        "containing pointers or link with -no_fixup_chains";
+    auto report = [&](const Twine &problem) {
+      std::string msg = (loc.isec->getLocation(loc.offset) + ": " + problem +
+                         "; stop packing structs containing pointers or link "
+                         "with -no_fixup_chains")
+                            .str();
       std::string src = loc.isec->getSourceLocation(loc.offset);
       if (!src.empty())
         msg += "\n>>> defined at " + src;
       error(msg);
-    }
+    };
+    if (offset % pageSize + target->wordSize > pageSize)
+      report("fixup straddles page boundary");
+    if (offset % chainStride != 0)
+      report("fixup is not " + Twine(chainStride) + "-byte aligned");
     loc.offset = offset;
   }
 

@@ -8,6 +8,7 @@
 name: uadde_s32_s1_vsv
 legalized: true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -42,6 +43,7 @@ body: |
 name: uadde_s32_s1_vvs
 legalized: true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
