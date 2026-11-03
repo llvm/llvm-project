@@ -69,14 +69,15 @@
 #endif
 
 #if SANITIZER_LINUX
+#include <ftw.h>
+#include <linux/cdrom.h>
+#include <linux/fd.h>
+#include <linux/filter.h>
 #include <malloc.h>
 #include <mntent.h>
 #include <netinet/ether.h>
 #include <sys/sysinfo.h>
 #include <sys/vt.h>
-#include <linux/cdrom.h>
-#include <linux/fd.h>
-#include <linux/filter.h>
 #if SANITIZER_ANDROID
 #include <linux/fs.h>
 #endif
@@ -1239,6 +1240,10 @@ CHECK_SIZE_AND_OFFSET(tm, tm_zone);
 #  endif
 
 #  if SANITIZER_LINUX
+CHECK_TYPE_SIZE(FTW);
+CHECK_SIZE_AND_OFFSET(FTW, base);
+CHECK_SIZE_AND_OFFSET(FTW, level);
+
 CHECK_TYPE_SIZE(mntent);
 CHECK_SIZE_AND_OFFSET(mntent, mnt_fsname);
 CHECK_SIZE_AND_OFFSET(mntent, mnt_dir);
