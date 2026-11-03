@@ -38,12 +38,14 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -65,6 +67,7 @@ class Compilation;
 namespace tooling {
 
 class CompilationDatabase;
+struct CompileCommand;
 
 /// Retrieves the flags of the `-cc1` job in `Compilation` that has only source
 /// files as its inputs.
@@ -309,6 +312,23 @@ public:
   DiagnosticOptions *DiagOpts = nullptr;
 };
 
+/// A hook that runs around each compile command processed by a \c ClangTool.
+///
+/// \p Cmd is the compile command about to be processed. Its \c Directory is
+/// the working directory the command will run in, and its \c Filename may be
+/// relative to it. \p Invoke does the actual work (applying arguments
+/// adjusters and running the tool action) and returns whether it succeeded.
+/// The wrapper should normally call \p Invoke exactly once and return its
+/// result; the wrapper's return value is used as the success status for
+/// \p Cmd.
+///
+/// This allows, for example, setting up file-specific state for the whole
+/// duration of the invocation, e.g. using an RAII object.
+///
+/// Executors may call the wrapper concurrently from multiple threads.
+using InvocationWrapper = std::function<bool(
+    const CompileCommand &Cmd, llvm::function_ref<bool()> Invoke)>;
+
 /// Utility to run a FrontendAction over a set of files.
 ///
 /// This class is written to be usable for command line utilities.
@@ -360,6 +380,13 @@ public:
   /// Clear the command line arguments adjuster chain.
   void clearArgumentsAdjusters();
 
+  /// Set a hook that runs around the processing of each compile command.
+  ///
+  /// See \c InvocationWrapper. Passing an empty wrapper removes the hook.
+  void setInvocationWrapper(InvocationWrapper Wrapper) {
+    InvocationWrap = std::move(Wrapper);
+  }
+
   /// Runs an action over all files specified in the command line.
   ///
   /// \param Action Tool action.
@@ -398,6 +425,8 @@ private:
   llvm::StringSet<> SeenWorkingDirectories;
 
   ArgumentsAdjuster ArgsAdjuster;
+
+  InvocationWrapper InvocationWrap;
 
   DiagnosticConsumer *DiagConsumer = nullptr;
 
