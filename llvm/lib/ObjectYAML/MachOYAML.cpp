@@ -15,7 +15,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/Host.h"
 #include <cstdint>
 #include <cstring>
 
@@ -101,13 +100,9 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
     IO.setContext(&Object);
   }
   IO.mapTag("!mach-o", true);
-  // Always write the byte order: input without it gets the host's, so leaving
-  // it out would make the YAML mean different objects on different hosts.
-  if (IO.outputting())
-    IO.mapRequired("IsLittleEndian", Object.IsLittleEndian);
-  else
-    IO.mapOptional("IsLittleEndian", Object.IsLittleEndian,
-                   sys::IsLittleEndianHost);
+  // Don't default to the host's byte order, which would make the same YAML
+  // describe different objects on different hosts.
+  IO.mapRequired("IsLittleEndian", Object.IsLittleEndian);
   Object.DWARF.IsLittleEndian = Object.IsLittleEndian;
 
   IO.mapRequired("FileHeader", Object.Header);

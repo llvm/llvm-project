@@ -8,6 +8,7 @@
 #   xcrun --sdk iphoneos clang -target arm64-apple-ios15.1 -o b.o b.c -c
 #   xcrun --sdk iphoneos clang -target arm64-apple-ios15.1 -dynamiclib b.o -o libfixups.dylib -install_name @executable_path/libfixups.dylib -L. -la
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
