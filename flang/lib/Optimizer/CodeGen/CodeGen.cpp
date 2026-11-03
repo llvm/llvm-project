@@ -3912,8 +3912,8 @@ foldConstantInitializer(mlir::Value val, mlir::Type llvmType,
     if (body.empty())
       return llvm::failure();
 
-    // Walk the struct-level fir.insert_value chain once, back to the root
-    // fir.undefined. Each insert sets one member by its integer field index.
+    // Walk the struct-level fir.insert_value chain back to its fir.undefined or
+    // fir.zero_bits root.
     llvm::SmallVector<mlir::TypedAttr> members(body.size(), mlir::TypedAttr{});
     mlir::Value cur = val;
     while (true) {
@@ -3984,7 +3984,7 @@ foldConstantInitializer(mlir::Value val, mlir::Type llvmType,
   // llvm.array level per Fortran dimension so aggregate elements (character,
   // complex, derived types, descriptors) are rejected.
   mlir::Type llvmEleTy = llvmType;
-  for (size_t i = 0, rank = firShape.size(); i < rank; ++i) {
+  for (auto _ : firShape) {
     auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(llvmEleTy);
     if (!arrTy)
       return llvm::failure();
