@@ -223,34 +223,6 @@ def have_host_clang_repl_thread_local():
     return clang_repl_cmd.returncode == 0 and b"success" in clang_repl_cmd.stdout
 
 
-def have_host_clang_repl_cuda():
-    clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
-
-    if not clang_repl_exe:
-        return False
-
-    testcode = b'\n'.join([
-        b"__global__ void test_func() {}",
-        b"test_func<<<1,1>>>();",
-        b"extern \"C\" int puts(const char *s);",
-        b"puts(cudaGetLastError() ? \"failure\" : \"success\");",
-        b"%quit"
-    ])
-    try:
-        clang_repl_cmd = subprocess.run([clang_repl_exe, '--cuda'],
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
-                                        input=testcode)
-    except OSError:
-        return False
-
-    if clang_repl_cmd.returncode == 0:
-        if clang_repl_cmd.stdout.find(b"success") != -1:
-            return True
-
-    return False
-
-
 skip_clang_repl_checks = lit.util.pythonize_bool(
     lit_config.params.get(
         "clang_skip_clang_repl_checks",
@@ -260,9 +232,6 @@ skip_clang_repl_checks = lit.util.pythonize_bool(
 
 if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
-
-    if have_host_clang_repl_cuda():
-        config.available_features.add('host-supports-cuda')
 
     if have_host_clang_repl_thread_local():
         config.available_features.add("jit-thread-local")
