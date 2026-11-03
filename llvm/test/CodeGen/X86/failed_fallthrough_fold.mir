@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=branch-folder -verify-machineinstrs -o - %s | FileCheck %s
+
+# Check that reversing the condition while considering a cold fallthrough
+# tail-call fold does not mutate the real branch unless the conditional tail
+# call is actually formed.
+#
+# bb.0 has two successors, both of which are tail-call blocks:
+#
+#   bb.0:
+#     jne bb.2        ; hot taken edge
+#     fallthrough bb.1; cold fallthrough edge
+#
+#   bb.1: indirect tail call through register, cold
+#   bb.2: direct tail call, hot
+#
+# Folding bb.1 would require reversing the condition and forming a conditional
+# indirect tail call which isn't possible on X86 so
+# canMakeTailCallConditional() should fail. Since the reversed condition is only
+# a local copy, the real branch and profile weights must remain unchanged.
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+
+  declare void @hot_tail()
+
+  define void @failed_fallthrough_fold(i32 %x, ptr %cold_callee) {
+    ret void
+  }
+...
+---
+name: failed_fallthrough_fold
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+  - { reg: '$rsi' }
+body: |
+  ; CHECK-LABEL: name: failed_fallthrough_fold
+
+  ; CHECK: bb.0:
+  ; CHECK-NEXT: successors: %bb.2(0x7fef9fcb), %bb.1(0x00106035)
+  ; CHECK: TEST32rr $edi, $edi, implicit-def $eflags
+  ; CHECK-NEXT: JCC_1 %bb.2, 5, implicit{{.*}}$eflags
+
+  bb.0:
+    liveins: $edi, $rsi
+    successors: %bb.2(0x7fef9fcb), %bb.1(0x00106035)
+    TEST32rr $edi, $edi, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  ; Cold fallthrough successor. This is a tail call, but it is indirect, so it
+  ; should not be converted into a conditional tail call.
+  ;
+  ; CHECK: bb.1:
+  ; CHECK: TCRETURNri64 killed $rsi, 0, csr_64, implicit $rsp
+
+  bb.1:
+    liveins: $rsi
+    TCRETURNri64 killed $rsi, 0, csr_64, implicit $rsp
+
+  ; Hot taken successor. 
+  ;
+  ; CHECK: bb.2:
+  ; CHECK: TCRETURNdi64 @hot_tail, 0, csr_64, implicit $rsp
+
+  bb.2:
+    TCRETURNdi64 @hot_tail, 0, csr_64, implicit $rsp
+...
