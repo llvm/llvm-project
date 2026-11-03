@@ -81,7 +81,7 @@ cmake ../llvm -G Ninja                                           \
     -DLLVM_ENABLE_RUNTIMES=openmp                                \
     -DLLVM_RUNTIME_TARGETS="default;aarch64-linux-gnu"           \
     -DOPENMP_ENABLE_OMPT_TOOLS=ON                                \
-    -DRUNTIMES_CMAKE_ARGS="-DLIBOMPTEST_INSTALL_COMPONENTS=ON"   \
+    -DRUNTIMES_CMAKE_ARGS="-DLIBOMPTEST_INSTALL_COMPONENTS=ON;-DLIBOMPTEST_USE_SYSTEM_GTEST=ON" \
     -DRUNTIMES_arch64-linux-gnu_CMAKE_CXX_FLAGS="-march=armv8-a"
 ```
 
@@ -373,7 +373,10 @@ This option is `OFF` if this feature is not supported for the platform.
 
 **LIBOMPTEST_INSTALL_COMPONENTS**: BOOL (default: `OFF`)
 : Whether to also copy `libomptest.so` into
-[`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX] during `ninja install`.
+[`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX] during `ninja install`. An
+ompTest built against LLVM's vendored GoogleTest is not installable, since the
+matching GoogleTest headers are not installed with it; combine this with
+`LIBOMPTEST_USE_SYSTEM_GTEST` or `LIBOMPTEST_BUILD_STANDALONE`.
 
 **LIBOMPTEST_USE_SYSTEM_GTEST**: BOOL (default: `OFF`)
 : Build ompTest against the GoogleTest found by `find_package(GTest)` instead
