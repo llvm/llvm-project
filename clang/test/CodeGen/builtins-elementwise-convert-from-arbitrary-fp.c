@@ -6,6 +6,13 @@ typedef float v4f32 __attribute__((ext_vector_type(4)));
 typedef _Float16 v4f16 __attribute__((ext_vector_type(4)));
 typedef unsigned char g4u8 __attribute__((vector_size(4)));
 typedef float g4f32 __attribute__((vector_size(16)));
+typedef __bf16 v4bf16 __attribute__((ext_vector_type(4)));
+typedef __bf16 g4bf16 __attribute__((vector_size(8)));
+typedef unsigned char v3u8 __attribute__((ext_vector_type(3)));
+typedef float v3f32 __attribute__((ext_vector_type(3)));
+typedef unsigned char v1u8 __attribute__((ext_vector_type(1)));
+typedef float v1f32 __attribute__((ext_vector_type(1)));
+typedef unsigned _BitInt(8) v4ub8 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: define dso_local float @from_f8e5m2_to_f32(
 // CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -111,6 +118,19 @@ _Float16 from_f8e5m3fnu_to_f16(unsigned char b) {
   return __builtin_elementwise_convert_from_f8e5m3fnu_f16(b);
 }
 
+// CHECK-LABEL: define dso_local bfloat @from_f8e5m3fnu_to_bf16(
+// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 [[TMP0]], metadata !"Float8E5M3FNU")
+// CHECK-NEXT:    ret bfloat [[TMP1]]
+//
+__bf16 from_f8e5m3fnu_to_bf16(unsigned char b) {
+  return __builtin_elementwise_convert_from_f8e5m3fnu_bf16(b);
+}
+
 // CHECK-LABEL: define dso_local float @from_signed_f8e5m2(
 // CHECK-SAME: i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -121,6 +141,19 @@ _Float16 from_f8e5m3fnu_to_f16(unsigned char b) {
 // CHECK-NEXT:    ret float [[TMP1]]
 //
 float from_signed_f8e5m2(signed char b) {
+  return __builtin_elementwise_convert_from_f8e5m2_f32(b);
+}
+
+// CHECK-LABEL: define dso_local float @from_bitint_f8e5m2(
+// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.convert.from.arbitrary.fp.f32.i8(i8 [[TMP0]], metadata !"Float8E5M2")
+// CHECK-NEXT:    ret float [[TMP1]]
+//
+float from_bitint_f8e5m2(unsigned _BitInt(8) b) {
   return __builtin_elementwise_convert_from_f8e5m2_f32(b);
 }
 
@@ -167,6 +200,117 @@ v4f32 from_v4f8e5m2(v4u8 b) {
 // CHECK-NEXT:    ret <4 x float> [[TMP1]]
 //
 g4f32 from_g4f8e5m2(g4u8 b) {
+  return __builtin_elementwise_convert_from_f8e5m2_f32(b);
+}
+
+// CHECK-LABEL: define dso_local double @from_v4f8e4m3fn_to_f16(
+// CHECK-SAME: i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8
+// CHECK-NEXT:    [[B:%.*]] = alloca <4 x i8>, align 4
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i8>, align 4
+// CHECK-NEXT:    store i32 [[B_COERCE]], ptr [[B]], align 4
+// CHECK-NEXT:    [[B1:%.*]] = load <4 x i8>, ptr [[B]], align 4
+// CHECK-NEXT:    store <4 x i8> [[B1]], ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x half> @llvm.convert.from.arbitrary.fp.v4f16.v4i8(<4 x i8> [[TMP0]], metadata !"Float8E4M3FN")
+// CHECK-NEXT:    store <4 x half> [[TMP1]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    ret double [[TMP2]]
+//
+v4f16 from_v4f8e4m3fn_to_f16(v4u8 b) {
+  return __builtin_elementwise_convert_from_f8e4m3fn_f16(b);
+}
+
+// CHECK-LABEL: define dso_local double @from_v4f8e4m3fn_to_bf16(
+// CHECK-SAME: i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-NEXT:    [[B:%.*]] = alloca <4 x i8>, align 4
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i8>, align 4
+// CHECK-NEXT:    store i32 [[B_COERCE]], ptr [[B]], align 4
+// CHECK-NEXT:    [[B1:%.*]] = load <4 x i8>, ptr [[B]], align 4
+// CHECK-NEXT:    store <4 x i8> [[B1]], ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x bfloat> @llvm.convert.from.arbitrary.fp.v4bf16.v4i8(<4 x i8> [[TMP0]], metadata !"Float8E4M3FN")
+// CHECK-NEXT:    store <4 x bfloat> [[TMP1]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    ret double [[TMP2]]
+//
+v4bf16 from_v4f8e4m3fn_to_bf16(v4u8 b) {
+  return __builtin_elementwise_convert_from_f8e4m3fn_bf16(b);
+}
+
+// CHECK-LABEL: define dso_local double @from_g4f8e4m3fn_to_bf16(
+// CHECK-SAME: i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-NEXT:    [[B:%.*]] = alloca <4 x i8>, align 4
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i8>, align 4
+// CHECK-NEXT:    store i32 [[B_COERCE]], ptr [[B]], align 4
+// CHECK-NEXT:    [[B1:%.*]] = load <4 x i8>, ptr [[B]], align 4
+// CHECK-NEXT:    store <4 x i8> [[B1]], ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x bfloat> @llvm.convert.from.arbitrary.fp.v4bf16.v4i8(<4 x i8> [[TMP0]], metadata !"Float8E4M3FN")
+// CHECK-NEXT:    store <4 x bfloat> [[TMP1]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    ret double [[TMP2]]
+//
+g4bf16 from_g4f8e4m3fn_to_bf16(g4u8 b) {
+  return __builtin_elementwise_convert_from_f8e4m3fn_bf16(b);
+}
+
+// CHECK-LABEL: define dso_local <3 x float> @from_v3f8e5m2(
+// CHECK-SAME: i32 [[B_COERCE:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B:%.*]] = alloca <3 x i8>, align 4
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <3 x i8>, align 4
+// CHECK-NEXT:    store i32 [[B_COERCE]], ptr [[B]], align 4
+// CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i8>, ptr [[B]], align 4
+// CHECK-NEXT:    [[B1:%.*]] = shufflevector <4 x i8> [[LOADVECN]], <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i8> [[B1]], <3 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-NEXT:    store <4 x i8> [[EXTRACTVEC]], ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[LOADVECN2:%.*]] = load <4 x i8>, ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <4 x i8> [[LOADVECN2]], <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK-NEXT:    [[TMP0:%.*]] = call <3 x float> @llvm.convert.from.arbitrary.fp.v3f32.v3i8(<3 x i8> [[EXTRACTVEC3]], metadata !"Float8E5M2")
+// CHECK-NEXT:    ret <3 x float> [[TMP0]]
+//
+v3f32 from_v3f8e5m2(v3u8 b) {
+  return __builtin_elementwise_convert_from_f8e5m2_f32(b);
+}
+
+// CHECK-LABEL: define dso_local i32 @from_v1f8e5m2(
+// CHECK-SAME: i8 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <1 x float>, align 4
+// CHECK-NEXT:    [[B:%.*]] = alloca <1 x i8>, align 1
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <1 x i8>, align 1
+// CHECK-NEXT:    store i8 [[B_COERCE]], ptr [[B]], align 1
+// CHECK-NEXT:    [[B1:%.*]] = load <1 x i8>, ptr [[B]], align 1
+// CHECK-NEXT:    store <1 x i8> [[B1]], ptr [[B_ADDR]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[B_ADDR]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = call <1 x float> @llvm.convert.from.arbitrary.fp.v1f32.v1i8(<1 x i8> [[TMP0]], metadata !"Float8E5M2")
+// CHECK-NEXT:    store <1 x float> [[TMP1]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+v1f32 from_v1f8e5m2(v1u8 b) {
+  return __builtin_elementwise_convert_from_f8e5m2_f32(b);
+}
+
+// CHECK-LABEL: define dso_local <4 x float> @from_v4bitint_f8e5m2(
+// CHECK-SAME: i32 noundef [[B_COERCE:%.*]]) #[[ATTR2]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B:%.*]] = alloca <4 x i8>, align 4
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i8>, align 4
+// CHECK-NEXT:    store i32 [[B_COERCE]], ptr [[B]], align 4
+// CHECK-NEXT:    [[B1:%.*]] = load <4 x i8>, ptr [[B]], align 4
+// CHECK-NEXT:    store <4 x i8> [[B1]], ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(<4 x i8> [[TMP0]], metadata !"Float8E5M2")
+// CHECK-NEXT:    ret <4 x float> [[TMP1]]
+//
+v4f32 from_v4bitint_f8e5m2(v4ub8 b) {
   return __builtin_elementwise_convert_from_f8e5m2_f32(b);
 }
 

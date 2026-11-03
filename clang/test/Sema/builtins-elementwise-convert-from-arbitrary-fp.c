@@ -7,6 +7,13 @@ typedef float v4f32 __attribute__((ext_vector_type(4)));
 typedef _Float16 v4f16 __attribute__((ext_vector_type(4)));
 typedef unsigned char g4u8 __attribute__((vector_size(4)));
 typedef float g4f32 __attribute__((vector_size(16)));
+typedef __bf16 g4bf16 __attribute__((vector_size(8)));
+typedef unsigned char v3u8 __attribute__((ext_vector_type(3)));
+typedef float v3f32 __attribute__((ext_vector_type(3)));
+typedef unsigned char v1u8 __attribute__((ext_vector_type(1)));
+typedef float v1f32 __attribute__((ext_vector_type(1)));
+typedef unsigned _BitInt(8) v4ub8 __attribute__((ext_vector_type(4)));
+typedef unsigned _BitInt(16) v4ub16 __attribute__((ext_vector_type(4)));
 
 enum __attribute__((packed)) byte_enum {
   BYTE_ZERO,
@@ -93,6 +100,17 @@ void test_result_types(unsigned char b, v4u8 vb, g4u8 gb) {
       typeof(__builtin_elementwise_convert_from_f8e4m3fn_f16(vb)), v4f16), "");
 }
 
+void test_vector_shapes(v3u8 v3, v1u8 v1, v4ub8 vbi, g4u8 gb) {
+  _Static_assert(__builtin_types_compatible_p(
+      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(v3)), v3f32), "");
+  _Static_assert(__builtin_types_compatible_p(
+      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(v1)), v1f32), "");
+  _Static_assert(__builtin_types_compatible_p(
+      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(vbi)), v4f32), "");
+  _Static_assert(__builtin_types_compatible_p(
+      typeof(__builtin_elementwise_convert_from_f8e5m2_bf16(gb)), g4bf16), "");
+}
+
 void test_source_formats(unsigned char b) {
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(b);
   (void)__builtin_elementwise_convert_from_f8e4m3fn_f32(b);
@@ -133,10 +151,12 @@ void test_arity(unsigned char b) {
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(b, b); // expected-error {{too many arguments}}
 }
 
-void test_width(unsigned short b16, unsigned _BitInt(4) b4, v4u16 vb16) {
+void test_width(unsigned short b16, unsigned _BitInt(4) b4, v4u16 vb16,
+                v4ub16 vbi16) {
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(b16); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'unsigned short')}}
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(b4); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'unsigned _BitInt(4)')}}
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(vb16); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'v4u16' (vector of 4 'unsigned short' values))}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(vbi16); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'v4ub16'}}
 }
 
 void test_operand_types(float f, void *p) {
