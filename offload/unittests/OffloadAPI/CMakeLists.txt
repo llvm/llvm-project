@@ -43,6 +43,10 @@ add_offload_unittest("memory"
     memory/olMemRegister.cpp
     memory/olMemIsAccessible.cpp)
 
+add_offload_unittest("memory_host"
+    memory/olMemFillHost.cpp)
+target_compile_definitions("memory_host.unittests" PRIVATE DISABLE_WRAPPER)
+
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp
     platform/olGetPlatformInfoSize.cpp
