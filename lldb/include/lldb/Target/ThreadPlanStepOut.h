@@ -51,6 +51,13 @@ public:
   }
 
 protected:
+  ThreadPlanStepOut(ThreadPlanKind kind, const char *name, Thread &thread,
+                    SymbolContext *addr_context, bool first_insn,
+                    bool stop_others, Vote report_stop_vote,
+                    Vote report_run_vote, uint32_t frame_idx,
+                    LazyBool step_out_avoids_code_without_debug_info,
+                    bool continue_to_next_branch, bool gather_return_value);
+
   void SetFlagsToDefault() override {
     GetFlags().Set(ThreadPlanStepOut::s_default_flag_values);
   }
