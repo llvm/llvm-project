@@ -1,6 +1,6 @@
 // Check that -E reports errors from the lexer and preprocessor.
 
-// RUN: echo '/*' | not llvm-tblgen -E 2>&1 | FileCheck %s --check-prefix=COMMENT
+// RUN: echo '/* unterminated' | not llvm-tblgen -E 2>&1 | FileCheck %s --check-prefix=COMMENT
 // COMMENT: error: unterminated comment
 
 // RUN: echo 'include "foo"' | not llvm-tblgen -E 2>&1 | FileCheck %s --check-prefix=INCLUDE
