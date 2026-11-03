@@ -2149,10 +2149,11 @@ bool DSEState::eliminateRedundantStoresViaDominatingConditions() {
     if (match(Cond,
               m_NUWTrunc(m_Instruction(ICmpL, m_Load(m_Value(StorePtr)))))) {
       Type *Ty = ICmpL->getType();
-      return {{ConditionInfo(StorePtr, ConstantInt::get(Ty, 1)), ICmpL,
-               BI->getSuccessor(0)},
-              {ConditionInfo(StorePtr, ConstantInt::getNullValue(Ty)), ICmpL,
-               BI->getSuccessor(1)}};
+      ConditionData TrueCond(ConditionInfo(StorePtr, ConstantInt::get(Ty, 1)),
+                             ICmpL, BI->getSuccessor(0));
+      ConditionData FalseCond(ConditionInfo(StorePtr, ConstantInt::get(Ty, 0)),
+                              ICmpL, BI->getSuccessor(1));
+      return {TrueCond, FalseCond};
     }
 
     if (!match(Cond,
