@@ -41,6 +41,14 @@ using namespace llvm;
 
 namespace {
 
+// SPIR-V lowering needs LoopSimplify on optnone functions too.
+struct SPIRVLoopSimplifyPass : RequiredPassInfoMixin<SPIRVLoopSimplifyPass> {
+  static StringRef name() { return LoopSimplifyPass::name(); }
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+    return LoopSimplifyPass().run(F, FAM);
+  }
+};
+
 class SPIRVCodeGenPassBuilder : public CodeGenPassBuilder {
   using Base = CodeGenPassBuilder;
 
@@ -119,7 +127,7 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
     //  - loops have a single entry edge (pre-header to loop header).
     //  - all loop exits are dominated by the loop pre-header.
     //  - loops have a single back-edge.
-    addFunctionPass(LoopSimplifyPass(), PMW);
+    addFunctionPass(SPIRVLoopSimplifyPass(), PMW);
 
     // 2. Removes registers whose lifetime spans across basic blocks. Also
     // removes phi nodes. This will greatly simplify the next steps.
@@ -139,7 +147,7 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
   } else {
     // Canonicalize loops so they have a single latch and preheader.
     // This enables OpLoopMerge emission for non-shader targets.
-    addFunctionPass(LoopSimplifyPass(), PMW);
+    addFunctionPass(SPIRVLoopSimplifyPass(), PMW);
   }
   addFunctionPass(StripConvergenceIntrinsicsPass(), PMW);
   flushFPMsToMPM(PMW);
