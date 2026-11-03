@@ -460,10 +460,15 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         HandleBranch(cast<WhileStmt>(Term)->getCond(), Term, B, Pred);
         return;
 
-      case Stmt::GCCAsmStmtClass:
-        assert(cast<GCCAsmStmt>(Term)->isAsmGoto() && "Encountered GCCAsmStmt without labels");
-        // TODO: Handle jumping to labels
+      case Stmt::GCCAsmStmtClass: {
+        // An asm goto may fall through or jump to any of its labels.
+        assert(cast<GCCAsmStmt>(Term)->isAsmGoto() &&
+               "Encountered GCCAsmStmt without labels");
+        ExplodedNodeSet Dst;
+        ExprEng.processAsmGoto(cast<GCCAsmStmt>(Term), B, Pred, Dst);
+        enqueue(Dst);
         return;
+      }
     }
   }
 
