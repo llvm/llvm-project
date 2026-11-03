@@ -104,3 +104,24 @@ dump "TheSet = " # !repr(TheSet);
 
 // CHECK: [[FILE]]:[[@LINE+1]]:1: note: 0
 dump !repr(!exists<BaseClassForSet>("non-existent-record"));
+
+// Dumps from a superclass or from the body of a def in a multiclass are
+// emitted for each def that a defm instantiates.
+class Dumper<int n> {
+  dump "Dumper n = " # !repr(n);
+}
+multiclass DumperMC<int m> {
+  def _a : Dumper<m>;
+  def _b {
+    dump "m = " # !repr(m);
+  }
+}
+// CHECK: [[FILE]]:[[@LINE-8]]:3: note: Dumper n = 1
+// CHECK: [[FILE]]:[[@LINE-4]]:5: note: m = 1
+defm DumperX : DumperMC<1>;
+multiclass DumperMMC<int m> {
+  defm _c : DumperMC<!add(m, 1)>;
+}
+// CHECK: [[FILE]]:[[@LINE-14]]:3: note: Dumper n = 3
+// CHECK: [[FILE]]:[[@LINE-10]]:5: note: m = 3
+defm DumperY : DumperMMC<2>;

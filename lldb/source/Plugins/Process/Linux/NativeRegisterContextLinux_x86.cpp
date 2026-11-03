@@ -12,8 +12,8 @@
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/NativeThreadLinux.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_x86_64.h"
+#include "Register/Linux/RegisterInfoLinux_i386.h"
+#include "Register/Linux/RegisterInfoLinux_x86_64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"

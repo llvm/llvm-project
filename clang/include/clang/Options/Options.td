@@ -1146,6 +1146,7 @@ def bundle__loader : Separate<["-"], "bundle_loader">;
 def bundle : Flag<["-"], "bundle">;
 def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   HelpText<"Pass -b <arg> to the linker on AIX">, MetaVarName<"<arg>">,
+  Visibility<[ClangOption, FlangOption]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
@@ -2027,6 +2028,10 @@ def fno_profile_use : Flag<["-"], "fno-profile-use">,
 def ftest_coverage : Flag<["-"], "ftest-coverage">, Group<f_Group>,
     HelpText<"Produce gcov notes files (*.gcno)">;
 def fno_test_coverage : Flag<["-"], "fno-test-coverage">, Group<f_Group>;
+def fprofile_abs_path : Flag<["-"], "fprofile-abs-path">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    HelpText<"Use absolute paths in gcov notes files (*.gcno)">;
+def fno_profile_abs_path : Flag<["-"], "fno-profile-abs-path">, Group<f_Group>;
 def fprofile_arcs : Flag<["-"], "fprofile-arcs">, Group<f_Group>,
     HelpText<"Instrument code to produce gcov data files (*.gcda)">;
 def fno_profile_arcs : Flag<["-"], "fno-profile-arcs">, Group<f_Group>;
@@ -3782,6 +3787,13 @@ def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
   Group<f_Group>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
 
+defm module_local_hints : BoolFOption<"module-local-hints",
+  CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Mark inline functions and template instantiations defined in the "
+          "main source file as likely_module_local">,
+  NegFlag<SetFalse>>;
+
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Embed the contents of all files read by this compilation into "
@@ -3928,7 +3940,7 @@ def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group
   HelpText<"Implicitly search the file system for module map files.">,
   MarshallingInfoFlag<HeaderSearchOpts<"ImplicitModuleMaps">>;
 defm modulemap_allow_subdirectory_search : BoolFOption <"modulemap-allow-subdirectory-search",
-  HeaderSearchOpts<"AllowModuleMapSubdirectorySearch">, DefaultTrue,
+  HeaderSearchOpts<"AllowModuleMapSubdirectorySearch">, DefaultFalse,
   PosFlag<SetTrue, [], [], "Allow to search for module maps in subdirectories of search paths">,
   NegFlag<SetFalse>, BothFlags<[NoXarchOption], [ClangOption, CC1Option]>>;
 defm modules : BoolFOption<"modules",
@@ -5413,11 +5425,13 @@ def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
                                 Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CC1Option]>;
-def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def gpubnames : Flag<["-"], "gpubnames">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CC1Option]>;
-def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
 def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"
@@ -8128,10 +8142,6 @@ let Visibility = [CC1Option, CC1AsOption] in {
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
-def debug_info_macro_expansion_loc
-    : Flag<["-"], "debug-info-macro-expansion-loc">,
-      HelpText<"Use expansion location for debug info for multi line macros">,
-      MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;
@@ -8263,6 +8273,8 @@ def : Joined<["-"], "coverage-data-file=">,
   MarshallingInfoString<CodeGenOpts<"CoverageDataFile">>;
 def : Joined<["-"], "coverage-notes-file=">,
   MarshallingInfoString<CodeGenOpts<"CoverageNotesFile">>;
+def : Joined<["-"], "coverage-notes-abs-paths">,
+  MarshallingInfoFlag<CodeGenOpts<"UseAbsolutePathsInNotesFile">>;
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
   HelpText<"Four-byte version string for gcov files.">;
 def dump_coverage_mapping : Flag<["-"], "dump-coverage-mapping">,
@@ -9284,6 +9296,13 @@ def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
   MarshallingInfoString<LangOpts<"OMPHostIRFile">>;
 
 } // let Visibility = [CC1Option, FC1Option]
+
+def fopenmp_metadirective_runtime_selection
+    : Flag<["-"], "fopenmp-metadirective-runtime-selection">,
+      Visibility<[CC1Option]>,
+      HelpText<"Enable runtime selection of metadirective variants with "
+               "non-constant user conditions.">,
+      MarshallingInfoFlag<LangOpts<"OpenMPMetadirectiveRuntimeSelection">>;
 
 //===----------------------------------------------------------------------===//
 // SYCL Options

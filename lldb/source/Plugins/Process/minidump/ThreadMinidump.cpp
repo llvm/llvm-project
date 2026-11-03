@@ -15,8 +15,8 @@
 #include "RegisterContextMinidump_x86_32.h"
 #include "RegisterContextMinidump_x86_64.h"
 
-#include "Plugins/Process/Utility/RegisterInfoLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_x86_64.h"
+#include "Register/Linux/RegisterInfoLinux_i386.h"
+#include "Register/Linux/RegisterInfoLinux_x86_64.h"
 #include "Plugins/Process/elf-core/RegisterContextPOSIXCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 

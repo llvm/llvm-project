@@ -1097,7 +1097,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
 
   // Lookup or create unique function info.
-  llvm::FoldingSetNodeID ID;
   bool isInstanceMethod =
       (opts & FnInfoOpts::IsInstanceMethod) == FnInfoOpts::IsInstanceMethod;
   bool isChainCall =
@@ -1148,7 +1147,19 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
     //
     // For CPU targets, this currently only works for OpenCL.
     assert(CC != llvm::CallingConv::C || getContext().getLangOpts().OpenCL);
-    computeSPIRKernelABIInfo(CGM, *FI);
+    // SPIR-V lowers OpenCL types to target extension types, which the ABI
+    // library cannot tell apart from the kernel pointers it coerces yet, so
+    // such kernels keep Clang's own lowering.
+    auto IsSPIRVOpenCLType = [&](const CGFunctionInfoArgInfo &Arg) {
+      return CGM.getTriple().isSPIRV() &&
+             Arg.type.getTypePtr()->isOpenCLSpecificType();
+    };
+    if (CC == llvm::CallingConv::SPIR_KERNEL &&
+        CGM.shouldUseLLVMABILowering(CC) &&
+        llvm::none_of(FI->arguments(), IsSPIRVOpenCLType))
+      CGM.computeABIInfoUsingLib(*FI);
+    else
+      computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else if (CGM.shouldUseLLVMABILowering(CC)) {
@@ -4729,8 +4740,9 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
         CalleeDestructedParamCleanups.lookup(cast<ParmVarDecl>(param));
     assert(cleanup.isValid() &&
            "cleanup for callee-destructed param not recorded");
-    // This unreachable is a temporary marker which will be removed later.
-    llvm::Instruction *isActive = Builder.CreateUnreachable();
+    // This load is a temporary marker which will be removed later.
+    llvm::Instruction *isActive =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
     args.addArgCleanupDeactivation(cleanup, isActive);
   }
 }
@@ -5145,10 +5157,8 @@ void CodeGenFunction::EmitCallArgs(
   // case, there are certain language constructs that require left-to-right
   // evaluation, and in those cases we consider the evaluation order requirement
   // to trump the "destruction order is reverse construction order" guarantee.
-  bool LeftToRight =
-      CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()
-          ? Order == EvaluationOrder::ForceLeftToRight
-          : Order != EvaluationOrder::ForceRightToLeft;
+  bool LeftToRight = CodeGenUtils::shouldEvaluateArgsLeftToRight(
+      Order, CGM.getTarget().getCXXABI());
 
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
                                          RValue EmittedArg) {
