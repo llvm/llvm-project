@@ -495,6 +495,43 @@ void DiagnosticInfoMisExpect::print(DiagnosticPrinter &DP) const {
   DP << getLocationStr() << ": " << getMsg();
 }
 
+DiagnosticInfoSanitizerInstrumentationRegion::
+    DiagnosticInfoSanitizerInstrumentationRegion(
+        const Function &Fn, const DebugLoc &Loc,
+        SanitizerInstrumentationRegionIssue Issue)
+    : DiagnosticInfoWithLocationBase(DK_SanitizerInstrumentationRegion,
+                                     DS_Warning, Fn, Loc),
+      Issue(Issue) {}
+
+StringRef DiagnosticInfoSanitizerInstrumentationRegion::getIssueText(
+    SanitizerInstrumentationRegionIssue Issue) {
+  switch (Issue) {
+  case SanitizerInstrumentationRegionIssue::UnmatchedEnd:
+    return "sanitizer instrumentation region end without a matching begin";
+  case SanitizerInstrumentationRegionIssue::NotClosedAtReturn:
+    return "sanitizer instrumentation region is not closed before return";
+  case SanitizerInstrumentationRegionIssue::MergeOutsideRegion:
+    return "control flow merges from paths with different sanitizer "
+           "instrumentation region nesting; the code that follows is treated "
+           "as outside the region";
+  case SanitizerInstrumentationRegionIssue::MergeNestedRegions:
+    return "control flow merges from paths with different sanitizer "
+           "instrumentation region nesting; the code that follows is treated "
+           "as nested in the smaller number of regions";
+  case SanitizerInstrumentationRegionIssue::NumIssues:
+    llvm_unreachable("not an issue");
+  }
+  llvm_unreachable("unknown SanitizerInstrumentationRegionIssue");
+}
+
+void DiagnosticInfoSanitizerInstrumentationRegion::print(
+    DiagnosticPrinter &DP) const {
+  if (isLocationAvailable())
+    DP << getLocationStr() << ": ";
+  DP << "in function '" << getFunction().getName()
+     << "': " << getIssueText(Issue);
+}
+
 void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}
 

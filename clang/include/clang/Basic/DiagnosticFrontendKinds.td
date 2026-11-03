@@ -410,6 +410,17 @@ def warn_profile_data_misexpect : Warning<
   "potential performance regression from use of __builtin_expect(): "
   "annotation was correct on %0 of profiled executions">,
   BackendInfo, InGroup<MisExpect>;
+// The %select order must match llvm::SanitizerInstrumentationRegionIssue.
+def warn_fe_backend_sanitizer_instrumentation_region : Warning<
+  "in function '%1': "
+  "%select{sanitizer instrumentation region end without a matching begin"
+  "|sanitizer instrumentation region is not closed before return"
+  "|control flow merges from paths with different sanitizer instrumentation "
+  "region nesting; the code that follows is treated as outside the region"
+  "|control flow merges from paths with different sanitizer instrumentation "
+  "region nesting; the code that follows is treated as nested in the smaller "
+  "number of regions}0">,
+  BackendInfo, InGroup<SanitizerInstrumentationRegion>;
 } // end of instrumentation issue category
 
 def warn_cgs_no_proto : Warning<

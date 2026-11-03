@@ -475,10 +475,24 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   if (F.hasFnAttribute(Attribute::Naked))
     return false;
 
+  bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
   // __attribute__(disable_sanitizer_instrumentation) prevents all kinds of
-  // instrumentation.
-  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+  // instrumentation, except inside llvm.sanitizer.instrumentation.begin()/end()
+  // regions. Such a function is instrumented only there, and gets no
+  // function-level instrumentation (entry/exit hooks, runtime ignores), as that
+  // would run outside of the regions.
+  bool RegionOnly =
+      F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation);
+  if (RegionOnly && !hasSanitizerInstrumentationRegions(F))
     return false;
+  // Regions also enable memory access instrumentation in functions that lack
+  // the sanitize_thread attribute, which otherwise only get their atomics and
+  // entry/exit instrumented.
+  SmallPtrSet<const Instruction *, 16> InRegion;
+  if (RegionOnly ||
+      (!SanitizeFunction && hasSanitizerInstrumentationRegions(F)))
+    if (auto Problem = computeSanitizerInstrumentationRegions(F, InRegion))
+      diagnoseSanitizerInstrumentationRegionProblem(F, *Problem);
 
   initialize(*F.getParent(), TLI);
   SmallVector<InstructionInfo, 8> AllLoadsAndStores;
@@ -487,7 +501,6 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   SmallVector<Instruction*, 8> MemIntrinCalls;
   bool Res = false;
   bool HasCalls = false;
-  bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
   const DataLayout &DL = F.getDataLayout();
 
   // Traverse all instructions, collect loads/stores/returns, check for calls.
@@ -496,14 +509,32 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
       // Skip instructions inserted by another instrumentation.
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
+      // The region markers are not calls: they neither need function entry
+      // and exit hooks nor separate the accesses around them.
+      if (isSanitizerInstrumentationBegin(Inst) ||
+          isSanitizerInstrumentationEnd(Inst))
+        continue;
+      // In a region-only function nothing outside the regions is instrumented,
+      // not even atomics.
+      if (RegionOnly && !InRegion.contains(&Inst)) {
+        // A call outside a region still separates the accesses around it.
+        if (isa<CallBase>(Inst))
+          chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores,
+                                         DL);
+        continue;
+      }
+      // Plain accesses and memory intrinsics are instrumented in
+      // sanitize_thread functions and inside regions.
+      bool InstrumentAccesses = SanitizeFunction || InRegion.contains(&Inst);
       if (isTsanAtomic(&Inst))
         AtomicAccesses.push_back(&Inst);
-      else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
-        LocalLoadsAndStores.push_back(&Inst);
-      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
+      else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst)) {
+        if (InstrumentAccesses)
+          LocalLoadsAndStores.push_back(&Inst);
+      } else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
-        if (isa<MemIntrinsic>(Inst))
+        if (isa<MemIntrinsic>(Inst) && InstrumentAccesses)
           MemIntrinCalls.push_back(&Inst);
         HasCalls = true;
         chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores,
@@ -517,23 +548,28 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // FIXME: many of these accesses do not need to be checked for races
   // (e.g. variables that do not escape, etc).
 
-  // Instrument memory accesses only if we want to report bugs in the function.
-  if (Opts.tsan_instrument_memory_accesses && SanitizeFunction)
+  // Instrument memory accesses only if we want to report bugs in the function
+  // (or in the region they belong to).
+  if (Opts.tsan_instrument_memory_accesses)
     for (const auto &II : AllLoadsAndStores) {
       Res |= instrumentLoadOrStore(II, DL);
     }
 
   // Instrument atomic memory accesses in any case (they can be used to
-  // implement synchronization).
+  // implement synchronization), except outside the regions of a region-only
+  // function.
   if (Opts.tsan_instrument_atomics)
     for (auto *Inst : AtomicAccesses) {
       Res |= instrumentAtomic(Inst, DL);
     }
 
-  if (Opts.tsan_instrument_memintrinsics && SanitizeFunction)
+  if (Opts.tsan_instrument_memintrinsics)
     for (auto *Inst : MemIntrinCalls) {
       Res |= instrumentMemIntrinsic(Inst);
     }
+
+  if (RegionOnly)
+    return Res;
 
   if (F.hasFnAttribute("sanitize_thread_no_checking_at_run_time")) {
     assert(!F.hasFnAttribute(Attribute::SanitizeThread));

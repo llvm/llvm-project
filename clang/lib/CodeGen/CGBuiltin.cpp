@@ -3678,6 +3678,24 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Kind)));
     return RValue::get(Allow);
   }
+  case Builtin::BI__builtin_sanitizer_instrumentation_begin:
+  case Builtin::BI__builtin_sanitizer_instrumentation_end: {
+    // Only emit the region markers for sanitizers that honour them. Elsewhere
+    // they would just be optimization barriers that no pass ever removes. This
+    // lets code guard its uses on __has_builtin alone.
+    SanitizerMask Consumers =
+        SanitizerKind::Memory | SanitizerKind::KernelMemory |
+        SanitizerKind::Address | SanitizerKind::KernelAddress |
+        SanitizerKind::Thread;
+    if (getLangOpts().Sanitize.hasOneOf(Consumers) ||
+        CGM.getCodeGenOpts().hasSanitizeCoverage())
+      Builder.CreateCall(CGM.getIntrinsic(
+          BuiltinIDIfNoAsmLabel ==
+                  Builtin::BI__builtin_sanitizer_instrumentation_begin
+              ? Intrinsic::sanitizer_instrumentation_begin
+              : Intrinsic::sanitizer_instrumentation_end));
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_allow_sanitize_check: {
     Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
     StringRef Name =

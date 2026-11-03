@@ -1514,6 +1514,24 @@ def BuiltinAllowSanitizeCheck : Builtin {
   let Prototype = "bool(char const*)";
 }
 
+// Sanitizer instrumentation region markers. These delimit a region of an
+// otherwise uninstrumented function (e.g. one marked with
+// __attribute__((disable_sanitizer_instrumentation))) in which sanitizer
+// instrumentation is enabled. They must not be Const or Pure: they are
+// optimization barriers, and moving code across them changes which
+// instructions belong to the region.
+def SanitizerInstrumentationBegin : Builtin {
+  let Spellings = ["__builtin_sanitizer_instrumentation_begin"];
+  let Attributes = [NoThrow];
+  let Prototype = "void()";
+}
+
+def SanitizerInstrumentationEnd : Builtin {
+  let Spellings = ["__builtin_sanitizer_instrumentation_end"];
+  let Attributes = [NoThrow];
+  let Prototype = "void()";
+}
+
 def ShuffleVector : Builtin {
   let Spellings = ["__builtin_shufflevector"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
