@@ -72,20 +72,20 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
       std::make_unique<std::byte[]>(Block::allocSize(D, Block::Local));
   auto *B = new (Memory.get()) Block(EvalID, D, Block::Local);
   B->invokeCtorNoMemset();
-  InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());
-  ID->Desc = D;
-  ID->IsActive = true;
-  ID->Offset = sizeof(InlineDescriptor);
-  ID->IsBase = false;
-  ID->IsFieldMutable = false;
-  ID->IsConst = false;
-  ID->IsInitialized = false;
-  ID->IsVolatile = false;
+  InlineDescriptor &ID = B->getBlockDesc<InlineDescriptor>();
+  ID.Desc = D;
+  ID.IsActive = true;
+  ID.Offset = sizeof(InlineDescriptor);
+  ID.IsBase = false;
+  ID.IsFieldMutable = false;
+  ID.IsConst = false;
+  ID.IsInitialized = false;
+  ID.IsVolatile = false;
 
   if (D->isCompositeArray())
-    ID->LifeState = Lifetime::Started;
+    ID.LifeState = Lifetime::Started;
   else
-    ID->LifeState =
+    ID.LifeState =
         AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
 
   if (auto It = AllocationSites.find(D->asExpr());
