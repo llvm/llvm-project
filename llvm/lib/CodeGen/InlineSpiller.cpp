@@ -104,6 +104,9 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
       MapVector<std::pair<int, VNInfo *>, SmallPtrSet<MachineInstr *, 16>>;
   MergeableSpillsMap MergeableSpills;
 
+  // Original values whose saves may have become dead by restore forwarding.
+  SmallPtrSet<VNInfo *, 8> DeadSpillCandidates;
+
   /// This is the map from original register to a set containing all its
   /// siblings. To hoist a spill to another BB, we need to find out a live
   /// sibling there and use it as the source of the new spill.
@@ -129,6 +132,9 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
                       SmallVectorImpl<MachineInstr *> &SpillsToRm,
                       DenseMap<MachineBasicBlock *, Register> &SpillsToIns);
 
+  bool isFullSlotStore(const MachineInstr &MI, int FI) const;
+  SmallPtrSet<VNInfo *, 16> collectUsedSpillValues() const;
+
 public:
   HoistSpillHelper(const Spiller::RequiredAnalyses &Analyses,
                    MachineFunction &mf, VirtRegMap &vrm, LiveRegMatrix *matrix)
@@ -140,6 +146,7 @@ public:
   void addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                             Register Original);
   bool rmFromMergeableSpills(MachineInstr &Spill, int StackSlot);
+  void addDeadSpillCandidate(const MachineInstr &Spill, int StackSlot);
   void hoistAllSpills();
   void LRE_WillShrinkVirtReg(Register) override;
   bool LRE_CanEraseVirtReg(Register) override;
@@ -633,6 +640,7 @@ bool InlineSpiller::tryForwardRestore(MachineInstr &Restore,
   MF.substituteDebugValuesForInst(Restore, *Copy, /*MaxOperand=*/1);
   Restore.eraseFromParent();
   ++NumReloadsRemoved;
+  HSpiller.addDeadSpillCandidate(Store, StoreFI);
   SlotIndex BlockStart = LIS.getMBBStartIdx(&MBB);
   if (!StoreLI) {
     // Store register is physical, extend the live range.
@@ -1674,6 +1682,85 @@ bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr &Spill,
   return MergeableSpills[MIdx].erase(&Spill);
 }
 
+/// Record that the save \p Spill may be dead because a restore of the value it
+/// saves was forwarded. Only saves into slots created by this spiller qualify.
+void HoistSpillHelper::addDeadSpillCandidate(const MachineInstr &Spill,
+                                             int StackSlot) {
+  auto It = StackSlotToOrigLI.find(StackSlot);
+  if (It == StackSlotToOrigLI.end())
+    return;
+  SlotIndex Idx = LIS.getInstructionIndex(Spill).getRegSlot();
+  if (VNInfo *OrigVNI = It->second->getVNInfoAt(Idx))
+    DeadSpillCandidates.insert(OrigVNI);
+}
+
+/// Return true if \p MI unconditionally overwrites all of stack slot \p FI.
+bool HoistSpillHelper::isFullSlotStore(const MachineInstr &MI, int FI) const {
+  if (MI.peekDebugInstrNum() || MI.isBundled() || MI.hasOrderedMemoryRef() ||
+      MI.mayLoad() || TII.isPredicated(MI) || !MI.all_defs().empty())
+    return false;
+  int StoreFI;
+  TypeSize Size = TypeSize::getZero();
+  Register Reg = TII.isStoreToStackSlot(MI, StoreFI, Size);
+  if (!Reg || StoreFI != FI || Size.isScalable() || Size.isZero() ||
+      Size.getFixedValue() != uint64_t(MF.getFrameInfo().getObjectSize(FI)))
+    return false;
+  // Implicit inputs may predicate a spill, as EXEC does on AMDGPU.
+  // Call regmasks don't model reserved registers, so like MachineCSE, assume
+  // calls preserve constant physical registers.
+  return all_of(MI.all_uses(), [&](const MachineOperand &MO) {
+    Register Use = MO.getReg();
+    return !Use || Use == Reg ||
+           (Use.isPhysical() && MRI.isConstantPhysReg(Use.asMCReg()));
+  });
+}
+
+/// Collect the original values that stack accesses may read from slots
+/// created by this spiller. Only spill code accesses those slots, and a full
+/// store writes the original value live at that point.
+SmallPtrSet<VNInfo *, 16> HoistSpillHelper::collectUsedSpillValues() const {
+  SmallPtrSet<VNInfo *, 16> Used;
+  SmallVector<std::pair<LiveInterval *, VNInfo *>, 16> Worklist;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB.instrs()) {
+      if (MI.isDebugInstr())
+        continue;
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isFI())
+          continue;
+        int FI = MO.getIndex();
+        auto It = StackSlotToOrigLI.find(FI);
+        if (It == StackSlotToOrigLI.end() || isFullSlotStore(MI, FI))
+          continue;
+        LiveInterval &OrigLI = *It->second;
+        SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot(true);
+        if (VNInfo *VNI =
+                MI.mayLoad() ? OrigLI.getVNInfoBefore(Idx) : nullptr) {
+          Worklist.emplace_back(&OrigLI, VNI);
+        } else {
+          // Other accesses, such as partial or predicated stores, may leave
+          // any value visible.
+          for (VNInfo *VNI : OrigLI.vnis())
+            Used.insert(VNI);
+        }
+      }
+    }
+  }
+
+  // A value merged at a block entry reads the values incoming from the
+  // predecessors.
+  while (!Worklist.empty()) {
+    auto [OrigLI, VNI] = Worklist.pop_back_val();
+    if (!Used.insert(VNI).second || !VNI->isPHIDef())
+      continue;
+    for (MachineBasicBlock *Pred :
+         LIS.getMBBFromIndex(VNI->def)->predecessors())
+      if (VNInfo *PredVNI = OrigLI->getVNInfoBefore(LIS.getMBBEndIdx(Pred)))
+        Worklist.emplace_back(OrigLI, PredVNI);
+  }
+  return Used;
+}
+
 /// Check BB to see if it is a possible target BB to place a hoisted spill,
 /// i.e., there should be a living sibling of OrigReg at the insert point.
 bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
@@ -1972,6 +2059,10 @@ void HoistSpillHelper::hoistAllSpills() {
       Virt2SiblingsMap[Original].insert(Reg);
   }
 
+  SmallPtrSet<VNInfo *, 16> UsedValues;
+  if (!DeadSpillCandidates.empty())
+    UsedValues = collectUsedSpillValues();
+
   // Each entry in MergeableSpills contains a spill set with equal values.
   for (auto &Ent : MergeableSpills) {
     int Slot = Ent.first.first;
@@ -1994,7 +2085,17 @@ void HoistSpillHelper::hoistAllSpills() {
     // SpillsToIns is the spill set to be newly inserted after hoisting.
     DenseMap<MachineBasicBlock *, Register> SpillsToIns;
 
-    runHoistSpills(OrigLI, *OrigVNI, EqValSpills, SpillsToRm, SpillsToIns);
+    if (DeadSpillCandidates.contains(OrigVNI) &&
+        !UsedValues.contains(OrigVNI)) {
+      // Restore forwarding removed every read of this value.
+      LLVM_DEBUG(dbgs() << "Removing unread spills of VN" << OrigVNI->id
+                        << '\n');
+      SpillsToRm.append(EqValSpills.begin(), EqValSpills.end());
+      EqValSpills.clear();
+      NumSpillsRemoved += SpillsToRm.size();
+    } else {
+      runHoistSpills(OrigLI, *OrigVNI, EqValSpills, SpillsToRm, SpillsToIns);
+    }
 
     LLVM_DEBUG({
       dbgs() << "Finally inserted spills in BB: ";

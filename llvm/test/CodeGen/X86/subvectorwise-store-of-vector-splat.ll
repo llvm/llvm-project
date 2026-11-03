@@ -6855,7 +6855,6 @@ define void @vec512_v16i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec
 ; SCALAR-NEXT:    notl %edi
 ; SCALAR-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    notl %ecx
-; SCALAR-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    notl %r8d
 ; SCALAR-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    notl %r9d

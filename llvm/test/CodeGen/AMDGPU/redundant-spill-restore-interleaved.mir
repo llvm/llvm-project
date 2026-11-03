@@ -5,7 +5,8 @@
 # Greedy spills %5 first and %3 later. The restore of %5 before the update of
 # %3 is inserted first, so it ends up between the save and the restore of the
 # initial %3. Both pieces of %3 are assigned the same SGPR, so the restore is
-# forwarded across the unrelated restore. The input contains no stack accesses.
+# forwarded across the unrelated restore, and the initial save becomes dead.
+# The input contains no stack accesses.
 --- |
   define void @interleaved_restore() { ret void }
 ...
@@ -30,7 +31,6 @@ body: |
     ; CHECK-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_ADD_I32_1]], 1, implicit-def dead $scc
     ; CHECK-NEXT: SI_SPILL_S32_SAVE [[S_ADD_I32_1]], %stack.3, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.3, addrspace 5)
     ; CHECK-NEXT: [[S_ADD_I32_4:%[0-9]+]]:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
-    ; CHECK-NEXT: SI_SPILL_S32_SAVE [[S_ADD_I32_4]], %stack.1, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.1, addrspace 5)
     ; CHECK-NEXT: [[SI_SPILL_S32_RESTORE:%[0-9]+]]:sgpr_32 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sp_reg :: (load (s32) from %stack.0, addrspace 5)
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_4]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[COPY]], [[SI_SPILL_S32_RESTORE]], implicit-def dead $scc
