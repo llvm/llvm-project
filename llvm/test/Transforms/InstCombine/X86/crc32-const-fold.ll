@@ -180,3 +180,13 @@ define i64 @crc32_i64_5() {
   %crc = call i64 @llvm.x86.sse42.crc32.64.64(i64 -3762583644562149098, i64 -6300179796582957251)
   ret i64 %crc
 }
+
+; test _mm_crc32_u32(x, x) folds to 0
+define i32 @test_same_arg_crc32(i32 %x) {
+; CHECK-LABEL: define i32 @test_same_arg_crc32(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret i32 0
+;
+  %crc = tail call noundef i32 @llvm.x86.sse42.crc32.32.32(i32 %x, i32 %x)
+  ret i32 %crc
+}
