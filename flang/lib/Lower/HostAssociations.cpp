@@ -22,6 +22,10 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Debug.h"
+#include <algorithm>
 #include <optional>
 
 #define DEBUG_TYPE "flang-host-assoc"
@@ -540,10 +544,12 @@ static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
 
 void Fortran::lower::HostAssociations::addSymbolsToBind(
     const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols,
-    const Fortran::semantics::Scope &hostScope) {
+    const Fortran::semantics::Scope &hostScope,
+    llvm::function_ref<llvm::ArrayRef<pft::Variable>()> getVariables) {
   assert(tupleSymbols.empty() && globalSymbols.empty() &&
          "must be initially empty");
   this->hostScope = &hostScope;
+  bool hasNewGlobals = false;
   for (const auto *s : symbols)
     // GlobalOp are created for non-global threadprivate variable,
     //  so considering them as globals.
@@ -551,10 +557,59 @@ void Fortran::lower::HostAssociations::addSymbolsToBind(
         (*s).test(Fortran::semantics::Symbol::Flag::OmpThreadprivate)) {
       // The ultimate symbol is stored here so that global symbols from the
       // host scope can later be searched in this set.
-      globalSymbols.insert(&s->GetUltimate());
+      const auto &ultimate = s->GetUltimate();
+      globalSymbols.insert(&ultimate);
+      hasNewGlobals |= ultimate.test(semantics::Symbol::Flag::OmpMainGlobal);
     } else {
       tupleSymbols.insert(s);
     }
+  if (hasNewGlobals) {
+    variables = getVariables();
+    // Aggregate stores precede their aliases. Select backwards so each chosen
+    // alias requests its backing store using the already computed storage key.
+    // Resolve each USE/host association tail once, including rejected records.
+    // Direct objects require no cache lookup or allocation.
+    llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *> roots;
+    auto root = [&](const semantics::Symbol &symbol) {
+      const auto *original = &symbol;
+      llvm::SmallVector<const semantics::Symbol *> path;
+      while (true) {
+        const semantics::Symbol *next;
+        if (const auto *details = original->detailsIf<semantics::UseDetails>())
+          next = &details->symbol();
+        else if (const auto *details =
+                     original->detailsIf<semantics::HostAssocDetails>())
+          next = &details->symbol();
+        else
+          break;
+        if (auto it = roots.find(original); it != roots.end()) {
+          original = it->second;
+          break;
+        }
+        path.push_back(original);
+        LLVM_DEBUG(llvm::dbgs() << "main-global binding association\n");
+        original = next;
+      }
+      for (const auto *entry : path)
+        roots.try_emplace(entry, original);
+      return original;
+    };
+    llvm::DenseSet<AggregateStoreKey> stores;
+    for (const auto &variable : llvm::reverse(*variables)) {
+      const auto *original =
+          variable.hasSymbol() ? root(variable.getSymbol()) : nullptr;
+      if (original && globalSymbols.contains(original)) {
+        globalBindings.push_back(&variable);
+        if (variable.isAlias())
+          stores.insert({&original->owner(), variable.getAliasOffset()});
+      } else if (variable.isAggregateStore() && variable.isGlobal() &&
+                 stores.contains({variable.getOwningScope(),
+                                  variable.getAggregateStore().getOffset()})) {
+        globalBindings.push_back(&variable);
+      }
+    }
+    std::reverse(globalBindings.begin(), globalBindings.end());
+  }
 }
 
 void Fortran::lower::HostAssociations::hostProcedureBindings(
@@ -593,18 +648,24 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
     // The host scope variable list is required to deal with host variables
     // that are equivalenced and requires instantiating the right global
     // AggregateStore.
-    for (auto &hostVariable : pft::getScopeVariableList(*hostScope))
-      if ((hostVariable.isAggregateStore() && hostVariable.isGlobal()) ||
-          (hostVariable.hasSymbol() &&
-           globalSymbols.contains(&hostVariable.getSymbol().GetUltimate()))) {
-        Fortran::lower::instantiateVariable(converter, hostVariable, symMap,
-                                            storeMap);
-        // Generate threadprivate Op for host associated variables.
-        if (hostVariable.hasSymbol() &&
-            hostVariable.getSymbol().test(
-                Fortran::semantics::Symbol::Flag::OmpThreadprivate))
-          Fortran::lower::genThreadprivateOp(converter, hostVariable);
-      }
+    auto bind = [&](const pft::Variable &hostVariable) {
+      Fortran::lower::instantiateVariable(converter, hostVariable, symMap,
+                                          storeMap);
+      if (hostVariable.hasSymbol() &&
+          hostVariable.getSymbol().test(
+              Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+        Fortran::lower::genThreadprivateOp(converter, hostVariable);
+    };
+    if (variables) {
+      for (const auto *variable : globalBindings)
+        bind(*variable);
+    } else {
+      for (const auto &variable : pft::getScopeVariableList(*hostScope))
+        if ((variable.isAggregateStore() && variable.isGlobal()) ||
+            (variable.hasSymbol() &&
+             globalSymbols.contains(&variable.getSymbol().GetUltimate())))
+          bind(variable);
+    }
   }
   if (tupleSymbols.empty())
     return;

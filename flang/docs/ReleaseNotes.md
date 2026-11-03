@@ -87,6 +87,9 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- With OpenMP enabled, eligible small main-program scalars used in explicit
+  host `PARALLEL` regions now use static storage by default.
+
 - Added support for the OpenMP implementation-defined extension sentinels
   (OpenMP 5.2, section 3.1): `!$omx`, `c$omx` and `*$omx` in fixed source form
   and `!$ompx` in free source form. These sentinels are recognized like their
