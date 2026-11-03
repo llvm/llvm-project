@@ -22,6 +22,9 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.SKU }}
+    defaults:
+      run:
+        shell: cmd
     env:
       VsDevCmd: 'Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat'
     steps:
@@ -37,7 +40,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.sha }}
           path: llvm-project
       - name: Checkout OffloadTest
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
