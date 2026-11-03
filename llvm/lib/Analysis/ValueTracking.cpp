@@ -1705,6 +1705,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Q, Depth,
                                       KF);
+    // X << X is even: X is either zero or shifts by at least one bit. Both
+    // uses must observe the same value, so X must not be undef.
+    if (I->getOperand(0) == I->getOperand(1) &&
+        isGuaranteedNotToBeUndef(I->getOperand(0), Q.AC, Q.CtxI, Q.DT,
+                                 Depth + 1))
+      Known.Zero.setBit(0);
+
     // Trailing zeros of a right-shifted constant never decrease.
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
@@ -5490,11 +5497,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (II->getArgOperand(0) == II->getArgOperand(1)) {
+        FPClassTest InterestedSquared = InterestedClasses;
+        FPClassTest InterestedAddend = InterestedClasses;
+        // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+        // squaring.
+        if (InterestedClasses & fcQNan) {
+          InterestedSquared |= fcSNan | fcInf;
+          InterestedAddend |= fcSNan | fcNegInf;
+        }
+
         KnownFPClass KnownSrc, KnownAddend;
         computeKnownFPClass(II->getArgOperand(2), DemandedElts,
-                            InterestedClasses, KnownAddend, Q, Depth + 1);
+                            InterestedAddend, KnownAddend, Q, Depth + 1);
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, KnownSrc, Q, Depth + 1);
+                            InterestedSquared, KnownSrc, Q, Depth + 1);
 
         const Function *F = II->getFunction();
         const fltSemantics &FltSem =
@@ -6217,7 +6233,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                         Q, Depth + 1);
 
     bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcSNan) ||
         KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
 

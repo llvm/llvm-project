@@ -5,6 +5,7 @@
 
 ---
 name: buffer_load_dword_dwordx3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx3
@@ -27,6 +28,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx3_dword
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx3_dword
@@ -49,6 +51,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dwordx2
@@ -71,6 +74,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx2
@@ -93,6 +97,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dword
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dword
@@ -116,6 +121,7 @@ body:             |
 
 
 name: buffer_load_dword_dword
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword
@@ -138,6 +144,7 @@ body:             |
 ---
 
 name: buffer_load_dword_32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_32
@@ -183,6 +190,7 @@ body:             |
 #
 
 name: buffer_store_dword_xyz
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -217,6 +225,7 @@ body:             |
 ---
 
 name: buffer_store_dwordx3_dword
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -251,6 +260,7 @@ body:             |
 ---
 
 name: buffer_store_dwordx2_dwordx2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -287,6 +297,7 @@ body:             |
 ---
 
 name: buffer_store_dword_dwordx2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -321,6 +332,7 @@ body:             |
 ---
 
 name: buffer_store_dwordx2_dword
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -356,6 +368,7 @@ body:             |
 ---
 
 name: buffer_store_dword_dword
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -388,6 +401,7 @@ body:             |
 ---
 
 name: buffer_store_dword_32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -444,6 +458,7 @@ body:             |
 ---
 
 name: buffer_load_dword_not_merged_swizzled_0
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_not_merged_swizzled_0
@@ -465,6 +480,7 @@ body:             |
 ---
 
 name: buffer_load_dword_not_merged_swizzled_1
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_not_merged_swizzled_1
@@ -486,6 +502,7 @@ body:             |
 ---
 
 name: buffer_load_dword_merge_across_swizzle
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_merge_across_swizzle
@@ -510,6 +527,7 @@ body:             |
 ---
 
 name: buffer_load_dword_merge_across_swizzled_store
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_merge_across_swizzled_store
@@ -535,6 +553,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dword_idxen
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword_idxen
@@ -559,6 +578,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx2_idxen
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx2_idxen
@@ -583,6 +603,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2_idxen
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dwordx2_idxen
@@ -607,6 +628,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx3_idxen
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx3_idxen
@@ -631,6 +653,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dword_bothen
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword_bothen
@@ -655,6 +678,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx2_bothen
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx2_bothen
@@ -679,6 +703,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2_bothen
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dwordx2_bothen
@@ -703,6 +728,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx3_bothen
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx3_bothen
@@ -727,6 +753,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dword_idxen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword_idxen_exact
@@ -751,6 +778,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx2_idxen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx2_idxen_exact
@@ -775,6 +803,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2_idxen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dwordx2_idxen_exact
@@ -799,6 +828,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx3_idxen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx3_idxen_exact
@@ -823,6 +853,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dword_dword_idxen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword_dword_idxen_exact
@@ -850,6 +881,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dword_dword_idxen_exact_swizzled_0
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword_dword_idxen_exact_swizzled_0
@@ -876,6 +908,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dword_bothen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword_bothen_exact
@@ -900,6 +933,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx2_bothen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dwordx2_bothen_exact
@@ -924,6 +958,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2_bothen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 
@@ -949,6 +984,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dwordx3_bothen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 
@@ -974,6 +1010,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dword_dword_bothen_exact
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword_dword_bothen_exact
@@ -1001,6 +1038,7 @@ body:             |
 ---
 
 name: buffer_load_dword_dword_dword_bothen_exact_swizzled_0
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dword_dword_dword_bothen_exact_swizzled_0
@@ -1027,6 +1065,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2_bothen_exact_diff_vaddr
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dwordx2_bothen_exact_diff_vaddr
@@ -1052,6 +1091,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2_bothen_exact_diff_srsrc
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dwordx2_bothen_exact_diff_srsrc
@@ -1079,6 +1119,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2_idxen_exact_diff_vaddr
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dwordx2_idxen_exact_diff_vaddr
@@ -1104,6 +1145,7 @@ body:             |
 ---
 
 name: buffer_load_dwordx2_dwordx2_idxen_exact_diff_srsrc
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: buffer_load_dwordx2_dwordx2_idxen_exact_diff_srsrc
