@@ -3627,11 +3627,11 @@ static LogicalResult verifyFloatBinaryOp(OpType op, StringRef opKind) {
 }
 
 LogicalResult NVVM::AddFOp::verify() {
-  return verifyFloatBinaryOp(*this, "additions/subtractions");
+  return verifyFloatBinaryOp(*this, "additions");
 }
 
 LogicalResult NVVM::SubFOp::verify() {
-  return verifyFloatBinaryOp(*this, "additions/subtractions");
+  return verifyFloatBinaryOp(*this, "subtractions");
 }
 
 LogicalResult NVVM::MulFOp::verify() {
