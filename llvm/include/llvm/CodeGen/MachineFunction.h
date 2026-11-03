@@ -198,7 +198,8 @@ public:
     FailsVerification,
     FailedRegAlloc,
     TracksDebugUserValues,
-    LastProperty = TracksDebugUserValues,
+    UsesBlockArgs,
+    LastProperty = UsesBlockArgs,
   };
 
   bool hasProperty(Property P) const {
@@ -233,6 +234,7 @@ public:
   PPACCESSORS(FailsVerification)
   PPACCESSORS(FailedRegAlloc)
   PPACCESSORS(TracksDebugUserValues)
+  PPACCESSORS(UsesBlockArgs)
 
   /// Reset all the properties.
   MachineFunctionProperties &reset() {
