@@ -312,6 +312,40 @@ TEST(LegalizerInfoTest, RuleSets) {
   }
 }
 
+// maxScalarEltSameAsIf must narrow only the element size of the type being
+// legalized. Returning the other slot's whole type also changes the element
+// count (or the scalar/vector shape), which makes the NarrowScalar mutation
+// invalid.
+TEST(LegalizerInfoTest, MaxScalarEltSameAsIfLaneCount) {
+  LegalizeRuleSet RS;
+  RS.maxScalarEltSameAsIf([](const LegalityQuery &) { return true; }, 1, 0);
+
+  // Vector: keep 2 lanes, narrow the element from 32 to 8 bits.
+  {
+    LLT Types[] = {LLT::fixed_vector(16, 8), LLT::fixed_vector(2, 32)};
+    LegalizeActionStep Step = RS.apply(LegalityQuery(0, Types));
+    EXPECT_EQ(Step.Action, NarrowScalar);
+    EXPECT_EQ(Step.TypeIdx, 1u);
+    EXPECT_EQ(Step.NewType, LLT::fixed_vector(2, 8));
+  }
+
+  // Scalars: the shape stays scalar.
+  {
+    LLT Types[] = {LLT::scalar(8), LLT::scalar(32)};
+    LegalizeActionStep Step = RS.apply(LegalityQuery(0, Types));
+    EXPECT_EQ(Step.Action, NarrowScalar);
+    EXPECT_EQ(Step.TypeIdx, 1u);
+    EXPECT_EQ(Step.NewType, LLT::scalar(8));
+  }
+
+  // Equal element sizes: no rule may fire.
+  {
+    LLT Types[] = {LLT::fixed_vector(2, 32), LLT::fixed_vector(2, 32)};
+    LegalizeActionStep Step = RS.apply(LegalityQuery(0, Types));
+    EXPECT_EQ(Step.Action, Unsupported);
+  }
+}
+
 TEST(LegalizerInfoTest, MMOAlignment) {
   using namespace TargetOpcode;
 
