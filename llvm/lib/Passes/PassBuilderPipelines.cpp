@@ -1971,6 +1971,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     return MPM;
   }
 
+  // Older producers may not have separated retcon entries from their pre-split
+  // bodies. Establish that boundary before profile-guided inlining and IPO.
+  MPM.addPass(CoroEarlyPass());
+
   if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
     // Load sample profile before running the LTO optimization pipeline.
     MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
@@ -2069,9 +2073,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     return MPM;
   }
-
-  // TODO: Skip to match buildCoroWrapper.
-  MPM.addPass(CoroEarlyPass());
 
   // Optimize globals to try and fold them into constants.
   MPM.addPass(GlobalOptPass());

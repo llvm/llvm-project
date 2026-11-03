@@ -3,6 +3,11 @@
 ; RUN: opt -verify-each -passes='default<O2>,ipsccp,instcombine' -S %s | FileCheck %s
 ; RUN: opt -verify-each -passes='thinlto-pre-link<O2>,thinlto<O2>,ipsccp,instcombine' -S %s | FileCheck %s
 ; RUN: opt -verify-each -passes='thinlto<O2>,ipsccp,instcombine' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='lto-pre-link<O2>,lto<O2>,ipsccp,instcombine' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='lto<O0>,ipsccp,instcombine' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='lto<O1>,ipsccp,instcombine' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='lto<O2>,ipsccp,instcombine' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='lto<O3>,ipsccp,instcombine' -S %s | FileCheck %s
 
 ; The body never returns, but the ramp returns the yielded value at the first
 ; suspension. Body exits do not describe that caller-visible return.
@@ -11,7 +16,7 @@
 ; A final IPSCCP pass folds the now-visible ramp return, but cannot repair an
 ; earlier incorrect replacement of the caller's result with undef.
 ; Older producers did not separate the entry in their CoroEarly pass. Their
-; bitcode must also work when sent directly to the ThinLTO backend.
+; bitcode must also work when sent directly to either LTO backend.
 
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
