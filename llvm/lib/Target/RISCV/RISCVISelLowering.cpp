@@ -627,7 +627,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SHUFFLE, P64VecVTs, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, P64VecVTs, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
-      setOperationAction(ISD::BUILD_VECTOR, P64VecVTs, Legal);
+      setOperationAction(ISD::BUILD_VECTOR, {MVT::v4i16, MVT::v2i32}, Legal);
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v8i8, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
       setOperationAction({ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT},
                          {MVT::v4i16, MVT::v8i8}, Custom);
@@ -4824,20 +4825,18 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (VT == MVT::v4i8) {
       // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b,
       // d))
-      SDValue Val0 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(0));
-      SDValue Val1 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(1));
-      SDValue Val2 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
-      SDValue Val3 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
-      SDValue Concat1 =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Val0, Val2);
-      SDValue Concat2 =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Val1, Val3);
-      SDValue PPairE =
-          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v8i8, Concat1, Concat2);
+      // FIXME: This is not the best lowering if the use of PPACK.DH forces the
+      // use of MVs to make GPR pairs.
+      SDValue Undef = DAG.getUNDEF(Op->getOperand(0).getValueType());
+      SDValue BV1 =
+          DAG.getBuildVector(MVT::v8i8, DL,
+                             {Op->getOperand(0), Undef, Undef, Undef,
+                              Op->getOperand(2), Undef, Undef, Undef});
+      SDValue BV2 =
+          DAG.getBuildVector(MVT::v8i8, DL,
+                             {Op->getOperand(1), Undef, Undef, Undef,
+                              Op->getOperand(3), Undef, Undef, Undef});
+      SDValue PPairE = DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v8i8, BV1, BV2);
 
       SDValue Lo = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 0);
       SDValue Hi = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 4);
@@ -4846,6 +4845,36 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                             DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
                                         DAG.getBitcast(MVT::v2i16, Lo),
                                         DAG.getBitcast(MVT::v2i16, Hi)));
+    }
+
+    if (VT == MVT::v8i8) {
+      // Build each <4 x i8> half, skipping work for undef lanes, then
+      // concatenate the halves.
+      auto ToVec = [&](unsigned I) {
+        return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8,
+                           Op->getOperand(I));
+      };
+      // Pack elements I and I+1 into the low 16 bits.
+      auto BuildPair = [&](unsigned I) {
+        if (Op->getOperand(I).isUndef() && Op->getOperand(I + 1).isUndef())
+          return DAG.getUNDEF(MVT::v4i8);
+        if (Op->getOperand(I + 1).isUndef())
+          return ToVec(I);
+        return DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v4i8, ToVec(I),
+                           ToVec(I + 1));
+      };
+      auto BuildHalf = [&](unsigned I) {
+        SDValue Lo = BuildPair(I);
+        SDValue Hi = BuildPair(I + 2);
+        if (Hi.isUndef())
+          return Lo;
+        return DAG.getBitcast(MVT::v4i8,
+                              DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
+                                          DAG.getBitcast(MVT::v2i16, Lo),
+                                          DAG.getBitcast(MVT::v2i16, Hi)));
+      };
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, BuildHalf(0),
+                         BuildHalf(4));
     }
 
     llvm_unreachable("Unexpected RV32 P BUILD_VECTOR type");
