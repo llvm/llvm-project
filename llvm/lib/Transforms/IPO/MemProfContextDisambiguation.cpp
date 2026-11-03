@@ -6640,45 +6640,64 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
   return VMaps;
 }
 
-// Locate the summary for F. This is complicated by the fact that it might
-// have been internalized or promoted.
-static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
-                                      const ModuleSummaryIndex *ImportSummary,
-                                      const Function *CallingFunc = nullptr) {
+// If F is an imported copy of an alias (materialized as a Function by
+// replaceAliasWithAliasee during FunctionImport while preserving the aliasee's
+// !guid metadata for body-level passes), return the original alias GUID
+// recorded in its thinlto_alias_guid metadata.
+static std::optional<GlobalValue::GUID>
+getImportedAliasGUID(const Function &F) {
+  if (auto *MD = F.getMetadata("thinlto_alias_guid"))
+    return mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+  return std::nullopt;
+}
+
+// Locate the summary for GV. This is complicated by the fact that it might
+// have been internalized, promoted, or imported as a copy of an alias.
+static ValueInfo findValueInfoForGV(const GlobalValue &GV, const Module &M,
+                                    const ModuleSummaryIndex *ImportSummary,
+                                    const Function *CallingFunc = nullptr) {
+  if (const auto *F = dyn_cast<Function>(&GV))
+    if (auto AliasGUID = getImportedAliasGUID(*F)) {
+      ValueInfo AliasVI = ImportSummary->getValueInfo(*AliasGUID);
+      assert(AliasVI && "Expected ValueInfo for imported alias GUID");
+      return AliasVI;
+    }
+
   // FIXME: Ideally we would retain the original GUID in some fashion on the
   // function (e.g. as metadata), but for now do our best to locate the
   // summary without that information.
-  ValueInfo TheFnVI = ImportSummary->getValueInfo(F.getGUID());
+  ValueInfo TheFnVI = ImportSummary->getValueInfo(GV.getGUID());
   if (!TheFnVI)
-    // See if theFn was internalized, by checking index directly with
+    // See if GV was internalized, by checking index directly with
     // original name (this avoids the name adjustment done by getGUID() for
     // internal symbols).
     TheFnVI = ImportSummary->getValueInfo(
-        GlobalValue::getGUIDAssumingExternalLinkage(F.getName()));
+        GlobalValue::getGUIDAssumingExternalLinkage(GV.getName()));
   if (TheFnVI)
     return TheFnVI;
   // Now query with the original name before any promotion was performed.
   StringRef OrigName =
-      ModuleSummaryIndex::getOriginalNameBeforePromote(F.getName());
+      ModuleSummaryIndex::getOriginalNameBeforePromote(GV.getName());
   // When this pass is enabled, we always add thinlto_src_file provenance
   // metadata to imported function definitions, which allows us to recreate the
   // original internal symbol's GUID.
-  auto SrcFileMD = F.getMetadata("thinlto_src_file");
+  const auto *GO = dyn_cast<GlobalObject>(&GV);
+  MDNode *SrcFileMD = GO ? GO->getMetadata("thinlto_src_file") : nullptr;
   // If this is a call to an imported/promoted local for which we didn't import
   // the definition, the metadata will not exist on the declaration. However,
   // since we are doing this early, before any inlining in the LTO backend, we
   // can simply look at the metadata on the calling function which must have
-  // been from the same module if F was an internal symbol originally.
-  if (!SrcFileMD && F.isDeclaration()) {
+  // been from the same module if GV was an internal symbol originally.
+  if (!SrcFileMD && GV.isDeclaration()) {
     // We would only call this for a declaration for a direct callsite, in which
     // case the caller would have provided the calling function pointer.
     assert(CallingFunc);
     SrcFileMD = CallingFunc->getMetadata("thinlto_src_file");
-    // If this is a promoted local (OrigName != F.getName()), since this is a
+    // If this is a promoted local (OrigName != GV.getName()), since this is a
     // declaration, it must be imported from a different module and therefore we
     // should always find the metadata on its calling function. Any call to a
     // promoted local that came from this module should still be a definition.
-    assert(SrcFileMD || OrigName == F.getName());
+    assert(SrcFileMD || OrigName == GV.getName());
   }
   StringRef SrcFile = M.getSourceFileName();
   if (SrcFileMD)
@@ -6692,9 +6711,9 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
   // automatically during IR linking for naming conflicts. It would have to
   // still be internal in that case (otherwise it would have been renamed on
   // promotion in which case we wouldn't have a naming conflict).
-  if (!TheFnVI && OrigName == F.getName() && F.hasLocalLinkage() &&
-      F.getName().contains('.')) {
-    OrigName = F.getName().rsplit('.').first;
+  if (!TheFnVI && OrigName == GV.getName() && GV.hasLocalLinkage() &&
+      GV.getName().contains('.')) {
+    OrigName = GV.getName().rsplit('.').first;
     OrigId = GlobalValue::getGlobalIdentifier(
         OrigName, GlobalValue::InternalLinkage, SrcFile);
     TheFnVI = ImportSummary->getValueInfo(
@@ -6703,7 +6722,7 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
   // The only way we may not have a VI is if this is a declaration created for
   // an imported reference. For distributed ThinLTO we may not have a VI for
   // such declarations in the distributed summary.
-  assert(TheFnVI || F.isDeclaration());
+  assert(TheFnVI || GV.isDeclaration());
   return TheFnVI;
 }
 
@@ -6942,9 +6961,9 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
     };
 
     // Locate the summary for F.
-    ValueInfo TheFnVI = findValueInfoForFunc(F, M, ImportSummary);
+    ValueInfo TheFnVI = findValueInfoForGV(F, M, ImportSummary);
     // If not found, this could be an imported local (see comment in
-    // findValueInfoForFunc). Skip for now as it will be cloned in its original
+    // findValueInfoForGV). Skip for now as it will be cloned in its original
     // module (where it would have been promoted to global scope so should
     // satisfy any reference in this module).
     if (!TheFnVI)
@@ -6966,19 +6985,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           break;
         }
       }
-      // TODO: Put back the assert once we have metadata on imported copies of
-      // aliases linking them back to the original alias GUID, which would allow
-      // us to locate the alias summary here.
-      // assert(GVSummary && GVSummary->modulePath() == SrcModule);
+      assert(GVSummary && GVSummary->modulePath() == SrcModule);
     }
-
-    // GVSummary can be null if this is a function imported as a copy of an
-    // alias, and we don't have the aliasee's summary in our distributed index.
-    // TODO: Once we can locate the original GUID for imported aliases (e.g. via
-    // TBD additional metadata), we should find the alias summary instead, and
-    // we can remove this check and fall back to the original check below.
-    if (!GVSummary)
-      continue;
 
     // If this was an imported alias skip it as we won't have the function
     // summary, and it should be cloned in the original module.
@@ -7201,8 +7209,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         } else if (CB->isTailCall() && CalledFunction) {
           // Locate the synthesized callsite info for the callee VI, if any was
           // created, and use that for cloning.
-          ValueInfo CalleeVI =
-              findValueInfoForFunc(*CalledFunction, M, ImportSummary, &F);
+          ValueInfo CalleeVI = findValueInfoForGV(
+              *cast<GlobalValue>(CalledValue), M, ImportSummary, &F);
           if (CalleeVI && MapTailCallCalleeVIToCallsite.count(CalleeVI)) {
             auto Callsite = MapTailCallCalleeVIToCallsite.find(CalleeVI);
             assert(Callsite != MapTailCallCalleeVIToCallsite.end());

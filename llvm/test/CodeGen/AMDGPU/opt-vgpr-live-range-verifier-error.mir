@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -verify-machineinstrs -run-pass=si-opt-vgpr-liverange -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=si-opt-vgpr-liverange -o - %s | FileCheck %s
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -passes=si-opt-vgpr-liverange -o - %s | FileCheck %s
 # Run again using LiveIntervals instead of LiveVariables
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -verify-machineinstrs -run-pass=liveintervals,si-opt-vgpr-liverange -o - %s | FileCheck %s

@@ -8833,9 +8833,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
   // TODO: Check if 32-byte or greater accesses are slow too?
   if (!MI.hasOneMemOperand() && RC == &X86::VR128RegClass &&
       Subtarget.isUnalignedMem16Slow())
-    // Without memoperands, loadRegFromAddr and storeRegToStackSlot will
-    // conservatively assume the address is unaligned. That's bad for
-    // performance.
+    // Without memoperands, storeRegToStackSlot will conservatively
+    // assume the address is unaligned. That's bad for performance.
     return false;
   SmallVector<MachineOperand, X86::AddrNumOperands> AddrOps;
   SmallVector<MachineOperand, 2> BeforeOps;
