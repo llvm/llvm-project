@@ -16,6 +16,12 @@ v8b integral(v8i v) {
   v8b m4 = __builtin_convertvector(v, __attribute__((ext_vector_type(8))) unsigned long);
   v8b m5 = __builtin_convertvector(v, __attribute__((ext_vector_type(8))) char);
   v8b m6 = __builtin_convertvector(v, __attribute__((ext_vector_type(8))) unsigned char);
+  v8b s1 = __builtin_splatvector(v[0], __attribute__((ext_vector_type(8))) int);
+  v8b s2 = __builtin_splatvector(v[0], __attribute__((ext_vector_type(8))) unsigned);
+  v8b s3 = __builtin_splatvector(v[0], __attribute__((ext_vector_type(8))) long);
+  v8b s4 = __builtin_splatvector(v[0], __attribute__((ext_vector_type(8))) unsigned long);
+  v8b s5 = __builtin_splatvector(v[0], __attribute__((ext_vector_type(8))) char);
+  v8b s6 = __builtin_splatvector(v[0], __attribute__((ext_vector_type(8))) unsigned char);
   foo(v);
   return v;
 }
