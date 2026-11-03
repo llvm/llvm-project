@@ -48,8 +48,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
-#include <optional>
-
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
@@ -1773,13 +1771,12 @@ struct RewritePhi {
   PHINode *PN;           // For which PHI node is this replacement?
   unsigned Ith;          // For which incoming value?
   SCEVUse ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
-  std::optional<OperandExitValueList> OperandExitValues;
+  OperandExitValueList OperandExitValues;
   Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
   bool HighCost;               // Is this expansion a high-cost?
 
   RewritePhi(PHINode *P, unsigned I, SCEVUse Val, Instruction *ExpansionPt,
-             bool H,
-             std::optional<OperandExitValueList> OpExitValues = std::nullopt)
+             bool H, OperandExitValueList OpExitValues = {})
       : PN(P), Ith(I), ExpansionSCEV(Val),
         OperandExitValues(std::move(OpExitValues)), ExpansionPoint(ExpansionPt),
         HighCost(H) {}
@@ -2011,15 +2008,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         Instruction *InsertPt =
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
-        // Operand exit values and their cloned user must be expanded outside
-        // the loop at a point that dominates the exiting block.
-        if (!OperandExitValues.empty())
-          InsertPt = L->getLoopPreheader()->getTerminator();
-        if (OperandExitValues.empty())
-          RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
-        else
-          RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost,
-                                     std::move(OperandExitValues));
+        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost,
+                                   std::move(OperandExitValues));
       }
     }
   }
@@ -2045,13 +2035,13 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
     Instruction *Inst = cast<Instruction>(PN->getIncomingValue(Phi.Ith));
     Value *ExitVal;
-    if (!Phi.OperandExitValues) {
+    if (Phi.OperandExitValues.empty()) {
       ExitVal = Rewriter.expandCodeFor(Phi.ExpansionSCEV, Phi.PN->getType(),
                                        Phi.ExpansionPoint);
     } else {
       Instruction *Clone = Inst->clone();
       Clone->setName(Inst->getName() + ".exit");
-      for (auto [Idx, ExitSCEV] : *Phi.OperandExitValues)
+      for (auto [Idx, ExitSCEV] : Phi.OperandExitValues)
         Clone->setOperand(Idx, Rewriter.expandCodeFor(
                                    ExitSCEV, Inst->getOperand(Idx)->getType(),
                                    Phi.ExpansionPoint));
