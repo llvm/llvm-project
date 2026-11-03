@@ -1,0 +1,169 @@
+## Check that the parallel linker descends into a DW_TAG_partial_unit root whose
+## only kept contents are types bound for the artificial type unit. The
+## DW_TAG_compile_unit run is the control.
+##
+## U01:  namespace ns { struct S {}; }
+## U02:  ns::S foo1() { ... }   // DW_FORM_ref_addr reference into U01
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: llvm-dwarfutil %t.cu.o %t.cu.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-CU
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not='DW_AT_name ("U01")' \
+# RUN:   --implicit-check-not=DW_TAG_structure_type
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+# RUN: llvm-dwarfutil %t.pu.o %t.pu.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-PU
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not='DW_AT_name ("U01")' \
+# RUN:   --implicit-check-not=DW_TAG_structure_type
+
+## The two parallel links agree byte for byte.
+# RUN: cmp %t.cu.parallel %t.pu.parallel
+
+## FIXME: llvm-dwarfdump prefixes the partial unit's name to the type (#219635).
+# CLASSIC-CU:     DW_TAG_compile_unit
+# CLASSIC-PU:     DW_TAG_partial_unit
+# CLASSIC-NEXT:     DW_AT_producer ("by_hand")
+# CLASSIC-NEXT:     DW_AT_name ("U01")
+# CLASSIC:        DW_TAG_namespace
+# CLASSIC-NEXT:     DW_AT_name ("ns")
+# CLASSIC:      0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
+# CLASSIC-NEXT:   DW_AT_name ("S")
+# CLASSIC:        DW_TAG_compile_unit
+# CLASSIC-NEXT:     DW_AT_producer ("by_hand")
+# CLASSIC-NEXT:     DW_AT_name ("U02")
+# CLASSIC:        DW_TAG_subprogram
+# CLASSIC-NEXT:     DW_AT_name ("foo1")
+# CLASSIC-CU:       DW_AT_type (0x00000000[[S]] "ns::S")
+# CLASSIC-PU:       DW_AT_type (0x00000000[[S]] "U01::ns::S")
+
+## S is output only in the type unit, and foo1's reference resolves there.
+# PARALLEL:      DW_AT_name ("__artificial_type_unit")
+# PARALLEL:      DW_TAG_namespace
+# PARALLEL-NEXT:   DW_AT_name ("ns")
+# PARALLEL:      0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
+# PARALLEL-NEXT:   DW_AT_name ("S")
+# PARALLEL-NEXT:   DW_AT_byte_size (0x08)
+
+## U01, left empty, is dropped whatever its root tag.
+# PARALLEL:      DW_TAG_compile_unit
+# PARALLEL-NEXT:   DW_AT_producer ("by_hand")
+# PARALLEL-NEXT:   DW_AT_name ("U02")
+# PARALLEL:      DW_TAG_subprogram
+# PARALLEL-NEXT:   DW_AT_name ("foo1")
+# PARALLEL:        DW_AT_type (0x00000000[[S]] "ns::S")
+
+## S has no members, whose DW_TAG_base_type would stay in U01 as a plain child.
+## The roots carry DW_AT_str_offsets_base, which the linker adds only to a
+## DW_TAG_compile_unit root (#219365).
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x10
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 4
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 5
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x23
+        - AbbrCode: 0
+...
