@@ -6463,25 +6463,24 @@ void VPlanTransforms::applyReductionStartAfterLoop(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   if (!LoopRegion)
     return;
-  for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
-    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!PhiR || PhiR->isInLoop())
+  for (auto &PhiR : make_isa_range<VPReductionPHIRecipe>(
+           LoopRegion->getEntryBasicBlock()->phis())) {
+    if (PhiR.isInLoop())
       continue;
     // Reductions without an identity have no ReductionStartVector.
-    auto *StartVec = dyn_cast<VPInstruction>(PhiR->getStartValue());
-    if (!StartVec ||
-        StartVec->getOpcode() != VPInstruction::ReductionStartVector)
+    if (!match(PhiR.getStartValue(),
+               m_VPInstruction<VPInstruction::ReductionStartVector>()))
       continue;
-    // Constants and arguments are available before the loop, so
-    // applying them after the loop only adds latency.
+    auto *StartVec = cast<VPInstruction>(PhiR.getStartValue());
+    // A constant start value folds into a constant start vector, so
+    // applying it after the loop would only add an operation.
     VPValue *Start = StartVec->getOperand(0);
-    auto *IRV = dyn_cast<VPIRValue>(Start);
-    if (IRV && isa<Constant, Argument>(IRV->getValue()))
+    if (isa<VPConstant>(Start))
       continue;
     // findComputeReductionResult does not find reductions performed in a
     // narrower type: their result is computed from a truncate of the backedge
     // value.
-    VPInstruction *RdxResult = vputils::findComputeReductionResult(PhiR);
+    VPInstruction *RdxResult = vputils::findComputeReductionResult(&PhiR);
     if (!RdxResult)
       continue;
     assert(RdxResult->getScalarType() == Start->getScalarType() &&
@@ -6492,15 +6491,15 @@ void VPlanTransforms::applyReductionStartAfterLoop(VPlan &Plan) {
     auto *NewStartVec = cast<VPInstruction>(StartVec->clone());
     NewStartVec->setOperand(0, StartVec->getOperand(1));
     NewStartVec->insertBefore(StartVec);
-    PhiR->setStartValue(NewStartVec);
+    PhiR.setStartValue(NewStartVec);
 
-    RecurKind RK = PhiR->getRecurrenceKind();
+    RecurKind RK = PhiR.getRecurrenceKind();
     unsigned Opc = RecurrenceDescriptor::getOpcode(RK);
     // The lanes of a sub reduction hold negated sums: add the start value.
     if (RecurrenceDescriptor::isSubRecurrenceKind(RK))
       Opc = RK == RecurKind::Sub ? Instruction::Add : Instruction::FAdd;
     VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)
-                          ? VPIRFlags(PhiR->getFastMathFlagsOrNone())
+                          ? VPIRFlags(PhiR.getFastMathFlagsOrNone())
                           : VPIRFlags::getDefaultFlags(Opc);
     VPInstruction *StartOp =
         VPBuilder::getToInsertAfter(RdxResult).createNaryOp(
