@@ -85,7 +85,12 @@ ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
       if (page_end != shadow_end) {
         REAL(memset)((void *)page_end, 0, shadow_end - page_end);
       }
-      ReserveShadowMemoryRange(page_beg, page_end - 1, nullptr);
+      const char* name = kGaplessShadow                 ? "shadow"
+                         : AddrIsInLowShadow(page_beg)  ? "low shadow"
+                         : AddrIsInHighShadow(page_beg) ? "high shadow"
+                         : AddrIsInMidShadow(page_beg)  ? "mid shadow"
+                                                        : nullptr;
+      ReserveShadowMemoryRange(page_beg, page_end - 1, name);
     }
   }
 #endif // SANITIZER_FUCHSIA
