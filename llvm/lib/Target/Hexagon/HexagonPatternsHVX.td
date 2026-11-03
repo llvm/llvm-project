@@ -565,6 +565,14 @@ let Predicates = [UseHVXV68, UseHVXQFloat] in {
   def: OpR_RR_pat_conv_hf<V6_vsub_hf,        pf2<fsub>,  VecF16, HVF16>;
   def: OpR_RR_pat_conv_hf<V6_vadd_hf,        pf2<fadd>,  VecF16, HVF16>;
   def: OpR_RR_pat_conv_hf<V6_vmpy_qf16_hf,   pf2<fmul>,  VecF16, HVF16>;
+
+  // Fused multiply-add. Keeping the vmpy product in qf16 and accumulating with
+  // vadd_qf16_mix avoids the qf16->hf conversion that lowering the multiply and
+  // the add separately would emit, so a MAC is 3 instructions instead of 4.
+  def: Pat<(VecF16 (fma HVF16:$Vu, HVF16:$Vv, HVF16:$Vacc)),
+           (V6_vconv_hf_qf16 (V6_vadd_qf16_mix
+             (V6_vmpy_qf16_hf HVF16:$Vu, HVF16:$Vv), HVF16:$Vacc))>;
+
   def: OpR_RR_pat_conv<V6_vsub_sf,        pf2<fsub>,  VecF32, HVF32>;
   def: OpR_RR_pat_conv<V6_vadd_sf,        pf2<fadd>,  VecF32, HVF32>;
   def: OpR_RR_pat_conv<V6_vmpy_qf32_sf,   pf2<fmul>,  VecF32, HVF32>;
