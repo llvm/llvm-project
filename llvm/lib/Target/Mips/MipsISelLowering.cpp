@@ -555,9 +555,28 @@ static bool invertFPCondCodeUser(Mips::CondCode CC) {
   return true;
 }
 
+/// The `R5900` FPU only implements C.F, C.EQ, C.OLT and C.OLE. Rewrites a
+/// NaN-free condition code (NaN-aware ones are softened before reaching the
+/// FPU) so it maps to one of those or their inverses.
+static ISD::CondCode canonicalizeR5900FCC(ISD::CondCode CC, SDValue &LHS,
+                                          SDValue &RHS) {
+  assert(CC >= ISD::SETFALSE2 && "NaN-aware f32 compare not softened");
+  switch (CC) {
+  case ISD::SETGT:
+  case ISD::SETGE:
+    std::swap(LHS, RHS);
+    return ISD::getSetCCSwappedOperands(CC);
+  case ISD::SETNE:
+    // Without NaN, `!=` is the inverse of C.EQ; FCOND_ONE would use C.UEQ.
+    return ISD::SETUNE;
+  default:
+    return CC;
+  }
+}
+
 // Creates and returns an FPCmp node from a setcc node.
 // Returns Op if setcc is not a floating point comparison.
-static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
+static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op, bool IsR5900) {
   // must be a SETCC node
   if (Op.getOpcode() != ISD::SETCC && Op.getOpcode() != ISD::STRICT_FSETCC &&
       Op.getOpcode() != ISD::STRICT_FSETCCS)
@@ -574,6 +593,8 @@ static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
   // Assume the 3rd operand is a CondCodeSDNode. Add code to check the type of
   // node if necessary.
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  if (IsR5900)
+    CC = canonicalizeR5900FCC(CC, LHS, RHS);
 
   return DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
                      DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
@@ -2212,7 +2233,11 @@ SDValue MipsTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   assert(!Subtarget.hasMips32r6() && !Subtarget.hasMips64r6());
-  SDValue CondRes = createFPCmp(DAG, Op.getOperand(1));
+
+  if (SDValue Soft = lowerR5900SoftFPCmp(Op.getOperand(1), DAG))
+    return DAG.getNode(ISD::BRCOND, DL, Op.getValueType(), Chain, Soft, Dest);
+
+  SDValue CondRes = createFPCmp(DAG, Op.getOperand(1), Subtarget.isR5900());
 
   // Return if flag is not set by a floating point comparison.
   if (CondRes.getOpcode() != MipsISD::FPCmp)
@@ -2231,7 +2256,12 @@ SDValue MipsTargetLowering::
 lowerSELECT(SDValue Op, SelectionDAG &DAG) const
 {
   assert(!Subtarget.hasMips32r6() && !Subtarget.hasMips64r6());
-  SDValue Cond = createFPCmp(DAG, Op.getOperand(0));
+
+  if (SDValue Soft = lowerR5900SoftFPCmp(Op.getOperand(0), DAG))
+    return DAG.getSelect(SDLoc(Op), Op.getValueType(), Soft, Op.getOperand(1),
+                         Op.getOperand(2));
+
+  SDValue Cond = createFPCmp(DAG, Op.getOperand(0), Subtarget.isR5900());
 
   // Return if flag is not set by a floating point comparison.
   if (Cond.getOpcode() != MipsISD::FPCmp)
@@ -2243,7 +2273,11 @@ lowerSELECT(SDValue Op, SelectionDAG &DAG) const
 
 SDValue MipsTargetLowering::lowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   assert(!Subtarget.hasMips32r6() && !Subtarget.hasMips64r6());
-  SDValue Cond = createFPCmp(DAG, Op);
+
+  if (SDValue Soft = lowerR5900SoftFPCmp(Op, DAG))
+    return Soft;
+
+  SDValue Cond = createFPCmp(DAG, Op, Subtarget.isR5900());
 
   assert(Cond.getOpcode() == MipsISD::FPCmp &&
          "Floating point operand expected.");
@@ -2264,6 +2298,20 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(2);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
 
+  if (Subtarget.isR5900() && LHS.getValueType() == MVT::f32) {
+    if (CC < ISD::SETFALSE2) {
+      SDValue NewLHS = LHS, NewRHS = RHS;
+      softenSetCCOperands(DAG, MVT::f32, NewLHS, NewRHS, CC, DL, LHS, RHS,
+                          Chain, Op.getOpcode() == ISD::STRICT_FSETCCS);
+      SDValue Res =
+          NewRHS ? DAG.getSetCC(DL, MVT::i32, NewLHS, NewRHS, CC) : NewLHS;
+
+      return DAG.getMergeValues({Res, Chain}, DL);
+    }
+
+    CC = canonicalizeR5900FCC(CC, LHS, RHS);
+  }
+
   SDValue Cond = DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
                              DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
   SDValue True = DAG.getConstant(1, DL, MVT::i32);
@@ -2271,6 +2319,29 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue CMovFP = createCMovFP(DAG, Cond, True, False, DL);
 
   return DAG.getMergeValues({CMovFP, Chain}, DL);
+}
+
+SDValue MipsTargetLowering::lowerR5900SoftFPCmp(SDValue SetCC,
+                                                SelectionDAG &DAG) const {
+  if (!Subtarget.isR5900() || SetCC.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  SDValue LHS = SetCC.getOperand(0);
+  SDValue RHS = SetCC.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
+  // SETOEQ..SETUNE, SETO and SETUO may see a NaN. `SelectionDAGBuilder` only
+  // emits SETEQ/NE/LT/LE/GT/GE when NaN is ruled out (nnan or known never NaN).
+  if (LHS.getValueType() != MVT::f32 || CC >= ISD::SETFALSE2)
+    return SDValue();
+
+  SDLoc DL(SetCC);
+  SDValue NewLHS = LHS, NewRHS = RHS;
+  softenSetCCOperands(DAG, MVT::f32, NewLHS, NewRHS, CC, DL, LHS, RHS);
+  // Predicates that need two libcalls come back as a finished boolean
+  if (!NewRHS)
+    return NewLHS;
+
+  return DAG.getSetCC(DL, SetCC.getValueType(), NewLHS, NewRHS, CC);
 }
 
 SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,

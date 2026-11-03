@@ -342,21 +342,17 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   }
 
   if (Subtarget.isR5900()) {
-    // R5900 FPU only supports 4 compare conditions: C.F, C.EQ, C.OLT, C.OLE
-    // (and their inversions via bc1t/bc1f). Expand all conditions that would
-    // require C.UN, C.UEQ, C.ULT, or C.ULE instructions (not available on
-    // R5900). The legalizer resolves these via operand swapping, condition
-    // inversion, and decomposition into supported conditions.
-    setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETOGE, MVT::f32, Expand);
+    // The `R5900` FPU only implements C.F, C.EQ, C.OLT and C.OLE (inverted via
+    // bc1t/bc1f and movt/movf), and its compares treat NaN encodings as
+    // ordinary numbers. Compares that may see a NaN (the explicit ordered and
+    // unordered predicates) are lowered to `compiler-rt` libcalls. NaN-free
+    // ones (SETEQ/NE/LT/LE/GT/GE) use the FPU, canonicalized to those four
+    // conditions in `createFPCmp`.
+    for (unsigned CC = ISD::SETOEQ; CC <= ISD::SETUNE; ++CC)
+      setCondCodeAction(static_cast<ISD::CondCode>(CC), MVT::f32, Custom);
+
     setCondCodeAction(ISD::SETGT, MVT::f32, Expand);
     setCondCodeAction(ISD::SETGE, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETULT, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETULE, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETUO, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETUEQ, MVT::f32, Expand);
     setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
 
     // R5900 FPU does not support IEEE 754 special values (NaN, infinity). Use
