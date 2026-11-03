@@ -67,7 +67,7 @@ jobs:
             mkdir build
             cd build
             cmake -G Ninja -DDXIL_DIS=${{ github.workspace }}/DXC/build/bin/llvm-dis.exe -DLLVM_INCLUDE_DXIL_TESTS=On -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_WARP_ONLY=On -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
-            ninja llc llvm-objcopy filecheck hlsl-test-depends
+            ninja llc llvm-objcopy FileCheck hlsl-test-depends
       - name: Run HLSL Tests
         run: |
             & $env:ProgramFiles\$env:VsDevShell -Arch amd64
