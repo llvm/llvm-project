@@ -290,7 +290,6 @@ private:
                                     const MachineOperand &Base,
                                     MemAddress &Addr) const;
   bool processBaseWithConstOffset32(MachineInstr *AddDef,
-                                    const MachineOperand &Base,
                                     MemAddress &Addr) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
   /// Promotes constant offset to the immediate by adjusting the base. It
@@ -2309,10 +2308,7 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
 // Returns true if successful, populating Addr with base register info and
 // offset.
 bool SILoadStoreOptimizer::processBaseWithConstOffset32(
-    MachineInstr *AddDef, const MachineOperand &Base, MemAddress &Addr) const {
-  if (!Base.isReg())
-    return false;
-
+    MachineInstr *AddDef, MemAddress &Addr) const {
   MachineOperand *Src0 = TII->getNamedOperand(*AddDef, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(*AddDef, AMDGPU::OpName::src1);
 
@@ -2372,7 +2368,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
 
   // Try V_ADD_U32_e64 pattern (32-bit base, used for FLAT_SCRATCH vaddr)
   if (Def->getOpcode() == AMDGPU::V_ADD_U32_e64) {
-    if (processBaseWithConstOffset32(Def, Base, Addr))
+    if (processBaseWithConstOffset32(Def, Addr))
       return;
   }
 
