@@ -401,8 +401,8 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       // to alignment padding is not populated with any specific value
       // here. This would be safe as long as runtime is sync with
       // the offsets.
-      Builder.CreateMemCpy(PtrToStore, /*DstAlign*/ SlotAlign, Args[i],
-                           /*SrcAlign*/ Args[i]->getPointerAlignment(DL),
+      Builder.CreateMemCpy(PtrToStore, /*DstAlign=*/SlotAlign, Args[i],
+                           /*SrcAlign=*/Args[i]->getPointerAlignment(DL),
                            StrIt->RealSize);
 
       PtrToStore =
