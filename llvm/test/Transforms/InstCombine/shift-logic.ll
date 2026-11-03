@@ -175,7 +175,7 @@ define i32 @ashr_xor(i32 %x, i32 %py) {
 ; CHECK-LABEL: @ashr_xor(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i32 [[PY:%.*]], 42
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[Y]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[Y]], 31
 ; CHECK-NEXT:    [[SH1:%.*]] = xor i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[SH1]]
 ;
@@ -201,7 +201,7 @@ define i32 @shr_mismatch_xor(i32 %x, i32 %y) {
 
 define i32 @ashr_overshift_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_overshift_xor(
-; CHECK-NEXT:    [[SH0:%.*]] = ashr i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[SH0:%.*]] = ashr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Y:%.*]], [[SH0]]
 ; CHECK-NEXT:    [[SH1:%.*]] = ashr i32 [[R]], 17
 ; CHECK-NEXT:    ret i32 [[SH1]]
@@ -246,10 +246,10 @@ define i32 @lshr_or_extra_use(i32 %x, i32 %y, ptr %p) {
 
 define i32 @PR44028(i32 %x) {
 ; CHECK-LABEL: @PR44028(
-; CHECK-NEXT:    [[SH1:%.*]] = ashr exact i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[SH1:%.*]] = ashr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[SH2:%.*]] = shl i32 ptrtoint (ptr @g to i32), 16
 ; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[SH1]], [[SH2]]
-; CHECK-NEXT:    [[T27:%.*]] = ashr exact i32 [[T0]], 16
+; CHECK-NEXT:    [[T27:%.*]] = ashr i32 [[T0]], 16
 ; CHECK-NEXT:    ret i32 [[T27]]
 ;
   %sh1 = ashr exact i32 %x, 16
