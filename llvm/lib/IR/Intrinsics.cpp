@@ -943,6 +943,27 @@ static raw_ostream &operator<<(raw_ostream &OS, const MatchPosition &Pos) {
 using DeferredIntrinsicMatchInfo =
     std::tuple<Type *, ArrayRef<Intrinsic::IITDescriptor>, MatchPosition>;
 
+/// Check whether \p Ty satisfies the given element constraint \p EC and return
+/// a description of the expected element kind for error messages.
+static std::pair<bool, StringRef>
+checkElementConstraint(Type *Ty,
+                       Intrinsic::IITDescriptor::AnyKindElementConstraint EC) {
+  using namespace Intrinsic;
+
+  Type *EltTy = Ty->getScalarType();
+  switch (EC) {
+  case IITDescriptor::EC_None:
+    return {true, "value"};
+  case IITDescriptor::EC_Integer:
+    return {EltTy->isIntegerTy(), "integer"};
+  case IITDescriptor::EC_Float:
+    return {EltTy->isFloatingPointTy(), "fp"};
+  case IITDescriptor::EC_Pointer:
+    return {EltTy->isPointerTy(), "pointer"};
+  }
+  llvm_unreachable("invalid element constraint");
+}
+
 static bool
 matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
                    MatchPosition Position, SmallVectorImpl<Type *> &OverloadTys,
@@ -1123,20 +1144,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       llvm_unreachable("invalid vector constraint");
     }();
 
-    IsValid &= [&]() {
-      Type *ETy = Ty->getScalarType();
-      switch (EC) {
-      case IITDescriptor::EC_None:
-        return true;
-      case IITDescriptor::EC_Integer:
-        return ETy->isIntegerTy();
-      case IITDescriptor::EC_Float:
-        return ETy->isFloatingPointTy();
-      case IITDescriptor::EC_Pointer:
-        return ETy->isPointerTy();
-      }
-      llvm_unreachable("invalid element constraint");
-    }();
+    auto [ElemValid, EK] = checkElementConstraint(Ty, EC);
+    IsValid &= ElemValid;
 
     if (IsValid)
       return false;
@@ -1146,12 +1155,6 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
         "vector",
         "scalar",
     };
-    static constexpr StringLiteral ElementKinds[] = {
-        "",
-        "integer",
-        "fp",
-        "pointer",
-    };
 
     if (EC == IITDescriptor::EC_None) {
       // No constraint on element type.
@@ -1160,7 +1163,6 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return PrintMsg(false, formatv("any {} type", VK), OIdx);
     }
 
-    StringLiteral EK = ArrayRef(ElementKinds)[EC];
     switch (VC) {
     case IITDescriptor::VC_None:
       // Expected = any EK or EK vector.
@@ -1264,27 +1266,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       OverloadTys.push_back(Ty);
     }
 
-    Type *EltTy = Ty->getScalarType();
-    bool ElemValid;
-    StringRef Kind;
-    switch (D.getElementConstraint()) {
-    case IITDescriptor::EC_None:
-      ElemValid = true;
-      Kind = "value";
-      break;
-    case IITDescriptor::EC_Integer:
-      ElemValid = EltTy->isIntegerTy();
-      Kind = "integer";
-      break;
-    case IITDescriptor::EC_Float:
-      ElemValid = EltTy->isFloatingPointTy();
-      Kind = "fp";
-      break;
-    case IITDescriptor::EC_Pointer:
-      ElemValid = EltTy->isPointerTy();
-      Kind = "pointer";
-      break;
-    }
+    auto [ElemValid, Kind] =
+        checkElementConstraint(Ty, D.getElementConstraint());
 
     auto *ReferenceType = dyn_cast<VectorType>(OverloadTys[RefOverloadIndex]);
     auto *ThisArgVecTy = dyn_cast<VectorType>(Ty);
