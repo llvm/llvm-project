@@ -127,6 +127,7 @@ struct Shape {
     Function *Dealloc;
     BasicBlock *ReturnBlock;
     bool IsFrameInlineInStorage;
+    ConstantInt *TypeId;
   };
 
   struct AsyncLoweringStorage {
