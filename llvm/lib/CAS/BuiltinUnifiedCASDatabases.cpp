@@ -10,14 +10,26 @@
 #include "BuiltinCAS.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::cas;
 
+/// \returns the directory within \p Path for the builtin on-disk CAS, named
+/// after the builtin hashing algorithm, so that it does not conflict with
+/// on-disk CAS data of other hashing algorithms in \p Path.
+static std::string getBuiltinCASPath(StringRef Path) {
+  SmallString<256> CASPath(Path);
+  sys::path::append(CASPath, builtin::BuiltinCASContext::getHashName());
+  return std::string(CASPath);
+}
+
 Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
 cas::createOnDiskUnifiedCASDatabases(StringRef Path) {
   std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB;
-  if (Error E = builtin::createBuiltinUnifiedOnDiskCache(Path).moveInto(UniDB))
+  if (Error E =
+          builtin::createBuiltinUnifiedOnDiskCache(getBuiltinCASPath(Path))
+              .moveInto(UniDB))
     return std::move(E);
   auto CAS = builtin::createObjectStoreFromUnifiedOnDiskCache(UniDB);
   auto AC = builtin::createActionCacheFromUnifiedOnDiskCache(std::move(UniDB));
@@ -29,7 +41,7 @@ cas::validateOnDiskUnifiedCASDatabasesIfNeeded(StringRef Path, bool CheckHash,
                                                bool ForceValidation) {
 #if LLVM_ENABLE_ONDISK_CAS
   return ondisk::UnifiedOnDiskCache::validateIfNeeded(
-      Path, builtin::BuiltinCASContext::getHashName(),
+      getBuiltinCASPath(Path), builtin::BuiltinCASContext::getHashName(),
       sizeof(builtin::HashType), CheckHash, builtin::hashingFunc,
       ForceValidation);
 #else
@@ -40,7 +52,7 @@ cas::validateOnDiskUnifiedCASDatabasesIfNeeded(StringRef Path, bool CheckHash,
 Expected<ValidationResult>
 cas::recoverOnDiskUnifiedCASDatabases(StringRef Path) {
 #if LLVM_ENABLE_ONDISK_CAS
-  return ondisk::UnifiedOnDiskCache::recover(Path);
+  return ondisk::UnifiedOnDiskCache::recover(getBuiltinCASPath(Path));
 #else
   return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
 #endif
