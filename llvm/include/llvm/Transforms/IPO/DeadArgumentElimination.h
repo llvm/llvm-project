@@ -119,7 +119,7 @@ public:
 private:
   Liveness markIfNotLive(RetOrArg Use, UseVector &MaybeLiveUses);
   Liveness surveyUse(const Use *U, UseVector &MaybeLiveUses,
-                     unsigned RetValNum = -1U);
+                     unsigned RetValNum = ~0u);
   Liveness surveyUses(const Value *V, UseVector &MaybeLiveUses);
 
   void surveyFunction(const Function &F);
