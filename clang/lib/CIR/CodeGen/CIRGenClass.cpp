@@ -455,7 +455,6 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   //
   // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space.
-  assert(!cir::MissingFeatures::addressSpace());
   auto vtablePtr =
       cir::VTableGetVPtrOp::create(builder, loc, classAddr.getPointer());
   Address vtableField = Address(vtablePtr, classAddr.getAlignment());
