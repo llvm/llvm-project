@@ -1517,8 +1517,7 @@ define void @loop2_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    zip1 v1.8h, v2.8h, v1.8h
-; CHECK-NEXT:    xtn v1.8b, v1.8h
+; CHECK-NEXT:    trn1 v1.8b, v2.8b, v1.8b
 ; CHECK-NEXT:    str d1, [x0], #8
 ; CHECK-NEXT:    b.ne .LBB4_8
 ; CHECK-NEXT:  // %bb.9: // %middle.block
