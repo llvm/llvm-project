@@ -3472,8 +3472,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::canonicalize: {
       Type *EltTy = VTy->getScalarType();
 
-      // TODO: This could have more refined support for PositiveZero denormal
-      // mode.
       if (EltTy->isIEEELikeFPTy()) {
         DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
@@ -3486,8 +3484,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
         if (Mode != DenormalMode::getIEEE()) {
           // Any zero results may have come from flushed denormals.
-          if (DemandedMask & fcPosZero)
+          if (DemandedMask & fcPosZero) {
             SrcDemandedMask |= fcPosSubnormal;
+            if (Mode.inputsMayBePositiveZero() ||
+                Mode.outputsMayBePositiveZero())
+              SrcDemandedMask |= fcNegSubnormal;
+          }
           if (DemandedMask & fcNegZero)
             SrcDemandedMask |= fcNegSubnormal;
         }
