@@ -1606,8 +1606,14 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
       }
       CompilandIndexItem::GlobalLineTable::Entry line_entry(
           LLDB_INVALID_ADDRESS, 0);
+      const bool has_columns = lines.hasColumnInfo() &&
+                               group.Columns.size() == group.LineNumbers.size();
+      auto column_it = group.Columns.begin();
       for (const LineNumberEntry &entry : group.LineNumbers) {
         LineInfo cur_info(entry.Flags);
+        uint16_t column = 0;
+        if (has_columns)
+          column = (column_it++)->StartColumn;
 
         if (cur_info.isAlwaysStepInto() || cur_info.isNeverStepInto())
           continue;
@@ -1620,8 +1626,8 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
 
         uint32_t lno = cur_info.getStartLine();
 
-        LineTable::Entry new_entry(addr, lno, 0, file_index, is_statement, false,
-                                 is_prologue, is_epilogue, false);
+        LineTable::Entry new_entry(addr, lno, column, file_index, is_statement,
+                                   false, is_prologue, is_epilogue, false);
         // Terminal entry has lower precedence than new entry.
         auto iter = line_set.find(new_entry);
         if (iter != line_set.end() && iter->is_terminal_entry)
