@@ -158,8 +158,9 @@ private:
   /// Collect functions that are specified to be bumped.
   void selectFunctionsToPrint();
 
-  /// Mark functions that are not meant for processing as ignored.
-  void selectFunctionsToProcess();
+  /// Mark functions that are not meant for processing as ignored. Return an
+  /// error if incompatible function-selection options were specified.
+  Error selectFunctionsToProcess();
 
   /// Read information from debug sections.
   void readDebugInfo();
