@@ -73,7 +73,7 @@ StmtResult Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
     MaybeParseGNUAttributes(GNUOrMSAttrs);
 
   if (getLangOpts().HLSL)
-    MaybeParseMicrosoftAttributes(GNUOrMSAttrs);
+    MaybeParseMicrosoftAttributes(GNUOrMSAttrs, /*IsStmtContext=*/true);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs,
