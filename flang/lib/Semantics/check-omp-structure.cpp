@@ -6195,6 +6195,11 @@ void OmpStructureChecker::CheckArraySection(
                 "Cannot specify a step for a substring"_err_en_US);
             break;
           }
+          // DEPEND and AFFINITY already diagnose explicit strides. Avoid
+          // additional zero-size diagnostics for these invalid sections.
+          if (!checkPositiveStride) {
+            continue;
+          }
           // OpenMP 6.0 Section 5.2.5: Array Sections
           // Restrictions: if a stride expression is specified it must be
           // positive. A stride of 0 doesn't make sense.
