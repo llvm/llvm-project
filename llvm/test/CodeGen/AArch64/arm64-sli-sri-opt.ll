@@ -392,10 +392,9 @@ define void @testLeftBad2x32(<2 x i32> %src1, <2 x i32> %src2, ptr %dest) nounwi
 ; CHECK-SD-LABEL: testLeftBad2x32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #4194300 // =0x3ffffc
-; CHECK-SD-NEXT:    shl.2s v1, v1, #22
 ; CHECK-SD-NEXT:    dup.2s v2, w8
 ; CHECK-SD-NEXT:    and.8b v0, v0, v2
-; CHECK-SD-NEXT:    orr.8b v0, v0, v1
+; CHECK-SD-NEXT:    sli.2s v0, v1, #22
 ; CHECK-SD-NEXT:    str d0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -490,10 +489,9 @@ define void @testLeftBad4x32(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) nounwi
 ; CHECK-SD-LABEL: testLeftBad4x32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #4194300 // =0x3ffffc
-; CHECK-SD-NEXT:    shl.4s v1, v1, #22
 ; CHECK-SD-NEXT:    dup.4s v2, w8
 ; CHECK-SD-NEXT:    and.16b v0, v0, v2
-; CHECK-SD-NEXT:    orr.16b v0, v0, v1
+; CHECK-SD-NEXT:    sli.4s v0, v1, #22
 ; CHECK-SD-NEXT:    str q0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -714,12 +712,18 @@ define void @testLeftNotAllConstantBuildVec8x8(<8 x i8> %src1, <8 x i8> %src2, p
 ; Known bits can provide the implicit mask required by SLI/SRI.
 
 define <8 x i16> @sli_zext_v8i16(<8 x i8> %a, <8 x i16> %b) {
-; CHECK-LABEL: sli_zext_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    shl.8h v1, v1, #8
-; CHECK-NEXT:    orr.16b v0, v0, v1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sli_zext_v8i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    sli.8h v0, v1, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_zext_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.8h v0, v0, #0
+; CHECK-GI-NEXT:    shl.8h v1, v1, #8
+; CHECK-GI-NEXT:    orr.16b v0, v0, v1
+; CHECK-GI-NEXT:    ret
   %base = zext <8 x i8> %a to <8 x i16>
   %shift = shl <8 x i16> %b, splat (i16 8)
   %result = or <8 x i16> %base, %shift
@@ -727,12 +731,18 @@ define <8 x i16> @sli_zext_v8i16(<8 x i8> %a, <8 x i16> %b) {
 }
 
 define <4 x i32> @sli_zext_v4i32(<4 x i16> %a, <4 x i32> %b) {
-; CHECK-LABEL: sli_zext_v4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    shl.4s v1, v1, #16
-; CHECK-NEXT:    orr.16b v0, v0, v1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sli_zext_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    sli.4s v0, v1, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_zext_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    shl.4s v1, v1, #16
+; CHECK-GI-NEXT:    orr.16b v0, v0, v1
+; CHECK-GI-NEXT:    ret
   %base = zext <4 x i16> %a to <4 x i32>
   %shift = shl <4 x i32> %b, splat (i32 16)
   %result = or <4 x i32> %base, %shift
@@ -740,12 +750,18 @@ define <4 x i32> @sli_zext_v4i32(<4 x i16> %a, <4 x i32> %b) {
 }
 
 define <2 x i64> @sli_zext_v2i64(<2 x i32> %a, <2 x i64> %b) {
-; CHECK-LABEL: sli_zext_v2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll.2d v0, v0, #0
-; CHECK-NEXT:    shl.2d v1, v1, #32
-; CHECK-NEXT:    orr.16b v0, v0, v1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sli_zext_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll.2d v0, v0, #0
+; CHECK-SD-NEXT:    sli.2d v0, v1, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_zext_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.2d v0, v0, #0
+; CHECK-GI-NEXT:    shl.2d v1, v1, #32
+; CHECK-GI-NEXT:    orr.16b v0, v0, v1
+; CHECK-GI-NEXT:    ret
   %base = zext <2 x i32> %a to <2 x i64>
   %shift = shl <2 x i64> %b, splat (i64 32)
   %result = or <2 x i64> %base, %shift
@@ -817,9 +833,8 @@ define <4 x i32> @sli_shifted_zext(<4 x i8> %a, <4 x i32> %b) {
 ; CHECK-SD-LABEL: sli_shifted_zext:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-SD-NEXT:    shl.4s v1, v1, #22
 ; CHECK-SD-NEXT:    ushll.4s v0, v0, #12
-; CHECK-SD-NEXT:    orr.16b v0, v0, v1
+; CHECK-SD-NEXT:    sli.4s v0, v1, #22
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sli_shifted_zext:
@@ -842,9 +857,8 @@ define <4 x i32> @sli_shifted_zext_commuted(<4 x i8> %a, <4 x i32> %b) {
 ; CHECK-SD-LABEL: sli_shifted_zext_commuted:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-SD-NEXT:    shl.4s v1, v1, #22
 ; CHECK-SD-NEXT:    ushll.4s v0, v0, #12
-; CHECK-SD-NEXT:    orr.16b v0, v1, v0
+; CHECK-SD-NEXT:    sli.4s v0, v1, #22
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sli_shifted_zext_commuted:
@@ -867,10 +881,9 @@ define <4 x i32> @sli_subset_mask(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-LABEL: sli_subset_mask:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #65534 // =0xfffe
-; CHECK-SD-NEXT:    shl.4s v1, v1, #16
 ; CHECK-SD-NEXT:    dup.4s v2, w8
 ; CHECK-SD-NEXT:    and.16b v0, v0, v2
-; CHECK-SD-NEXT:    orr.16b v0, v0, v1
+; CHECK-SD-NEXT:    sli.4s v0, v1, #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sli_subset_mask:

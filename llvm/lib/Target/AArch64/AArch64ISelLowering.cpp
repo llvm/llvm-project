@@ -16647,103 +16647,94 @@ static bool isAllActivePredicate(const SelectionDAG &DAG, SDValue N) {
   return false;
 }
 
-// Attempt to form a vector S[LR]I from (or (and X, BvecC1), (lsl Y, C2)),
-// to (SLI X, Y, C2), where X and Y have matching vector types, BvecC1 is a
-// BUILD_VECTORs with constant element C1, C2 is a constant, and:
-//   - for the SLI case: C1 == ~(Ones(ElemSizeInBits) << C2)
-//   - for the SRI case: C1 == ~(Ones(ElemSizeInBits) >> C2)
-// The (or (lsl Y, C2), (and X, BvecC1)) case is also handled.
-static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
+// Attempt to form a vector S[LR]I from (or (and X, C1), (shift Y, C2)),
+// where C1 preserves exactly the bits not supplied by the shift. Also handle
+// values whose known-zero bits make the AND unnecessary, using the value
+// itself as the tied destination operand.
+static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG,
+                             bool AllowKnownBits = false) {
   EVT VT = N->getValueType(0);
-
   if (!VT.isVector())
     return SDValue();
 
   SDLoc DL(N);
-
-  SDValue And;
-  SDValue Shift;
-
-  SDValue FirstOp = N->getOperand(0);
-  unsigned FirstOpc = FirstOp.getOpcode();
-  SDValue SecondOp = N->getOperand(1);
-  unsigned SecondOpc = SecondOp.getOpcode();
-
-  // Is one of the operands an AND or a BICi? The AND may have been optimised to
-  // a BICi in order to use an immediate instead of a register.
-  // Is the other operand an shl or lshr? This will have been turned into:
-  // AArch64ISD::VSHL vector, #shift or AArch64ISD::VLSHR vector, #shift
-  // or (AArch64ISD::SHL_PRED || AArch64ISD::SRL_PRED) mask, vector, #shiftVec.
-  if ((FirstOpc == ISD::AND || FirstOpc == AArch64ISD::BICi) &&
-      (SecondOpc == AArch64ISD::VSHL || SecondOpc == AArch64ISD::VLSHR ||
-       SecondOpc == AArch64ISD::SHL_PRED ||
-       SecondOpc == AArch64ISD::SRL_PRED)) {
-    And = FirstOp;
-    Shift = SecondOp;
-
-  } else if ((SecondOpc == ISD::AND || SecondOpc == AArch64ISD::BICi) &&
-             (FirstOpc == AArch64ISD::VSHL || FirstOpc == AArch64ISD::VLSHR ||
-              FirstOpc == AArch64ISD::SHL_PRED ||
-              FirstOpc == AArch64ISD::SRL_PRED)) {
-    And = SecondOp;
-    Shift = FirstOp;
-  } else
-    return SDValue();
-
-  bool IsAnd = And.getOpcode() == ISD::AND;
-  bool IsShiftRight = Shift.getOpcode() == AArch64ISD::VLSHR ||
-                      Shift.getOpcode() == AArch64ISD::SRL_PRED;
-  bool ShiftHasPredOp = Shift.getOpcode() == AArch64ISD::SHL_PRED ||
-                        Shift.getOpcode() == AArch64ISD::SRL_PRED;
-
-  // Is the shift amount constant and are all lanes active?
-  uint64_t C2;
-  if (ShiftHasPredOp) {
-    if (!isAllActivePredicate(DAG, Shift.getOperand(0)))
-      return SDValue();
-    APInt C;
-    if (!ISD::isConstantSplatVector(Shift.getOperand(2).getNode(), C))
-      return SDValue();
-    C2 = C.getZExtValue();
-  } else if (ConstantSDNode *C2node =
-                 dyn_cast<ConstantSDNode>(Shift.getOperand(1)))
-    C2 = C2node->getZExtValue();
-  else
-    return SDValue();
-
-  APInt C1AsAPInt;
   unsigned ElemSizeInBits = VT.getScalarSizeInBits();
-  if (IsAnd) {
-    // Is the and mask vector all constant?
-    if (!ISD::isConstantSplatVector(And.getOperand(1).getNode(), C1AsAPInt))
-      return SDValue();
-  } else {
-    // Reconstruct the corresponding AND immediate from the two BICi immediates.
-    ConstantSDNode *C1nodeImm = dyn_cast<ConstantSDNode>(And.getOperand(1));
-    ConstantSDNode *C1nodeShift = dyn_cast<ConstantSDNode>(And.getOperand(2));
-    assert(C1nodeImm && C1nodeShift);
-    C1AsAPInt = ~(C1nodeImm->getAPIntValue() << C1nodeShift->getAPIntValue());
-    C1AsAPInt = C1AsAPInt.zextOrTrunc(ElemSizeInBits);
+  for (unsigned I = 0; I != 2; ++I) {
+    SDValue Base = N->getOperand(I);
+    SDValue Shift = N->getOperand(1 - I);
+    unsigned ShiftOpc = Shift.getOpcode();
+    if (ShiftOpc != AArch64ISD::VSHL && ShiftOpc != AArch64ISD::VLSHR &&
+        ShiftOpc != AArch64ISD::SHL_PRED && ShiftOpc != AArch64ISD::SRL_PRED)
+      continue;
+
+    bool IsShiftRight =
+        ShiftOpc == AArch64ISD::VLSHR || ShiftOpc == AArch64ISD::SRL_PRED;
+    bool ShiftHasPredOp =
+        ShiftOpc == AArch64ISD::SHL_PRED || ShiftOpc == AArch64ISD::SRL_PRED;
+
+    // Is the shift amount constant and are all lanes active?
+    uint64_t C2;
+    if (ShiftHasPredOp) {
+      if (!isAllActivePredicate(DAG, Shift.getOperand(0)))
+        continue;
+      APInt C;
+      if (!ISD::isConstantSplatVector(Shift.getOperand(2).getNode(), C))
+        continue;
+      C2 = C.getZExtValue();
+    } else if (auto *C = dyn_cast<ConstantSDNode>(Shift.getOperand(1)))
+      C2 = C->getZExtValue();
+    else
+      continue;
+
+    if (C2 > ElemSizeInBits)
+      continue;
+    APInt RequiredC1 = IsShiftRight ? APInt::getHighBitsSet(ElemSizeInBits, C2)
+                                    : APInt::getLowBitsSet(ElemSizeInBits, C2);
+
+    // Preserve the existing exact-mask fold, including when the AND has been
+    // lowered to a BICi to use an immediate instead of a register.
+    APInt C1;
+    bool HasMask = false;
+    if (Base.getOpcode() == ISD::AND)
+      HasMask = ISD::isConstantSplatVector(Base.getOperand(1).getNode(), C1);
+    else if (Base.getOpcode() == AArch64ISD::BICi) {
+      C1 = ~(Base->getConstantOperandAPInt(1)
+             << Base->getConstantOperandAPInt(2));
+      C1 = C1.zextOrTrunc(ElemSizeInBits);
+      HasMask = true;
+    }
+
+    SDValue X = Base;
+    if (HasMask && C1 == RequiredC1)
+      X = Base.getOperand(0);
+    else {
+      // SLI/SRI replaces bits in Base rather than ORing them. This is
+      // equivalent only if those bits are already zero. Keep Base (and any
+      // narrower mask) and avoid a copy or retaining a separately used shift.
+      // Leave right shifts available for USRA and rotate/funnel-shift patterns.
+      if (!AllowKnownBits || IsShiftRight ||
+          Base.getOpcode() == AArch64ISD::VLSHR || !Base.hasOneUse() ||
+          !Shift.hasOneUse() || !DAG.MaskedValueIsZero(Base, ~RequiredC1))
+        continue;
+
+      // Do not split a shift that can be selected as SSHLL/USHLL/SHLL.
+      SDValue Src = Shift.getOperand(0);
+      if ((Src.getOpcode() == ISD::ZERO_EXTEND ||
+           Src.getOpcode() == ISD::SIGN_EXTEND ||
+           Src.getOpcode() == ISD::ANY_EXTEND) &&
+          VT.is128BitVector() &&
+          Src.getOperand(0).getScalarValueSizeInBits() * 2 == ElemSizeInBits &&
+          C2 <= ElemSizeInBits / 2)
+        continue;
+    }
+
+    SDValue Y = ShiftHasPredOp ? Shift.getOperand(1) : Shift.getOperand(0);
+    SDValue Imm = ShiftHasPredOp ? DAG.getTargetConstant(C2, DL, MVT::i32)
+                                 : Shift.getOperand(1);
+    unsigned Inst = IsShiftRight ? AArch64ISD::VSRI : AArch64ISD::VSLI;
+    return DAG.getNode(Inst, DL, VT, X, Y, Imm);
   }
-
-  // Is C1 == ~(Ones(ElemSizeInBits) << C2) or
-  // C1 == ~(Ones(ElemSizeInBits) >> C2), taking into account
-  // how much one can shift elements of a particular size?
-  if (C2 > ElemSizeInBits)
-    return SDValue();
-
-  APInt RequiredC1 = IsShiftRight ? APInt::getHighBitsSet(ElemSizeInBits, C2)
-                                  : APInt::getLowBitsSet(ElemSizeInBits, C2);
-  if (C1AsAPInt != RequiredC1)
-    return SDValue();
-
-  SDValue X = And.getOperand(0);
-  SDValue Y = ShiftHasPredOp ? Shift.getOperand(1) : Shift.getOperand(0);
-  SDValue Imm = ShiftHasPredOp ? DAG.getTargetConstant(C2, DL, MVT::i32)
-                               : Shift.getOperand(1);
-
-  unsigned Inst = IsShiftRight ? AArch64ISD::VSRI : AArch64ISD::VSLI;
-  return DAG.getNode(Inst, DL, VT, X, Y, Imm);
+  return SDValue();
 }
 
 static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
@@ -22353,6 +22344,12 @@ static SDValue performANDORDUPNOTCombine(SDNode *N, SelectionDAG &DAG) {
 static SDValue performORCombine(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
+
+  // Wait until legalization is complete so use counts include every user of
+  // the lowered shifts and the tied destination operand.
+  if (DCI.isAfterLegalizeDAG() && N->getValueType(0).isFixedLengthVector())
+    if (SDValue R = tryLowerToSLI(N, DAG, /*AllowKnownBits=*/true))
+      return R;
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
