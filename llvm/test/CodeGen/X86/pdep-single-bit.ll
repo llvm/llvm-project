@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=-bmi2 | FileCheck %s --check-prefix=NOBMI2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=-bmi2,+popcnt | FileCheck %s --check-prefix=POPCNT
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+bmi2 | FileCheck %s --check-prefix=BMI2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefix=SLOW
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+bmi2,+slow-pdep,-popcnt | FileCheck %s --check-prefix=SLOW-NOPOPCNT
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefixes=SLOW,SLOW-POPCNT
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+bmi2,+slow-pdep,-popcnt | FileCheck %s --check-prefixes=SLOW,SLOW-NOPOPCNT
 
 define i8 @pdep_single_bit_i8(i8 %mask, i8 %n) {
 ; NOBMI2-LABEL: pdep_single_bit_i8:
@@ -111,16 +111,16 @@ define i8 @pdep_single_bit_i8(i8 %mask, i8 %n) {
 ; BMI2-NEXT:    # kill: def $al killed $al killed $eax
 ; BMI2-NEXT:    retq
 ;
-; SLOW-LABEL: pdep_single_bit_i8:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    movb $1, %al
-; SLOW-NEXT:    movl %esi, %ecx
-; SLOW-NEXT:    # kill: def $cl killed $cl killed $ecx
-; SLOW-NEXT:    shlb %cl, %al
-; SLOW-NEXT:    movzbl %al, %eax
-; SLOW-NEXT:    pdepl %edi, %eax, %eax
-; SLOW-NEXT:    # kill: def $al killed $al killed $eax
-; SLOW-NEXT:    retq
+; SLOW-POPCNT-LABEL: pdep_single_bit_i8:
+; SLOW-POPCNT:       # %bb.0:
+; SLOW-POPCNT-NEXT:    movb $1, %al
+; SLOW-POPCNT-NEXT:    movl %esi, %ecx
+; SLOW-POPCNT-NEXT:    # kill: def $cl killed $cl killed $ecx
+; SLOW-POPCNT-NEXT:    shlb %cl, %al
+; SLOW-POPCNT-NEXT:    movzbl %al, %eax
+; SLOW-POPCNT-NEXT:    pdepl %edi, %eax, %eax
+; SLOW-POPCNT-NEXT:    # kill: def $al killed $al killed $eax
+; SLOW-POPCNT-NEXT:    retq
 ;
 ; SLOW-NOPOPCNT-LABEL: pdep_single_bit_i8:
 ; SLOW-NOPOPCNT:       # %bb.0:
@@ -266,76 +266,76 @@ define i16 @pdep_single_bit_i16(i16 %mask, i16 %n) {
 ; BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; BMI2-NEXT:    retq
 ;
-; SLOW-LABEL: pdep_single_bit_i16:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    pushq %rbx
-; SLOW-NEXT:    .cfi_def_cfa_offset 16
-; SLOW-NEXT:    .cfi_offset %rbx, -16
-; SLOW-NEXT:    movzwl %di, %eax
-; SLOW-NEXT:    movl %edi, %r8d
-; SLOW-NEXT:    movzbl %sil, %ecx
-; SLOW-NEXT:    xorl %edx, %edx
-; SLOW-NEXT:    popcntl %eax, %esi
-; SLOW-NEXT:    shrl $16, %r8d
-; SLOW-NEXT:    xorl %eax, %eax
-; SLOW-NEXT:    cmpl %esi, %ecx
-; SLOW-NEXT:    cmovbl %edi, %r8d
-; SLOW-NEXT:    cmovbl %edx, %esi
-; SLOW-NEXT:    setae %al
-; SLOW-NEXT:    subl %esi, %ecx
-; SLOW-NEXT:    movzbl %r8b, %esi
-; SLOW-NEXT:    movl %r8d, %r9d
-; SLOW-NEXT:    popcntl %esi, %r10d
-; SLOW-NEXT:    shrl $8, %r9d
-; SLOW-NEXT:    xorl %esi, %esi
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovbl %r8d, %r9d
-; SLOW-NEXT:    setae %sil
-; SLOW-NEXT:    cmovbl %edx, %r10d
-; SLOW-NEXT:    movl %r9d, %r8d
-; SLOW-NEXT:    movl %r9d, %r11d
-; SLOW-NEXT:    subl %r10d, %ecx
-; SLOW-NEXT:    andl $15, %r8d
-; SLOW-NEXT:    shrl $4, %r11d
-; SLOW-NEXT:    popcntl %r8d, %r10d
-; SLOW-NEXT:    xorl %r8d, %r8d
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovbl %r9d, %r11d
-; SLOW-NEXT:    setae %r8b
-; SLOW-NEXT:    cmovbl %edx, %r10d
-; SLOW-NEXT:    movl %r11d, %r9d
-; SLOW-NEXT:    movl %r11d, %ebx
-; SLOW-NEXT:    subl %r10d, %ecx
-; SLOW-NEXT:    andl $3, %r9d
-; SLOW-NEXT:    shrl $2, %ebx
-; SLOW-NEXT:    popcntl %r9d, %r10d
-; SLOW-NEXT:    xorl %r9d, %r9d
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovbl %r11d, %ebx
-; SLOW-NEXT:    setae %r9b
-; SLOW-NEXT:    cmovbl %edx, %r10d
-; SLOW-NEXT:    xorl %r11d, %r11d
-; SLOW-NEXT:    andl $1, %ebx
-; SLOW-NEXT:    subl %r10d, %ecx
-; SLOW-NEXT:    popcntl %ebx, %r10d
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovbl %edx, %r10d
-; SLOW-NEXT:    setae %r11b
-; SLOW-NEXT:    shll $4, %eax
-; SLOW-NEXT:    addl %r9d, %r9d
-; SLOW-NEXT:    leal (%rax,%rsi,8), %eax
-; SLOW-NEXT:    movl $1, %esi
-; SLOW-NEXT:    leal (%rax,%r8,4), %eax
-; SLOW-NEXT:    orl %r9d, %eax
-; SLOW-NEXT:    orl %r11d, %eax
-; SLOW-NEXT:    shlxl %eax, %esi, %eax
-; SLOW-NEXT:    andl %edi, %eax
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovnel %edx, %eax
-; SLOW-NEXT:    # kill: def $ax killed $ax killed $eax
-; SLOW-NEXT:    popq %rbx
-; SLOW-NEXT:    .cfi_def_cfa_offset 8
-; SLOW-NEXT:    retq
+; SLOW-POPCNT-LABEL: pdep_single_bit_i16:
+; SLOW-POPCNT:       # %bb.0:
+; SLOW-POPCNT-NEXT:    pushq %rbx
+; SLOW-POPCNT-NEXT:    .cfi_def_cfa_offset 16
+; SLOW-POPCNT-NEXT:    .cfi_offset %rbx, -16
+; SLOW-POPCNT-NEXT:    movzwl %di, %eax
+; SLOW-POPCNT-NEXT:    movl %edi, %r8d
+; SLOW-POPCNT-NEXT:    movzbl %sil, %ecx
+; SLOW-POPCNT-NEXT:    xorl %edx, %edx
+; SLOW-POPCNT-NEXT:    popcntl %eax, %esi
+; SLOW-POPCNT-NEXT:    shrl $16, %r8d
+; SLOW-POPCNT-NEXT:    xorl %eax, %eax
+; SLOW-POPCNT-NEXT:    cmpl %esi, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %edi, %r8d
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %esi
+; SLOW-POPCNT-NEXT:    setae %al
+; SLOW-POPCNT-NEXT:    subl %esi, %ecx
+; SLOW-POPCNT-NEXT:    movzbl %r8b, %esi
+; SLOW-POPCNT-NEXT:    movl %r8d, %r9d
+; SLOW-POPCNT-NEXT:    popcntl %esi, %r10d
+; SLOW-POPCNT-NEXT:    shrl $8, %r9d
+; SLOW-POPCNT-NEXT:    xorl %esi, %esi
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %r8d, %r9d
+; SLOW-POPCNT-NEXT:    setae %sil
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %r10d
+; SLOW-POPCNT-NEXT:    movl %r9d, %r8d
+; SLOW-POPCNT-NEXT:    movl %r9d, %r11d
+; SLOW-POPCNT-NEXT:    subl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    andl $15, %r8d
+; SLOW-POPCNT-NEXT:    shrl $4, %r11d
+; SLOW-POPCNT-NEXT:    popcntl %r8d, %r10d
+; SLOW-POPCNT-NEXT:    xorl %r8d, %r8d
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %r9d, %r11d
+; SLOW-POPCNT-NEXT:    setae %r8b
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %r10d
+; SLOW-POPCNT-NEXT:    movl %r11d, %r9d
+; SLOW-POPCNT-NEXT:    movl %r11d, %ebx
+; SLOW-POPCNT-NEXT:    subl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    andl $3, %r9d
+; SLOW-POPCNT-NEXT:    shrl $2, %ebx
+; SLOW-POPCNT-NEXT:    popcntl %r9d, %r10d
+; SLOW-POPCNT-NEXT:    xorl %r9d, %r9d
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %r11d, %ebx
+; SLOW-POPCNT-NEXT:    setae %r9b
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %r10d
+; SLOW-POPCNT-NEXT:    xorl %r11d, %r11d
+; SLOW-POPCNT-NEXT:    andl $1, %ebx
+; SLOW-POPCNT-NEXT:    subl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    popcntl %ebx, %r10d
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %r10d
+; SLOW-POPCNT-NEXT:    setae %r11b
+; SLOW-POPCNT-NEXT:    shll $4, %eax
+; SLOW-POPCNT-NEXT:    addl %r9d, %r9d
+; SLOW-POPCNT-NEXT:    leal (%rax,%rsi,8), %eax
+; SLOW-POPCNT-NEXT:    movl $1, %esi
+; SLOW-POPCNT-NEXT:    leal (%rax,%r8,4), %eax
+; SLOW-POPCNT-NEXT:    orl %r9d, %eax
+; SLOW-POPCNT-NEXT:    orl %r11d, %eax
+; SLOW-POPCNT-NEXT:    shlxl %eax, %esi, %eax
+; SLOW-POPCNT-NEXT:    andl %edi, %eax
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovnel %edx, %eax
+; SLOW-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; SLOW-POPCNT-NEXT:    popq %rbx
+; SLOW-POPCNT-NEXT:    .cfi_def_cfa_offset 8
+; SLOW-POPCNT-NEXT:    retq
 ;
 ; SLOW-NOPOPCNT-LABEL: pdep_single_bit_i16:
 ; SLOW-NOPOPCNT:       # %bb.0:
@@ -557,75 +557,75 @@ define i32 @pdep_single_bit_i32(i32 %mask, i32 %n) {
 ; BMI2-NEXT:    pdepl %edi, %eax, %eax
 ; BMI2-NEXT:    retq
 ;
-; SLOW-LABEL: pdep_single_bit_i32:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    pushq %rbx
-; SLOW-NEXT:    .cfi_def_cfa_offset 16
-; SLOW-NEXT:    .cfi_offset %rbx, -16
-; SLOW-NEXT:    movzwl %di, %eax
-; SLOW-NEXT:    movl %edi, %r8d
-; SLOW-NEXT:    movzbl %sil, %ecx
-; SLOW-NEXT:    xorl %edx, %edx
-; SLOW-NEXT:    popcntl %eax, %esi
-; SLOW-NEXT:    shrl $16, %r8d
-; SLOW-NEXT:    xorl %eax, %eax
-; SLOW-NEXT:    cmpl %esi, %ecx
-; SLOW-NEXT:    cmovbl %edi, %r8d
-; SLOW-NEXT:    cmovbl %edx, %esi
-; SLOW-NEXT:    setae %al
-; SLOW-NEXT:    subl %esi, %ecx
-; SLOW-NEXT:    movzbl %r8b, %esi
-; SLOW-NEXT:    movl %r8d, %r9d
-; SLOW-NEXT:    popcntl %esi, %r10d
-; SLOW-NEXT:    shrl $8, %r9d
-; SLOW-NEXT:    xorl %esi, %esi
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovbl %r8d, %r9d
-; SLOW-NEXT:    setae %sil
-; SLOW-NEXT:    cmovbl %edx, %r10d
-; SLOW-NEXT:    movl %r9d, %r8d
-; SLOW-NEXT:    movl %r9d, %r11d
-; SLOW-NEXT:    subl %r10d, %ecx
-; SLOW-NEXT:    andl $15, %r8d
-; SLOW-NEXT:    shrl $4, %r11d
-; SLOW-NEXT:    popcntl %r8d, %r10d
-; SLOW-NEXT:    xorl %r8d, %r8d
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovbl %r9d, %r11d
-; SLOW-NEXT:    setae %r8b
-; SLOW-NEXT:    cmovbl %edx, %r10d
-; SLOW-NEXT:    movl %r11d, %r9d
-; SLOW-NEXT:    movl %r11d, %ebx
-; SLOW-NEXT:    subl %r10d, %ecx
-; SLOW-NEXT:    andl $3, %r9d
-; SLOW-NEXT:    shrl $2, %ebx
-; SLOW-NEXT:    popcntl %r9d, %r10d
-; SLOW-NEXT:    xorl %r9d, %r9d
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovbl %r11d, %ebx
-; SLOW-NEXT:    setae %r9b
-; SLOW-NEXT:    cmovbl %edx, %r10d
-; SLOW-NEXT:    xorl %r11d, %r11d
-; SLOW-NEXT:    andl $1, %ebx
-; SLOW-NEXT:    subl %r10d, %ecx
-; SLOW-NEXT:    popcntl %ebx, %r10d
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovbl %edx, %r10d
-; SLOW-NEXT:    setae %r11b
-; SLOW-NEXT:    shll $4, %eax
-; SLOW-NEXT:    addl %r9d, %r9d
-; SLOW-NEXT:    leal (%rax,%rsi,8), %eax
-; SLOW-NEXT:    movl $1, %esi
-; SLOW-NEXT:    leal (%rax,%r8,4), %eax
-; SLOW-NEXT:    orl %r9d, %eax
-; SLOW-NEXT:    orl %r11d, %eax
-; SLOW-NEXT:    shlxl %eax, %esi, %eax
-; SLOW-NEXT:    andl %edi, %eax
-; SLOW-NEXT:    cmpl %r10d, %ecx
-; SLOW-NEXT:    cmovnel %edx, %eax
-; SLOW-NEXT:    popq %rbx
-; SLOW-NEXT:    .cfi_def_cfa_offset 8
-; SLOW-NEXT:    retq
+; SLOW-POPCNT-LABEL: pdep_single_bit_i32:
+; SLOW-POPCNT:       # %bb.0:
+; SLOW-POPCNT-NEXT:    pushq %rbx
+; SLOW-POPCNT-NEXT:    .cfi_def_cfa_offset 16
+; SLOW-POPCNT-NEXT:    .cfi_offset %rbx, -16
+; SLOW-POPCNT-NEXT:    movzwl %di, %eax
+; SLOW-POPCNT-NEXT:    movl %edi, %r8d
+; SLOW-POPCNT-NEXT:    movzbl %sil, %ecx
+; SLOW-POPCNT-NEXT:    xorl %edx, %edx
+; SLOW-POPCNT-NEXT:    popcntl %eax, %esi
+; SLOW-POPCNT-NEXT:    shrl $16, %r8d
+; SLOW-POPCNT-NEXT:    xorl %eax, %eax
+; SLOW-POPCNT-NEXT:    cmpl %esi, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %edi, %r8d
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %esi
+; SLOW-POPCNT-NEXT:    setae %al
+; SLOW-POPCNT-NEXT:    subl %esi, %ecx
+; SLOW-POPCNT-NEXT:    movzbl %r8b, %esi
+; SLOW-POPCNT-NEXT:    movl %r8d, %r9d
+; SLOW-POPCNT-NEXT:    popcntl %esi, %r10d
+; SLOW-POPCNT-NEXT:    shrl $8, %r9d
+; SLOW-POPCNT-NEXT:    xorl %esi, %esi
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %r8d, %r9d
+; SLOW-POPCNT-NEXT:    setae %sil
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %r10d
+; SLOW-POPCNT-NEXT:    movl %r9d, %r8d
+; SLOW-POPCNT-NEXT:    movl %r9d, %r11d
+; SLOW-POPCNT-NEXT:    subl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    andl $15, %r8d
+; SLOW-POPCNT-NEXT:    shrl $4, %r11d
+; SLOW-POPCNT-NEXT:    popcntl %r8d, %r10d
+; SLOW-POPCNT-NEXT:    xorl %r8d, %r8d
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %r9d, %r11d
+; SLOW-POPCNT-NEXT:    setae %r8b
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %r10d
+; SLOW-POPCNT-NEXT:    movl %r11d, %r9d
+; SLOW-POPCNT-NEXT:    movl %r11d, %ebx
+; SLOW-POPCNT-NEXT:    subl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    andl $3, %r9d
+; SLOW-POPCNT-NEXT:    shrl $2, %ebx
+; SLOW-POPCNT-NEXT:    popcntl %r9d, %r10d
+; SLOW-POPCNT-NEXT:    xorl %r9d, %r9d
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %r11d, %ebx
+; SLOW-POPCNT-NEXT:    setae %r9b
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %r10d
+; SLOW-POPCNT-NEXT:    xorl %r11d, %r11d
+; SLOW-POPCNT-NEXT:    andl $1, %ebx
+; SLOW-POPCNT-NEXT:    subl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    popcntl %ebx, %r10d
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovbl %edx, %r10d
+; SLOW-POPCNT-NEXT:    setae %r11b
+; SLOW-POPCNT-NEXT:    shll $4, %eax
+; SLOW-POPCNT-NEXT:    addl %r9d, %r9d
+; SLOW-POPCNT-NEXT:    leal (%rax,%rsi,8), %eax
+; SLOW-POPCNT-NEXT:    movl $1, %esi
+; SLOW-POPCNT-NEXT:    leal (%rax,%r8,4), %eax
+; SLOW-POPCNT-NEXT:    orl %r9d, %eax
+; SLOW-POPCNT-NEXT:    orl %r11d, %eax
+; SLOW-POPCNT-NEXT:    shlxl %eax, %esi, %eax
+; SLOW-POPCNT-NEXT:    andl %edi, %eax
+; SLOW-POPCNT-NEXT:    cmpl %r10d, %ecx
+; SLOW-POPCNT-NEXT:    cmovnel %edx, %eax
+; SLOW-POPCNT-NEXT:    popq %rbx
+; SLOW-POPCNT-NEXT:    .cfi_def_cfa_offset 8
+; SLOW-POPCNT-NEXT:    retq
 ;
 ; SLOW-NOPOPCNT-LABEL: pdep_single_bit_i32:
 ; SLOW-NOPOPCNT:       # %bb.0:
@@ -884,92 +884,92 @@ define i64 @pdep_single_bit_i64(i64 %mask, i32 %n) {
 ; BMI2-NEXT:    pdepq %rdi, %rax, %rax
 ; BMI2-NEXT:    retq
 ;
-; SLOW-LABEL: pdep_single_bit_i64:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    pushq %r14
-; SLOW-NEXT:    .cfi_def_cfa_offset 16
-; SLOW-NEXT:    pushq %rbx
-; SLOW-NEXT:    .cfi_def_cfa_offset 24
-; SLOW-NEXT:    .cfi_offset %rbx, -24
-; SLOW-NEXT:    .cfi_offset %r14, -16
-; SLOW-NEXT:    # kill: def $esi killed $esi def $rsi
-; SLOW-NEXT:    movq %rdi, %r8
-; SLOW-NEXT:    andl $63, %esi
-; SLOW-NEXT:    popcntl %edi, %edx
-; SLOW-NEXT:    xorl %ecx, %ecx
-; SLOW-NEXT:    xorl %eax, %eax
-; SLOW-NEXT:    shrq $32, %r8
-; SLOW-NEXT:    cmpq %rdx, %rsi
-; SLOW-NEXT:    cmovbq %rdi, %r8
-; SLOW-NEXT:    cmovbq %rcx, %rdx
-; SLOW-NEXT:    setae %al
-; SLOW-NEXT:    subq %rdx, %rsi
-; SLOW-NEXT:    movzwl %r8w, %edx
-; SLOW-NEXT:    movq %r8, %r9
-; SLOW-NEXT:    popcntl %edx, %r11d
-; SLOW-NEXT:    shrq $16, %r9
-; SLOW-NEXT:    xorl %edx, %edx
-; SLOW-NEXT:    cmpq %r11, %rsi
-; SLOW-NEXT:    cmovbq %r8, %r9
-; SLOW-NEXT:    cmovbq %rcx, %r11
-; SLOW-NEXT:    setae %dl
-; SLOW-NEXT:    movzbl %r9b, %r8d
-; SLOW-NEXT:    movq %r9, %r10
-; SLOW-NEXT:    subq %r11, %rsi
-; SLOW-NEXT:    popcntl %r8d, %r11d
-; SLOW-NEXT:    shrq $8, %r10
-; SLOW-NEXT:    xorl %r8d, %r8d
-; SLOW-NEXT:    cmpq %r11, %rsi
-; SLOW-NEXT:    cmovbq %r9, %r10
-; SLOW-NEXT:    setae %r8b
-; SLOW-NEXT:    cmovbq %rcx, %r11
-; SLOW-NEXT:    movl %r10d, %r9d
-; SLOW-NEXT:    movq %r10, %rbx
-; SLOW-NEXT:    subq %r11, %rsi
-; SLOW-NEXT:    andl $15, %r9d
-; SLOW-NEXT:    shrq $4, %rbx
-; SLOW-NEXT:    popcntl %r9d, %r11d
-; SLOW-NEXT:    xorl %r9d, %r9d
-; SLOW-NEXT:    cmpq %r11, %rsi
-; SLOW-NEXT:    cmovbq %r10, %rbx
-; SLOW-NEXT:    setae %r9b
-; SLOW-NEXT:    cmovbq %rcx, %r11
-; SLOW-NEXT:    movl %ebx, %r10d
-; SLOW-NEXT:    movl %ebx, %r14d
-; SLOW-NEXT:    subq %r11, %rsi
-; SLOW-NEXT:    andl $3, %r10d
-; SLOW-NEXT:    shrl $2, %r14d
-; SLOW-NEXT:    popcntl %r10d, %r11d
-; SLOW-NEXT:    xorl %r10d, %r10d
-; SLOW-NEXT:    cmpq %r11, %rsi
-; SLOW-NEXT:    cmovbq %rbx, %r14
-; SLOW-NEXT:    setae %r10b
-; SLOW-NEXT:    cmovbq %rcx, %r11
-; SLOW-NEXT:    xorl %ebx, %ebx
-; SLOW-NEXT:    andl $1, %r14d
-; SLOW-NEXT:    subq %r11, %rsi
-; SLOW-NEXT:    popcntl %r14d, %r11d
-; SLOW-NEXT:    cmpq %r11, %rsi
-; SLOW-NEXT:    cmovbq %rcx, %r11
-; SLOW-NEXT:    setae %bl
-; SLOW-NEXT:    shll $4, %edx
-; SLOW-NEXT:    shll $5, %eax
-; SLOW-NEXT:    addl %r10d, %r10d
-; SLOW-NEXT:    orl %edx, %eax
-; SLOW-NEXT:    movl $1, %edx
-; SLOW-NEXT:    leal (%rax,%r8,8), %eax
-; SLOW-NEXT:    leal (%rax,%r9,4), %eax
-; SLOW-NEXT:    orl %r10d, %eax
-; SLOW-NEXT:    orl %ebx, %eax
-; SLOW-NEXT:    shlxq %rax, %rdx, %rax
-; SLOW-NEXT:    andq %rdi, %rax
-; SLOW-NEXT:    cmpq %r11, %rsi
-; SLOW-NEXT:    cmovneq %rcx, %rax
-; SLOW-NEXT:    popq %rbx
-; SLOW-NEXT:    .cfi_def_cfa_offset 16
-; SLOW-NEXT:    popq %r14
-; SLOW-NEXT:    .cfi_def_cfa_offset 8
-; SLOW-NEXT:    retq
+; SLOW-POPCNT-LABEL: pdep_single_bit_i64:
+; SLOW-POPCNT:       # %bb.0:
+; SLOW-POPCNT-NEXT:    pushq %r14
+; SLOW-POPCNT-NEXT:    .cfi_def_cfa_offset 16
+; SLOW-POPCNT-NEXT:    pushq %rbx
+; SLOW-POPCNT-NEXT:    .cfi_def_cfa_offset 24
+; SLOW-POPCNT-NEXT:    .cfi_offset %rbx, -24
+; SLOW-POPCNT-NEXT:    .cfi_offset %r14, -16
+; SLOW-POPCNT-NEXT:    # kill: def $esi killed $esi def $rsi
+; SLOW-POPCNT-NEXT:    movq %rdi, %r8
+; SLOW-POPCNT-NEXT:    andl $63, %esi
+; SLOW-POPCNT-NEXT:    popcntl %edi, %edx
+; SLOW-POPCNT-NEXT:    xorl %ecx, %ecx
+; SLOW-POPCNT-NEXT:    xorl %eax, %eax
+; SLOW-POPCNT-NEXT:    shrq $32, %r8
+; SLOW-POPCNT-NEXT:    cmpq %rdx, %rsi
+; SLOW-POPCNT-NEXT:    cmovbq %rdi, %r8
+; SLOW-POPCNT-NEXT:    cmovbq %rcx, %rdx
+; SLOW-POPCNT-NEXT:    setae %al
+; SLOW-POPCNT-NEXT:    subq %rdx, %rsi
+; SLOW-POPCNT-NEXT:    movzwl %r8w, %edx
+; SLOW-POPCNT-NEXT:    movq %r8, %r9
+; SLOW-POPCNT-NEXT:    popcntl %edx, %r11d
+; SLOW-POPCNT-NEXT:    shrq $16, %r9
+; SLOW-POPCNT-NEXT:    xorl %edx, %edx
+; SLOW-POPCNT-NEXT:    cmpq %r11, %rsi
+; SLOW-POPCNT-NEXT:    cmovbq %r8, %r9
+; SLOW-POPCNT-NEXT:    cmovbq %rcx, %r11
+; SLOW-POPCNT-NEXT:    setae %dl
+; SLOW-POPCNT-NEXT:    movzbl %r9b, %r8d
+; SLOW-POPCNT-NEXT:    movq %r9, %r10
+; SLOW-POPCNT-NEXT:    subq %r11, %rsi
+; SLOW-POPCNT-NEXT:    popcntl %r8d, %r11d
+; SLOW-POPCNT-NEXT:    shrq $8, %r10
+; SLOW-POPCNT-NEXT:    xorl %r8d, %r8d
+; SLOW-POPCNT-NEXT:    cmpq %r11, %rsi
+; SLOW-POPCNT-NEXT:    cmovbq %r9, %r10
+; SLOW-POPCNT-NEXT:    setae %r8b
+; SLOW-POPCNT-NEXT:    cmovbq %rcx, %r11
+; SLOW-POPCNT-NEXT:    movl %r10d, %r9d
+; SLOW-POPCNT-NEXT:    movq %r10, %rbx
+; SLOW-POPCNT-NEXT:    subq %r11, %rsi
+; SLOW-POPCNT-NEXT:    andl $15, %r9d
+; SLOW-POPCNT-NEXT:    shrq $4, %rbx
+; SLOW-POPCNT-NEXT:    popcntl %r9d, %r11d
+; SLOW-POPCNT-NEXT:    xorl %r9d, %r9d
+; SLOW-POPCNT-NEXT:    cmpq %r11, %rsi
+; SLOW-POPCNT-NEXT:    cmovbq %r10, %rbx
+; SLOW-POPCNT-NEXT:    setae %r9b
+; SLOW-POPCNT-NEXT:    cmovbq %rcx, %r11
+; SLOW-POPCNT-NEXT:    movl %ebx, %r10d
+; SLOW-POPCNT-NEXT:    movl %ebx, %r14d
+; SLOW-POPCNT-NEXT:    subq %r11, %rsi
+; SLOW-POPCNT-NEXT:    andl $3, %r10d
+; SLOW-POPCNT-NEXT:    shrl $2, %r14d
+; SLOW-POPCNT-NEXT:    popcntl %r10d, %r11d
+; SLOW-POPCNT-NEXT:    xorl %r10d, %r10d
+; SLOW-POPCNT-NEXT:    cmpq %r11, %rsi
+; SLOW-POPCNT-NEXT:    cmovbq %rbx, %r14
+; SLOW-POPCNT-NEXT:    setae %r10b
+; SLOW-POPCNT-NEXT:    cmovbq %rcx, %r11
+; SLOW-POPCNT-NEXT:    xorl %ebx, %ebx
+; SLOW-POPCNT-NEXT:    andl $1, %r14d
+; SLOW-POPCNT-NEXT:    subq %r11, %rsi
+; SLOW-POPCNT-NEXT:    popcntl %r14d, %r11d
+; SLOW-POPCNT-NEXT:    cmpq %r11, %rsi
+; SLOW-POPCNT-NEXT:    cmovbq %rcx, %r11
+; SLOW-POPCNT-NEXT:    setae %bl
+; SLOW-POPCNT-NEXT:    shll $4, %edx
+; SLOW-POPCNT-NEXT:    shll $5, %eax
+; SLOW-POPCNT-NEXT:    addl %r10d, %r10d
+; SLOW-POPCNT-NEXT:    orl %edx, %eax
+; SLOW-POPCNT-NEXT:    movl $1, %edx
+; SLOW-POPCNT-NEXT:    leal (%rax,%r8,8), %eax
+; SLOW-POPCNT-NEXT:    leal (%rax,%r9,4), %eax
+; SLOW-POPCNT-NEXT:    orl %r10d, %eax
+; SLOW-POPCNT-NEXT:    orl %ebx, %eax
+; SLOW-POPCNT-NEXT:    shlxq %rax, %rdx, %rax
+; SLOW-POPCNT-NEXT:    andq %rdi, %rax
+; SLOW-POPCNT-NEXT:    cmpq %r11, %rsi
+; SLOW-POPCNT-NEXT:    cmovneq %rcx, %rax
+; SLOW-POPCNT-NEXT:    popq %rbx
+; SLOW-POPCNT-NEXT:    .cfi_def_cfa_offset 16
+; SLOW-POPCNT-NEXT:    popq %r14
+; SLOW-POPCNT-NEXT:    .cfi_def_cfa_offset 8
+; SLOW-POPCNT-NEXT:    retq
 ;
 ; SLOW-NOPOPCNT-LABEL: pdep_single_bit_i64:
 ; SLOW-NOPOPCNT:       # %bb.0:
@@ -1262,16 +1262,6 @@ define i64 @pdep_single_bit_i64_minsize(i64 %mask, i64 %n) minsize {
 ; SLOW-NEXT:    shlxq %rsi, %rax, %rax
 ; SLOW-NEXT:    pdepq %rdi, %rax, %rax
 ; SLOW-NEXT:    retq
-;
-; SLOW-NOPOPCNT-LABEL: pdep_single_bit_i64_minsize:
-; SLOW-NOPOPCNT:       # %bb.0:
-; SLOW-NOPOPCNT-NEXT:    pushq $1
-; SLOW-NOPOPCNT-NEXT:    .cfi_adjust_cfa_offset 8
-; SLOW-NOPOPCNT-NEXT:    popq %rax
-; SLOW-NOPOPCNT-NEXT:    .cfi_adjust_cfa_offset -8
-; SLOW-NOPOPCNT-NEXT:    shlxq %rsi, %rax, %rax
-; SLOW-NOPOPCNT-NEXT:    pdepq %rdi, %rax, %rax
-; SLOW-NOPOPCNT-NEXT:    retq
   %bit = shl i64 1, %n
   %r = call i64 @llvm.pdep.i64(i64 %bit, i64 %mask)
   ret i64 %r
