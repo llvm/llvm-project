@@ -21,8 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, close_range,
-                   (unsigned int first, unsigned int last,
-                    unsigned int flags)) {
+                   (unsigned int first, unsigned int last, int flags)) {
   auto ret = linux_syscalls::close_range(first, last, flags);
   if (!ret.has_value()) {
     libc_errno = ret.error();

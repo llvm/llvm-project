@@ -31,11 +31,6 @@ namespace {
 bool create_adjacent_fds(int fds[2]) {
   if (LIBC_NAMESPACE::pipe(fds) != 0)
     return false;
-  if (fds[0] > fds[1]) {
-    int tmp = fds[0];
-    fds[0] = fds[1];
-    fds[1] = tmp;
-  }
   while (fds[0] + 1 != fds[1]) {
     int new_fd = LIBC_NAMESPACE::fcntl(fds[0], F_DUPFD, fds[1]);
     if (new_fd < 0) {
@@ -43,11 +38,7 @@ bool create_adjacent_fds(int fds[2]) {
       LIBC_NAMESPACE::close(fds[1]);
       return false;
     }
-    if (LIBC_NAMESPACE::close(fds[0]) != 0) {
-      LIBC_NAMESPACE::close(fds[1]);
-      LIBC_NAMESPACE::close(new_fd);
-      return false;
-    }
+    LIBC_NAMESPACE::close(fds[0]);
     fds[0] = fds[1];
     fds[1] = new_fd;
   }
@@ -61,7 +52,7 @@ TEST_F(LlvmLibcCloseRangeTest, InvalidArgs) {
   ASSERT_THAT(LIBC_NAMESPACE::close_range(10, 5, 0), Fails(EINVAL));
 
   // Unsupported or invalid flags should fail with EINVAL.
-  ASSERT_THAT(LIBC_NAMESPACE::close_range(10, 10, ~0U), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::close_range(10, 10, ~0), Fails(EINVAL));
 }
 
 TEST_F(LlvmLibcCloseRangeTest, ClosePipes) {
@@ -79,9 +70,9 @@ TEST_F(LlvmLibcCloseRangeTest, ClosePipes) {
   ASSERT_THAT(LIBC_NAMESPACE::fcntl(fds[1], F_GETFD), Fails(EBADF));
 }
 
+#ifdef CLOSE_RANGE_CLOEXEC
 // CLOSE_RANGE_CLOEXEC was introduced in Linux kernel 5.11.
 TEST_F(LlvmLibcCloseRangeTest, CloexecFlag) {
-#ifdef CLOSE_RANGE_CLOEXEC
   int fds[2];
   ASSERT_TRUE(create_adjacent_fds(fds));
   LIBC_NAMESPACE::cpp::scope_exit cleanup([&] {
@@ -102,5 +93,5 @@ TEST_F(LlvmLibcCloseRangeTest, CloexecFlag) {
   int flags1 = LIBC_NAMESPACE::fcntl(fds[1], F_GETFD);
   ASSERT_GT(flags1, -1);
   EXPECT_NE(flags1 & FD_CLOEXEC, 0);
-#endif
 }
+#endif

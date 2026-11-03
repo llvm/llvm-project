@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> close_range(unsigned int first, unsigned int last,
-                                     unsigned int flags) {
+                                     int flags) {
   return syscall_checked<int>(SYS_close_range, first, last, flags);
 }
 

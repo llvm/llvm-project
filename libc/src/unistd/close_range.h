@@ -18,7 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int close_range(unsigned int first, unsigned int last, unsigned int flags);
+int close_range(unsigned int first, unsigned int last, int flags);
 
 } // namespace LIBC_NAMESPACE_DECL
 

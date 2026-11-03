@@ -191,12 +191,12 @@ functions:
       - type: int
   - name: close_range
     standards:
-      - posix
+      - linux
     return_type: int
     arguments:
       - type: unsigned int
       - type: unsigned int
-      - type: unsigned int
+      - type: int
   - name: dup
     standards:
       - posix
