@@ -240,7 +240,7 @@ defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit],
     GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
-let IsDPMACCInstruction = 1 in
+let IsDPMACCInstruction = 1, DPMACCRequiresFullRate64Ops = 1 in
 defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 

@@ -431,6 +431,8 @@ struct VOPDXYInfo {
 
 struct DPMACCInstructionInfo {
   uint32_t Opcode;
+  bool RequiresFullRate64Ops;
+  bool OnGFX125x;
 };
 
 struct FP4FP8DstByteSelInfo {
@@ -855,6 +857,16 @@ FPType getFPDstSelType(unsigned Opc) {
     return FPType::FP4;
 
   return FPType::None;
+}
+
+DPMACCInstructionKind getDPMACCInstructionKind(unsigned Opcode) {
+  const auto *Info = isDPMACCInstructionHelper(Opcode);
+  if (!Info)
+    return DPMACCInstructionKind::None;
+  if (!Info->OnGFX125x)
+    return DPMACCInstructionKind::PreGFX125x;
+  return Info->RequiresFullRate64Ops ? DPMACCInstructionKind::FullRate64Ops
+                                     : DPMACCInstructionKind::Always;
 }
 
 bool isDPMACCInstruction(unsigned Opc) {

@@ -188,12 +188,14 @@ defm V_PK_MIN_U16 : VOP3PInst<"v_pk_min_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, smax>;
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
 
-let SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble] in {
+let SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble],
+    IsDPMACCInstruction = 1 in {
 defm V_PK_MAX_NUM_F64 : VOP3PInst<"v_pk_max_num_f64", V_PK_VOP2_F64_Profile, fmaxnum_like>;
 defm V_PK_MIN_NUM_F64 : VOP3PInst<"v_pk_min_num_f64", V_PK_VOP2_F64_Profile, fminnum_like>;
 }
 
-let SubtargetPredicate = HasPackedU64SingleSGPROps, SchedRW = [Write64Bit] in
+let SubtargetPredicate = HasPackedU64SingleSGPROps, SchedRW = [Write64Bit],
+    IsDPMACCInstruction = 1 in
 defm V_PK_ADD_NC_U64 : VOP3PInst<"v_pk_add_nc_u64", V_PK_VOP2_I64_Profile, add>;
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
@@ -209,7 +211,8 @@ defm V_PK_LSHLREV_B16 : VOP3PInst<"v_pk_lshlrev_b16", VOP3P_Profile<VOP_V2I16_V2
 defm V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, cashr_rev_16>;
 defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshr_rev_16>;
 
-let SubtargetPredicate = HasPackedU64SingleSGPROps, SchedRW = [Write64Bit] in {
+let SubtargetPredicate = HasPackedU64SingleSGPROps, SchedRW = [Write64Bit],
+    IsDPMACCInstruction = 1 in {
 defm V_PK_SUB_NC_U64 : VOP3PInst<"v_pk_sub_nc_u64", V_PK_VOP2_I64_Profile, sub>;
 defm V_PK_LSHL_ADD_U64 : VOP3PInst<"v_pk_lshl_add_u64", V_PK_LSHL_ADD_U64_Profile>;
 } // End SubtargetPredicate = HasPackedU64SingleSGPROps, , SchedRW = [Write64Bit]
@@ -1579,7 +1582,8 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
 
-  let SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble] in {
+  let SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble],
+      IsDPMACCInstruction = 1 in {
     defm V_PK_FMA_F64 : VOP3PInst<"v_pk_fma_f64", V_PK_VOP3_F64_Profile, any_fma>;
     defm V_PK_MUL_F64 : VOP3PInst<"v_pk_mul_f64", V_PK_VOP2_F64_Profile, any_fmul>;
     defm V_PK_ADD_F64 : VOP3PInst<"v_pk_add_f64", V_PK_VOP2_F64_Profile, any_fadd>;

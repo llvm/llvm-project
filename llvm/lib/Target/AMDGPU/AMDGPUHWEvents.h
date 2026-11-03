@@ -49,11 +49,11 @@ namespace AMDGPU {
 ///   - Constructor ensures undefined bits cannot be set.
 class HWEvents {
 public:
-  using value_type = uint32_t;
+  using value_type = uint64_t;
 
   enum : value_type {
     NONE = 0,
-#define AMDGPU_HW_EVENT(X, V) X = (1u << V),
+#define AMDGPU_HW_EVENT(X, V) X = (value_type{1} << V),
 #define AMDGPU_LAST_HW_EVENT(X) HWEVENT_LAST_EVENT = X,
 #include "AMDGPUHWEvents.def"
 
@@ -80,7 +80,7 @@ public:
 
     HWEvents operator*() const {
       // Return only rightmost (least significant) bit set.
-      return Cur ? (Cur & (1 << countr_zero(Cur))) : 0;
+      return Cur ? Cur & (HWEvents::value_type{1} << countr_zero(Cur)) : 0;
     }
 
     const_iterator &operator++() {

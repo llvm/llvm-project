@@ -509,7 +509,7 @@ multiclass VOPC_F32 <string opName, SDPatternOperator cond = COND_NULL, string r
 // The let must be inside the body: a let around a multiclass does not reach
 // the records it inherits from another multiclass.
 multiclass VOPC_F64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> {
-  let IsDPMACCInstruction = 1 in
+  let IsDPMACCInstruction = 1, DPMACCRequiresFullRate64Ops = 1 in
   defm NAME : VOPC_Pseudos <opName, VOPC_I1_F64_F64, cond, revOp, 0>;
 }
 
@@ -530,7 +530,7 @@ multiclass VOPC_I32 <string opName, SDPatternOperator cond = COND_NULL, string r
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
 
 multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> {
-  let IsDPMACCInstruction = 1 in
+  let IsDPMACCInstruction = 1, DPMACCRequiresFullRate64Ops = 1 in
   defm NAME : VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
 }
 
@@ -550,7 +550,7 @@ multiclass VOPCX_F32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_F32_F32, VOPC_F32_F32, COND_NULL, revOp>;
 
 multiclass VOPCX_F64 <string opName, string revOp = opName> {
-  let IsDPMACCInstruction = 1 in
+  let IsDPMACCInstruction = 1, DPMACCRequiresFullRate64Ops = 1 in
   defm NAME : VOPCX_Pseudos <opName, VOPC_I1_F64_F64, VOPC_F64_F64, COND_NULL, revOp>;
 }
 
@@ -570,7 +570,7 @@ multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I32_I32, VOPC_I32_I32, COND_NULL, revOp>;
 
 multiclass VOPCX_I64 <string opName, string revOp = opName> {
-  let IsDPMACCInstruction = 1 in
+  let IsDPMACCInstruction = 1, DPMACCOnGFX125x = 0 in
   defm NAME : VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
 }
 
@@ -1208,15 +1208,15 @@ multiclass VOPCX_CLASS_F32 <string opName> :
   VOPCX_Class_Pseudos <opName, VOPC_I1_F32_I32, VOPC_F32_I32>;
 
 multiclass VOPC_CLASS_F64 <string opName> {
-  let IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32,
-      HasGFX1250BlockingCycles = true in
+  let IsDPMACCInstruction = 1, DPMACCRequiresFullRate64Ops = 1,
+      GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
   defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
   defm : VOPCClassPat64<NAME>;
 }
 
 multiclass VOPCX_CLASS_F64 <string opName> {
-  let IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32,
-      HasGFX1250BlockingCycles = true in
+  let IsDPMACCInstruction = 1, DPMACCRequiresFullRate64Ops = 1,
+      GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
   defm NAME : VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
 }
 

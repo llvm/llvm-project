@@ -19,6 +19,8 @@ class LetDummies {
   bit isAsCheapAsAMove;
   bit FPDPRounding;
   bit IsDPMACCInstruction;
+  bit DPMACCRequiresFullRate64Ops;
+  bit DPMACCOnGFX125x;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -76,6 +78,8 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
   bit IsDPMACCInstruction = 0;
+  bit DPMACCRequiresFullRate64Ops = 0;
+  bit DPMACCOnGFX125x = 1;
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -173,6 +177,8 @@ class VOP_Real<VOP_Pseudo ps> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsSingle = ps.Pfl.IsSingle;
   bit IsDPMACCInstruction = ps.IsDPMACCInstruction;
+  bit DPMACCRequiresFullRate64Ops = ps.DPMACCRequiresFullRate64Ops;
+  bit DPMACCOnGFX125x = ps.DPMACCOnGFX125x;
 }
 
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
@@ -2497,7 +2503,7 @@ def DPMACCInstructionTable : GenericTable {
   let FilterClass = "VOP_Pseudo";
   let FilterClassField = "IsDPMACCInstruction";
   let CppTypeName = "DPMACCInstructionInfo";
-  let Fields = ["Opcode"];
+  let Fields = ["Opcode", "DPMACCRequiresFullRate64Ops", "DPMACCOnGFX125x"];
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "isDPMACCInstructionHelper";
