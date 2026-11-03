@@ -81,13 +81,13 @@ end subroutine
 ! Plain PARAMETER still gets linkonce_odr; CUDA constant PARAMETER stays strong
 ! with an initializer in the defining TU and a declaration in the consumer.
 ! CUDA-CONST-DAG: fir.global linkonce_odr @_QMmod_cudaEChost_vals
-! CUDA-CONST-DAG: fir.global @_QMmod_cudaECconst_vals({{.*}}) {{.*}}data_attr = #cuf.cuda<constant>
+! CUDA-CONST-DAG: fir.global @_QMmod_cudaECconst_vals({{.*}}) <{{.*}}data_attr = #cuf.cuda<constant>
 
 ! CUDA data attributes are stored in the .mod, so the consumer keeps external
 ! linkage for const_vals with or without -fcuda.  '{' after the name is a
 ! declaration (no dense initializer); DAG because emission order is not a contract.
 ! CUDA-USE-DAG: fir.global linkonce_odr @_QMmod_cudaEChost_vals({{.*}})
-! CUDA-USE-DAG: fir.global @_QMmod_cudaECconst_vals {{{.*}}data_attr = #cuf.cuda<constant>
+! CUDA-USE-DAG: fir.global @_QMmod_cudaECconst_vals <{{{.*}}data_attr = #cuf.cuda<constant>
 ! CUDA-USE-NOFCUDA-DAG: fir.global linkonce_odr @_QMmod_cudaEChost_vals({{.*}})
-! CUDA-USE-NOFCUDA-DAG: fir.global @_QMmod_cudaECconst_vals {{{.*}}data_attr = #cuf.cuda<constant>
+! CUDA-USE-NOFCUDA-DAG: fir.global @_QMmod_cudaECconst_vals <{{{.*}}data_attr = #cuf.cuda<constant>
 ! CUDA-USE-NOFCUDA-NOT: fir.global linkonce_odr @_QMmod_cudaECconst_vals

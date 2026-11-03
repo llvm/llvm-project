@@ -1,0 +1,53 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!f32 = !cir.float
+!v4f32 = !cir.vector<4 x !f32>
+
+module {
+  cir.func @wrong_vector_type(%vec: !v4f32) {
+    // expected-error @below {{operand #0 must be vector of}}
+    %0 = cir.vec.reduce.add(%vec) : (!v4f32) -> !f32
+    cir.return
+  }
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+!v4u32 = !cir.vector<4 x !u32i>
+
+module {
+  cir.func @wrong_signedness(%vec: !v4u32) {
+    // expected-error @below {{operand #0 must be vector of signed integer}}
+    %0 = cir.vec.reduce.smax(%vec) : (!v4u32) -> !u32i
+    cir.return
+  }
+}
+
+// -----
+
+!f32 = !cir.float
+!f64 = !cir.double
+!v4f32 = !cir.vector<4 x !f32>
+
+module {
+  cir.func @wrong_accumulator_type(%vec: !v4f32, %start: !f64) {
+    // expected-error @below {{type of 'accumulator' matches element type of 'input'}}
+    %0 = cir.vec.reduce.fadd(%start, %vec) : (!f64, !v4f32) -> !f32
+    cir.return
+  }
+}
+
+// -----
+
+!f32 = !cir.float
+!f64 = !cir.double
+!v4f32 = !cir.vector<4 x !f32>
+
+module {
+  cir.func @wrong_result_type(%vec: !v4f32) {
+    // expected-error @below {{type of 'result' matches element type of 'input'}}
+    %0 = cir.vec.reduce.fmax(%vec) : (!v4f32) -> !f64
+    cir.return
+  }
+}

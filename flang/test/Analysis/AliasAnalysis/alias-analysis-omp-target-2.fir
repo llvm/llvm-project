@@ -26,13 +26,13 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
   %0 = fir.dummy_scope : !fir.dscope
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg1(%1) dummy_scope %0 {uniq_name = "_QFtest_target_dataEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %2:2 = hlfir.declare %arg1(%1) dummy_scope %0 uniq_name("_QFtest_target_dataEa") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %c10_0 = arith.constant 10 : index
   %3 = fir.shape %c10_0 : (index) -> !fir.shape<1>
-  %4:2 = hlfir.declare %arg2(%3) dummy_scope %0 {uniq_name = "_QFtest_target_dataEb"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %4:2 = hlfir.declare %arg2(%3) dummy_scope %0 uniq_name("_QFtest_target_dataEb") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %c10_1 = arith.constant 10 : index
   %5 = fir.shape %c10_1 : (index) -> !fir.shape<1>
-  %6:2 = hlfir.declare %arg0(%5) dummy_scope %0 {uniq_name = "_QFtest_target_dataEp"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %6:2 = hlfir.declare %arg0(%5) dummy_scope %0 uniq_name("_QFtest_target_dataEp") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %7 = arith.subi %c10_1, %c1 : index
@@ -52,10 +52,10 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
     omp.target kernel_type(generic) map_entries(%12 -> %arg3, %15 -> %arg4 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
       %c10_10 = arith.constant 10 : index
       %22 = fir.shape %c10_10 : (index) -> !fir.shape<1>
-      %23:2 = hlfir.declare %arg3(%22) {uniq_name = "_QFtest_target_dataEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+      %23:2 = hlfir.declare %arg3(%22) uniq_name("_QFtest_target_dataEa") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
       %c10_11 = arith.constant 10 : index
       %24 = fir.shape %c10_11 : (index) -> !fir.shape<1>
-      %25:2 = hlfir.declare %arg4(%24) {uniq_name = "_QFtest_target_dataEp"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+      %25:2 = hlfir.declare %arg4(%24) uniq_name("_QFtest_target_dataEp") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
       %c1_12 = arith.constant 1 : index
       %26 = hlfir.designate %23#0 (%c1_12) {test.ptr = "targetArrayA"}  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
       %27 = fir.load %26 : !fir.ref<f32>
@@ -77,10 +77,10 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
     omp.target kernel_type(generic) map_entries(%18 -> %arg3, %21 -> %arg4 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
       %c10_10 = arith.constant 10 : index
       %22 = fir.shape %c10_10 : (index) -> !fir.shape<1>
-      %23:2 = hlfir.declare %arg3(%22) {uniq_name = "_QFtest_target_dataEb"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+      %23:2 = hlfir.declare %arg3(%22) uniq_name("_QFtest_target_dataEb") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
       %c10_11 = arith.constant 10 : index
       %24 = fir.shape %c10_11 : (index) -> !fir.shape<1>
-      %25:2 = hlfir.declare %arg4(%24) {uniq_name = "_QFtest_target_dataEp"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+      %25:2 = hlfir.declare %arg4(%24) uniq_name("_QFtest_target_dataEp") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
       %c1_12 = arith.constant 1 : index
       %26 = hlfir.designate %23#0 (%c1_12) {test.ptr = "targetArrayB"}  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
       %27 = fir.load %26 : !fir.ref<f32>

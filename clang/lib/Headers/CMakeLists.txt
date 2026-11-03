@@ -11,6 +11,7 @@ set(core_files
   inttypes.h
   iso646.h
   limits.h
+  meta
   module.modulemap
   stdalign.h
   stdarg.h
@@ -98,6 +99,7 @@ set(hlsl_subdir_files
   hlsl/hlsl_intrinsic_helpers.h
   hlsl/hlsl_intrinsics.h
   hlsl/hlsl_detail.h
+  hlsl/hlsl_resources.h
   hlsl/hlsl_spirv.h
   )
 set(hlsl_files

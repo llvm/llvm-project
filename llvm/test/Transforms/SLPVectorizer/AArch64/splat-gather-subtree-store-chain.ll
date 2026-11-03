@@ -9,21 +9,25 @@ define void @test(ptr %matrix, double %0) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[MATRIX:%.*]], double [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[TMP0]], i64 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 832
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd double [[TMP1]], 0.000000e+00
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double [[TMP2]])
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double [[TMP2]], double 0.000000e+00)
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP1]], double 0.000000e+00, double [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[TMP8:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP1]], double 0.000000e+00, double [[TMP7]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP1]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd double [[TMP2]], 0.000000e+00
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP8]], <2 x double> [[TMP6]], <2 x double> zeroinitializer)
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP16]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP11]], <2 x double> zeroinitializer, <2 x double> [[TMP14]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP4]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP10]], double [[TMP6]], i64 2
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP8]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP17]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP12]], <4 x double> zeroinitializer, <4 x double> zeroinitializer)
 ; CHECK-NEXT:    store <4 x double> [[TMP13]], ptr [[GEP0]], align 8
 ; CHECK-NEXT:    br label %[[LOOP]]
@@ -67,18 +71,18 @@ define void @splat_subtree_with_scalar_uses(ptr noalias %out, ptr noalias %in) {
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 8
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 12
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 16
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 20
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 16
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 20
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 24
-; CHECK-NEXT:    [[XOR24:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[IN]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[IN]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ADD25:%.*]] = add i32 [[TMP16]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[ADD25:%.*]] = add i32 [[XOR24]], [[TMP3]]
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP2]], [[TMP16]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr [[ARRAYIDX8]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[ADD1]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> zeroinitializer

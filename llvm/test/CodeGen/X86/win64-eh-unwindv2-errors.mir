@@ -31,13 +31,14 @@
 ...
 ---
 name:            alloc_no_dealloc
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
     frame-setup SEH_StackAlloc 40
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -67,6 +68,7 @@ body:             |
 ...
 ---
 name:            missed_push
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup PUSH64r killed $rsi, implicit-def $rsp, implicit $rsp
@@ -74,9 +76,9 @@ body:             |
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 55
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -106,12 +108,13 @@ body:             |
 ...
 ---
 name:            dealloc_no_alloc
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -143,11 +146,12 @@ body:             |
 ...
 ---
 name:            dealloc_after_epilog
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
     RET64
 ...
@@ -178,6 +182,7 @@ body:             |
 ...
 ---
 name:            pop_before_dealloc
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
@@ -185,10 +190,10 @@ body:             |
     $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
     frame-setup SEH_StackAlloc 40
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -218,12 +223,13 @@ body:             |
 ...
 ---
 name:            mov_no_setframe
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rsp = MOV64rr $rbp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -255,13 +261,14 @@ body:             |
 ...
 ---
 name:            mov_after_epilog
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $rbp = MOV64rr $rsp
     frame-setup SEH_SetFrame 52, 0
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     $rsp = MOV64rr $rbp
     RET64
 ...
@@ -292,6 +299,7 @@ body:             |
 ...
 ---
 name:            pop_before_mov
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
@@ -299,10 +307,10 @@ body:             |
     $rbp = MOV64rr $rsp
     frame-setup SEH_SetFrame 52, 0
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $rsp = MOV64rr $rbp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -332,6 +340,7 @@ body:             |
 ...
 ---
 name:            mov_after_dealloc
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $rbp = MOV64rr $rsp
@@ -339,10 +348,10 @@ body:             |
     $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
     frame-setup SEH_StackAlloc 40
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
     $rsp = MOV64rr $rbp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -372,15 +381,16 @@ body:             |
 ...
 ---
 name:            too_many_pops
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 55
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $rsi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -410,6 +420,7 @@ body:             |
 ...
 ---
 name:            pop_in_wrong_order
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
@@ -417,10 +428,10 @@ body:             |
     frame-setup PUSH64r killed $rsi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 60
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $rsi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 
@@ -450,11 +461,12 @@ body:             |
 ...
 ---
 name:            pop_after_epilog
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     RET64
 ...
@@ -485,11 +497,12 @@ body:             |
 ...
 ---
 name:            instr_after_epilog
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     $ecx = MOV32rr killed $eax
     RET64
 ...
@@ -520,6 +533,7 @@ body:             |
 ...
 ---
 name:            dealloc_pop_dealloc
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
@@ -527,10 +541,10 @@ body:             |
     $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
     frame-setup SEH_StackAlloc 40
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rsp = frame-destroy ADD64ri32 $rsp, 20, implicit-def dead $eflags
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $rsp = frame-destroy ADD64ri32 $rsp, 20, implicit-def dead $eflags
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...

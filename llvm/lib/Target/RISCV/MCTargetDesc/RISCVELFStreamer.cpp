@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVELFStreamer.h"
-#include "RISCVAsmBackend.h"
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -28,36 +27,7 @@ using namespace llvm;
 RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  StringRef ABIName = MAB.getTargetOptions().getABIName();
-  // We have to recompute the ABI rather than casting STI to RISCVSubtarget
-  // since MC tools like llvm-mc call this when STI is MCSubtargetInfo instead.
-  // Using RISCVSubtarget requires a TargetMachine, which the MC-only tools
-  // deliberately don't link.
-  // TODO: Might be cleaner to have callers set the ABI instead of computing
-  // it twice which introduces a chance of it being out of sync.
-  if (auto ABIOrErr = RISCVABI::computeTargetABI(STI, ABIName)) {
-    setTargetABI(*ABIOrErr);
-  } else {
-    // Do not set TargetABI here if invalid: RISCVSubtarget/RISCVAsmPrinter
-    // (in codegen) or RISCVAsmParser::onBeginOfFile() (in llvm-mc) will
-    // resolve or diagnose it with proper contexts.
-    consumeError(ABIOrErr.takeError());
-  }
   setFlagsFromFeatures(STI);
-
-  // Compute the initial ISA string.  This serves two purposes:
-  //   1. Deduplication: subsequent .option arch/rvc/norvc directives compare
-  //      against ArchString to avoid propagating redundant ISA updates.
-  //   2. Initial symbol: seed the streamer's active ISA so a "$x<ArchString>"
-  //      mapping symbol is emitted before the first instruction, recording
-  //      the full ISA in the object even when no .option directive is present.
-  if (auto ParseResult = RISCVFeatures::parseFeatureBits(STI)) {
-    InitialArchString = (*ParseResult)->toString();
-    ArchString = InitialArchString;
-    getStreamer().setMappingSymbolArch(ArchString);
-  }
 }
 
 RISCVELFStreamer::RISCVELFStreamer(MCContext &C,
@@ -68,6 +38,23 @@ RISCVELFStreamer::RISCVELFStreamer(MCContext &C,
 
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
+}
+
+void RISCVTargetELFStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
+  RISCVTargetStreamer::setFlagsFromFeatures(STI);
+
+  // Compute the initial ISA string.  This serves two purposes:
+  //   1. Deduplication: subsequent .option arch/rvc/norvc directives compare
+  //      against ArchString to avoid propagating redundant ISA updates.
+  //   2. Initial symbol: seed the streamer's active ISA so a "$x<ArchString>"
+  //      mapping symbol is emitted before the first instruction, recording
+  //      the full ISA in the object even when no .option directive is present.
+  if (auto ParseResult = RISCVFeatures::parseFeatureBits(STI)) {
+    InitialArchString = (*ParseResult)->toString();
+    setArchString(InitialArchString);
+  } else {
+    consumeError(ParseResult.takeError());
+  }
 }
 
 void RISCVTargetELFStreamer::setArchString(StringRef Arch) {
@@ -157,7 +144,7 @@ void RISCVTargetELFStreamer::finish() {
     EFlags |= ELF::EF_RISCV_RVE;
     break;
   case RISCVABI::ABI_Unknown:
-    llvm_unreachable("Improperly initialised target ABI");
+    break;
   }
 
   W.setELFHeaderEFlags(EFlags);
@@ -236,9 +223,9 @@ void RISCVELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // default constructor by DenseMap::lookup.  The last ISA suffix emitted in
   // each section is also preserved so that re-entering a section only emits a
   // new "$x<ISA>" symbol when the active ISA has actually changed.
-  const MCSection *Prev = getPreviousSection().first;
-  LastMappingSymbols[Prev] = LastEMS;
-  LastEmittedArchInSection[Prev] = LastEmittedArch;
+  const MCSection *Cur = getCurrentSection().first;
+  LastMappingSymbols[Cur] = LastEMS;
+  LastEmittedArchInSection[Cur] = LastEmittedArch;
   LastEMS = LastMappingSymbols.lookup(Section);
   auto It = LastEmittedArchInSection.find(Section);
   LastEmittedArch = It != LastEmittedArchInSection.end() ? It->second : "";

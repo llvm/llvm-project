@@ -44,6 +44,60 @@ func.func @rescale_unsupported_type(%arg0: tensor<13x21x3x!quant.uniform<u8:f32,
 
 // -----
 
+// CHECK-LABEL: @rescale_unsupported_output_width
+func.func @rescale_unsupported_output_width(%arg0: tensor<2xi32>) -> tensor<2xi64> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi64>}> : () -> tensor<1xi64>
+  // expected-error@+1 {{failed to legalize operation 'tosa.rescale'}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<2xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi64>) -> tensor<2xi64>
+  return %0 : tensor<2xi64>
+}
+
+// -----
+
+// CHECK-LABEL: @rescale_unsupported_i48_output
+func.func @rescale_unsupported_i48_output(%arg0: tensor<2xi8>) -> tensor<2xi48> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi48>}> : () -> tensor<1xi48>
+  // expected-error@+1 {{failed to legalize operation 'tosa.rescale'}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi48>) -> tensor<2xi48>
+  return %0 : tensor<2xi48>
+}
+
+// -----
+
+// CHECK-LABEL: @rescale_invalid_input_zp
+func.func @rescale_invalid_input_zp(%arg0: tensor<2xi32>) -> tensor<2xi32> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  // expected-error@+2 {{'tosa.rescale' op expect input_zp of 0, got 1}}
+  // expected-error@+1 {{failed to legalize operation 'tosa.rescale'}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<2xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi32>) -> tensor<2xi32>
+  return %0 : tensor<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @rescale_invalid_output_zp
+func.func @rescale_invalid_output_zp(%arg0: tensor<2xi32>) -> tensor<2xi32> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %output_zp = "tosa.const"() <{values = dense<-1> : tensor<1xi32>}> : () -> tensor<1xi32>
+  // expected-error@+2 {{'tosa.rescale' op expect output_zp of 0, got -1}}
+  // expected-error@+1 {{failed to legalize operation 'tosa.rescale'}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<2xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi32>) -> tensor<2xi32>
+  return %0 : tensor<2xi32>
+}
+
+// -----
+
 func.func @test_add_2d_different_ranks(%arg0: tensor<3x4xf32>, %arg1: tensor<2x3x4xf32>) -> tensor<2x3x4xf32> {
   // expected-error@+1 {{'tosa.add' op operands don't have matching ranks}}
   %0 = "tosa.add"(%arg0, %arg1) : (tensor<3x4xf32>, tensor<2x3x4xf32>) -> tensor<2x3x4xf32>
@@ -71,5 +125,14 @@ func.func @unranked_reduce(%arg0: tensor<*xf32>) -> tensor<*xf32> {
 func.func @unranked_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<*xf32> {
   // expected-error@+1 {{failed to legalize operation 'tosa.gather'}}
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<13x26xi32>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}
+
+// -----
+
+// Verify ROW_GATHER rejects unranked results during lowering.
+func.func @unranked_row_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>, %row_count: tensor<1xi32>) -> tensor<*xf32> {
+  // expected-error@+1 {{failed to legalize operation 'tosa.row_gather'}}
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<*xf32>
   return %0 : tensor<*xf32>
 }

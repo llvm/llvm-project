@@ -106,13 +106,11 @@ public:
   void writeTo(uint8_t *buf) const override {}
 };
 
-// This is the base class for the GOT and TLVPointer sections, which are nearly
-// functionally identical -- they will both be populated by dyld with addresses
-// to non-lazily-loaded dylib symbols. The main difference is that the
-// TLVPointerSection stores references to thread-local variables.
-class NonLazyPointerSectionBase : public SyntheticSection {
+// The __got section, populated by dyld with addresses to non-lazily-loaded
+// dylib symbols, including TLV descriptors.
+class GotSection final : public SyntheticSection {
 public:
-  NonLazyPointerSectionBase(const char *segname, const char *name);
+  GotSection();
   const llvm::SetVector<const Symbol *> &getEntries() const { return entries; }
   bool isNeeded() const override { return !entries.empty(); }
   uint64_t getSize() const override {
@@ -126,16 +124,6 @@ public:
 
 private:
   llvm::SetVector<const Symbol *> entries;
-};
-
-class GotSection final : public NonLazyPointerSectionBase {
-public:
-  GotSection();
-};
-
-class TlvPointerSection final : public NonLazyPointerSectionBase {
-public:
-  TlvPointerSection();
 };
 
 struct Location {
@@ -342,7 +330,7 @@ public:
   void writeTo(uint8_t *buf) const override;
   void setUp();
 
-  static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+  static constexpr llvm::StringLiteral objcMsgSendStubPrefix = "_objc_msgSend$";
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
   ArrayRef<Defined *> getSymbols() const { return symbols; }
@@ -355,6 +343,8 @@ private:
   size_t getStubSize() const;
 
   std::vector<Defined *> symbols;
+  // Total byte size of all stubs added so far.
+  size_t stubsSectionSize = 0;
   Symbol *objcMsgSend = nullptr;
 };
 
@@ -796,6 +786,10 @@ public:
 
   const std::vector<Location> &getLocations() const { return locations; }
 
+  // Each fixup's "next" field holds the distance to the next fixup on its page
+  // in units of this stride, so every fixup must be aligned to it.
+  static constexpr uint32_t chainStride = 4; // for DYLD_CHAINED_PTR_64
+
   bool hasWeakBinding() const { return hasWeakBind; }
   bool hasNonWeakDefinition() const { return hasNonWeakDef; }
 
@@ -846,7 +840,6 @@ struct InStruct {
   LazyBindingSection *lazyBinding = nullptr;
   ExportSection *exports = nullptr;
   GotSection *got = nullptr;
-  TlvPointerSection *tlvPointers = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;

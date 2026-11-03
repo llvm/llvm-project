@@ -25,6 +25,8 @@ namespace DefaultBufferSizes {
 constexpr unsigned DS = 16;
 } // namespace DefaultBufferSizes
 
+enum class CarriedLatency { Off, Fence, All };
+
 /// AMDGPU-specific scheduling decision reasons. These provide more granularity
 /// than the generic CandReason enum for debugging purposes.
 enum class AMDGPUSchedReason : uint8_t {
@@ -110,7 +112,7 @@ private:
 public:
   HardwareUnitInfo() {}
 
-  unsigned size() { return AllSUs.size(); }
+  size_t size() { return AllSUs.size(); }
 
   unsigned getTotalCycles() { return TotalCycles; }
 
@@ -147,7 +149,7 @@ public:
 
   /// \returns the most recently scheduled SU for this HardwareUnit.
   SUnit *getLastScheduledSU() {
-    unsigned ScheduledCount = ScheduledSUs.size();
+    size_t ScheduledCount = ScheduledSUs.size();
     if (!ScheduledCount)
       return nullptr;
 
@@ -227,7 +229,10 @@ protected:
   const SIInstrInfo *SII;
   const SIRegisterInfo *SRI;
   const TargetSchedModel *SchedModel;
+  const MachineLoopInfo *MLI;
   SmallVector<HardwareUnitInfo, 8> HWUInfo;
+
+  AMDGPU::CarriedLatency RegionCarriedLatency = AMDGPU::CarriedLatency::Off;
   DenseMap<MachineInstr *, unsigned> CarriedLatencies;
 
   /// Walk over the region and collect characteristics for the various
@@ -239,9 +244,6 @@ protected:
   unsigned getMaxBlockingCycles(const MCSchedClassDesc *SC,
                                 const MachineInstr *MI);
 
-  /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
-  /// SU.
-  unsigned getHWUICyclesForSU(SUnit *SU);
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
   /// MI.
   unsigned getHWUICyclesForMI(MachineInstr *MI);
@@ -259,7 +261,7 @@ public:
   CandidateHeuristics() = default;
 
   void initialize(ScheduleDAGMI *DAG, const TargetSchedModel *SchedModel,
-                  const TargetRegisterInfo *TRI);
+                  const TargetRegisterInfo *TRI, const MachineLoopInfo *MLI);
 
   /// Update the state to reflect that \p SU is going to be scheduled.
   void updateForScheduling(SUnit *SU);

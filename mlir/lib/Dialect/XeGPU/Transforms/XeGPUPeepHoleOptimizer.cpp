@@ -331,12 +331,8 @@ public:
       // Compute base = aligned pointer + offset (in bytes).
       Value alignedPtr = memref::ExtractAlignedPointerAsIndexOp::create(
           rewriter, loc, meta.getBaseBuffer());
-      Value elemBytes = arith::ConstantIndexOp::create(
-          rewriter, loc, memrefType.getElementTypeBitWidth() / 8);
-      Value offsetBytes =
-          arith::MulIOp::create(rewriter, loc, meta.getOffset(), elemBytes);
-      Value baseIdx =
-          arith::AddIOp::create(rewriter, loc, alignedPtr, offsetBytes);
+      Value baseIdx = xegpu::addElemOffsetInBytes(rewriter, loc, alignedPtr,
+                                                  meta.getOffset(), memrefType);
       source = arith::IndexCastOp::create(rewriter, loc, rewriter.getI64Type(),
                                           baseIdx);
     }
@@ -467,7 +463,7 @@ public:
 /// reductions ordered based on layout to minimize cross-lane communication.
 class MultiRed2dOpPattern
     : public OpConversionPattern<vector::MultiDimReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -564,7 +560,7 @@ private:
                        xegpu::DistributeLayoutAttr layout) const {
     assert(layout.isForSubgroup() && "Must know the lane layout");
     assert(reductionDims.size() == 2 && "Expected 2D reduction");
-    int64_t intra, cross = -1;
+    int64_t intra = -1, cross = -1;
     xegpu::LayoutAttr layoutAttr = dyn_cast<xegpu::LayoutAttr>(layout);
     if (auto layoutSliceAttr = dyn_cast<xegpu::SliceAttr>(layout))
       layoutAttr =

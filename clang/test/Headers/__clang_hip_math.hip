@@ -2653,7 +2653,7 @@ extern "C" __device__ int test_ilogb(double x) {
   return ilogb(x);
 }
 
-// DEFAULT-LABEL: define dso_local range(i32 0, 2) i32 @test___finitef(
+// DEFAULT-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___finitef(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
@@ -2666,7 +2666,7 @@ extern "C" __device__ int test_ilogb(double x) {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    ret i32 1
 //
-// APPROX-LABEL: define dso_local range(i32 0, 2) i32 @test___finitef(
+// APPROX-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___finitef(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
@@ -2674,7 +2674,7 @@ extern "C" __device__ int test_ilogb(double x) {
 // APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
-// NCRDIV-LABEL: define dso_local range(i32 0, 2) i32 @test___finitef(
+// NCRDIV-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___finitef(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
@@ -2682,7 +2682,7 @@ extern "C" __device__ int test_ilogb(double x) {
 // NCRDIV-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // NCRDIV-NEXT:    ret i32 [[CONV]]
 //
-// AMDGCNSPIRV-LABEL: define spir_func range(i32 0, 2) i32 @test___finitef(
+// AMDGCNSPIRV-LABEL: define spir_func noundef range(i32 0, 2) i32 @test___finitef(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call addrspace(4) float @llvm.fabs.f32(float [[X]])
@@ -2694,7 +2694,7 @@ extern "C" __device__ BOOL_TYPE test___finitef(float x) {
   return __finitef(x);
 }
 
-// DEFAULT-LABEL: define dso_local range(i32 0, 2) i32 @test___finite(
+// DEFAULT-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___finite(
 // DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X]])
@@ -2707,7 +2707,7 @@ extern "C" __device__ BOOL_TYPE test___finitef(float x) {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    ret i32 1
 //
-// APPROX-LABEL: define dso_local range(i32 0, 2) i32 @test___finite(
+// APPROX-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___finite(
 // APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X]])
@@ -2715,7 +2715,7 @@ extern "C" __device__ BOOL_TYPE test___finitef(float x) {
 // APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
-// NCRDIV-LABEL: define dso_local range(i32 0, 2) i32 @test___finite(
+// NCRDIV-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___finite(
 // NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X]])
@@ -2723,7 +2723,7 @@ extern "C" __device__ BOOL_TYPE test___finitef(float x) {
 // NCRDIV-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // NCRDIV-NEXT:    ret i32 [[CONV]]
 //
-// AMDGCNSPIRV-LABEL: define spir_func range(i32 0, 2) i32 @test___finite(
+// AMDGCNSPIRV-LABEL: define spir_func noundef range(i32 0, 2) i32 @test___finite(
 // AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call addrspace(4) double @llvm.fabs.f64(double [[X]])
@@ -2735,7 +2735,7 @@ extern "C" __device__ BOOL_TYPE test___finite(double x) {
   return __finite(x);
 }
 
-// DEFAULT-LABEL: define dso_local range(i32 0, 2) i32 @test___isinff(
+// DEFAULT-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isinff(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
@@ -2748,7 +2748,7 @@ extern "C" __device__ BOOL_TYPE test___finite(double x) {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    ret i32 0
 //
-// APPROX-LABEL: define dso_local range(i32 0, 2) i32 @test___isinff(
+// APPROX-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isinff(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
@@ -2756,7 +2756,7 @@ extern "C" __device__ BOOL_TYPE test___finite(double x) {
 // APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
-// NCRDIV-LABEL: define dso_local range(i32 0, 2) i32 @test___isinff(
+// NCRDIV-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isinff(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
@@ -2764,7 +2764,7 @@ extern "C" __device__ BOOL_TYPE test___finite(double x) {
 // NCRDIV-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // NCRDIV-NEXT:    ret i32 [[CONV]]
 //
-// AMDGCNSPIRV-LABEL: define spir_func range(i32 0, 2) i32 @test___isinff(
+// AMDGCNSPIRV-LABEL: define spir_func noundef range(i32 0, 2) i32 @test___isinff(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call addrspace(4) float @llvm.fabs.f32(float [[X]])
@@ -2776,7 +2776,7 @@ extern "C" __device__ BOOL_TYPE test___isinff(float x) {
   return __isinff(x);
 }
 
-// DEFAULT-LABEL: define dso_local range(i32 0, 2) i32 @test___isinf(
+// DEFAULT-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isinf(
 // DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X]])
@@ -2789,7 +2789,7 @@ extern "C" __device__ BOOL_TYPE test___isinff(float x) {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    ret i32 0
 //
-// APPROX-LABEL: define dso_local range(i32 0, 2) i32 @test___isinf(
+// APPROX-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isinf(
 // APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X]])
@@ -2797,7 +2797,7 @@ extern "C" __device__ BOOL_TYPE test___isinff(float x) {
 // APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
-// NCRDIV-LABEL: define dso_local range(i32 0, 2) i32 @test___isinf(
+// NCRDIV-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isinf(
 // NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X]])
@@ -2805,7 +2805,7 @@ extern "C" __device__ BOOL_TYPE test___isinff(float x) {
 // NCRDIV-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // NCRDIV-NEXT:    ret i32 [[CONV]]
 //
-// AMDGCNSPIRV-LABEL: define spir_func range(i32 0, 2) i32 @test___isinf(
+// AMDGCNSPIRV-LABEL: define spir_func noundef range(i32 0, 2) i32 @test___isinf(
 // AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call addrspace(4) double @llvm.fabs.f64(double [[X]])
@@ -2817,7 +2817,7 @@ extern "C" __device__ BOOL_TYPE test___isinf(double x) {
   return __isinf(x);
 }
 
-// DEFAULT-LABEL: define dso_local range(i32 0, 2) i32 @test___isnanf(
+// DEFAULT-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isnanf(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = fcmp uno float [[X]], 0.000000e+00
@@ -2829,21 +2829,21 @@ extern "C" __device__ BOOL_TYPE test___isinf(double x) {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    ret i32 0
 //
-// APPROX-LABEL: define dso_local range(i32 0, 2) i32 @test___isnanf(
+// APPROX-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isnanf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = fcmp uno float [[X]], 0.000000e+00
 // APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
-// NCRDIV-LABEL: define dso_local range(i32 0, 2) i32 @test___isnanf(
+// NCRDIV-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isnanf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = fcmp uno float [[X]], 0.000000e+00
 // NCRDIV-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // NCRDIV-NEXT:    ret i32 [[CONV]]
 //
-// AMDGCNSPIRV-LABEL: define spir_func range(i32 0, 2) i32 @test___isnanf(
+// AMDGCNSPIRV-LABEL: define spir_func noundef range(i32 0, 2) i32 @test___isnanf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = fcmp uno float [[X]], 0.000000e+00
@@ -2854,7 +2854,7 @@ extern "C" __device__ BOOL_TYPE test___isnanf(float x) {
   return __isnanf(x);
 }
 
-// DEFAULT-LABEL: define dso_local range(i32 0, 2) i32 @test___isnan(
+// DEFAULT-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isnan(
 // DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = fcmp uno double [[X]], 0.000000e+00
@@ -2866,21 +2866,21 @@ extern "C" __device__ BOOL_TYPE test___isnanf(float x) {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    ret i32 0
 //
-// APPROX-LABEL: define dso_local range(i32 0, 2) i32 @test___isnan(
+// APPROX-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isnan(
 // APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = fcmp uno double [[X]], 0.000000e+00
 // APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
-// NCRDIV-LABEL: define dso_local range(i32 0, 2) i32 @test___isnan(
+// NCRDIV-LABEL: define dso_local noundef range(i32 0, 2) i32 @test___isnan(
 // NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = fcmp uno double [[X]], 0.000000e+00
 // NCRDIV-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // NCRDIV-NEXT:    ret i32 [[CONV]]
 //
-// AMDGCNSPIRV-LABEL: define spir_func range(i32 0, 2) i32 @test___isnan(
+// AMDGCNSPIRV-LABEL: define spir_func noundef range(i32 0, 2) i32 @test___isnan(
 // AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = fcmp uno double [[X]], 0.000000e+00
