@@ -17,4 +17,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(AMDGPUMCTests
   Disassembler.cpp
   DwarfRegMappings.cpp
+  TargetStreamer.cpp
   )
