@@ -1044,12 +1044,29 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
         // explicitly. If we know it's a variable, we have a definition for
         // the purposes of this check.
         if (Sym && Sym->isTemporary() && !Sym->isVariable() &&
-            !Sym->isDefined())
-          // FIXME: We would really like to refer back to where the symbol was
-          // first referenced for a source location. We need to add something
-          // to track that. Currently, we just point to the end of the file.
-          printError(getTok().getLoc(), "assembler local symbol '" +
-                                            Sym->getName() + "' not defined");
+            !Sym->isDefined()) {
+          // Check if the character position exists; if not, retrieve it.
+          SMLoc ErrorLoc = getContext().getSymbolLoc(Sym);
+          if (!ErrorLoc.isValid())
+            ErrorLoc = getTok().getLoc();
+
+          // Achieve underline annotation effect.
+          // If the start and end positions exist, retrieve the markers;
+          // otherwise, do nothing. Important: To reproduce this error, please
+          // specify the macOS platform.
+          SMRange SymbolRange;
+          if (ErrorLoc.isValid()) {
+            const char *StartPtr = ErrorLoc.getPointer();
+            SMLoc EndLoc =
+                SMLoc::getFromPointer(StartPtr + Sym->getName().size());
+            SymbolRange = SMRange(ErrorLoc, EndLoc);
+          }
+
+          printError(ErrorLoc,
+                     "assembler local symbol '" + Sym->getName() +
+                         "' not defined",
+                     SymbolRange);
+        }
       }
     }
 
