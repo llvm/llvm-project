@@ -113,7 +113,7 @@ class IntrinsicArgAttr<AttrIndex idx, Attr attr, int value = 0>
 // refer to Attributes.td.
 
 // NoCapture - The specified argument pointer is not captured by the intrinsic.
-class NoCapture<ArgIndex idx> : IntrinsicArgAttr<idx, Captures>;
+class NoCapture<ArgIndex idx> : IntrinsicArgAttr<idx, Captures, 0>;
 
 // NoAlias - The return value or the specified argument pointer is not aliasing
 // other "noalias" pointer arguments of the intrinsic wrt. the intrinsic scope.
