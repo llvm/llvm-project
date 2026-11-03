@@ -5,6 +5,7 @@
 
 ---
 name:            smin_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: smin_i8
@@ -42,6 +43,7 @@ body:             |
 
 ---
 name:            smin_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: smin_i16
@@ -79,6 +81,7 @@ body:             |
 
 ---
 name:            smin_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: smin_i32
@@ -104,6 +107,7 @@ body:             |
 
 ---
 name:            smin_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: smin_i64

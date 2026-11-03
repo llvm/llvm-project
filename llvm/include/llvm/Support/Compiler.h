@@ -348,6 +348,14 @@
 #define LLVM_UNLIKELY(EXPR) (EXPR)
 #endif
 
+// Indicate that a branch condition is hard to predict, so that the compiler
+// prefers a conditional move or select over a branch.
+#if __has_builtin(__builtin_unpredictable)
+#define LLVM_UNPREDICTABLE(EXPR) __builtin_unpredictable(EXPR)
+#else
+#define LLVM_UNPREDICTABLE(EXPR) (EXPR)
+#endif
+
 /// LLVM_ATTRIBUTE_NOINLINE - On compilers where we have a directive to do so,
 /// mark a method "not for inlining".
 #if __has_attribute(noinline)
