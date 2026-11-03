@@ -1782,12 +1782,36 @@ void AccAttributeVisitor::EnsureAllocatableOrPointer(
                 return;
               }
               if (!IsAllocatableOrObjectPointer(lastName.symbol)) {
-                context_.Say(designator.source,
+                std::string clauseName{parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(clause).str())};
+                auto &msg{context_.Say(designator.source,
                     "Argument `%s` on the %s clause must be a variable or "
                     "array with the POINTER or ALLOCATABLE attribute"_err_en_US,
-                    lastName.symbol->name(),
-                    parser::ToUpperCaseLetters(
-                        llvm::acc::getOpenACCClauseName(clause).str()));
+                    lastName.symbol->name(), clauseName)};
+                // An associate name never acquires the POINTER or ALLOCATABLE
+                // attribute of its selector (F2023 11.1.3.3), so the clause
+                // cannot reach the selector's descriptor through it. When the
+                // selector itself qualifies, suggest naming it directly.
+                const Symbol &ultimate{lastName.symbol->GetUltimate()};
+                if (const auto *assoc{
+                        ultimate.detailsIf<AssocEntityDetails>()}) {
+                  const Symbol *selector{assoc->expr()
+                          ? evaluate::GetLastSymbol(*assoc->expr())
+                          : nullptr};
+                  if (selector && IsAllocatableOrObjectPointer(selector)) {
+                    msg.Attach(ultimate.name(),
+                        "`%s` is an associate name and does not have the "
+                        "POINTER or ALLOCATABLE attribute of its selector; "
+                        "use `%s` in the %s clause instead"_en_US,
+                        ultimate.name(), assoc->expr()->AsFortran(),
+                        clauseName);
+                  } else {
+                    msg.Attach(ultimate.name(),
+                        "`%s` is an associate name and does not have the "
+                        "POINTER or ALLOCATABLE attribute"_en_US,
+                        ultimate.name());
+                  }
+                }
               }
             },
             [&](const auto &name) {
