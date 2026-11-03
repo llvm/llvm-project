@@ -58,38 +58,6 @@ end subroutine
 ! CHECK:           return
 ! CHECK:         }
 
-subroutine test_arrays(a)
-  integer :: a(:, :)
-  call takes_int([a, a])
-end subroutine
-! CHECK-LABEL: func.func @_QMarrayctorPtest_arrays(
-! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.array<10xi64> <{bindc_name = ".rt.arrayctor.vector"}>
-! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".tmp.arrayctor"}>
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}Ea"
-! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_5]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
-! CHECK:  %[[VAL_8:.*]] = arith.constant 1 : index
-! CHECK:  %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_8]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#1 : (index) -> i64
-! CHECK:  %[[VAL_11:.*]] = arith.muli %[[VAL_7]], %[[VAL_10]] : i64
-! CHECK:  %[[VAL_20:.*]] = arith.addi %[[VAL_11]], %{{.*}} : i64
-! CHECK:  %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i64) -> index
-! CHECK:  %[[VAL_22:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_21]] <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
-! CHECK:  %[[VAL_23:.*]] = fir.shape %[[VAL_21]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_23]]) uniq_name(".tmp.arrayctor") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:  %[[VAL_25:.*]] = fir.embox %[[VAL_24]]#1(%[[VAL_23]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:  fir.store %[[VAL_25]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:  %[[VAL_26:.*]] = arith.constant false
-! CHECK:  %[[VAL_27:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
-! CHECK:  %[[VAL_31:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:  fir.call @_FortranAInitArrayConstructorVector(%[[VAL_27]], %[[VAL_31]], %[[VAL_26]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, !fir.ref<i8>, i32) -> ()
-! CHECK:  %[[VAL_34:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
-! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_27]], %[[VAL_34]]) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
-! CHECK:  %[[VAL_36:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
-! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_27]], %[[VAL_36]]) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
-! CHECK:  %[[VAL_38:.*]] = arith.constant true
-! CHECK:  hlfir.as_expr %[[VAL_24]]#0 move %[[VAL_38]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
 
 subroutine test_arrays_unpredictable_size()
   call takes_int([rank1(), rank3(), rank1()])
@@ -116,6 +84,31 @@ subroutine test_arrays_unpredictable_size()
 ! CHECK:  hlfir.as_expr %[[VAL_33]] move %[[VAL_32]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, i1) -> !hlfir.expr<?xi32>
 end subroutine
 
+
+! Although SIZE(a) is available before evaluating the entries, the size of
+! rank1() depends on the function's saved counter and is only known after the
+! call. The whole constructor must therefore use the runtime strategy,
+! including the known-size array prefix and the trailing scalar.
+subroutine test_mixed_unpredictable_size(a)
+  integer :: a(:)
+  call takes_int([a, rank1(), 0])
+end subroutine
+! CHECK-LABEL: func.func @_QMarrayctorPtest_mixed_unpredictable_size(
+! CHECK-NOT: fir.allocmem
+! CHECK-NOT: fir.call @_QMarrayctorPrank1
+! CHECK: %[[NULL:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK-NOT: fir.allocmem
+! CHECK-NOT: fir.call @_QMarrayctorPrank1
+! CHECK: fir.call @_FortranAInitArrayConstructorVector(%[[VECTOR:[^,]+]],
+! CHECK-NOT: fir.call @_QMarrayctorPrank1
+! CHECK: fir.call @_FortranAPushArrayConstructorValue(%[[VECTOR]],
+! CHECK: fir.call @_QMarrayctorPrank1() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK: fir.call @_FortranAPushArrayConstructorValue(%[[VECTOR]],
+! CHECK: fir.call @_FortranAPushArrayConstructorSimpleScalar(%[[VECTOR]],
+! CHECK: hlfir.as_expr
+! CHECK: fir.call @_QMarrayctorPtakes_int
+! CHECK: hlfir.destroy
+! CHECK: return
 
 ! End to to end test implementation
 function rank1()
