@@ -1062,7 +1062,7 @@ public:
   ///
   /// \returns
   ///   If caching is enabled in the lldb settings and based on the arguments
-  ///   for this currentu se case, , return a pointer to the data file cache.
+  ///   for this current use case, return a pointer to the data file cache.
   ///   If caching is not enabled for this context/settings, returns nullptr.
   static DataFileCache *
   GetIndexCache(bool memory_module, bool disable_memory_symtab_caching = false);
