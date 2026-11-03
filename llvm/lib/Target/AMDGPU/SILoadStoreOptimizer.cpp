@@ -2203,7 +2203,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
     Register FullDestReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     MachineInstr *Add32 =
         BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_U32_e64), FullDestReg)
-            .addReg(Addr.Base.LoReg)
+            .addReg(Addr.Base.LoReg, {}, Addr.Base.LoSubReg)
             .add(OffsetOp)
             .addImm(0); // clamp bit
     (void)Add32;
@@ -2309,27 +2309,33 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
 // offset.
 bool SILoadStoreOptimizer::processBaseWithConstOffset32(
     MachineInstr *AddDef, MemAddress &Addr) const {
+  // A clamped add saturates, so its constant cannot be split off.
+  if (TII->getNamedOperand(*AddDef, AMDGPU::OpName::clamp)->getImm())
+    return false;
+
   MachineOperand *Src0 = TII->getNamedOperand(*AddDef, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(*AddDef, AMDGPU::OpName::src1);
 
   const MachineOperand *BaseOp = nullptr;
+  std::optional<int64_t> Offset;
 
-  if (auto Offset = TII->getImmOrMaterializedImm(*MRI, *Src1)) {
+  if ((Offset = TII->getImmOrMaterializedImm(*MRI, *Src1))) {
     BaseOp = Src0;
-    Addr.Offset = *Offset;
-  } else if (auto Offset0 = TII->getImmOrMaterializedImm(*MRI, *Src0)) {
+  } else if ((Offset = TII->getImmOrMaterializedImm(*MRI, *Src0))) {
     BaseOp = Src1;
-    Addr.Offset = *Offset0;
   } else {
     // Both or neither are constants - can't handle this pattern
     return false;
   }
 
-  if (!BaseOp->isReg())
+  // An SGPR base could make the rebuilt add read two SGPRs.
+  if (!BaseOp->isReg() || !TRI->isVGPR(*MRI, BaseOp->getReg()))
     return false;
 
   Addr.Base.LoReg = BaseOp->getReg();
+  Addr.Base.LoSubReg = BaseOp->getSubReg();
   Addr.Base.UseScratchVGPRPattern = true;
+  Addr.Offset = *Offset;
   return true;
 }
 
@@ -2367,7 +2373,9 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   }
 
   // Try V_ADD_U32_e64 pattern (32-bit base, used for FLAT_SCRATCH vaddr)
-  if (Def->getOpcode() == AMDGPU::V_ADD_U32_e64) {
+  // Not GLOBAL saddr: it zero-extends vaddr, so a 32-bit wrap cannot be split.
+  if (Def->getOpcode() == AMDGPU::V_ADD_U32_e64 &&
+      SIInstrInfo::isFLATScratch(*Base.getParent())) {
     if (processBaseWithConstOffset32(Def, Addr))
       return;
   }
@@ -2461,6 +2469,11 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
 
   if (SIInstrInfo::isFLATScratch(MI) &&
       !TII->getNamedOperand(MI, AMDGPU::OpName::vaddr))
+    return false;
+
+  // Moving part of vaddr into the offset can trigger the SVS swizzle bug.
+  if (STM->hasFlatScratchSVSSwizzleBug() && SIInstrInfo::isFLATScratch(MI) &&
+      TII->getNamedOperand(MI, AMDGPU::OpName::saddr))
     return false;
 
   unsigned AS = SIInstrInfo::isFLATGlobal(MI)    ? AMDGPUAS::GLOBAL_ADDRESS
