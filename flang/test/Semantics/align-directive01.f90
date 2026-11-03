@@ -82,3 +82,8 @@ contains
     f = 0.0
   end function
 end module
+
+! A directive after the last program unit is parsed as a trailing part of
+! that unit, outside its specification part.
+!ERROR: !DIR$ ALIGN directive must appear in the specification part
+!dir$ align(64) :: y
