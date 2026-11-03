@@ -35,7 +35,7 @@ TEST_SUFFIXES = {".s", ".S", ".asm", ".txt", ".test"}
 # The body of a diagnostic check, e.g. ':[[@LINE-1]]:11: error: message'.
 DIAG_RE = re.compile(
     r"""(?:(?:<stdin>|[^\s:\[]*):?(?:\[\[\#?\s*@LINE(?P<offset>[+-]\d+)?\]\]|\[\[\#\]\]|\{\{\[0-9\]\+\}\}|\b\d+):
-           (?:(?P<col>\d+):)?\s*)?
+           (?:(?:(?P<col>\d+)|\[\[\#\]\]|\{\{[^}:\s]+\}\}):)?\s*)?
         (?:(?P<kind>error|warning|note|remark):\s*)?
         (?P<msg>.+?)(?:\{\{\$\}\})?""",
     re.VERBOSE,
