@@ -1,0 +1,35 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# RUN: cd %t
+# RUN: not %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make 2>&1 \
+# RUN:   | FileCheck %s
+
+# CHECK: '{{[^ ]*}}/build/libx.a' is not a link unit
+# CHECK-SAME: build a target that links
+
+# The archive was summarised; it is simply not something to analyse.
+# RUN: cat %t/out/ssaf-artifacts%t/build/libx.a.summary.json \
+# RUN:   | FileCheck %s --check-prefix=LIB
+# LIB: "type": "StaticLibrary"
+
+#--- Makefile
+CXX = clang++
+all: build/libx.a
+build/a.o: src/a.cpp
+	$(CXX) -c -o $@ $<
+build/libx.a: build/a.o
+	$(AR) rcs $@ build/a.o
+
+#--- src/a.cpp
+int total(int *data, int n) {
+  int t = 0;
+  for (int i = 0; i < n; ++i)
+    t += data[i];
+  return t;
+}
