@@ -316,3 +316,42 @@ TEST(PresburgerRelationTest, convertVarKind) {
   // Check if identifiers are transferred correctly.
   EXPECT_TRUE(expectedRel.isEqual(rel));
 }
+
+/// The relation and context used by the gist tests below.
+static PresburgerRelation getGistTestRelation() {
+  return parsePresburgerRelationFromPresburgerSet(
+      {"(x, y) : (y - x - 1 >= 0, x >= 0, -x + 10 >= 0)",
+       "(x, y) : (x - 20 >= 0, -x + 30 >= 0, y >= 0)"},
+      1);
+}
+
+static PresburgerRelation getGistTestContext() {
+  return parsePresburgerRelationFromPresburgerSet({"(x, y) : (x >= 0)"}, 1);
+}
+
+TEST(PresburgerRelationTest, gistPreservesDomainAndRange) {
+  PresburgerRelation rel = getGistTestRelation();
+  PresburgerRelation context = getGistTestContext();
+  PresburgerRelation gist = rel.gist(context);
+
+  EXPECT_TRUE(gist.intersect(context).isEqual(rel.intersect(context)));
+  EXPECT_TRUE(gist.gist(context).isEqual(gist));
+  EXPECT_TRUE(gist.isEqual(parsePresburgerRelationFromPresburgerSet(
+      {"(x, y) : (y - x - 1 >= 0, -x + 10 >= 0)",
+       "(x, y) : (x - 20 >= 0, -x + 30 >= 0, y >= 0)"},
+      1)));
+  EXPECT_EQ(gist.getNumDomainVars(), 1u);
+  EXPECT_EQ(gist.getNumRangeVars(), 1u);
+  ASSERT_EQ(gist.getNumDisjuncts(), 2u);
+  EXPECT_EQ(gist.getDisjunct(0).getNumConstraints(), 2u);
+  EXPECT_EQ(gist.getDisjunct(1).getNumConstraints(), 3u);
+}
+
+TEST(PresburgerRelationTest, gistConvexContextMatchesUnionContext) {
+  PresburgerRelation rel = getGistTestRelation();
+  PresburgerRelation context = getGistTestContext();
+  PresburgerRelation gist = rel.gist(context.getDisjunct(0));
+  EXPECT_TRUE(gist.intersect(context).isEqual(rel.intersect(context)));
+  EXPECT_TRUE(gist.gist(context.getDisjunct(0)).isEqual(gist));
+  EXPECT_TRUE(gist.isEqual(rel.gist(context)));
+}
