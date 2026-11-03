@@ -1148,6 +1148,21 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedVectorElts(
                                          Depth);
 }
 
+// Find the smallest power-2 type that is at least 8 bits and can hold a value
+// of type VT that has KnownBits known sign/zero bits. Returns std::nullopt if
+// that is wider than VT.
+static std::optional<EVT> getNarrowAVGType(EVT VT, unsigned KnownBits,
+                                           LLVMContext &Ctx) {
+  unsigned MinWidth =
+      std::max<unsigned>(VT.getScalarSizeInBits() - KnownBits, 8);
+  EVT NVT = EVT::getIntegerVT(Ctx, llvm::bit_ceil(MinWidth));
+  if (NVT.getScalarSizeInBits() > VT.getScalarSizeInBits())
+    return std::nullopt;
+  if (VT.isVector())
+    NVT = EVT::getVectorVT(Ctx, NVT, VT.getVectorElementCount());
+  return NVT;
+}
+
 // Attempt to form ext(avgfloor(A, B)) from shr(add(ext(A), ext(B)), 1).
 //      or to form ext(avgceil(A, B)) from shr(add(ext(A), ext(B), 1), 1).
 static SDValue combineShiftToAVG(SDValue Op,
@@ -1256,13 +1271,11 @@ static SDValue combineShiftToAVG(SDValue Op,
   // operation, given the original type size and the number of known sign/zero
   // bits.
   EVT VT = Op.getValueType();
-  unsigned MinWidth =
-      std::max<unsigned>(VT.getScalarSizeInBits() - KnownBits, 8);
-  EVT NVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_ceil(MinWidth));
-  if (NVT.getScalarSizeInBits() > VT.getScalarSizeInBits())
+  std::optional<EVT> NarrowVT =
+      getNarrowAVGType(VT, KnownBits, *DAG.getContext());
+  if (!NarrowVT)
     return SDValue();
-  if (VT.isVector())
-    NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
+  EVT NVT = *NarrowVT;
   if (TLO.LegalTypes() && !TLI.isOperationLegal(AVGOpc, NVT)) {
     // If we could not transform, and (both) adds are nuw/nsw, we can use the
     // larger type size to do the transform.
@@ -1288,6 +1301,94 @@ static SDValue combineShiftToAVG(SDValue Op,
       DAG.getNode(AVGOpc, DL, NVT, DAG.getExtOrTrunc(IsSigned, ExtOpA, DL, NVT),
                   DAG.getExtOrTrunc(IsSigned, ExtOpB, DL, NVT));
   return DAG.getExtOrTrunc(IsSigned, ResultAVG, DL, VT);
+}
+
+// Attempt to form ext(avgsubfloor(A, B)) from shr(sub(ext(A), ext(B)), 1).
+static SDValue combineShiftToAVGSUB(SDValue Op,
+                                    TargetLowering::TargetLoweringOpt &TLO,
+                                    const TargetLowering &TLI,
+                                    const APInt &DemandedBits,
+                                    const APInt &DemandedElts, unsigned Depth) {
+  assert((Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SRA) &&
+         "SRL or SRA node is required here!");
+  // Is the right shift using an immediate value of 1?
+  ConstantSDNode *N1C = isConstOrConstSplat(Op.getOperand(1), DemandedElts);
+  if (!N1C || !N1C->isOne())
+    return SDValue();
+
+  SDValue Sub = Op.getOperand(0);
+  if (Sub.getOpcode() != ISD::SUB)
+    return SDValue();
+
+  // The result of the avgsub is sign extended to match the sra. For srl, the
+  // top bit of the result is always zero so it must not be demanded.
+  if (Op.getOpcode() == ISD::SRL && !DemandedBits.isSignBitClear())
+    return SDValue();
+
+  SDValue A = Sub.getOperand(0);
+  SDValue B = Sub.getOperand(1);
+
+  // If both operands have at least 2 sign bits or at least 1 leading zero, the
+  // subtract can't overflow and the operands are extended from a narrower type.
+  SelectionDAG &DAG = TLO.DAG;
+  bool IsSigned;
+  unsigned KnownBits;
+  unsigned NumSigned =
+      std::min(DAG.ComputeNumSignBits(A, DemandedElts, Depth),
+               DAG.ComputeNumSignBits(B, DemandedElts, Depth)) -
+      1;
+  unsigned NumZero = std::min(
+      DAG.computeKnownBits(A, DemandedElts, Depth).countMinLeadingZeros(),
+      DAG.computeKnownBits(B, DemandedElts, Depth).countMinLeadingZeros());
+  if (NumZero >= 1 && NumSigned < NumZero) {
+    IsSigned = false;
+    KnownBits = NumZero;
+  } else if (NumSigned >= 1) {
+    IsSigned = true;
+    KnownBits = NumSigned;
+  } else {
+    return SDValue();
+  }
+
+  unsigned AVGOpc = IsSigned ? ISD::AVGSUBFLOORS : ISD::AVGSUBFLOORU;
+
+  // Return true if the AVG node is legal or custom on the type VT will be
+  // legalized to, provided that legalization doesn't change the scalar size.
+  // That means vectors that are widened or split are accepted, but integers
+  // that are promoted or expanded are not.
+  LLVMContext &Ctx = *DAG.getContext();
+  auto IsLegalAfterTypeLegalization = [&](EVT VT) {
+    EVT LegalVT = TLI.getLegalTypeToTransformTo(Ctx, VT);
+    return LegalVT.getScalarSizeInBits() == VT.getScalarSizeInBits() &&
+           TLI.isOperationLegal(AVGOpc, LegalVT);
+  };
+
+  // Use the narrow type if the node is legal or custom there. Otherwise fall
+  // back to the original type, which is still correct since the subtract can't
+  // overflow. Don't form the node if the target can't do it on either type, as
+  // expanding it may be worse than the original subtract and shift.
+  // FIXME: Enable for illegal types/operations like combineShiftToAVG.
+  EVT VT = Op.getValueType();
+  std::optional<EVT> NarrowVT = getNarrowAVGType(VT, KnownBits, Ctx);
+  EVT NVT = VT;
+  if (NarrowVT && IsLegalAfterTypeLegalization(*NarrowVT))
+    NVT = *NarrowVT;
+  else if (!IsLegalAfterTypeLegalization(VT))
+    return SDValue();
+
+  // Don't create an AVGSUBFLOOR node with a scalar constant unless it's legal
+  // as this is likely to stop other folds (reassociation, value tracking etc.)
+  if (!TLI.isOperationLegal(AVGOpc, NVT) &&
+      (isa<ConstantSDNode>(A) || isa<ConstantSDNode>(B)))
+    return SDValue();
+
+  // The difference of two unsigned values can be negative, so the result is
+  // always sign extended.
+  SDLoc DL(Op);
+  SDValue ResultAVG =
+      DAG.getNode(AVGOpc, DL, NVT, DAG.getExtOrTrunc(IsSigned, A, DL, NVT),
+                  DAG.getExtOrTrunc(IsSigned, B, DL, NVT));
+  return DAG.getExtOrTrunc(/*IsSigned=*/true, ResultAVG, DL, VT);
 }
 
 /// Look at Op. At this point, we know that only the OriginalDemandedBits of the
@@ -2301,6 +2402,9 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SDValue AVG = combineShiftToAVG(Op, TLO, *this, DemandedBits,
                                         DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, AVG);
+    if (SDValue AVG = combineShiftToAVGSUB(Op, TLO, *this, DemandedBits,
+                                           DemandedElts, Depth + 1))
+      return TLO.CombineTo(Op, AVG);
 
     break;
   }
@@ -2409,6 +2513,9 @@ bool TargetLowering::SimplifyDemandedBits(
     // Try to match AVG patterns (after shift simplification).
     if (SDValue AVG = combineShiftToAVG(Op, TLO, *this, DemandedBits,
                                         DemandedElts, Depth + 1))
+      return TLO.CombineTo(Op, AVG);
+    if (SDValue AVG = combineShiftToAVGSUB(Op, TLO, *this, DemandedBits,
+                                           DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, AVG);
 
     break;
