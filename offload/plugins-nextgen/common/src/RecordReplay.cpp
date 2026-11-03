@@ -288,7 +288,7 @@ Error NativeRecordReplayTy::recordDescImpl(
   JsonKernelInfo["NumThreads"] = Instance.NumThreads;
   JsonKernelInfo["SharedMemorySize"] = Instance.SharedMemorySize;
   JsonKernelInfo["LoopTripCount"] = RecordArgs.Tripcount;
-  JsonKernelInfo["DeviceId"] = Device.RTLDeviceID;
+  JsonKernelInfo["DeviceId"] = Device.DeviceID;
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
 
