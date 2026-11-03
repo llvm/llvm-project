@@ -1283,8 +1283,6 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
-        # Resolves circular-dep b/w Coroutines and Core.
-        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ]),
     hdrs = glob(
         [
@@ -1300,6 +1298,8 @@ cc_library(
         "include/llvm/Analysis/WithCache.h",
         "include/llvm/ProfileData/InstrProf.h",
         "include/llvm/ProfileData/InstrProfData.inc",
+        # Resolves circular-dep b/w Coroutines, Scalar, and Core.
+        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     features = ["-parse_headers"],
