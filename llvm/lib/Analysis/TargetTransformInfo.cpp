@@ -1045,10 +1045,16 @@ TargetTransformInfo::getOperandInfo(ArrayRef<Value *> Ops) {
       return CI->getValue().isNegatedPowerOf2();
     return false;
   });
+  const bool IsIndexVec = all_of(enumerate(Ops), [&](const auto &Data) {
+    auto *CI = llvm::dyn_cast<llvm::ConstantInt>(Data.value());
+    return CI && CI->getLimitedValue() == Data.index();
+  });
 
   TTI::OperandValueKind VK = TTI::OK_AnyValue;
   if (IsConstant && IsUniform)
     VK = TTI::OK_UniformConstantValue;
+  else if (IsIndexVec)
+    VK = TTI::OK_IndexVecConstantValue;
   else if (IsConstant)
     VK = TTI::OK_NonUniformConstantValue;
   else if (IsUniform)
