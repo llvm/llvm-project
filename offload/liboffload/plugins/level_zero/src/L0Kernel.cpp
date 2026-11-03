@@ -64,7 +64,7 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   // Dynamic SLM region starts after static block aligned to 1024
   // bytes, so here we store the aligned number used later
   // to determine if we exceed the total SLM size.
-  StaticBlockMemSize = alignTo(getProperties().LocalMemSize, 1024); 
+  StaticBlockMemSize = alignTo(getProperties().LocalMemSize, 1024);
 
   return Plugin::success();
 }
