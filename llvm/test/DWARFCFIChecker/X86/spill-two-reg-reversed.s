@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple x86_64-unknown-unknown %s --validate-cfi --filetype=null 2>&1 | FileCheck %s 
+# RUN: not llvm-mc -triple x86_64-unknown-unknown %s --validate-cfi --filetype=null 2>&1 | FileCheck %s --implicit-check-not warning: --implicit-check-not error:
 # RUN: llvm-mc -triple x86_64-unknown-unknown %s --filetype=asm 2>&1 | FileCheck %s -check-prefix=ASSEMBLER --implicit-check-not warning: --implicit-check-not error:
 # ASSEMBLER: .text
         .text
@@ -12,6 +12,7 @@ _start:
         .cfi_same_value %rsi
 
         pushq   %rbp
+        # CHECK: warning: validating changes happening to register RBP unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset 8
         .cfi_offset %rbp, -16
 
@@ -26,11 +27,13 @@ _start:
         .cfi_rel_offset %rsi, 0
         
         popq    %rsi
+        # CHECK: warning: validating changes happening to register RDI unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rdi
 
         popq    %rdi
         # CHECK: error: changed register RDI, that register RDI's unwinding rule uses, but there is no CFI directives about it
+        # CHECK: warning: validating changes happening to register RSI unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rsi
 

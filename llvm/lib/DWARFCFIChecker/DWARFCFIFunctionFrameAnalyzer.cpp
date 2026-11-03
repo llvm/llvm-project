@@ -17,7 +17,7 @@ CFIFunctionFrameAnalyzer::~CFIFunctionFrameAnalyzer() {
 
 void CFIFunctionFrameAnalyzer::startFunctionFrame(
     bool IsEH, ArrayRef<MCCFIInstruction> Prologue) {
-  UIAs.emplace_back(&getContext(), MCII, IsEH, Prologue);
+  UIAs.emplace_back(&getContext(), MCII, MCIA, IsEH, Prologue);
 }
 
 void CFIFunctionFrameAnalyzer::emitInstructionAndDirectives(
