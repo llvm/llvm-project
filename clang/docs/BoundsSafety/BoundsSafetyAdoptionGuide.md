@@ -6,7 +6,7 @@
 The open sourcing to llvm.org's `llvm-project` is still on going and the
 feature is not available yet. In the mean time, the preview implementation is
 available
-[here](https://github.com/swiftlang/llvm-project/tree/stable/20240723) in a
+[here](https://github.com/swiftlang/llvm-project/tree/stable/21.x) in a
 fork of `llvm-project`. Please follow
 [Building LLVM with CMake](https://llvm.org/docs/CMake.html) to build the
 compiler.
