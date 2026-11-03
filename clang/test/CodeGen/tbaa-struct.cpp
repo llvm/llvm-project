@@ -224,12 +224,12 @@ void copy12(UnionMember2 *a1, UnionMember2 *a2) {
 // CHECK-NEW: [[META21]] = !{[[META4]], i64 6, !"_ZTS1D", [[META4]], i64 0, i64 1, [[META4]], i64 4, i64 1, [[META4]], i64 5, i64 1}
 // CHECK-NEW: [[TBAA23]] = !{[[META4]], [[META4]], i64 0, i64 0}
 // CHECK-NEW: [[TBAA24]] = !{[[META25:![0-9]+]], [[META25]], i64 0, i64 16}
-// CHECK-NEW: [[META25]] = !{[[META4]], i64 16, !"_ZTS14NamedBitfields", [[META3]], i64 0, i64 4, [[META3]], i64 1, i64 4, [[META4]], i64 2, i64 1, [[META26:![0-9]+]], i64 8, i64 8}
+// CHECK-NEW: [[META25]] = !{[[META4]], i64 16, !"_ZTS14NamedBitfields", [[META4]], i64 0, i64 2, [[META4]], i64 2, i64 1, [[META26:![0-9]+]], i64 8, i64 8}
 // CHECK-NEW: [[META26]] = !{[[META4]], i64 8, !"double"}
 // CHECK-NEW: [[TBAA30]] = !{[[META31:![0-9]+]], [[META31]], i64 0, i64 24}
-// CHECK-NEW: [[META31]] = !{[[META4]], i64 24, !"_ZTS15NamedBitfields2", [[META4]], i64 0, i64 1, [[META4]], i64 1, i64 1, [[META4]], i64 2, i64 1, [[META3]], i64 3, i64 4, [[META3]], i64 3, i64 4, [[META4]], i64 4, i64 1, [[META26]], i64 8, i64 8, [[META3]], i64 16, i64 4}
+// CHECK-NEW: [[META31]] = !{[[META4]], i64 24, !"_ZTS15NamedBitfields2", [[META4]], i64 0, i64 1, [[META4]], i64 1, i64 1, [[META4]], i64 2, i64 1, [[META4]], i64 3, i64 2, [[META26]], i64 8, i64 8, [[META4]], i64 16, i64 1}
 // CHECK-NEW: [[TBAA33]] = !{[[META34:![0-9]+]], [[META34]], i64 0, i64 16}
-// CHECK-NEW: [[META34]] = !{[[META4]], i64 16, !"_ZTS15NamedBitfields3", [[META3]], i64 1, i64 4, [[META3]], i64 2, i64 4, [[META26]], i64 8, i64 8}
+// CHECK-NEW: [[META34]] = !{[[META4]], i64 16, !"_ZTS15NamedBitfields3", [[META4]], i64 0, i64 4, [[META26]], i64 8, i64 8}
 // CHECK-NEW: [[TBAA37]] = !{[[META38:![0-9]+]], [[META38]], i64 0, i64 16}
 // CHECK-NEW: [[META38]] = !{[[META4]], i64 16, !"_ZTS12UnionMember1", [[META4]], i64 0, i64 8, [[META3]], i64 8, i64 4}
 // CHECK-NEW: [[TBAA41]] = !{[[META42:![0-9]+]], [[META42]], i64 0, i64 16}
