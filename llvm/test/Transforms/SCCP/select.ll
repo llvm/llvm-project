@@ -42,3 +42,182 @@ define i1 @f2(i32 %x, i1 %cmp) {
   %res.3 = add i1 %res.2, %c.4
   ret i1 %res.3
 }
+
+define i1 @f3(i1 %c) {
+; CHECK-LABEL: define i1 @f3(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i64 0, i64 1
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[E:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[E]]:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %s = select i1 %c, i64 0, i64 1
+  br i1 %c, label %t, label %f
+
+t:
+  %rt = icmp eq i64 %s, 0
+  ret i1 %rt
+
+f:
+  %rf = icmp eq i64 %s, 1
+  ret i1 %rf
+}
+
+define i1 @f3_variable_operand(i1 %c, i64 %a) {
+; CHECK-LABEL: define i1 @f3_variable_operand(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i64 [[A]], i64 1
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[RT:%.*]] = icmp eq i64 [[S]], [[A]]
+; CHECK-NEXT:    ret i1 [[RT]]
+; CHECK:       [[F]]:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %s = select i1 %c, i64 %a, i64 1
+  br i1 %c, label %t, label %f
+
+t:
+  %rt = icmp eq i64 %s, %a
+  ret i1 %rt
+
+f:
+  %rf = icmp eq i64 %s, 1
+  ret i1 %rf
+}
+
+define i1 @f3_cond_and(i1 %c, i1 %d) {
+; CHECK-LABEL: define i1 @f3_cond_and(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i64 0, i64 1
+; CHECK-NEXT:    [[A:%.*]] = and i1 [[C]], [[D]]
+; CHECK-NEXT:    br i1 [[A]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[F]]:
+; CHECK-NEXT:    [[RF:%.*]] = icmp eq i64 [[S]], 1
+; CHECK-NEXT:    ret i1 [[RF]]
+;
+entry:
+  %s = select i1 %c, i64 0, i64 1
+  %a = and i1 %c, %d
+  br i1 %a, label %t, label %f
+
+t:
+  %rt = icmp eq i64 %s, 0
+  ret i1 %rt
+
+f:
+  %rf = icmp eq i64 %s, 1
+  ret i1 %rf
+}
+
+define i1 @f3_cond_or(i1 %c, i1 %d) {
+; CHECK-LABEL: define i1 @f3_cond_or(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i64 0, i64 1
+; CHECK-NEXT:    [[O:%.*]] = or i1 [[C]], [[D]]
+; CHECK-NEXT:    br i1 [[O]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[RT:%.*]] = icmp eq i64 [[S]], 0
+; CHECK-NEXT:    ret i1 [[RT]]
+; CHECK:       [[F]]:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %s = select i1 %c, i64 0, i64 1
+  %o = or i1 %c, %d
+  br i1 %o, label %t, label %f
+
+t:
+  %rt = icmp eq i64 %s, 0
+  ret i1 %rt
+
+f:
+  %rf = icmp eq i64 %s, 1
+  ret i1 %rf
+}
+
+
+define i32 @f3_aggregate(i1 %c, {i32, i32} %a, {i32, i32} %b) {
+; CHECK-LABEL: define i32 @f3_aggregate(
+; CHECK-SAME: i1 [[C:%.*]], { i32, i32 } [[A:%.*]], { i32, i32 } [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], { i32, i32 } [[A]], { i32, i32 } [[B]]
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[XT:%.*]] = extractvalue { i32, i32 } [[S]], 0
+; CHECK-NEXT:    ret i32 [[XT]]
+; CHECK:       [[F]]:
+; CHECK-NEXT:    [[XF:%.*]] = extractvalue { i32, i32 } [[S]], 1
+; CHECK-NEXT:    ret i32 [[XF]]
+;
+entry:
+  %s = select i1 %c, {i32, i32} %a, {i32, i32} %b
+  br i1 %c, label %t, label %f
+
+t:
+  %xt = extractvalue {i32, i32} %s, 0
+  ret i32 %xt
+
+f:
+  %xf = extractvalue {i32, i32} %s, 1
+  ret i32 %xf
+}
+
+define i32 @f3_vector(i1 %c, <2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: define i32 @f3_vector(
+; CHECK-SAME: i1 [[C:%.*]], <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], <2 x i32> [[A]], <2 x i32> [[B]]
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[XT:%.*]] = extractelement <2 x i32> [[S]], i32 0
+; CHECK-NEXT:    ret i32 [[XT]]
+; CHECK:       [[F]]:
+; CHECK-NEXT:    [[XF:%.*]] = extractelement <2 x i32> [[S]], i32 1
+; CHECK-NEXT:    ret i32 [[XF]]
+;
+entry:
+  %s = select i1 %c, <2 x i32> %a, <2 x i32> %b
+  br i1 %c, label %t, label %f
+
+t:
+  %xt = extractelement <2 x i32> %s, i32 0
+  ret i32 %xt
+
+f:
+  %xf = extractelement <2 x i32> %s, i32 1
+  ret i32 %xf
+}
+
+define i1 @f3_one_use(i1 %c) {
+; CHECK-LABEL: define i1 @f3_one_use(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i64 0, i64 1
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       [[F]]:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %s = select i1 %c, i64 0, i64 1
+  br i1 %c, label %t, label %f
+
+t:
+  ret i1 false
+
+f:
+  %rf = icmp eq i64 %s, 1
+  ret i1 %rf
+}

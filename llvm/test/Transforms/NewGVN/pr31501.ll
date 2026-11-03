@@ -65,15 +65,14 @@ define weak_odr hidden ptr @quux(ptr %arg, ptr %arg1) local_unnamed_addr align 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[TMP18:%.*]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[BB19:.*]], label %[[BB11]]
 ; CHECK:       [[BB11]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP17:%.*]], %[[BB9]] ], [ undef, %[[BB8]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[TMP18]], %[[BB9]] ], [ [[TMP3]], %[[BB8]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP13]], align 8, !tbaa [[ANYPTR_TBAA8:![0-9]+]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[TMP15]], [[ARG1]]
-; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], ptr [[TMP13]], ptr [[TMP12]]
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], ptr [[TMP13]], ptr undef
 ; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[TMP13]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[BB19]], label %[[BB9]]
 ; CHECK:       [[BB19]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi ptr [ null, %[[BB9]] ], [ [[TMP17]], %[[BB11]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi ptr [ null, %[[BB9]] ], [ [[TMP13]], %[[BB11]] ]
 ; CHECK-NEXT:    br label %[[BB21]]
 ; CHECK:       [[BB21]]:
 ; CHECK-NEXT:    [[TMP22:%.*]] = phi ptr [ null, %[[BB]] ], [ [[TMP20]], %[[BB19]] ]
