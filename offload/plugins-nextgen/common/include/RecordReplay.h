@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Support/Error.h"
@@ -160,6 +161,10 @@ protected:
   /// as full copies (LIBOMPTARGET_RECORD_BLOCK_STORE).
   bool UseBlockStore = true;
 
+  /// Whether the record output snapshots are stored compressed
+  /// (LIBOMPTARGET_RECORD_COMPRESS_OUTPUT).
+  bool CompressOutput = true;
+
   /// The block store file shared by the input snapshots, its generation and
   /// size, the stored block of each distinct block content, by its 128-bit
   /// hash, and the descriptor of the locked lock file of the directory.
@@ -255,6 +260,9 @@ public:
 
     BoolEnvar OMPX_RecordBlockStore("LIBOMPTARGET_RECORD_BLOCK_STORE", true);
     UseBlockStore = OMPX_RecordBlockStore;
+    BoolEnvar OMPX_RecordCompressOutput("LIBOMPTARGET_RECORD_COMPRESS_OUTPUT",
+                                        true);
+    CompressOutput = OMPX_RecordCompressOutput;
   }
 
   virtual ~RecordReplayTy() = default;
@@ -269,11 +277,18 @@ public:
   bool isRecording() const { return Status == StatusTy::Recording; }
   bool isReplaying() const { return Status == StatusTy::Replaying; }
   bool isRecordingOrReplaying() const { return isRecording() || isReplaying(); }
-  bool shouldRecordPrologue() const {
-    return isRecording() || shouldRecordEpilogue();
+  bool shouldRecordPrologue(const InstanceTy &Instance) const {
+    return isRecording() || shouldRecordEpilogue(Instance);
   }
-  bool shouldRecordEpilogue() const {
-    return isRecordingOrReplaying() && SaveOutput;
+  bool shouldRecordEpilogue(const InstanceTy &Instance) const {
+    return (isRecordingOrReplaying() && SaveOutput) ||
+           shouldVerifyOutput(Instance);
+  }
+  /// Whether the replay of \p Instance compares the device memory after the
+  /// kernel execution with an expected output.
+  bool shouldVerifyOutput(const InstanceTy &Instance) const {
+    return isReplaying() && Instance.ReplayOutcome &&
+           Instance.ReplayOutcome->ExpectedOutput;
   }
 
   /// Add information about a global.
@@ -406,9 +421,27 @@ private:
   /// not stored yet to the block store.
   Error recordSnapshotBlocks(StringRef Filename, const MemoryBuffer *Snapshot);
 
+  /// Retrieve the first \p Size bytes of the device memory in chunks, to bound
+  /// the host memory usage, and call \p Callback with each chunk and its
+  /// offset until it returns false.
+  Error retrieveSnapshotChunks(
+      uint64_t Size,
+      function_ref<bool(const char *Chunk, uint64_t Offset, uint64_t Size)>
+          Callback);
+
+  /// Write the device memory currently in use to \p OS, as a diff against the
+  /// input snapshot of \p Instance.
+  Error writeSnapshotDiff(raw_pwrite_stream &OS, const InstanceTy &Instance);
+
   /// Record the device memory currently in use to a file, as a diff against
-  /// the input snapshot of \p Instance.
-  Error recordSnapshotDiff(StringRef Filename, const InstanceTy &Instance);
+  /// the input snapshot of \p Instance, compressed if \p Compress is set and
+  /// compression makes it smaller.
+  Error recordSnapshotDiff(StringRef Filename, const InstanceTy &Instance,
+                           bool Compress);
+
+  /// Compare the device memory currently in use with the expected output of
+  /// the replay of \p Instance, and store the result in its replay outcome.
+  Error verifySnapshot(const InstanceTy &Instance);
 
   /// Record the globals to a file, and count the unknown pointers in them.
   Error recordGlobals(StringRef Filename, uint64_t &NumUnknownPointers);

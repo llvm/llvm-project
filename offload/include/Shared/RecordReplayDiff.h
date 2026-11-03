@@ -21,6 +21,10 @@
 // separated by fewer than RecordReplayDiffMaxGap unchanged bytes are merged,
 // and the output bytes beyond the input snapshot size are always stored.
 //
+// A record output may instead be stored compressed: a
+// RecordReplayDiffCompressedHeaderTy followed by the diff file compressed as a
+// whole.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef OMPTARGET_SHARED_RECORD_REPLAY_DIFF_H
@@ -54,5 +58,27 @@ struct RecordReplayDiffRegionTy {
 /// storing a short run of unchanged bytes is cheaper than another descriptor.
 static constexpr uint64_t RecordReplayDiffMaxGap =
     sizeof(RecordReplayDiffRegionTy);
+
+/// The magic number identifying a compressed output snapshot diff file
+/// ("OMPRRDZ1").
+static constexpr char RecordReplayDiffCompressedMagic[8] = {'O', 'M', 'P', 'R',
+                                                            'R', 'D', 'Z', '1'};
+
+/// How a compressed output snapshot diff is compressed.
+enum RecordReplayDiffCodecTy : uint32_t {
+  RecordReplayDiffZstd = 1,
+  RecordReplayDiffZlib = 2,
+};
+
+/// The header of a compressed output snapshot diff file.
+struct RecordReplayDiffCompressedHeaderTy {
+  /// Must be RecordReplayDiffCompressedMagic.
+  char Magic[8];
+  /// A RecordReplayDiffCodecTy value.
+  uint32_t Codec;
+  uint32_t Reserved;
+  /// The size of the uncompressed diff file.
+  uint64_t Size;
+};
 
 #endif // OMPTARGET_SHARED_RECORD_REPLAY_DIFF_H

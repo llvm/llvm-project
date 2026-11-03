@@ -1238,18 +1238,25 @@ recommended to use dedicated profiling tools in conjunction with the replay
 tool.
 
 Finally, the replay tool provides an optional verification step via the
-`--verify` flag. When enabled, it checks whether the output device memory
-snapshot generated during replay matches the output snapshot captured during the
-recording phase. Because this verification performs a strict binary difference
-between the two memory snapshots, the check may fail for kernels operating on
-floating-point data due to normal variations in precision and operation order.
+`--verify` flag. When enabled, it checks whether the device memory after the
+replay matches the output snapshot captured during the recording phase, and
+reports the offset of the first differing byte otherwise. Because this
+verification performs a strict binary comparison, the check may fail for
+kernels operating on floating-point data due to normal variations in precision
+and operation order. With `--repetitions`, only the last repetition is
+verified. The verification compares the device memory in place and stores
+nothing; the `--save-output` flag stores the replay output snapshot in a
+`.replay_output` file.
 
 To reduce their size, the output snapshots (the `.record_output` and
 `.replay_output` files) only store the device memory regions that the kernel
 changed, as a diff against the input snapshot (the `.record_input` file). Two
 output snapshots of the same recording are identical if and only if the device
-memory after the kernel execution is identical. The format of these files is
-described in `offload/include/Shared/RecordReplayDiff.h`.
+memory after the kernel execution is identical. The recording also compresses
+the `.record_output` file with zstd (or zlib if LLVM was built without zstd)
+when that makes it smaller. Setting `LIBOMPTARGET_RECORD_COMPRESS_OUTPUT=FALSE`
+stores it uncompressed. The format of these files is described in
+`offload/include/Shared/RecordReplayDiff.h`.
 
 The kernels of a program mostly see the same device memory, so the input
 snapshots are not stored as full copies either. Each input snapshot is split
@@ -1302,6 +1309,7 @@ is provided below.
 - `LIBOMPTARGET_RECORD_DEVICE=<Num> (default 0)`
 - `LIBOMPTARGET_RECORD_OUTPUT=[TRUE/FALSE] (default TRUE)`
 - `LIBOMPTARGET_RECORD_BLOCK_STORE=[TRUE/FALSE] (default TRUE)`
+- `LIBOMPTARGET_RECORD_COMPRESS_OUTPUT=[TRUE/FALSE] (default TRUE)`
 
 (libomptarget_record)=
 

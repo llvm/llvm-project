@@ -2,8 +2,9 @@
 // RUN: %libomptarget-compilexx-generic
 // RUN: rm -rf %t.testdir
 // RUN: mkdir -p %t.testdir
-// Record full input snapshots, without the block store, to compare sizes.
-// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_BLOCK_STORE=0 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.testdir %libomptarget-run-generic 2>&1 | %fcheck-generic
+// Record full input snapshots and uncompressed output diffs, to compare sizes
+// and edit the diff.
+// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_BLOCK_STORE=0 LIBOMPTARGET_RECORD_COMPRESS_OUTPUT=0 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.testdir %libomptarget-run-generic 2>&1 | %fcheck-generic
 // The input snapshot holds the whole buffer, the output only the changes.
 // RUN: ls %t.testdir/*.record_input | xargs -I {} sh -c 'test $(wc -c < {}) -ge 8388608'
 // RUN: ls %t.testdir/*.record_output | xargs -I {} sh -c 'test $(wc -c < {}) -lt 4096'

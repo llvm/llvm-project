@@ -152,6 +152,18 @@ struct KernelReplayOutcomeTy {
   /// the device memory before the kernel execution.
   const void *InputSnapshot = nullptr;
   uint64_t InputSnapshotSize = 0;
+  /// The output memory snapshot that the replay is expected to produce, as a
+  /// diff against the input snapshot (see Shared/RecordReplayDiff.h). If set,
+  /// the device memory is compared with it after the kernel execution, and the
+  /// result is stored in Verification.
+  const void *ExpectedOutput = nullptr;
+  uint64_t ExpectedOutputSize = 0;
+  /// The result of comparing the device memory with ExpectedOutput.
+  enum class VerificationTy { None, Match, Mismatch };
+  VerificationTy Verification = VerificationTy::None;
+  /// On a mismatch, the offset of the first differing byte within the replay
+  /// memory.
+  uint64_t MismatchOffset = 0;
 };
 }
 

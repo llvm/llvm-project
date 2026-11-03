@@ -35,6 +35,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <optional>
 
 using namespace llvm;
 using namespace omp;
@@ -255,7 +256,7 @@ RecordReplayTy::recordPrologue(const KernelInfoTy &Kernel,
     if (auto Err = recordDescImpl(Kernel, Instance, RecordArgs))
       return Err;
 
-  if (shouldRecordPrologue())
+  if (shouldRecordPrologue(Instance))
     if (auto Err = recordPrologueImpl(Kernel, Instance))
       return Err;
 
@@ -274,7 +275,7 @@ Error RecordReplayTy::recordEpilogue(const KernelInfoTy &Kernel,
   const InstanceTy &Instance = *Handle.Instance;
   Instance.recordEndTime();
 
-  if (shouldRecordEpilogue())
+  if (shouldRecordEpilogue(Instance))
     if (auto Err = recordEpilogueImpl(Kernel, Instance))
       return Err;
 
@@ -296,7 +297,7 @@ Error RecordReplayTy::recordEpilogue(const KernelInfoTy &Kernel,
 void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
                                            KernelReplayOutcomeTy &Outcome) {
   // Only save the epilogue output filename if it was recorded.
-  if (shouldRecordEpilogue()) {
+  if (SaveOutput) {
     SmallString<128> Filename = getFilename(Instance, FileTy::EpilogueSnapshot);
     Outcome.OutputFilepath = Filename;
   }
@@ -356,18 +357,30 @@ Error NativeRecordReplayTy::recordPrologueImpl(const KernelInfoTy &Kernel,
       return Err;
   }
 
-  // Keep the input snapshot to record the output snapshot as a diff against it.
-  // When replaying, this is the only purpose of the prologue.
-  if (shouldRecordEpilogue())
+  // Keep the input snapshot to record or verify the output snapshot as a diff
+  // against it. When replaying, this is the only purpose of the prologue.
+  if (shouldRecordEpilogue(Instance))
     Instance.InputSnapshot = std::move(Snapshot);
   return Plugin::success();
 }
 
 Error NativeRecordReplayTy::recordEpilogueImpl(const KernelInfoTy &Kernel,
                                                const InstanceTy &Instance) {
-  SmallString<128> SnapshotFilename =
-      getFilename(Instance, FileTy::EpilogueSnapshot);
-  return recordSnapshotDiff(SnapshotFilename, Instance);
+  if (shouldVerifyOutput(Instance))
+    if (auto Err = verifySnapshot(Instance))
+      return Err;
+
+  if (SaveOutput) {
+    SmallString<128> SnapshotFilename =
+        getFilename(Instance, FileTy::EpilogueSnapshot);
+    if (auto Err = recordSnapshotDiff(SnapshotFilename, Instance,
+                                      isRecording() && CompressOutput))
+      return Err;
+  }
+
+  // Release the input snapshot.
+  Instance.InputSnapshot.reset();
+  return Plugin::success();
 }
 
 Error NativeRecordReplayTy::recordDescImpl(
@@ -693,22 +706,42 @@ static uint64_t getNumEqualBytes(const char *A, const char *B, uint64_t Size) {
   return I;
 }
 
-Error NativeRecordReplayTy::recordSnapshotDiff(StringRef Filename,
-                                               const InstanceTy &Instance) {
+Error NativeRecordReplayTy::retrieveSnapshotChunks(
+    uint64_t Size,
+    function_ref<bool(const char *Chunk, uint64_t Offset, uint64_t Size)>
+        Callback) {
+  if (!Size)
+    return Plugin::success();
+
+  constexpr uint64_t MaxChunkSize = 64 * 1024 * 1024;
+  std::unique_ptr<WritableMemoryBuffer> ChunkMB =
+      WritableMemoryBuffer::getNewUninitMemBuffer(std::min(MaxChunkSize, Size));
+  if (!ChunkMB)
+    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                         "creating MemoryBuffer for device memory");
+
+  for (uint64_t Offset = 0; Offset < Size; Offset += MaxChunkSize) {
+    uint64_t ChunkSize = std::min(MaxChunkSize, Size - Offset);
+    char *Chunk = ChunkMB->getBufferStart();
+    if (auto Err = Device.dataRetrieve(
+            Chunk, utils::advancePtr(StartAddr, Offset), ChunkSize, nullptr))
+      return Err;
+    if (!Callback(Chunk, Offset, ChunkSize))
+      break;
+  }
+  return Plugin::success();
+}
+
+Error NativeRecordReplayTy::writeSnapshotDiff(raw_pwrite_stream &OS,
+                                              const InstanceTy &Instance) {
   // Another thread may be allocating memory. The size can only increase.
   AllocationLock.lock();
   uint64_t OutputSize = CurrentSize;
   AllocationLock.unlock();
 
-  // Take the input snapshot so it is released once the diff is recorded.
-  std::unique_ptr<MemoryBuffer> Input = std::move(Instance.InputSnapshot);
+  const MemoryBuffer *Input = Instance.InputSnapshot.get();
   const char *InputData = Input ? Input->getBufferStart() : nullptr;
   uint64_t InputSize = Input ? Input->getBufferSize() : 0;
-
-  std::error_code EC;
-  raw_fd_ostream OS(Filename, EC);
-  if (EC)
-    return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
 
   RecordReplayDiffHeaderTy Header;
   std::memcpy(Header.Magic, RecordReplayDiffMagic, sizeof(Header.Magic));
@@ -734,27 +767,10 @@ Error NativeRecordReplayTy::recordSnapshotDiff(StringRef Filename,
               RegionFilePos);
   };
 
-  // Retrieve the output memory in chunks to bound the host memory usage. The
-  // regions do not depend on the chunk size, since a region can span chunks.
-  constexpr uint64_t MaxChunkSize = 64 * 1024 * 1024;
-  std::unique_ptr<WritableMemoryBuffer> ChunkMB;
-  if (OutputSize) {
-    ChunkMB = WritableMemoryBuffer::getNewUninitMemBuffer(
-        std::min(MaxChunkSize, OutputSize));
-    if (!ChunkMB)
-      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                           "creating MemoryBuffer for device memory");
-  }
-
-  for (uint64_t ChunkOffset = 0; ChunkOffset < OutputSize;
-       ChunkOffset += MaxChunkSize) {
-    uint64_t ChunkSize = std::min(MaxChunkSize, OutputSize - ChunkOffset);
-    char *Chunk = ChunkMB->getBufferStart();
-    if (auto Err = Device.dataRetrieve(
-            Chunk, utils::advancePtr(StartAddr, ChunkOffset), ChunkSize,
-            nullptr))
-      return Err;
-
+  // The regions do not depend on the chunk size, since a region can span
+  // chunks.
+  auto WriteChunk = [&](const char *Chunk, uint64_t ChunkOffset,
+                        uint64_t ChunkSize) {
     if (isRecording())
       Instance.NumUnknownOutputPointers += countUnknownPointers(
           Chunk, ChunkSize, ChunkOffset, Instance.PointerOffsets, OutputSize);
@@ -800,15 +816,169 @@ Error NativeRecordReplayTy::recordSnapshotDiff(StringRef Filename,
       RegionEnd = ChunkOffset + End;
       I = End;
     }
-  }
+    return true;
+  };
+  if (auto Err = retrieveSnapshotChunks(OutputSize, WriteChunk))
+    return Err;
   if (RegionOpen)
     CloseRegion();
+  return Plugin::success();
+}
 
+Error NativeRecordReplayTy::recordSnapshotDiff(StringRef Filename,
+                                               const InstanceTy &Instance,
+                                               bool Compress) {
+  auto SaveError = [] {
+    return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
+  };
+  std::error_code EC;
+  if (!Compress || (!compression::zstd::isAvailable() &&
+                    !compression::zlib::isAvailable())) {
+    raw_fd_ostream OS(Filename, EC);
+    if (EC)
+      return SaveError();
+    if (auto Err = writeSnapshotDiff(OS, Instance))
+      return Err;
+    OS.close();
+    if (OS.has_error()) {
+      OS.clear_error();
+      return SaveError();
+    }
+    return Plugin::success();
+  }
+
+  // Build the diff in memory and compress it as a whole.
+  SmallVector<char, 0> Diff;
+  raw_svector_ostream DiffOS(Diff);
+  if (auto Err = writeSnapshotDiff(DiffOS, Instance))
+    return Err;
+
+  RecordReplayDiffCompressedHeaderTy Header;
+  std::memcpy(Header.Magic, RecordReplayDiffCompressedMagic,
+              sizeof(Header.Magic));
+  Header.Reserved = 0;
+  Header.Size = Diff.size();
+  SmallVector<uint8_t, 0> Compressed;
+  if (compression::zstd::isAvailable()) {
+    compression::zstd::compress(arrayRefFromStringRef(DiffOS.str()), Compressed,
+                                /*Level=*/3);
+    Header.Codec = RecordReplayDiffZstd;
+  } else {
+    compression::zlib::compress(arrayRefFromStringRef(DiffOS.str()),
+                                Compressed);
+    Header.Codec = RecordReplayDiffZlib;
+  }
+
+  raw_fd_ostream OS(Filename, EC);
+  if (EC)
+    return SaveError();
+  if (sizeof(Header) + Compressed.size() < Diff.size()) {
+    OS.write(reinterpret_cast<const char *>(&Header), sizeof(Header));
+    OS.write(reinterpret_cast<const char *>(Compressed.data()),
+             Compressed.size());
+  } else {
+    OS.write(Diff.data(), Diff.size());
+  }
   OS.close();
   if (OS.has_error()) {
     OS.clear_error();
-    return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
+    return SaveError();
   }
+  return Plugin::success();
+}
+
+Error NativeRecordReplayTy::verifySnapshot(const InstanceTy &Instance) {
+  KernelReplayOutcomeTy &Outcome = *Instance.ReplayOutcome;
+  StringRef Expected(static_cast<const char *>(Outcome.ExpectedOutput),
+                     Outcome.ExpectedOutputSize);
+  auto InvalidError = [] {
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid expected output snapshot");
+  };
+
+  AllocationLock.lock();
+  uint64_t OutputSize = CurrentSize;
+  AllocationLock.unlock();
+
+  const MemoryBuffer *Input = Instance.InputSnapshot.get();
+  const char *InputData = Input ? Input->getBufferStart() : nullptr;
+  uint64_t InputSize = Input ? Input->getBufferSize() : 0;
+
+  // Read the regions of the expected output diff.
+  RecordReplayDiffHeaderTy Header;
+  if (Expected.size() < sizeof(Header) ||
+      std::memcmp(Expected.data(), RecordReplayDiffMagic, sizeof(Header.Magic)))
+    return InvalidError();
+  std::memcpy(&Header, Expected.data(), sizeof(Header));
+  if (Header.InputSize != InputSize)
+    return InvalidError();
+
+  struct RegionTy {
+    uint64_t Offset;
+    uint64_t Size;
+    const char *Data;
+  };
+  SmallVector<RegionTy> Regions;
+  for (uint64_t Pos = sizeof(Header), End = 0; Pos < Expected.size();) {
+    RecordReplayDiffRegionTy Region;
+    if (Expected.size() - Pos < sizeof(Region))
+      return InvalidError();
+    std::memcpy(&Region, Expected.data() + Pos, sizeof(Region));
+    Pos += sizeof(Region);
+    if (Expected.size() - Pos < Region.Size || Region.Offset < End ||
+        Region.Size > Header.OutputSize - Region.Offset)
+      return InvalidError();
+    Regions.push_back({Region.Offset, Region.Size, Expected.data() + Pos});
+    Pos += Region.Size;
+    End = Region.Offset + Region.Size;
+  }
+
+  // Each byte must be equal to the region that holds it, or else to the input
+  // snapshot. Compare up to the smaller of the two sizes, and report the end
+  // of the smaller one if they differ.
+  uint64_t CompareSize = std::min(OutputSize, Header.OutputSize);
+  std::optional<uint64_t> MismatchOffset;
+  size_t R = 0;
+  auto CompareChunk = [&](const char *Chunk, uint64_t ChunkOffset,
+                          uint64_t ChunkSize) {
+    uint64_t Pos = ChunkOffset, ChunkEnd = ChunkOffset + ChunkSize;
+    while (Pos < ChunkEnd) {
+      while (R < Regions.size() && Regions[R].Offset + Regions[R].Size <= Pos)
+        ++R;
+      const char *ExpectedData;
+      uint64_t End;
+      if (R < Regions.size() && Regions[R].Offset <= Pos) {
+        End = std::min(ChunkEnd, Regions[R].Offset + Regions[R].Size);
+        ExpectedData = Regions[R].Data + (Pos - Regions[R].Offset);
+      } else {
+        // The bytes beyond the input snapshot are always in a region.
+        if (Pos >= InputSize) {
+          MismatchOffset = Pos;
+          return false;
+        }
+        End = std::min({ChunkEnd, InputSize,
+                        R < Regions.size() ? Regions[R].Offset : ChunkEnd});
+        ExpectedData = InputData + Pos;
+      }
+      uint64_t NumEqual = getNumEqualBytes(Chunk + (Pos - ChunkOffset),
+                                           ExpectedData, End - Pos);
+      if (NumEqual < End - Pos) {
+        MismatchOffset = Pos + NumEqual;
+        return false;
+      }
+      Pos = End;
+    }
+    return true;
+  };
+  if (auto Err = retrieveSnapshotChunks(CompareSize, CompareChunk))
+    return Err;
+  if (!MismatchOffset && OutputSize != Header.OutputSize)
+    MismatchOffset = CompareSize;
+
+  Outcome.Verification = MismatchOffset
+                             ? KernelReplayOutcomeTy::VerificationTy::Mismatch
+                             : KernelReplayOutcomeTy::VerificationTy::Match;
+  Outcome.MismatchOffset = MismatchOffset.value_or(0);
   return Plugin::success();
 }
 
