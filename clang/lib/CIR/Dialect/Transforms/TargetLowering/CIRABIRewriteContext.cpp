@@ -357,8 +357,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
       attrs.erase(mlir::LLVM::LLVMDialect::getNoFPClassAttrName());
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
                 builder.getI64IntegerAttr(ac.indirectAlign.value()));
-      attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
-                builder.getUnitAttr());
+      if (enableNoundefAttrs)
+        attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                  builder.getUnitAttr());
       attrs.set(mlir::LLVM::LLVMDialect::getByRefAttrName(),
                 mlir::TypeAttr::get(origArgTypes[oldIdx]));
       newArgAttrs.push_back(attrs.getDictionary(ctx));

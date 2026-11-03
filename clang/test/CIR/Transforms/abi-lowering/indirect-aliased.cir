@@ -201,3 +201,33 @@ module attributes {
   // CHECK-NEXT:   cir.call @takes_big(%[[SLOT]])
 
 }
+
+// -----
+
+// Without noundef analysis a byref pointer is not marked noundef.
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect_aliased", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.lowering_options = #cir.lowering_options<
+    exceptions = false, threadsafe_statics = true, cuda = false,
+    cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
+    openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
+    long_double_size = 0, enable_noundef_attrs = false>
+} {
+
+  cir.func private @takes_big_no_noundef(%arg0: !rec_Big)
+      attributes { test_classify = #byref }
+
+  // CHECK:      cir.func private @takes_big_no_noundef(!cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big})
+
+}
