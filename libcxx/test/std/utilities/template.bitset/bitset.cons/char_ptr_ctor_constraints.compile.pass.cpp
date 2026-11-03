@@ -13,19 +13,17 @@
 //                     typename basic_string_view<charT>::size_type n = basic_string_view<charT>::npos,
 //                     charT zero = charT('0'), charT one = charT('1'));
 //
-// Constraints (LWG4294):
+// Constraints:
 //   - is_array_v<charT> is false,
 //   - is_trivially_copyable_v<charT> is true,
 //   - is_standard_layout_v<charT> is true, and
 //   - is_trivially_default_constructible_v<charT> is true.
-//
-// When the constraints are not met, the constructor must not participate in overload resolution, and checking
-// is_constructible must not cause a hard error.
 
 // The frozen C++03 headers don't implement LWG4294.
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <bitset>
+#include <cstddef>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -58,20 +56,20 @@ void test() {
   static_assert(std::is_constructible<std::bitset<N>, const wchar_t*>::value, "");
 #endif
 
-  // Array types (the case added by LWG4294).
+  // Array types.
   static_assert(!std::is_constructible<std::bitset<N>, const char (*)[2]>::value, "");
   static_assert(!std::is_constructible<std::bitset<N>, char (*)[2]>::value, "");
   static_assert(!std::is_constructible<std::bitset<N>, const int (*)[3]>::value, "");
   static_assert(!std::is_constructible<std::bitset<N>, const char (*)[2][2]>::value, "");
 
-  // Types that are not trivially copyable, standard-layout, or trivially default constructible.
+  // Class types that are not trivially copyable, standard-layout, or trivially default constructible.
   static_assert(!std::is_constructible<std::bitset<N>, NonTrivialDestructor*>::value, "");
   static_assert(!std::is_constructible<std::bitset<N>, const NonTrivialDefaultCtor*>::value, "");
   static_assert(!std::is_constructible<std::bitset<N>, const NonTriviallyCopyable*>::value, "");
   static_assert(!std::is_constructible<std::bitset<N>, const NonStandardLayout*>::value, "");
 }
 
-void test_all() {
+void test() {
   test<0>();
   test<1>();
   test<32>();
