@@ -6895,7 +6895,6 @@ define void @vec512_v16i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec
 ; SCALAR-NEXT:    movw %bp, 10(%rsi)
 ; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; SCALAR-NEXT:    movw %di, 8(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
 ; SCALAR-NEXT:    movw %cx, 6(%rsi)
 ; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
 ; SCALAR-NEXT:    movw %r8w, 4(%rsi)

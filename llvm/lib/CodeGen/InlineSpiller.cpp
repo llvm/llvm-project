@@ -217,6 +217,7 @@ private:
   bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
   void eliminateRedundantRestores();
+  bool tryForwardRestore(MachineInstr &Restore, MachineInstr &Store);
 
   void markValueUsed(LiveInterval *, VNInfo *);
   bool hasPhysRegAvailable(const MachineInstr &MI);
@@ -524,104 +525,156 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   return true;
 }
 
+/// Replace \p Restore with a copy to forward the value if \p Store saved the
+/// same physical register to the same slot and that register still holds the
+/// value. Returns true if the forwarding was successful, false otherwise.
+bool InlineSpiller::tryForwardRestore(MachineInstr &Restore,
+                                      MachineInstr &Store) {
+  // Establish that Restore and Store are both eligible for forwarding check
+  // that physical register, store/load size and stack slot match.
+  if (Restore.isBundled() || Store.isBundled())
+    return false;
+  int LoadFI;
+  TypeSize LoadSize = TypeSize::getZero();
+  Register LoadReg = TII.isLoadFromStackSlot(Restore, LoadFI, LoadSize);
+  if (!LoadReg.isValid())
+    return false;
+
+  MachineOperand *LoadOperand = Restore.findRegisterDefOperand(LoadReg, &TRI);
+  if (!LoadOperand || LoadOperand->getSubReg())
+    return false;
+
+  int StoreFI;
+  TypeSize StoreSize = TypeSize::getZero();
+  Register StoreReg = TII.isStoreToStackSlot(Store, StoreFI, StoreSize);
+  if (!StoreReg.isValid())
+    return false;
+
+  MachineOperand *StoreOperand = Store.findRegisterUseOperand(StoreReg, &TRI);
+  if (!StoreOperand || StoreOperand->getSubReg())
+    return false;
+
+  if (StoreFI != LoadFI || !MF.getFrameInfo().isSpillSlotObjectIndex(LoadFI))
+    return false;
+
+  if (StoreSize.isZero() || StoreSize != LoadSize)
+    return false;
+  if (StoreSize * 8 != TRI.getRegSizeInBits(StoreReg, MRI) ||
+      LoadSize * 8 != TRI.getRegSizeInBits(LoadReg, MRI))
+    return false;
+
+  if (Restore.hasOrderedMemoryRef() || Store.hasOrderedMemoryRef())
+    return false;
+
+  auto GetAssignedReg = [&](Register Reg) -> Register {
+    if (Reg.isVirtual()) {
+      if (!VRM.hasPhys(Reg))
+        return Register();
+      return VRM.getPhys(Reg);
+    }
+    return Reg;
+  };
+  Register PhysReg = GetAssignedReg(LoadReg);
+  if (!PhysReg.isValid() || PhysReg != GetAssignedReg(StoreReg))
+    return false;
+
+  MachineBasicBlock &MBB = *Restore.getParent();
+  auto Gap = make_range(std::next(Store.getIterator()), Restore.getIterator());
+  bool Adjacent = all_of(
+      Gap, [](const MachineInstr &GapMI) { return GapMI.isDebugInstr(); });
+  SlotIndex StoreIdx = LIS.getInstructionIndex(Store).getRegSlot();
+  SlotIndex Use = LIS.getInstructionIndex(Restore).getRegSlot();
+  LiveInterval *StoreLI =
+      StoreReg.isVirtual() ? &LIS.getInterval(StoreReg) : nullptr;
+  // If Restore and Store are not directly adjacent, we need to make sure that
+  // the forwarded register or the implicit inputs of restore or store are not
+  // modified between the two instructions.
+  if (!Adjacent) {
+    if (!Matrix)
+      return false;
+    SmallVector<Register, 4> Inputs;
+    Inputs.push_back(PhysReg);
+    for (const MachineInstr *Access : {&Store, &Restore})
+      for (const MachineOperand &MO : Access->all_uses())
+        if (MO.getReg().isPhysical() && MO.getReg() != StoreReg)
+          Inputs.push_back(MO.getReg());
+    for (const MachineInstr &GapMI : Gap)
+      for (const MachineOperand &Def : GapMI.all_defs()) {
+        Register DefReg = GetAssignedReg(Def.getReg());
+        if (DefReg.isValid() && any_of(Inputs, [&](Register Input) {
+              return TRI.regsOverlap(DefReg, Input);
+            }))
+          return false;
+      }
+    // The saved register must keep its value across the gap.
+    if (StoreLI && any_of(StoreLI->vnis(), [&](const VNInfo *VNI) {
+          return !VNI->isUnused() && StoreIdx < VNI->def && VNI->def < Use;
+        }))
+      return false;
+    if (StoreLI)
+      Matrix->unassign(*StoreLI);
+    bool Interferes =
+        Matrix->checkInterference(StoreIdx, Use, PhysReg.asMCReg());
+    if (StoreLI)
+      Matrix->assign(*StoreLI, PhysReg.asMCReg());
+    if (Interferes)
+      return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "Forwarding restore " << Restore << "  from save "
+                    << Store);
+  // Forward by inserting a copy instruction.
+  MachineInstr *Copy = BuildMI(MBB, Restore, Restore.getDebugLoc(),
+                               TII.get(TargetOpcode::COPY), LoadReg)
+                           .addReg(StoreReg)
+                           .getInstr();
+  Store.clearRegisterKills(StoreReg, &TRI);
+  LIS.ReplaceMachineInstrInMaps(Restore, *Copy);
+  MF.substituteDebugValuesForInst(Restore, *Copy, /*MaxOperand=*/1);
+  Restore.eraseFromParent();
+  ++NumReloadsRemoved;
+  SlotIndex BlockStart = LIS.getMBBStartIdx(&MBB);
+  if (!StoreLI) {
+    // Store register is physical, extend the live range.
+    for (MCRegUnit Unit : TRI.regunits(StoreReg.asMCReg())) {
+      if (MRI.isReservedRegUnit(Unit))
+        continue;
+      if (LiveRange *LR = LIS.getCachedRegUnit(Unit))
+        LR->extendInBlock(BlockStart, Use);
+    }
+    return true;
+  }
+  // Store register is virtual, update liveness information and re-assign in the
+  // matrix.
+  if (Matrix)
+    Matrix->unassign(*StoreLI);
+  StoreLI->extendInBlock(BlockStart, Use);
+  for (LiveInterval::SubRange &SubLI : StoreLI->subranges())
+    if (SubLI.getVNInfoBefore(StoreIdx))
+      SubLI.extendInBlock(BlockStart, Use);
+  if (Matrix)
+    Matrix->assign(*StoreLI, PhysReg.asMCReg());
+  return true;
+}
+
 void InlineSpiller::eliminateRedundantRestores() {
   for (MachineBasicBlock &MBB : MF) {
-    auto First = MBB.getFirstNonDebugInstr();
-    for (auto I = First; I != MBB.instr_end();) {
-      auto Current = I++;
-      if (Current == First)
+    // The last instruction in this block referencing each stack slot.
+    DenseMap<int, MachineInstr *> LastSlotAccess;
+    for (MachineInstr &MI : make_early_inc_range(MBB.instrs())) {
+      if (MI.isDebugInstr())
         continue;
-      MachineInstr &MI = *Current;
-      if (MI.isBundled())
-        continue;
-      int LoadFI;
-      TypeSize LoadSize = TypeSize::getZero();
-      Register LoadReg = TII.isLoadFromStackSlot(MI, LoadFI, LoadSize);
-      if (!LoadReg.isValid())
-        continue;
-
-      MachineOperand *LoadOperand = MI.findRegisterDefOperand(LoadReg, &TRI);
-      if (!LoadOperand || LoadOperand->getSubReg())
-        continue;
-
-      MachineInstr &MaybeStore = *prev_nodbg(Current, First);
-      if (MaybeStore.isBundled())
-        continue;
-
-      int StoreFI;
-      TypeSize StoreSize = TypeSize::getZero();
-      Register StoreReg =
-          TII.isStoreToStackSlot(MaybeStore, StoreFI, StoreSize);
-      if (!StoreReg.isValid())
-        continue;
-
-      MachineOperand *StoreOperand =
-          MaybeStore.findRegisterUseOperand(StoreReg, &TRI);
-      if (!StoreOperand || StoreOperand->getSubReg())
-        continue;
-
-      if (StoreFI != LoadFI ||
-          !MF.getFrameInfo().isSpillSlotObjectIndex(LoadFI))
-        continue;
-
-      if (StoreSize.isZero() || StoreSize != LoadSize)
-        continue;
-      if (StoreSize * 8 != TRI.getRegSizeInBits(StoreReg, MRI) ||
-          LoadSize * 8 != TRI.getRegSizeInBits(LoadReg, MRI))
-        continue;
-
-      if (MI.hasOrderedMemoryRef() || MaybeStore.hasOrderedMemoryRef())
-        continue;
-
-      auto GetAssignedReg = [&](Register Reg) -> Register {
-        if (Reg.isVirtual()) {
-          if (!VRM.hasPhys(Reg))
-            return Register();
-          return VRM.getPhys(Reg);
-        }
-        return Reg;
-      };
-      if (Register LoadAssign = GetAssignedReg(LoadReg);
-          !LoadAssign.isValid() || LoadAssign != GetAssignedReg(StoreReg))
-        continue;
-
-      MachineInstr *Copy = BuildMI(MBB, MI, MI.getDebugLoc(),
-                                   TII.get(TargetOpcode::COPY), LoadReg)
-                               .addReg(StoreReg)
-                               .getInstr();
-      MaybeStore.clearRegisterKills(StoreReg, &TRI);
-      LIS.ReplaceMachineInstrInMaps(MI, *Copy);
-      MF.substituteDebugValuesForInst(MI, *Copy, /*MaxOperand=*/1);
-      MI.eraseFromParent();
-      ++NumReloadsRemoved;
-      SlotIndex Use = LIS.getInstructionIndex(*Copy).getRegSlot();
-      SlotIndex BlockStart = LIS.getMBBStartIdx(&MBB);
-      if (StoreReg.isPhysical()) {
-        for (MCRegUnit Unit : TRI.regunits(StoreReg.asMCReg())) {
-          if (MRI.isReservedRegUnit(Unit))
+      int FI;
+      TypeSize Size = TypeSize::getZero();
+      if (TII.isLoadFromStackSlot(MI, FI, Size))
+        if (MachineInstr *Store = LastSlotAccess.lookup(FI))
+          if (tryForwardRestore(MI, *Store))
             continue;
-          if (LiveRange *LR = LIS.getCachedRegUnit(Unit))
-            LR->extendInBlock(BlockStart, Use);
-        }
-        continue;
-      }
-      LiveInterval &StoreLI = LIS.getInterval(StoreReg);
-      Register StorePhys;
-      if (Matrix && VRM.hasPhys(StoreReg)) {
-        StorePhys = VRM.getPhys(StoreReg);
-        Matrix->unassign(StoreLI);
-      }
-      StoreLI.extendInBlock(BlockStart, Use);
-      if (StoreLI.hasSubRanges()) {
-        SlotIndex StoreUse = LIS.getInstructionIndex(MaybeStore).getRegSlot();
-        for (LiveInterval::SubRange &SubLI : StoreLI.subranges()) {
-          if (!SubLI.getVNInfoBefore(StoreUse))
-            continue;
-          SubLI.extendInBlock(BlockStart, Use);
-        }
-      }
-      if (Matrix && StorePhys.isValid())
-        Matrix->assign(StoreLI, StorePhys);
+      // Before frame index elimination, every stack slot access has a frame
+      // index operand.
+      for (const MachineOperand &MO : MI.operands())
+        if (MO.isFI())
+          LastSlotAccess[MO.getIndex()] = &MI;
     }
   }
 }
