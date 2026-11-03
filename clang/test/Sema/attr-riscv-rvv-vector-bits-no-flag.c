@@ -2,7 +2,7 @@
 // -mrvv-vector-bits=). The bound for riscv_rvv_vector_bits(N) on
 // a data type then comes from the ISA's Zvl*b extension, scaled by LMUL.
 //
-// Bound: N <= MinElts * EltSize * zvl / RVVBitsPerBlock = zvl * LMUL (bits)
+// Bound: N <= zvl * LMUL (bits)
 //
 // vintXm1_t  -> bound = zvl
 // vintXm2_t  -> bound = zvl * 2
