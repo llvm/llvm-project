@@ -358,12 +358,24 @@ bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
   return true;
 }
 
-// A multicast load whose workgroup mask has all 16 bits set may never return
-// to some of the workgroups. Clamp the mask to 0xfffe: workgroups 1-15 still
-// multicast to each other, and workgroup 0 does an ordinary load (mask 0). It
-// is still a single load per wave, and every workgroup still receives the
-// data.
+// A multicast load whose workgroup mask names all 16 workgroups of a cluster
+// may never return to some of them. Clamp the mask to 0x7fff: workgroups 0-14
+// still multicast to each other, and workgroup 15 does an ordinary load (mask
+// 0). It is still a single load per wave, and every workgroup still receives
+// the data. Only a 16-workgroup cluster has a workgroup 15, so in a smaller
+// cluster the clamped mask names the same workgroups.
 bool AMDGPULowerIntrinsicsImpl::visitMcastLoad(IntrinsicInst &I) {
+  // A cluster size fixed at compile time cannot change at run time.
+  AMDGPU::ClusterDimsAttr ClusterDims =
+      AMDGPU::ClusterDimsAttr::get(*I.getFunction());
+  if (ClusterDims.isNoCluster())
+    return false;
+  if (ClusterDims.isFixedDims()) {
+    const std::array<unsigned, 3> &Dims = ClusterDims.getDims();
+    if (Dims[0] * Dims[1] * Dims[2] < 16)
+      return false;
+  }
+
   // A tensor load has the mask in bits [15:0] of dword 0 of D# group 1. A
   // cluster load has it in bits [15:0] of its last operand, which goes to M0.
   constexpr uint32_t FullMask = 0xffff;
@@ -396,9 +408,9 @@ bool AMDGPULowerIntrinsicsImpl::visitMcastLoad(IntrinsicInst &I) {
   EntryB.SetInsertPointPastAllocas(I.getFunction());
   Value *FlatID =
       EntryB.CreateIntrinsic(Intrinsic::amdgcn_cluster_workgroup_flat_id, {});
-  Value *IsFirst = EntryB.CreateICmpEQ(FlatID, EntryB.getInt32(0));
-  Value *ClampMask = EntryB.CreateSelect(IsFirst, EntryB.getInt32(0xffff0000),
-                                         EntryB.getInt32(0xfffffffe));
+  Value *IsLast = EntryB.CreateICmpEQ(FlatID, EntryB.getInt32(15));
+  Value *ClampMask = EntryB.CreateSelect(IsLast, EntryB.getInt32(0xffff0000),
+                                         EntryB.getInt32(0xffff7fff));
   Value *NewMask = B.CreateAnd(ClampMask, Mask);
   if (!IsKnownFull) {
     Value *IsFull =
