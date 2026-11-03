@@ -822,10 +822,9 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
   // Remember to free the memory later.
   freeAfterSynchronization(Device, AsyncInfo, *AllocOrErr);
 
-  // Use the KLE in the __tgt_async_info to ensure a stable address for the
+  // Use the KLE in the AsyncInfoTy to ensure a stable address for the
   // async data transfer.
-  auto &LocalKLE =
-      static_cast<__tgt_async_info *>(AsyncInfo)->KernelLaunchEnvironment;
+  auto &LocalKLE = AsyncInfo.getKernelLaunchEnvironment();
   LocalKLE = KernelLaunchEnvironmentTy{};
   LocalKLE.DynCGroupMemSize = DynBlockMemConf.Size;
   LocalKLE.DynCGroupMemFbPtr = DynBlockMemConf.FallbackPtr;
