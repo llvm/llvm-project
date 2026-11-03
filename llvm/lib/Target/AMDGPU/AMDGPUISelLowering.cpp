@@ -5737,14 +5737,20 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (ConstantSDNode *CVal = dyn_cast<ConstantSDNode>(BitsFrom)) {
       if (Signed) {
-        return constantFoldBFE<int32_t>(
-            DAG, static_cast<int32_t>(CVal->getSExtValue()), OffsetVal,
-            WidthVal, DL);
+        int32_t Val = static_cast<int32_t>(CVal->getSExtValue());
+        return constantFoldBFE<int32_t>(DAG,
+                                        Val,
+                                        OffsetVal,
+                                        WidthVal,
+                                        DL);
       }
 
-      return constantFoldBFE<uint32_t>(
-          DAG, static_cast<uint32_t>(CVal->getZExtValue()), OffsetVal, WidthVal,
-          DL);
+      uint32_t Val = static_cast<uint32_t>(CVal->getZExtValue());
+      return constantFoldBFE<uint32_t>(DAG,
+                                       Val,
+                                       OffsetVal,
+                                       WidthVal,
+                                       DL);
     }
 
     if ((OffsetVal + WidthVal) >= 32 &&
