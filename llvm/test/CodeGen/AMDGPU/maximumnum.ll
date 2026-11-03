@@ -32,10 +32,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00-amd-amdhsa -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
 ; xUN: llc -global-isel -mtriple=amdgpu12.00-amd-amdhsa -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16,GFX12-GISEL,GFX12-FAKE16-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgpu12.51-amd-amdhsa -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-TRUE16 %s
+; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-TRUE16 %s
 ; xUN: llc -global-isel -mtriple=amdgpu12.51-amd-amdhsa -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-TRUE16,GFX1251-GISEL,GFX1251-TRUE16-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgpu12.51-amd-amdhsa -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-FAKE16 %s
+; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-FAKE16 %s
 ; xUN: llc -global-isel -mtriple=amdgpu12.51-amd-amdhsa -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-FAKE16,GFX1251-GISEL,GFX1251-FAKE16-GISEL %s
 
 define half @v_maximumnum_f16(half %x, half %y) #1 {
