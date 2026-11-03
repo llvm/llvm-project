@@ -1205,8 +1205,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
   // Forward the loop vectorization preference to the LTO backend by toggling
   // the existing -vectorize-loops cl::opt, which the pass honors directly.
-  // This avoids minting dedicated linker options for what is only pipeline
-  // tuning.
   if (Arg *A =
           Args.getLastArg(options::OPT_fvectorize, options::OPT_fno_vectorize))
     CmdArgs.push_back(Args.MakeArgString(
