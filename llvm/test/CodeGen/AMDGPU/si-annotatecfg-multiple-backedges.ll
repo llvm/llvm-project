@@ -11,15 +11,17 @@ define amdgpu_kernel void @multiple_backedges(i32 %arg, ptr %arg1) {
 ; OPT-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; OPT-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[ARG:%.*]], 1
 ; OPT-NEXT:    br label [[LOOP:%.*]]
+; OPT:       loop.outer:
+; OPT-NEXT:    [[PHI_BROKEN1:%.*]] = phi i64 [ [[TMP7:%.*]], [[LOOP_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; OPT-NEXT:    br label [[LOOP1:%.*]]
 ; OPT:       loop:
-; OPT-NEXT:    [[PHI_BROKEN1:%.*]] = phi i64 [ [[TMP7:%.*]], [[LOOP_END:%.*]] ], [ [[PHI_BROKEN1]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ 0, [[LOOP_END]] ], [ [[TMP0:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
-; OPT-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP5:%.*]], [[LOOP]] ], [ 0, [[LOOP_END]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ 0, [[LOOP]] ], [ [[TMP0:%.*]], [[LOOP1]] ]
+; OPT-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP5:%.*]], [[LOOP1]] ], [ 0, [[LOOP]] ]
 ; OPT-NEXT:    [[TMP5]] = add nsw i32 [[TMP4]], [[TMP]]
 ; OPT-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[ARG]], [[TMP5]]
 ; OPT-NEXT:    [[TMP0]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP6]], i64 [[PHI_BROKEN]])
 ; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
-; OPT-NEXT:    br i1 [[TMP1]], label [[LOOP_END]], label [[LOOP]]
+; OPT-NEXT:    br i1 [[TMP1]], label [[LOOP_END]], label [[LOOP1]]
 ; OPT:       loop_end:
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
 ; OPT-NEXT:    [[EXIT:%.*]] = icmp sgt i32 [[TMP5]], [[TMP2]]
