@@ -55,3 +55,83 @@ b.out:
 exit:
   ret i32 %p.next
 }
+
+; The value of %p along the self-loop is %p itself. When %p is replaced by the
+; new PHI in the guard block, the new PHI uses itself along the self-loop.
+define i32 @header_self_loop_same_value(i1 %c, i1 %d, i1 %e) {
+; CHECK-LABEL: define i32 @header_self_loop_same_value(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]], i1 [[E:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C_INV:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    br label %[[IRR_GUARD:.*]]
+; CHECK:       [[A:.*]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[B:.*]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[IRR_GUARD]], label %[[B_OUT:.*]]
+; CHECK:       [[B_OUT]]:
+; CHECK-NEXT:    br i1 [[E]], label %[[EXIT:.*]], label %[[A]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[P_MOVED:%.*]]
+; CHECK:       [[IRR_GUARD]]:
+; CHECK-NEXT:    [[P_MOVED]] = phi i32 [ [[P_MOVED]], %[[B]] ], [ 100, %[[A]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, %[[B]] ], [ true, %[[A]] ], [ [[C_INV]], %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B]], label %[[B]], label %[[A]]
+;
+entry:
+  br i1 %c, label %a, label %b
+
+a:
+  br label %b
+
+b:
+  %p = phi i32 [ 0, %entry ], [ 100, %a ], [ %p, %b ]
+  br i1 %d, label %b, label %b.out
+
+b.out:
+  br i1 %e, label %exit, label %a
+
+exit:
+  ret i32 %p
+}
+
+; %x and %y swap values along the self-loop. Each new PHI in the guard block
+; uses the other one along the self-loop.
+define i32 @header_self_loop_swap(i1 %c, i1 %d, i1 %e) {
+; CHECK-LABEL: define i32 @header_self_loop_swap(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]], i1 [[E:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C_INV:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    br label %[[IRR_GUARD:.*]]
+; CHECK:       [[A:.*]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[B:.*]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[IRR_GUARD]], label %[[B_OUT:.*]]
+; CHECK:       [[B_OUT]]:
+; CHECK-NEXT:    br i1 [[E]], label %[[EXIT:.*]], label %[[A]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = sub i32 [[X_MOVED:%.*]], [[Y_MOVED:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+; CHECK:       [[IRR_GUARD]]:
+; CHECK-NEXT:    [[Y_MOVED]] = phi i32 [ [[X_MOVED]], %[[B]] ], [ 0, %[[A]] ], [ 1, %[[ENTRY]] ]
+; CHECK-NEXT:    [[X_MOVED]] = phi i32 [ [[Y_MOVED]], %[[B]] ], [ 1, %[[A]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, %[[B]] ], [ true, %[[A]] ], [ [[C_INV]], %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B]], label %[[B]], label %[[A]]
+;
+entry:
+  br i1 %c, label %a, label %b
+
+a:
+  br label %b
+
+b:
+  %x = phi i32 [ 0, %entry ], [ 1, %a ], [ %y, %b ]
+  %y = phi i32 [ 1, %entry ], [ 0, %a ], [ %x, %b ]
+  br i1 %d, label %b, label %b.out
+
+b.out:
+  br i1 %e, label %exit, label %a
+
+exit:
+  %r = sub i32 %x, %y
+  ret i32 %r
+}
