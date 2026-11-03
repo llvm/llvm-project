@@ -269,8 +269,8 @@ def Vector_ReductionOp :
   Vector_Op<"reduction", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     OptionalTypesMatchWith<"dest and acc have the same type",
-                            "dest", "acc", "::llvm::cast<Type>($_self)">,
+     OptionalTypesMatchWith<"result and acc have the same type",
+                            "result", "acc", "::llvm::cast<Type>($_self)">,
      DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
@@ -281,7 +281,7 @@ def Vector_ReductionOp :
                DefaultValuedAttr<
                  Arith_FastMathAttr,
                  "::mlir::arith::FastMathFlags::none">:$fastmath)>,
-    Results<(outs AnyType:$dest)> {
+    Results<(outs AnyType:$result)> {
   let summary = "reduction operation";
   let description = [{
     Reduces an 1-D vector "horizontally" into a scalar using the given
@@ -310,18 +310,18 @@ def Vector_ReductionOp :
     }
   }];
   let builders = [
-    // Builder that infers the type of `dest`.
+    // Builder that infers the type of `result`.
     OpBuilder<(ins "CombiningKind":$kind, "Value":$vector, "Value":$acc,
                     CArg<"::mlir::arith::FastMathFlags",
                          "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>,
-    // Builder that infers the type of `dest` and has no accumulator.
+    // Builder that infers the type of `result` and has no accumulator.
     OpBuilder<(ins "CombiningKind":$kind, "Value":$vector,
                     CArg<"::mlir::arith::FastMathFlags",
                          "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
 
   let assemblyFormat = "$kind `,` $vector (`,` $acc^)? (`fastmath` `` $fastmath^)?"
-                       " attr-dict `:` type($vector) `into` type($dest)";
+                       " attr-dict `:` type($vector) `into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
@@ -420,7 +420,7 @@ def Vector_BroadcastOp :
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyType:$source)>,
-    Results<(outs AnyVectorOfAnyRank:$vector)> {
+    Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "broadcast operation";
   let description = [{
     Broadcasts the scalar or k-D vector value in the source operand
@@ -469,7 +469,7 @@ def Vector_BroadcastOp :
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
     VectorType getResultVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
 
     /// Return the dimensions of the result vector that were formerly ones in the
@@ -493,7 +493,7 @@ def Vector_BroadcastOp :
       ArrayRef<int64_t> dstShape,
       const llvm::SetVector<int64_t> &broadcastedDims);
   }];
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($vector)";
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -510,7 +510,7 @@ def Vector_ShuffleOp
            InferTypeOpAdaptor]>,
       Arguments<(ins AnyFixedVectorOfAnyRank:$v1, AnyFixedVectorOfAnyRank:$v2,
           DenseI64ArrayAttr:$mask)>,
-      Results<(outs AnyVectorOfNonZeroRank:$vector)> {
+      Results<(outs AnyVectorOfNonZeroRank:$result)> {
   let summary = "shuffle operation";
   let description = [{
     The shuffle operation constructs a permutation (or duplication) of elements
@@ -559,7 +559,7 @@ def Vector_ShuffleOp
       return ::llvm::cast<VectorType>(getV2().getType());
     }
     VectorType getResultVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
 
@@ -1321,7 +1321,7 @@ def Vector_TransferReadOp :
                    AnyType:$padding,
                    Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
                    BoolArrayAttr:$in_bounds)>,
-    Results<(outs AnyVectorOfAnyRank:$vector)> {
+    Results<(outs AnyVectorOfAnyRank:$result)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
 
@@ -3068,14 +3068,14 @@ def VectorScaleOp : Vector_Op<"vscale",
 
 def Vector_ScanOp :
   Vector_Op<"scan", [Pure,
-    AllTypesMatch<["source", "dest"]>,
+    AllTypesMatch<["source", "result"]>,
     AllTypesMatch<["initial_value", "accumulated_value"]> ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVectorOfNonZeroRankNonI0Elem:$source,
                    AnyVectorOfNonI0Elem:$initial_value,
                    I64Attr:$reduction_dim,
                    BoolAttr:$inclusive)>,
-    Results<(outs AnyVectorOfNonZeroRankNonI0Elem:$dest,
+    Results<(outs AnyVectorOfNonZeroRankNonI0Elem:$result,
                   AnyVectorOfNonI0Elem:$accumulated_value)> {
   let summary = "Scan operation";
   let description = [{
@@ -3099,7 +3099,7 @@ def Vector_ScanOp :
       return ::llvm::cast<VectorType>(getSource().getType());
     }
     VectorType getDestType() {
-      return ::llvm::cast<VectorType>(getDest().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
     VectorType getAccumulatorType() {
       return ::llvm::cast<VectorType>(getAccumulatedValue().getType());
