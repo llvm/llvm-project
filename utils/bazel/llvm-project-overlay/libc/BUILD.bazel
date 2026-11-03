@@ -3210,6 +3210,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sendfile",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sendfile.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_off_t",
+        ":types_size_t",
+        ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_sendmsg",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sendmsg.h"],
     target_compatible_with = select({
@@ -19856,6 +19874,28 @@ libc_function(
         ":errno",
         ":types_size_t",
         ":types_struct_sembuf",
+    ],
+)
+
+############################# sys/sendfile targets #############################
+
+libc_function(
+    name = "sendfile",
+    srcs = ["src/sys/sendfile/linux/sendfile.cpp"],
+    hdrs = ["src/sys/sendfile/sendfile.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendfile",
+        ":errno",
+        ":types_off_t",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
