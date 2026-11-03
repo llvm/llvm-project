@@ -8,6 +8,12 @@
 # Initialize package.
 @PACKAGE_INIT@
 
+set(LIBOMPTEST_USE_SYSTEM_GTEST "@LIBOMPTEST_USE_SYSTEM_GTEST@")
+if(LIBOMPTEST_USE_SYSTEM_GTEST)
+  include(CMakeFindDependencyMacro)
+  find_dependency(GTest @GTest_VERSION@)
+endif()
+
 # Include exported targets.
 include("${CMAKE_CURRENT_LIST_DIR}/omptest-targets.cmake")
 
