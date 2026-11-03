@@ -813,7 +813,7 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
   if (!TargetLoweringBase::shouldReduceLoadWidth(N, ExtTy, NewVT, ByteOffset))
     return false;
 
-  uint64_t NewSize = NewVT.getStoreSizeInBits();
+  TypeSize NewSize = NewVT.getStoreSizeInBits();
 
   // If we are reducing to a 32-bit load or a smaller multi-dword load,
   // this is always better.
@@ -821,7 +821,7 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
     return true;
 
   EVT OldVT = N->getValueType(0);
-  uint64_t OldSize = OldVT.getStoreSizeInBits();
+  TypeSize OldSize = OldVT.getStoreSizeInBits();
 
   MemSDNode *MN = cast<MemSDNode>(N);
   unsigned AS = MN->getAddressSpace();
