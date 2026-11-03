@@ -30,18 +30,33 @@ TEST(LlvmLibcSysUioProcessVmWritevTest, SmokeTest) {
   local_iov[1].iov_base = part1;
   local_iov[1].iov_len = 8;
 
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU user space emulation does not support process_vm_writev and returns
+  // ENOSYS.
+  ASSERT_THAT(
+      LIBC_NAMESPACE::process_vm_writev(pid, local_iov, 2, remote_iov, 1, 0),
+      returns(EQ(ssize_t(-1))).with_errno(EQ(ENOSYS)));
+#else
   ASSERT_THAT(
       LIBC_NAMESPACE::process_vm_writev(pid, local_iov, 2, remote_iov, 1, 0),
       returns(EQ(ssize_t(15))).with_errno(EQ(0)));
 
   EXPECT_EQ(dest[0], 'H');
   EXPECT_EQ(dest[7], 'W');
+#endif
 }
 
 TEST(LlvmLibcSysUioProcessVmWritevTest, InvalidFlags) {
   pid_t pid = LIBC_NAMESPACE::getpid();
   char buf[8];
   struct iovec iov = {buf, sizeof(buf)};
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU user space emulation does not support process_vm_writev and returns
+  // ENOSYS.
+  ASSERT_THAT(LIBC_NAMESPACE::process_vm_writev(pid, &iov, 1, &iov, 1, 1),
+              returns(EQ(ssize_t(-1))).with_errno(EQ(ENOSYS)));
+#else
   ASSERT_THAT(LIBC_NAMESPACE::process_vm_writev(pid, &iov, 1, &iov, 1, 1),
               returns(EQ(ssize_t(-1))).with_errno(EQ(EINVAL)));
+#endif
 }
