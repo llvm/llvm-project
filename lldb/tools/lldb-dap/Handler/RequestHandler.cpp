@@ -17,6 +17,7 @@
 #include "RunInTerminal.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
@@ -188,6 +189,9 @@ void BaseRequestHandler::Run(const Request &request) {
 
   lldb::SBMutex lock = dap.GetAPIMutex();
   std::lock_guard<lldb::SBMutex> guard(lock);
+  dap.m_active_api_mutex = &lock;
+  llvm::scope_exit reset_active_mutex(
+      [&] { dap.m_active_api_mutex = nullptr; });
 
   // FIXME: After all the requests have migrated from LegacyRequestHandler >
   // RequestHandler<> we should be able to move this into
