@@ -24,8 +24,8 @@ with `-b`.
 :::
 
 :::{option} --etm=<string>
-Path of the ETM trace file created by ARM CoreSight trace tools.
-Requires the OpenCSD library version 1.5.4 or higher to be enabled during the build.
+Path of the ETM/ITM trace file created by ARM CoreSight trace tools.
+Requires the OpenCSD library version 1.7.1 or higher to be enabled during the build.
 :::
 
 :::{option} --perfdata=<perfdata>, --pd
