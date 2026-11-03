@@ -456,9 +456,6 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " zero-size-array";
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
-
-  if (IsConstexprUnknown)
-    OS << " constexpr-unknown";
 }
 
 /// Dump descriptor, including all valid offsets.
