@@ -7,6 +7,8 @@ struct S {
   static int static_func(int a);
 };
 
+S get_s();
+
 // CIR-LABEL: cir.func {{.*}} @_Z18test_instance_call1S
 // OGCG-LABEL: define {{.*}} @_Z18test_instance_call1S
 int test_instance_call(S s) {
@@ -33,4 +35,34 @@ int test_arrow_call(S *p) {
   // OGCG: %[[CALL_OGCG:.*]] = call noundef i32 @_ZN1S11static_funcEi(i32 noundef 100)
   // OGCG: ret i32 %[[CALL_OGCG]]
   return p->static_func(100);
+}
+
+// Verify that the instance expression is evaluated for side effects:
+// CIR-LABEL: cir.func {{.*}} @_Z16test_side_effectv
+// OGCG-LABEL: define {{.*}} @_Z16test_side_effectv
+int test_side_effect() {
+  // CIR: cir.call @_Z5get_sv()
+  // CIR: %[[ARG:.*]] = cir.const #cir.int<42> : !s32i
+  // CIR: %[[CALL:.*]] = cir.call @_ZN1S11static_funcEi(%[[ARG]]) : (!s32i {{.*}}) -> (!s32i {{.*}})
+  // CIR: cir.return %{{.*}} : !s32i
+
+  // OGCG: call void @_Z5get_sv()
+  // OGCG: %[[CALL_OGCG:.*]] = call noundef i32 @_ZN1S11static_funcEi(i32 noundef 42)
+  // OGCG: ret i32 %[[CALL_OGCG]]
+  return get_s().static_func(42);
+}
+
+// Verify that pointer expressions are evaluated for side effects:
+// CIR-LABEL: cir.func {{.*}} @_Z20test_ptr_side_effectP1S
+// OGCG-LABEL: define {{.*}} @_Z20test_ptr_side_effectP1S
+int test_ptr_side_effect(S *p) {
+  // CIR: cir.ptr_stride
+  // CIR: %[[ARG:.*]] = cir.const #cir.int<100> : !s32i
+  // CIR: %[[CALL:.*]] = cir.call @_ZN1S11static_funcEi(%[[ARG]]) : (!s32i {{.*}}) -> (!s32i {{.*}})
+  // CIR: cir.return %{{.*}} : !s32i
+
+  // OGCG: getelementptr
+  // OGCG: %[[CALL_OGCG:.*]] = call noundef i32 @_ZN1S11static_funcEi(i32 noundef 100)
+  // OGCG: ret i32 %[[CALL_OGCG]]
+  return (p++)->static_func(100);
 }
