@@ -490,6 +490,7 @@ body:             |
 # GFX8: SCRATCH_LOAD_DWORD %{{[0-9]+}}, 0, 0,
 
 name: diffoporder_add_scratch_vgpr
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 
