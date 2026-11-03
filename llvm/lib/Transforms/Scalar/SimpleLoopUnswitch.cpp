@@ -605,7 +605,8 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   std::optional<int> LatchIdx = std::nullopt;
   auto *LoopLatch = L.getLoopLatch();
   auto *ULExit = LI.getUniqueLatchExitBlock(L);
-  if (SE && FullUnswitch && ULExit) {
+  if (SE && FullUnswitch && ULExit &&
+      BI.getSuccessor(0) != BI.getSuccessor(1)) {
     if (BI.getSuccessor(0) == LoopLatch && L.contains(BI.getSuccessor(1)))
       LatchIdx = 0;
     else if (BI.getSuccessor(1) == LoopLatch && L.contains(BI.getSuccessor(0)))
