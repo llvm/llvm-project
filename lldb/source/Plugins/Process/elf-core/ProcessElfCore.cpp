@@ -1226,12 +1226,22 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
     if (program_header.p_type != llvm::ELF::PT_NOTE)
       continue;
 
-    std::vector<uint8_t> note_bytes;
-    note_bytes.resize(program_header.p_memsz);
-
     // We need to slide the address of the p_vaddr as these values don't get
     // relocated in memory.
     const lldb::addr_t vaddr = program_header.p_vaddr + address - base_addr;
+
+    // The program headers come from process memory, which may not hold an
+    // intact ELF image, so p_memsz can be garbage. Only allocate for a note
+    // segment that lies within one range of the core, as reading it requires.
+    const VMRangeToFileOffset::Entry *core_range =
+        m_core_aranges.FindEntryThatContains(vaddr);
+    if (!core_range ||
+        program_header.p_memsz > core_range->GetRangeEnd() - vaddr)
+      continue;
+
+    std::vector<uint8_t> note_bytes;
+    note_bytes.resize(program_header.p_memsz);
+
     byte_read =
         ReadMemory(vaddr, note_bytes.data(), program_header.p_memsz, error);
     if (byte_read != program_header.p_memsz)
