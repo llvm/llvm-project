@@ -3340,7 +3340,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 
   if (getRequiresCallConvLowering())
-    p << " requires_call_conv_lowering";
+    p << ' ' << getRequiresCallConvLoweringAttrName().getValue();
 
   // Every other declared attribute is printed by the syntax above.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
