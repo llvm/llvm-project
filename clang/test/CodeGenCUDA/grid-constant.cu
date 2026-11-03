@@ -20,8 +20,7 @@ void foo() {
   tkernel<const S><<<1,1>>>(1, {});
 }
 
-// CHECK: define dso_local ptx_kernel void @_Z6kernel1Sii(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %gc_arg1, i32 noundef %arg2, i32 noundef "nvvm.grid_constant" %gc_arg3)
+// CHECK: define dso_local ptx_kernel void @_Z6kernel1Sii(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %gc_arg1, i32 noundef %arg2, ptr noundef byval(i32) align 4 "nvvm.grid_constant" %gc_arg3)
 // CHECK: define ptx_kernel void @_Z13tkernel_constIK1SEvT_(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
 // CHECK: define ptx_kernel void @_Z13tkernel_constI1SEvT_(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
 // CHECK: define ptx_kernel void @_Z7tkernelIK1SEviT_(i32 noundef %dummy, ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
-
