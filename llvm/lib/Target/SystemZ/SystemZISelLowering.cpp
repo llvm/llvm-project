@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -805,6 +806,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::SETCC,
                        ISD::SRL,
                        ISD::SRA,
+                       ISD::ADD,
+                       ISD::SUB,
                        ISD::MUL,
                        ISD::SDIV,
                        ISD::UDIV,
@@ -7876,37 +7879,9 @@ SDValue SystemZTargetLowering::combineZERO_EXTEND(
       }
     }
   }
-  // Recognize patterns for VECTOR SUBTRACT COMPUTE BORROW INDICATION
-  // and VECTOR ADD COMPUTE CARRY for i128:
-  //   (zext (setcc_uge X Y)) --> (VSCBI X Y)
-  //   (zext (setcc_ule Y X)) --> (VSCBI X Y)
-  //   (zext (setcc_ult (add X Y) X/Y) -> (VACC X Y)
-  //   (zext (setcc_ugt X/Y (add X Y)) -> (VACC X Y)
-  // For vector types, these patterns are recognized in the .td file.
-  if (N0.getOpcode() == ISD::SETCC && isTypeLegal(VT) && VT == MVT::i128 &&
-      N0.getOperand(0).getValueType() == VT) {
-    SDValue Op0 = N0.getOperand(0);
-    SDValue Op1 = N0.getOperand(1);
-    const ISD::CondCode CC = N0.getOperandCondCode(2);
-    switch (CC) {
-    case ISD::SETULE:
-      std::swap(Op0, Op1);
-      [[fallthrough]];
-    case ISD::SETUGE:
-      return DAG.getNode(SystemZISD::VSCBI, SDLoc(N0), VT, Op0, Op1);
-    case ISD::SETUGT:
-      std::swap(Op0, Op1);
-      [[fallthrough]];
-    case ISD::SETULT:
-      if (Op0->hasOneUse() && Op0->getOpcode() == ISD::ADD &&
-          (Op0->getOperand(0) == Op1 || Op0->getOperand(1) == Op1))
-        return DAG.getNode(SystemZISD::VACC, SDLoc(N0), VT, Op0->getOperand(0),
-                           Op0->getOperand(1));
-      break;
-    default:
-      break;
-    }
-  }
+  // Recognize patterns for VACC/VACCC and VSCBI/VSBCBI.
+  if (SDValue V = combineToAddSubCarry(N, DCI))
+    return V;
 
   return SDValue();
 }
@@ -9280,6 +9255,220 @@ SDValue SystemZTargetLowering::combineGET_CCMASK(
   return Select->getOperand(4);
 }
 
+// Detect cases where it is worthwhile to use the i128 add/sub-with-carry
+// instructions (VACQ / VSBIQ et al).
+SDValue SystemZTargetLowering::combineToAddSubCarry(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  using namespace llvm::SDPatternMatch;
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Only attempt to handle i128 type in vector registers.
+  if (VT != MVT::i128 || !isTypeLegal(VT))
+    return SDValue();
+
+  // SD match helper to identify "carry" values, i.e. values that are
+  // known to equal either 0 or 1.
+  struct Carry_match {
+    SelectionDAG &DAG;
+    Carry_match(SelectionDAG &DAG) : DAG(DAG) {}
+
+    bool match(SDValue N) {
+      // A value is guaranteed to equal 0 or 1 if all bits but the LSB
+      // are known to be zero.
+      KnownBits Known = DAG.computeKnownBits(N);
+      return (Known.Zero | 1).isAllOnes();
+    }
+  };
+
+  // SD match helper to identify inverted "carry" values, i.e. values
+  // that are known to equal either -1 or -2.
+  struct InvCarry_match {
+    SelectionDAG &DAG;
+    InvCarry_match(SelectionDAG &DAG) : DAG(DAG) {}
+
+    bool match(SDValue N) {
+      // A value is guaranteed to equal -1 or -2 if all bits but the LSB
+      // are known to be one.
+      KnownBits Known = DAG.computeKnownBits(N);
+      return (Known.One | 1).isAllOnes();
+    }
+  };
+
+  // SD match helper to identify negated "carry" values, i.e. values
+  // that are known to equal either 0 or -1.
+  struct NegCarry_match {
+    SelectionDAG &DAG;
+    NegCarry_match(SelectionDAG &DAG) : DAG(DAG) {}
+
+    bool match(SDValue N) {
+      // A value is guaranteed to equal 0 or -1 if all bits are
+      // known to be sign-bit copies.
+      if (DAG.ComputeNumSignBits(N) == N.getScalarValueSizeInBits())
+        return true;
+      // A value is also guaranteed to equal 0 or -1 if it is one added
+      // to a value known to equal -1 or -2; the latter is the case if
+      // all bits but the LSB are known to be one.  (This is not currently
+      // being detected by DAG.ComputeNumSignBits.)
+      SDValue N0;
+      if (sd_match(N, m_Add(m_Value(N0), m_One()))) {
+        KnownBits Known = DAG.computeKnownBits(N0);
+        return (Known.One | 1).isAllOnes();
+      }
+      return false;
+    }
+  };
+
+  // Find or create an SD node whose LSB is the inverse of the LSB of Carry.
+  auto getInvCarry = [&](SDValue Carry) -> SDValue {
+    // XOR/ADD/SUB with a value with LSB 1 already inverts the LSB.
+    unsigned Opcode = Carry.getOpcode();
+    if (Opcode == ISD::XOR || Opcode == ISD::ADD || Opcode == ISD::SUB) {
+      KnownBits Known = DAG.computeKnownBits(Carry.getOperand(1));
+      if ((Known.One & 1) != 0)
+        return Carry.getOperand(0);
+    }
+    // Otherwise insert XOR to invert the LSB here.
+    return DAG.getNode(ISD::XOR, DL, Carry.getValueType(), Carry,
+                       DAG.getConstant(1, DL, Carry.getValueType()));
+  };
+
+  // Create an SD node for Opcode, marking the result as carry.
+  auto getCarryOut = [&](unsigned Opcode, SDValue X, SDValue Y,
+                         SDValue Carry = SDValue()) -> SDValue {
+    SDValue Res = Carry ? DAG.getNode(Opcode, DL, VT, X, Y, Carry)
+                        : DAG.getNode(Opcode, DL, VT, X, Y);
+    return DAG.getNode(ISD::AssertZext, DL, VT, Res, DAG.getValueType(MVT::i1));
+  };
+
+  // Create an SD node for Opcode, inverting the result and marking it as carry.
+  auto getInvCarryOut = [&](unsigned Opcode, SDValue X, SDValue Y,
+                            SDValue Carry = SDValue()) -> SDValue {
+    SDValue Res = Carry ? DAG.getNode(Opcode, DL, VT, X, Y, Carry)
+                        : DAG.getNode(Opcode, DL, VT, X, Y);
+    Res = DAG.getNode(ISD::XOR, DL, VT, Res, DAG.getConstant(1, DL, VT));
+    return DAG.getNode(ISD::AssertZext, DL, VT, Res, DAG.getValueType(MVT::i1));
+  };
+
+  // Match helpers for the three inputs of an add/sub-with-carry.
+  SDValue X, Y, Carry;
+  auto MatchX = m_AllOf(m_SpecificVT(VT), m_Value(X));
+  auto MatchY = m_AllOf(m_SpecificVT(VT), m_Value(Y));
+  auto MatchAddXY = m_Add(m_Deferred(X), m_Deferred(Y));
+  auto MatchSubXY = m_Sub(m_Deferred(X), m_Deferred(Y));
+  auto MatchCarry = m_Value(Carry, Carry_match(DAG));
+  auto MatchInvCarry = m_Value(Carry, InvCarry_match(DAG));
+  auto MatchNegCarry = m_Value(Carry, NegCarry_match(DAG));
+
+  // Detect patterns computing the value of an add/sub with incoming carry.
+  // These can be implemented via VACQ / VSBIQ.
+
+  // Match any permutation of X + Y + Carry with Carry in 0/1.
+  if (sd_match(N, m_Add(MatchX, m_OneUse(m_Add(MatchY, MatchCarry)))) ||
+      sd_match(N, m_Add(m_OneUse(m_Add(MatchX, MatchY)), MatchCarry)))
+    return DAG.getNode(SystemZISD::VAC, DL, VT, X, Y, Carry);
+
+  // Match any permutation of X - Y - Carry with Carry in 0/1.
+  if (sd_match(N, m_Sub(MatchX, m_OneUse(m_Add(MatchY, MatchCarry)))) ||
+      sd_match(N, m_Sub(m_OneUse(m_Sub(MatchX, MatchY)), MatchCarry)))
+    return DAG.getNode(SystemZISD::VSBI, DL, VT, X, Y, getInvCarry(Carry));
+
+  // Match any permutation of X - Y + Carry with Carry in 0/-1.
+  // As VSBI only uses the LSB of Carry, we can use 0/-1 as if it were 0/1.
+  if (sd_match(N, m_Sub(m_OneUse(m_Add(MatchX, MatchNegCarry)), MatchY)) ||
+      sd_match(N, m_Add(MatchX, m_OneUse(m_Sub(MatchNegCarry, MatchY)))))
+    return DAG.getNode(SystemZISD::VSBI, DL, VT, X, Y, getInvCarry(Carry));
+
+  // Detect patterns computing the i128 carry-out value of a plain add/sub.
+  // These can be implemented via VACCQ / VSCBIQ.
+
+  // Match carry from X + Y.
+  if (sd_match(N, m_ZExt(m_UAddOverflow(MatchX, MatchY))))
+    return getCarryOut(SystemZISD::VACC, X, Y);
+
+  // Match inverted carry from X - Y.
+  if (sd_match(N, m_ZExt(m_USubNoOverflow(MatchX, MatchY))))
+    return getCarryOut(SystemZISD::VSCBI, X, Y);
+
+  // Match inverted carry from X + Y.
+  if (sd_match(N, m_ZExt(m_UAddNoOverflow(MatchX, MatchY))))
+    return getInvCarryOut(SystemZISD::VACC, X, Y);
+
+  // Match carry from X - Y.
+  if (sd_match(N, m_ZExt(m_USubOverflow(MatchX, MatchY))))
+    return getInvCarryOut(SystemZISD::VSCBI, X, Y);
+
+  // Detect patterns computing the i128 carry-out value of an add/sub with
+  // incoming carry.  These can be implemented via VACCCQ / VSBCBIQ.
+
+  // Match carry from X + Y + Carry with Carry in 0/1.
+  // There is carry if either X + Y or (X + Y) + Carry overflow.
+  if (sd_match(N, m_ZExt(m_Or(m_UAddOverflow(MatchX, MatchY),
+                              m_UAddOverflow(MatchAddXY, MatchCarry)))))
+    return getCarryOut(SystemZISD::VACCC, X, Y, Carry);
+  // (X + Y) + Carry overflows iff ~Carry - (X + Y) overflows.
+  if (sd_match(N, m_ZExt(m_Or(m_UAddOverflow(MatchX, MatchY),
+                              m_USubOverflow(MatchInvCarry, MatchAddXY)))))
+    return getCarryOut(SystemZISD::VACCC, X, Y, getInvCarry(Carry));
+
+  // Match inverted carry from X - Y - Carry with Carry in 0/1.
+  // There is no carry if neither X - Y nor (X - Y) - Carry overflow.
+  if (sd_match(N, m_ZExt(m_And(m_USubNoOverflow(MatchX, MatchY),
+                               m_USubNoOverflow(MatchSubXY, MatchCarry)))))
+    return getCarryOut(SystemZISD::VSBCBI, X, Y, getInvCarry(Carry));
+
+  // Match inverted carry from X + Y + Carry with Carry in 0/1.
+  // There is no carry if neither X + Y nor (X + Y) + Carry overflow.
+  if (sd_match(N, m_ZExt(m_And(m_UAddNoOverflow(MatchX, MatchY),
+                               m_UAddNoOverflow(MatchAddXY, MatchCarry)))))
+    return getInvCarryOut(SystemZISD::VACCC, X, Y, Carry);
+  // (X + Y) + Carry overflows iff ~Carry - (X + Y) overflows.
+  if (sd_match(N, m_ZExt(m_And(m_UAddNoOverflow(MatchX, MatchY),
+                               m_USubNoOverflow(MatchInvCarry, MatchAddXY)))))
+    return getInvCarryOut(SystemZISD::VACCC, X, Y, getInvCarry(Carry));
+
+  // Match carry from X - Y - Carry with Carry in 0/1.
+  // There is carry if either X - Y or (X - Y) - Carry overflow.
+  if (sd_match(N, m_ZExt(m_Or(m_USubOverflow(MatchX, MatchY),
+                              m_USubOverflow(MatchSubXY, MatchCarry)))))
+    return getInvCarryOut(SystemZISD::VSBCBI, X, Y, getInvCarry(Carry));
+
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::combineAddSubCarry(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(N);
+
+  // These instructions only look at the LSB of the Carry operand, which might
+  // enable simplification of the computation of the incoming Carry.
+  SDValue Carry = N->getOperand(2);
+  if (Carry.getScalarValueSizeInBits() != 1) {
+    APInt LSB = APInt::getLowBitsSet(Carry.getScalarValueSizeInBits(), 1);
+    if (TLI.SimplifyDemandedBits(Carry, LSB, DCI)) {
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
+      return SDValue(N, 0);
+    }
+    EVT CarryVT = Carry.getValueType();
+    while (ISD::isExtOpcode(Carry.getOpcode()) ||
+           Carry.getOpcode() == ISD::TRUNCATE)
+      Carry = Carry.getOperand(0);
+    LSB = APInt::getLowBitsSet(Carry.getScalarValueSizeInBits(), 1);
+    if (SDValue NewCarry =
+            TLI.SimplifyMultipleUseDemandedBits(Carry, LSB, DAG)) {
+      NewCarry = DAG.getAnyExtOrTrunc(NewCarry, DL, CarryVT);
+      return DAG.getNode(N->getOpcode(), DL, N->getVTList(), N->getOperand(0),
+                         N->getOperand(1), NewCarry);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue SystemZTargetLowering::combineIntDIVREM(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -9551,6 +9740,12 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);
+  case SystemZISD::VAC:
+  case SystemZISD::VACCC:
+  case SystemZISD::VSBI:
+  case SystemZISD::VSBCBI:      return combineAddSubCarry(N, DCI);
+  case ISD::ADD:
+  case ISD::SUB:                return combineToAddSubCarry(N, DCI);
   case ISD::SRL:
   case ISD::SRA:                return combineShiftToMulAddHigh(N, DCI);
   case ISD::MUL:                return combineMUL(N, DCI);
