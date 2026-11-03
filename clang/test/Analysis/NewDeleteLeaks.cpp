@@ -251,3 +251,54 @@ void validate_system_header() {
 }
 
 } // namespace protobuf_leak
+
+// Regression test for GH#214226.
+namespace heap_field_bind {
+
+struct Owner {
+  int *member;
+  Owner() : member(new int(42)) {} // expected-note {{Memory is allocated}}
+};
+
+void member_leaked_when_owner_deleted() {
+  Owner *owner = new Owner; // expected-note {{Calling default constructor for 'Owner'}}
+                            // expected-note@-1 {{Returning from default constructor for 'Owner'}}
+  delete owner;
+} // expected-warning {{Potential leak of memory pointed to by field 'member'}}
+// expected-note@-1 {{Potential leak of memory pointed to by field 'member'}}
+
+Owner *member_not_leaked_when_owner_returned() {
+  Owner *owner = new Owner;
+  return owner;
+} // no-warning
+
+void member_released_before_owner() {
+  Owner *owner = new Owner;
+  delete owner->member;
+  delete owner;
+} // no-warning
+
+struct OwnerNoCtor {
+  int *member;
+};
+
+void leak_assigned_member_when_owner_deleted() {
+  OwnerNoCtor *owner = new OwnerNoCtor;
+  owner->member = new int; // expected-note {{Memory is allocated}}
+  delete owner;
+} // expected-warning {{Potential leak of memory pointed to by field 'member'}}
+// expected-note@-1 {{Potential leak of memory pointed to by field 'member'}}
+
+OwnerNoCtor *assigned_member_not_leaked_when_owner_returned() {
+  OwnerNoCtor *owner = new OwnerNoCtor;
+  owner->member = new int;
+  return owner;
+} // no-warning
+
+void escaped_parent_does_not_report_inner(OwnerNoCtor **out) {
+  OwnerNoCtor *owner = new OwnerNoCtor;
+  *out = owner;
+  owner->member = new int;
+} // no-warning
+
+} // namespace heap_field_bind
