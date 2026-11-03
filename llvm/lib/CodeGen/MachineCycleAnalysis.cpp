@@ -117,7 +117,6 @@ bool MachineCycleInfoPrinterLegacy::runOnMachineFunction(MachineFunction &F) {
 PreservedAnalyses
 MachineCycleInfoPrinterPass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  OS << "MachineCycleInfo for function: " << MF.getName() << "\n";
   auto &MCI = MFAM.getResult<MachineCycleAnalysis>(MF);
   MCI.print(OS);
   return PreservedAnalyses::all();
