@@ -93,6 +93,65 @@ entry:
   ret void
 }
 
+; With AVX2 the byte swap is not more expensive than the permutation of the
+; bytes either.
+
+define void @put_be32_avx2(ptr %p, i32 %x) #0 {
+; CHECK-LABEL: define void @put_be32_avx2(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[X]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %s0 = lshr i32 %x, 24
+  %t0 = trunc i32 %s0 to i8
+  store i8 %t0, ptr %p, align 1
+  %s1 = lshr i32 %x, 16
+  %t1 = trunc i32 %s1 to i8
+  %g1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  store i8 %t1, ptr %g1, align 1
+  %s2 = lshr i32 %x, 8
+  %t2 = trunc i32 %s2 to i8
+  %g2 = getelementptr inbounds nuw i8, ptr %p, i64 2
+  store i8 %t2, ptr %g2, align 1
+  %t3 = trunc i32 %x to i8
+  %g3 = getelementptr inbounds nuw i8, ptr %p, i64 3
+  store i8 %t3, ptr %g3, align 1
+  ret void
+}
+
+; The reversal of the 16-bit fields is not a byte swap.
+
+define void @put_be16x4(ptr %p, i64 %x) {
+; CHECK-LABEL: define void @put_be16x4(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[X]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[P]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %s0 = lshr i64 %x, 48
+  %t0 = trunc i64 %s0 to i16
+  store i16 %t0, ptr %p, align 2
+  %s1 = lshr i64 %x, 32
+  %t1 = trunc i64 %s1 to i16
+  %g1 = getelementptr inbounds nuw i8, ptr %p, i64 2
+  store i16 %t1, ptr %g1, align 2
+  %s2 = lshr i64 %x, 16
+  %t2 = trunc i64 %s2 to i16
+  %g2 = getelementptr inbounds nuw i8, ptr %p, i64 4
+  store i16 %t2, ptr %g2, align 2
+  %t3 = trunc i64 %x to i16
+  %g3 = getelementptr inbounds nuw i8, ptr %p, i64 6
+  store i16 %t3, ptr %g3, align 2
+  ret void
+}
+
 ; The source scalar is vectorized in the same tree: the byte swap uses the
 ; extracted scalar, unless the permutation of the vector register is cheaper.
 
@@ -323,7 +382,7 @@ entry:
 
 define void @extracted_src_upper_half(<8 x i32> %v, ptr %p) #0 {
 ; CHECK-LABEL: define void @extracted_src_upper_half(
-; CHECK-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X:%.*]] = extractelement <8 x i32> [[V]], i64 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[X]] to <4 x i8>

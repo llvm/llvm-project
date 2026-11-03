@@ -17505,7 +17505,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // a bitcast (here it is just a noop).
       if (VecOpcode != Opcode && VecOpcode == Instruction::BitCast)
         return CommonCost;
-      auto *VI = VL0->getOpcode() == Opcode ? VL0 : nullptr;
+      auto *VI =
+          VL0->getOpcode() == Opcode && VecOpcode == Opcode ? VL0 : nullptr;
 
       bool IsArithmeticExtendedReduction =
           E->Idx == 0 && UserIgnoreList &&
@@ -17520,9 +17521,23 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
-      return CommonCost +
-             TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
-                                   VecOpcode == Opcode ? VI : nullptr);
+      // The scalar cast describes the users of the vector cast. If the scalar
+      // cast of the vector element types is free by itself (e.g. i32 to i64
+      // zext), it makes the vector cast free as well, which is true only for
+      // the widening arithmetic users.
+      if (VI &&
+          any_of(VI->users(),
+                 [](const User *U) {
+                   return !is_contained(
+                       {Instruction::Add, Instruction::Sub, Instruction::Mul},
+                       cast<Instruction>(U)->getOpcode());
+                 }) &&
+          TTI->getCastInstrCost(VecOpcode, VecTy->getScalarType(),
+                                SrcVecTy->getScalarType(),
+                                TTI::getCastContextHint(VL0), CostKind) == 0)
+        VI = nullptr;
+      return CommonCost + TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH,
+                                                CostKind, VI);
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -25453,7 +25468,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                 auto *CI = dyn_cast<ConstantInt>(Op);
                 return CI && CI->getValue().countr_one() >= It->second.first;
               })) {
-            V = FinalShuffle(I == 0 ? RHS : LHS, E);
+            V = I == 0 ? RHS : LHS;
+            if (V->getType() != VecTy)
+              V = Builder.CreateIntCast(V, VecTy,
+                                        GetOperandSignedness(I == 0 ? 1 : 0));
+            V = FinalShuffle(V, E);
             E->VectorizedValue = V;
             ++NumVectorInstructions;
             return V;
@@ -27040,6 +27059,26 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
   SmallDenseSet<ExtractElementInst *, 4> IgnoredExtracts;
+  // The copyable lanes are equal to their scalars. The vector is reused only
+  // if its other lanes are extracted too.
+  SmallPtrSet<const TreeEntry *, 4> ExtractedEntries;
+  for (const ExternalUser &EU : ExternalUses)
+    ExtractedEntries.insert(&EU.E);
+  SmallDenseMap<Value *, const TreeEntry *> CopyableToEntry;
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (TE->State != TreeEntry::Vectorize || !TE->hasCopyableElements() ||
+        !ExtractedEntries.contains(TE.get()) || !TE->UserTreeIndex ||
+        !TE->UserTreeIndex.UserTE->hasState() ||
+        DeletedNodes.contains(TE.get()) ||
+        TransformedToGatherNodes.contains(TE.get()) ||
+        !isa_and_nonnull<Instruction>(TE->VectorizedValue) ||
+        TE->VectorizedValue->getType()->getScalarType() !=
+            TE->Scalars.front()->getType())
+      continue;
+    for (Value *V : TE->Scalars)
+      if (TE->isCopyableElement(V))
+        CopyableToEntry.try_emplace(V, TE.get());
+  }
   // Extract all of the elements with the external uses.
   for (const auto &ExternalUse : ExternalUses) {
     Value *Scalar = ExternalUse.Scalar;
@@ -27377,8 +27416,26 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           }
         }
       } else {
-        Builder.SetInsertPoint(cast<Instruction>(User));
-        Value *NewInst = ExtractAndExtendIfNeeded(Vec);
+        auto *UserI = cast<Instruction>(User);
+        Builder.SetInsertPoint(UserI);
+        Value *NewInst = nullptr;
+        // A user, isomorphic to the user of the node with the copyable scalar,
+        // extracts it from that node, so other trees may reuse the vector.
+        if (const TreeEntry *CE = CopyableToEntry.lookup(Scalar)) {
+          const EdgeInfo &EI = CE->UserTreeIndex;
+          auto *CEVec = cast<Instruction>(CE->VectorizedValue);
+          if (UserI->getOpcode() == EI.UserTE->getOpcode() &&
+              EI.EdgeIdx < UserI->getNumOperands() &&
+              UserI->getOperand(EI.EdgeIdx) == Scalar &&
+              DT->dominates(CEVec, UserI)) {
+            NewInst = Builder.CreateExtractElement(
+                CEVec, CE->findLaneForValue(Scalar));
+            GatherShuffleExtractSeq.insert(cast<Instruction>(NewInst));
+            CSEBlocks.insert(UserI->getParent());
+          }
+        }
+        if (!NewInst)
+          NewInst = ExtractAndExtendIfNeeded(Vec);
         if (isa<StructType>(Scalar->getType()) &&
             isa_and_nonnull<ExtractValueInst>(User) &&
             !isa<StructType>(NewInst->getType())) {
@@ -30703,6 +30760,8 @@ private:
       std::numeric_limits<unsigned>::max();
   /// Maximum number of iterations through CandidateVFs
   static constexpr unsigned MaxAttempts = 4;
+  /// The VFs, starting from this number of stores, are not tried
+  static constexpr unsigned StoresLimit = 64;
 
   const VectorizeOptions &Opts;
   /// For the StoreTy/Stride in the given group, what is the smallest VF
@@ -30826,13 +30885,23 @@ bool StoreChainContext::initializeContext(
     return false;
   }
 
-  // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF).
+  // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF), if
+  // its widest elements take no more vector registers than with the
+  // power-of-2 VF below it. Otherwise, start from the power-of-2 VF.
   unsigned NonPowerOf2VF = 0;
   unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
   if (isAllowedNonPowerOf2VF(CandVF, Opts.slp_vectorize_non_power_of_2)) {
-    NonPowerOf2VF = CandVF;
-    assert(NonPowerOf2VF != MaxVF &&
-           "Non-power-of-2 VF should not be equal to MaxVF");
+    unsigned PowerOf2VF = bit_floor(CandVF);
+    Type *EltTy = IntegerType::get(
+        StoreTy->getContext(),
+        std::max(EltSize, R.getVectorElementSize(Store->getValueOperand())));
+    if (PowerOf2VF < MinVF || StoreTy->isVectorTy() ||
+        R.getRegUsageForType(getWidenedType(EltTy, CandVF), EltTy) <=
+            R.getRegUsageForType(getWidenedType(EltTy, PowerOf2VF), EltTy)) {
+      NonPowerOf2VF = CandVF;
+      assert(NonPowerOf2VF != MaxVF &&
+             "Non-power-of-2 VF should not be equal to MaxVF");
+    }
   }
 
   MaxRegVF = MaxVF;
@@ -30845,6 +30914,14 @@ bool StoreChainContext::initializeContext(
     return false;
   }
 
+  // With the non-power-of-2 vectorization, the non-power-of-2 number of stores,
+  // which takes a whole number of vector registers, is tried first.
+  if (Opts.slp_vectorize_non_power_of_2) {
+    unsigned FullVF = getFloorFullVectorNumberOfElements(
+        TTI, StoreTy, Operands.size(), Opts.slp_revec);
+    if (!has_single_bit(FullVF) && FullVF < StoresLimit)
+      CandidateVFs.push(FullVF);
+  }
   for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
        VF = divideCeil(VF, 2))
     CandidateVFs.push(VF);
@@ -30912,7 +30989,6 @@ void StoreChainContext::updateCachedRangeSizes(unsigned StartIdx,
 
 bool StoreChainContext::updateCandidateVFs(const TargetTransformInfo &TTI) {
   assert(CandidateVFs.empty() && "Did not use all VFs before refilling");
-  constexpr unsigned StoresLimit = 64;
   const unsigned MaxTotalNum = std::min<unsigned>(
       Operands.size(), static_cast<unsigned>(End - getFirstUnvecStore()));
   unsigned VF = bit_ceil(ProbeVF) * 2;
@@ -37239,17 +37315,25 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
 
     HaveVectorizedPhiNodes = tryToVectorizeSequence<Value>(
         *Opts, Incoming, PHICompare, AreCompatiblePHIs,
-        [this, &R, &PHICompare](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+        [this, &R, &PHICompare,
+         &AreCompatiblePHIs](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
           if (vectorizeSeedReductions(Candidates, R))
             return true;
           // If the whole register vectors are not built in the original order,
           // the phis from the different groups, matching in the leading values,
-          // are tried together.
+          // are tried together. Only the lists, filling a single register and
+          // having compatible phis, are reordered.
+          const unsigned NumRegElts =
+              std::max(2U, R.getMaxVecRegSize() /
+                               R.getVectorElementSize(Candidates.front()));
           SmallVector<Value *> Sorted(Candidates);
           stable_sort(Sorted, [&](Value *V1, Value *V2) {
             return PHICompare(V1, V2, /*PrefixFirst=*/true);
           });
           if (!equal(Sorted, Candidates) &&
+              Candidates.size() / NumRegElts == 1 &&
+              adjacent_find(Candidates, AreCompatiblePHIs) !=
+                  Candidates.end() &&
               (tryToVectorizeList(Candidates, R, /*MaxVFOnly=*/true) ||
                tryToVectorizeList(Sorted, R, /*MaxVFOnly=*/true)))
             return true;
