@@ -11,13 +11,21 @@
 #include "Options.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/WithColor.h"
 #include <algorithm>
 #include <float.h>
+#include <map>
+#include <tuple>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -121,6 +129,141 @@ cl::opt<bool> InferMissingFrames(
     cl::cat(ProfGenCategory));
 
 namespace sampleprof {
+
+namespace {
+
+using memprof::SymbolHandleRef;
+
+struct DataSymbol {
+  uint64_t Start = 0;
+  uint64_t End = 0;
+  SymbolHandleRef Key;
+  bool Preemptible = false;
+};
+
+static bool isStringLiteralName(StringRef Name) {
+  return Name.starts_with(".str") || Name.starts_with(".L.str");
+}
+
+static Error
+collectProfileDataSymbols(ProfiledBinary &Binary,
+                          const std::optional<StringSet<>> &DefinedElsewhere,
+                          std::vector<DataSymbol> &Symbols) {
+  SmallVector<ProfiledDataSymbol> BinarySymbols;
+  if (Error E = Binary.collectDataSymbols(BinarySymbols))
+    return E;
+
+  for (const ProfiledDataSymbol &BinarySymbol : BinarySymbols) {
+    DataSymbol Symbol;
+    Symbol.Start = BinarySymbol.Start;
+    Symbol.End = BinarySymbol.End;
+    if (isStringLiteralName(BinarySymbol.Name)) {
+      if (!BinarySymbol.Contents) {
+        WithColor::warning()
+            << "Cannot read contents of string literal " << BinarySymbol.Name
+            << " in " << Binary.getPath() << ", skipping\n";
+        continue;
+      }
+      Symbol.Key = MD5Hash(*BinarySymbol.Contents);
+    } else {
+      StringRef Canonical =
+          InstrProfSymtab::getCanonicalName(BinarySymbol.Name);
+      Symbol.Key = Canonical;
+      Symbol.Preemptible =
+          Binary.isSharedLibrary() && BinarySymbol.ExternallyVisible &&
+          (!DefinedElsewhere || DefinedElsewhere->contains(Canonical));
+    }
+    Symbols.push_back(Symbol);
+  }
+
+  llvm::sort(Symbols, [](const DataSymbol &A, const DataSymbol &B) {
+    return std::tie(A.Start, A.End, A.Key) < std::tie(B.Start, B.End, B.Key);
+  });
+  return Error::success();
+}
+
+static Error buildDataAccessProfile(ArrayRef<DataSymbol> Symbols,
+                                    const DataAccessSamples &Samples,
+                                    memprof::DataAccessProfData &Profile) {
+  std::map<SymbolHandleRef, uint64_t> Counts;
+  std::map<SymbolHandleRef, bool> Preemptible;
+  for (const DataSymbol &Symbol : Symbols) {
+    Preemptible[Symbol.Key] |= Symbol.Preemptible;
+    uint64_t Count = 0;
+    for (auto It = Samples.AddressCounts.lower_bound(Symbol.Start);
+         It != Samples.AddressCounts.end() && It->first < Symbol.End; ++It)
+      Count += It->second;
+    if (Count)
+      Counts[Symbol.Key] += Count;
+  }
+
+  for (const auto &[Key, Count] : Counts)
+    if (Error E = Profile.setDataAccessProfile(Key, Count))
+      return E;
+  if (!Samples.CanMarkKnownCold)
+    return Error::success();
+
+  for (const DataSymbol &Symbol : Symbols) {
+    if (Preemptible[Symbol.Key] || Profile.getProfileRecord(Symbol.Key))
+      continue;
+    if (Error E = Profile.addKnownSymbolWithoutSamples(Symbol.Key))
+      return E;
+  }
+  return Error::success();
+}
+
+} // namespace
+
+Expected<std::unique_ptr<memprof::DataAccessProfData>>
+generateDataAccessProfile(ProfiledBinary &Binary,
+                          const DataAccessSamples &Samples) {
+  if (Samples.AddressCounts.empty() &&
+      (Samples.HasUnresolvedSample || !Samples.HasMappedImage ||
+       !Samples.SawMappedPIDSample))
+    return createStringError(
+        inconvertibleErrorCode(),
+        "No data-access sample maps to " + Binary.getPath() +
+            ", and the trace has no usable mapping for that binary");
+
+  std::optional<StringSet<>> DefinedElsewhere;
+  if (Binary.isSharedLibrary()) {
+    if (!Samples.OtherLoadedFiles.empty()) {
+      std::optional<StringSet<>> DynamicSymbols =
+          ProfiledBinary::collectDynamicDataSymbols(Samples.OtherLoadedFiles);
+      if (DynamicSymbols) {
+        DefinedElsewhere.emplace();
+        for (const auto &Symbol : *DynamicSymbols)
+          DefinedElsewhere->insert(
+              InstrProfSymtab::getCanonicalName(Symbol.getKey()));
+      }
+    }
+    if (!DefinedElsewhere)
+      WithColor::warning() << "no exported variable of " << Binary.getName()
+                           << " is listed as known-cold\n";
+  }
+
+  std::vector<DataSymbol> Symbols;
+  if (Error E = collectProfileDataSymbols(Binary, DefinedElsewhere, Symbols))
+    return std::move(E);
+
+  auto Profile = std::make_unique<memprof::DataAccessProfData>();
+  if (Error E = buildDataAccessProfile(Symbols, Samples, *Profile))
+    return std::move(E);
+  return std::move(Profile);
+}
+
+Error writeDataAccessProfile(
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfile,
+    raw_fd_ostream &OS) {
+  InstrProfWriter Writer(/*Sparse=*/false,
+                         /*TemporalProfTraceReservoirSize=*/0,
+                         /*MaxTemporalProfTraceLength=*/0,
+                         /*WritePrevVersion=*/false, memprof::Version4);
+  if (Error E = Writer.mergeProfileKind(InstrProfKind::MemProf))
+    return E;
+  Writer.addDataAccessProfData(std::move(DataAccessProfile));
+  return Writer.write(OS);
+}
 
 // Initialize the MaxCompressionSize to -1 which means no size limit
 int32_t CSProfileGenerator::MaxCompressionSize = -1;

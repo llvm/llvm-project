@@ -15,7 +15,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <unordered_set>
 
@@ -23,6 +25,17 @@ namespace llvm {
 namespace sampleprof {
 
 using ProbeCounterMap = DenseMap<const MCDecodedPseudoProbe *, uint64_t>;
+
+// Attribute canonical data-address counts to this binary's symbols and build
+// the shared data-access profile representation.
+Expected<std::unique_ptr<memprof::DataAccessProfData>>
+generateDataAccessProfile(ProfiledBinary &Binary,
+                          const DataAccessSamples &Samples);
+
+// Write a data-access-only indexed MemProf v4 profile.
+Error writeDataAccessProfile(
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfile,
+    raw_fd_ostream &OS);
 
 // This base class for profile generation of sample-based PGO. We reuse all
 // structures relating to function profiles and profile writers as seen in
