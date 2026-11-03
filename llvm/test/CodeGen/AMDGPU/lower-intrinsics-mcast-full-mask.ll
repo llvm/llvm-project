@@ -271,6 +271,96 @@ define void @cluster_load_async_to_lds_b8_partial_mask(ptr addrspace(1) %p, ptr 
   ret void
 }
 
+; amdgpu-cluster-dims gives the cluster size: "0,0,0" is no cluster, and
+; "1024,1024,1024" is a size only known at run time.
+define void @cluster_load_b32_full_mask_no_cluster(ptr addrspace(1) %p, ptr addrspace(1) %out) "amdgpu-cluster-dims"="0,0,0" {
+; BUG-LABEL: define void @cluster_load_b32_full_mask_no_cluster(
+; BUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 65535
+; BUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 [[TMP4]])
+; BUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @cluster_load_b32_full_mask_no_cluster(
+; NOBUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
+; NOBUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 65535)
+; NOBUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; NOBUG-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %p, i32 0, i32 65535)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @cluster_load_b32_full_mask_cluster_8x1x1(ptr addrspace(1) %p, ptr addrspace(1) %out) "amdgpu-cluster-dims"="8,1,1" {
+; BUG-LABEL: define void @cluster_load_b32_full_mask_cluster_8x1x1(
+; BUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR1:[0-9]+]] {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 65535
+; BUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 [[TMP4]])
+; BUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @cluster_load_b32_full_mask_cluster_8x1x1(
+; NOBUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR1:[0-9]+]] {
+; NOBUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 65535)
+; NOBUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; NOBUG-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %p, i32 0, i32 65535)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @cluster_load_b32_full_mask_cluster_4x2x2(ptr addrspace(1) %p, ptr addrspace(1) %out) "amdgpu-cluster-dims"="4,2,2" {
+; BUG-LABEL: define void @cluster_load_b32_full_mask_cluster_4x2x2(
+; BUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR2:[0-9]+]] {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 65535
+; BUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 [[TMP4]])
+; BUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @cluster_load_b32_full_mask_cluster_4x2x2(
+; NOBUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR2:[0-9]+]] {
+; NOBUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 65535)
+; NOBUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; NOBUG-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %p, i32 0, i32 65535)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @cluster_load_b32_full_mask_variable_cluster(ptr addrspace(1) %p, ptr addrspace(1) %out) "amdgpu-cluster-dims"="1024,1024,1024" {
+; BUG-LABEL: define void @cluster_load_b32_full_mask_variable_cluster(
+; BUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR3:[0-9]+]] {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 65535
+; BUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 [[TMP4]])
+; BUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @cluster_load_b32_full_mask_variable_cluster(
+; NOBUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR3:[0-9]+]] {
+; NOBUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 65535)
+; NOBUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; NOBUG-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %p, i32 0, i32 65535)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
 ; The clamp mask is computed in the entry block after the allocas, not in the
 ; loop.
 define void @tensor_loads_in_loop(<4 x i32> %d0, <8 x i32> %d1, i32 %n) {
