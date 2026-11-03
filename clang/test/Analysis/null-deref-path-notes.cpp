@@ -1,4 +1,3 @@
-// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_analyze_cc1 -w -x c++ -analyzer-checker=core -analyzer-output=text -verify %s
 
 namespace pr34731 {
