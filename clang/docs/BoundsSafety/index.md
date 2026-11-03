@@ -19,14 +19,34 @@ turning OOB accesses into deterministic traps.
 BoundsSafety
 BoundsSafetyAdoptionGuide
 BoundsSafetyImplPlans
-BoundsSafetyUpstreamStatus
 ```
 
+(bounds-safety-upstream-status)=
 ## Upstream Status
 
-`-fbounds-safety` is being upstreamed incrementally: bounds annotations first,
-then the full model. See {doc}`BoundsSafetyUpstreamStatus` for what is
-available, what is in review, and what is planned.
+`-fbounds-safety` is being upstreamed incrementally: first the bounds
+annotations, so that projects can start annotating their code, then the full
+model. Until the model is complete, it is guarded by the experimental `-cc1`
+flag `-fexperimental-bounds-safety`. A preview implementation is available in
+the
+[swiftlang/llvm-project](https://github.com/swiftlang/llvm-project/tree/stable/21.x)
+fork.
+
+`__counted_by`, `__sized_by` and their `_or_null` variants are available on
+struct fields, with limits: the count must be a single identifier, and the
+annotations are handled as declaration attributes rather than type attributes.
+They are used by `-fsanitize=array-bounds` and `_FORTIFY_SOURCE=3`. Work is in
+progress to handle them as type attributes, with late parsing, and to support
+them on function parameters. The remaining annotations (`__single`,
+`__ended_by`, `__null_terminated`, `__unsafe_indexable`) and complex count
+expressions are planned. We aim to have the bounds annotations ready for
+open-source projects to adopt by early 2027.
+
+The full `-fbounds-safety` model, including wide pointers with bounds checks
+and implicit bounds annotations, follows. Parts of it need RFCs.
+
+The detailed status, with links to the relevant PRs and issues, is tracked in
+[#238453](https://github.com/llvm/llvm-project/issues/238453).
 
 ## Open-source Adoption Effort
 
