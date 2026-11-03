@@ -469,6 +469,27 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   return BEBlock;
 }
 
+/// Replace PHI nodes in the loop header that simplify to a single value.
+static bool simplifyHeaderPHIs(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                               ScalarEvolution *SE, AssumptionCache *AC,
+                               bool PreserveLCSSA) {
+  bool Changed = false;
+  const DataLayout &DL = L->getHeader()->getDataLayout();
+  PHINode *PN;
+  for (BasicBlock::iterator I = L->getHeader()->begin();
+       (PN = dyn_cast<PHINode>(I++));)
+    if (Value *V = simplifyInstruction(PN, {DL, nullptr, DT, AC})) {
+      if (SE)
+        SE->forgetValue(PN);
+      if (!PreserveLCSSA || LI->replacementPreservesLCSSAForm(PN, V)) {
+        PN->replaceAllUsesWith(V);
+        PN->eraseFromParent();
+        Changed = true;
+      }
+    }
+  return Changed;
+}
+
 /// Simplify one loop and queue further loops for simplification.
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
@@ -579,7 +600,10 @@ ReprocessLoop:
 
     // If we either couldn't, or didn't want to, identify nesting of the loops,
     // insert a new block that all backedges target, then make it jump to the
-    // loop header.
+    // loop header. Fold degenerate header PHIs first, so they don't turn into
+    // a PHI cycle through the new backedge block.
+    if (simplifyHeaderPHIs(L, DT, LI, SE, AC, PreserveLCSSA))
+      Changed = true;
     LoopLatch = insertUniqueBackedgeBlock(L, Preheader, DT, LI, MSSAU);
     if (LoopLatch)
       Changed = true;
@@ -588,22 +612,11 @@ ReprocessLoop:
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
-  const DataLayout &DL = L->getHeader()->getDataLayout();
-
   // Scan over the PHI nodes in the loop header.  Since they now have only two
   // incoming values (the loop is canonicalized), we may have simplified the PHI
   // down to 'X = phi [X, Y]', which should be replaced with 'Y'.
-  PHINode *PN;
-  for (BasicBlock::iterator I = L->getHeader()->begin();
-       (PN = dyn_cast<PHINode>(I++)); )
-    if (Value *V = simplifyInstruction(PN, {DL, nullptr, DT, AC})) {
-      if (SE) SE->forgetValue(PN);
-      if (!PreserveLCSSA || LI->replacementPreservesLCSSAForm(PN, V)) {
-        PN->replaceAllUsesWith(V);
-        PN->eraseFromParent();
-        Changed = true;
-      }
-    }
+  if (simplifyHeaderPHIs(L, DT, LI, SE, AC, PreserveLCSSA))
+    Changed = true;
 
   // If this loop has multiple exits and the exits all go to the same
   // block, attempt to merge the exits. This helps several passes, such
