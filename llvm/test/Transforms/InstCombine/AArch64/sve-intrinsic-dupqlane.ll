@@ -250,10 +250,10 @@ define <vscale x 4 x float> @dupq_f32_ab_not_splatting_inserted_vector(float %x,
 ; CHECK-LABEL: @dupq_f32_ab_not_splatting_inserted_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[Y:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> [[TMP2]], i64 0)
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <vscale x 4 x float> [[TMP3]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <vscale x 2 x i64> [[TMP4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <vscale x 2 x i64> [[TMP5]] to <vscale x 4 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[X]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[Y]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> [[TMP4]], i64 4)
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> [[TMP5]], i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP6]]
 ;
   %1 = insertelement <4 x float> poison, float %x, i64 0
@@ -269,10 +269,10 @@ define <vscale x 4 x float> @dupq_f32_ab_potentially_out_of_range_index(float %x
 ; CHECK-LABEL: @dupq_f32_ab_potentially_out_of_range_index(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[Y:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> [[TMP2]], i64 0)
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <vscale x 4 x float> [[TMP3]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <vscale x 2 x i64> [[TMP4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <vscale x 2 x i64> [[TMP5]] to <vscale x 4 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[X]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[Y]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> [[TMP4]], i64 4)
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> [[TMP5]], i64 1)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP6]]
 ;
   %1 = insertelement <4 x float> poison, float %x, i64 0
