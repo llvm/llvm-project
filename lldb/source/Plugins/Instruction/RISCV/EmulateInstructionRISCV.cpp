@@ -1245,9 +1245,9 @@ public:
   // RV32A & RV64A (The standard atomic instruction extension) //
   bool operator()(LR_W) { return AtomicSequence(m_emu); }
   bool operator()(LR_D) { return AtomicSequence(m_emu); }
-  // A well-formed LR/SC loop is consumed by AtomicSequence. An SC reached on its
-  // own (a differently shaped loop, or analysis starting mid-function) cannot be
-  // emulated, so report failure instead of aborting the debugger.
+  // A well-formed LR/SC loop is consumed by AtomicSequence. An SC reached on
+  // its own (a differently shaped loop, or analysis starting mid-function)
+  // cannot be emulated, so report failure instead of aborting the debugger.
   bool operator()(SC_W) { return false; }
   bool operator()(SC_D) { return false; }
   bool operator()(AMOSWAP_W inst) {
