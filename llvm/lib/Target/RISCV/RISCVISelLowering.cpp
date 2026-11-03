@@ -23506,9 +23506,8 @@ static SDValue combineSlideUpScalarMove(SDNode *N, SelectionDAG &DAG) {
 
   SDLoc DL(N);
   SDValue Mask = Slide.getOperand(3);
-  // Scalar move is unmasked, so the slide mask must enable lane zero.
-  if (Mask.getOpcode() != RISCVISD::VMSET_VL &&
-      !DAG.isKnownNeverZero(DAG.getExtractVectorElt(DL, MVT::i1, Mask, 0)))
+  // Scalar move is unmasked. Require a known all-true mask to enable lane zero.
+  if (Mask.getOpcode() != RISCVISD::VMSET_VL && !DAG.isKnownNeverZero(Mask))
     return SDValue();
 
   // Both operations preserve the destination at VL=0. Keeping the slide's
@@ -26720,15 +26719,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     switch (IntNo) {
       // By default we do not combine any intrinsic.
     default:
-      return SDValue();
-    case Intrinsic::riscv_vmv_s_x:
-    case Intrinsic::riscv_vfmv_s_f:
-    case Intrinsic::riscv_vslideup:
-    case Intrinsic::riscv_vslideup_mask:
-      // Expose target nodes before masks are expanded or scalar moves are
-      // narrowed to M1. Leave illegal vector types to type legalization.
-      if (isTypeLegal(N->getValueType(0)))
-        return LowerINTRINSIC_WO_CHAIN(SDValue(N, 0), DAG);
       return SDValue();
     case Intrinsic::riscv_vcpop:
     case Intrinsic::riscv_vcpop_mask:

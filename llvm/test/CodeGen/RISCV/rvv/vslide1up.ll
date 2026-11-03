@@ -919,8 +919,8 @@ define <vscale x 1 x i64> @slide_scalar_move_i64(<vscale x 1 x i64> %dst, <vscal
   ret <vscale x 1 x i64> %r
 }
 
-define <vscale x 2 x i32> @slide_scalar_move_mask_lane0(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, i32 %scalar, iXLen %vl, <vscale x 2 x i1> %mask) {
-; CHECK-LABEL: slide_scalar_move_mask_lane0:
+define <vscale x 2 x i32> @negative_slide_scalar_move_only_lane0(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, i32 %scalar, iXLen %vl, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: negative_slide_scalar_move_only_lane0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
@@ -932,7 +932,8 @@ define <vscale x 2 x i32> @slide_scalar_move_mask_lane0(<vscale x 2 x i32> %dst,
 ; CHECK-NEXT:    vand.vi v10, v10, 1
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
-; CHECK-NEXT:    vslide1up.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %enabled = insertelement <vscale x 2 x i1> %mask, i1 true, i64 0
   %s = call <vscale x 2 x i32> @llvm.riscv.vslideup.mask.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, iXLen 1, <vscale x 2 x i1> %enabled, iXLen %vl, iXLen 0)
@@ -991,4 +992,15 @@ define <vscale x 2 x i32> @negative_slide_scalar_move_shared(<vscale x 2 x i32> 
   %r = call <vscale x 2 x i32> @llvm.riscv.vmv.s.x.nxv2i32.iXLen(<vscale x 2 x i32> %s, i32 %scalar, iXLen %vl)
   %result = add <vscale x 2 x i32> %r, %s
   ret <vscale x 2 x i32> %result
+}
+
+define <vscale x 2 x i32> @slide_scalar_move_mask_all_true(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, i32 %scalar, iXLen %vl) {
+; CHECK-LABEL: slide_scalar_move_mask_all_true:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
+; CHECK-NEXT:    vslide1up.vx v8, v9, a0
+; CHECK-NEXT:    ret
+  %s = call <vscale x 2 x i32> @llvm.riscv.vslideup.mask.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, iXLen 1, <vscale x 2 x i1> splat (i1 true), iXLen %vl, iXLen 0)
+  %r = call <vscale x 2 x i32> @llvm.riscv.vmv.s.x.nxv2i32.iXLen(<vscale x 2 x i32> %s, i32 %scalar, iXLen %vl)
+  ret <vscale x 2 x i32> %r
 }
