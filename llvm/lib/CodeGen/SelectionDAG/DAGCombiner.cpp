@@ -28020,7 +28020,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   // Revisit construction-time folds after operands have been combined.
   if (VT.isFixedLengthVector() && !LegalOperations) {
     SmallVector<SDValue, 8> Ops(N->ops());
-    if (SDValue V = DAG.FoldConcatVectors(SDLoc(N), VT, Ops))
+    if (SDValue V = DAG.FoldConcatVectors(SDLoc(N), VT, Ops, LegalOperations))
       return V;
   }
 

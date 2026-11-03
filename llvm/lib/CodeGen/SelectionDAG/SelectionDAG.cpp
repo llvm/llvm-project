@@ -7024,7 +7024,8 @@ static SDValue FoldBUILD_VECTOR(const SDLoc &DL, EVT VT,
 }
 
 SDValue SelectionDAG::FoldConcatVectors(const SDLoc &DL, EVT VT,
-                                        ArrayRef<SDValue> Ops) {
+                                        ArrayRef<SDValue> Ops,
+                                        bool LegalOperations) {
   assert(!Ops.empty() && "Can't concatenate an empty list of vectors!");
   assert(llvm::all_of(Ops,
                       [Ops](SDValue Op) {
@@ -7089,6 +7090,10 @@ SDValue SelectionDAG::FoldConcatVectors(const SDLoc &DL, EVT VT,
     else if (Op.getOpcode() == ISD::BUILD_VECTOR)
       Elts.append(Op->op_begin(), Op->op_end());
     else if (Op.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+      // Custom lowering may create concats after BUILD_VECTOR legalization.
+      if (LegalOperations &&
+          !getTargetLoweringInfo().isOperationLegal(ISD::BUILD_VECTOR, VT))
+        return SDValue();
       Elts.push_back(Op.getOperand(0));
       Elts.append(OpVT.getVectorNumElements() - 1, getPOISON(SVT));
     } else if (Op.getOpcode() == ISD::INSERT_VECTOR_ELT &&

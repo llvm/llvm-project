@@ -1376,9 +1376,12 @@ public:
   }
 
   /// Try to simplify vector concatenation to an input value, undef, or build
-  /// vector. Return an empty SDValue if no simplification is possible.
+  /// vector. Scalar-to-vector operands may only introduce an illegal build
+  /// vector when LegalOperations is false. Return an empty SDValue if no
+  /// simplification is possible.
   LLVM_ABI SDValue FoldConcatVectors(const SDLoc &DL, EVT VT,
-                                     ArrayRef<SDValue> Ops);
+                                     ArrayRef<SDValue> Ops,
+                                     bool LegalOperations = true);
 
   /// Try to simplify a select/vselect into 1 of its operands or a constant.
   LLVM_ABI SDValue simplifySelect(SDValue Cond, SDValue TVal, SDValue FVal);
