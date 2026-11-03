@@ -759,19 +759,24 @@ cc_library(
     ],
 )
 
+# A version script that exports only the SB API, like CMake's default
+# LLDB_EXPORT_ALL_SYMBOLS=OFF. liblldb's copies of lldb_private and LLVM stay
+# local, so executables that also link those statically, like lldb-dap and the
+# SB API unit tests, can't interpose on them.
 genrule(
     name = "gen_exports_file_linux",
-    srcs = [":source/API/liblldb-private.exports"],
+    srcs = [":source/API/liblldb.exports"],
     outs = ["exports_linux.txt"],
     cmd = """
 cat > $(OUTS) <<EOF
 {
   global:
     $$(sed 's/$$/;/g' $(SRCS))
+  local: *;
 };
 EOF
 """,
-    cmd_bat = ">$(OUTS) echo {&& >>$(OUTS) echo   global:&& (for /f \"usebackq delims=\" %l in (\"$(SRCS)\") do @>>$(OUTS) echo     %l;)&& >>$(OUTS) echo };",
+    cmd_bat = ">$(OUTS) echo {&& >>$(OUTS) echo   global:&& (for /f \"usebackq delims=\" %l in (\"$(SRCS)\") do @>>$(OUTS) echo     %l;)&& >>$(OUTS) echo   local: *;&& >>$(OUTS) echo };",
 )
 
 genrule(
@@ -799,15 +804,7 @@ cc_binary(
     }),
     linkopts = select({
         "@platforms//os:linux": [
-            "-Wl,--export-dynamic-symbol-list=$(location :gen_exports_file_linux)",
-            # liblldb exports its copies of lldb_private and LLVM, and an
-            # executable that also links them statically, like the SB API unit
-            # tests, exports those symbols back to it. Bind liblldb's calls to
-            # its own copies so that its global state, like the registered
-            # LLVM command line options, isn't mixed with the executable's.
-            # CMake gets the same effect by linking those executables with
-            # --exclude-libs,ALL.
-            "-Wl,-Bsymbolic-functions",
+            "-Wl,--version-script=$(location :gen_exports_file_linux)",
         ],
         "@platforms//os:macos": [
             "-Wl,-exported_symbols_list,$(location :gen_exports_file_macos)",
