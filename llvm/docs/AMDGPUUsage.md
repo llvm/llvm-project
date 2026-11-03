@@ -17222,6 +17222,34 @@ It supports AMDGCN GFX6-GFX11.
 
 This section describes general syntax for instructions and operands.
 
+(amdgpu-async-barrier-replay-warning)=
+
+#### Async Barrier Arrival Warning
+
+The compiler emits an async barrier arrival workaround for gfx1250 and gfx1251
+unless XNACK is explicitly disabled. The assembler checks hand-written and
+inline assembly for the same sequence. This check is also omitted when XNACK
+is explicitly disabled.
+
+The assembler warns by default when it cannot recognize the compiler's dummy
+form: `s_mov_b32 exec_lo, 0` followed by
+`global_load_async_to_lds_b8` with a vector address, issued after an arrival
+and before a non-async VMEM instruction. Only `s_set_vgpr_msb`, which does
+not change EXEC, may intervene between the EXEC clear and the load.
+Other load opcodes, scalar-address forms,
+and active loads do not suppress the warning. Recognition stops at labels,
+control-flow instructions, and the end of assembly. Assembler directives
+can also end recognition; `.loc` and `.file` preserve it. Each inline assembly
+block is checked separately. A warning reports missing recognized protection;
+absence of a warning does not prove control-flow safety, correct EXEC
+preservation, or correct async wait counts.
+
+Disable only this check in Clang with
+`-mllvm -amdgpu-asm-warn-async-barrier-replay=false`, or in `llvm-mc` with
+`-amdgpu-asm-warn-async-barrier-replay=false`. Clang's `-Wa,--no-warn`
+suppresses all assembler warnings, and `-Wa,--fatal-warnings` treats them as
+errors. With `llvm-mc`, use `--no-warn` and `--fatal-warnings` respectively.
+
 #### Instructions
 
 An instruction has the following [syntax](AMDGPUInstructionSyntax.md):
