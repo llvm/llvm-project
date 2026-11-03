@@ -26,21 +26,21 @@ namespace Fortran::evaluate {
 
 class FoldingContext;
 
-using ExtentType = Type<TypeCategory::Integer>;
-using ExtentExpr = Expr<ExtentType>;
+using ExtentExpr = Expr<Type<TypeCategory::Integer>>;
 using MaybeExtentExpr = std::optional<ExtentExpr>;
 using Shape = std::vector<MaybeExtentExpr>;
 
 inline constexpr int ExtentIntKind = Fortran::evaluate::SubscriptIntegerKind;
 
-inline Constant<ExtentType> MakeExtentConstant(int64_t v) {
-  return Constant<ExtentType>{
-      ExtentIntKind, Scalar<ExtentType>{ExtentIntKind, v}};
+inline Constant<Type<TypeCategory::Integer>> MakeExtentConstant(int64_t v) {
+  return Constant<Type<TypeCategory::Integer>>{
+      ExtentIntKind, Scalar<Type<TypeCategory::Integer>>{ExtentIntKind, v}};
 }
 
-inline Constant<ExtentType> MakeExtentConstant(const value::IntegerValue &v) {
-  return Constant<ExtentType>{
-      ExtentIntKind, Scalar<ExtentType>{ExtentIntKind, v}};
+inline Constant<Type<TypeCategory::Integer>> MakeExtentConstant(
+    const value::IntegerValue &v) {
+  return Constant<Type<TypeCategory::Integer>>{
+      ExtentIntKind, Scalar<Type<TypeCategory::Integer>>{ExtentIntKind, v}};
 }
 
 inline ExtentExpr MakeExtentExpr(int64_t v) {
@@ -57,13 +57,15 @@ bool IsExplicitShape(const Symbol &);
 // Conversions between various representations of shapes.
 std::optional<ExtentExpr> AsExtentArrayExpr(const Shape &);
 
-std::optional<Constant<ExtentType>> AsConstantShape(
+std::optional<Constant<Type<TypeCategory::Integer>>> AsConstantShape(
     FoldingContext &, const Shape &);
-Constant<ExtentType> AsConstantShape(const ConstantSubscripts &);
+Constant<Type<TypeCategory::Integer>> AsConstantShape(
+    const ConstantSubscripts &);
 
 // AsConstantExtents returns a constant shape.  It may contain
 // invalid negative extents; use HasNegativeExtent() to check.
-ConstantSubscripts AsConstantExtents(const Constant<ExtentType> &);
+ConstantSubscripts AsConstantExtents(
+    const Constant<Type<TypeCategory::Integer>> &);
 std::optional<ConstantSubscripts> AsConstantExtents(
     FoldingContext &, const Shape &);
 inline std::optional<ConstantSubscripts> AsConstantExtents(
@@ -251,7 +253,7 @@ public:
 
 private:
   static Result ScalarShape() { return Shape{}; }
-  static Shape ConstantShape(const Constant<ExtentType> &);
+  static Shape ConstantShape(const Constant<Type<TypeCategory::Integer>> &);
   Result AsShapeResult(ExtentExpr &&) const;
   Shape CreateShape(int rank, NamedEntity &) const;
 
@@ -337,7 +339,7 @@ std::optional<Shape> GetShape(const A &x, bool invariantOnly) {
 }
 
 template <typename A>
-std::optional<Constant<ExtentType>> GetConstantShape(
+std::optional<Constant<Type<TypeCategory::Integer>>> GetConstantShape(
     FoldingContext &context, const A &x) {
   if (auto shape{GetShape(context, x, /*invariantonly=*/true)}) {
     return AsConstantShape(context, *shape);

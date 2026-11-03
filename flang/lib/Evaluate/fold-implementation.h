@@ -393,12 +393,12 @@ template <typename T> Expr<T> Folder<T>::Folding(Designator<T> &&designator) {
   } else if constexpr (T::category == TypeCategory::Real) {
     if (auto *zPart{std::get_if<ComplexPart>(&designator.u)}) {
       *zPart = FoldOperation(context_, std::move(*zPart));
-      using ComplexT = Type<TypeCategory::Complex>;
       if (auto zConst{
-              Folder<ComplexT>{kind, context_}.Folding(zPart->complex())}) {
+              Folder<Type<TypeCategory::Complex>>{kind, context_}.Folding(
+                  zPart->complex())}) {
         return Fold(context_,
             Expr<T>{ComplexComponent{zPart->part() == ComplexPart::Part::IM,
-                Expr<ComplexT>{std::move(*zConst)}}});
+                Expr<Type<TypeCategory::Complex>>{std::move(*zConst)}}});
       } else {
         return Expr<T>{Designator<T>{kind, std::move(*zPart)}};
       }

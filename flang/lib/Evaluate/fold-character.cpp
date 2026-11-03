@@ -52,12 +52,14 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
   CHECK(intrinsic);
   std::string name{intrinsic->name};
   if (name == "achar" || name == "char") {
-    using IntT = Type<TypeCategory::Integer>;
-    return FoldElementalIntrinsic<T, IntT>(kind, {SubscriptIntegerKind},
-        context, std::move(funcRef),
-        ScalarFunc<T, IntT>([&](const Scalar<IntT> &i) {
+    return FoldElementalIntrinsic<T, Type<TypeCategory::Integer>>(kind,
+        {SubscriptIntegerKind}, context, std::move(funcRef),
+        ScalarFunc<T,
+            Type<TypeCategory::Integer>>([&](const Scalar<
+                                             Type<TypeCategory::Integer>> &i) {
           if (i.IsNegative() ||
-              i.BGE(Scalar<IntT>{SubscriptIntegerKind, 0}.IBSET(8 * kind))) {
+              i.BGE(Scalar<Type<TypeCategory::Integer>>{SubscriptIntegerKind, 0}
+                      .IBSET(8 * kind))) {
             context.Warn(common::UsageWarning::FoldingValueChecks,
                 "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
                 parser::ToUpperCaseLetters(name),

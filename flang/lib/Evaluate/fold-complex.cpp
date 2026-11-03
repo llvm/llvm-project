@@ -81,11 +81,10 @@ Expr<Type<TypeCategory::Complex>> FoldOperation(
   if (auto array{ApplyElementwise(context, x)}) {
     return *array;
   }
-  using ComplexType = Type<TypeCategory::Complex>;
   if (auto folded{OperandsAreConstants(x)}) {
-    using RealType = typename ComplexType::Part;
-    Constant<ComplexType> result{
-        kind, Scalar<ComplexType>{folded->first, folded->second}};
+    using RealType = typename Type<TypeCategory::Complex>::Part;
+    Constant<Type<TypeCategory::Complex>> result{kind,
+        Scalar<Type<TypeCategory::Complex>>{folded->first, folded->second}};
     if (const auto *re{UnwrapConstantValue<RealType>(kind, x.left())};
         re && re->result().isFromInexactLiteralConversion()) {
       result.result().set_isFromInexactLiteralConversion();
@@ -93,9 +92,9 @@ Expr<Type<TypeCategory::Complex>> FoldOperation(
         im && im->result().isFromInexactLiteralConversion()) {
       result.result().set_isFromInexactLiteralConversion();
     }
-    return Expr<ComplexType>{std::move(result)};
+    return Expr<Type<TypeCategory::Complex>>{std::move(result)};
   }
-  return Expr<ComplexType>{std::move(x)};
+  return Expr<Type<TypeCategory::Complex>>{std::move(x)};
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions

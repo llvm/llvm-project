@@ -434,10 +434,12 @@ Expr<SomeComplex> PromoteMixedComplexReal(
   return common::visit(
       [&](const auto &kx, const auto &ky) {
         int maxKind{std::max(kx.kind(), ky.kind())};
-        using ZTy = Type<TypeCategory::Complex>;
-        return Expr<SomeComplex>{Expr<ZTy>{
-            OPR<ZTy>{maxKind, ConvertToType<ZTy>(maxKind, std::move(x)),
-                ConvertToType<ZTy>(maxKind, std::move(y))}}};
+        return Expr<SomeComplex>{Expr<Type<TypeCategory::Complex>>{
+            OPR<Type<TypeCategory::Complex>>{maxKind,
+                ConvertToType<Type<TypeCategory::Complex>>(
+                    maxKind, std::move(x)),
+                ConvertToType<Type<TypeCategory::Complex>>(
+                    maxKind, std::move(y))}}};
       },
       x.u, y.u);
 }
@@ -658,7 +660,6 @@ std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
 }
 
 Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
-  using IntType = Type<TypeCategory::Integer>;
   const int intKind{4};
   const semantics::DerivedTypeSpec *derived{
       GetDerivedTypeSpec(operand.GetType())};
@@ -677,8 +678,9 @@ Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
           std::move(dummies), attrs}};
   ActualArguments intArgs;
   intArgs.emplace_back(AsGenericExpr(std::move(operand)));
-  return AsGenericExpr(Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
-      intKind, ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
+  return AsGenericExpr(Expr<SomeInteger>(Expr<Type<TypeCategory::Integer>>(
+      FunctionRef<Type<TypeCategory::Integer>>{intKind,
+          ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
 }
 
 std::optional<Expr<Type<TypeCategory::Logical>>> Relate(
@@ -1434,9 +1436,7 @@ bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr) {
 
 namespace {
 
-template <common::TypeCategory CAT> using Numeric = Type<CAT>;
-
-template <common::TypeCategory CAT> using NumericExpr = Expr<Numeric<CAT>>;
+template <common::TypeCategory CAT> using NumericExpr = Expr<Type<CAT>>;
 
 template <common::TypeCategory CAT> struct SignedNumericTerm {
   int kind() const { return expr.kind(); };
@@ -1473,12 +1473,12 @@ static void flattenTopLevelAddSubtract(const NumericExpr<CAT> &expr,
     bool isPositive = true) {
   // Only flatten Add and Subtract nodes. Every other node, including
   // Parentheses, is one opaque signed term whose tree is preserved.
-  if (const auto *add = std::get_if<Add<Numeric<CAT>>>(&expr.u)) {
+  if (const auto *add = std::get_if<Add<Type<CAT>>>(&expr.u)) {
     flattenTopLevelAddSubtract(add->left(), terms, isPositive);
     flattenTopLevelAddSubtract(add->right(), terms, isPositive);
     return;
   }
-  if (const auto *subtract = std::get_if<Subtract<Numeric<CAT>>>(&expr.u)) {
+  if (const auto *subtract = std::get_if<Subtract<Type<CAT>>>(&expr.u)) {
     flattenTopLevelAddSubtract(subtract->left(), terms, isPositive);
     flattenTopLevelAddSubtract(subtract->right(), terms, !isPositive);
     return;
@@ -1498,10 +1498,10 @@ static SignedNumericExpr<CAT> buildRightAssociatedSignedFold(
     const bool useAdd{term.isPositive == terms[i].isPositive};
     if (useAdd)
       result = NumericExpr<CAT>{
-          Add<Numeric<CAT>>{kind, std::move(term.expr), std::move(result)}};
+          Add<Type<CAT>>{kind, std::move(term.expr), std::move(result)}};
     else
-      result = NumericExpr<CAT>{Subtract<Numeric<CAT>>{
-          kind, std::move(term.expr), std::move(result)}};
+      result = NumericExpr<CAT>{
+          Subtract<Type<CAT>>{kind, std::move(term.expr), std::move(result)}};
   }
   return SignedNumericExpr<CAT>{std::move(result), isPositive};
 }
@@ -1513,19 +1513,19 @@ static SignedNumericExpr<CAT> buildSignedAdd(
   const int kind{left.kind()};
   if (left.isPositive == right.isPositive) {
     return SignedNumericExpr<CAT>{
-        NumericExpr<CAT>{Add<Numeric<CAT>>{
-            kind, std::move(left.expr), std::move(right.expr)}},
+        NumericExpr<CAT>{
+            Add<Type<CAT>>{kind, std::move(left.expr), std::move(right.expr)}},
         left.isPositive};
   }
   if (left.isPositive) {
     return SignedNumericExpr<CAT>{
-        NumericExpr<CAT>{Subtract<Numeric<CAT>>{
+        NumericExpr<CAT>{Subtract<Type<CAT>>{
             kind, std::move(left.expr), std::move(right.expr)}},
         true};
   }
   // Prefer Y-X to introducing a unary negation for -X+Y.
   return SignedNumericExpr<CAT>{
-      NumericExpr<CAT>{Subtract<Numeric<CAT>>{
+      NumericExpr<CAT>{Subtract<Type<CAT>>{
           kind, std::move(right.expr), std::move(left.expr)}},
       true};
 }
@@ -1534,7 +1534,7 @@ template <common::TypeCategory CAT>
 static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
     const NumericExpr<CAT> &expr) {
   const int kind{expr.kind()};
-  if (const auto *convert = std::get_if<Convert<Numeric<CAT>, CAT>>(&expr.u)) {
+  if (const auto *convert = std::get_if<Convert<Type<CAT>, CAT>>(&expr.u)) {
     std::optional<Expr<SomeKind<CAT>>> rewritten = common::visit(
         [&](const auto &typedExpr) -> std::optional<Expr<SomeKind<CAT>>> {
           if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
@@ -1545,7 +1545,7 @@ static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
     if (!rewritten)
       return std::nullopt;
     return NumericExpr<CAT>{
-        Convert<Numeric<CAT>, CAT>{kind, std::move(*rewritten)}};
+        Convert<Type<CAT>, CAT>{kind, std::move(*rewritten)}};
   }
 
   // Only a conversion around the complete expression is supported. Keep
@@ -1554,8 +1554,8 @@ static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
   if (HasConversionHelper{}(expr))
     return std::nullopt;
 
-  if (!std::get_if<Add<Numeric<CAT>>>(&expr.u) &&
-      !std::get_if<Subtract<Numeric<CAT>>>(&expr.u))
+  if (!std::get_if<Add<Type<CAT>>>(&expr.u) &&
+      !std::get_if<Subtract<Type<CAT>>>(&expr.u))
     return std::nullopt;
 
   llvm::SmallVector<SignedNumericTerm<CAT>, 8> terms;

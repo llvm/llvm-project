@@ -491,9 +491,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
         SomeExpr{evaluate::NullPointer{}});
   }
-  using Int = evaluate::Type<TypeCategory::Integer>;
-  std::vector<Int::Scalar> kinds;
-  std::vector<Int::Scalar> lenKinds;
+  std::vector<evaluate::Type<TypeCategory::Integer>::Scalar> kinds;
+  std::vector<evaluate::Type<TypeCategory::Integer>::Scalar> lenKinds;
   if (parameters) {
     // Package the derived type's parameters in declaration order for
     // each category of parameter.  KIND= type parameters are described
@@ -523,11 +522,11 @@ const Symbol *RuntimeTableBuilder::DescribeType(
     }
   }
   AddValue(dtValues, derivedTypeSchema_, "kindparameter"s,
-      SaveNumericPointerTarget<Int>(8, scope,
+      SaveNumericPointerTarget<evaluate::Type<TypeCategory::Integer>>(8, scope,
           SaveObjectName((fir::kKindParameterSeparator + distinctName).str()),
           std::move(kinds)));
   AddValue(dtValues, derivedTypeSchema_, "lenparameterkind"s,
-      SaveNumericPointerTarget<Int>(1, scope,
+      SaveNumericPointerTarget<evaluate::Type<TypeCategory::Integer>>(1, scope,
           SaveObjectName((fir::kLenKindSeparator + distinctName).str()),
           std::move(lenKinds)));
   // Traverse the components of the derived type
@@ -749,10 +748,10 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
         ParamValue{len, common::TypeParamAttr::Len}, MakeKindExpr(1)));
   }
   using evaluate::AsciiKind, evaluate::MakeConstantExpr;
-  using AsciiType = evaluate::Type<TypeCategory::Character>;
-  using AsciiExpr = evaluate::Expr<AsciiType>;
-  object.set_init(
-      evaluate::AsGenericExpr(MakeConstantExpr<AsciiType>(AsciiKind, name)));
+  using AsciiExpr = evaluate::Expr<evaluate::Type<TypeCategory::Character>>;
+  object.set_init(evaluate::AsGenericExpr(
+      MakeConstantExpr<evaluate::Type<TypeCategory::Character>>(
+          AsciiKind, name)));
   Symbol &symbol{
       *scope
            .try_emplace(
@@ -761,7 +760,8 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
            .first->second};
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
-      AsciiExpr{evaluate::Designator<AsciiType>{AsciiKind, symbol}});
+      AsciiExpr{evaluate::Designator<evaluate::Type<TypeCategory::Character>>{
+          AsciiKind, symbol}});
 }
 
 evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
