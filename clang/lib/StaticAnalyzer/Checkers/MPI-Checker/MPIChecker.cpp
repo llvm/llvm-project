@@ -43,6 +43,8 @@ void MPIChecker::checkDoubleNonblocking(const CallEvent &PreCallEvent,
   // double nonblocking detected
   if (Req && Req->CurrentState == Request::State::Nonblocking) {
     ExplodedNode *ErrorNode = Ctx.generateNonFatalErrorNode();
+    if (!ErrorNode)
+      return;
     BReporter.reportDoubleNonblocking(PreCallEvent, *Req, MR, ErrorNode,
                                       Ctx.getBugReporter());
     Ctx.addTransition(ErrorNode->getState(), ErrorNode);
