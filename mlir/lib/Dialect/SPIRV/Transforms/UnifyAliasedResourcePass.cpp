@@ -593,7 +593,7 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
       firstStore->setDiscardableAttrs(storeOp->getDiscardableAttrDictionary());
       for (unsigned i = 1; i < ratio; ++i) {
         Value part = getPart(i);
-        auto indices = llvm::to_vector(acOp.getIndices());
+        SmallVector<Value> indices = llvm::to_vector(acOp.getIndices());
         Type indexType = indices.back().getType();
         auto offset = spirv::ConstantOp::create(
             rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, i));
@@ -601,7 +601,7 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
                                                indices.back(), offset);
         Value ptr = spirv::AccessChainOp::create(rewriter, loc,
                                                  acOp.getBasePtr(), indices);
-        auto alignment = storeOp.getAlignmentAttr();
+        IntegerAttr alignment = storeOp.getAlignmentAttr();
         if (alignment)
           alignment = rewriter.getI32IntegerAttr(
               llvm::commonAlignment(llvm::Align(alignment.getInt()), i * bytes)
