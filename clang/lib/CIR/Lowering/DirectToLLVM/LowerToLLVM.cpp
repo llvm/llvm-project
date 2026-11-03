@@ -51,6 +51,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Module.h"
@@ -1079,7 +1080,14 @@ CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
   mlir::Operation *sourceSymbol =
       symbolTables.lookupSymbolIn(parentModule, symbol);
   if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
-    sourceType = llvmSymbol.getType();
+    // Prefer the stashed pre-conversion type: the LLVM global's type may
+    // have been adjusted (split rows, flexible array).
+    if (mlir::Type preType = getPreConversionSymType(llvmSymbol)) {
+      originalType = preType;
+      sourceType = convertTypeForMemory(*converter, dataLayout, originalType);
+    } else {
+      sourceType = llvmSymbol.getType();
+    }
     symName = llvmSymbol.getSymName();
     addrSpace = llvmSymbol.getAddrSpace();
   } else if (auto cirSymbol = dyn_cast<cir::GlobalOp>(sourceSymbol)) {
@@ -2623,6 +2631,10 @@ static mlir::LogicalResult rewriteCallOrInvoke(
 
   mlir::LLVM::CConv cconv = convertCallingConv(call.getCallingConv());
 
+  // The replace below erases the root op, so read what the CallOp branch
+  // needs first.
+  const bool mustTail = op->hasAttr(CIRDialect::getMustTailAttrName());
+  const std::optional<cir::InlineKind> inlineKind = call.getInlineKind();
   if (landingPadBlock) {
     assert(!cir::MissingFeatures::opCallInvokeAttrs());
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
@@ -2640,10 +2652,10 @@ static mlir::LogicalResult rewriteCallOrInvoke(
     newOp.setNoUnwind(noUnwind);
     newOp.setWillReturn(willReturn);
     newOp.setNoreturn(noReturn);
-    if (op->hasAttr(CIRDialect::getMustTailAttrName()))
+    if (mustTail)
       newOp.setTailCallKind(mlir::LLVM::TailCallKind::MustTail);
 
-    if (std::optional<cir::InlineKind> inlineKind = call.getInlineKind()) {
+    if (inlineKind) {
       newOp.setNoInline(*inlineKind == cir::InlineKind::NoInline);
       newOp.setInlineHint(*inlineKind == cir::InlineKind::InlineHint);
       newOp.setAlwaysInline(*inlineKind == cir::InlineKind::AlwaysInline);
@@ -3359,9 +3371,12 @@ convertTlsModelAttrToLLVM(TLSModelAttr attr) {
   return static_cast<mlir::LLVM::ThreadLocalMode>(attr.getValue());
 }
 
-/// Replace CIR global with a region initialized LLVM global and update
-/// insertion point to the end of the initializer block.
-mlir::LogicalResult
+/// Create the region-initialized LLVM global beside the CIR op and update
+/// insertion point to the end of the initializer block. Returns the new op,
+/// or null on failure. The caller owns the replacement: it runs the
+/// initializer visit with the old op still in the table, then swaps the
+/// table and erases the old op on success.
+mlir::LLVM::GlobalOp
 CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
     cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type llvmType =
@@ -3373,7 +3388,7 @@ CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
                                        dataLayout);
   if (!llvmType)
-    return mlir::failure();
+    return {};
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops. This duplicates code
@@ -3390,18 +3405,20 @@ CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
-  mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
 
   SmallVector<mlir::NamedAttribute> attributes =
       lowerGlobalAttributes(op, rewriter);
 
-  mlir::LLVM::GlobalOp newGlobalOp =
-      rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-          op, llvmType, isConst, linkage, symbol, nullptr, alignment, addrSpace,
-          isDsoLocal, threadLocalMode, comdatAttr, attributes);
+  mlir::Type preConversionType = op.getSymType();
+  mlir::LLVM::GlobalOp newGlobalOp = mlir::LLVM::GlobalOp::create(
+      rewriter, op.getLoc(), llvmType, isConst, linkage, symbol, nullptr,
+      alignment, addrSpace, isDsoLocal, threadLocalMode, mlir::SymbolRefAttr{},
+      attributes);
+  newGlobalOp->setAttr(kPreConversionSymType,
+                       mlir::TypeAttr::get(preConversionType));
   rewriter.createBlock(&newGlobalOp.getRegion());
   rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
-  return mlir::success();
+  return newGlobalOp;
 }
 
 mlir::LogicalResult
@@ -3420,18 +3437,38 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   // to the appropriate value.
   const mlir::Location loc = op.getLoc();
   mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  if (failed(setupRegionInitializedLLVMGlobalOp(op, rewriter)))
+  // Build the cached table before the replacement exists, so the swap below
+  // drops a real entry instead of depending on duplicate tolerance.
+  auto &symbolTable = symbolTables.getSymbolTable(moduleOp);
+  // Create the replacement beside the root op, not via replaceOp: the table
+  // swap below and the visit both need the old op alive.
+  rewriter.setInsertionPoint(op);
+  mlir::LLVM::GlobalOp newGlobalOp =
+      setupRegionInitializedLLVMGlobalOp(op, rewriter);
+  if (!newGlobalOp)
     return mlir::failure();
-
+  // Keep the old op in the table during the visit so self-references
+  // resolve to the CIR type, not the possibly adjusted LLVM type.
   // Pass blockInfoAddr so that block address initializers (either as the whole
   // initializer or nested inside an aggregate) can be resolved by the
   // BlockAddrInfoAttr visitor.
   CIRAttrToValue valueConverter(loc, moduleOp, rewriter, symbolTables,
                                 typeConverter, &blockInfoAddr);
   mlir::Value value = valueConverter.visit(init);
-  if (!value)
+  if (!value) {
+    // Drop the speculative replacement; the table still holds the live
+    // root op for the driver to report on.
+    rewriter.eraseOp(newGlobalOp);
     return mlir::failure();
+  }
   mlir::LLVM::ReturnOp::create(rewriter, loc, value);
+  // Attach comdat only after the visit succeeds: creating it earlier would
+  // leave module-level ops behind on a failing compile.
+  if (mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter))
+    newGlobalOp.setComdatAttr(comdatAttr);
+  symbolTable.remove(op);
+  symbolTable.insert(newGlobalOp);
+  rewriter.eraseOp(op);
   return mlir::success();
 }
 
@@ -3531,10 +3568,17 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         if (std::optional<mlir::Attribute> bulkInit = lowerConstArrayAttr(
                 constArr, symbolTables, typeConverter, modOp)) {
           mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
-          rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+          // The driver does not invalidate the cached symbol table, so
+          // maintain it explicitly: drop the old entry before replacement
+          // and register the new op after.
+          symbolTables.getSymbolTable(modOp).remove(op);
+          auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
               op, llvmType, isConst, linkage, symbol, bulkInit.value(),
               alignment, addrSpace, isDsoLocal, threadLocalMode, comdatAttr,
               attributes);
+          newGlobalOp->setAttr(kPreConversionSymType,
+                               mlir::TypeAttr::get(cirSymType));
+          symbolTables.getSymbolTable(modOp).insert(newGlobalOp);
           return mlir::success();
         }
       }
@@ -3550,9 +3594,16 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       if (std::optional<mlir::Attribute> bulkInit = lowerConstRecordAttr(
               constRecord, symbolTables, typeConverter, modOp)) {
         mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
-        rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+        // The driver does not invalidate the cached symbol table, so
+        // maintain it explicitly: drop the old entry before replacement
+        // and register the new op after.
+        symbolTables.getSymbolTable(modOp).remove(op);
+        auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
             op, llvmType, isConst, linkage, symbol, bulkInit.value(), alignment,
             addrSpace, isDsoLocal, threadLocalMode, comdatAttr, attributes);
+        newGlobalOp->setAttr(kPreConversionSymType,
+                             mlir::TypeAttr::get(cirSymType));
+        symbolTables.getSymbolTable(modOp).insert(newGlobalOp);
         return mlir::success();
       }
       return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
@@ -3575,10 +3626,17 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   }
 
   mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
-  rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+  // The driver does not invalidate the cached symbol table, so
+  // maintain it explicitly: drop the old entry before replacement
+  // and register the new op after.
+  mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
+  symbolTables.getSymbolTable(modOp).remove(op);
+  auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
       alignment, addrSpace, isDsoLocal, threadLocalMode, comdatAttr,
       attributes);
+  newGlobalOp->setAttr(kPreConversionSymType, mlir::TypeAttr::get(cirSymType));
+  symbolTables.getSymbolTable(modOp).insert(newGlobalOp);
 
   return mlir::success();
 }
@@ -4879,6 +4937,14 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::TimeTraceScope scope("Convert CIR to LLVM Pass");
 
   mlir::ModuleOp module = getOperation();
+  // The pre-conversion type snapshots never reach the output, however the
+  // pass exits. Snapshots only ever sit on module-level symbols.
+  mlir::StringAttr stashName =
+      mlir::StringAttr::get(&getContext(), kPreConversionSymType);
+  llvm::scope_exit stripPreConversionTypes([&] {
+    for (mlir::Operation &op : module.getBody()->getOperations())
+      op.removeAttr(stashName);
+  });
   mlir::DataLayout dl(module);
   mlir::LLVMTypeConverter converter(&getContext());
   prepareTypeConverter(converter, dl);

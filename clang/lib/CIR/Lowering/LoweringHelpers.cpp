@@ -290,7 +290,13 @@ globalViewMatchesPointerLeaf(cir::GlobalViewAttr gv, mlir::ModuleOp moduleOp,
   mlir::Type sourceType;
   auto sourceSymbol = symbolTables.lookupSymbolIn(moduleOp, gv.getSymbol());
   if (auto llvmSymbol = mlir::dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
-    sourceType = llvmSymbol.getType();
+    // Prefer the stashed pre-conversion type: the lowered type may have been
+    // adjusted, which would answer differently depending on lowering order.
+    // Globals that were never CIR (no stash) keep the converted-type view.
+    if (mlir::Type preType = getPreConversionSymType(llvmSymbol))
+      sourceType = converter->convertType(preType);
+    else
+      sourceType = llvmSymbol.getType();
     sourceAddrSpace = llvmSymbol.getAddrSpace();
   } else if (auto cirSymbol = mlir::dyn_cast<cir::GlobalOp>(sourceSymbol)) {
     sourceType = converter->convertType(cirSymbol.getSymType());
