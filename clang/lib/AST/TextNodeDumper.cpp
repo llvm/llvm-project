@@ -2168,21 +2168,16 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
   case VectorKind::SveFixedLengthPredicate:
     OS << " fixed-length sve predicate vector";
     break;
-  case VectorKind::RVVFixedLengthData_MF8:
-  case VectorKind::RVVFixedLengthData_MF4:
-  case VectorKind::RVVFixedLengthData_MF2:
-  case VectorKind::RVVFixedLengthData_M1:
-  case VectorKind::RVVFixedLengthData_M2:
-  case VectorKind::RVVFixedLengthData_M4:
-  case VectorKind::RVVFixedLengthData_M8:
-    OS << " fixed-length rvv data vector lmul "
-       << getRVVFixedLengthDataLMulString(T->getVectorKind(), /*MF=*/false);
-    break;
-  case VectorKind::RVVFixedLengthMask:
-  case VectorKind::RVVFixedLengthMask_1:
-  case VectorKind::RVVFixedLengthMask_2:
-  case VectorKind::RVVFixedLengthMask_4:
-    OS << " fixed-length rvv mask vector";
+  default:
+    if (isRVVFixedLengthDataVectorKind(T->getVectorKind())) {
+      OS << " fixed-length rvv data vector lmul "
+         << getRVVFixedLengthDataLMulString(T->getVectorKind(), /*MF=*/false);
+    } else {
+      assert(isRVVFixedLengthMaskVectorKind(T->getVectorKind()) &&
+             "unexpected vector kind");
+      OS << " fixed-length rvv mask vector ratio "
+         << (1u << getRVVFixedLengthMaskRatioLog2(T->getVectorKind()));
+    }
     break;
   }
   OS << " " << T->getNumElements();

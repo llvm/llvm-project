@@ -750,24 +750,21 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
   case VectorKind::SveFixedLengthPredicate:
     JOS.attribute("vectorKind", "fixed-length sve predicate vector");
     break;
-  case VectorKind::RVVFixedLengthData_MF8:
-  case VectorKind::RVVFixedLengthData_MF4:
-  case VectorKind::RVVFixedLengthData_MF2:
-  case VectorKind::RVVFixedLengthData_M1:
-  case VectorKind::RVVFixedLengthData_M2:
-  case VectorKind::RVVFixedLengthData_M4:
-  case VectorKind::RVVFixedLengthData_M8:
-    JOS.attribute("vectorKind",
-                  "fixed-length rvv data vector lmul " +
-                      getRVVFixedLengthDataLMulString(VT->getVectorKind(),
-                                                      /*MF=*/false)
-                          .str());
-    break;
-  case VectorKind::RVVFixedLengthMask:
-  case VectorKind::RVVFixedLengthMask_1:
-  case VectorKind::RVVFixedLengthMask_2:
-  case VectorKind::RVVFixedLengthMask_4:
-    JOS.attribute("vectorKind", "fixed-length rvv mask vector");
+  default:
+    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind())) {
+      JOS.attribute("vectorKind",
+                    "fixed-length rvv data vector lmul " +
+                        getRVVFixedLengthDataLMulString(VT->getVectorKind(),
+                                                        /*MF=*/false)
+                            .str());
+    } else {
+      assert(isRVVFixedLengthMaskVectorKind(VT->getVectorKind()) &&
+             "unexpected vector kind");
+      JOS.attribute("vectorKind",
+                    "fixed-length rvv mask vector ratio " +
+                        std::to_string(1u << getRVVFixedLengthMaskRatioLog2(
+                                           VT->getVectorKind())));
+    }
     break;
   }
 }
