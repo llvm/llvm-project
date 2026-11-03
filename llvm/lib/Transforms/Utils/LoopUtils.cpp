@@ -1997,7 +1997,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
         // Check if expansions of this SCEV would count as being high cost.
         bool HighCost =
-            OperandExitValues.empty() &&
+            !OperandExitValues.empty() ||
             Rewriter.isHighCostExpansion(ExitValue.getPointer(), L,
                                          SCEVCheapExpansionBudget, TTI, Inst);
 
@@ -2011,12 +2011,14 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         Instruction *InsertPt =
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
+        // Operand exit values and their cloned user must be expanded outside
+        // the loop at a point that dominates the exiting block.
         if (!OperandExitValues.empty())
           InsertPt = L->getLoopPreheader()->getTerminator();
         if (OperandExitValues.empty())
           RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
         else
-          RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, false,
+          RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost,
                                      std::move(OperandExitValues));
       }
     }
@@ -2033,10 +2035,6 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   // Transformation.
   for (const RewritePhi &Phi : RewritePhiSet) {
     PHINode *PN = Phi.PN;
-
-    // Only clone an instruction when doing so allows the loop to be deleted.
-    if (Phi.OperandExitValues && !LoopCanBeDel)
-      continue;
 
     // Only do the rewrite when the ExitValue can be expanded cheaply.
     // If LoopCanBeDel is true, rewrite exit value aggressively.
