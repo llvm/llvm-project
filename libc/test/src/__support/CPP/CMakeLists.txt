@@ -65,6 +65,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  functional_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    functional_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.functional
+    libc.src.__support.CPP.nullptr_t
+    libc.src.__support.CPP.type_traits
+)
+
+add_libc_test(
   stringview_test
   SUITE
     libc-cpp-utils-tests
@@ -162,6 +174,8 @@ add_libc_test(
   SRCS
     unique_ptr_test.cpp
   DEPENDS
+    libc.hdr.signal_macros
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility
 )
