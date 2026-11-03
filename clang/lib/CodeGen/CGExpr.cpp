@@ -3468,17 +3468,6 @@ LValue CodeGenFunction::EmitLoadOfPointerLValue(Address PtrAddr,
   return MakeAddrLValue(Addr, PtrTy->getPointeeType(), BaseInfo, TBAAInfo);
 }
 
-template <typename BuilderTy>
-static llvm::Value *
-GetCastedThreadLocalAddress(BuilderTy &Builder,
-                            llvm::AddrSpaceCastOperator *ASC) {
-  // On targets with a non-default Global AS, we might have inserted a cast,
-  // so we need to ensure that we create the TLS address from the global
-  // itself, and then cast it, rather than trying to use the casted value.
-  llvm::Value *TL = Builder.CreateThreadLocalAddress(ASC->getPointerOperand());
-  return Builder.CreateAddrSpaceCast(TL, ASC->getType());
-}
-
 static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
                                       const Expr *E, const VarDecl *VD) {
   QualType T = E->getType();
@@ -3506,12 +3495,8 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
 
   llvm::Value *V = CGF.CGM.GetAddrOfGlobalVar(VD);
 
-  if (VD->getTLSKind() != VarDecl::TLS_None) {
-    if (auto *ASC = dyn_cast<llvm::AddrSpaceCastOperator>(V))
-      V = GetCastedThreadLocalAddress(CGF.Builder, ASC);
-    else
-      V = CGF.Builder.CreateThreadLocalAddress(V);
-  }
+  if (VD->getTLSKind() != VarDecl::TLS_None)
+    V = CGF.Builder.CreateThreadLocalAddress(V);
 
   llvm::Type *RealVarTy = CGF.getTypes().ConvertTypeForMem(VD->getType());
   CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
@@ -3835,19 +3820,10 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     }
 
     // Handle threadlocal function locals.
-    if (VD->getTLSKind() != VarDecl::TLS_None) {
-      // TODO: unify / deduplicate with the same block in
-      //       EmitGlobalVarDeclLValue, possibly by refactoring
-      //       CreateThreadLocalAddress
-      if (auto *ASC =
-              dyn_cast<llvm::AddrSpaceCastOperator>(addr.getBasePointer()))
-        addr = addr.withPointer(GetCastedThreadLocalAddress(Builder, ASC),
-                                NotKnownNonNull);
-      else
-        addr = addr.withPointer(
-            Builder.CreateThreadLocalAddress(addr.getBasePointer()),
-            NotKnownNonNull);
-    }
+    if (VD->getTLSKind() != VarDecl::TLS_None)
+      addr = addr.withPointer(
+          Builder.CreateThreadLocalAddress(addr.getBasePointer()),
+          NotKnownNonNull);
 
     // Check for OpenMP threadprivate variables.
     if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd &&

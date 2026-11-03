@@ -6102,7 +6102,8 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     }
 
     // Make sure the result is of the correct type.
-    if (Entry->getType()->getAddressSpace() != TargetAS)
+    if (Entry->getType()->getAddressSpace() != TargetAS &&
+        D->getTLSKind() == VarDecl::TLS_None)
       return llvm::ConstantExpr::getAddrSpaceCast(
           Entry, llvm::PointerType::get(Ty->getContext(), TargetAS));
 
@@ -6247,7 +6248,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       D ? D->getType().getAddressSpace()
         : (LangOpts.OpenCL ? LangAS::opencl_global : LangAS::Default);
   assert(getContext().getTargetAddressSpace(ExpectedAS) == TargetAS);
-  if (DAddrSpace != ExpectedAS)
+  if (DAddrSpace != ExpectedAS && D->getTLSKind() == VarDecl::TLS_None)
     return performAddrSpaceCast(
         GV, llvm::PointerType::get(getLLVMContext(), TargetAS));
 
