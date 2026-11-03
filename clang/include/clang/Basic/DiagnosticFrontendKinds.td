@@ -546,10 +546,6 @@ def err_open_hotpatch_file_failed
 
 def err_codegen_unsupported : Error<"cannot compile this %0 yet">;
 
-def err_amdgpu_printf_nonconst_fmt_with_ptr_arg
-    : Error<"AMDGPU printf requires a constant format string when pointer "
-            "arguments are passed">;
-
 def warn_trivial_auto_var_limit
     : Warning<"-ftrivial-auto-var-init-stop-after=%0 has been enabled to limit "
               "the number of times ftrivial-auto-var-init=%1 gets applied">,

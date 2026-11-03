@@ -65,6 +65,7 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaBPF.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaDirectX.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
@@ -2499,6 +2500,34 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
   return false;
 }
 
+/// The AMDGPU printf lowering can only find %s specifiers in a format string
+/// known at compile time, so with any other format a string argument would be
+/// printed as its address. Any pointer argument may be a string, so reject it.
+static void checkAMDGPUDevicePrintf(Sema &S, CallExpr *TheCall) {
+  const llvm::Triple &TT = S.Context.getTargetInfo().getTriple();
+  if (!S.getLangOpts().HIP ||
+      !(TT.isAMDGCN() || (TT.isSPIRV() && TT.getVendor() == llvm::Triple::AMD)))
+    return;
+  if (TheCall->getNumArgs() < 2 || TheCall->isValueDependent() ||
+      TheCall->isTypeDependent())
+    return;
+
+  auto PtrArg =
+      llvm::find_if(llvm::drop_begin(TheCall->arguments()), [](const Expr *E) {
+        return E->getType()->isPointerType();
+      });
+  if (PtrArg == TheCall->arg_end())
+    return;
+
+  const Expr *Fmt = TheCall->getArg(0);
+  if (Fmt->tryEvaluateString(S.Context))
+    return;
+
+  S.CUDA().DiagIfDeviceCode(Fmt->getExprLoc(),
+                            diag::err_amdgpu_printf_nonconst_fmt_with_ptr_arg)
+      << (*PtrArg)->getSourceRange();
+}
+
 /// BuiltinCpu{Supports|Is} - Handle __builtin_cpu_{supports|is}(char *).
 /// This checks that the target supports the builtin and that the string
 /// argument is constant and valid.
@@ -3202,6 +3231,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
         << Context.BuiltinInfo.getQuotedName(BuiltinID)
         << "__safestack_get_unsafe_stack_ptr";
+    break;
+  case Builtin::BIprintf:
+  case Builtin::BI__builtin_printf:
+    checkAMDGPUDevicePrintf(*this, TheCall);
     break;
   case Builtin::BI__builtin_cpu_supports:
   case Builtin::BI__builtin_cpu_is:
