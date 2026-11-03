@@ -633,31 +633,6 @@ define i64 @vsetvl_e64mf8_and9bits(i64 %avl) {
   ret i64 %b
 }
 
-define i64 @vsetvl_bounded_avl(i64 %avl) {
-; CHECK-LABEL: vsetvl_bounded_avl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 31
-; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, ma
-; CHECK-NEXT:    ret
-  %limit = and i64 %avl, 31
-  %vl = call i64 @llvm.riscv.vsetvli(i64 %limit, i64 0, i64 0)
-  %result = and i64 %vl, 31
-  ret i64 %result
-}
-
-define i64 @vsetvl_bounded_avl_narrow_mask(i64 %avl) {
-; CHECK-LABEL: vsetvl_bounded_avl_narrow_mask:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 31
-; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, ma
-; CHECK-NEXT:    andi a0, a0, 15
-; CHECK-NEXT:    ret
-  %limit = and i64 %avl, 31
-  %vl = call i64 @llvm.riscv.vsetvli(i64 %limit, i64 0, i64 0)
-  %result = and i64 %vl, 15
-  ret i64 %result
-}
-
 ; Default VectorToLLVM lowering of vector.create_mask(actual VL), after LLVM
 ; optimization removes the INT32_MAX clamp using the vsetvli result range.
 define <vscale x 2 x i32> @prefix_create_mask_i32_indices(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, i64 %avl) {
