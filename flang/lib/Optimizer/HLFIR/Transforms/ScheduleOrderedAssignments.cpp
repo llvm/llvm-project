@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/ArraySectionAnalyzer.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "mlir/IR/OperationSupport.h"
@@ -185,7 +186,7 @@ public:
   /// Start scheduling an assignment. Gather the write side effect from the
   /// assignment.
   void startSchedulingAssignment(hlfir::RegionAssignOp assign,
-                                 bool leafRegionsMayOnlyRead);
+                                 bool leafRegionsArePure);
 
   /// Start analysing a set of evaluation regions that can be evaluated in
   /// any order between themselves according to Fortran rules (like the controls
@@ -205,7 +206,7 @@ public:
   /// was saved in a previous run is considered to have no side effects with the
   /// current assignment: the saved value will be used.
   void saveEvaluationIfConflict(mlir::Region &yieldRegion,
-                                bool leafRegionsMayOnlyRead,
+                                bool leafRegionsArePure,
                                 bool yieldIsImplicitRead = true,
                                 bool evaluationsMayConflict = false);
 
@@ -222,7 +223,7 @@ public:
   /// After all the dependent evaluation regions have been analyzed, create the
   /// action to evaluate the assignment that was being analyzed.
   void finishSchedulingAssignment(hlfir::RegionAssignOp assign,
-                                  bool leafRegionsMayOnlyRead);
+                                  bool leafRegionsArePure);
 
   /// Once all the assignments have been analyzed and scheduled, return the
   /// schedule. The scheduler object should not be used after this call.
@@ -300,16 +301,83 @@ static bool isForallIndex(mlir::Value var) {
          mlir::isa_and_nonnull<hlfir::ForallIndexOp>(var.getDefiningOp());
 }
 
-/// Gather the memory effects of the operations contained in a region.
-/// \p mayOnlyRead can be given to exclude some potential write effects that
-/// cannot affect the current scheduling problem because it is known that the
-/// regions are evaluating pure expressions from a Fortran point of view. It is
-/// useful because low level IR in the region may contain operation that lacks
-/// side effect interface, or that are writing temporary variables that may be
-/// hard to identify as such (one would have to prove the write is "local" to
-/// the region even when the alloca may be outside of the region).
+/// Does \p var designate a Fortran variable that is not local to
+/// \p evaluationRegion? Walk back to the first Fortran variable definition: a
+/// variable declared inside the region, or storage allocated without any
+/// Fortran variable declaration, is a temporary of the evaluation.
+static bool isNonLocalVariable(mlir::Value var,
+                               mlir::Region &evaluationRegion) {
+  while (var) {
+    mlir::Operation *op = var.getDefiningOp();
+    if (!op)
+      return !evaluationRegion.isAncestor(var.getParentRegion());
+    if (auto designate = mlir::dyn_cast<hlfir::DesignateOp>(op))
+      var = designate.getMemref();
+    else if (mlir::isa<fir::FortranVariableOpInterface>(op))
+      return !evaluationRegion.isAncestor(op->getParentRegion());
+    else if (mlir::isa<fir::AllocaOp, fir::AllocMemOp>(op))
+      return false;
+    else if (auto convert = mlir::dyn_cast<fir::ConvertOp>(op))
+      var = convert.getValue();
+    else if (auto load = mlir::dyn_cast<fir::LoadOp>(op))
+      var = load.getMemref();
+    else if (auto boxAddr = mlir::dyn_cast<fir::BoxAddrOp>(op))
+      var = boxAddr.getVal();
+    else if (auto embox = mlir::dyn_cast<fir::EmboxOp>(op))
+      var = embox.getMemref();
+    else if (auto rebox = mlir::dyn_cast<fir::ReboxOp>(op))
+      var = rebox.getBox();
+    else if (auto coor = mlir::dyn_cast<fir::CoordinateOp>(op))
+      var = coor.getRef();
+    else if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op))
+      var = arrayCoor.getMemref();
+    else if (auto copyIn = mlir::dyn_cast<hlfir::CopyInOp>(op))
+      var = copyIn.getVar();
+    else
+      return true;
+  }
+  return true;
+}
+
+/// Gather the effects of a call inside a FORALL. Calls in FORALL are to PURE
+/// procedures that may read any variable, but write only to the actual
+/// arguments that lowering marked with fir.may_be_modified (INTENT(OUT) and
+/// INTENT(INOUT) dummy arguments are allowed in PURE functions as an
+/// extension).
+static void gatherPureCallEffects(
+    mlir::Operation &call, mlir::OperandRange args, mlir::ArrayAttr argAttrs,
+    mlir::Region &evaluationRegion,
+    llvm::SmallVectorImpl<hlfir::DetailedEffectInstance> &effects) {
+  LLVM_DEBUG(llvm::dbgs() << "unknown effect: " << call << "\n";);
+  effects.emplace_back(mlir::MemoryEffects::Read::get());
+  if (!argAttrs)
+    return;
+  unsigned firstArg = args.getBeginOperandIndex();
+  for (auto [idx, attrs] :
+       llvm::enumerate(argAttrs.getAsRange<mlir::DictionaryAttr>())) {
+    if (idx >= args.size() || !attrs.contains(fir::getMayBeModifiedAttrName()))
+      continue;
+    mlir::OpOperand &arg = call.getOpOperand(firstArg + idx);
+    if (isNonLocalVariable(arg.get(), evaluationRegion))
+      effects.emplace_back(mlir::MemoryEffects::Write::get(), &arg);
+  }
+}
+
+/// Gather the memory effects of the operations contained in \p region, which
+/// is \p evaluationRegion or one of its nested regions.
+/// \p leafRegionIsPure is set when the evaluation is known to be pure from a
+/// Fortran point of view (inside FORALL). Low level IR in the region may
+/// contain operations that lack side effect interfaces, or that are writing
+/// temporary variables (one would have to prove the write is "local" to the
+/// region even when the alloca may be outside of the region). In that case,
+/// unknown operations are only assumed to read memory, calls only write to
+/// the arguments marked as modifiable, and writes are only kept if they are
+/// known to affect Fortran variables that are not local to the evaluation
+/// region (e.g., the STAT= argument of NEXT/PREVIOUS). Writes on unknown
+/// values (e.g., derived type assignments to temporaries, or volatile
+/// accesses) are ignored.
 static void gatherMemoryEffectsImpl(
-    mlir::Region &region, bool mayOnlyRead,
+    mlir::Region &region, mlir::Region &evaluationRegion, bool leafRegionIsPure,
     llvm::SmallVectorImpl<hlfir::DetailedEffectInstance> &effects,
     hlfir::ElementalTree *tree = nullptr) {
   /// This analysis is a simple walk of all the operations of the region that is
@@ -317,9 +385,23 @@ static void gatherMemoryEffectsImpl(
   /// trying to walk back the SSA DAG from the yielded value. But if desired,
   /// this could be changed.
   for (mlir::Operation &op : region.getOps()) {
+    if (leafRegionIsPure) {
+      if (auto call = mlir::dyn_cast<fir::CallOp>(op)) {
+        gatherPureCallEffects(op, call.getArgOperands(), call.getArgAttrsAttr(),
+                              evaluationRegion, effects);
+        continue;
+      }
+      if (auto dispatch = mlir::dyn_cast<fir::DispatchOp>(op)) {
+        gatherPureCallEffects(op, dispatch.getArgs(),
+                              dispatch.getArgAttrsAttr(), evaluationRegion,
+                              effects);
+        continue;
+      }
+    }
     if (op.hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
       for (mlir::Region &subRegion : op.getRegions())
-        gatherMemoryEffectsImpl(subRegion, mayOnlyRead, effects, tree);
+        gatherMemoryEffectsImpl(subRegion, evaluationRegion, leafRegionIsPure,
+                                effects, tree);
       // In MLIR, RecursiveMemoryEffects can be combined with
       // MemoryEffectOpInterface to describe extra effects on top of the
       // effects of the nested operations.  However, the presence of
@@ -334,20 +416,22 @@ static void gatherMemoryEffectsImpl(
     if (!interface) {
       LLVM_DEBUG(llvm::dbgs() << "unknown effect: " << op << "\n";);
       // There is no generic way to know what this operation is reading/writing
-      // to. Assume the worst. No need to continue analyzing the code any
-      // further.
+      // to. Assume the worst. Outside of pure evaluations, no need to continue
+      // analyzing the code any further.
       effects.emplace_back(mlir::MemoryEffects::Read::get());
-      if (!mayOnlyRead)
+      if (!leafRegionIsPure) {
         effects.emplace_back(mlir::MemoryEffects::Write::get());
-      return;
+        return;
+      }
+      continue;
     }
     // Collect read/write effects. Alloc/Free effects do not matter, they
     // are either local to the evaluation region and can be repeated, or, if
     // they are allocatable/pointer allocation/deallocation, they are conveyed
     // via the write that is updating the descriptor/allocatable (and there
     // cannot be any indirect allocatable/pointer allocation/deallocation if
-    // mayOnlyRead is set). When mayOnlyRead is set, local write effects are
-    // also ignored.
+    // leafRegionIsPure is set). When leafRegionIsPure is set, local write
+    // effects are also ignored.
     llvm::SmallVector<mlir::MemoryEffects::EffectInstance> opEffects;
     interface.getEffects(opEffects);
     for (auto &effect : opEffects)
@@ -362,8 +446,11 @@ static void gatherMemoryEffectsImpl(
         if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect())) {
           LLVM_DEBUG(logIfUnknownEffectValue(llvm::dbgs(), effect, op););
           effects.emplace_back(effect, array);
-        } else if (!mayOnlyRead &&
-                   mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect())) {
+        } else if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect()) &&
+                   (!leafRegionIsPure ||
+                    (effect.getValue() &&
+                     isNonLocalVariable(effect.getValue(),
+                                        evaluationRegion)))) {
           LLVM_DEBUG(logIfUnknownEffectValue(llvm::dbgs(), effect, op););
           effects.emplace_back(effect, array);
         }
@@ -371,7 +458,7 @@ static void gatherMemoryEffectsImpl(
   }
 }
 static void gatherMemoryEffects(
-    mlir::Region &region, bool mayOnlyRead,
+    mlir::Region &region, bool leafRegionIsPure,
     llvm::SmallVectorImpl<hlfir::DetailedEffectInstance> &effects) {
   if (!region.getParentOfType<hlfir::ForallOp>()) {
     // TODO: leverage array access analysis for FORALL.
@@ -386,10 +473,11 @@ static void gatherMemoryEffects(
     // now this feature is disabled for inside FORALL.
     hlfir::ElementalTree tree =
         hlfir::ElementalTree::buildElementalTree(region.back().back());
-    gatherMemoryEffectsImpl(region, mayOnlyRead, effects, &tree);
+    gatherMemoryEffectsImpl(region, region, leafRegionIsPure, effects, &tree);
     return;
   }
-  gatherMemoryEffectsImpl(region, mayOnlyRead, effects, /*tree=*/nullptr);
+  gatherMemoryEffectsImpl(region, region, leafRegionIsPure, effects,
+                          /*tree=*/nullptr);
 }
 
 /// Return the entity yielded by a region, or a null value if the region
@@ -702,19 +790,19 @@ bool Scheduler::haveTheSameValue(mlir::Value v1, mlir::Value v2) {
 }
 
 void Scheduler::startSchedulingAssignment(hlfir::RegionAssignOp assign,
-                                          bool leafRegionsMayOnlyRead) {
-  gatherAssignEffects(assign, leafRegionsMayOnlyRead, assignEffects);
+                                          bool leafRegionsArePure) {
+  gatherAssignEffects(assign, leafRegionsArePure, assignEffects);
   // Unconditionally collect effects of the evaluations of LHS and RHS
   // in case they need to be analyzed for any parent that might be
   // affected by conflicts of these evaluations.
   // This collection might be skipped, if there are no such parents,
   // but for the time being we run it always.
-  gatherAssignEvaluationEffects(assign, leafRegionsMayOnlyRead,
+  gatherAssignEvaluationEffects(assign, leafRegionsArePure,
                                 assignEvaluateEffects);
 }
 
 void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
-                                         bool leafRegionsMayOnlyRead,
+                                         bool leafRegionsArePure,
                                          bool yieldIsImplicitRead,
                                          bool evaluationsMayConflict) {
   // If the region evaluation was previously executed and saved, the saved
@@ -723,7 +811,7 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
   if (regionStates[&yieldRegion].saved)
     return;
   llvm::SmallVector<hlfir::DetailedEffectInstance> effects;
-  gatherMemoryEffects(yieldRegion, leafRegionsMayOnlyRead, effects);
+  gatherMemoryEffects(yieldRegion, leafRegionsArePure, effects);
   // Yield has no effect as such, but in the context of order assignments.
   // The order assignments will usually read the yielded entity (except for
   // the yielded assignments LHS that is only read if this is an assignment
@@ -739,10 +827,11 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
             hlfir::DetailedEffectInstance::getArrayReadEffect(entity));
     }
   }
-  if (!leafRegionsMayOnlyRead && anyNonLocalWrite(effects, yieldRegion)) {
+  if (anyNonLocalWrite(effects, yieldRegion)) {
     // Region with write effect must be executed only once (unless all writes
     // affect storages allocated inside the region): save it the first time it
-    // is encountered.
+    // is encountered. In pure regions, the only writes gathered are writes to
+    // non local variables.
     LLVM_DEBUG(llvm::dbgs()
                    << "saving eval because write effect prevents re-evaluation"
                    << "\n";);
@@ -870,7 +959,7 @@ static void gatherAssignmentParents(
 }
 
 void Scheduler::finishSchedulingAssignment(hlfir::RegionAssignOp assign,
-                                           bool leafRegionsMayOnlyRead) {
+                                           bool leafRegionsArePure) {
   // Schedule the assignment in a new run, unless it can be fused with the
   // previous run (if enabled and proven safe).
   currentRunIsReadOnly = false;
@@ -891,7 +980,7 @@ void Scheduler::finishSchedulingAssignment(hlfir::RegionAssignOp assign,
               llvm::dbgs(), *yieldRegion,
               **regionStates[yieldRegion].modifiedInRun, assign));
           llvm::SmallVector<hlfir::DetailedEffectInstance> effects;
-          gatherMemoryEffects(*yieldRegion, leafRegionsMayOnlyRead, effects);
+          gatherMemoryEffects(*yieldRegion, leafRegionsArePure, effects);
           saveEvaluation(*yieldRegion, effects,
                          anyNonLocalWrite(effects, *yieldRegion));
         }
@@ -958,10 +1047,12 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
   // definition of pure). This is not a commitment that there are no operation
   // with write effect in the regions: entities local to the region may still
   // be written to (e.g., a temporary accumulator implementing SUM). This is
-  // a commitment that no write effect will affect the scheduling problem, and
-  // that all write effect caught by MLIR analysis can be ignored for the
-  // current problem.
-  const bool leafRegionsMayOnlyRead =
+  // a commitment that only a few write effects may affect the scheduling
+  // problem: the STAT= argument of NEXT/PREVIOUS, and the INTENT(OUT) and
+  // INTENT(INOUT) arguments of PURE functions (an extension). Other
+  // write effects caught by MLIR analysis can be ignored for the current
+  // problem.
+  const bool leafRegionsArePure =
       mlir::isa<hlfir::ForallOp>(root.getOperation());
 
   // Loop through the assignments and schedule them.
@@ -969,7 +1060,7 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
   llvm::SmallVector<hlfir::RegionAssignOp> assignments;
   gatherAssignments(root, assignments);
   for (hlfir::RegionAssignOp assign : assignments) {
-    scheduler.startSchedulingAssignment(assign, leafRegionsMayOnlyRead);
+    scheduler.startSchedulingAssignment(assign, leafRegionsArePure);
     // Go through the list of parents (not including the current
     // hlfir.region_assign) in Fortran execution order so that any parent leaf
     // region that must be saved is saved in order.
@@ -980,13 +1071,17 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
       scheduler.startIndependentEvaluationGroup();
       llvm::SmallVector<mlir::Region *, 4> yieldRegions;
       parent.getLeafRegions(yieldRegions);
-      // TODO: is this really limited to WHERE/ELSEWHERE?
-      bool evaluationsMayConflict = mlir::isa<hlfir::WhereOp>(parent) ||
-                                    mlir::isa<hlfir::ElseWhereOp>(parent);
+      // The controls and masks are evaluated before the assignment evaluations
+      // in Fortran. If the assignment evaluations may write to variables used
+      // in the controls and masks, they must be saved. For example, a WHERE
+      // mask might be written by the masked assignment evaluations, or a
+      // FORALL mask by the STAT= argument of NEXT:
+      //   where (mask) r = f() ! function f modifies mask
+      //   forall (i=1:n, st(i)==0) e(i) = next(e(i), stat=st(i))
       for (mlir::Region *yieldRegion : yieldRegions)
-        scheduler.saveEvaluationIfConflict(*yieldRegion, leafRegionsMayOnlyRead,
+        scheduler.saveEvaluationIfConflict(*yieldRegion, leafRegionsArePure,
                                            /*yieldIsImplicitRead=*/true,
-                                           evaluationsMayConflict);
+                                           /*evaluationsMayConflict=*/true);
       scheduler.finishIndependentEvaluationGroup();
     }
     // Look for conflicts between the RHS/LHS evaluation and the assignments.
@@ -996,7 +1091,7 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
     // is taken.
     scheduler.startIndependentEvaluationGroup();
     scheduler.saveEvaluationIfConflict(
-        assign.getRhsRegion(), leafRegionsMayOnlyRead,
+        assign.getRhsRegion(), leafRegionsArePure,
         /*yieldIsImplicitRead=*/!assign.isPointerAssignment());
     // There is no point to save the LHS outside of Forall and assignment to a
     // vector subscripted LHS because the LHS is already fully evaluated and
@@ -1005,10 +1100,10 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
     if (mlir::isa<hlfir::ForallOp>(root.getOperation()) ||
         mlir::isa<hlfir::ElementalAddrOp>(assign.getLhsRegion().back().back()))
       scheduler.saveEvaluationIfConflict(assign.getLhsRegion(),
-                                         leafRegionsMayOnlyRead,
+                                         leafRegionsArePure,
                                          /*yieldIsImplicitRead=*/false);
     scheduler.finishIndependentEvaluationGroup();
-    scheduler.finishSchedulingAssignment(assign, leafRegionsMayOnlyRead);
+    scheduler.finishSchedulingAssignment(assign, leafRegionsArePure);
   }
   return scheduler.moveSchedule();
 }
