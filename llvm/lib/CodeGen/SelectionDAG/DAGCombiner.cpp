@@ -15823,8 +15823,15 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
   }
   Combiner.CombineTo(N, Res);
   DAG.ReplaceAllUsesOfValueWith(SDValue(OldExtLoad, 1), ExtLoad.getValue(1));
-  if (N0->use_empty())
+  if (N0->use_empty()) {
     Combiner.recursivelyDeleteUnusedNodes(N0.getNode());
+  } else {
+    // Other users of the freeze would keep the old load alive next to the new
+    // one, so rewrite them to use a truncate of the new frozen extload.
+    assert(Frozen && "Expected the extload to have a single use");
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, N0.getValueType(), Res);
+    Combiner.CombineTo(N0.getNode(), Trunc);
+  }
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 
