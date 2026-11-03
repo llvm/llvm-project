@@ -64,12 +64,12 @@ static const char *ForeignRuntimeStrTbl[] = {
     "none", "cuda", "cuda_driver", "opencl",
     "sycl", "hip",  "level_zero",  "hsa"};
 const char *getForeignRuntimeIdToStr(const omp_foreign_runtime_id_t FrId) {
-  if (FrId < omp_fr_none || FrId >= omp_fr_last)
+  if (FrId < omp_ifr_none || FrId >= omp_ifr_last)
     return ("unknown");
   return ForeignRuntimeStrTbl[FrId];
 }
 
-constexpr interop_spec_t NoInteropSpec{omp_fr_none, {true, 0}, 0};
+constexpr interop_spec_t NoInteropSpec{omp_ifr_none, {true, 0}, 0};
 
 /// Return the interop specification supported by \p Device for the given
 /// interop type, or NoInteropSpec if the device supports none.
@@ -81,16 +81,16 @@ interop_spec_t selectInteropPreference(DeviceTy &Device, int32_t InteropType,
   interop_spec_t SelectedSpec = NoInteropSpec;
   switch (Device.getBackend()) {
   case OL_PLATFORM_BACKEND_CUDA:
-    SelectedSpec.fr_id = omp_fr_cuda;
+    SelectedSpec.fr_id = omp_ifr_cuda;
     break;
   case OL_PLATFORM_BACKEND_AMDGPU:
     // TODO: update once targetsync is supported.
     if (InteropType == kmp_interop_type_targetsync)
       return NoInteropSpec;
-    SelectedSpec.fr_id = omp_fr_hsa;
+    SelectedSpec.fr_id = omp_ifr_hsa;
     break;
   case OL_PLATFORM_BACKEND_LEVEL_ZERO:
-    SelectedSpec.fr_id = omp_fr_level_zero;
+    SelectedSpec.fr_id = omp_ifr_level_zero;
     break;
   default:;
   }
@@ -99,7 +99,7 @@ interop_spec_t selectInteropPreference(DeviceTy &Device, int32_t InteropType,
 
 omp_vendor_id_t getVendorForForeignRuntime(int32_t FrId) {
   // Vendor of each foreign runtime, indexed by omp_foreign_runtime_id_t.
-  static constexpr omp_vendor_id_t VendorTbl[omp_fr_last] = {
+  static constexpr omp_vendor_id_t VendorTbl[omp_ifr_last] = {
       /*none*/ omp_vendor_unknown,
       /*cuda*/ omp_vendor_nvidia,
       /*cuda_driver*/ omp_vendor_unknown,
@@ -108,7 +108,7 @@ omp_vendor_id_t getVendorForForeignRuntime(int32_t FrId) {
       /*hip*/ omp_vendor_unknown,
       /*level_zero*/ omp_vendor_intel,
       /*hsa*/ omp_vendor_amd};
-  if (FrId < omp_fr_none || FrId >= omp_fr_last)
+  if (FrId < omp_ifr_none || FrId >= omp_ifr_last)
     return omp_vendor_unknown;
   return VendorTbl[FrId];
 }
@@ -138,8 +138,6 @@ omp_interop_val_t *createInterop(DeviceTy &Device, int32_t InteropType,
 
   Interop->native_device = getNativeHandle(olGetDeviceInfo, Device.DeviceHandle,
                                            OL_DEVICE_INFO_NATIVE_HANDLE);
-  if (!Interop->native_device)
-    Interop->err_str = "the device does not expose a native handle";
   Interop->native_platform =
       getNativeHandle(olGetDeviceInfo, Device.DeviceHandle,
                       OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE);
@@ -323,7 +321,7 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
   omp_interop_val_t *Interop = omp_interop_none;
   auto InteropSpec =
       selectInteropPreference(Device, InteropType, NumPrefers, Prefers);
-  if (InteropSpec.fr_id == omp_fr_none) {
+  if (InteropSpec.fr_id == omp_ifr_none) {
     ODBG(ODT_Interface) << "Interop request not supported by device "
                         << DeviceNum;
     return omp_interop_none;

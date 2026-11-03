@@ -92,7 +92,7 @@ typedef struct omp_interop_val_t {
   const kmp_interop_type_t interop_type;
   const intptr_t device_id;
   omp_vendor_id_t vendor_id = omp_vendor_llvm;
-  omp_foreign_runtime_id_t fr_id = omp_fr_none;
+  omp_foreign_runtime_id_t fr_id = omp_ifr_none;
   interop_attrs_t attrs{false, 0}; // Common prefer specification attributes
   int64_t impl_attrs = 0; // Implementation prefer specification attributes
 
