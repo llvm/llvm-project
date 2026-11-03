@@ -355,7 +355,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   LexicalBlocks.clear();
   DebugScopeRegs.clear();
   ScopesInProgress.clear();
-  HasRelaxedExtInst = false;
+  CanUseForwardRefs = false;
   UsedForwardRefs = false;
   PendingStrings.clear();
   PendingGlobalDI.clear();
@@ -474,7 +474,7 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
   // Add the extension to requirements so OpExtension is output.
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
 
-  HasRelaxedExtInst =
+  CanUseForwardRefs =
       SPIRVDebugScopeForwardRefs &&
       ST.canUseExtension(
           SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
@@ -602,7 +602,7 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
   // Tag the instruction with OpExtInstWithForwardRefsKHR and remember the id:
   // if that scope later fails, the id still needs a definition.
   bool HasForwardRef =
-      HasRelaxedExtInst && markForwardReferencedOperands(Operands);
+      CanUseForwardRefs && markForwardReferencedOperands(Operands);
   assert((!HasForwardRef || PendingSink) &&
          "forward reference built after OpExtension was printed");
   UsedForwardRefs |= HasForwardRef;
@@ -841,7 +841,7 @@ auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
   // resolved/emitted.
   auto [InProgressIt, FirstVisit] = ScopesInProgress.try_emplace(S);
   if (!FirstVisit) { // We hit a back edge, it is not the first insertion.
-    if (!HasRelaxedExtInst)
+    if (!CanUseForwardRefs)
       return EmitResult<MCRegister>::inProgress(); // No support for forward
                                                    // refs.
     // Use the reserved id for the back edge when forward references are
@@ -858,7 +858,7 @@ auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
   InProgressIt->second.Id = Id;
 
   EmitResult<PreparedScope> P = emitDebugScope(S);
-  assert((!HasRelaxedExtInst || P.Status == EmitStatus::Emitted ||
+  assert((!CanUseForwardRefs || P.Status == EmitStatus::Emitted ||
           P.Status == EmitStatus::Unsupported) &&
          "InProgress is only returned when forward references are unsupported");
   if (!P) {
@@ -872,7 +872,7 @@ auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
     // supported, P can only be unsupported. Define the id only when an
     // already-emitted instruction named it.
     if (ForwardReferenced) {
-      assert(HasRelaxedExtInst &&
+      assert(CanUseForwardRefs &&
              "a forward reference requires relaxed extended instructions");
       assert(P.Status == EmitStatus::Unsupported &&
              "a forward-referenced scope fails as unsupported");
