@@ -235,7 +235,8 @@ static bool selectMergeValues(MachineInstrBuilder &MIB,
                               MachineRegisterInfo &MRI,
                               const TargetRegisterInfo &TRI,
                               const RegisterBankInfo &RBI) {
-  assert(TII.getSubtarget().hasVFP2Base() && "Can't select merge without VFP");
+  assert(TII.getSubtarget().hasFPRegs() &&
+         "Can't select merge without FP Regs");
 
   // We only support G_MERGE_VALUES as a way to stick together two scalar GPRs
   // into one DPR.
@@ -266,8 +267,8 @@ static bool selectUnmergeValues(MachineInstrBuilder &MIB,
                                 MachineRegisterInfo &MRI,
                                 const TargetRegisterInfo &TRI,
                                 const RegisterBankInfo &RBI) {
-  assert(TII.getSubtarget().hasVFP2Base() &&
-         "Can't select unmerge without VFP");
+  assert(TII.getSubtarget().hasFPRegs() &&
+         "Can't select unmerge without FP Regs");
 
   // We only support G_UNMERGE_VALUES as a way to break up one DPR into two
   // GPRs.

@@ -41,6 +41,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   const LLT s64 = LLT::scalar(64);
 
   const LLT i32 = LLT::integer(32);
+  const LLT i64 = LLT::integer(64);
   const LLT f32 = LLT::float32();
   const LLT f64 = LLT::float64();
 
@@ -53,7 +54,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   getActionDefinitionsBuilder(G_BITCAST)
       .legalFor({{s32, s32}})
       .legalFor(ST.hasFPRegs(), {{s64, s64}})
-      .maxScalar(!ST.hasFPRegs(), 0, i32);
+      .maxScalar(0, ST.hasFPRegs() ? i64 : i32);
 
   getActionDefinitionsBuilder(G_MERGE_VALUES).legalFor({{s64, s32}});
   getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{s32, s64}});
@@ -161,9 +162,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
 
     getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct({s1},
                                                                  {f32, f64});
-
-    getActionDefinitionsBuilder(G_MERGE_VALUES).legalFor({{s64, s32}});
-    getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{s32, s64}});
 
     getActionDefinitionsBuilder(G_FPEXT).legalFor({{f64, f32}});
     getActionDefinitionsBuilder(G_FPTRUNC).legalFor({{f32, f64}});
