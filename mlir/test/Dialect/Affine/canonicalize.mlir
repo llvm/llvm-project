@@ -654,6 +654,29 @@ func.func @canonicalize_affine_if_compose_apply(%N: index) {
 
 // -----
 
+// CHECK: #[[$SET:.+]] = affine_set<(d0, d1)[s0, s1] : (d0 - 2 >= 0, -d1 + 99 >= 0, s0 >= 0, d1 - 2 >= 0, -d0 + 99 >= 0, s1 >= 0)>
+
+// CHECK-LABEL: func @collapse_nested_affine_if
+//  CHECK-SAME:   %[[ARG0:.*]]: index, %[[ARG1:.*]]: index)
+
+func.func @collapse_nested_affine_if(%arg : index, %arg1 : index) {
+  affine.for %i = 0 to 100 {
+    affine.for %j = 0 to 100 {
+      affine.if affine_set<(d0, d1)[s0] : (d0 - 2 >= 0, -d1 + 99 >= 0, s0 >= 0)>(%i, %j)[%arg] {
+        affine.if affine_set<(d0, d1)[s0] : (d0 - 2 >= 0, -d1 + 99 >= 0, s0 >= 0)>(%j, %i)[%arg1]  {
+          "test.foo"() : () -> ()
+        }
+      }
+    }
+  }
+  return
+}
+// CHECK:  affine.for %[[I:.*]] = 0 to 100
+// CHECK:    affine.for %[[J:.*]] = 0 to 100
+// CHECK:      affine.if #[[$SET]](%[[I]], %[[J]])[%[[ARG0]], %[[ARG1]]] 
+
+// -----
+
 // CHECK-DAG: #[[$LBMAP:.*]] = affine_map<()[s0] -> (0, s0)>
 // CHECK-DAG: #[[$UBMAP:.*]] = affine_map<()[s0] -> (1024, s0 * 2)>
 
