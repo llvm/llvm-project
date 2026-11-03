@@ -388,20 +388,21 @@ private:
   void emitMCInst(MCInst &Inst);
   MCRegister emitOpString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Section 7 only: emit OpString and cache it if not already present. Must
-  /// not be called after DebugStringsGenerated is set. Returns the path (or
-  /// string) \c OpString result id.
+  /// generateDebugStrings() only: emit OpString and cache it if not already
+  /// present. Must not be called after DebugStringsGenerated is set. Returns
+  /// the path (or string) \c OpString result id.
   MCRegister emitOpStringIfNew(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Section 10 only: lookup OpString id from cache; asserts if missing or if
-  /// section 7 did not complete.
+  /// generateDebugStrings() did not complete.
   MCRegister getCachedOpStringReg(StringRef S);
 
-  /// Section 7 only: emit the path \c OpString for \p Scope and cache it under
-  /// \p Scope. Returns the \c OpString result id. A \p Scope already seen
-  /// returns the cached id without rebuilding the path. A null \p Scope maps to
-  /// the empty path and is cached like any other, though section 10 reads it
-  /// through \c getCachedScopePathOpStringReg, which handles null separately.
+  /// generateDebugStrings() only: emit the path \c OpString for \p Scope and
+  /// cache it under \p Scope. Returns the \c OpString result id. A \p Scope
+  /// already seen returns the cached id without rebuilding the path. A null
+  /// \p Scope maps to the empty path and is cached like any other, though
+  /// section 10 reads it through \c getCachedScopePathOpStringReg, which
+  /// handles null separately.
   MCRegister emitAndCacheScopePathOpStringReg(const DIScope *Scope,
                                               SPIRV::ModuleAnalysisInfo &MAI);
 

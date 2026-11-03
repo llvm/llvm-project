@@ -950,8 +950,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // non-semantic instructions with OpExtInst.
   outputModuleSection(SPIRV::MB_TypeConstVars);
   // 10. All global NonSemantic.Shader.DebugInfo.100 instructions. The
-  // SPIRVNonSemanticDebugHandler emits these directly as MCInsts; the
-  // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
+  // SPIRVNonSemanticDebugHandler outputs the MCInsts it buffered;
+  // the MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
   if (AuxDataHandler)
