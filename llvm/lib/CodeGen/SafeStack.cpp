@@ -565,7 +565,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   if (StackGuardSlot) {
     unsigned Offset = SSL.getObjectOffset(StackGuardSlot);
-    Value *Off = IRB.CreatePtrAddWithSignedOffset(BasePointer, (int)-Offset);
+    Value *Off =
+        IRB.CreatePtrAddWithSignedOffset(BasePointer, -(int64_t)Offset);
     Value *NewAI =
         IRB.CreateBitCast(Off, StackGuardSlot->getType(), "StackGuardSlot");
 
@@ -583,7 +584,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     if (Size == 0)
       Size = 1; // Don't create zero-sized stack objects.
 
-    Value *Off = IRB.CreatePtrAddWithSignedOffset(BasePointer, (int)-Offset);
+    Value *Off =
+        IRB.CreatePtrAddWithSignedOffset(BasePointer, -(int64_t)Offset);
     Value *NewArg = IRB.CreateBitCast(Off, Arg->getType(),
                                       Arg->getName() + ".unsafe-byval");
 
@@ -625,7 +627,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
       IRBuilder<> IRBUser(InsertBefore);
       Value *Off =
-          IRBUser.CreatePtrAddWithSignedOffset(BasePointer, (int)-Offset);
+          IRBUser.CreatePtrAddWithSignedOffset(BasePointer, -(int64_t)Offset);
       Value *Replacement =
           IRBUser.CreateAddrSpaceCast(Off, AI->getType(), Name);
 
@@ -656,7 +658,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   IRB.SetInsertPoint(BasePointer->getNextNode());
 
   Value *StaticTop = IRB.CreatePtrAddWithSignedOffset(
-      BasePointer, (int)-FrameSize, "unsafe_stack_static_top");
+      BasePointer, -(int64_t)FrameSize, "unsafe_stack_static_top");
   IRB.CreateStore(StaticTop, UnsafeStackPtr);
   return StaticTop;
 }
