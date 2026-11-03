@@ -990,6 +990,7 @@ set(files
   __utility/as_lvalue.h
   __utility/assume.h
   __utility/auto_cast.h
+  __utility/checked_int.h
   __utility/cmp.h
   __utility/constant_wrapper.h
   __utility/convert_to_integral.h
