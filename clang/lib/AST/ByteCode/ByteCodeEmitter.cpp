@@ -88,7 +88,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   Func->setIsFullyCompiled(true);
 }
 
-Scope::Local ByteCodeEmitter::createLocal(const Descriptor *D) {
+Scope::Local ByteCodeEmitter::createLocal(const Descriptor *D, bool) {
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
   assert(aligned(Block::getMetadataSize(Block::Local) + D->getAllocSize()));

@@ -133,8 +133,6 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
 
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
-bool isConstexprUnknown(const Pointer &P);
-bool isConstexprUnknown(const Block *B);
 bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
                  bool IsReferenceCast);
 bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
@@ -886,11 +884,6 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                   bool CanOverflow, UnsignedOrNone BitWidth = std::nullopt) {
   assert(!Ptr.isDummy());
 
-  if (!S.inConstantContext()) {
-    if (isConstexprUnknown(Ptr))
-      return false;
-  }
-
   if constexpr (std::is_same_v<T, Boolean>) {
     if (!S.getLangOpts().CPlusPlus14)
       return Invalid(S, OpPC);
@@ -1321,7 +1314,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   assert(!RHS.isZero());
 
   if (!S.inConstantContext()) {
-    if (isConstexprUnknown(LHS) || isConstexprUnknown(RHS))
+    if (LHS.isConstexprUnknown() || RHS.isConstexprUnknown())
       return false;
   }
 
@@ -2054,7 +2047,7 @@ inline bool GetRefGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
     return true;
   }
 
-  if (isConstexprUnknown(B)) {
+  if (B->isConstexprUnknown()) {
     S.Stk.push<Pointer>(B);
     return true;
   }
