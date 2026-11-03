@@ -1698,6 +1698,7 @@ void local_class() {
   }
 }
 
+#ifndef __MVS__
 void thread_local_var() {
   template for (int x : {0}) {
     thread_local int v1;
@@ -1705,6 +1706,7 @@ void thread_local_var() {
     static __thread int v3;
   }
 }
+#endif
 
 task coro() {
   template for (int x : {0}) {

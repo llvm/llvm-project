@@ -97,9 +97,11 @@ Test hostglob4(foo(x));
 // expected-error@-1 {{invalid use of a __managed__ variable}}
 // expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
 
+#ifndef __MVS__
 thread_local int hostglob5 = x;
 // expected-error@-1 {{invalid use of a __managed__ variable}}
 // expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
+#endif
 
 int ok = sizeof(x);
 auto reader = [] { return x; };
