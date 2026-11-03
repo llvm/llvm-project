@@ -939,11 +939,14 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     ConstWGSize = Device.getDefaultNumThreads();
     std::string WGSizeName(getName());
     WGSizeName += "_wg_size";
-    GlobalTy HostConstWGSize(WGSizeName, sizeof(decltype(ConstWGSize)),
-                             &ConstWGSize);
+    GlobalTy ImageWGSize(WGSizeName);
     GenericGlobalHandlerTy &GHandler = Device.Plugin.getGlobalHandler();
-    if (auto Err =
-            GHandler.readGlobalFromImage(Device, AMDImage, HostConstWGSize)) {
+    Error Err =
+        GHandler.getGlobalMetadataFromImage(Device, AMDImage, ImageWGSize);
+    if (!Err && ImageWGSize.getPtr() &&
+        ImageWGSize.getSize() == sizeof(ConstWGSize)) {
+      std::memcpy(&ConstWGSize, ImageWGSize.getPtr(), sizeof(ConstWGSize));
+    } else {
       // In case it is not found, we simply stick with the defaults.
       // So we consume the error and print a debug message.
       ODBG(ODT_Tool) << "Could not load " << WGSizeName.c_str()

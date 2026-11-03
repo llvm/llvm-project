@@ -521,11 +521,6 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             // Read this kernel's launch-geometry properties once, from its
             // "<name>_kernel_environment" global, and cache them on
             // the device for use at launch time.
-            llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
-                Device.RTL->getDevice(Device.RTLDeviceID);
-            auto &Image =
-                *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
-                    Program.getHandle());
 
             // Downstream, these constant globals are read from the ELF image
             // on the host rather than copied back from device memory. That
@@ -533,16 +528,14 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             // out of the plugin API trace (LIBOMPTARGET_KERNEL_TRACE).
             auto ReadImageGlobal = [&](const char *Suffix, void *Dst,
                                        uint32_t Size) {
-              llvm::omp::target::plugin::GlobalTy HostGlobal(
-                  std::string(Entry.SymbolName) + Suffix, Size, Dst);
-              if (auto Err = GenericDevice.Plugin.getGlobalHandler()
-                                 .readGlobalFromImage(GenericDevice, Image,
-                                                      HostGlobal)) {
+              std::string Name = std::string(Entry.SymbolName) + Suffix;
+              if (auto Err =
+                      Program.readGlobalFromImage(Name.c_str(), Dst, Size)) {
                 // Not all kernels have all of these globals, e.g., No-Loop
                 // kernels have no kernel environment.
                 [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-                ODBG(ODT_Mapping) << "Failed to read " << HostGlobal.getName()
-                                  << ": " << ErrStr;
+                ODBG(ODT_Mapping)
+                    << "Failed to read " << Name << ": " << ErrStr;
                 return false;
               }
               return true;
@@ -571,6 +564,9 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
               REPORT() << "Failed to query max threads of " << Entry.SymbolName
                        << ": " << Res->Details;
 
+            auto &Image =
+                *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
+                    Program.getHandle());
             const auto &Cfg = KernelEnv.Configuration;
 
             // Downstream, "<name>_exec_mode" is authoritative: the AMD-only
