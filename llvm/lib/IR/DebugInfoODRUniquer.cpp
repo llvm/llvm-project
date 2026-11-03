@@ -72,7 +72,8 @@ void DebugInfoODRUniquer::finalizeUnresolvedSubprogramDecls() {
     // declarations, which shouldn't be distinct. Save it in our map in case
     // other instances need to be ODR-uniqued to it.
     auto *NewSP = DISubprogram::replaceWithPermanent(std::move(SP));
-    assert(NewSP->isResolved() && "expected SP to be resolved");
+    assert(isa<DIScope>(NewSP->getScope()) &&
+           "Unexpected scope MDNode placeholder");
     addSubprogramDecl(NewSP);
   }
   PendingFnDecls.clear();
