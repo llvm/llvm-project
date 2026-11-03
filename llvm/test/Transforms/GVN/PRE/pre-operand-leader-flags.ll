@@ -18,7 +18,7 @@ define i64 @gep_inbounds_leader(i1 %c, i64 %idx) {
 ; CHECK-NEXT:    [[RA:%.*]] = ptrtoint ptr [[GA]] to i64
 ; CHECK-NEXT:    br label %[[JOIN:.*]]
 ; CHECK:       [[PB]]:
-; CHECK-NEXT:    [[GB:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX]]
+; CHECK-NEXT:    [[GB:%.*]] = getelementptr i8, ptr null, i64 [[IDX]]
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[GB]] to i64
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
@@ -54,7 +54,7 @@ define i32 @icmp_samesign_leader(i1 %c, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[RA:%.*]] = zext i1 [[CA]] to i32
 ; CHECK-NEXT:    br label %[[JOIN:.*]]
 ; CHECK:       [[PB]]:
-; CHECK-NEXT:    [[CB:%.*]] = icmp samesign ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[CB:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = zext i1 [[CB]] to i32
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:

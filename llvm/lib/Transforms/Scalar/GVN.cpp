@@ -3940,6 +3940,8 @@ bool GVNPassImpl::performScalarPREInsertion(Instruction *Instr,
   // that weren't originally present will have been instantiated earlier
   // in this loop.
   bool Success = true;
+  // Leaders that replace an operand, paired with the value they stand in for.
+  SmallVector<std::pair<Instruction *, Instruction *>, 4> ReplacedOperands;
   for (unsigned I = 0, E = Instr->getNumOperands(); I != E; ++I) {
     Value *Op = Instr->getOperand(I);
     if (isa<Argument>(Op) || isa<Constant>(Op) || isa<GlobalValue>(Op))
@@ -3954,6 +3956,15 @@ bool GVNPassImpl::performScalarPREInsertion(Instruction *Instr,
     }
     uint32_t TValNo = VN.phiTranslate(Pred, Curr, VN.lookup(Op), LeaderTable);
     if (Value *V = findLeader(Pred, TValNo)) {
+      // On the edge from Pred, a phi in Curr is its incoming value; any other
+      // operand is itself.
+      Value *Orig = Op;
+      if (auto *PN = dyn_cast<PHINode>(Op); PN && PN->getParent() == Curr)
+        Orig = PN->getIncomingValueForBlock(Pred);
+      auto *OrigI = dyn_cast<Instruction>(Orig);
+      auto *LeaderI = dyn_cast<Instruction>(V);
+      if (OrigI && LeaderI && OrigI != LeaderI)
+        ReplacedOperands.emplace_back(OrigI, LeaderI);
       Instr->setOperand(I, V);
     } else {
       Success = false;
@@ -3966,6 +3977,13 @@ bool GVNPassImpl::performScalarPREInsertion(Instruction *Instr,
   // are not value numbered precisely.
   if (!Success)
     return false;
+
+  // Value numbering ignores poison-generating flags and metadata, so a leader
+  // may be more poisonous than the operand it replaces (e.g. an inbounds GEP
+  // replacing a plain GEP). Weaken the leader so the new instruction is no
+  // more poisonous than the original.
+  for (auto [OrigI, LeaderI] : ReplacedOperands)
+    patchReplacementInstruction(OrigI, LeaderI);
 
   Instr->insertBefore(Pred->getTerminator()->getIterator());
   Instr->setName(Instr->getName() + ".pre");
