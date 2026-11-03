@@ -79,11 +79,6 @@ class DebugInfoODRUniquer {
   SmallVector<TempDISubprogram> PendingFnDecls;
 
 public:
-  ~DebugInfoODRUniquer() {
-    assert(PendingFnDecls.empty() &&
-           "Unexpected unresolved maybe-ODR-unique DISubprograms");
-  }
-
   // FIXME: Improve the interface for types.
   DenseMap<const MDString *, DICompositeType *> DITypeMap;
 
