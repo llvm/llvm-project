@@ -282,6 +282,12 @@ public:
   LLVM_ABI void moveOperands(MachineOperand *Dst, MachineOperand *Src,
                              unsigned NumOps);
 
+  /// Swap the contents of operands \p A and \p B, updating use-def lists as
+  /// needed. Each operand keeps its parent instruction and its tied-operand
+  /// status, so a tied register operand can only be swapped with another
+  /// register operand.
+  LLVM_ABI void swapOperands(MachineOperand *A, MachineOperand *B);
+
   /// Verify the sanity of the use list for Reg.
   LLVM_ABI void verifyUseList(Register Reg) const;
 
