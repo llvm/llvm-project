@@ -1,4 +1,3 @@
-
 // RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s --check-prefix=CIR
 
 void before(void);
