@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wlifetime-safety-experimental-destructor-use -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -1015,3 +1015,38 @@ struct S {
   }            // expected-note {{later used here}}
 };
 } // namespace CapturedByThis
+
+namespace implicit_use_after_free {
+struct [[gsl::Pointer]] Ref {
+  const int *p;
+  Ref &operator=(const int *q [[clang::lifetime_capture_by_this]]);
+  ~Ref();
+};
+void cleanup_ref(Ref *r);
+
+void via_destructor() {
+  Ref r;
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  r = h;
+  delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void via_cleanup() {
+  Ref g __attribute__((cleanup(cleanup_ref)));
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  g = h;
+  delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the cleanup function of 'g' at scope exit}}
+
+struct [[gsl::Pointer]] ViewRef {
+  std::string_view sv;
+  ViewRef &operator=(std::string_view s [[clang::lifetime_capture_by_this]]);
+  ~ViewRef();
+};
+void via_destructor_invalidated() {
+  std::string s;
+  ViewRef r;
+  r = s;            // expected-warning {{local variable 's' is later invalidated}}
+  s.push_back('x'); // expected-note {{local variable 's' is invalidated here}}
+}                   // expected-note {{later used by the destructor of 'r' at scope exit}}
+} // namespace implicit_use_after_free

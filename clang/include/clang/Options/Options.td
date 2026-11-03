@@ -1146,6 +1146,7 @@ def bundle__loader : Separate<["-"], "bundle_loader">;
 def bundle : Flag<["-"], "bundle">;
 def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   HelpText<"Pass -b <arg> to the linker on AIX">, MetaVarName<"<arg>">,
+  Visibility<[ClangOption, FlangOption]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
@@ -3785,6 +3786,13 @@ def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduce
 def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
   Group<f_Group>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
+
+defm module_local_hints : BoolFOption<"module-local-hints",
+  CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Mark inline functions and template instantiations defined in the "
+          "main source file as likely_module_local">,
+  NegFlag<SetFalse>>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
