@@ -3916,8 +3916,8 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
   SymbolRef EscapingSymbol = nullptr;
   if (Kind == PSK_DirectEscapeOnCall) {
     // If we want to model this call explicitly, don't discard state.
-    // FIXME: Maybe extend this to non-direct escape and/or non-simple calls
-    // (e.g. 'isMemCall' is true for a C++ method with ownership attributes)?
+    // FIXME: Maybe extend this to non-direct escape and/or non-simple calls?
+    // ('isMemCall' is true for e.g. a C++ method with ownership attributes.)
     if (isa<SimpleFunctionCall>(Call) && isMemCall(*Call))
       return State;
     // If we know that the call cannot release memory, don't discard state.
