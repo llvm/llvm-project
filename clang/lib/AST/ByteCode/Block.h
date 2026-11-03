@@ -24,6 +24,30 @@ class InterpState;
 class Pointer;
 enum PrimType : uint8_t;
 
+struct BlockFlags {
+  static constexpr uint8_t Extern = 1u << 0u;
+  static constexpr uint8_t Dead = 1u << 1u;
+  static constexpr uint8_t Weak = 1u << 2u;
+  static constexpr uint8_t ConstexprUnknown = 1u << 3u;
+
+  uint8_t V = 0;
+  constexpr BlockFlags(uint8_t V = 0) : V(V) {}
+  static constexpr BlockFlags empty() { return BlockFlags(); }
+
+  constexpr BlockFlags withExtern(bool B = true) const {
+    return BlockFlags(V | (B * Extern));
+  }
+  constexpr BlockFlags withDead(bool B = true) const {
+    return BlockFlags(V | (B * Dead));
+  }
+  constexpr BlockFlags withWeak(bool B = true) const {
+    return BlockFlags(V | (B * Weak));
+  }
+  constexpr BlockFlags withConstexprUnknown(bool B = true) const {
+    return BlockFlags(V | (B * ConstexprUnknown));
+  }
+};
+
 /// A memory block, either on the stack or in the heap.
 ///
 /// The storage described by the block is immediately followed by
@@ -42,33 +66,18 @@ enum PrimType : uint8_t;
 /// getAllocSize() returns getMetadataSize() + Desc->getAllocSize().
 ///
 class Block final {
-private:
-  static constexpr uint8_t ExternFlag = 1 << 0;
-  static constexpr uint8_t DeadFlag = 1 << 1;
-  static constexpr uint8_t WeakFlag = 1 << 2;
-
 public:
   enum BlockKind : uint8_t { None, Local, Global };
 
-  /// Creates a new block.
   Block(unsigned EvalID, UnsignedOrNone DeclID, const Descriptor *Desc,
-        BlockKind K, bool IsExtern, bool IsWeak)
-
+        BlockKind K, BlockFlags Flags = BlockFlags::empty())
       : Desc(Desc), DescSize(Desc->getAllocSize()), DeclID(DeclID),
-        EvalID(EvalID), Kind(K), MDSize(getMetadataSize(K)) {
-    assert(Desc);
-    AccessFlags |= (ExternFlag * IsExtern);
-    AccessFlags |= (WeakFlag * IsWeak);
-  }
+        EvalID(EvalID), Flags(Flags), Kind(K), MDSize(getMetadataSize(K)) {}
 
   Block(unsigned EvalID, const Descriptor *Desc, BlockKind K,
-        bool IsExtern = false, bool IsWeak = false)
-      : Desc(Desc), DescSize(Desc->getAllocSize()), EvalID(EvalID), Kind(K),
-        MDSize(getMetadataSize(K)) {
-    assert(Desc);
-    AccessFlags |= (ExternFlag * IsExtern);
-    AccessFlags |= (WeakFlag * IsWeak);
-  }
+        BlockFlags Flags = BlockFlags::empty())
+      : Desc(Desc), DescSize(Desc->getAllocSize()), EvalID(EvalID),
+        Flags(Flags), Kind(K), MDSize(getMetadataSize(K)) {}
 
   /// Number of bytes needed to allocate the block.
   static unsigned allocSize(const Descriptor *D, BlockKind K) {
@@ -95,23 +104,25 @@ public:
   /// Checks if the block has any live pointers.
   bool hasPointers() const { return Pointers; }
   /// Checks if the block is extern.
-  bool isExtern() const { return AccessFlags & ExternFlag; }
+  bool isExtern() const { return Flags.V & BlockFlags::Extern; }
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
-  bool isWeak() const { return AccessFlags & WeakFlag; }
+  bool isWeak() const { return Flags.V & BlockFlags::Weak; }
   bool isDynamic() const {
     bool Result = (DynAllocId != std::nullopt);
     assert((Result == Desc->isDynAlloc()) &&
            "Inconsistent block/descriptor dynamic alloc state");
     return Result;
   }
-  bool isDead() const { return AccessFlags & DeadFlag; }
+  bool isDead() const { return Flags.V & BlockFlags::Dead; }
+  bool isConstexprUnknown() const {
+    return Flags.V & BlockFlags::ConstexprUnknown;
+  }
+  bool isAccessible() const { return Flags.V == 0; }
   /// Returns the size of the block, excluding metadata.
   unsigned getSize() const { return DescSize; }
   /// Returns the size of the block, including metadata.
   unsigned getAllocSize() const { return DescSize + MDSize; }
-  /// Returns the size of the metadata.
-  unsigned getMetadataSize() const { return MDSize; }
   /// Returns the declaration ID.
   UnsignedOrNone getDeclID() const { return DeclID; }
   /// Returns whether the data of this block has been initialized via
@@ -144,7 +155,7 @@ public:
   template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
 
   template <typename T> T &getBlockDesc() {
-    assert(sizeof(T) == getMetadataSize());
+    assert(sizeof(T) == getMetadataSize(Kind));
 
     if constexpr (std::is_same_v<T, GlobalInlineDescriptor>)
       assert(Kind == Global);
@@ -186,24 +197,12 @@ public:
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
 
-  bool isAccessible() const { return AccessFlags == 0; }
-
 private:
   friend class Pointer;
   friend class DeadBlock;
   friend class InterpState;
   friend class DynamicAllocator;
   friend class Program;
-
-  Block(unsigned EvalID, const Descriptor *Desc, BlockKind K, bool IsExtern,
-        bool IsWeak, bool IsDead)
-      : Desc(Desc), DescSize(Desc->getAllocSize()), EvalID(EvalID), Kind(K),
-        MDSize(getMetadataSize(K)) {
-    assert(Desc);
-    AccessFlags |= (ExternFlag * IsExtern);
-    AccessFlags |= (DeadFlag * IsDead);
-    AccessFlags |= (WeakFlag * IsWeak);
-  }
 
   /// To be called by DynamicAllocator.
   void setDynAllocId(unsigned ID) { DynAllocId = ID; }
@@ -219,6 +218,9 @@ private:
   bool hasPointer(const Pointer *P) const;
 #endif
 
+  /// For DynamicAllocator.
+  void markDead() { Flags = Flags.withDead(); }
+
   /// Pointer to the stack slot descriptor.
   const Descriptor *const Desc;
   /// Start of the chain of pointers.
@@ -230,8 +232,7 @@ private:
   const unsigned EvalID = ~0u;
   /// Allocation ID for this dynamic allocation, if it is one.
   UnsignedOrNone DynAllocId = std::nullopt;
-  /// AccessFlags containing IsExtern, IsDead and IsWeak bits.
-  uint8_t AccessFlags = 0;
+  BlockFlags Flags;
   /// Type of this block.
   const BlockKind Kind;
   /// Size of block-level metadata.

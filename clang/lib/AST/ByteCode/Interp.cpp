@@ -339,16 +339,6 @@ void cleanupAfterFunctionCall(InterpState &S, const Function *Func) {
     S.Stk.discard<Pointer>();
 }
 
-bool isConstexprUnknown(const Block *B) {
-  return B->getDescriptor()->IsConstexprUnknown;
-}
-
-bool isConstexprUnknown(const Pointer &P) {
-  if (!P.isBlockPointer() || P.isZero())
-    return false;
-  return isConstexprUnknown(P.block());
-}
-
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   if (Ptr.isDummy())
     return false;
@@ -874,7 +864,9 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   if (!B->isAccessible()) {
     if (!CheckExtern(S, OpPC, B))
       return false;
-    return CheckWeak(S, OpPC, B);
+    if (!CheckWeak(S, OpPC, B))
+      return false;
+    return false;
   }
 
   if (!CheckConstant(S, OpPC, B->getDescriptor()))
@@ -956,7 +948,9 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
     }
     if (!CheckExtern(S, OpPC, Ptr.block()))
       return false;
-    return CheckWeak(S, OpPC, Ptr.block());
+    if (!CheckWeak(S, OpPC, Ptr.block()))
+      return false;
+    return false;
   }
 
   if (!CheckConstant(S, OpPC, Ptr, AK))
@@ -976,8 +970,6 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
   if (!CheckMutable(S, OpPC, Ptr, AK))
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK))
-    return false;
-  if (isConstexprUnknown(Ptr.block()))
     return false;
 
   if (!Ptr.isArrayRoot()) {
@@ -1051,7 +1043,9 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
       return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
-    return CheckWeak(S, OpPC, Ptr.block());
+    if (!CheckWeak(S, OpPC, Ptr.block()))
+      return false;
+    return false;
   }
 
   if (Ptr.isPastEnd())
@@ -1073,8 +1067,6 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     if (!CheckMutable(S, OpPC, Ptr.view()))
       return false;
   }
-  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-    return false;
   return true;
 }
 
@@ -1092,7 +1084,9 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK))
       return false;
-    return CheckExtern(S, OpPC, Ptr);
+    if (!CheckExtern(S, OpPC, Ptr))
+      return false;
+    return false;
   }
   if (!WillBeActivated && !CheckLifetime(S, OpPC, Ptr, AK))
     return false;
@@ -1108,14 +1102,12 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckMutable(S, OpPC, Ptr.view(), AK))
     return false;
-  if (isConstexprUnknown(Ptr))
-    return false;
   return true;
 }
 
 static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         bool IsCtor, bool IsDtor) {
-  if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
+  if (!Ptr.isDummy() && !Ptr.isConstexprUnknown()) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
@@ -2881,8 +2873,6 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
   if (!CheckConst(S, OpPC, Ptr))
     return false;
-  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-    return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
   const ASTContext &ASTCtx = S.getASTContext();
@@ -3066,7 +3056,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
 }
 
 bool handleReference(InterpState &S, CodePtr OpPC, Block *B) {
-  if (isConstexprUnknown(B)) {
+  if (B->isConstexprUnknown()) {
     S.Stk.push<Pointer>(B);
     return true;
   }

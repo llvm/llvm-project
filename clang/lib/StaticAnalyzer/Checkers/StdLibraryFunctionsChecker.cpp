@@ -1490,6 +1490,23 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
   llvm_unreachable("Unknown invalidation kind!");
 }
 
+/// Returns whether the signatures should match based on the restrict
+/// qualifier.
+/// The "restrict" keyword is illegal in C++, however, many libc
+/// implementations use the "__restrict" compiler intrinsic in functions
+/// prototypes. The "__restrict" keyword qualifies a type as a restricted type
+/// even in C++.
+/// In case of any non-C99 languages, we don't want to match based on the
+/// restrict qualifier because we cannot know if the given libc implementation
+/// qualifies the paramter type or not.
+/// The Microsoft C runtime (e.g. UCRT) omits the restrict qualifiers of the
+/// standard prototypes even in C99 and later, so we don't match based on the
+/// restrict qualifier when targeting the MSVC environment either.
+static bool isRestrictSignificant(const ASTContext &ACtx) {
+  return ACtx.getLangOpts().C99 &&
+         !ACtx.getTargetInfo().getTriple().isWindowsMSVCEnvironment();
+}
+
 bool StdLibraryFunctionsChecker::Signature::matches(
     const FunctionDecl *FD) const {
   assert(!isInvalid());
@@ -1497,15 +1514,8 @@ bool StdLibraryFunctionsChecker::Signature::matches(
   if (FD->param_size() != ArgTys.size())
     return false;
 
-  // The "restrict" keyword is illegal in C++, however, many libc
-  // implementations use the "__restrict" compiler intrinsic in functions
-  // prototypes. The "__restrict" keyword qualifies a type as a restricted type
-  // even in C++.
-  // In case of any non-C99 languages, we don't want to match based on the
-  // restrict qualifier because we cannot know if the given libc implementation
-  // qualifies the paramter type or not.
   auto RemoveRestrict = [&FD](QualType T) {
-    if (!FD->getASTContext().getLangOpts().C99)
+    if (!isRestrictSignificant(FD->getASTContext()))
       T.removeLocalRestrict();
     return T;
   };
@@ -1606,7 +1616,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   public:
     GetRestrictTy(const ASTContext &ACtx) : ACtx(ACtx) {}
     QualType operator()(QualType Ty) {
-      return ACtx.getLangOpts().C99 ? ACtx.getRestrictType(Ty) : Ty;
+      return isRestrictSignificant(ACtx) ? ACtx.getRestrictType(Ty) : Ty;
     }
     std::optional<QualType> operator()(std::optional<QualType> Ty) {
       if (Ty)

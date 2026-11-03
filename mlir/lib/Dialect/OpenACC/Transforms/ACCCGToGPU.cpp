@@ -1865,6 +1865,7 @@ void ACCCGToGPULowering::createPerRowBarrier(Location loc) {
     (void)accSupport.emitNYI(
         loc,
         "per-row barrier to support worker parallelism on non-NVIDIA device");
+    return;
   }
 
   // Per-row barrier with fully runtime branching.
