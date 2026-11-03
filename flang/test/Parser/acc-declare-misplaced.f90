@@ -1,6 +1,6 @@
 ! RUN: split-file %s %t
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/continued.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=CONTINUED --implicit-check-not="error:" -DFILE=continued.f90 -DLINE1=1 -DLINE2=7 -DLINE3=12
-! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/malformed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=MALFORMED
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/malformed.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=MALFORMED --implicit-check-not="error:" --implicit-check-not="OpenACC DECLARE"
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/consecutive.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=consecutive.f90 -DLINE1=1 -DLINE2=2 -DLINE3=3
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/trailing.f90 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=trailing.f90 -DLINE1=3 -DLINE2=7 -DLINE3=11
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed.f 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not="error:" -DFILE=fixed.f -DLINE1=1 -DLINE2=8 -DLINE3=14
@@ -54,7 +54,8 @@
 ! CONTINUED-NEXT: {{^  \^$}}
 ! The unmatched parenthesis is a prescanner control; balanced malformed
 ! directives that reach parser recovery are covered in acc-declare-recovery.f90.
-! MALFORMED: malformed.f90:3:{{[0-9]+}}: error:
+! MALFORMED: error: Could not scan
+! MALFORMED: malformed.f90:3:21: error: Unmatched '('
 
 !--- external.f90
 !$acc declare create(x)

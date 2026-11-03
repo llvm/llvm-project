@@ -14,6 +14,11 @@
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/fixed-ambiguous.f 2>&1 | FileCheck %s --strict-whitespace --check-prefix=AMBIGUOUS --implicit-check-not="OpenACC DECLARE"
 ! RUN: not %flang_fc1 -fopenacc -ffixed-form -fsyntax-only %t/fixed-cuda-ambiguous.cuf 2>&1 | FileCheck %s --strict-whitespace --check-prefix=AMBIGUOUS --implicit-check-not="OpenACC DECLARE"
 ! RUN: not %flang_fc1 -fsyntax-only %t/malformed-header.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=HEADER --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/unsupported-wait.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=FALLBACK -DFILE=unsupported-wait.f90 --implicit-check-not="OpenACC DECLARE"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/unsupported-routine.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=FALLBACK -DFILE=unsupported-routine.f90 --implicit-check-not="OpenACC DECLARE"
+! RUN: not %flang_fc1 -fopenacc -fopenmp -fsyntax-only %t/unsupported-omp.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=FALLBACK -DFILE=unsupported-omp.f90 --implicit-check-not="OpenACC DECLARE"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/external-body-error.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=BODY -DFILE=external-body-error.f90 -DDECLARE=1 -DBODYLINE=3 --implicit-check-not="error:"
+! RUN: not %flang_fc1 -fopenacc -fsyntax-only %t/module-body-error.f90 2>&1 | FileCheck %s --strict-whitespace --check-prefix=BODY -DFILE=module-body-error.f90 -DDECLARE=3 -DBODYLINE=5 --implicit-check-not="error:"
 
 ! Check filenames and exact locations, as well as the diagnostic text. The
 ! malformed directives have balanced parentheses and reach parser recovery.
@@ -48,6 +53,19 @@
 ! Normal SUBROUTINE parsing must retain its malformed-header recovery.
 ! HEADER: error: Could not parse
 ! HEADER: malformed-header.f90:1:14: error: expected end of statement
+
+! Lexical lookahead can cross directives that the file-scope grammar cannot
+! consume. Keep the normal diagnostic path instead of recovering a partial
+! prefix and diagnosing its DECLARE in isolation.
+! FALLBACK: error: Could not parse
+! FALLBACK: [[FILE]]:3:12: error: expected '('
+
+! Recovery must leave errors inside the following procedure visible.
+! BODY: error: Could not parse
+! BODY: [[FILE]]:[[DECLARE]]:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
+! BODY: [[FILE]]:[[BODYLINE]]:8: error: expected ':'
+! BODY-NEXT: return ,
+! BODY-NEXT: {{^         \^$}}
 
 !--- headers.f90
 recursive subroutine rec(a)
@@ -163,3 +181,36 @@ c$acc declare create(x)
       attributes(device) subroutine s
       real :: x
       end subroutine
+
+!--- unsupported-wait.f90
+!$acc declare create(x)
+!$acc wait
+subroutine s()
+end subroutine
+
+!--- unsupported-routine.f90
+!$acc declare create(x)
+!$acc routine(s) seq junk
+subroutine s()
+end subroutine
+
+!--- unsupported-omp.f90
+!$acc declare create(x)
+!$omp declare target
+subroutine s()
+end subroutine
+
+!--- external-body-error.f90
+!$acc declare create(x)
+subroutine s()
+return ,
+end subroutine
+
+!--- module-body-error.f90
+module m
+contains
+!$acc declare create(x)
+subroutine s()
+return ,
+end subroutine
+end module
