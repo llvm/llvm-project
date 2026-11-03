@@ -61,10 +61,10 @@ entry:
   ret void
 }
 
-; Check that x20 is NOT used to pass a swiftself argument when the attribute is
+; Check that x20 is used to pass a swiftself argument when the parameter is
 ; only in the declaration's arguments.
 ; CHECK-LABEL: _swiftself_not_on_call_params:
-; CHECK-NOT: mov{{.*}}x20
+; CHECK: mov x20, x0
 ; CHECK: bl {{_?}}swiftself_param
 ; CHECK: ret
 define ptr @swiftself_not_on_call_params(ptr %arg) {

@@ -330,5 +330,15 @@ define i1 @freeze_samesign(i32 %x) {
   ret i1 %fr
 }
 
+define i1 @freeze_samesign_consts(i32 %x) {
+; CHECK-LABEL: @freeze_samesign_consts(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 -42, 42
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp samesign ult i32 -42, 42
+  %fr = freeze i1 %cmp
+  ret i1 %fr
+}
+
 declare void @g1()
 declare void @g2()

@@ -486,3 +486,17 @@ entry:
   %is.inf = call i1 @llvm.is.fpclass.f16(half %f, i32 516)
   ret i1 %is.inf
 }
+
+; The sitofp -> uitofp nneg canonicalization should keep ninf/nsz (still
+; semantically meaningful for the cast), but drop nnan/afn (meaningless for
+; a value-preserving cast).
+define float @sitofp_to_uitofp_keeps_ninf_nsz(i32 %a) {
+; CHECK-LABEL: @sitofp_to_uitofp_keeps_ninf_nsz(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[F:%.*]] = uitofp ninf nsz nneg i32 [[M]] to float
+; CHECK-NEXT:    ret float [[F]]
+;
+  %m = and i32 %a, 2147483647
+  %f = sitofp nnan ninf nsz afn i32 %m to float
+  ret float %f
+}

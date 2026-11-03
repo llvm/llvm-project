@@ -174,15 +174,21 @@ void VirtualClassDestructorCheck::check(
   if (!Destructor)
     return;
 
+  const bool HasUserDeclaredDtor =
+      MatchedClassOrStruct->hasUserDeclaredDestructor();
+
+  const SourceLocation DiagLoc = HasUserDeclaredDtor
+                                     ? Destructor->getLocation()
+                                     : MatchedClassOrStruct->getLocation();
+
   if (Destructor->getAccess() == AccessSpecifier::AS_private) {
-    diag(MatchedClassOrStruct->getLocation(),
-         "destructor of %0 is private and prevents using the type")
+    diag(DiagLoc, "destructor of %0 is private and prevents using the type")
         << MatchedClassOrStruct;
-    diag(MatchedClassOrStruct->getLocation(),
+    diag(DiagLoc,
          /*Description=*/"make it public and virtual", DiagnosticIDs::Note)
         << changePrivateDestructorVisibilityTo(
                "public", *Destructor, *Result.SourceManager, getLangOpts());
-    diag(MatchedClassOrStruct->getLocation(),
+    diag(DiagLoc,
          /*Description=*/"make it protected", DiagnosticIDs::Note)
         << changePrivateDestructorVisibilityTo(
                "protected", *Destructor, *Result.SourceManager, getLangOpts());
@@ -194,7 +200,7 @@ void VirtualClassDestructorCheck::check(
   bool ProtectedAndVirtual = false;
   FixItHint Fix;
 
-  if (MatchedClassOrStruct->hasUserDeclaredDestructor()) {
+  if (HasUserDeclaredDtor) {
     if (Destructor->getAccess() == AccessSpecifier::AS_public) {
       Fix = FixItHint::CreateInsertion(Destructor->getLocation(), "virtual ");
     } else if (Destructor->getAccess() == AccessSpecifier::AS_protected) {
@@ -209,11 +215,11 @@ void VirtualClassDestructorCheck::check(
                                          *Result.SourceManager);
   }
 
-  diag(MatchedClassOrStruct->getLocation(),
+  diag(DiagLoc,
        "destructor of %0 is %select{public and non-virtual|protected and "
        "virtual}1")
       << MatchedClassOrStruct << ProtectedAndVirtual;
-  diag(MatchedClassOrStruct->getLocation(),
+  diag(DiagLoc,
        "make it %select{public and virtual|protected and non-virtual}0",
        DiagnosticIDs::Note)
       << ProtectedAndVirtual << Fix;

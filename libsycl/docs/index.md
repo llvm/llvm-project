@@ -91,6 +91,8 @@ which doesn't currently support Windows.
 
 - `exception`: methods with context are not implemented, to add once context is ready
 
+- `backend`: CUDA and HIP backends are not supported, to add together with the corresponding backend extensions; devices of these liboffload backends are ignored
+
 - `platform`: deprecated info descriptor is not implemented (`info::platform::extensions`), to implement on RT level with `device::get_info<info::device::aspects>()`
 
 - `device`:
@@ -102,7 +104,7 @@ which doesn't currently support Windows.
 
 - device selection: to add compatibility with old SYCL 1.2.1 device selectors, still part of SYCL 2020 specification
 
-- `context`: to implement get_info, properties & public constructors once context support is added to liboffload
+- `context`: to implement get_info, properties once context support is added to liboffload
 
 - `queue`:
 
@@ -127,9 +129,6 @@ which doesn't currently support Windows.
 - `property_list`: to fully implement and integrate with existing SYCL runtime classes supporting it
 
 - usm allocations:
-
-  - add aligned functions (blocked by liboffload support)
-  - forward templated funcs to alignment methods (rewrite current impl)
   - handle sub devices once they are implemented (blocked by liboffload support)
 
 - `event`:

@@ -1541,4 +1541,15 @@ define float @fpext_f32_bf16(bfloat %x) #0 {
   ret float %val
 }
 
+define double @fpext_f64_bf16(bfloat %x) #0 {
+; CHECK-LABEL: fpext_f64_bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvt d0, s0
+; CHECK-NEXT:    ret
+  %val = call double @llvm.experimental.constrained.fpext.f64.bf16(bfloat %x, metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
 attributes #0 = { strictfp }

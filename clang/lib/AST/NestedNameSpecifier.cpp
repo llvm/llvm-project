@@ -38,12 +38,9 @@ const NamespaceAndPrefixStorage *
 NestedNameSpecifier::MakeNamespaceAndPrefixStorage(
     const ASTContext &Ctx, const NamespaceBaseDecl *Namespace,
     NestedNameSpecifier Prefix) {
-  llvm::FoldingSetNodeID ID;
-  NamespaceAndPrefixStorage::Profile(ID, Namespace, Prefix);
-
   llvm::FoldingSetInsertToken Token;
   NamespaceAndPrefixStorage *S =
-      Ctx.NamespaceAndPrefixStorages.lookup(ID, Token);
+      Ctx.NamespaceAndPrefixStorages.lookup({Namespace, Prefix}, Token);
   if (!S) {
     S = new (Ctx, alignof(NamespaceAndPrefixStorage))
         NamespaceAndPrefixStorage(Namespace, Prefix);

@@ -12,6 +12,7 @@ add_mlir_conversion_library(MLIRConvertToEmitC
   MLIRArithToEmitC
   MLIREmitCCommonConversion
   MLIRFuncToEmitC
+  MLIRMathToEmitC
   MLIRMemRefToEmitC
   MLIRPass
   MLIRSCFToEmitC

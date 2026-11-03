@@ -120,6 +120,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_8a,
     ARMSubArch_v9_7a,
     ARMSubArch_v9_6a,
     ARMSubArch_v9_5a,
@@ -157,6 +158,7 @@ public:
     ARMSubArch_v4t,
 
     AArch64SubArch_arm64e,
+    AArch64SubArch_arm64e_x1,
     AArch64SubArch_arm64ec,
     AArch64SubArch_lfi,
 
@@ -920,6 +922,9 @@ public:
     return Version < VersionTuple(Major);
   }
 
+  /// Tests whether the environment is mlibc.
+  bool isMlibc() const { return getEnvironment() == Triple::Mlibc; }
+
   /// Tests whether the environment is musl-libc
   bool isMusl() const {
     return getEnvironment() == Triple::Musl ||
@@ -1150,19 +1155,16 @@ public:
 
   /// Tests whether the target 64-bit PowerPC big endian ABI is ELFv2.
   bool isPPC64ELFv2ABI() const {
-    return (getArch() == Triple::ppc64 &&
-            ((getOS() == Triple::FreeBSD &&
-              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-             getOS() == Triple::OpenBSD || isMusl()));
+    return (
+        getArch() == Triple::ppc64 &&
+        (getOS() == Triple::FreeBSD || getOS() == Triple::OpenBSD || isMusl()));
   }
 
   /// Tests whether the target 32-bit PowerPC uses Secure PLT.
   bool isPPC32SecurePlt() const {
     return ((getArch() == Triple::ppc || getArch() == Triple::ppcle) &&
-            ((getOS() == Triple::FreeBSD &&
-              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-             getOS() == Triple::NetBSD || getOS() == Triple::OpenBSD ||
-             isMusl()));
+            (getOS() == Triple::FreeBSD || getOS() == Triple::NetBSD ||
+             getOS() == Triple::OpenBSD || isMusl()));
   }
 
   /// Tests whether the target is 32-bit RISC-V.
@@ -1220,6 +1222,11 @@ public:
            getSubArch() == Triple::AArch64SubArch_arm64e;
   }
 
+  bool isArm64e_x1() const {
+    return getArch() == Triple::aarch64 &&
+           getSubArch() == Triple::AArch64SubArch_arm64e_x1;
+  }
+
   // Tests whether the target is N32.
   bool isABIN32() const {
     EnvironmentType Env = getEnvironment();
@@ -1252,20 +1259,50 @@ public:
   }
 
   /// Returns the default floating-point ABI for this target triple, i.e. the
-  /// ABI the code generator will resolve FloatABI::Default to
-  LLVM_ABI FloatABI::ABIType getDefaultFloatABI() const;
+  /// ABI the code generator will resolve FloatABI::Default to. \p ABIName, if
+  /// given, is the effective target ABI (e.g. "aapcs16" can force hard float on
+  /// ARM even when the ordinary default is soft).
+  LLVM_ABI FloatABI::ABIType getDefaultFloatABI(StringRef ABIName = "") const;
 
   /// Tests if the target's default floating-point ABI is hard float.
   bool isHardFloatABI() const { return getDefaultFloatABI() == FloatABI::Hard; }
+
+  /// Returns the default threading model for this target triple, i.e. the model
+  /// used when the "thread-model" module flag is absent.
+  LLVM_ABI ThreadModel getDefaultThreadModel() const;
 
   /// Returns the default floating-point format for the "long double" type. A
   /// particular module may override this default.
   LLVM_ABI LongDoubleFormat getDefaultLongDoubleFormat() const;
 
+  /// Returns the default debugger tuning for this target triple, i.e. the
+  /// tuning used when the "debugger-tuning" module flag is absent.
+  LLVM_ABI DebuggerKind getDefaultDebuggerTuning() const;
+
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
     return !(isOSBinFormatMachO() || isOSBinFormatXCOFF() ||
              isOSBinFormatDXContainer());
+  }
+
+  /// Tests whether the target supports debug entry values.
+  bool supportsDebugEntryValues() const {
+    switch (getArch()) {
+    case Triple::x86:
+    case Triple::x86_64:
+    case Triple::aarch64:
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::mips:
+    case Triple::mipsel:
+    case Triple::mips64:
+    case Triple::mips64el:
+    case Triple::riscv32:
+    case Triple::riscv64:
+      return true;
+    default:
+      return false;
+    }
   }
 
   /// Tests whether the target uses emulated TLS as default.

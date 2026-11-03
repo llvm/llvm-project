@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../../IR/DumpNotifications.h"
 #include "TestDialect.h"
 #include "TestOps.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/ControlFlow/Transforms/StructuralTypeConversions.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
@@ -112,7 +114,8 @@ public:
     // should not crash when attempting to recover the (unchanged) operation
     // result.
     Value result = rewriter.createOrFold<TestOpInPlaceFold>(
-        op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0));
+        op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0),
+        IntegerAttr{});
     assert(result);
     rewriter.replaceOp(op, result);
     return success();
@@ -468,6 +471,159 @@ public:
   }
 };
 
+/// Perform the CFG change selected by the `mode` of a `test.greedy_cfg_rewrite`
+/// op while a greedy rewrite is processing its worklist. The modes are
+/// documented on the op.
+class GreedyCfgRewritePattern
+    : public OpRewritePattern<TestGreedyCfgRewriteOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TestGreedyCfgRewriteOp op,
+                                PatternRewriter &rewriter) const override {
+    Region *region = op->getParentRegion();
+    Location loc = op.getLoc();
+    // The unconditional branch that terminates the block of `op`.
+    auto getBranch = [&] {
+      return cast<cf::BranchOp>(op->getBlock()->getTerminator());
+    };
+    switch (op.getMode()) {
+    case GreedyCfgRewriteMode::Observe:
+      op.emitRemark("processed reachable block");
+      break;
+    case GreedyCfgRewriteMode::AppendUnreachable:
+    case GreedyCfgRewriteMode::AppendReachable: {
+      Block *newBlock = rewriter.createBlock(region);
+      TestGreedyCfgRewriteOp::create(rewriter, loc,
+                                     GreedyCfgRewriteMode::Observe,
+                                     /*cond=*/Value());
+      func::ReturnOp::create(rewriter, loc);
+      if (op.getMode() == GreedyCfgRewriteMode::AppendReachable) {
+        cf::BranchOp branch = getBranch();
+        rewriter.setInsertionPoint(branch);
+        cf::CondBranchOp::create(rewriter, loc, op.getCond(), branch.getDest(),
+                                 ValueRange(), newBlock, ValueRange());
+        rewriter.eraseOp(branch);
+      }
+      break;
+    }
+    case GreedyCfgRewriteMode::InsertEntry:
+      rewriter.createBlock(region, region->begin());
+      func::ReturnOp::create(rewriter, loc);
+      break;
+    case GreedyCfgRewriteMode::MoveEntry: {
+      // The new entry must not have predecessors after the rewrite.
+      cf::BranchOp branch = getBranch();
+      rewriter.setInsertionPoint(branch);
+      rewriter.replaceOpWithNewOp<func::ReturnOp>(branch);
+      rewriter.moveBlockBefore(&region->back(), region, region->begin());
+      break;
+    }
+    case GreedyCfgRewriteMode::MoveEntryAway: {
+      Block *entry = &region->front();
+      rewriter.createBlock(region, std::next(region->begin()));
+      func::ReturnOp::create(rewriter, loc);
+      rewriter.moveBlockBefore(entry, region, region->end());
+      break;
+    }
+    case GreedyCfgRewriteMode::EraseEntry:
+      rewriter.eraseBlock(&region->front());
+      break;
+    case GreedyCfgRewriteMode::Redirect:
+    case GreedyCfgRewriteMode::DoubleRedirect: {
+      if (auto conditional =
+              dyn_cast<cf::CondBranchOp>(op->getBlock()->getTerminator())) {
+        assert(op.getMode() == GreedyCfgRewriteMode::DoubleRedirect);
+        rewriter.setInsertionPoint(conditional);
+        cf::BranchOp::create(rewriter, loc, conditional.getFalseDest());
+        rewriter.eraseOp(conditional);
+      } else {
+        cf::BranchOp branch = getBranch();
+        rewriter.modifyOpInPlace(branch,
+                                 [&] { branch.setDest(&region->back()); });
+      }
+      if (op.getMode() == GreedyCfgRewriteMode::DoubleRedirect) {
+        Operation *entryBranch = region->front().getTerminator();
+        rewriter.setInsertionPoint(entryBranch);
+        func::ReturnOp::create(rewriter, loc);
+        rewriter.eraseOp(entryBranch);
+      }
+      break;
+    }
+    case GreedyCfgRewriteMode::Reconnect: {
+      cf::BranchOp branch = getBranch();
+      rewriter.setInsertionPoint(branch);
+      cf::CondBranchOp::create(
+          rewriter, loc, op.getCond(), branch.getDest(), ValueRange(),
+          &*std::next(op->getBlock()->getIterator()), ValueRange());
+      rewriter.eraseOp(branch);
+      break;
+    }
+    case GreedyCfgRewriteMode::DisconnectParent: {
+      Region *parentRegion = region->getParentOp()->getParentRegion();
+      auto branch = cast<cf::BranchOp>(parentRegion->front().getTerminator());
+      rewriter.modifyOpInPlace(branch,
+                               [&] { branch.setDest(&parentRegion->back()); });
+      break;
+    }
+    case GreedyCfgRewriteMode::MoveParent: {
+      Operation *outer = region->getParentOp()->getParentOp();
+      Block *newBlock = rewriter.createBlock(outer->getParentRegion());
+      func::ReturnOp::create(rewriter, loc);
+      rewriter.moveOpBefore(outer, newBlock, newBlock->begin());
+      break;
+    }
+    case GreedyCfgRewriteMode::MoveErase: {
+      cf::BranchOp branch = getBranch();
+      Block *moved = branch.getDest();
+      rewriter.modifyOpInPlace(branch,
+                               [&] { branch.setDest(&region->back()); });
+      // The block is erased while it belongs to another region. The source
+      // region keeps its entry and several blocks, so its cached state must
+      // not retain a pointer to the erased block.
+      Region temporary;
+      rewriter.moveBlockBefore(moved, &temporary, temporary.end());
+      rewriter.eraseBlock(moved);
+      break;
+    }
+    case GreedyCfgRewriteMode::RedirectRetarget: {
+      // Two terminators change in one rewrite. The old destination has no
+      // predecessors left, so its retargeted branch must not make the new
+      // block reachable, whichever block the cache processes first.
+      cf::BranchOp branch = getBranch();
+      auto lostBranch = cast<cf::BranchOp>(branch.getDest()->getTerminator());
+      Block *newBlock = rewriter.createBlock(region);
+      TestGreedyCfgRewriteOp::create(rewriter, loc,
+                                     GreedyCfgRewriteMode::Observe,
+                                     /*cond=*/Value());
+      func::ReturnOp::create(rewriter, loc);
+      rewriter.modifyOpInPlace(branch,
+                               [&] { branch.setDest(lostBranch.getDest()); });
+      rewriter.modifyOpInPlace(lostBranch,
+                               [&] { lostBranch.setDest(newBlock); });
+      break;
+    }
+    case GreedyCfgRewriteMode::Merge:
+    case GreedyCfgRewriteMode::MergeDisconnect: {
+      Block *dest = op->getBlock();
+      cf::BranchOp branch = getBranch();
+      Block *source = branch.getDest();
+      rewriter.eraseOp(branch);
+      rewriter.mergeBlocks(source, dest);
+      if (op.getMode() == GreedyCfgRewriteMode::MergeDisconnect) {
+        auto conditional = cast<cf::CondBranchOp>(dest->getTerminator());
+        rewriter.setInsertionPoint(conditional);
+        cf::BranchOp::create(rewriter, loc, conditional.getTrueDest());
+        rewriter.eraseOp(conditional);
+      }
+      break;
+    }
+    }
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 struct TestGreedyPatternDriver
     : public PassWrapper<TestGreedyPatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestGreedyPatternDriver)
@@ -486,12 +642,14 @@ struct TestGreedyPatternDriver
     patterns.add<FoldingPattern, TestNamedPatternRule,
                  FolderInsertBeforePreviouslyFoldedConstantPattern,
                  FolderCommutativeOp2WithConstant, HoistEligibleOps,
-                 MakeOpEligible>(&getContext());
+                 MakeOpEligible, GreedyCfgRewritePattern>(&getContext());
 
     // Additional patterns for testing the GreedyPatternRewriteDriver.
     patterns.insert<IncrementIntAttribute<3>>(&getContext());
 
+    DumpNotifications listener;
     GreedyRewriteConfig config;
+    config.setListener(dumpNotifications ? &listener : nullptr);
     config.setUseTopDownTraversal(useTopDownTraversal)
         .setMaxIterations(this->maxIterations)
         .enableFolding(this->fold)
@@ -499,6 +657,10 @@ struct TestGreedyPatternDriver
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
+  Option<bool> dumpNotifications{
+      *this, "dump-notifications",
+      llvm::cl::desc("Print rewrite listener notifications"),
+      llvm::cl::init(false)};
   Option<bool> useTopDownTraversal{
       *this, "top-down",
       llvm::cl::desc("Seed the worklist in general top-down order"),
@@ -512,51 +674,6 @@ struct TestGreedyPatternDriver
   Option<bool> cseConstants{
       *this, "cse-constants", llvm::cl::desc("Whether to CSE constants"),
       llvm::cl::init(GreedyRewriteConfig().isConstantCSEEnabled())};
-};
-
-struct DumpNotifications : public RewriterBase::Listener {
-  void notifyBlockInserted(Block *block, Region *previous,
-                           Region::iterator previousIt) override {
-    llvm::outs() << "notifyBlockInserted";
-    if (block->getParentOp()) {
-      llvm::outs() << " into " << block->getParentOp()->getName() << ": ";
-    } else {
-      llvm::outs() << " into unknown op: ";
-    }
-    if (previous == nullptr) {
-      llvm::outs() << "was unlinked\n";
-    } else {
-      llvm::outs() << "was linked\n";
-    }
-  }
-  void notifyOperationInserted(Operation *op,
-                               OpBuilder::InsertPoint previous) override {
-    llvm::outs() << "notifyOperationInserted: " << op->getName();
-    if (!previous.isSet()) {
-      llvm::outs() << ", was unlinked\n";
-    } else {
-      if (!previous.getPoint().getNodePtr()) {
-        llvm::outs() << ", was linked, exact position unknown\n";
-      } else if (previous.getPoint() == previous.getBlock()->end()) {
-        llvm::outs() << ", was last in block\n";
-      } else {
-        llvm::outs() << ", previous = " << previous.getPoint()->getName()
-                     << "\n";
-      }
-    }
-  }
-  void notifyBlockErased(Block *block) override {
-    llvm::outs() << "notifyBlockErased\n";
-  }
-  void notifyOperationErased(Operation *op) override {
-    llvm::outs() << "notifyOperationErased: " << op->getName() << "\n";
-  }
-  void notifyOperationModified(Operation *op) override {
-    llvm::outs() << "notifyOperationModified: " << op->getName() << "\n";
-  }
-  void notifyOperationReplaced(Operation *op, ValueRange values) override {
-    llvm::outs() << "notifyOperationReplaced: " << op->getName() << "\n";
-  }
 };
 
 struct TestStrictPatternDriver
@@ -581,6 +698,7 @@ public:
     patterns.add<
         // clang-format off
         ChangeBlockOp,
+        GreedyCfgRewritePattern,
         CloneOp,
         CloneRegionBeforeOp,
         EraseOp,
@@ -600,7 +718,8 @@ public:
           opName == "test.move_before_parent_op" ||
           opName == "test.inline_blocks_into_parent" ||
           opName == "test.split_block_here" || opName == "test.clone_me" ||
-          opName == "test.clone_region_before") {
+          opName == "test.clone_region_before" ||
+          opName == "test.greedy_cfg_rewrite") {
         ops.push_back(op);
       }
     });
@@ -623,8 +742,9 @@ public:
     // operation will trigger the assertion while processing.
     bool changed = false;
     bool allErased = false;
-    (void)applyOpPatternsGreedily(ArrayRef(ops), std::move(patterns), config,
-                                  &changed, &allErased);
+    if (failed(applyOpPatternsGreedily(ArrayRef(ops), std::move(patterns),
+                                       config, &changed, &allErased)))
+      return signalPassFailure();
     Builder b(ctx);
     getOperation()->setDiscardableAttr("pattern_driver_changed",
                                        b.getBoolAttr(changed));
@@ -1787,7 +1907,7 @@ struct TestLegalizePatternDriver
 // ConversionPatternRewriter.
 namespace {
 struct TestRemapValueTypeConverter : public TypeConverter {
-  using TypeConverter::TypeConverter;
+  using Base::Base;
 
   TestRemapValueTypeConverter() {
     addConversion(

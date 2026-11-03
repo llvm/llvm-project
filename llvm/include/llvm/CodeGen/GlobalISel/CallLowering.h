@@ -161,6 +161,9 @@ public:
     /// True if this call results in convergent operations.
     bool IsConvergent = true;
 
+    /// True if this call must not be merged with other calls.
+    bool NoMerge = false;
+
     GlobalValue *DeactivationSymbol = nullptr;
   };
 
@@ -363,6 +366,14 @@ protected:
     const XXXTargetLowering *getTLI() const {
     return static_cast<const XXXTargetLowering *>(TLI);
   }
+
+  /// \returns Flags corresponding to the attributes on the \p ArgIdx-th
+  /// parameter of \p Call.
+  ISD::ArgFlagsTy getAttributesForArgIdx(const CallBase &Call,
+                                         unsigned ArgIdx) const;
+
+  /// \returns Flags corresponding to the attributes on the return from \p Call.
+  ISD::ArgFlagsTy getAttributesForReturn(const CallBase &Call) const;
 
   /// Adds flags to \p Flags based off of the attributes in \p Attrs.
   /// \p OpIdx is the index in \p Attrs to add flags from.

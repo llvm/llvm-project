@@ -26,9 +26,9 @@ template <OverflowMode mode>
 ErrorOr<size_t> printf_main_modular(Writer<mode> *writer,
                                     const char *__restrict str,
                                     internal::ArgList &args) {
-  Parser<internal::ArgList> parser(str, args);
+  Parser<internal::ArgList, char> parser(str, args);
   int result = 0;
-  for (FormatSection cur_section = parser.get_next_section();
+  for (FormatSection<char> cur_section = parser.get_next_section();
        !cur_section.raw_string.empty();
        cur_section = parser.get_next_section()) {
     if (cur_section.has_conv)

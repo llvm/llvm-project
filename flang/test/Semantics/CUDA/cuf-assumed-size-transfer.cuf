@@ -1,0 +1,34 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! An implicit data transfer copies the whole device object to the host, which
+! cannot be done for an assumed-size array.
+
+subroutine craypointee(h, ip)
+  implicit none
+  double precision :: h
+  integer(8) :: ip
+  double precision :: a(*)
+  pointer (ip, a)
+  attributes(device) :: a
+  !ERROR: Implicit data transfer of assumed-size device array 'a' is not supported
+  h = h + a(3)*2.0d0
+  h = a(3)
+  a(3) = h*2.0d0
+end subroutine
+
+subroutine dummy(h, x)
+  implicit none
+  double precision :: h
+  double precision, device :: x(*)
+  !ERROR: Implicit data transfer of assumed-size device array 'x' is not supported
+  h = x(1) + 1.0d0
+  h = x(2)
+  x(1) = h
+end subroutine
+
+subroutine explicit_shape(h, x)
+  implicit none
+  double precision :: h
+  double precision, device :: x(10)
+  h = x(1) + 1.0d0
+end subroutine

@@ -82,7 +82,7 @@ def FIRvalue        : I32BitEnumAttrCaseBit<"value", 11>;
 def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
 // Used inside internal procedure to flag variables host associated from parent procedure.
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
-// Used inside parent procedure to flag variables host associated in internal procedure.
+// Marks storage accessible to internal procedures through host association.
 def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
 // Used by alias analysis
 def FIRcray_pointer : I32BitEnumAttrCaseBit<"cray_pointer", 15>;
@@ -188,6 +188,25 @@ def fir_ReduceAttr : fir_Attr<"Reduce"> {
 
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
+
+def FortranRuntimeResource : Resource<"::fir::FortranRuntimeResource">;
+
+def fir_RuntimeCheckKind : I32EnumAttr<"RuntimeCheckKind",
+    "Fortran runtime check category", [
+      I32EnumAttrCase<"status", 0>,
+      I32EnumAttrCase<"conformance", 1>,
+      I32EnumAttrCase<"argument", 2>,
+      I32EnumAttrCase<"bounds", 3>,
+      I32EnumAttrCase<"pointer", 4>,
+      I32EnumAttrCase<"doLoop", 5, "do">,
+      I32EnumAttrCase<"bits", 6>,
+      I32EnumAttrCase<"divide", 7>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+def fir_RuntimeCheckKindAttr
+    : EnumAttr<FIROpsDialect, fir_RuntimeCheckKind, "runtime_check_kind">;
 
 def fir_LowerBoundModifierAttribute : I32EnumAttr<
     "LowerBoundModifierAttribute",
@@ -306,6 +325,46 @@ def fir_UseRenameAttr : fir_Attr<"UseRename"> {
 
   let assemblyFormat = "`<` $local_name `,` $symbol `>`";
 }
+
+//===----------------------------------------------------------------------===//
+// Allocation policy
+//===----------------------------------------------------------------------===//
+
+// Module attribute recording where array allocations should be placed. It is
+// set by lowering and read back with fir::getAllocationPolicy, so that
+// policy-aware passes make consistent placement decisions and dumped IR
+// replays with the policy it was compiled with.
+//
+// fir::AllocationPolicy.
+def fir_AllocationPolicyAttr : fir_Attr<"AllocationPolicy"> {
+  let mnemonic = "allocation_policy";
+  let summary = "Records the module-level array allocation policy";
+  let description = [{
+    Records the policy used by policy-aware passes to choose between stack
+    (`fir.alloca`) and heap (`fir.allocmem`) storage for array allocations.
+    Lowering sets this attribute from the compiler options. Passes that create
+    allocations can consult it when selecting the allocation operation, and
+    allocation-placement uses it when reconsidering existing allocations.
+
+    Fields:
+      - stack_arrays: place all arrays on the stack when possible
+        (`-fstack-arrays`).
+      - small_array_threshold: maximum size in bytes of a "small" constant-size
+        array temporary.
+      - total_stack_limit: per-function budget in bytes for small arrays placed
+        on the stack.
+  }];
+  let parameters = (ins
+    "bool":$stack_arrays,
+    "uint64_t":$small_array_threshold,
+    "uint64_t":$total_stack_limit
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACC
+//===----------------------------------------------------------------------===//
 
 // Fortran-specific variable information for OpenACC.
 // Carries metadata that cannot be recovered from the FIR type system alone

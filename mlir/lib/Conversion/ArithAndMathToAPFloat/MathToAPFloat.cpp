@@ -9,6 +9,7 @@
 #include "Utils.h"
 
 #include "mlir/Conversion/ArithAndMathToAPFloat/MathToAPFloat.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Utils/Utils.h"
 #include "mlir/Dialect/Math/IR/Math.h"

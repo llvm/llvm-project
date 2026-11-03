@@ -20,12 +20,15 @@
 
 #include <os/log.h>
 
+// --- C API Implementation ---
+
+extern "C" {
+
 // Cache for the inline accessor (declared in Logging.h). Zero-initialized, so
 // no static constructor runs; slots are filled lazily by the cold path below.
 os_log_t orc_rt_log_OSLogHandles[orc_rt_log_Category_Count];
 
-extern "C" os_log_t
-orc_rt_log_osLogHandleSlow(orc_rt_log_Category Category) noexcept {
+os_log_t orc_rt_log_osLogHandleSlow(orc_rt_log_Category Category) noexcept {
   // Category is already range-checked by the inline caller.
   //
   // ORC rt logs to the "org.llvm.orc-rt" subsystem.
@@ -43,3 +46,5 @@ orc_rt_log_osLogHandleSlow(orc_rt_log_Category Category) noexcept {
                    __ATOMIC_RELEASE);
   return Handle;
 }
+
+} // extern "C"

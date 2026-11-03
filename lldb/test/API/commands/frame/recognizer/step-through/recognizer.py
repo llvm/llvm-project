@@ -81,6 +81,8 @@ class StepThrough(ScriptedThreadPlan):
             return False
 
     def should_stop(self):
+        if self.addr_plan.IsPlanComplete():
+            self.thread_plan.SetPlanComplete(True)
         return self.thread_plan.IsPlanComplete()
 
     def should_step(self):

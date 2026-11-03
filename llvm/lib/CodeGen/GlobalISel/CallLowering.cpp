@@ -99,6 +99,25 @@ static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
   }
 }
 
+ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
+                                                     unsigned ArgIdx) const {
+  ISD::ArgFlagsTy Flags;
+  const AttributeList &Attrs = Call.getAttributes();
+  addFlagsFromAttrSet(Flags, Attrs.getParamAttrs(ArgIdx));
+  if (const Function *F = Call.getCalledFunction())
+    addFlagsFromAttrSet(Flags, F->getAttributes().getParamAttrs(ArgIdx));
+  return Flags;
+}
+
+ISD::ArgFlagsTy
+CallLowering::getAttributesForReturn(const CallBase &Call) const {
+  ISD::ArgFlagsTy Flags;
+  addFlagsFromAttrSet(Flags, Call.getAttributes().getRetAttrs());
+  if (const Function *F = Call.getCalledFunction())
+    addFlagsFromAttrSet(Flags, F->getAttributes().getRetAttrs());
+  return Flags;
+}
+
 void CallLowering::addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
                                              const AttributeList &Attrs,
                                              unsigned OpIdx) const {
@@ -125,17 +144,13 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   CallingConv::ID CallConv = CB.getCallingConv();
   Type *RetTy = CB.getType();
   bool IsVarArg = CB.getFunctionType()->isVarArg();
-  const Function *Callee = CB.getCalledFunction();
 
-  if (RetTy->isVoidTy()) {
-    Info.CanLowerReturn = true;
-  } else {
-    SmallVector<BaseArgInfo, 4> SplitArgs;
-    getReturnInfo(CallConv, RetTy, CB.getAttributes(), SplitArgs, DL);
-    Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
-  }
+  SmallVector<BaseArgInfo, 4> SplitArgs;
+  getReturnInfo(CallConv, RetTy, CB.getAttributes(), SplitArgs, DL);
+  Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
   Info.IsConvergent = CB.isConvergent();
+  Info.NoMerge = CB.hasFnAttr(Attribute::NoMerge);
 
   if (!Info.CanLowerReturn) {
     // Callee requires sret demotion.
@@ -152,11 +167,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (const auto &Arg : CB.args()) {
-    ISD::ArgFlagsTy Flags;
-    // "returned" is not an ABI attribute, so we can inherit it from the callee.
-    if (Callee && Callee->hasParamAttribute(i, Attribute::Returned))
-      Flags.setReturned();
-    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, Flags};
+    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, getAttributesForArgIdx(CB, i)};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
     if (i >= NumFixedArgs)
       OrigArg.Flags[0].setVarArg();
@@ -200,8 +211,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Register ReturnHintAlignReg;
   Align ReturnHintAlign;
 
-  ISD::ArgFlagsTy RetFlags;
-  Info.OrigRet = ArgInfo{ResRegs, RetTy, 0, RetFlags};
+  Info.OrigRet = ArgInfo{ResRegs, RetTy, 0, getAttributesForReturn(CB)};
 
   if (!Info.OrigRet.Ty->isVoidTy()) {
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
@@ -451,7 +461,13 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       return;
     }
 
-    B.buildTrunc(OrigRegs[0], SrcReg);
+    LLT OrigITy = OrigTy.changeToInteger();
+    if (OrigTy == OrigITy) {
+      B.buildTrunc(OrigRegs[0], SrcReg);
+    } else {
+      auto Trunc = B.buildTrunc(OrigITy, SrcReg);
+      B.buildBitcast(OrigRegs[0], Trunc);
+    }
     return;
   }
 
@@ -604,7 +620,21 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
     assert(DstRegs.size() == 1);
-    B.buildInstr(ExtendOp, {DstRegs[0]}, {SrcReg});
+    // Convert float to integer if needed
+    LLT SrcITy = SrcTy.changeToInteger();
+    LLT PartITy = PartTy.changeToInteger();
+    if (SrcTy != SrcITy)
+      SrcReg = B.buildBitcast(SrcITy, SrcReg).getReg(0);
+
+    // Emit the sext/zext/anyext
+    Register DstIReg =
+        B.buildInstr(ExtendOp,
+                     PartITy == PartTy ? DstOp(DstRegs[0]) : DstOp(PartITy),
+                     {SrcReg})
+            .getReg(0);
+    // Convert back to the original type if needed
+    if (PartITy != PartTy)
+      B.buildBitcast(DstRegs[0], DstIReg);
     return;
   }
 

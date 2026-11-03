@@ -50,7 +50,10 @@ enum : unsigned {
 
   RESERVED_ADDRESS_SPACE_11 = 11, ///< Reserved for downstream use.
 
-  RESERVED_ADDRESS_SPACE_13 = 13, ///< Reserved for downstream use.
+  VGPR = 13, ///< Address space for VGPRs. The 32-bit address is a byte offset
+             ///< into the wave's view of its vector registers. Note this shares
+             ///< its numeric value with CONSTANT_BUFFER_5, which is only used
+             ///< by the (graphics) R600 path.
 
   RESERVED_ADDRESS_SPACE_14 = 14, ///< Reserved for downstream use.
 
@@ -61,6 +64,10 @@ enum : unsigned {
   RESERVED_ADDRESS_SPACE_17 = 17, ///< Reserved for downstream use.
 
   RESERVED_ADDRESS_SPACE_18 = 18, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_19 = 19, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_20 = 20, ///< Reserved for downstream use.
 
   /// Internal address spaces. Can be freely renumbered.
   STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.
@@ -173,7 +180,7 @@ static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
 ///
 /// This maps private/scratch to the focused lane view.
 ///
-/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.rst
+/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.md
 /// table "AMDGPU DWARF Address Space Mapping".
 ///
 /// Note: This could return std::optional<int> but that would require
@@ -194,6 +201,7 @@ constexpr int64_t getNullPointerValue(unsigned AS) {
   case PRIVATE_ADDRESS:
   case LOCAL_ADDRESS:
   case REGION_ADDRESS:
+  case VGPR:
     return -1;
   default:
     return 0;

@@ -163,7 +163,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
 
-  I1->moveBefore(VPBB1, I3->getIterator());
+  I1->moveBefore(I3->getIterator());
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
@@ -175,7 +175,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
 
-  I3->moveBefore(VPBB2, I4->getIterator());
+  I3->moveBefore(I4->getIterator());
 
   CHECK_ITERATOR(VPBB1, I2, I1);
   CHECK_ITERATOR(VPBB2, I3, I4, I5);
@@ -183,7 +183,7 @@ TEST_F(VPInstructionTest, moveBefore) {
 
   VPBasicBlock &VPBB3 = *getPlan().createVPBasicBlock("");
 
-  I4->moveBefore(VPBB3, VPBB3.end());
+  I4->moveBefore(VPBB3.end());
 
   CHECK_ITERATOR(VPBB1, I2, I1);
   CHECK_ITERATOR(VPBB2, I3, I5);
@@ -1271,7 +1271,7 @@ TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPRecipeBase) {
       new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
-  VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, {}, {});
+  VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, Load->getAlign(), {}, {});
 
   checkVPRecipeCastImpl<VPWidenLoadRecipe, VPUser, VPIRMetadata>(&Recipe);
 
@@ -1303,7 +1303,7 @@ TEST_F(VPRecipeTest, CastVPWidenLoadEVLRecipeToVPUser) {
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
-  VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, {}, {});
+  VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, Load->getAlign(), {}, {});
   VPWidenLoadEVLRecipe Recipe(BaseLoad, Addr, *EVL, Mask);
 
   checkVPRecipeCastImpl<VPWidenLoadEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
@@ -1320,7 +1320,8 @@ TEST_F(VPRecipeTest, CastVPWidenStoreRecipeToVPUser) {
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *StoredVal = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 42));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
-  VPWidenStoreRecipe Recipe(*Store, Addr, StoredVal, Mask, true, {}, {});
+  VPWidenStoreRecipe Recipe(*Store, Addr, StoredVal, Mask, true,
+                            Store->getAlign(), {}, {});
 
   checkVPRecipeCastImpl<VPWidenStoreRecipe, VPUser, VPIRMetadata>(&Recipe);
 
@@ -1337,7 +1338,8 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
   VPValue *StoredVal = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 42));
   VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
-  VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true, {}, {});
+  VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true,
+                               Store->getAlign(), {}, {});
   VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, StoredVal, *EVL, Mask);
 
   checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
@@ -1424,7 +1426,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
         new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
     VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, {}, {});
+    VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, Load->getAlign(), {}, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1438,7 +1440,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
     VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *StoredV = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPWidenStoreRecipe Recipe(*Store, Addr, StoredV, Mask, false, {}, {});
+    VPWidenStoreRecipe Recipe(*Store, Addr, StoredV, Mask, false,
+                              Store->getAlign(), {}, {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1900,6 +1903,312 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform));
 }
 
+static VPValue *reconstructSSA(VPBasicBlock *VPBB,
+                               DenseMap<VPBasicBlock *, VPValue *> &&Defs) {
+  return vputils::reconstructSSA(VPBB, Defs);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSA) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB2->appendRecipe(Def2);
+
+  auto *Res =
+      cast<VPPhi>(reconstructSSA(VPBB4, {{VPBB1, Def1}, {VPBB2, Def2}}));
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def2);
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Def1);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAPoisonExample) {
+  // Test that the resulting phi isn't affected by the parent block of any
+  // definition. The resulting value in VPBB4 should be Def1 on any path that
+  // goes through VPPB2, and poison otherwise.
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPValue *Poison = Plan.getPoison(C->getScalarType());
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  auto *Res =
+      cast<VPPhi>(reconstructSSA(VPBB4, {{VPBB1, Poison}, {VPBB2, Def1}}));
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def1);
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Poison);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAMultiplePhis) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB5 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB6 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    / \
+  //    VPBB4  VPBB5
+  //        \  /
+  //       VPBB6
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB5);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB6);
+  VPBlockUtils::connectBlocks(VPBB5, VPBB6);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB2->appendRecipe(Def2);
+  auto *Def3 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB3->appendRecipe(Def3);
+
+  auto *Phi6 =
+      cast<VPPhi>(reconstructSSA(VPBB6, {{VPBB2, Def2}, {VPBB3, Def3}}));
+  EXPECT_EQ(Phi6->getIncomingValueForBlock(VPBB5), Def3);
+  EXPECT_TRUE(isa<VPPhi>(Phi6->getIncomingValueForBlock(VPBB4)));
+
+  auto *Phi4 = cast<VPPhi>(Phi6->getIncomingValueForBlock(VPBB4));
+  EXPECT_EQ(Phi4->getIncomingValueForBlock(VPBB2), Def2);
+  EXPECT_EQ(Phi4->getIncomingValueForBlock(VPBB3), Def3);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAFold) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def);
+
+  // Check that phis with all equal incoming values are folded away.
+  EXPECT_EQ(reconstructSSA(VPBB4, {{VPBB2, Def}, {VPBB3, Def}}), Def);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSACycle) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //       |
+  //     VPBB2
+  //     / | ^
+  // VPBB3 | |
+  //    \  | /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB2);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB3->appendRecipe(Def2);
+
+  auto *Phi1 =
+      cast<VPPhi>(reconstructSSA(VPBB4, {{VPBB1, Def1}, {VPBB3, Def2}}));
+  EXPECT_EQ(Phi1->getIncomingValueForBlock(VPBB3), Def2);
+  EXPECT_TRUE(isa<VPPhi>(Phi1->getIncomingValueForBlock(VPBB2)));
+
+  auto *Phi2 = cast<VPPhi>(Phi1->getIncomingValueForBlock(VPBB2));
+  EXPECT_EQ(Phi2->getIncomingValueForBlock(VPBB4), Phi1);
+  EXPECT_EQ(Phi2->getIncomingValueForBlock(VPBB1), Def1);
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST_F(VPUtilsTest, ReconstructSSAUnreachableCycle) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+
+  //     VPBB1     VPBB2 <-+
+  //                 |     |
+  //                 +-----+
+  VPBlockUtils::connectBlocks(VPBB2, VPBB2);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  EXPECT_DEATH(reconstructSSA(VPBB2, {{VPBB1, Def1}}),
+               "VPBB isn't reachable from entry");
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAUnreachableCyclePredecessor) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  //     VPBB1     VPBB2 <-+
+  //          \   /  |     |
+  //           \ /   +-----+
+  //          VPBB3
+  VPBlockUtils::connectBlocks(VPBB2, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  EXPECT_DEATH(reconstructSSA(VPBB3, {{VPBB1, Def1}}),
+               "VPBB isn't reachable from entry");
+}
+#endif
+
+TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessor) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     / \  \
+  //     | |  VPBB2
+  //     \ /  /
+  //      VPBB3
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB2->appendRecipe(Def2);
+
+  auto *Phi =
+      cast<VPPhi>(reconstructSSA(VPBB3, {{VPBB1, Def1}, {VPBB2, Def2}}));
+  EXPECT_EQ(Phi->getIncomingValue(0), Def1);
+  EXPECT_EQ(Phi->getIncomingValue(1), Def1);
+  EXPECT_EQ(Phi->getIncomingValue(2), Def2);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessorAllEqual) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //    /   \ \
+  //   /     \ \
+  //  VPBB2  VPBB3
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  EXPECT_EQ(reconstructSSA(VPBB3, {{VPBB1, Def1}}), Def1);
+  EXPECT_EQ(reconstructSSA(VPBB2, {{VPBB1, Def1}}), Def1);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAStaleDefAfterFold) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB5 = Plan.createVPBasicBlock("");
+
+  //       VPBB1
+  //         |
+  //   +-> VPBB2
+  //   |    | |
+  //   |   VPBB3 --+
+  //   |    | |    |
+  //   +-- VPBB4   |
+  //         |     |
+  //       VPBB5 <-+
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB5);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB5);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def);
+
+  // The phi VPBB4 is folded to the phi in VPBB3, then the phi in VPBB3 is
+  // folded to the phi in VPBB2. Make sure that we update Defs[VPBB4] from
+  // phi@VPPB3->phi@VPBB2.
+  auto *Res = cast<VPPhi>(reconstructSSA(VPBB5, {{VPBB1, Def}}));
+  EXPECT_EQ(Res->getParent(), VPBB2);
+}
+
 TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
   VPlan &Plan = getPlan();
   VPBasicBlock *Preheader = Plan.getEntry();
@@ -1952,6 +2261,30 @@ TEST_F(VPBasicBlockTest, VPRegionBlockCloneSyncsCanonicalIVNUW) {
   // The clone must carry over the cleared NUW flag rather than resetting it.
   VPRegionBlock *Clone = Region->clone();
   EXPECT_FALSE(Clone->hasCanonicalIVNUW());
+}
+
+TEST_F(VPRecipeTest, VPWidenCompressStoreExpandLoadIntr) {
+  VPlan &Plan = getPlan();
+
+  IntegerType *Int64 = IntegerType::get(C, 64);
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int64, 1));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPValue *Value = Plan.getOrAddLiveIn(ConstantInt::get(Int64, 8));
+
+  VPWidenMemIntrinsicRecipe ExpandLoad(Intrinsic::masked_expandload,
+                                       {Addr, Mask, Plan.getPoison(Int64)},
+                                       Int64, Align(8));
+
+  VPWidenMemIntrinsicRecipe CompressStore(Intrinsic::masked_compressstore,
+                                          {Value, Addr, Mask},
+                                          Type::getVoidTy(C), Align(8));
+
+  auto VF = ElementCount::getFixed(4);
+  for (VPWidenMemIntrinsicRecipe *Intr : {&ExpandLoad, &CompressStore}) {
+    EXPECT_EQ(Intr->getMask(), Mask);
+    EXPECT_EQ(Intr->getAccessType(VF)->getScalarType(), Int64);
+    EXPECT_EQ(Intr->getOperand(Intr->getAddrOpIdx()), Addr);
+  }
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
