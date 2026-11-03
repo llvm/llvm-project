@@ -1196,7 +1196,18 @@ private:
     if (!AR || AR->getLoop() != FC.L || !AR->isAffine())
       return std::nullopt;
 
-    return AffineLoadKey{AR->getStart(), AR->getStepRecurrence(SE)};
+    // Drop a canonical constant addend so accesses a fixed distance apart,
+    // such as A[i] and A[i + 1], share a lookup key. Fusion can then keep
+    // those accesses close in time and exploit their cache locality. The map
+    // below stays an exact match.
+    const SCEV *Start = AR->getStart();
+    if (const auto *Add = dyn_cast<SCEVAddExpr>(Start);
+        Add && isa<SCEVConstant>(Add->getOperand(0))) {
+      SmallVector<SCEVUse, 4> Ops(drop_begin(Add->operands()));
+      Start = SE.getAddExpr(Ops);
+    }
+
+    return AffineLoadKey{Start, AR->getStepRecurrence(SE)};
   }
 
   /// Return true if \p A is known to execute before \p B in an iteration of
@@ -1230,8 +1241,9 @@ private:
 
   /// Collect distinct read-read addresses reused at corresponding iterations.
   ///
-  /// This uses exact affine SCEV equality rather than adding a potentially
-  /// expensive read-read DependenceAnalysis query for every load pair.
+  /// Reads a constant distance apart also count as reuse because of spatial
+  /// locality. Constant offsets are removed from affine starts so they can be
+  /// found using the exact-match lookup below.
   void collectReadReadReuse(const FusionCandidate &FC0,
                             const FusionCandidate &FC1,
                             ReusedValueSet &ReusedValues) {

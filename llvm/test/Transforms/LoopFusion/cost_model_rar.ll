@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-simplify,loop-fusion -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s
 
 ; CHECK: [exact_affine_rar]{{.*}}Loops fused
-; CHECK: [shifted_start]{{.*}}found 0 cross-loop reused values
+; CHECK: [shifted_start]{{.*}}Loops fused
 ; CHECK: [different_stride]{{.*}}found 0 cross-loop reused values
 ; CHECK: [different_type]{{.*}}Loops fused
 ; CHECK: [non_affine]{{.*}}found 0 cross-loop reused values
@@ -41,7 +41,7 @@ exit:
   ret void
 }
 
-; A one-element offset changes the SCEV start and is not exact RAR.
+; A one-element offset is a constant distance and counts as reuse.
 define void @shifted_start(ptr noalias %src, ptr noalias %dst1,
                            ptr noalias %dst2, i64 %n) {
 entry:

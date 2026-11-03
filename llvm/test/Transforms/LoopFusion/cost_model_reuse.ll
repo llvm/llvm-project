@@ -8,10 +8,11 @@
 ; DEFAULT: [two_raw_producers]{{.*}}Loops fused
 
 ; MIN2: [no_cross_loop_reuse]{{.*}}found 0 cross-loop reused values; configured minimum is 2
-; MIN2: [exact_rar_with_unmatched_read]{{.*}}found 1 cross-loop reused values; configured minimum is 2
+; MIN2: [exact_rar_with_unmatched_read]{{.*}}Loops fused
 ; MIN2: [one_raw_producer_multiple_reads]{{.*}}found 1 cross-loop reused values; configured minimum is 2
 ; MIN2: [two_raw_producers]{{.*}}Loops fused
 
+; MIN3: [exact_rar_with_unmatched_read]{{.*}}found 2 cross-loop reused values; configured minimum is 3
 ; MIN3: [two_raw_producers]{{.*}}found 2 cross-loop reused values; configured minimum is 3
 
 ; Independent stores have no cross-loop reuse and are rejected by default.
@@ -49,8 +50,7 @@ exit:
   ret void
 }
 
-; One exact affine RAR match is sufficient. The additional shifted read does
-; not match and must not increase the reused-value count.
+; The exact read and the constant-distance read are two reused values.
 define void @exact_rar_with_unmatched_read(
     ptr noalias %src, ptr noalias %other, ptr noalias %a, ptr noalias %b,
     i64 %n) {
