@@ -74,6 +74,42 @@ _LIBCPP_CONSTEXPR _OrigIter __rewrap_iter(_OrigIter __orig_iter, _Iter __iter) _
   return _Impl::__rewrap(std::move(__orig_iter), std::move(__iter));
 }
 
+// __unwrap_bounded_iter(__i, __n) validates the range [__i, __i + __n) once and, if __i is one of libc++'s own
+// bounded iterators, returns a raw pointer to __i's element. Every other iterator type is returned unchanged.
+//
+// This lets an algorithm that only ever accesses elements inside a range it has validated (e.g. the bisection loop
+// of std::lower_bound) drop the per-step bounds checks of __bounded_iter and __static_bounded_iter: those checks are
+// already implied by the up-front one. Other iterators are deliberately left alone: they gain nothing from
+// unwrapping, and unwrapping a user-defined contiguous iterator could bypass checks of its own.
+//
+// __rewrap_bounded_iter(__orig_iter, __iter) converts the result of __unwrap_bounded_iter (or an iterator derived
+// from it) back to the type of __orig_iter. The result keeps __orig_iter's bounds. It is not re-checked: __iter must
+// lie inside the range that __unwrap_bounded_iter validated, which holds for positions an algorithm reaches by moving
+// within that range.
+
+template <class _Iter, class _Diff, __enable_if_t<!__is_bounded_iter<_Iter>::value, int> = 0>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter __unwrap_bounded_iter(_Iter __i, _Diff) _NOEXCEPT {
+  return __i;
+}
+
+template <class _Iter, class _Diff, __enable_if_t<__is_bounded_iter<_Iter>::value, int> = 0>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 decltype(std::__to_address(std::declval<_Iter>()))
+__unwrap_bounded_iter(_Iter __i, _Diff __n) _NOEXCEPT {
+  // The iterator knows its own bounds, so it is the one validating the range.
+  __i.__validate_range(__n);
+  return std::__to_address(__i);
+}
+
+template <class _Iter, __enable_if_t<!__is_bounded_iter<_Iter>::value, int> = 0>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter __rewrap_bounded_iter(const _Iter&, _Iter __iter) _NOEXCEPT {
+  return __iter;
+}
+
+template <class _Iter, class _Ptr, __enable_if_t<__is_bounded_iter<_Iter>::value, int> = 0>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter __rewrap_bounded_iter(const _Iter& __orig_iter, _Ptr __iter) _NOEXCEPT {
+  return __orig_iter.__unchecked_add(__iter - std::__to_address(__orig_iter));
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

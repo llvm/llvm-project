@@ -12,6 +12,7 @@
 #include <__algorithm/comp.h>
 #include <__algorithm/half_positive.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/advance.h>
@@ -19,6 +20,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -33,18 +35,19 @@ template <class _AlgPolicy, class _Iter, class _Type, class _Proj, class _Comp>
     typename iterator_traits<_Iter>::difference_type __len,
     _Comp& __comp,
     _Proj& __proj) {
+  auto __ufirst = std::__unwrap_bounded_iter(__first, __len);
   while (__len != 0) {
     auto __l2 = std::__half_positive(__len);
-    _Iter __m = __first;
+    auto __m  = __ufirst;
     _IterOps<_AlgPolicy>::advance(__m, __l2);
     if (std::__invoke(__comp, std::__invoke(__proj, *__m), __value)) {
-      __first = ++__m;
+      __ufirst = ++__m;
       __len -= __l2 + 1;
     } else {
       __len = __l2;
     }
   }
-  return __first;
+  return std::__rewrap_bounded_iter(std::move(__first), std::move(__ufirst));
 }
 
 // One-sided binary search, aka meta binary search, has been in the public domain for decades, and has the general

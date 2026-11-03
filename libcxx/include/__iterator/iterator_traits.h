@@ -398,6 +398,12 @@ struct __libcpp_is_contiguous_iterator : false_type {};
 template <class _Up>
 struct __libcpp_is_contiguous_iterator<_Up*> : true_type {};
 
+// __is_bounded_iter determines if an iterator is one of libc++'s own bounds-checked iterator wrappers
+// (__bounded_iter or __static_bounded_iter). Algorithms that validate a whole range up front can replace such
+// iterators with raw pointers, since every per-step check is implied by the up-front one.
+template <class _Iter>
+struct __is_bounded_iter : false_type {};
+
 template <class _Iter>
 class __wrap_iter;
 
