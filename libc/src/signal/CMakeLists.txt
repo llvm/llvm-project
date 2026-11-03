@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  killpg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.killpg
+)
+
+add_entrypoint_object(
   sigaction
   ALIAS
   DEPENDS

@@ -10,7 +10,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "DXILFlattenArrays.h"
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -478,7 +477,8 @@ static bool flattenArrays(Module &M) {
   return MadeChange;
 }
 
-PreservedAnalyses DXILFlattenArrays::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses DXILFlattenArraysPass::run(Module &M,
+                                             ModuleAnalysisManager &) {
   bool MadeChanges = flattenArrays(M);
   if (!MadeChanges)
     return PreservedAnalyses::all();
