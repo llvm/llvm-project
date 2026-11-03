@@ -221,50 +221,15 @@ bool AArch64TTIImpl::hasPossibleIncompatibleOps(const Function *F,
 
       auto *II = dyn_cast<IntrinsicInst>(&I);
 
-      // If the operation is invalid in the current mode, it should not be
-      // inlined.
-      // Target intrinics may not be handled by `getInstructionCost`, so
-      // remain conservative that they may not be compatible in the mode
-      // of the caller.
       // FIXME: Be less conservative about target intrinsics.
-      SmallVector<Value *> Opnds(I.op_begin(), I.op_end());
-      if (!getInstructionCost(&I, Opnds, TTI::TCK_RecipThroughput).isValid() ||
-          (II && Intrinsic::isTargetIntrinsic(II->getIntrinsicID())))
+      if (II && II->getCalledFunction()->isTargetIntrinsic())
         return true;
-
-      if (AssumeVScaleIsEquivalent)
-        continue;
-
-      // Inlining operations on fixed-length vectors when the streaming
-      // mode does not match is rejected because performance may be impacted.
-      // This decision should eventually be moved to the cost-model.
-      if (!IsAlwaysInline && (isa<FixedVectorType>(I.getType()) ||
-                              any_of(I.operand_values(), [](const Value *V) {
-                                return isa<FixedVectorType>(V->getType());
-                              })))
-        return true;
-
-      if (II) {
-        unsigned IID = II->getIntrinsicID();
-        switch (IID) {
-        default:
-          if (!Intrinsic::isTargetIntrinsic(IID))
-            break;
-          // Conservatively assume target intrinsics are vscale dependent,
-          // although we can probably limit it to a small list of target
-          // intrinsics that use vscale (e.g. `llvm.aarch64.sve.cntb()`).
-          return true;
-        case Intrinsic::vscale:
-          if (!AssumeVScaleIsEquivalent)
-            return true;
-          break;
-        }
-      }
 
       // Determine if the operation is vscale dependent by looking at it's
       // operand/result types.
       if (!AssumeVScaleIsEquivalent &&
-          (I.getType()->isScalableTy() ||
+          ((II && II->getIntrinsicID() == Intrinsic::vscale) ||
+           I.getType()->isScalableTy() ||
            any_of(
                I.operand_values(),
                [](const Value *V) { return V->getType()->isScalableTy(); }) ||
@@ -272,6 +237,22 @@ bool AArch64TTIImpl::hasPossibleIncompatibleOps(const Function *F,
                                              .getSourceElementType()
                                              ->isScalableTy()) ||
            (isa<AllocaInst>(I) && cast<AllocaInst>(I).isScalable())))
+        return true;
+
+      // Inlining operations on fixed-length vectors when the streaming
+      // mode does not match is rejected because performance may be impacted.
+      // This decision should eventually be moved to the cost-model.
+      if (!AssumeVScaleIsEquivalent && !IsAlwaysInline &&
+          (isa<FixedVectorType>(I.getType()) ||
+           any_of(I.operand_values(), [](const Value *V) {
+             return isa<FixedVectorType>(V->getType());
+           })))
+        return true;
+
+      // If the operation is invalid in the current mode, it should not be
+      // inlined.
+      SmallVector<Value *> Opnds(I.op_begin(), I.op_end());
+      if (!getInstructionCost(&I, Opnds, TTI::TCK_RecipThroughput).isValid())
         return true;
     }
   }
