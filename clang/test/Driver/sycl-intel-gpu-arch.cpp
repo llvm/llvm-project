@@ -73,6 +73,19 @@
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-NUM %s
 // CHK-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.
 
+/// A GPU from another vendor is not a SYCL device on a plain SPIR-V target.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=sm_80 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-OTHER-VENDOR -DARCH=sm_80 %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=gfx906 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-OTHER-VENDOR -DARCH=gfx906 %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=gfx90a:xnack+ -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-OTHER-VENDOR -DARCH=gfx90a:xnack+ %s
+// CHK-OTHER-VENDOR: error: unsupported SYCL gpu architecture: [[ARCH]]
+// CHK-OTHER-VENDOR-NOT: llvm-offload-binary
+
 /// A numeric name names no device unless the list has its GPU IP version.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_40.11.0 -c %s 2>&1 \
