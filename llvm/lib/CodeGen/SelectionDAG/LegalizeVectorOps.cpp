@@ -1360,9 +1360,28 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     Results.push_back(ExpandMASK_BEFOREFIRST(Node));
     return;
 
+  case ISD::FMA:
+    // afn permits evaluating the f16 FMA in f32. Preserve scalar f16 FMA
+    // lowering that splitting can still reach.
+    if (Node->getValueType(0).getVectorElementType() == MVT::f16 &&
+        Node->getFlags().hasApproximateFuncs() &&
+        !TLI.isOperationLegalOrCustom(ISD::FMA, MVT::f16) &&
+        TLI.isOperationLegal(ISD::FMA, MVT::f32)) {
+      EVT VT = Node->getValueType(0);
+      EVT F32VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+      SDLoc DL(Node);
+      SDValue A = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, Node->getOperand(0));
+      SDValue B = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, Node->getOperand(1));
+      SDValue C = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, Node->getOperand(2));
+      SDValue FMA = DAG.getNode(ISD::FMA, DL, F32VT, A, B, C, Node->getFlags());
+      Results.push_back(
+          DAG.getNode(ISD::FP_ROUND, DL, VT, FMA,
+                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)));
+      return;
+    }
+    [[fallthrough]];
   case ISD::FADD:
   case ISD::FMUL:
-  case ISD::FMA:
   case ISD::FDIV:
   case ISD::FCEIL:
   case ISD::FFLOOR:
