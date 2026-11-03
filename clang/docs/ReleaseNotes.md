@@ -1458,6 +1458,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 #### Diagnostic changes
 
 - For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
+- The diagnostics of the Clang Static Analyzer no longer have two spaces after a sentence ending (#GH228777). The RFC for this change can be found here: https://discourse.llvm.org/t/rfc-standardization-of-reports-sentence-spacing/92428
 
 (release-notes-sanitizers)=
 
@@ -1547,6 +1548,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
   and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+- Fixed variables shared by an enclosing region (e.g. `parallel`) being
+  captured by copy when a nested construct has `default(firstprivate)` or
+  `default(private)`, which could silently lose writes such as the result of
+  a reduction on the nested construct.
 
 ### SYCL Support
 

@@ -416,7 +416,7 @@ added in the future:
     - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with `nest`.
 
-    - On RISC-V the callee preserves x5-x31 except x6, x7 and x28 registers.
+    - On RISC-V the callee preserves x8-x31 except the x28 register.
 
     - On LoongArch the callee preserves r4-r31 except r12-r15 and r20-r21 registers.
 
