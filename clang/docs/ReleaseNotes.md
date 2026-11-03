@@ -1454,6 +1454,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Improvements
 
+- `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
+  declarations such as `fopen` when targeting MSVC to avoid false negatives in
+  C99 and later C standards.
+
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
