@@ -1,7 +1,6 @@
 header: sys/uio.h
 standards:
   - posix
-  - linux
 types:
   - type_name: struct_iovec
   - type_name: ssize_t
