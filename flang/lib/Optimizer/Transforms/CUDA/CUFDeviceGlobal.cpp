@@ -81,10 +81,10 @@ static void processAllocaOp(fir::AllocaOp allocaOp,
     processTypeDescriptor(recTy, symbolTable, candidates);
 }
 
-static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
+static void processBoxType(mlir::Type boxType, mlir::SymbolTable &symbolTable,
                            llvm::DenseSet<fir::GlobalOp> &candidates) {
-  if (auto recTy = mlir::dyn_cast<fir::RecordType>(
-          fir::unwrapRefType(emboxOp.getMemref().getType())))
+  if (auto recTy =
+          mlir::dyn_cast<fir::RecordType>(fir::getFortranElementType(boxType)))
     processTypeDescriptor(recTy, symbolTable, candidates);
 }
 
@@ -96,8 +96,12 @@ static void prepareImplicitDeviceGlobals(
       processAddrOfOp(op, symbolTable, candidates, /*recurseInGlobal=*/false,
                       skipDeadDeclares);
     });
-    funcOp.walk(
-        [&](fir::EmboxOp op) { processEmboxOp(op, symbolTable, candidates); });
+    funcOp.walk([&](fir::EmboxOp op) {
+      processBoxType(op.getType(), symbolTable, candidates);
+    });
+    funcOp.walk([&](fir::ReboxOp op) {
+      processBoxType(op.getType(), symbolTable, candidates);
+    });
     funcOp.walk([&](fir::AllocaOp op) {
       processAllocaOp(op, symbolTable, candidates);
     });

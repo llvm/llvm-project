@@ -135,5 +135,6 @@ subroutine s5(a, notify, res)
   !ERROR: Variable 'bad' with NOTIFY_TYPE potential component '%a' must be a coarray
   type(t) :: bad
   !ERROR: NOTIFY= specifier must have type NOTIFY_TYPE from ISO_FORTRAN_ENV
+  !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
   print *, a[1, NOTIFY=notify]
 end

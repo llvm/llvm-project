@@ -9,6 +9,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -892,12 +893,13 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
 
 TEST(ConstantsTest, Float128Test) {
   LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext("", C);
   LLVMTypeRef Ty128 = LLVMFP128TypeInContext(C);
   LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(C);
   LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
   LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
   LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
-  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(C);
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
   uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
   uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
   LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
@@ -918,6 +920,7 @@ TEST(ConstantsTest, Float128Test) {
   LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
   EXPECT_TRUE(val7 != nullptr);
   LLVMDisposeBuilder(Builder);
+  LLVMDisposeModule(M);
   LLVMContextDispose(C);
 }
 
@@ -941,6 +944,68 @@ TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
   ASSERT_TRUE(isa<ConstantVector>(CVWithPoison));
   ConstantRange CRPoison = CVWithPoison->toConstantRange();
   EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
+}
+
+TEST(ConstantsTest, ToConstantFPRangeScalar) {
+  LLVMContext Context;
+  Type *FloatTy = Type::getFloatTy(Context);
+  const fltSemantics &Sem = APFloat::IEEEsingle();
+
+  EXPECT_EQ(ConstantFP::get(FloatTy, 1.5)->toConstantFPRange(),
+            ConstantFPRange(APFloat(1.5f)));
+  EXPECT_EQ(UndefValue::get(FloatTy)->toConstantFPRange(),
+            ConstantFPRange::getFull(Sem));
+  EXPECT_EQ(PoisonValue::get(FloatTy)->toConstantFPRange(),
+            ConstantFPRange::getFull(Sem));
+}
+
+TEST(ConstantsTest, ToConstantFPRangeVector) {
+  LLVMContext Context;
+  Type *FloatTy = Type::getFloatTy(Context);
+  auto *VecTy = FixedVectorType::get(FloatTy, 3);
+  const fltSemantics &Sem = APFloat::IEEEsingle();
+  auto GetFP = [&](float V) { return ConstantFP::get(FloatTy, V); };
+
+  EXPECT_EQ(ConstantFP::get(VecTy, 2.0)->toConstantFPRange(),
+            ConstantFPRange(APFloat(2.0f)));
+  EXPECT_EQ(Constant::getNullValue(VecTy)->toConstantFPRange(),
+            ConstantFPRange(APFloat(0.0f)));
+
+  Constant *SplatWithPoison = ConstantVector::get(
+      {GetFP(2.0f), PoisonValue::get(FloatTy), GetFP(2.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(SplatWithPoison));
+  EXPECT_EQ(SplatWithPoison->toConstantFPRange(),
+            ConstantFPRange(APFloat(2.0f)));
+
+  Constant *CDV = ConstantVector::get({GetFP(1.0f), GetFP(-2.0f), GetFP(0.5f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(CDV));
+  EXPECT_EQ(CDV->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(-2.0f), APFloat(1.0f)));
+
+  Constant *Zeros =
+      ConstantVector::get({GetFP(-0.0f), GetFP(0.0f), GetFP(-0.0f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(Zeros));
+  EXPECT_EQ(Zeros->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(-0.0f), APFloat(0.0f)));
+
+  Constant *WithNaN = ConstantVector::get(
+      {GetFP(1.0f), ConstantFP::get(FloatTy, APFloat::getQNaN(Sem)),
+       GetFP(1.0f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(WithNaN));
+  EXPECT_EQ(WithNaN->toConstantFPRange(),
+            ConstantFPRange(APFloat(1.0f))
+                .unionWith(ConstantFPRange(APFloat::getQNaN(Sem))));
+
+  Constant *WithPoison = ConstantVector::get(
+      {GetFP(1.0f), PoisonValue::get(FloatTy), GetFP(3.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(WithPoison));
+  EXPECT_EQ(WithPoison->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(1.0f), APFloat(3.0f)));
+
+  Constant *WithUndef = ConstantVector::get(
+      {GetFP(1.0f), UndefValue::get(FloatTy), GetFP(3.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(WithUndef));
+  EXPECT_EQ(WithUndef->toConstantFPRange(), ConstantFPRange::getFull(Sem));
 }
 
 TEST(ConstantsTest, GetElementPtrDataLayout) {
@@ -996,6 +1061,34 @@ TEST(ConstantsTest, GetElementPtrDataLayout) {
   EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I32, Ptr, PtrToInt64));
   // Can't represent sext(constexpr).
   EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I8, Ptr, PtrToInt32));
+}
+
+TEST(ConstantsTest, PtrAddCAPI) {
+  LLVMContext Context;
+  DataLayout DL;
+  Module M("", Context);
+
+  Type *I8 = Type::getInt8Ty(Context);
+  Type *I32 = Type::getInt32Ty(Context);
+  Type *I64 = Type::getInt64Ty(Context);
+  Constant *Ptr = M.getOrInsertGlobal("dummy", I8);
+  Constant *PtrToInt = ConstantExpr::getPtrToInt(Ptr, I64);
+  Constant *I64_1 = ConstantInt::get(I64, 1);
+
+  EXPECT_EQ(
+      unwrap(LLVMConstPtrAdd(wrap(Ptr), wrap(I64_1), LLVMGEPFlagNUW)),
+      ConstantExpr::getPtrAdd(Ptr, I64_1, GEPNoWrapFlags::noUnsignedWrap()));
+
+  LLVMValueRef Indices[1] = {wrap(I64_1)};
+  EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
+                                              Indices, 1, LLVMGEPFlagInBounds)),
+            ConstantExpr::getGetElementPtr(DL, I32, Ptr, I64_1,
+                                           GEPNoWrapFlags::inBounds()));
+
+  LLVMValueRef Indices2[1] = {wrap(PtrToInt)};
+  EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
+                                              Indices2, 1, 0)),
+            nullptr);
 }
 
 } // end anonymous namespace

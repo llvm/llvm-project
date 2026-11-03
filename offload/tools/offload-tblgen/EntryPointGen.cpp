@@ -36,9 +36,7 @@ static void EmitValidationFunc(const FunctionRec &F, raw_ostream &OS) {
   OS << ") {\n";
 
   bool HasValidation = llvm::any_of(F.getReturns(), [](auto &R) {
-    return llvm::any_of(R.getConditions(), [](auto &C) {
-      return C.starts_with("`") && C.ends_with("`");
-    });
+    return llvm::any_of(R.getConditions(), ReturnRec::isValidationCondition);
   });
 
   if (HasValidation) {
@@ -46,7 +44,7 @@ static void EmitValidationFunc(const FunctionRec &F, raw_ostream &OS) {
     // Emit validation checks
     for (const auto &Return : F.getReturns()) {
       for (auto &Condition : Return.getConditions()) {
-        if (Condition.starts_with("`") && Condition.ends_with("`")) {
+        if (ReturnRec::isValidationCondition(Condition)) {
           auto ConditionString = Condition.substr(1, Condition.size() - 2);
           OS << formatv(TAB_2 "if ({0}) {{\n", ConditionString);
           OS << formatv(TAB_3

@@ -22,7 +22,6 @@
 #include "mlir/Dialect/Arith/Transforms/BufferDeallocationOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/Transforms/BufferViewFlowOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
-#include "mlir/Dialect/Arith/Transforms/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
@@ -57,8 +56,9 @@
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
-#include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
+#include "mlir/Dialect/MemRef/IR/MemorySlotInterfacesImpl.h"
 #include "mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h"
+#include "mlir/Dialect/MemRef/Transforms//MemorySlotInterfacesImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/BufferViewFlowOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
@@ -90,7 +90,6 @@
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/Transforms/RuntimeOpVerification.h"
 #include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
-#include "mlir/Dialect/Tosa/IR/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/PDLExtension/PDLExtension.h"
@@ -99,7 +98,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/Transforms/IndexedAccessOpInterfaceImpl.h"
-#include "mlir/Dialect/Vector/Transforms/MemorySlotOpInterfaceImpl.h"
+#include "mlir/Dialect/Vector/Transforms/MemorySlotInterfacesImpl.h"
 #include "mlir/Dialect/Vector/Transforms/SubsetOpInterfaceImpl.h"
 #include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 #include "mlir/Dialect/X86/X86Dialect.h"
@@ -168,7 +167,6 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   arith::registerBufferDeallocationOpInterfaceExternalModels(registry);
   arith::registerBufferizableOpInterfaceExternalModels(registry);
   arith::registerBufferViewFlowOpInterfaceExternalModels(registry);
-  arith::registerShardingInterfaceExternalModels(registry);
   arith::registerValueBoundsOpInterfaceExternalModels(registry);
   bufferization::registerBufferizableOpInterfaceExternalModels(registry);
   bufferization::registerValueBoundsOpInterfaceExternalModels(registry);
@@ -187,7 +185,8 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   memref::registerBufferViewFlowOpInterfaceExternalModels(registry);
   memref::registerRuntimeVerifiableOpInterfaceExternalModels(registry);
   memref::registerValueBoundsOpInterfaceExternalModels(registry);
-  memref::registerMemorySlotExternalModels(registry);
+  memref::registerDestructurableTypeExternalModels(registry);
+  memref::registerMemorySlotOpInterfaceExternalModels(registry);
   ml_program::registerBufferizableOpInterfaceExternalModels(registry);
   nvgpu::registerMemoryAccessOpInterfacesExternalModels(registry);
   scf::registerBufferDeallocationOpInterfaceExternalModels(registry);
@@ -202,10 +201,9 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   tensor::registerSubsetOpInterfaceExternalModels(registry);
   tensor::registerTilingInterfaceExternalModels(registry);
   tensor::registerValueBoundsOpInterfaceExternalModels(registry);
-  tosa::registerShardingInterfaceExternalModels(registry);
   vector::registerBufferizableOpInterfaceExternalModels(registry);
   vector::registerIndexedAccessOpInterfaceExternalModels(registry);
-  vector::registerMemorySlotOpInterfaceExternalModels(registry);
+  vector::registerMemorySlotExternalModels(registry);
   vector::registerSubsetOpInterfaceExternalModels(registry);
   vector::registerValueBoundsOpInterfaceExternalModels(registry);
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);

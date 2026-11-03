@@ -1,6 +1,7 @@
 # RUN: llc -mtriple=armv7-apple-ios -o - %s -run-pass if-converter | FileCheck %s
 ---
 name:            f1
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1

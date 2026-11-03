@@ -333,7 +333,7 @@ set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
 
 # If LLVM is dynamically linked we need to add its libraries.
 set(OFFLOAD_INSTALL_RPATH "$ORIGIN")
-if(LLVM_LINK_LLVM_DYLIB)
+if(LLVM_LINK_LLVM_DYLIB OR LLVM_ENABLE_SHARED_LIBS)
   file(RELATIVE_PATH llvm_libdir_relpath
        "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_INSTALL_LIBDIR}"
        "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
@@ -356,6 +356,12 @@ add_dependencies(install-offload offload)
 add_dependencies(install-offload-stripped offload)
 
 add_subdirectory(tools/offload-tblgen)
+
+# Invokes offload-tblgen; see tablegen_internal() for the calling convention.
+function(offload_tablegen ofn)
+  tablegen_internal(OFFLOAD ${ARGV})
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
+endfunction()
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)

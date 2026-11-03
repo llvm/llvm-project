@@ -81,7 +81,7 @@ bool InitialImage::Incorporate(ConstantSubscript toOffset,
   }
 }
 
-// Classes used with common::SearchTypes() to (re)construct Constant<> values
+// Classes used with evaluate::SearchTypes() to (re)construct Constant<> values
 // of the right type to initialize each symbol from the values that have
 // been placed into its initialization image by DATA statements.
 class AsConstantHelper {
@@ -96,15 +96,16 @@ public:
         extents_{extents}, padWithZero_{padWithZero}, offset_{offset} {
     CHECK(!type.IsPolymorphic());
   }
-  template <typename T> Result Test() {
+  template <typename T> Result Test(int kind) {
     if (T::category != type_.category()) {
       return std::nullopt;
     }
     if constexpr (T::category != TypeCategory::Derived) {
-      if (T::kind != type_.kind()) {
+      if (kind != type_.kind()) {
         return std::nullopt;
       }
     }
+    CHECK_KIND(kind, T);
     using Const = Constant<T>;
     using Scalar = typename Const::Element;
     std::optional<uint64_t> optElements{TotalElementCount(extents_)};
@@ -159,36 +160,38 @@ public:
       return AsGenericExpr(
           Const{derived, std::move(typedValue), std::move(extents_)});
     } else if constexpr (T::category == TypeCategory::Character) {
-      auto length{static_cast<ConstantSubscript>(stride) / T::kind};
+      auto length{static_cast<ConstantSubscript>(stride) / kind};
       llvm::SmallVector<char, 256> buffer;
       const char *data{GetTailPaddedData(offset_, elements * stride, buffer)};
-      std::size_t unit{InitialImage::ByteSwapUnit<T>(context_, stride)};
+      std::size_t unit{InitialImage::ByteSwapUnit(
+          context_, TypeCategory::Character, kind, stride)};
       for (std::size_t j{0}; j < elements; ++j) {
         if (unit > 1) {
           llvm::SmallVector<char, 64> chars(
-              data + j * stride, data + j * stride + length * T::kind);
+              data + j * stride, data + j * stride + length * kind);
           ReverseByteUnits(chars.data(), chars.size(), unit);
-          typedValue[j] = value::Character<T::kind>::FromRawBytes(
-              chars.data(), length * T::kind);
+          typedValue[j] = value::CharacterValue::FromRawBytes(
+              kind, chars.data(), length * kind);
         } else {
-          typedValue[j] = value::Character<T::kind>::FromRawBytes(
-              data + j * stride, length * T::kind);
+          typedValue[j] = value::CharacterValue::FromRawBytes(
+              kind, data + j * stride, length * kind);
         }
       }
       return AsGenericExpr(
-          Const{length, std::move(typedValue), std::move(extents_)});
+          Const{kind, length, std::move(typedValue), std::move(extents_)});
     } else {
       // Lengthless intrinsic type
       llvm::SmallVector<char, 256> buffer;
       const char *data{GetTailPaddedData(offset_,
-          elements == 0
-              ? 0
-              : (elements - 1) * stride + evaluate::Scalar<T>::bytesStored(),
+          elements == 0 ? 0
+                        : (elements - 1) * stride +
+                  evaluate::Scalar<T>::bytesStored(kind),
           buffer)};
-      LoadSerialValues(data,
+      LoadSerialValues(kind, data,
           llvm::MutableArrayRef<evaluate::Scalar<T>>(typedValue), stride,
-          InitialImage::ByteSwapUnit<T>(context_, stride));
-      return AsGenericExpr(Const{std::move(typedValue), std::move(extents_)});
+          InitialImage::ByteSwapUnit(context_, T::category, kind, stride));
+      return AsGenericExpr(
+          Const{kind, std::move(typedValue), std::move(extents_)});
     }
   }
 
@@ -228,7 +231,7 @@ std::optional<Expr<SomeType>> InitialImage::AsConstant(FoldingContext &context,
     const DynamicType &type, std::optional<std::int64_t> charLength,
     const ConstantSubscripts &extents, bool padWithZero,
     ConstantSubscript offset) const {
-  return common::SearchTypes(AsConstantHelper{
+  return SearchTypes(AsConstantHelper{
       context, type, charLength, extents, *this, padWithZero, offset});
 }
 

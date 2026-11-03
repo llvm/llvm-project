@@ -100,7 +100,7 @@ end subroutine
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QMassumed_rank_testsPtest_intentout(
-! CHECK-SAME:                                                    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>> {fir.bindc_name = "x"}) {
+! CHECK-SAME:                                                    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QMassumed_rank_testsFtest_intentoutEx") fortran_attrs<allocatable, intent_out> : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>

@@ -14,7 +14,6 @@
 // initializer for a symbol.
 
 #include "expression.h"
-#include "flang/Evaluate/char.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cstring>
@@ -61,16 +60,18 @@ inline void StoreSerialValues(char *dst, llvm::ArrayRef<SCALAR> values,
 /// De-serializes \p values from \p src; \p swapUnit as for
 /// StoreSerialValues (target to host byte order).
 template <typename SCALAR>
-inline void LoadSerialValues(const char *src,
+inline void LoadSerialValues(int kind, const char *src,
     llvm::MutableArrayRef<SCALAR> values, size_t stride, size_t swapUnit = 0) {
   for (auto it : llvm::enumerate(values)) {
     const char *from{src + stride * it.index()};
     if (swapUnit > 1) {
-      llvm::SmallVector<char, 32> buffer(from, from + SCALAR::bytesStored());
+      llvm::SmallVector<char, 32> buffer(
+          from, from + SCALAR::bytesStored(kind));
       ReverseByteUnits(buffer.data(), buffer.size(), swapUnit);
-      it.value() = SCALAR::FromRawBytes(buffer.data(), SCALAR::bytesStored());
+      it.value() =
+          SCALAR::FromRawBytes(kind, buffer.data(), SCALAR::bytesStored(kind));
     } else {
-      it.value() = SCALAR::FromRawBytes(from, SCALAR::bytesStored());
+      it.value() = SCALAR::FromRawBytes(kind, from, SCALAR::bytesStored(kind));
     }
   }
 }
@@ -95,14 +96,13 @@ public:
   /// The image holds the bytes of the values in the byte order of the target.
   /// Returns the size of the pieces whose bytes have to be reversed when the
   /// byte orders of the target and the host differ, or 0.
-  template <typename T>
-  static std::size_t ByteSwapUnit(
-      const FoldingContext &context, std::size_t elementBytes) {
+  static std::size_t ByteSwapUnit(const FoldingContext &context,
+      TypeCategory category, int kind, std::size_t elementBytes) {
     if (context.targetCharacteristics().isBigEndian() != isHostLittleEndian) {
       return 0; // same byte order
-    } else if constexpr (T::category == TypeCategory::Character) {
-      return T::kind;
-    } else if constexpr (T::category == TypeCategory::Complex) {
+    } else if (category == TypeCategory::Character) {
+      return kind;
+    } else if (category == TypeCategory::Complex) {
       return elementBytes / 2; // real and imaginary parts
     } else {
       return elementBytes;
@@ -130,15 +130,15 @@ public:
         bool changed{false};
         StoreSerialValues<Scalar<T>>(&data_.at(offset),
             llvm::ArrayRef<Scalar<T>>(x.values()), *elementBytes, &changed,
-            ByteSwapUnit<T>(context, *elementBytes));
+            ByteSwapUnit(context, T::category, 0, *elementBytes));
         return changed ? Ok : OkNoChange;
       }
     }
   }
-  template <int KIND>
   Result Add(ConstantSubscript offset, std::size_t bytes,
-      const Constant<Type<TypeCategory::Character, KIND>> &x,
+      const Constant<Type<TypeCategory::Character>> &x,
       FoldingContext &context) {
+    const int kind{x.kind()};
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
@@ -155,16 +155,15 @@ public:
       } else {
         Result result{OkNoChange};
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
-          typename value::Character<KIND> scalar{x.At(at)};
-          auto scalarBytes{scalar.size() * KIND};
+          value::CharacterValue scalar{x.At(at)};
+          auto scalarBytes{scalar.size() * kind};
           if (scalarBytes != elementBytes) {
             result = LengthMismatch;
           }
           auto *to{&data_.at(offset)};
           bool changed{false};
-          if (std::size_t unit{
-                  ByteSwapUnit<Type<TypeCategory::Character, KIND>>(
-                      context, elementBytes)};
+          if (std::size_t unit{ByteSwapUnit(
+                  context, TypeCategory::Character, kind, elementBytes)};
               unit > 1) {
             llvm::SmallVector<char, 64> buffer(elementBytes);
             scalar.StoreRawBytes(buffer.data(), elementBytes);

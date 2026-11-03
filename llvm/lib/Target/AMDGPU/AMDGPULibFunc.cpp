@@ -65,7 +65,6 @@ struct ManglingRule {
    unsigned char Param[5];
 
    int maxLeadIndex() const { return (std::max)(Lead[0], Lead[1]); }
-   int getNumLeads() const { return (Lead[0] ? 1 : 0) + (Lead[1] ? 1 : 0); }
 
    unsigned getNumArgs() const;
 
@@ -105,7 +104,6 @@ public:
         Index + 1 + static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED));
   }
   static unsigned getNumArgs(ID Id) { return Table[toIndex(Id)].NumArgs; }
-  static StringRef getName(ID Id) { return Table[toIndex(Id)].Name; }
 };
 
 unsigned ManglingRule::getNumArgs() const {
@@ -544,15 +542,14 @@ AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(EFuncId id, FunctionType *FT,
 ///////////////////////////////////////////////////////////////////////////////
 // Demangling
 
-static int parseVecSize(StringRef& mangledName) {
-  size_t const Len = eatNumber(mangledName);
+static unsigned char parseVecSize(StringRef &mangledName) {
+  int const Len = eatNumber(mangledName);
   switch (Len) {
   case 2: case 3: case 4: case 8: case 16:
-    return Len;
+    return static_cast<unsigned char>(Len);
   default:
-    break;
+    return 1;
   }
-  return 1;
 }
 
 static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
@@ -708,13 +705,6 @@ bool AMDGPULibFunc::parse(StringRef FuncName, AMDGPULibFunc &F) {
 
   F.Impl = std::unique_ptr<AMDGPULibFuncImpl>();
   return false;
-}
-
-StringRef AMDGPUMangledLibFunc::getUnmangledName(StringRef mangledName) {
-  StringRef S = mangledName;
-  if (eatTerm(S, "_Z"))
-    return eatLengthPrefixedName(S);
-  return StringRef();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -893,7 +883,7 @@ AMDGPULibFuncBase::Param AMDGPULibFuncBase::Param::getFromTy(Type *Ty,
                                                              bool Signed) {
   Param P;
   if (FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty)) {
-    P.VectorSize = VT->getNumElements();
+    P.VectorSize = static_cast<unsigned char>(VT->getNumElements());
     Ty = VT->getElementType();
   }
 

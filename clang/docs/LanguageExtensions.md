@@ -1782,6 +1782,7 @@ More information can be found [here](Modules.md).
 | `= delete ("should have a reason");`          | \_\_cpp_deleted_function           | C++26         | C++03         |
 | Variadic Friends                              | \_\_cpp_variadic_friend            | C++26         | C++03         |
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
+| `#embed`                                      | \_\_cpp_pp_embed                   | C++26         | C++03         |
 |``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
 | Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
@@ -1807,7 +1808,7 @@ More information can be found [here](Modules.md).
 | `_Thread_local` (N1364)                       |                                    | C11           | C89, C++      |
 | Array & element qualification (N2607)         |                                    | C23           | C89           |
 | Attributes (N2335)                            |                                    | C23           | C89           |
-| `#embed` (N3017)                              |                                    | C23           | C89, C++      |
+| `#embed` (N3017)                              |                                    | C23           | C89           |
 | Enum with fixed underlying type (N3030)       |                                    | C23           | C89           |
 | `#warning` (N2686)                            |                                    | C23           | C89           |
 | `_BitInt` (N3035)                             |                                    | C23           | C89, C++      |
@@ -5296,6 +5297,11 @@ underlying allocation or one past the end (see C17 6.5.6p8, C++ [expr.add]).
 This means that arbitrary integer values stored in pointer-type variables must
 not be passed to these builtins. For those use cases, the builtins can still be
 used, but the operation must be performed on the pointer cast to `uintptr_t`.
+
+Null pointers are considered to be aligned to any requested alignment.
+Therefore, `__builtin_is_aligned` evaluates to true for null pointer
+arguments, and `__builtin_align_up` and `__builtin_align_down` preserve
+the null pointer value.
 
 If Clang can determine that the alignment is not a power of two at compile time,
 it will result in a compilation failure. If the alignment argument is not a

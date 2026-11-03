@@ -147,7 +147,7 @@
 ; O2-NEXT:     nvptx-forward-params
 ; O2-NEXT:     nvptx-address-folder
 ; O2-NEXT:     nvptx-proxyreg-erasure
-; O2-NEXT:     process-imp-defs
+; O2-NEXT:     process-implicit-defs
 ; O2-NEXT:     require<machine-loops>
 ; O2-NEXT:     phi-node-elimination
 ; O2-NEXT:     two-address-instruction
@@ -160,7 +160,6 @@
 ; O2-NEXT:     fixup-statepoint-caller-saved
 ; O2-NEXT:     branch-folder
 ; O2-NEXT:     post-ra-pseudos
-; O2-NEXT:     block-placement
 ; O2-NEXT:     fentry-insert
 ; O2-NEXT:     xray-instrumentation
 ; O2-NEXT:     live-debug-values

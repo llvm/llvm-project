@@ -429,3 +429,31 @@ def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
   let PrimaryKeyEarlyOut = 1;
 }
+
+def LDSDMAIntrinsicTable : GenericTable {
+  let FilterClass = "AMDGPULDSDMAIntrinsic";
+  let CppTypeName = "LDSDMAIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupLDSDMAIntrinsic";
+}
+
+class ExponentOnlyScaleIntrinsic<AMDGPUExponentOnlyScale intr> {
+  Intrinsic Intr = !cast<Intrinsic>(intr);
+  bits<8> ScaleArg = intr.ScaleArg;
+  assert !eq(Intr.ParamTypes[intr.ScaleArg], llvm_float_ty),
+    "scale argument of " # !cast<string>(intr) # " must be f32";
+}
+
+def ExponentOnlyScaleIntrinsics : GenericTable {
+  let FilterClass = "ExponentOnlyScaleIntrinsic";
+  let Fields = ["Intr", "ScaleArg"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupExponentOnlyScaleIntrinsic";
+  let PrimaryKeyEarlyOut = 1;
+}
+
+foreach intr = !instances<AMDGPUExponentOnlyScale>() in
+  def : ExponentOnlyScaleIntrinsic<intr>;
