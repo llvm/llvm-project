@@ -105,20 +105,22 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
   return res;
 }
 
-static mlir::LogicalResult emitMasterOp(CIRGenFunction &cgf, mlir::Location begin, mlir::Location end, llvm::function_ref<mlir::LogicalResult()> emitBody){
-    CIRGenBuilderTy &builder = cgf.getBuilder();
-    CIRGenModule &cgm = cgf.getCIRGenModule();
+static mlir::LogicalResult
+emitMasterOp(CIRGenFunction &cgf, mlir::Location begin, mlir::Location end,
+             llvm::function_ref<mlir::LogicalResult()> emitBody) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  CIRGenModule &cgm = cgf.getCIRGenModule();
 
-    auto masterOp = mlir::omp::MasterOp::create(builder, begin);
+  auto masterOp = mlir::omp::MasterOp::create(builder, begin);
 
-    mlir::Block &block = masterOp.getRegion().emplaceBlock();
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToEnd(&block);
+  mlir::Block &block = masterOp.getRegion().emplaceBlock();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
 
-    CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
-    mlir::LogicalResult res = emitBody();
-    mlir::omp::TerminatorOp::create(builder, end);
-    return res;
+  CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
+  mlir::LogicalResult res = emitBody();
+  mlir::omp::TerminatorOp::create(builder, end);
+  return res;
 }
 
 mlir::LogicalResult
@@ -222,17 +224,15 @@ CIRGenFunction::emitOMPSingleDirective(const OMPSingleDirective &s) {
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
-    mlir::Location begin = getLoc(s.getBeginLoc());
-     mlir::Location end = getLoc(s.getEndLoc());
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
 
-     return emitMasterOp(
-         *this, begin, end,
-         [&]() -> mlir::LogicalResult {
-           // emitStmt() rejects CapturedStmt directly; the parent construct
-           // must unwrap it, so emit the inner statement instead.
-           const Stmt *innerStmt = s.getAssociatedStmt();
-           return emitStmt(innerStmt, /*useCurrentScope=*/true);
-         });
+  return emitMasterOp(*this, begin, end, [&]() -> mlir::LogicalResult {
+    // emitStmt() rejects CapturedStmt directly; the parent construct
+    // must unwrap it, so emit the inner statement instead.
+    const Stmt *innerStmt = s.getAssociatedStmt();
+    return emitStmt(innerStmt, /*useCurrentScope=*/true);
+  });
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
