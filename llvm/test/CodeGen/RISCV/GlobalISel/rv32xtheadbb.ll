@@ -129,28 +129,12 @@ define i8 @cttz_i8(i8 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    zext.b a1, a0
 ; RV32XTHEADBB-NEXT:    beqz a1, .LBB10_2
 ; RV32XTHEADBB-NEXT:  # %bb.1: # %cond.false
-; RV32XTHEADBB-NEXT:    addi sp, sp, -16
-; RV32XTHEADBB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32XTHEADBB-NEXT:    not a1, a0
 ; RV32XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV32XTHEADBB-NEXT:    and a0, a1, a0
-; RV32XTHEADBB-NEXT:    zext.b a1, a0
-; RV32XTHEADBB-NEXT:    srli a1, a1, 1
-; RV32XTHEADBB-NEXT:    andi a1, a1, 85
-; RV32XTHEADBB-NEXT:    sub a0, a0, a1
-; RV32XTHEADBB-NEXT:    zext.b a1, a0
-; RV32XTHEADBB-NEXT:    srli a1, a1, 2
-; RV32XTHEADBB-NEXT:    andi a1, a1, 51
-; RV32XTHEADBB-NEXT:    andi a0, a0, 51
-; RV32XTHEADBB-NEXT:    add a0, a1, a0
-; RV32XTHEADBB-NEXT:    srli a1, a0, 4
-; RV32XTHEADBB-NEXT:    add a0, a1, a0
-; RV32XTHEADBB-NEXT:    andi a0, a0, 15
-; RV32XTHEADBB-NEXT:    li a1, 1
-; RV32XTHEADBB-NEXT:    call __mulsi3
-; RV32XTHEADBB-NEXT:    zext.b a0, a0
-; RV32XTHEADBB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32XTHEADBB-NEXT:    addi sp, sp, 16
+; RV32XTHEADBB-NEXT:    li a1, 32
+; RV32XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV32XTHEADBB-NEXT:    sub a0, a1, a0
 ; RV32XTHEADBB-NEXT:    ret
 ; RV32XTHEADBB-NEXT:  .LBB10_2:
 ; RV32XTHEADBB-NEXT:    li a0, 8
@@ -168,30 +152,10 @@ define i16 @cttz_i16(i16 %a) nounwind {
 ; RV32XTHEADBB-NEXT:  # %bb.1: # %cond.false
 ; RV32XTHEADBB-NEXT:    not a1, a0
 ; RV32XTHEADBB-NEXT:    addi a0, a0, -1
-; RV32XTHEADBB-NEXT:    lui a2, 16
 ; RV32XTHEADBB-NEXT:    and a0, a1, a0
-; RV32XTHEADBB-NEXT:    addi a2, a2, -1
-; RV32XTHEADBB-NEXT:    and a1, a0, a2
-; RV32XTHEADBB-NEXT:    lui a3, 5
-; RV32XTHEADBB-NEXT:    srli a1, a1, 1
-; RV32XTHEADBB-NEXT:    addi a3, a3, 1365
-; RV32XTHEADBB-NEXT:    and a1, a1, a3
-; RV32XTHEADBB-NEXT:    sub a0, a0, a1
-; RV32XTHEADBB-NEXT:    and a2, a0, a2
-; RV32XTHEADBB-NEXT:    lui a1, 3
-; RV32XTHEADBB-NEXT:    srli a2, a2, 2
-; RV32XTHEADBB-NEXT:    addi a1, a1, 819
-; RV32XTHEADBB-NEXT:    and a2, a2, a1
-; RV32XTHEADBB-NEXT:    and a0, a0, a1
-; RV32XTHEADBB-NEXT:    add a0, a2, a0
-; RV32XTHEADBB-NEXT:    srli a1, a0, 4
-; RV32XTHEADBB-NEXT:    lui a2, 1
-; RV32XTHEADBB-NEXT:    add a0, a1, a0
-; RV32XTHEADBB-NEXT:    addi a1, a2, -241
-; RV32XTHEADBB-NEXT:    and a0, a0, a1
-; RV32XTHEADBB-NEXT:    srli a1, a0, 8
-; RV32XTHEADBB-NEXT:    add a0, a0, a1
-; RV32XTHEADBB-NEXT:    zext.b a0, a0
+; RV32XTHEADBB-NEXT:    li a1, 32
+; RV32XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV32XTHEADBB-NEXT:    sub a0, a1, a0
 ; RV32XTHEADBB-NEXT:    ret
 ; RV32XTHEADBB-NEXT:  .LBB11_2:
 ; RV32XTHEADBB-NEXT:    li a0, 16
@@ -203,28 +167,12 @@ define i16 @cttz_i16(i16 %a) nounwind {
 define i8 @cttz_zero_poison_i8(i8 %a) nounwind {
 ; RV32XTHEADBB-LABEL: cttz_zero_poison_i8:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    addi sp, sp, -16
-; RV32XTHEADBB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32XTHEADBB-NEXT:    not a1, a0
+; RV32XTHEADBB-NEXT:    li a1, 32
+; RV32XTHEADBB-NEXT:    not a2, a0
 ; RV32XTHEADBB-NEXT:    addi a0, a0, -1
-; RV32XTHEADBB-NEXT:    and a0, a1, a0
-; RV32XTHEADBB-NEXT:    zext.b a1, a0
-; RV32XTHEADBB-NEXT:    srli a1, a1, 1
-; RV32XTHEADBB-NEXT:    andi a1, a1, 85
-; RV32XTHEADBB-NEXT:    sub a0, a0, a1
-; RV32XTHEADBB-NEXT:    zext.b a1, a0
-; RV32XTHEADBB-NEXT:    srli a1, a1, 2
-; RV32XTHEADBB-NEXT:    andi a1, a1, 51
-; RV32XTHEADBB-NEXT:    andi a0, a0, 51
-; RV32XTHEADBB-NEXT:    add a0, a1, a0
-; RV32XTHEADBB-NEXT:    srli a1, a0, 4
-; RV32XTHEADBB-NEXT:    add a0, a1, a0
-; RV32XTHEADBB-NEXT:    andi a0, a0, 15
-; RV32XTHEADBB-NEXT:    li a1, 1
-; RV32XTHEADBB-NEXT:    call __mulsi3
-; RV32XTHEADBB-NEXT:    zext.b a0, a0
-; RV32XTHEADBB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32XTHEADBB-NEXT:    addi sp, sp, 16
+; RV32XTHEADBB-NEXT:    and a0, a2, a0
+; RV32XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV32XTHEADBB-NEXT:    sub a0, a1, a0
 ; RV32XTHEADBB-NEXT:    ret
   %1 = call i8 @llvm.cttz.i8(i8 %a, i1 true)
   ret i8 %1
@@ -233,32 +181,12 @@ define i8 @cttz_zero_poison_i8(i8 %a) nounwind {
 define i16 @cttz_zero_poison_i16(i16 %a) nounwind {
 ; RV32XTHEADBB-LABEL: cttz_zero_poison_i16:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    lui a1, 16
+; RV32XTHEADBB-NEXT:    li a1, 32
 ; RV32XTHEADBB-NEXT:    not a2, a0
 ; RV32XTHEADBB-NEXT:    addi a0, a0, -1
 ; RV32XTHEADBB-NEXT:    and a0, a2, a0
-; RV32XTHEADBB-NEXT:    addi a1, a1, -1
-; RV32XTHEADBB-NEXT:    and a2, a0, a1
-; RV32XTHEADBB-NEXT:    lui a3, 5
-; RV32XTHEADBB-NEXT:    srli a2, a2, 1
-; RV32XTHEADBB-NEXT:    addi a3, a3, 1365
-; RV32XTHEADBB-NEXT:    and a2, a2, a3
-; RV32XTHEADBB-NEXT:    sub a0, a0, a2
-; RV32XTHEADBB-NEXT:    and a1, a0, a1
-; RV32XTHEADBB-NEXT:    lui a2, 3
-; RV32XTHEADBB-NEXT:    srli a1, a1, 2
-; RV32XTHEADBB-NEXT:    addi a2, a2, 819
-; RV32XTHEADBB-NEXT:    and a1, a1, a2
-; RV32XTHEADBB-NEXT:    and a0, a0, a2
-; RV32XTHEADBB-NEXT:    add a0, a1, a0
-; RV32XTHEADBB-NEXT:    srli a1, a0, 4
-; RV32XTHEADBB-NEXT:    lui a2, 1
-; RV32XTHEADBB-NEXT:    add a0, a1, a0
-; RV32XTHEADBB-NEXT:    addi a1, a2, -241
-; RV32XTHEADBB-NEXT:    and a0, a0, a1
-; RV32XTHEADBB-NEXT:    srli a1, a0, 8
-; RV32XTHEADBB-NEXT:    add a0, a0, a1
-; RV32XTHEADBB-NEXT:    zext.b a0, a0
+; RV32XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV32XTHEADBB-NEXT:    sub a0, a1, a0
 ; RV32XTHEADBB-NEXT:    ret
   %1 = call i16 @llvm.cttz.i16(i16 %a, i1 true)
   ret i16 %1
