@@ -37,15 +37,16 @@ static cl::opt<GVDAGType> ViewBlockFreqPropagationDAG(
     "view-block-freq-propagation-dags", cl::Hidden,
     cl::desc("Pop up a window to show a dag displaying how block "
              "frequencies propagation through the CFG."),
-    cl::values(clEnumValN(GVDT_None, "none", "do not display graphs."),
-               clEnumValN(GVDT_Fraction, "fraction",
+    cl::values(clEnumValN(GVDAGType::None, "none", "do not display graphs."),
+               clEnumValN(GVDAGType::Fraction, "fraction",
                           "display a graph using the "
                           "fractional block frequency representation."),
-               clEnumValN(GVDT_Integer, "integer",
+               clEnumValN(GVDAGType::Integer, "integer",
                           "display a graph using the raw "
                           "integer fractional block frequency representation."),
-               clEnumValN(GVDT_Count, "count", "display a graph using the real "
-                                               "profile count if available.")));
+               clEnumValN(GVDAGType::Count, "count",
+                          "display a graph using the real "
+                          "profile count if available.")));
 
 StringRef llvm::getViewBlockFreqFuncName(const LLVMContext &C) {
   return getAnalysisOptions(C).view_bfi_func_name;
@@ -64,7 +65,7 @@ namespace llvm {
 
 static GVDAGType getGVDT(const LLVMContext &C) {
   if (getPGOViewCounts(C) == PGOViewCountsType::Graph)
-    return GVDT_Count;
+    return GVDAGType::Count;
   return ViewBlockFreqPropagationDAG;
 }
 
@@ -163,7 +164,7 @@ void BlockFrequencyInfo::calculate(const Function &F,
     BFI.reset(new ImplType);
   BFI->calculate(F, BPI, CI);
   const AnalysisOptions &Opts = getAnalysisOptions(F);
-  if (ViewBlockFreqPropagationDAG != GVDT_None &&
+  if (ViewBlockFreqPropagationDAG != GVDAGType::None &&
       (Opts.view_bfi_func_name.empty() ||
        F.getName() == Opts.view_bfi_func_name)) {
     view();
