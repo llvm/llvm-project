@@ -205,16 +205,17 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   }
 }
 
-static llvm::SmallVector<std::string, 2>
+static llvm::SmallVector<std::string, 3>
 perTargetRuntimeDirForMachineType(MachineTypes mt) {
   switch (mt) {
   case ARM64:
   case ARM64X:
     return {"aarch64-pc-windows-msvc"};
   case ARM64EC:
-    return {"arm64ec-pc-windows-msvc"};
+    return {"arm64ec-pc-windows-msvc", "aarch64-pc-windows-msvc"};
   case ARMNT:
-    return {"armv7-pc-windows-msvc", "arm-pc-windows-msvc"};
+    return {"armv7-pc-windows-msvc", "arm-pc-windows-msvc",
+            "thumbv7-pc-windows-msvc"};
   case AMD64:
     return {"x86_64-pc-windows-msvc"};
   case I386:
