@@ -238,7 +238,9 @@ FPClassTest llvm::invertFPClassTestIfSimpler(FPClassTest Test, bool UseFCmp) {
 
 static MachineOperand *getSalvageOpsForCopy(const MachineRegisterInfo &MRI,
                                             MachineInstr &Copy) {
-  assert(Copy.getOpcode() == TargetOpcode::COPY && "Must be a COPY");
+  assert((Copy.getOpcode() == TargetOpcode::COPY ||
+          Copy.getOpcode() == TargetOpcode::G_BITCAST) &&
+         "Must be a COPY or G_BITCAST");
 
   return &Copy.getOperand(1);
 }
@@ -269,10 +271,55 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
   case TargetOpcode::COPY:
+  case TargetOpcode::G_BITCAST:
     return getSalvageOpsForCopy(MRI, MI);
   default:
     return nullptr;
   }
+}
+
+/// Replace \p DbgMI, which describes the result of \p BuildVector, with one
+/// fragment DBG_VALUE per vector element.
+static void salvageBuildVector(const MachineRegisterInfo &MRI,
+                               MachineInstr &BuildVector, MachineInstr &DbgMI) {
+  const DIExpression *Expr = DbgMI.getDebugExpression();
+  if (Expr->isComplex())
+    return;
+
+  unsigned VecSize = MRI.getType(BuildVector.getOperand(0).getReg())
+                         .getSizeInBits()
+                         .getFixedValue();
+  if (auto Fragment = Expr->getFragmentInfo()) {
+    if (VecSize > Fragment->SizeInBits)
+      return;
+  } else if (auto VarSize = DbgMI.getDebugVariable()->getSizeInBits()) {
+    if (VecSize > *VarSize)
+      return;
+  }
+
+  unsigned NumElts = BuildVector.getNumOperands() - 1;
+  unsigned EltSize = VecSize / NumElts;
+  SmallVector<DIExpression *, 8> FragExprs;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    auto FragExpr =
+        DIExpression::createFragmentExpression(Expr, I * EltSize, EltSize);
+    if (!FragExpr)
+      return;
+    FragExprs.push_back(*FragExpr);
+  }
+
+  MachineBasicBlock &MBB = *DbgMI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  for (unsigned I = NumElts - 1; I != 0; --I) {
+    MachineInstr *NewMI = MF.CloneMachineInstr(&DbgMI);
+    NewMI->getDebugOperand(0).setReg(BuildVector.getOperand(I + 1).getReg());
+    NewMI->getDebugExpressionOp().setMetadata(FragExprs[I]);
+    MBB.insertAfter(DbgMI.getIterator(), NewMI);
+    LLVM_DEBUG(dbgs() << "SALVAGE: " << *NewMI << '\n');
+  }
+  DbgMI.getDebugOperand(0).setReg(BuildVector.getOperand(1).getReg());
+  DbgMI.getDebugExpressionOp().setMetadata(FragExprs[0]);
+  LLVM_DEBUG(dbgs() << "SALVAGE: " << DbgMI << '\n');
 }
 
 void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
@@ -298,6 +345,11 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     if (DbgMI->getOpcode() != TargetOpcode::DBG_VALUE) {
       assert(DbgMI->getOpcode() == TargetOpcode::DBG_VALUE_LIST &&
              "Must be either DBG_VALUE or DBG_VALUE_LIST");
+      continue;
+    }
+
+    if (MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
+      salvageBuildVector(MRI, MI, *DbgMI);
       continue;
     }
 
