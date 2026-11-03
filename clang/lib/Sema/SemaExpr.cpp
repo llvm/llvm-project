@@ -21032,14 +21032,10 @@ static void DoMarkVarDeclReferenced(
       Var->mightBeUsableInConstantExpressions(SemaRef.Context);
 
   // Only track variables with internal linkage or local scope.
-  // Use canonical decl so in-class declarations and out-of-class definitions
-  // of static data members in anonymous namespaces are tracked as a single
-  // entry.
-  const VarDecl *CanonVar = Var->getCanonicalDecl();
-  if ((CanonVar->isLocalVarDeclOrParm() ||
-       CanonVar->isInternalLinkageFileVar()) &&
-      !CanonVar->hasExternalStorage()) {
-    RefsMinusAssignments.insert({CanonVar, 0}).first->getSecond()++;
+  const VarDecl *Key = Sema::getUnusedButSetKey(Var);
+  if ((Key->isLocalVarDeclOrParm() || Key->isInternalLinkageFileVar()) &&
+      !Key->hasExternalStorage()) {
+    RefsMinusAssignments.insert({Key, 0}).first->getSecond()++;
   }
 
   // C++20 [expr.const]p12:
