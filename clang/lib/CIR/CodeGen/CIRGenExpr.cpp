@@ -974,7 +974,9 @@ Address CIRGenFunction::emitExtVectorElementLValue(LValue lv,
 }
 
 static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
-  assert(!cir::MissingFeatures::weakRefReference());
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+  if (fd->hasAttr<WeakRefAttr>())
+    return cast<cir::FuncOp>(cgm.getWeakRefReference(fd));
   return cgm.getAddrOfFunction(gd);
 }
 
@@ -1194,8 +1196,17 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           !e->getLocation().isValid()) &&
          "Should not use decl without marking it used!");
 
-  if (nd->hasAttr<WeakRefAttr>())
-    cgm.errorNYI(nd->getSourceRange(), "emitGlobal: WeakRefAttr");
+  // A weakref variable refers to its alias target. Weakref functions are
+  // handled by emitFunctionDeclPointer.
+  if (const auto *vd = dyn_cast<VarDecl>(nd);
+      vd && vd->hasAttr<WeakRefAttr>()) {
+    auto aliasee = mlir::cast<cir::GlobalOp>(cgm.getWeakRefReference(vd));
+    mlir::Value v =
+        builder.createGetGlobal(getLoc(e->getSourceRange()), aliasee);
+    Address addr(v, convertTypeForMem(vd->getType()),
+                 getContext().getDeclAlign(vd));
+    return makeAddrLValue(addr, ty, AlignmentSource::Decl);
+  }
 
   if (const auto *vd = dyn_cast<VarDecl>(nd)) {
     // Checks for omitted feature handling

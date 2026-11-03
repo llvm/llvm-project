@@ -141,6 +141,11 @@ private:
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
+  /// Symbols created as the target of a weakref. They are extern_weak until
+  /// something names them in a way that is not itself weak, such as an
+  /// ordinary declaration or definition of the target.
+  llvm::SmallPtrSet<mlir::Operation *, 4> weakRefReferences;
+
   /// -------
   /// Annotations
   /// -------
@@ -294,6 +299,11 @@ public:
 
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
+
+  /// Return the symbol that a weakref declaration refers to: the cir.func or
+  /// cir.global named by its alias target, declared extern_weak if it did not
+  /// already exist.
+  mlir::Operation *getWeakRefReference(const clang::ValueDecl *vd);
 
   cir::GlobalOp
   createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,

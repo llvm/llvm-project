@@ -946,14 +946,11 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     // at properties of the most recent declaration at the point of emission.
     d = cast<ValueDecl>(d->getMostRecentDecl());
 
-    if (d->hasAttr<WeakRefAttr>()) {
-      cgm.errorNYI(d->getSourceRange(),
-                   "ConstantLValueEmitter: emit pointer base for weakref");
-      return {};
-    }
-
     if (auto *fd = dyn_cast<FunctionDecl>(d)) {
-      cir::FuncOp fop = cgm.getAddrOfFunction(fd);
+      cir::FuncOp fop =
+          fd->hasAttr<WeakRefAttr>()
+              ? mlir::cast<cir::FuncOp>(cgm.getWeakRefReference(fd))
+              : cgm.getAddrOfFunction(fd);
       CIRGenBuilderTy &builder = cgm.getBuilder();
       mlir::MLIRContext *mlirContext = builder.getContext();
       // Use the destination pointer type (e.g. struct field type), not
@@ -977,6 +974,11 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       return cir::GlobalViewAttr::get(
           ptrTy, mlir::FlatSymbolRefAttr::get(mlirContext, symName));
     }
+
+    // A weakref refers to its alias target. Handle non-function versions here.
+    if (d->hasAttr<WeakRefAttr>())
+      return cgm.getBuilder().getGlobalViewAttr(
+          cast<cir::GlobalOp>(cgm.getWeakRefReference(d)));
 
     if (auto *vd = dyn_cast<VarDecl>(d)) {
       // We can never refer to a variable with local storage.

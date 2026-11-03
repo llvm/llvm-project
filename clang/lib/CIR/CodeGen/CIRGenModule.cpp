@@ -1293,7 +1293,10 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
   if (entry) {
     mlir::ptr::MemorySpaceAttrInterface entryCIRAS = entry.getAddrSpaceAttr();
-    assert(!cir::MissingFeatures::opGlobalWeakRef());
+
+    // A weakref's target is only weak until something else names it.
+    if (weakRefReferences.erase(entry) && d && !d->hasAttr<WeakAttr>())
+      entry.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
 
     assert(!cir::MissingFeatures::setDLLStorageClass());
     assert(!cir::MissingFeatures::openMP());
@@ -1323,7 +1326,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       return entry;
   }
 
-  mlir::Location loc = getLoc(d->getSourceRange());
+  mlir::Location loc = d ? getLoc(d->getSourceRange()) : theModule->getLoc();
 
   // Calculate constant storage flag before creating the global. This was moved
   // from after the global creation to ensure the constant flag is set correctly
@@ -1425,6 +1428,33 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
   assert(!cir::MissingFeatures::addressSpace());
   return gv;
+}
+
+mlir::Operation *CIRGenModule::getWeakRefReference(const ValueDecl *vd) {
+  const auto *aa = vd->getAttr<AliasAttr>();
+  assert(aa && "No alias?");
+
+  // See if there is already something with the target's name in the module.
+  if (mlir::Operation *entry = getGlobalValue(aa->getAliasee()))
+    return entry;
+
+  mlir::Operation *aliasee;
+  if (const auto *fd = dyn_cast<FunctionDecl>(vd)) {
+    cir::FuncOp fn =
+        getOrCreateCIRFunction(aa->getAliasee(), convertType(fd->getType()),
+                               GlobalDecl(fd), /*forVTable=*/false);
+    fn.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+    aliasee = fn;
+  } else {
+    cir::GlobalOp gv = getOrCreateCIRGlobal(
+        aa->getAliasee(), getTypes().convertTypeForMem(vd->getType()),
+        LangAS::Default, /*d=*/nullptr, NotForDefinition);
+    gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+    aliasee = gv;
+  }
+
+  weakRefReferences.insert(aliasee);
+  return aliasee;
 }
 
 cir::GlobalOp
@@ -1724,6 +1754,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     if ((si.SectionFlags & ASTContext::PSF_Write) == 0)
       gv.setConstant(true);
   }
+
+  // The global may have been created without a declaration, e.g. as the target
+  // of a weakref, so make sure the alignment comes from the definition.
+  gv.setAlignmentAttr(getSize(astContext.getDeclAlign(vd)));
 
   // Set CIR linkage and DLL storage class.
   gv.setLinkage(linkage);
@@ -3701,7 +3735,13 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   if (entry) {
     assert(mlir::isa<cir::FuncOp>(entry));
 
-    assert(!cir::MissingFeatures::weakRefReference());
+    // A weakref's target is only weak until something else names it.
+    if (weakRefReferences.erase(entry)) {
+      const auto *fd = cast_or_null<FunctionDecl>(d);
+      if (fd && !fd->hasAttr<WeakAttr>())
+        cast<cir::FuncOp>(entry).setLinkage(
+            cir::GlobalLinkageKind::ExternalLinkage);
+    }
 
     // Handle dropped DLL attributes.
     if (d && !d->hasAttr<DLLImportAttr>() && !d->hasAttr<DLLExportAttr>()) {

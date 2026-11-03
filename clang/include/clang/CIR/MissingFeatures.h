@@ -30,7 +30,6 @@ struct MissingFeatures {
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
-  static bool opGlobalWeakRef() { return false; }
   static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalVisibility() { return false; }
   static bool opGlobalDLLImportExport() { return false; }
@@ -305,7 +304,6 @@ struct MissingFeatures {
   static bool vlas() { return false; }
   static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
-  static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
   static bool msvcCXXPersonality() { return false; }
   static bool functionUsesSEHTry() { return false; }
