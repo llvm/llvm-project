@@ -74,6 +74,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   SmallVector<const DIType *> DebugTypes;
 
+  // Compile unit whose enums list names each enum. DIBuilder gives a file-scope
+  // enum a null scope, so this list is the only record of its unit.
+  DenseMap<const DICompositeType *, const DICompileUnit *> EnumCompileUnits;
+
   // NonSemantic debug instruction result id per emitted scope.
   DenseMap<const DIScope *, MCRegister> DebugScopeRegs;
 
@@ -167,8 +171,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // so declares referencing it are skipped rather than described wrongly.
   DenseMap<const DIExpression *, MCRegister> DebugExpressionRegs;
 
-  // Distinct DILexicalBlock and DINamespace scopes, parent-before-child
-  // order, collected in beginModule() for DebugLexicalBlock emission.
+  // Distinct DILexicalBlock, DINamespace, and DILexicalBlockFile scopes,
+  // parent-before-child order, collected in beginModule().
   SetVector<const DIScope *> LexicalBlocks;
 
   // DebugInlinedAt result id per DILocation used as an inlined-at chain link.
@@ -651,6 +655,21 @@ private:
                          MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                          SPIRV::ModuleAnalysisInfo &MAI);
 
+  /// Build \c DebugTypeEnum for the enumeration type \p ET. Operands: Name,
+  /// Underlying Type, Source, Line, Column, Parent, Size, Flags, then a Value
+  /// and Name pair per enumerator. Uses \c DebugInfoNone for Underlying Type
+  /// when \p ET has no base type, and drops an enumerator whose value does not
+  /// fit in a 32-bit integer.
+  ///
+  /// \returns An Emitted result when the operands are ready. An Unsupported
+  /// result, building nothing, if the size is 0 or does not fit in 32 bits.
+  /// If the base or Parent fail, it returns code for the one that failed.
+  EmitResult<PreparedScope> emitDebugTypeEnum(const DICompositeType *ET,
+                                              MCRegister VoidTypeReg,
+                                              MCRegister I32TypeReg,
+                                              MCRegister ExtInstSetReg,
+                                              SPIRV::ModuleAnalysisInfo &MAI);
+
   /// Build \c DebugTypedef for the typedef derived type \p TD (a \c
   /// DIDerivedType with \c DW_TAG_typedef). Operands: Name, Base Type, Source,
   /// Line, Column, Parent. Parent is the enclosing type when \c TD->getScope()
@@ -702,10 +721,14 @@ private:
   /// Map \p Scope to the NonSemantic debug id used as a \c Parent operand.
   ///
   /// A \c DIType, \c DILexicalBlock, \c DINamespace, or \c DISubprogram scope
-  /// is created through \c getOrCreateDebugScope. When \p Scope is null, a
-  /// \c DIFile, or another scope without a dedicated debug instruction, falls
-  /// back to \p FallbackCU or the first module \c DebugCompilationUnit recorded
-  /// in \c DebugScopeRegs; no such compile unit is Unsupported.
+  /// is created through \c getOrCreateDebugScope. When
+  /// \c -spirv-debug-lexical-block-discriminator-scope is enabled, a
+  /// \c DILexicalBlockFile is also created this way, becoming a
+  /// \c DebugLexicalBlockDiscriminator; otherwise it is unwrapped to its
+  /// enclosing scope first. When \p Scope is null, a \c DIFile, or another
+  /// scope without a dedicated debug instruction, it falls back to
+  /// \p FallbackCU or the first module \c DebugCompilationUnit recorded in
+  /// \c DebugScopeRegs; no such compile unit is Unsupported.
   EmitResult<MCRegister>
   resolveScope(const DIScope *Scope, const DICompileUnit *FallbackCU = nullptr);
 
@@ -720,6 +743,13 @@ private:
   emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
                         MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                         SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Build \c DebugLexicalBlockDiscriminator for \p LBF.
+  /// Operands are Source, Discriminator, and Parent (\c LBF->getScope()).
+  EmitResult<PreparedScope> emitDebugLexicalBlockDiscriminator(
+      const DILexicalBlockFile *LBF, MCRegister VoidTypeReg,
+      MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+      SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Return a cached \c DebugInlinedAt id for \p IA, or emit one (recursing
   /// into \c IA->getInlinedAt() first for the optional Inlined operand, so

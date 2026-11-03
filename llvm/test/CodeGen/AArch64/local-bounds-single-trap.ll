@@ -18,33 +18,25 @@ define dso_local void @f8(i32 noundef %i, i32 noundef %k) #0 {
 ; CHECK-ASM-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-ASM-NEXT:    sxtw x8, w0
 ; CHECK-ASM-NEXT:    stp w1, w0, [sp, #8]
-; CHECK-ASM-NEXT:    cmp x8, #10
-; CHECK-ASM-NEXT:    b.hi .LBB0_5
-; CHECK-ASM-NEXT:  // %bb.1: // %entry
-; CHECK-ASM-NEXT:    mov w9, #10 // =0xa
-; CHECK-ASM-NEXT:    sub x9, x9, x8
-; CHECK-ASM-NEXT:    cbz x9, .LBB0_5
-; CHECK-ASM-NEXT:  // %bb.2:
+; CHECK-ASM-NEXT:    cmp x8, #9
+; CHECK-ASM-NEXT:    b.hi .LBB0_3
+; CHECK-ASM-NEXT:  // %bb.1:
 ; CHECK-ASM-NEXT:    ldrsw x9, [sp, #8]
 ; CHECK-ASM-NEXT:    adrp x10, .L_MergedGlobals
 ; CHECK-ASM-NEXT:    add x10, x10, :lo12:.L_MergedGlobals
 ; CHECK-ASM-NEXT:    strb wzr, [x10, x8]
-; CHECK-ASM-NEXT:    cmp x9, #10
-; CHECK-ASM-NEXT:    b.hi .LBB0_6
-; CHECK-ASM-NEXT:  // %bb.3:
-; CHECK-ASM-NEXT:    mov w8, #10 // =0xa
-; CHECK-ASM-NEXT:    sub x8, x8, x9
-; CHECK-ASM-NEXT:    cbz x8, .LBB0_6
-; CHECK-ASM-NEXT:  // %bb.4:
+; CHECK-ASM-NEXT:    cmp x9, #9
+; CHECK-ASM-NEXT:    b.hi .LBB0_4
+; CHECK-ASM-NEXT:  // %bb.2:
 ; CHECK-ASM-NEXT:    add x8, x10, x9
 ; CHECK-ASM-NEXT:    strb wzr, [x8, #10]
 ; CHECK-ASM-NEXT:    add sp, sp, #16
 ; CHECK-ASM-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-ASM-NEXT:    ret
-; CHECK-ASM-NEXT:  .LBB0_5: // %trap
+; CHECK-ASM-NEXT:  .LBB0_3: // %trap
 ; CHECK-ASM-NEXT:    .cfi_restore_state
 ; CHECK-ASM-NEXT:    brk #0x1
-; CHECK-ASM-NEXT:  .LBB0_6: // %trap3
+; CHECK-ASM-NEXT:  .LBB0_4: // %trap3
 ; CHECK-ASM-NEXT:    brk #0x1
 entry:
   %i.addr = alloca i32, align 4

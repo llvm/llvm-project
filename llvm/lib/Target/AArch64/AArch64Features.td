@@ -939,6 +939,11 @@ def FeatureALULSLFast : SubtargetFeature<
     "Add/Sub operations with lsl shift <= 4 are cheap",
     [], InlineIgnore>;
 
+def FeatureShiftMaddSlow : SubtargetFeature<
+    "shift-madd-slow", "HasShiftMaddSlow", "true",
+    "Madd with a shifted addend is slower than mul of a shifted add",
+    [], InlineIgnore>;
+
 def FeatureFastLD1Single : SubtargetFeature<
     "fast-ld1-single", "HasFastLD1Single", "true",
     "Single-element LD1 to vector lane has same performance as regular load",
