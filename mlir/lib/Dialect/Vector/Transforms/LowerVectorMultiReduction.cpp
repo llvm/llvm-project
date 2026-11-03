@@ -316,7 +316,8 @@ private:
 
 /// Lowers 2D vector.multi_reduction to a squence of Arith Ops
 ///
-/// The reduction dimension must be the outer-most dimension.
+/// The reduction dimension must be the outer-most dimension. The outer
+/// dimension is unrolled, so it must not be scalable.
 ///
 /// BEFORE:
 ///
@@ -388,7 +389,8 @@ struct TwoDimMultiReductionToElementWise
 
 /// Lowers 2D vector.multi_reduction to a sequence of vector.reduction Ops.
 ///
-/// The reduction dimension must be the inner-most dimension.
+/// The reduction dimension must be the inner-most dimension. The outer
+/// dimension is unrolled, so it must not be scalable.
 ///
 /// BEFORE:
 ///  vector.multi_reduction <mul>, %src, %acc [1] : vector<2x4xf32> to
