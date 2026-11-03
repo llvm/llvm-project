@@ -147,75 +147,80 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
 
   struct Target {
     ContextTrieNode *Node;
-    uint64_t Head;
-    uint64_t MapCount;
-    bool HasMapEntry = false;
+    uint64_t HeadCount;
+    uint64_t CallTargetCount = 0;
   };
   std::map<LineLocation, SmallVector<Target, 4>> CallSites;
   for (auto &Child : CallerNode->getAllChildContext()) {
     ContextTrieNode *CalleeNode = &Child.second;
     if (FunctionSamples *CalleeSamples = CalleeNode->getFunctionSamples())
       CallSites[CalleeNode->getCallSiteLoc()].push_back(
-          {CalleeNode, CalleeSamples->getHeadSamplesEstimate(), 0});
+          {CalleeNode, CalleeSamples->getHeadSamplesEstimate()});
   }
 
   uint64_t HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
       Summary->getDetailedSummary());
-  for (auto &[CallSite, Callees] : CallSites) {
+  for (auto &Entry : CallSites) {
+    const LineLocation &CallSite = Entry.first;
+    auto &Callees = Entry.second;
     // Site total with every target outlined, i.e. the raw call target map.
-    uint64_t Sum = 0;
-    size_t NumTargets = 0;
+    uint64_t SiteTotal = 0;
+    size_t NumTargets = Callees.size();
     if (auto CallTargets = CallerSamples->findCallTargetMapAt(CallSite)) {
       NumTargets = CallTargets->size();
-      for (const auto &[Name, Count] : *CallTargets) {
-        Sum += Count;
-        for (Target &T : Callees)
-          if (T.Node->getFuncName() == Name) {
-            T.MapCount = Count;
-            T.HasMapEntry = true;
-          }
+      for (const auto &[Name, Count] : *CallTargets)
+        SiteTotal += Count;
+      for (Target &T : Callees) {
+        auto It = CallTargets->find(T.Node->getFuncName());
+        if (It == CallTargets->end()) {
+          ++NumTargets;
+          continue;
+        }
+        T.CallTargetCount = It->second;
       }
     }
-    for (Target &T : Callees)
-      if (!T.HasMapEntry)
-        ++NumTargets;
     // A direct call site has a single target and is not subject to ICP.
     if (NumTargets < 2)
       continue;
 
     llvm::sort(Callees, [](const Target &L, const Target &R) {
-      if (L.Head != R.Head)
-        return L.Head > R.Head;
+      if (L.HeadCount != R.HeadCount)
+        return L.HeadCount > R.HeadCount;
       return L.Node->getFunctionSamples()->getGUID() <
              R.Node->getFunctionSamples()->getGUID();
     });
-    auto Promotable = [&](size_t Index, uint64_t Head, uint64_t SiteSum) {
-      return Head >= HotCountThreshold &&
-             (Index < ProfileICPRelativeHotnessSkip ||
-              Head * 100 >= SiteSum * ProfileICPRelativeHotness);
+    auto CanPromoteAll = [&](size_t NumCandidates, uint64_t NewTotal) {
+      for (size_t I = 0; I < NumCandidates; ++I) {
+        uint64_t HeadCount = Callees[I].HeadCount;
+        if (HeadCount < HotCountThreshold)
+          return false;
+        // The first few targets are exempt only from the percentage check.
+        if (I < ProfileICPRelativeHotnessSkip)
+          continue;
+        if (HeadCount * 100 < NewTotal * ProfileICPRelativeHotness)
+          return false;
+      }
+      return true;
     };
     LLVM_DEBUG(dbgs() << "  Indirect call site " << CallSite.LineOffset << "."
                       << CallSite.Discriminator << ": " << NumTargets
-                      << " targets, total count " << Sum << "\n");
+                      << " targets, total count " << SiteTotal << "\n");
     size_t NumAccepted = 0;
-    bool Stop = false;
-    for (Target &T : Callees) {
-      if (!Stop) {
-        uint64_t NewSum = Sum - T.MapCount + T.Head;
-        Stop = !Promotable(NumAccepted, T.Head, NewSum);
-        // Accepting this target must not push an accepted one below the bar.
-        for (size_t I = 0; !Stop && I < NumAccepted; ++I)
-          Stop = !Promotable(I, Callees[I].Head, NewSum);
-        if (!Stop) {
-          Sum = NewSum;
-          ++NumAccepted;
-          continue;
-        }
-      }
+    for (; NumAccepted < Callees.size(); ++NumAccepted) {
+      const Target &T = Callees[NumAccepted];
+      uint64_t NewTotal = SiteTotal - T.CallTargetCount + T.HeadCount;
+      // The new total must keep this target and the accepted prefix eligible.
+      if (!CanPromoteAll(NumAccepted + 1, NewTotal))
+        break;
+      SiteTotal = NewTotal;
+    }
+    for (size_t I = NumAccepted; I < Callees.size(); ++I) {
+      const Target &T = Callees[I];
       Rejected.insert(T.Node);
       LLVM_DEBUG(dbgs() << "    Not promotable by ICP: "
                         << ContextTracker.getContextString(T.Node) << " (head "
-                        << T.Head << ", site total " << Sum << ")\n");
+                        << T.HeadCount << ", site total " << SiteTotal
+                        << ")\n");
     }
   }
   return Rejected;
