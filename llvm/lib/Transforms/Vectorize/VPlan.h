@@ -2281,7 +2281,9 @@ public:
                    DebugLoc DL = DebugLoc::getUnknown(),
                    GetElementPtrInst *UV = nullptr)
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenGEPSC, Operands,
-                            Operands[0]->getScalarType(), Flags, DL),
+                            computeScalarTypeForInstruction(
+                                Instruction::GetElementPtr, Operands),
+                            Flags, DL),
         SourceElementTy(SourceElementTy) {
     if (UV) {
       setUnderlyingValue(UV);

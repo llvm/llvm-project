@@ -580,6 +580,15 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
       AssertOperandType(Idx, Op1Ty);
     return Op1Ty;
   }
+  case Instruction::GetElementPtr:
+    if (Op0Ty->isVectorTy())
+      return Op0Ty;
+    // getelementptr semantics guarantee that all vectors of indices (if any)
+    // have the same element count.
+    for (VPValue *Index : drop_begin(Operands))
+      if (auto *IndexTy = dyn_cast<VectorType>(Index->getScalarType()))
+        return VectorType::get(Op0Ty, IndexTy->getElementCount());
+    return Op0Ty;
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
     assert(Operands[0]->getScalarType()->isPointerTy() &&
