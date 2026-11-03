@@ -126,14 +126,13 @@ declare <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>)
 define <32 x i16> @combine_pmaddubsw_add_first_both_zero(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> %a2, <64 x i8> %a3) {
 ; AVX512-LABEL: combine_pmaddubsw_add_first_both_zero:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} zmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX512-NEXT:    vpandq %zmm4, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX512-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpandq %zmm4, %zmm2, %zmm1
-; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm3, %zmm2
-; AVX512-NEXT:    vpmaddubsw %zmm2, %zmm1, %zmm1
-; AVX512-NEXT:    vpaddw %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpbroadcastw {{.*#+}} zmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512-NEXT:    vpsllw $8, %zmm2, %zmm2
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm2 | (zmm4 & zmm0)
+; AVX512-NEXT:    vpsllw $8, %zmm3, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & m32bcst) | zmm1
+; AVX512-NEXT:    vpmaddubsw %zmm0, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = and <64 x i8> %a0, bitcast (<32 x i16> splat (i16 255) to <64 x i8>)
   %v1 = and <64 x i8> %a1, bitcast (<32 x i16> splat (i16 63) to <64 x i8>)

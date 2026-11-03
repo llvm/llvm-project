@@ -419,52 +419,41 @@ define <8 x i16> @combine_pmaddubsw_add_independent_inputs(<16 x i8> %a0, <16 x 
 ; SHIFT+OR alone. The second signed input may have nonzero odd bytes, which
 ; the word shift discards.
 define <8 x i16> @combine_pmaddubsw_add_first_both_zero(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
-; SSSE3-LABEL: combine_pmaddubsw_add_first_both_zero:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSSE3-NEXT:    pand %xmm4, %xmm0
-; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSSE3-NEXT:    pand %xmm2, %xmm4
-; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSSE3-NEXT:    pmaddubsw %xmm3, %xmm4
-; SSSE3-NEXT:    paddw %xmm4, %xmm0
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: combine_pmaddubsw_add_first_both_zero:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pand %xmm4, %xmm0
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm4
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE41-NEXT:    pmaddubsw %xmm3, %xmm4
-; SSE41-NEXT:    paddw %xmm4, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: combine_pmaddubsw_add_first_both_zero:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    psllw $8, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    psllw $8, %xmm3
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE-NEXT:    por %xmm1, %xmm3
+; SSE-NEXT:    pmaddubsw %xmm3, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pmaddubsw_add_first_both_zero:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllw $8, %xmm3, %xmm2
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm1
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm2
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pmaddubsw_add_first_both_zero:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX2-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm0, %xmm4, %xmm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $8, %xmm3, %xmm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm1
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm2
-; AVX2-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %v0 = and <16 x i8> %a0, bitcast (<8 x i16> splat (i16 255) to <16 x i8>)
   %v1 = and <16 x i8> %a1, bitcast (<8 x i16> splat (i16 63) to <16 x i8>)
@@ -478,52 +467,41 @@ define <8 x i16> @combine_pmaddubsw_add_first_both_zero(<16 x i8> %a0, <16 x i8>
 
 ; Commute the ADD operands while preserving the unsigned/signed input roles.
 define <8 x i16> @combine_pmaddubsw_add_first_both_zero_commuted(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
-; SSSE3-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSSE3-NEXT:    pand %xmm4, %xmm0
-; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSSE3-NEXT:    pand %xmm2, %xmm4
-; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSSE3-NEXT:    pmaddubsw %xmm3, %xmm4
-; SSSE3-NEXT:    paddw %xmm4, %xmm0
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pand %xmm4, %xmm0
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm4
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE41-NEXT:    pmaddubsw %xmm3, %xmm4
-; SSE41-NEXT:    paddw %xmm4, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    psllw $8, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    psllw $8, %xmm3
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE-NEXT:    por %xmm1, %xmm3
+; SSE-NEXT:    pmaddubsw %xmm3, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllw $8, %xmm3, %xmm2
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm1
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm2
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pmaddubsw_add_first_both_zero_commuted:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX2-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm0, %xmm4, %xmm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpsllw $8, %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $8, %xmm3, %xmm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm1
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm2
-; AVX2-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
   %v0 = and <16 x i8> %a0, bitcast (<8 x i16> splat (i16 255) to <16 x i8>)
   %v1 = and <16 x i8> %a1, bitcast (<8 x i16> splat (i16 63) to <16 x i8>)
@@ -602,47 +580,23 @@ define <8 x i16> @combine_pmaddubsw_add_first_both_zero_multiuse(<16 x i8> %a0, 
 ; The shared mask above the dword shift preserves its even bytes, so
 ; the original inputs can be reconstructed without changing the store.
 define <8 x i16> @combine_pmaddubsw_add_reconstruct_masked_shift(<16 x i8> %a, <16 x i8> %b, ptr %p) {
-; SSSE3-LABEL: combine_pmaddubsw_add_reconstruct_masked_shift:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSSE3-NEXT:    pand %xmm1, %xmm2
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    psrld $8, %xmm3
-; SSSE3-NEXT:    psrlw $8, %xmm1
-; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSSE3-NEXT:    movdqa %xmm3, (%rdi)
-; SSSE3-NEXT:    pmaddubsw %xmm2, %xmm0
-; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm3
-; SSSE3-NEXT:    paddw %xmm3, %xmm0
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: combine_pmaddubsw_add_reconstruct_masked_shift:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pand %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    psrld $8, %xmm3
-; SSE41-NEXT:    psrlw $8, %xmm1
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE41-NEXT:    movdqa %xmm3, (%rdi)
-; SSE41-NEXT:    pmaddubsw %xmm2, %xmm0
-; SSE41-NEXT:    pmaddubsw %xmm1, %xmm3
-; SSE41-NEXT:    paddw %xmm3, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: combine_pmaddubsw_add_reconstruct_masked_shift:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    psrld $8, %xmm2
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    movdqa %xmm2, (%rdi)
+; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pmaddubsw_add_reconstruct_masked_shift:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
-; AVX-NEXT:    vpsrld $8, %xmm0, %xmm3
-; AVX-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
-; AVX-NEXT:    vmovdqa %xmm3, (%rdi)
-; AVX-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpmaddubsw %xmm1, %xmm3, %xmm1
-; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrld $8, %xmm0, %xmm2
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %s = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %b, <16 x i8> splat (i8 63))
   %uw = bitcast <16 x i8> %a to <4 x i32>

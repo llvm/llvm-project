@@ -180,25 +180,25 @@ define <16 x i16> @combine_pmaddubsw_add_first_both_zero(<32 x i8> %a0, <32 x i8
 ; AVX2-LABEL: combine_pmaddubsw_add_first_both_zero:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm0, %ymm4, %ymm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX2-NEXT:    vpsllw $8, %ymm2, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsllw $8, %ymm3, %ymm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm1
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm2
-; AVX2-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_pmaddubsw_add_first_both_zero:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX512-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
-; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpand %ymm4, %ymm2, %ymm1
-; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm3, %ymm2
-; AVX512-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
-; AVX512-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512-NEXT:    vpsllw $8, %ymm2, %ymm2
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm2 = ymm2 | (ymm4 & ymm0)
+; AVX512-NEXT:    vpsllw $8, %ymm3, %ymm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = (ymm0 & m32bcst) | ymm1
+; AVX512-NEXT:    vpmaddubsw %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    retq
   %v0 = and <32 x i8> %a0, bitcast (<16 x i16> splat (i16 255) to <32 x i8>)
   %v1 = and <32 x i8> %a1, bitcast (<16 x i16> splat (i16 63) to <32 x i8>)
