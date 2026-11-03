@@ -14,8 +14,11 @@
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Interpreter/OptionValueFormat.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
+
+class StackFrame;
 
 /// Implements `dwim-print`, a printing command that chooses the most direct,
 /// efficient, and resilient means of printing a given expression.
@@ -41,6 +44,23 @@ public:
 
 private:
   void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
+
+  /// Rewrites a dotted expression path (e.g. `parent.child.name`) into one
+  /// that names backing storage members directly, for components that
+  /// resolve to a synthesized property rather than a real member.
+  ///
+  /// Walks the path component by component, starting from \a expr's first
+  /// component resolved as a frame variable. For each subsequent component,
+  /// a plain child lookup is tried first; only if that fails is the type
+  /// asked for the property's backing storage name, and the lookup retried
+  /// with that name.
+  ///
+  /// \return The rewritten path, or an error describing why \a expr could
+  /// not be rewritten (e.g. it could not be resolved, or nothing needed
+  /// rewriting).
+  llvm::Expected<std::string>
+  RewritePathForBackingStorage(llvm::StringRef expr, StackFrame &frame,
+                               lldb::DynamicValueType use_dynamic);
 
   OptionGroupOptions m_option_group;
   OptionGroupFormat m_format_options = lldb::eFormatDefault;
