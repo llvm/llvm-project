@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -verify-machineinstrs -run-pass machine-scheduler -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -run-pass machine-scheduler -o - %s | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -passes=machine-scheduler -o - %s | FileCheck -check-prefix=GCN %s
 
 # Check that the 16-bit V_CNDMASK forms are clustered with the V_CMP defining

@@ -90,9 +90,7 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
 
   this->OffloadKind = Components.front();
   ArrayRef<StringRef> TripleSlice{&Components[1], /*length=*/4};
-  llvm::Triple T = llvm::Triple(llvm::join(TripleSlice, "-"));
-  this->Triple = llvm::Triple(T.getArchName(), T.getVendorName(), T.getOSName(),
-                              T.getEnvironmentName());
+  this->Triple = llvm::Triple(llvm::join(TripleSlice, "-"));
 }
 
 bool OffloadTargetInfo::hasHostKind() const {
