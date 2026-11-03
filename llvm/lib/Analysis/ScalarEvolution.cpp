@@ -144,6 +144,8 @@ STATISTIC(NumExitCountsNotComputed,
           "Number of loop exits without predictable exit counts");
 STATISTIC(NumBruteForceTripCountsComputed,
           "Number of loops with trip counts computed by force");
+STATISTIC(NumAddRecStartQueries,
+          "Number of predicates checked on the start values of AddRecs");
 
 #ifdef EXPENSIVE_CHECKS
 bool llvm::VerifySCEV = true;
@@ -12861,6 +12863,7 @@ bool ScalarEvolution::isKnownPredicateViaAddRecStart(CmpPredicate Pred,
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
     return false;
 
+  ++NumAddRecStartQueries;
   return isKnownPredicate(Pred, LStart, RStart);
 }
 
