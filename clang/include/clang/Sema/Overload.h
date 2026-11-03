@@ -597,6 +597,8 @@ class Sema;
   public:
     void init(FailureKind K, Expr *From, QualType To) {
       init(K, From->getType(), To);
+      // We may have on-stack OpaqueValueExpr when building an initialization
+      // sequence, and tracking type only is sufficient for diagnostics.
       if (!isa<OpaqueValueExpr>(From))
         FromExpr = From;
     }
