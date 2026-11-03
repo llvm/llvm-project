@@ -449,4 +449,25 @@ TEST(LowLevelTypeTest, IsScalableVector) {
   EXPECT_TRUE(LLT::scalable_vector(2, 32).isScalableVector());
   EXPECT_TRUE(LLT::scalable_vector(1, 32).isScalableVector());
 }
+
+TEST(LowLevelTypeTest, FltSemantic) {
+  // A float type names its format.
+  EXPECT_EQ(&APFloat::IEEEhalf(), getFltSemanticForLLTOrNull(LLT::float16()));
+  EXPECT_EQ(&APFloat::BFloat(), getFltSemanticForLLTOrNull(LLT::bfloat16()));
+  EXPECT_EQ(&APFloat::x87DoubleExtended(),
+            getFltSemanticForLLTOrNull(LLT::x86fp80()));
+  EXPECT_EQ(&APFloat::PPCDoubleDouble(),
+            getFltSemanticForLLTOrNull(LLT::ppcf128()));
+
+  // A plain scalar does not, so it gets the IEEE format of its size, if there
+  // is one.
+  EXPECT_EQ(&APFloat::IEEEhalf(), getFltSemanticForLLTOrNull(LLT::scalar(16)));
+  EXPECT_EQ(&APFloat::IEEEsingle(),
+            getFltSemanticForLLTOrNull(LLT::scalar(32)));
+  EXPECT_EQ(&APFloat::IEEEdouble(),
+            getFltSemanticForLLTOrNull(LLT::scalar(64)));
+  EXPECT_EQ(&APFloat::IEEEquad(), getFltSemanticForLLTOrNull(LLT::scalar(128)));
+  EXPECT_EQ(nullptr, getFltSemanticForLLTOrNull(LLT::scalar(8)));
+  EXPECT_EQ(nullptr, getFltSemanticForLLTOrNull(LLT::scalar(80)));
+}
 }

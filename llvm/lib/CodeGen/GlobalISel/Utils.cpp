@@ -473,10 +473,9 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
 
   // Resized by a looked-through G_TRUNC/G_SEXT/G_ZEXT: only the width is left,
   // and it only identifies IEEE formats.
-  if (Width != 16 && Width != 32 && Width != 64 && Width != 128)
-    return std::nullopt;
-  return FPValueAndVReg{
-      APFloat(getFltSemanticForLLT(LLT::scalar(Width)), Reg->Value), Reg->VReg};
+  if (const fltSemantics *Sem = getFltSemanticForLLTOrNull(LLT::scalar(Width)))
+    return FPValueAndVReg{APFloat(*Sem, Reg->Value), Reg->VReg};
+  return std::nullopt;
 }
 
 const ConstantFP *

@@ -41,6 +41,10 @@ LLVM_ABI LLT getLLTForMVT(MVT Ty);
 /// Get the appropriate floating point arithmetic semantic based on the bit size
 /// of the given scalar LLT.
 LLVM_ABI const llvm::fltSemantics &getFltSemanticForLLT(LLT Ty);
+
+/// Like getFltSemanticForLLT, but return nullptr if \p Ty is a plain scalar
+/// whose size has no IEEE format.
+LLVM_ABI const llvm::fltSemantics *getFltSemanticForLLTOrNull(LLT Ty);
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_LOWLEVELTYPEUTILS_H
