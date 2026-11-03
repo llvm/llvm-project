@@ -9,7 +9,9 @@
 #ifndef LLVM_TOOLS_LLVM_DWARFUTIL_OPTIONS_H
 #define LLVM_TOOLS_LLVM_DWARFUTIL_OPTIONS_H
 
+#include "llvm/Support/Compression.h"
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -42,6 +44,9 @@ struct Options {
   bool Verify = false;
   bool UseDWARFLinkerParallel = false;
   DwarfUtilAccelKind AccelTableKind = DwarfUtilAccelKind::None;
+  /// Compression type of the output debug sections. If not specified, the
+  /// output debug sections are compressed the same way as the input ones.
+  std::optional<DebugCompressionType> CompressionType;
 
   std::string getSeparateDebugFileName() const {
     return OutputFileName + ".debug";

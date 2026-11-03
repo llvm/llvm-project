@@ -1,0 +1,172 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - \
+// RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
+!rec_SF = !cir.struct<"SF" {data !s64i, data !s32i}>
+!rec_SMem = !cir.struct<"SMem" {data !s64i, data !s64i, data !s64i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func private @take_s(!rec_S)
+  cir.func private @take_sf(!rec_SF)
+  cir.func private @take_smem(!rec_SMem)
+
+  cir.func @direct_volatile(%arg0: !cir.ptr<!rec_S>) {
+    %0 = cir.load volatile align(4) %arg0 : !cir.ptr<!rec_S>, !rec_S
+    cir.call @take_s(%0) : (!rec_S) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @direct_volatile(%arg0: !cir.ptr<!rec_S>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.copy %arg0 align(4) to %[[SLOT]] align(8) volatile : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VAL:.*]] = cir.load align(8) %[[VIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_s(%[[VAL]]) : (!u64i) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // LLVM-LABEL: define void @direct_volatile(ptr %0)
+  // LLVM-NEXT:    %[[SLOT:.*]] = alloca %struct.S, align 8
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 4 %0, i64 8, i1 true)
+  // LLVM-NEXT:    %[[VAL:.*]] = load i64, ptr %[[SLOT]], align 8
+  // LLVM-NEXT:    call void @take_s(i64 %[[VAL]])
+
+  // An alloca is copied too, never read in place.
+  cir.func @local_direct_volatile() {
+    %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+    %1 = cir.load volatile %0 : !cir.ptr<!rec_S>, !rec_S
+    cir.call @take_s(%1) : (!rec_S) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @local_direct_volatile()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.copy %[[S]] align(4) to %[[SLOT]] align(8) volatile : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VAL:.*]] = cir.load align(8) %[[VIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.call @take_s(%[[VAL]]) : (!u64i) -> ()
+
+  // LLVM-LABEL: define void @local_direct_volatile()
+  // LLVM-NEXT:    %[[SLOT:.*]] = alloca %struct.S, align 8
+  // LLVM-NEXT:    %[[S:.*]] = alloca %struct.S, align 4
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 4 %[[S]], i64 8, i1 true)
+  // LLVM-NEXT:    %[[VAL:.*]] = load i64, ptr %[[SLOT]], align 8
+
+  cir.func @flattened_volatile(%arg0: !cir.ptr<!rec_SF>) {
+    %0 = cir.load volatile align(8) %arg0 : !cir.ptr<!rec_SF>, !rec_SF
+    cir.call @take_sf(%0) : (!rec_SF) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @flattened_volatile(%arg0: !cir.ptr<!rec_SF>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.copy %arg0 align(8) to %[[SLOT]] align(8) volatile : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_SF> -> !cir.ptr<![[PAIR:rec_anon_struct[0-9]*]]>
+  // CHECK-NEXT:    %[[LOP:.*]] = cir.get_member %[[VIEW]][0] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!s64i>
+  // CHECK-NEXT:    %[[LO:.*]] = cir.load %[[LOP]] : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:    %[[HIP:.*]] = cir.get_member %[[VIEW]][1] {name = ""} : !cir.ptr<![[PAIR]]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:    %[[HI:.*]] = cir.load %[[HIP]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:    cir.call @take_sf(%[[LO]], %[[HI]]) : (!s64i, !s32i) -> ()
+
+  // LLVM-LABEL: define void @flattened_volatile(ptr %0)
+  // LLVM-NEXT:    %[[SLOT:.*]] = alloca %struct.SF, align 8
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 8 %0, i64 16, i1 true)
+
+  // The flattened read of a volatile load is copied even from an alloca.
+  cir.func @local_flattened_volatile() {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
+    %1 = cir.load volatile %0 : !cir.ptr<!rec_SF>, !rec_SF
+    cir.call @take_sf(%1) : (!rec_SF) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @local_flattened_volatile()
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    cir.copy %[[S]] align(8) to %[[SLOT]] align(8) volatile : !cir.ptr<!rec_SF>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_SF> -> !cir.ptr<![[PAIR]]>
+
+  // LLVM-LABEL: define void @local_flattened_volatile()
+  // LLVM-NEXT:    %[[SLOT:.*]] = alloca %struct.SF, align 8
+  // LLVM-NEXT:    %[[S:.*]] = alloca %struct.SF, align 8
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 8 %[[S]], i64 16, i1 true)
+
+  // A byval parameter's volatile spill is a volatile copy.
+  cir.func @byval_volatile_spill(%arg0: !rec_SMem) {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SMem>
+    cir.store volatile %arg0, %0 : !rec_SMem, !cir.ptr<!rec_SMem>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @byval_volatile_spill(%arg0: !cir.ptr<!rec_SMem> {llvm.align = 8 : i64, llvm.byval = !rec_SMem, llvm.noundef})
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.copy %arg0 align(8) to %[[S]] align(8) volatile : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.return
+
+  // LLVM-LABEL: define void @byval_volatile_spill(ptr noundef byval(%struct.SMem) align 8 %0)
+  // LLVM-NEXT:    %[[S:.*]] = alloca %struct.SMem, align 8
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[S]], ptr align 8 %0, i64 24, i1 true)
+
+  cir.func @byval_volatile(%arg0: !cir.ptr<!rec_SMem>) {
+    %0 = cir.load volatile align(8) %arg0 : !cir.ptr<!rec_SMem>, !rec_SMem
+    cir.call @take_smem(%0) : (!rec_SMem) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @byval_volatile(%arg0: !cir.ptr<!rec_SMem>)
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.copy %arg0 align(8) to %[[SLOT]] align(8) volatile : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.call @take_smem(%[[SLOT]])
+
+  // LLVM-LABEL: define void @byval_volatile(ptr %0)
+  // LLVM-NEXT:    %[[SLOT:.*]] = alloca %struct.SMem, align 8
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 8 %0, i64 24, i1 true)
+  // LLVM-NEXT:    call void @take_smem(ptr noundef byval(%struct.SMem) align 8 %[[SLOT]])
+
+  // A volatile load is not forwarded, even from an alloca nothing writes.
+  cir.func @local_byval_volatile() {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SMem>
+    %1 = cir.load volatile %0 : !cir.ptr<!rec_SMem>, !rec_SMem
+    cir.call @take_smem(%1) : (!rec_SMem) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @local_byval_volatile()
+  // CHECK-NEXT:    %[[S:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.copy %[[S]] align(8) to %[[SLOT]] align(8) volatile : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    cir.call @take_smem(%[[SLOT]])
+
+  // LLVM-LABEL: define void @local_byval_volatile()
+  // LLVM-NEXT:    %[[S:.*]] = alloca %struct.SMem, align 8
+  // LLVM-NEXT:    %[[SLOT:.*]] = alloca %struct.SMem, align 8
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 8 %[[S]], i64 24, i1 true)
+  // LLVM-NEXT:    call void @take_smem(ptr noundef byval(%struct.SMem) align 8 %[[SLOT]])
+
+  cir.func @return_volatile(%arg0: !cir.ptr<!rec_S>) -> !rec_S {
+    %0 = cir.load volatile align(4) %arg0 : !cir.ptr<!rec_S>, !rec_S
+    cir.return %0 : !rec_S
+  }
+
+  // CHECK-LABEL: cir.func @return_volatile(%arg0: !cir.ptr<!rec_S>) -> !u64i
+  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.copy %arg0 align(4) to %[[SLOT]] align(8) volatile : !cir.ptr<!rec_S>
+  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
+  // CHECK-NEXT:    %[[VAL:.*]] = cir.load align(8) %[[VIEW]] : !cir.ptr<!u64i>, !u64i
+  // CHECK-NEXT:    cir.return %[[VAL]] : !u64i
+
+  // LLVM-LABEL: define i64 @return_volatile(ptr %0)
+  // LLVM-NEXT:    %[[SLOT:.*]] = alloca %struct.S, align 8
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 4 %0, i64 8, i1 true)
+  // LLVM-NEXT:    %[[VAL:.*]] = load i64, ptr %[[SLOT]], align 8
+  // LLVM-NEXT:    ret i64 %[[VAL]]
+}

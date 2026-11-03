@@ -1,13 +1,13 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu9.06 < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cedar < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=juniper < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=sumo < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=barts < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=caicos < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=turks < %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu9.06 < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: not llc -mtriple=r600 -mcpu=cedar < %s
+; RUN: not llc -mtriple=r600 -mcpu=juniper < %s
+; RUN: not llc -mtriple=r600 -mcpu=redwood < %s
+; RUN: not llc -mtriple=r600 -mcpu=sumo < %s
+; RUN: not llc -mtriple=r600 -mcpu=barts < %s
+; RUN: not llc -mtriple=r600 -mcpu=caicos < %s
+; RUN: not llc -mtriple=r600 -mcpu=turks < %s
 
 declare float @llvm.fma.f32(float, float, float) nounwind readnone
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone
@@ -23,9 +23,13 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; EG: FMA {{\*? *}}[[RES]]
 define amdgpu_kernel void @fma_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
                      ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-  %r0 = load float, ptr addrspace(1) %in1
-  %r1 = load float, ptr addrspace(1) %in2
-  %r2 = load float, ptr addrspace(1) %in3
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in1.tid = getelementptr inbounds float, ptr addrspace(1) %in1, i32 %tid
+  %in2.tid = getelementptr inbounds float, ptr addrspace(1) %in2, i32 %tid
+  %in3.tid = getelementptr inbounds float, ptr addrspace(1) %in3, i32 %tid
+  %r0 = load float, ptr addrspace(1) %in1.tid
+  %r1 = load float, ptr addrspace(1) %in2.tid
+  %r2 = load float, ptr addrspace(1) %in3.tid
   %r3 = tail call float @llvm.fma.f32(float %r0, float %r1, float %r2)
   store float %r3, ptr addrspace(1) %out
   ret void
@@ -50,9 +54,13 @@ define float @fmac_to_3addr_f32(float %r0, float %r1, float %r2) {
 ; EG-DAG: FMA {{\*? *}}[[RES]].[[CHHI]]
 define amdgpu_kernel void @fma_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
                        ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-  %r0 = load <2 x float>, ptr addrspace(1) %in1
-  %r1 = load <2 x float>, ptr addrspace(1) %in2
-  %r2 = load <2 x float>, ptr addrspace(1) %in3
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in1.tid = getelementptr inbounds <2 x float>, ptr addrspace(1) %in1, i32 %tid
+  %in2.tid = getelementptr inbounds <2 x float>, ptr addrspace(1) %in2, i32 %tid
+  %in3.tid = getelementptr inbounds <2 x float>, ptr addrspace(1) %in3, i32 %tid
+  %r0 = load <2 x float>, ptr addrspace(1) %in1.tid
+  %r1 = load <2 x float>, ptr addrspace(1) %in2.tid
+  %r2 = load <2 x float>, ptr addrspace(1) %in3.tid
   %r3 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %r0, <2 x float> %r1, <2 x float> %r2)
   store <2 x float> %r3, ptr addrspace(1) %out
   ret void
@@ -75,9 +83,13 @@ define amdgpu_kernel void @fma_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-DAG: FMA {{\*? *}}[[RES]].W
 define amdgpu_kernel void @fma_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
                        ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-  %r0 = load <4 x float>, ptr addrspace(1) %in1
-  %r1 = load <4 x float>, ptr addrspace(1) %in2
-  %r2 = load <4 x float>, ptr addrspace(1) %in3
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in1.tid = getelementptr inbounds <4 x float>, ptr addrspace(1) %in1, i32 %tid
+  %in2.tid = getelementptr inbounds <4 x float>, ptr addrspace(1) %in2, i32 %tid
+  %in3.tid = getelementptr inbounds <4 x float>, ptr addrspace(1) %in3, i32 %tid
+  %r0 = load <4 x float>, ptr addrspace(1) %in1.tid
+  %r1 = load <4 x float>, ptr addrspace(1) %in2.tid
+  %r2 = load <4 x float>, ptr addrspace(1) %in3.tid
   %r3 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %r0, <4 x float> %r1, <4 x float> %r2)
   store <4 x float> %r3, ptr addrspace(1) %out
   ret void

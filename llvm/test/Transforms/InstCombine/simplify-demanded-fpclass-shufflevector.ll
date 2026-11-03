@@ -159,7 +159,7 @@ define nofpclass(inf nan) <4 x half> @ret_nonan_noinf__shufflevector_nan_inf(i1 
 ; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call <4 x half> @returns_nan()
 ; CHECK-NEXT:    [[INF:%.*]] = call <4 x half> @returns_inf()
-; CHECK-NEXT:    ret <4 x half> <half undef, half poison, half poison, half poison>
+; CHECK-NEXT:    ret <4 x half> poison
 ;
   %nan = call <4 x half> @returns_nan()
   %inf = call <4 x half> @returns_inf()
