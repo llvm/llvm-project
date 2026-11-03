@@ -1,4 +1,4 @@
-# RUN: llc -o - -run-pass=x86-expand-pseudo -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -o - -run-pass=x86-expand-pseudo %s | FileCheck %s
 # RUN: llc -o - -passes=x86-expand-pseudo -verify-machineinstrs %s | FileCheck %s
 
 --- |

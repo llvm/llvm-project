@@ -1,4 +1,4 @@
-#RUN: llc -verify-machineinstrs -mtriple=x86_64-apple-darwin -o - -run-pass=x86-expand-pseudo %s | FileCheck %s
+#RUN: llc -mtriple=x86_64-apple-darwin -o - -run-pass=x86-expand-pseudo %s | FileCheck %s
 #RUN: llc -verify-machineinstrs -mtriple=x86_64-apple-darwin -o - -passes=x86-expand-pseudo %s | FileCheck %s
 
 ---
