@@ -249,11 +249,9 @@ llvm::Error DeviceTy::deinit() {
       { performOmptCallback(device_finalize, DeviceID); });
 
   // Keep tearing down even if record/replay fails to finish cleanly.
-  llvm::Error Result = llvm::Error::success();
-  if (RecordReplay) {
-    Result = RecordReplay->deinit();
-    RecordReplay.reset();
-  }
+  llvm::Error Result =
+    RecordReplay ? RecordReplay->deinit() : llvm::Error::success();
+  RecordReplay.reset();
 
   if (!Context)
     return Result;
