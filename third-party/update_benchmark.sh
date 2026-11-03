@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo "This script deletes `benchmark`, clones it from github, together"
 echo "with its dependencies. It then removes .git* files and dirs."
