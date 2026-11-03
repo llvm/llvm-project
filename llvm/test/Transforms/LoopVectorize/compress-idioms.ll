@@ -587,8 +587,6 @@ define void @compress_store_single_iteration(ptr writeonly noalias %dst, ptr rea
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> [[WIDE_LOAD]], ptr align 4 [[DST]], <4 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i1> [[TMP0]] to <4 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP1]])
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
