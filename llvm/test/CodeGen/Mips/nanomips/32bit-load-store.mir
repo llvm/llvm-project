@@ -13,387 +13,435 @@
 # --- load / store (with placeholder operands for now) ---
 ---
 # CHECK-LABEL: lb:
-# CHECK: lb $a0, 0 # encoding: [0x80,0x84,0x00,0x00]
+# CHECK: lb $4, 0 # encoding: [0x80,0x84,0x00,0x00]
 name: lb
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LB_NM 0
+    $r4 = LB_NM 0
 ...
 ---
 # CHECK-LABEL: lbgp:
-# CHECK: lb $a0, 0 # encoding: [0x80,0x44,0x00,0x00]
+# CHECK: lb $4, 0 # encoding: [0x80,0x44,0x00,0x00]
 name: lbgp
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LBGP_NM 0
+    $r4 = LBGP_NM 0
 ...
 ---
 # CHECK-LABEL: lbs9:
-# CHECK: lb $a0, 0 # encoding: [0x80,0xa4,0x00,0x00]
+# CHECK: lb $4, 0 # encoding: [0x80,0xa4,0x00,0x00]
 name: lbs9
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LBs9_NM 0
+    $r4 = LBs9_NM 0
 ...
 ---
 # CHECK-LABEL: lbu:
-# CHECK: lbu $a0, 0 # encoding: [0x80,0x84,0x00,0x20]
+# CHECK: lbu $4, 0 # encoding: [0x80,0x84,0x00,0x20]
 name: lbu
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LBU_NM 0
+    $r4 = LBU_NM 0
 ...
 ---
 # CHECK-LABEL: lbugp:
-# CHECK: lbu $a0, 0 # encoding: [0x88,0x44,0x00,0x00]
+# CHECK: lbu $4, 0 # encoding: [0x88,0x44,0x00,0x00]
 name: lbugp
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LBUGP_NM 0
+    $r4 = LBUGP_NM 0
 ...
 ---
 # CHECK-LABEL: lbus9:
-# CHECK: lbu $a0, 0 # encoding: [0x80,0xa4,0x00,0x10]
+# CHECK: lbu $4, 0 # encoding: [0x80,0xa4,0x00,0x10]
 name: lbus9
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LBUs9_NM 0
+    $r4 = LBUs9_NM 0
 ...
 ---
 # CHECK-LABEL: lbux:
-# CHECK: lbux $a0, 0 # encoding: [0x00,0x20,0x07,0x21]
+# CHECK: lbux $4, 0 # encoding: [0x00,0x20,0x07,0x21]
 name: lbux
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LBUX_NM 0
+    $r4 = LBUX_NM 0
 ...
 ---
 # CHECK-LABEL: lbx:
-# CHECK: lbx $a0, 0 # encoding: [0x00,0x20,0x07,0x20]
+# CHECK: lbx $4, 0 # encoding: [0x00,0x20,0x07,0x20]
 name: lbx
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LBX_NM 0
+    $r4 = LBX_NM 0
 ...
 ---
 # CHECK-LABEL: lh:
-# CHECK: lh $a0, 0 # encoding: [0x80,0x84,0x00,0x40]
+# CHECK: lh $4, 0 # encoding: [0x80,0x84,0x00,0x40]
 name: lh
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LH_NM 0
+    $r4 = LH_NM 0
 ...
 ---
 # CHECK-LABEL: lhgp:
-# CHECK: lh $a0, 0 # encoding: [0x90,0x44,0x00,0x00]
+# CHECK: lh $4, 0 # encoding: [0x90,0x44,0x00,0x00]
 name: lhgp
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHGP_NM 0
+    $r4 = LHGP_NM 0
 ...
 ---
 # CHECK-LABEL: lhs9:
-# CHECK: lh $a0, 0 # encoding: [0x80,0xa4,0x00,0x20]
+# CHECK: lh $4, 0 # encoding: [0x80,0xa4,0x00,0x20]
 name: lhs9
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHs9_NM 0
+    $r4 = LHs9_NM 0
 ...
 ---
 # CHECK-LABEL: lhu:
-# CHECK: lhu $a0, 0 # encoding: [0x80,0x84,0x00,0x60]
+# CHECK: lhu $4, 0 # encoding: [0x80,0x84,0x00,0x60]
 name: lhu
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHU_NM 0
+    $r4 = LHU_NM 0
 ...
 ---
 # CHECK-LABEL: lhugp:
-# CHECK: lhu $a0, 0 # encoding: [0x90,0x44,0x01,0x00]
+# CHECK: lhu $4, 0 # encoding: [0x90,0x44,0x01,0x00]
 name: lhugp
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHUGP_NM 0
+    $r4 = LHUGP_NM 0
 ...
 ---
 # CHECK-LABEL: lhus9:
-# CHECK: lhu $a0, 0 # encoding: [0x80,0xa4,0x00,0x30]
+# CHECK: lhu $4, 0 # encoding: [0x80,0xa4,0x00,0x30]
 name: lhus9
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHUs9_NM 0
+    $r4 = LHUs9_NM 0
 ...
 ---
 # CHECK-LABEL: lhux:
-# CHECK: lhux $a0, 0 # encoding: [0x00,0x20,0x07,0x23]
+# CHECK: lhux $4, 0 # encoding: [0x00,0x20,0x07,0x23]
 name: lhux
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHUX_NM 0
+    $r4 = LHUX_NM 0
 ...
 ---
 # CHECK-LABEL: lhuxs:
-# CHECK: lhuxs $a0, 0 # encoding: [0x00,0x20,0x47,0x23]
+# CHECK: lhuxs $4, 0 # encoding: [0x00,0x20,0x47,0x23]
 name: lhuxs
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHUXS_NM 0
+    $r4 = LHUXS_NM 0
 ...
 ---
 # CHECK-LABEL: lhx:
-# CHECK: lhx $a0, 0 # encoding: [0x00,0x20,0x07,0x22]
+# CHECK: lhx $4, 0 # encoding: [0x00,0x20,0x07,0x22]
 name: lhx
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHX_NM 0
+    $r4 = LHX_NM 0
 ...
 ---
 # CHECK-LABEL: lhxs:
-# CHECK: lhxs $a0, 0 # encoding: [0x00,0x20,0x47,0x22]
+# CHECK: lhxs $4, 0 # encoding: [0x00,0x20,0x47,0x22]
 name: lhxs
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHXS_NM 0
+    $r4 = LHXS_NM 0
 ...
 ---
 # CHECK-LABEL: ll:
-# CHECK: ll $a0, 0 # encoding: [0x80,0xa4,0x00,0x51]
+# CHECK: ll $4, 0 # encoding: [0x80,0xa4,0x00,0x51]
 name: ll
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LL_NM 0
+    $r4 = LL_NM 0
 ...
 ---
 # CHECK-LABEL: lw:
-# CHECK: lw $a0, 0 # encoding: [0x80,0x84,0x00,0x80]
+# CHECK: lw $4, 0 # encoding: [0x80,0x84,0x00,0x80]
 name: lw
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LW_NM 0
+    $r4 = LW_NM 0
 ...
 ---
 # CHECK-LABEL: lwgp:
-# CHECK: lw $a0, 0 # encoding: [0x80,0x40,0x02,0x00]
+# CHECK: lw $4, 0 # encoding: [0x80,0x40,0x02,0x00]
 name: lwgp
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWGP_NM 0
+    $r4 = LWGP_NM 0
 ...
 ---
 # CHECK-LABEL: lwm:
-# CHECK: lwm $a0, 0, 1 # encoding: [0x80,0xa4,0x00,0x14]
+# CHECK: lwm $4, 0, 1 # encoding: [0x80,0xa4,0x00,0x14]
 name: lwm
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWM_NM 0, 1
+    $r4 = LWM_NM 0, 1
 ...
 ---
 # CHECK-LABEL: lws9:
-# CHECK: lw $a0, 0 # encoding: [0x80,0xa4,0x00,0x40]
+# CHECK: lw $4, 0 # encoding: [0x80,0xa4,0x00,0x40]
 name: lws9
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWs9_NM 0
+    $r4 = LWs9_NM 0
 ...
 ---
 # CHECK-LABEL: lwx:
-# CHECK: lwx $a0, 0 # encoding: [0x00,0x20,0x07,0x24]
+# CHECK: lwx $4, 0 # encoding: [0x00,0x20,0x07,0x24]
 name: lwx
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWX_NM 0
+    $r4 = LWX_NM 0
 ...
 ---
 # CHECK-LABEL: lwxs:
-# CHECK: lwxs $a0, 0 # encoding: [0x00,0x20,0x47,0x24]
+# CHECK: lwxs $4, 0 # encoding: [0x00,0x20,0x47,0x24]
 name: lwxs
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWXS_NM 0
+    $r4 = LWXS_NM 0
 ...
 ---
 # CHECK-LABEL: sb:
-# CHECK: sb $a0, 0 # encoding: [0x80,0x84,0x00,0x10]
+# CHECK: sb $4, 0 # encoding: [0x80,0x84,0x00,0x10]
 name: sb
+tracksRegLiveness: false
 body: |
   bb.0:
-    SB_NM $a0_nm, 0
+    SB_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: sbgp:
-# CHECK: sb $a0, 0 # encoding: [0x84,0x44,0x00,0x00]
+# CHECK: sb $4, 0 # encoding: [0x84,0x44,0x00,0x00]
 name: sbgp
+tracksRegLiveness: false
 body: |
   bb.0:
-    SBGP_NM $a0_nm, 0
+    SBGP_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: sbs9:
-# CHECK: sb $a0, 0 # encoding: [0x80,0xa4,0x00,0x08]
+# CHECK: sb $4, 0 # encoding: [0x80,0xa4,0x00,0x08]
 name: sbs9
+tracksRegLiveness: false
 body: |
   bb.0:
-    SBs9_NM $a0_nm, 0
+    SBs9_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: sbx:
-# CHECK: sbx $a0, 0 # encoding: [0x00,0x20,0x87,0x20]
+# CHECK: sbx $4, 0 # encoding: [0x00,0x20,0x87,0x20]
 name: sbx
+tracksRegLiveness: false
 body: |
   bb.0:
-    SBX_NM $a0_nm, 0
+    SBX_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: sc:
-# CHECK: sc $a0, 0 # encoding: [0x80,0xa4,0x00,0x59]
+# CHECK: sc $4, 0 # encoding: [0x80,0xa4,0x00,0x59]
 name: sc
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = SC_NM $a0_nm, 0
+    $r4 = SC_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: scwp:
-# CHECK: scwp $a0, $a1, 0 # encoding: [0x80,0xa4,0x29,0x59]
+# CHECK: scwp $4, $5, 0 # encoding: [0x80,0xa4,0x29,0x59]
 name: scwp
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = SCWP_NM $a0_nm, $a1_nm, 0
+    $r4 = SCWP_NM $r4, $r5, 0
 ...
 ---
 # CHECK-LABEL: sh:
-# CHECK: sh $a0, 0 # encoding: [0x80,0x84,0x00,0x50]
+# CHECK: sh $4, 0 # encoding: [0x80,0x84,0x00,0x50]
 name: sh
+tracksRegLiveness: false
 body: |
   bb.0:
-    SH_NM $a0_nm, 0
+    SH_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: shgp:
-# CHECK: sh $a0, 0 # encoding: [0x94,0x44,0x00,0x00]
+# CHECK: sh $4, 0 # encoding: [0x94,0x44,0x00,0x00]
 name: shgp
+tracksRegLiveness: false
 body: |
   bb.0:
-    SHGP_NM $a0_nm, 0
+    SHGP_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: shs9:
-# CHECK: sh $a0, 0 # encoding: [0x80,0xa4,0x00,0x28]
+# CHECK: sh $4, 0 # encoding: [0x80,0xa4,0x00,0x28]
 name: shs9
+tracksRegLiveness: false
 body: |
   bb.0:
-    SHs9_NM $a0_nm, 0
+    SHs9_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: shx:
-# CHECK: shx $a0, 0 # encoding: [0x00,0x20,0x87,0x22]
+# CHECK: shx $4, 0 # encoding: [0x00,0x20,0x87,0x22]
 name: shx
+tracksRegLiveness: false
 body: |
   bb.0:
-    SHX_NM $a0_nm, 0
+    SHX_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: shxs:
-# CHECK: shxs $a0, 0 # encoding: [0x00,0x20,0xc7,0x22]
+# CHECK: shxs $4, 0 # encoding: [0x00,0x20,0xc7,0x22]
 name: shxs
+tracksRegLiveness: false
 body: |
   bb.0:
-    SHXS_NM $a0_nm, 0
+    SHXS_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: sw:
-# CHECK: sw $a0, 0 # encoding: [0x80,0x84,0x00,0x90]
+# CHECK: sw $4, 0 # encoding: [0x80,0x84,0x00,0x90]
 name: sw
+tracksRegLiveness: false
 body: |
   bb.0:
-    SW_NM $a0_nm, 0
+    SW_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: swgp:
-# CHECK: sw $a0, 0 # encoding: [0x80,0x40,0x03,0x00]
+# CHECK: sw $4, 0 # encoding: [0x80,0x40,0x03,0x00]
 name: swgp
+tracksRegLiveness: false
 body: |
   bb.0:
-    SWGP_NM $a0_nm, 0
+    SWGP_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: swm:
-# CHECK: swm $a0, 0, 1 # encoding: [0x80,0xa4,0x00,0x1c]
+# CHECK: swm $4, 0, 1 # encoding: [0x80,0xa4,0x00,0x1c]
 name: swm
+tracksRegLiveness: false
 body: |
   bb.0:
-    SWM_NM $a0_nm, 0, 1
+    SWM_NM $r4, 0, 1
 ...
 ---
 # CHECK-LABEL: sws9:
-# CHECK: sw $a0, 0 # encoding: [0x80,0xa4,0x00,0x48]
+# CHECK: sw $4, 0 # encoding: [0x80,0xa4,0x00,0x48]
 name: sws9
+tracksRegLiveness: false
 body: |
   bb.0:
-    SWs9_NM $a0_nm, 0
+    SWs9_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: swx:
-# CHECK: swx $a0, 0 # encoding: [0x00,0x20,0x87,0x24]
+# CHECK: swx $4, 0 # encoding: [0x00,0x20,0x87,0x24]
 name: swx
+tracksRegLiveness: false
 body: |
   bb.0:
-    SWX_NM $a0_nm, 0
+    SWX_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: swxs:
-# CHECK: swxs $a0, 0 # encoding: [0x00,0x20,0xc7,0x24]
+# CHECK: swxs $4, 0 # encoding: [0x00,0x20,0xc7,0x24]
 name: swxs
+tracksRegLiveness: false
 body: |
   bb.0:
-    SWXS_NM $a0_nm, 0
+    SWXS_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: ualh:
-# CHECK: ualh $a0, 0 # encoding: [0x80,0xa4,0x00,0x21]
+# CHECK: ualh $4, 0 # encoding: [0x80,0xa4,0x00,0x21]
 name: ualh
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = UALH_NM 0, $a0_nm
+    $r4 = UALH_NM 0, $r4
 ...
 ---
 # CHECK-LABEL: ualw:
-# CHECK: ualw $a0, 0 # encoding: [0x80,0xa4,0x00,0x15]
+# CHECK: ualw $4, 0 # encoding: [0x80,0xa4,0x00,0x15]
 name: ualw
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = UALW_NM 0, $a0_nm
+    $r4 = UALW_NM 0, $r4
 ...
 ---
 # CHECK-LABEL: ualwm:
-# CHECK: ualwm $a0, 0, 1 # encoding: [0x80,0xa4,0x00,0x15]
+# CHECK: ualwm $4, 0, 1 # encoding: [0x80,0xa4,0x00,0x15]
 name: ualwm
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = UALWM_NM 0, 1
+    $r4 = UALWM_NM 0, 1
 ...
 ---
 # CHECK-LABEL: uash:
-# CHECK: uash $a0, 0 # encoding: [0x80,0xa4,0x00,0x29]
+# CHECK: uash $4, 0 # encoding: [0x80,0xa4,0x00,0x29]
 name: uash
+tracksRegLiveness: false
 body: |
   bb.0:
-    UASH_NM $a0_nm, 0
+    UASH_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: uasw:
-# CHECK: uasw $a0, 0 # encoding: [0x80,0xa4,0x00,0x1d]
+# CHECK: uasw $4, 0 # encoding: [0x80,0xa4,0x00,0x1d]
 name: uasw
+tracksRegLiveness: false
 body: |
   bb.0:
-    UASW_NM $a0_nm, 0
+    UASW_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: uaswm:
-# CHECK: uaswm $a0, 0, 1 # encoding: [0x80,0xa4,0x00,0x1d]
+# CHECK: uaswm $4, 0, 1 # encoding: [0x80,0xa4,0x00,0x1d]
 name: uaswm
+tracksRegLiveness: false
 body: |
   bb.0:
-    UASWM_NM $a0_nm, 0, 1
+    UASWM_NM $r4, 0, 1
 ...
 
 # --- cache / prefetch / sync (with placeholder operands for now) ---
@@ -401,22 +449,25 @@ body: |
 # CHECK-LABEL: cache:
 # CHECK: cache 0, 0 # encoding: [0x00,0xa4,0x00,0x39]
 name: cache
+tracksRegLiveness: false
 body: |
   bb.0:
     CACHE_NM 0, 0
 ...
 ---
 # CHECK-LABEL: llwp:
-# CHECK: llwp $a0, $a1, 0 # encoding: [0x80,0xa4,0x29,0x51]
+# CHECK: llwp $4, $5, 0 # encoding: [0x80,0xa4,0x29,0x51]
 name: llwp
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm, $a1_nm = LLWP_NM 0
+    $r4, $r5 = LLWP_NM 0
 ...
 ---
 # CHECK-LABEL: pref:
 # CHECK: pref 0, 0 # encoding: [0x00,0x84,0x00,0x30]
 name: pref
+tracksRegLiveness: false
 body: |
   bb.0:
     PREF_NM 0, 0
@@ -425,6 +476,7 @@ body: |
 # CHECK-LABEL: prefs9:
 # CHECK: pref 0, 0 # encoding: [0x00,0xa4,0x00,0x18]
 name: prefs9
+tracksRegLiveness: false
 body: |
   bb.0:
     PREFs9_NM 0, 0
@@ -433,6 +485,7 @@ body: |
 # CHECK-LABEL: synci:
 # CHECK: synci 0 # encoding: [0xe0,0x87,0x00,0x30]
 name: synci
+tracksRegLiveness: false
 body: |
   bb.0:
     SYNCI_NM 0
@@ -441,6 +494,7 @@ body: |
 # CHECK-LABEL: syncis9:
 # CHECK: synci 0 # encoding: [0xe0,0xa7,0x00,0x18]
 name: syncis9
+tracksRegLiveness: false
 body: |
   bb.0:
     SYNCIs9_NM 0

@@ -105,7 +105,6 @@ public:
   unsigned GetBasePtr() const;
   unsigned GetGlobalPtr() const;
   unsigned GetNullPtr() const;
-  unsigned GetRetReg() const;
   unsigned GetZeroReg() const;
   unsigned GetPtrAdduOp() const;
   unsigned GetPtrAddiuOp() const;

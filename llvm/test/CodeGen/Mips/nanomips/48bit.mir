@@ -13,61 +13,68 @@
 # --- arithmetic / immediate ---
 ---
 # CHECK-LABEL: addiu48:
-# CHECK: addiu $a0, $a0, 305419896 # encoding: [0x81,0x60,0x78,0x56,0x34,0x12]
+# CHECK: addiu $4, $4, 305419896 # encoding: [0x81,0x60,0x78,0x56,0x34,0x12]
 name: addiu48
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = ADDIU48_NM $a0_nm, 305419896
+    $r4 = ADDIU48_NM $r4, 305419896
 ...
 ---
 # CHECK-LABEL: li48:
-# CHECK: li $a0, 305419896 # encoding: [0x80,0x60,0x78,0x56,0x34,0x12]
+# CHECK: li $4, 305419896 # encoding: [0x80,0x60,0x78,0x56,0x34,0x12]
 name: li48
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LI48_NM 305419896
+    $r4 = LI48_NM 305419896
 ...
 
 # --- PC/GP-relative address (with placeholder operands for now) ---
 ---
 # CHECK-LABEL: addiugp48:
-# CHECK: addiu.b32 $a0, $gp, 0 # encoding: [0x82,0x60,0x00,0x00,0x00,0x00]
+# CHECK: addiu.b32 $4, $gp, 0 # encoding: [0x82,0x60,0x00,0x00,0x00,0x00]
 name: addiugp48
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = ADDIUGP48_NM $gp_nm, 0
+    $r4 = ADDIUGP48_NM $r28, 0
 ...
 ---
 # CHECK-LABEL: addiupc48:
-# CHECK: addiupc $a0, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
+# CHECK: addiupc $4, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
 name: addiupc48
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = ADDIUPC48_NM 0
+    $r4 = ADDIUPC48_NM 0
 ...
 ---
 # CHECK-LABEL: lapc48:
-# CHECK: lapc.b $a0, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
+# CHECK: lapc.b $4, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
 name: lapc48
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LAPC48_NM 0
+    $r4 = LAPC48_NM 0
 ...
 
 # --- PC-relative load / store (with placeholder operands for now) ---
 ---
 # CHECK-LABEL: lwpc:
-# CHECK: lwpc $a0, 0 # encoding: [0x8b,0x60,0x00,0x00,0x00,0x00]
+# CHECK: lwpc $4, 0 # encoding: [0x8b,0x60,0x00,0x00,0x00,0x00]
 name: lwpc
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWPC_NM 0
+    $r4 = LWPC_NM 0
 ...
 ---
 # CHECK-LABEL: swpc:
-# CHECK: swpc $a0, 0 # encoding: [0x8f,0x60,0x00,0x00,0x00,0x00]
+# CHECK: swpc $4, 0 # encoding: [0x8f,0x60,0x00,0x00,0x00,0x00]
 name: swpc
+tracksRegLiveness: false
 body: |
   bb.0:
-    SWPC_NM $a0_nm, 0
+    SWPC_NM $r4, 0
 ...

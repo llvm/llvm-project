@@ -153,7 +153,7 @@ class Call_Desc<string opstr, DAGOperand calltarget>
   : InstNM<(outs), (ins calltarget:$addr), !strconcat(opstr, "\t$addr")> {
   let isCall = 1;
   let isCTI = 1;
-  let Defs = [RA_NM];
+  let Defs = [R31];
 }
 
 // Indirect branch instruction.
@@ -386,7 +386,7 @@ class MOVEBALC_Desc : InstNM<(outs GPRNM1R1Opnd:$rd),
                              "move.balc\t$rd, $rt, $addr">  {
   let isCall = 1;
   let isCTI = 1;
-  let Defs = [RA_NM];
+  let Defs = [R31];
 }
 
 def MOVEBALC_NM : MOVEBALC_Desc, MOVEBALC_Enc;
@@ -434,7 +434,7 @@ class IndirectCall_Desc<string opstr, RegisterOperand DRO, RegisterOperand SRO>
 }
 
 // TODO: check let ... in, isCall and isCTI is already in IndirectCall_Desc
-let Defs = [RA_NM] in {
+let Defs = [R31] in {
   def JALRC16_NM : IndirectCall_Desc<"jalrc", GPRNMRAOpnd, GPRNM32Opnd>,
                    IndirectCall16_Enc;
   def JALRC_NM   : IndirectCall_Desc<"jalrc", GPRNM32Opnd, GPRNM32Opnd>,
@@ -724,8 +724,8 @@ class UnalignedStore_Desc<string opstr, RegisterOperand RO = GPRNM32Opnd>
 class SaveRestore_Desc<string opstr, Operand Od, Operand RL>
   : InstNM<(outs), (ins Od:$adj, RL:$regs, variable_ops),
            !strconcat(opstr, "\t$adj$regs")> {
-  let Defs = [SP_NM];
-  let Uses = [SP_NM];
+  let Defs = [R29];
+  let Uses = [R29];
   let hasSideEffects = 1;
 }
 

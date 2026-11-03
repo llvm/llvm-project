@@ -116,9 +116,8 @@ def CC_NanoMipsP32 : CallingConv<[
   // Promote i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
-  // Pass arguments in A0_NM...A7_NM.
-  CCIfType<[i32], CCAssignToReg<[A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM,
-                                 A6_NM, A7_NM]>>,
+  // Pass arguments in $a0...$a7.
+  CCIfType<[i32], CCAssignToReg<[R4, R5, R6, R7, R8, R9, R10, R11]>>,
 
   // Integer values get stored in stack slots that are 4 bytes in
   // size and 4-byte aligned.
@@ -129,8 +128,8 @@ def RetCC_NanoMipsP32 : CallingConv<[
   // Promote i1/i8/i16 return values to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
-  // i32 are returned in registers A0_NM, A1_NM.
-  CCIfType<[i32], CCAssignToReg<[A0_NM, A1_NM]>>
+  // i32 are returned in registers $a0, $a1.
+  CCIfType<[i32], CCAssignToReg<[R4, R5]>>
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -456,4 +455,4 @@ def CSR_Interrupt_64 : CalleeSavedRegs<(add (sequence "R%u_64", 7, 4),
                                             LO0_64, HI0_64)>;
 
 def CSR_P32 :
-  CalleeSavedRegs<(add RA_NM, FP_NM, GP_NM, (sequence "S%u_NM", 7, 0))>;
+  CalleeSavedRegs<(add R31, R30, R28, (sequence "R%u", 23, 16))>;

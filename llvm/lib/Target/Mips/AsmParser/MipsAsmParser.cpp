@@ -1697,18 +1697,18 @@ public:
     return RegIdx.Index == 4 || RegIdx.Index == 5;
   }
 
-  template <unsigned RegClassID = Mips::GPRNM32RegClassID>
+  template <unsigned RegClassID = Mips::GPR32RegClassID>
   bool isGPRNMAsmReg() const {
     if (!(isRegIdx() && RegIdx.Kind))
       return false;
     switch (RegClassID) {
-    case Mips::GPRNMGPRegClassID:
+    case Mips::GP32RegClassID:
       return (RegIdx.Index == 28);
-    case Mips::GPRNMSPRegClassID:
+    case Mips::SP32RegClassID:
       return (RegIdx.Index == 29);
     case Mips::GPRNMRARegClassID:
       return (RegIdx.Index == 31);
-    case Mips::GPRNM32NZRegClassID:
+    case Mips::GPR32NONZERORegClassID:
       return (RegIdx.Index > 0 && RegIdx.Index < 32);
     case Mips::GPRNM3RegClassID:
       return isNM16AsmReg();

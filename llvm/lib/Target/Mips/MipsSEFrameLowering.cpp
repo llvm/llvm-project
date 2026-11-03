@@ -801,7 +801,7 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();
-  unsigned RA = ABI.GetRetReg();
+  unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
   unsigned FP = ABI.GetFramePtr();
   unsigned BP = ABI.GetBasePtr();
 
@@ -844,9 +844,8 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
       !MF.getFrameInfo().hasVarSizedObjects())
     return;
 
-  const TargetRegisterClass &RC = ABI.ArePtrs64bit() ? Mips::GPR64RegClass
-                                  : ABI.IsP32()      ? Mips::GPRNM32RegClass
-                                                     : Mips::GPR32RegClass;
+  const TargetRegisterClass &RC =
+      ABI.ArePtrs64bit() ? Mips::GPR64RegClass : Mips::GPR32RegClass;
   int FI = MF.getFrameInfo().CreateSpillStackObject(TRI->getSpillSize(RC),
                                                     TRI->getSpillAlign(RC));
   RS->addScavengingFrameIndex(FI);

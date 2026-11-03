@@ -860,6 +860,8 @@ MipsTargetELFStreamer::getISAMode(const MCSubtargetInfo &STI) {
     return ISAMode::Mips16;
   if (STI.hasFeature(Mips::FeatureMicroMips))
     return ISAMode::MicroMips;
+  if (STI.hasFeature(Mips::FeatureNanoMips))
+    return ISAMode::NanoMips;
   return ISAMode::Standard;
 }
 
@@ -944,8 +946,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   if (Features[Mips::FeatureNaN2008])
     EFlags |= ELF::EF_MIPS_NAN2008;
 
-  if (STI.getTargetTriple().getArch() == Triple::ArchType::nanomips) {
-    NanoMipsEnabled = true;
+  if (STI.getTargetTriple().isNanoMips()) {
+    Mode = ISAMode::NanoMips;
     Pic = false; // PIC not supported yet on nanoMIPS
   }
 

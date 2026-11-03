@@ -187,41 +187,6 @@ let Namespace = "Mips" in {
   def R30_64 : Mips64GPRReg<R30>, DwarfRegNum<[30]>;
   def R31_64 : Mips64GPRReg<R31>, DwarfRegNum<[31]>;
 
-  // General Purpose nanoMIPS Registers
-  let isConstant = true in
-  def ZERO_NM : MipsGPRReg< 0, "zero">, DwarfRegNum<[0]>;
-  def AT_NM   : MipsGPRReg< 1, "at">,   DwarfRegNum<[1]>;
-  def T4_NM   : MipsGPRReg< 2, "t4">,   DwarfRegNum<[2]>;
-  def T5_NM   : MipsGPRReg< 3, "t5">,   DwarfRegNum<[3]>;
-  def A0_NM   : MipsGPRReg< 4, "a0">,   DwarfRegNum<[4]>;
-  def A1_NM   : MipsGPRReg< 5, "a1">,   DwarfRegNum<[5]>;
-  def A2_NM   : MipsGPRReg< 6, "a2">,   DwarfRegNum<[6]>;
-  def A3_NM   : MipsGPRReg< 7, "a3">,   DwarfRegNum<[7]>;
-  def A4_NM   : MipsGPRReg< 8, "a4">,   DwarfRegNum<[8]>;
-  def A5_NM   : MipsGPRReg< 9, "a5">,   DwarfRegNum<[9]>;
-  def A6_NM   : MipsGPRReg< 10, "a6">,  DwarfRegNum<[10]>;
-  def A7_NM   : MipsGPRReg< 11, "a7">,  DwarfRegNum<[11]>;
-  def T0_NM   : MipsGPRReg< 12, "t0">,  DwarfRegNum<[12]>;
-  def T1_NM   : MipsGPRReg< 13, "t1">,  DwarfRegNum<[13]>;
-  def T2_NM   : MipsGPRReg< 14, "t2">,  DwarfRegNum<[14]>;
-  def T3_NM   : MipsGPRReg< 15, "t3">,  DwarfRegNum<[15]>;
-  def S0_NM   : MipsGPRReg< 16, "s0">,  DwarfRegNum<[16]>;
-  def S1_NM   : MipsGPRReg< 17, "s1">,  DwarfRegNum<[17]>;
-  def S2_NM   : MipsGPRReg< 18, "s2">,  DwarfRegNum<[18]>;
-  def S3_NM   : MipsGPRReg< 19, "s3">,  DwarfRegNum<[19]>;
-  def S4_NM   : MipsGPRReg< 20, "s4">,  DwarfRegNum<[20]>;
-  def S5_NM   : MipsGPRReg< 21, "s5">,  DwarfRegNum<[21]>;
-  def S6_NM   : MipsGPRReg< 22, "s6">,  DwarfRegNum<[22]>;
-  def S7_NM   : MipsGPRReg< 23, "s7">,  DwarfRegNum<[23]>;
-  def T8_NM   : MipsGPRReg< 24, "t8">,  DwarfRegNum<[24]>;
-  def T9_NM   : MipsGPRReg< 25, "t9">,  DwarfRegNum<[25]>;
-  def K0_NM   : MipsGPRReg< 26, "k0">,  DwarfRegNum<[26]>;
-  def K1_NM   : MipsGPRReg< 27, "k1">,  DwarfRegNum<[27]>;
-  def GP_NM   : MipsGPRReg< 28, "gp">,  DwarfRegNum<[28]>;
-  def SP_NM   : MipsGPRReg< 29, "sp">,  DwarfRegNum<[29]>;
-  def FP_NM   : MipsGPRReg< 30, "fp">,  DwarfRegNum<[30]>;
-  def RA_NM   : MipsGPRReg< 31, "ra">,  DwarfRegNum<[31]>;
-
   /// Mips Single point precision FPU Registers
   foreach I = 0-31 in
   def F#I : FPR<I, "f"#I>, DwarfRegNum<[!add(I, 32)]>;
@@ -629,106 +594,64 @@ def GPRMM16MovePPairSecond : RegisterClass<"Mips", [i32], 32, (add
   // Callee save
   R21, R22)>;
 
-class GPRNM32Class<list<ValueType> regTypes> :
-  RegisterClass<"Mips", regTypes, 32, (add
-  // Reserved
-  ZERO_NM, AT_NM,
-  // Not preserved across procedure calls
-  T4_NM, T5_NM,
-  // Return Values and Arguments
-  A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM,
-  // Not preserved across procedure calls
-  T0_NM, T1_NM, T2_NM, T3_NM,
-  // Callee save
-  S0_NM, S1_NM, S2_NM, S3_NM, S4_NM, S5_NM, S6_NM, S7_NM,
-  // Not preserved across procedure calls
-  T8_NM, T9_NM,
-  // Reserved
-  K0_NM, K1_NM, GP_NM, SP_NM, FP_NM, RA_NM)>;
-
-def GPRNM32 : GPRNM32Class<[i32]>;
+def GPRNMRA : RegisterClass<"Mips", [i32], 32, (add R31)>, Unallocatable;
 
 def GPRNM32_TAIL : RegisterClass<"Mips", [i32], 32, (add
-  // Not preserved across procedure calls
-  T4_NM, T5_NM,
-  // Return Values and Arguments
-  A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM,
-  // Not preserved across procedure calls
-  T0_NM, T1_NM, T2_NM, T3_NM,
-  // Not preserved across procedure calls
-  T8_NM, T9_NM)>;
+  // Not preserved across procedure calls: $t4, $t5
+  R2, R3,
+  // Return Values and Arguments: $a0...$a7
+  R4, R5, R6, R7, R8, R9, R10, R11,
+  // Not preserved across procedure calls: $t0...$t3
+  R12, R13, R14, R15,
+  // Not preserved across procedure calls: $t8, $t9
+  R24, R25)>;
 
 // nanoMIPS "gpr3" register encoding type.
 def GPRNM3 : RegisterClass<"Mips", [i32], 32, (add
-  // Callee save
-  S0_NM, S1_NM, S2_NM, S3_NM,
-  // Return Values and Arguments
-  A0_NM, A1_NM, A2_NM, A3_NM)>;
+  // Callee save: $s0...$s3
+  R16, R17, R18, R19,
+  // Return Values and Arguments: $a0...$a3
+  R4, R5, R6, R7)>;
 
 // nanoMIPS "gpr3.zero" register encoding type.
 def GPRNM3Z : RegisterClass<"Mips", [i32], 32, (add
-  // Reserved
-  ZERO_NM,
-  // Callee save
-  S1_NM, S2_NM, S3_NM,
-  // Return Values and Arguments
-  A0_NM, A1_NM, A2_NM, A3_NM)>;
+  // Reserved: $zero
+  R0,
+  // Callee save: $s1...$s3
+  R17, R18, R19,
+  // Return Values and Arguments: $a0...$a3
+  R4, R5, R6, R7)>;
 
 // nanoMIPS "gpr4x4" register encoding type.
 def GPRNM4 : RegisterClass<"Mips", [i32], 32, (add
-  // Return Values and Arguments
-  A4_NM, A5_NM, A6_NM, A7_NM, A0_NM, A1_NM, A2_NM, A3_NM,
-  // Callee save
-  S0_NM, S1_NM, S2_NM, S3_NM, S4_NM, S5_NM, S6_NM, S7_NM)>;
+  // Return Values and Arguments: $a4...$a7, $a0...$a3
+  R8, R9, R10, R11, R4, R5, R6, R7,
+  // Callee save: $s0...$s7
+  R16, R17, R18, R19, R20, R21, R22, R23)>;
 
 // nanoMIPS "gpr4x4.zero" register encoding type.
 def GPRNM4Z : RegisterClass<"Mips", [i32], 32, (add
-  // Return Values and Arguments
-  A4_NM, A5_NM, A6_NM,
-  // Reserved
-  ZERO_NM,
-  // Return Values and Arguments
-  A0_NM, A1_NM, A2_NM, A3_NM,
-  // Callee save
-  S0_NM, S1_NM, S2_NM, S3_NM, S4_NM, S5_NM, S6_NM, S7_NM)>;
-
-// nanoMIPS non-zero gpr register encoding type.
-def GPRNM32NZ : RegisterClass<"Mips", [i32], 32, (add
-  // Reserved
-  AT_NM,
-  // Not preserved across procedure calls
-  T4_NM, T5_NM,
-  // Return Values and Arguments
-  A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM,
-  // Not preserved across procedure calls
-  T0_NM, T1_NM, T2_NM, T3_NM,
-  // Callee save
-  S0_NM, S1_NM, S2_NM, S3_NM, S4_NM, S5_NM, S6_NM, S7_NM,
-  // Not preserved across procedure calls
-  T8_NM, T9_NM,
-  // Reserved
-  K0_NM, K1_NM, GP_NM, SP_NM, FP_NM, RA_NM)>;
-
-// nanoMIPS: Stack pointer, global pointer and return address classes for
-// instructions that are limited to a single register
-def GPRNMSP : RegisterClass<"Mips", [i32], 32, (add SP_NM)>, Unallocatable;
-
-def GPRNMGP : RegisterClass<"Mips", [i32], 32, (add GP_NM)>, Unallocatable;
-
-def GPRNMRA : RegisterClass<"Mips", [i32], 32, (add RA_NM)>, Unallocatable;
+  // Return Values and Arguments: $a4...$a6
+  R8, R9, R10,
+  // Reserved: $zero
+  R0,
+  // Return Values and Arguments: $a0...$a3
+  R4, R5, R6, R7,
+  // Callee save: $s0...$s7
+  R16, R17, R18, R19, R20, R21, R22, R23)>;
 
 // nanoMIPS "gpr2.reg1" & "gpr2.reg2" register encoding types.
 def GPRNM2R1 : RegisterClass<"Mips", [i32], 32, (add
-  // Return Values and Arguments
-  A0_NM, A1_NM, A2_NM, A3_NM)>;
+  // Return Values and Arguments: $a0...$a3
+  R4, R5, R6, R7)>;
 
 def GPRNM2R2 : RegisterClass<"Mips", [i32], 32, (add
-  // Return Values and Arguments
-  A1_NM, A2_NM, A3_NM, A4_NM)>;
+  // Return Values and Arguments: $a1...$a4
+  R5, R6, R7, R8)>;
 
 def GPRNM1R1 : RegisterClass<"Mips", [i32], 32, (add
-  // Return Values and Arguments
-  A0_NM, A1_NM)>;
+  // Return Values and Arguments: $a0, $a1
+  R4, R5)>;
 
 def GPR64 : RegisterClass<"Mips", [i64], 64, (add
   // Reserved
@@ -1091,18 +1014,18 @@ def GPRMM16OpndMovePPairSecond : RegisterOperand<GPRMM16MovePPairSecond> {
 // In the following nanoMIPS operand definitions, the SuperClasses list passed
 // to GPRNMAsmOperandClass indirectly controls mnemonic-matching priority by
 // dictating the order in which instructions appear in the MatchTable.
-def GPRNM48Opnd : RegisterOperand<GPRNM32> {
-  let ParserMatchClass = GPRNMAsmOperandClass<"48Reg5", "GPRNM32RegClassID",
-                                              []>;
+def GPRNM48Opnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"48Reg5", "GPR32RegClassID", []>;
 }
 
-def GPRNM32NZOpnd : RegisterOperand<GPRNM32NZ> {
-  let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5NZ", "GPRNM32NZRegClassID",
+def GPRNM32NZOpnd : RegisterOperand<GPR32NONZERO> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5NZ",
+                                              "GPR32NONZERORegClassID",
                                               [GPRNM48Opnd.ParserMatchClass]>;
 }
 
-def GPRNM32Opnd : RegisterOperand<GPRNM32> {
-  let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5", "GPRNM32RegClassID",
+def GPRNM32Opnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5", "GPR32RegClassID",
                                               [GPRNM32NZOpnd.ParserMatchClass]>;
 }
 
@@ -1121,13 +1044,14 @@ def GPRNM4ZOpnd : RegisterOperand<GPRNM4Z> {
                                               [GPRNM32Opnd.ParserMatchClass]>;
 }
 
-def GPRNM16R5Opnd : RegisterOperand<GPRNM32> {
-  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg5", "GPRNM32RegClassID",
+def GPRNM16R5Opnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg5", "GPR32RegClassID",
                                               [GPRNM4Opnd.ParserMatchClass]>;
 }
 
-def GPRNM16R5NZOpnd : RegisterOperand<GPRNM32> {
-  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg5NZ", "GPRNM32NZRegClassID",
+def GPRNM16R5NZOpnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg5NZ",
+                                              "GPR32NONZERORegClassID",
                                               [GPRNM4Opnd.ParserMatchClass]>;
 }
 
@@ -1141,19 +1065,19 @@ def GPRNM16R3ZOpnd : RegisterOperand<GPRNM3Z> {
                                               [GPRNM16R5Opnd.ParserMatchClass]>;
 }
 
-def GPRNMSPOpnd : RegisterOperand<GPRNMSP> {
-  let ParserMatchClass = GPRNMAsmOperandClass<"RegSP", "GPRNMSPRegClassID",
+def GPRNMSPOpnd : RegisterOperand<SP32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"RegSP", "SP32RegClassID",
                                               [GPRNM16R3Opnd.ParserMatchClass]>;
 }
 
-def GPRNMGPOpnd : RegisterOperand<GPRNMGP> {
-  let ParserMatchClass = GPRNMAsmOperandClass<"RegGP", "GPRNMGPRegClassID",
+def GPRNMGPOpnd : RegisterOperand<GP32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"RegGP", "GP32RegClassID",
                                               [GPRNM16R3Opnd.ParserMatchClass]>;
 }
 
 def GPRNMRAOpnd : RegisterOperand<GPRNMRA> {
   let ParserMatchClass = GPRNMAsmOperandClass<"RegRA", "GPRNMRARegClassID",
-                                             [GPRNM16R3Opnd.ParserMatchClass]>;
+                                              [GPRNM16R3Opnd.ParserMatchClass]>;
 }
 
 def GPRNM2R1Opnd : RegisterOperand<GPRNM2R1> {

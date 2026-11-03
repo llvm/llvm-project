@@ -19,6 +19,9 @@ static constexpr MCPhysReg O32IntRegs[] = {Mips::R4, Mips::R5, Mips::R6,
 static constexpr MCPhysReg NABIIntRegs[] = {Mips::R4,  Mips::R5, Mips::R6,
                                             Mips::R7,  Mips::R8, Mips::R9,
                                             Mips::R10, Mips::R11};
+static const MCPhysReg P32IntRegs[] = {Mips::R4,  Mips::R5, Mips::R6,
+                                       Mips::R7,  Mips::R8, Mips::R9,
+                                       Mips::R10, Mips::R11};
 static constexpr MCPhysReg Mips64IntRegs[] = {
     Mips::R4_64, Mips::R5_64, Mips::R6_64,  Mips::R7_64,
     Mips::R8_64, Mips::R9_64, Mips::R10_64, Mips::R11_64};
@@ -74,6 +77,11 @@ static constexpr GPR ReturnRegs[] = {
     {Mips::R3, Mips::R3_64},
 };
 
+static constexpr GPR PABIReturnRegs[] = {
+    {Mips::R4, Mips::R4_64},
+    {Mips::R5, Mips::R5_64},
+};
+
 MCRegister getReg(ArrayRef<GPR> Regs, unsigned I, bool Is64Bit) {
   assert(I < Regs.size() && "Invalid ABI register index");
   MCRegister Reg = Is64Bit ? Regs[I].Reg64 : Regs[I].Reg32;
@@ -86,7 +94,9 @@ ArrayRef<MCPhysReg> MipsABIInfo::getArgRegs(bool Is64Bit) const {
   assert(IsKnown() && "Unknown ABI");
   if (Is64Bit)
     return ArrayRef(Mips64IntRegs).take_front(IsO32() ? 4 : 8);
-  return IsO32() ? ArrayRef(O32IntRegs) : ArrayRef(NABIIntRegs);
+  return IsO32()   ? ArrayRef(O32IntRegs)
+         : IsP32() ? ArrayRef(P32IntRegs)
+                   : ArrayRef(NABIIntRegs);
 }
 
 ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
@@ -100,6 +110,8 @@ unsigned MipsABIInfo::getRegAltNameIndex() const {
   case ABI::N32:
   case ABI::N64:
     return Mips::NABIRegAltName;
+  case ABI::P32:
+    return Mips::PABIRegAltName;
   case ABI::Unknown:
     llvm_unreachable("Unknown ABI");
   }
@@ -136,6 +148,8 @@ MCRegister MipsABIInfo::getReturnReg(unsigned I, bool Is64Bit) const {
   case ABI::N32:
   case ABI::N64:
     return getReg(ReturnRegs, I, Is64Bit);
+  case ABI::P32:
+    return getReg(PABIReturnRegs, I, Is64Bit);
   case ABI::Unknown:
     llvm_unreachable("Unknown ABI");
   }
@@ -185,17 +199,17 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef ABIName) {
 }
 
 unsigned MipsABIInfo::GetStackPtr() const {
-  return ArePtrs64bit() ? Mips::SP_64 : IsP32() ? Mips::SP_NM : Mips::SP;
+  return ArePtrs64bit() ? Mips::SP_64 : Mips::SP;
 }
 
 unsigned MipsABIInfo::GetFramePtr() const {
-  return ArePtrs64bit() ? Mips::FP_64 : IsP32() ? Mips::FP_NM : Mips::FP;
+  return ArePtrs64bit() ? Mips::FP_64 : Mips::FP;
 }
 
 unsigned MipsABIInfo::GetBasePtr() const { return getSavedRegPtr(7); }
 
 unsigned MipsABIInfo::GetGlobalPtr() const {
-  return ArePtrs64bit() ? Mips::GP_64 : IsP32() ? Mips::GP_NM : Mips::GP;
+  return ArePtrs64bit() ? Mips::GP_64 : Mips::GP;
 }
 
 unsigned MipsABIInfo::GetNullPtr() const {

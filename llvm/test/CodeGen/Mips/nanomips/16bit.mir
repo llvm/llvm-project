@@ -13,305 +13,342 @@
 # --- alu / logic / move ---
 ---
 # CHECK-LABEL: addiur1sp:
-# CHECK: addiu $a0, $sp, 4 # encoding: [0x41,0x72]
+# CHECK: addiu $4, $sp, 4 # encoding: [0x41,0x72]
 name: addiur1sp
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = ADDIUR1SP_NM $sp_nm, 4
+    $r4 = ADDIUR1SP_NM $r29, 4
 ...
 ---
 # CHECK-LABEL: addiur2:
-# CHECK: addiu $a0, $a1, 4 # encoding: [0x51,0x92]
+# CHECK: addiu $4, $5, 4 # encoding: [0x51,0x92]
 name: addiur2
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = ADDIUR2_NM $a1_nm, 4
+    $r4 = ADDIUR2_NM $r5, 4
 ...
 ---
 # CHECK-LABEL: and16:
-# CHECK: and $a0, $a1, $a0 # encoding: [0x58,0x52]
+# CHECK: and $4, $5, $4 # encoding: [0x58,0x52]
 name: and16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = AND16_NM $a1_nm, $a0_nm
+    $r4 = AND16_NM $r5, $r4
 ...
 ---
 # CHECK-LABEL: andi16:
-# CHECK: andi $a0, $a1, 3 # encoding: [0x53,0xf2]
+# CHECK: andi $4, $5, 3 # encoding: [0x53,0xf2]
 name: andi16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = ANDI16_NM $a1_nm, 3
+    $r4 = ANDI16_NM $r5, 3
 ...
 ---
 # CHECK-LABEL: break16:
 # CHECK: break 3 # encoding: [0x13,0x10]
 name: break16
+tracksRegLiveness: false
 body: |
   bb.0:
     BREAK16_NM 3
 ...
 ---
 # CHECK-LABEL: li16:
-# CHECK: li $a0, 5 # encoding: [0x05,0xd2]
+# CHECK: li $4, 5 # encoding: [0x05,0xd2]
 name: li16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LI16_NM 5
+    $r4 = LI16_NM 5
 ...
 ---
 # CHECK-LABEL: move:
-# CHECK: move $a0, $a1 # encoding: [0x85,0x10]
+# CHECK: move $4, $5 # encoding: [0x85,0x10]
 name: move
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = MOVE_NM $a1_nm
+    $r4 = MOVE_NM $r5
 ...
 ---
 # CHECK-LABEL: not16:
-# CHECK: not $a0, $a1 # encoding: [0x50,0x52]
+# CHECK: not $4, $5 # encoding: [0x50,0x52]
 name: not16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = NOT16_NM $a1_nm
+    $r4 = NOT16_NM $r5
 ...
 ---
 # CHECK-LABEL: or16:
-# CHECK: or $a0, $a1, $a0 # encoding: [0x5c,0x52]
+# CHECK: or $4, $5, $4 # encoding: [0x5c,0x52]
 name: or16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = OR16_NM $a1_nm, $a0_nm
+    $r4 = OR16_NM $r5, $r4
 ...
 ---
 # CHECK-LABEL: sdbbp16:
 # CHECK: sdbbp 3 # encoding: [0x1b,0x10]
 name: sdbbp16
+tracksRegLiveness: false
 body: |
   bb.0:
     SDBBP16_NM 3
 ...
 ---
 # CHECK-LABEL: sll16:
-# CHECK: sll $a0, $a1, 3 # encoding: [0x53,0x32]
+# CHECK: sll $4, $5, 3 # encoding: [0x53,0x32]
 name: sll16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = SLL16_NM $a1_nm, 3
+    $r4 = SLL16_NM $r5, 3
 ...
 ---
 # CHECK-LABEL: srl16:
-# CHECK: srl $a0, $a1, 3 # encoding: [0x5b,0x32]
+# CHECK: srl $4, $5, 3 # encoding: [0x5b,0x32]
 name: srl16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = SRL16_NM $a1_nm, 3
+    $r4 = SRL16_NM $r5, 3
 ...
 ---
 # CHECK-LABEL: syscall16:
 # CHECK: syscall 3 # encoding: [0x0b,0x10]
 name: syscall16
+tracksRegLiveness: false
 body: |
   bb.0:
     SYSCALL16_NM 3
 ...
 ---
 # CHECK-LABEL: xor16:
-# CHECK: xor $a0, $a1, $a0 # encoding: [0x54,0x52]
+# CHECK: xor $4, $5, $4 # encoding: [0x54,0x52]
 name: xor16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = XOR16_NM $a1_nm, $a0_nm
+    $r4 = XOR16_NM $r5, $r4
 ...
 
 # --- arithmetic ---
 ---
 # CHECK-LABEL: addu16:
-# CHECK: addu $a0, $a1, $a2 # encoding: [0x58,0xb3]
+# CHECK: addu $4, $5, $6 # encoding: [0x58,0xb3]
 name: addu16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = ADDu16_NM $a1_nm, $a2_nm
+    $r4 = ADDu16_NM $r5, $r6
 ...
 ---
 # CHECK-LABEL: addu4x4:
-# CHECK: addu $a0, $a0, $a1 # encoding: [0x85,0x3c]
+# CHECK: addu $4, $4, $5 # encoding: [0x85,0x3c]
 name: addu4x4
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = ADDu4x4_NM $a0_nm, $a1_nm
+    $r4 = ADDu4x4_NM $r4, $r5
 ...
 ---
 # CHECK-LABEL: movep:
-# CHECK: movep $a0, $a1, $a2, $a3 # encoding: [0xe6,0xbc]
+# CHECK: movep $4, $5, $6, $7 # encoding: [0xe6,0xbc]
 name: movep
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm, $a1_nm = MOVEP_NM $a2_nm, $a3_nm
+    $r4, $r5 = MOVEP_NM $r6, $r7
 ...
 ---
 # CHECK-LABEL: moveprev:
-# CHECK: movep $a0, $a1, $a2, $a3 # encoding: [0xac,0xfc]
+# CHECK: movep $4, $5, $6, $7 # encoding: [0xac,0xfc]
 name: moveprev
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm, $a1_nm = MOVEPREV_NM $a2_nm, $a3_nm
+    $r4, $r5 = MOVEPREV_NM $r6, $r7
 ...
 ---
 # CHECK-LABEL: mul4x4:
-# CHECK: mul $a0, $a0, $a1 # encoding: [0x8d,0x3c]
+# CHECK: mul $4, $4, $5 # encoding: [0x8d,0x3c]
 name: mul4x4
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = MUL4x4_NM $a0_nm, $a1_nm
+    $r4 = MUL4x4_NM $r4, $r5
 ...
 ---
 # CHECK-LABEL: subu16:
-# CHECK: subu $a0, $a1, $a2 # encoding: [0x59,0xb3]
+# CHECK: subu $4, $5, $6 # encoding: [0x59,0xb3]
 name: subu16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = SUBu16_NM $a1_nm, $a2_nm
+    $r4 = SUBu16_NM $r5, $r6
 ...
 
 # --- load / store (with placeholder operands for now) ---
 ---
 # CHECK-LABEL: lb16:
-# CHECK: lb $a0, 0 # encoding: [0x00,0x5e]
+# CHECK: lb $4, 0 # encoding: [0x00,0x5e]
 name: lb16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LB16_NM 0
+    $r4 = LB16_NM 0
 ...
 ---
 # CHECK-LABEL: lbu16:
-# CHECK: lbu $a0, 0 # encoding: [0x08,0x5e]
+# CHECK: lbu $4, 0 # encoding: [0x08,0x5e]
 name: lbu16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LBU16_NM 0
+    $r4 = LBU16_NM 0
 ...
 ---
 # CHECK-LABEL: lh16:
-# CHECK: lh $a0, 0 # encoding: [0x00,0x7e]
+# CHECK: lh $4, 0 # encoding: [0x00,0x7e]
 name: lh16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LH16_NM 0
+    $r4 = LH16_NM 0
 ...
 ---
 # CHECK-LABEL: lhu16:
-# CHECK: lhu $a0, 0 # encoding: [0x08,0x7e]
+# CHECK: lhu $4, 0 # encoding: [0x08,0x7e]
 name: lhu16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LHU16_NM 0
+    $r4 = LHU16_NM 0
 ...
 ---
 # CHECK-LABEL: lw16:
-# CHECK: lw $a0, 0 # encoding: [0x00,0x16]
+# CHECK: lw $4, 0 # encoding: [0x00,0x16]
 name: lw16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LW16_NM 0
+    $r4 = LW16_NM 0
 ...
 ---
 # CHECK-LABEL: lw4x4:
-# CHECK: lw $a0, 0 # encoding: [0x80,0x74]
+# CHECK: lw $4, 0 # encoding: [0x80,0x74]
 name: lw4x4
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LW4x4_NM 0
+    $r4 = LW4x4_NM 0
 ...
 ---
 # CHECK-LABEL: lwgp16:
-# CHECK: lw $a0, 0 # encoding: [0x00,0x56]
+# CHECK: lw $4, 0 # encoding: [0x00,0x56]
 name: lwgp16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWGP16_NM 0
+    $r4 = LWGP16_NM 0
 ...
 ---
 # CHECK-LABEL: lwsp16:
-# CHECK: lw $a0, 0 # encoding: [0x80,0x34]
+# CHECK: lw $4, 0 # encoding: [0x80,0x34]
 name: lwsp16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWSP16_NM 0
+    $r4 = LWSP16_NM 0
 ...
 ---
 # CHECK-LABEL: lwxs16:
-# CHECK: lwxs $a0, 0 # encoding: [0x09,0x50]
+# CHECK: lwxs $4, 0 # encoding: [0x09,0x50]
 name: lwxs16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $a0_nm = LWXS16_NM 0
+    $r4 = LWXS16_NM 0
 ...
 ---
 # CHECK-LABEL: sb16:
-# CHECK: sb $a0, 0 # encoding: [0x04,0x5e]
+# CHECK: sb $4, 0 # encoding: [0x04,0x5e]
 name: sb16
+tracksRegLiveness: false
 body: |
   bb.0:
-    SB16_NM $a0_nm, 0
+    SB16_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: sh16:
-# CHECK: sh $a0, 0 # encoding: [0x01,0x7e]
+# CHECK: sh $4, 0 # encoding: [0x01,0x7e]
 name: sh16
+tracksRegLiveness: false
 body: |
   bb.0:
-    SH16_NM $a0_nm, 0
+    SH16_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: sw16:
-# CHECK: sw $a0, 0 # encoding: [0x00,0x96]
+# CHECK: sw $4, 0 # encoding: [0x00,0x96]
 name: sw16
+tracksRegLiveness: false
 body: |
   bb.0:
-    SW16_NM $a0_nm, 0
+    SW16_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: sw4x4:
-# CHECK: sw $a0, 0 # encoding: [0x80,0xf4]
+# CHECK: sw $4, 0 # encoding: [0x80,0xf4]
 name: sw4x4
+tracksRegLiveness: false
 body: |
   bb.0:
-    SW4x4_NM $a0_nm, 0
+    SW4x4_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: swgp16:
-# CHECK: sw $a0, 0 # encoding: [0x00,0xd6]
+# CHECK: sw $4, 0 # encoding: [0x00,0xd6]
 name: swgp16
+tracksRegLiveness: false
 body: |
   bb.0:
-    SWGP16_NM $a0_nm, 0
+    SWGP16_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: swsp16:
-# CHECK: sw $a0, 0 # encoding: [0x80,0xb4]
+# CHECK: sw $4, 0 # encoding: [0x80,0xb4]
 name: swsp16
+tracksRegLiveness: false
 body: |
   bb.0:
-    SWSP16_NM $a0_nm, 0
+    SWSP16_NM $r4, 0
 ...
 
 # --- jump ---
 ---
 # CHECK-LABEL: jalrc16:
-# CHECK: jalrc $ra, $a1 # encoding: [0xb0,0xd8]
+# CHECK: jalrc $ra, $5 # encoding: [0xb0,0xd8]
 name: jalrc16
+tracksRegLiveness: false
 body: |
   bb.0:
-    $ra_nm = JALRC16_NM $a1_nm
+    $r31 = JALRC16_NM $r5
 ...
 ---
 # CHECK-LABEL: jrc:
 # CHECK: jrc $ra # encoding: [0xe0,0xdb]
 name: jrc
+tracksRegLiveness: false
 body: |
   bb.0:
-    JRC_NM $ra_nm
+    JRC_NM $r31
 ...
 
 # --- branch (with placeholder operands for now) ---
@@ -319,6 +356,7 @@ body: |
 # CHECK-LABEL: balc16:
 # CHECK: balc 0 # encoding: [0x00,0x38]
 name: balc16
+tracksRegLiveness: false
 body: |
   bb.0:
     BALC16_NM 0
@@ -327,25 +365,28 @@ body: |
 # CHECK-LABEL: bc16:
 # CHECK: bc 0 # encoding: [0x00,0x18]
 name: bc16
+tracksRegLiveness: false
 body: |
   bb.0:
     BC16_NM 0
 ...
 ---
 # CHECK-LABEL: beqzc16:
-# CHECK: beqzc $a0, 0 # encoding: [0x00,0x9a]
+# CHECK: beqzc $4, 0 # encoding: [0x00,0x9a]
 name: beqzc16
+tracksRegLiveness: false
 body: |
   bb.0:
-    BEQZC16_NM $a0_nm, 0
+    BEQZC16_NM $r4, 0
 ...
 ---
 # CHECK-LABEL: bnezc16:
-# CHECK: bnezc $a0, 0 # encoding: [0x00,0xba]
+# CHECK: bnezc $4, 0 # encoding: [0x00,0xba]
 name: bnezc16
+tracksRegLiveness: false
 body: |
   bb.0:
-    BNEZC16_NM $a0_nm, 0
+    BNEZC16_NM $r4, 0
 ...
 
 # --- save / restore ---
@@ -353,6 +394,7 @@ body: |
 # CHECK-LABEL: restorejrc16:
 # CHECK: restore.jrc 00 # encoding: [0x00,0x1d]
 name: restorejrc16
+tracksRegLiveness: false
 body: |
   bb.0:
     RESTOREJRC16_NM 0, 0
@@ -361,6 +403,7 @@ body: |
 # CHECK-LABEL: save16:
 # CHECK: save 00 # encoding: [0x00,0x1c]
 name: save16
+tracksRegLiveness: false
 body: |
   bb.0:
     SAVE16_NM 0, 0

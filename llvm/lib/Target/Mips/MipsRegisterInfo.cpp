@@ -15,6 +15,7 @@
 #include "Mips.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
+#include "MipsTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -38,8 +39,7 @@ using namespace llvm;
 #include "MipsGenRegisterInfo.inc"
 
 MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
-    : MipsGenRegisterInfo(Mips::RA), ArePtrs64bit(STI.getABI().ArePtrs64bit()),
-      IsP32ABI(STI.getABI().IsP32()) {
+    : MipsGenRegisterInfo(Mips::RA), ArePtrs64bit(STI.getABI().ArePtrs64bit()) {
   MIPS_MC::initLLVMToCVRegMapping(this);
 }
 
@@ -176,9 +176,6 @@ getReservedRegs(const MachineFunction &MF) const {
   static const MCPhysReg ReservedGPR64[] = {Mips::R0_64, Mips::R26_64,
                                             Mips::R27_64, Mips::SP_64};
 
-  static const MCPhysReg ReservedGPRNM32[] = {
-      Mips::ZERO_NM, Mips::K0_NM, Mips::K1_NM, Mips::SP_NM, Mips::AT_NM};
-
   BitVector Reserved(getNumRegs());
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
 
@@ -187,6 +184,10 @@ getReservedRegs(const MachineFunction &MF) const {
 
   for (MCPhysReg R : ReservedGPR64)
     Reserved.set(R);
+
+  // Reserve AT if ABI is P32.
+  if (Subtarget.isABI_P32())
+    Reserved.set(Mips::R1);
 
   // Static JIT code uses t9 in RuntimeDyld stubs for R_MIPS_26 relocations,
   // including jumps within a function. Keep it out of register allocation.
@@ -204,7 +205,6 @@ getReservedRegs(const MachineFunction &MF) const {
   if (!Subtarget.isABICalls() || GPIsGlobal) {
     Reserved.set(Mips::GP);
     Reserved.set(Mips::GP_64);
-    Reserved.set(Mips::GP_NM);
   }
 
   if (Subtarget.isFP64bit()) {
@@ -223,7 +223,6 @@ getReservedRegs(const MachineFunction &MF) const {
     else {
       Reserved.set(Mips::FP);
       Reserved.set(Mips::FP_64);
-      Reserved.set(Mips::FP_NM);
 
       // Reserve the base register if we need to both realign the stack and
       // allocate variable-sized objects at runtime. This should test the
@@ -268,7 +267,6 @@ getReservedRegs(const MachineFunction &MF) const {
   if (Subtarget.useSmallSection()) {
     Reserved.set(Mips::GP);
     Reserved.set(Mips::GP_64);
-    Reserved.set(Mips::GP_NM);
   }
 
   return Reserved;
