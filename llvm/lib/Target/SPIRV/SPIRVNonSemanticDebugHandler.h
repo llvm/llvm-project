@@ -155,7 +155,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   // True when -spirv-debug-scope-forward-refs is set and prepareModuleOutput
   // saw that SPV_KHR_relaxed_extended_instruction may be used.
-  bool HasRelaxedExtInst = false;
+  bool CanUseForwardRefs = false;
 
   // True once an OpExtInstWithForwardRefsKHR was built.
   bool UsedForwardRefs = false;
@@ -447,7 +447,7 @@ private:
   /// scopes it names first. One already in \c DebugScopeRegs is Emitted. A null
   /// \p S or one in \c FailedScopes is Unsupported. Entering a scope reserves
   /// its result id. A back edge (\p S already in \c ScopesInProgress) returns
-  /// that id when \c HasRelaxedExtInst is set, and InProgress otherwise. If
+  /// that id when \c CanUseForwardRefs is set, and InProgress otherwise. If
   /// emission fails after an emitted instruction used that id, it is defined as
   /// DebugInfoNone. An id that nothing named stays undefined. An Unsupported
   /// result is recorded in \c FailedScopes; an InProgress one is not, so a
