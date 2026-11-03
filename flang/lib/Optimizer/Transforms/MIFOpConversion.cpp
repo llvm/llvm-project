@@ -1685,7 +1685,6 @@ struct MIFEventQueryOpConversion
 
     mlir::Type ptrTy = getBuiltinCptrType(builder, loc);
     mlir::Type i64Ty = builder.getI64Type();
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
         /*inputs*/
