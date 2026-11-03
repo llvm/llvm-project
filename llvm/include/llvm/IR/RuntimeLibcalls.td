@@ -863,14 +863,15 @@ def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 
 // AArch64 SME ABI calls
-def SMEABI_SME_STATE : RuntimeLibcall;
-def SMEABI_TPIDR2_SAVE : RuntimeLibcall;
-def SMEABI_ZA_DISABLE : RuntimeLibcall;
-def SMEABI_TPIDR2_RESTORE : RuntimeLibcall;
-def SMEABI_GET_CURRENT_VG : RuntimeLibcall;
-def SMEABI_SME_STATE_SIZE : RuntimeLibcall;
-def SMEABI_SME_SAVE : RuntimeLibcall;
-def SMEABI_SME_RESTORE : RuntimeLibcall;
+def SMEState : StructFuncArgType<[UInt64, UInt64]>;
+def SMEABI_SME_STATE : RuntimeLibcall<SMEState, []>;
+def SMEABI_TPIDR2_SAVE : RuntimeLibcall<Void, []>;
+def SMEABI_ZA_DISABLE : RuntimeLibcall<Void, []>;
+def SMEABI_TPIDR2_RESTORE : RuntimeLibcall<Void, [Ptr]>;
+def SMEABI_GET_CURRENT_VG : RuntimeLibcall<UInt64, []>;
+def SMEABI_SME_STATE_SIZE : RuntimeLibcall<UInt64, []>;
+def SMEABI_SME_SAVE : RuntimeLibcall<Void, [Ptr]>;
+def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
 
 // ARM EABI calls
 def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4
