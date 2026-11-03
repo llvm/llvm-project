@@ -946,6 +946,10 @@ protected:
   /// must not be a view of a constraint of `this`.
   void eliminateVarUsingEquality(ArrayRef<DynamicAPInt> eq, unsigned col);
 
+  /// Same as above, but uses the equality at index `eqIdx` of `this` as `eq`
+  /// and leaves that equality itself unchanged.
+  void eliminateVarUsingEquality(unsigned eqIdx, unsigned col);
+
   /// Rewrites every constraint of `this` using the equalities of `eqs`, which
   /// must have the same space as `this` (including local variables). This does
   /// not change the intersection of `this` with `eqs`, but may change `this`
