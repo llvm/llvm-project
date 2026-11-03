@@ -1642,10 +1642,6 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
   return Device->DeviceNum;
 }
 
-__tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
-  return Queue ? Queue->AsyncInfo : nullptr;
-}
-
 plugin::PluginContextTy *
 __ol_tgt_GetPluginContext(ol_context_handle_t Context) {
   return Context ? Context->PluginCtx.get() : nullptr;
