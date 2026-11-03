@@ -12,11 +12,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Reflection.h"
-#include "llvm/ADT/APSInt.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstddef>
-#include <cstdint>
 
 namespace clang {
 namespace interp {
@@ -48,6 +44,14 @@ public:
   }
   APValue toAPValue(const ASTContext &Ctx) const {
     return APValue(Kind, Operand);
+  }
+
+  std::string toDiagnosticString(const ASTContext &) const {
+    // FIXME: Properly implement.
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    print(OS);
+    return Str;
   }
 };
 

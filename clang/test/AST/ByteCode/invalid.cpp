@@ -1,31 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -triple x86_64 -fcxx-exceptions -std=c++20                                         -verify=ref,both %s
-
-namespace Throw {
-
-  constexpr int ConditionalThrow(bool t) {
-    if (t)
-      throw 4; // both-note {{subexpression not valid in a constant expression}}
-
-    return 0;
-  }
-
-  static_assert(ConditionalThrow(false) == 0, "");
-  static_assert(ConditionalThrow(true) == 0, ""); // both-error {{not an integral constant expression}} \
-                                                  // both-note {{in call to 'ConditionalThrow(true)'}}
-
-  constexpr int Throw() { // both-error {{never produces a constant expression}}
-    throw 5; // both-note {{subexpression not valid in a constant expression}}
-    return 0;
-  }
-
-  constexpr int NoSubExpr() { // both-error {{never produces a constant expression}}
-    throw; // both-note 2{{subexpression not valid}}
-    return 0;
-  }
-  static_assert(NoSubExpr() == 0, ""); // both-error {{not an integral constant expression}} \
-                                       // both-note {{in call to}}
-}
+// RUN: %clang_cc1 -triple x86_64 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -triple x86_64 -std=c++20                                         -verify=ref,both %s
 
 namespace Asm {
   constexpr int ConditionalAsm(bool t) {

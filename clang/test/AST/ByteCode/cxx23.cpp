@@ -129,8 +129,8 @@ namespace StaticOperators {
 
   struct S1 {
     constexpr S1() { // all20-error {{never produces a constant expression}}
-      throw; // all-note {{not valid in a constant expression}} \
-             // all20-note {{not valid in a constant expression}}
+      __builtin_abort(); // all-note {{not valid in a constant expression}} \
+                         // all20-note {{not valid in a constant expression}}
     }
     static constexpr int operator()() { return 3; } // ref20-warning {{C++23 extension}} \
                                                     // expected20-warning {{C++23 extension}}

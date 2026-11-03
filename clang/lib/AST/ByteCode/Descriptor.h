@@ -274,8 +274,6 @@ public:
   DynAllocKind getDynAllocKind() const {
     return asExpr() ? getDynAllocKindForExpr(asExpr()) : DynAllocKind::None;
   }
-  /// Checks if the descriptor is of a dynamic allocation.
-  bool isDynAlloc() const { return getDynAllocKind() != DynAllocKind::None; }
 
   /// Compute the alignment for a dynamic allocation.
   CharUnits computeAlignForDynamicAlloc(const ASTContext &Ctx) const;
