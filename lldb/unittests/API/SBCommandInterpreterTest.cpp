@@ -293,8 +293,8 @@ TEST_F(SBCommandInterpreterTest, ReadyForInputBroadcastOnPipe) {
   debugger.RunCommandInterpreter(MakeSpawnedOptions());
   auto cleanup = llvm::scope_exit([&] { session.CloseWrite(); });
 
-  // Initial prompt wait broadcasts eBroadcastBitReadyForInput with event name
-  // "ready-for-input".
+  // Initial prompt wait for broadcast eBroadcastBitReadyForInput with event
+  // name "ready-for-input".
   SBEvent ready_event;
   ASSERT_EQ(
       session.WaitForEventBit(SBCommandInterpreter::eBroadcastBitReadyForInput,
@@ -306,8 +306,8 @@ TEST_F(SBCommandInterpreterTest, ReadyForInputBroadcastOnPipe) {
       llvm::StringRef(desc.GetData(), desc.GetSize()).find("ready-for-input"),
       llvm::StringRef::npos);
 
-  // Executing a single line runs the command and broadcasts ReadyForInput again
-  // when waiting for the next line.
+  // Executing a single line runs the command and broadcasts
+  // eBroadcastBitReadyForInput again when waiting for the next line.
   session.Write("count_cmd\n");
   ASSERT_EQ(
       session.WaitForEventBit(SBCommandInterpreter::eBroadcastBitReadyForInput),
@@ -315,7 +315,7 @@ TEST_F(SBCommandInterpreterTest, ReadyForInputBroadcastOnPipe) {
   EXPECT_EQ(counting_cmd.count.load(), 1);
 
   // Writing two lines in a single write executes both commands, emitting
-  // ReadyForInput before each line read.
+  // eBroadcastBitReadyForInput before each line is read.
   session.Write("count_cmd\ncount_cmd\n");
   ASSERT_EQ(
       session.WaitForEventBit(SBCommandInterpreter::eBroadcastBitReadyForInput),
@@ -328,7 +328,8 @@ TEST_F(SBCommandInterpreterTest, ReadyForInputBroadcastOnPipe) {
   EXPECT_FALSE(session.listener.GetNextEvent(extra_event));
 
   // Sourcing commands from a separate file (`m_input_sp != GetInputFileSP()`)
-  // should not broadcast ReadyForInput for lines inside the sourced file.
+  // should not broadcast eBroadcastBitReadyForInput for lines inside the
+  // sourced file.
   llvm::Expected<llvm::sys::fs::TempFile> temp_file =
       llvm::sys::fs::TempFile::create("lldb-cmd-source-%%%%%%.lldb");
   ASSERT_THAT_EXPECTED(temp_file, llvm::Succeeded());
@@ -519,9 +520,9 @@ TEST_F(SBCommandInterpreterTest, ReadyForInputEmbeddedPythonInterpreter) {
       session.WaitForEventBit(SBCommandInterpreter::eBroadcastBitReadyForInput),
       static_cast<uint32_t>(SBCommandInterpreter::eBroadcastBitReadyForInput));
 
-  // Enter interactive `script` REPL and verify ReadyForInput is emitted on
-  // entry, across multiline continuation prompts, and after exiting back to the
-  // command interpreter.
+  // Enter interactive `script` REPL and verify eBroadcastBitReadyForInput is
+  // emitted on entry, across multiline continuation prompts, and after exiting
+  // back to the command interpreter.
   session.Write("script -l python --\n");
   ASSERT_EQ(
       session.WaitForEventBit(SBCommandInterpreter::eBroadcastBitReadyForInput),
