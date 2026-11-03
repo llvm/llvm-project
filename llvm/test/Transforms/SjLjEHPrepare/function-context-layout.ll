@@ -1,6 +1,7 @@
 ; RUN: opt -S -passes=sjlj-eh-prepare -mtriple=i686-linux-gnu < %s | FileCheck -check-prefix=P32 %s
 ; RUN: opt -S -passes=sjlj-eh-prepare -mtriple=x86_64-linux-gnu < %s | FileCheck -check-prefix=P64 %s
 ; RUN: opt -S -passes=sjlj-eh-prepare -mtriple=x86_64-linux-gnux32 -data-layout=p:32:32 < %s | FileCheck -check-prefix=X32 %s
+; RUN: opt -S -passes=sjlj-eh-prepare -data-layout=p:32:32 < %s | FileCheck -check-prefix=P32 %s
 
 ; The function context matches libgcc's SjLj_Function_Context: call_site is
 ; always i32, and the __data words are register sized.

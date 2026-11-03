@@ -102,8 +102,10 @@ FunctionPass *llvm::createSjLjEHPreparePass() { return new SjLjEHPrepare(); }
 
 StructType *llvm::getSjLjFunctionContextType(const Module &M) {
   LLVMContext &Ctx = M.getContext();
-  Type *DataTy =
-      Type::getIntNTy(Ctx, M.getTargetTriple().getArchPointerBitWidth());
+  unsigned DataBits = M.getTargetTriple().getArchPointerBitWidth();
+  if (DataBits == 0)
+    DataBits = M.getDataLayout().getPointerSizeInBits();
+  Type *DataTy = Type::getIntNTy(Ctx, DataBits);
   // builtin_setjmp uses a five word jbuf
   Type *VoidPtrTy = PointerType::getUnqual(Ctx);
   return StructType::get(VoidPtrTy,                   // __prev
