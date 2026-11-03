@@ -47,6 +47,24 @@
 
 ; POSTLINK: remark: src/caller.cpp:4:36: '_Z5heavyIN3lib2v23TagEEii' inlined into '_Z6calleri' to match profiling context with (cost=always): preinliner at callsite _Z6calleri:2:36;
 
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/inlined-sample-annotate-lto-prelink-nowrap-cs.prof -o %t.extbin
+; RUN: opt -passes='pseudo-probe,thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.extbin --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl %s -S -o %t1.prelink.ll 2>&1 | FileCheck %s --check-prefix=PRELINK-CS
+; RUN: cat %t1.prelink.ll | FileCheck %s --check-prefix=PRELINK-GUID-CS
+; RUN: opt -passes='pseudo-probe,thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.extbin --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl %S/Inputs/inlined-sample-annotate-lto-prelink-nowrap-callees.ll -S -o %t2.prelink.ll
+; RUN: opt -module-summary %t1.prelink.ll -o %t1.o
+; RUN: opt -module-summary %t2.prelink.ll -o %t2.o
+; RUN: llvm-lto2 run -thinlto-distributed-indexes -import-hot-multiplier=0 -o %t/lto2 %t1.o %t2.o -r %t1.o,_Z6calleri,px -r %t1.o,_Z5heavyIN3lib2v23TagEEii, -r %t2.o,_Z5heavyIN3lib2v23TagEEii,px
+; RUN: opt -passes=function-import,sample-profile -summary-file=%t1.o.thinlto.bc -sample-profile-file=%t.extbin -pass-remarks=sample-profile --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl %t1.o -S -o %t1.opt.ll 2>&1 | FileCheck %s --check-prefix=POSTLINK-CS
+
+; PRELINK-CS: Function _Z5heavyIN3lib2v23TagEEii is not in profile or profile symbol list.
+; PRELINK-CS: Direct basename match: _Z5heavyIN3lib2v23TagEEii (IR) -> _Z5heavyIN3lib3TagEEii (Profile) [basename: heavy]
+; PRELINK-CS: Direct basename matching found 1 matches
+
+; PRELINK-GUID-CS: define dso_local noundef i32 @_Z6calleri(i32 noundef %n) local_unnamed_addr #0 !dbg !40 !prof !43 !guid !44 {
+; PRELINK-GUID-CS: !43 = !{!"function_entry_count", i64 1000000, i64 -7245025397704601654}
+
+; POSTLINK-CS: remark: src/caller.cpp:4:36: '_Z5heavyIN3lib2v23TagEEii' inlined into '_Z6calleri' to match profiling context with (cost=-25, threshold=3000) at callsite _Z6calleri:2:36;
+
 source_filename = "src/caller.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-redhat-linux-gnu"
