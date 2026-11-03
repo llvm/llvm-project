@@ -476,3 +476,26 @@ func.func @extract_slice_non_one_stride(
   %1 = tensor.extract_slice %0[%offset1] [%size1] [%stride1] : tensor<?xf32> to tensor<?xf32>
   return %1: tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_read_of_extract_slice_with_mask
+// CHECK-SAME: %[[SRC:.*]]: tensor<16xf32>, %[[MASK:.*]]: vector<4xi1>, %[[PAD:.*]]: f32
+// CHECK: %[[C4:.*]] = arith.constant 4 : index
+// CHECK-NOT: tensor.extract_slice
+// CHECK: vector.transfer_read %[[SRC]][%[[C4]]], %[[PAD]], %[[MASK]] {in_bounds = [true]} : tensor<16xf32>, vector<4xf32>
+func.func @transfer_read_of_extract_slice_with_mask(
+    %src: tensor<16xf32>,
+    %mask: vector<4xi1>,
+    %padding: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+
+  %slice = tensor.extract_slice %src[4] [4] [1]
+      : tensor<16xf32> to tensor<4xf32>
+
+  %0 = vector.transfer_read %slice[%c0], %padding, %mask
+      {in_bounds = [true]}
+      : tensor<4xf32>, vector<4xf32>
+
+  return %0 : vector<4xf32>
+}
