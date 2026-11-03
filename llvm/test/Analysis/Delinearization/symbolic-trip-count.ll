@@ -2,7 +2,7 @@
 ; RUN: opt %s -passes='print<delinearization>' -debug-only=delinearize -disable-output 2>&1 | FileCheck  %s
 
 ; CHECK-LABEL: Printing analysis 'Delinearization' for function 'symbolic_trip_count':
-; CHECK: Range check failed: {0,+,1}<nuw><nsw><%col.header> <s %cols
+; CHECK: Range check via trip count: %cols <=s %cols
 ; CHECK: Delinearization validation: Failed
 
 define void @symbolic_trip_count(ptr %a, i64 %cols) {

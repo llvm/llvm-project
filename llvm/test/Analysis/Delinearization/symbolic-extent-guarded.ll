@@ -4,8 +4,8 @@
 
 
 ; CHECK-LABEL: Printing analysis 'Delinearization' for function 'sym_extent':
-; CHECK: Range check failed: {0,+,1}<nuw><nsw><%j.b> <s (zext i32 %m0 to i64)
-; CHECK: Delinearization validation: Failed
+; CHECK: Range check via trip count: %n <=s (zext i32 %m0 to i64)
+; CHECK: Delinearization validation: Succeeded
 define void @sym_extent(ptr %A, i32 %m0, i64 %n) {
 entry:
   %m = zext i32 %m0 to i64
