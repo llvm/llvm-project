@@ -16,6 +16,8 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 
+#include <vector>
+
 namespace llvm {
 namespace orc {
 class ExecutorAddr;
@@ -65,6 +67,11 @@ public:
 
   llvm::Expected<std::unique_ptr<IncrementalExecutor>>
   create(llvm::orc::ThreadSafeContext &TSC, const clang::TargetInfo &TI);
+
+  /// Pass LLVM arguments to restore after linking Wasm modules.
+  llvm::Expected<std::unique_ptr<IncrementalExecutor>>
+  create(llvm::orc::ThreadSafeContext &TSC, const clang::TargetInfo &TI,
+         const std::vector<std::string> &LLVMArgs);
 
 private:
   llvm::Error UpdateOrcRuntimePath(const driver::Compilation &C);
