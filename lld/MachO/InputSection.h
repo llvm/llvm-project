@@ -310,6 +310,7 @@ bool isClassRefsSection(const InputSection *);
 bool isSelRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
+bool usesAuthGot(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
 // This is used as a counter for specifying input order for input sections.
