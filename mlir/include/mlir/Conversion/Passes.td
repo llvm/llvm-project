@@ -1622,10 +1622,19 @@ def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
     "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
     "vector::VectorDialect"
   ];
+}
 
-  let options = [
-    Option<"useNvGpu", "use-nvgpu", "bool", /*default=*/"false",
-      "convert to NvGPU ops instead of GPU dialect ops">
+//===----------------------------------------------------------------------===//
+// VectorToNVGPU
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToNVGPU : Pass<"convert-vector-to-nvgpu"> {
+  let summary = "Lower the operations from the vector dialect into the NVGPU "
+                "dialect";
+  let constructor = "mlir::createConvertVectorToNVGPUPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
+    "vector::VectorDialect", "nvgpu::NVGPUDialect"
   ];
 }
 
