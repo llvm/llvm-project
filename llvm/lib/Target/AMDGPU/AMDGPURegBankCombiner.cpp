@@ -273,7 +273,10 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
   if (!matchMed<GFCstAndRegMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  if (K0->Value > K1->Value)
+  // The constants can be in different formats, for example a bfloat and a
+  // half constant, and then cannot be ordered.
+  if (&K0->Value.getSemantics() != &K1->Value.getSemantics() ||
+      K0->Value > K1->Value)
     return false;
 
   // For IEEE=false perform combine only when it's safe to assume that there are

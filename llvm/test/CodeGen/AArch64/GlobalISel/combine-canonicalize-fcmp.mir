@@ -170,3 +170,20 @@ body:             |
     %res:_(i32) = G_FCMP floatpred(oeq), %t(s8), %t
     $w0 = COPY %res(i32)
 ...
+---
+# A half and a bfloat constant in plain s16 registers are read in their own
+# formats, which cannot be compared.
+name:            test_fcmp_mixed_formats
+tracksRegLiveness: false
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_fcmp_mixed_formats
+    ; CHECK: %lhs:_(s16) = G_FCONSTANT half 1.000000e+00
+    ; CHECK-NEXT: %rhs:_(s16) = G_FCONSTANT bfloat 2.000000e+00
+    ; CHECK-NEXT: %res:_(i32) = G_FCMP floatpred(olt), %lhs(s16), %rhs
+    ; CHECK-NEXT: $w0 = COPY %res(i32)
+    %lhs:_(s16) = G_FCONSTANT half 1.0
+    %rhs:_(s16) = G_FCONSTANT bfloat 2.0
+    %res:_(i32) = G_FCMP floatpred(olt), %lhs(s16), %rhs
+    $w0 = COPY %res(i32)
+...
