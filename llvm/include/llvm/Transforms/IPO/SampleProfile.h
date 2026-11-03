@@ -32,6 +32,8 @@ LLVM_ABI extern cl::opt<int> ProfileInlineGrowthLimit;
 LLVM_ABI extern cl::opt<int> ProfileInlineLimitMin;
 LLVM_ABI extern cl::opt<int> ProfileInlineLimitMax;
 LLVM_ABI extern cl::opt<bool> SortProfiledSCC;
+LLVM_ABI extern cl::opt<unsigned> ProfileICPRelativeHotness;
+LLVM_ABI extern cl::opt<unsigned> ProfileICPRelativeHotnessSkip;
 
 /// The sample profiler data loader pass.
 class SampleProfileLoaderPass

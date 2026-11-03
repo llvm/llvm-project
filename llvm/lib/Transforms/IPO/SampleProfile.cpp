@@ -225,18 +225,20 @@ cl::opt<int> SampleHotCallSiteThreshold(
 cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
-} // namespace llvm
 
-static cl::opt<unsigned> ProfileICPRelativeHotness(
+// Also used by llvm-profgen's CSPreInliner, which must not plan inlining of
+// indirect call targets that the loader will not promote.
+cl::opt<unsigned> ProfileICPRelativeHotness(
     "sample-profile-icp-relative-hotness", cl::Hidden, cl::init(25),
     cl::desc(
         "Relative hotness percentage threshold for indirect "
         "call promotion in proirity-based sample profile loader inlining."));
 
-static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
+cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
     "sample-profile-icp-relative-hotness-skip", cl::Hidden, cl::init(1),
     cl::desc(
         "Skip relative hotness check for ICP up to given number of targets."));
+} // namespace llvm
 
 static cl::opt<unsigned> HotFuncCutoffForStalenessError(
     "hot-func-cutoff-for-staleness-error", cl::Hidden, cl::init(800000),
