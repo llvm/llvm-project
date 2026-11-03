@@ -71,6 +71,13 @@ private:
                       SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
                       LiveInterval &LI) const;
 
+  /// Check whether repairing missing PHI live-ins for the split interval
+  /// would require redefining a component while another value in the same
+  /// component is still live at the PHI copy insertion point.
+  bool canRename(const IntEqClasses &Classes,
+                 const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
+                 LiveInterval &LI) const;
+
   /// Distribute the LiveInterval segments into the new LiveIntervals
   /// belonging to their class.
   void distribute(const IntEqClasses &Classes,
@@ -134,6 +141,13 @@ bool RenameIndependentSubregs::renameComponents(LiveInterval &LI) const {
   IntEqClasses Classes;
   if (!findComponents(Classes, SubRangeInfos, LI))
     return false;
+
+  if (!canRename(Classes, SubRangeInfos, LI)) {
+    LLVM_DEBUG(dbgs() << printReg(LI.reg())
+                      << ": skipping split because PHI repair would require "
+                         "an edge def overlapping an existing component.\n");
+    return false;
+  }
 
   // Create a new VReg for each class.
   Register Reg = LI.reg();
@@ -212,6 +226,54 @@ bool RenameIndependentSubregs::findComponents(IntEqClasses &Classes,
   Classes.compress();
   unsigned NumClasses = Classes.getNumClasses();
   return NumClasses > 1;
+}
+
+bool RenameIndependentSubregs::canRename(
+    const IntEqClasses &Classes,
+    const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
+    LiveInterval &LI) const {
+  const SlotIndexes &Indexes = *LIS->getSlotIndexes();
+
+  auto ClassLiveAt = [&](unsigned ClassID, SlotIndex Pos) {
+    for (const SubRangeInfo &SRInfo : SubRangeInfos) {
+      const LiveInterval::SubRange &SR = *SRInfo.SR;
+      const VNInfo *VNI = SR.getVNInfoAt(Pos);
+      if (VNI == nullptr)
+        continue;
+      unsigned LocalID = SRInfo.ConEQ.getEqClass(VNI);
+      if (Classes[LocalID + SRInfo.Index] == ClassID)
+        return true;
+    }
+    return false;
+  };
+
+  Register Reg = LI.reg();
+  for (const SubRangeInfo &SRInfo : SubRangeInfos) {
+    const LiveInterval::SubRange &SR = *SRInfo.SR;
+    for (const VNInfo *VNI : SR.valnos) {
+      if (VNI->isUnused() || !VNI->isPHIDef())
+        continue;
+
+      unsigned LocalID = SRInfo.ConEQ.getEqClass(VNI);
+      unsigned ClassID = Classes[LocalID + SRInfo.Index];
+      MachineBasicBlock &MBB = *Indexes.getMBBFromIndex(VNI->def);
+      for (MachineBasicBlock *PredMBB : MBB.predecessors()) {
+        SlotIndex PredEnd = Indexes.getMBBEndIdx(PredMBB);
+        if (ClassLiveAt(ClassID, PredEnd.getPrevSlot()))
+          continue;
+
+        MachineBasicBlock::iterator InsertPos =
+            llvm::findPHICopyInsertPoint(PredMBB, &MBB, Reg);
+        SlotIndex InsertIdx = InsertPos == PredMBB->end()
+                                  ? PredEnd
+                                  : LIS->getInstructionIndex(*InsertPos);
+        if (ClassLiveAt(ClassID, InsertIdx))
+          return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
