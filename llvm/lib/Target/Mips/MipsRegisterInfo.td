@@ -355,168 +355,6 @@ let Namespace = "Mips" in {
   def P1 : MipsReg<1, "p1">;
   def P2 : MipsReg<2, "p2">;
 
-  // COP0 registers with fixed selects
-  def COP0Sel_INDEX           : MipsReg< !or(!shl(0, 5), 0), "index">;
-  def COP0Sel_MVPCONTROL      : MipsReg< !or(!shl(0, 5), 1), "mvpcontrol">;
-  def COP0Sel_MVPCONF0        : MipsReg< !or(!shl(0, 5), 2), "mvpconf0">;
-  def COP0Sel_MVPCONF1        : MipsReg< !or(!shl(0, 5), 3), "mvpconf1">;
-  def COP0Sel_VPCONTROL       : MipsReg< !or(!shl(0, 5), 4), "vpcontrol">;
-  def COP0Sel_RANDOM          : MipsReg< !or(!shl(1, 5), 0), "random">;
-  def COP0Sel_VPECONTROL      : MipsReg< !or(!shl(1, 5), 1), "vpecontrol">;
-  def COP0Sel_VPECONF0        : MipsReg< !or(!shl(1, 5), 2), "vpeconf0">;
-  def COP0Sel_VPECONF1        : MipsReg< !or(!shl(1, 5), 3), "vpeconf1">;
-  def COP0Sel_YQMASK          : MipsReg< !or(!shl(1, 5), 4), "yqmask">;
-  def COP0Sel_VPESCHEDULE     : MipsReg< !or(!shl(1, 5), 5), "vpeschedule">;
-  def COP0Sel_VPESCHEFBACK    : MipsReg< !or(!shl(1, 5), 6), "vpeschefback">;
-  def COP0Sel_VPEOPT          : MipsReg< !or(!shl(1, 5), 7), "vpeopt">;
-  def COP0Sel_ENTRYLO0        : MipsReg< !or(!shl(2, 5), 0), "entrylo0">;
-  def COP0Sel_TCSTATUS        : MipsReg< !or(!shl(2, 5), 1), "tcstatus">;
-  def COP0Sel_TCBIND          : MipsReg< !or(!shl(2, 5), 2), "tcbind">;
-  def COP0Sel_TCRESTART       : MipsReg< !or(!shl(2, 5), 3), "tcrestart">;
-  def COP0Sel_TCHALT          : MipsReg< !or(!shl(2, 5), 4), "tchalt">;
-  def COP0Sel_TCCONTEXT       : MipsReg< !or(!shl(2, 5), 5), "tccontext">;
-  def COP0Sel_TCSCHEDULE      : MipsReg< !or(!shl(2, 5), 6), "tcschedule">;
-  def COP0Sel_TCSCHEFBACK     : MipsReg< !or(!shl(2, 5), 7), "tcschefback">;
-  def COP0Sel_ENTRYLO1        : MipsReg< !or(!shl(3, 5), 0), "entrylo1">;
-  def COP0Sel_GLOBALNUMBER    : MipsReg< !or(!shl(3, 5), 1), "globalnumber">;
-  def COP0Sel_TCOPT           : MipsReg< !or(!shl(3, 5), 7), "tcopt">;
-  def COP0Sel_CONTEXT         : MipsReg< !or(!shl(4, 5), 0), "context">;
-  def COP0Sel_CONTEXTCONFIG   : MipsReg< !or(!shl(4, 5), 1), "contextconfig">;
-  def COP0Sel_USERLOCAL       : MipsReg< !or(!shl(4, 5), 2), "userlocal">;
-  def COP0Sel_XCONTEXTCONFIG  : MipsReg< !or(!shl(4, 5), 3), "xcontextconfig">;
-  def COP0Sel_DEBUGCONTEXTID  : MipsReg< !or(!shl(4, 5), 4), "debugcontextid">;
-  def COP0Sel_MEMORYMAPID     : MipsReg< !or(!shl(4, 5), 5), "memorymapid">;
-  def COP0Sel_PAGEMASK        : MipsReg< !or(!shl(5, 5), 0), "pagemask">;
-  def COP0Sel_PAGEGRAIN       : MipsReg< !or(!shl(5, 5), 1), "pagegrain">;
-  def COP0Sel_SEGCTL0         : MipsReg< !or(!shl(5, 5), 2), "segctl0">;
-  def COP0Sel_SEGCTL1         : MipsReg< !or(!shl(5, 5), 3), "segctl1">;
-  def COP0Sel_SEGCTL2         : MipsReg< !or(!shl(5, 5), 4), "segctl2">;
-  def COP0Sel_PWBASE          : MipsReg< !or(!shl(5, 5), 5), "pwbase">;
-  def COP0Sel_PWFIELD         : MipsReg< !or(!shl(5, 5), 6), "pwfield">;
-  def COP0Sel_PWSIZE          : MipsReg< !or(!shl(5, 5), 7), "pwsize">;
-  def COP0Sel_WIRED           : MipsReg< !or(!shl(6, 5), 0), "wired">;
-  def COP0Sel_SRSCONF0        : MipsReg< !or(!shl(6, 5), 1), "srsconf0">;
-  def COP0Sel_SRSCONF1        : MipsReg< !or(!shl(6, 5), 2), "srsconf1">;
-  def COP0Sel_SRSCONF2        : MipsReg< !or(!shl(6, 5), 3), "srsconf2">;
-  def COP0Sel_SRSCONF3        : MipsReg< !or(!shl(6, 5), 4), "srsconf3">;
-  def COP0Sel_SRSCONF4        : MipsReg< !or(!shl(6, 5), 5), "srsconf4">;
-  def COP0Sel_PWCTL           : MipsReg< !or(!shl(6, 5), 6), "pwctl">;
-  def COP0Sel_HWRENA          : MipsReg< !or(!shl(7, 5), 0), "hwrena">;
-  def COP0Sel_BADVADDR        : MipsReg< !or(!shl(8, 5), 0), "badvaddr">;
-  def COP0Sel_BADINST         : MipsReg< !or(!shl(8, 5), 1), "badinst">;
-  def COP0Sel_BADINSTRP       : MipsReg< !or(!shl(8, 5), 2), "badinstrp">;
-  def COP0Sel_BADINSTRX       : MipsReg< !or(!shl(8, 5), 3), "badinstrx">;
-  def COP0Sel_COUNT           : MipsReg< !or(!shl(9, 5), 0), "count">;
-  def COP0Sel_ENTRYHI         : MipsReg< !or(!shl(10, 5), 0), "entryhi">;
-  def COP0Sel_GUESTCTL1       : MipsReg< !or(!shl(10, 5), 4), "guestctl1">;
-  def COP0Sel_GUESTCTL2       : MipsReg< !or(!shl(10, 5), 5), "guestctl2">;
-  def COP0Sel_GUESTCTL3       : MipsReg< !or(!shl(10, 5), 6), "guestctl3">;
-  def COP0Sel_COMPARE         : MipsReg< !or(!shl(11, 5), 0), "compare">;
-  def COP0Sel_GUESTCTL0EXT    : MipsReg< !or(!shl(11, 5), 4), "guestctl0ext">;
-  def COP0Sel_STATUS          : MipsReg< !or(!shl(12, 5), 0), "status">;
-  def COP0Sel_INTCTL          : MipsReg< !or(!shl(12, 5), 1), "intctl">;
-  def COP0Sel_SRSCTL          : MipsReg< !or(!shl(12, 5), 2), "srsctl">;
-  def COP0Sel_SRSMAP          : MipsReg< !or(!shl(12, 5), 3), "srsmap">;
-  def COP0Sel_VIEW_IPL        : MipsReg< !or(!shl(12, 5), 4), "view_ipl">;
-  def COP0Sel_SRSMAP2         : MipsReg< !or(!shl(12, 5), 5), "srsmap2">;
-  def COP0Sel_GUESTCTL0       : MipsReg< !or(!shl(12, 5), 6), "guestctl0">;
-  def COP0Sel_GTOFFSET        : MipsReg< !or(!shl(12, 5), 7), "gtoffset">;
-  def COP0Sel_CAUSE           : MipsReg< !or(!shl(13, 5), 0), "cause">;
-  def COP0Sel_VIEW_RIPL       : MipsReg< !or(!shl(13, 5), 4), "view_ripl">;
-  def COP0Sel_NESTEDEXC       : MipsReg< !or(!shl(13, 5), 5), "nestedexc">;
-  def COP0Sel_EPC             : MipsReg< !or(!shl(14, 5), 0), "epc">;
-  def COP0Sel_NESTEDEPC       : MipsReg< !or(!shl(14, 5), 2), "nestedepc">;
-  def COP0Sel_PRID            : MipsReg< !or(!shl(15, 5), 0), "prid">;
-  def COP0Sel_EBASE           : MipsReg< !or(!shl(15, 5), 1), "ebase">;
-  def COP0Sel_CDMMBASE        : MipsReg< !or(!shl(15, 5), 2), "cdmmbase">;
-  def COP0Sel_CMGCRBASE       : MipsReg< !or(!shl(15, 5), 3), "cmgcrbase">;
-  def COP0Sel_BEVVA           : MipsReg< !or(!shl(15, 5), 4), "bevva">;
-  def COP0Sel_CONFIG          : MipsReg< !or(!shl(16, 5), 0), "config">;
-  def COP0Sel_CONFIG1         : MipsReg< !or(!shl(16, 5), 1), "config1">;
-  def COP0Sel_CONFIG2         : MipsReg< !or(!shl(16, 5), 2), "config2">;
-  def COP0Sel_CONFIG3         : MipsReg< !or(!shl(16, 5), 3), "config3">;
-  def COP0Sel_CONFIG4         : MipsReg< !or(!shl(16, 5), 4), "config4">;
-  def COP0Sel_CONFIG5         : MipsReg< !or(!shl(16, 5), 5), "config5">;
-  def COP0Sel_LLADDR          : MipsReg< !or(!shl(17, 5), 0), "lladdr">;
-  def COP0Sel_MAAR            : MipsReg< !or(!shl(17, 5), 1), "maar">;
-  def COP0Sel_MAARI           : MipsReg< !or(!shl(17, 5), 2), "maari">;
-  def COP0Sel_WATCHLO0        : MipsReg< !or(!shl(18, 5), 0), "watchlo0">;
-  def COP0Sel_WATCHLO1        : MipsReg< !or(!shl(18, 5), 1), "watchlo1">;
-  def COP0Sel_WATCHLO2        : MipsReg< !or(!shl(18, 5), 2), "watchlo2">;
-  def COP0Sel_WATCHLO3        : MipsReg< !or(!shl(18, 5), 3), "watchlo3">;
-  def COP0Sel_WATCHLO4        : MipsReg< !or(!shl(18, 5), 4), "watchlo4">;
-  def COP0Sel_WATCHLO5        : MipsReg< !or(!shl(18, 5), 5), "watchlo5">;
-  def COP0Sel_WATCHLO6        : MipsReg< !or(!shl(18, 5), 6), "watchlo6">;
-  def COP0Sel_WATCHLO7        : MipsReg< !or(!shl(18, 5), 7), "watchlo7">;
-  def COP0Sel_WATCHLO8        : MipsReg< !or(!shl(18, 5), 8), "watchlo8">;
-  def COP0Sel_WATCHLO9        : MipsReg< !or(!shl(18, 5), 9), "watchlo9">;
-  def COP0Sel_WATCHLO10       : MipsReg< !or(!shl(18, 5), 10), "watchlo10">;
-  def COP0Sel_WATCHLO11       : MipsReg< !or(!shl(18, 5), 11), "watchlo11">;
-  def COP0Sel_WATCHLO12       : MipsReg< !or(!shl(18, 5), 12), "watchlo12">;
-  def COP0Sel_WATCHLO13       : MipsReg< !or(!shl(18, 5), 13), "watchlo13">;
-  def COP0Sel_WATCHLO14       : MipsReg< !or(!shl(18, 5), 14), "watchlo14">;
-  def COP0Sel_WATCHLO15       : MipsReg< !or(!shl(18, 5), 15), "watchlo15">;
-  def COP0Sel_WATCHHI0        : MipsReg< !or(!shl(19, 5), 0), "watchhi0">;
-  def COP0Sel_WATCHHI1        : MipsReg< !or(!shl(19, 5), 1), "watchhi1">;
-  def COP0Sel_WATCHHI2        : MipsReg< !or(!shl(19, 5), 2), "watchhi2">;
-  def COP0Sel_WATCHHI3        : MipsReg< !or(!shl(19, 5), 3), "watchhi3">;
-  def COP0Sel_WATCHHI4        : MipsReg< !or(!shl(19, 5), 4), "watchhi4">;
-  def COP0Sel_WATCHHI5        : MipsReg< !or(!shl(19, 5), 5), "watchhi5">;
-  def COP0Sel_WATCHHI6        : MipsReg< !or(!shl(19, 5), 6), "watchhi6">;
-  def COP0Sel_WATCHHI7        : MipsReg< !or(!shl(19, 5), 7), "watchhi7">;
-  def COP0Sel_WATCHHI8        : MipsReg< !or(!shl(19, 5), 8), "watchhi8">;
-  def COP0Sel_WATCHHI9        : MipsReg< !or(!shl(19, 5), 9), "watchhi9">;
-  def COP0Sel_WATCHHI10       : MipsReg< !or(!shl(19, 5), 10), "watchhi10">;
-  def COP0Sel_WATCHHI11       : MipsReg< !or(!shl(19, 5), 11), "watchhi11">;
-  def COP0Sel_WATCHHI12       : MipsReg< !or(!shl(19, 5), 12), "watchhi12">;
-  def COP0Sel_WATCHHI13       : MipsReg< !or(!shl(19, 5), 13), "watchhi13">;
-  def COP0Sel_WATCHHI14       : MipsReg< !or(!shl(19, 5), 14), "watchhi14">;
-  def COP0Sel_WATCHHI15       : MipsReg< !or(!shl(19, 5), 15), "watchhi15">;
-  def COP0Sel_XCONTEXT        : MipsReg< !or(!shl(20, 5), 0), "xcontext">;
-  def COP0Sel_DEBUG           : MipsReg< !or(!shl(23, 5), 0), "debug">;
-  def COP0Sel_TRACECONTROL    : MipsReg< !or(!shl(23, 5), 1), "tracecontrol">;
-  def COP0Sel_TRACECONTROL2   : MipsReg< !or(!shl(23, 5), 2), "tracecontrol2">;
-  def COP0Sel_USERTRACEDATA1  : MipsReg< !or(!shl(23, 5), 3), "usertracedata1">;
-  def COP0Sel_TRACEIBPC       : MipsReg< !or(!shl(23, 5), 4), "traceibpc">;
-  def COP0Sel_TRACEDBPC       : MipsReg< !or(!shl(23, 5), 5), "tracedbpc">;
-  def COP0Sel_DEBUG2          : MipsReg< !or(!shl(23, 5), 6), "debug2">;
-  def COP0Sel_DEPC            : MipsReg< !or(!shl(24, 5), 0), "depc">;
-  def COP0Sel_TRACECONTROL3   : MipsReg< !or(!shl(24, 5), 2), "tracecontrol3">;
-  def COP0Sel_USERTRACEDATA2  : MipsReg< !or(!shl(24, 5), 3), "usertracedata2">;
-  def COP0Sel_PERFCTL0        : MipsReg< !or(!shl(25, 5), 0), "perfctl0">;
-  def COP0Sel_PERFCNT0        : MipsReg< !or(!shl(25, 5), 1), "perfcnt0">;
-  def COP0Sel_PERFCTL1        : MipsReg< !or(!shl(25, 5), 2), "perfctl1">;
-  def COP0Sel_PERFCNT1        : MipsReg< !or(!shl(25, 5), 3), "perfcnt1">;
-  def COP0Sel_PERFCTL2        : MipsReg< !or(!shl(25, 5), 4), "perfctl2">;
-  def COP0Sel_PERFCNT2        : MipsReg< !or(!shl(25, 5), 5), "perfcnt2">;
-  def COP0Sel_PERFCTL3        : MipsReg< !or(!shl(25, 5), 6), "perfctl3">;
-  def COP0Sel_PERFCNT3        : MipsReg< !or(!shl(25, 5), 7), "perfcnt3">;
-  def COP0Sel_PERFCTL4        : MipsReg< !or(!shl(25, 5), 8), "perfctl4">;
-  def COP0Sel_PERFCNT4        : MipsReg< !or(!shl(25, 5), 9), "perfcnt4">;
-  def COP0Sel_PERFCTL5        : MipsReg< !or(!shl(25, 5), 10), "perfctl5">;
-  def COP0Sel_PERFCNT5        : MipsReg< !or(!shl(25, 5), 11), "perfcnt5">;
-  def COP0Sel_PERFCTL6        : MipsReg< !or(!shl(25, 5), 12), "perfctl6">;
-  def COP0Sel_PERFCNT6        : MipsReg< !or(!shl(25, 5), 13), "perfcnt6">;
-  def COP0Sel_PERFCTL7        : MipsReg< !or(!shl(25, 5), 14), "perfctl7">;
-  def COP0Sel_PERFCNT7        : MipsReg< !or(!shl(25, 5), 15), "perfcnt7">;
-  def COP0Sel_ERRCTL          : MipsReg< !or(!shl(26, 5), 0), "errctl">;
-  def COP0Sel_CACHEERR        : MipsReg< !or(!shl(27, 5), 0), "cacheerr">;
-  def COP0Sel_ITAGLO          : MipsReg< !or(!shl(28, 5), 0), "itaglo">;
-  def COP0Sel_IDATALO         : MipsReg< !or(!shl(28, 5), 1), "idatalo">;
-  def COP0Sel_DTAGLO          : MipsReg< !or(!shl(28, 5), 2), "dtaglo">;
-  def COP0Sel_DDATALO         : MipsReg< !or(!shl(28, 5), 3), "ddatalo">;
-  def COP0Sel_ITAGHI          : MipsReg< !or(!shl(29, 5), 0), "itaghi">;
-  def COP0Sel_IDATAHI         : MipsReg< !or(!shl(29, 5), 1), "idatahi">;
-  def COP0Sel_DTAGHI          : MipsReg< !or(!shl(29, 5), 2), "dtaghi">;
-  def COP0Sel_DDATAHI         : MipsReg< !or(!shl(29, 5), 3), "ddatahi">;
-  def COP0Sel_ERROREPC        : MipsReg< !or(!shl(30, 5), 0), "errorepc">;
-  def COP0Sel_DESAVE          : MipsReg< !or(!shl(31, 5), 0), "desave">;
-  def COP0Sel_KSCRATCH1       : MipsReg< !or(!shl(31, 5), 2), "kscratch1">;
-  def COP0Sel_KSCRATCH2       : MipsReg< !or(!shl(31, 5), 3), "kscratch2">;
-  def COP0Sel_KSCRATCH3       : MipsReg< !or(!shl(31, 5), 4), "kscratch3">;
-  def COP0Sel_KSCRATCH4       : MipsReg< !or(!shl(31, 5), 5), "kscratch4">;
-  def COP0Sel_KSCRATCH5       : MipsReg< !or(!shl(31, 5), 6), "kscratch5">;
-  def COP0Sel_KSCRATCH6       : MipsReg< !or(!shl(31, 5), 7), "kscratch6">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -780,51 +618,6 @@ def COP0 : RegisterClass<"Mips", [i32], 32, (add
     (sequence "COP0%u_5", 0, 31), (sequence "COP0%u_6", 0, 31),
     (sequence "COP0%u_7", 0, 31))>, Unallocatable;
 
-// Coprocessor 0 registers with a fixed select.
-def COP0Sel : RegisterClass<"Mips", [i32], 32, (add
-  COP0Sel_INDEX, COP0Sel_MVPCONTROL, COP0Sel_MVPCONF0, COP0Sel_MVPCONF1,
-  COP0Sel_VPCONTROL, COP0Sel_RANDOM, COP0Sel_VPECONTROL, COP0Sel_VPECONF0,
-  COP0Sel_VPECONF1, COP0Sel_YQMASK, COP0Sel_VPESCHEDULE, COP0Sel_VPESCHEFBACK,
-  COP0Sel_VPEOPT, COP0Sel_ENTRYLO0, COP0Sel_TCSTATUS, COP0Sel_TCBIND,
-  COP0Sel_TCRESTART, COP0Sel_TCHALT, COP0Sel_TCCONTEXT, COP0Sel_TCSCHEDULE,
-  COP0Sel_TCSCHEFBACK, COP0Sel_ENTRYLO1, COP0Sel_GLOBALNUMBER, COP0Sel_TCOPT,
-  COP0Sel_CONTEXT, COP0Sel_CONTEXTCONFIG, COP0Sel_USERLOCAL,
-  COP0Sel_XCONTEXTCONFIG, COP0Sel_DEBUGCONTEXTID, COP0Sel_MEMORYMAPID,
-  COP0Sel_PAGEMASK, COP0Sel_PAGEGRAIN, COP0Sel_SEGCTL0, COP0Sel_SEGCTL1,
-  COP0Sel_SEGCTL2, COP0Sel_PWBASE, COP0Sel_PWFIELD, COP0Sel_PWSIZE,
-  COP0Sel_WIRED, COP0Sel_SRSCONF0, COP0Sel_SRSCONF1, COP0Sel_SRSCONF2,
-  COP0Sel_SRSCONF3, COP0Sel_SRSCONF4, COP0Sel_PWCTL, COP0Sel_HWRENA,
-  COP0Sel_BADVADDR, COP0Sel_BADINST, COP0Sel_BADINSTRP, COP0Sel_BADINSTRX,
-  COP0Sel_COUNT, COP0Sel_ENTRYHI, COP0Sel_GUESTCTL1, COP0Sel_GUESTCTL2,
-  COP0Sel_GUESTCTL3, COP0Sel_COMPARE, COP0Sel_GUESTCTL0EXT, COP0Sel_STATUS,
-  COP0Sel_INTCTL, COP0Sel_SRSCTL, COP0Sel_SRSMAP, COP0Sel_VIEW_IPL,
-  COP0Sel_SRSMAP2, COP0Sel_GUESTCTL0, COP0Sel_GTOFFSET, COP0Sel_CAUSE,
-  COP0Sel_VIEW_RIPL, COP0Sel_NESTEDEXC, COP0Sel_EPC, COP0Sel_NESTEDEPC,
-  COP0Sel_PRID, COP0Sel_EBASE, COP0Sel_CDMMBASE, COP0Sel_CMGCRBASE,
-  COP0Sel_BEVVA, COP0Sel_CONFIG, COP0Sel_CONFIG1, COP0Sel_CONFIG2,
-  COP0Sel_CONFIG3, COP0Sel_CONFIG4, COP0Sel_CONFIG5, COP0Sel_LLADDR,
-  COP0Sel_MAAR, COP0Sel_MAARI, COP0Sel_WATCHLO0, COP0Sel_WATCHLO1,
-  COP0Sel_WATCHLO2, COP0Sel_WATCHLO3, COP0Sel_WATCHLO4, COP0Sel_WATCHLO5,
-  COP0Sel_WATCHLO6, COP0Sel_WATCHLO7, COP0Sel_WATCHLO8, COP0Sel_WATCHLO9,
-  COP0Sel_WATCHLO10, COP0Sel_WATCHLO11, COP0Sel_WATCHLO12, COP0Sel_WATCHLO13,
-  COP0Sel_WATCHLO14, COP0Sel_WATCHLO15, COP0Sel_WATCHHI0, COP0Sel_WATCHHI1,
-  COP0Sel_WATCHHI2, COP0Sel_WATCHHI3, COP0Sel_WATCHHI4, COP0Sel_WATCHHI5,
-  COP0Sel_WATCHHI6, COP0Sel_WATCHHI7, COP0Sel_WATCHHI8, COP0Sel_WATCHHI9,
-  COP0Sel_WATCHHI10, COP0Sel_WATCHHI11, COP0Sel_WATCHHI12, COP0Sel_WATCHHI13,
-  COP0Sel_WATCHHI14, COP0Sel_WATCHHI15, COP0Sel_XCONTEXT, COP0Sel_DEBUG,
-  COP0Sel_TRACECONTROL, COP0Sel_TRACECONTROL2, COP0Sel_USERTRACEDATA1,
-  COP0Sel_TRACEIBPC, COP0Sel_TRACEDBPC, COP0Sel_DEBUG2, COP0Sel_DEPC,
-  COP0Sel_TRACECONTROL3, COP0Sel_USERTRACEDATA2, COP0Sel_PERFCTL0,
-  COP0Sel_PERFCNT0, COP0Sel_PERFCTL1, COP0Sel_PERFCNT1, COP0Sel_PERFCTL2,
-  COP0Sel_PERFCNT2, COP0Sel_PERFCTL3, COP0Sel_PERFCNT3, COP0Sel_PERFCTL4,
-  COP0Sel_PERFCNT4, COP0Sel_PERFCTL5, COP0Sel_PERFCNT5, COP0Sel_PERFCTL6,
-  COP0Sel_PERFCNT6, COP0Sel_PERFCTL7, COP0Sel_PERFCNT7, COP0Sel_ERRCTL,
-  COP0Sel_CACHEERR, COP0Sel_ITAGLO, COP0Sel_IDATALO, COP0Sel_DTAGLO,
-  COP0Sel_DDATALO, COP0Sel_ITAGHI, COP0Sel_IDATAHI, COP0Sel_DTAGHI,
-  COP0Sel_DDATAHI, COP0Sel_ERROREPC, COP0Sel_DESAVE, COP0Sel_KSCRATCH1,
-  COP0Sel_KSCRATCH2, COP0Sel_KSCRATCH3, COP0Sel_KSCRATCH4, COP0Sel_KSCRATCH5,
-  COP0Sel_KSCRATCH6)>, Unallocatable;
-
 // Coprocessor 2 registers.
 def COP2 : RegisterClass<"Mips", [i32], 32, (sequence "COP2%u", 0, 31)>,
            Unallocatable;
@@ -907,13 +700,6 @@ class GPRNMAsmOperandClass<string Cname, string RegClass,
   : MipsAsmRegOperand {
   let Name = "GPRNM" # Cname;
   let PredicateMethod = "isGPRNMAsmReg<Mips::" # RegClass # ">";
-  let SuperClasses = Supers;
-}
-
-class COP0SelAsmOperandClass<string Cname, list<AsmOperandClass> Supers = []>
-  : MipsAsmRegOperand {
-  let Name = Cname;
-  let PredicateMethod = "isCOP0SelAsmReg";
   let SuperClasses = Supers;
 }
 
@@ -1027,11 +813,6 @@ def GPRNM32NZOpnd : RegisterOperand<GPR32NONZERO> {
 def GPRNM32Opnd : RegisterOperand<GPR32> {
   let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5", "GPR32RegClassID",
                                               [GPRNM32NZOpnd.ParserMatchClass]>;
-}
-
-def COP0SelOpnd : RegisterOperand<COP0Sel> {
-  let ParserMatchClass =
-    COP0SelAsmOperandClass<"COP0SelReg", [GPRNM32Opnd.ParserMatchClass]>;
 }
 
 def GPRNM4Opnd : RegisterOperand<GPRNM4> {

@@ -918,20 +918,11 @@ class WAIT_Enc : _Pool_POOL32Axf_5_group3<0b00001> {
 
 class ReadWriteCP0_Enc<bits<6> isel> : _Pool_POOL32A0_1<isel> {
   bits<5> rt;
-  bits<5> c0s;
-  bits<5> sel;
+  bits<10> cop0;
 
   let Inst{25-21} = rt;
-  let Inst{20-16} = c0s;
-  let Inst{15-11} = sel;
-}
-
-class ReadWriteCP0Sel_Enc<bits<6> isel> : _Pool_POOL32A0_1<isel> {
-  bits<5> rt;
-  bits<10> c0s;
-
-  let Inst{25-21} = rt;
-  let Inst{20-11} = c0s;
+  let Inst{20-16} = cop0{9-5};
+  let Inst{15-11} = cop0{4-0};
 }
 
 class GINVI_Enc<bits<5> isel> : _Pool_POOL32Axf_5_group0<isel> {

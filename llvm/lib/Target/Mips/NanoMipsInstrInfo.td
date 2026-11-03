@@ -418,7 +418,7 @@ class ReadHardware_Desc<RegisterOperand CPURegOperand, RegisterOperand RO>
   : InstNM<(outs CPURegOperand:$rt), (ins RO:$hs, uimm5:$sel),
            "rdhwr\t$rt, $hs, $sel">;
 
-def RDHWR_NM : ReadHardware_Desc<GPRNM32Opnd, COP0Opnd>,
+def RDHWR_NM : ReadHardware_Desc<GPRNM32Opnd, HWRegsOpnd>,
                RDHWR_Enc;
 
 def JRC_NM : IndirectBranch_Desc<"jrc", GPRNM32Opnd>, IndirectBranch16_Enc<0>;
@@ -962,41 +962,18 @@ class WaitOp_Desc<string opstr, DAGOperand MO>
 
 def WAIT_NM : WaitOp_Desc<"wait", uimm10>, WAIT_Enc;
 
-class WriteToCP0_Desc<string opstr, RegisterOperand RO, RegisterOperand CO>
-  : InstNM<(outs), (ins RO:$rt, CO:$c0s, uimm5:$sel),
-           !strconcat(opstr, "\t$rt, $c0s, $sel")>;
+class WriteToCP0_Desc<string opstr>
+  : InstNM<(outs), (ins GPRNM32Opnd:$rt, COP0Opnd:$cop0),
+           !strconcat(opstr, "\t$rt, $cop0")>;
 
-class WriteToCP0Sel_Desc<string opstr, RegisterOperand RO, RegisterOperand CO>
-  : InstNM<(outs), (ins RO:$rt, CO:$c0s),
-           !strconcat(opstr, "\t$rt, $c0s")>;
+class ReadFromCP0_Desc<string opstr>
+  : InstNM<(outs GPRNM32Opnd:$rt), (ins COP0Opnd:$cop0),
+           !strconcat(opstr, "\t$rt, $cop0")>;
 
-class ReadFromCP0_Desc<string opstr, RegisterOperand RO, RegisterOperand CO>
-  : InstNM<(outs RO:$rt), (ins CO:$c0s, uimm5:$sel),
-           !strconcat(opstr, "\t$rt, $c0s, $sel")>;
-
-class ReadFromCP0Sel_Desc<string opstr, RegisterOperand RO, RegisterOperand CO>
-  : InstNM<(outs RO:$rt), (ins CO:$c0s),
-           !strconcat(opstr, "\t$rt, $c0s")>;
-
-def MFC0Sel_NM  : ReadFromCP0Sel_Desc<"mfc0", GPRNM32Opnd, COP0SelOpnd>,
-                  ReadWriteCP0Sel_Enc<0b000010>;
-def MFHC0Sel_NM : ReadFromCP0Sel_Desc<"mfhc0", GPRNM32Opnd, COP0SelOpnd>,
-                  ReadWriteCP0Sel_Enc<0b000011>;
-def MTC0Sel_NM  : WriteToCP0Sel_Desc<"mtc0", GPRNM32Opnd, COP0SelOpnd>,
-                  ReadWriteCP0Sel_Enc<0b000110>;
-def MTHC0Sel_NM : WriteToCP0Sel_Desc<"mthc0", GPRNM32Opnd, COP0SelOpnd>,
-                  ReadWriteCP0Sel_Enc<0b000111>;
-
-let isAsmParserOnly = 1 in {
-  def MFC0_NM  : ReadFromCP0_Desc<"mfc0", GPRNM32Opnd, COP0Opnd>,
-                 ReadWriteCP0_Enc<0b000010>;
-  def MFHC0_NM : ReadFromCP0_Desc<"mfhc0", GPRNM32Opnd, COP0Opnd>,
-                 ReadWriteCP0_Enc<0b000011>;
-  def MTC0_NM  : WriteToCP0_Desc<"mtc0", GPRNM32Opnd, COP0Opnd>,
-                 ReadWriteCP0_Enc<0b000110>;
-  def MTHC0_NM : WriteToCP0_Desc<"mthc0", GPRNM32Opnd, COP0Opnd>,
-                 ReadWriteCP0_Enc<0b000111>;
-}
+def MFC0_NM  : ReadFromCP0_Desc<"mfc0">,  ReadWriteCP0_Enc<0b000010>;
+def MFHC0_NM : ReadFromCP0_Desc<"mfhc0">, ReadWriteCP0_Enc<0b000011>;
+def MTC0_NM  : WriteToCP0_Desc<"mtc0">,   ReadWriteCP0_Enc<0b000110>;
+def MTHC0_NM : WriteToCP0_Desc<"mthc0">,  ReadWriteCP0_Enc<0b000111>;
 
 class GINVI_Desc : InstNM<(outs), (ins GPRNM32Opnd:$rs), "ginvi\t$rs">;
 class GINVT_Desc : InstNM<(outs), (ins GPRNM32Opnd:$rs, uimm2:$type),

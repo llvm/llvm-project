@@ -228,41 +228,6 @@ static DecodeStatus DecodeCOP0RegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeCOP0SelRegisterClass(MCInst &Inst, unsigned RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  const MCRegisterInfo &MRI = *Decoder->getContext().getRegisterInfo();
-  for (MCRegister Reg : MRI.getRegClass(Mips::COP0SelRegClassID)) {
-    if (MRI.getEncodingValue(Reg) == RegNo) {
-      Inst.addOperand(MCOperand::createReg(Reg));
-      return MCDisassembler::Success;
-    }
-  }
-
-  // Not a named register encoding - print numeric register and select value
-  switch (Inst.getOpcode()) {
-  case Mips::MFC0Sel_NM:
-    Inst.setOpcode(Mips::MFC0_NM);
-    break;
-  case Mips::MFHC0Sel_NM:
-    Inst.setOpcode(Mips::MFHC0_NM);
-    break;
-  case Mips::MTC0Sel_NM:
-    Inst.setOpcode(Mips::MTC0_NM);
-    break;
-  case Mips::MTHC0Sel_NM:
-    Inst.setOpcode(Mips::MTHC0_NM);
-    break;
-  default:
-    llvm_unreachable("Unknown instruction!");
-  }
-  MCRegister Reg = getReg(Decoder, Mips::COP0RegClassID, RegNo >> 5);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  Inst.addOperand(MCOperand::createImm(RegNo & 0x1f));
-
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus DecodeCOP2RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {

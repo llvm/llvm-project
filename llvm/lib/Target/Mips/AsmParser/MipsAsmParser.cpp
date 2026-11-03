@@ -1666,12 +1666,6 @@ public:
             (RegIdx.Index >= 16 && RegIdx.Index <= 23));
   }
 
-  bool isCOP0SelAsmReg() const {
-    if (!(isRegIdx() && RegIdx.Kind))
-      return false;
-    return RegIdx.Index <= 160;
-  }
-
   bool isNM4ZeroAsmReg() const {
     if (!(isRegIdx() && RegIdx.Kind))
       return false;

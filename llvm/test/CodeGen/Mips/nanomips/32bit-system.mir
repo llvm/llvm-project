@@ -188,15 +188,7 @@ name: mfc0
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = MFC0_NM $cop00, 0
-...
----
-# CHECK-LABEL: mfc0sel:
-# CHECK: mfc0 $4, $index # encoding: [0x80,0x20,0x30,0x00]
-name: mfc0sel
-body: |
-  bb.0:
-    $r4 = MFC0Sel_NM $cop0sel_index
+    $r4 = MFC0_NM $cop00
 ...
 ---
 # CHECK-LABEL: mfhc0:
@@ -205,15 +197,7 @@ name: mfhc0
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = MFHC0_NM $cop00, 0
-...
----
-# CHECK-LABEL: mfhc0sel:
-# CHECK: mfhc0 $4, $index # encoding: [0x80,0x20,0x38,0x00]
-name: mfhc0sel
-body: |
-  bb.0:
-    $r4 = MFHC0Sel_NM $cop0sel_index
+    $r4 = MFHC0_NM $cop00
 ...
 ---
 # CHECK-LABEL: mtc0:
@@ -222,15 +206,7 @@ name: mtc0
 tracksRegLiveness: false
 body: |
   bb.0:
-    MTC0_NM $r4, $cop00, 0
-...
----
-# CHECK-LABEL: mtc0sel:
-# CHECK: mtc0 $4, $index # encoding: [0x80,0x20,0x70,0x00]
-name: mtc0sel
-body: |
-  bb.0:
-    MTC0Sel_NM $r4, $cop0sel_index
+    MTC0_NM $r4, $cop00
 ...
 ---
 # CHECK-LABEL: mthc0:
@@ -239,24 +215,16 @@ name: mthc0
 tracksRegLiveness: false
 body: |
   bb.0:
-    MTHC0_NM $r4, $cop00, 0
-...
----
-# CHECK-LABEL: mthc0sel:
-# CHECK: mthc0 $4, $index # encoding: [0x80,0x20,0x78,0x00]
-name: mthc0sel
-body: |
-  bb.0:
-    MTHC0Sel_NM $r4, $cop0sel_index
+    MTHC0_NM $r4, $cop00
 ...
 ---
 # CHECK-LABEL: rdhwr:
-# CHECK: rdhwr $4, $0, 0 # encoding: [0x80,0x20,0xc0,0x01]
+# CHECK: rdhwr $4, $hwr_cpunum, 0 # encoding: [0x80,0x20,0xc0,0x01]
 name: rdhwr
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = RDHWR_NM $cop00, 0
+    $r4 = RDHWR_NM $hwr0 ,0
 ...
 
 # --- misc / ASE ---
