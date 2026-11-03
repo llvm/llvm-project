@@ -8753,10 +8753,8 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
   bool HaveChain = Intr->getOpcode() == ISD::INTRINSIC_VOID ||
                    Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN;
 
-  assert(!SetCC ||
-         (SetCC->getConstantOperandVal(1) == 1 &&
-          cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get() ==
-              ISD::SETNE));
+  assert(!SetCC || (SetCC->getConstantOperandVal(1) == 1 &&
+                    SetCC->getOperandCondCode(2) == ISD::SETNE));
 
   // operands of the new intrinsic call
   SmallVector<SDValue, 4> Ops;
@@ -9025,7 +9023,7 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
     // TODO: are all of those cases correct, and are there more?
     return ISD::ANY_EXTEND;
   case ISD::SETCC: {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    ISD::CondCode CC = Op.getOperandCondCode(2);
     return ISD::isSignedIntSetCC(CC) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
   }
   default:
@@ -9094,7 +9092,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
 
   // setcc always return i1/i1 vec so no need to truncate after.
   if (Opc == ISD::SETCC) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    ISD::CondCode CC = Op.getOperandCondCode(2);
     return DAG.getSetCC(DL, Op.getValueType(), LHS, RHS, CC);
   }
 
@@ -15138,8 +15136,8 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   // (and (fcmp ord x, x), (fcmp une (fabs x), inf)) ->
   // fp_class x, ~(s_nan | q_nan | n_infinity | p_infinity)
   if (LHS.getOpcode() == ISD::SETCC && RHS.getOpcode() == ISD::SETCC) {
-    ISD::CondCode LCC = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
-    ISD::CondCode RCC = cast<CondCodeSDNode>(RHS.getOperand(2))->get();
+    ISD::CondCode LCC = LHS.getOperandCondCode(2);
+    ISD::CondCode RCC = RHS.getOperandCondCode(2);
 
     SDValue X = LHS.getOperand(0);
     SDValue Y = RHS.getOperand(0);
@@ -15180,7 +15178,7 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
 
   if (LHS.getOpcode() == ISD::SETCC && RHS.getOpcode() == AMDGPUISD::FP_CLASS &&
       RHS.hasOneUse()) {
-    ISD::CondCode LCC = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+    ISD::CondCode LCC = LHS.getOperandCondCode(2);
     // and (fcmp seto), (fp_class x, mask) -> fp_class x, mask & ~(p_nan |
     // n_nan) and (fcmp setuo), (fp_class x, mask) -> fp_class x, mask & (p_nan
     // | n_nan)
@@ -18888,7 +18886,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   EVT VT = LHS.getValueType();
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
 
   auto *CRHS = dyn_cast<ConstantSDNode>(RHS);
   if (!CRHS) {
@@ -19276,7 +19274,7 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
   // Handle SETCC conditions for inf/nan tests.
   // The canonical form of these checks is fcmp + fabs.
   if (Cond.getOpcode() == ISD::SETCC) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    ISD::CondCode CC = Cond.getOperandCondCode(2);
     SDValue CondLHS = Cond.getOperand(0);
     SDValue CondRHS = Cond.getOperand(1);
 
@@ -19356,7 +19354,7 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 
   SDValue LHS = Cond.getOperand(0);
   SDValue RHS = Cond.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  ISD::CondCode CC = Cond.getOperandCondCode(2);
 
   bool isFloatingPoint = LHS.getValueType().isFloatingPoint();
   bool isInteger = LHS.getValueType().isInteger();
@@ -20301,27 +20299,15 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
-    case 'm':
-      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
-    if (Constraint == "RF")
-      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
-}
-
-InlineAsm::ConstraintCode
-SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
-  if (ConstraintCode == "RF")
-    return InlineAsm::ConstraintCode::RF;
-
-  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {

@@ -417,16 +417,19 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
     writeArm64eChainedRebase(buf, targetVA, auth);
     return;
   }
-  auto *rebase = reinterpret_cast<dyld_chained_ptr_64_rebase *>(buf);
-  rebase->target = targetVA & 0xf'ffff'ffff;
-  rebase->high8 = (targetVA >> 56);
-  rebase->reserved = 0;
-  rebase->next = 0;
-  rebase->bind = 0;
+  // DYLD_CHAINED_PTR_64 fixups only need to be 4-byte aligned, so build the
+  // pointer here and copy it out.
+  dyld_chained_ptr_64_rebase rebase;
+  rebase.target = targetVA & 0xf'ffff'ffff;
+  rebase.high8 = (targetVA >> 56);
+  rebase.reserved = 0;
+  rebase.next = 0;
+  rebase.bind = 0;
+  memcpy(buf, &rebase, sizeof(rebase));
 
   // The fixup format places a 64 GiB limit on the output's size.
   // Should we handle this gracefully?
-  uint64_t encodedVA = rebase->target | ((uint64_t)rebase->high8 << 56);
+  uint64_t encodedVA = rebase.target | ((uint64_t)rebase.high8 << 56);
   if (encodedVA != targetVA)
     error("rebase target address 0x" + Twine::utohexstr(targetVA) +
           " does not fit into chained fixup. Re-link with -no_fixup_chains");
@@ -483,13 +486,15 @@ static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
       writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind>(buf, sym, addend);
     return;
   }
-  auto *bind = reinterpret_cast<dyld_chained_ptr_64_bind *>(buf);
+  // See writeChainedRebase() for why this is copied out.
+  dyld_chained_ptr_64_bind bind;
   auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
-  bind->ordinal = ordinal;
-  bind->addend = inlineAddend;
-  bind->reserved = 0;
-  bind->next = 0;
-  bind->bind = 1;
+  bind.ordinal = ordinal;
+  bind.addend = inlineAddend;
+  bind.reserved = 0;
+  bind.next = 0;
+  bind.bind = 1;
+  memcpy(buf, &bind, sizeof(bind));
 }
 
 void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
@@ -1019,29 +1024,122 @@ ObjCStubsSection::ObjCStubsSection()
               : target->objcStubsSmallAlignment;
 }
 
-bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
+bool ObjCStubsSection::isObjCMsgSendStubSymbol(Symbol *sym) {
   return sym->getName().starts_with(objcMsgSendStubPrefix);
+}
+
+bool ObjCStubsSection::isObjCClassStubSymbol(Symbol *sym) {
+  return sym->getName().starts_with(objcMsgSendClassStubPrefix);
+}
+
+bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
+  return isObjCMsgSendStubSymbol(sym) || isObjCClassStubSymbol(sym);
 }
 
 StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   assert(isObjCStubSymbol(sym) && "not an objc stub");
-  auto name = sym->getName();
-  return name.drop_front(objcMsgSendStubPrefix.size());
+  if (isObjCMsgSendStubSymbol(sym))
+    return sym->getName().drop_front(objcMsgSendStubPrefix.size());
+
+  assert(isObjCClassStubSymbol(sym) && "not an objc class stub");
+  std::optional<ObjCClassStubNames> parsed = parseObjCClassStubSymbol(sym);
+  assert(parsed && "malformed objc class stub");
+  return parsed->selectorName;
 }
 
-size_t ObjCStubsSection::getStubSize() const {
-  return config->objcStubsMode == ObjCStubsMode::fast
-             ? target->objcStubsFastSize
-             : target->objcStubsSmallSize;
+std::optional<ObjCStubsSection::ObjCClassStubNames>
+ObjCStubsSection::parseObjCClassStubSymbol(Symbol *sym) {
+  assert(isObjCClassStubSymbol(sym) && "not an objc class stub");
+  StringRef name = sym->getName().drop_front(objcMsgSendClassStubPrefix.size());
+  // For _objc_msgSendClass$alloc$_OBJC_CLASS_$_Foo, return
+  // selectorName "alloc" and classSymbolName "_OBJC_CLASS_$_Foo".
+  auto [selectorName, classSymbolName] = name.split('$');
+  if (selectorName.empty() || classSymbolName.empty() ||
+      !classSymbolName.starts_with(objcClassSymbolPrefix))
+    return std::nullopt;
+  return ObjCClassStubNames{selectorName, classSymbolName};
+}
+
+void ObjCStubsSection::recordClassSymbol(Symbol *stubSym, Symbol *classSym) {
+  // SymbolTable updates symbols in place with replaceSymbol(), so this pointer
+  // remains valid if an Undefined later becomes a DylibSymbol or Defined.
+  classSymbols[stubSym] = classSym;
+}
+
+Symbol *ObjCStubsSection::lookupClassSymbol(Symbol *stubSym) const {
+  return classSymbols.lookup(stubSym);
+}
+
+size_t ObjCStubsSection::getStubSize(Symbol *sym) const {
+  if (config->objcStubsMode == ObjCStubsMode::fast)
+    return isObjCClassStubSymbol(sym) ? target->objcClassStubsFastSize
+                                      : target->objcStubsFastSize;
+  return isObjCClassStubSymbol(sym) ? target->objcClassStubsSmallSize
+                                    : target->objcStubsSmallSize;
 }
 
 void ObjCStubsSection::addEntry(Symbol *sym) {
-  StringRef methname = getMethname(sym);
-  // We create a selref entry for each unique methname.
-  if (!ObjCSelRefsHelper::getSelRef(methname))
-    ObjCSelRefsHelper::makeSelRef(methname);
+  // Replace invalid stubs to avoid follow-on undefined-symbol diagnostics.
+  auto replaceWithEmptyStub = [&] {
+    replaceSymbol<Defined>(
+        sym, sym->getName(), nullptr, isec, /*value=*/stubsSectionSize,
+        /*size=*/0,
+        /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
+        /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
+        /*noDeadStrip=*/false);
+  };
 
-  size_t stubSize = getStubSize();
+  StringRef selectorName;
+  Symbol *classSym = nullptr;
+  if (isObjCClassStubSymbol(sym)) {
+    if (!target->supportsObjCClassStubs()) {
+      error("objc class stubs are not supported for " +
+            getArchitectureName(config->arch()));
+      replaceWithEmptyStub();
+      return;
+    }
+    std::optional<ObjCClassStubNames> parsed = parseObjCClassStubSymbol(sym);
+    if (!parsed) {
+      error("malformed objc class stub symbol " + sym->getName() +
+            "; expected " + objcMsgSendClassStubPrefix + "<selector>" + "$" +
+            objcClassSymbolPrefix + "<class>");
+      replaceWithEmptyStub();
+      return;
+    }
+    selectorName = parsed->selectorName;
+    classSym = lookupClassSymbol(sym);
+    if (!classSym) {
+      error("objc class stub symbol " + sym->getName() +
+            " references missing class symbol " + parsed->classSymbolName);
+      replaceWithEmptyStub();
+      return;
+    }
+    if (auto *undefined = dyn_cast<Undefined>(classSym)) {
+      treatUndefinedSymbol(*undefined, "objc class stub");
+      if (isa<Undefined>(classSym)) {
+        replaceWithEmptyStub();
+        return;
+      }
+    }
+    if (auto *dysym = dyn_cast<DylibSymbol>(classSym)) {
+      // Preserve effective import weakness from a classref or a weak library.
+      // Otherwise, an unreferenced class still defaults to a strong import.
+      dysym->reference(dysym->isWeakRef() ? RefState::Weak : RefState::Strong);
+      in.got->addEntry(dysym);
+    } else if (needsBinding(classSym)) {
+      // Interposable or weak definitions in this image.
+      in.got->addEntry(classSym);
+    }
+    classSym->used = true;
+  } else {
+    selectorName = getMethname(sym);
+  }
+
+  size_t stubSize = getStubSize(sym);
+  // We create a selref entry for each unique selector.
+  if (!ObjCSelRefsHelper::getSelRef(selectorName))
+    ObjCSelRefsHelper::makeSelRef(selectorName);
+
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
       /*value=*/stubsSectionSize,
@@ -1101,8 +1199,16 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
     InputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef != nullptr && "no selref for methname");
     auto selrefAddr = selRef->getVA(0);
-    target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
-                                 stubOffset, selrefAddr, objcMsgSend);
+    if (isObjCClassStubSymbol(sym)) {
+      Symbol *classSym = classSymbols.lookup(sym);
+      assert(classSym != nullptr && "no class symbol for objc class stub");
+      target->writeObjCMsgSendClassStub(buf + stubOffset, sym,
+                                        in.objcStubs->addr, stubOffset,
+                                        selrefAddr, classSym, objcMsgSend);
+    } else {
+      target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
+                                   stubOffset, selrefAddr, objcMsgSend);
+    }
   }
 }
 
