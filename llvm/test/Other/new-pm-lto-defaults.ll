@@ -68,6 +68,7 @@
 ; CHECK-O-NEXT: Running pass: NoRecurseLTOInferencePass
 ; CHECK-O1-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-O23-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O23-NEXT: Running pass: GlobalOptPass
 ; CHECK-O23-NEXT: Running pass: PromotePass
 ; CHECK-O23-NEXT: Running pass: ConstantMergePass

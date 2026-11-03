@@ -24,7 +24,13 @@ namespace llvm {
 class Module;
 
 struct CoroEarlyPass : RequiredPassInfoMixin<CoroEarlyPass> {
+  // LTO backends only need to prepare retcon bodies from older producers;
+  // unrelated functions have already passed through frontend lowering.
+  explicit CoroEarlyPass(bool RetconOnly = false) : RetconOnly(RetconOnly) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  bool RetconOnly;
 };
 } // end namespace llvm
 

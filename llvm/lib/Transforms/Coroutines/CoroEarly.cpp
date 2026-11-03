@@ -198,20 +198,20 @@ static bool declaresCoroEarlyIntrinsics(const Module &M) {
           Intrinsic::coro_promise, Intrinsic::coro_resume});
 }
 
+static bool isRetconCoroutine(Function &F) {
+  return llvm::any_of(instructions(F), [](Instruction &I) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    return II && (II->getIntrinsicID() == Intrinsic::coro_id_retcon ||
+                  II->getIntrinsicID() == Intrinsic::coro_id_retcon_once);
+  });
+}
+
 // A returned-continuation body's exits do not describe calls to its ramp: a
 // suspension returns to the caller even if the body never reaches coro.end.
 // Keep the callable entry opaque until CoroSplit has materialized those
 // returns.
 static void separateRetconRamp(Function &Body) {
-  if (Body.hasFnAttribute("coro-retcon-body"))
-    return;
-
-  bool IsRetcon = llvm::any_of(instructions(Body), [](Instruction &I) {
-    auto *II = dyn_cast<IntrinsicInst>(&I);
-    return II && (II->getIntrinsicID() == Intrinsic::coro_id_retcon ||
-                  II->getIntrinsicID() == Intrinsic::coro_id_retcon_once);
-  });
-  if (!IsRetcon)
+  if (Body.hasFnAttribute("coro-retcon-body") || !isRetconCoroutine(Body))
     return;
 
   Module *M = Body.getParent();
@@ -290,7 +290,8 @@ PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
 
   Lowerer L(M);
   for (auto &F : M)
-    L.lowerEarlyIntrinsics(F);
+    if (!RetconOnly || isRetconCoroutine(F))
+      L.lowerEarlyIntrinsics(F);
 
   for (auto &F : llvm::make_early_inc_range(M))
     if (!F.isDeclaration())

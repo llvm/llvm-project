@@ -1030,7 +1030,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // pre-split bodies. Establish that boundary before backend IPO, including
   // the early indirect call promotion below.
   if (isThinLTOPostLink(Phase))
-    MPM.addPass(CoroEarlyPass());
+    MPM.addPass(CoroEarlyPass(/*RetconOnly=*/true));
 
   // During the ThinLTO backend phase we perform early indirect call promotion
   // here, before globalopt. Otherwise imported available_externally functions
@@ -1973,7 +1973,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // Older producers may not have separated retcon entries from their pre-split
   // bodies. Establish that boundary before profile-guided inlining and IPO.
-  MPM.addPass(CoroEarlyPass());
+  MPM.addPass(CoroEarlyPass(/*RetconOnly=*/true));
 
   if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
     // Load sample profile before running the LTO optimization pipeline.
@@ -2073,6 +2073,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     return MPM;
   }
+
+  // TODO: Skip to match buildCoroWrapper.
+  MPM.addPass(CoroEarlyPass());
 
   // Optimize globals to try and fold them into constants.
   MPM.addPass(GlobalOptPass());
