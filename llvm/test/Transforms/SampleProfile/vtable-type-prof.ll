@@ -91,6 +91,58 @@ cold:
   ret void, !dbg !32
 }
 
+; A hot vtable load (entry) feeds a hot virtual call and a cold one. The cold
+; call must not drop the annotation that the hot call put on the shared load,
+; even with -overwrite-existing-weights.
+; COMMON-LABEL: define void @test_shared_load_hot_and_cold_calls(
+; NOVTABLE: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}{{$}}
+; VTABLE: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}, !prof ![[VT2]]
+; VTABLE1: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}, !prof ![[VT2]]
+; COMMON: call void %{{.*}}(ptr %d), !dbg !{{[0-9]+}}, !prof !{{[0-9]+}}
+; COMMON: call void %{{.*}}(ptr %d), !dbg !{{[0-9]+}}{{$}}
+define void @test_shared_load_hot_and_cold_calls(ptr %d, i1 %c) #0 !dbg !50 {
+entry:
+  %vtable = load ptr, ptr %d, align 8, !dbg !51
+  %vfn = getelementptr inbounds ptr, ptr %vtable, i64 1, !dbg !51
+  %0 = load ptr, ptr %vfn, align 8, !dbg !51
+  call void %0(ptr %d), !dbg !51
+  br i1 %c, label %hot, label %cold, !dbg !52
+
+hot:
+  ret void, !dbg !53
+
+cold:
+  %vfn2 = getelementptr inbounds ptr, ptr %vtable, i64 0, !dbg !54
+  %1 = load ptr, ptr %vfn2, align 8, !dbg !54
+  call void %1(ptr %d), !dbg !54
+  ret void, !dbg !55
+}
+
+; The address-feeding instruction of a non-virtual indirect call (here a
+; `select` with branch weights) must keep its own !prof, both when the call is
+; hot and its profile has no type samples, and when the call is cold.
+; COMMON-LABEL: define void @test_non_vtable_base(
+; COMMON: %tbl = select i1 %c, ptr %a, ptr %b, !dbg !{{[0-9]+}}, !prof ![[SEL:[0-9]+]]
+; COMMON: %tbl2 = select i1 %c, ptr %a, ptr %b, !dbg !{{[0-9]+}}, !prof ![[SEL]]
+define void @test_non_vtable_base(ptr %a, ptr %b, i1 %c) #0 !dbg !60 {
+entry:
+  %tbl = select i1 %c, ptr %a, ptr %b, !dbg !61, !prof !70
+  %slot = getelementptr inbounds ptr, ptr %tbl, i64 1, !dbg !61
+  %fp = load ptr, ptr %slot, align 8, !dbg !61
+  call void %fp(), !dbg !61
+  br i1 %c, label %hot, label %cold, !dbg !62
+
+hot:
+  ret void, !dbg !63
+
+cold:
+  %tbl2 = select i1 %c, ptr %a, ptr %b, !dbg !64, !prof !70
+  %slot2 = getelementptr inbounds ptr, ptr %tbl2, i64 1, !dbg !64
+  %fp2 = load ptr, ptr %slot2, align 8, !dbg !64
+  call void %fp2(), !dbg !64
+  ret void, !dbg !65
+}
+
 define void @Base_foo(ptr %this) #0 {
   ret void
 }
@@ -150,3 +202,16 @@ attributes #0 = { "use-sample-profile" }
 !32 = !DILocation(line: 32, column: 1, scope: !30)
 !33 = !DILocation(line: 33, column: 1, scope: !30)
 !40 = !{!"VP", i32 2, i64 100, i64 -4123858694673519054, i64 100}
+!50 = distinct !DISubprogram(name: "test_shared_load_hot_and_cold_calls", scope: !6, file: !6, line: 50, type: !7, scopeLine: 50, unit: !3)
+!51 = !DILocation(line: 51, column: 3, scope: !50)
+!52 = !DILocation(line: 52, column: 3, scope: !50)
+!53 = !DILocation(line: 53, column: 1, scope: !50)
+!54 = !DILocation(line: 54, column: 3, scope: !50)
+!55 = !DILocation(line: 55, column: 1, scope: !50)
+!60 = distinct !DISubprogram(name: "test_non_vtable_base", scope: !6, file: !6, line: 60, type: !7, scopeLine: 60, unit: !3)
+!61 = !DILocation(line: 61, column: 3, scope: !60)
+!62 = !DILocation(line: 62, column: 3, scope: !60)
+!63 = !DILocation(line: 63, column: 1, scope: !60)
+!64 = !DILocation(line: 64, column: 3, scope: !60)
+!65 = !DILocation(line: 65, column: 1, scope: !60)
+!70 = !{!"branch_weights", i32 7, i32 3}

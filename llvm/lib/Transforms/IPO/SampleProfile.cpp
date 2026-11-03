@@ -1608,6 +1608,19 @@ GetSortedValueDataFromCallTargets(const SampleRecord::CallTargetMap &M) {
   return R;
 }
 
+// Drop stale `IPVK_VTableTarget` value profile metadata from \p VPtr, if any.
+// `tryGetVTableInstruction` is a heuristic and may return the address-feeding
+// instruction of a non-virtual indirect call (e.g. a `select` or `call` with
+// its own branch weights or value profiles), so only clear `!prof` when it
+// actually carries a vtable type profile.
+static void clearVTableTypeProfMetadata(Instruction *VPtr) {
+  uint64_t TotalCount = 0;
+  if (!getValueProfDataFromInst(*VPtr, IPVK_VTableTarget,
+                                MaxNumVTableAnnotations, TotalCount)
+           .empty())
+    VPtr->setMetadata(LLVMContext::MD_prof, nullptr);
+}
+
 bool SampleProfileLoader::updateVTableTypeProfMetadata(
     CallBase &CB, float Factor, SmallPtrSetImpl<Instruction *> &Visited) {
   Instruction *VPtr = PGOIndirectCallVisitor::tryGetVTableInstruction(&CB);
@@ -1633,7 +1646,7 @@ bool SampleProfileLoader::updateVTableTypeProfMetadata(
       FunctionSamples::getOffset(DIL), DIL->getBaseDiscriminator()));
   if (!TypeCounts || TypeCounts->empty()) {
     if (OverwriteExistingWeights)
-      VPtr->setMetadata(LLVMContext::MD_prof, nullptr);
+      clearVTableTypeProfMetadata(VPtr);
     return true;
   }
 
@@ -1751,12 +1764,21 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
-            // Also drop stale vtable type profiles on the vtable load feeding
-            // this cold virtual call.
-            if (Instruction *VPtr =
-                    PGOIndirectCallVisitor::tryGetVTableInstruction(
-                        &cast<CallBase>(I)))
-              VPtr->setMetadata(LLVMContext::MD_prof, nullptr);
+            // This indirect call is in a cold block (BlockWeights[BB] == 0).
+            // If it looks like a virtual call, also drop stale vtable type
+            // profiles on the vtable load feeding it, but only if the load
+            // itself is cold and has not been annotated from a hot virtual
+            // call it also feeds (e.g., a load shared by several calls after
+            // CSE). clearVTableTypeProfMetadata() guards against the
+            // heuristic picking the base of a non-virtual indirect call.
+            if (EnableVTableProfileUse) {
+              Instruction *VPtr =
+                  PGOIndirectCallVisitor::tryGetVTableInstruction(
+                      &cast<CallBase>(I));
+              if (VPtr && !BlockWeights[VPtr->getParent()] &&
+                  !AnnotatedVTableLoads.contains(VPtr))
+                clearVTableTypeProfMetadata(VPtr);
+            }
           } else {
             setBranchWeights(I, ArrayRef<uint32_t>{uint32_t(0)},
                              /*IsExpected=*/false);
