@@ -33,6 +33,7 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   KernelPR.SIMDWidth = KP.maxSubgroupSize;
   KernelPR.Width = KP.maxSubgroupSize;
   KernelPR.NumKernelArgs = KP.numKernelArgs;
+  KernelPR.LocalMemSize = KP.localMemSize;
 
   if (KP.pNext)
     KernelPR.Width = KPrefGRPSize.preferredMultiple;
@@ -58,6 +59,12 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   CALL_ZE_RET_ERROR(zeKernelCreate, Module, &KernelDesc, &zeKernel);
   if (auto Err = readKernelProperties(Program))
     return Err;
+
+  // Dynamic SLM arguments use the same memory as static SLM.
+  // Dynamic SLM region starts after static block aligned to 1024
+  // bytes, so here we store the aligned number used later
+  // to determine if we exceed the total SLM size.
+  StaticBlockMemSize = alignTo(getProperties().LocalMemSize, 1024); 
 
   return Plugin::success();
 }
