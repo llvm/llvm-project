@@ -769,7 +769,7 @@ public:
   template <typename Itr>
   iterator insertInstructions(iterator At, Itr Begin, Itr End) {
     if (Begin == End)
-    return At;
+      return At;
     adjustNumPseudos(Begin, End, 1);
     auto InsertedAt = Instructions.insert(At, Begin, End);
     return std::next(InsertedAt, std::distance(Begin, End));
