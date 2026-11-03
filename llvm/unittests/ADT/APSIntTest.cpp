@@ -94,6 +94,53 @@ TEST(APSIntTest, tryExtValue) {
             APSInt(APInt::getAllOnes(128), true).tryExtValue().value_or(42));
 }
 
+TEST(APSIntTest, TruncSat) {
+  // Signed to signed.
+  EXPECT_EQ(APSInt::get(127).trunc(8), APSInt::get(127).truncSat(8));
+  EXPECT_EQ(APSInt::get(127).trunc(8), APSInt::get(300).truncSat(8));
+  EXPECT_EQ(APSInt::get(-128).trunc(8), APSInt::get(-200).truncSat(8));
+
+  // Unsigned to unsigned.
+  EXPECT_EQ(APSInt::getUnsigned(255).trunc(8),
+            APSInt::getUnsigned(255).truncSat(8));
+  EXPECT_EQ(APSInt::getUnsigned(255).trunc(8),
+            APSInt::getUnsigned(300).truncSat(8));
+}
+
+TEST(APSIntTest, ExtOrTruncSat) {
+  // Signed to signed.
+  EXPECT_EQ(APSInt::get(127).trunc(8),
+            APSInt::get(127).extOrTruncSat(8, false));
+  EXPECT_EQ(APSInt::get(127).trunc(8),
+            APSInt::get(300).extOrTruncSat(8, false));
+  EXPECT_EQ(APSInt::get(-128).trunc(8),
+            APSInt::get(-200).extOrTruncSat(8, false));
+  EXPECT_EQ(APSInt::get(300).trunc(16),
+            APSInt::get(300).extOrTruncSat(16, false));
+  EXPECT_EQ(APSInt::get(127).trunc(8),
+            APSInt::get(127).extOrTruncSat(8, false));
+
+  // Signed to unsigned.
+  EXPECT_EQ(APSInt::getUnsigned(0).trunc(8),
+            APSInt::get(-1).extOrTruncSat(8, true));
+  EXPECT_EQ(APSInt::getUnsigned(255).trunc(8),
+            APSInt::get(300).extOrTruncSat(8, true));
+  EXPECT_EQ(APSInt::getUnsigned(0).trunc(9),
+            APSInt::get(-1).trunc(8).extOrTruncSat(9, true));
+
+  // Unsigned to signed.
+  EXPECT_EQ(APSInt::get(127).trunc(8),
+            APSInt::getUnsigned(300).extOrTruncSat(8, false));
+  EXPECT_EQ(APSInt::get(200).trunc(9),
+            APSInt::getUnsigned(200).trunc(8).extOrTruncSat(9, false));
+
+  // Unsigned to unsigned.
+  EXPECT_EQ(APSInt::getUnsigned(255).trunc(8),
+            APSInt::getUnsigned(255).extOrTruncSat(8, true));
+  EXPECT_EQ(APSInt::getUnsigned(255).trunc(8),
+            APSInt::getUnsigned(300).extOrTruncSat(8, true));
+}
+
 TEST(APSIntTest, compareValues) {
   auto U = [](uint64_t V) { return APSInt::getUnsigned(V); };
   auto S = [](int64_t V) { return APSInt::get(V); };

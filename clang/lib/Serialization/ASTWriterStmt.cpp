@@ -1455,6 +1455,16 @@ void ASTStmtWriter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
     Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
 }
 
+void ASTStmtWriter::VisitElementwiseSaturatingCastExpr(
+    ElementwiseSaturatingCastExpr *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getBuiltinLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
+  Record.AddTypeSourceInfo(E->getTypeSourceInfo());
+  Record.AddStmt(E->getSrcExpr());
+  Code = serialization::EXPR_ELEMENTWISE_SATURATING_CAST;
+}
+
 void ASTStmtWriter::VisitBlockExpr(BlockExpr *E) {
   VisitExpr(E);
   Record.AddDeclRef(E->getBlockDecl());

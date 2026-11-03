@@ -633,6 +633,8 @@ namespace clang {
     ExpectedStmt VisitVAArgExpr(VAArgExpr *E);
     ExpectedStmt VisitChooseExpr(ChooseExpr *E);
     ExpectedStmt VisitConvertVectorExpr(ConvertVectorExpr *E);
+    ExpectedStmt
+    VisitElementwiseSaturatingCastExpr(ElementwiseSaturatingCastExpr *E);
     ExpectedStmt VisitShuffleVectorExpr(ShuffleVectorExpr *E);
     ExpectedStmt VisitGNUNullExpr(GNUNullExpr *E);
     ExpectedStmt VisitGenericSelectionExpr(GenericSelectionExpr *E);
@@ -7728,6 +7730,22 @@ ExpectedStmt ASTNodeImporter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
       Importer.getToContext(), ToSrcExpr, ToTSI, ToType, E->getValueKind(),
       E->getObjectKind(), ToBuiltinLoc, ToRParenLoc,
       E->getStoredFPFeaturesOrDefault());
+}
+
+ExpectedStmt ASTNodeImporter::VisitElementwiseSaturatingCastExpr(
+    ElementwiseSaturatingCastExpr *E) {
+  Error Err = Error::success();
+  auto *ToSrcExpr = importChecked(Err, E->getSrcExpr());
+  auto ToRParenLoc = importChecked(Err, E->getRParenLoc());
+  auto ToBuiltinLoc = importChecked(Err, E->getBuiltinLoc());
+  auto ToType = importChecked(Err, E->getType());
+  auto *ToTSI = importChecked(Err, E->getTypeSourceInfo());
+  if (Err)
+    return std::move(Err);
+
+  return ElementwiseSaturatingCastExpr::Create(
+      Importer.getToContext(), ToSrcExpr, ToTSI, ToType, E->getValueKind(),
+      E->getObjectKind(), ToBuiltinLoc, ToRParenLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {

@@ -122,6 +122,27 @@ public:
     return APSInt(sextOrTrunc(width), IsUnsigned);
   }
 
+  /// Truncate to \p width with saturation according to this integer's
+  /// signedness.
+  ///
+  /// \param width The destination bit width.
+  APSInt truncSat(uint32_t width) const {
+    if (IsUnsigned)
+      return APSInt(truncUSat(width), IsUnsigned);
+    return APSInt(truncSSat(width), IsUnsigned);
+  }
+
+  /// Extend to \p width when possible, or saturate to the destination's
+  /// representable range when the value does not fit.
+  ///
+  /// \param width The destination bit width.
+  /// \param toUnsigned Whether the destination is unsigned.
+  LLVM_ABI APSInt extOrTruncSat(uint32_t width, bool toUnsigned) const;
+
+  APSInt extOrTruncSat(uint32_t width) const {
+    return extOrTruncSat(width, IsUnsigned);
+  }
+
   const APSInt &operator%=(const APSInt &RHS) {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
     if (IsUnsigned)
