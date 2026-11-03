@@ -2264,7 +2264,7 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
 
   const uint64_t halfBitWidth = HalfVT.getSizeInBits();
 
-  for (unsigned i = 0; i < halfBitWidth; ++i) {
+  for (uint64_t i = 0; i < halfBitWidth; ++i) {
     const uint64_t bitPos = halfBitWidth - i - 1;
     SDValue POS = DAG.getConstant(bitPos, DL, HalfVT);
     // Get value of high bit
