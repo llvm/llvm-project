@@ -842,7 +842,7 @@ auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
   InProgressIt->second.Id = Id;
 
   EmitResult<PreparedScope> P = emitDebugScope(S);
-  assert((!HasRelaxedExtInst || P.Status != EmitStatus::InProgres) &&
+  assert((!HasRelaxedExtInst || P.Status != EmitStatus::InProgress) &&
          "InProgress is only returned when forward references are unsupported");
   if (!P) {
     // Emission during recursion updates the container. Look the scope up again.
