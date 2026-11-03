@@ -87,7 +87,7 @@ add_fp_unittest(
   sinbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sinbf16_test.cpp
   DEPENDS
