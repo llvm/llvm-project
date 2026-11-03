@@ -4501,9 +4501,13 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
   case Instruction::Select: {
     // umax(X, Y) == null -> (X == null) && (Y == null).
     if (I.getPredicate() != ICmpInst::ICMP_EQ ||
-        !match(RHSC, m_Isa<ConstantPointerNull>()) ||
-        !DL.getNullPtrValue(RHSC->getType()->getPointerAddressSpace()).isZero())
+        !match(RHSC, m_Isa<ConstantPointerNull>()))
       break;
+
+    unsigned AS = RHSC->getType()->getPointerAddressSpace();
+    if (!DL.getNullPtrValue(AS).isZero())
+      break;
+
     auto *SI = cast<SelectInst>(LHSI);
     // Both the select and its comparison must die to avoid adding instructions.
     if (!SI->hasOneUse() || !SI->getCondition()->hasOneUse())
