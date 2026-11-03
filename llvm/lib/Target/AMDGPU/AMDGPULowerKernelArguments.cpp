@@ -82,8 +82,8 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     return;
 
   // Add alias scopes for each noalias argument. The scopes are disjoint, since
-  // an access based on one noalias argument can't reach memory an access based
-  // on another one reaches.
+  // an access based on one noalias argument can't modify memory an access based
+  // on another one reads.
   MDBuilder MDB(F.getContext());
   DenseMap<const Argument *, MDNode *> NewScopes;
   MDNode *NewDomain =
