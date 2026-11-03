@@ -28,6 +28,13 @@ class DestMode<bit val> {
 def DstReg      : DestMode<0>;   // r
 def DstMem      : DestMode<1>;   // m
 
+class ALKind<bit val> {
+  bit Value = val;
+}
+
+def ALAddr : ALKind<0>;
+def ALWord : ALKind<1>;
+
 // Generic MSP430 Format
 class MSP430Inst<dag outs, dag ins, int size, string asmstr> : Instruction {
   field bits<48> Inst;
@@ -431,6 +438,94 @@ class CJForm<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{12-10} = cond;
   let Inst{9-0} = dst;
 }
+
+// RRCM, RRAM, RRUM and RLAM. Single-word MSP430X instructions with their own
+// layout in the Format II opcode space, without an extension word. TI calls
+// them Format II exceptions.
+class IIExtExcRotForm<bits<2> opcode, ALKind al,
+                      dag outs, dag ins, string asmstr, list<dag> pattern>
+  : MSP430Inst<outs, ins, 2, asmstr> {
+  let Pattern = pattern;
+  let DecoderNamespace = "MSP430X";
+
+  bits<4> rd;
+  bits<2> cnt;
+
+  let Inst{15-12} = 0b0000;
+  let Inst{11-10} = cnt;
+  let Inst{9-8}   = opcode;
+  let Inst{7-5}   = 0b010;
+  let Inst{4}     = al.Value;
+  let Inst{3-0}   = rd;
+}
+
+class IIExtExcRotForm16<bits<2> opcode,
+                        dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IIExtExcRotForm<opcode, ALWord, outs, ins, asmstr, pattern>;
+
+// MSP430X extended instructions in register mode.
+//
+// The extension word precedes the instruction word in memory, so it occupies
+// Inst{15-0} and the instruction word is in Inst{31-16}.
+//
+// FIXME: Add the non-register mode, which is needed for 20-bit memory
+// operands.
+class ExtRegForm<bit zc, bit rpt, ALKind al,
+                 dag outs, dag ins, string asmstr, list<dag> pattern>
+  : MSP430Inst<outs, ins, 4, asmstr> {
+  let Pattern = pattern;
+  let DecoderNamespace = "MSP430X";
+
+  bits<4> cnt = 0;
+
+  let Inst{15-9} = 0b0001100;
+  let Inst{8}    = zc;
+  let Inst{7}    = rpt;
+  let Inst{6}    = al.Value;
+  let Inst{5-4}  = 0b00;
+  let Inst{3-0}  = cnt;
+}
+
+// Same layout as IIForm, moved behind the extension word.
+class IIExtRegForm<bits<3> opcode, bit bw, bit zc, bit rpt,
+                   dag outs, dag ins, string asmstr, list<dag> pattern>
+  : ExtRegForm<zc, rpt, ALWord, outs, ins, asmstr, pattern> {
+  bits<4> rs;
+
+  let Inst{31-26} = 0b000100;
+  let Inst{25-23} = opcode;
+  let Inst{22}    = bw;
+  let Inst{21-20} = SrcReg.Value;
+  let Inst{19-16} = rs;
+}
+
+// Same layout as IForm, moved behind the extension word.
+class IExtRegForm<bits<4> opcode, bit bw, bit zc, bit rpt,
+                  dag outs, dag ins, string asmstr, list<dag> pattern>
+  : ExtRegForm<zc, rpt, ALWord, outs, ins, asmstr, pattern> {
+  bits<4> rs;
+  bits<4> rd;
+
+  let Inst{31-28} = opcode;
+  let Inst{27-24} = rs;
+  let Inst{23}    = DstReg.Value;
+  let Inst{22}    = bw;
+  let Inst{21-20} = SrcReg.Value;
+  let Inst{19-16} = rd;
+}
+
+class II8rExtended<bits<3> opcode, bit zc, bit rpt,
+                   dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IIExtRegForm<opcode, 1, zc, rpt, outs, ins, asmstr, pattern>;
+class II16rExtended<bits<3> opcode, bit zc, bit rpt,
+                    dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IIExtRegForm<opcode, 0, zc, rpt, outs, ins, asmstr, pattern>;
+class I8rExtended<bits<4> opcode, bit zc, bit rpt,
+                  dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IExtRegForm<opcode, 1, zc, rpt, outs, ins, asmstr, pattern>;
+class I16rExtended<bits<4> opcode, bit zc, bit rpt,
+                   dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IExtRegForm<opcode, 0, zc, rpt, outs, ins, asmstr, pattern>;
 
 // Pseudo instructions
 class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
