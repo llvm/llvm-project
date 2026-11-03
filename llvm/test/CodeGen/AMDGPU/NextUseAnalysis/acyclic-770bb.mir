@@ -72901,7 +72901,7 @@ body:             |
 # CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
-# CHECK-GX-JSON-NEXT:          "instr": "SI_RETURN_TO_EPILOG killed $sgpr0",
+# CHECK-GX-JSON-NEXT:          "instr": "SI_RETURN_TO_EPILOG $sgpr0",
 # CHECK-GX-JSON-NEXT:          "id": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
@@ -142587,7 +142587,7 @@ body:             |
 # CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
-# CHECK-CP-JSON-NEXT:          "instr": "SI_RETURN_TO_EPILOG killed $sgpr0",
+# CHECK-CP-JSON-NEXT:          "instr": "SI_RETURN_TO_EPILOG $sgpr0",
 # CHECK-CP-JSON-NEXT:          "id": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},

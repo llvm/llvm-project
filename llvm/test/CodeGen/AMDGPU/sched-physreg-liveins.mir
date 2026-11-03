@@ -32,8 +32,8 @@
 # Region 1 (top of block, processed second):
 # $sgpr10 is live-through (MBB live-in, not used until region 0).
 # Physical live-in tracking captures it in per-region pressure.
-# GCN: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 5
-# GCN: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 5
+# GCN: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 3
+# GCN: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 3
 
 # GCN-NOPHYS-LABEL: physreg_livein_across_regions
 #
@@ -42,8 +42,8 @@
 # GCN-NOPHYS: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 2
 #
 # Region 1: No physical register pressure.
-# GCN-NOPHYS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 4
-# GCN-NOPHYS: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 4
+# GCN-NOPHYS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 2
+# GCN-NOPHYS: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 2
 
 ---
 name:  physreg_livein_across_regions

@@ -5462,27 +5462,28 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32, ptr addr
 ; SDAG-NEXT:    s_mov_b32 s39, 0xe00000
 ; SDAG-NEXT:    s_add_u32 s36, s36, s5
 ; SDAG-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x2c
-; SDAG-NEXT:    v_lshlrev_b32_e32 v26, 7, v0
+; SDAG-NEXT:    v_lshlrev_b32_e32 v24, 7, v0
 ; SDAG-NEXT:    v_mul_hi_i32_i24_e32 v3, 0xffffff84, v0
 ; SDAG-NEXT:    v_mul_i32_i24_e32 v0, 0xffffff84, v0
 ; SDAG-NEXT:    s_addc_u32 s37, s37, 0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v1, s5
-; SDAG-NEXT:    v_add_co_u32_e32 v2, vcc, s4, v26
+; SDAG-NEXT:    v_add_co_u32_e32 v2, vcc, s4, v24
 ; SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; SDAG-NEXT:    v_add_co_u32_e32 v24, vcc, v2, v0
-; SDAG-NEXT:    v_addc_co_u32_e32 v25, vcc, v1, v3, vcc
-; SDAG-NEXT:    global_load_dword v32, v[24:25], off
-; SDAG-NEXT:    global_load_dwordx4 v[28:31], v26, s[4:5] offset:112
-; SDAG-NEXT:    global_load_dwordx4 v[0:3], v26, s[4:5]
-; SDAG-NEXT:    global_load_dwordx4 v[4:7], v26, s[4:5] offset:16
-; SDAG-NEXT:    global_load_dwordx4 v[8:11], v26, s[4:5] offset:32
-; SDAG-NEXT:    global_load_dwordx4 v[12:15], v26, s[4:5] offset:48
-; SDAG-NEXT:    global_load_dwordx4 v[16:19], v26, s[4:5] offset:64
-; SDAG-NEXT:    global_load_dwordx4 v[20:23], v26, s[4:5] offset:80
-; SDAG-NEXT:    ; kill: killed $vgpr24 killed $vgpr25
+; SDAG-NEXT:    v_add_co_u32_e32 v20, vcc, v2, v0
+; SDAG-NEXT:    v_addc_co_u32_e32 v21, vcc, v1, v3, vcc
+; SDAG-NEXT:    global_load_dword v32, v[20:21], off
+; SDAG-NEXT:    global_load_dwordx4 v[28:31], v24, s[4:5] offset:112
+; SDAG-NEXT:    global_load_dwordx4 v[0:3], v24, s[4:5]
+; SDAG-NEXT:    global_load_dwordx4 v[4:7], v24, s[4:5] offset:16
+; SDAG-NEXT:    global_load_dwordx4 v[8:11], v24, s[4:5] offset:32
+; SDAG-NEXT:    global_load_dwordx4 v[12:15], v24, s[4:5] offset:48
+; SDAG-NEXT:    global_load_dwordx4 v[16:19], v24, s[4:5] offset:64
+; SDAG-NEXT:    ; kill: killed $vgpr20 killed $vgpr21
 ; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    global_load_dwordx4 v[24:27], v26, s[4:5] offset:96
+; SDAG-NEXT:    global_load_dwordx4 v[20:23], v24, s[4:5] offset:80
+; SDAG-NEXT:    s_nop 0
+; SDAG-NEXT:    global_load_dwordx4 v[24:27], v24, s[4:5] offset:96
 ; SDAG-NEXT:    s_mov_b32 s32, 0
 ; SDAG-NEXT:    s_getpc_b64 s[4:5]
 ; SDAG-NEXT:    s_add_u32 s4, s4, external_void_func_v32i32_i32@rel32@lo+4
@@ -5610,8 +5611,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32, ptr addr
 ; GISEL-NEXT:    global_load_dwordx4 v[12:15], v3, s[0:1] offset:48
 ; GISEL-NEXT:    global_load_dwordx4 v[16:19], v3, s[0:1] offset:64
 ; GISEL-NEXT:    global_load_dwordx4 v[20:23], v3, s[0:1] offset:80
-; GISEL-NEXT:    global_load_dwordx4 v[24:27], v3, s[0:1] offset:96
 ; GISEL-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GISEL-NEXT:    global_load_dwordx4 v[24:27], v3, s[0:1] offset:96
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    global_load_dwordx4 v[0:3], v3, s[0:1]
 ; GISEL-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -6925,11 +6926,11 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; GISEL-NEXT:    v_mov_b32_e32 v14, s50
 ; GISEL-NEXT:    v_mov_b32_e32 v15, s51
 ; GISEL-NEXT:    v_mov_b32_e32 v16, s8
+; GISEL-NEXT:    s_mov_b64 s[0:1], s[52:53]
+; GISEL-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GISEL-NEXT:    v_mov_b32_e32 v17, s9
 ; GISEL-NEXT:    v_mov_b32_e32 v18, s10
 ; GISEL-NEXT:    v_mov_b32_e32 v19, s11
-; GISEL-NEXT:    s_mov_b64 s[0:1], s[52:53]
-; GISEL-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GISEL-NEXT:    v_mov_b32_e32 v20, s12
 ; GISEL-NEXT:    v_mov_b32_e32 v21, s13
 ; GISEL-NEXT:    v_mov_b32_e32 v22, s14

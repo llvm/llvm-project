@@ -10,16 +10,16 @@
 ; Test that GCN trackers correctly track physical register pressure from inline asm
 
 ; GCN-DEBUG-LABEL: test_single_physreg
-; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
 
 ; GENERIC-DEBUG-LABEL: test_single_physreg
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_single_physreg
-; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
-; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 4
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 4
 
 define amdgpu_kernel void @test_single_physreg(ptr addrspace(1) %out) {
 ; GCN-LABEL: test_single_physreg:
@@ -69,23 +69,23 @@ entry:
 ; Test multiple physical registers
 
 ; GCN-DEBUG-LABEL: test_multiple_physregs
-; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 6
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GENERIC-DEBUG-LABEL: test_multiple_physregs
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_multiple_physregs
-; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
-; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 4
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 4
 
 define amdgpu_kernel void @test_multiple_physregs(ptr addrspace(1) %out) {
 ; GCN-LABEL: test_multiple_physregs:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    s_mov_b32 s10, 0; s_mov_b32 s11, 1
+; GCN-NEXT:    s_mov_b32 s10, 0 ; s_mov_b32 s11, 1
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_add_i32 s4, s10, s11
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -99,7 +99,7 @@ define amdgpu_kernel void @test_multiple_physregs(ptr addrspace(1) %out) {
 ; NO-GCN:       ; %bb.0: ; %entry
 ; NO-GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; NO-GCN-NEXT:    ;;#ASMSTART
-; NO-GCN-NEXT:    s_mov_b32 s10, 0; s_mov_b32 s11, 1
+; NO-GCN-NEXT:    s_mov_b32 s10, 0 ; s_mov_b32 s11, 1
 ; NO-GCN-NEXT:    ;;#ASMEND
 ; NO-GCN-NEXT:    s_add_i32 s4, s10, s11
 ; NO-GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -113,7 +113,7 @@ define amdgpu_kernel void @test_multiple_physregs(ptr addrspace(1) %out) {
 ; GCN-NOPHYS:       ; %bb.0: ; %entry
 ; GCN-NOPHYS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GCN-NOPHYS-NEXT:    ;;#ASMSTART
-; GCN-NOPHYS-NEXT:    s_mov_b32 s10, 0; s_mov_b32 s11, 1
+; GCN-NOPHYS-NEXT:    s_mov_b32 s10, 0 ; s_mov_b32 s11, 1
 ; GCN-NOPHYS-NEXT:    ;;#ASMEND
 ; GCN-NOPHYS-NEXT:    s_add_i32 s4, s10, s11
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s3, 0xf000
@@ -134,16 +134,16 @@ entry:
 ; Test physical register with virtual registers
 
 ; GCN-DEBUG-LABEL: test_physreg_with_vreg
-; GCN-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 10, LVGPR WT: 0, LSGPR WT: 12
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 12
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 12
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 12
 
 ; GENERIC-DEBUG-LABEL: test_physreg_with_vreg
-; GENERIC-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 10, LVGPR WT: 0, LSGPR WT: 12
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 12
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 12
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 12
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_physreg_with_vreg
-; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 12
-; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 12
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 12
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 12
 
 define amdgpu_kernel void @test_physreg_with_vreg(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_physreg_with_vreg:
@@ -213,16 +213,16 @@ entry:
 ; Test early-clobber constraint
 
 ; GCN-DEBUG-LABEL: test_early_clobber
-; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
 
 ; GENERIC-DEBUG-LABEL: test_early_clobber
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_early_clobber
-; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
-; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 4
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 4
 
 define amdgpu_kernel void @test_early_clobber(ptr addrspace(1) %out) {
 ; GCN-LABEL: test_early_clobber:
@@ -273,12 +273,12 @@ entry:
 ; The input s12 and early-clobber output s[10:11] have distinct live ranges.
 
 ; GCN-DEBUG-LABEL: test_early_clobber_tuple
-; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 9
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 7
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 7
 
 ; GENERIC-DEBUG-LABEL: test_early_clobber_tuple
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 9
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 7
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 7
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_early_clobber_tuple
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
@@ -294,7 +294,7 @@ define amdgpu_kernel void @test_early_clobber_tuple(ptr addrspace(1) %out) {
 ; GCN-NEXT:    s_mov_b32 s12, 42
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    s_mov_b64 s[10:11], s12
+; GCN-NEXT:    ; def s[10:11], use s12
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    v_mov_b32_e32 v0, s10
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -310,7 +310,7 @@ define amdgpu_kernel void @test_early_clobber_tuple(ptr addrspace(1) %out) {
 ; NO-GCN-NEXT:    s_mov_b32 s12, 42
 ; NO-GCN-NEXT:    ;;#ASMEND
 ; NO-GCN-NEXT:    ;;#ASMSTART
-; NO-GCN-NEXT:    s_mov_b64 s[10:11], s12
+; NO-GCN-NEXT:    ; def s[10:11], use s12
 ; NO-GCN-NEXT:    ;;#ASMEND
 ; NO-GCN-NEXT:    v_mov_b32_e32 v0, s10
 ; NO-GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -326,7 +326,7 @@ define amdgpu_kernel void @test_early_clobber_tuple(ptr addrspace(1) %out) {
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s12, 42
 ; GCN-NOPHYS-NEXT:    ;;#ASMEND
 ; GCN-NOPHYS-NEXT:    ;;#ASMSTART
-; GCN-NOPHYS-NEXT:    s_mov_b64 s[10:11], s12
+; GCN-NOPHYS-NEXT:    ; def s[10:11], use s12
 ; GCN-NOPHYS-NEXT:    ;;#ASMEND
 ; GCN-NOPHYS-NEXT:    v_mov_b32_e32 v0, s10
 ; GCN-NOPHYS-NEXT:    s_waitcnt lgkmcnt(0)
@@ -334,7 +334,7 @@ define amdgpu_kernel void @test_early_clobber_tuple(ptr addrspace(1) %out) {
 ; GCN-NOPHYS-NEXT:    s_endpgm
 entry:
   %in = call i32 asm sideeffect "s_mov_b32 $0, 42", "={s12}"()
-  %val = call i64 asm sideeffect "s_mov_b64 $0, $1", "=&{s[10:11]},{s12}"(i32 %in)
+  %val = call i64 asm sideeffect "; def $0, use $1", "=&{s[10:11]},{s12}"(i32 %in)
   %lo = trunc i64 %val to i32
   store i32 %lo, ptr addrspace(1) %out
   ret void
@@ -343,16 +343,16 @@ entry:
 ; Test physical register input
 
 ; GCN-DEBUG-LABEL: test_physreg_input
-; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
 
 ; GENERIC-DEBUG-LABEL: test_physreg_input
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 5
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_physreg_input
-; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
-; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 4
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 4
 
 define amdgpu_kernel void @test_physreg_input(ptr addrspace(1) %out) {
 ; GCN-LABEL: test_physreg_input:
@@ -361,7 +361,7 @@ define amdgpu_kernel void @test_physreg_input(ptr addrspace(1) %out) {
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    s_mov_b32 s10, 5; s_add_u32 s11, s10, 1
+; GCN-NEXT:    s_mov_b32 s10, 5 ; s_add_u32 s11, s10, 1
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    v_mov_b32_e32 v0, s11
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -374,7 +374,7 @@ define amdgpu_kernel void @test_physreg_input(ptr addrspace(1) %out) {
 ; NO-GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; NO-GCN-NEXT:    s_mov_b32 s2, -1
 ; NO-GCN-NEXT:    ;;#ASMSTART
-; NO-GCN-NEXT:    s_mov_b32 s10, 5; s_add_u32 s11, s10, 1
+; NO-GCN-NEXT:    s_mov_b32 s10, 5 ; s_add_u32 s11, s10, 1
 ; NO-GCN-NEXT:    ;;#ASMEND
 ; NO-GCN-NEXT:    v_mov_b32_e32 v0, s11
 ; NO-GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -387,7 +387,7 @@ define amdgpu_kernel void @test_physreg_input(ptr addrspace(1) %out) {
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s2, -1
 ; GCN-NOPHYS-NEXT:    ;;#ASMSTART
-; GCN-NOPHYS-NEXT:    s_mov_b32 s10, 5; s_add_u32 s11, s10, 1
+; GCN-NOPHYS-NEXT:    s_mov_b32 s10, 5 ; s_add_u32 s11, s10, 1
 ; GCN-NOPHYS-NEXT:    ;;#ASMEND
 ; GCN-NOPHYS-NEXT:    v_mov_b32_e32 v0, s11
 ; GCN-NOPHYS-NEXT:    s_waitcnt lgkmcnt(0)
@@ -403,12 +403,12 @@ entry:
 ; GCN tracker counts the 2 SGPRs.
 
 ; GCN-DEBUG-LABEL: test_tuple_physreg
-; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GENERIC-DEBUG-LABEL: test_tuple_physreg
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_tuple_physreg
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
@@ -464,12 +464,12 @@ entry:
 ; GCN tracker counts the 4 SGPRs.
 
 ; GCN-DEBUG-LABEL: test_tuple128_physreg
-; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 12
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 12
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
 
 ; GENERIC-DEBUG-LABEL: test_tuple128_physreg
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 12
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 12
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_tuple128_physreg
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
@@ -482,7 +482,7 @@ define amdgpu_kernel void @test_tuple128_physreg(ptr addrspace(1) %out) {
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    s_mov_b64 s[8:11], 0; s_mov_b64 s[8:11]+2, 0
+; GCN-NEXT:    ; def s[8:11]
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -495,7 +495,7 @@ define amdgpu_kernel void @test_tuple128_physreg(ptr addrspace(1) %out) {
 ; NO-GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; NO-GCN-NEXT:    s_mov_b32 s2, -1
 ; NO-GCN-NEXT:    ;;#ASMSTART
-; NO-GCN-NEXT:    s_mov_b64 s[8:11], 0; s_mov_b64 s[8:11]+2, 0
+; NO-GCN-NEXT:    ; def s[8:11]
 ; NO-GCN-NEXT:    ;;#ASMEND
 ; NO-GCN-NEXT:    v_mov_b32_e32 v0, s8
 ; NO-GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -508,14 +508,14 @@ define amdgpu_kernel void @test_tuple128_physreg(ptr addrspace(1) %out) {
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s2, -1
 ; GCN-NOPHYS-NEXT:    ;;#ASMSTART
-; GCN-NOPHYS-NEXT:    s_mov_b64 s[8:11], 0; s_mov_b64 s[8:11]+2, 0
+; GCN-NOPHYS-NEXT:    ; def s[8:11]
 ; GCN-NOPHYS-NEXT:    ;;#ASMEND
 ; GCN-NOPHYS-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-NOPHYS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NOPHYS-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NOPHYS-NEXT:    s_endpgm
 entry:
-  %val = call i128 asm sideeffect "s_mov_b64 $0, 0; s_mov_b64 $0+2, 0", "={s[8:11]}"()
+  %val = call i128 asm sideeffect "; def $0", "={s[8:11]}"()
   %lo = trunc i128 %val to i32
   store i32 %lo, ptr addrspace(1) %out
   ret void
@@ -524,16 +524,16 @@ entry:
 ; Test virtual and physical register overlap
 
 ; GCN-DEBUG-LABEL: test_vreg_and_physreg_live_range_overlap
-; GCN-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 16, LVGPR WT: 0, LSGPR WT: 16
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 13, LVGPR WT: 0, LSGPR WT: 16
+; GCN-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
 
 ; GENERIC-DEBUG-LABEL: test_vreg_and_physreg_live_range_overlap
-; GENERIC-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 16, LVGPR WT: 0, LSGPR WT: 16
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 13, LVGPR WT: 0, LSGPR WT: 16
+; GENERIC-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_vreg_and_physreg_live_range_overlap
-; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
-; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
 
 define amdgpu_kernel void @test_vreg_and_physreg_live_range_overlap(ptr addrspace(1) %in1, ptr addrspace(1) %in2, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_vreg_and_physreg_live_range_overlap:
@@ -543,7 +543,7 @@ define amdgpu_kernel void @test_vreg_and_physreg_live_range_overlap(ptr addrspac
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    s_mov_b32 s10, 0; s_mov_b32 s11, 1
+; GCN-NEXT:    s_mov_b32 s10, 0 ; s_mov_b32 s11, 1
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, s0
@@ -570,7 +570,7 @@ define amdgpu_kernel void @test_vreg_and_physreg_live_range_overlap(ptr addrspac
 ; NO-GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; NO-GCN-NEXT:    s_mov_b32 s6, -1
 ; NO-GCN-NEXT:    ;;#ASMSTART
-; NO-GCN-NEXT:    s_mov_b32 s10, 0; s_mov_b32 s11, 1
+; NO-GCN-NEXT:    s_mov_b32 s10, 0 ; s_mov_b32 s11, 1
 ; NO-GCN-NEXT:    ;;#ASMEND
 ; NO-GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; NO-GCN-NEXT:    s_mov_b32 s4, s0
@@ -597,7 +597,7 @@ define amdgpu_kernel void @test_vreg_and_physreg_live_range_overlap(ptr addrspac
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s6, -1
 ; GCN-NOPHYS-NEXT:    ;;#ASMSTART
-; GCN-NOPHYS-NEXT:    s_mov_b32 s10, 0; s_mov_b32 s11, 1
+; GCN-NOPHYS-NEXT:    s_mov_b32 s10, 0 ; s_mov_b32 s11, 1
 ; GCN-NOPHYS-NEXT:    ;;#ASMEND
 ; GCN-NOPHYS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NOPHYS-NEXT:    s_mov_b32 s4, s0

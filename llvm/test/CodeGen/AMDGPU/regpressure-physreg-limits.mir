@@ -5,8 +5,9 @@
 
 # Tests for physical register pressure tracking edge cases:
 # 1. Non-allocatable registers (e.g. $scc) should not affect pressure.
-# 2. Aliasing: a tuple def ($sgpr10_sgpr11) does not kill a live sub-register
-#    ($sgpr11) tracked under a different name, leading to over-counted pressure.
+# 2. Aliasing: a tuple def ($sgpr10_sgpr11) kills a live sub-register ($sgpr11)
+#    tracked under a different name, so pressure is not over-counted.
+# 3. Live-out seeding of physical registers defined in a block.
 
 # Non-allocatable physical register should not change pressure.
 ---
@@ -77,10 +78,11 @@ body:             |
   ; RPU:   SGPR  VGPR
   ;
   ; The def of $sgpr10_sgpr11 correctly kills $sgpr11's unit via
-  ; unit-level tracking, reducing SGPR pressure from 3 to 2.
+  ; unit-level tracking, reducing SGPR pressure from 3 to 2. At the def
+  ; itself, both units are counted.
   ;
   ; RPU:   2     1
-  ; RPU:   3     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
+  ; RPU:   4     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
   ; RPU:   3     1
   ; RPU:   3     1      %3:sreg_32 = COPY $sgpr11
   ;
@@ -102,16 +104,14 @@ body:             |
   ;
   ; Initial pressure includes $sgpr8_sgpr9 live-in (2 SGPR units).
   ; Downward tracker: the INLINEASM def adds $sgpr10_sgpr11 (2 units =
-  ; 2 SGPRs). At the COPY use of $sgpr11, the corresponding reg-unit
-  ; is not found in the cached live ranges, so it conservatively keeps
-  ; the unit live. The virtual register def leads to the increase in
-  ; pressure from 4 to 5.
+  ; 2 SGPRs), and the dead $sgpr10 unit is dropped after the def. At the
+  ; COPY, the $sgpr11 unit dies, so pressure matches the upward tracker.
   ;
   ; RPD:   2     0
   ; RPD:   2     1
   ; RPD:   4     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
-  ; RPD:   4     1
-  ; RPD:   5     1      %3:sreg_32 = COPY $sgpr11
+  ; RPD:   3     1
+  ; RPD:   3     1      %3:sreg_32 = COPY $sgpr11
   ;
   ; RPD-NOPHYS-LABEL: name: aliased_physreg_tuple_def_subreg_use
   ; RPD-NOPHYS: bb.0:
@@ -196,9 +196,9 @@ body:             |
   ; INLINEASM adds $sgpr10 (1 unit), bringing pressure to 3.
   ;
   ; RPD:   2     0
-  ; RPD:   4     0      %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
+  ; RPD:   2     0      %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
   ; RPD:   2     0
-  ; RPD:   4     0      %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM
+  ; RPD:   2     0      %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM
   ; RPD:   2     0
   ; RPD:   3     0      INLINEASM &"s_mov_b32 $0, 0"{{.*}} implicit-def $sgpr10
   ; RPD:   3     0
@@ -214,7 +214,7 @@ body:             |
   ; RPD-NOPHYS:   0     0
   ; RPD-NOPHYS:   2     0      %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
   ; RPD-NOPHYS:   2     0
-  ; RPD-NOPHYS:   4     0      %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM
+  ; RPD-NOPHYS:   2     0      %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM
   ; RPD-NOPHYS:   2     0
   ; RPD-NOPHYS:   2     0      INLINEASM &"s_mov_b32 $0, 0"{{.*}} implicit-def $sgpr10
   ; RPD-NOPHYS:   2     0

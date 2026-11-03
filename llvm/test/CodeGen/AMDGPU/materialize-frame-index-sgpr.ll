@@ -669,7 +669,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX8-GCNTRACKERS-NEXT:    buffer_store_dword v0, off, s[0:3], s32
 ; GFX8-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, 0x4040
 ; GFX8-GCNTRACKERS-NEXT:    v_mad_u32_u24 v0, v0, 64, s32
-; GFX8-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX8-GCNTRACKERS-NEXT:    v_lshrrev_b32_e32 v0, 6, v0
 ; GFX8-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v0
 ; GFX8-GCNTRACKERS-NEXT:    buffer_load_dword v0, off, s[0:3], s32
@@ -736,7 +735,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX900-GCNTRACKERS-NEXT:    buffer_store_dword v0, off, s[0:3], s32
 ; GFX900-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
-; GFX900-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX900-GCNTRACKERS-NEXT:    v_add_u32_e32 v0, 0x4040, v0
 ; GFX900-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v0
 ; GFX900-GCNTRACKERS-NEXT:    buffer_load_dword v0, off, s[0:3], s32
@@ -803,7 +801,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX942-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX942-GCNTRACKERS-NEXT:    s_addc_u32 s59, s32, 0x4040
-; GFX942-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX942-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
 ; GFX942-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
 ; GFX942-GCNTRACKERS-NEXT:    s_mov_b32 s54, s59
@@ -869,7 +866,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX10_1-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
 ; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX10_1-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v24, 5, s32
-; GFX10_1-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX10_1-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v24, 0x4040, v24
 ; GFX10_1-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v24
 ; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
@@ -934,7 +930,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX10_3-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
 ; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX10_3-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v24, 5, s32
-; GFX10_3-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX10_3-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v24, 0x4040, v24
 ; GFX10_3-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v24
 ; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
@@ -999,7 +994,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX11-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
 ; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX11-GCNTRACKERS-NEXT:    s_addc_u32 s59, s32, 0x4040
-; GFX11-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX11-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
 ; GFX11-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
 ; GFX11-GCNTRACKERS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1068,7 +1062,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX12-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
 ; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX12-GCNTRACKERS-NEXT:    s_add_co_ci_u32 s59, s32, 0x4000
-; GFX12-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
 ; GFX12-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
@@ -1702,7 +1695,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX8-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX8-GCNTRACKERS-NEXT:    v_mad_u32_u24 v22, 16, 64, s32
-; GFX8-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX8-GCNTRACKERS-NEXT:    v_lshrrev_b32_e32 v22, 6, v22
 ; GFX8-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
 ; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
@@ -1761,7 +1753,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX900-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX900-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v22, 6, s32
-; GFX900-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX900-GCNTRACKERS-NEXT:    v_add_u32_e32 v22, 16, v22
 ; GFX900-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
 ; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
@@ -1821,7 +1812,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX942-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX942-GCNTRACKERS-NEXT:    s_addc_u32 s59, s32, 16
-; GFX942-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX942-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
 ; GFX942-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
 ; GFX942-GCNTRACKERS-NEXT:    s_mov_b32 s54, s59
@@ -1881,7 +1871,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX10_1-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX10_1-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v22, 5, s32
-; GFX10_1-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX10_1-GCNTRACKERS-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX10_1-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v22, 16, v22
 ; GFX10_1-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
@@ -1941,7 +1930,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX10_3-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX10_3-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v22, 5, s32
-; GFX10_3-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX10_3-GCNTRACKERS-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX10_3-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v22, 16, v22
 ; GFX10_3-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
@@ -2001,7 +1989,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX11-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX11-GCNTRACKERS-NEXT:    s_addc_u32 s59, s32, 16
-; GFX11-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX11-GCNTRACKERS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
 ; GFX11-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
@@ -2064,7 +2051,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX12-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX12-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX12-GCNTRACKERS-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 s54, s32
 ; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
@@ -2692,20 +2678,22 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 14
 ; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 15
 ; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 16
-; GFX7-GCNTRACKERS-NEXT:    s_lshr_b32 s5, s32, 6
 ; GFX7-GCNTRACKERS-NEXT:    v_lshr_b32_e64 v0, s32, 6
-; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s4, s5, 0x4240
-; GFX7-GCNTRACKERS-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
 ; GFX7-GCNTRACKERS-NEXT:    v_add_i32_e32 v0, vcc, 64, v0
-; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s4, 0
-; GFX7-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
 ; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX7-GCNTRACKERS-NEXT:    ; use alloca0 v0
 ; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
 ; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX7-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 0
+; GFX7-GCNTRACKERS-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v22, vcc_lo, 0
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v22, vcc_hi, 1
+; GFX7-GCNTRACKERS-NEXT:    s_lshr_b32 vcc_lo, s32, 6
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s54, vcc_lo, 0x4240
+; GFX7-GCNTRACKERS-NEXT:    s_and_b64 vcc, 0, exec
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 vcc_lo, v22, 0
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 vcc_hi, v22, 1
 ; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX7-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
 ; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
@@ -2776,7 +2764,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX8-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX8-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 0
 ; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX8-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
@@ -2846,7 +2833,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX900-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX900-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 0
 ; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX900-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
@@ -2910,10 +2896,8 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX942-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s58, s32, 0x4240
-; GFX942-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s54, s32, 0x4240
 ; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[60:61], 0, exec
-; GFX942-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX942-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
@@ -2977,7 +2961,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX10_1-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX10_1-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
 ; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX10_1-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
@@ -3042,7 +3025,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX10_3-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX10_3-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
 ; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX10_3-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
@@ -3105,7 +3087,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX11-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX11-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
 ; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX11-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
@@ -3171,7 +3152,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX12-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
-; GFX12-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
 ; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
 ; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART

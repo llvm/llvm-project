@@ -26,13 +26,14 @@
 # Region 0 (bottom of bb.0, processed first by scheduler):
 # $sgpr10 is live-through here (defined above, live-out to bb.1).
 # With phys tracking it contributes +1 SGPR compared to NOPHYS.
-# GCN: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5
-# GCN: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5
+# GCN: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 3
+# GCN: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 3
 #
 # Region 1 (top of bb.0, processed second):
-# $sgpr4_sgpr5 live-in (+2) and $sgpr10 def (+1) add physical pressure.
-# GCN: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 4
-# GCN: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 4
+# The $sgpr10 def (+1) adds physical pressure. The $sgpr4_sgpr5 live-in dies
+# at the COPY that defines %0, so it does not raise the peak.
+# GCN: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 3
+# GCN: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 3
 #
 # bb.1: $sgpr10 is a physical live-in here.
 # GCN: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 1
@@ -41,8 +42,8 @@
 # GCN-NOPHYS-LABEL: physreg_liveout_across_regions
 #
 # Region 0: $sgpr10 live-out not tracked, only virtual regs contribute.
-# GCN-NOPHYS: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 4
-# GCN-NOPHYS: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 4
+# GCN-NOPHYS: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 2
+# GCN-NOPHYS: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 2
 #
 # Region 1: No physical register pressure.
 # GCN-NOPHYS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 2
