@@ -17189,8 +17189,8 @@ SITargetLowering::performExponentOnlyScaleCombine(SDNode *N,
         Idx->getAPIntValue().ult(VecVT.getVectorNumElements())) {
       APInt DemandedElts = APInt::getOneBitSet(VecVT.getVectorNumElements(),
                                                Idx->getZExtValue());
-      if (SDValue DemandedVec = SimplifyMultipleUseDemandedBits(
-              Vec, Demanded, DemandedElts, DAG))
+      if (SDValue DemandedVec =
+              SimplifyMultipleUseDemandedBits(Vec, Demanded, DemandedElts, DAG))
         return ReplaceScale(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Scale),
                                         Scale.getValueType(), DemandedVec,
                                         Scale.getOperand(1)));
