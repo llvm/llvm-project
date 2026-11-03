@@ -1115,9 +1115,11 @@ public:
     if (!Attr)
       return;
 
-    StringRef Kind = "machine";
+    std::string Kind = "machine";
     bool HasSiFiveCLICPreemptible = false;
     bool HasSiFiveCLICStackSwap = false;
+    bool HasPreemptible = false;
+    bool HasPushPop = false;
     for (RISCVInterruptAttr::InterruptType type : Attr->interrupt()) {
       switch (type) {
       case RISCVInterruptAttr::machine:
@@ -1150,9 +1152,19 @@ public:
                                         : "SiFive-CLIC-stack-swap";
         break;
       }
+      case RISCVInterruptAttr::preemptible:
+        HasPreemptible = true;
+        break;
+      case RISCVInterruptAttr::pushpop:
+        HasPushPop = true;
+        break;
       }
     }
 
+    if (HasPreemptible)
+      Kind += "-preemptible";
+    if (HasPushPop)
+      Kind += "-push-pop";
     Fn->addFnAttr("interrupt", Kind);
   }
 };

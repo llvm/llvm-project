@@ -2485,6 +2485,8 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
                                      "qci-nonest",
                                      "SiFive-CLIC-preemptible",
                                      "SiFive-CLIC-stack-swap",
+                                     "preemptible",
+                                     "push-pop",
                                    ],
                                    [
                                      "supervisor",
@@ -2494,6 +2496,8 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
                                      "qcinonest",
                                      "SiFiveCLICPreemptible",
                                      "SiFiveCLICStackSwap",
+                                     "preemptible",
+                                     "pushpop",
                                    ]>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];

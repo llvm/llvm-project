@@ -96,6 +96,61 @@ def CSR_XLEN_F32_V_Interrupt_RVE: CalleeSavedRegs<(sub CSR_XLEN_F32_V_Interrupt,
 def CSR_XLEN_F64_V_Interrupt_RVE: CalleeSavedRegs<(sub CSR_XLEN_F64_V_Interrupt,
                                                    (sequence "X%u", 16, 31))>;
 
+// For Smip/Ssip interrupt handlers, the compiler may assume that X10-X15
+// (a0-a5) have been saved and does not need to restore them.
+def CSR_Interrupt_PushPop
+    : CalleeSavedRegs<(sub CSR_Interrupt, (sequence "X%u", 10, 15))>;
+
+def CSR_XLEN_F32_Interrupt_PushPop
+    : CalleeSavedRegs<(sub CSR_XLEN_F32_Interrupt,
+                       (sequence "X%u", 10, 15))>;
+
+def CSR_XLEN_F64_Interrupt_PushPop
+    : CalleeSavedRegs<(sub CSR_XLEN_F64_Interrupt,
+                       (sequence "X%u", 10, 15))>;
+
+def CSR_XLEN_V_Interrupt_PushPop
+    : CalleeSavedRegs<(sub CSR_XLEN_V_Interrupt,
+                       (sequence "X%u", 10, 15))>;
+
+def CSR_XLEN_F32_V_Interrupt_PushPop
+    : CalleeSavedRegs<(sub CSR_XLEN_F32_V_Interrupt,
+                       (sequence "X%u", 10, 15))>;
+
+def CSR_XLEN_F64_V_Interrupt_PushPop
+    : CalleeSavedRegs<(sub CSR_XLEN_F64_V_Interrupt,
+                       (sequence "X%u", 10, 15))>;
+
+// Same as CSR_Interrupt_PushPop, but excluding X16-X31.
+def CSR_Interrupt_PushPop_RVE
+    : CalleeSavedRegs<(sub CSR_Interrupt_PushPop,
+                       (sequence "X%u", 16, 31))>;
+
+// Same as CSR_XLEN_F32_Interrupt_PushPop, but excluding X16-X31.
+def CSR_XLEN_F32_Interrupt_PushPop_RVE
+    : CalleeSavedRegs<(sub CSR_XLEN_F32_Interrupt_PushPop,
+                       (sequence "X%u", 16, 31))>;
+
+// Same as CSR_XLEN_F64_Interrupt_PushPop, but excluding X16-X31.
+def CSR_XLEN_F64_Interrupt_PushPop_RVE
+    : CalleeSavedRegs<(sub CSR_XLEN_F64_Interrupt_PushPop,
+                       (sequence "X%u", 16, 31))>;
+
+// Same as CSR_XLEN_V_Interrupt_PushPop, but excluding X16-X31.
+def CSR_XLEN_V_Interrupt_PushPop_RVE
+    : CalleeSavedRegs<(sub CSR_XLEN_V_Interrupt_PushPop,
+                       (sequence "X%u", 16, 31))>;
+
+// Same as CSR_XLEN_F32_V_Interrupt_PushPop, but excluding X16-X31.
+def CSR_XLEN_F32_V_Interrupt_PushPop_RVE
+    : CalleeSavedRegs<(sub CSR_XLEN_F32_V_Interrupt_PushPop,
+                       (sequence "X%u", 16, 31))>;
+
+// Same as CSR_XLEN_F64_V_Interrupt_PushPop, but excluding X16-X31.
+def CSR_XLEN_F64_V_Interrupt_PushPop_RVE
+    : CalleeSavedRegs<(sub CSR_XLEN_F64_V_Interrupt_PushPop,
+                       (sequence "X%u", 16, 31))>;
+
 def CSR_RT_MostRegs : CalleeSavedRegs<(sub CSR_Interrupt, X5, X6, X7, X28)>;
 def CSR_RT_MostRegs_RVE : CalleeSavedRegs<(sub CSR_RT_MostRegs,
                                                (sequence "X%u", 16, 31))>;
