@@ -490,9 +490,7 @@ struct VOP3PHasNoOpSelHiInfo {
 
 const VLdStIdxOpcodeInfo *
 getVLdStIdxOpcodeInfoByKey(unsigned BitWidth, bool IsStore, bool IsGPRIdx) {
-  // The table's key is 16 bits, which a wider width would wrap onto an entry.
-  if (!isUInt<16>(BitWidth))
-    return nullptr;
+  assert(isUInt<16>(BitWidth) && "the table's key is 16 bits");
   return getVLdStIdxOpcodeInfoByKeyImpl(BitWidth, IsStore, IsGPRIdx);
 }
 

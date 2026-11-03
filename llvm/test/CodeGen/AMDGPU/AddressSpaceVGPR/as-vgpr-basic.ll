@@ -438,6 +438,45 @@ define i64 @load_sext_i64(ptr addrspace(13) inreg %p) {
   ret i64 %s
 }
 
+; GlobalISel's combiner turns these into 16-bit extending loads, which must
+; still read the whole dword.
+define i32 @can_fold_to_zextload16(ptr addrspace(13) inreg %ptr) {
+; GFX12-LABEL: can_fold_to_zextload16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %ld = load i32, ptr addrspace(13) %ptr, align 4
+  %and = and i32 %ld, 65535
+  ret i32 %and
+}
+
+define i32 @can_fold_to_sextload16(ptr addrspace(13) inreg %ptr) {
+; GFX12-LABEL: can_fold_to_sextload16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %ld = load i32, ptr addrspace(13) %ptr, align 4
+  %shl = shl i32 %ld, 16
+  %sext_inreg = ashr i32 %shl, 16
+  ret i32 %sext_inreg
+}
+
 ; Pointers of each width, and vectors of them. GlobalISel moves them through
 ; integers, since a scalar pointer cannot be bitcast.
 
