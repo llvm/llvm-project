@@ -1198,7 +1198,7 @@ public:
     if (isOpaquePointer())
       return Opaque.isConstexprUnknown();
     if (isBlockPointer())
-      return getDeclDesc()->IsConstexprUnknown;
+      return block()->isConstexprUnknown();
     return false;
   }
 

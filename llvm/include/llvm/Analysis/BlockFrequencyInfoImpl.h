@@ -25,6 +25,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
@@ -1715,8 +1716,6 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
 
 // Graph trait base class for block frequency information graph
 // viewer.
-
-enum class GVDAGType { None, Fraction, Integer, Count };
 
 template <class BlockFrequencyInfoT, class BranchProbabilityInfoT>
 struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
