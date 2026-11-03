@@ -1601,6 +1601,104 @@ m_ReassociatableNUWAdd(const PatternTs &...Patterns) {
       ISD::ADD, SDNodeFlags::NoUnsignedWrap, Patterns...);
 }
 
+template <typename LHS_P, typename RHS_P, bool Inverted>
+struct UAddOverflow_match {
+  LHS_P L;
+  RHS_P R;
+
+  UAddOverflow_match(const LHS_P &L, const RHS_P &R) : L(L), R(R) {}
+
+  bool match(SDValue N) {
+    SDValue ICmpLHS, ICmpRHS;
+    ISD::CondCode CC;
+    if (!sd_match(N, m_SetCC(CC, m_Value(ICmpLHS), m_Value(ICmpRHS))))
+      return false;
+    if (Inverted)
+      CC = ISD::getSetCCInverse(CC, ICmpLHS.getValueType());
+
+    SDValue AddLHS, AddRHS;
+    auto AddExpr = m_Add(m_Value(AddLHS), m_Value(AddRHS));
+
+    // (a + b) u< a, (a + b) u< b
+    if (CC == ISD::SETULT)
+      if (AddExpr.match(ICmpLHS) && (ICmpRHS == AddLHS || ICmpRHS == AddRHS))
+        return L.match(AddLHS) && R.match(AddRHS);
+
+    // a >u (a + b), b >u (a + b)
+    if (CC == ISD::SETUGT)
+      if (AddExpr.match(ICmpRHS) && (ICmpLHS == AddLHS || ICmpLHS == AddRHS))
+        return L.match(AddLHS) && R.match(AddRHS);
+
+    SDValue Op1;
+    auto XorExpr = m_OneUse(m_Not(m_Value(Op1)));
+    // (~a) <u b
+    if (CC == ISD::SETULT) {
+      if (XorExpr.match(ICmpLHS))
+        return L.match(Op1) && R.match(ICmpRHS);
+    }
+    //  b > u (~a)
+    if (CC == ISD::SETUGT) {
+      if (XorExpr.match(ICmpRHS))
+        return L.match(Op1) && R.match(ICmpLHS);
+    }
+
+    return false;
+  }
+};
+
+template <typename LHS_P, typename RHS_P, bool Inverted>
+struct USubOverflow_match {
+  LHS_P L;
+  RHS_P R;
+
+  USubOverflow_match(const LHS_P &L, const RHS_P &R) : L(L), R(R) {}
+
+  bool match(SDValue N) {
+    SDValue ICmpLHS, ICmpRHS;
+    ISD::CondCode CC;
+    if (!sd_match(N, m_SetCC(CC, m_Value(ICmpLHS), m_Value(ICmpRHS))))
+      return false;
+    if (Inverted)
+      CC = ISD::getSetCCInverse(CC, ICmpLHS.getValueType());
+
+    // a u< b
+    if (CC == ISD::SETULT)
+      return L.match(ICmpLHS) && R.match(ICmpRHS);
+
+    // b >u a
+    if (CC == ISD::SETUGT)
+      return L.match(ICmpRHS) && R.match(ICmpLHS);
+
+    return false;
+  }
+};
+
+// Match a check whether L + R overflows.
+template <typename LHS, typename RHS>
+inline UAddOverflow_match<LHS, RHS, false> m_UAddOverflow(const LHS &L,
+                                                          const RHS &R) {
+  return UAddOverflow_match<LHS, RHS, false>(L, R);
+}
+// Match a check whether L + R does not overflow.
+template <typename LHS, typename RHS>
+inline UAddOverflow_match<LHS, RHS, true> m_UAddNoOverflow(const LHS &L,
+                                                           const RHS &R) {
+  return UAddOverflow_match<LHS, RHS, true>(L, R);
+}
+
+// Match a check whether L - R overflows.
+template <typename LHS, typename RHS>
+inline USubOverflow_match<LHS, RHS, false> m_USubOverflow(const LHS &L,
+                                                          const RHS &R) {
+  return USubOverflow_match<LHS, RHS, false>(L, R);
+}
+// Match a check whether L - R does not overflow.
+template <typename LHS, typename RHS>
+inline USubOverflow_match<LHS, RHS, true> m_USubNoOverflow(const LHS &L,
+                                                           const RHS &R) {
+  return USubOverflow_match<LHS, RHS, true>(L, R);
+}
+
 } // namespace SDPatternMatch
 } // namespace llvm
 #endif
