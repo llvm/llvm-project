@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Callable, Dict, Iterable, List, NamedTuple, Optional
+from typing import Callable, Dict, Iterable, List, NamedTuple, Optional, Tuple
 import argparse
 import datetime
 import json
@@ -24,6 +24,9 @@ USER_AGENT = 'libcxx-lnt-tooling'
 
 # LNT instances can be slow: timeout after that many seconds.
 LNT_TIMEOUT_SECONDS = 120
+
+# The format of the timestamps in LNT reports, which are always in UTC.
+LNT_TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 # How many results to ask for at once when paging. This is the largest page size LNT allows.
 LNT_PAGE_SIZE = 10000
@@ -117,7 +120,7 @@ def write_lnt_report(path: pathlib.Path, machine: str, machine_fields: dict, com
         # Pick the UUID ourselves so that we can safely retry submitting this run if needed without
         # running the risk of storing the same run twice.
         'uuid': str(uuid.uuid4()),
-        'measured_at': measured_at.astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'measured_at': measured_at.astimezone(datetime.timezone.utc).strftime(LNT_TIMESTAMP_FORMAT),
         'machine': {'name': machine, 'fields': machine_fields},
         'commit': commit,
         'run_parameters': run_parameters or {},
@@ -136,12 +139,16 @@ def parse_lnt_results(lines: Iterable[str]) -> List[dict]:
     n-th value of each metric is taken to belong to the n-th sample of that test.
     """
     tests: Dict[str, Dict[str, List[float]]] = {}
-    for line in lines:
+    for (number, line) in enumerate(lines, start=1):
         if not line.strip():
             continue
-        (key, value) = line.split()
-        (name, metric) = key.rsplit('.', 1)
-        tests.setdefault(name, {}).setdefault(metric, []).append(float(value))
+        try:
+            (key, value) = line.split()
+            (name, metric) = key.rsplit('.', 1)
+            parsed = float(value)
+        except ValueError:
+            raise ValueError(f'line {number} is not of the form `<test>.<metric> <value>`: {line.strip()!r}')
+        tests.setdefault(name, {}).setdefault(metric, []).append(parsed)
 
     result = []
     for (name, metrics) in tests.items():
@@ -169,6 +176,14 @@ def at_least(minimum: int) -> Callable[[str], int]:
             raise argparse.ArgumentTypeError(f'expected an integer no smaller than {minimum}, got {string}')
         return value
     return parse
+
+
+def key_value(string: str) -> Tuple[str, str]:
+    """An argparse type that accepts KEY=VALUE pairs, where the value may itself contain `=`."""
+    if '=' not in string:
+        raise argparse.ArgumentTypeError(f'expected KEY=VALUE, got {string!r}')
+    (key, value) = string.split('=', 1)
+    return (key, value)
 
 
 class Target(NamedTuple):

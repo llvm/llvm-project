@@ -36,7 +36,14 @@
 ; CHECK-NEXT:     finalize-isel
 ; CHECK-NEXT:     localstackalloc
 ; CHECK-NEXT:     riscv-expand-pseudo-pre-ra
+; CHECK-NEXT:     riscv-insert-read-write-csr
+; CHECK-NEXT:     riscv-insert-write-vxrm
+; CHECK-NEXT:     riscv-lpad-setup
+; CHECK-NEXT:     riscv-vmv0-elimination
+; CHECK-NEXT:     init-undef
 ; CHECK-NEXT:     phi-node-elimination
+; CHECK-NEXT:     regallocfast<filter=rvv;no-clear-vregs>
+; CHECK-NEXT:     riscv-insert-vsetvli
 ; CHECK-NEXT:     regallocfast
 ; CHECK-NEXT:     remove-redundant-debug-values
 ; CHECK-NEXT:     fixup-statepoint-caller-saved
@@ -47,7 +54,9 @@
 ; CHECK-NEXT:     fentry-insert
 ; CHECK-NEXT:     xray-instrumentation
 ; CHECK-NEXT:     patchable-function
+; CHECK-NEXT:     riscv-indirect-branch-tracking
 ; CHECK-NEXT:     branch-relaxation
+; CHECK-NEXT:     riscv-make-compressible
 ; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass

@@ -3948,6 +3948,12 @@ static StringRef getCanonicalArchString(Compilation &C,
         return StringRef();
       }
     }
+  } else if (Triple.isSPIRV() && ArchStr.starts_with("igca")) {
+    if (!StringToOffloadArch(ArchStr).isIntelIGCA()) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "IGCA" << ArchStr;
+      return StringRef();
+    }
   }
 
   if (Arch.isNVPTX())

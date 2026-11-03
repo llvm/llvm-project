@@ -69,6 +69,8 @@ defm : BoolField<"enable-epilogue-vectorization", "true",
   "Enable vectorization of epilogue loops">;
 defm : BoolField<"enable-ind-var-reg-heur", "true",
   "Count the induction variable only once when interleaving">;
+defm : BoolField<"enable-interleave-to-reduce-stalls", "false",
+  "When interleaving choose the interleave count that will reduce the stall cycles due to instruction latency to zero">;
 defm : OptionalBoolField<"enable-interleaved-mem-accesses",
   "Enable vectorization on interleaved memory accesses in a loop">;
 // Runtime interleave loops for load/store throughput.
@@ -94,6 +96,8 @@ defm : OptionalEnumField<"force-tail-folding-style", "TailFoldingStyle", "none,d
   "Force the tail folding style">;
 defm : OptionalValueField<"force-target-instruction-cost", "unsigned",
   "A flag that overrides the target's expected cost for an instruction to a single constant value. Mostly useful for getting consistent testing">;
+defm : ValueField<"force-target-load-latency", "unsigned", "0",
+  "A flag that overrides the target's expected latency for load instructions">;
 defm : OptionalValueField<"force-target-max-scalar-interleave", "unsigned",
   "A flag that overrides the target's max interleave factor for scalar loops">;
 defm : OptionalValueField<"force-target-max-vector-interleave", "unsigned",

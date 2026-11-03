@@ -9434,10 +9434,12 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !MI.getFlag(MachineInstr::FmNsz)) {
     GISelValueTracking VT(MIRBuilder.getMF());
+    // FIXME: Also demand for subnormal classes depending on the denormal mode.
     KnownFPClass Src0Info = VT.computeKnownFPClass(Src0, fcZero);
     KnownFPClass Src1Info = VT.computeKnownFPClass(Src1, fcZero);
 
-    if (!Src0Info.isKnownNeverZero() && !Src1Info.isKnownNeverZero()) {
+    // FIXME: Must use isKnownNeverLogicalZero(Mode)
+    if (!Src0Info.isKnownNever(fcZero) && !Src1Info.isKnownNever(fcZero)) {
       const unsigned Flags = MI.getFlags();
       Register Zero = MIRBuilder.buildFConstant(Ty, 0.0).getReg(0);
       auto IsZero = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CmpTy, Res, Zero);

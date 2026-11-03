@@ -1126,6 +1126,8 @@ IntrusiveRefCntPtr<MemoryObject>
 Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
                   MemInitKind InitKind, MemAllocKind AllocKind,
                   bool IsIRGlobalValue) {
+  if (exceedsMaxObjectSize(Size, AS))
+    return nullptr;
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);

@@ -369,6 +369,54 @@ struct SignOpPattern final : OpConversionPattern<complex::SignOp> {
     return success();
   }
 };
+
+enum class SinCos { Sin, Cos };
+
+/// Lowers complex.sin/cos following the identities
+/// sin(x + iy) = sin(x) * cosh(y) + i * cos(x) * sinh(y)
+/// cos(x + iy) = cos(x) * cosh(y) - i * sin(x) * sinh(y)
+template <SinCos Kind, typename SinOp, typename CosOp, typename SinhOp,
+          typename CoshOp,
+          typename ComplexOp = std::conditional_t<
+              Kind == SinCos::Sin, complex::SinOp, complex::CosOp>>
+struct TrigonometricOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value sin = SinOp::create(rewriter, loc, re);
+    Value cos = CosOp::create(rewriter, loc, re);
+    Value sinh = SinhOp::create(rewriter, loc, im);
+    Value cosh = CoshOp::create(rewriter, loc, im);
+
+    bool isSin = Kind == SinCos::Sin;
+    Value resultRe =
+        spirv::FMulOp::create(rewriter, loc, isSin ? sin : cos, cosh);
+    Value resultIm =
+        spirv::FMulOp::create(rewriter, loc, isSin ? cos : sin, sinh);
+    if (!isSin)
+      resultIm = spirv::FNegateOp::create(rewriter, loc, resultIm);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -395,5 +443,14 @@ void mlir::populateComplexToSPIRVPatterns(
            SignOpPattern<spirv::GLSqrtOp, spirv::GLFAbsOp, spirv::GLFMaxOp,
                          spirv::GLFMinOp>,
            SignOpPattern<spirv::CLSqrtOp, spirv::CLFAbsOp, spirv::CLFMaxOp,
-                         spirv::CLFMinOp>>(typeConverter, context);
+                         spirv::CLFMinOp>,
+           TrigonometricOpPattern<SinCos::Sin, spirv::GLSinOp, spirv::GLCosOp,
+                                  spirv::GLSinhOp, spirv::GLCoshOp>,
+           TrigonometricOpPattern<SinCos::Sin, spirv::CLSinOp, spirv::CLCosOp,
+                                  spirv::CLSinhOp, spirv::CLCoshOp>,
+           TrigonometricOpPattern<SinCos::Cos, spirv::GLSinOp, spirv::GLCosOp,
+                                  spirv::GLSinhOp, spirv::GLCoshOp>,
+           TrigonometricOpPattern<SinCos::Cos, spirv::CLSinOp, spirv::CLCosOp,
+                                  spirv::CLSinhOp, spirv::CLCoshOp>>(
+          typeConverter, context);
 }

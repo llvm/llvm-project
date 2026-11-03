@@ -1768,7 +1768,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       },
       /*forceInputOrder=*/true);
 
-  // Like lexigraphical sort, except we read strings in reverse and take the
+  // Like lexicographical sort, except we read strings in reverse and take the
   // longest string first
   // TODO: We could improve performance by implementing our own sort that avoids
   // comparing characters we know to be the same. See
@@ -2048,7 +2048,7 @@ void InitOffsetsSection::setUp() {
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
               ": unsupported relocation type: " + attrs.name);
-      if (rel.addend != 0)
+      if (rel.getAddend() != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
       if (isa<InputSection *>(rel.referent))
@@ -2203,7 +2203,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = def->getVA();
   } else {
     auto *isec = cast<InputSection *>(reloc->referent);
-    symVA = isec->getVA(reloc->addend);
+    symVA = isec->getVA(reloc->getAddend());
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;

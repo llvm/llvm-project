@@ -228,7 +228,7 @@ def EnvOpenCL : Environment<0>;
 def EnvVulkan : Environment<1>;
 
 //===----------------------------------------------------------------------===//
-// Multiclass used to define Extesions enum values and at the same time
+// Multiclass used to define Extension enum values and at the same time
 // SymbolicOperand entries.
 //===----------------------------------------------------------------------===//
 
@@ -885,10 +885,11 @@ class StorageClass<string name, bits<32> value> {
   bits<32> Value = value;
 }
 
-multiclass StorageClassOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
+multiclass StorageClassOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities, bits<32> minVersion = 0> {
   def : StorageClass<NAME, value>;
-  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME, 0, 0,
-                                         reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME,
+                                         minVersion, 0, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm UniformConstant : StorageClassOperand<0, [], []>;
@@ -903,7 +904,7 @@ defm Generic : StorageClassOperand<8, [], [GenericPointer]>;
 defm PushConstant : StorageClassOperand<9, [], [Shader]>;
 defm AtomicCounter : StorageClassOperand<10, [], [AtomicStorage]>;
 defm Image : StorageClassOperand<11, [], []>;
-defm StorageBuffer : StorageClassOperand<12, [], [Shader]>;
+defm StorageBuffer : StorageClassOperand<12, [SPV_KHR_storage_buffer_storage_class], [Shader], 0x10300>;
 defm CallableDataNV : StorageClassOperand<5328, [], [RayTracingNV]>;
 defm IncomingCallableDataNV : StorageClassOperand<5329, [], [RayTracingNV]>;
 defm RayPayloadNV : StorageClassOperand<5338, [], [RayTracingNV]>;
@@ -1371,7 +1372,7 @@ multiclass DecorationOperand<bits<32> value, bits<32> minVersion, bits<32> maxVe
 defm RelaxedPrecision : DecorationOperand<0, 0, 0, [], [Shader]>;
 defm SpecId : DecorationOperand<1, 0, 0, [], [Shader, Kernel]>;
 defm Block : DecorationOperand<2, 0, 0, [], [Shader]>;
-defm BufferBlock : DecorationOperand<3, 0, 0, [], [Shader]>;
+defm BufferBlock : DecorationOperand<3, 0, 0x10300, [], [Shader]>;
 defm RowMajor : DecorationOperand<4, 0, 0, [], [Matrix]>;
 defm ColMajor : DecorationOperand<5, 0, 0, [], [Matrix]>;
 defm ArrayStride : DecorationOperand<6, 0, 0, [], [Shader]>;
@@ -1394,7 +1395,7 @@ defm Coherent : DecorationOperand<23, 0, 0, [], []>;
 defm NonWritable : DecorationOperand<24, 0, 0, [], []>;
 defm NonReadable : DecorationOperand<25, 0, 0, [], []>;
 defm Uniform : DecorationOperand<26, 0, 0, [], [Shader]>;
-defm UniformId : DecorationOperand<27, 0, 0, [], [Shader]>;
+defm UniformId : DecorationOperand<27, 0x10400, 0, [], [Shader]>;
 defm SaturatedConversion : DecorationOperand<28, 0, 0, [], [Kernel]>;
 defm Stream : DecorationOperand<29, 0, 0, [], [GeometryStreams]>;
 defm Location : DecorationOperand<30, 0, 0, [], [Shader]>;
@@ -1413,8 +1414,8 @@ defm NoContraction : DecorationOperand<42, 0, 0, [], [Shader]>;
 defm InputAttachmentIndex : DecorationOperand<43, 0, 0, [], [InputAttachment]>;
 defm Alignment : DecorationOperand<44, 0, 0, [], [Kernel]>;
 defm MaxByteOffset : DecorationOperand<45, 0x10100, 0, [], [Addresses]>;
-defm AlignmentId : DecorationOperand<46, 0, 0, [], [Kernel]>;
-defm MaxByteOffsetId : DecorationOperand<47, 0, 0, [], [Addresses]>;
+defm AlignmentId : DecorationOperand<46, 0x10200, 0, [], [Kernel]>;
+defm MaxByteOffsetId : DecorationOperand<47, 0x10200, 0, [], [Addresses]>;
 defm NoSignedWrap : DecorationOperand<4469, 0x10400, 0, [SPV_KHR_no_integer_wrap_decoration], []>;
 defm NoUnsignedWrap : DecorationOperand<4470, 0x10400, 0, [SPV_KHR_no_integer_wrap_decoration], []>;
 defm ExplicitInterpAMD : DecorationOperand<4999, 0, 0, [], []>;

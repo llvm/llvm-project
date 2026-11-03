@@ -1330,7 +1330,7 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
           cast<Constant>(VecC), Builder.getInt64(*Index));
 
   Value *Scalar;
-  // We need to pass the flags during the creation of instrucitons. Constant
+  // We need to pass the flags during the creation of instructions. Constant
   // folding might remove the instructions, so post setting the flags might
   // pollute the later instructions.
   if (CI) {

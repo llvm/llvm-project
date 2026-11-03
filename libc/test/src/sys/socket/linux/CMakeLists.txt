@@ -122,6 +122,8 @@ add_libc_test(
     socketopt_test.cpp
   DEPENDS
     libc.include.sys_socket
+    libc.hdr.netinet_in_macros
+    libc.hdr.netinet_tcp_macros
     libc.hdr.sys_socket_macros
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_linger

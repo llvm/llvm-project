@@ -1,0 +1,551 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+# Test names and dependencies mirror the add_lldb_unittest() calls in
+# lldb/unittests/**/CMakeLists.txt so the two builds are easy to keep in sync.
+
+# Inputs read through lldb_private::GetInputFilePath(), keyed by test. That
+# helper looks in an Inputs/ directory next to the test binary, which CMake's
+# add_unittest_inputs() populates by copying. Do the same here: copy every
+# input into this package's Inputs/ directory, where it sits next to the test
+# binaries in the runfiles tree.
+_TEST_INPUTS = {
+    "HostCommonTests": glob(["Host/common/Inputs/*"]),
+    "SymbolTests": glob(["Symbol/Inputs/*"]),
+    "TargetTests": glob(["Target/Inputs/*"]),
+    "UtilityTests": glob(["Utility/Inputs/*"]),
+}
+
+[
+    copy_file(
+        name = "copy_input_" + src.rsplit("/", 1)[1],
+        testonly = True,
+        src = src,
+        out = "Inputs/" + src.rsplit("/", 1)[1],
+    )
+    for inputs in _TEST_INPUTS.values()
+    for src in inputs
+]
+
+# TestingSupport helper libraries.
+
+cc_library(
+    name = "lldbUtilityHelpers",
+    testonly = True,
+    srcs = [
+        "TestingSupport/MockTildeExpressionResolver.cpp",
+        "TestingSupport/TestUtilities.cpp",
+    ],
+    hdrs = [
+        "TestingSupport/MockTildeExpressionResolver.h",
+        "TestingSupport/SubsystemRAII.h",
+        "TestingSupport/TestUtilities.h",
+    ],
+    includes = ["."],
+    deps = [
+        "//lldb:Headers",
+        "//lldb:Utility",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+cc_library(
+    name = "lldbHostHelpers",
+    testonly = True,
+    srcs = ["TestingSupport/Host/SocketTestUtilities.cpp"],
+    hdrs = glob(["TestingSupport/Host/*.h"]),
+    includes = ["."],
+    deps = [
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+cc_library(
+    name = "lldbSymbolHelpers",
+    testonly = True,
+    srcs = ["TestingSupport/Symbol/YAMLModuleTester.cpp"],
+    hdrs = [
+        "TestingSupport/Symbol/ClangTestUtils.h",
+        "TestingSupport/Symbol/YAMLModuleTester.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb/source/Plugins:PluginExpressionParserClang",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+# Unit tests.
+
+cc_test(
+    name = "EditlineTests",
+    srcs = ["Editline/EditlineTest.cpp"],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ExpressionTests",
+    srcs = glob([
+        "Expression/*.cpp",
+        "Expression/*.h",
+    ]),
+    # CMake only defines this when the AArch64 target is built. Like llvm's
+    # target_aarch64_tests, assume AArch64 is one of the configured targets.
+    local_defines = ["ARCH_AARCH64"],
+    deps = [
+        ":lldbSymbolHelpers",
+        ":lldbUtilityHelpers",
+        "//clang:basic",
+        "//clang:config",
+        "//clang:options",
+        "//lldb:Core",
+        "//lldb:Expression",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginABIAArch64",
+        "//lldb/source/Plugins:PluginExpressionParserClang",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginObjectFileWasm",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginSymbolVendorWasm",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:AArch64Info",
+        "//llvm:AArch64UtilsAndDesc",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "HighlighterTests",
+    srcs = glob(["Highlighter/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginCPlusPlusLanguage",
+        "//lldb/source/Plugins:PluginHighlighterClang",
+        "//lldb/source/Plugins:PluginHighlighterDefault",
+        "//lldb/source/Plugins:PluginObjCLanguage",
+        "//lldb/source/Plugins:PluginObjCPlusPlusLanguage",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "HostCommonTests",
+    srcs = glob(["Host/common/*.cpp"]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["HostCommonTests"]],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "HostTests",
+    srcs = glob(
+        ["Host/*.cpp"],
+        # Only built when LLDB_ENABLE_PYTHON, which this build does not set.
+        exclude = ["Host/PythonRuntimeLoaderTest.cpp"],
+    ) + select({
+        "@platforms//os:windows": glob(["Host/windows/*.cpp"]),
+        "//conditions:default": glob(["Host/posix/*.cpp"]),
+    }),
+    deps = [
+        ":lldbHostHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "InterpreterTests",
+    srcs = glob(["Interpreter/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Commands",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LLDBBreakpointTests",
+    srcs = glob(["Breakpoint/*.cpp"]),
+    deps = [
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LLDBCallbackTests",
+    srcs = glob(["Callback/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LLDBCoreTests",
+    srcs = glob(["Core/*.cpp"]),
+    deps = [
+        ":lldbHostHelpers",
+        ":lldbSymbolHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginCPlusPlusLanguage",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginObjectFileMachO",
+        "//lldb/source/Plugins:PluginObjectFilePECOFF",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:Telemetry",
+        "//llvm:TestingDemangle",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LLDBFormatterTests",
+    srcs = glob(["DataFormatter/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:DataFormatters",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LLDBValueObjectTests",
+    srcs = glob(["ValueObject/*.cpp"]),
+    deps = [
+        ":lldbSymbolHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:DataFormatters",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//lldb/source/Plugins:PluginScriptInterpreterNone",
+        "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ProcessTests",
+    srcs = glob(["Process/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ProtocolTests",
+    srcs = glob([
+        "Protocol/*.cpp",
+        "Protocol/*.h",
+    ]),
+    deps = [
+        ":lldbHostHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Commands",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:ProtocolMCP",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginProtocolServerMCP",
+        "//lldb/source/Plugins:PluginScriptInterpreterNone",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "SignalsTests",
+    srcs = ["Signals/UnixSignalsTest.cpp"],
+    deps = [
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "SymbolTests",
+    srcs = glob(["Symbol/*.cpp"]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["SymbolTests"]],
+    deps = [
+        ":lldbSymbolHelpers",
+        ":lldbUtilityHelpers",
+        "//clang:ast",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Register",
+        "//lldb:Symbol",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginObjectFileMachO",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//lldb/source/Plugins:PluginSymbolLocatorSymStore",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:Core",
+        "//llvm:DebugInfo",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:DebugInfoDWARFLowLevel",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "TargetTests",
+    srcs = glob(["Target/*.cpp"]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["TargetTests"]],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFileBreakpad",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginObjectFileMachO",
+        "//lldb/source/Plugins:PluginPlatformAndroid",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//lldb/source/Plugins:PluginRegisterTypeBuilderClang",
+        "//lldb/source/Plugins:PluginScriptInterpreterNone",
+        "//lldb/source/Plugins:PluginSymbolFileBreakpad",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ThreadTests",
+    srcs = glob(["Thread/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ] + select({
+        "@platforms//os:windows": [
+            "//lldb/source/Plugins:PluginDynamicLoaderWindowsDYLD",
+            "//lldb/source/Plugins:PluginObjectFilePECOFF",
+            "//lldb/source/Plugins:PluginPlatformWindows",
+            "//lldb/source/Plugins:PluginProcessWindowsCommon",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+cc_test(
+    name = "UtilityTests",
+    srcs = glob([
+        "Utility/*.cpp",
+        "Utility/*.h",
+    ]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["UtilityTests"]],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:Utility",
+        "//llvm:BinaryFormat",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

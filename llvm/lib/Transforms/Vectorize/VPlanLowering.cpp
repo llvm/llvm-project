@@ -222,8 +222,17 @@ void VPlanTransforms::materializeHeaderMask(
                                 {WideCanonicalIV, Plan.getTripCount()}, nullptr,
                                 "active.lane.mask");
   } else {
-    Mask = Builder.createICmp(CmpInst::ICMP_ULE, WideCanonicalIV,
-                              Plan.getOrCreateBackedgeTakenCount());
+    // Compare against the backedge-taken count, TC - 1, computed in the vector
+    // preheader.
+    VPBasicBlock *VectorPH = Plan.getVectorPreheader();
+    VPValue *TC = Plan.getTripCount();
+    VPValue *BTC =
+        VPBuilder(VectorPH, VectorPH->getFirstNonPhi())
+            .createSub(TC, Plan.getConstantInt(TC->getScalarType(), 1),
+                       DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
+    if (!Plan.hasScalarVFOnly())
+      BTC = VPBuilder(VectorPH).createNaryOp(VPInstruction::Broadcast, BTC);
+    Mask = Builder.createICmp(CmpInst::ICMP_ULE, WideCanonicalIV, BTC);
   }
   HeaderMask->replaceAllUsesWith(Mask);
 }
@@ -729,8 +738,6 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 #endif
 
   SmallVector<VPValue *> VPValues;
-  if (VPValue *BTC = Plan.getBackedgeTakenCount())
-    VPValues.push_back(BTC);
   append_range(VPValues, Plan.getLiveIns());
   for (VPRecipeBase &R : *Plan.getEntry())
     append_range(VPValues, R.definedValues());
@@ -793,20 +800,6 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   const SCEV *VecTCScev = SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
   if (auto *ConstVecTC = dyn_cast<SCEVConstant>(VecTCScev))
     Plan.getVectorTripCount().setUnderlyingValue(ConstVecTC->getValue());
-}
-
-void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
-                                                    VPBasicBlock *VectorPH) {
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  if (BTC->user_empty())
-    return;
-
-  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
-  auto *TCTy = Plan.getTripCount()->getScalarType();
-  auto *TCMO =
-      Builder.createSub(Plan.getTripCount(), Plan.getConstantInt(TCTy, 1),
-                        DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
-  BTC->replaceAllUsesWith(TCMO);
 }
 
 void VPlanTransforms::materializeUnpacks(VPlan &Plan) {

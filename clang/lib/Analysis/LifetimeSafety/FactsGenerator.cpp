@@ -1222,15 +1222,25 @@ void FactsGenerator::handleUse(const Expr *E) {
 // class and its bases. It represents the storage the field refers to, as
 // opposed to the field itself (covered by $this).
 void FactsGenerator::issueFieldPlaceholderLoans(
-    const CXXMethodDecl *MD, llvm::SmallVectorImpl<Fact *> &Facts) {
-  const CXXRecordDecl *ClassDecl = MD->getParent()->getDefinition();
-  if (!ClassDecl)
-    return;
+    const CXXRecordDecl *ClassDef, llvm::SmallVectorImpl<Fact *> &Facts) {
+  assert(ClassDef && "class methods have a defined parent");
+  assert(ClassDef->isThisDeclarationADefinition());
   auto IssueForRecord = [&](const CXXRecordDecl *RD) {
     for (const FieldDecl *Field : RD->fields()) {
-      // Skip private fields of bases as they cannot be named in MD.
-      if (RD != ClassDecl && Field->getAccess() == AS_private)
+      // Skip private fields of bases as they cannot be named in ClassDef.
+      if (RD != ClassDef && Field->getAccess() == AS_private)
         continue;
+
+      if (Field->isAnonymousStructOrUnion()) {
+        if (const CXXRecordDecl *Sub = Field->getType()->getAsCXXRecordDecl()) {
+          if (const CXXRecordDecl *SubDef = Sub->getDefinition()) {
+            // Anonymous records cannot have base classes and they can only have
+            // public fields. Sema rejects them with an error otherwise.
+            issueFieldPlaceholderLoans(SubDef, Facts);
+            continue;
+          }
+        }
+      }
       OriginList *FieldList = getOriginsList(*Field);
       if (!FieldList)
         continue;
@@ -1240,8 +1250,8 @@ void FactsGenerator::issueFieldPlaceholderLoans(
     }
     return true;
   };
-  IssueForRecord(ClassDecl);
-  ClassDecl->forallBases(IssueForRecord);
+  IssueForRecord(ClassDef);
+  ClassDef->forallBases(IssueForRecord);
 }
 
 // Creates an IssueFact for a new placeholder loan for each pointer or reference
@@ -1260,7 +1270,8 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
     if (LSOpts.CheckFieldOriginEscape && !isa<CXXConstructorDecl>(MD))
-      issueFieldPlaceholderLoans(MD, PlaceholderLoanFacts);
+      issueFieldPlaceholderLoans(MD->getParent()->getDefinition(),
+                                 PlaceholderLoanFacts);
   }
   for (const ParmVarDecl *PVD : FD->parameters()) {
     OriginList *List = getOriginsList(*PVD);

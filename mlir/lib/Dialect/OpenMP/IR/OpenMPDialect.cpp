@@ -4549,7 +4549,13 @@ LogicalResult NewCliOp::verify() {
   OpOperand *gen = nullptr;
   OpOperand *cons = nullptr;
   for (mlir::OpOperand &use : cli.getUses()) {
-    auto op = cast<mlir::omp::LoopTransformationInterface>(use.getOwner());
+    auto op = dyn_cast<mlir::omp::LoopTransformationInterface>(use.getOwner());
+    if (!op) {
+      InFlightDiagnostic error =
+          emitOpError("CLI must only be used by loop transformations");
+      error.attachNote(use.getOwner()->getLoc()).append("invalid use here:");
+      return error;
+    }
 
     unsigned opnum = use.getOperandNumber();
     if (op.isGeneratee(opnum)) {

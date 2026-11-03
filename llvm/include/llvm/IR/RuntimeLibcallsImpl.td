@@ -156,6 +156,20 @@ multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
+  FuncArgType ReturnType = P.ReturnType;
+  list<FuncArgType> ArgumentTypes = P.ArgumentTypes;
+}
+
+// Implementation of a long double function, which provides the libcall
+// matching the module's long double format.
+class LongDoubleLibcallImpl<string libcall_basename, string Name = NAME>
+    : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
+                         Name> {
+  let Provides = ?;
+  RuntimeLibcall ProvidesF80 = !cast<RuntimeLibcall>(libcall_basename#"_F80");
+  RuntimeLibcall ProvidesF128 = !cast<RuntimeLibcall>(libcall_basename#"_F128");
+  RuntimeLibcall ProvidesPPCF128 =
+      !cast<RuntimeLibcall>(libcall_basename#"_PPCF128");
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used

@@ -620,8 +620,9 @@ ParseGlobals(DataExtractor &data) {
           "global section holds %zu of its %u globals", globals.size(), *count);
 
     WasmGlobal global;
-    global.size = GetWasmValueTypeSize(data.GetU8(&offset));
-    data.GetU8(&offset); // mutability
+    global.value_type = data.GetU8(&offset);
+    global.size = GetWasmValueTypeSize(global.value_type);
+    global.is_mutable = data.GetU8(&offset) != 0;
     global.init_expr_value = ParseGlobalInitValue(data, offset);
     globals.push_back(global);
   }
