@@ -1125,14 +1125,25 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (auto OBU = I->getOperandBundleAt(Elem.Index);
-          getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
+      auto OBU = I->getOperandBundleAt(Elem.Index);
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::Align: {
         auto [Ptr, _, _2, Alignment, Offset] = getAssumeAlignInfo(OBU);
         if (Ptr == V && Alignment && Offset && isPowerOf2_64(*Alignment) &&
             isValidAssumeForContext(I, Q)) {
           Known.Zero |= (*Alignment - 1) & ~*Offset;
           Known.One |= (*Alignment - 1) & *Offset;
         }
+      } break;
+
+      case BundleAttr::Range: {
+        auto [Val, Range] = getAssumeRangeInfo(OBU);
+        if (Val == V && isValidAssumeForContext(I, Q))
+          Known = Known.unionWith(Range.toKnownBits());
+      } break;
+
+      default:
+        break;
       }
       continue;
     }
@@ -10914,6 +10925,16 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
              "Got assumption for the wrong function!");
       assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
+
+      if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
+        auto OBU = I->getOperandBundleAt(AssumeVH.Index);
+        if (getBundleAttrFromOBU(OBU) == BundleAttr::Range) {
+          auto [Val, Range] = getAssumeRangeInfo(OBU);
+          if (Val == V && isValidAssumeForContext(I, SQ))
+            CR = CR.intersectWith(Range);
+        }
+        continue;
+      }
 
       if (!isValidAssumeForContext(I, SQ))
         continue;
