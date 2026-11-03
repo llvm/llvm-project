@@ -22866,6 +22866,15 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   MVT SVT = In.getSimpleValueType();
 
+  // Rounding through f32 may round twice, which afn permits.
+  if (VT == MVT::f16 && (SVT == MVT::f64 || SVT == MVT::f80) && !IsStrict &&
+      !Subtarget.hasFP16() && Subtarget.hasF16C() &&
+      Op->getFlags().hasApproximateFuncs()) {
+    SDValue Rnd = DAG.getIntPtrConstant(0, DL, /*isTarget=*/true);
+    SDValue F32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, In, Rnd);
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, F32, Rnd);
+  }
+
   if (SVT == MVT::f128 || (VT == MVT::f16 && SVT == MVT::f80))
     return SDValue();
 
@@ -32485,7 +32494,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // Attempt to use GFNI gf2p8affine to rotate vXi8 by an uniform constant.
-  if (IsCstSplat && Subtarget.hasGFNI() && VT.getScalarType() == MVT::i8 &&
+  if (IsCstSplat && EltSizeInBits == 8 && Subtarget.hasGFNI() &&
       DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
     uint64_t RotAmt = CstSplatValue.urem(EltSizeInBits);
     SDValue Mask = getGFNICtrlMask(Opcode, DAG, DL, VT, RotAmt);
@@ -32497,23 +32506,23 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && (Subtarget.hasXOP() || !Subtarget.hasAVX2()))
     return splitVectorIntBinary(Op, DAG, DL);
 
-  // rotl(x,7) -> pavgb(x, 0 - (x & 1))
-  if (EltSizeInBits == 8 && IsCstSplat &&
-      CstSplatValue.urem(EltSizeInBits) == 7 && IsROTL &&
-      !Subtarget.hasAVX512()) {
-    SDValue One = DAG.getConstant(1, DL, VT);
-    SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
-    SDValue Neg = DAG.getNegative(LSB, DL, VT);
-    return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
-  }
+  if (IsROTL && IsCstSplat && EltSizeInBits == 8 && !Subtarget.hasAVX512()) {
+    unsigned RotAmt = CstSplatValue.urem(EltSizeInBits);
 
-  // rotl(x,1) -> sub(add(x, x), icmp_slt(x, 0))
-  if (IsROTL && EltSizeInBits == 8 && IsCstSplat &&
-      CstSplatValue.urem(EltSizeInBits) == 1 && !Subtarget.hasAVX512()) {
-    SDValue Double = DAG.getNode(ISD::ADD, DL, VT, R, R);
-    SDValue Zero = DAG.getConstant(0, DL, VT);
-    SDValue CmpNeg = DAG.getSetCC(DL, VT, R, Zero, ISD::SETLT);
-    return DAG.getNode(ISD::SUB, DL, VT, Double, CmpNeg);
+    // rotl(x,7) -> pavgb(x, 0 - (x & 1))
+    if (RotAmt == 7) {
+      SDValue One = DAG.getConstant(1, DL, VT);
+      SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
+      SDValue Neg = DAG.getNegative(LSB, DL, VT);
+      return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
+    }
+    // rotl(x,1) -> sub(add(x, x), icmp_slt(x, 0))
+    if (RotAmt == 1) {
+      SDValue Double = DAG.getNode(ISD::ADD, DL, VT, R, R);
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      SDValue CmpNeg = DAG.getSetCC(DL, VT, R, Zero, ISD::SETLT);
+      return DAG.getNode(ISD::SUB, DL, VT, Double, CmpNeg);
+    }
   }
 
   // Rotate by an uniform constant - expand back to shifts.
@@ -32550,22 +32559,20 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // Attempt to fold as unpack(x,x) << zext(splat(y)):
   // rotl(x,y) -> (unpack(x,x) << (y & (bw-1))) >> bw.
   // rotr(x,y) -> (unpack(x,x) >> (y & (bw-1))).
-  if (EltSizeInBits == 8 || EltSizeInBits == 16 || EltSizeInBits == 32) {
-    int BaseRotAmtIdx = -1;
-    if (SDValue BaseRotAmt = DAG.getSplatSourceVector(AmtMod, BaseRotAmtIdx)) {
-      if (EltSizeInBits == 16 && Subtarget.hasSSE41()) {
-        unsigned FunnelOpc = IsROTL ? ISD::FSHL : ISD::FSHR;
-        return DAG.getNode(FunnelOpc, DL, VT, R, R, Amt);
-      }
-      unsigned ShiftX86Opc = IsROTL ? X86ISD::VSHLI : X86ISD::VSRLI;
-      SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
-      SDValue Hi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
-      Lo = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Lo, BaseRotAmt,
-                               BaseRotAmtIdx, Subtarget, DAG);
-      Hi = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Hi, BaseRotAmt,
-                               BaseRotAmtIdx, Subtarget, DAG);
-      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, IsROTL);
+  int BaseRotAmtIdx = -1;
+  if (SDValue BaseRotAmt = DAG.getSplatSourceVector(AmtMod, BaseRotAmtIdx)) {
+    if (EltSizeInBits == 16 && Subtarget.hasSSE41()) {
+      unsigned FunnelOpc = IsROTL ? ISD::FSHL : ISD::FSHR;
+      return DAG.getNode(FunnelOpc, DL, VT, R, R, Amt);
     }
+    unsigned ShiftX86Opc = IsROTL ? X86ISD::VSHLI : X86ISD::VSRLI;
+    SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
+    SDValue Hi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
+    Lo = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Lo, BaseRotAmt,
+                             BaseRotAmtIdx, Subtarget, DAG);
+    Hi = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Hi, BaseRotAmt,
+                             BaseRotAmtIdx, Subtarget, DAG);
+    return getPack(DAG, Subtarget, DL, VT, Lo, Hi, IsROTL);
   }
 
   bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
@@ -32667,18 +32674,19 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return SignBitSelect(VT, Amt, BuildRotate(R, 1), R);
   }
 
-  bool IsSplatAmt = DAG.isSplatValue(Amt);
   bool LegalVarShifts = supportedVectorVarShift(VT, Subtarget, ISD::SHL) &&
                         supportedVectorVarShift(VT, Subtarget, ISD::SRL);
 
-  // Fallback for splats + all supported variable shifts.
-  // Fallback for non-constants AVX2 vXi16 as well.
-  if (IsSplatAmt || LegalVarShifts || (Subtarget.hasAVX2() && !ConstantAmt)) {
+  // Fallback for all supported (non-uniform) variable shifts.
+  // Use X86ISD::VSHLV/VSRLV to handle Amt=0/AmtR=EltSizeInBits.
+  if (LegalVarShifts) {
     Amt = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
     SDValue AmtR = DAG.getConstant(EltSizeInBits, DL, VT);
     AmtR = DAG.getNode(ISD::SUB, DL, VT, AmtR, Amt);
-    SDValue SHL = DAG.getNode(IsROTL ? ISD::SHL : ISD::SRL, DL, VT, R, Amt);
-    SDValue SRL = DAG.getNode(IsROTL ? ISD::SRL : ISD::SHL, DL, VT, R, AmtR);
+    unsigned OpcL = IsROTL ? X86ISD::VSHLV : X86ISD::VSRLV;
+    unsigned OpcR = IsROTL ? X86ISD::VSRLV : X86ISD::VSHLV;
+    SDValue SHL = DAG.getNode(OpcL, DL, VT, R, Amt);
+    SDValue SRL = DAG.getNode(OpcR, DL, VT, R, AmtR);
     return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
   }
 
@@ -45109,6 +45117,22 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       }
     }
 
+    // If we don't need to zero the upper elements, attempt to peek through to a
+    // larger vector.
+    if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        DemandedElts.countLeadingZeros() >= ShiftAmt) {
+      SDValue Inner = Src.getOperand(0);
+      EVT InnerVT = Inner.getValueType();
+      uint64_t NewAmt = ShiftAmt + Src.getConstantOperandVal(1);
+      if (isTypeLegal(InnerVT) && NewAmt < InnerVT.getVectorNumElements()) {
+        SDLoc DL(Op);
+        SDValue Shift =
+            TLO.DAG.getNode(X86ISD::KSHIFTR, DL, InnerVT, Inner,
+                            TLO.DAG.getTargetConstant(NewAmt, DL, MVT::i8));
+        return TLO.CombineTo(Op, TLO.DAG.getExtractSubvector(DL, VT, Shift, 0));
+      }
+    }
+
     APInt DemandedSrc = DemandedElts.shl(ShiftAmt);
     if (SimplifyDemandedVectorElts(Src, DemandedSrc, KnownUndef, KnownZero, TLO,
                                    Depth + 1))
@@ -52246,9 +52270,10 @@ static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineVectorShiftVar(SDNode *N, SelectionDAG &DAG,
-                                     TargetLowering::DAGCombinerInfo &DCI,
-                                     const X86Subtarget &Subtarget) {
+static SDValue
+combineVectorShiftUniformVar(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI,
+                             const X86Subtarget &Subtarget) {
   assert((X86ISD::VSHL == N->getOpcode() || X86ISD::VSRA == N->getOpcode() ||
           X86ISD::VSRL == N->getOpcode()) &&
          "Unexpected shift opcode");
@@ -63604,19 +63629,15 @@ static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
   }
 
   if (Opcode == X86ISD::KSHIFTR) {
-    // Fold kshiftr(extract_subvector(X,C1),C2)
-    //  --> extract_subvector(kshiftr(X,C1+C2),0)
     // Fold kshiftr(kshiftr(X,C1),C2) --> kshiftr(X,C1+C2)
-    if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
-        Src.getOpcode() == X86ISD::KSHIFTR) {
+    if (Src.getOpcode() == X86ISD::KSHIFTR) {
       SDValue Inner = Src.getOperand(0);
       EVT InnerVT = Inner.getValueType();
       uint64_t NewAmt = Amt + Src.getConstantOperandVal(1);
       if (TLI.isTypeLegal(InnerVT) && NewAmt < InnerVT.getVectorNumElements()) {
         SDValue Shift = DAG.getNode(X86ISD::KSHIFTR, DL, InnerVT, Inner,
                                     DAG.getTargetConstant(NewAmt, DL, MVT::i8));
-        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Shift,
-                           DAG.getVectorIdxConstant(0, DL));
+        return DAG.getExtractSubvector(DL, VT, Shift, 0);
       }
     }
     // Fold kshiftr(concat_vectors(X,Y,Z,W),C)
@@ -64358,7 +64379,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VSHL:
   case X86ISD::VSRA:
   case X86ISD::VSRL:
-    return combineVectorShiftVar(N, DAG, DCI, Subtarget);
+    return combineVectorShiftUniformVar(N, DAG, DCI, Subtarget);
   case X86ISD::VSHLI:
   case X86ISD::VSRAI:
   case X86ISD::VSRLI:
