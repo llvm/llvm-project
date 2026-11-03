@@ -41,11 +41,12 @@ using namespace llvm;
 
 namespace {
 
-// SPIR-V lowering needs LoopSimplify on optnone functions too.
-struct SPIRVLoopSimplifyPass : RequiredPassInfoMixin<SPIRVLoopSimplifyPass> {
-  static StringRef name() { return LoopSimplifyPass::name(); }
+// SPIR-V lowering needs PassT on optnone functions too.
+template <typename PassT>
+struct SPIRVRequiredPass : RequiredPassInfoMixin<SPIRVRequiredPass<PassT>> {
+  static StringRef name() { return PassT::name(); }
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
-    return LoopSimplifyPass().run(F, FAM);
+    return PassT().run(F, FAM);
   }
 };
 
@@ -127,11 +128,11 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
     //  - loops have a single entry edge (pre-header to loop header).
     //  - all loop exits are dominated by the loop pre-header.
     //  - loops have a single back-edge.
-    addFunctionPass(SPIRVLoopSimplifyPass(), PMW);
+    addFunctionPass(SPIRVRequiredPass<LoopSimplifyPass>(), PMW);
 
     // 2. Removes registers whose lifetime spans across basic blocks. Also
     // removes phi nodes. This will greatly simplify the next steps.
-    addFunctionPass(RegToMemPass(), PMW);
+    addFunctionPass(SPIRVRequiredPass<RegToMemPass>(), PMW);
 
     // 3. Merge the convergence region exit nodes into one. After this step,
     // regions are single-entry, single-exit. This will help determine the
@@ -147,9 +148,9 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
   } else {
     // Canonicalize loops so they have a single latch and preheader.
     // This enables OpLoopMerge emission for non-shader targets.
-    addFunctionPass(SPIRVLoopSimplifyPass(), PMW);
+    addFunctionPass(SPIRVRequiredPass<LoopSimplifyPass>(), PMW);
   }
-  addFunctionPass(StripConvergenceIntrinsicsPass(), PMW);
+  addFunctionPass(SPIRVRequiredPass<StripConvergenceIntrinsicsPass>(), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(SPIRVLegalizeResourceBindingPass(), PMW);
   addModulePass(SPIRVLegalizeZeroSizeArraysPass(getTM()), PMW);
