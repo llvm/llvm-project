@@ -2,8 +2,8 @@
 // obj format, and that the scanner can read obj format from PCH and modules
 // imported by PCH.
 
-// Unsupported on AIX because we don't support the requisite "__clangast"
-// section in XCOFF yet.
+// Unsupported on AIX and z/OS because we don't support the requisite
+// "__clangast" section in XCOFF (AIX) or GOFF (z/OS) yet.
 // UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // RUN: rm -rf %t && mkdir %t

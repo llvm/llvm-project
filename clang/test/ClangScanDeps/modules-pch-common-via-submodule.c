@@ -1,5 +1,5 @@
-// Unsupported on AIX because we don't support the requisite "__clangast"
-// section in XCOFF yet.
+// Unsupported on AIX and z/OS because we don't support the requisite
+// "__clangast" section in XCOFF (AIX) or GOFF (z/OS) yet.
 // UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // Check that we discover dependency on a precompiled module when it's imported

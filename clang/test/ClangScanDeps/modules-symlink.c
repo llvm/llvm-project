@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// Unsupported on AIX because we don't support the requisite "__clangast"
-// section in XCOFF yet.
+// Unsupported on AIX and z/OS because we don't support the requisite
+// "__clangast" section in XCOFF (AIX) or GOFF (z/OS) yet.
 // UNSUPPORTED: system-windows, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 //--- cdb_pch.json
