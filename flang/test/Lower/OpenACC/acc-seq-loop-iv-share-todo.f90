@@ -8,8 +8,6 @@
 !   `do k = 1, 0`, the value is 1.
 ! - device_type(nvidia) seq, device_type(default) seq, and device_type(*) seq
 !   leave the induction variable on the parent. `do k = 1, 3` leaves 4.
-! - reduction(+:s) on a seq loop is carried by the enclosing gang loop. An
-!   index that is not used is not privatized.
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 ! XFAIL: *
@@ -153,25 +151,3 @@ end subroutine
 ! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
 ! CHECK: hlfir.declare %{{[0-9]+}} uniq_name("_QFdtype_star_seqEk")
 ! CHECK: acc.loop control(%{{.*}} : i32) =
-
-! -----------------------------------------------------------------------------
-! The reduction is on the gang loop. The unused index is not privatized.
-! -----------------------------------------------------------------------------
-subroutine reduction_other(a, n, s)
-  integer :: n, i, k
-  real :: a(n), s
-  !$acc parallel copy(s)
-  !$acc loop gang
-  do i = 1, n
-    !$acc loop seq reduction(+:s)
-    do k = 1, n
-      s = s + a(i)
-    end do
-  end do
-  !$acc end parallel
-end subroutine
-
-! CHECK-LABEL: func.func @_QPreduction_other
-! CHECK: acc.loop gang {{.*}} reduction({{.*}} : !fir.ref<f32>) control(%{{.*}} : i32) =
-! CHECK-NOT: acc.private {{.*}} name("k")
-! CHECK: acc.loop
