@@ -636,7 +636,9 @@ def OpenACC_ComputeRegionOp
     std::optional<mlir::Value> getKnownLaunchArg(
         ::mlir::acc::GPUParallelDimAttr parDim);
 
-    /// Get the known constant launch value for a dimension.
+    /// Get the known constant launch value for a dimension. A negative
+    /// constant is not a width and leaves the width to the launch, so it is
+    /// not reported.
     std::optional<uint64_t> getKnownConstantLaunchArg(
         ::mlir::acc::GPUParallelDimAttr parDim);
 
