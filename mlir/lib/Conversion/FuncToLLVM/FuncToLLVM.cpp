@@ -474,6 +474,15 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
     return funcOp.emitError("C interface for variadic functions is not "
                             "supported yet.");
 
+  // The C wrapper signature requires all argument types to be LLVM compatible,
+  // which is stricter than the signature conversion above. Check it here, so
+  // that the pattern fails before any IR is created rather than while emitting
+  // the wrapper.
+  if (!useBarePtrCallConv && emitCWrapper &&
+      !converter.convertFunctionTypeCWrapper(funcTy).first)
+    return rewriter.notifyMatchFailure(
+        funcOp, "failed to convert C interface wrapper function type");
+
   // Lower function attrs
   FailureOr<LoweredLLVMFuncAttrs> loweredAttrs =
       lowerDiscardableAttrsForLLVMFunc(funcOp, *llvmType);
