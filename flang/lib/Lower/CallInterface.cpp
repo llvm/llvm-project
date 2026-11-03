@@ -69,9 +69,9 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
 /// nullptr when \p proc is not such a base call, or when no variant matches the
 /// context, so the base procedure is used as usual.
 static const Fortran::semantics::Symbol *
-getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
+getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureRef &procRef,
                            Fortran::lower::AbstractConverter &converter) {
-  const Fortran::semantics::Symbol *symbol = proc.GetSymbol();
+  const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
   if (!symbol)
     return nullptr;
   const Fortran::semantics::Symbol &ultimate{symbol->GetUltimate()};
@@ -81,7 +81,9 @@ getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
       ultimate.detailsIf<Fortran::semantics::SubprogramDetails>();
   if (!details || details->ompDeclareVariants().empty())
     return nullptr;
-  return Fortran::lower::omp::resolveDeclareVariantCallee(ultimate, converter);
+  return Fortran::lower::omp::resolveDeclareVariantCallee(
+      ultimate, converter,
+      !Fortran::lower::omp::isDispatchTargetCall(procRef, converter));
 }
 
 /// Return the binding label (from BIND(C...)) or the mangled name of the
@@ -103,7 +105,7 @@ std::string Fortran::lower::CallerInterface::getMangledName() const {
   // actual argument or to associate it with a procedure pointer) go through
   // getProcMangledName and are intentionally not redirected to the variant.
   if (const Fortran::semantics::Symbol *variant =
-          getOmpDeclareVariantCallee(procRef.proc(), converter))
+          getOmpDeclareVariantCallee(procRef, converter))
     return converter.mangleName(*variant);
   return getProcMangledName(procRef.proc(), converter);
 }
@@ -112,7 +114,7 @@ const Fortran::semantics::Symbol *
 Fortran::lower::CallerInterface::getProcedureSymbol() const {
   // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
   if (const Fortran::semantics::Symbol *variant =
-          getOmpDeclareVariantCallee(procRef.proc(), converter))
+          getOmpDeclareVariantCallee(procRef, converter))
     return variant;
   return procRef.proc().GetSymbol();
 }
@@ -197,8 +199,15 @@ getProcedureDesignatorLoc(const Fortran::evaluate::ProcedureDesignator &proc,
   // To prevent this, it is up to the bridge to first declare all functions
   // defined in the translation unit before lowering any calls or procedure
   // designator references.
-  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol())
-    return converter.genLocation(symbol->name());
+  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol()) {
+    mlir::Location loc = converter.genLocation(symbol->name());
+    // Symbols created by semantics (e.g. the renaming USE added to access the
+    // specific procedure of a use-associated generic) have names that do not
+    // map to any source. Fall back to the ultimate symbol's location.
+    if (mlir::isa<mlir::UnknownLoc>(loc))
+      loc = converter.genLocation(symbol->GetUltimate().name());
+    return loc;
+  }
   // Use current location for intrinsics.
   return converter.getCurrentLocation();
 }

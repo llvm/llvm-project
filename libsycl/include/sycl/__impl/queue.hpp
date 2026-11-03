@@ -516,6 +516,43 @@ public:
   event memcpy(void *dest, const void *src, std::size_t numBytes,
                const std::vector<event> &depEvents);
 
+  /// Submits a copy of elements from one USM or host pointer to another.
+  ///
+  /// USM pointers must be accessible on the device associated with the queue.
+  ///
+  /// \param src is the pointer to copy from.
+  /// \param dest is the pointer to copy to.
+  /// \param count is the number of elements of type T to copy.
+  /// \return an event that represents the status of the operation.
+  template <typename T> event copy(const T *src, T *dest, std::size_t count) {
+    return copy(src, dest, count, std::vector<event>{});
+  }
+
+  /// \overload
+  ///
+  /// \param src is the pointer to copy from.
+  /// \param dest is the pointer to copy to.
+  /// \param count is the number of elements of type T to copy.
+  /// \param depEvent is an event that represents a dependency for the
+  /// operation.
+  template <typename T>
+  event copy(const T *src, T *dest, std::size_t count, event depEvent) {
+    return copy(src, dest, count, std::vector<event>{depEvent});
+  }
+
+  /// \overload
+  ///
+  /// \param src is the pointer to copy from.
+  /// \param dest is the pointer to copy to.
+  /// \param count is the number of elements of type T to copy.
+  /// \param depEvents is a vector of events that represent dependencies for the
+  /// operation.
+  template <typename T>
+  event copy(const T *src, T *dest, std::size_t count,
+             const std::vector<event> &depEvents) {
+    return memcpy(dest, src, count * sizeof(T), depEvents);
+  }
+
   /// Submits a memset operation on a USM allocation that must be accessible
   /// on the device associated with the queue. Equivalent to a fill operation
   /// with an unsigned char pattern.

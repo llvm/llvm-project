@@ -21,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/SemaProxy.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -243,7 +244,7 @@ void noteValueLocation(InterpState &S, const Pointer &Ptr) {
 static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
                            AccessKinds AK) {
   if (B->getDeclID()) {
-    if (!(B->isStatic() && B->isTemporary()))
+    if (!(B->isGlobal() && B->isTemporary()))
       return true;
 
     const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(
@@ -595,7 +596,7 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, PtrView Ptr,
   if (S.checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl()))
     return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 
-  if (!Ptr.block()->isStatic())
+  if (!Ptr.block()->isGlobal())
     return true;
   if (!Ptr.block()->getDeclID())
     return true;
@@ -899,7 +900,7 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 // Similarly, for local loads.
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
-  const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<InlineDescriptor>();
   const Descriptor *BlockDesc = B->getDescriptor();
   if (!Desc.IsInitialized)
     return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
@@ -1939,7 +1940,7 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   }
 
   // Can't call a dtor on a global variable.
-  if (Ptr.isOpaquePointer() || Ptr.block()->isStatic()) {
+  if (Ptr.isOpaquePointer() || Ptr.block()->isGlobal()) {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_modify_global);
     return false;
@@ -2055,9 +2056,25 @@ bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr,
   return true;
 }
 
-static void compileFunction(InterpState &S, const Function *Func) {
+static void compileFunction(InterpState &S, const Function *Func,
+                            CodePtr OpPC) {
+  const FunctionDecl *Fn = Func->getDecl();
+
+  // [C++26] [temp.inst] p5
+  // [...] the function template specialization is implicitly instantiated
+  // when the specialization is referenced in a context that requires a function
+  // definition to exist or if the existence of the definition affects the
+  // semantics of the program.
+  if (FunctionDefinitionCanBeLazilyInstantiated(Fn) && S.inConstantContext()) {
+    SemaProxy *SProxy = S.getSemaProxy();
+    if (!SProxy)
+      return;
+    SProxy->instantiateFunctionDefinition(S.Current->getLocation(OpPC),
+                                          const_cast<FunctionDecl *>(Fn));
+  }
+
   const FunctionDecl *Definition;
-  if (!Func->getDecl()->hasBody(Definition))
+  if (!Fn->hasBody(Definition))
     return;
   if (!Definition)
     return;
@@ -2090,7 +2107,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -2169,7 +2186,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
@@ -2241,7 +2258,7 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   QualType DynamicType = TypePtr.getType();
-  if (TypePtr.Pointee->isStatic() || TypePtr.isConst()) {
+  if (TypePtr.Pointee->isGlobal() || TypePtr.isConst()) {
     if (const VarDecl *VD = Pointer(TypePtr).getRootVarDecl();
         VD && !VD->isConstexpr())
       return diagUnknownDynamicType(Pointer(TypePtr));
@@ -2399,7 +2416,7 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   {
     CXXBasePaths Paths;
     getRecord(LimitedPtr)
-        ->isDerivedFrom(TargetType->getAsCXXRecordDecl(), Paths);
+        ->isDerivedFrom(TargetType->castAsCXXRecordDecl(), Paths);
     if (std::distance(Paths.begin(), Paths.end()) == 0 &&
         !typesMatch(LimitedPtr.getType(), TargetType)) {
       return diag(DiagNoBase, TargetType);
@@ -2531,7 +2548,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     Func = S.getContext().getOrCreateFunction(Overrider);
 
     const CXXRecordDecl *ThisFieldDecl =
-        ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
+        ThisPtr.getFieldDesc()->getType()->castAsCXXRecordDecl();
     if (Func->getParentDecl()->isDerivedFrom(ThisFieldDecl)) {
       // If the function we call is further DOWN the hierarchy than the
       // FieldDesc of our pointer, just go up the hierarchy of this field
@@ -2625,7 +2642,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   // because the Call/CallVirt below might access the instance pointer
   // but the Function's information about them is wrong.
   if (!F->isFullyCompiled())
-    compileFunction(S, F);
+    compileFunction(S, F, OpPC);
 
   if (!CheckCallable(S, OpPC, F))
     return false;
@@ -2981,7 +2998,7 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
   S.CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
       << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
       << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-  if (Ptr.isBlockPointer() && !Ptr.isZero())
+  if ((Ptr.isBlockPointer() && !Ptr.isZero()) || Ptr.isOpaquePointer())
     S.CCEDiag(E, diag::note_constexpr_has_lvalue) << S.Current->getRange(OpPC);
   if (Ptr.isIntegralPointer())
     return true;
@@ -3054,7 +3071,7 @@ bool handleReference(InterpState &S, CodePtr OpPC, Block *B) {
     return true;
   }
 
-  const auto &ID = B->getBlockDesc<const InlineDescriptor>();
+  const auto &ID = B->getBlockDesc<InlineDescriptor>();
   if (!ID.IsInitialized) {
     if (!S.checkingPotentialConstantExpression())
       S.FFDiag(S.Current->getSource(OpPC),

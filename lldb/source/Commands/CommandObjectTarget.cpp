@@ -3520,9 +3520,9 @@ protected:
       }
     }
     if (dump_object_name) {
-      const char *object_name = module->GetObjectName().GetCString();
-      if (object_name)
-        strm.Printf("(%s)", object_name);
+      if (llvm::StringRef object_name = module->GetObjectName();
+          !object_name.empty())
+        strm.Format("({0})", object_name);
       std::optional<addr_t> memory_addr = module->GetMemoryModuleAddress();
       if (memory_addr.has_value())
         strm.Printf("(0x%" PRIx64 ")", memory_addr.value());

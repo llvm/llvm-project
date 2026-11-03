@@ -26,6 +26,7 @@ void MappingTraits<BBAddrMapYAML::BBAddrMapEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Version", E.Version);
   IO.mapOptional("Feature", E.Feature, Hex16(0));
+  IO.mapOptional("FuncGUID", E.FuncGUID);
   IO.mapOptional("NumBBRanges", E.NumBBRanges);
   IO.mapOptional("BBRanges", E.BBRanges);
 }
@@ -84,7 +85,7 @@ void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
   assert((AddressSize == 4 || AddressSize == 8) && "invalid address size");
   for (const auto &[Idx, E] : llvm::enumerate(Entries)) {
     // Write version and feature values.
-    if (E.Version > 5)
+    if (E.Version > 6)
       WithColor::warning() << "unsupported BB address map version: "
                            << static_cast<int>(E.Version)
                            << "; encoding using the most recent version";
@@ -99,6 +100,13 @@ void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
       WithColor::warning() << toString(FeatureOrErr.takeError());
       continue;
     }
+    // Write the function GUID. This is emitted when either the feature is
+    // enabled or 'FuncGUID' is specified, which allows testing mismatches.
+    if (!FeatureOrErr->FuncGUID && E.FuncGUID.has_value())
+      WithColor::warning() << "feature value(" << E.Feature
+                           << ") does not support function GUID.";
+    if (FeatureOrErr->FuncGUID || E.FuncGUID.has_value())
+      CBA.write<uint64_t>(E.FuncGUID.value_or(llvm::yaml::Hex64(0)), Endian);
     bool MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
     bool MultiBBRange =
         MultiBBRangeFeatureEnabled ||
@@ -210,7 +218,7 @@ Error decodePayload(
   uint64_t Address = 0;
   while (Cur && Cur.tell() < Content.size()) {
     Version = Data.getU8(Cur);
-    if (Cur && Version > 5)
+    if (Cur && Version > 6)
       return createStringError(
           errc::invalid_argument,
           "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
@@ -222,6 +230,9 @@ Error decodePayload(
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(Feature);
     if (!FeatureOrErr)
       return FeatureOrErr.takeError();
+    std::optional<llvm::yaml::Hex64> FuncGUID;
+    if (FeatureOrErr->FuncGUID)
+      FuncGUID = Data.getU64(Cur);
     if (FeatureOrErr->MultiBBRange) {
       NumBBRanges = Data.getULEB128(Cur);
     } else {
@@ -265,7 +276,7 @@ Error decodePayload(
       BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
     }
     DecodedEntries.push_back(
-        {Version, Feature, /*NumBBRanges=*/{}, std::move(BBRanges)});
+        {Version, Feature, FuncGUID, /*NumBBRanges=*/{}, std::move(BBRanges)});
 
     PGOAnalysisMapEntry &PGOAnalysis = DecodedPGOAnalyses.emplace_back();
     if (FeatureOrErr->hasPGOAnalysis()) {

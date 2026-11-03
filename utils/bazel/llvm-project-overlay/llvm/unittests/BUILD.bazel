@@ -475,7 +475,6 @@ cc_test(
         "//llvm:BinaryFormat",
         "//llvm:CodeGen",
         "//llvm:Core",
-        "//llvm:InstCombine",
         "//llvm:Passes",
         "//llvm:Plugins",
         "//llvm:Scalar",
@@ -514,6 +513,7 @@ cc_test(
     ),
     deps = [
         "//llvm:Core",
+        "//llvm:FrontendDirective",
         "//llvm:FrontendHLSL",
         "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenACC",
@@ -756,6 +756,26 @@ cc_test(
         "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Symbolize",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "TargetParserTests",
+    size = "small",
+    srcs = glob(
+        [
+            "TargetParser/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
         "//third-party/unittest:gmock",

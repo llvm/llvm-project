@@ -185,11 +185,12 @@ bool SIFormMemoryClausesImpl::canBundle(const MachineInstr &MI,
 // bundled into a memory clause.
 bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
                                             GCNDownwardRPTracker &RPT) {
-  // NB: skip advanceBeforeNext() call. Since all defs will be marked
-  // early-clobber they will all stay alive at least to the end of the
-  // clause. Therefor we should not decrease pressure even if load
-  // pointer becomes dead and could otherwise be reused for destination.
-  RPT.advanceToNext();
+  // NB: do not retire the uses of MI. Since all defs will be marked
+  // early-clobber they will all stay alive at least to the end of the clause.
+  // Therefore we should not decrease pressure even if load pointer becomes
+  // dead and could otherwise be reused for destination. The tracker is reset
+  // after the clause is formed, so its position does not need to be updated.
+  RPT.addDefs(MI);
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
   unsigned Occupancy = MaxPressure.getOccupancy(
       *ST,
@@ -348,8 +349,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
 
         if (!LI.hasSubRanges()) {
           if (!LI.liveAt(ClauseLiveOutIdx)) {
-            KillOps.emplace_back(R.second.first | RegState::Kill,
-                                 AMDGPU::NoSubRegister);
+            KillOps.emplace_back(R.second.first, AMDGPU::NoSubRegister);
           }
         } else {
           LaneBitmask KilledMask;
@@ -367,7 +367,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
           (void)Success;
           assert(Success && "Failed to find subregister mask to cover lanes");
           for (unsigned SubReg : KilledIndexes) {
-            KillOps.emplace_back(R.second.first | RegState::Kill, SubReg);
+            KillOps.emplace_back(R.second.first, SubReg);
           }
         }
 

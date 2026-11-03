@@ -591,7 +591,7 @@ static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
 }
 
 class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xevm::MMAOp op, xevm::MMAOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -696,7 +696,7 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
 };
 
 class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(PrefetchOp op, PrefetchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -734,7 +734,7 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
 };
 
 class MemfenceToOCLPattern : public OpConversionPattern<MemfenceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(MemfenceOp op, MemfenceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1202,7 +1202,7 @@ static Value takeLeadingElements(ConversionPatternRewriter &rewriter,
 //
 
 class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(TruncfOp op, TruncfOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1397,7 +1397,7 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
 };
 
 class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ExtfOp op, ExtfOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1525,7 +1525,7 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
 };
 
 class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(MMAMxOp op, MMAMxOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1624,7 +1624,7 @@ class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
 // holding floating point data bitcasts it to a same-width integer beforehand.
 class BitcastShuffleToGenISAPattern
     : public OpConversionPattern<BitcastShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(BitcastShuffleOp op, BitcastShuffleOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1646,7 +1646,7 @@ class BitcastShuffleToGenISAPattern
 };
 
 class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(LLVM::AllocaOp op, LLVM::AllocaOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

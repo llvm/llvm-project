@@ -19,33 +19,33 @@
 # CHECK-FIXUP:                 #   fixup A - offset: 0,
 # CHECK-FIXUP:                     value: bar, kind: fixup_MICROMIPS_PC10_S1
 # CHECK-FIXUP: nop             # encoding: [0x00,0x00,0x00,0x00]
-# CHECK-FIXUP: b   bar         # encoding: [A,0x94'A',0x00,0x00]
+# CHECK-FIXUP: b   bar         # encoding: [0x00,0x94,A,A]
 # CHECK-FIXUP:                 #   fixup A - offset: 0,
 # CHECK-FIXUP:                     value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP: nop             # encoding: [0x00,0x0c]
-# CHECK-FIXUP: beq $3, $4, bar # encoding: [0x83'A',0x94'A',0x00,0x00]
+# CHECK-FIXUP: beq $3, $4, bar # encoding: [0x83,0x94,A,A]
 # CHECK-FIXUP:                 #   fixup A - offset: 0, value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP: nop             # encoding: [0x00,0x0c]
-# CHECK-FIXUP: bne $3, $4, bar # encoding: [0x83'A',0xb4'A',0x00,0x00]
+# CHECK-FIXUP: bne $3, $4, bar # encoding: [0x83,0xb4,A,A]
 # CHECK-FIXUP:                 #   fixup A - offset: 0, value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP: nop             # encoding: [0x00,0x0c]
-# CHECK-FIXUP: bgez    $4, bar # encoding: [0x44'A',0x40'A',0x00,0x00]
+# CHECK-FIXUP: bgez    $4, bar # encoding: [0x44,0x40,A,A]
 # CHECK-FIXUP-NEXT:                 #   fixup A - offset: 0, value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP-NEXT: nop             # encoding: [0x00,0x0c]
-# CHECK-FIXUP: bgtz    $4, bar # encoding: [0xc4'A',0x40'A',0x00,0x00]
+# CHECK-FIXUP: bgtz    $4, bar # encoding: [0xc4,0x40,A,A]
 # CHECK-FIXUP-NEXT:                 #   fixup A - offset: 0, value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP-NEXT: nop             # encoding: [0x00,0x0c]
-# CHECK-FIXUP: blez    $4, bar # encoding: [0x84'A',0x40'A',0x00,0x00]
+# CHECK-FIXUP: blez    $4, bar # encoding: [0x84,0x40,A,A]
 # CHECK-FIXUP-NEXT:                 #   fixup A - offset: 0, value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP-NEXT: nop             # encoding: [0x00,0x0c]
-# CHECK-FIXUP: bltz    $4, bar # encoding: [0x04'A',0x40'A',0x00,0x00]
+# CHECK-FIXUP: bltz    $4, bar # encoding: [0x04,0x40,A,A]
 # CHECK-FIXUP-NEXT:                 #   fixup A - offset: 0, value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP-NEXT: nop             # encoding: [0x00,0x0c]
-# CHECK-FIXUP: bgezal  $4, bar # encoding: [0x64'A',0x40'A',0x00,0x00]
+# CHECK-FIXUP: bgezal  $4, bar # encoding: [0x64,0x40,A,A]
 # CHECK-FIXUP:                 #   fixup A - offset: 0,
 # CHECK-FIXUP:                     value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP: nop             # encoding: [0x00,0x00,0x00,0x00]
-# CHECK-FIXUP: bltzal  $4, bar # encoding: [0x24'A',0x40'A',0x00,0x00]
+# CHECK-FIXUP: bltzal  $4, bar # encoding: [0x24,0x40,A,A]
 # CHECK-FIXUP:                 #   fixup A - offset: 0,
 # CHECK-FIXUP:                     value: bar, kind: fixup_MICROMIPS_PC16_S1
 # CHECK-FIXUP: nop             # encoding: [0x00,0x00,0x00,0x00]

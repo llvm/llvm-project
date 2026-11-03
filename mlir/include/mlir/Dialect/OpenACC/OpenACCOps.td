@@ -2687,6 +2687,13 @@ def OpenACC_LoopOp
     as Loop Invariant Code Motion breaks the property requested by the
     clause on the loop constructs.
 
+    The `tile` operands hold the sizes of the `tile` clause in source order.
+    As defined by the OpenACC specification (version 3.4, section 2.9.8), the
+    first size applies to the innermost associated loop and the last size to
+    the outermost one: with `n` sizes, the size at position `k` applies to
+    induction variable `n - 1 - k`. A size of `-1` represents `*`, an
+    implementation-defined tile size.
+
     Each `acc.loop` holds private and reduction operands which are the
     ssa values from the corresponding `acc.private` or `acc.reduction`
     operations. Additionally, firstprivate operands are supported to
@@ -2826,10 +2833,11 @@ def OpenACC_LoopOp
     /// device_type.
     bool hasWorker(mlir::acc::DeviceType deviceType);
 
-    /// Return the values of the tile clause if present.
+    /// Return the values of the tile clause if present, in clause order: the
+    /// first value is the tile size of the innermost associated loop.
     mlir::Operation::operand_range getTileValues();
     /// Return the values of the tile clause for the given device_type if
-    /// present.
+    /// present, in clause order.
     mlir::Operation::operand_range
     getTileValues(mlir::acc::DeviceType deviceType);
 
@@ -2866,7 +2874,8 @@ def OpenACC_LoopOp
     void setCollapseForDeviceTypes(MLIRContext *, llvm::ArrayRef<DeviceType>,
                                    llvm::APInt);
     // Sets the tile values for this 'loop' for a set of DeviceTypes. All of the
-    // values should be integral constants, with the '*' represented as a '-1'.
+    // values should be integral constants in clause order, with the '*'
+    // represented as a '-1'.
     void setTileForDeviceTypes(MLIRContext *, llvm::ArrayRef<DeviceType>,
                                mlir::ValueRange);
 
@@ -3481,6 +3490,9 @@ def OpenACC_RoutineOp
 
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
+
+    /// Return the effective bind name for a given target device type
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getEffectiveBindName(mlir::acc::DeviceType targetDeviceType);
 
     // Add an entry to the 'seq' attribute for each additional device types.
     void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);
