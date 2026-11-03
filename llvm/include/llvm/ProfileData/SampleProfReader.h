@@ -580,7 +580,7 @@ public:
   /// Get the bitmask the discriminators: For FS profiles, return the bit
   /// mask for this pass. For non FS profiles, return (unsigned) -1.
   uint32_t getDiscriminatorMask() const {
-    if (!ProfileIsFS)
+    if (!profileIsFS())
       return 0xFFFFFFFF;
     assert((MaskedBitFrom != 0) && "MaskedBitFrom is not set properly");
     return getN1Bits(MaskedBitFrom);
@@ -592,7 +592,6 @@ public:
       return EC;
     if (Remapper)
       Remapper->applyRemapping(Ctx);
-    FunctionSamples::UseMD5 = useMD5();
     return sampleprof_error::success;
   }
 
@@ -634,7 +633,7 @@ public:
     // The function name may have been updated by adding suffix. Call
     // a helper to (optionally) strip off suffixes so that we can
     // match against the original function name in the profile.
-    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+    StringRef CanonName = getAttributes().getCanonicalFnName(F);
     return getSamplesFor(CanonName);
   }
 
@@ -667,6 +666,12 @@ public:
   /// Return all the profiles.
   SampleProfileMap &getProfiles() { return Profiles; }
 
+  /// Return the profile metadata and query helpers.
+  SampleProfileAttributes &getAttributes() { return Profiles.getAttributes(); }
+  const SampleProfileAttributes &getAttributes() const {
+    return Profiles.getAttributes();
+  }
+
   /// Report a parse error message.
   void reportError(int64_t LineNumber, const Twine &Msg) const {
     Ctx.diagnose(DiagnosticInfoSampleProfile(Buffer->getBufferIdentifier(),
@@ -698,16 +703,20 @@ public:
   SampleProfileFormat getFormat() const { return Format; }
 
   /// Whether input profile is based on pseudo probes.
-  bool profileIsProbeBased() const { return ProfileIsProbeBased; }
+  bool profileIsProbeBased() const {
+    return Profiles.getAttributes().ProfileIsProbeBased;
+  }
 
   /// Whether input profile is fully context-sensitive.
-  bool profileIsCS() const { return ProfileIsCS; }
+  bool profileIsCS() const { return Profiles.getAttributes().ProfileIsCS; }
 
   /// Whether input profile contains ShouldBeInlined contexts.
-  bool profileIsPreInlined() const { return ProfileIsPreInlined; }
+  bool profileIsPreInlined() const {
+    return Profiles.getAttributes().ProfileIsPreInlined;
+  }
 
   /// Whether input profile is flow-sensitive.
-  bool profileIsFS() const { return ProfileIsFS; }
+  bool profileIsFS() const { return Profiles.getAttributes().ProfileIsFS; }
 
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
@@ -739,17 +748,19 @@ public:
   bool hasUnknownProfileTypes() const { return HasUnknownProfileTypes; }
 
   /// Return whether names in the profile are all MD5 numbers.
-  bool useMD5() const { return ProfileIsMD5; }
+  bool useMD5() const { return Profiles.getAttributes().UseMD5; }
 
   /// Force the profile to use MD5 in Sample contexts, even if function names
   /// are present.
-  virtual void setProfileUseMD5() { ProfileIsMD5 = true; }
+  virtual void setProfileUseMD5() { Profiles.getAttributes().UseMD5 = true; }
 
   /// Don't read profile without context if the flag is set.
   void setSkipFlatProf(bool Skip) { SkipFlatProf = Skip; }
 
   /// Return whether any name in the profile contains ".__uniq." suffix.
-  virtual bool hasUniqSuffix() { return false; }
+  virtual bool hasUniqSuffix() {
+    return Profiles.getAttributes().HasUniqSuffix;
+  }
 
   SampleProfileReaderItaniumRemapper *getRemapper() { return Remapper.get(); }
 
@@ -826,20 +837,8 @@ protected:
   /// Whether the profile has attribute metadata.
   bool ProfileHasAttribute = false;
 
-  /// \brief Whether samples are collected based on pseudo probes.
-  bool ProfileIsProbeBased = false;
-
-  /// Whether function profiles are context-sensitive flat profiles.
-  bool ProfileIsCS = false;
-
-  /// Whether function profile contains ShouldBeInlined contexts.
-  bool ProfileIsPreInlined = false;
-
   /// Number of context-sensitive profiles.
   uint32_t CSProfileCount = 0;
-
-  /// Whether the function profiles use FS discriminators.
-  bool ProfileIsFS = false;
 
   /// Format version of the profile.
   uint64_t FormatVersion = 0;
@@ -859,10 +858,6 @@ protected:
   /// Zero out the discriminator bits higher than bit MaskedBitFrom (0 based).
   /// The default is to keep all the bits.
   uint32_t MaskedBitFrom = 31;
-
-  /// Whether the profile uses MD5 for Sample Contexts and function names. This
-  /// can be one-way overriden by the user to force use MD5.
-  bool ProfileIsMD5 = false;
 
   /// If SkipFlatProf is true, skip functions marked with !Flat in text mode or
   /// sections with SecFlagFlat flag in ExtBinary mode.

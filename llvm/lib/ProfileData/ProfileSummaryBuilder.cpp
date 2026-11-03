@@ -211,7 +211,7 @@ SampleProfileSummaryBuilder::computeSummaryForProfiles(
   // more function profiles each with lower counts, which in turn leads to lower
   // hot thresholds. To compensate for that, by default we merge context
   // profiles before computing profile summary.
-  if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCS &&
+  if (UseContextLessSummary || (Profiles.getAttributes().ProfileIsCS &&
                                 !UseContextLessSummary.getNumOccurrences())) {
     ProfileConverter::flattenProfile(Profiles, ContextLessProfiles, true);
     ProfilesToUse = &ContextLessProfiles;

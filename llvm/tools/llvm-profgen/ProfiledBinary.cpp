@@ -606,11 +606,11 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   uint64_t NextStartAddress =
       (SI + 1 < SE) ? Symbols[SI + 1].Addr : SectionAddress + SectSize;
   FuncRange *FRange = findFuncRange(StartAddress);
-  setIsFuncEntry(FRange, FunctionSamples::getCanonicalFnName(Symbols[SI].Name));
-  StringRef SymbolName =
-      ShowCanonicalFnName
-          ? FunctionSamples::getCanonicalFnName(Symbols[SI].Name)
-          : Symbols[SI].Name;
+  SampleProfileAttributes ProfAttrs;
+  setIsFuncEntry(FRange, ProfAttrs.getCanonicalFnName(Symbols[SI].Name));
+  StringRef SymbolName = ShowCanonicalFnName
+                             ? ProfAttrs.getCanonicalFnName(Symbols[SI].Name)
+                             : Symbols[SI].Name;
   bool ShowDisassembly =
       ShowDisassemblyOnly && (DisassembleFunctionSet.empty() ||
                               DisassembleFunctionSet.count(SymbolName));
@@ -962,7 +962,7 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
 
     const uint64_t EndAddr = StartAddr + Size;
     const StringRef SymName =
-        FunctionSamples::getCanonicalFnName(Name, CanonicalSuffixes);
+        SampleProfileAttributes().getCanonicalFnName(Name, CanonicalSuffixes);
     assert(StartAddr < EndAddr && StartAddr >= getPreferredBaseAddress() &&
            "Function range is invalid.");
 
@@ -1038,7 +1038,7 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
     if (!Name)
       continue;
 
-    auto CanonName = FunctionSamples::getCanonicalCoroFnName(Name);
+    auto CanonName = SampleProfileAttributes::getCanonicalCoroFnName(Name);
     auto RangesOrError = Die.getAddressRanges();
     if (!RangesOrError)
       continue;
@@ -1173,11 +1173,11 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
 
     StringRef FunctionName(CallerFrame.FunctionName);
     if (UseCanonicalFnName)
-      FunctionName =
-          FunctionSamples::getCanonicalFnName(FunctionName, CanonicalSuffixes);
+      FunctionName = SampleProfileAttributes().getCanonicalFnName(
+          FunctionName, CanonicalSuffixes);
     else
-      FunctionName =
-          FunctionSamples::getCanonicalFnName(FunctionName, CoroSuffixes);
+      FunctionName = SampleProfileAttributes().getCanonicalFnName(FunctionName,
+                                                                  CoroSuffixes);
 
     uint32_t Discriminator = CallerFrame.Discriminator;
     uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;

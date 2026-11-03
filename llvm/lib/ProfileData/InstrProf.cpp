@@ -626,7 +626,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // to "foo" otherwise, which can make the symtab lookup return unexpected
   // result.
   const SmallVector<StringRef> SuffixesToRemove{".llvm.", ".part."};
-  return FunctionSamples::getCanonicalFnName(PGOName, SuffixesToRemove);
+  return SampleProfileAttributes().getCanonicalFnName(PGOName,
+                                                      SuffixesToRemove);
 }
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,

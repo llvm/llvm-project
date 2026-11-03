@@ -32,7 +32,8 @@ ContextTrieNode *ContextTrieNode::getChildContext(const LineLocation &CallSite,
   if (CalleeName.empty())
     return getHottestChildContext(CallSite);
 
-  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
+  uint64_t Hash =
+      SampleProfileAttributes::getCallSiteHash(CalleeName, CallSite);
   auto It = AllChildContext.find(Hash);
   if (It != AllChildContext.end())
     return &It->second;
@@ -66,8 +67,8 @@ ContextTrieNode &
 SampleContextTracker::moveContextSamples(ContextTrieNode &ToNodeParent,
                                          const LineLocation &CallSite,
                                          ContextTrieNode &&NodeToMove) {
-  uint64_t Hash =
-      FunctionSamples::getCallSiteHash(NodeToMove.getFuncName(), CallSite);
+  uint64_t Hash = SampleProfileAttributes::getCallSiteHash(
+      NodeToMove.getFuncName(), CallSite);
   std::map<uint64_t, ContextTrieNode> &AllChildContext =
       ToNodeParent.getAllChildContext();
   assert(!AllChildContext.count(Hash) && "Node to remove must exist");
@@ -104,7 +105,8 @@ SampleContextTracker::moveContextSamples(ContextTrieNode &ToNodeParent,
 
 void ContextTrieNode::removeChildContext(const LineLocation &CallSite,
                                          FunctionId CalleeName) {
-  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
+  uint64_t Hash =
+      SampleProfileAttributes::getCallSiteHash(CalleeName, CallSite);
   // Note this essentially calls dtor and destroys that child context
   AllChildContext.erase(Hash);
 }
@@ -178,7 +180,8 @@ void ContextTrieNode::dumpTree() {
 
 ContextTrieNode *ContextTrieNode::getOrCreateChildContext(
     const LineLocation &CallSite, FunctionId CalleeName, bool AllowCreate) {
-  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
+  uint64_t Hash =
+      SampleProfileAttributes::getCallSiteHash(CalleeName, CallSite);
   auto It = AllChildContext.find(Hash);
   if (It != AllChildContext.end()) {
     assert(It->second.getFuncName() == CalleeName &&
@@ -198,7 +201,8 @@ ContextTrieNode *ContextTrieNode::getOrCreateChildContext(
 SampleContextTracker::SampleContextTracker(
     SampleProfileMap &Profiles,
     const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap)
-    : GUIDToFuncNameMap(GUIDToFuncNameMap) {
+    : GUIDToFuncNameMap(GUIDToFuncNameMap),
+      ProfAttrs(Profiles.getAttributes()) {
   for (auto &FuncSample : Profiles) {
     FunctionSamples *FSamples = &FuncSample.second;
     SampleContext Context = FuncSample.second.getContext();
@@ -231,9 +235,9 @@ SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
   if (!DIL)
     return nullptr;
 
-  CalleeName = FunctionSamples::getCanonicalFnName(CalleeName);
-  
-  FunctionId FName = getRepInFormat(CalleeName);
+  CalleeName = ProfAttrs.getCanonicalFnName(CalleeName);
+
+  FunctionId FName = ProfAttrs.getRepInFormat(CalleeName);
 
   // For indirect call, CalleeName will be empty, in which case the context
   // profile for callee with largest total samples will be returned.
@@ -258,7 +262,7 @@ SampleContextTracker::getIndirectCalleeContextSamplesFor(
     return R;
 
   ContextTrieNode *CallerNode = getContextFor(DIL);
-  LineLocation CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+  LineLocation CallSite = ProfAttrs.getCallSiteIdentifier(DIL);
   for (auto &It : CallerNode->getAllChildContext()) {
     ContextTrieNode &ChildNode = It.second;
     if (ChildNode.getCallSiteLoc() != CallSite)
@@ -302,19 +306,19 @@ SampleContextTracker::getContextSamplesFor(const SampleContext &Context) {
 
 SampleContextTracker::ContextSamplesTy &
 SampleContextTracker::getAllContextSamplesFor(const Function &Func) {
-  StringRef CanonName = FunctionSamples::getCanonicalFnName(Func);
-  return FuncToCtxtProfiles[getRepInFormat(CanonName)];
+  StringRef CanonName = ProfAttrs.getCanonicalFnName(Func);
+  return FuncToCtxtProfiles[ProfAttrs.getRepInFormat(CanonName)];
 }
 
 SampleContextTracker::ContextSamplesTy &
 SampleContextTracker::getAllContextSamplesFor(StringRef Name) {
-  return FuncToCtxtProfiles[getRepInFormat(Name)];
+  return FuncToCtxtProfiles[ProfAttrs.getRepInFormat(Name)];
 }
 
 FunctionSamples *SampleContextTracker::getBaseSamplesFor(const Function &Func,
                                                          bool MergeContext) {
-  StringRef CanonName = FunctionSamples::getCanonicalFnName(Func);
-  return getBaseSamplesFor(getRepInFormat(CanonName), MergeContext);
+  StringRef CanonName = ProfAttrs.getCanonicalFnName(Func);
+  return getBaseSamplesFor(ProfAttrs.getRepInFormat(CanonName), MergeContext);
 }
 
 FunctionSamples *SampleContextTracker::getBaseSamplesFor(FunctionId Name,
@@ -378,7 +382,7 @@ void SampleContextTracker::promoteMergeContextSamplesTree(
     return;
 
   // Get the context that needs to be promoted
-  LineLocation CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+  LineLocation CallSite = ProfAttrs.getCallSiteIdentifier(DIL);
   // For indirect call, CalleeName will be empty, in which case we need to
   // promote all non-inlined child context profiles.
   if (CalleeName.empty()) {
@@ -451,7 +455,7 @@ SampleContextTracker::getContextString(ContextTrieNode *Node) const {
 void SampleContextTracker::dump() { RootContext.dumpTree(); }
 
 StringRef SampleContextTracker::getFuncNameFor(ContextTrieNode *Node) const {
-  if (!FunctionSamples::UseMD5)
+  if (!ProfAttrs.UseMD5)
     return Node->getFuncName().stringRef();
   assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be populated first");
   return GUIDToFuncNameMap->lookup(Node->getFuncName().getHashCode());
@@ -473,8 +477,8 @@ SampleContextTracker::getCalleeContextFor(const DILocation *DIL,
 
   // When CalleeName is empty, the child context profile with max
   // total samples will be returned.
-  return CallContext->getChildContext(
-      FunctionSamples::getCallSiteIdentifier(DIL), CalleeName);
+  return CallContext->getChildContext(ProfAttrs.getCallSiteIdentifier(DIL),
+                                      CalleeName);
 }
 
 ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
@@ -487,9 +491,8 @@ ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
     StringRef Name = PrevDIL->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
       Name = PrevDIL->getScope()->getSubprogram()->getName();
-    S.push_back(
-        std::make_pair(FunctionSamples::getCallSiteIdentifier(DIL),
-                       getRepInFormat(Name)));
+    S.push_back(std::make_pair(ProfAttrs.getCallSiteIdentifier(DIL),
+                               ProfAttrs.getRepInFormat(Name)));
     PrevDIL = DIL;
   }
 
@@ -498,8 +501,8 @@ ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
   StringRef RootName = PrevDIL->getScope()->getSubprogram()->getLinkageName();
   if (RootName.empty())
     RootName = PrevDIL->getScope()->getSubprogram()->getName();
-  S.push_back(std::make_pair(LineLocation(0, 0),
-                             getRepInFormat(RootName)));
+  S.push_back(
+      std::make_pair(LineLocation(0, 0), ProfAttrs.getRepInFormat(RootName)));
 
   ContextTrieNode *ContextNode = &RootContext;
   int I = S.size();
@@ -621,6 +624,8 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
 
 void SampleContextTracker::createContextLessProfileMap(
     SampleProfileMap &ContextLessProfiles) {
+  ContextLessProfiles.getAttributes() = ProfAttrs;
+  ContextLessProfiles.getAttributes().ProfileIsCS = false;
   for (auto *Node : *this) {
     FunctionSamples *FProfile = Node->getFunctionSamples();
     // Profile's context can be empty, use ContextNode's func name.

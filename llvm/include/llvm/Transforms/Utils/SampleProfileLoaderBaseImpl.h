@@ -84,9 +84,11 @@ template <> struct IRTraits<BasicBlock> {
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
   DenseSet<uint64_t> GUIDIsWeakSymbol;
+  SampleProfileAttributes ProfAttrs;
 
 public:
-  PseudoProbeManager(const Module &M) {
+  PseudoProbeManager(const Module &M, SampleProfileAttributes ProfAttrs = {})
+      : ProfAttrs(ProfAttrs) {
     if (NamedMDNode *FuncInfo =
             M.getNamedMetadata(PseudoProbeDescMetadataName)) {
       for (const auto *Operand : FuncInfo->operands()) {
@@ -100,7 +102,7 @@ public:
       for (const auto &Func : M) {
         if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
           auto GUID = Function::getGUIDAssumingExternalLinkage(
-              FunctionSamples::getCanonicalFnName(Func));
+              this->ProfAttrs.getCanonicalFnName(Func));
           if (GUIDToProbeDescMap.contains(GUID))
             GUIDIsWeakSymbol.insert(GUID);
         }
@@ -115,12 +117,12 @@ public:
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
     return getDesc(Function::getGUIDAssumingExternalLinkage(
-        FunctionSamples::getCanonicalFnName(FProfileName)));
+        ProfAttrs.getCanonicalFnName(FProfileName)));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
     return getDesc(Function::getGUIDAssumingExternalLinkage(
-        FunctionSamples::getCanonicalFnName(F)));
+        ProfAttrs.getCanonicalFnName(F)));
   }
 
   bool probeFromWeakSymbol(uint64_t GUID) const {
@@ -409,7 +411,7 @@ void SampleProfileLoaderBaseImpl<BT>::printBlockWeight(
 template <typename BT>
 ErrorOr<uint64_t>
 SampleProfileLoaderBaseImpl<BT>::getInstWeight(const InstructionT &Inst) {
-  if (FunctionSamples::ProfileIsProbeBased)
+  if (Reader->profileIsProbeBased())
     return getProbeWeight(Inst);
   return getInstWeightImpl(Inst);
 }
@@ -426,7 +428,7 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
     return std::error_code();
 
   const DILocation *DIL = DLoc;
-  uint32_t LineOffset = FunctionSamples::getOffset(DIL);
+  uint32_t LineOffset = SampleProfileAttributes::getOffset(DIL);
   uint32_t Discriminator;
   if (EnableFSDiscriminator)
     Discriminator = DIL->getDiscriminator();
@@ -461,8 +463,7 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
 template <typename BT>
 ErrorOr<uint64_t>
 SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
-  assert(FunctionSamples::ProfileIsProbeBased &&
-         "Profile is not pseudo probe based");
+  assert(Reader->profileIsProbeBased() && "Profile is not pseudo probe based");
   std::optional<PseudoProbe> Probe = extractProbe(Inst);
   // Ignore the non-probe instruction. If none of the instruction in the BB is
   // probe, we choose to infer the BB's weight.
@@ -574,7 +575,8 @@ const FunctionSamples *SampleProfileLoaderBaseImpl<BT>::findFunctionSamples(
 
   auto it = DILocation2SampleMap.try_emplace(DIL, nullptr);
   if (it.second) {
-    it.first->second = Samples->findFunctionSamples(DIL, Reader->getRemapper());
+    it.first->second = Reader->getAttributes().findFunctionSamples(
+        *Samples, DIL, Reader->getRemapper());
   }
   return it.first->second;
 }
