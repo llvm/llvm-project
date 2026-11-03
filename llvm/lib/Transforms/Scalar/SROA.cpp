@@ -6165,17 +6165,24 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     }
   }
 
+  SmallDenseMap<Instruction *, Slice *> MemTransferSlices;
+
   for (Slice &S : AS) {
     if (!S.isSplittable())
       continue;
 
-    // Memory transfers within an alloca are always unsplittable
+    // If we have two slices for the same MemTransferInst then that means they
+    // correspond to the source and destination and so the transfer is within
+    // the same alloca. Such slices are always unsplittable.
     auto *MTI = dyn_cast<MemTransferInst>(S.getUse()->getUser());
-    if (MTI && getUnderlyingObject(MTI->getSource()) ==
-                   getUnderlyingObject(MTI->getDest())) {
-      S.makeUnsplittable();
-      IsSorted = false;
-      continue;
+    if (MTI) {
+      auto [Iter, DidInsert] = MemTransferSlices.insert({MTI, &S});
+      if (!DidInsert) {
+        S.makeUnsplittable();
+        Iter->second->makeUnsplittable();
+        IsSorted = false;
+        continue;
+      }
     }
 
     if ((S.beginOffset() > AllocaSize ||

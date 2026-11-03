@@ -493,6 +493,136 @@ define void @memmove_too_large(i8 %arg, ptr %dest) {
   ret void
 }
 
+; The memmove source and destination being obscured by a phi and select
+; shouldn't prevent this from being optimized.
+define void @memmove_select_phi(i8 %arg, ptr %dest, i1 %cond) {
+; CHECK-LABEL: define void @memmove_select_phi(
+; CHECK-SAME: i8 [[ARG:%.*]], ptr [[DEST:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[THEN:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[DEST_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 1
+; CHECK-NEXT:    [[DEST_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 2
+; CHECK-NEXT:    [[DEST_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 3
+; CHECK-NEXT:    [[DEST_4:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 4
+; CHECK-NEXT:    store i8 [[ARG]], ptr [[DEST]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[DEST_1]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[DEST_2]], align 1
+; CHECK-NEXT:    store i8 2, ptr [[DEST_3]], align 1
+; CHECK-NEXT:    store i8 3, ptr [[DEST_4]], align 1
+; CHECK-NEXT:    ret void
+;
+  %arr = alloca [5 x i8], align 1
+  %arr.1 = getelementptr inbounds nuw i8, ptr %arr, i64 1
+  %arr.2 = getelementptr inbounds nuw i8, ptr %arr, i64 2
+  %arr.3 = getelementptr inbounds nuw i8, ptr %arr, i64 3
+  %arr.4 = getelementptr inbounds nuw i8, ptr %arr, i64 4
+  store i8 0, ptr %arr, align 1
+  store i8 1, ptr %arr.1, align 1
+  store i8 2, ptr %arr.2, align 1
+  store i8 3, ptr %arr.3, align 1
+  store i8 4, ptr %arr.4, align 1
+  %dst = select i1 %cond, ptr %arr.1, ptr %arr.1
+  br i1 %cond, label %if, label %else
+
+if:
+  br label %then
+
+else:
+  br label %then
+
+then:
+  %src = phi ptr [ %arr, %if ], [ %arr, %else ]
+  call void @llvm.memmove.p0.p0.i32(ptr %dst, ptr %src, i32 4, i1 false)
+  store i8 %arg, ptr %arr, align 1
+  %dest.1 = getelementptr inbounds nuw i8, ptr %dest, i64 1
+  %dest.2 = getelementptr inbounds nuw i8, ptr %dest, i64 2
+  %dest.3 = getelementptr inbounds nuw i8, ptr %dest, i64 3
+  %dest.4 = getelementptr inbounds nuw i8, ptr %dest, i64 4
+  %val.0 = load i8, ptr %arr, align 1
+  %val.1 = load i8, ptr %arr.1, align 1
+  %val.2 = load i8, ptr %arr.2, align 1
+  %val.3 = load i8, ptr %arr.3, align 1
+  %val.4 = load i8, ptr %arr.4, align 1
+  store i8 %val.0, ptr %dest, align 1
+  store i8 %val.1, ptr %dest.1, align 1
+  store i8 %val.2, ptr %dest.2, align 1
+  store i8 %val.3, ptr %dest.3, align 1
+  store i8 %val.4, ptr %dest.4, align 1
+  ret void
+}
+
+; If we have a memmove with no overlap between source and destination then even
+; if the source and destination are obscured by phi and select we should still
+; not try to split them.
+define void @memmove_select_phi_no_overlap(i8 %arg, ptr %dest, i1 %cond) {
+; CHECK-LABEL: define void @memmove_select_phi_no_overlap(
+; CHECK-SAME: i8 [[ARG:%.*]], ptr [[DEST:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[THEN:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[DEST_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 1
+; CHECK-NEXT:    [[DEST_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 2
+; CHECK-NEXT:    [[DEST_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 3
+; CHECK-NEXT:    [[DEST_4:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 4
+; CHECK-NEXT:    store i8 0, ptr [[DEST]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[DEST_1]], align 1
+; CHECK-NEXT:    store i8 2, ptr [[DEST_2]], align 1
+; CHECK-NEXT:    store i8 3, ptr [[DEST_3]], align 1
+; CHECK-NEXT:    store i8 4, ptr [[DEST_4]], align 1
+; CHECK-NEXT:    ret void
+;
+  %arr = alloca [10 x i8], align 1
+  %arr.1 = getelementptr inbounds nuw i8, ptr %arr, i64 1
+  %arr.2 = getelementptr inbounds nuw i8, ptr %arr, i64 2
+  %arr.3 = getelementptr inbounds nuw i8, ptr %arr, i64 3
+  %arr.4 = getelementptr inbounds nuw i8, ptr %arr, i64 4
+  %arr.5 = getelementptr inbounds nuw i8, ptr %arr, i64 5
+  %arr.6 = getelementptr inbounds nuw i8, ptr %arr, i64 6
+  %arr.7 = getelementptr inbounds nuw i8, ptr %arr, i64 7
+  %arr.8 = getelementptr inbounds nuw i8, ptr %arr, i64 8
+  %arr.9 = getelementptr inbounds nuw i8, ptr %arr, i64 9
+  store i8 0, ptr %arr, align 1
+  store i8 1, ptr %arr.1, align 1
+  store i8 2, ptr %arr.2, align 1
+  store i8 3, ptr %arr.3, align 1
+  store i8 4, ptr %arr.4, align 1
+  %dst = select i1 %cond, ptr %arr.5, ptr %arr.5
+  br i1 %cond, label %if, label %else
+
+if:
+  br label %then
+
+else:
+  br label %then
+
+then:
+  %src = phi ptr [ %arr, %if ], [ %arr, %else ]
+  call void @llvm.memmove.p0.p0.i32(ptr %dst, ptr %src, i32 5, i1 false)
+  store i8 %arg, ptr %arr, align 1
+  %dest.1 = getelementptr inbounds nuw i8, ptr %dest, i64 1
+  %dest.2 = getelementptr inbounds nuw i8, ptr %dest, i64 2
+  %dest.3 = getelementptr inbounds nuw i8, ptr %dest, i64 3
+  %dest.4 = getelementptr inbounds nuw i8, ptr %dest, i64 4
+  %val.0 = load i8, ptr %arr.5, align 1
+  %val.1 = load i8, ptr %arr.6, align 1
+  %val.2 = load i8, ptr %arr.7, align 1
+  %val.3 = load i8, ptr %arr.8, align 1
+  %val.4 = load i8, ptr %arr.9, align 1
+  store i8 %val.0, ptr %dest, align 1
+  store i8 %val.1, ptr %dest.1, align 1
+  store i8 %val.2, ptr %dest.2, align 1
+  store i8 %val.3, ptr %dest.3, align 1
+  store i8 %val.4, ptr %dest.4, align 1
+  ret void
+}
+
 ; The move destination overlaps an unsplittable float store
 ; FIXME: splitting the move here doesn't let us eliminate it, so the end result
 ; is worse.
