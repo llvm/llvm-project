@@ -13,6 +13,8 @@
 
 #include "CodeGenFunction.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
@@ -179,6 +181,21 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
 
     llvm::Value *Arg = A.getRValue(*this).getScalarVal();
     Args.push_back(Arg);
+  }
+
+  // The lowering can only find %s specifiers in a constant format string, so
+  // with a non-constant format a string argument would cause wrong behavior.
+  // Instead we reject it.
+  StringRef FmtStr;
+  if (!llvm::getConstantStringInfo(Args[0], FmtStr)) {
+    for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I) {
+      if (Args[I]->getType()->isPointerTy()) {
+        CGM.getDiags().Report(E->getArg(0)->getExprLoc(),
+                              diag::err_amdgpu_printf_nonconst_fmt_with_ptr_arg)
+            << E->getArg(I)->getSourceRange();
+        return RValue::get(llvm::ConstantInt::getAllOnesValue(IntTy));
+      }
+    }
   }
 
   llvm::IRBuilder<> IRB(Builder.GetInsertPoint());
