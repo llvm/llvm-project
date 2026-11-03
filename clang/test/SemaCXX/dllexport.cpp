@@ -745,6 +745,7 @@ struct ClassTemplateWithMultipleDefaultCtors {
   __declspec(dllexport) ClassTemplateWithMultipleDefaultCtors(int = 40) {}      // ms-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
   __declspec(dllexport) ClassTemplateWithMultipleDefaultCtors(int = 30, ...) {} // ms-note{{declared here}}
 };
+template struct ClassTemplateWithMultipleDefaultCtors<int>; // ms-note{{in instantiation of template class 'ClassTemplateWithMultipleDefaultCtors<int>' requested here}}
 
 struct ClassWithNestedMultipleDefaultCtors {
   struct Nested {
