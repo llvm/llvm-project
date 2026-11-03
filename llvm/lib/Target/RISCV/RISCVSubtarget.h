@@ -293,6 +293,7 @@ public:
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const {
     return TargetABI == RISCVABI::ABI_LP64 ||
+           TargetABI == RISCVABI::ABI_LP64E ||
            TargetABI == RISCVABI::ABI_ILP32 ||
            TargetABI == RISCVABI::ABI_ILP32E;
   }
