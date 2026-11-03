@@ -11,7 +11,11 @@
 
 #include "llvm/Transforms/Coroutines/MaterializationUtils.h"
 #include "CoroInternal.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
@@ -27,6 +31,83 @@ using namespace coro;
 // The "coro-suspend-crossing" flag is very noisy. There is another debug type,
 // "coro-frame", which results in leaner debug spew.
 #define DEBUG_TYPE "coro-suspend-crossing"
+
+// Returns true if \p Root can be rematerialized in the resume function without
+// introducing a new spill. This holds when a value is:
+// 1. A constant: genuinely available at no cost, materialized as an immediate
+//    in the resume function.
+// 2. An argument: treated as available heuristically. An argument crossing the
+//    suspend is actually spilled, but treating it as available preserves
+//    beneficial shared-operand rematerialization.
+// 3. A value that already crosses a suspend point for an independent use, i.e.,
+//    it is spilled regardless.
+// 4. A materializable value all of whose operands are themselves available.
+static bool isAvailableAfterSuspend(
+    Value *Root, const std::function<bool(Instruction &)> &Materializable,
+    const SuspendCrossingInfo &Checker, SmallDenseMap<Value *, bool> &Memo) {
+  SmallVector<Value *> Stack;
+  // Materializable nodes whose operands have been scheduled but not yet folded.
+  // Distinguishes a node being visited a second time (operands ready) from the
+  // first visit, and lets an operand reached through a cycle resolve to false.
+  SmallPtrSet<Value *, 16> Opened;
+  Stack.push_back(Root);
+  while (!Stack.empty()) {
+    Value *V = Stack.back();
+    if (Memo.contains(V)) {
+      Stack.pop_back();
+      continue;
+    }
+
+    // Leaves that resolve without inspecting operands. Non-instructions
+    // (constants, arguments) are available; a value that already crosses a
+    // suspend independently is spilled regardless, so referencing its slot is
+    // available at no new cost.
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || Checker.isDefinitionAcrossSuspend(*I)) {
+      Memo[V] = true;
+      Stack.pop_back();
+      continue;
+    }
+    if (!Materializable(*I)) {
+      Memo[V] = false;
+      Stack.pop_back();
+      continue;
+    }
+
+    // Materializable: available iff all operands are available. On the first
+    // visit, schedule the unresolved operands above V and revisit V once they
+    // are folded.
+    if (Opened.insert(V).second) {
+      for (Use &U : I->operands())
+        if (!Memo.contains(U.get()))
+          Stack.push_back(U.get());
+      continue;
+    }
+
+    // Second visit: operands are resolved, except any reached through a cycle
+    // (only possible via non-materializable PHIs, which never open). An
+    // unresolved operand is treated as not available, conservatively.
+    Stack.pop_back();
+    Memo[V] = all_of(I->operands(), [&](Use &U) {
+      auto It = Memo.find(U.get());
+      return It != Memo.end() && It->second;
+    });
+  }
+  return Memo.lookup(Root);
+}
+
+// Returns true if every operand of \p I is available after the suspend. This is
+// the profitability condition for rematerializing \p I: recomputing it then
+// forces no new value into the coroutine frame. Note this deliberately does NOT
+// consult isDefinitionAcrossSuspend(I) on I itself -- every remat candidate
+// crosses a suspend by definition, so that would make the check a no-op.
+static bool allOperandsAvailableAfterSuspend(
+    Instruction &I, const std::function<bool(Instruction &)> &Materializable,
+    const SuspendCrossingInfo &Checker, SmallDenseMap<Value *, bool> &Memo) {
+  return all_of(I.operands(), [&](Use &U) {
+    return isAvailableAfterSuspend(U.get(), Materializable, Checker, Memo);
+  });
+}
 
 namespace {
 
@@ -52,10 +133,16 @@ struct RematGraph {
   RematNodeMap Remats;
   const std::function<bool(Instruction &)> &MaterializableCallback;
   SuspendCrossingInfo &Checker;
+  // Shared across all RematGraphs and the candidate scan in
+  // doRematerializations: isAvailableAfterSuspend is context-free and the IR is
+  // not mutated until rematerialization, so results can be cached across uses.
+  SmallDenseMap<Value *, bool> &AvailMemo;
 
   RematGraph(const std::function<bool(Instruction &)> &MaterializableCallback,
-             Instruction *I, SuspendCrossingInfo &Checker)
-      : MaterializableCallback(MaterializableCallback), Checker(Checker) {
+             Instruction *I, SuspendCrossingInfo &Checker,
+             SmallDenseMap<Value *, bool> &AvailMemo)
+      : MaterializableCallback(MaterializableCallback), Checker(Checker),
+        AvailMemo(AvailMemo) {
     std::unique_ptr<RematNode> FirstNode = std::make_unique<RematNode>(I);
     EntryNode = FirstNode.get();
     std::deque<std::unique_ptr<RematNode>> WorkList;
@@ -80,7 +167,9 @@ struct RematGraph {
     for (auto &Def : N->Node->operands()) {
       Instruction *D = dyn_cast<Instruction>(Def.get());
       if (!D || !MaterializableCallback(*D) ||
-          !Checker.isDefinitionAcrossSuspend(*D, FirstUse))
+          !Checker.isDefinitionAcrossSuspend(*D, FirstUse) ||
+          !allOperandsAvailableAfterSuspend(*D, MaterializableCallback, Checker,
+                                            AvailMemo))
         continue;
 
       if (auto It = Remats.find(D); It != Remats.end()) {
@@ -336,6 +425,9 @@ void coro::doRematerializations(
   // different instructions with a def in common (rather than maintaining more
   // complex graphs for each suspend point)
 
+  // Caches whether values are available after a suspend point.
+  SmallDenseMap<Value *, bool> AvailMemo;
+
   // We can do this by adding new nodes to the list for each suspend
   // point. Then using standard GraphTraits to give a reverse post-order
   // traversal when we insert the nodes after the suspend
@@ -350,7 +442,7 @@ void coro::doRematerializations(
 
       // Constructor creates the whole RematGraph for the given Use
       auto RematUPtr =
-          std::make_unique<RematGraph>(IsMaterializable, U, Checker);
+          std::make_unique<RematGraph>(IsMaterializable, U, Checker, AvailMemo);
 
       LLVM_DEBUG(dbgs() << "***** Next remat group *****\n";
                  ReversePostOrderTraversal<RematGraph *> RPOT(RematUPtr.get());

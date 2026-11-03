@@ -4,9 +4,7 @@
 define ptr @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  coro.return:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 12)
-; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
-; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret ptr @f.resume.0
 ;
 entry:
@@ -36,18 +34,7 @@ cleanup:
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 12)
-; CHECK-NEXT:    store i32 1, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[N_VAL3_SPILL_ADDR_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    store i32 1, ptr [[N_VAL3_SPILL_ADDR_I]], align 4, !noalias [[META0:![0-9]+]]
-; CHECK-NEXT:    [[INPUT_SPILL_ADDR_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
-; CHECK-NEXT:    store i32 2, ptr [[INPUT_SPILL_ADDR_I]], align 4, !noalias [[META0]]
-; CHECK-NEXT:    [[INPUT_RELOAD_ADDR13_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
-; CHECK-NEXT:    [[N_VAL3_RELOAD_ADDR11_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    store i32 3, ptr [[N_VAL3_RELOAD_ADDR11_I]], align 4, !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    store i32 4, ptr [[INPUT_RELOAD_ADDR13_I]], align 4, !noalias [[META3]]
-; CHECK-NEXT:    tail call void @print(i32 7), !noalias [[META6:![0-9]+]]
-; CHECK-NEXT:    tail call void @deallocate(ptr nonnull [[TMP0]]), !noalias [[META6]]
+; CHECK-NEXT:    tail call void @print(i32 7), !noalias [[META0:![0-9]+]], !inline_history [[META3:![0-9]+]]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
