@@ -139,3 +139,34 @@ body:             |
     %res:_(i32) = G_FCMP floatpred(oge), %trunc(f32), %rhs
     $w0 = COPY %res(i32)
 ...
+---
+# 0x7E00 is a NaN as a half but 2^125 as a bfloat, which is greater than 0x7C00
+# (2^121).
+name:            test_fcmp_bf16_const
+tracksRegLiveness: false
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_fcmp_bf16_const
+    ; CHECK: %res:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: $w0 = COPY %res(i32)
+    %lhs:_(bf16) = G_FCONSTANT bfloat 0xR7E00
+    %rhs:_(bf16) = G_FCONSTANT bfloat 0xR7C00
+    %res:_(i32) = G_FCMP floatpred(ogt), %lhs(bf16), %rhs
+    $w0 = COPY %res(i32)
+...
+---
+# There is no IEEE type of 8 bits to read the truncated half in.
+name:            test_fcmp_trunc_no_fp_type
+tracksRegLiveness: false
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_fcmp_trunc_no_fp_type
+    ; CHECK: %h:_(s16) = G_FCONSTANT half 1.000000e+00
+    ; CHECK-NEXT: %t:_(s8) = G_TRUNC %h(s16)
+    ; CHECK-NEXT: %res:_(i32) = G_FCMP floatpred(oeq), %t(s8), %t
+    ; CHECK-NEXT: $w0 = COPY %res(i32)
+    %h:_(s16) = G_FCONSTANT half 1.0
+    %t:_(s8) = G_TRUNC %h(s16)
+    %res:_(i32) = G_FCMP floatpred(oeq), %t(s8), %t
+    $w0 = COPY %res(i32)
+...

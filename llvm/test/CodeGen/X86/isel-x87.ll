@@ -74,6 +74,36 @@ define x86_fp80 @f0(x86_fp80 noundef %a) nounwind {
   ret x86_fp80 %add
 }
 
+define x86_fp80 @fadd_constant(x86_fp80 %a) nounwind {
+; GISEL_X86-LABEL: fadd_constant:
+; GISEL_X86:       # %bb.0:
+; GISEL_X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; GISEL_X86-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
+; GISEL_X86-NEXT:    faddp %st, %st(1)
+; GISEL_X86-NEXT:    retl
+;
+; SDAG_X86-LABEL: fadd_constant:
+; SDAG_X86:       # %bb.0:
+; SDAG_X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; SDAG_X86-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
+; SDAG_X86-NEXT:    retl
+;
+; GISEL_X64-LABEL: fadd_constant:
+; GISEL_X64:       # %bb.0:
+; GISEL_X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; GISEL_X64-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; GISEL_X64-NEXT:    faddp %st, %st(1)
+; GISEL_X64-NEXT:    retq
+;
+; SDAG_X64-LABEL: fadd_constant:
+; SDAG_X64:       # %bb.0:
+; SDAG_X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; SDAG_X64-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; SDAG_X64-NEXT:    retq
+  %add = fadd x86_fp80 %a, 0xK4000C000000000000000
+  ret x86_fp80 %add
+}
+
 
 define void @f1(ptr %a, ptr %b) nounwind {
 ; GISEL_X86-LABEL: f1:
