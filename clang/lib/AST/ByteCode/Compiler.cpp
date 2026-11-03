@@ -524,7 +524,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
                                        ->castAs<MemberPointerType>()
                                        ->getMostRecentCXXRecordDecl();
     for (const CXXBaseSpecifier *B : E->path()) {
-      const CXXRecordDecl *ToDecl = B->getType()->getAsCXXRecordDecl();
+      const CXXRecordDecl *ToDecl = B->getType()->castAsCXXRecordDecl();
       unsigned DerivedOffset = Ctx.collectBaseOffset(ToDecl, CurDecl);
 
       if (!this->emitCastMemberPtrBasePop(DerivedOffset, ToDecl, E))
@@ -553,7 +553,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     typedef std::reverse_iterator<CastExpr::path_const_iterator> ReverseIter;
     for (ReverseIter PathI(E->path_end() - 1), PathE(E->path_begin());
          PathI != PathE; ++PathI) {
-      const CXXRecordDecl *ToDecl = (*PathI)->getType()->getAsCXXRecordDecl();
+      const CXXRecordDecl *ToDecl = (*PathI)->getType()->castAsCXXRecordDecl();
       unsigned DerivedOffset = Ctx.collectBaseOffset(CurDecl, ToDecl);
 
       if (!this->emitCastMemberPtrDerivedPop(-DerivedOffset, ToDecl, E))
@@ -579,8 +579,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
     const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
       if (const auto *PT = dyn_cast<PointerType>(Ty))
-        return PT->getPointeeType()->getAsCXXRecordDecl();
-      return Ty->getAsCXXRecordDecl();
+        return PT->getPointeeType()->castAsCXXRecordDecl();
+      return Ty->castAsCXXRecordDecl();
     };
 
     // FIXME: We can express a series of non-virtual casts as a single
@@ -3946,7 +3946,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
     if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
         Ctor->isTrivial() &&
         E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
-                                        T->getAsCXXRecordDecl()))
+                                        T->castAsCXXRecordDecl()))
       return this->visitInitializer(E->getArg(0));
 
     // Zero initialization.
@@ -6564,7 +6564,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
         if (isa<CXXThisExpr>(Stripped)) {
           FuncDecl =
               cast<CXXMethodDecl>(FuncDecl)->getCorrespondingMethodInClass(
-                  Stripped->getType()->getPointeeType()->getAsCXXRecordDecl());
+                  Stripped->getType()->getPointeeType()->castAsCXXRecordDecl());
           Devirtualized = true;
           if (!this->visit(Stripped))
             return false;
@@ -7759,10 +7759,10 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       return false;
 
     for (const auto *Init : Ctor->inits()) {
+      LocalScope<Emitter> VirtLocalScope(this);
       if (const Type *Base = Init->getBaseClass();
           Base && Init->isBaseVirtual()) {
-        const auto *BaseDecl = Base->getAsCXXRecordDecl();
-        assert(BaseDecl);
+        const auto *BaseDecl = Base->castAsCXXRecordDecl();
         assert(R->findVirtualBase(BaseDecl));
         if (!this->emitGetPtrThisVirtBase(BaseDecl, Ctor))
           return false;
@@ -7792,8 +7792,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         return false;
       ++FieldInits;
     } else if (const Type *Base = Init->getBaseClass()) {
-      const auto *BaseDecl = Base->getAsCXXRecordDecl();
-      assert(BaseDecl);
+      const auto *BaseDecl = Base->castAsCXXRecordDecl();
 
       if (Init->isBaseVirtual()) {
         // See above.
@@ -8762,7 +8761,7 @@ unsigned Compiler<Emitter>::collectBaseOffset(const QualType BaseType,
   const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
     if (const auto *R = Ty->getPointeeCXXRecordDecl())
       return R;
-    return Ty->getAsCXXRecordDecl();
+    return Ty->castAsCXXRecordDecl();
   };
   const CXXRecordDecl *BaseDecl = extractRecordDecl(BaseType);
   const CXXRecordDecl *DerivedDecl = extractRecordDecl(DerivedType);

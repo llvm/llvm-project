@@ -105,20 +105,26 @@ def V16I32 : FuncArgType;
 def NXV2I32 : FuncArgType;
 def NXV4I32 : FuncArgType;
 
-class VectorFuncArgType<FuncArgType intType> : FuncArgType {
-  FuncArgType IntType = intType;
-  FuncArgType MaskType = ?;
+class VectorFuncArgType<FuncArgType elementType, int numElements,
+                        bit scalable = false> : FuncArgType {
+  FuncArgType ElementType = elementType;
+  int NumElements = numElements;
+  bit Scalable = scalable;
+
+  defvar Prefix = !if(scalable, "NXV", "V") # numElements;
+  FuncArgType IntType = !cast<FuncArgType>(Prefix # "I32");
+  FuncArgType MaskType = !if(scalable, !cast<FuncArgType>(Prefix # "I1"), ?);
 }
 
-def V2F32 : VectorFuncArgType<V2I32>;
-def V4F32 : VectorFuncArgType<V4I32>;
-def V8F32 : VectorFuncArgType<V8I32>;
-def V16F32 : VectorFuncArgType<V16I32>;
-def NXV4F32 : VectorFuncArgType<NXV4I32> { let MaskType = NXV4I1; }
-def V2F64 : VectorFuncArgType<V2I32>;
-def V4F64 : VectorFuncArgType<V4I32>;
-def V8F64 : VectorFuncArgType<V8I32>;
-def NXV2F64 : VectorFuncArgType<NXV2I32> { let MaskType = NXV2I1; }
+def V2F32 : VectorFuncArgType<Flt, 2>;
+def V4F32 : VectorFuncArgType<Flt, 4>;
+def V8F32 : VectorFuncArgType<Flt, 8>;
+def V16F32 : VectorFuncArgType<Flt, 16>;
+def NXV4F32 : VectorFuncArgType<Flt, 4, scalable = true>;
+def V2F64 : VectorFuncArgType<Dbl, 2>;
+def V4F64 : VectorFuncArgType<Dbl, 4>;
+def V8F64 : VectorFuncArgType<Dbl, 8>;
+def NXV2F64 : VectorFuncArgType<Dbl, 2, scalable = true>;
 
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
