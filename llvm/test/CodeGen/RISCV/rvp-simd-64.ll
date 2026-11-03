@@ -9598,14 +9598,12 @@ define <4 x i16> @test_build_vector_v4i16_undef_lo(i16 %a, i16 %b) {
 ; RV32-LABEL: test_build_vector_v4i16_undef_lo:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pack a1, a0, a1
-; RV32-NEXT:    pack a0, a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_build_vector_v4i16_undef_lo:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ppaire.h a0, a0, a1
-; RV64-NEXT:    ppaire.h a1, a0, a0
-; RV64-NEXT:    pack a0, a1, a0
+; RV64-NEXT:    pack a0, a0, a0
 ; RV64-NEXT:    ret
   %v0 = insertelement <4 x i16> poison, i16 %a, i32 2
   %v1 = insertelement <4 x i16> %v0, i16 %b, i32 3
@@ -9616,7 +9614,6 @@ define <4 x i16> @test_build_vector_v4i16_undef_hi(i16 %a, i16 %b) {
 ; RV32-LABEL: test_build_vector_v4i16_undef_hi:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pack a0, a0, a1
-; RV32-NEXT:    pack a1, a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_build_vector_v4i16_undef_hi:
@@ -9631,14 +9628,10 @@ define <4 x i16> @test_build_vector_v4i16_undef_hi(i16 %a, i16 %b) {
 define <4 x i16> @test_build_vector_v4i16_undef_odd(i16 %a, i16 %b) {
 ; RV32-LABEL: test_build_vector_v4i16_undef_odd:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pack a1, a1, a0
-; RV32-NEXT:    pack a0, a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_build_vector_v4i16_undef_odd:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ppaire.h a1, a1, a0
-; RV64-NEXT:    ppaire.h a0, a0, a0
 ; RV64-NEXT:    pack a0, a0, a1
 ; RV64-NEXT:    ret
   %v0 = insertelement <4 x i16> poison, i16 %a, i32 0
@@ -9651,19 +9644,15 @@ define <8 x i8> @test_build_vector_v8i8_undef_lo(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    ppaire.b a2, a2, a3
 ; RV32-NEXT:    ppaire.b a0, a0, a1
-; RV32-NEXT:    ppaire.b a3, a0, a0
 ; RV32-NEXT:    pack a1, a0, a2
-; RV32-NEXT:    pack a0, a3, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_build_vector_v8i8_undef_lo:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ppaire.b a2, a2, a3
 ; RV64-NEXT:    ppaire.b a0, a0, a1
-; RV64-NEXT:    ppaire.b a1, a0, a0
 ; RV64-NEXT:    ppaire.h a0, a0, a2
-; RV64-NEXT:    ppaire.h a1, a1, a1
-; RV64-NEXT:    pack a0, a1, a0
+; RV64-NEXT:    pack a0, a0, a0
 ; RV64-NEXT:    ret
   %v0 = insertelement <8 x i8> poison, i8 %a, i32 4
   %v1 = insertelement <8 x i8> %v0, i8 %b, i32 5
@@ -9677,9 +9666,7 @@ define <8 x i8> @test_build_vector_v8i8_undef_hi(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    ppaire.b a2, a2, a3
 ; RV32-NEXT:    ppaire.b a0, a0, a1
-; RV32-NEXT:    ppaire.b a1, a0, a0
 ; RV32-NEXT:    pack a0, a0, a2
-; RV32-NEXT:    pack a1, a1, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_build_vector_v8i8_undef_hi:
@@ -9698,21 +9685,16 @@ define <8 x i8> @test_build_vector_v8i8_undef_hi(i8 %a, i8 %b, i8 %c, i8 %d) {
 define <8 x i8> @test_build_vector_v8i8_undef_pairs(i8 %a, i8 %b, i8 %c) {
 ; RV32-LABEL: test_build_vector_v8i8_undef_pairs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    ppaire.b a2, a2, a0
-; RV32-NEXT:    ppaire.b a3, a0, a0
 ; RV32-NEXT:    ppaire.b a0, a0, a1
-; RV32-NEXT:    pack a1, a2, a3
-; RV32-NEXT:    pack a0, a3, a0
+; RV32-NEXT:    pack a0, a0, a0
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_build_vector_v8i8_undef_pairs:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ppaire.b a2, a2, a0
-; RV64-NEXT:    ppaire.b a3, a0, a0
 ; RV64-NEXT:    ppaire.b a0, a0, a1
-; RV64-NEXT:    ppaire.h a1, a2, a3
-; RV64-NEXT:    ppaire.h a0, a3, a0
-; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    ppaire.h a0, a0, a0
+; RV64-NEXT:    pack a0, a0, a2
 ; RV64-NEXT:    ret
   %v0 = insertelement <8 x i8> poison, i8 %a, i32 2
   %v1 = insertelement <8 x i8> %v0, i8 %b, i32 3
@@ -9723,20 +9705,13 @@ define <8 x i8> @test_build_vector_v8i8_undef_pairs(i8 %a, i8 %b, i8 %c) {
 define <8 x i8> @test_build_vector_v8i8_undef_odd(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; RV32-LABEL: test_build_vector_v8i8_undef_odd:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    ppaire.b a3, a3, a0
-; RV32-NEXT:    ppaire.b a2, a2, a0
-; RV32-NEXT:    ppaire.b a4, a1, a0
-; RV32-NEXT:    ppaire.b a0, a0, a0
-; RV32-NEXT:    pack a1, a2, a3
-; RV32-NEXT:    pack a0, a0, a4
+; RV32-NEXT:    pack a2, a2, a3
+; RV32-NEXT:    pack a0, a0, a1
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_build_vector_v8i8_undef_odd:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ppaire.b a3, a3, a0
-; RV64-NEXT:    ppaire.b a2, a2, a0
-; RV64-NEXT:    ppaire.b a1, a1, a0
-; RV64-NEXT:    ppaire.b a0, a0, a0
 ; RV64-NEXT:    ppaire.h a2, a2, a3
 ; RV64-NEXT:    ppaire.h a0, a0, a1
 ; RV64-NEXT:    pack a0, a0, a2
