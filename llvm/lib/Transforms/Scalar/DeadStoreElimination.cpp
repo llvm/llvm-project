@@ -80,6 +80,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
@@ -923,6 +924,9 @@ struct DSEState {
   DenseMap<const Value *, uint64_t> InvisibleToCallerAfterRetBounded;
   // Keep track of blocks with throwing instructions not modeled in MemorySSA.
   SmallPtrSet<BasicBlock *, 16> ThrowingBlocks;
+  // Keep track of blocks containing fallthrough `@llvm.coro.end.*` intrinsics.
+  // These blocks should be treated as though they return.
+  SmallPtrSet<BasicBlock *, 16> CoroEndBlocks;
   // Post-order numbers for each basic block. Used to figure out if memory
   // accesses are executed before another access.
   DenseMap<BasicBlock *, unsigned> PostOrderNumbers;
@@ -1135,6 +1139,10 @@ DSEState::DSEState(const ScalarOptions &Opts, Function &F, AliasAnalysis &AA,
       MemoryAccess *MA = MSSA.getMemoryAccess(&I);
       if (I.mayThrow() && !MA)
         ThrowingBlocks.insert(I.getParent());
+      if (AnyCoroEndInst *CEI = dyn_cast<AnyCoroEndInst>(&I)) {
+        if (CEI->isFallthrough())
+          CoroEndBlocks.insert(I.getParent());
+      }
 
       auto *MD = dyn_cast_or_null<MemoryDef>(MA);
       if (MD && MemDefs.size() < Opts.dse_memoryssa_defs_per_block_limit &&
@@ -1931,13 +1939,17 @@ std::optional<MemoryAccess *> DSEState::getDomMemoryDef(
     SetVector<BasicBlock *> WorkList;
     // If CommonPred is null, there are multiple exits from the function.
     // They all have to be added to the worklist.
-    if (CommonPred)
+    if (CommonPred) {
       WorkList.insert(CommonPred);
-    else
+    } else {
       for (BasicBlock *R : PDT.roots()) {
         if (!isa<UnreachableInst>(R->getTerminator()))
           WorkList.insert(R);
       }
+
+      for (BasicBlock *R : CoroEndBlocks)
+        WorkList.insert(R);
+    }
 
     NumCFGTries++;
     // Check if all paths starting from an exit node go through one of the

@@ -171,8 +171,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // so declares referencing it are skipped rather than described wrongly.
   DenseMap<const DIExpression *, MCRegister> DebugExpressionRegs;
 
-  // Distinct DILexicalBlock and DINamespace scopes, parent-before-child
-  // order, collected in beginModule() for DebugLexicalBlock emission.
+  // Distinct DILexicalBlock, DINamespace, and DILexicalBlockFile scopes,
+  // parent-before-child order, collected in beginModule().
   SetVector<const DIScope *> LexicalBlocks;
 
   // DebugInlinedAt result id per DILocation used as an inlined-at chain link.
@@ -504,14 +504,15 @@ private:
   /// survived codegen and in what form, and because an expression synthesized
   /// during lowering never appears in the IR at all. Must be called from
   /// module-scope emission, which is where the resulting \c DebugExpression
-  /// instructions have to be emitted; every \c MachineFunction is still
-  /// reachable at that point through \c MachineModuleInfo.
+  /// instructions have to be emitted. The debug values come from
+  /// \c SPIRVModuleAnalysis, which sees every \c MachineFunction.
   ///
   /// Deliberately independent of what the consumers can currently emit, so
   /// that adding an instruction that needs an expression (\c DebugValue) needs
   /// no change here. The cost is a \c DebugExpression that nothing references
   /// yet, for a debug value no instruction is emitted for.
-  void collectDebugExpressions(SetVector<const DIExpression *> &Out) const;
+  void collectDebugExpressions(const SPIRV::ModuleAnalysisInfo &MAI,
+                               SetVector<const DIExpression *> &Out) const;
 
   /// Emit one \c DebugOperation for \p Op, reusing a cached result id when the
   /// same opcode and arguments were already emitted.
@@ -721,10 +722,14 @@ private:
   /// Map \p Scope to the NonSemantic debug id used as a \c Parent operand.
   ///
   /// A \c DIType, \c DILexicalBlock, \c DINamespace, or \c DISubprogram scope
-  /// is created through \c getOrCreateDebugScope. When \p Scope is null, a
-  /// \c DIFile, or another scope without a dedicated debug instruction, falls
-  /// back to \p FallbackCU or the first module \c DebugCompilationUnit recorded
-  /// in \c DebugScopeRegs; no such compile unit is Unsupported.
+  /// is created through \c getOrCreateDebugScope. When
+  /// \c -spirv-debug-lexical-block-discriminator-scope is enabled, a
+  /// \c DILexicalBlockFile is also created this way, becoming a
+  /// \c DebugLexicalBlockDiscriminator; otherwise it is unwrapped to its
+  /// enclosing scope first. When \p Scope is null, a \c DIFile, or another
+  /// scope without a dedicated debug instruction, it falls back to
+  /// \p FallbackCU or the first module \c DebugCompilationUnit recorded in
+  /// \c DebugScopeRegs; no such compile unit is Unsupported.
   EmitResult<MCRegister>
   resolveScope(const DIScope *Scope, const DICompileUnit *FallbackCU = nullptr);
 
@@ -739,6 +744,13 @@ private:
   emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
                         MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                         SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Build \c DebugLexicalBlockDiscriminator for \p LBF.
+  /// Operands are Source, Discriminator, and Parent (\c LBF->getScope()).
+  EmitResult<PreparedScope> emitDebugLexicalBlockDiscriminator(
+      const DILexicalBlockFile *LBF, MCRegister VoidTypeReg,
+      MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+      SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Return a cached \c DebugInlinedAt id for \p IA, or emit one (recursing
   /// into \c IA->getInlinedAt() first for the optional Inlined operand, so
