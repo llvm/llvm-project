@@ -3822,7 +3822,7 @@ bool MallocChecker::ignoreDirectEscapeTo(const CallEvent *Call,
   // Currently, we do not inspect the 'closefn' function (PR12101).
   if (FName == "funopen")
     if (Call->getNumArgs() >= 5 && Call->getArgSVal(4).isConstant(0))
-      return false;
+      return true;
 
   // Do not warn on pointers passed to 'setbuf' when used with std streams,
   // these leaks might be intentional when setting the buffer for stdio.
