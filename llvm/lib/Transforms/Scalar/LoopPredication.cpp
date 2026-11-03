@@ -305,8 +305,7 @@ PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(AR.MSSA);
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   LoopPredication LP(Opts, &AR.AA, &AR.DT, &AR.SE, &AR.LI,
                      MSSAU ? MSSAU.get() : nullptr);
   if (!LP.runOnLoop(&L))

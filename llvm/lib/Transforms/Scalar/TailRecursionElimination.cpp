@@ -555,7 +555,8 @@ class TailRecursionEliminator {
 
   void copyByValueOperandIntoLocalTemp(CallInst *CI, int OpndIdx);
 
-  void copyLocalTempOfByValueOperandIntoArguments(CallInst *CI, int OpndIdx);
+  void copyLocalTempOfByValueOperandIntoArguments(CallInst *CI, int OpndIdx,
+                                                  Instruction *InsertPt);
 
 public:
   static bool eliminate(Function &F, const TargetTransformInfo *TTI,
@@ -829,9 +830,11 @@ void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
 }
 
 // Creates a copy from temporarily variable(keeping value of ByVal argument)
-// into the corresponding function argument location.
+// into the corresponding function argument location. The copy is inserted
+// before InsertPt, which must come after any instructions that followed the
+// call, since those may still read the current value of the argument.
 void TailRecursionEliminator::copyLocalTempOfByValueOperandIntoArguments(
-    CallInst *CI, int OpndIdx) {
+    CallInst *CI, int OpndIdx, Instruction *InsertPt) {
   Type *AggTy = CI->getParamByValType(OpndIdx);
   assert(AggTy);
   const DataLayout &DL = F.getDataLayout();
@@ -839,7 +842,7 @@ void TailRecursionEliminator::copyLocalTempOfByValueOperandIntoArguments(
   // Get alignment of byVal operand.
   Align Alignment(CI->getParamAlign(OpndIdx).valueOrOne());
 
-  IRBuilder<> Builder(CI);
+  IRBuilder<> Builder(InsertPt);
   Value *Size = Builder.getInt64(DL.getTypeAllocSize(AggTy));
 
   // Copy data from the temporarily variable into corresponding
@@ -908,7 +911,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   // parameters passed into the tail-recursive call.
   for (unsigned I = 0, E = CI->arg_size(); I != E; ++I) {
     if (CI->isByValArgument(I)) {
-      copyLocalTempOfByValueOperandIntoArguments(CI, I);
+      copyLocalTempOfByValueOperandIntoArguments(CI, I, Ret);
       // When eliminating a tail call, we modify the values of the arguments.
       // Therefore, if the byval parameter has a readonly attribute, we have to
       // remove it. It is safe because, from the perspective of a caller, the
@@ -928,9 +931,10 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // inserted.
     AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
 
-    // Reassociating into the loop reorders the operands, so flags from the
-    // original order (nsw/nuw/exact/...) may no longer hold.
-    AccRecInstr->dropPoisonGeneratingFlags();
+    // Reassociating into the loop reorders the operands, so poison-generating
+    // flags (nsw/nuw/exact/...), attributes (range/nonnull/...) and metadata
+    // (!range/...) from the original order may no longer hold.
+    AccRecInstr->dropPoisonGeneratingAnnotations();
   }
 
   // Update our return value tracking
@@ -1148,8 +1152,7 @@ bool TailRecursionEliminator::eliminate(
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChange = false;
   MadeChange |= markTails(Opts, F, ORE, PSI, BFI);
 

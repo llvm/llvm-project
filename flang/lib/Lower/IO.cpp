@@ -398,10 +398,10 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
       groupIsLocal = true;
       continue;
     }
-    // A global pointer or allocatable variable has a descriptor for typical
-    // accesses. Variables in multiple namelist groups may already have one.
-    // Create descriptors for other cases.
-    if (!IsAllocatableOrObjectPointer(&s)) {
+    // A global pointer, allocatable or coarray variable has a descriptor for
+    // typical accesses. Variables in multiple namelist groups may already have
+    // one. Create descriptors for other cases.
+    if (!IsAllocatableOrObjectPointer(&s) && !Fortran::evaluate::IsCoarray(s)) {
       std::string mangleName =
           Fortran::lower::mangle::globalNamelistDescriptorName(s);
       if (builder.getNamedGlobal(mangleName))
@@ -803,6 +803,7 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
   auto toSubscript = [](const Fortran::lower::SomeExpr &expr) {
     return Fortran::evaluate::ConvertToType<
         Fortran::evaluate::SubscriptInteger>(
+        Fortran::evaluate::SubscriptIntegerKind,
         Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
             DEREF(Fortran::evaluate::UnwrapExpr<
                   Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>>(
@@ -822,7 +823,7 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
       Fortran::evaluate::AsGenericExpr(Fortran::evaluate::ExtentExpr{lowerSub});
   Fortran::lower::SomeExpr loopStepValue = Fortran::evaluate::AsGenericExpr(
       stepSub ? Fortran::evaluate::ExtentExpr{*stepSub}
-              : Fortran::evaluate::ExtentExpr{1});
+              : Fortran::evaluate::MakeExtentExpr(1));
 
   Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> loopSubExpr =
       toSubscript(Fortran::evaluate::AsGenericExpr(*loopSym).value());
