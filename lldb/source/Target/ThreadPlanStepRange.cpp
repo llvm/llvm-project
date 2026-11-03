@@ -86,6 +86,16 @@ void ThreadPlanStepRange::AddRange(const AddressRange &new_range) {
   m_instruction_ranges.push_back(DisassemblerSP());
 }
 
+void ThreadPlanStepRange::SetBreakpointsToYieldTo(
+    llvm::ArrayRef<lldb::break_id_t> break_ids) {
+  assert(llvm::all_of(break_ids,
+                      [](lldb::break_id_t break_id) {
+                        return LLDB_BREAK_ID_IS_INTERNAL(break_id);
+                      }) &&
+         "only internal breakpoints can be yielded to");
+  m_breakpoints_to_yield_to = break_ids;
+}
+
 void ThreadPlanStepRange::DumpRanges(Stream *s) {
   size_t num_ranges = m_address_ranges.size();
   if (num_ranges == 1) {
@@ -476,7 +486,11 @@ bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
   // continue.  If one is not internal, then we should not explain the stop,
   // and let the user breakpoint handle the stop.
   for (size_t i = 0; i < num_constituents; i++) {
-    if (!bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint().IsInternal()) {
+    BreakpointLocation &bp_loc = *bp_site_sp->GetConstituentAtIndex(i);
+    Breakpoint &bp = bp_loc.GetBreakpoint();
+    if (!bp.IsInternal() ||
+        (llvm::is_contained(m_breakpoints_to_yield_to, bp.GetID()) &&
+         bp_loc.ValidForThisThread(GetThread()))) {
       explains_stop = false;
       break;
     }
