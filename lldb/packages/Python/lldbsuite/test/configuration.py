@@ -43,6 +43,7 @@ count = 1
 # command line.
 arch = None
 compiler = None
+fortran_compiler = None
 dsymutil = None
 sdkroot = None
 make_path = None
