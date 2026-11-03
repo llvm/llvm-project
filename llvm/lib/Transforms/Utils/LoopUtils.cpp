@@ -2008,6 +2008,10 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         Instruction *InsertPt =
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
+        // Place the clone outside the loop so the rewrite can make the loop
+        // deletable.
+        if (!OperandExitValues.empty())
+          InsertPt = L->getLoopPreheader()->getTerminator();
         RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost,
                                    std::move(OperandExitValues));
       }
