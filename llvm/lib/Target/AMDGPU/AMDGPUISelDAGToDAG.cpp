@@ -3197,7 +3197,7 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
 
   SDLoc SL(N);
   SDValue BaseOffset = N->getOperand(HasVSrc ? 3 : 2);
-  int ImmOffset = 0;
+  uint64_t ImmOffset = 0;
   MemIntrinsicSDNode *M = cast<MemIntrinsicSDNode>(N);
   MachineMemOperand *MMO = M->getMemOperand();
 
@@ -3213,10 +3213,10 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
     // default -1 only set the low 16-bits, we could leave it as-is and add 1 to
     // the immediate offset.
     glueCopyToM0(N, CurDAG->getTargetConstant(0, SL, MVT::i32));
-    ImmOffset = static_cast<int>(ConstOffset->getZExtValue());
+    ImmOffset = ConstOffset->getZExtValue();
   } else {
     if (CurDAG->isBaseWithConstantOffset(BaseOffset)) {
-      ImmOffset = static_cast<int>(BaseOffset.getConstantOperandVal(1));
+      ImmOffset = BaseOffset.getConstantOperandVal(1);
       BaseOffset = BaseOffset.getOperand(0);
     }
 
