@@ -56,10 +56,8 @@ namespace llvm {
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
-class IRBuilderBase;
 struct VPTransformState;
 class raw_ostream;
-class RecurrenceDescriptor;
 class SCEV;
 class SCEVPredicate;
 class Type;
@@ -70,7 +68,6 @@ using VPBuilder = VPBuilderBase<>;
 class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
-class VPLane;
 class VPReplicateRecipe;
 class Value;
 class LoopVectorizationCostModel;

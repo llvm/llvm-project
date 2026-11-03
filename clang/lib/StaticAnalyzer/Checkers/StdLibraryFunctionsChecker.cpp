@@ -866,7 +866,7 @@ private:
     if (ValuesPrinted)
       MsgOs << " but ";
     else
-      MsgOs << "is out of the accepted range; It ";
+      MsgOs << "is out of the accepted range; it ";
     VC->describe(ValueConstraint::Violation, Call, C.getState(), Summary,
                  MsgOs);
     Msg[0] = toupper(Msg[0]);
