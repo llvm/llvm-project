@@ -18,14 +18,14 @@ static Expr<T> FoldTransformationalBessel(
   const int kind{funcRef.kind()};
   CHECK(funcRef.arguments().size() == 3);
   /// Bessel runtime functions use `int` integer arguments. Convert integer
-  /// arguments to Int4, any overflow error will be reported during the
+  /// arguments to Int, any overflow error will be reported during the
   /// conversion folding.
-  using Int4 = Type<TypeCategory::Integer>;
-  if (auto args{GetConstantArguments<Int4, Int4, T>({4, 4, kind}, context,
+  using Int = Type<TypeCategory::Integer>;
+  if (auto args{GetConstantArguments<Int, Int, T>({4, 4, kind}, context,
           funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
     const std::string &name{std::get<SpecificIntrinsic>(funcRef.proc().u).name};
     if (auto elementalBessel{
-            GetHostRuntimeWrapper<T, Int4, T>(kind, {4, kind}, name)}) {
+            GetHostRuntimeWrapper<T, Int, T>(kind, {4, kind}, name)}) {
       std::vector<Scalar<T>> results;
       int n1{static_cast<int>(
           std::get<0>(*args)->GetScalarValue().value().ToInt64())};
@@ -142,7 +142,7 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
   const int kind{funcRef.kind()};
   using T = Type<TypeCategory::Real>;
   using ComplexT = Type<TypeCategory::Complex>;
-  using Int4 = Type<TypeCategory::Integer>;
+  using Int = Type<TypeCategory::Integer>;
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -182,8 +182,8 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
     if (args.size() == 2) { // elemental
       // runtime functions use int arg
       if (auto callable{
-              GetHostRuntimeWrapper<T, Int4, T>(kind, {4, kind}, name)}) {
-        return FoldElementalIntrinsic<T, Int4, T>(
+              GetHostRuntimeWrapper<T, Int, T>(kind, {4, kind}, name)}) {
+        return FoldElementalIntrinsic<T, Int, T>(
             kind, {4, kind}, context, std::move(funcRef), *callable);
       } else {
         context.Warn(common::UsageWarning::FoldingFailure,
@@ -452,10 +452,12 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
                 context, std::move(funcRef),
                 ScalarFunc<T, T, TY>([&](const Scalar<T> &x,
                                          const Scalar<TY> &y) -> Scalar<T> {
-                  auto xBig{
-                      Scalar<LargestReal>::Convert(LargestRealKind, x).value};
-                  auto yBig{
-                      Scalar<LargestReal>::Convert(LargestRealKind, y).value};
+                  auto xBig{Scalar<Type<TypeCategory::Real>>::Convert(
+                      LargestRealKind, x)
+                          .value};
+                  auto yBig{Scalar<Type<TypeCategory::Real>>::Convert(
+                      LargestRealKind, y)
+                          .value};
                   switch (xBig.Compare(yBig)) {
                   case Relation::Unordered:
                     context.Warn(common::UsageWarning::FoldingValueChecks,

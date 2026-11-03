@@ -189,7 +189,8 @@ bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
               .value_or(true /*fail only when nonconformance is known now*/));
 }
 
-std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureElementSizeInBytes(
+std::optional<Expr<Type<TypeCategory::Integer>>>
+TypeAndShape::MeasureElementSizeInBytes(
     FoldingContext &foldingContext, bool align) const {
   if (LEN_) {
     CHECK(type_.category() == TypeCategory::Character);
@@ -204,8 +205,8 @@ std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureElementSizeInBytes(
   return std::nullopt;
 }
 
-std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureSizeInBytes(
-    FoldingContext &foldingContext) const {
+std::optional<Expr<Type<TypeCategory::Integer>>>
+TypeAndShape::MeasureSizeInBytes(FoldingContext &foldingContext) const {
   if (auto elements{GetSize(shape_)}) {
     // Sizes of arrays (even with single elements) are multiples of
     // their alignments.

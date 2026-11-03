@@ -52,7 +52,7 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
   CHECK(intrinsic);
   std::string name{intrinsic->name};
   if (name == "achar" || name == "char") {
-    using IntT = SubscriptInteger;
+    using IntT = Type<TypeCategory::Integer>;
     return FoldElementalIntrinsic<T, IntT>(kind, {SubscriptIntegerKind},
         context, std::move(funcRef),
         ScalarFunc<T, IntT>([&](const Scalar<IntT> &i) {
@@ -93,11 +93,11 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
   } else if (name == "new_line") {
     return MakeConstantExpr<T>(kind, CharacterUtils::NEW_LINE(kind));
   } else if (name == "repeat") { // not elemental
-    if (auto scalars{GetScalarConstantArguments<T, SubscriptInteger>(
+    if (auto scalars{GetScalarConstantArguments<T, Type<TypeCategory::Integer>>(
             {kind, SubscriptIntegerKind}, context, funcRef.arguments(),
             /*hasOptionalArgument=*/false)}) {
       auto str{std::get<Scalar<T>>(*scalars)};
-      auto n{std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64()};
+      auto n{std::get<Scalar<Type<TypeCategory::Integer>>>(*scalars).ToInt64()};
       if (n < 0) {
         context.messages().Say(
             "NCOPIES= argument to REPEAT() should be nonnegative, but is %jd"_err_en_US,

@@ -236,9 +236,10 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         // Case of IndirectSubscriptIntegerExpr
         using IndirectSubscriptIntegerExpr =
             Fortran::evaluate::IndirectSubscriptIntegerExpr;
-        using SubscriptInteger = Fortran::evaluate::SubscriptInteger;
-        Fortran::evaluate::Expr<SubscriptInteger> oneInt =
-            std::get<IndirectSubscriptIntegerExpr>(subscript.u).value();
+        Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>
+            oneInt =
+                std::get<IndirectSubscriptIntegerExpr>(subscript.u).value();
         lower = Fortran::evaluate::AsGenericExpr(std::move(oneInt));
         if (lower->Rank() > 0) {
           mlir::emitError(

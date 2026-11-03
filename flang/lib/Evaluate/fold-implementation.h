@@ -62,12 +62,12 @@ public:
 
   std::optional<Constant<T>> GetNamedConstant(const Symbol &);
   std::optional<Constant<T>> ApplySubscripts(const Constant<T> &array,
-      const std::vector<Constant<SubscriptInteger>> &subscripts);
+      const std::vector<Constant<Type<TypeCategory::Integer>>> &subscripts);
   std::optional<Constant<T>> ApplyComponent(Constant<SomeDerived> &&,
       const Symbol &component,
-      const std::vector<Constant<SubscriptInteger>> * = nullptr);
-  std::optional<Constant<T>> GetConstantComponent(
-      Component &, const std::vector<Constant<SubscriptInteger>> * = nullptr);
+      const std::vector<Constant<Type<TypeCategory::Integer>>> * = nullptr);
+  std::optional<Constant<T>> GetConstantComponent(Component &,
+      const std::vector<Constant<Type<TypeCategory::Integer>>> * = nullptr);
   std::optional<Constant<T>> Folding(ArrayRef &);
   std::optional<Constant<T>> Folding(DataRef &);
   Expr<T> Folding(Designator<T> &&);
@@ -90,7 +90,7 @@ private:
   bool forOptionalArgument_{false};
 };
 
-std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
+std::optional<Constant<Type<TypeCategory::Integer>>> GetConstantSubscript(
     FoldingContext &, Subscript &, const NamedEntity &, int dim);
 
 template <typename TR, typename... TA, std::size_t... I>
@@ -185,7 +185,7 @@ std::optional<Constant<T>> Folder<T>::GetNamedConstant(const Symbol &symbol0) {
 
 template <typename T>
 std::optional<Constant<T>> Folder<T>::Folding(ArrayRef &aRef) {
-  std::vector<Constant<SubscriptInteger>> subscripts;
+  std::vector<Constant<Type<TypeCategory::Integer>>> subscripts;
   int dim{0};
   for (Subscript &ss : aRef.subscript()) {
     if (auto constant{GetConstantSubscript(context_, ss, aRef.base(), dim++)}) {
@@ -225,7 +225,7 @@ std::optional<Constant<T>> Folder<T>::Folding(DataRef &ref) {
 // TODO: This would be more natural as a member function of Constant<T>.
 template <typename T>
 std::optional<Constant<T>> Folder<T>::ApplySubscripts(const Constant<T> &array,
-    const std::vector<Constant<SubscriptInteger>> &subscripts) {
+    const std::vector<Constant<Type<TypeCategory::Integer>>> &subscripts) {
   const int kind{array.kind()};
   const auto &shape{array.shape()};
   const auto &lbounds{array.lbounds()};
@@ -290,7 +290,7 @@ std::optional<Constant<T>> Folder<T>::ApplySubscripts(const Constant<T> &array,
 template <typename T>
 std::optional<Constant<T>> Folder<T>::ApplyComponent(
     Constant<SomeDerived> &&structures, const Symbol &component,
-    const std::vector<Constant<SubscriptInteger>> *subscripts) {
+    const std::vector<Constant<Type<TypeCategory::Integer>>> *subscripts) {
   if (auto scalar{structures.GetScalarValue()}) {
     if (std::optional<Expr<SomeType>> expr{scalar->Find(component)}) {
       if (const Constant<T> *value{UnwrapConstantValue<T>(kind_, *expr)}) {
@@ -351,7 +351,7 @@ std::optional<Constant<T>> Folder<T>::ApplyComponent(
 
 template <typename T>
 std::optional<Constant<T>> Folder<T>::GetConstantComponent(Component &component,
-    const std::vector<Constant<SubscriptInteger>> *subscripts) {
+    const std::vector<Constant<Type<TypeCategory::Integer>>> *subscripts) {
   if (std::optional<Constant<SomeDerived>> structures{common::visit(
           common::visitors{
               [&](const Symbol &symbol) {
@@ -664,9 +664,9 @@ template <typename T> Expr<T> Folder<T>::CSHIFT(FunctionRef<T> &&funcRef) {
     return Expr<T>{std::move(funcRef)};
   }
   auto convertedShift{Fold(context_,
-      ConvertToType<SubscriptInteger>(
+      ConvertToType<Type<TypeCategory::Integer>>(
           SubscriptIntegerKind, Expr<SomeInteger>{*shiftExpr}))};
-  const auto *shift{UnwrapConstantValue<SubscriptInteger>(
+  const auto *shift{UnwrapConstantValue<Type<TypeCategory::Integer>>(
       SubscriptIntegerKind, convertedShift)};
   if (!shift) {
     return Expr<T>{std::move(funcRef)};
@@ -746,9 +746,9 @@ template <typename T> Expr<T> Folder<T>::EOSHIFT(FunctionRef<T> &&funcRef) {
   }
   // Apply type conversions to the shift= and boundary= arguments.
   auto convertedShift{Fold(context_,
-      ConvertToType<SubscriptInteger>(
+      ConvertToType<Type<TypeCategory::Integer>>(
           SubscriptIntegerKind, Expr<SomeInteger>{*shiftExpr}))};
-  const auto *shift{UnwrapConstantValue<SubscriptInteger>(
+  const auto *shift{UnwrapConstantValue<Type<TypeCategory::Integer>>(
       SubscriptIntegerKind, convertedShift)};
   if (!shift) {
     return Expr<T>{std::move(funcRef)};
@@ -871,13 +871,12 @@ template <typename T> Expr<T> Folder<T>::EOSHIFT(FunctionRef<T> &&funcRef) {
 
 template <typename T> Expr<T> Folder<T>::MERGE(FunctionRef<T> &&funcRef) {
   const int kind{funcRef.kind()};
-  return FoldElementalIntrinsic<T, T, T, LogicalResult>(kind,
+  return FoldElementalIntrinsic<T, T, T, Type<TypeCategory::Logical>>(kind,
       {kind, kind, LogicalResultKind}, context_, std::move(funcRef),
-      ScalarFunc<T, T, T, LogicalResult>(
+      ScalarFunc<T, T, T, Type<TypeCategory::Logical>>(
           [](const Scalar<T> &ifTrue, const Scalar<T> &ifFalse,
-              const Scalar<LogicalResult> &predicate) -> Scalar<T> {
-            return predicate.IsTrue() ? ifTrue : ifFalse;
-          }));
+              const Scalar<Type<TypeCategory::Logical>> &predicate)
+              -> Scalar<T> { return predicate.IsTrue() ? ifTrue : ifFalse; }));
 }
 
 template <typename T> Expr<T> Folder<T>::PACK(FunctionRef<T> &&funcRef) {
@@ -887,10 +886,10 @@ template <typename T> Expr<T> Folder<T>::PACK(FunctionRef<T> &&funcRef) {
   const auto *array{UnwrapConstantValue<T>(kind, args[0])};
   const auto *vector{UnwrapConstantValue<T>(kind, args[2])};
   auto convertedMask{Fold(context_,
-      ConvertToType<LogicalResult>(LogicalResultKind,
+      ConvertToType<Type<TypeCategory::Logical>>(LogicalResultKind,
           Expr<SomeLogical>{DEREF(UnwrapExpr<Expr<SomeLogical>>(args[1]))}))};
-  const auto *mask{
-      UnwrapConstantValue<LogicalResult>(LogicalResultKind, convertedMask)};
+  const auto *mask{UnwrapConstantValue<Type<TypeCategory::Logical>>(
+      LogicalResultKind, convertedMask)};
   if (!array || !mask || (args[2] && !vector)) {
     return Expr<T>{std::move(funcRef)};
   }
@@ -1100,10 +1099,10 @@ template <typename T> Expr<T> Folder<T>::UNPACK(FunctionRef<T> &&funcRef) {
   CHECK(args.size() == 3);
   const auto *vector{UnwrapConstantValue<T>(kind, args[0])};
   auto convertedMask{Fold(context_,
-      ConvertToType<LogicalResult>(LogicalResultKind,
+      ConvertToType<Type<TypeCategory::Logical>>(LogicalResultKind,
           Expr<SomeLogical>{DEREF(UnwrapExpr<Expr<SomeLogical>>(args[1]))}))};
-  const auto *mask{
-      UnwrapConstantValue<LogicalResult>(LogicalResultKind, convertedMask)};
+  const auto *mask{UnwrapConstantValue<Type<TypeCategory::Logical>>(
+      LogicalResultKind, convertedMask)};
   const auto *field{UnwrapConstantValue<T>(kind, args[2])};
   if (!vector || !mask || !field) {
     return Expr<T>{std::move(funcRef)};
@@ -1600,12 +1599,12 @@ private:
     return FoldArray(expr.value());
   }
   bool FoldArray(const ImpliedDo<T> &iDo) {
-    Expr<SubscriptInteger> lower{
-        Fold(context_, Expr<SubscriptInteger>{iDo.lower()})};
-    Expr<SubscriptInteger> upper{
-        Fold(context_, Expr<SubscriptInteger>{iDo.upper()})};
-    Expr<SubscriptInteger> stride{
-        Fold(context_, Expr<SubscriptInteger>{iDo.stride()})};
+    Expr<Type<TypeCategory::Integer>> lower{
+        Fold(context_, Expr<Type<TypeCategory::Integer>>{iDo.lower()})};
+    Expr<Type<TypeCategory::Integer>> upper{
+        Fold(context_, Expr<Type<TypeCategory::Integer>>{iDo.upper()})};
+    Expr<Type<TypeCategory::Integer>> stride{
+        Fold(context_, Expr<Type<TypeCategory::Integer>>{iDo.stride()})};
     std::optional<ConstantSubscript> start{ToInt64(lower)}, end{ToInt64(upper)},
         step{ToInt64(stride)};
     if (start && end && step && *step != 0) {
@@ -1748,7 +1747,7 @@ std::optional<Expr<T>> FromArrayConstructor(
 template <typename RESULT, typename OPERAND>
 std::optional<Expr<RESULT>> MapOperation(int kind, FoldingContext &context,
     std::function<Expr<RESULT>(Expr<OPERAND> &&)> &&f, const Shape &shape,
-    [[maybe_unused]] std::optional<Expr<SubscriptInteger>> &&length,
+    [[maybe_unused]] std::optional<Expr<Type<TypeCategory::Integer>>> &&length,
     Expr<OPERAND> &&values) {
   ArrayConstructor<RESULT> result{kind, values};
   if constexpr (common::HasMember<OPERAND, AllIntrinsicCategoryTypes>) {
@@ -1779,7 +1778,7 @@ std::optional<Expr<RESULT>> MapOperation(int kind, FoldingContext &context,
 
 template <typename RESULT, typename A>
 ArrayConstructor<RESULT> ArrayConstructorFromMold(int kind, const A &prototype,
-    std::optional<Expr<SubscriptInteger>> &&length) {
+    std::optional<Expr<Type<TypeCategory::Integer>>> &&length) {
   ArrayConstructor<RESULT> result{kind, prototype};
   if constexpr (RESULT::category == TypeCategory::Character) {
     if (length) {
@@ -1815,7 +1814,8 @@ bool ShapesMatch(FoldingContext &context,
 template <typename RESULT, typename LEFT, typename RIGHT>
 auto MapOperation(int kind, FoldingContext &context,
     std::function<Expr<RESULT>(Expr<LEFT> &&, Expr<RIGHT> &&)> &&f,
-    const Shape &shape, std::optional<Expr<SubscriptInteger>> &&length,
+    const Shape &shape,
+    std::optional<Expr<Type<TypeCategory::Integer>>> &&length,
     Expr<LEFT> &&leftValues, Expr<RIGHT> &&rightValues)
     -> std::optional<Expr<RESULT>> {
   auto result{
@@ -1867,7 +1867,8 @@ auto MapOperation(int kind, FoldingContext &context,
 template <typename RESULT, typename LEFT, typename RIGHT>
 auto MapOperation(int kind, FoldingContext &context,
     std::function<Expr<RESULT>(Expr<LEFT> &&, Expr<RIGHT> &&)> &&f,
-    const Shape &shape, std::optional<Expr<SubscriptInteger>> &&length,
+    const Shape &shape,
+    std::optional<Expr<Type<TypeCategory::Integer>>> &&length,
     Expr<LEFT> &&leftValues, const Expr<RIGHT> &rightScalar)
     -> std::optional<Expr<RESULT>> {
   auto result{
@@ -1885,7 +1886,8 @@ auto MapOperation(int kind, FoldingContext &context,
 template <typename RESULT, typename LEFT, typename RIGHT>
 auto MapOperation(int kind, FoldingContext &context,
     std::function<Expr<RESULT>(Expr<LEFT> &&, Expr<RIGHT> &&)> &&f,
-    const Shape &shape, std::optional<Expr<SubscriptInteger>> &&length,
+    const Shape &shape,
+    std::optional<Expr<Type<TypeCategory::Integer>>> &&length,
     const Expr<LEFT> &leftScalar, Expr<RIGHT> &&rightValues)
     -> std::optional<Expr<RESULT>> {
   auto result{
@@ -1915,7 +1917,7 @@ auto MapOperation(int kind, FoldingContext &context,
 }
 
 template <typename DERIVED, typename RESULT, typename... OPD>
-std::optional<Expr<SubscriptInteger>> ComputeResultLength(
+std::optional<Expr<Type<TypeCategory::Integer>>> ComputeResultLength(
     Operation<DERIVED, RESULT, OPD...> &operation) {
   if constexpr (RESULT::category == TypeCategory::Character) {
     return Expr<RESULT>{operation.derived()}.LEN();
@@ -2549,7 +2551,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, ConditionalExpr<T> &&x) {
   x.condition() = Fold(context, std::move(x.condition()));
   // If the condition is a scalar logical constant, select the branch.
-  if (auto cst{GetScalarConstantValue<LogicalResult>(
+  if (auto cst{GetScalarConstantValue<Type<TypeCategory::Logical>>(
           LogicalResultKind, x.condition())}) {
     return cst->IsTrue() ? Fold(context, std::move(x.thenValue()))
                          : Fold(context, std::move(x.elseValue()));

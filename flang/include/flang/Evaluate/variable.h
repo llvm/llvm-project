@@ -51,7 +51,7 @@ struct BaseObject {
   EVALUATE_UNION_CLASS_BOILERPLATE(BaseObject)
   int Rank() const;
   int Corank() const;
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   const Symbol *symbol() const {
     if (const auto *result{std::get_if<SymbolRef>(&u)}) {
@@ -87,7 +87,7 @@ public:
   int Corank() const;
   const Symbol &GetFirstSymbol() const;
   const Symbol &GetLastSymbol() const { return symbol_; }
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   bool operator==(const Component &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
@@ -116,7 +116,7 @@ public:
 
   int Rank() const;
   int Corank() const;
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   bool operator==(const NamedEntity &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
@@ -135,7 +135,7 @@ private:
 // not have base objects.
 class TypeParamInquiry {
 public:
-  using Result = SubscriptInteger;
+  using Result = Type<TypeCategory::Integer>;
   static constexpr int ResultKind{SubscriptIntegerKind};
   static constexpr int kind() { return SubscriptIntegerKind; }
   static constexpr DynamicType GetType() {
@@ -166,23 +166,26 @@ class Triplet {
 public:
   Triplet();
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(Triplet)
-  Triplet(std::optional<Expr<SubscriptInteger>> &&,
-      std::optional<Expr<SubscriptInteger>> &&,
-      std::optional<Expr<SubscriptInteger>> &&);
+  Triplet(std::optional<Expr<Type<TypeCategory::Integer>>> &&,
+      std::optional<Expr<Type<TypeCategory::Integer>>> &&,
+      std::optional<Expr<Type<TypeCategory::Integer>>> &&);
 
-  std::optional<Expr<SubscriptInteger>> lower() const;
-  const Expr<SubscriptInteger> *GetLower() const {
+  std::optional<Expr<Type<TypeCategory::Integer>>> lower() const;
+  const Expr<Type<TypeCategory::Integer>> *GetLower() const {
     return lower_.has_value() ? &lower_->value() : nullptr;
   }
-  Triplet &set_lower(Expr<SubscriptInteger> &&);
-  std::optional<Expr<SubscriptInteger>> upper() const;
-  const Expr<SubscriptInteger> *GetUpper() const {
+  Triplet &set_lower(Expr<Type<TypeCategory::Integer>> &&);
+  std::optional<Expr<Type<TypeCategory::Integer>>> upper() const;
+  const Expr<Type<TypeCategory::Integer>> *GetUpper() const {
     return upper_.has_value() ? &upper_->value() : nullptr;
   }
-  Triplet &set_upper(Expr<SubscriptInteger> &&);
-  Expr<SubscriptInteger> stride() const; // N.B. result is not optional<>
-  const Expr<SubscriptInteger> &GetStride() const { return stride_.value(); }
-  Triplet &set_stride(Expr<SubscriptInteger> &&);
+  Triplet &set_upper(Expr<Type<TypeCategory::Integer>> &&);
+  Expr<Type<TypeCategory::Integer>>
+  stride() const; // N.B. result is not optional<>
+  const Expr<Type<TypeCategory::Integer>> &GetStride() const {
+    return stride_.value();
+  }
+  Triplet &set_stride(Expr<Type<TypeCategory::Integer>> &&);
 
   bool operator==(const Triplet &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
@@ -195,7 +198,7 @@ private:
 // R919 subscript when rank 0, R923 vector-subscript when rank 1
 struct Subscript {
   EVALUATE_UNION_CLASS_BOILERPLATE(Subscript)
-  explicit Subscript(Expr<SubscriptInteger> &&s)
+  explicit Subscript(Expr<Type<TypeCategory::Integer>> &&s)
       : u{IndirectSubscriptIntegerExpr::Make(std::move(s))} {}
   int Rank() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
@@ -233,7 +236,7 @@ public:
   int Corank() const;
   const Symbol &GetFirstSymbol() const;
   const Symbol &GetLastSymbol() const;
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   bool operator==(const ArrayRef &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
@@ -248,14 +251,16 @@ private:
 class CoarrayRef {
 public:
   CLASS_BOILERPLATE(CoarrayRef)
-  CoarrayRef(DataRef &&, std::vector<Expr<SubscriptInteger>> &&);
+  CoarrayRef(DataRef &&, std::vector<Expr<Type<TypeCategory::Integer>>> &&);
 
   const DataRef &base() const { return base_.value(); }
   DataRef &base() { return base_.value(); }
-  const std::vector<Expr<SubscriptInteger>> &cosubscript() const {
+  const std::vector<Expr<Type<TypeCategory::Integer>>> &cosubscript() const {
     return cosubscript_;
   }
-  std::vector<Expr<SubscriptInteger>> &cosubscript() { return cosubscript_; }
+  std::vector<Expr<Type<TypeCategory::Integer>>> &cosubscript() {
+    return cosubscript_;
+  }
 
   // These integral expressions for STAT= and TEAM= must be variables
   // (i.e., Designator or pointer-valued FunctionRef).
@@ -273,13 +278,13 @@ public:
   int Corank() const { return 0; }
   const Symbol &GetFirstSymbol() const;
   const Symbol &GetLastSymbol() const;
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   bool operator==(const CoarrayRef &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   common::CopyableIndirection<DataRef> base_;
-  std::vector<Expr<SubscriptInteger>> cosubscript_;
+  std::vector<Expr<Type<TypeCategory::Integer>>> cosubscript_;
   std::optional<common::CopyableIndirection<Expr<SomeType>>> notify_;
   std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_;
   std::optional<common::CopyableIndirection<Expr<SomeType>>> team_;
@@ -296,7 +301,7 @@ struct DataRef {
   int Corank() const;
   const Symbol &GetFirstSymbol() const;
   const Symbol &GetLastSymbol() const;
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::variant<SymbolRef, Component, ArrayRef, CoarrayRef> u;
@@ -311,28 +316,29 @@ class Substring {
 
 public:
   CLASS_BOILERPLATE(Substring)
-  Substring(DataRef &&parent, std::optional<Expr<SubscriptInteger>> &&lower,
-      std::optional<Expr<SubscriptInteger>> &&upper)
+  Substring(DataRef &&parent,
+      std::optional<Expr<Type<TypeCategory::Integer>>> &&lower,
+      std::optional<Expr<Type<TypeCategory::Integer>>> &&upper)
       : parent_{std::move(parent)} {
     SetBounds(lower, upper);
   }
   Substring(StaticDataObject::Pointer &&parent,
-      std::optional<Expr<SubscriptInteger>> &&lower,
-      std::optional<Expr<SubscriptInteger>> &&upper)
+      std::optional<Expr<Type<TypeCategory::Integer>>> &&lower,
+      std::optional<Expr<Type<TypeCategory::Integer>>> &&upper)
       : parent_{std::move(parent)} {
     SetBounds(lower, upper);
   }
 
-  Expr<SubscriptInteger> lower() const;
-  const Expr<SubscriptInteger> *GetLower() const {
+  Expr<Type<TypeCategory::Integer>> lower() const;
+  const Expr<Type<TypeCategory::Integer>> *GetLower() const {
     return lower_.has_value() ? &lower_->value() : nullptr;
   }
-  Substring &set_lower(Expr<SubscriptInteger> &&);
-  std::optional<Expr<SubscriptInteger>> upper() const;
-  const Expr<SubscriptInteger> *GetUpper() const {
+  Substring &set_lower(Expr<Type<TypeCategory::Integer>> &&);
+  std::optional<Expr<Type<TypeCategory::Integer>>> upper() const;
+  const Expr<Type<TypeCategory::Integer>> *GetUpper() const {
     return upper_.has_value() ? &upper_->value() : nullptr;
   }
-  Substring &set_upper(Expr<SubscriptInteger> &&);
+  Substring &set_upper(Expr<Type<TypeCategory::Integer>> &&);
   const Parent &parent() const { return parent_; }
   Parent &parent() { return parent_; }
 
@@ -343,15 +349,15 @@ public:
   }
   BaseObject GetBaseObject() const;
   const Symbol *GetLastSymbol() const;
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   bool operator==(const Substring &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::optional<Expr<SomeCharacter>> Fold(FoldingContext &);
 
 private:
-  void SetBounds(std::optional<Expr<SubscriptInteger>> &,
-      std::optional<Expr<SubscriptInteger>> &);
+  void SetBounds(std::optional<Expr<Type<TypeCategory::Integer>>> &,
+      std::optional<Expr<Type<TypeCategory::Integer>>> &);
   Parent parent_;
   std::optional<IndirectSubscriptIntegerExpr> lower_, upper_;
 };
@@ -436,7 +442,7 @@ public:
   int Corank() const;
   BaseObject GetBaseObject() const;
   const Symbol *GetLastSymbol() const;
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const;
 
   Variant u;
@@ -449,7 +455,7 @@ FOR_EACH_CHARACTER_KIND(extern template class Designator, )
 
 class DescriptorInquiry {
 public:
-  using Result = SubscriptInteger;
+  using Result = Type<TypeCategory::Integer>;
   static constexpr int ResultKind{SubscriptIntegerKind};
   static constexpr int kind() { return SubscriptIntegerKind; }
   static constexpr DynamicType GetType() {
@@ -483,17 +489,20 @@ private:
 // dimension_ is zero-based.
 class RankOneBoundElement {
 public:
-  using Result = SubscriptInteger;
+  using Result = Type<TypeCategory::Integer>;
   static constexpr int ResultKind{SubscriptIntegerKind};
   CLASS_BOILERPLATE(RankOneBoundElement)
   RankOneBoundElement(
-      common::CopyableIndirection<Expr<SubscriptInteger>> &&e, int dim)
+      common::CopyableIndirection<Expr<Type<TypeCategory::Integer>>> &&e,
+      int dim)
       : base_{std::move(e)}, dimension_{dim} {}
-  RankOneBoundElement(Expr<SubscriptInteger> &&e, int dim)
+  RankOneBoundElement(Expr<Type<TypeCategory::Integer>> &&e, int dim)
       : base_{std::move(e)}, dimension_{dim} {}
 
-  const Expr<SubscriptInteger> &base() const { return base_.value(); }
-  Expr<SubscriptInteger> &base() { return base_.value(); }
+  const Expr<Type<TypeCategory::Integer>> &base() const {
+    return base_.value();
+  }
+  Expr<Type<TypeCategory::Integer>> &base() { return base_.value(); }
   static constexpr int kind() { return ResultKind; }
   int dimension() const { return dimension_; }
 
@@ -520,7 +529,7 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
-  common::CopyableIndirection<Expr<SubscriptInteger>> base_;
+  common::CopyableIndirection<Expr<Type<TypeCategory::Integer>>> base_;
   int dimension_{0}; // zero-based
   std::optional<NamedEntity> originatingArray_;
   bool isUpperBound_{false};

@@ -411,7 +411,7 @@ public:
   LocationHelper(
       DynamicType &&type, ActualArguments &arg, FoldingContext &context)
       : type_{type}, arg_{arg}, context_{context} {}
-  using Result = std::optional<Constant<SubscriptInteger>>;
+  using Result = std::optional<Constant<Type<TypeCategory::Integer>>>;
   using Types = std::conditional_t<WHICH == WhichLocation::Findloc,
       AllIntrinsicTypes, RelationalTypes>;
 
@@ -434,7 +434,7 @@ public:
       }
     }
     std::optional<int> dim;
-    Constant<LogicalResult> *mask{
+    Constant<Type<TypeCategory::Logical>> *mask{
         GetReductionMASK(arg_[maskArg], array->shape(), context_)};
     if ((!mask && arg_[maskArg]) ||
         !CheckReductionDIM(dim, context_, arg_, dimArg, array->Rank())) {
@@ -442,7 +442,7 @@ public:
     }
     bool back{false};
     if (arg_[backArg]) {
-      const auto *backConst{Folder<LogicalResult>{
+      const auto *backConst{Folder<Type<TypeCategory::Logical>>{
           LogicalResultKind, context_, /*forOptionalArgument=*/true}
               .Folding(arg_[backArg])};
       if (backConst) {
@@ -465,9 +465,9 @@ public:
         // Convert into array in case of scalar MASK= (for
         // MAXLOC/MINLOC/FINDLOC mask should be conformable)
         ConstantSubscript n{GetSize(array->shape())};
-        std::vector<Scalar<LogicalResult>> mask_elements(
-            n, Scalar<LogicalResult>{scalarMask.value()});
-        *mask = Constant<LogicalResult>{LogicalResultKind,
+        std::vector<Scalar<Type<TypeCategory::Logical>>> mask_elements(
+            n, Scalar<Type<TypeCategory::Logical>>{scalarMask.value()});
+        *mask = Constant<Type<TypeCategory::Logical>>{LogicalResultKind,
             std::move(mask_elements), ConstantSubscripts{array->shape()}};
       }
       mask->SetLowerBoundsToOne();
@@ -530,11 +530,11 @@ public:
         }
       }
     }
-    std::vector<Scalar<SubscriptInteger>> resultElements;
+    std::vector<Scalar<Type<TypeCategory::Integer>>> resultElements;
     for (ConstantSubscript j : resultIndices) {
       resultElements.emplace_back(SubscriptIntegerKind, j);
     }
-    return Constant<SubscriptInteger>{SubscriptIntegerKind,
+    return Constant<Type<TypeCategory::Integer>>{SubscriptIntegerKind,
         std::move(resultElements), std::move(resultShape)};
   }
 
@@ -545,16 +545,17 @@ private:
       [[maybe_unused]] RelationalOperator relation,
       [[maybe_unused]] bool back) const {
     const int kind{element.kind()};
-    std::optional<Expr<LogicalResult>> cmp;
+    std::optional<Expr<Type<TypeCategory::Logical>>> cmp;
     bool result{true};
     if (value) {
       if constexpr (T::category == TypeCategory::Logical) {
         // array(at) .EQV. value?
         static_assert(WHICH == WhichLocation::Findloc);
-        cmp.emplace(ConvertToType<LogicalResult>(LogicalResultKind,
-            Expr<LogicalResult>{LogicalOperation{LogicalOperator::Eqv,
-                MakeConstantExpr<T>(kind, element),
-                MakeConstantExpr<T>(kind, *value)}}));
+        cmp.emplace(
+            ConvertToType<Type<TypeCategory::Logical>>(LogicalResultKind,
+                Expr<Type<TypeCategory::Logical>>{LogicalOperation{
+                    LogicalOperator::Eqv, MakeConstantExpr<T>(kind, element),
+                    MakeConstantExpr<T>(kind, *value)}}));
       } else { // compare array(at) to value
         if constexpr (T::category == TypeCategory::Real &&
             (WHICH == WhichLocation::Maxloc ||
@@ -571,8 +572,9 @@ private:
                   MakeConstantExpr<T>(kind, *value)));
         }
       }
-      Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
-      result = GetScalarConstantValue<LogicalResult>(LogicalResultKind, folded)
+      Expr<Type<TypeCategory::Logical>> folded{Fold(context_, std::move(*cmp))};
+      result = GetScalarConstantValue<Type<TypeCategory::Logical>>(
+          LogicalResultKind, folded)
                    .value()
                    .IsTrue();
     } else {
@@ -597,7 +599,7 @@ private:
 };
 
 template <WhichLocation which>
-static std::optional<Constant<SubscriptInteger>> FoldLocationCall(
+static std::optional<Constant<Type<TypeCategory::Integer>>> FoldLocationCall(
     ActualArguments &arg, FoldingContext &context) {
   if (arg[0]) {
     if (auto type{arg[0]->GetType()}) {
@@ -622,10 +624,11 @@ template <WhichLocation which, typename T>
 static Expr<T> FoldLocation(FoldingContext &context, FunctionRef<T> &&ref) {
   static_assert(T::category == TypeCategory::Integer);
   const int kind{ref.kind()};
-  if (std::optional<Constant<SubscriptInteger>> found{
+  if (std::optional<Constant<Type<TypeCategory::Integer>>> found{
           FoldLocationCall<which>(ref.arguments(), context)}) {
     return Expr<T>{Fold(context,
-        ConvertToType<T>(kind, Expr<SubscriptInteger>{std::move(*found)}))};
+        ConvertToType<T>(
+            kind, Expr<Type<TypeCategory::Integer>>{std::move(*found)}))};
   } else {
     return Expr<T>{std::move(ref)};
   }
@@ -659,7 +662,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
-  using Int4 = Type<TypeCategory::Integer>;
+  using Int = Type<TypeCategory::Integer>;
   if (name == "bit_size") {
     return MakeConstantExpr<T>(kind, Scalar<T>::bits(kind));
   } else if (name == "digits") {
@@ -699,10 +702,10 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     const auto fptr{
         name == "dshiftl" ? &Scalar<T>::DSHIFTL : &Scalar<T>::DSHIFTR};
     // Third argument can be of any kind. However, it must be smaller or equal
-    // than BIT_SIZE. It can be converted to Int4 to simplify.
+    // than BIT_SIZE. It can be converted to Int to simplify.
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
-    } else if (const auto *shiftCon{Folder<Int4>(
+    } else if (const auto *shiftCon{Folder<Int>(
                    /*kind=*/4, context)
                        .Folding(args[2])}) {
       for (const auto &scalar : shiftCon->values()) {
@@ -719,13 +722,12 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         }
       }
     }
-    return FoldElementalIntrinsic<T, T, T, Int4>(kind, {kind, kind, 4}, context,
+    return FoldElementalIntrinsic<T, T, T, Int>(kind, {kind, kind, 4}, context,
         std::move(funcRef),
-        ScalarFunc<T, T, T, Int4>(
-            [&fptr](const Scalar<T> &i, const Scalar<T> &j,
-                const Scalar<Int4> &shift) -> Scalar<T> {
-              return std::invoke(fptr, i, j, static_cast<int>(shift.ToInt64()));
-            }));
+        ScalarFunc<T, T, T, Int>([&fptr](const Scalar<T> &i, const Scalar<T> &j,
+                                     const Scalar<Int> &shift) -> Scalar<T> {
+          return std::invoke(fptr, i, j, static_cast<int>(shift.ToInt64()));
+        }));
   } else if (name == "iand" || name == "ior" || name == "ieor") {
     auto fptr{&Scalar<T>::IAND};
     if (name == "iand") { // done in fptr declaration
@@ -746,7 +748,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         context, std::move(funcRef), &Scalar<T>::IOR, Scalar<T>{kind, 0});
   } else if (name == "ibclr" || name == "ibset") {
     // Second argument can be of any kind. However, it must be smaller
-    // than BIT_SIZE. It can be converted to Int4 to simplify.
+    // than BIT_SIZE. It can be converted to Int to simplify.
     auto fptr{&Scalar<T>::IBCLR};
     if (name == "ibclr") { // done in fptr definition
     } else if (name == "ibset") {
@@ -757,7 +759,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
     } else if (const auto *posCon{
-                   Folder<Int4>(/*kind=*/4, context).Folding(args[1])}) {
+                   Folder<Int>(/*kind=*/4, context).Folding(args[1])}) {
       for (const auto &scalar : posCon->values()) {
         std::int64_t posVal{scalar.ToInt64()};
         if (posVal < 0) {
@@ -773,15 +775,15 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         }
       }
     }
-    return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, 4}, context,
+    return FoldElementalIntrinsic<T, T, Int>(kind, {kind, 4}, context,
         std::move(funcRef),
-        ScalarFunc<T, T, Int4>(
-            [&](const Scalar<T> &i, const Scalar<Int4> &pos) -> Scalar<T> {
+        ScalarFunc<T, T, Int>(
+            [&](const Scalar<T> &i, const Scalar<Int> &pos) -> Scalar<T> {
               return std::invoke(fptr, i, static_cast<int>(pos.ToInt64()));
             }));
   } else if (name == "ibits") {
-    const auto *posCon{Folder<Int4>(/*kind=*/4, context).Folding(args[1])};
-    const auto *lenCon{Folder<Int4>(/*kind=*/4, context).Folding(args[2])};
+    const auto *posCon{Folder<Int>(/*kind=*/4, context).Folding(args[1])};
+    const auto *lenCon{Folder<Int>(/*kind=*/4, context).Folding(args[2])};
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
     } else {
@@ -813,11 +815,11 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         }
       }
     }
-    return FoldElementalIntrinsic<T, T, Int4, Int4>(kind, {kind, 4, 4}, context,
+    return FoldElementalIntrinsic<T, T, Int, Int>(kind, {kind, 4, 4}, context,
         std::move(funcRef),
-        ScalarFunc<T, T, Int4, Int4>(
-            [&](const Scalar<T> &i, const Scalar<Int4> &pos,
-                const Scalar<Int4> &len) -> Scalar<T> {
+        ScalarFunc<T, T, Int, Int>(
+            [&](const Scalar<T> &i, const Scalar<Int> &pos,
+                const Scalar<Int> &len) -> Scalar<T> {
               return i.IBITS(static_cast<int>(pos.ToInt64()),
                   static_cast<int>(len.ToInt64()));
             }));
@@ -878,10 +880,10 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         context, std::move(funcRef), &Scalar<T>::IEOR, Scalar<T>{kind, 0});
   } else if (name == "ishft" || name == "ishftc") {
     const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
-    const auto *shiftCon{Folder<Int4>(/*kind=*/4, context).Folding(args[1])};
+    const auto *shiftCon{Folder<Int>(/*kind=*/4, context).Folding(args[1])};
     const auto *shiftVals{shiftCon ? &shiftCon->values() : nullptr};
     const auto *sizeCon{args.size() == 3
-            ? Folder<Int4>{/*kind=*/4, context, /*forOptionalArgument=*/true}
+            ? Folder<Int>{/*kind=*/4, context, /*forOptionalArgument=*/true}
                   .Folding(args[2])
             : nullptr};
     const auto *sizeVals{sizeCon ? &sizeCon->values() : nullptr};
@@ -937,25 +939,25 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
       }
     }
     if (name == "ishft") {
-      return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, 4}, context,
+      return FoldElementalIntrinsic<T, T, Int>(kind, {kind, 4}, context,
           std::move(funcRef),
-          ScalarFunc<T, T, Int4>(
-              [&](const Scalar<T> &i, const Scalar<Int4> &shift) -> Scalar<T> {
+          ScalarFunc<T, T, Int>(
+              [&](const Scalar<T> &i, const Scalar<Int> &shift) -> Scalar<T> {
                 return i.ISHFT(static_cast<int>(shift.ToInt64()));
               }));
     } else if (!args.at(2)) { // ISHFTC(no SIZE=)
-      return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, 4}, context,
+      return FoldElementalIntrinsic<T, T, Int>(kind, {kind, 4}, context,
           std::move(funcRef),
-          ScalarFunc<T, T, Int4>(
-              [&](const Scalar<T> &i, const Scalar<Int4> &shift) -> Scalar<T> {
+          ScalarFunc<T, T, Int>(
+              [&](const Scalar<T> &i, const Scalar<Int> &shift) -> Scalar<T> {
                 return i.ISHFTC(static_cast<int>(shift.ToInt64()));
               }));
     } else { // ISHFTC(with SIZE=)
-      return FoldElementalIntrinsic<T, T, Int4, Int4>(kind, {kind, 4, 4},
-          context, std::move(funcRef),
-          ScalarFunc<T, T, Int4, Int4>(
-              [&](const Scalar<T> &i, const Scalar<Int4> &shift,
-                  const Scalar<Int4> &size) -> Scalar<T> {
+      return FoldElementalIntrinsic<T, T, Int, Int>(kind, {kind, 4, 4}, context,
+          std::move(funcRef),
+          ScalarFunc<T, T, Int, Int>(
+              [&](const Scalar<T> &i, const Scalar<Int> &shift,
+                  const Scalar<Int> &size) -> Scalar<T> {
                 auto shiftVal{static_cast<int>(shift.ToInt64())};
                 auto sizeVal{static_cast<int>(size.ToInt64())};
                 return i.ISHFTC(shiftVal, sizeVal);
@@ -977,13 +979,13 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   } else if (name == "maskl" || name == "maskr" || name == "umaskl" ||
       name == "umaskr") {
     // Argument can be of any kind but value has to be smaller than BIT_SIZE.
-    // It can be safely converted to Int4 to simplify.
+    // It can be safely converted to Int to simplify.
     const auto fptr{name == "maskl" || name == "umaskl" ? &Scalar<T>::MASKL
                                                         : &Scalar<T>::MASKR};
-    return FoldElementalIntrinsic<T, Int4>(kind, {4}, context,
+    return FoldElementalIntrinsic<T, Int>(kind, {4}, context,
         std::move(funcRef),
-        ScalarFunc<T, Int4>(
-            [&fptr, kind](const Scalar<Int4> &places) -> Scalar<T> {
+        ScalarFunc<T, Int>(
+            [&fptr, kind](const Scalar<Int> &places) -> Scalar<T> {
               return fptr(kind, static_cast<int>(places.ToInt64()));
             }));
   } else if (name == "matmul") {
@@ -1014,7 +1016,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     return Expr<T>{Constant<T>{kind, typename T::Scalar{kind, 2}}};
   } else if (name == "shifta" || name == "shiftr" || name == "shiftl") {
     // Second argument can be of any kind. However, it must be smaller or
-    // equal than BIT_SIZE. It can be converted to Int4 to simplify.
+    // equal than BIT_SIZE. It can be converted to Int to simplify.
     auto fptr{&Scalar<T>::SHIFTA};
     if (name == "shifta") { // done in fptr definition
     } else if (name == "shiftr") {
@@ -1027,7 +1029,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
     } else if (const auto *shiftCon{
-                   Folder<Int4>(/*kind=*/4, context).Folding(args[1])}) {
+                   Folder<Int>(/*kind=*/4, context).Folding(args[1])}) {
       for (const auto &scalar : shiftCon->values()) {
         std::int64_t shiftVal{scalar.ToInt64()};
         if (shiftVal < 0) {
@@ -1042,10 +1044,10 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         }
       }
     }
-    return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, 4}, context,
+    return FoldElementalIntrinsic<T, T, Int>(kind, {kind, 4}, context,
         std::move(funcRef),
-        ScalarFunc<T, T, Int4>(
-            [&](const Scalar<T> &i, const Scalar<Int4> &shift) -> Scalar<T> {
+        ScalarFunc<T, T, Int>(
+            [&](const Scalar<T> &i, const Scalar<Int> &shift) -> Scalar<T> {
               return std::invoke(fptr, i, static_cast<int>(shift.ToInt64()));
             }));
   } else if (name == "sum") {
@@ -1192,13 +1194,14 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
             using TC = typename std::decay_t<decltype(kch)>::Result;
             const int kchKind{kch.kind()};
             if (UnwrapExpr<Expr<SomeLogical>>(args[2])) { // BACK=
-              return FoldElementalIntrinsic<T, TC, TC, LogicalResult>(kind,
+              return FoldElementalIntrinsic<T, TC, TC,
+                  Type<TypeCategory::Logical>>(kind,
                   {kchKind, kchKind, LogicalResultKind}, context,
                   std::move(funcRef),
-                  ScalarFunc<T, TC, TC, LogicalResult>{
+                  ScalarFunc<T, TC, TC, Type<TypeCategory::Logical>>{
                       [&name, &FromInt64](const Scalar<TC> &str,
                           const Scalar<TC> &other,
-                          const Scalar<LogicalResult> &back) {
+                          const Scalar<Type<TypeCategory::Logical>> &back) {
                         return FromInt64(name == "index"
                                 ? CharacterUtils::INDEX(
                                       str, other, back.IsTrue())
@@ -1235,8 +1238,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       if (const auto *inquiry{UnwrapExpr<TypeParamInquiry>(*expr)}) {
         if (const auto *typeSpec{inquiry->parameter().GetType()}) {
           if (const auto *intrinType{typeSpec->AsIntrinsic()}) {
-            if (auto k{ToInt64(Fold(
-                    context, Expr<SubscriptInteger>{intrinType->kind()}))}) {
+            if (auto k{ToInt64(Fold(context,
+                    Expr<Type<TypeCategory::Integer>>{intrinType->kind()}))}) {
               return MakeConstantExpr<T>(kind, *k);
             }
           }
@@ -1756,7 +1759,7 @@ static std::optional<DataRef> SubscriptRankOneElement(
                 if (j != nonScalarDim) {
                   ss.emplace_back(sub);
                 } else if (const auto *trip{std::get_if<Triplet>(&sub.u)}) {
-                  std::optional<Expr<SubscriptInteger>> lower;
+                  std::optional<Expr<Type<TypeCategory::Integer>>> lower;
                   if (const auto *lo{trip->GetLower()}) {
                     lower = *lo;
                   } else if (auto lb{GetLBOUND(context, a.base(), j)}) {
@@ -1853,12 +1856,12 @@ static std::optional<Expr<Type<TypeCategory::Integer>>> ExtractRankOneElement(
               --target;
             } else {
               const auto &ido{std::get<ImpliedDo<T>>(value.u)};
-              auto lower{
-                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.lower()}))};
-              auto upper{
-                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.upper()}))};
-              auto stride{
-                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.stride()}))};
+              auto lower{ToInt64(Fold(
+                  context, Expr<Type<TypeCategory::Integer>>{ido.lower()}))};
+              auto upper{ToInt64(Fold(
+                  context, Expr<Type<TypeCategory::Integer>>{ido.upper()}))};
+              auto stride{ToInt64(Fold(
+                  context, Expr<Type<TypeCategory::Integer>>{ido.stride()}))};
               if (!lower || !upper || !stride || *stride == 0) {
                 return std::nullopt;
               }

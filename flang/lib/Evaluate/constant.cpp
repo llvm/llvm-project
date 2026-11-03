@@ -53,7 +53,7 @@ void ConstantBounds::SetLowerBoundsToOne() {
   }
 }
 
-Constant<SubscriptInteger> ConstantBounds::SHAPE() const {
+Constant<Type<TypeCategory::Integer>> ConstantBounds::SHAPE() const {
   return AsConstantShape(shape_);
 }
 

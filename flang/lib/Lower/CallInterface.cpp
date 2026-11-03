@@ -1467,8 +1467,8 @@ private:
     return bounds;
   }
   std::optional<std::int64_t>
-  toInt64(std::optional<
-          Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
+  toInt64(std::optional<Fortran::evaluate::Expr<
+              Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>>
               expr) {
     if (expr)
       return Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(

@@ -83,7 +83,8 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
                         [&](const IndirectSubscriptIntegerExpr &expr) {
                           auto folded{
                               Fold(context_, common::Clone(expr.value()))};
-                          if (auto value{UnwrapConstantValue<SubscriptInteger>(
+                          if (auto value{UnwrapConstantValue<
+                                  Type<TypeCategory::Integer>>(
                                   SubscriptIntegerKind, folded)}) {
                             CHECK(value->Rank() <= 1);
                             if (value->size() != 0) {

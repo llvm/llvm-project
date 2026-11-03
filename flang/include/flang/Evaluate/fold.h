@@ -121,9 +121,10 @@ std::optional<std::int64_t> ToInt64(const ActualArgument &);
 
 // When an expression is a constant logical scalar, ToLogical() extracts its
 // value.
-inline std::optional<bool> ToLogical(const Expr<LogicalResult> &expr) {
-  if (auto val{
-          GetScalarConstantValue<LogicalResult>(LogicalResultKind, expr)}) {
+inline std::optional<bool> ToLogical(
+    const Expr<Type<TypeCategory::Logical>> &expr) {
+  if (auto val{GetScalarConstantValue<Type<TypeCategory::Logical>>(
+          LogicalResultKind, expr)}) {
     return val->IsTrue();
   }
   return std::nullopt;

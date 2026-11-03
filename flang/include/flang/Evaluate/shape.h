@@ -26,7 +26,7 @@ namespace Fortran::evaluate {
 
 class FoldingContext;
 
-using ExtentType = SubscriptInteger;
+using ExtentType = Type<TypeCategory::Integer>;
 using ExtentExpr = Expr<ExtentType>;
 using MaybeExtentExpr = std::optional<ExtentExpr>;
 using Shape = std::vector<MaybeExtentExpr>;
@@ -180,7 +180,7 @@ extern template bool ContainsUntaggedRankOneBoundElement(
 extern template bool ContainsUntaggedRankOneBoundElement(
     const Expr<SomeInteger> &);
 extern template bool ContainsUntaggedRankOneBoundElement(
-    const Expr<SubscriptInteger> &);
+    const Expr<Type<TypeCategory::Integer>> &);
 
 // GetShape()
 

@@ -8134,9 +8134,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
           // Try to evaluate as a constant integer (e.g., omp_ifr_cuda).
           if (auto constVal = evaluate::ToInt64(pref)) {
             prefValues.push_back(*constVal);
-          } else if (auto str =
-                         evaluate::GetScalarConstantValue<evaluate::Ascii>(
-                             evaluate::AsciiKind, pref)) {
+          } else if (auto str = evaluate::GetScalarConstantValue<
+                         evaluate::Type<common::TypeCategory::Character>>(
+                         evaluate::AsciiKind, pref)) {
             // Map standard OpenMP foreign-runtime identifier strings to
             // their well-known integer values (OpenMP 5.1, Table 22.2).
             auto frId = llvm::StringSwitch<std::optional<int64_t>>(
@@ -8430,7 +8430,8 @@ static void genErrorDirective(lower::AbstractConverter &converter,
   MaybeExpr messageExpr;
   if (args.message) {
     if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
-      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(
+      if (auto val = evaluate::GetScalarConstantValue<
+              evaluate::Type<common::TypeCategory::Character>>(
               evaluate::AsciiKind, *expr))
         message = val->AsStdString();
       else

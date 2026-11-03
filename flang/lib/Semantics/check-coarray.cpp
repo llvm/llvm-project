@@ -220,11 +220,12 @@ void CoarrayChecker::Leave(const parser::SyncImagesStmt &x) {
               std::get_if<evaluate::Expr<evaluate::SomeInteger>>(&expr->u)};
           someInt && evaluate::IsActuallyConstant(*someInt)) {
         auto converted{evaluate::Fold(context_.foldingContext(),
-            evaluate::ConvertToType<evaluate::SubscriptInteger>(
+            evaluate::ConvertToType<
+                evaluate::Type<common::TypeCategory::Integer>>(
                 evaluate::SubscriptIntegerKind, common::Clone(*someInt)))};
-        if (const auto *cst{
-                evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
-                    evaluate::SubscriptIntegerKind, converted)}) {
+        if (const auto *cst{evaluate::UnwrapConstantValue<
+                evaluate::Type<common::TypeCategory::Integer>>(
+                evaluate::SubscriptIntegerKind, converted)}) {
           for (auto elt : cst->values()) {
             auto n{elt.ToInt64()};
             if (n < 1) {

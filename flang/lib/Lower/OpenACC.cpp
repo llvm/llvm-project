@@ -782,7 +782,8 @@ isWholeDimensionTriplet(const Fortran::evaluate::Triplet &triplet,
     return false;
 
   auto matchesBound =
-      [&](const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>
+      [&](const Fortran::evaluate::Expr<
+              Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>
               *sectionBound,
           Fortran::evaluate::MaybeExtentExpr declaredBound) {
         // Omitted section bound means the declared bound of that dimension.
@@ -793,8 +794,8 @@ isWholeDimensionTriplet(const Fortran::evaluate::Triplet &triplet,
         std::optional<std::int64_t> sectionVal =
             Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
                 foldingContext,
-                Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>{
-                    *sectionBound}));
+                Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                    Fortran::common::TypeCategory::Integer>>{*sectionBound}));
         std::optional<std::int64_t> declaredVal = Fortran::evaluate::ToInt64(
             Fortran::evaluate::Fold(foldingContext, std::move(*declaredBound)));
         return sectionVal && declaredVal && *sectionVal == *declaredVal;

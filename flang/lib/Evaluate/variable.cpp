@@ -24,9 +24,9 @@ namespace Fortran::evaluate {
 
 Triplet::Triplet() : stride_{MakeSubscriptIntExpr(1)} {}
 
-Triplet::Triplet(std::optional<Expr<SubscriptInteger>> &&l,
-    std::optional<Expr<SubscriptInteger>> &&u,
-    std::optional<Expr<SubscriptInteger>> &&s)
+Triplet::Triplet(std::optional<Expr<Type<TypeCategory::Integer>>> &&l,
+    std::optional<Expr<Type<TypeCategory::Integer>>> &&u,
+    std::optional<Expr<Type<TypeCategory::Integer>>> &&s)
     : stride_{s ? std::move(*s) : MakeSubscriptIntExpr(1)} {
   if (l) {
     lower_.emplace(std::move(*l));
@@ -36,39 +36,41 @@ Triplet::Triplet(std::optional<Expr<SubscriptInteger>> &&l,
   }
 }
 
-std::optional<Expr<SubscriptInteger>> Triplet::lower() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> Triplet::lower() const {
   if (lower_) {
     return {lower_.value().value()};
   }
   return std::nullopt;
 }
 
-Triplet &Triplet::set_lower(Expr<SubscriptInteger> &&expr) {
+Triplet &Triplet::set_lower(Expr<Type<TypeCategory::Integer>> &&expr) {
   lower_.emplace(std::move(expr));
   return *this;
 }
 
-std::optional<Expr<SubscriptInteger>> Triplet::upper() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> Triplet::upper() const {
   if (upper_) {
     return {upper_.value().value()};
   }
   return std::nullopt;
 }
 
-Triplet &Triplet::set_upper(Expr<SubscriptInteger> &&expr) {
+Triplet &Triplet::set_upper(Expr<Type<TypeCategory::Integer>> &&expr) {
   upper_.emplace(std::move(expr));
   return *this;
 }
 
-Expr<SubscriptInteger> Triplet::stride() const { return stride_.value(); }
+Expr<Type<TypeCategory::Integer>> Triplet::stride() const {
+  return stride_.value();
+}
 
-Triplet &Triplet::set_stride(Expr<SubscriptInteger> &&expr) {
+Triplet &Triplet::set_stride(Expr<Type<TypeCategory::Integer>> &&expr) {
   stride_.value() = std::move(expr);
   return *this;
 }
 
 CoarrayRef::CoarrayRef(
-    DataRef &&base, std::vector<Expr<SubscriptInteger>> &&css)
+    DataRef &&base, std::vector<Expr<Type<TypeCategory::Integer>>> &&css)
     : base_{std::move(base)}, cosubscript_(std::move(css)) {}
 
 std::optional<Expr<SomeInteger>> CoarrayRef::stat() const {
@@ -119,8 +121,9 @@ const Symbol &CoarrayRef::GetLastSymbol() const {
   return base().GetLastSymbol();
 }
 
-void Substring::SetBounds(std::optional<Expr<SubscriptInteger>> &lower,
-    std::optional<Expr<SubscriptInteger>> &upper) {
+void Substring::SetBounds(
+    std::optional<Expr<Type<TypeCategory::Integer>>> &lower,
+    std::optional<Expr<Type<TypeCategory::Integer>>> &upper) {
   if (lower) {
     set_lower(std::move(lower.value()));
   }
@@ -129,7 +132,7 @@ void Substring::SetBounds(std::optional<Expr<SubscriptInteger>> &lower,
   }
 }
 
-Expr<SubscriptInteger> Substring::lower() const {
+Expr<Type<TypeCategory::Integer>> Substring::lower() const {
   if (lower_) {
     return lower_.value().value();
   } else {
@@ -137,12 +140,12 @@ Expr<SubscriptInteger> Substring::lower() const {
   }
 }
 
-Substring &Substring::set_lower(Expr<SubscriptInteger> &&expr) {
+Substring &Substring::set_lower(Expr<Type<TypeCategory::Integer>> &&expr) {
   lower_.emplace(std::move(expr));
   return *this;
 }
 
-std::optional<Expr<SubscriptInteger>> Substring::upper() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> Substring::upper() const {
   if (upper_) {
     return upper_.value().value();
   } else {
@@ -150,7 +153,7 @@ std::optional<Expr<SubscriptInteger>> Substring::upper() const {
         common::visitors{
             [](const DataRef &dataRef) { return dataRef.LEN(); },
             [](const StaticDataObject::Pointer &object)
-                -> std::optional<Expr<SubscriptInteger>> {
+                -> std::optional<Expr<Type<TypeCategory::Integer>>> {
               return MakeSubscriptIntExpr(object->data().size());
             },
         },
@@ -158,7 +161,7 @@ std::optional<Expr<SubscriptInteger>> Substring::upper() const {
   }
 }
 
-Substring &Substring::set_upper(Expr<SubscriptInteger> &&expr) {
+Substring &Substring::set_upper(Expr<Type<TypeCategory::Integer>> &&expr) {
   upper_.emplace(std::move(expr));
   return *this;
 }
@@ -259,7 +262,8 @@ DescriptorInquiry::DescriptorInquiry(NamedEntity &&base, Field field, int dim)
 }
 
 // LEN()
-static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
+static std::optional<Expr<Type<TypeCategory::Integer>>> SymbolLEN(
+    const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
   if (const auto *assoc{ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
     if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(assoc->expr())}) {
@@ -285,47 +289,47 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
         return MakeSubscriptIntExpr(std::max<std::int64_t>(*constLen, 0));
       } else if (ultimate.owner().IsDerivedType() ||
           IsScopeInvariantExpr(*len)) {
-        return AsExpr(Extremum<SubscriptInteger>{
+        return AsExpr(Extremum<Type<TypeCategory::Integer>>{
             Ordering::Greater, MakeSubscriptIntExpr(0), std::move(*len)});
       }
     }
   }
   if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
-    return Expr<SubscriptInteger>{
+    return Expr<Type<TypeCategory::Integer>>{
         DescriptorInquiry{NamedEntity{symbol}, DescriptorInquiry::Field::Len}};
   }
   return std::nullopt;
 }
 
-std::optional<Expr<SubscriptInteger>> BaseObject::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> BaseObject::LEN() const {
   return common::visit(
       common::visitors{
           [](const Symbol &symbol) { return SymbolLEN(symbol); },
           [](const StaticDataObject::Pointer &object)
-              -> std::optional<Expr<SubscriptInteger>> {
+              -> std::optional<Expr<Type<TypeCategory::Integer>>> {
             return MakeSubscriptIntExpr(object->data().size());
           },
       },
       u);
 }
 
-std::optional<Expr<SubscriptInteger>> Component::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> Component::LEN() const {
   return SymbolLEN(GetLastSymbol());
 }
 
-std::optional<Expr<SubscriptInteger>> NamedEntity::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> NamedEntity::LEN() const {
   return SymbolLEN(GetLastSymbol());
 }
 
-std::optional<Expr<SubscriptInteger>> ArrayRef::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> ArrayRef::LEN() const {
   return base_.LEN();
 }
 
-std::optional<Expr<SubscriptInteger>> CoarrayRef::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> CoarrayRef::LEN() const {
   return SymbolLEN(GetLastSymbol());
 }
 
-std::optional<Expr<SubscriptInteger>> DataRef::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> DataRef::LEN() const {
   return common::visit(common::visitors{
                            [](SymbolRef symbol) { return SymbolLEN(symbol); },
                            [](const auto &x) { return x.LEN(); },
@@ -333,18 +337,18 @@ std::optional<Expr<SubscriptInteger>> DataRef::LEN() const {
       u);
 }
 
-std::optional<Expr<SubscriptInteger>> Substring::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> Substring::LEN() const {
   if (auto top{upper()}) {
-    return AsExpr(
-        Extremum<SubscriptInteger>{Ordering::Greater, MakeSubscriptIntExpr(0),
-            *std::move(top) - lower() + MakeSubscriptIntExpr(1)});
+    return AsExpr(Extremum<Type<TypeCategory::Integer>>{Ordering::Greater,
+        MakeSubscriptIntExpr(0),
+        *std::move(top) - lower() + MakeSubscriptIntExpr(1)});
   } else {
     return std::nullopt;
   }
 }
 
 template <typename T>
-std::optional<Expr<SubscriptInteger>> Designator<T>::LEN() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> Designator<T>::LEN() const {
   if constexpr (T::category == TypeCategory::Character) {
     return common::visit(common::visitors{
                              [](SymbolRef symbol) { return SymbolLEN(symbol); },
@@ -357,8 +361,9 @@ std::optional<Expr<SubscriptInteger>> Designator<T>::LEN() const {
   }
 }
 
-std::optional<Expr<SubscriptInteger>> ProcedureDesignator::LEN() const {
-  using T = std::optional<Expr<SubscriptInteger>>;
+std::optional<Expr<Type<TypeCategory::Integer>>>
+ProcedureDesignator::LEN() const {
+  using T = std::optional<Expr<Type<TypeCategory::Integer>>>;
   return common::visit(
       common::visitors{
           [](SymbolRef symbol) -> T { return SymbolLEN(symbol); },

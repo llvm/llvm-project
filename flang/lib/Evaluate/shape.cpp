@@ -117,8 +117,9 @@ std::optional<Constant<ExtentType>> AsConstantShape(
   return std::nullopt;
 }
 
-Constant<SubscriptInteger> AsConstantShape(const ConstantSubscripts &shape) {
-  using IntType = Scalar<SubscriptInteger>;
+Constant<Type<TypeCategory::Integer>> AsConstantShape(
+    const ConstantSubscripts &shape) {
+  using IntType = Scalar<Type<TypeCategory::Integer>>;
   std::vector<IntType> result;
   for (auto dim : shape) {
     result.emplace_back(SubscriptIntegerKind, dim);
@@ -252,7 +253,7 @@ bool ContainsUntaggedRankOneBoundElement(const Expr<T> &expr) {
 template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeType> &);
 template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeInteger> &);
 template bool ContainsUntaggedRankOneBoundElement(
-    const Expr<SubscriptInteger> &);
+    const Expr<Type<TypeCategory::Integer>> &);
 
 // Copies a declared bound out of its ShapeSpec.  A rank-1 array bound is stored
 // as a RankOneBoundElement wrapping the whole rank-1 expression; the copy is
@@ -537,15 +538,15 @@ static MaybeExtentExpr GetNonNegativeExtent(const NamedEntity &base,
     if (lval.value_or(0) == 1) {
       // max(0,ub) == max(0,UBOUND(a,dim)) for every ub when lb == 1, so a
       // surviving rank-1 bound element can carry ubound() provenance exactly.
-      return ExtentExpr{
-          Extremum<SubscriptInteger>{Ordering::Greater, MakeExtentExpr(0),
-              CloneBound(*ubound, &base, /*isUpperBound=*/true)}};
+      return ExtentExpr{Extremum<Type<TypeCategory::Integer>>{Ordering::Greater,
+          MakeExtentExpr(0),
+          CloneBound(*ubound, &base, /*isUpperBound=*/true)}};
     } else {
       // Neither UBOUND() nor LBOUND() equals the declared bound of an empty
       // dimension, so the raw copies cannot carry provenance here.
-      return ExtentExpr{
-          Extremum<SubscriptInteger>{Ordering::Greater, MakeExtentExpr(0),
-              CloneBound(*ubound) - CloneBound(*lbound) + MakeExtentExpr(1)}};
+      return ExtentExpr{Extremum<Type<TypeCategory::Integer>>{Ordering::Greater,
+          MakeExtentExpr(0),
+          CloneBound(*ubound) - CloneBound(*lbound) + MakeExtentExpr(1)}};
     }
   } else {
     return std::nullopt;
@@ -1199,7 +1200,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             if (*dim >= 1 &&
                 static_cast<std::size_t>(*dim) <= arrayShape->size() + 1) {
               arrayShape->emplace(arrayShape->begin() + *dim - 1,
-                  Extremum<SubscriptInteger>{Ordering::Greater,
+                  Extremum<Type<TypeCategory::Integer>>{Ordering::Greater,
                       MakeExtentExpr(0),
                       ConvertToType<ExtentType>(
                           ExtentIntKind, common::Clone(*nCopies))});

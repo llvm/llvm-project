@@ -220,7 +220,7 @@ template <typename A> bool IsConstantExpr(const A &x, const FoldingContext *c) {
 template bool IsConstantExpr(const Expr<SomeType> &, const FoldingContext *);
 template bool IsConstantExpr(const Expr<SomeInteger> &, const FoldingContext *);
 template bool IsConstantExpr(
-    const Expr<SubscriptInteger> &, const FoldingContext *);
+    const Expr<Type<TypeCategory::Integer>> &, const FoldingContext *);
 template bool IsConstantExpr(
     const StructureConstructor &, const FoldingContext *);
 
@@ -234,7 +234,7 @@ template bool IsScopeInvariantExpr(
 template bool IsScopeInvariantExpr(
     const Expr<SomeInteger> &, const FoldingContext *);
 template bool IsScopeInvariantExpr(
-    const Expr<SubscriptInteger> &, const FoldingContext *);
+    const Expr<Type<TypeCategory::Integer>> &, const FoldingContext *);
 
 // IsActuallyConstant()
 struct IsActuallyConstantHelper {
@@ -278,8 +278,9 @@ template <typename A> bool IsActuallyConstant(const A &x) {
 
 template bool IsActuallyConstant(const Expr<SomeType> &);
 template bool IsActuallyConstant(const Expr<SomeInteger> &);
-template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
-template bool IsActuallyConstant(const std::optional<Expr<SubscriptInteger>> &);
+template bool IsActuallyConstant(const Expr<Type<TypeCategory::Integer>> &);
+template bool IsActuallyConstant(
+    const std::optional<Expr<Type<TypeCategory::Integer>>> &);
 
 // Object pointer initialization checking predicate IsInitialDataTarget().
 // This code determines whether an expression is allowable as the static
@@ -1014,7 +1015,7 @@ template void CheckSpecificationExpr(const Expr<SomeType> &,
 template void CheckSpecificationExpr(const Expr<SomeInteger> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
-template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
+template void CheckSpecificationExpr(const Expr<Type<TypeCategory::Integer>> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
@@ -1024,8 +1025,9 @@ template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 template void CheckSpecificationExpr(
-    const std::optional<Expr<SubscriptInteger>> &, const semantics::Scope &,
-    FoldingContext &, bool forElementalFunctionResult);
+    const std::optional<Expr<Type<TypeCategory::Integer>>> &,
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
 
 // IsContiguous() -- 9.5.4
 class IsContiguousHelper
@@ -1249,12 +1251,14 @@ private:
       std::optional<ConstantSubscript> dimExtent;
       if (baseLbounds && j < baseLbounds->size()) {
         if (const auto &lb{baseLbounds->at(j)}) {
-          dimLbound = ToInt64(Fold(context_, Expr<SubscriptInteger>{*lb}));
+          dimLbound =
+              ToInt64(Fold(context_, Expr<Type<TypeCategory::Integer>>{*lb}));
         }
       }
       if (baseUbounds && j < baseUbounds->size()) {
         if (const auto &ub{baseUbounds->at(j)}) {
-          dimUbound = ToInt64(Fold(context_, Expr<SubscriptInteger>{*ub}));
+          dimUbound =
+              ToInt64(Fold(context_, Expr<Type<TypeCategory::Integer>>{*ub}));
         }
       }
       if (dimLbound && dimUbound) {
@@ -1268,13 +1272,17 @@ private:
       }
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
         ++rank;
-        const Expr<SubscriptInteger> *lowerBound{triplet->GetLower()};
-        const Expr<SubscriptInteger> *upperBound{triplet->GetUpper()};
+        const Expr<Type<TypeCategory::Integer>> *lowerBound{
+            triplet->GetLower()};
+        const Expr<Type<TypeCategory::Integer>> *upperBound{
+            triplet->GetUpper()};
         std::optional<ConstantSubscript> lowerVal{lowerBound
-                ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*lowerBound}))
+                ? ToInt64(Fold(
+                      context_, Expr<Type<TypeCategory::Integer>>{*lowerBound}))
                 : dimLbound};
         std::optional<ConstantSubscript> upperVal{upperBound
-                ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*upperBound}))
+                ? ToInt64(Fold(
+                      context_, Expr<Type<TypeCategory::Integer>>{*upperBound}))
                 : dimUbound};
         if (auto stride{ToInt64(triplet->stride())}) {
           if (j == 0 && *stride == 1 && firstDimensionStride1_) {

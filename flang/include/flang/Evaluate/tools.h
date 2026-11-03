@@ -788,16 +788,17 @@ std::optional<Expr<SomeType>> Negation(
 
 // Given two expressions of arbitrary type, try to combine them with a
 // relational operator (e.g., .LT.), possibly with data type conversion.
-std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &,
-    RelationalOperator, Expr<SomeType> &&, Expr<SomeType> &&);
+std::optional<Expr<Type<TypeCategory::Logical>>> Relate(
+    parser::ContextualMessages &, RelationalOperator, Expr<SomeType> &&,
+    Expr<SomeType> &&);
 
 // Create a relational operation between two identically-typed operands
-// and wrap it up in an Expr<LogicalResult>.
+// and wrap it up in an Expr<Type<TypeCategory::Logical>>.
 template <typename T>
-Expr<LogicalResult> PackageRelation(
+Expr<Type<TypeCategory::Logical>> PackageRelation(
     RelationalOperator opr, Expr<T> &&x, Expr<T> &&y) {
   static_assert(IsSpecificIntrinsicType<T>);
-  return Expr<LogicalResult>{
+  return Expr<Type<TypeCategory::Logical>>{
       Relational<SomeType>{Relational<T>{opr, std::move(x), std::move(y)}}};
 }
 
@@ -1104,7 +1105,7 @@ extern template semantics::UnorderedSymbolSet CollectSymbols(
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeInteger> &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
-    const Expr<SubscriptInteger> &);
+    const Expr<Type<TypeCategory::Integer>> &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const ProcedureDesignator &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
@@ -1125,7 +1126,7 @@ CollectRankOneBoundProvenanceSymbols(const Expr<SomeType> &);
 extern template semantics::UnorderedSymbolSet
 CollectRankOneBoundProvenanceSymbols(const Expr<SomeInteger> &);
 extern template semantics::UnorderedSymbolSet
-CollectRankOneBoundProvenanceSymbols(const Expr<SubscriptInteger> &);
+CollectRankOneBoundProvenanceSymbols(const Expr<Type<TypeCategory::Integer>> &);
 
 // Collects Symbols of interest for the CUDA data transfer in an expression
 template <typename A>
@@ -1135,7 +1136,7 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SomeInteger> &);
 extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
-    const Expr<SubscriptInteger> &);
+    const Expr<Type<TypeCategory::Integer>> &);
 
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
@@ -1336,8 +1337,10 @@ private:
 // naming of corresponding dummy arguments?
 template <typename T>
 std::optional<bool> AreEquivalentInInterface(const Expr<T> &, const Expr<T> &);
-extern template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
-    const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
+extern template std::optional<bool>
+AreEquivalentInInterface<Type<TypeCategory::Integer>>(
+    const Expr<Type<TypeCategory::Integer>> &,
+    const Expr<Type<TypeCategory::Integer>> &);
 extern template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
     const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 

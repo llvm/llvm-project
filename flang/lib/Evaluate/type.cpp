@@ -139,13 +139,14 @@ bool DynamicType::operator==(const DynamicType &that) const {
       PointeeComparison(derived_, that.derived_);
 }
 
-std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
+std::optional<Expr<Type<TypeCategory::Integer>>>
+DynamicType::GetCharLength() const {
   if (category_ == TypeCategory::Character) {
     if (knownLength()) {
       return MakeSubscriptIntExpr(*knownLength());
     } else if (charLengthParamValue_) {
       if (auto length{charLengthParamValue_->GetExplicit()}) {
-        return ConvertToType<SubscriptInteger>(
+        return ConvertToType<Type<TypeCategory::Integer>>(
             SubscriptIntegerKind, std::move(*length));
       }
     }
@@ -186,8 +187,8 @@ std::size_t DynamicType::GetAlignment(
   return 1; // needs to be after switch to dodge a bogus gcc warning
 }
 
-std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
-    FoldingContext &context, bool aligned,
+std::optional<Expr<Type<TypeCategory::Integer>>>
+DynamicType::MeasureSizeInBytes(FoldingContext &context, bool aligned,
     std::optional<std::int64_t> charLength) const {
   switch (category_) {
   case TypeCategory::Integer:

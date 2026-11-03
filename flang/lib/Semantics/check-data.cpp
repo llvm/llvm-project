@@ -182,7 +182,8 @@ private:
     return CheckSubscriptExpr(expr.value());
   }
   bool CheckSubscriptExpr(
-      const evaluate::Expr<evaluate::SubscriptInteger> &expr) const {
+      const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>> &expr)
+      const {
     if (!evaluate::IsConstantExpr(expr, /*context=*/
             nullptr /* to accept unbound implied DO indices */)) { // C875,C881
       context_.Say(

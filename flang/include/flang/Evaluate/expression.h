@@ -293,11 +293,12 @@ struct Not : public Operation<Not, Type<TypeCategory::Logical>,
 // have explicit syntax for changing them.  Expressions represent
 // changes of length (e.g., for assignments and structure constructors)
 // with this operation.
-struct SetLength : public Operation<SetLength, Type<TypeCategory::Character>,
-                       Type<TypeCategory::Character>, SubscriptInteger> {
+struct SetLength
+    : public Operation<SetLength, Type<TypeCategory::Character>,
+          Type<TypeCategory::Character>, Type<TypeCategory::Integer>> {
   using Result = Type<TypeCategory::Character>;
   using CharacterOperand = Result;
-  using LengthOperand = SubscriptInteger;
+  using LengthOperand = Type<TypeCategory::Integer>;
   using Base = Operation<SetLength, Result, CharacterOperand, LengthOperand>;
   using Base::Base;
 };
@@ -416,16 +417,18 @@ public:
   constexpr int kind() const { return kind_; }
 
   CLASS_BOILERPLATE(ConditionalExpr)
-  ConditionalExpr(Expr<LogicalResult> &&cond, Expr<Result> &&thenVal,
-      Expr<Result> &&elseVal)
+  ConditionalExpr(Expr<Type<TypeCategory::Logical>> &&cond,
+      Expr<Result> &&thenVal, Expr<Result> &&elseVal)
       : kind_{thenVal.kind()}, condition_{std::move(cond)},
         thenValue_{std::move(thenVal)}, elseValue_{std::move(elseVal)} {
     CHECK_KIND(kind(), Result);
     CHECK(thenValue().kind() == elseValue().kind());
   }
   bool operator==(const ConditionalExpr &) const;
-  Expr<LogicalResult> &condition() { return condition_.value(); }
-  const Expr<LogicalResult> &condition() const { return condition_.value(); }
+  Expr<Type<TypeCategory::Logical>> &condition() { return condition_.value(); }
+  const Expr<Type<TypeCategory::Logical>> &condition() const {
+    return condition_.value();
+  }
   Expr<Result> &thenValue() { return thenValue_.value(); }
   const Expr<Result> &thenValue() const { return thenValue_.value(); }
   Expr<Result> &elseValue() { return elseValue_.value(); }
@@ -450,7 +453,7 @@ public:
 
 private:
   int kind_;
-  common::CopyableIndirection<Expr<LogicalResult>> condition_;
+  common::CopyableIndirection<Expr<Type<TypeCategory::Logical>>> condition_;
   common::CopyableIndirection<Expr<Result>> thenValue_;
   common::CopyableIndirection<Expr<Result>> elseValue_;
 };
@@ -459,7 +462,7 @@ private:
 template <typename RESULT> class ArrayConstructorValues;
 
 struct ImpliedDoIndex {
-  using Result = SubscriptInteger;
+  using Result = Type<TypeCategory::Integer>;
   bool operator==(const ImpliedDoIndex &) const;
 
   static constexpr int kind() { return SubscriptIntegerKind; }
@@ -579,18 +582,19 @@ public:
   explicit ArrayConstructor(int kind, const Expr<T> &) : kind_{kind} {
     CHECK_KIND(kind, Result);
   }
-  ArrayConstructor &set_LEN(Expr<SubscriptInteger> &&);
+  ArrayConstructor &set_LEN(Expr<Type<TypeCategory::Integer>> &&);
   bool operator==(const ArrayConstructor &) const;
   static constexpr Result result(int kind) { return Result{kind}; }
   DynamicType GetType() const { return {Result::category, kind()}; }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
-  const Expr<SubscriptInteger> *LEN() const {
+  const Expr<Type<TypeCategory::Integer>> *LEN() const {
     return length_ ? &length_->value() : nullptr;
   }
 
 private:
   int kind_;
-  std::optional<common::CopyableIndirection<Expr<SubscriptInteger>>> length_;
+  std::optional<common::CopyableIndirection<Expr<Type<TypeCategory::Integer>>>>
+      length_;
 };
 
 template <>
@@ -739,7 +743,7 @@ public:
   explicit Expr(int kind, Scalar<Result> &&x)
       : u{Constant<Result>{kind, std::move(x)}} {}
 
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
 
   std::variant<Constant<Result>, ArrayConstructor<Result>, Designator<Result>,
       FunctionRef<Result>, Parentheses<Result>, Convert<Result>, Concat,
@@ -758,10 +762,11 @@ FOR_EACH_CHARACTER_KIND(extern template class Expr, )
 // There are no relations between LOGICAL values.
 
 template <typename T>
-class Relational : public Operation<Relational<T>, LogicalResult, T, T> {
+class Relational
+    : public Operation<Relational<T>, Type<TypeCategory::Logical>, T, T> {
 public:
-  using Result = LogicalResult;
-  using Base = Operation<Relational, LogicalResult, T, T>;
+  using Result = Type<TypeCategory::Logical>;
+  using Base = Operation<Relational, Type<TypeCategory::Logical>, T, T>;
   using Operand = typename Base::template Operand<0>;
   static_assert(Operand::category == TypeCategory::Integer ||
       Operand::category == TypeCategory::Real ||
@@ -790,7 +795,7 @@ template <> class Relational<SomeType> {
       ComplexTypes, CharacterTypes, UnsignedTypes>;
 
 public:
-  using Result = LogicalResult;
+  using Result = Type<TypeCategory::Logical>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Relational)
   int kind() const {
     return common::visit([](const auto &x) { return x.kind(); }, u);
@@ -933,7 +938,7 @@ template <> class Expr<SomeCharacter> : public ExpressionBase<SomeCharacter> {
 public:
   using Result = SomeCharacter;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
-  std::optional<Expr<SubscriptInteger>> LEN() const;
+  std::optional<Expr<Type<TypeCategory::Integer>>> LEN() const;
   common::MapTemplate<Expr, CategoryTypes<TypeCategory::Character>> u;
 };
 
@@ -945,7 +950,7 @@ using CategoryExpression = common::MapTemplate<Expr, SomeCategory>;
 // value of any supported kind of INTEGER or REAL.  They must also be
 // distinguishable from other integer constants, since they are permitted
 // to be used in only a few situations.
-using BOZLiteralConstant = typename LargestReal::Scalar::Word;
+using BOZLiteralConstant = typename Type<TypeCategory::Real>::Scalar::Word;
 inline constexpr int BOZLiteralConstantKind = LargestRealKind;
 
 // Null pointers without MOLD= arguments are typed by context.
@@ -1008,9 +1013,10 @@ public:
       : lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
   struct Intrinsic {};
-  using BoundsSpec = std::vector<Expr<SubscriptInteger>>;
+  using BoundsSpec = std::vector<Expr<Type<TypeCategory::Integer>>>;
   using BoundsRemapping =
-      std::vector<std::pair<Expr<SubscriptInteger>, Expr<SubscriptInteger>>>;
+      std::vector<std::pair<Expr<Type<TypeCategory::Integer>>,
+          Expr<Type<TypeCategory::Integer>>>>;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   Expr<SomeType> lhs;
@@ -1112,36 +1118,39 @@ template <typename T> inline Expr<T> MakeZeroExpr(int kind) {
   return MakeConstantExpr<T>(kind, Scalar<T>::Zero(kind));
 }
 
-inline Expr<SubscriptInteger> MakeSubscriptIntExpr(int64_t v) {
-  return Expr<SubscriptInteger>{MakeSubscriptIntConstant(v)};
+inline Expr<Type<TypeCategory::Integer>> MakeSubscriptIntExpr(int64_t v) {
+  return Expr<Type<TypeCategory::Integer>>{MakeSubscriptIntConstant(v)};
 }
 
-inline Expr<SubscriptInteger> MakeSubscriptIntExpr(
-    const Scalar<SubscriptInteger> &v) {
-  return Expr<SubscriptInteger>{
-      Constant<SubscriptInteger>{SubscriptIntegerKind, v}};
+inline Expr<Type<TypeCategory::Integer>> MakeSubscriptIntExpr(
+    const Scalar<Type<TypeCategory::Integer>> &v) {
+  return Expr<Type<TypeCategory::Integer>>{
+      Constant<Type<TypeCategory::Integer>>{SubscriptIntegerKind, v}};
 }
 
-inline Expr<SubscriptInteger> MakeSubscriptIntExpr(
-    Scalar<SubscriptInteger> &&v) {
-  return Expr<SubscriptInteger>{
-      Constant<SubscriptInteger>{SubscriptIntegerKind, std::move(v)}};
+inline Expr<Type<TypeCategory::Integer>> MakeSubscriptIntExpr(
+    Scalar<Type<TypeCategory::Integer>> &&v) {
+  return Expr<Type<TypeCategory::Integer>>{
+      Constant<Type<TypeCategory::Integer>>{
+          SubscriptIntegerKind, std::move(v)}};
 }
 
-inline Expr<CInteger> MakeCIntegerExpr(int32_t v) {
-  return Expr<CInteger>{MakeCIntegerConstant(v)};
+inline Expr<Type<TypeCategory::Integer>> MakeCIntegerExpr(int32_t v) {
+  return Expr<Type<TypeCategory::Integer>>{MakeCIntegerConstant(v)};
 }
 
-inline Expr<LogicalResult> MakeLogicalResultExpr(bool v) {
-  return Expr<LogicalResult>{MakeLogicalResultConstant(v)};
+inline Expr<Type<TypeCategory::Logical>> MakeLogicalResultExpr(bool v) {
+  return Expr<Type<TypeCategory::Logical>>{MakeLogicalResultConstant(v)};
 }
 
-inline Expr<Ascii> MakeAsciiExpr(const std::string &v) {
-  return Expr<Ascii>{MakeConstant<Ascii>(AsciiKind, v)};
+inline Expr<Type<TypeCategory::Character>> MakeAsciiExpr(const std::string &v) {
+  return Expr<Type<TypeCategory::Character>>{
+      MakeConstant<Type<TypeCategory::Character>>(AsciiKind, v)};
 }
 
-inline Expr<Ascii> MakeAsciiExpr(std::string &&v) {
-  return Expr<Ascii>{MakeConstant<Ascii>(AsciiKind, std::move(v))};
+inline Expr<Type<TypeCategory::Character>> MakeAsciiExpr(std::string &&v) {
+  return Expr<Type<TypeCategory::Character>>{
+      MakeConstant<Type<TypeCategory::Character>>(AsciiKind, std::move(v))};
 }
 
 } // namespace Fortran::evaluate
