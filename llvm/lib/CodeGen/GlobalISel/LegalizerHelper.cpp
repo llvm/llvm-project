@@ -7547,11 +7547,20 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
     Register UnsignedHigh = MRI.createGenericVirtualRegister(Ty);
     MIRBuilder.buildMergeLikeInstr(UnsignedHigh, DstRegs);
 
-    // Create sign masks: 0 for nonnegative, -1 for negative.
-    auto ShiftAmt = MIRBuilder.buildConstant(Ty, Size - 1);
+    // Extract the sign from the highest narrow part of each operand.
+    auto ShiftAmt = MIRBuilder.buildConstant(NarrowTy, NarrowSize - 1);
 
-    auto SignA = MIRBuilder.buildAShr(Ty, Src1, ShiftAmt.getReg(0));
-    auto SignB = MIRBuilder.buildAShr(Ty, Src2, ShiftAmt.getReg(0));
+    auto SignAPart =
+        MIRBuilder.buildAShr(NarrowTy, Src1Parts.back(), ShiftAmt.getReg(0));
+    auto SignBPart =
+        MIRBuilder.buildAShr(NarrowTy, Src2Parts.back(), ShiftAmt.getReg(0));
+
+    // Replicate the sign parts to construct full-width sign masks.
+    SmallVector<Register, 2> SignAParts(NumParts, SignAPart.getReg(0));
+    SmallVector<Register, 2> SignBParts(NumParts, SignBPart.getReg(0));
+
+    auto SignA = MIRBuilder.buildMergeLikeInstr(Ty, SignAParts);
+    auto SignB = MIRBuilder.buildMergeLikeInstr(Ty, SignBParts);
 
     // Ca = (Src1 < 0) ? Src2 : 0
     // Cb = (Src2 < 0) ? Src1 : 0
