@@ -498,6 +498,13 @@ DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
   // Mark operands as dead/unused.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      // Marking bundle header operands dead or undef could make the header
+      // disagree with the bundled instructions. Rewriting the bundled
+      // instructions would not be correct either: bundle internal reads are
+      // ignored by MachineOperand::readsReg(), so an internal def only used
+      // inside the bundle would be marked dead.
+      if (MI.isBundled())
+        continue;
       for (MachineOperand &MO : mi_bundle_ops(MI)) {
         if (!MO.isReg())
           continue;
