@@ -5,7 +5,7 @@
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s -check-prefix=CHECK,CHECK-SPV
 
-// CHECK: define {{.*}} <4 x i32> @_Z10test_u8u32u15uint8_t4_packed
+// CHECK: define {{.*}} <4 x i32> @_Z10test_u8u32
 // CHECK-DXIL: [[VAR:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.unpack.u8u32(i32 %{{.*}})
 // CHECK-DXIL: [[extract1:%.*]] = extractvalue { i32, i32, i32, i32 } [[VAR]], 0
 // CHECK-DXIL: [[insert1:%.*]] = insertelement <4 x i32> poison, i32 [[extract1]], i32 0

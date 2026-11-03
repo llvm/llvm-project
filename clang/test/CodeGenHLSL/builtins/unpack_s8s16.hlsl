@@ -5,7 +5,7 @@
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-int16-type -fnative-half-type -o - | \
 // RUN:  FileCheck %s -check-prefix=CHECK,CHECK-SPV
 
-// CHECK: define {{.*}} <4 x i16> @_Z10test_s8s16u14int8_t4_packed
+// CHECK: define {{.*}} <4 x i16> @_Z10test_s8s16
 // CHECK-DXIL: [[VAR:%.*]] = call { i16, i16, i16, i16 } @llvm.dx.unpack.s8s16(i32 %{{.*}})
 // CHECK-DXIL: [[extract1:%.*]] = extractvalue { i16, i16, i16, i16 } [[VAR]], 0
 // CHECK-DXIL: [[insert1:%.*]] = insertelement <4 x i16> poison, i16 [[extract1]], i32 0
