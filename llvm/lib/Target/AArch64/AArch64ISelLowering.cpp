@@ -33140,9 +33140,9 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
 static unsigned getAtomicLoad128Opcode(unsigned ISDOpcode,
                                        AtomicOrdering Ordering) {
   // ATOMIC_LOAD_CLR only appears when lowering ATOMIC_LOAD_AND (see
-  // ATOMIC_LOAD_AND expansion). We can't take that approach with 128-bit, because
-  // the type is not legal. Therefore we shouldn't expect to see a 128-bit
-  // ATOMIC_LOAD_CLR at any point.
+  // ATOMIC_LOAD_AND expansion). We can't take that approach with 128-bit,
+  // because the type is not legal. Therefore we shouldn't expect to see a
+  // 128-bit ATOMIC_LOAD_CLR at any point.
   assert(ISDOpcode != ISD::ATOMIC_LOAD_CLR &&
          "ATOMIC_LOAD_AND should be lowered to LDCLRP directly");
   assert(ISDOpcode != ISD::ATOMIC_LOAD_ADD && "There is no 128 bit LDADD");
