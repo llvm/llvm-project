@@ -4798,10 +4798,10 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (VT == MVT::v4i8) {
       // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b,
       // d))
-      SDValue Val0 = DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, XLenVT);
-      SDValue Val1 = DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, XLenVT);
-      SDValue Val2 = DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, XLenVT);
-      SDValue Val3 = DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, XLenVT);
+      SDValue Val0 = Op.getOperand(0);
+      SDValue Val1 = Op.getOperand(1);
+      SDValue Val2 = Op.getOperand(2);
+      SDValue Val3 = Op.getOperand(3);
       SDValue Pair1 =
           DAG.getNode(RISCVISD::BuildPairGPRVec, DL, MVT::v8i8, Val0, Val2);
       SDValue Pair2 =
