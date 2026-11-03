@@ -207,10 +207,7 @@ void *getProperty<void *>(omp_interop_val_t &InteropVal,
                           omp_interop_property_t Property, int *Err) {
   switch (Property) {
   case omp_ipr_device:
-    if (InteropVal.native_device)
-      return InteropVal.native_device;
-    *Err = omp_irc_no_value;
-    return const_cast<char *>(InteropVal.err_str);
+    return InteropVal.native_device;
   case omp_ipr_platform:
     return InteropVal.native_platform;
   case omp_ipr_device_context:
