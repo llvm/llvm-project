@@ -10,7 +10,6 @@
 //  opcodes in DirectX Intermediate Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILIntrinsicExpansion.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"

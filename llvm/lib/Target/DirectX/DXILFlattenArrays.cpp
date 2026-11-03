@@ -10,7 +10,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "DXILFlattenArrays.h"
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"

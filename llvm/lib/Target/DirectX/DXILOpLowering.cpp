@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILOpLowering.h"
 #include "DXILConstants.h"
 #include "DXILOpBuilder.h"
 #include "DXILRootSignature.h"
