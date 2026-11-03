@@ -2543,8 +2543,8 @@ private:
         // Build a unique name for the fir.local op, following the same
         // naming convention as privatizeSymbol (mangled name + suffix + type).
         std::string sharedPrefix = mangleName(ultimate) + "_shared";
-        std::string uniqueName = fir::getTypeAsString(
-            allocType, getKindMap(), sharedPrefix);
+        std::string uniqueName =
+            fir::getTypeAsString(allocType, getKindMap(), sharedPrefix);
 
         // Only create the op if it doesn't already exist (e.g., for the same
         // type used in multiple do concurrent loops).
@@ -2552,10 +2552,10 @@ private:
         if (!moduleOp.lookupSymbol<fir::LocalitySpecifierOp>(uniqueName)) {
           mlir::OpBuilder::InsertionGuard guard(*builder);
           builder->setInsertionPointToStart(moduleOp.getBody());
-          fir::LocalitySpecifierOp::create(
-              *builder, symLoc, uniqueName,
-              /*sym_visibility=*/nullptr, allocType,
-              fir::LocalitySpecifierType::Shared);
+          fir::LocalitySpecifierOp::create(*builder, symLoc, uniqueName,
+                                           /*sym_visibility=*/nullptr,
+                                           allocType,
+                                           fir::LocalitySpecifierType::Shared);
         }
       }
 
