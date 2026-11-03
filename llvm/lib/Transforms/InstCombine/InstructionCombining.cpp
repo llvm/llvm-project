@@ -2817,7 +2817,7 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   auto &DL = IC.getDataLayout();
   Value *Base;
   const APInt *C1;
-  if (!match(Src, m_PtrAdd(m_Value(Base), m_APInt(C1))))
+  if (!match(Src, m_PtrAdd(DL, m_Value(Base), m_APInt(C1))))
     return nullptr;
   Value *VarIndex;
   const APInt *C2;
@@ -2825,8 +2825,7 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   unsigned IndexSizeInBits = DL.getIndexTypeSizeInBits(PtrTy);
   if (!match(GEP.getOperand(1), m_AddLike(m_Value(VarIndex), m_APInt(C2))))
     return nullptr;
-  if (C1->getBitWidth() != IndexSizeInBits ||
-      C2->getBitWidth() != IndexSizeInBits)
+  if (C2->getBitWidth() != IndexSizeInBits)
     return nullptr;
   Type *BaseType = GEP.getSourceElementType();
   if (isa<ScalableVectorType>(BaseType))
