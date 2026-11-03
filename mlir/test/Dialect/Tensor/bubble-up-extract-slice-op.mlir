@@ -483,6 +483,102 @@ func.func @no_bubble_up_extract_slice_affine_apply_dynamic_offset_multi_trailing
   return %extracted_slice : tensor<24xf32>
 }
 
+// Affine IVs support non-power-of-two factors and dynamic upper bounds.
+// CHECK-LABEL: func.func @bubble_affine_loop_iv(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x6xf32>
+// CHECK: affine.for
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 6] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_affine_loop_iv(%src: tensor<4x6xf32>, %out: tensor<24xf32>, %ub: index) -> tensor<24xf32> {
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x6xf32> into tensor<24xf32>
+  %r = affine.for %iv = 0 to %ub step 6 iter_args(%acc = %out) -> tensor<24xf32> {
+    %tile = tensor.extract_slice %flat[%iv] [6] [1] : tensor<24xf32> to tensor<6xf32>
+    %next = tensor.insert_slice %tile into %acc[%iv] [6] [1] : tensor<6xf32> into tensor<24xf32>
+    affine.yield %next : tensor<24xf32>
+  }
+  return %r : tensor<24xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_affine_nonzero_lb(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x6xf32>
+// CHECK: affine.for
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 6] [1, 1]
+func.func @bubble_affine_nonzero_lb(%src: tensor<4x6xf32>, %out: tensor<24xf32>) -> tensor<24xf32> {
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x6xf32> into tensor<24xf32>
+  %r = affine.for %iv = 6 to 24 step 6 iter_args(%acc = %out) -> tensor<24xf32> {
+    %tile = tensor.extract_slice %flat[%iv] [6] [1] : tensor<24xf32> to tensor<6xf32>
+    %next = tensor.insert_slice %tile into %acc[%iv] [6] [1] : tensor<6xf32> into tensor<24xf32>
+    affine.yield %next : tensor<24xf32>
+  }
+  return %r : tensor<24xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_affine_misaligned_lb(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x6xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: affine.for
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_affine_misaligned_lb(%src: tensor<4x6xf32>, %out: tensor<24xf32>) -> tensor<24xf32> {
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x6xf32> into tensor<24xf32>
+  %r = affine.for %iv = 1 to 19 step 6 iter_args(%acc = %out) -> tensor<24xf32> {
+    %tile = tensor.extract_slice %flat[%iv] [6] [1] : tensor<24xf32> to tensor<6xf32>
+    %next = tensor.insert_slice %tile into %acc[%iv] [6] [1] : tensor<6xf32> into tensor<24xf32>
+    affine.yield %next : tensor<24xf32>
+  }
+  return %r : tensor<24xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_affine_misaligned_step(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x6xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: affine.for
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_affine_misaligned_step(%src: tensor<4x6xf32>, %out: tensor<24xf32>) -> tensor<24xf32> {
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x6xf32> into tensor<24xf32>
+  %r = affine.for %iv = 0 to 19 step 4 iter_args(%acc = %out) -> tensor<24xf32> {
+    %tile = tensor.extract_slice %flat[%iv] [6] [1] : tensor<24xf32> to tensor<6xf32>
+    %next = tensor.insert_slice %tile into %acc[%iv] [6] [1] : tensor<6xf32> into tensor<24xf32>
+    affine.yield %next : tensor<24xf32>
+  }
+  return %r : tensor<24xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_affine_dynamic_lb(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x6xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: affine.for
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_affine_dynamic_lb(%src: tensor<4x6xf32>, %out: tensor<24xf32>, %lb: index) -> tensor<24xf32> {
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x6xf32> into tensor<24xf32>
+  %r = affine.for %iv = %lb to 24 step 6 iter_args(%acc = %out) -> tensor<24xf32> {
+    %tile = tensor.extract_slice %flat[%iv] [6] [1] : tensor<24xf32> to tensor<6xf32>
+    %next = tensor.insert_slice %tile into %acc[%iv] [6] [1] : tensor<6xf32> into tensor<24xf32>
+    affine.yield %next : tensor<24xf32>
+  }
+  return %r : tensor<24xf32>
+}
+
+// Loop-carried values are not induction variables, even with aligned initial values.
+// CHECK-LABEL: func.func @no_bubble_affine_iter_arg(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x6xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: affine.for
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_affine_iter_arg(%src: tensor<4x6xf32>, %out: tensor<24xf32>) -> tensor<24xf32> {
+  %c0 = arith.constant 0 : index
+  %c6 = arith.constant 6 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x6xf32> into tensor<24xf32>
+  %r:2 = affine.for %iv = 0 to 4 iter_args(%offset = %c0, %acc = %out) -> (index, tensor<24xf32>) {
+    %tile = tensor.extract_slice %flat[%offset] [6] [1] : tensor<24xf32> to tensor<6xf32>
+    %next = tensor.insert_slice %tile into %acc[%offset] [6] [1] : tensor<6xf32> into tensor<24xf32>
+    %next_offset = arith.addi %offset, %c6 : index
+    affine.yield %next_offset, %next : index, tensor<24xf32>
+  }
+  return %r#1 : tensor<24xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
