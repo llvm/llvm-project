@@ -33,7 +33,7 @@ LLVM_LIBC_FUNCTION(int, killpg, (pid_t pgrp, int sig)) {
     return -1;
   }
 
-  return 0;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL
