@@ -5864,6 +5864,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveMultiPrefixOp(ResVReg, ResType, I,
                                    SPIRV::OpGroupNonUniformBitwiseXor,
                                    "WaveMultiPrefixBitXor");
+  case Intrinsic::spv_subgroup_multi_prefix_product: {
+    bool IsFloatTy =
+        GR.isScalarOrVectorOfType(I.getOperand(2).getReg(), SPIRV::OpTypeFloat);
+    return selectWaveMultiPrefixOp(ResVReg, ResType, I,
+                                   IsFloatTy ? SPIRV::OpGroupNonUniformFMul
+                                             : SPIRV::OpGroupNonUniformIMul,
+                                   "WaveMultiPrefixProduct");
+  }
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_read_across_x: {
