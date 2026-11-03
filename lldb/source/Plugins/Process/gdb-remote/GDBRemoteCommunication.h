@@ -202,6 +202,7 @@ protected:
   bool DecompressPacket();
 
 private:
+  /// The communication channel name included in packet logs.
   const std::string m_name;
 
 #if HAVE_LIBCOMPRESSION
