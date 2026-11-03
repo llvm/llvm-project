@@ -161,6 +161,40 @@ inline void expectComputedVolumeIsValidOverapprox(
       llvm::transformOptional(resultBound, getDynamicAPInt));
 }
 
+/// Returns true if no constraint of `rel` has a non-zero coefficient for the
+/// variable at column `col`.
+inline bool isColumnZero(const IntegerRelation &rel, unsigned col) {
+  for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i)
+    if (rel.atEq(i, col) != 0)
+      return false;
+  for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i)
+    if (rel.atIneq(i, col) != 0)
+      return false;
+  return true;
+}
+
+/// Check the invariants that `gist`, the result of `set.gist(context)`, must
+/// satisfy: it has the same intersection with `context` as `set`, it has no
+/// more constraints and no more local variables than `set`, and it does not
+/// involve any (non-local) variable that `set` does not involve.
+inline void expectGistInvariants(const IntegerRelation &set,
+                                 const IntegerRelation &context,
+                                 const IntegerRelation &gist) {
+  EXPECT_TRUE(gist.intersect(context).isEqual(set.intersect(context)))
+      << "gist " << gist << "of set " << set << "has a different intersection "
+      << "with context " << context;
+  EXPECT_LE(gist.getNumConstraints(), set.getNumConstraints());
+  EXPECT_LE(gist.getNumLocalVars(), set.getNumLocalVars());
+  ASSERT_EQ(gist.getNumVars() - gist.getNumLocalVars(),
+            set.getNumVars() - set.getNumLocalVars());
+  for (unsigned col = 0, e = set.getNumVars() - set.getNumLocalVars(); col < e;
+       ++col) {
+    if (isColumnZero(set, col))
+      EXPECT_TRUE(isColumnZero(gist, col))
+          << "gist " << gist << "involves variable " << col
+          << " that is not involved in set " << set;
+  }
+}
 } // namespace presburger
 } // namespace mlir
 
