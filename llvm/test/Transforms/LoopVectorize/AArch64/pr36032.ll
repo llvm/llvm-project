@@ -27,10 +27,10 @@ define void @_Z1dv() {
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub nsw i64 4, [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[CALL1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[G_0]], [[CONV]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], ptrtoaddr (ptr @c to i64)
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 ptrtoaddr (ptr @c to i64), [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[CALL1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP13]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], 3
