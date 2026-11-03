@@ -110,6 +110,11 @@ def V16I32 : FuncArgType;
 def NXV2I32 : FuncArgType;
 def NXV4I32 : FuncArgType;
 
+class StructFuncArgType<list<FuncArgType> elementTypes> : FuncArgType {
+  list<FuncArgType> ElementTypes = elementTypes;
+  bit InReg = false;
+}
+
 class VectorFuncArgType<FuncArgType elementType, int numElements,
                         bit scalable = false> : FuncArgType {
   FuncArgType ElementType = elementType;

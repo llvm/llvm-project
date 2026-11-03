@@ -548,6 +548,50 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
   }
 
   OS << "};\n";
+
+  OS << "\nstatic ArrayRef<RTLIB::FuncArgTypeID>\n"
+        "getStructElementTypes(RTLIB::FuncArgTypeID ID) {\n"
+        "  switch (ID) {\n";
+
+  for (const Record *R : Libcalls.getFuncArgTypeList()) {
+    if (!R->isSubClassOf("StructFuncArgType"))
+      continue;
+
+    OS << "  case RTLIB::" << R->getName() << ": {\n"
+       << "    static constexpr RTLIB::FuncArgTypeID Elts[] = {";
+
+    ListSeparator LS;
+    for (const Record *Elt : R->getValueAsListOfDefs("ElementTypes"))
+      OS << LS << "RTLIB::" << Elt->getName();
+
+    OS << "};\n"
+          "    return Elts;\n"
+          "  }\n";
+  }
+
+  OS << "  default:\n"
+        "    return {};\n"
+        "  }\n"
+        "}\n";
+
+  OS << "\nstatic bool isInRegStruct(RTLIB::FuncArgTypeID ID) {\n"
+        "  switch (ID) {\n";
+
+  bool HasInRegStruct = false;
+  for (const Record *R : Libcalls.getFuncArgTypeList()) {
+    if (R->isSubClassOf("StructFuncArgType") && R->getValueAsBit("InReg")) {
+      OS << "  case RTLIB::" << R->getName() << ":\n";
+      HasInRegStruct = true;
+    }
+  }
+
+  if (HasInRegStruct)
+    OS << "    return true;\n";
+
+  OS << "  default:\n"
+        "    return false;\n"
+        "  }\n"
+        "}\n";
 }
 
 using AttrNames = std::vector<StringRef>;
