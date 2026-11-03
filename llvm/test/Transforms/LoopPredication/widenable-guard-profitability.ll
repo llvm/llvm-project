@@ -991,6 +991,74 @@ exit:
   ret i32 %result
 }
 
+; Same as @single_guard, but the latch exits into an unreachable block. The
+; guard is not predicated on that latch check.
+define i32 @latch_exit_unreachable(ptr %array, i32 %length, i32 %n) {
+; CHECK-LABEL: define i32 @latch_exit_unreachable(
+; CHECK-SAME: ptr [[ARRAY:%.*]], i32 [[LENGTH:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ZERO_TRIP:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[ZERO_TRIP]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], %[[GUARDED:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[GUARDED]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[GUARD_COND:%.*]] = and i1 [[WITHIN_BOUNDS]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[GUARD_COND]], label %[[GUARDED]], label %[[DEOPT:.*]], !prof [[PROF0]]
+; CHECK:       [[DEOPT]]:
+; CHECK-NEXT:    [[DEOPTCALL:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTCALL]]
+; CHECK:       [[GUARDED]]:
+; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[UNREACHED:.*]], !prof [[PROF1]]
+; CHECK:       [[UNREACHED]]:
+; CHECK-NEXT:    unreachable
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %zero.trip = icmp eq i32 %n, 0
+  br i1 %zero.trip, label %exit, label %loop.preheader
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %loop.acc = phi i32 [ %loop.acc.next, %guarded ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %guarded ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  %guard_cond = and i1 %within.bounds, %widenable_cond
+  br i1 %guard_cond, label %guarded, label %deopt, !prof !0
+
+deopt:
+  %deoptcall = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
+  ret i32 %deoptcall
+
+guarded:
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ult i32 %i.next, %n
+  br i1 %continue, label %loop, label %unreached, !prof !1
+
+unreached:
+  unreachable
+
+exit:
+  ret i32 0
+}
+
 declare void @llvm.experimental.guard(i1, ...)
 declare i32 @llvm.experimental.deoptimize.i32(...)
 declare i1 @llvm.experimental.widenable.condition()
