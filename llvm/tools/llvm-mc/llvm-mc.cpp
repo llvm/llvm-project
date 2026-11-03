@@ -436,7 +436,6 @@ int main(int argc, char **argv) {
 
   const char *ProgName = argv[0];
 
-  // A bare --verify (or a stray comma) yields empty values; ignore them.
   SmallVector<StringRef> VerifyPrefixes;
   for (StringRef Prefix : Verify) {
     if (Prefix.empty())
