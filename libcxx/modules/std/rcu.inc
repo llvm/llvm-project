@@ -8,15 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
-#  if _LIBCPP_STD_VER >= 23
+#if _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU && _LIBCPP_STD_VER >= 26
   // 2.2.3, class template rcu_obj_base using std::rcu_obj_base;
   // 2.2.4, class rcu_domain
-  using std::rcu_domain;
-  using std::rcu_default_domain();
   using std::rcu_barrier;
+  using std::rcu_default_domain;
+  using std::rcu_domain;
+  using std::rcu_obj_base;
   using std::rcu_retire;
   using std::rcu_synchronize;
-#  endif // _LIBCPP_STD_VER >= 23
-#endif
+#endif // _LIBCPP_STD_VER >= 26
 } // namespace std
