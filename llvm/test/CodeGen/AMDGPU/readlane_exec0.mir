@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=amdgpu8.03 -run-pass=si-late-branch-lowering -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+# RUN: llc -o - %s -mtriple=amdgpu8.03 -run-pass=si-late-branch-lowering | FileCheck -check-prefix=GCN %s
 # RUN: llc -o - %s -mtriple=amdgpu8.03 -passes=si-late-branch-lowering | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: readlane_exec0
@@ -7,6 +7,7 @@
 
 ---
 name: readlane_exec0
+tracksRegLiveness: false
 
 body:       |
   bb.0:

@@ -20440,6 +20440,17 @@ TEST_F(FormatTest, BreakPenaltyScopeResolution) {
                Style);
 }
 
+TEST_F(FormatTest, PenaltyDoesNotOverflow) {
+  // Indenting the rows more would make the total penalty go past 2^32.
+  auto Style = getLLVMStyleWithColumns(20);
+  Style.PenaltyExcessCharacter = 200'000'000;
+  verifyFormat("int t[] = {\n"
+               "    11111111111111111111,\n"
+               "    11111111111111111111,\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTest, WorksFor8bitEncodings) {
   // FIXME: unstable test case
   EXPECT_EQ("\"\xce\xe4\xed\xe0\xe6\xe4\xfb \xe2 \"\n"

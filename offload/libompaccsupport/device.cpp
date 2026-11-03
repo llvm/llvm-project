@@ -160,6 +160,8 @@ llvm::Error DeviceTy::init() {
                         &Backend))
     Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 
+  MaxDirectWriteSize = getInfo<uint64_t>(OL_DEVICE_INFO_MAX_DIRECT_WRITE_SIZE);
+
   getInfoString(OL_DEVICE_INFO_UID, Uid);
   if (Uid.empty())
     ODBG(ODT_Init) << "Failed to get UID for device " << DeviceID;
@@ -387,9 +389,8 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
 
   DeviceEnvironmentTy DeviceEnvironment;
   DeviceEnvironment.DeviceDebugKind = OMPX_DebugKind.get();
-  DeviceEnvironment.NumDevices = RTL->getNumDevices();
-  // TODO: The device ID used here is not the real device ID used by OpenMP.
-  DeviceEnvironment.DeviceNum = RTLDeviceID;
+  DeviceEnvironment.NumDevices = PM->getNumDevices();
+  DeviceEnvironment.DeviceNum = DeviceID;
   DeviceEnvironment.DynamicMemSize = 0;
   DeviceEnvironment.ClockFrequency =
       getInfo<uint64_t>(OL_DEVICE_INFO_TIMESTAMP_FREQUENCY);
@@ -507,6 +508,17 @@ int32_t DeviceTy::submitDataSync(void *TgtPtrBegin, void *HstPtrBegin,
                                  const ident_t *Loc, const char *Name) {
   return submitDataImpl(TgtPtrBegin, HstPtrBegin, Size, /*Queue=*/nullptr,
                         Entry, HDTTMapPtr, Loc, Name);
+}
+
+int32_t DeviceTy::submitDataIndependently(void *TgtPtrBegin, void *HstPtrBegin,
+                                          int64_t Size, AsyncInfoTy &AsyncInfo,
+                                          const char *Name) {
+  if (Size > 0 && uint64_t(Size) <= MaxDirectWriteSize)
+    return submitDataSync(TgtPtrBegin, HstPtrBegin, Size, /*Entry=*/nullptr,
+                          /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr, Name);
+  return submitData(TgtPtrBegin, HstPtrBegin, Size, AsyncInfo,
+                    /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                    Name);
 }
 
 int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
@@ -832,12 +844,13 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  if (Device.submitData(*AllocOrErr, &LocalKLE,
-                        sizeof(KernelLaunchEnvironmentTy), AsyncInfo,
-                        /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
-                        /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv"))
+  if (Device.submitDataIndependently(*AllocOrErr, &LocalKLE,
+                                     sizeof(KernelLaunchEnvironmentTy),
+                                     AsyncInfo, "KernelLaunchEnv"))
     return createError(ErrorCode::BackendFailure,
-                       "failed to copy the kernel launch environment");
+                       "failed to copy the kernel launch environment to "
+                       "device %d",
+                       Device.DeviceID);
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 

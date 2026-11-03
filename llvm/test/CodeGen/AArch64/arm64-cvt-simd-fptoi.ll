@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fprcvt,+fullfp16 | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+sme,+neon,+fullfp16,+fprcvt -force-streaming | FileCheck %s --check-prefixes=CHECK-SME
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+sve,+neon,+fullfp16,+fprcvt -force-streaming-compatible | FileCheck %s --check-prefixes=CHECK-SVE
-; RUN: llc < %s -mtriple aarch64-unknown-unknown -global-isel -global-isel-abort=2 -mattr=+fprcvt,+fullfp16 2>&1  | FileCheck %s --check-prefixes=CHECK
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -global-isel -mattr=+fprcvt,+fullfp16  | FileCheck %s --check-prefixes=CHECK
 
 ;
 ; FPTOI
