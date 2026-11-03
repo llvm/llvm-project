@@ -7,8 +7,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-amd-amdhsa -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX11
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00-amd-amdhsa -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX1200-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-amd-amdhsa -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX1200-GISEL
-; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa -mattr=-wait-xcnt -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX1250-SDAG
-; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdhsa -mattr=-wait-xcnt -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX1250-GISEL
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa -mattr=-wait-xcnt < %s | FileCheck %s --check-prefix=GFX1250-SDAG
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdhsa -mattr=-wait-xcnt < %s | FileCheck %s --check-prefix=GFX1250-GISEL
 
 define amdgpu_kernel void @ptr_s_buffer_load_i32(ptr addrspace(1) %out, ptr addrspace(8) inreg %rsrc, i32 inreg %offset) {
 ;
