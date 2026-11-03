@@ -94,11 +94,7 @@ combiner {
 }
 
 func.func @sections_bounded_reduction_effects(%x: memref<f32>) {
-  // TODO: nowait does not currently eliminate the barrier with reductions.
-  // The first two effects come from the implicit barrier.
   // expected-remark@below {{recursive memory effects}}
-  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'free' on block argument 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'read' on block argument 0, on resource '<Default>'}}
@@ -155,8 +151,6 @@ func.func @sections_unbounded_private_bounded_reduction(%x: memref<i32>, %y: mem
 func.func @sections_bounded_private_bounded_reduction(%x: memref<i32>, %y: memref<f32>) {
   // The private and reduction clauses make independent assumptions.
   // expected-remark@below {{recursive memory effects}}
-  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
