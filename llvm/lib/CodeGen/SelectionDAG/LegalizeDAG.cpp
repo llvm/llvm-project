@@ -3378,6 +3378,22 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Res.getValue(1));
     break;
   }
+  case ISD::ATOMIC_LOAD_AND: {
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    if (TLI.getOperationAction(ISD::ATOMIC_LOAD_CLR, AN->getMemoryVT()) ==
+        TargetLowering::Expand)
+      break;
+
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    SDValue NewRHS = DAG.getNOT(DL, Node->getOperand(2), VT);
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_CLR, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
   case ISD::ATOMIC_LOAD_FSUB: {
     SDLoc DL(Node);
     EVT VT = Node->getValueType(0);
