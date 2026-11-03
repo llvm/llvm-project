@@ -10,6 +10,7 @@
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/FrontendTool/Utils.h"
+#include "flang/Parser/parsing.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -171,6 +172,48 @@ TEST_F(FrontendActionTest, ParseSyntaxOnly) {
       llvm::StringRef(outputDiagBuffer.data())
           .contains(
               ":1:14: error: IF statement is not allowed in IF statement\n"));
+}
+
+TEST_F(FrontendActionTest, RecoverOpenACCDeclarePreservesDirectives) {
+  *(inputFileOs) << "!$acc declare create(x)\n"
+                 << "!$acc declare create(y)\n"
+                 << "!$acc routine(s) seq\n"
+                 << "!dir$ ivdep\n"
+                 << "!$acc declare create(z)\n"
+                 << "!$acc declare create(w)\n"
+                 << "subroutine s()\n"
+                 << "end subroutine\n";
+  inputFileOs.reset();
+
+  auto &options = compInst.getInvocation().getFortranOpts();
+  options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
+  options.compilerDirectiveSentinels.emplace_back("dir$");
+  auto &parsing = compInst.getParsing();
+  ASSERT_NE(parsing.Prescan(inputFilePath, options), nullptr);
+  ASSERT_FALSE(parsing.messages().AnyFatalError());
+  parsing.Parse(llvm::nulls(), compInst.getInvocation().getLangOpts());
+  ASSERT_TRUE(parsing.consumedWholeFile());
+  ASSERT_TRUE(parsing.messages().AnyFatalError());
+  ASSERT_TRUE(parsing.parseTree().has_value());
+
+  // Consecutive DECLAREs share a recovery node. Other directives and the
+  // following procedure retain their positions and their actual node types.
+  const auto &units = parsing.parseTree()->v;
+  ASSERT_EQ(units.size(), 5u);
+  auto unit = units.begin();
+  EXPECT_TRUE(
+      std::holds_alternative<Fortran::parser::ErrorRecovery>(unit++->u));
+  EXPECT_TRUE(std::holds_alternative<
+      Fortran::common::Indirection<Fortran::parser::OpenACCRoutineConstruct>>(
+      unit++->u));
+  EXPECT_TRUE(std::holds_alternative<
+      Fortran::common::Indirection<Fortran::parser::CompilerDirective>>(
+      unit++->u));
+  EXPECT_TRUE(
+      std::holds_alternative<Fortran::parser::ErrorRecovery>(unit++->u));
+  EXPECT_TRUE(std::holds_alternative<
+      Fortran::common::Indirection<Fortran::parser::SubroutineSubprogram>>(
+      unit->u));
 }
 
 TEST_F(FrontendActionTest, EmitLLVM) {

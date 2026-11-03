@@ -98,12 +98,15 @@ static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
-// Treat a whole run as one recovery region, diagnosing each DECLARE. Compiler
-// and ROUTINE directives may intervene before the following program unit.
-// Consuming the run together avoids repeatedly rescanning its remaining suffix.
-static constexpr auto misplacedOpenACCDeclareRun{MisplacedOpenACCDeclare{} >>
-    skipMany(MisplacedOpenACCDeclare{} || globalCompilerDirective >> ok ||
-        globalOpenACCCompilerDirective >> ok)};
+// Collapse only consecutive misplaced DECLAREs into a recovery node.
+static constexpr auto misplacedOpenACCDeclareRun{
+    construct<ProgramUnit>(MisplacedOpenACCDeclare{} >>
+        skipMany(MisplacedOpenACCDeclare{}) >> construct<ErrorRecovery>())};
+
+// Classification needs only the next Fortran statement, not the grammar or
+// parse-tree nodes of the intervening compiler directives.
+static constexpr auto skipCompilerDirectiveLines{
+    skipMany(skipStuffBeforeStatement >> "!"_ch >> skipToNextLineIfAny)};
 
 // At file scope, DECLARE may start an unnamed main program. Complete
 // specification statements therefore take precedence over procedure headers,
@@ -111,16 +114,33 @@ static constexpr auto misplacedOpenACCDeclareRun{MisplacedOpenACCDeclare{} >>
 // After fixed-form blank removal, a typed header with arguments can also be an
 // array declaration, and a CUDA header without arguments can be an ATTRIBUTES
 // statement; such headers retain normal parser diagnostics.
-// Lookahead uses the recovery parser too, with messages deferred, so malformed
-// DECLARE lines are recognized consistently here and in procedure/interface
-// lists.
+static constexpr auto externalSubprogramStmt{skipStuffBeforeStatement >>
+    !statement(Parser<OtherSpecificationStmt>{}) >>
+    !statement(typeDeclarationStmt) >> maybe(label) >>
+    (validFunctionStmt >> ok || validSubroutineStmt >> ok)};
+
+// Classify the whole directive prefix once, but retain its ordinary directive
+// nodes in order. Parsing the prefix together avoids quadratic suffix rescans
+// when compiler directives separate several DECLARE runs. Require consumption
+// to reach the header seen by lookahead; unsupported global directives retain
+// their normal parsing and diagnostics.
 static constexpr auto misplacedOpenACCDeclareAtFileScope{
-    lookAhead(misplacedOpenACCDeclareRun >> skipStuffBeforeStatement >>
-        !statement(Parser<OtherSpecificationStmt>{}) >>
-        !statement(typeDeclarationStmt) >> maybe(label) >>
-        (validFunctionStmt >> ok || validSubroutineStmt >> ok)) >>
-    construct<ProgramUnit>(
-        misplacedOpenACCDeclareRun >> construct<ErrorRecovery>())};
+    lookAhead("!$ACC "_sptok >> "DECLARE"_tok) >>
+    lookAhead(skipCompilerDirectiveLines >> externalSubprogramStmt) >>
+    applyFunction(prepend<ProgramUnit>, misplacedOpenACCDeclareRun,
+        many(skipStuffBeforeStatement >> (globalCompilerDirective ||
+                                             globalOpenACCCompilerDirective ||
+                                             misplacedOpenACCDeclareRun))) /
+        lookAhead(externalSubprogramStmt)};
+
+static std::list<ProgramUnit> flattenProgramUnits(
+    std::list<std::list<ProgramUnit>> &&groups) {
+  std::list<ProgramUnit> result;
+  for (auto &group : groups) {
+    result.splice(result.end(), std::move(group));
+  }
+  return result;
+}
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
@@ -128,9 +148,14 @@ TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
     (extension<LanguageFeature::EmptySourceFile>(
          "nonstandard usage: empty source file"_port_en_US,
          consumedAllInput >> pure<std::list<ProgramUnit>>()) ||
-        some(skipStuffBeforeStatement >>
-            (globalCompilerDirective || globalOpenACCCompilerDirective ||
-                misplacedOpenACCDeclareAtFileScope || normalProgramUnit)) /
+        applyFunction(flattenProgramUnits,
+            some(skipStuffBeforeStatement >>
+                (applyFunction(singletonList<ProgramUnit>,
+                     globalCompilerDirective ||
+                         globalOpenACCCompilerDirective) ||
+                    misplacedOpenACCDeclareAtFileScope ||
+                    applyFunction(
+                        singletonList<ProgramUnit>, normalProgramUnit)))) /
             skipStuffBeforeStatement)))
 
 // R507 declaration-construct ->
