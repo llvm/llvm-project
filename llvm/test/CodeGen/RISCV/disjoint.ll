@@ -1,15 +1,15 @@
 ; REQUIRES: asserts
 ; RUN: llc -mtriple=riscv32 -debug-only=machine-scheduler < %s \
-; RUN:   -enable-store-sequencing=false -o /dev/null 2>&1 | FileCheck %s
+; RUN:   -o /dev/null 2>&1 | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -debug-only=machine-scheduler < %s \
-; RUN:   -enable-store-sequencing=false -o /dev/null 2>&1 | FileCheck %s
+; RUN:   -o /dev/null 2>&1 | FileCheck %s
 
 ; This test exercises the areMemAccessesTriviallyDisjoint hook.
 ; Test that the two stores are disjoint memory accesses. If the corresponding
 ; store machine instructions don't depend on each other, the second store should
 ; not appear in the successors list of the first one and the first one should
 ; not appear on the predecessors list of the second one.
-define i32 @test_disjoint(ptr %P, i32 %v) {
+define i32 @test_disjoint(ptr noalias %P, i32 %v) {
 entry:
 ; CHECK: Current Schedule Region
 ; CHECK-LABEL: test_disjoint:%bb.0
