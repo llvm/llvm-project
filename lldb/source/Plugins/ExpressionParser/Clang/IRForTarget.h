@@ -206,8 +206,9 @@ private:
   ///     The allocation of the persistent variable.
   ///
   /// \return
-  ///     True on success; false otherwise
-  bool RewritePersistentAlloc(llvm::Instruction *persistent_alloc);
+  ///     An error describing why the allocation couldn't be rewritten, or
+  ///     success.
+  llvm::Error RewritePersistentAlloc(llvm::Instruction *persistent_alloc);
 
   /// The top-level pass implementation
   ///
