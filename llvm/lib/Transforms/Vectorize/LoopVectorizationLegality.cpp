@@ -347,7 +347,6 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides = LAI && AllowRuntimeSCEVChecks
                             ? LAI->getSymbolicStrides()
                             : SymbolicStrideMap();
-
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
                             AllowRuntimeSCEVChecks ? &Predicates : nullptr)
