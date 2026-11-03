@@ -1588,6 +1588,17 @@ static bool privatizeSeqIvOnParent(Fortran::lower::AbstractConverter &converter,
   if (!parent)
     return false;
 
+  // An address already inside the parent cannot be the varPtr of a private
+  // placed before that loop. It is the parent's own copy; leave it on this
+  // loop.
+  if (auto blockArg = llvm::dyn_cast<mlir::BlockArgument>(ivValue)) {
+    if (parent->isAncestor(blockArg.getOwner()->getParentOp()))
+      return false;
+  } else if (mlir::Operation *def = ivValue.getDefiningOp();
+             def && (def == parent || parent->isAncestor(def))) {
+    return false;
+  }
+
   for (mlir::Value priv : parent.getPrivateOperands())
     if (mlir::acc::getVar(priv.getDefiningOp()) == ivValue ||
         valueOrDeclareOf(ivValue, priv))

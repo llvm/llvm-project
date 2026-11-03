@@ -180,10 +180,12 @@ subroutine test_unstructured6(N, A, B)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured6
-! The outer loop keeps its bounds on the op; the inner one, which the GOTO
-! leaves, has none.
-! CHECK: acc.loop gang vector private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
-! CHECK: acc.loop private({{.*}}) {
+! The outer loop keeps its bounds. The inner seq loop's induction variable is
+! private on that outer loop, not on the inner loop.
+! CHECK: acc.private {{.*}} name("j")
+! CHECK: acc.loop gang vector private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: hlfir.declare {{.*}} uniq_name("_QFtest_unstructured6Ej")
+! CHECK: acc.loop {
 ! CHECK: arith.cmpf ogt
 ! CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
 ! CHECK: acc.yield
@@ -207,11 +209,13 @@ subroutine test_unstructured7(A, B, C, N)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured7
-! The outer loop keeps its bounds on the op; the inner one, which the GOTO
-! leaves, has none.
-! CHECK: acc.loop gang vector private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! The outer loop keeps its bounds. The inner seq loop's induction variable is
+! private on that outer loop, not on the inner loop.
+! CHECK: acc.private {{.*}} name("j")
+! CHECK: acc.loop gang vector private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: hlfir.declare {{.*}} uniq_name("_QFtest_unstructured7Ej")
 ! Inner loop stores exit selector and yields:
-! CHECK: acc.loop private({{.*}}) {
+! CHECK: acc.loop {
 ! CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
 ! CHECK: acc.yield
 ! CHECK: } seq unstructured

@@ -39,12 +39,15 @@ end subroutine
 ! The outer loop the directive owns: bounds on the op, and its body, which the
 ! GOTO branches within, folded into a region.
 ! GOTO1-LABEL: func.func @_QPtest_unstructured6
-! GOTO1:         acc.loop gang vector private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! The inner seq induction variable is private on the outer loop.
+! GOTO1:         acc.private {{.*}} name("j")
+! GOTO1:         acc.loop gang vector private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! GOTO1:         hlfir.declare {{.*}} uniq_name("_QFtest_unstructured6Ej")
 ! GOTO1:         scf.execute_region no_inline {
 !
 ! The inner loop, which the GOTO leaves: no bounds on the op, raw branching,
 ! and marked unstructured.
-! GOTO1:             acc.loop private({{.*}}) {
+! GOTO1:             acc.loop {
 ! GOTO1:               cf.cond_br
 ! GOTO1:               acc.yield
 ! GOTO1:             } seq  unstructured
@@ -76,9 +79,12 @@ end subroutine
 ! Same nest as goto_one_level: the outer loop keeps its bounds and wraps its
 ! body, the inner one the GOTO leaves keeps neither.
 ! GOTO2-LABEL: func.func @_QPtest_unstructured7
-! GOTO2:         acc.loop gang vector private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! The inner seq induction variable is private on the outer loop.
+! GOTO2:         acc.private {{.*}} name("j")
+! GOTO2:         acc.loop gang vector private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! GOTO2:         hlfir.declare {{.*}} uniq_name("_QFtest_unstructured7Ej")
 ! GOTO2:         scf.execute_region no_inline {
-! GOTO2:             acc.loop private({{.*}}) {
+! GOTO2:             acc.loop {
 ! GOTO2:               acc.yield
 ! GOTO2:             } seq  unstructured
 !
