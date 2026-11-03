@@ -51,6 +51,15 @@
 ; CHECK-DAG: %[[G2]] = OpVariable %[[#]] CrossWorkgroup %[[CG2]]
 ; CHECK-DAG: %[[G1]] = OpVariable %[[#]] CrossWorkgroup %[[CG1]]
 
+; CHECK-DAG: OpName %[[S:.*]] "S"
+; CHECK-DAG: %[[FnPtrChar:.*]] = OpTypePointer Function %[[Char]]
+; CHECK-DAG: %[[SpanTy:.*]] = OpTypeStruct %[[FnPtrChar]] %[[#]]
+; CHECK-DAG: %[[CharS:.*]] = OpSpecConstantOp %[[CWPtrChar]] Bitcast %[[S]]
+; CHECK-DAG: %[[GenS:.*]] = OpSpecConstantOp %[[GenPtrChar]] PtrCastToGeneric %[[CharS]]
+; CHECK-DAG: %[[FnS:.*]] = OpSpecConstantOp %[[FnPtrChar]] GenericCastToPtr %[[GenS]]
+; CHECK-DAG: %[[Span:.*]] = OpSpecConstantComposite %[[SpanTy]] %[[FnS]] %[[#]]
+; CHECK-DAG: OpFunctionCall %[[#]] %[[#]] %[[Span]]
+
 @F = addrspace(1) constant i32 0
 @B = addrspace(1) constant i32 1
 @G1 = addrspace(1) constant { [2 x ptr addrspace(4)] } { [2 x ptr addrspace(4)] [ptr addrspace(4) addrspacecast (ptr addrspace(1) @F to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @B to ptr addrspace(4))] }
@@ -61,7 +70,18 @@
 @G3 = addrspace(1) constant { [2 x ptr addrspace(1)] } { [2 x ptr addrspace(1)] [ptr addrspace(1) addrspacecast (ptr addrspace(3) @X to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr addrspace(3) @Y to ptr addrspace(1))] }
 @G4 = addrspace(1) constant { [2 x ptr addrspace(1)] } { [2 x ptr addrspace(1)] [ptr addrspace(1) addrspacecast (ptr addrspace(3) @Y to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr addrspace(3) @X to ptr addrspace(1))] }
 
+@S = internal addrspace(1) constant [2 x i8] c" \00"
+
 define void @foo() {
 entry:
+  ret void
+}
+
+define void @callee({ ptr, i64 } %arg) {
+  ret void
+}
+
+define void @caller() {
+  call void @callee({ ptr, i64 } { ptr addrspacecast (ptr addrspace(1) @S to ptr), i64 1 })
   ret void
 }
