@@ -285,11 +285,11 @@ namespace DefaultArgs {
   }
 
   void testFloatReference() {
-    clang_analyzer_eval(defaultFloatReference(1) == -1); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(defaultFloatReference() == -42); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(defaultFloatReference(1) == -1); // expected-warning{{TRUE}}
+    clang_analyzer_eval(defaultFloatReference() == -42); // expected-warning{{TRUE}}
 
-    clang_analyzer_eval(defaultFloatReferenceZero(1) == -1); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(defaultFloatReferenceZero() == 0); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(defaultFloatReferenceZero(1) == -1); // expected-warning{{TRUE}}
+    clang_analyzer_eval(defaultFloatReferenceZero() == 0); // expected-warning{{TRUE}}
   }
 
   char defaultString(const char *s = "abc") {
