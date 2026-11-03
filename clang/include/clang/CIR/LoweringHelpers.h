@@ -56,10 +56,12 @@ mlir::Attribute spellOutSplitTrailingZeros(mlir::Attribute attr);
 /// source of truth for the shape of a lowered record constant; the
 /// value-producing paths (the insertvalue visitor and lowerConstRecordAttr)
 /// conform to it. Returns null if the input type or an initializer type cannot
-/// be lowered.
+/// be lowered. If provided, \p failedType receives the CIR initializer type
+/// whose conversion failed, including in nested aggregates.
 mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                                    const mlir::TypeConverter &converter,
-                                   const mlir::DataLayout &dataLayout);
+                                   const mlir::DataLayout &dataLayout,
+                                   mlir::Type *failedType = nullptr);
 
 // A version of adjustGlobalTypeForInit which records where additional padding
 // was added in the middle, so we can properly adjust field indexes.
@@ -67,7 +69,8 @@ mlir::Type
 adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                         const mlir::TypeConverter &converter,
                         const mlir::DataLayout &dataLayout,
-                        llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes);
+                        llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes,
+                        mlir::Type *failedType = nullptr);
 
 mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
                           mlir::Type typ, const llvm::APInt &val);
