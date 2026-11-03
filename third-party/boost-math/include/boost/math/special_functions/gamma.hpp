@@ -1290,7 +1290,6 @@ BOOST_MATH_GPU_ENABLED T incomplete_tgamma_large_x(const T& a, const T& x, const
    return result;
 }
 
-
 //
 // Main incomplete gamma entry point, handles all four incomplete gamma's:
 //
@@ -1770,6 +1769,87 @@ BOOST_MATH_GPU_ENABLED T gamma_incomplete_imp(T a, T x, bool normalised, bool in
 
    // If no special handling is required then we proceeds as normal
    return gamma_incomplete_imp_final(T(a), T(x), normalised, invert, pol, p_derivative);
+}
+
+// Calculate log of incomplete gamma function
+template <class T, class Policy>
+BOOST_MATH_GPU_ENABLED T lgamma_incomplete_imp(T a, T x, const Policy& pol)
+{
+   using namespace boost::math;  // temporary until we're in the right namespace
+
+   BOOST_MATH_STD_USING_CORE
+
+   // Check for invalid inputs (a < 0 or x < 0)
+   constexpr auto function = "boost::math::lgamma_q<%1%>(%1%, %1%)";
+   if(a <= 0)
+      return policies::raise_domain_error<T>(function, "Argument a to the incomplete gamma function must be greater than zero (got a=%1%).", a, pol);
+   if(x < 0)
+      return policies::raise_domain_error<T>(function, "Argument x to the incomplete gamma function must be >= 0 (got x=%1%).", x, pol);
+
+   if (((x > 1000) || (x > tools::log_max_value<T>() - 10)) && (a + 50 < x))
+   {
+      //
+      // Take the logarithmic version of the asymtotic expansion:
+      //
+      return log(detail::incomplete_tgamma_large_x(a, x, pol)) + a * log(x) - x - lgamma(a, pol) - log(x);
+   }
+   //
+   // Can't do better than taking the log of Q, but...
+   //
+   // Figure out whether we need P or Q, since if we calculate Q and it's too close to unity
+   // we will lose precision in the result, selection logic here is extracted from gamma_incomplete_imp_final:
+   //
+   bool need_p = false;
+   if ((x < 0.5) && (T(-0.4) / log(x) < a))
+      need_p = true;
+   else if ((x < 1.1) && (x >= 0.5) && (x * 0.75f < a))
+      need_p = true;
+   else if ((x < a) && (x >= 1.1))
+      need_p = true;
+
+   if (need_p)
+      return log1p(-gamma_p(a, x, pol), pol);
+   return log(gamma_q(a, x, pol));
+}
+
+// Calculate log of incomplete gamma function
+template <class T, class Policy>
+BOOST_MATH_GPU_ENABLED T lgamma_incomplete_lower_imp(T a, T x, const Policy& pol)
+{
+   using namespace boost::math;  // temporary until we're in the right namespace
+
+   BOOST_MATH_STD_USING_CORE
+
+   // Check for invalid inputs (a < 0 or x < 0)
+   constexpr auto function = "boost::math::lgamma_p<%1%>(%1%, %1%)";
+   if(a <= 0)
+      return policies::raise_domain_error<T>(function, "Argument a to the incomplete gamma function must be greater than zero (got a=%1%).", a, pol);
+   if(x < 0)
+      return policies::raise_domain_error<T>(function, "Argument x to the incomplete gamma function must be >= 0 (got x=%1%).", x, pol);
+
+   // Taken from conditions on Line 1709. There are also
+   // conditions on Line 1368, but didn't implement that one here. 
+   // The second condition ensures floats do not return -inf for small 
+   // values of x.
+   if (((a > 4 * x) && (a >= max_factorial<T>::value)) || ((T(-0.4) / log(x) < a) && (x < T(1.0)))){
+      return log(detail::lower_gamma_series(a, x, pol)) - log(a) + a * log(x) - x - lgamma(a, pol);
+   }
+
+   //
+   // Can't do better than taking the log of P, but...
+   //
+   // Figure out whether we need P or Q, since if we calculate P and it's too close to unity
+   // we will lose precision in the result, selection logic here is extracted from gamma_incomplete_imp_final:
+   //
+   bool need_p = false;
+   if ((x < 1.1) && (x >= 0.5) && (x * 0.75f < a))
+      need_p = true;
+   else if ((x < a) && (x >= 1.1))
+      need_p = true;
+
+   if (need_p)
+      return log(gamma_p(a, x, pol));
+   return log1p(-gamma_q(a, x, pol), pol);
 }
 
 //
@@ -2389,6 +2469,52 @@ BOOST_MATH_GPU_ENABLED inline tools::promote_args_t<T1, T2>
    gamma_q(T1 a, T2 z)
 {
    return gamma_q(a, z, policies::policy<>());
+}
+
+template <class T1, class T2, class Policy>
+BOOST_MATH_GPU_ENABLED inline tools::promote_args_t<T1, T2> lgamma_q(T1 a, T2 z, const Policy& /* pol */)
+{
+   typedef tools::promote_args_t<T1, T2> result_type;
+   typedef typename policies::evaluation<result_type, Policy>::type value_type;
+   typedef typename policies::normalise<
+      Policy,
+      policies::promote_float<false>,
+      policies::promote_double<false>,
+      policies::discrete_quantile<>,
+      policies::assert_undefined<> >::type forwarding_policy;
+
+   return policies::checked_narrowing_cast<result_type, forwarding_policy>(
+      detail::lgamma_incomplete_imp(static_cast<value_type>(a),
+      static_cast<value_type>(z), forwarding_policy()), "lgamma_q<%1%>(%1%, %1%)");
+}
+
+template <class T1, class T2>
+BOOST_MATH_GPU_ENABLED inline tools::promote_args_t<T1, T2> lgamma_q(T1 a, T2 z)
+{
+   return lgamma_q(a, z, policies::policy<>());
+}
+
+template <class T1, class T2, class Policy>
+BOOST_MATH_GPU_ENABLED inline tools::promote_args_t<T1, T2> lgamma_p(T1 a, T2 z, const Policy& /* pol */)
+{
+   typedef tools::promote_args_t<T1, T2> result_type;
+   typedef typename policies::evaluation<result_type, Policy>::type value_type;
+   typedef typename policies::normalise<
+      Policy,
+      policies::promote_float<false>,
+      policies::promote_double<false>,
+      policies::discrete_quantile<>,
+      policies::assert_undefined<> >::type forwarding_policy;
+
+   return policies::checked_narrowing_cast<result_type, forwarding_policy>(
+      detail::lgamma_incomplete_lower_imp(static_cast<value_type>(a),
+      static_cast<value_type>(z), forwarding_policy()), "lgamma_p<%1%>(%1%, %1%)");
+}
+
+template <class T1, class T2>
+BOOST_MATH_GPU_ENABLED inline tools::promote_args_t<T1, T2> lgamma_p(T1 a, T2 z)
+{
+   return lgamma_p(a, z, policies::policy<>());
 }
 //
 // Regularised lower incomplete gamma:

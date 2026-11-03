@@ -327,7 +327,10 @@ namespace boost { namespace math {
          // x is positive until reflection
          W = T(2) / (x * pi<T>());               // Wronskian
          T Yv_scale = 1;
-         if(((kind & need_y) == 0) && ((x < 1) || (v > x * x / 4) || (x < 5)))
+
+         const bool kind_does_not_need_y { ((kind & need_y) == 0) };
+
+         if(kind_does_not_need_y && ((x < 5) || (v > x * x / 4)))
          {
             //
             // This series will actually converge rapidly for all small

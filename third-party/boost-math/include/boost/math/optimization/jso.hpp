@@ -389,7 +389,7 @@ jso(const Func cost_function, jso_parameters<ArgumentContainer> &jso_params,
         throw std::logic_error(oss.str());
       }
       for (size_t i = 0; i < weights.size(); ++i) {
-        weights[i] = delta_f[i] / delta_sum;
+        weights[i] = static_cast<DimensionlessReal>(delta_f[i] / delta_sum);
       }
 
       M_CR[k] = detail::weighted_lehmer_mean(S_CR, weights);
