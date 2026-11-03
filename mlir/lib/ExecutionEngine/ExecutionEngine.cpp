@@ -319,9 +319,13 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   auto objectLinkingLayerCreator = [&](ExecutionSession &session,
                                        llvm::jitlink::JITLinkMemoryManager
                                            &IgnoredMemMgr) {
-    // Needed to respect AArch64 ABI requirements on the distance between
-    // TEXT and GOT sections.
-    bool reserveAlloc = llvmModule->getTargetTriple().isAArch64();
+    const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
+    // Allocate each object's sections from one reserved block. AArch64 limits
+    // the distance between the TEXT and GOT sections. COFF's image-relative
+    // relocations, such as those in .pdata, need every section within 4GB
+    // above the lowest one, and RuntimeDyld aborts when they are not.
+    bool reserveAlloc =
+        targetTriple.isAArch64() || targetTriple.isOSBinFormatCOFF();
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
         session, [sectionMemoryMapper = options.sectionMemoryMapper,
                   reserveAlloc](const MemoryBuffer &) {
@@ -338,7 +342,6 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     // COFF format binaries (Windows) need special handling to deal with
     // exported symbol visibility.
     // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
-    const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
     if (targetTriple.isOSBinFormatCOFF()) {
       objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
       objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
