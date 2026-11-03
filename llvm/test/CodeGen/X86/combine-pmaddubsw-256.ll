@@ -172,3 +172,40 @@ define <16 x i16> @combine_pmaddubsw_add_independent_inputs(<32 x i8> %a0, <32 x
 }
 
 declare <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>)
+
+; Both inputs of the first PMADD have zero odd bytes, so the inputs pack with
+; SHIFT+OR alone. The second signed input may have nonzero odd bytes, which
+; the word shift discards.
+define <16 x i16> @combine_pmaddubsw_add_first_both_zero(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2, <32 x i8> %a3) {
+; AVX2-LABEL: combine_pmaddubsw_add_first_both_zero:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm1
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm2
+; AVX2-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: combine_pmaddubsw_add_first_both_zero:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
+; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpand %ymm4, %ymm2, %ymm1
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm3, %ymm2
+; AVX512-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
+; AVX512-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %v0 = and <32 x i8> %a0, bitcast (<16 x i16> splat (i16 255) to <32 x i8>)
+  %v1 = and <32 x i8> %a1, bitcast (<16 x i16> splat (i16 63) to <32 x i8>)
+  %v2 = and <32 x i8> %a2, bitcast (<16 x i16> splat (i16 255) to <32 x i8>)
+  %v3 = and <32 x i8> %a3, bitcast (<16 x i16> splat (i16 16191) to <32 x i8>)
+  %m0 = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %v0, <32 x i8> %v1)
+  %m1 = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %v2, <32 x i8> %v3)
+  %r = add <16 x i16> %m0, %m1
+  ret <16 x i16> %r
+}

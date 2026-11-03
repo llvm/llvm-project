@@ -119,3 +119,28 @@ define <32 x i16> @combine_pmaddubsw_add_independent_inputs(<64 x i8> %a0, <64 x
 }
 
 declare <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>)
+
+; Both inputs of the first PMADD have zero odd bytes, so the inputs pack with
+; SHIFT+OR alone. The second signed input may have nonzero odd bytes, which
+; the word shift discards.
+define <32 x i16> @combine_pmaddubsw_add_first_both_zero(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> %a2, <64 x i8> %a3) {
+; AVX512-LABEL: combine_pmaddubsw_add_first_both_zero:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastw {{.*#+}} zmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512-NEXT:    vpandq %zmm4, %zmm0, %zmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
+; AVX512-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpandq %zmm4, %zmm2, %zmm1
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm3, %zmm2
+; AVX512-NEXT:    vpmaddubsw %zmm2, %zmm1, %zmm1
+; AVX512-NEXT:    vpaddw %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %v0 = and <64 x i8> %a0, bitcast (<32 x i16> splat (i16 255) to <64 x i8>)
+  %v1 = and <64 x i8> %a1, bitcast (<32 x i16> splat (i16 63) to <64 x i8>)
+  %v2 = and <64 x i8> %a2, bitcast (<32 x i16> splat (i16 255) to <64 x i8>)
+  %v3 = and <64 x i8> %a3, bitcast (<32 x i16> splat (i16 16191) to <64 x i8>)
+  %m0 = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> %v0, <64 x i8> %v1)
+  %m1 = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> %v2, <64 x i8> %v3)
+  %r = add <32 x i16> %m0, %m1
+  ret <32 x i16> %r
+}
