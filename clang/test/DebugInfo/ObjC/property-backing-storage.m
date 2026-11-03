@@ -10,7 +10,9 @@
 //                           auto-synthesizes both the accessors and a
 //                           default-named ivar (_implicitBacking).
 
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o %t.ll
+// RUN: FileCheck %s < %t.ll
+// RUN: FileCheck %s --check-prefix=NO-DIPROPERTY < %t.ll
 
 // CHECK-DAG: ![[DECLARED_PROP:[0-9]+]] = !DIObjCProperty(name: "declaredBacking", file: ![[FILE:[0-9]+]], line: {{[0-9]+}}, attributes: 2316, type: ![[INT_TY:[0-9]+]])
 // CHECK-DAG: ![[UNDECLARED_PROP:[0-9]+]] = !DIObjCProperty(name: "undeclaredBacking", file: ![[FILE]], line: {{[0-9]+}}, attributes: 2316, type: ![[INT_TY]])
@@ -25,6 +27,14 @@
 // CHECK-DAG: ![[IMPLICIT_IVAR:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "_implicitBacking", {{.*}}file: ![[FILE]], {{.*}}extraData: ![[IMPLICIT_PROP]])
 // CHECK-DAG: !DIProperty(name: "implicitBacking", file: ![[FILE]], line: {{[0-9]+}}, type: ![[INT_TY]], backing_storage: ![[IMPLICIT_IVAR]])
 
+// CHECK-DAG: ![[COMPUTED_PROP:[0-9]+]] = !DIObjCProperty(name: "computed", file: ![[FILE]], line: {{[0-9]+}}, attributes: 2124, type: ![[INT_TY]])
+// CHECK-DAG: !DIDerivedType(tag: DW_TAG_member, name: "_computed", {{.*}}file: ![[FILE]], {{.*}}extraData: ![[COMPUTED_PROP]])
+// CHECK-DAG: ![[CLAMPED_PROP:[0-9]+]] = !DIObjCProperty(name: "clamped", file: ![[FILE]], line: {{[0-9]+}}, attributes: 2124, type: ![[INT_TY]])
+// CHECK-DAG: !DIDerivedType(tag: DW_TAG_member, name: "_clamped", {{.*}}file: ![[FILE]], {{.*}}extraData: ![[CLAMPED_PROP]])
+
+// NO-DIPROPERTY-NOT: !DIProperty(name: "computed"
+// NO-DIPROPERTY-NOT: !DIProperty(name: "clamped"
+
 @interface C {
   int _customDeclaredIvar;
 }
@@ -38,4 +48,16 @@
 @synthesize undeclaredBacking = _customUndeclaredIvar;
 @end
 
-void foo(C *cptr) {}
+@interface HandwrittenAccessor
+// Hand-written getter, synthesized setter.
+@property(nonatomic) int computed;
+// Synthesized getter, hand-written setter.
+@property(nonatomic) int clamped;
+@end
+
+@implementation HandwrittenAccessor
+- (int)computed { return _computed * 100; }
+- (void)setClamped:(int)clamped { _clamped = clamped > 10 ? 10 : clamped; }
+@end
+
+void foo(C *cptr, HandwrittenAccessor *hptr) {}
