@@ -672,8 +672,8 @@ func.func @negative_owning_access_declines(%a: i32) -> i32 {
 
 // -----
 
-// Keep the slot in memory when the wrapper disowns its embedded uses, leaving
-// the load in an unpromotable region.
+// Keep the slot in memory when the wrapper disowns the wrapped access uses,
+// leaving the load in an unpromotable region.
 
 // CHECK-LABEL: func.func @negative_owning_access_disowned
 // CHECK: test.multi_slot_alloca

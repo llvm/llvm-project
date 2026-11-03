@@ -43,24 +43,28 @@ void mlir::populatePromotableAliasMap(PromotableAliaserInterface aliaser,
   }
 }
 
-/// Returns `op`'s operands, including the wrapped access's operands if `op`
-/// owns its embedded blocking uses.
-static SmallVector<Value> getPotentialSlotOperands(Operation *op) {
-  SmallVector<Value> operands(op->getOperands());
-  auto memOp = dyn_cast<PromotableMemOpInterface>(op);
-  if (!memOp || !memOp.ownsEmbeddedBlockingUses())
-    return operands;
-
-  Block &body = op->getRegion(0).front();
-  Operation &access = body.front();
-  llvm::append_range(operands, access.getOperands());
-  return operands;
-}
-
 std::optional<MemorySlot>
 mlir::getOpAliasSlot(Operation *op, const MemorySlot &rootSlot,
                      const PromotableAliasMap &aliasMap) {
-  for (Value operand : getPotentialSlotOperands(op))
+  for (Value operand : op->getOperands())
+    if (std::optional<MemorySlot> slot =
+            getParentSlot(operand, rootSlot, aliasMap))
+      return slot;
+
+  // Also check the wrapped access (e.g. in `vector.mask`). Only one level of
+  // nesting is supported.
+  auto memOp = dyn_cast<PromotableMemOpInterface>(op);
+  if (!memOp || !memOp.ownsWrappedBlockingUses())
+    return std::nullopt;
+  assert(op->getNumRegions() == 1 && op->getRegion(0).hasOneBlock() &&
+         op->getRegion(0).front().getOperations().size() == 2 &&
+         isa<PromotableMemOpInterface>(op->getRegion(0).front().front()) &&
+         "an op owning wrapped blocking uses must have one single-block "
+         "region holding a wrapped PromotableMemOpInterface op and a "
+         "terminator");
+  Block &body = op->getRegion(0).front();
+  Operation &wrappedOp = body.front();
+  for (Value operand : wrappedOp.getOperands())
     if (std::optional<MemorySlot> slot =
             getParentSlot(operand, rootSlot, aliasMap))
       return slot;
@@ -71,15 +75,36 @@ bool mlir::referencesAtMostOneAliasOfSlot(Operation *op,
                                           const MemorySlot &rootSlot,
                                           const PromotableAliasMap &aliasMap) {
   Value uniqueAliasPtr;
-  for (Value operand : getPotentialSlotOperands(op)) {
-    std::optional<MemorySlot> slot = getParentSlot(operand, rootSlot, aliasMap);
-    if (!slot)
-      continue;
-    if (uniqueAliasPtr && uniqueAliasPtr != slot->ptr)
-      return false;
-    uniqueAliasPtr = slot->ptr;
-  }
-  return true;
+  auto hasUniqueAlias = [&](ValueRange operands) {
+    for (Value operand : operands) {
+      std::optional<MemorySlot> slot =
+          getParentSlot(operand, rootSlot, aliasMap);
+      if (!slot)
+        continue;
+      if (uniqueAliasPtr && uniqueAliasPtr != slot->ptr)
+        return false;
+      uniqueAliasPtr = slot->ptr;
+    }
+    return true;
+  };
+
+  if (!hasUniqueAlias(op->getOperands()))
+    return false;
+
+  // Also check the wrapped access's operands, under the same single-level
+  // assumption as `getOpAliasSlot`.
+  auto memOp = dyn_cast<PromotableMemOpInterface>(op);
+  if (!memOp || !memOp.ownsWrappedBlockingUses())
+    return true;
+  assert(op->getNumRegions() == 1 && op->getRegion(0).hasOneBlock() &&
+         op->getRegion(0).front().getOperations().size() == 2 &&
+         isa<PromotableMemOpInterface>(op->getRegion(0).front().front()) &&
+         "an op owning wrapped blocking uses must have one single-block "
+         "region holding a wrapped PromotableMemOpInterface op and a "
+         "terminator");
+  Block &body = op->getRegion(0).front();
+  Operation &wrappedOp = body.front();
+  return hasUniqueAlias(wrappedOp.getOperands());
 }
 
 namespace {
