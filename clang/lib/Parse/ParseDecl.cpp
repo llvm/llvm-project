@@ -6654,9 +6654,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     DeclSpec DS(AttrFactory);
     ParseTypeQualifierListOpt(DS);
 
-    D.AddTypeInfo(
-        DeclaratorChunk::getPipe(DS.getTypeQualifiers(), DS.getPipeLoc()),
-        std::move(DS.getAttributes()), SourceLocation());
+    D.AddTypeInfo(DeclaratorChunk::getPipe(DS.getTypeQualifiers(),
+                                           D.getDeclSpec().getPipeLoc()),
+                  std::move(DS.getAttributes()), SourceLocation());
   }
 
   // Not a pointer, C++ reference, or block.

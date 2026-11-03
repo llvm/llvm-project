@@ -22,6 +22,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
@@ -848,6 +849,24 @@ getSectionsConstructStackTop(lower::AbstractConverter &converter) {
   SectionsConstructStackFrame *frame =
       converter.getStateStack().getStackTop<SectionsConstructStackFrame>();
   return frame ? &frame->sectionsConstruct : nullptr;
+}
+
+class DispatchTargetStackFrame
+    : public mlir::StateStackFrameBase<DispatchTargetStackFrame> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DispatchTargetStackFrame)
+
+  explicit DispatchTargetStackFrame(const evaluate::ProcedureRef *target)
+      : target{target} {}
+
+  const evaluate::ProcedureRef *target;
+};
+
+bool Fortran::lower::omp::isDispatchTargetCall(
+    const evaluate::ProcedureRef &proc, lower::AbstractConverter &converter) {
+  auto *frame =
+      converter.getStateStack().getStackTop<DispatchTargetStackFrame>();
+  return frame && frame->target == &proc;
 }
 
 /// Bind objects to their corresponding entry block arguments.
@@ -2300,9 +2319,10 @@ static void genDispatchClauses(lower::AbstractConverter &converter,
                                const List<Clause> &clauses, mlir::Location loc,
                                mlir::omp::DispatchOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processNocontext(stmtCtx, clauseOps);
+  cp.processNovariants(stmtCtx, clauseOps);
   cp.processNowait(clauseOps);
-  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
-                 clause::Novariants, clause::Nocontext>(
+  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr>(
       loc, llvm::omp::Directive::OMPD_dispatch);
 }
 
@@ -2900,6 +2920,21 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, nameAttr);
 }
 
+class DispatchTargetFinder
+    : public evaluate::AnyTraverse<DispatchTargetFinder,
+                                   const evaluate::ProcedureRef *> {
+public:
+  using Base = evaluate::AnyTraverse<DispatchTargetFinder,
+                                     const evaluate::ProcedureRef *>;
+  DispatchTargetFinder() : Base{*this} {}
+  using Base::operator();
+
+  const evaluate::ProcedureRef *
+  operator()(const evaluate::ProcedureRef &proc) const {
+    return &proc;
+  }
+};
+
 static mlir::omp::DispatchOp genDispatchOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
@@ -2908,6 +2943,17 @@ static mlir::omp::DispatchOp genDispatchOp(
   mlir::omp::DispatchOperands clauseOps;
   genDispatchClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                      clauseOps);
+
+  const evaluate::ProcedureRef *target = nullptr;
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
+    nested.visit(common::visitors{
+        [&](const parser::CallStmt &stmt) { target = &*stmt.typedCall; },
+        [&](const parser::AssignmentStmt &stmt) {
+          target = DispatchTargetFinder{}(stmt.typedAssignment->v->rhs);
+        },
+        [](const auto &) {}});
+  mlir::SaveStateStack<DispatchTargetStackFrame> saveStateStack{
+      converter.getStateStack(), target};
 
   return genOpWithBody<mlir::omp::DispatchOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
@@ -3564,6 +3610,30 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
+static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  const auto *type = ultimate.GetType();
+  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate) &&
+         !semantics::IsPointer(ultimate);
+}
+
+static bool isNonDerivedNonPointer(const mlir::Value &variable) {
+  return !fir::isAllocatableType(variable.getType()) &&
+         !fir::isa_derived(fir::getFortranElementType(variable.getType())) &&
+         !fir::isPointerType(variable.getType());
+}
+
+static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  if (const auto *common =
+          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
+    return llvm::all_of(common->objects(), [](const auto &member) {
+      return isNonDerivedNonPointer(*member);
+    });
+  }
+  return isNonDerivedNonPointer(ultimate);
+}
+
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3657,6 +3727,23 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // SECTIONS construct.
   auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
+  // TODO: sections still uses eager privatisation. Use clauseOps.privateVars
+  // once delayedPrivatization is turned on.
+  const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
+  if (!privateSyms.empty() &&
+      llvm::all_of(privateSyms, [](const semantics::Symbol *sym) {
+        return isNonDerivedNonPointerItem(*sym);
+      }))
+    sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
+
+  if (!clauseOps.reductionVars.empty() &&
+      llvm::all_of(clauseOps.reductionVars, [lpAlloca](mlir::Value variable) {
+        // The generated conditional-lastprivate recipe only accesses the
+        // intrinsic value and index fields of its accumulator, despite its
+        // record type.
+        return variable == lpAlloca || isNonDerivedNonPointer(variable);
+      }))
+    sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
   // Create entry block with reduction variables as arguments.
   ObjectEntryBlockArgs args;
