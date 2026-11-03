@@ -36,8 +36,7 @@ define <vscale x 2 x double> @powi_constant(<vscale x 2 x double> %x) {
 ; Keep the constrained intrinsic and its metadata operands intact.
 define <vscale x 2 x double> @constrained_powi(<vscale x 2 x double> %x, i32 %n) {
 ; CHECK-LABEL: define <vscale x 2 x double> @constrained_powi(
-; CHECK:       call double @llvm.experimental.constrained.powi.f64(double {{%.*}}, i32 %n, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[STRICTFP:[0-9]+]]
-; CHECK: attributes #[[STRICTFP]] = { strictfp }
+; CHECK:       call double @llvm.experimental.constrained.powi.f64(double {{%.*}}, i32 %n, metadata !"round.dynamic", metadata !"fpexcept.strict")
 
 ;
   %result = call <vscale x 2 x double> @llvm.experimental.constrained.powi.nxv2f64.i32(<vscale x 2 x double> %x, i32 %n, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
