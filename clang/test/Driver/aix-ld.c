@@ -81,10 +81,10 @@
 // CHECK-LD32-PTHREAD-NOT: "-lm"
 // CHECK-LD32-PTHREAD:     "-lc"
 
-// Check powerpc64-ibm-aix7.1.0.0, 64-bit. POSIX thread alias.
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. POSIX thread support.
 // RUN: %clang %s -### 2>&1 \
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
-// RUN:        -pthreads \
+// RUN:        -pthread \
 // RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:        --unwindlib=libunwind \
