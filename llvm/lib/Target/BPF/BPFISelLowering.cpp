@@ -390,6 +390,12 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:
     return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_SWAP:
+    return Op;
   case ISD::ATOMIC_FENCE:
     return LowerATOMIC_FENCE(Op, DAG);
   case ISD::TRAP:

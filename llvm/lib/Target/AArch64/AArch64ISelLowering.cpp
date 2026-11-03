@@ -926,14 +926,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   for (MVT Ty : {MVT::f16, MVT::bf16, MVT::f32, MVT::f64})
     setOperationAction(ISD::ATOMIC_LOAD_FSUB, Ty, Expand);
   if (!Subtarget->hasLSE() && !Subtarget->outlineAtomics()) {
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB,
+                       {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, LibCall);
   } else {
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, Expand);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB,
+                       {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, Expand);
   }
-  setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i64, Custom);
+  setOperationAction(ISD::ATOMIC_LOAD_AND,
+                     {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, Custom);
 
   // Generate outline atomics library calls only if LSE was not specified for
   // subtarget
@@ -33363,6 +33363,9 @@ void AArch64TargetLowering::ReplaceNodeResults(
            "128-bit ATOMIC_LOAD_AND should be lowered directly to LDCLRP");
     break;
   case ISD::ATOMIC_LOAD_AND:
+    if (N->getValueType(0) != MVT::i128)
+      return;
+    [[fallthrough]];
   case ISD::ATOMIC_LOAD_OR:
   case ISD::ATOMIC_SWAP: {
     assert(cast<AtomicSDNode>(N)->getVal().getValueType() == MVT::i128 &&

@@ -235,7 +235,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
 
   // Sub-word ATOMIC_CMP_SWAP need to ensure that the input is zero-extended.
-  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, Custom);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, {MVT::i8, MVT::i16}, Custom);
 
   // Custom lower inline assembly to check for special registers.
   setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
@@ -13125,6 +13125,8 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Do not know how to custom type legalize this operation!");
+  case ISD::ATOMIC_CMP_SWAP:
+    return;
   case ISD::ATOMIC_LOAD: {
     SDValue Res = LowerATOMIC_LOAD_STORE(SDValue(N, 0), DAG);
     Results.push_back(Res);
