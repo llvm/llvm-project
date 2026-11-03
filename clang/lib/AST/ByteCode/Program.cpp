@@ -168,10 +168,10 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
+  BlockFlags Flags = BlockFlags().withExtern(IsExtern).withWeak(IsWeak);
   auto *G = new (Allocator,
                  Desc->getAllocSize() + Block::getMetadataSize(Block::Global))
-      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::Global, IsExtern,
-             IsWeak);
+      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::Global, Flags);
   G->block()->invokeCtor();
 
   // Initialize GlobalInlineDescriptor fields.
