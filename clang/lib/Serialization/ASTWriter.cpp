@@ -1926,9 +1926,9 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
 
     Entry.trySetContentHash(*PP, [&] { return Cache->getBufferIfLoaded(); });
 
-    // Entries come in order, so the first one naming a file is the one to
-    // record. These are the adjusted values a reader sees, since entries left
-    // out earlier in the table shift both.
+    // Record the adjusted values a reader sees, since entries left out earlier
+    // in the table shift both. The loop writing this table keeps the first
+    // entry naming each file, which is the one with the lowest index.
     if (IsSLocAffecting[I]) {
       Entry.SLocIndex = getAdjustedFileID(FileID::get(I)).ID;
       Entry.SLocOffset = getAdjustedOffset(SLoc->getOffset()) - 2;
@@ -2911,6 +2911,8 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
                                      EEnd = PPRec.local_end();
        E != EEnd; ++E)
     Entities.emplace_back(*E, getAdjustedRange((*E)->getSourceRange()));
+  // The predicate asks the live location, not the range stored above, which is
+  // already in the coordinates this module file writes.
   std::stable_partition(
       Entities.begin(), Entities.end(), [this](const auto &E) {
         return getRedirectedLocation(E.first->getSourceRange().getBegin())
@@ -6966,7 +6968,6 @@ SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {
 SourceLocation ASTWriter::getAdjustedLocalLocation(SourceLocation Loc) const {
   if (Loc.isInvalid())
     return Loc;
-  // getAdjustment() is also used for values that are not source locations.
   return Loc.getLocWithOffset(-getAdjustment(Loc.getOffset()));
 }
 
@@ -7406,8 +7407,12 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
   if (FID.isInvalid())
     return;
   assert(SM.getSLocEntry(FID).isFile());
-  // We write no declaration table for a file we leave out, and a redirected one
-  // already has its table in the module that kept its locations.
+  // We write no declaration table for a file we leave out. A reader looks such
+  // a table up by the file's location, which for a redirected file names the
+  // module file that kept it, so declarations only this module file saw in that
+  // file go unrecorded.
+  // FIXME: Record them too, so that a consumer searching a file for
+  // declarations sees those of every module file that parsed it.
   assert(IsSLocAffecting[FID.ID] || getRedirectedLocation(FileLoc).isValid());
   if (!IsSLocAffecting[FID.ID])
     return;

@@ -2902,7 +2902,7 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   R.TopLevel = static_cast<bool>(Record[5]);
   R.ModuleMap = static_cast<bool>(Record[6]);
   R.SLocIndex = static_cast<unsigned>(Record[7]);
-  R.SLocOffset = static_cast<uint32_t>(Record[8]);
+  R.SLocOffset = static_cast<SourceLocation::UIntTy>(Record[8]);
   auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
       getUnresolvedInputFilenames(Record, Blob);
   R.UnresolvedImportedFilenameAsRequested = UnresolvedFilenameAsRequested;
