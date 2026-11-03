@@ -2322,9 +2322,15 @@ enum CXCursorKind {
    * a concept declaration.
    */
   CXCursor_ConceptDecl = 604,
+  /**
+   * A C++20 module export declaration: an exported declaration block
+   * (`export namespace { ... }`) or a per-declaration export
+   * (`export int f();`).
+   */
+  CXCursor_ModuleExportDecl = 605,
 
   CXCursor_FirstExtraDecl = CXCursor_ModuleImportDecl,
-  CXCursor_LastExtraDecl = CXCursor_ConceptDecl,
+  CXCursor_LastExtraDecl = CXCursor_ModuleExportDecl,
 
   /**
    * A code completion overload candidate.
