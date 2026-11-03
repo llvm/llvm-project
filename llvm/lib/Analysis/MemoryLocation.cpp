@@ -192,6 +192,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
     default:
       break;
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
     case Intrinsic::memcpy:
     case Intrinsic::memcpy_inline:
     case Intrinsic::memmove:
