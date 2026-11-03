@@ -1406,13 +1406,14 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
   if (!Producer)
     return Reg;
 
+  if (Producer->getParent() != BB)
+    // Producer was not inside the loop. Use the register as-is.
+    return Reg;
+
   int ConsumerStage = S.getStage(&MI);
   if (!Producer->isPHI()) {
     // Non-phi producers are simple to remap. Insert as many phis as the
     // difference between the consumer and producer stages.
-    if (Producer->getParent() != BB)
-      // Producer was not inside the loop. Use the register as-is.
-      return Reg;
     int ProducerStage = S.getStage(Producer);
     assert(ConsumerStage != -1 &&
            "In-loop consumer should always be scheduled!");
@@ -1436,12 +1437,17 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
     assert(LoopProducer);
   }
   int LoopProducerStage = S.getStage(LoopProducer);
+  if (LoopProducerStage == -1) {
+    assert(LoopProducer->getParent() != BB &&
+           "In-loop producer should always be scheduled!");
+    // The loop-carried value of the in-loop phi chain is defined outside the
+    // loop, so it is available at stage 0 of every iteration.
+    LoopProducerStage = 0;
+  }
 
   std::optional<Register> IllegalPhiDefault;
 
-  if (LoopProducerStage == -1) {
-    // Do nothing.
-  } else if (LoopProducerStage > ConsumerStage) {
+  if (LoopProducerStage > ConsumerStage) {
     // This schedule is only representable if ProducerStage == ConsumerStage+1.
     // In addition, Consumer's cycle must be scheduled after Producer in the
     // rescheduled loop. This is enforced by the pipeliner's ASAP and ALAP
