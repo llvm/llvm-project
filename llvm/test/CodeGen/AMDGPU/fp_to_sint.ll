@@ -1384,7 +1384,7 @@ define amdgpu_kernel void @fp_to_sint_v2f32_to_v2i16(ptr addrspace(1) %out, <2 x
 ; EG-LABEL: fp_to_sint_v2f32_to_v2i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.X, T5.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
@@ -1395,8 +1395,8 @@ define amdgpu_kernel void @fp_to_sint_v2f32_to_v2i16(ptr addrspace(1) %out, <2 x
 ; EG-NEXT:     AND_INT T0.W, PS, literal.x,
 ; EG-NEXT:     LSHL * T1.W, PV.W, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
-; EG-NEXT:     OR_INT T4.X, PV.W, PS,
-; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.x,
+; EG-NEXT:     OR_INT T0.X, PV.W, PS,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %sint = fptosi <2 x float> %in to <2 x i16>
   store <2 x i16> %sint, ptr addrspace(1) %out
@@ -1459,19 +1459,19 @@ define amdgpu_kernel void @fp_to_sint_f32_to_v2i16(ptr addrspace(1) %out, float 
 ; EG-LABEL: fp_to_sint_f32_to_v2i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.X, T5.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     TRUNC T0.W, KC0[2].W,
-; EG-NEXT:     TRUNC * T1.W, KC0[2].Z,
+; EG-NEXT:     TRUNC T0.W, KC0[2].Z,
+; EG-NEXT:     TRUNC * T1.W, KC0[2].W,
 ; EG-NEXT:     FLT_TO_INT T1.W, PS,
 ; EG-NEXT:     FLT_TO_INT * T0.W, PV.W,
-; EG-NEXT:     LSHL T0.W, PS, literal.x,
-; EG-NEXT:     AND_INT * T1.W, PV.W, literal.y,
-; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
-; EG-NEXT:     OR_INT T4.X, PV.W, PS,
-; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.x,
+; EG-NEXT:     AND_INT T0.W, PS, literal.x,
+; EG-NEXT:     LSHL * T1.W, PV.W, literal.y,
+; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
+; EG-NEXT:     OR_INT T0.X, PV.W, PS,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %sint0 = fptosi float %in0 to i16
   %sint1 = fptosi float %in1 to i16
