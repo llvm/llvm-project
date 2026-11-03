@@ -14081,9 +14081,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 
   // If this is a masked store with an all ones mask, we can use a unmasked
   // store.
-  // FIXME: Can we do this for indexed, compressing, or truncating stores?
-  if (MST->isUnindexed() && !MST->isCompressingStore() &&
-      !MST->isTruncatingStore()) {
+  // FIXME: Can we do this for indexed or truncating stores?
+  if (MST->isUnindexed() && !MST->isTruncatingStore()) {
     if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
       return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
                           MST->getBasePtr(), MST->getPointerInfo(),
