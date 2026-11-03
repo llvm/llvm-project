@@ -34,10 +34,10 @@ namespace omp {
 namespace target {
 namespace ompt {
 
-// Declare OMPT device tracing function mutexes
-#define declareOmptTracingFnMutex(Name) extern std::mutex Name##_mutex;
-FOREACH_OMPT_DEVICE_TRACING_FN_IMPLEMENTAIONS(declareOmptTracingFnMutex)
-#undef declareOmptTracingFnMutex
+/// Serialize the plugin-side device state transitions. libomptarget does
+/// its own synchronization.
+extern std::mutex ompt_start_trace_mutex;
+extern std::mutex ompt_stop_trace_mutex;
 
 extern std::mutex DeviceIdWritingMutex;
 

@@ -72,14 +72,6 @@ VERS1.0 {
     __tgt_print_device_info;
     omp_is_coarse_grain_mem_region;
     omp_register_coarse_grain_mem;
-    libomptarget_ompt_set_trace_ompt;
-    libomptarget_ompt_start_trace;
-    libomptarget_ompt_flush_trace;
-    libomptarget_ompt_stop_trace;
-    libomptarget_ompt_set_granted_teams;
-    libomptarget_ompt_set_timestamp;
-    libomptarget_ompt_advance_buffer_cursor;
-    libomptarget_ompt_get_record_type;
     omp_get_interop_ptr;
     omp_get_interop_str;
     omp_get_interop_int;

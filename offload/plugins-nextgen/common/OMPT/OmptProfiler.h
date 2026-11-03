@@ -68,16 +68,6 @@ public:
 
     FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
 #undef bindOmptCallback
-
-#define bindOmptTracingFunction(FunctionName)                                  \
-  if (ompt::Initialized && ompt::lookupDeviceTracingFn) {                      \
-    FunctionName##_fn = ompt::lookupDeviceTracingFn(#FunctionName);            \
-    ODBG(ODT_Tool) << "device tracing fn bound " << #FunctionName              \
-                   << "=" << ((void *)(uint64_t)FunctionName##_fn);            \
-  }
-
-    FOREACH_OMPT_DEVICE_TRACING_FN_COMMON(bindOmptTracingFunction);
-#undef bindOmptTracingFunction
   }
 
   bool isProfilingEnabled() override;
@@ -134,11 +124,6 @@ private:
 #define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
   FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
 #undef defineOmptCallback
-
-  /// OMPT device tracing functions
-#define defineOmptTracingFunction(Name) ompt_interface_fn_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_TRACING_FN_COMMON(defineOmptTracingFunction);
-#undef defineOmptTracingFunction
 };
 } // namespace ompt
 } // namespace target

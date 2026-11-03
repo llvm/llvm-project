@@ -20,8 +20,6 @@
 #include "Shared/Debug.h"
 #include "omp-tools.h"
 
-#include "llvm/Support/DynamicLibrary.h"
-
 #include <atomic>
 #include <cassert>
 #include <cstdlib>

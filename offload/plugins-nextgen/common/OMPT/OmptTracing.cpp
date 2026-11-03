@@ -26,11 +26,8 @@
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
-// Define OMPT device tracing function mutexes
-#define defineOmptTracingFnMutex(Name)                                         \
-  std::mutex llvm::omp::target::ompt::Name##_mutex;
-FOREACH_OMPT_DEVICE_TRACING_FN_IMPLEMENTAIONS(defineOmptTracingFnMutex)
-#undef defineOmptTracingFnMutex
+std::mutex llvm::omp::target::ompt::ompt_start_trace_mutex;
+std::mutex llvm::omp::target::ompt::ompt_stop_trace_mutex;
 
 std::mutex llvm::omp::target::ompt::DeviceIdWritingMutex;
 
@@ -97,7 +94,6 @@ OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *Device,
     return ompt_set_never;
   }
 
-  std::unique_lock<std::mutex> Lock(ompt_set_trace_ompt_mutex);
   return libomptarget_ompt_set_trace_ompt(DeviceId, Enable, EventTy);
 }
 
@@ -135,7 +131,6 @@ ompt_start_trace(ompt_device_t *Device, ompt_callback_buffer_request_t Request,
 OMPT_API_ROUTINE int ompt_flush_trace(ompt_device_t *Device) {
   ODBG(ODT_Tool) << "Executing ompt_flush_trace";
 
-  std::unique_lock<std::mutex> Lock(ompt_flush_trace_mutex);
   return libomptarget_ompt_flush_trace(getDeviceId(Device));
 }
 
@@ -188,14 +183,12 @@ OMPT_API_ROUTINE int ompt_advance_buffer_cursor(ompt_device_t *Device,
   // Advance can be called concurrently. The actual libomptarget function
   // does not need to be synchronized since it must be working on logically
   // disjoint buffers.
-  std::unique_lock<std::mutex> Lock(ompt_advance_buffer_cursor_mutex);
   return libomptarget_ompt_advance_buffer_cursor(Device, Buffer, Size,
                                                  CurrentPos, NextPos);
 }
 
 OMPT_API_ROUTINE ompt_record_t
 ompt_get_record_type(ompt_buffer_t *Buffer, ompt_buffer_cursor_t CurrentPos) {
-  std::unique_lock<std::mutex> Lock(ompt_get_record_type_mutex);
   return libomptarget_ompt_get_record_type(Buffer, CurrentPos);
 }
 
@@ -218,8 +211,7 @@ OMPT_API_ROUTINE double ompt_translate_time(ompt_device_t *Device,
 
 void llvm::omp::target::ompt::setOmptTimestamp(uint64_t StartTime,
                                                uint64_t EndTime) {
-  std::unique_lock<std::mutex> Lock(ompt_set_timestamp_mutex);
-  // No need to hold a lock
+  // No lock needed: the callee only writes thread-local trace record state.
   libomptarget_ompt_set_timestamp(StartTime, EndTime);
 }
 
@@ -230,8 +222,7 @@ void llvm::omp::target::ompt::setOmptHostToDeviceRate(double Slope,
 }
 
 void llvm::omp::target::ompt::setOmptGrantedNumTeams(uint64_t NumTeams) {
-  std::unique_lock<std::mutex> Lock(ompt_set_granted_teams_mutex);
-  // No need to hold a lock
+  // No lock needed: the callee only writes thread-local trace record state.
   libomptarget_ompt_set_granted_teams(NumTeams);
 }
 
