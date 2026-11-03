@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ITANIUM
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple i686-windows | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WINDOWS
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple x86_64-windows | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WINDOWS
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ITANIUM --check-prefix=CXX23 --check-prefix=CXX23-ITANIUM
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple i686-windows | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WINDOWS --check-prefix=CXX23 --check-prefix=CXX23-WINDOWS
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple x86_64-windows | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WINDOWS --check-prefix=CXX23 --check-prefix=CXX23-WINDOWS
 
 struct B;
 struct A {
@@ -269,3 +272,89 @@ void andor_lhs_before_rhs() {
   // CHECK: call {{.*}}@{{.*}}make_b{{.*}}(
   make_c() || make_b();
 }
+
+#if __cplusplus >= 202302L
+struct ExplicitObject {
+  void operator[](this ExplicitObject self, B b);
+  void operator[](this ExplicitObject self, B b, C c);
+  void operator[](this ExplicitObject self, B b, C c, A a);
+  void operator()(this ExplicitObject self, B b, C c);
+};
+struct StaticOperator {
+  static void operator()(B b, C c);
+  static void operator[](B b, C c);
+};
+struct ImplicitObject {
+  void operator[](B b, C c);
+};
+ExplicitObject make_explicit_object();
+StaticOperator make_static_operator();
+ImplicitObject make_implicit_object();
+
+// CXX23-LABEL: define {{.*}}@{{.*}}subscript_object_before_index{{.*}}(
+void subscript_object_before_index() {
+  // CXX23: call {{.*}}@{{.*}}make_explicit_object{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  make_explicit_object()[make_b()];
+// CXX23: }
+}
+
+// CXX23-LABEL: define {{.*}}@{{.*}}subscript_object_before_indices{{.*}}(
+void subscript_object_before_indices() {
+  // CXX23: call {{.*}}@{{.*}}make_explicit_object{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_c{{.*}}(
+  make_explicit_object()[make_b(), make_c()];
+// CXX23: }
+}
+
+// CXX23-LABEL: define {{.*}}@{{.*}}subscript_object_before_three_indices{{.*}}(
+void subscript_object_before_three_indices() {
+  // CXX23: call {{.*}}@{{.*}}make_explicit_object{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_a{{.*}}(
+  make_explicit_object()[make_b(), make_c(), make_a()];
+// CXX23: }
+}
+
+// CXX23-LABEL: define {{.*}}@{{.*}}implicit_subscript_object_before_indices{{.*}}(
+void implicit_subscript_object_before_indices() {
+  // CXX23: call {{.*}}@{{.*}}make_implicit_object{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_c{{.*}}(
+  make_implicit_object()[make_b(), make_c()];
+// CXX23: }
+}
+
+// CXX23-LABEL: define {{.*}}@{{.*}}call_object_before_args{{.*}}(
+void call_object_before_args() {
+  // CXX23: call {{.*}}@{{.*}}make_explicit_object{{.*}}(
+  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
+  make_explicit_object()(make_b(), make_c());
+// CXX23: }
+}
+
+// CXX23-LABEL: define {{.*}}@{{.*}}static_call_object_first{{.*}}(
+void static_call_object_first() {
+  // CXX23: call {{.*}}@{{.*}}make_static_operator{{.*}}(
+  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
+  make_static_operator()(make_b(), make_c());
+// CXX23: }
+}
+
+// CXX23-LABEL: define {{.*}}@{{.*}}static_subscript_object_first{{.*}}(
+void static_subscript_object_first() {
+  // CXX23: call {{.*}}@{{.*}}make_static_operator{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_c{{.*}}(
+  make_static_operator()[make_b(), make_c()];
+// CXX23: }
+}
+#endif

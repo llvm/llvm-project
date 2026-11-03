@@ -7260,8 +7260,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
   auto Arguments = E->arguments();
   if (StaticOperator) {
-    // If we're calling a static operator, we need to emit the object argument
-    // and ignore it.
+    // A static operator evaluates and discards the object before the call.
+    if (Order == EvaluationOrder::ForceFirstBeforeRest)
+      Order = EvaluationOrder::Default;
     EmitIgnoredExpr(E->getArg(0));
     Arguments = drop_begin(Arguments, 1);
   }
