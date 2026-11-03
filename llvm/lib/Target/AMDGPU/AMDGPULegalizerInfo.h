@@ -236,6 +236,8 @@ public:
   bool legalizeSetFPEnv(MachineInstr &MI, MachineRegisterInfo &MRI,
                         MachineIRBuilder &B) const;
 
+  bool legalizeGetFPMode(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeImageIntrinsic(
       MachineInstr &MI, MachineIRBuilder &B,
       GISelChangeObserver &Observer,
