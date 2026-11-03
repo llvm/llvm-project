@@ -474,16 +474,17 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
 
 VFSelectionContext::VFSelectionTypeWidths
 VFSelectionContext::getTypeWidthsForVFSelection() const {
+  unsigned MaxWidth = 8;
   unsigned MinWidth = -1;
   unsigned MinWidthForMaxBandwidth = -1U;
-  unsigned MaxWidth = 8;
-  const DataLayout &DL = F.getDataLayout();
 
-  auto UpdateSmallestAndWidestSizes = [&](Type *T) {
+  const DataLayout &DL = F.getDataLayout();
+  auto UpdateSmallestAndWidestSizes = [&](Type *T, bool UpdateMaxWidth = true) {
     unsigned TySize = DL.getTypeSizeInBits(T->getScalarType()).getFixedValue();
 
     MinWidth = std::min<unsigned>(MinWidth, TySize);
-    MaxWidth = std::max<unsigned>(MaxWidth, TySize);
+    if (UpdateMaxWidth)
+      MaxWidth = std::max<unsigned>(MaxWidth, TySize);
 
     if (!useMaxBandwidth(VectorKind::FixedOrScalable, T))
       return;
@@ -498,12 +499,11 @@ VFSelectionContext::getTypeWidthsForVFSelection() const {
   if (ElementTypesInLoop.empty()) {
     for (const RecurrenceDescriptor &RdxDesc :
          Legal->getReductionVars().values()) {
+      UpdateSmallestAndWidestSizes(RdxDesc.getRecurrenceType());
       // When finding the min width used by the recurrence we need to account
       // for casts on the input operands of the recurrence.
-      for (Type *T : {RdxDesc.getRecurrenceType(),
-                      RdxDesc.getMinWidthCastToRecurrenceType()})
-        if (T)
-          UpdateSmallestAndWidestSizes(T);
+      if (Type *T = RdxDesc.getMinWidthCastToRecurrenceType())
+        UpdateSmallestAndWidestSizes(T, /*UpdateMaxWidth=*/false);
     }
   } else {
     for (Type *T : ElementTypesInLoop)
