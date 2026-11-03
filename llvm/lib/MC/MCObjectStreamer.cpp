@@ -766,7 +766,8 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   }
 
   assert(getCurrentSectionOnly() && "need a section");
-  newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
+  if (Size)
+    newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
 }
 
 void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,

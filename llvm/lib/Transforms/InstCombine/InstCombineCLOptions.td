@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def InstCombineCLOptions : OptionsStruct<prefix = "instcombine-", perContext = true>;
+def InstCombineCLOptions : OptionsStruct<prefix = "instcombine-">;
 
 defm : BoolField<"instcombine-code-sinking", "true",
   "Enable code sinking">;

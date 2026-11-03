@@ -1,21 +1,20 @@
 // RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// UNSUPPORTED: darwin, aarch64
+// UNSUPPORTED: darwin
 
 #include <assert.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <signal.h>
 
 int main(int argc, char **argv) {
   pid_t pid = fork();
   if (pid) { // parent
-    int x[3];
-    int *status = x + argc * 3;
+    alignas(siginfo_t) char x[sizeof(siginfo_t)];
     int res;
 
-    siginfo_t *si = (siginfo_t*)(x + argc * 3);
+    siginfo_t *si = (siginfo_t *)(x + argc * sizeof(void *));
     res = waitid(P_ALL, 0, si, WEXITED | WNOHANG);
     // CHECK: stack-buffer-overflow
     // CHECK: {{WRITE of size .* at 0x.* thread T0}}
