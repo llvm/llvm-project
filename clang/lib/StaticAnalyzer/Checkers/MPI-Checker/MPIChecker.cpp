@@ -47,7 +47,6 @@ void MPIChecker::checkDoubleNonblocking(const CallEvent &PreCallEvent,
       return;
     BReporter.reportDoubleNonblocking(PreCallEvent, *Req, MR, ErrorNode,
                                       Ctx.getBugReporter());
-    Ctx.addTransition(ErrorNode->getState(), ErrorNode);
   }
   // no error
   else {
