@@ -1,4 +1,4 @@
-//===- ShardingExtensions.cpp ---------------------------------------------===//
+//===- ShardingInterfaceImpl.cpp - Linalg sharding models -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Linalg/Extensions/ShardingInterfaceImpl.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineDialect.h"

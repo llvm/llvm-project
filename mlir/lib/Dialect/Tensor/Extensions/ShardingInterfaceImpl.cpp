@@ -1,4 +1,4 @@
-//===- ShardingExtensions.cpp ---------------------------------------------===//
+//===- ShardingInterfaceImpl.cpp - Tensor sharding models -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tensor/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Tensor/Extensions/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -17,7 +17,6 @@ using namespace mlir::tensor;
 using namespace mlir::shard;
 
 namespace {
-
 // Sharding of tensor.empty/tensor.splat
 template <typename OpTy>
 struct CreatorOpShardingInterface

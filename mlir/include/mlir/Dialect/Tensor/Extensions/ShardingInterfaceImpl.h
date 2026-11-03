@@ -1,4 +1,4 @@
-//===- SubsetInsertionOpInterfaceImpl.h - Tensor subsets ------------------===//
+//===- ShardingInterfaceImpl.h - Tensor sharding models ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_TENSOR_SUBSETINSERTIONOPINTERFACEIMPL_H
-#define MLIR_DIALECT_TENSOR_SUBSETINSERTIONOPINTERFACEIMPL_H
+#ifndef MLIR_DIALECT_TENSOR_EXTENSIONS_SHARDINGINTERFACEIMPL_H_
+#define MLIR_DIALECT_TENSOR_EXTENSIONS_SHARDINGINTERFACEIMPL_H_
 
 namespace mlir {
 class DialectRegistry;
 
 namespace tensor {
-void registerSubsetOpInterfaceExternalModels(DialectRegistry &registry);
+void registerShardingInterfaceExternalModels(DialectRegistry &registry);
 } // namespace tensor
 } // namespace mlir
 
-#endif // MLIR_DIALECT_TENSOR_SUBSETINSERTIONOPINTERFACEIMPL_H
+#endif // MLIR_DIALECT_TENSOR_EXTENSIONS_SHARDINGINTERFACEIMPL_H_

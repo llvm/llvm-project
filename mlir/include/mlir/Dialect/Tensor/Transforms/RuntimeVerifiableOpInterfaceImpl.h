@@ -1,4 +1,4 @@
-//===- RuntimeOpVerification.h - Op Verification ----------------*- C++ -*-===//
+//===- RuntimeVerifiableOpInterfaceImpl.h - Op Verification -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_RUNTIMEOPVERIFICATION_H
-#define MLIR_DIALECT_LINALG_RUNTIMEOPVERIFICATION_H
+#ifndef MLIR_DIALECT_TENSOR_TRANSFORMS_RUNTIMEVERIFIABLEOPINTERFACEIMPL_H
+#define MLIR_DIALECT_TENSOR_TRANSFORMS_RUNTIMEVERIFIABLEOPINTERFACEIMPL_H
 
 namespace mlir {
 class DialectRegistry;
 
-namespace linalg {
+namespace tensor {
 void registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry);
-} // namespace linalg
+} // namespace tensor
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_RUNTIMEOPVERIFICATION_H
+#endif // MLIR_DIALECT_TENSOR_TRANSFORMS_RUNTIMEVERIFIABLEOPINTERFACEIMPL_H

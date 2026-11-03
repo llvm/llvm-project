@@ -1,4 +1,4 @@
-//===- ShardingExtensions.cpp - ---------------------------------------===//
+//===- ShardingInterfaceImpl.cpp - Func sharding models -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Func/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Func/Extensions/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
 #include "mlir/IR/MLIRContext.h"
 
 namespace mlir::func {
-
 void registerShardingInterfaceExternalModels(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, FuncDialect *dialect) {
     ReturnOp::attachInterface<
@@ -20,5 +19,4 @@ void registerShardingInterfaceExternalModels(DialectRegistry &registry) {
         *ctx);
   });
 }
-
 } // namespace mlir::func
