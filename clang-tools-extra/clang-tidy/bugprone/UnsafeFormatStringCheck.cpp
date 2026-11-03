@@ -192,7 +192,7 @@ static bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily) {
       if (SpecPos < N && Fmt[SpecPos] == '*') {
         // precision in argument
         SpecPos++;
-      } else  {
+      } else {
         while (SpecPos < N && isdigit(Fmt[SpecPos]))
           SpecPos++;
       }
