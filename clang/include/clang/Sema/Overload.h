@@ -597,7 +597,8 @@ class Sema;
   public:
     void init(FailureKind K, Expr *From, QualType To) {
       init(K, From->getType(), To);
-      FromExpr = From;
+      if (!isa<OpaqueValueExpr>(From))
+        FromExpr = From;
     }
 
     void init(FailureKind K, QualType From, QualType To) {
@@ -609,11 +610,6 @@ class Sema;
 
     QualType getFromType() const { return QualType::getFromOpaquePtr(FromTy); }
     QualType getToType() const { return QualType::getFromOpaquePtr(ToTy); }
-
-    void setFromExpr(Expr *E) {
-      FromExpr = E;
-      setFromType(E->getType());
-    }
 
     void setFromType(QualType T) { FromTy = T.getAsOpaquePtr(); }
     void setToType(QualType T) { ToTy = T.getAsOpaquePtr(); }
