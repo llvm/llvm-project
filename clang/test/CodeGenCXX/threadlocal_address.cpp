@@ -69,14 +69,12 @@ int g() {
 // NON-ZERO-GLOBAL-AS-SAME: ) #[[ATTR0]] {
 // NON-ZERO-GLOBAL-AS-NEXT:  [[ENTRY:.*:]]
 // NON-ZERO-GLOBAL-AS-NEXT:    [[TMP0:%.*]] = call align 4 ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) align 4 @_ZZ1fvE1j)
-// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[TMP0]] to ptr
-// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// NON-ZERO-GLOBAL-AS-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
-// NON-ZERO-GLOBAL-AS-NEXT:    store i32 [[INC]], ptr [[TMP1]], align 4
-// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP3:%.*]] = call align 4 ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) align 4 @_ZZ1fvE1j)
-// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[TMP3]] to ptr
-// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// NON-ZERO-GLOBAL-AS-NEXT:    ret i32 [[TMP5]]
+// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[TMP0]], align 4
+// NON-ZERO-GLOBAL-AS-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
+// NON-ZERO-GLOBAL-AS-NEXT:    store i32 [[INC]], ptr addrspace(1) [[TMP0]], align 4
+// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP2:%.*]] = call align 4 ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) align 4 @_ZZ1fvE1j)
+// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[TMP2]], align 4
+// NON-ZERO-GLOBAL-AS-NEXT:    ret i32 [[TMP3]]
 //
 // CHECK-O1-LABEL: define dso_local noundef range(i32 -2147483647, -2147483648) i32 @_Z1fv(
 // CHECK-O1-SAME: ) local_unnamed_addr #[[ATTR0]] {
@@ -108,9 +106,9 @@ extern int foo(int *, int *);
 // NON-ZERO-GLOBAL-AS-NEXT:  [[ENTRY:.*:]]
 // NON-ZERO-GLOBAL-AS-NEXT:    [[TMP0:%.*]] = call align 4 ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) align 4 @i)
 // NON-ZERO-GLOBAL-AS-NEXT:    [[TMP1:%.*]] = call align 4 ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) align 4 @_ZZ1hvE1k)
-// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[TMP1]] to ptr
-// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(1) [[TMP0]] to ptr
-// NON-ZERO-GLOBAL-AS-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooPiS_(ptr noundef [[TMP3]], ptr noundef [[TMP2]]) #[[ATTR4:[0-9]+]]
+// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[TMP0]] to ptr
+// NON-ZERO-GLOBAL-AS-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(1) [[TMP1]] to ptr
+// NON-ZERO-GLOBAL-AS-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooPiS_(ptr noundef [[TMP2]], ptr noundef [[TMP3]]) #[[ATTR4:[0-9]+]]
 // NON-ZERO-GLOBAL-AS-NEXT:    ret i32 [[CALL]]
 //
 // CHECK-O1-LABEL: define dso_local noundef i32 @_Z1hv(
