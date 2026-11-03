@@ -1453,7 +1453,7 @@ struct PragmaWarningHandler : public PragmaHandler {
     }
 
     PP.Lex(Tok);
-    IdentifierInfo *II = Tok.getIdentifierInfo();
+    IdentifierInfo *II = Tok.isAnnotation() ? nullptr : Tok.getIdentifierInfo();
 
     if (II && II->isStr("push")) {
       // #pragma warning( push[ ,n ] )
@@ -1484,7 +1484,7 @@ struct PragmaWarningHandler : public PragmaHandler {
       // #pragma warning( warning-specifier : warning-number-list
       //                  [; warning-specifier : warning-number-list...] )
       while (true) {
-        II = Tok.getIdentifierInfo();
+        II = Tok.isAnnotation() ? nullptr : Tok.getIdentifierInfo();
         if (!II && !Tok.is(tok::numeric_constant)) {
           PP.Diag(Tok, diag::warn_pragma_warning_spec_invalid);
           return;
@@ -1601,7 +1601,7 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
     }
 
     PP.Lex(Tok);
-    IdentifierInfo *II = Tok.getIdentifierInfo();
+    IdentifierInfo *II = Tok.isAnnotation() ? nullptr : Tok.getIdentifierInfo();
 
     if (II && II->isStr("push")) {
       // #pragma execution_character_set( push[ , string ] )

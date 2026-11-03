@@ -1189,6 +1189,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed a crash in `#pragma warning` and `#pragma execution_character_set` when
+  containing an annotation-producing `_Pragma` or `__pragma`.
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
