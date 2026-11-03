@@ -71,13 +71,20 @@ jobs:
           GIT_TRACE: "true"
           GIT_CURL_VERBOSE: "true"
 
+      # TODO(#226230): This doesn't use actions/checkout because fetching the test-suite
+      #                can take more than 5 minutes without producing any output, which
+      #                gets the job killed on K8s.
       - name: Checkout the test-suite
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          repository: llvm/llvm-test-suite
-          ref: ${{ fromJSON(inputs.setup).test-suite-version }}
-          path: llvm-test-suite
+        env:
+          TEST_SUITE_VERSION: ${{ fromJSON(inputs.setup).test-suite-version }}
+        run: |
+          (while sleep 60; do echo "Still checking out the test-suite..."; done) &
+          keepalive=$!
+          trap 'kill ${keepalive}' EXIT
+
+          git init -q llvm-test-suite
+          git -C llvm-test-suite fetch --depth=1 https://github.com/llvm/llvm-test-suite "${TEST_SUITE_VERSION}"
+          git -C llvm-test-suite checkout -q --detach FETCH_HEAD
 
       - name: Select Xcode
         if: runner.os == 'macOS'
