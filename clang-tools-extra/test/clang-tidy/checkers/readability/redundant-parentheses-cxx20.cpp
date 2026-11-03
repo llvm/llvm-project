@@ -25,3 +25,18 @@ template <C N> decltype(auto) decltypeParameter() {
 static_assert(__is_same(decltype(returnParameter<C{1}>()), const C &));
 static_assert(__is_same(decltype(initParameter<C{1}>()), const C &));
 static_assert(__is_same(decltype(decltypeParameter<C{1}>()), const C &));
+
+// Substituting a reference template parameter into a template argument wraps
+// it in synthetic parentheses, e.g. 'Array<char, (PATTERN).size() * 10>'.
+struct StringView {
+  constexpr unsigned long size() const { return 8; }
+};
+template <class T, unsigned long N> struct Array {
+  T Data[N];
+};
+template <const StringView &Pattern, unsigned long Repeat>
+struct RepeatPattern {
+  static auto impl() { return Array<char, Pattern.size() * Repeat>{}; }
+};
+constexpr StringView PATTERN{};
+auto RepeatedArray = RepeatPattern<PATTERN, 10>::impl();
