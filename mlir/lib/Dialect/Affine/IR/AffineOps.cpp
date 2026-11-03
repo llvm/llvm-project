@@ -2795,6 +2795,8 @@ bool AffineForOp::matchingBoundOperandList() {
 
 SmallVector<Region *> AffineForOp::getLoopRegions() { return {&getRegion()}; }
 
+std::optional<bool> AffineForOp::isLoopIterationSigned() { return true; }
+
 std::optional<SmallVector<Value>> AffineForOp::getLoopInductionVars() {
   return SmallVector<Value>{getInductionVar()};
 }
@@ -4166,6 +4168,8 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 SmallVector<Region *> AffineParallelOp::getLoopRegions() {
   return {&getRegion()};
 }
+
+std::optional<bool> AffineParallelOp::isLoopIterationSigned() { return true; }
 
 unsigned AffineParallelOp::getNumDims() { return getSteps().size(); }
 
