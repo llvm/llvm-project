@@ -14,7 +14,9 @@
 #include "src/signal/killpg.h"
 
 #include "hdr/errno_macros.h"
+#include "hdr/signal_macros.h"
 #include "src/unistd/getpgrp.h"
+#include "src/unistd/setpgid.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -27,12 +29,22 @@ TEST(LlvmLibcKillpgTest, InvalidPgrp) {
 }
 
 TEST(LlvmLibcKillpgTest, ZeroPgrpTargetsCallerGroup) {
-  // pgrp = 0 represents the caller's process group.
+  // Signal 0 performs an existence check on the caller's process group.
   ASSERT_THAT(LIBC_NAMESPACE::killpg(0, 0), Succeeds(0));
 }
 
 TEST(LlvmLibcKillpgTest, ExplicitPgrp) {
-  // Sending signal 0 to our own process group should succeed.
+  // Signal 0 performs an existence check on our own process group.
   pid_t pgrp = LIBC_NAMESPACE::getpgrp();
   ASSERT_THAT(LIBC_NAMESPACE::killpg(pgrp, 0), Succeeds(0));
+}
+
+TEST(LlvmLibcKillpgTest, KillProcessGroup) {
+  EXPECT_DEATH(
+      [] {
+        ASSERT_EQ(LIBC_NAMESPACE::setpgid(0, 0), 0);
+        pid_t pgrp = LIBC_NAMESPACE::getpgrp();
+        LIBC_NAMESPACE::killpg(pgrp, SIGKILL);
+      },
+      WITH_SIGNAL(SIGKILL));
 }

@@ -33,8 +33,10 @@ add_libc_test(
     killpg_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.signal_macros
     libc.src.signal.killpg
     libc.src.unistd.getpgrp
+    libc.src.unistd.setpgid
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
