@@ -23,19 +23,23 @@ void bad() {
   template for (__private_extern__ auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'extern'}}
   template for (extern static auto y : {1, 2}); // expected-error {{cannot combine with previous 'extern' declaration specifier}} expected-error {{expansion variable 'y' may not be declared 'extern'}}
   template for (static auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'static'}}
+#ifndef __MVS__
   template for (thread_local auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'thread_local'}}
   template for (static thread_local auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'thread_local'}}
   template for (__thread auto y : {1, 2}); // expected-error {{'__thread' variables must have global storage}}
   template for (static __thread auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'static'}}
+#endif
   template for (constinit auto y : {1, 2}); // expected-error {{local variable cannot be declared 'constinit'}}
   template for (consteval auto y : {1, 2});  // expected-error {{consteval can only be used in function declarations}}
   template for (int x; extern auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'extern'}}
   template for (int x; extern static auto y : {1, 2}); // expected-error {{cannot combine with previous 'extern' declaration specifier}} expected-error {{expansion variable 'y' may not be declared 'extern'}}
   template for (int x; static auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'static'}}
+#ifndef __MVS__
   template for (int x; thread_local auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'thread_local'}}
   template for (int x; static thread_local auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'thread_local'}}
   template for (int x; __thread auto y : {1, 2}); // expected-error {{'__thread' variables must have global storage}}
   template for (int x; static __thread auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'static'}}
+#endif
   template for (int x; constinit auto y : {1, 2}); // expected-error {{local variable cannot be declared 'constinit'}}
   template for (int x; consteval auto y : {1, 2});  // expected-error {{consteval can only be used in function declarations}}
   template for (auto y : {abc, -+, }); // expected-error {{use of undeclared identifier 'abc'}} expected-error {{expected expression}}
