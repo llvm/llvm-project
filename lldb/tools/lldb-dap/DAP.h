@@ -24,15 +24,18 @@
 #include "Watchpoint.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBListener.h"
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Host/Pipe.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -88,7 +91,6 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   Log &log;
   DAPTransport &transport;
-  lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
 
@@ -150,6 +152,11 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// last message to the client.
   llvm::unique_function<void()> on_session_end;
 
+  void ActivateRepl();
+  bool IsCommandInterpreterActive();
+  llvm::Expected<lldb::SBCommandReturnObject>
+  EvaluateCommand(llvm::StringRef command);
+
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
   /// repeat). If the previous expression was a command, it will be empty.
@@ -200,7 +207,7 @@ struct DAP final : public DAPTransport::MessageHandler {
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 
-  ~DAP() override = default;
+  ~DAP() override;
 
   /// DAP is not copyable.
   /// @{
@@ -461,6 +468,8 @@ struct DAP final : public DAPTransport::MessageHandler {
   void OnError(llvm::Error) override;
   void OnClosed() override;
 
+  friend BaseRequestHandler;
+
 private:
   std::vector<protocol::Breakpoint> SetSourceBreakpoints(
       const protocol::Source &source,
@@ -512,6 +521,30 @@ private:
   /// @}
 
   const llvm::StringRef m_client_name;
+
+  struct CommandRepl {
+    lldb::SBDebugger debugger;
+    lldb_private::Pipe in;
+    std::mutex mutex;
+    std::condition_variable cv;
+    lldb::SBListener listener;
+    std::optional<lldb::SBCommandReturnObject> result;
+    bool waiting_for_command = false;
+    bool active = false;
+
+    ~CommandRepl() { Close(); }
+
+    void Close() {
+      if (debugger)
+        debugger.GetCommandInterpreter().SetPrintCallback(nullptr, nullptr);
+      std::lock_guard<std::mutex> guard(mutex);
+      in.Close();
+      waiting_for_command = false;
+      cv.notify_all();
+    }
+  };
+  std::shared_ptr<CommandRepl> m_repl;
+  lldb::SBMutex *m_active_api_mutex = nullptr;
 
   /// List of addresses mapped by sourceReference.
   std::vector<lldb::addr_t> m_source_references;
