@@ -13,6 +13,12 @@
 ; CHECK-DAG: %[[#ptr_func_v3f64:]] = OpTypePointer Function %[[#v3f64]]
 ; CHECK-DAG: %[[#v4f64:]] = OpTypeVector %[[#double]] 4
 
+; CHECK-DAG: OpName %[[#test_float_shuffle:]] "test_float_shuffle"
+; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#v4f32:]] = OpTypeVector %[[#float]] 4
+; CHECK-DAG: %[[#v8f32:]] = OpTypeVector %[[#float]] 8
+; CHECK-DAG: %[[#undef_v4f32:]] = OpUndef %[[#v4f32]]
+
 define spir_kernel void @test_int32_double_conversion(ptr %G_vec) {
 ; CHECK: %[[#test_int32_double_conversion]] = OpFunction
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#ptr_func_v8i32]]
@@ -67,3 +73,14 @@ entry:
   ret void
 }
 
+define spir_kernel void @test_float_shuffle(ptr %G_vec) {
+; CHECK: %[[#test_float_shuffle]] = OpFunction
+entry:
+  ; CHECK: %[[#LOAD:]] = OpLoad %[[#v4f32]]
+  ; CHECK: OpCompositeConstruct %[[#v8f32]] %[[#LOAD]] %[[#undef_v4f32]]
+  %0 = load <4 x float>, ptr %G_vec
+  %1 = shufflevector <4 x float> %0, <4 x float> %0, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  %2 = shufflevector <6 x float> %1, <6 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 5>
+  store <4 x float> %2, ptr %G_vec
+  ret void
+}
