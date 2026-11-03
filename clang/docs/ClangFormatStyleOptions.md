@@ -4651,8 +4651,8 @@ the configuration (without a prefix: `Auto`).
 
   - `IBS_RegroupByDirectory` (in configuration: `RegroupByDirectory`)
     Merge multiple `#include` blocks together and sort as one.
-    It's first grouped by category priority (defined in clang-format
-    config), then by top-level directory within each category.
+    It's first grouped by category priority, then by top-level directory
+    within each category.
 
     ```c++
     #include "b/b.h"             into      #include "a/a.h"
