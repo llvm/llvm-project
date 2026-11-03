@@ -62,11 +62,11 @@ class BinaryFunction;
 /// that changes control flow is encoded in the last (highest) bit of VALUE.
 ///
 /// Notes:
-/// Instructions that will never appear in LBR because they do not cause control
-/// flow change are omitted from this map. Basic block locations are recorded
-/// because they can be a target of a jump (To address in the LBR) and also to
-/// recreate the BB layout of this function. We use the BB layout map to
-/// recreate fall-through jumps in the profile, given an LBR trace.
+/// Instructions that will never appear in brstack because they do not cause
+/// control flow change are omitted from this map. Basic block locations are
+/// recorded because they can be a target of a jump (To address in the brstack)
+/// and also to recreate the BB layout of this function. We use the BB layout
+/// map to recreate fall-through jumps in the profile, given a brstack trace.
 class BoltAddressTranslation {
 public:
   // In-memory representation of the address translation table
@@ -92,13 +92,13 @@ public:
   /// Dump the parsed address translation tables
   void dump(raw_ostream &OS) const;
 
-  /// If the maps are loaded in memory, perform the lookup to translate LBR
+  /// If the maps are loaded in memory, perform the lookup to translate brstack
   /// addresses in function located at \p FuncAddress.
   uint64_t translate(uint64_t FuncAddress, uint64_t Offset,
                      bool IsBranchSrc) const;
 
   /// Use the map keys containing basic block addresses to infer fall-throughs
-  /// taken in the path started at FirstLBR.To and ending at SecondLBR.From.
+  /// taken in the path started at \p From and ending at \p To.
   /// Return std::nullopt if trace is invalid or the list of fall-throughs
   /// otherwise.
   std::optional<FallthroughListTy> getFallthroughsInTrace(uint64_t FuncAddress,

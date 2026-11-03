@@ -97,7 +97,8 @@ PrintAfterLowering("print-after-lowering",
 
 static cl::opt<bool> PrintEstimateEdgeCounts(
     "print-estimate-edge-counts",
-    cl::desc("print function after edge counts are set for no-LBR profile"),
+    cl::desc(
+        "print function after edge counts are set for a non-brstack profile"),
     cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>

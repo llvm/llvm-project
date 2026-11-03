@@ -23,8 +23,8 @@ class DataflowInfoManager;
 /// same loop and same loop nesting level.
 void equalizeBBCounts(DataflowInfoManager &Info, BinaryFunction &BF);
 
-/// Fill edge counts based on the basic block count. Used in nonLBR mode when
-/// we only have bb count.
+/// Fill edge counts based on the basic block count. Used in non-brstack mode
+/// when we only have bb count.
 class EstimateEdgeCounts : public BinaryFunctionPass {
   void runOnFunction(BinaryFunction &BF);
 

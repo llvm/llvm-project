@@ -45,7 +45,7 @@ fdata_pat = re.compile(r"([01].*) (?P<mispred>\d+) (?P<exec>\d+)")
 # <loc>: [<id>:]<offset>
 preagg_pat = re.compile(r"(?P<type>[TRSBFfr]) (?P<offsets_count>.*)")
 
-# No-LBR profile:
+# Basic sample profile (without brstack):
 # <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
 nolbr_pat = re.compile(r"([01].*) (?P<count>\d+)")
 
