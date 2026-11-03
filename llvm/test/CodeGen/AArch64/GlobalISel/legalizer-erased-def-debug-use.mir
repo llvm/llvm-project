@@ -37,9 +37,11 @@ body:             |
 ...
 
 # The unmerge of a build_vector folds away, taking the build_vector with it.
+# Its debug use is salvaged as one fragment per element.
 # CHECK-LABEL: name: dead_artifact
 # CHECK-NOT:   G_BUILD_VECTOR
-# CHECK:       DBG_VALUE $noreg, $noreg
+# CHECK:       DBG_VALUE %a(i32), $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+# CHECK-NEXT:  DBG_VALUE $w1, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 # CHECK:       $w0 = COPY %a(i32)
 ---
 name:            dead_artifact
