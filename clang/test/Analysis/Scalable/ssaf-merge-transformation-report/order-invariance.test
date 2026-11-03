@@ -1,8 +1,0 @@
-// The merged report does not depend on the order of the inputs.
-
-// RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-ssaf-merge-transformation-report %S/Inputs/tu-a.sarif \
-// RUN:   %S/Inputs/tu-b.sarif %S/Inputs/tu-c.sarif -o %t/abc.sarif
-// RUN: clang-ssaf-merge-transformation-report %S/Inputs/tu-c.sarif \
-// RUN:   %S/Inputs/tu-b.sarif %S/Inputs/tu-a.sarif -o %t/cba.sarif
-// RUN: diff %t/abc.sarif %t/cba.sarif

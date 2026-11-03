@@ -462,6 +462,8 @@ def avgfloors  : SDNode<"ISD::AVGFLOORS" , SDTIntBinOp, [SDNPCommutative]>;
 def avgflooru  : SDNode<"ISD::AVGFLOORU" , SDTIntBinOp, [SDNPCommutative]>;
 def avgceils   : SDNode<"ISD::AVGCEILS"  , SDTIntBinOp, [SDNPCommutative]>;
 def avgceilu   : SDNode<"ISD::AVGCEILU"  , SDTIntBinOp, [SDNPCommutative]>;
+def avgsubfloors : SDNode<"ISD::AVGSUBFLOORS", SDTIntBinOp>;
+def avgsubflooru : SDNode<"ISD::AVGSUBFLOORU", SDTIntBinOp>;
 def abds       : SDNode<"ISD::ABDS"      , SDTIntBinOp, [SDNPCommutative]>;
 def abdu       : SDNode<"ISD::ABDU"      , SDTIntBinOp, [SDNPCommutative]>;
 def smullohi   : SDNode<"ISD::SMUL_LOHI" , SDTIntBinHiLoOp, [SDNPCommutative]>;
@@ -1050,6 +1052,22 @@ def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
 
 def to_tframeindex : SDNodeXForm<frameindex, [{
   return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+}]>;
+
+// The bits of a floating-point immediate as an integer immediate.
+def bitcast_fpimm_to_i16 : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(
+      N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i16);
+}]>;
+
+def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(
+      N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
+}]>;
+
+def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(
+      N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
 //===----------------------------------------------------------------------===//

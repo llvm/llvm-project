@@ -143,7 +143,9 @@ a.bataev@outlook.com (email), [alexey-bataev](https://github.com/alexey-bataev) 
 #### SROA, Mem2Reg
 
 Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub) \
+Yonah Goldberg \
+ygoldberg@nvidia.com (email), [yonahgoldberg](https://github.com/yonahgoldberg) (GitHub)
 
 #### DFAJumpThreading
 
@@ -214,6 +216,15 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 
 Reid Kleckner \
 rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
+
+#### LightWeight Fault Isolation (LFI)
+
+Zachary Yedidia \
+zyedidia@gmail.com (email), [zyedidia](https://github.com/zyedidia) (GitHub) \
+Sharjeel Khan \
+sharjeelkhan@google.com (email), [Sharjeel-Khan](https://github.com/Sharjeel-Khan) \
+Nick Desaulniers \
+ndesaulniers@google.com (email), [nickdesaulniers](https://github.com/nickdesaulniers)
 
 ### Backends / Targets
 
@@ -343,7 +354,9 @@ asb@igalia.com (email), [asb](https://github.com/asb) (GitHub) \
 Craig Topper \
 craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub) \
 Philip Reames \
-listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub)
+listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub) \
+Sam Elliott \
+aelliott@qti.qualcomm.com (email), [lenary](https://github.com/lenary) (GitHub)
 
 #### Sparc backend
 

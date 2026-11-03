@@ -509,8 +509,8 @@ static bool needsPropDictEnumBrackets(const NamedAttribute *attr) {
   if (!shouldStripEnumAttrInPropDict(attr))
     return false;
   EnumInfo enumInfo(getEnumInfoRecord(attr->attr.getBaseAttr()));
-  return enumInfo.isBitEnum() &&
-         enumInfo.getDef().getValueAsString("separator").trim() == ",";
+  return enumInfo.isBitEnum() && enumInfo.getBitEnumSeparatorKind() ==
+                                     EnumInfo::BitEnumSeparatorKind::Comma;
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
@@ -1311,11 +1311,7 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
 
   if (formatAsEnumDirective && enumInfo.isBitEnum() &&
       (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
-    StringRef separator = enumInfo.getDef().getValueAsString("separator");
-    StringRef parseSeparatorFn = llvm::StringSwitch<StringRef>(separator.trim())
-                                     .Case("|", "parseOptionalVerticalBar")
-                                     .Case(",", "parseOptionalComma")
-                                     .Default("invalid bit enum separator");
+    StringRef parseSeparatorFn = enumInfo.getBitEnumSeparatorParser();
     std::string enumType =
         (enumInfo.getCppNamespace() + "::" + enumInfo.getEnumClassName()).str();
     body << formatv(unquotedBitEnumAttrParserCode, var->name,
@@ -3990,7 +3986,7 @@ OpFormatParser::verifyEnumAdjacentLiterals(SMLoc loc,
 
     Attribute baseAttr = attr->getVar()->attr.getBaseAttr();
     EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
-    if (!enumInfo.isBitEnum() || enumInfo.printBitEnumQuoted())
+    if (!enumInfo.isNewStyleBitEnum())
       continue;
 
     auto remaining = elements.drop_front(index + 1);
@@ -4002,8 +3998,7 @@ OpFormatParser::verifyEnumAdjacentLiterals(SMLoc loc,
     if (!literal)
       continue;
 
-    StringRef separator =
-        enumInfo.getDef().getValueAsString("separator").trim();
+    StringRef separator = enumInfo.getBitEnumSeparator().trim();
     if (literal->getSpelling() == separator) {
       return emitError(loc, "unquoted bit enum cannot be followed by its '" +
                                 separator + "' separator literal");

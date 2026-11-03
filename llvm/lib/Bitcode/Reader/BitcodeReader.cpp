@@ -1246,12 +1246,12 @@ static GlobalVarSummary::GVarFlags getDecodedGVarFlags(uint64_t RawFlags) {
       (GlobalObject::VCallVisibility)(RawFlags >> 3));
 }
 
-static std::pair<CalleeInfo::HotnessType, bool>
-getDecodedHotnessCallEdgeInfo(uint64_t RawFlags) {
+static CalleeInfo getDecodedHotnessCallEdgeInfo(uint64_t RawFlags) {
   CalleeInfo::HotnessType Hotness =
       static_cast<CalleeInfo::HotnessType>(RawFlags & 0x7); // 3 bits
   bool HasTailCall = (RawFlags & 0x8);                      // 1 bit
-  return {Hotness, HasTailCall};
+  bool HasIndirectCall = (RawFlags & 0x10);                 // 1 bit
+  return CalleeInfo(Hotness, HasTailCall, HasIndirectCall);
 }
 
 // Deprecated, but still needed to read old bitcode files.
@@ -2272,6 +2272,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeHWAddress;
   case bitc::ATTR_KIND_SANITIZE_THREAD:
     return Attribute::SanitizeThread;
+  case bitc::ATTR_KIND_SANITIZE_CONCURRENCY:
+    return Attribute::SanitizeConcurrency;
   case bitc::ATTR_KIND_SANITIZE_TYPE:
     return Attribute::SanitizeType;
   case bitc::ATTR_KIND_SANITIZE_MEMORY:
@@ -2344,6 +2346,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoOutline;
   case bitc::ATTR_KIND_NOIPA:
     return Attribute::NoIPA;
+  case bitc::ATTR_KIND_LIKELY_MODULE_LOCAL:
+    return Attribute::LikelyModuleLocal;
   }
 }
 
@@ -7723,22 +7727,22 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
     Ret.reserve(Record.size());
 
   for (unsigned I = 0, E = Record.size(); I != E; ++I) {
-    CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
-    bool HasTailCall = false;
-    uint64_t RelBF = 0;
+    CalleeInfo Info;
     ValueInfo Callee = std::get<0>(getValueInfoFromValueId(Record[I]));
     if (IsOldProfileFormat) {
       I += 1; // Skip old callsitecount field
       if (HasProfile)
         I += 1; // Skip old profilecount field
     } else if (HasProfile)
-      std::tie(Hotness, HasTailCall) =
-          getDecodedHotnessCallEdgeInfo(Record[++I]);
+      Info = getDecodedHotnessCallEdgeInfo(Record[++I]);
     // Deprecated, but still needed to read old bitcode files.
-    else if (HasRelBF)
+    else if (HasRelBF) {
+      uint64_t RelBF = 0;
+      bool HasTailCall = false;
       getDecodedRelBFCallEdgeInfo(Record[++I], RelBF, HasTailCall);
-    Ret.push_back(
-        FunctionSummary::EdgeTy{Callee, CalleeInfo(Hotness, HasTailCall)});
+      Info.setHasTailCall(HasTailCall);
+    }
+    Ret.push_back(FunctionSummary::EdgeTy{Callee, Info});
   }
   return Ret;
 }

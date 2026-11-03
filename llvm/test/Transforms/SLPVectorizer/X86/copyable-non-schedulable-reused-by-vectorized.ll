@@ -80,3 +80,72 @@ bb:
   %or2 = select i1 %or1, i1 true, i1 %cmp3
   ret i1 %or2
 }
+
+define i1 @test_reverse_order(double %x) {
+; CHECK-LABEL: @test_reverse_order(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B0:%.*]] = fmul double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[B:%.*]] = fadd double [[B0]], 0.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[TMP0]], <double 1.000000e+00, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP3]], <4 x i32> <i32 0, i32 0, i32 0, i32 3>
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double> [ zeroinitializer, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double poison>, double [[B]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <4 x double> [[TMP10]], [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <4 x double> [[TMP8]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fsub <4 x double> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub <4 x double> zeroinitializer, [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fcmp uno <4 x double> [[TMP14]], zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = freeze <4 x i1> [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
+; CHECK-NEXT:    ret i1 [[TMP17]]
+;
+entry:
+  %a = fmul double 0.000000e+00, %x
+  %b0 = fmul double 0.000000e+00, 0.000000e+00
+  %b = fadd double %b0, 0.000000e+00
+  %c0 = fmul double 0.000000e+00, 0.000000e+00
+  %c = fadd double %c0, 0.000000e+00
+  br label %bb
+
+bb:
+  %p0 = phi double [ 0.000000e+00, %entry ]
+  %p1 = phi double [ 0.000000e+00, %entry ]
+  %p2 = phi double [ 0.000000e+00, %entry ]
+  %p3 = phi double [ 0.000000e+00, %entry ]
+  %p4 = phi double [ 0.000000e+00, %entry ]
+  %t0 = fmul double %c, %p0
+  %t1 = fmul double %a, %p2
+  %t2 = fadd double %t0, %t1
+  %t3 = fsub double %t2, 0.000000e+00
+  %t4 = fmul double 0.000000e+00, %p0
+  %t5 = fmul double %a, %p3
+  %t6 = fadd double %t4, %t5
+  %t7 = fmul double 0.000000e+00, %p0
+  %t8 = fmul double %a, %p4
+  %t9 = fadd double %t8, %t7
+  %t10 = fmul double %b, %p0
+  %t11 = fmul double %a, %p1
+  %t12 = fadd double %t11, %t10
+  %t13 = fsub double %t12, 0.000000e+00
+  %t14 = fsub double 0.000000e+00, %t13
+  %t15 = fcmp uno double %t14, 0.000000e+00
+  %t16 = fsub double 0.000000e+00, %t3
+  %t17 = fcmp uno double %t16, 0.000000e+00
+  %t18 = select i1 %t15, i1 true, i1 %t17
+  %t19 = fsub double 0.000000e+00, %t6
+  %t20 = fcmp uno double %t19, 0.000000e+00
+  %t21 = select i1 %t18, i1 true, i1 %t20
+  %t22 = fsub double 0.000000e+00, %t9
+  %t23 = fcmp uno double %t22, 0.000000e+00
+  %res = select i1 %t21, i1 true, i1 %t23
+  ret i1 %res
+}

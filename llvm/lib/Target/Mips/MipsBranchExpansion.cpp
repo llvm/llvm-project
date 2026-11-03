@@ -60,7 +60,7 @@
 /// B) Transforming a delay slot branch into compact branch. This case can be
 ///    difficult to process as lookahead for hazards is insufficient, as
 ///    backwards delay slot fillling can also produce hazards in previously
-///    processed instuctions.
+///    processed instructions.
 ///
 /// In future this pass can be extended (or new pass can be created) to handle
 /// other pipeline hazards, such as various MIPS1 hazards, processor errata that
@@ -383,7 +383,7 @@ bool MipsBranchExpansion::buildProperJumpMI(MachineBasicBlock *MBB,
   if (JumpOp == Mips::JIC && STI->inMicroMipsMode())
     JumpOp = Mips::JIC_MMR6;
 
-  unsigned ATReg = ABI.IsN64() ? Mips::AT_64 : Mips::AT;
+  unsigned ATReg = ABI.IsN64() ? Mips::R1_64 : Mips::R1;
   MachineInstrBuilder Instr =
       BuildMI(*MBB, Pos, DL, TII->get(JumpOp)).addReg(ATReg);
   if (AddImm)
@@ -478,15 +478,15 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
       // %hi($tgt-$baltgt) and %lo($tgt-$baltgt) expressions and add them as
       // operands to lowered instructions.
 
-      BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi), Mips::AT)
+      BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi), Mips::R1)
           .addMBB(TgtMBB, MipsII::MO_ABS_HI)
           .addMBB(BalTgtMBB);
 
       MachineInstrBuilder BalInstr =
           BuildMI(*MFp, DL, TII->get(BalOp)).addMBB(BalTgtMBB);
       MachineInstrBuilder ADDiuInstr =
-          BuildMI(*MFp, DL, TII->get(Mips::LONG_BRANCH_ADDiu), Mips::AT)
-              .addReg(Mips::AT)
+          BuildMI(*MFp, DL, TII->get(Mips::LONG_BRANCH_ADDiu), Mips::R1)
+              .addReg(Mips::R1)
               .addMBB(TgtMBB, MipsII::MO_ABS_LO)
               .addMBB(BalTgtMBB);
       if (STI->hasMips32r6()) {
@@ -500,9 +500,9 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
 
       Pos = BalTgtMBB->begin();
 
-      BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::ADDu), Mips::AT)
+      BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::ADDu), Mips::R1)
           .addReg(Mips::RA)
-          .addReg(Mips::AT);
+          .addReg(Mips::R1);
       BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::LW), Mips::RA)
           .addReg(Mips::SP)
           .addImm(0);
@@ -577,19 +577,19 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
           .addReg(Mips::SP_64)
           .addImm(0);
       BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu),
-              Mips::AT_64)
-          .addReg(Mips::ZERO_64)
+              Mips::R1_64)
+          .addReg(Mips::R0_64)
           .addMBB(TgtMBB, MipsII::MO_ABS_HI)
           .addMBB(BalTgtMBB);
-      BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::AT_64)
-          .addReg(Mips::AT_64)
+      BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::R1_64)
+          .addReg(Mips::R1_64)
           .addImm(16);
 
       MachineInstrBuilder BalInstr =
           BuildMI(*MFp, DL, TII->get(BalOp)).addMBB(BalTgtMBB);
       MachineInstrBuilder DADDiuInstr =
-          BuildMI(*MFp, DL, TII->get(Mips::LONG_BRANCH_DADDiu), Mips::AT_64)
-              .addReg(Mips::AT_64)
+          BuildMI(*MFp, DL, TII->get(Mips::LONG_BRANCH_DADDiu), Mips::R1_64)
+              .addReg(Mips::R1_64)
               .addMBB(TgtMBB, MipsII::MO_ABS_LO)
               .addMBB(BalTgtMBB);
       if (STI->hasMips32r6()) {
@@ -603,9 +603,9 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
 
       Pos = BalTgtMBB->begin();
 
-      BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::DADDu), Mips::AT_64)
+      BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::DADDu), Mips::R1_64)
           .addReg(Mips::RA_64)
-          .addReg(Mips::AT_64);
+          .addReg(Mips::R1_64);
       BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::LD), Mips::RA_64)
           .addReg(Mips::SP_64)
           .addImm(0);
@@ -666,33 +666,33 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
       // do branch register.
       if (ABI.IsN64()) {
         BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi2Op_64),
-                Mips::AT_64)
+                Mips::R1_64)
             .addMBB(TgtMBB, MipsII::MO_HIGHEST);
         BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
-                Mips::AT_64)
-            .addReg(Mips::AT_64)
+                Mips::R1_64)
+            .addReg(Mips::R1_64)
             .addMBB(TgtMBB, MipsII::MO_HIGHER);
-        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::AT_64)
-            .addReg(Mips::AT_64)
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::R1_64)
+            .addReg(Mips::R1_64)
             .addImm(16);
         BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
-                Mips::AT_64)
-            .addReg(Mips::AT_64)
+                Mips::R1_64)
+            .addReg(Mips::R1_64)
             .addMBB(TgtMBB, MipsII::MO_ABS_HI);
-        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::AT_64)
-            .addReg(Mips::AT_64)
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::R1_64)
+            .addReg(Mips::R1_64)
             .addImm(16);
         BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
-                Mips::AT_64)
-            .addReg(Mips::AT_64)
+                Mips::R1_64)
+            .addReg(Mips::R1_64)
             .addMBB(TgtMBB, MipsII::MO_ABS_LO);
       } else {
         BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi2Op),
-                Mips::AT)
+                Mips::R1)
             .addMBB(TgtMBB, MipsII::MO_ABS_HI);
         BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_ADDiu2Op),
-                Mips::AT)
-            .addReg(Mips::AT)
+                Mips::R1)
+            .addReg(Mips::R1)
             .addMBB(TgtMBB, MipsII::MO_ABS_LO);
       }
       buildProperJumpMI(LongBrMBB, Pos, DL);
@@ -713,12 +713,12 @@ static void emitGPDisp(MachineFunction &F, const MipsInstrInfo *TII) {
   MachineBasicBlock &MBB = F.front();
   MachineBasicBlock::iterator I = MBB.begin();
   DebugLoc DL = MBB.findDebugLoc(MBB.begin());
-  BuildMI(MBB, I, DL, TII->get(Mips::LUi), Mips::V0)
+  BuildMI(MBB, I, DL, TII->get(Mips::LUi), Mips::R2)
       .addExternalSymbol("_gp_disp", MipsII::MO_ABS_HI);
-  BuildMI(MBB, I, DL, TII->get(Mips::ADDiu), Mips::V0)
-      .addReg(Mips::V0)
+  BuildMI(MBB, I, DL, TII->get(Mips::ADDiu), Mips::R2)
+      .addReg(Mips::R2)
       .addExternalSymbol("_gp_disp", MipsII::MO_ABS_LO);
-  MBB.removeLiveIn(Mips::V0);
+  MBB.removeLiveIn(Mips::R2);
 }
 
 template <typename Pred, typename Safe>

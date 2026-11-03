@@ -568,8 +568,8 @@ const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
   return AMDGPU_AllVectorRegs_RegMask;
 }
 
-unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
-                                              unsigned NumRegs) {
+unsigned SIRegisterInfo::getSubRegFromChannel(uint64_t Channel,
+                                              uint64_t NumRegs) {
   assert(NumRegs < SubRegFromChannelTableWidthMap.size());
   unsigned NumRegIndex = SubRegFromChannelTableWidthMap[NumRegs];
   assert(NumRegIndex && "Not implemented");
@@ -972,16 +972,16 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   if (ST.hasFlatScratchEnabled()) {
     // FIXME: Make sure scc isn't live in.
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_I32), BaseReg)
-        .addReg(OffsetReg, RegState::Kill)
+        .addReg(OffsetReg)
         .addReg(FIReg)
         .setOperandDead(3); // scc
     return BaseReg;
   }
 
   TII->getAddNoCarry(*MBB, Ins, DL, BaseReg)
-    .addReg(OffsetReg, RegState::Kill)
-    .addReg(FIReg)
-    .addImm(0); // clamp bit
+      .addReg(OffsetReg)
+      .addReg(FIReg)
+      .addImm(0); // clamp bit
 
   return BaseReg;
 }
@@ -4482,19 +4482,20 @@ MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const 
 }
 
 const TargetRegisterClass *
-SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
+SIRegisterInfo::getRegClassForSizeOnBank(uint64_t Size,
                                          const RegisterBank &RB) const {
+  unsigned SizeEnc = static_cast<unsigned>(Size);
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
     return getVGPRClassForBitWidth(
-        std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size));
+        std::max(ST.useRealTrue16Insts() ? 16u : 32u, SizeEnc));
   case AMDGPU::VCCRegBankID:
     assert(Size == 1);
     return getWaveMaskRegClass();
   case AMDGPU::SGPRRegBankID:
-    return getSGPRClassForBitWidth(std::max(32u, Size));
+    return getSGPRClassForBitWidth(std::max(32u, SizeEnc));
   case AMDGPU::AGPRRegBankID:
-    return getAGPRClassForBitWidth(std::max(32u, Size));
+    return getAGPRClassForBitWidth(std::max(32u, SizeEnc));
   default:
     llvm_unreachable("unknown register bank");
   }
@@ -4580,18 +4581,18 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
   return Def;
 }
 
-MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
+MCRegister SIRegisterInfo::get32BitRegister(MCRegister Reg) const {
   assert(getRegSizeInBits(*getPhysRegBaseClass(Reg)) <= 32);
 
   for (const TargetRegisterClass *RC :
        {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
         &AMDGPU::AGPR_32RegClass}) {
-    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
+    if (MCRegister Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
       return Super;
   }
-  if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,
-                                            &AMDGPU::VGPR_32RegClass)) {
-      return Super;
+  if (MCRegister Super =
+          getMatchingSuperReg(Reg, AMDGPU::hi16, &AMDGPU::VGPR_32RegClass)) {
+    return Super;
   }
 
   return AMDGPU::NoRegister;
