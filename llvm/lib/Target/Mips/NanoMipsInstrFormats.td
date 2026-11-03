@@ -584,35 +584,33 @@ class BBit_Enc<bits<3> isel> : _Pool_P_BRI<isel> {
 
 class LSSPRegMem16_Enc<bits<5> isel> : _Pool_P16<isel> {
   bits<5> rt;
-  bits<7> addr;
-  bits<5> offset = addr{6-2};
+  bits<0> base;
+  bits<7> offset;
   let Inst{9-5} = rt;
-  let Inst{4-0} = offset;
+  let Inst{4-0} = offset{6-2};
 }
 
 class LSGPRegMem16_Enc<bits<5> isel> : _Pool_P16<isel> {
   bits<3> rt;
-  bits<9> addr;
-  bits<7> offset = addr{8-2};
+  bits<0> base;
+  bits<9> offset;
   let Inst{9-7} = rt;
-  let Inst{6-0} = offset;
+  let Inst{6-0} = offset{8-2};
 }
 
 class LSMem16_Enc<bits<5> isel> : _Pool_P16<isel> {
   bits<3> rt;
-  bits<9> addr;
-  bits<3> base = addr{8-6};
-  bits<4> offset = addr{5-2};
+  bits<3> base;
+  bits<6> offset;
   let Inst{9-7} = rt;
   let Inst{6-4} = base;
-  let Inst{3-0} = offset;
+  let Inst{3-0} = offset{5-2};
 }
 
 class LHMem16_Enc<bits<2> isel> : _Pool_P16_LH<isel> {
   bits<3> rt;
-  bits<6> addr;
-  bits<3> base = addr{5-3};
-  bits<3> offset = addr{2-0};
+  bits<3> base;
+  bits<3> offset;
   let Inst{9-7} = rt;
   let Inst{6-4} = base;
   let Inst{2-1} = offset{2-1};
@@ -620,9 +618,8 @@ class LHMem16_Enc<bits<2> isel> : _Pool_P16_LH<isel> {
 
 class LBMem16_Enc<bits<2> isel> : _Pool_P16_LB<isel> {
   bits<3> rt;
-  bits<5> addr;
-  bits<3> base = addr{4-2};
-  bits<2> offset = addr{1-0};
+  bits<3> base;
+  bits<2> offset;
   let Inst{9-7} = rt;
   let Inst{6-4} = base;
   let Inst{1-0} = offset{1-0};
@@ -630,31 +627,33 @@ class LBMem16_Enc<bits<2> isel> : _Pool_P16_LB<isel> {
 
 class LSMemGP19S2_Enc<bits<2> isel> : _Pool_P_GP_W<isel> {
   bits<5> rt;
-  bits<21> addr;
+  bits<0> base;
+  bits<21> offset;
   let Inst{25-21} = rt;
-  let Inst{20-2} = addr{20-2};
+  let Inst{20-2} = offset{20-2};
 }
 
 class LSMemGP18_Enc<bits<3> isel> : _Pool_P_GP_BH<isel> {
   bits<5> rt;
-  bits<18> addr;
+  bits<0> base;
+  bits<18> offset;
   let Inst{25-21} = rt;
-  let Inst{17-0} = addr;
+  let Inst{17-0} = offset;
 }
 
 class LSMemGP17S1_Enc<bits<4> isel> : _Pool_P_GP_BH<isel{3-1}> {
   bits<5> rt;
-  bits<18> addr;
+  bits<0> base;
+  bits<18> offset;
   let Inst{25-21} = rt;
-  let Inst{17-1} = addr{17-1};
+  let Inst{17-1} = offset{17-1};
   let Inst{0} = isel{0};
 }
 
 class LSMem_U12_Enc<bits<4> isel> : _Pool_P_LS_U12<isel> {
   bits<5> rt;
-  bits<17> addr;
-  bits<5> base = addr{16-12};
-  bits<12> offset = addr{11-0};
+  bits<5> base;
+  bits<12> offset;
   let Inst{25-21} = rt;
   let Inst{20-16} = base;
   let Inst{11-0} = offset;
@@ -662,27 +661,26 @@ class LSMem_U12_Enc<bits<4> isel> : _Pool_P_LS_U12<isel> {
 
 class LSMemX_Enc<bit scaled, bits<4> isel> : _Pool_PP_LSX<scaled, isel> {
   bits<5> rt;
-  bits<10> addr;
-  let Inst{25-21} = addr{9-5};
-  let Inst{20-16} = addr{4-0};
+  bits<5> base;
+  bits<5> index;
+  let Inst{25-21} = base;
+  let Inst{20-16} = index;
   let Inst{15-11} = rt;
 }
 
 class LSMemXS16_Enc : _Pool_P16C<0b1> {
   bits<3> rt;
-  // Uses same encoding method as LWXS to get 5+5 register bits
-  // but only needs the lower 3 bits of each register.
-  bits<10> addr;
-  let Inst{9-7} = addr{7-5}; // Discard {9-8}
-  let Inst{6-4} = addr{2-0}; // Discard {4-3}
+  bits<3> base;
+  bits<3> index;
+  let Inst{9-7} = base;
+  let Inst{6-4} = index;
   let Inst{3-1} = rt;
 }
 
 class LSMem_S9_Enc<bits<3> psel, bits<4> isel> : _Pool_P_LS_S9<psel> {
   bits<5> rt;
-  bits<14> addr;
-  bits<5> base = addr{13-9};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
   let Inst{25-21} = rt;
   let Inst{20-16} = base;
   let Inst{14-11} = isel;
@@ -692,9 +690,8 @@ class LSMem_S9_Enc<bits<3> psel, bits<4> isel> : _Pool_P_LS_S9<psel> {
 
 class LSMem_S9_Mult_Enc<bits<4> isel> : _Pool_P_LS_S9<isel{2-0}> {
   bits<5> rt;
-  bits<14> addr;
-  bits<5> base = addr{13-9};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
   bits<3> rcount;
   let Inst{25-21} = rt;
   let Inst{20-16} = base;
@@ -706,13 +703,12 @@ class LSMem_S9_Mult_Enc<bits<4> isel> : _Pool_P_LS_S9<isel{2-0}> {
 
 class LSMem4x4_Enc<bits<5> isel> : _Pool_P16<isel> {
   bits<5> rt;
-  bits<9> addr;
-  bits<5> rs = addr{8-4};
-  bits<4> offset = addr{3-0};
+  bits<5> base;
+  bits<4> offset;
   let Inst{9} = rt{4};
   let Inst{7-5} = rt{2-0};
-  let Inst{4} = rs{4};
-  let Inst{2-0} = rs{2-0};
+  let Inst{4} = base{4};
+  let Inst{2-0} = base{2-0};
   let Inst{3} = offset{3};
   let Inst{8} = offset{2};
 }
@@ -763,9 +759,8 @@ class MOVEBALC_Enc : _Pool_P32<0b00010> {
 
 class LLSC_Enc<bits<3> psel, bits<4>isel> : _Pool_P_LS_S9<psel> {
   bits<5> rt;
-  bits<14> addr;
-  bits<5> base = addr{13-9};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
   let Inst{25-21} = rt;
   let Inst{20-16} = base;
   let Inst{15} = offset{8};
@@ -777,9 +772,9 @@ class LLSC_Enc<bits<3> psel, bits<4>isel> : _Pool_P_LS_S9<psel> {
 class LLSCWP_Enc<bits<3> psel, bits<4> isel> : _Pool_P_LS_S9<psel> {
   bits<5> rt;
   bits<5> ru;
-  bits<5> addr;
+  bits<5> base;
   let Inst{25-21} = rt;
-  let Inst{20-16} = addr;
+  let Inst{20-16} = base;
   let Inst{14-11} = isel;
   let Inst{7-3} = ru;
   let Inst{1-0} = 0b01;
@@ -872,9 +867,8 @@ class ROTX_Enc : RotxAliasBase_Enc {
 
 class CACHE_PREFs9_Enc<bits<3> psel, bits<4> isel> : _Pool_P_LS_S9<psel> {
   bits<5> op;
-  bits<14> addr;
-  bits<5> base = addr{13-9};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
   let Inst{25-21} = op;
   let Inst{20-16} = base;
   let Inst{15} = offset{8};
@@ -884,9 +878,8 @@ class CACHE_PREFs9_Enc<bits<3> psel, bits<4> isel> : _Pool_P_LS_S9<psel> {
 
 class PREF_Enc : _Pool_P_LS_U12<0b0011> {
   bits<5> op;
-  bits<17> addr;
-  bits<5> base = addr{16-12};
-  bits<12> offset = addr{11-0};
+  bits<5> base;
+  bits<12> offset;
   let Inst{25-21} = op;
   let Inst{20-16} = base;
   let Inst{11-0} = offset{11-0};
@@ -901,9 +894,8 @@ class SYNC_Enc : _Pool_P_SHIFT<0b0000> {
 }
 
 class SYNCIs9_SYNCIE_Enc<bits<3> psel, bits<4> isel> : _Pool_P_LS_S9<psel> {
-  bits<14> addr;
-  bits<5> base = addr{13-9};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
   let Inst{25-21} = 0b11111;
   let Inst{20-16} = base;
   let Inst{15} = offset{8};
@@ -912,9 +904,8 @@ class SYNCIs9_SYNCIE_Enc<bits<3> psel, bits<4> isel> : _Pool_P_LS_S9<psel> {
 }
 
 class SYNCI_Enc : _Pool_P_LS_U12<0b0011> {
-  bits<17> addr;
-  bits<5> base = addr{16-12};
-  bits<12> offset = addr{11-0};
+  bits<5> base;
+  bits<12> offset;
   let Inst{25-21} = 0b11111;
   let Inst{20-16} = base;
   let Inst{11-0} = offset;

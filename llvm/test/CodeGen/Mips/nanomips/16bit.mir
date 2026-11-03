@@ -4,9 +4,9 @@
 # Encoding tests for 16-bit nanoMIPS instructions (compact ALU, moves,
 # arithmetic, load/store, jumps, branches, save/restore)
 #
-# Since load/store and branch-target operands will be fully supported in the
-# next upstreaming batch, they are set to 0 to allow confirming the mnemonics
-# and encoding of the remaining instruction parts.
+# Since branch-target operands will be fully supported in the next upstreaming
+# batch, they are set to 0 to allow confirming the mnemonics and encoding of the
+# remaining instruction parts.
 # Encoding bytes are shown in on-disk order: each halfword is little-endian,
 # more significant halfword first.
 
@@ -194,141 +194,141 @@ body: |
     $r4 = SUBu16_NM $r5, $r6
 ...
 
-# --- load / store (with placeholder operands for now) ---
+# --- load / store ---
 ---
 # CHECK-LABEL: lb16:
-# CHECK: lb $4, 0 # encoding: [0x00,0x5e]
+# CHECK: lb $4, 0($5) # encoding: [0x50,0x5e]
 name: lb16
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LB16_NM 0
+    $r4 = LB16_NM $r5, 0
 ...
 ---
 # CHECK-LABEL: lbu16:
-# CHECK: lbu $4, 0 # encoding: [0x08,0x5e]
+# CHECK: lbu $4, 0($5) # encoding: [0x58,0x5e]
 name: lbu16
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LBU16_NM 0
+    $r4 = LBU16_NM $r5, 0
 ...
 ---
 # CHECK-LABEL: lh16:
-# CHECK: lh $4, 0 # encoding: [0x00,0x7e]
+# CHECK: lh $4, 0($5) # encoding: [0x50,0x7e]
 name: lh16
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LH16_NM 0
+    $r4 = LH16_NM $r5, 0
 ...
 ---
 # CHECK-LABEL: lhu16:
-# CHECK: lhu $4, 0 # encoding: [0x08,0x7e]
+# CHECK: lhu $4, 0($5) # encoding: [0x58,0x7e]
 name: lhu16
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LHU16_NM 0
+    $r4 = LHU16_NM $r5, 0
 ...
 ---
 # CHECK-LABEL: lw16:
-# CHECK: lw $4, 0 # encoding: [0x00,0x16]
+# CHECK: lw $4, 0($5) # encoding: [0x50,0x16]
 name: lw16
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LW16_NM 0
+    $r4 = LW16_NM $r5, 0
 ...
 ---
 # CHECK-LABEL: lw4x4:
-# CHECK: lw $4, 0 # encoding: [0x80,0x74]
+# CHECK: lw $4, 0($5) # encoding: [0x85,0x74]
 name: lw4x4
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LW4x4_NM 0
+    $r4 = LW4x4_NM $r5, 0
 ...
 ---
 # CHECK-LABEL: lwgp16:
-# CHECK: lw $4, 0 # encoding: [0x00,0x56]
+# CHECK: lw $4, 0($gp) # encoding: [0x00,0x56]
 name: lwgp16
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LWGP16_NM 0
+    $r4 = LWGP16_NM $r28, 0
 ...
 ---
 # CHECK-LABEL: lwsp16:
-# CHECK: lw $4, 0 # encoding: [0x80,0x34]
+# CHECK: lw $4, 0($sp) # encoding: [0x80,0x34]
 name: lwsp16
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LWSP16_NM 0
+    $r4 = LWSP16_NM $r29, 0
 ...
 ---
 # CHECK-LABEL: lwxs16:
-# CHECK: lwxs $4, 0 # encoding: [0x09,0x50]
+# CHECK: lwxs $4, $6($5) # encoding: [0xe9,0x52]
 name: lwxs16
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = LWXS16_NM 0
+    $r4 = LWXS16_NM $r5, $r6
 ...
 ---
 # CHECK-LABEL: sb16:
-# CHECK: sb $4, 0 # encoding: [0x04,0x5e]
+# CHECK: sb $4, 0($5) # encoding: [0x54,0x5e]
 name: sb16
 tracksRegLiveness: false
 body: |
   bb.0:
-    SB16_NM $r4, 0
+    SB16_NM $r4, $r5, 0
 ...
 ---
 # CHECK-LABEL: sh16:
-# CHECK: sh $4, 0 # encoding: [0x01,0x7e]
+# CHECK: sh $4, 0($5) # encoding: [0x51,0x7e]
 name: sh16
 tracksRegLiveness: false
 body: |
   bb.0:
-    SH16_NM $r4, 0
+    SH16_NM $r4, $r5, 0
 ...
 ---
 # CHECK-LABEL: sw16:
-# CHECK: sw $4, 0 # encoding: [0x00,0x96]
+# CHECK: sw $4, 0($5) # encoding: [0x50,0x96]
 name: sw16
 tracksRegLiveness: false
 body: |
   bb.0:
-    SW16_NM $r4, 0
+    SW16_NM $r4, $r5, 0
 ...
 ---
 # CHECK-LABEL: sw4x4:
-# CHECK: sw $4, 0 # encoding: [0x80,0xf4]
+# CHECK: sw $4, 0($5) # encoding: [0x85,0xf4]
 name: sw4x4
 tracksRegLiveness: false
 body: |
   bb.0:
-    SW4x4_NM $r4, 0
+    SW4x4_NM $r4, $r5, 0
 ...
 ---
 # CHECK-LABEL: swgp16:
-# CHECK: sw $4, 0 # encoding: [0x00,0xd6]
+# CHECK: sw $4, 0($gp) # encoding: [0x00,0xd6]
 name: swgp16
 tracksRegLiveness: false
 body: |
   bb.0:
-    SWGP16_NM $r4, 0
+    SWGP16_NM $r4, $r28, 0
 ...
 ---
 # CHECK-LABEL: swsp16:
-# CHECK: sw $4, 0 # encoding: [0x80,0xb4]
+# CHECK: sw $4, 0($sp) # encoding: [0x80,0xb4]
 name: swsp16
 tracksRegLiveness: false
 body: |
   bb.0:
-    SWSP16_NM $r4, 0
+    SWSP16_NM $r4, $r29, 0
 ...
 
 # --- jump ---

@@ -54,12 +54,8 @@ def mem_nm_gp18 : Operand<iPTR>;
 def mem_nm_gp17s1 : Operand<iPTR>;
 def mem_nm_u12 : Operand<iPTR>;
 def mem_nm_s9 : Operand<iPTR>;
-def mem_nm_rx : Operand<iPTR>;
-def mem_nm_rx16 : Operand<iPTR>;
 def mem_nm_4s2 : Operand<iPTR>;
 def mem_nm_7s2 : Operand<iPTR>;
-def mem_nm_0 : Operand<iPTR>;
-def mem_nm_0_no_offset : Operand<iPTR>;
 
 def reglist16_nm : Operand<OtherVT>;
 def reglist_nm : Operand<OtherVT>;
@@ -578,69 +574,94 @@ let hasNoSchedulingInfo = 1, hasDelaySlot = 0 in {
 // Load / store instructions
 //
 //===----------------------------------------------------------------------===//
-class LoadAsm_Desc<string opstr, RegisterOperand RO, DAGOperand MO>
-  : InstNM<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr")>;
+class LoadAsm_Desc<string opstr, RegisterOperand RO, DAGOperand BO,
+                   DAGOperand MO>
+  : InstNM<(outs RO:$rt), (ins BO:$base, MO:$offset),
+           !strconcat(opstr, "\t$rt, ${offset}(${base})")>;
 
-class StoreAsm_Desc<string opstr, RegisterOperand RO, DAGOperand MO>
-  : InstNM<(outs), (ins RO:$rt, MO:$addr), !strconcat(opstr, "\t$rt, $addr")>;
+class StoreAsm_Desc<string opstr, RegisterOperand RO, DAGOperand BO,
+                    DAGOperand MO>
+  : InstNM<(outs), (ins RO:$rt, BO:$base, MO:$offset),
+           !strconcat(opstr, "\t$rt, ${offset}(${base})")>;
 
-def LWSP16_NM : LoadAsm_Desc<"lw", GPRNM32Opnd, mem_nm_sp5s2>,
+def LWSP16_NM : LoadAsm_Desc<"lw", GPRNM32Opnd, MemBaseSP, mem_nm_sp5s2>,
                 LSSPRegMem16_Enc<0b00101>;
-def SWSP16_NM : StoreAsm_Desc<"sw", GPRNM32Opnd, mem_nm_sp5s2>,
+def SWSP16_NM : StoreAsm_Desc<"sw", GPRNM32Opnd, MemBaseSP, mem_nm_sp5s2>,
                 LSSPRegMem16_Enc<0b10101>;
-def LWGP16_NM : LoadAsm_Desc<"lw", GPRNM16R3Opnd, mem_nm_gp7s2>,
+def LWGP16_NM : LoadAsm_Desc<"lw", GPRNM16R3Opnd, MemBaseGP, mem_nm_gp7s2>,
                 LSGPRegMem16_Enc<0b01001>;
-def SWGP16_NM : StoreAsm_Desc<"sw", GPRNM16R3ZOpnd, mem_nm_gp7s2>,
+def SWGP16_NM : StoreAsm_Desc<"sw", GPRNM16R3ZOpnd, MemBaseGP, mem_nm_gp7s2>,
                 LSGPRegMem16_Enc<0b11001>;
 
-def LW16_NM  : LoadAsm_Desc<"lw", GPRNM16R3Opnd, mem_nm_6s2>,
+def LW16_NM  : LoadAsm_Desc<"lw", GPRNM16R3Opnd, GPRNM16R3Opnd, mem_nm_6s2>,
                LSMem16_Enc<0b00001>;
-def SW16_NM  : StoreAsm_Desc<"sw", GPRNM16R3ZOpnd, mem_nm_6s2>,
+def SW16_NM  : StoreAsm_Desc<"sw", GPRNM16R3ZOpnd, GPRNM16R3Opnd, mem_nm_6s2>,
                LSMem16_Enc<0b10001>;
-def LH16_NM  : LoadAsm_Desc<"lh", GPRNM16R3Opnd, mem_nm_3s1>,
+def LH16_NM  : LoadAsm_Desc<"lh", GPRNM16R3Opnd, GPRNM16R3Opnd, mem_nm_3s1>,
                LHMem16_Enc<0b00>;
-def LHU16_NM : LoadAsm_Desc<"lhu", GPRNM16R3Opnd, mem_nm_3s1>,
+def LHU16_NM : LoadAsm_Desc<"lhu", GPRNM16R3Opnd, GPRNM16R3Opnd, mem_nm_3s1>,
                LHMem16_Enc<0b10>;
-def SH16_NM  : StoreAsm_Desc<"sh", GPRNM16R3ZOpnd, mem_nm_3s1>,
+def SH16_NM  : StoreAsm_Desc<"sh", GPRNM16R3ZOpnd, GPRNM16R3Opnd, mem_nm_3s1>,
                LHMem16_Enc<0b01>;
 
-def LB16_NM  : LoadAsm_Desc<"lb", GPRNM16R3Opnd, mem_nm_2>,
+def LB16_NM  : LoadAsm_Desc<"lb", GPRNM16R3Opnd, GPRNM16R3Opnd, mem_nm_2>,
                LBMem16_Enc<0b00>;
-def LBU16_NM : LoadAsm_Desc<"lbu", GPRNM16R3Opnd, mem_nm_2>,
+def LBU16_NM : LoadAsm_Desc<"lbu", GPRNM16R3Opnd, GPRNM16R3Opnd, mem_nm_2>,
                LBMem16_Enc<0b10>;
-def SB16_NM  : StoreAsm_Desc<"sb", GPRNM16R3ZOpnd, mem_nm_2>,
+def SB16_NM  : StoreAsm_Desc<"sb", GPRNM16R3ZOpnd, GPRNM16R3Opnd, mem_nm_2>,
                LBMem16_Enc<0b01>;
 
-class LoadMemory_Desc<string opstr, RegisterOperand RO, DAGOperand MO>
-  : InstNM<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr")> {
+class LoadMemory_Desc<string opstr, RegisterOperand RO, DAGOperand MO,
+                      DAGOperand BO = MemBase>
+  : InstNM<(outs RO:$rt), (ins BO:$base, MO:$offset),
+           !strconcat(opstr, "\t$rt, ${offset}(${base})")> {
   let canFoldAsLoad = 1;
   let mayLoad = 1;
   string BaseOpcode = opstr;
 }
 
-class StoreMemory_Desc<string opstr, RegisterOperand RO, DAGOperand MO>
-  : InstNM<(outs), (ins RO:$rt, MO:$addr), !strconcat(opstr, "\t$rt, $addr")> {
+class StoreMemory_Desc<string opstr, RegisterOperand RO, DAGOperand MO,
+                       DAGOperand BO = MemBase>
+  : InstNM<(outs), (ins RO:$rt, BO:$base, MO:$offset),
+           !strconcat(opstr, "\t$rt, ${offset}(${base})")> {
   let mayStore = 1;
   string BaseOpcode = opstr;
 }
 
-def LWGP_NM : LoadMemory_Desc<"lw", GPRNM32Opnd, mem_nm_gp19s2>,
+class LoadMemoryX_Desc<string opstr, RegisterOperand RO,
+                       RegisterOperand BO = MemBase,
+                       RegisterOperand IO = GPRNM32Opnd>
+  : InstNM<(outs RO:$rt), (ins BO:$base, IO:$index),
+           !strconcat(opstr, "\t$rt, ${index}(${base})")> {
+  let canFoldAsLoad = 1;
+  let mayLoad = 1;
+  string BaseOpcode = opstr;
+}
+
+class StoreMemoryX_Desc<string opstr, RegisterOperand RO>
+  : InstNM<(outs), (ins RO:$rt, MemBase:$base, GPRNM32Opnd:$index),
+           !strconcat(opstr, "\t$rt, ${index}(${base})")> {
+  let mayStore = 1;
+  string BaseOpcode = opstr;
+}
+
+def LWGP_NM : LoadMemory_Desc<"lw", GPRNM32Opnd, mem_nm_gp19s2, MemBaseGP>,
               LSMemGP19S2_Enc<0b10>;
-def SWGP_NM : StoreMemory_Desc<"sw", GPRNM32Opnd, mem_nm_gp19s2>,
+def SWGP_NM : StoreMemory_Desc<"sw", GPRNM32Opnd, mem_nm_gp19s2, MemBaseGP>,
               LSMemGP19S2_Enc<0b11>;
 
-def LBGP_NM  : LoadMemory_Desc<"lb", GPRNM32Opnd, mem_nm_gp18>,
+def LBGP_NM  : LoadMemory_Desc<"lb", GPRNM32Opnd, mem_nm_gp18, MemBaseGP>,
                LSMemGP18_Enc<0b000>;
-def SBGP_NM  : StoreMemory_Desc<"sb", GPRNM32Opnd, mem_nm_gp18>,
+def SBGP_NM  : StoreMemory_Desc<"sb", GPRNM32Opnd, mem_nm_gp18, MemBaseGP>,
                LSMemGP18_Enc<0b001>;
-def LBUGP_NM : LoadMemory_Desc<"lbu", GPRNM32Opnd, mem_nm_gp18>,
+def LBUGP_NM : LoadMemory_Desc<"lbu", GPRNM32Opnd, mem_nm_gp18, MemBaseGP>,
                LSMemGP18_Enc<0b010>;
 
-def LHGP_NM  : LoadMemory_Desc<"lh", GPRNM32Opnd, mem_nm_gp17s1>,
+def LHGP_NM  : LoadMemory_Desc<"lh", GPRNM32Opnd, mem_nm_gp17s1, MemBaseGP>,
                LSMemGP17S1_Enc<0b1000>;
-def SHGP_NM  : StoreMemory_Desc<"sh", GPRNM32Opnd, mem_nm_gp17s1>,
+def SHGP_NM  : StoreMemory_Desc<"sh", GPRNM32Opnd, mem_nm_gp17s1, MemBaseGP>,
                LSMemGP17S1_Enc<0b1010>;
-def LHUGP_NM : LoadMemory_Desc<"lhu", GPRNM32Opnd, mem_nm_gp17s1>,
+def LHUGP_NM : LoadMemory_Desc<"lhu", GPRNM32Opnd, mem_nm_gp17s1, MemBaseGP>,
                LSMemGP17S1_Enc<0b1001>;
 
 def LB_NM : LoadMemory_Desc<"lb", GPRNM32Opnd, mem_nm_u12>,
@@ -677,47 +698,48 @@ def LBUs9_NM : LoadMemory_Desc<"lbu", GPRNM32Opnd, mem_nm_s9>,
 def LHUs9_NM : LoadMemory_Desc<"lhu", GPRNM32Opnd, mem_nm_s9>,
                LSMem_S9_Enc<0b000, 0b0110>;
 
-def LBX_NM : LoadMemory_Desc<"lbx", GPRNM32Opnd, mem_nm_rx>,
+def LBX_NM : LoadMemoryX_Desc<"lbx", GPRNM32Opnd>,
              LSMemX_Enc<0, 0b0000>;
-def SBX_NM : StoreMemory_Desc<"sbx", GPRNM32Opnd, mem_nm_rx>,
+def SBX_NM : StoreMemoryX_Desc<"sbx", GPRNM32Opnd>,
              LSMemX_Enc<0, 0b0001>;
-def LHX_NM : LoadMemory_Desc<"lhx", GPRNM32Opnd, mem_nm_rx>,
+def LHX_NM : LoadMemoryX_Desc<"lhx", GPRNM32Opnd>,
              LSMemX_Enc<0, 0b0100>;
-def SHX_NM : StoreMemory_Desc<"shx", GPRNM32Opnd, mem_nm_rx>,
+def SHX_NM : StoreMemoryX_Desc<"shx", GPRNM32Opnd>,
              LSMemX_Enc<0, 0b0101>;
-def LWX_NM : LoadMemory_Desc<"lwx", GPRNM32Opnd, mem_nm_rx>,
+def LWX_NM : LoadMemoryX_Desc<"lwx", GPRNM32Opnd>,
              LSMemX_Enc<0, 0b1000>;
-def SWX_NM : StoreMemory_Desc<"swx", GPRNM32Opnd, mem_nm_rx>,
+def SWX_NM : StoreMemoryX_Desc<"swx", GPRNM32Opnd>,
              LSMemX_Enc<0, 0b1001>;
-def LBUX_NM : LoadMemory_Desc<"lbux", GPRNM32Opnd, mem_nm_rx>,
+def LBUX_NM : LoadMemoryX_Desc<"lbux", GPRNM32Opnd>,
               LSMemX_Enc<0, 0b0010>;
-def LHUX_NM : LoadMemory_Desc<"lhux", GPRNM32Opnd, mem_nm_rx>,
+def LHUX_NM : LoadMemoryX_Desc<"lhux", GPRNM32Opnd>,
               LSMemX_Enc<0, 0b0110>;
 
-def LHXS_NM : LoadMemory_Desc<"lhxs", GPRNM32Opnd, mem_nm_rx>,
+def LHXS_NM : LoadMemoryX_Desc<"lhxs", GPRNM32Opnd>,
               LSMemX_Enc<0b1, 0b0100>;
-def SHXS_NM : StoreMemory_Desc<"shxs", GPRNM32Opnd, mem_nm_rx>,
+def SHXS_NM : StoreMemoryX_Desc<"shxs", GPRNM32Opnd>,
               LSMemX_Enc<0b1, 0b0101>;
-def LHUXS_NM : LoadMemory_Desc<"lhuxs", GPRNM32Opnd, mem_nm_rx>,
+def LHUXS_NM : LoadMemoryX_Desc<"lhuxs", GPRNM32Opnd>,
                LSMemX_Enc<0b1, 0b0110>;
-def LWXS16_NM : LoadAsm_Desc<"lwxs", GPRNM16R3Opnd, mem_nm_rx16>,
+def LWXS16_NM : LoadMemoryX_Desc<"lwxs", GPRNM16R3Opnd, GPRNM16R3Opnd,
+                                 GPRNM16R3Opnd>,
                 LSMemXS16_Enc;
-def LWXS_NM : LoadMemory_Desc<"lwxs", GPRNM32Opnd, mem_nm_rx>,
+def LWXS_NM : LoadMemoryX_Desc<"lwxs", GPRNM32Opnd>,
               LSMemX_Enc<0b1, 0b1000>;
-def SWXS_NM : StoreMemory_Desc<"swxs", GPRNM32Opnd, mem_nm_rx>,
+def SWXS_NM : StoreMemoryX_Desc<"swxs", GPRNM32Opnd>,
               LSMemX_Enc<0b1, 0b1001>;
 
 class UnalignedLoad_Desc<string opstr, RegisterOperand RO = GPRNM32Opnd>
-  : InstNM<(outs RO:$rt), (ins mem_nm_s9:$addr, RO:$src),
-           !strconcat(opstr, "\t$rt, $addr")>,
+  : InstNM<(outs RO:$rt), (ins MemBase:$base, mem_nm_s9:$offset, RO:$src),
+           !strconcat(opstr, "\t$rt, ${offset}(${base})")>,
     RegConstraint<"$src = $rt"> {
   let mayLoad = 1;
   let canFoldAsLoad = 1;
 }
 
 class UnalignedStore_Desc<string opstr, RegisterOperand RO = GPRNM32Opnd>
-  : InstNM<(outs), (ins RO:$rt, mem_nm_s9:$addr),
-           !strconcat(opstr, "\t$rt, $addr")> {
+  : InstNM<(outs), (ins RO:$rt, MemBase:$base, mem_nm_s9:$offset),
+           !strconcat(opstr, "\t$rt, ${offset}(${base})")> {
   let mayStore = 1;
 }
 
@@ -744,15 +766,16 @@ def RESTOREJRC_NM : SaveRestore_Desc<"restore.jrc", uimm12s3_nm, reglist_nm>,
 
 class LoadMultiple_Desc<string opstr>
   : InstNM<(outs GPRNM32Opnd:$rt),
-           (ins mem_nm_s9:$addr, uimm3plus1_nm:$rcount),
-           !strconcat(opstr, "\t$rt, $addr, $rcount")> {
+           (ins MemBase:$base, mem_nm_s9:$offset, uimm3plus1_nm:$rcount),
+           !strconcat(opstr, "\t$rt, ${offset}(${base}), $rcount")> {
   let mayLoad = 1;
 }
 
 class StoreMultiple_Desc<string opstr>
   : InstNM<(outs),
-           (ins GPRNM32Opnd:$rt, mem_nm_s9:$addr, uimm3plus1_nm:$rcount),
-           !strconcat(opstr, "\t$rt, $addr, $rcount")> {
+           (ins GPRNM32Opnd:$rt, MemBase:$base, mem_nm_s9:$offset,
+            uimm3plus1_nm:$rcount),
+           !strconcat(opstr, "\t$rt, ${offset}(${base}), $rcount")> {
   let mayStore = 1;
 }
 
@@ -781,9 +804,9 @@ def SWPC_NM : StorePCBase_Desc<GPRNM32Opnd, sym32_pc_nm>,
 def LWPC_NM : LoadPCBase_Desc<GPRNM32Opnd, sym32_pc_nm>,
               Op48_Addr_Enc<0b01011>;
 
-def LW4x4_NM : LoadAsm_Desc<"lw", GPRNM4Opnd, mem_nm_4s2>,
+def LW4x4_NM : LoadAsm_Desc<"lw", GPRNM4Opnd, GPRNM4Opnd, mem_nm_4s2>,
                LSMem4x4_Enc<0b01101>;
-def SW4x4_NM : StoreAsm_Desc<"sw", GPRNM4ZOpnd, mem_nm_4s2>,
+def SW4x4_NM : StoreAsm_Desc<"sw", GPRNM4ZOpnd, GPRNM4Opnd, mem_nm_4s2>,
                LSMem4x4_Enc<0b11101>;
 
 def MOVE_NM : MoveBase_Desc, MOVE_Enc;
@@ -796,8 +819,9 @@ def MOVEPREV_NM : MovePBase_Desc<GPRNM2R1Opnd, GPRNM2R2Opnd,
                   MOVEPREV_Enc<0b11111>;
 
 class SC_Desc<string opstr>
-  : InstNM<(outs GPRNM32Opnd:$dst), (ins GPRNM32Opnd:$rt, mem_nm_7s2:$addr),
-           !strconcat(opstr, "\t$rt, $addr")>,
+  : InstNM<(outs GPRNM32Opnd:$dst),
+           (ins GPRNM32Opnd:$rt, MemBase:$base, mem_nm_7s2:$offset),
+           !strconcat(opstr, "\t$rt, ${offset}(${base})")>,
     RegConstraint<"$rt = $dst"> {
   let mayStore = 1;
 }
@@ -808,20 +832,20 @@ let hasNoSchedulingInfo = 1 in {
   def SC_NM  : SC_Desc<"sc">, LLSC_Enc<0b001, 0b1011>;
 }
 
-class LLWP_Desc<string opstr, DAGOperand MO>
-  : InstNM<(outs GPRNM32Opnd:$rt, GPRNM32Opnd:$ru), (ins MO:$addr),
-           !strconcat(opstr, "\t$rt, $ru, $addr")> {
+class LLWP_Desc<string opstr>
+  : InstNM<(outs GPRNM32Opnd:$rt, GPRNM32Opnd:$ru), (ins MemBase:$base),
+           !strconcat(opstr, "\t$rt, $ru, (${base})")> {
   let canFoldAsLoad = 1;
   let mayLoad = 1;
   string BaseOpcode = "llwp";
 }
 
-def LLWP_NM : LLWP_Desc<"llwp", mem_nm_0_no_offset>, LLSCWP_Enc<0b001, 0b1010>;
+def LLWP_NM : LLWP_Desc<"llwp">, LLSCWP_Enc<0b001, 0b1010>;
 
 class SCWP_Desc<string opstr>
   : InstNM<(outs GPRNM32Opnd:$dst),
-           (ins GPRNM32Opnd:$rt, GPRNM32Opnd:$ru, mem_nm_0:$addr),
-           !strconcat(opstr, "\t$rt, $ru, $addr")>,
+           (ins GPRNM32Opnd:$rt, GPRNM32Opnd:$ru, MemBase:$base),
+           !strconcat(opstr, "\t$rt, $ru, (${base})")>,
     RegConstraint<"$dst = $rt"> {
   let mayStore = 1;
   string BaseOpcode = "scwp";
@@ -908,7 +932,8 @@ def BYTEREVW_NM : RotxAlias_Desc<"byterevw">, RotxAlias_Enc<24, 8, 0>;
 def ROTX_NM : ROTX_Desc, ROTX_Enc;
 
 class CacheOp_Desc<string opstr, Operand Od, DAGOperand MO>
-  : InstNM<(outs), (ins Od:$op, MO:$addr), !strconcat(opstr, "\t$op, $addr")>;
+  : InstNM<(outs), (ins Od:$op, MemBase:$base, MO:$offset),
+           !strconcat(opstr, "\t$op, ${offset}(${base})")>;
 
 def CACHE_NM  : CacheOp_Desc<"cache", uimm5, mem_nm_s9>,
                 CACHE_PREFs9_Enc<0b001, 0b0111>;
@@ -922,7 +947,8 @@ class SyncOp_Desc<string opstr, DAGOperand MO>
   : InstNM<(outs), (ins MO:$stype), !strconcat(opstr, "\t$stype")>;
 
 class SyncIOp_Desc<string opstr, DAGOperand MO>
-  : InstNM<(outs), (ins MO:$addr), !strconcat(opstr, "\t$addr")>;
+  : InstNM<(outs), (ins MemBase:$base, MO:$offset),
+           !strconcat(opstr, "\t${offset}(${base})")>;
 
 def SYNC_NM : SyncOp_Desc<"sync", uimm5>, SYNC_Enc;
 
