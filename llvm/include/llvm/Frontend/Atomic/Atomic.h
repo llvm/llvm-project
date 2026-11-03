@@ -62,7 +62,8 @@ public:
                                    bool CmpXchg = false);
 
   LLVM_ABI CallInst *EmitAtomicLibcall(StringRef fnName, Type *ResultType,
-                                       ArrayRef<Value *> Args);
+                                       ArrayRef<Value *> Args,
+                                       AttributeList ParamAttrs = {});
 
   Value *getAtomicSizeValue() const {
     LLVMContext &ctx = getLLVMContext();
