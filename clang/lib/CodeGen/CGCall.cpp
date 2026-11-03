@@ -4400,6 +4400,10 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
 void CodeGenFunction::EmitFunctionEpilog(
     const CGFunctionInfo &FI, bool EmitRetDbgLoc, SourceLocation EndLoc,
     uint64_t RetKeyInstructionsSourceAtom) {
+  // Nothing to do if the function body already emitted a return.
+  if (!HaveInsertPoint())
+    return;
+
   if (FI.isNoReturn()) {
     // Noreturn functions don't return.
     EmitUnreachable(EndLoc);
@@ -6698,7 +6702,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     else
       Builder.CreateRet(CI);
     Builder.ClearInsertionPoint();
-    EnsureInsertPoint();
     return GetUndefRValue(RetTy);
   }
 
