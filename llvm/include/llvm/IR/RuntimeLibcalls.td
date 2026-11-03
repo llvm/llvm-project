@@ -2398,98 +2398,92 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<isAArch64_ExceptArm64EC,
 
 // These are not the exact x87 soft-float helpers of libgcc: The value stays
 // an 80-bit x87 image in a 16-byte slot, but every operation on it is carried
-// out in `double`. These are named with an `__arm64ec_` prefix so they will
-// not be confused with, or silently bound to, an exact implementation of the
-// same format.
+// out in `double`. These are ARM64EC-only, so they already carry the `#`
+// decoration. An additional `__arm64ec_` keeps them from being confused with,
+// or silently bound to, an exact implementation of the same format.
 defset list<RuntimeLibcallImpl> Arm64ECF80Impls = {
-  def arm64ec___addxf3 : RuntimeLibcallImpl<ADD_F80, "__arm64ec_addxf3">;
-  def arm64ec___subxf3 : RuntimeLibcallImpl<SUB_F80, "__arm64ec_subxf3">;
-  def arm64ec___mulxf3 : RuntimeLibcallImpl<MUL_F80, "__arm64ec_mulxf3">;
-  def arm64ec___divxf3 : RuntimeLibcallImpl<DIV_F80, "__arm64ec_divxf3">;
-  def arm64ec___fmaxf3 : RuntimeLibcallImpl<FMA_F80, "__arm64ec_fmaxf3">;
-  def arm64ec___fmaxxf3 : RuntimeLibcallImpl<FMAX_F80, "__arm64ec_fmaxxf3">;
-  def arm64ec___fminxf3 : RuntimeLibcallImpl<FMIN_F80, "__arm64ec_fminxf3">;
-  def arm64ec___powixf2 : RuntimeLibcallImpl<POWI_F80, "__arm64ec_powixf2">;
+  def arm64ec___addxf3 : RuntimeLibcallImpl<ADD_F80, "#__arm64ec_addxf3">;
+  def arm64ec___subxf3 : RuntimeLibcallImpl<SUB_F80, "#__arm64ec_subxf3">;
+  def arm64ec___mulxf3 : RuntimeLibcallImpl<MUL_F80, "#__arm64ec_mulxf3">;
+  def arm64ec___divxf3 : RuntimeLibcallImpl<DIV_F80, "#__arm64ec_divxf3">;
+  def arm64ec___powixf2 : RuntimeLibcallImpl<POWI_F80, "#__arm64ec_powixf2">;
 
   def arm64ec___eqxf2
-      : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F80, "__arm64ec_eqxf2">;
+      : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F80, "#__arm64ec_eqxf2">;
   def arm64ec___nexf2
-      : RuntimeLibcallImpl<FCMP3_PRED_UNE_F80, "__arm64ec_nexf2">;
+      : RuntimeLibcallImpl<FCMP3_PRED_UNE_F80, "#__arm64ec_nexf2">;
   def arm64ec___gexf2
-      : RuntimeLibcallImpl<FCMP3_PRED_OGE_F80, "__arm64ec_gexf2">;
+      : RuntimeLibcallImpl<FCMP3_PRED_OGE_F80, "#__arm64ec_gexf2">;
   def arm64ec___ltxf2
-      : RuntimeLibcallImpl<FCMP3_PRED_OLT_F80, "__arm64ec_ltxf2">;
+      : RuntimeLibcallImpl<FCMP3_PRED_OLT_F80, "#__arm64ec_ltxf2">;
   def arm64ec___lexf2
-      : RuntimeLibcallImpl<FCMP3_PRED_OLE_F80, "__arm64ec_lexf2">;
+      : RuntimeLibcallImpl<FCMP3_PRED_OLE_F80, "#__arm64ec_lexf2">;
   def arm64ec___gtxf2
-      : RuntimeLibcallImpl<FCMP3_PRED_OGT_F80, "__arm64ec_gtxf2">;
-  def arm64ec___unordxf2 : RuntimeLibcallImpl<UO_F80, "__arm64ec_unordxf2">;
+      : RuntimeLibcallImpl<FCMP3_PRED_OGT_F80, "#__arm64ec_gtxf2">;
+  def arm64ec___unordxf2
+      : RuntimeLibcallImpl<UO_F80, "#__arm64ec_unordxf2">;
 
   def arm64ec___extendhfxf2
-      : RuntimeLibcallImpl<FPEXT_F16_F80, "__arm64ec_extendhfxf2">;
+      : RuntimeLibcallImpl<FPEXT_F16_F80, "#__arm64ec_extendhfxf2">;
   def arm64ec___extendsfxf2
-      : RuntimeLibcallImpl<FPEXT_F32_F80, "__arm64ec_extendsfxf2">;
+      : RuntimeLibcallImpl<FPEXT_F32_F80, "#__arm64ec_extendsfxf2">;
   def arm64ec___extenddfxf2
-      : RuntimeLibcallImpl<FPEXT_F64_F80, "__arm64ec_extenddfxf2">;
+      : RuntimeLibcallImpl<FPEXT_F64_F80, "#__arm64ec_extenddfxf2">;
   def arm64ec___extendxftf2
-      : RuntimeLibcallImpl<FPEXT_F80_F128, "__arm64ec_extendxftf2">;
+      : RuntimeLibcallImpl<FPEXT_F80_F128, "#__arm64ec_extendxftf2">;
   def arm64ec___truncxfhf2
-      : RuntimeLibcallImpl<FPROUND_F80_F16, "__arm64ec_truncxfhf2">;
+      : RuntimeLibcallImpl<FPROUND_F80_F16, "#__arm64ec_truncxfhf2">;
   def arm64ec___truncxfbf2
-      : RuntimeLibcallImpl<FPROUND_F80_BF16, "__arm64ec_truncxfbf2">;
+      : RuntimeLibcallImpl<FPROUND_F80_BF16, "#__arm64ec_truncxfbf2">;
   def arm64ec___truncxfsf2
-      : RuntimeLibcallImpl<FPROUND_F80_F32, "__arm64ec_truncxfsf2">;
+      : RuntimeLibcallImpl<FPROUND_F80_F32, "#__arm64ec_truncxfsf2">;
   def arm64ec___truncxfdf2
-      : RuntimeLibcallImpl<FPROUND_F80_F64, "__arm64ec_truncxfdf2">;
+      : RuntimeLibcallImpl<FPROUND_F80_F64, "#__arm64ec_truncxfdf2">;
   def arm64ec___trunctfxf2
-      : RuntimeLibcallImpl<FPROUND_F128_F80, "__arm64ec_trunctfxf2">;
+      : RuntimeLibcallImpl<FPROUND_F128_F80, "#__arm64ec_trunctfxf2">;
   def arm64ec___fixxfsi
-      : RuntimeLibcallImpl<FPTOSINT_F80_I32, "__arm64ec_fixxfsi">;
+      : RuntimeLibcallImpl<FPTOSINT_F80_I32, "#__arm64ec_fixxfsi">;
   def arm64ec___fixxfdi
-      : RuntimeLibcallImpl<FPTOSINT_F80_I64, "__arm64ec_fixxfdi">;
+      : RuntimeLibcallImpl<FPTOSINT_F80_I64, "#__arm64ec_fixxfdi">;
   def arm64ec___fixxfti
-      : RuntimeLibcallImpl<FPTOSINT_F80_I128, "__arm64ec_fixxfti">;
+      : RuntimeLibcallImpl<FPTOSINT_F80_I128, "#__arm64ec_fixxfti">;
   def arm64ec___fixunsxfsi
-      : RuntimeLibcallImpl<FPTOUINT_F80_I32, "__arm64ec_fixunsxfsi">;
+      : RuntimeLibcallImpl<FPTOUINT_F80_I32, "#__arm64ec_fixunsxfsi">;
   def arm64ec___fixunsxfdi
-      : RuntimeLibcallImpl<FPTOUINT_F80_I64, "__arm64ec_fixunsxfdi">;
+      : RuntimeLibcallImpl<FPTOUINT_F80_I64, "#__arm64ec_fixunsxfdi">;
   def arm64ec___fixunsxfti
-      : RuntimeLibcallImpl<FPTOUINT_F80_I128, "__arm64ec_fixunsxfti">;
+      : RuntimeLibcallImpl<FPTOUINT_F80_I128, "#__arm64ec_fixunsxfti">;
   def arm64ec___floatsixf
-      : RuntimeLibcallImpl<SINTTOFP_I32_F80, "__arm64ec_floatsixf">;
+      : RuntimeLibcallImpl<SINTTOFP_I32_F80, "#__arm64ec_floatsixf">;
   def arm64ec___floatdixf
-      : RuntimeLibcallImpl<SINTTOFP_I64_F80, "__arm64ec_floatdixf">;
+      : RuntimeLibcallImpl<SINTTOFP_I64_F80, "#__arm64ec_floatdixf">;
   def arm64ec___floattixf
-      : RuntimeLibcallImpl<SINTTOFP_I128_F80, "__arm64ec_floattixf">;
+      : RuntimeLibcallImpl<SINTTOFP_I128_F80, "#__arm64ec_floattixf">;
   def arm64ec___floatunsixf
-      : RuntimeLibcallImpl<UINTTOFP_I32_F80, "__arm64ec_floatunsixf">;
+      : RuntimeLibcallImpl<UINTTOFP_I32_F80, "#__arm64ec_floatunsixf">;
   def arm64ec___floatundixf
-      : RuntimeLibcallImpl<UINTTOFP_I64_F80, "__arm64ec_floatundixf">;
+      : RuntimeLibcallImpl<UINTTOFP_I64_F80, "#__arm64ec_floatundixf">;
   def arm64ec___floatuntixf
-      : RuntimeLibcallImpl<UINTTOFP_I128_F80, "__arm64ec_floatuntixf">;
+      : RuntimeLibcallImpl<UINTTOFP_I128_F80, "#__arm64ec_floatuntixf">;
 }  // Arm64ECF80Impls
 
-// The x87 forms of the C library math functions.  `LibmLibcallImpls` describes
-// them as `long double` implementations, which `DuplicateLibcallImplWithPrefix`
-// cannot copy (their `Provides` is left open until the module's `long double`
-// format is known), so they are spelled out as plain implementations of the F80
-// libcall each of them provides.  `fma` is left out: the fused multiply-add is
-// one of the compiler-rt helpers above.
+// These are C library math functions. The goal is that an operation which
+// results in a call to mingw-w64 CRT for x86_64-w64-mingw32 must also result
+// in a call to mingw-w64 CRT for arm64ec-w64-mingw32. These are ARM64EC-only,
+// so they already carry the `#` decoration.
 defset list<RuntimeLibcallImpl> Arm64ECX87LibmImpls = {
-  foreach entry = !listremove(LibmCoreImpls_ldbl_noFrexpLdexp, [fmal]) in {
+  foreach entry = LibmCoreImpls_ldbl in {
     defvar ldbl = !cast<LongDoubleLibcallImpl>(entry);
     def arm64ec_ldbl_#entry
-        : RuntimeLibcallImpl<ldbl.ProvidesF80, ldbl.LibCallFuncName>;
+        : RuntimeLibcallImpl<ldbl.ProvidesF80, "#"#ldbl.LibCallFuncName>;
   }
 }
 
 // The Windows runtime lacks the f32 and f64 powi helpers, and frexpf/ldexpf.
-// ARM64EC still uses the x87 `long double` format, whose helpers are part of
-// compiler-rt as well.
 defvar Arm64ECCompilerRtImpls =
-    !listconcat(CompilerRtLibgccImpls_core_noPowi, Arm64ECF80Impls);
-defvar Arm64ECLibmImpls = !listconcat(
-    !listremove(LibmCoreImpls_core, LibmFrexpLdexpF32), Arm64ECX87LibmImpls);
+    !listremove(CompilerRtLibgccImpls_core,
+                !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]));
+defvar Arm64ECLibmImpls = !listremove(LibmCoreImpls_core, LibmFrexpLdexpF32);
 
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
@@ -2558,7 +2552,8 @@ def Arm64ECExceptionRuntime : LibcallLibrary<"unwind",
 
 // '#'-prefixed compiler-rt builtins and AArch64 outline atomics.
 def Arm64ECRuntime : LibcallLibrary<"compiler-rt",
-  (add WinArm64ECDefaultRuntimeLibcallImpls), isWindowsArm64EC> {
+  (add WinArm64ECDefaultRuntimeLibcallImpls, Arm64ECF80Impls,
+       Arm64ECX87LibmImpls), isWindowsArm64EC> {
   let Isolated = true;
 }
 

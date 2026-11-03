@@ -49,24 +49,24 @@ define x86_fp80 @f_div(x86_fp80 %a, x86_fp80 %b) {
   ret x86_fp80 %r
 }
 
-; Three-operand helpers: the fused multiply-add lives in the "fmax" family of
-; libgcc, the minimum and maximum in the "fmaxx"/"fminx" ones.
+; `sqrt`, `fma`, `maxnum` and `minnum` are library calls on x86 as well, so they
+; stay libm calls rather than gaining helpers.
 ; CHECK-LABEL: "#f_fma":
-; CHECK: bl "#__arm64ec_fmaxf3"
+; CHECK: bl "#fmal"
 define x86_fp80 @f_fma(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) {
   %r = call x86_fp80 @llvm.fma.f80(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c)
   ret x86_fp80 %r
 }
 
 ; CHECK-LABEL: "#f_maxnum":
-; CHECK: bl "#__arm64ec_fmaxxf3"
+; CHECK: bl "#fmaxl"
 define x86_fp80 @f_maxnum(x86_fp80 %a, x86_fp80 %b) {
   %r = call x86_fp80 @llvm.maxnum.f80(x86_fp80 %a, x86_fp80 %b)
   ret x86_fp80 %r
 }
 
 ; CHECK-LABEL: "#f_minnum":
-; CHECK: bl "#__arm64ec_fminxf3"
+; CHECK: bl "#fminl"
 define x86_fp80 @f_minnum(x86_fp80 %a, x86_fp80 %b) {
   %r = call x86_fp80 @llvm.minnum.f80(x86_fp80 %a, x86_fp80 %b)
   ret x86_fp80 %r
