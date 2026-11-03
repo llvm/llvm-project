@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple=amdgpu13.10 -show-encoding < %s | FileCheck -check-prefixes=GFX13,GFX13-W32 %s
 // RUN: llvm-mc -triple=amdgpu13.10 -show-encoding < %s | %extract-encodings | llvm-mc -triple=amdgpu13.10 -disassemble -show-encoding | FileCheck -check-prefixes=GFX13,GFX13-W32 %s
 // RUN: not llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize64 -show-encoding  < %s | FileCheck -check-prefix=GFX13 %s
-// RUN: not llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize64 -show-encoding -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX13-W64-ERR -implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize64 -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX13-W64-ERR -implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgpu12.50 -show-encoding -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --strict-whitespace %s
 
 flat_atomic_add_f32 v1, v[0:1], v2 offset:-8000000 th:TH_ATOMIC_RETURN

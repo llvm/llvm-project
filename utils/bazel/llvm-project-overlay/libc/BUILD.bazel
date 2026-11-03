@@ -16566,54 +16566,24 @@ libc_math_function(
 
 ############################## inttypes targets ##############################
 
-libc_function(
+alias(
     name = "strtoimax",
-    srcs = ["src/inttypes/strtoimax.cpp"],
-    hdrs = ["src/inttypes/strtoimax.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
-        ":hdr_stdint_proxy",
-    ],
+    actual = "//libc/src/inttypes:strtoimax",
 )
 
-libc_function(
+alias(
     name = "strtoumax",
-    srcs = ["src/inttypes/strtoumax.cpp"],
-    hdrs = ["src/inttypes/strtoumax.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_str_to_integer",
-        ":errno",
-        ":hdr_stdint_proxy",
-    ],
+    actual = "//libc/src/inttypes:strtoumax",
 )
 
-libc_function(
+alias(
     name = "imaxabs",
-    srcs = ["src/inttypes/imaxabs.cpp"],
-    hdrs = ["src/inttypes/imaxabs.h"],
-    deps = [
-        ":__support_common",
-        ":__support_integer_operations",
-        ":__support_macros_config",
-    ],
+    actual = "//libc/src/inttypes:imaxabs",
 )
 
-libc_function(
+alias(
     name = "imaxdiv",
-    srcs = ["src/inttypes/imaxdiv.cpp"],
-    hdrs = ["src/inttypes/imaxdiv.h"],
-    deps = [
-        ":__support_common",
-        ":__support_integer_operations",
-        ":__support_macros_config",
-    ],
+    actual = "//libc/src/inttypes:imaxdiv",
 )
 
 ############################### stdbit targets ###############################

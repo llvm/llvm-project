@@ -12,7 +12,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -22,7 +21,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
@@ -2307,27 +2305,11 @@ void SPIRVNonSemanticDebugHandler::notifyEntryLabelEmitted(
   tryEmitDebugFunctionDefinition(*CurrentMAI);
 }
 
-static void forEachDebugValueLike(const MachineModuleInfo &ModuleInfo,
-                                  function_ref<void(const MachineInstr &)> Fn) {
-  for (const Function &F : *ModuleInfo.getModule()) {
-    const MachineFunction *MF = ModuleInfo.getMachineFunction(F);
-    if (!MF)
-      continue;
-    for (const MachineBasicBlock &MBB : *MF)
-      for (const MachineInstr &MI : MBB)
-        if (MI.isDebugValueLike())
-          Fn(MI);
-  }
-}
-
 void SPIRVNonSemanticDebugHandler::collectDebugExpressions(
+    const SPIRV::ModuleAnalysisInfo &MAI,
     SetVector<const DIExpression *> &Out) const {
-  MachineModuleInfo *ModuleInfo = Asm->MMI;
-  assert(ModuleInfo && "MachineModuleInfo must be set during module output");
-
-  forEachDebugValueLike(*ModuleInfo, [&](const MachineInstr &MI) {
-    Out.insert(MI.getDebugExpression());
-  });
+  for (const MachineInstr *MI : MAI.DebugValueMIs)
+    Out.insert(MI->getDebugExpression());
 }
 
 void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
@@ -2416,7 +2398,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   // directly from the MIR to avoid inconsistencies with those in the LLVM IR
   // module.
   SetVector<const DIExpression *> Expressions;
-  collectDebugExpressions(Expressions);
+  collectDebugExpressions(MAI, Expressions);
   for (const DIExpression *Expr : Expressions)
     if (auto ExprReg = emitDebugExpression(Expr, VoidTypeReg, I32TypeReg,
                                            ExtInstSetReg, MAI))
@@ -2434,22 +2416,20 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   // Repeating the lookups emitDebugBinding() performs emits a type and a
   // constant only for an assignment that will reach a DebugValue.
-  MachineModuleInfo *ModuleInfo = Asm->MMI;
-  assert(ModuleInfo && "MachineModuleInfo must be set during module output");
-  forEachDebugValueLike(*ModuleInfo, [&](const MachineInstr &MI) {
+  for (const MachineInstr *MI : MAI.DebugValueMIs) {
     std::optional<std::pair<const DIBasicType *, uint64_t>> Const =
-        getConstantDbgValueBits(MI);
+        getConstantDbgValueBits(*MI);
     if (!Const)
-      return;
-    if (!DebugLocalVariableRegs.contains(MI.getDebugVariable()) ||
-        !DebugExpressionRegs.contains(MI.getDebugExpression()))
-      return;
+      continue;
+    if (!DebugLocalVariableRegs.contains(MI->getDebugVariable()) ||
+        !DebugExpressionRegs.contains(MI->getDebugExpression()))
+      continue;
     auto [It, Inserted] = ConstantValueRegs.try_emplace(*Const, MCRegister());
     if (Inserted)
       It->second = findOrEmitScalarConstant(Const->first, Const->second, MAI);
     if (!It->second.isValid())
       ConstantValueRegs.erase(It);
-  });
+  }
 
   for (const DILocation *DL : UniqueDebugLocations) {
     emitOpConstantI32(DL->getLine(), I32TypeReg, MAI);

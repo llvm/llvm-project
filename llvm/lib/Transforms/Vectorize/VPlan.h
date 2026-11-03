@@ -56,10 +56,8 @@ namespace llvm {
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
-class IRBuilderBase;
 struct VPTransformState;
 class raw_ostream;
-class RecurrenceDescriptor;
 class SCEV;
 class SCEVPredicate;
 class Type;
@@ -70,7 +68,6 @@ using VPBuilder = VPBuilderBase<>;
 class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
-class VPLane;
 class VPReplicateRecipe;
 class Value;
 class LoopVectorizationCostModel;
@@ -1520,9 +1517,6 @@ public:
   /// ExtractLastActive, FirstActiveLane, LastActiveLane.
   void addOperand(VPValue *Op);
 
-  /// Generate the instruction.
-  /// TODO: We currently execute only per-part unless a specific instance is
-  /// provided.
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPInstruction.

@@ -183,6 +183,7 @@ struct ModuleAnalysisInfo {
     AMDGPUAtomicMDKind Kind;
   };
   SmallVector<InstrAuxDataRecord> InstrAuxDataRecords;
+  SmallVector<const MachineInstr *> DebugValueMIs;
 
   MCRegister getGlobalObjReg(const GlobalObject *GO) {
     assert(GO && "GlobalObject is null");
