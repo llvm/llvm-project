@@ -259,7 +259,6 @@ bool PluginManager::registerImageOnDevice(
   TT.TargetsTable[UserId] = nullptr;
 
   UsedDevices.push_back(DeviceHandle);
-  UsedImages.insert(Img);
   return true;
 }
 
@@ -331,49 +330,10 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Init) << "Done registering entries!";
 }
 
-// Temporary forward declaration, old style CTor/DTor handling is going away.
-int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
-
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Deinit) << "Unloading target library!";
 
   Desc = upgradeLegacyEntries(Desc);
-
-  RTLsMtx.lock();
-  // Find which RTL understands each image, if any.
-  for (DeviceImageTy &DI : deviceImages()) {
-    // Obtain the image and information that was previously extracted.
-    __tgt_device_image *Img = &DI.getExecutableImage();
-
-    GenericPluginTy *FoundRTL = NULL;
-
-    // Scan the RTLs that have associated images until we find one that supports
-    // the current image. We only need to scan RTLs that are already being used.
-    for (auto &R : plugins()) {
-      if (R.is_initialized())
-        continue;
-
-      // Ensure that we do not use any unused images associated with this RTL.
-      if (!UsedImages.contains(Img))
-        continue;
-
-      FoundRTL = &R;
-
-      ODBG(ODT_Deinit) << "Unregistered image " << Img->ImageStart
-                       << " from RTL";
-
-      break;
-    }
-
-    // if no RTL was found proceed to unregister the next image
-    if (!FoundRTL) {
-      ODBG(ODT_Deinit) << "No RTLs in use support the image "
-                       << Img->ImageStart;
-    }
-  }
-  RTLsMtx.unlock();
-  ODBG(ODT_Deinit) << "Done unregistering images!";
 
   // Remove entries from HostPtrToTableMap
   TblMapMtx.lock();
