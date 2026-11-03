@@ -3424,19 +3424,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           IID == Intrinsic::nearbyint || IID == Intrinsic::rint ||
           IID == Intrinsic::trunc;
 
-      // Ignore denormals-as-zero, as canonicalization is not mandated.
       if ((IID == Intrinsic::floor || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal))
         return ConstantFP::getZero(VTy);
 
       if ((IID == Intrinsic::ceil || IsRoundNearestOrTrunc) &&
-          KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal))
+          KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal) &&
+          !Mode.inputsMayBePositiveZero())
         return ConstantFP::getZero(VTy, true);
 
-      if (IID == Intrinsic::floor && KnownSrc.isKnownAlways(fcNegSubnormal))
+      if (IID == Intrinsic::floor && KnownSrc.isKnownAlways(fcNegSubnormal) &&
+          !Mode.inputsMayBeZero())
         return ConstantFP::get(VTy, -1.0);
 
-      if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
+      if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal) &&
+          !Mode.inputsMayBeZero())
         return ConstantFP::get(VTy, 1.0);
 
       switch (IID) {
@@ -3463,7 +3465,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return SingleVal;
 
       if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
-          KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
+          KnownSrc.isKnownAlways(fcZero | fcSubnormal) &&
+          (!Mode.inputsMayBePositiveZero() ||
+           KnownSrc.isKnownNever(fcNegSubnormal))) {
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(CI);
 
