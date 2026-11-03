@@ -7842,7 +7842,7 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function,
 }
 
 template <typename CheckFn>
-static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
+static void diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
                                         bool ArgDependent, SourceLocation Loc,
                                         CheckFn &&IsSuccessful) {
   SmallVector<const DiagnoseIfAttr *, 8> Attrs;
@@ -7853,7 +7853,7 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
 
   // Common case: No diagnose_if attributes, so we can quit early.
   if (Attrs.empty())
-    return false;
+    return;
 
   auto WarningBegin = std::stable_partition(
       Attrs.begin(), Attrs.end(), [](const DiagnoseIfAttr *DIA) {
@@ -7870,7 +7870,7 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
     S.Diag(Loc, diag::err_diagnose_if_succeeded) << DIA->getMessage();
     S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
         << DIA->getParent() << DIA->getCond()->getSourceRange();
-    return true;
+    return;
   }
 
   auto ToSeverity = [](DiagnoseIfAttr::DefaultSeverity Sev) {
@@ -7900,15 +7900,13 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
         S.Diag(Loc, DiagID) << DIA->getMessage();
       }
     }
-
-  return false;
 }
 
-bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
+void Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
                                                const Expr *ThisArg,
                                                ArrayRef<const Expr *> Args,
                                                SourceLocation Loc) {
-  return diagnoseDiagnoseIfAttrsWith(
+  diagnoseDiagnoseIfAttrsWith(
       *this, Function, /*ArgDependent=*/true, Loc,
       [&](const DiagnoseIfAttr *DIA) {
         APValue Result;
@@ -7922,11 +7920,10 @@ bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
       });
 }
 
-bool Sema::diagnoseArgIndependentDiagnoseIfAttrs(const NamedDecl *ND,
+void Sema::diagnoseArgIndependentDiagnoseIfAttrs(const NamedDecl *ND,
                                                  SourceLocation Loc) {
-  return diagnoseDiagnoseIfAttrsWith(
-      *this, ND, /*ArgDependent=*/false, Loc,
-      [&](const DiagnoseIfAttr *DIA) {
+  diagnoseDiagnoseIfAttrsWith(
+      *this, ND, /*ArgDependent=*/false, Loc, [&](const DiagnoseIfAttr *DIA) {
         bool Result;
         return DIA->getCond()->EvaluateAsBooleanCondition(Result, Context) &&
                Result;
