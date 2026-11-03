@@ -8815,7 +8815,7 @@ def warn_exception_caught_by_earlier_handler : Warning<
   InGroup<Exceptions>;
 def note_previous_exception_handler : Note<"for type %0">;
 def err_exceptions_disabled : Error<
-  "cannot use '%0' with exceptions disabled">;
+  "cannot use '%select{throw|try}0' with exceptions disabled">;
 def err_objc_exceptions_disabled : Error<
   "cannot use '%0' with Objective-C exceptions disabled">;
 def warn_throw_in_noexcept_func : Warning<
@@ -9830,8 +9830,17 @@ def err_cuda_unattributed_constexpr_cannot_overload_device : Error<
 def note_cuda_conflicting_device_function_declared_here : Note<
   "conflicting __device__ function declared here">;
 def err_cuda_device_exceptions : Error<
-  "cannot use '%0' in "
+  "cannot use '%select{throw|try}0' in "
   "%select{__device__|__global__|__host__|__host__ __device__}1 function">;
+def err_cuda_device_rtti : Error<
+  "cannot use '%0' in "
+  "%select{__device__|__global__|__host__|__host__ __device__}1 function as "
+  "RTTI is not available in device code">;
+def err_cuda_device_rtti_var_init : Error<
+  "cannot use '%0' in the initializer of a device variable as RTTI is not "
+  "available in device code">;
+def note_cuda_device_rtti_default_used_here : Note<
+  "%select{default member initializer|default argument}0 used here">;
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, __shared__, and __managed__ variables">;
@@ -11101,6 +11110,10 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
+def note_lifetime_safety_used_by_destructor
+    : Note<"later used by the destructor of %0 at scope exit">;
+def note_lifetime_safety_used_by_cleanup
+    : Note<"later used by the cleanup function of %0 at scope exit">;
 def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"%0 is destroyed here">;
 def note_lifetime_safety_freed_here : Note<"%0 is freed here">;
@@ -11163,6 +11176,14 @@ def warn_lifetime_safety_noescape_escapes
 def warn_lifetime_safety_field_origin_escape
     : Warning<"return value depends on the object referenced by %0, not on '*this'">,
       InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_scope
+    : Warning<"%0 does not live long enough">,
+      InGroup<LifetimeSafetyDestructorUse>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_invalidation
+    : Warning<"%0 is later invalidated">,
+      InGroup<LifetimeSafetyDestructorUse>,
       DefaultIgnore;
 
 def note_lifetime_safety_owned_field_suggestion
@@ -11911,8 +11932,10 @@ def err_opencl_global_invalid_addr_space : Error<
   "%select{program scope|static local|extern}0 variable must reside in %1 address space">;
 def err_missing_actual_pipe_type : Error<
   "missing actual type specifier for pipe">;
-def err_reference_pipe_type : Error <
-  "pipes packet types cannot be of reference type">;
+def err_invalid_pipe_packet_type : Error<
+  "%select{pointer|reference|block pointer|non-object|incomplete}0 type %1 "
+  "cannot be used as a pipe packet type">,
+  LegacyStableIds<["err_reference_pipe_type"]>;
 def err_opencl_no_main : Error<"%select{function|kernel}0 cannot be called 'main'">;
 def err_opencl_kernel_attr :
   Error<"attribute %0 can only be applied to an OpenCL kernel function">;
@@ -12140,6 +12163,8 @@ def warn_omp_minus_in_reduction_deprecated : Warning<
   InGroup<Deprecated>;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
+def err_omp_unexpected_clause_modifier : Error<
+  "unexpected modifier in OpenMP clause '%0'">;
 def err_omp_unexpected_call_to_omp_runtime_api
     : Error<"calls to OpenMP runtime API are not allowed within a region that "
             "corresponds to a construct with an order clause that specifies "
@@ -12347,8 +12372,8 @@ def err_omp_collapse_stacked_tile : Error<
   "cannot %select{collapse|apply a loop transformation to}0 the intra-tile loop "
   "of a '#pragma omp tile' that is nested inside another loop-transforming "
   "directive; OpenMP permits this construct, but it is not yet supported">;
-def err_omp_simd_region_cannot_use_stmt : Error<
-  "'%0' statement cannot be used in OpenMP simd region">;
+def err_omp_simd_region_cannot_use_exceptions : Error<
+  "'%select{throw|try}0' cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<
   "OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed">,
   InGroup<OpenMPLoopForm>;
@@ -12388,7 +12413,8 @@ def err_omp_prohibited_region : Error<
   "; perhaps you forget to enclose 'omp %3' directive into a teams region?|"
   "; perhaps you forget to enclose 'omp %3' directive into a for, simd, for simd, parallel for, or parallel for simd region?}2">;
 def err_omp_prohibited_region_simd : Error<
-  "OpenMP constructs may not be nested inside a simd region%select{| except for ordered simd, simd, scan, or atomic directive}0">;
+  "OpenMP constructs may not be nested inside a simd region%select{| except for ordered simd, simd, scan, atomic, or loop directive"
+  "| except for ordered simd, simd, scan, atomic, loop, or loop-transforming directive}0">;
 def err_omp_prohibited_region_atomic : Error<
   "OpenMP constructs may not be nested inside an atomic region">;
 def err_omp_prohibited_region_order
@@ -12859,6 +12885,9 @@ def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;
 def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
+def err_omp_adjust_args_invalid_item : Error<
+  "expected a parameter name, a parameter position, or a parameter range in "
+  "'adjust_args' clause">;
 def err_omp_clause_requires_dispatch_construct : Error<
   "'%0' clause requires 'dispatch' context selector">;
 def err_omp_append_args_with_varargs : Error<
@@ -13595,6 +13624,10 @@ def err_sycl_external_invalid_main : Error<
   "%0 cannot be applied to the 'main' function">;
 def err_sycl_external_invalid_deleted_function : Error<
   "%0 cannot be applied to an explicitly deleted function">;
+def warn_sycl_external_ignored_variadic_function : Warning<
+  "%0 attribute ignored; a variadic function cannot be called from device "
+  "code">,
+  InGroup<IgnoredAttributes>;
 def warn_sycl_external_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">,
   InGroup<NonPortableSYCL>;
@@ -13770,8 +13803,8 @@ def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not ma
 def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
 def err_hlsl_interpolation_conflict : Error<
   "'nointerpolation' cannot be combined with other interpolation modifiers">;
-def err_hlsl_interpolation_position : Error<
-  "'nointerpolation' cannot be used on SV_Position">;
+def err_hlsl_interpolation_semantic : Error<
+  "'nointerpolation' cannot be used on %0">;
 def err_hlsl_interpolation_type : Error<
   "interpolation modifiers other than 'nointerpolation' cannot be used with type %0">;
 def warn_hlsl_duplicate_interpolation : Warning<
@@ -13797,7 +13830,7 @@ def err_hlsl_semantic_64bit_type
             "or outputs (was %1)">;
 def err_hlsl_semantic_invalid_type
     : Error<"semantic %0 must be a "
-            "%select{scalar|scalar or vector of up to %2 components}1 of "
+            "%select{scalar|scalar or vector of up to %2 components|vector of %2 components}1 of "
             "%select{16 or 32 bit integer|32 bit integer|"
             "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
             "32 bit unsigned integer}3 type (was %4)">;
@@ -13806,6 +13839,8 @@ def err_hlsl_init_priority_unsupported : Error<
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
 def err_hlsl_semantic_unsupported_iotype_for_stage
     : Error<"semantic %0 is not supported in %1 shader %2">;
+def err_hlsl_semantic_in_wrong_shader_model
+    : Error<"semantic %0 requires shader model %1 or greater">;
 def err_hlsl_semantic_partial_explicit_indexing
     : Error<"partial explicit stage input location assignment via "
             "vk::location(X) unsupported">;

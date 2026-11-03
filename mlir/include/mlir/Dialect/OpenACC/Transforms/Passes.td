@@ -268,30 +268,33 @@ def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
     have tile clauses. The pass transforms loops with `tile(size1, size2, ...)`
     clauses into tiled loop nests.
 
-    For a 2-level nested loop with tile(T1, T2), the transformation produces:
-    - Outer tile loops that iterate over tiles
-    - Inner element loops that iterate within each tile
+    The transformation produces two loops, each carrying all the induction
+    variables of the original loop:
+    - A tile group loop that iterates over tiles
+    - An element group loop that iterates within each tile
+
+    The tile clause lists its sizes innermost loop first (OpenACC 3.4,
+    section 2.9.8). In the example below, 32 tiles the `j` loop and 4 tiles
+    the `i` loop.
 
     Example transformation:
     ```
     // Before:
-    #pragma acc loop tile(32, 32)
+    #pragma acc loop tile(32, 4)
     for (i = 0; i < N; i++)
       for (j = 0; j < M; j++)
         A[i][j] = ...
 
     // After:
-    for (i = 0; i < N; i += 32)           // tile loop 1
-      for (j = 0; j < M; j += 32)         // tile loop 2
-        for (ii = i; ii < min(N, i+32); ii++)    // element loop 1
-          for (jj = j; jj < min(M, j+32); jj++)  // element loop 2
-            A[ii][jj] = ...
+    for (i = 0; i < N; i += 4, j = 0; j < M; j += 32)       // tile group
+      for (ii = i; ii < min(N, i+4); ii++,
+           jj = j; jj < min(M, j+32); jj++)                 // element group
+        A[ii][jj] = ...
     ```
 
     The pass handles:
     - Constant tile sizes
     - Wildcard tile sizes ('*') which use a default tile size
-    - Collapsed loops with tile counts exceeding collapse count
     - Proper handling of loop attributes (gang, worker, vector)
   }];
   let dependentDialects = ["mlir::arith::ArithDialect"];

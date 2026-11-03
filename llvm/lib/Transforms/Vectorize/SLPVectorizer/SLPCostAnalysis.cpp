@@ -27,6 +27,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <cassert>
 #include <utility>
@@ -124,6 +125,11 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             ? TTI::PointersChainInfo::getUnknownStride()
             : TTI::PointersChainInfo::getKnownStride();
 
+    const bool IsSameBase =
+        !all_of(Ptrs, IsaPred<GetElementPtrInst>) ||
+        all_equal(map_range(Ptrs, [](Value *V) {
+          return cast<GetElementPtrInst>(V)->getPointerOperand();
+        }));
     // The GEPs of the masked gather loads are accessed with the loaded type
     // and form a chain only if the lanes share the base.
     Type *AccessTy = ScalarTy;
@@ -131,9 +137,7 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
           auto *Ptr = dyn_cast<GetElementPtrInst>(V);
           return Ptr && Ptr->hasOneUse() && isa<LoadInst>(Ptr->user_back());
         })) {
-      PtrsInfo.IsSameBaseAddress = all_equal(map_range(Ptrs, [](Value *V) {
-        return cast<GetElementPtrInst>(V)->getPointerOperand();
-      }));
+      PtrsInfo.IsSameBaseAddress = IsSameBase;
       AccessTy = Ptrs.front()->user_back()->getType();
     }
     ScalarCost =
@@ -144,7 +148,21 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
       if (It != Ptrs.end())
         BaseGEP = cast<GEPOperator>(*It);
     }
-    if (BaseGEP) {
+    if (!IsSameBase) {
+      // The different bases are not folded into the addressing of the vector
+      // access, the scaled indices are added to them.
+      const DataLayout &DL = cast<Instruction>(Ptrs.front())->getDataLayout();
+      Type *IdxTy = DL.getIndexType(VecTy);
+      VecCost = TTI.getArithmeticInstrCost(Instruction::Add, IdxTy, CostKind);
+      uint64_t Stride = DL.getTypeAllocSize(BaseGEP->getSourceElementType())
+                            .getKnownMinValue();
+      if (Stride != 1 && !all_of(Ptrs, [](Value *V) {
+            return isa<Constant>(cast<GetElementPtrInst>(V)->getOperand(1));
+          }))
+        VecCost += TTI.getArithmeticInstrCost(
+            isPowerOf2_64(Stride) ? Instruction::Shl : Instruction::Mul, IdxTy,
+            CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_None});
+    } else if (BaseGEP) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       VecCost = TTI.getGEPCost(BaseGEP->getSourceElementType(),
                                BaseGEP->getPointerOperand(), Indices, CostKind,

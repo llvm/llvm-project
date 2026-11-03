@@ -1828,11 +1828,13 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
   kmp_team_t *team = this_thr->th.th_team;
   int status = 0;
   is_cancellable<cancellable> cancelled;
-#if OMPT_SUPPORT && OMPT_OPTIONAL
+#if OMPT_SUPPORT
+  ompt_sync_region_t barrier_kind;
+#if OMPT_OPTIONAL
   ompt_data_t *my_task_data;
   ompt_data_t *my_parallel_data;
   void *return_address;
-  ompt_sync_region_t barrier_kind;
+#endif
 #endif
 
   KA_TRACE(15, ("__kmp_barrier: T#%d(%d:%d) has arrived\n", gtid,
@@ -1840,11 +1842,11 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
+    barrier_kind = __ompt_get_barrier_kind(bt, this_thr);
 #if OMPT_OPTIONAL
     my_task_data = OMPT_CUR_TASK_DATA(this_thr);
     my_parallel_data = OMPT_CUR_TEAM_DATA(this_thr);
     return_address = OMPT_LOAD_RETURN_ADDRESS(gtid);
-    barrier_kind = __ompt_get_barrier_kind(bt, this_thr);
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
           barrier_kind, ompt_scope_begin, my_parallel_data, my_task_data,
@@ -2278,6 +2280,9 @@ void __kmp_join_barrier(int gtid) {
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
+    ompt_state_t ompt_state = ompt_state_wait_barrier_implicit_parallel;
+    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league)
+      ompt_state = ompt_state_wait_barrier_teams;
 #if OMPT_OPTIONAL
     ompt_data_t *my_task_data;
     ompt_data_t *my_parallel_data;
@@ -2290,11 +2295,8 @@ void __kmp_join_barrier(int gtid) {
     my_task_data = OMPT_CUR_TASK_DATA(this_thr);
     my_parallel_data = OMPT_CUR_TEAM_DATA(this_thr);
     ompt_sync_region_t sync_kind = ompt_sync_region_barrier_implicit_parallel;
-    ompt_state_t ompt_state = ompt_state_wait_barrier_implicit_parallel;
-    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league) {
+    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league)
       sync_kind = ompt_sync_region_barrier_teams;
-      ompt_state = ompt_state_wait_barrier_teams;
-    }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
           sync_kind, ompt_scope_begin, my_parallel_data, my_task_data, codeptr);
