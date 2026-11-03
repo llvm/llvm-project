@@ -1620,7 +1620,7 @@ def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
   let constructor = "mlir::createConvertVectorToGPUPass()";
   let dependentDialects = [
     "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
-    "vector::VectorDialect", "nvgpu::NVGPUDialect"
+    "vector::VectorDialect"
   ];
 
   let options = [

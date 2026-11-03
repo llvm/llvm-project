@@ -35,7 +35,6 @@
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
-class BlockFrequencyInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -44,7 +43,6 @@ class LoopInfo;
 class Metadata;
 class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
-class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
@@ -483,12 +481,12 @@ public:
   /// Returns a HistogramInfo* for the given instruction if it was determined
   /// to be part of a load -> update -> store sequence where multiple lanes
   /// may be working on the same memory address.
-  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+  const HistogramInfo *getHistogramInfo(Instruction *I) const {
     for (const HistogramInfo &HGram : Histograms)
       if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
         return &HGram;
 
-    return std::nullopt;
+    return nullptr;
   }
 
   /// Returns a list of all known histogram operations in the loop.

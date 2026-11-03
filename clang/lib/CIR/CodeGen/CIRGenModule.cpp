@@ -189,12 +189,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   getModule()->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
                        builder.getI32IntegerAttr(target.getIntWidth()));
 
-  // Serialize the lowering-relevant LangOptions onto the ModuleOp so a reloaded
-  // .cir is self-describing and lowers the same way it was compiled, without a
-  // live clang::LangOptions.
+  // Serialize the lowering-relevant LangOptions and CodeGenOptions onto the
+  // ModuleOp so a reloaded .cir is self-describing and lowers the same way it
+  // was compiled, without a live clang::LangOptions or clang::CodeGenOptions.
   getModule()->setAttr(
-      cir::CIRDialect::getLoweringLangOptionsAttrName(),
-      cir::LoweringLangOptionsAttr::get(
+      cir::CIRDialect::getLoweringOptionsAttrName(),
+      cir::LoweringOptionsAttr::get(
           &mlirContext,
           /*exceptions=*/langOpts.Exceptions,
           /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
@@ -207,7 +207,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
           /*clang_abi_compat=*/
           static_cast<int32_t>(langOpts.getClangABICompat()),
-          static_cast<int32_t>(langOpts.LongDoubleSize)));
+          static_cast<int32_t>(langOpts.LongDoubleSize),
+          /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -1518,20 +1519,24 @@ static void emitUsed(CIRGenModule &cgm, StringRef name,
 
   CIRGenBuilderTy &builder = cgm.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
+  cir::PointerType voidPtrTy = builder.getVoidPtrTy(
+      cgm.getTypes().getPointerAddressSpace(cgm.getASTContext().VoidTy));
+
   llvm::SmallVector<mlir::Attribute> usedArray;
   usedArray.resize(list.size());
   for (auto [i, op] : llvm::enumerate(list)) {
     usedArray[i] = cir::GlobalViewAttr::get(
-        cgm.voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
+        voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
   }
 
-  cir::ArrayType arrayTy = cir::ArrayType::get(cgm.voidPtrTy, usedArray.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(voidPtrTy, usedArray.size());
 
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&cgm.getMLIRContext(), usedArray));
 
-  cir::GlobalOp gv = cgm.createGlobalOp(loc, name, arrayTy,
-                                        /*isConstant=*/false);
+  cir::GlobalOp gv = cgm.createGlobalOp(
+      loc, name, arrayTy, /*isConstant=*/false,
+      cgm.getDataLayout().getDefaultGlobalsAddrSpace(&cgm.getMLIRContext()));
   gv.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   gv.setInitialValueAttr(initAttr);
   gv.setSectionAttr(builder.getStringAttr("llvm.metadata"));
@@ -2866,13 +2871,12 @@ static std::string getMangledNameImpl(CIRGenModule &cgm, GlobalDecl gd,
                    "getMangledName: multi-version functions");
     }
   }
-  // SYCL does not externalize file-scope statics, so RDC does not change the
-  // mangled name.
-  if (cgm.getLangOpts().GPURelocatableDeviceCode &&
-      !cgm.getLangOpts().isSYCL()) {
-    cgm.errorNYI(nd->getSourceRange(),
-                 "getMangledName: GPU relocatable device code");
-  }
+  // Make unique name for device side static file-scope variable for HIP.
+  if (cgm.getASTContext().shouldExternalize(nd) &&
+      cgm.getLangOpts().GPURelocatableDeviceCode)
+    if (cgm.getLangOpts().CUDA)
+      cgm.errorNYI(nd->getSourceRange(),
+                   "getMangledName: GPU relocatable device code");
 
   return std::string(out.str());
 }
