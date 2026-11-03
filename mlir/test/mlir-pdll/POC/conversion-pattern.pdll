@@ -1,0 +1,49 @@
+// RUN: mlir-pdll %s -x mlir | FileCheck %s
+
+// Test: Type conversion expression generates apply_native_rewrite in rewrite block
+// CHECK-LABEL: pdl.pattern @TestConvertType
+Pattern TestConvertType {
+  let root = op<test.op>(input: Value) -> (result_type: Type);
+
+  // CHECK: rewrite
+  rewrite root with {
+    // CHECK: attribute = "TestConverter"
+    // CHECK: apply_native_rewrite "__pdll_convert_type__"
+    let converted_type = convert_type<TestConverter>(result_type);
+    erase root;
+  };
+}
+
+// Test: Converted operand access
+// CHECK-LABEL: pdl.pattern @TestConvertedOperand
+Pattern TestConvertedOperand {
+  let root = op<test.op>(input: Value) -> (output_type: Type);
+
+  // CHECK: rewrite
+  rewrite root with {
+    // CHECK: apply_native_rewrite "__pdll_convert_type__"
+    let converted_output_type = convert_type<TestConverter>(output_type);
+    // CHECK: apply_native_rewrite "__pdll_converted_operand__"
+    let conv_input = converted_operand(input, converted_output_type);
+    erase root;
+  };
+}
+
+// Test: Complete ONNX Cast → HipSR Cast pattern
+// CHECK-LABEL: pdl.pattern @ConvertOnnxCast
+Pattern ConvertOnnxCast {
+  // CHECK: operation "onnx.Cast"
+  let root = op<onnx.Cast>(input: Value) {to = toAttr: Attr} -> (result_type: Type);
+
+  // CHECK: rewrite
+  rewrite root with {
+    // CHECK: attribute = "OnnxToHipSRConverter"
+    // CHECK: apply_native_rewrite "__pdll_convert_type__"
+    let hipsr_type = convert_type<OnnxToHipSRConverter>(result_type);
+    // CHECK: apply_native_rewrite "__pdll_converted_operand__"
+    let conv_input = converted_operand(input, hipsr_type);
+
+    // In full implementation, would create hipsr.cast here
+    erase root;
+  };
+}
