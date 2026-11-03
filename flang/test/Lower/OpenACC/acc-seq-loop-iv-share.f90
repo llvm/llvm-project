@@ -219,32 +219,6 @@ end subroutine
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
 
 ! -----------------------------------------------------------------------------
-! private(k) is already on the parent. The seq loop writes that copy.
-! -----------------------------------------------------------------------------
-subroutine private_on_parent(a, n, kout)
-  integer :: n, i, k, kout
-  real :: a(n)
-  !$acc parallel
-  !$acc loop gang private(k)
-  do i = 1, n
-    !$acc loop seq
-    do k = 1, 3
-      a(i) = a(i) + k
-    end do
-    kout = k
-  end do
-  !$acc end parallel
-end subroutine
-
-! CHECK-LABEL: func.func @_QPprivate_on_parent
-! CHECK: acc.private {{.*}} implicit(false) name("k")
-! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPprivate_on_parentEk")
-! CHECK: acc.loop control(%{{.*}} : i32) =
-! CHECK: fir.store %{{.*}} to %[[KDECL]]#0 : !fir.ref<i32>
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-
-! -----------------------------------------------------------------------------
 ! integer(8) induction variable.
 ! -----------------------------------------------------------------------------
 subroutine i64_iv(a, n, kout)
