@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName [[EQ:%.*]] "test_eq"
 ; CHECK-DAG: OpName [[NE:%.*]] "test_ne"
@@ -23,10 +23,13 @@
 ; CHECK-DAG: OpName [[v3UGE:%.*]] "test_v3_uge"
 ; CHECK-DAG: OpName [[v3SGE:%.*]] "test_v3_sge"
 
+; CHECK-DAG: OpName [[v5SLT:%.*]] "test_v5_slt"
+
 ; CHECK-DAG: OpName [[v16NE:%.*]] "test_boolean_v16_ne"
 ; CHECK-DAG: OpName [[v16EQ:%.*]] "test_boolean_v16_eq"
 
 ; CHECK-DAG: [[Bool:%.*]] = OpTypeBool
+; CHECK-DAG: [[v8Bool:%.*]] = OpTypeVector [[Bool]] 8
 ; CHECK-DAG: [[v16:%.*]] = OpTypeVector [[Bool]] 16
 ; CHECK-DAG: [[Null:%.*]] = OpConstantNull [[v16]]
 
@@ -268,6 +271,17 @@ define <3 x i1> @test_v3_uge(<3 x i32> %a, <3 x i32> %b) {
 define <3 x i1> @test_v3_sge(<3 x i32> %a, <3 x i32> %b) {
   %r = icmp sge <3 x i32> %a, %b
   ret <3 x i1> %r
+}
+
+;; Vectors whose length is not a power of two are widened to the next one.
+; CHECK:      [[v5SLT]] = OpFunction
+; CHECK:      [[A:%.*]] = OpCompositeConstruct
+; CHECK:      [[B:%.*]] = OpCompositeConstruct
+; CHECK:      OpSLessThan [[v8Bool]] [[A]] [[B]]
+; CHECK:      OpFunctionEnd
+define <5 x i1> @test_v5_slt(<5 x i32> %a, <5 x i32> %b) {
+  %r = icmp slt <5 x i32> %a, %b
+  ret <5 x i1> %r
 }
 
 ; CHECK:      [[v16NE]] = OpFunction

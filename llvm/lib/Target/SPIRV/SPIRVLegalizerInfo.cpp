@@ -516,7 +516,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
       })
       .customIf(all(typeInSet(0, allBoolScalarsAndVectors),
-                    typeInSet(1, allPtrsScalarsAndVectors)));
+                    typeInSet(1, allPtrsScalarsAndVectors)))
+      .moreElementsToNextPow2(1);
 
   getActionDefinitionsBuilder(G_FCMP)
       .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
