@@ -2189,9 +2189,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: object allocated and stored into &apos;object&apos; is returned from a function whose name (&apos;CFGetRuleViolation&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: object allocated and stored into &apos;object&apos; is returned from a function whose name (&apos;CFGetRuleViolation&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
      <key>message</key>
-     <string>Object leaked: object allocated and stored into &apos;object&apos; is returned from a function whose name (&apos;CFGetRuleViolation&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: object allocated and stored into &apos;object&apos; is returned from a function whose name (&apos;CFGetRuleViolation&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;object&apos;</string>
@@ -2673,9 +2673,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: object allocated and stored into &apos;result&apos; is returned from a method whose name (&apos;getViolation&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: object allocated and stored into &apos;result&apos; is returned from a method whose name (&apos;getViolation&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
      <key>message</key>
-     <string>Object leaked: object allocated and stored into &apos;result&apos; is returned from a method whose name (&apos;getViolation&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: object allocated and stored into &apos;result&apos; is returned from a method whose name (&apos;getViolation&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;result&apos;</string>

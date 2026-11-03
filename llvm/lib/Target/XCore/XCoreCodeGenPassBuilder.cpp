@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XCore.h"
+#include "XCoreAsmPrinter.h"
 #include "XCoreTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/IR/PassInstrumentation.h"
@@ -57,19 +58,19 @@ Error XCoreCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
 }
 
 void XCoreCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add XCoreFrameToArgsOffsetEliminationPass
+  addMachineFunctionPass(XCoreFrameToArgsOffsetEliminationPass(), PMW);
 }
 
 void XCoreCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add XCoreAsmPrinterBegin
+  addModulePass(XCoreAsmPrinterBeginPass(), PMW);
 }
 
 void XCoreCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add XCoreAsmPrinter
+  addMachineFunctionPass(XCoreAsmPrinterPass(), PMW);
 }
 
 void XCoreCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add XCoreAsmPrinterEnd
+  addModulePass(XCoreAsmPrinterEndPass(), PMW);
 }
 
 } // namespace

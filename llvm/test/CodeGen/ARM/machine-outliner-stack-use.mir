@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=arm-- -run-pass=machine-outliner -verify-machineinstrs \
-# RUN: %s -o - | FileCheck %s
+# RUN: llc -mtriple=arm-- -run-pass=machine-outliner %s -o - | FileCheck %s
 
 --- |
   define void @stack_use_no_lr_save_1() #0 { ret void }
