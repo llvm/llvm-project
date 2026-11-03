@@ -60,11 +60,13 @@ private:
   // Assigns expression for Max S/V/A-GPRs to the referenced symbols.
   void assignMaxRegs(MCContext &OutContext);
 
-  // Take flattened max of cyclic function calls' knowns. For example, for
-  // a cycle A->B->C->D->A, take max(A, B, C, D) for A and have B, C, D have the
-  // propgated value from A.
-  const MCExpr *flattenedCycleMax(MCSymbol *RecSym, ResourceInfoKind RIK,
-                                  MCContext &OutContext);
+  // Normalize a whole cyclic max/OR assignment. Fold constants, omit the
+  // symbol currently being assigned, and keep each unresolved outgoing symbol
+  // once. LocalValue is retained even if an unfamiliar shape needs a fallback.
+  const MCExpr *flattenedCycleExpr(MCSymbol *Sym, const MCExpr *Expr,
+                                   int64_t LocalValue, ResourceInfoKind RIK,
+                                   AMDGPUMCExpr::VariantKind Kind,
+                                   MCContext &OutContext);
 
 public:
   MCResourceInfo() = default;

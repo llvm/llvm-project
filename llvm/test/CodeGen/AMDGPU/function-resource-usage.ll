@@ -495,9 +495,9 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; GCN: NumVgprs: max(43, .Lmulti_stage_recurse1.num_vgpr)
 ; GCN: ScratchSize: 16+max(.Lmulti_stage_recurse1.private_seg_size)
 ; GCN-LABEL: {{^}}multi_stage_recurse1:
-; GCN: .set .Lmulti_stage_recurse1.num_vgpr, max(48, 43)
-; GCN: .set .Lmulti_stage_recurse1.num_agpr, max(0, 0)
-; GCN: .set .Lmulti_stage_recurse1.numbered_sgpr, max(34, 34)
+; GCN: .set .Lmulti_stage_recurse1.num_vgpr, 48
+; GCN: .set .Lmulti_stage_recurse1.num_agpr, 0
+; GCN: .set .Lmulti_stage_recurse1.numbered_sgpr, 34
 ; GCN: .set .Lmulti_stage_recurse1.private_seg_size, 16
 ; GCN: .set .Lmulti_stage_recurse1.uses_vcc, 1
 ; GCN: .set .Lmulti_stage_recurse1.uses_flat_scratch, 0
@@ -550,14 +550,14 @@ define amdgpu_kernel void @usage_multi_stage_recurse(i32 %n) #0 {
 ; GCN: NumVgprs: max(41, .Lmulti_stage_recurse_noattr1.num_vgpr)
 ; GCN: ScratchSize: 16+max(.Lmulti_stage_recurse_noattr1.private_seg_size)
 ; GCN-LABEL: {{^}}multi_stage_recurse_noattr1:
-; GCN: .set .Lmulti_stage_recurse_noattr1.num_vgpr, max(41, 41)
-; GCN: .set .Lmulti_stage_recurse_noattr1.num_agpr, max(0, 0)
-; GCN: .set .Lmulti_stage_recurse_noattr1.numbered_sgpr, max(57, 54)
+; GCN: .set .Lmulti_stage_recurse_noattr1.num_vgpr, 41
+; GCN: .set .Lmulti_stage_recurse_noattr1.num_agpr, 0
+; GCN: .set .Lmulti_stage_recurse_noattr1.numbered_sgpr, 57
 ; GCN: .set .Lmulti_stage_recurse_noattr1.private_seg_size, 16
 ; GCN: .set .Lmulti_stage_recurse_noattr1.uses_vcc, 1
 ; GCN: .set .Lmulti_stage_recurse_noattr1.uses_flat_scratch, 0
 ; GCN: .set .Lmulti_stage_recurse_noattr1.has_dyn_sized_stack, 0
-; GCN: .set .Lmulti_stage_recurse_noattr1.has_recursion, 0
+; GCN: .set .Lmulti_stage_recurse_noattr1.has_recursion, 1
 ; GCN: .set .Lmulti_stage_recurse_noattr1.has_indirect_call, 0
 ; GCN: TotalNumSgprs: 61
 ; GCN: NumVgprs: 41
