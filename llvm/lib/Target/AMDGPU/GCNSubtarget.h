@@ -504,9 +504,6 @@ public:
   }
 
   bool hasLDSFPAtomicAddF32() const { return HasGFX8Insts; }
-  bool hasLDSFPAtomicAddF64() const {
-    return HasGFX90AInsts || HasGFX1250Insts;
-  }
 
   /// \returns true if the subtarget has the v_permlane64_b32 instruction.
   bool hasPermLane64() const { return getGeneration() >= GFX11; }
@@ -679,7 +676,9 @@ public:
     return getGeneration() == GFX12 && HasGFX1250Insts;
   }
 
-  bool hasAddPC64Inst() const { return HasGFX1250Insts; }
+  bool useAddPCI64Inst() const {
+    return hasSAddPCI64Inst() && !hasUnusableSAddPCI64();
+  }
 
   /// \returns true if the target supports expert scheduling mode 2 which relies
   /// on the compiler to insert waits to avoid hazards between VMEM and VALU

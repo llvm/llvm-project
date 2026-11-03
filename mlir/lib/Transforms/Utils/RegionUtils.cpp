@@ -473,8 +473,11 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
     // The entry block has an unknown contract with their enclosing block, so
     // skip it.
     for (Block &block : llvm::drop_begin(region.getBlocks(), 1)) {
-      block.eraseArguments(
-          [&](BlockArgument arg) { return !liveMap.wasProvenLive(arg); });
+      block.eraseArguments([&](BlockArgument arg) {
+        bool isDead = !liveMap.wasProvenLive(arg);
+        erasedAnything |= isDead;
+        return isDead;
+      });
     }
   }
   return success(erasedAnything);

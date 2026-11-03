@@ -19,6 +19,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
@@ -915,12 +916,14 @@ bool SemaHLSL::checkInterpolationModifiers(
 
   auto Modifiers = static_cast<InterpolationModifier>(A->getModifiers());
   if (Modifiers == InterpolationModifier::NoInterpolation) {
-    bool IsPosition =
-        Semantic && llvm::hlsl::getSemanticKind(Semantic->getSemanticName()) ==
-                        SemanticKind::Position;
-    if (!IsPosition)
+    if (!Semantic)
       return true;
-    Diag(A->getLocation(), diag::err_hlsl_interpolation_position);
+    SemanticKind Kind =
+        llvm::hlsl::getSemanticKind(Semantic->getSemanticName());
+    if (Kind != SemanticKind::Position && Kind != SemanticKind::Barycentrics)
+      return true;
+    Diag(A->getLocation(), diag::err_hlsl_interpolation_semantic)
+        << Semantic->getSemanticName();
     Diag(Semantic->getLocation(), diag::note_conflicting_attribute);
     return false;
   }
@@ -1004,6 +1007,22 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return true;
   case SemanticKind::InstanceID:
     return ST == llvm::Triple::Vertex && IsInput;
+  case SemanticKind::ShadingRate:
+    // Lowered to:
+    //  - ShadingRateKHR built-in for fragment input.
+    //  - PrimitiveShadingRateKHR built-in for vertex output.
+    // TODO: extend to mesh
+    return (ST == llvm::Triple::Pixel && IsInput) ||
+           (ST == llvm::Triple::Vertex && !IsInput);
+  case SemanticKind::Barycentrics:
+  case SemanticKind::SampleIndex:
+  case SemanticKind::PrimitiveID:
+    return ST == llvm::Triple::Pixel && IsInput;
+  case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
+    return ST == llvm::Triple::Vertex && IsInput;
+  case SemanticKind::ViewID:
+    return IsInput;
   default:
     return false;
   }
@@ -1042,6 +1061,14 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
     return false;
   }
   unsigned ElementCount = AT ? ASTContext::getConstantArrayElementCount(AT) : 1;
+
+  // Each matrix row (or column for column_major) also occupies a separate
+  // semantic index.
+  QualType BaseTy = getASTContext().getBaseElementType(T.getNonReferenceType());
+  if (const auto *MT = BaseTy->getAs<ConstantMatrixType>())
+    ElementCount *= isMatrixRowMajor(getLangOpts(), BaseTy)
+                        ? MT->getNumRows()
+                        : MT->getNumColumns();
 
   checkSemanticAnnotation(FD, D, A, SC, ElementCount);
   OutputDecl->addAttr(A);
@@ -1245,6 +1272,36 @@ void SemaHLSL::checkSemanticAnnotation(
 
   diagnoseSystemSemanticIndex(SemanticAttr, Kind, ElementCount);
   diagnoseSemanticType(Param, SemanticAttr, Kind);
+  diagnoseSemanticShaderModel(SemanticAttr, Kind);
+}
+
+void SemaHLSL::diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
+                                           SemanticKind Kind) {
+  const auto &Triple = getASTContext().getTargetInfo().getTriple();
+  if (!Triple.isDXIL())
+    return;
+
+  switch (Kind) {
+  case SemanticKind::Barycentrics:
+  case SemanticKind::ViewID:
+    if (Triple.getOSVersion() < VersionTuple(6, 1))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
+          << A->getAttrName() << "6.1";
+    return;
+  case SemanticKind::ShadingRate:
+    if (Triple.getOSVersion() < VersionTuple(6, 4))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
+          << A->getAttrName() << "6.4";
+    return;
+  case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
+    if (Triple.getOSVersion() < VersionTuple(6, 8))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
+          << A->getAttrName() << "6.8";
+    return;
+  default:
+    return;
+  }
 }
 
 void SemaHLSL::diagnoseSystemSemanticIndex(const HLSLAppliedSemanticAttr *A,
@@ -1343,6 +1400,12 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
   bool IsSPIRV = getASTContext().getTargetInfo().getTriple().isSPIRV();
 
   switch (Kind) {
+  case SemanticKind::Barycentrics:
+    if (DeclaredTy != T || !isFloatOrHalfElement(ElemTy) || Components != 3)
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* vector of */ 2 << 3
+          << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
+    return;
   case SemanticKind::DispatchThreadID:
   case SemanticKind::GroupID:
   case SemanticKind::GroupThreadID:
@@ -1350,6 +1413,15 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
           << A->getAttrName() << /* scalar or vector of up to */ 1 << 3
           << /* 16 or 32 bit integer */ 0 << DeclaredTy;
+    return;
+  case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
+  case SemanticKind::ViewID:
+    if (DeclaredTy != T || !T->isScalarType() ||
+        !isIntElementOfWidth(Ctx, T, 32))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* scalar */ 0 << 1 << /* 32 bit integer */ 1
+          << DeclaredTy;
     return;
   case SemanticKind::GroupIndex:
     if (!isIntElementOfWidth(Ctx, ElemTy, 32) || Components != 1)
@@ -1370,9 +1442,20 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
           << A->getAttrName() << /* scalar or vector of up to */ 1 << 4
           << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
     return;
+  case SemanticKind::SampleIndex:
+  case SemanticKind::PrimitiveID:
+    // SPIR-V declares these built-ins as 32-bit integers and converts 16-bit
+    // declarations.
+    if (!DeclaredTy->isScalarType() || !isIntUpTo32Element(Ctx, DeclaredTy))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* scalar */ 0 << 1
+          << /* 16 or 32 bit integer */ 0 << DeclaredTy;
+    return;
   case SemanticKind::InstanceID:
-    // DXIL permits U32 or U16. SPIR-V requires a 32-bit scalar per
-    // VUID-InstanceIndex-InstanceIndex-04265.
+  case SemanticKind::ShadingRate:
+    // DXIL permits U32 or U16. SPIR-V requires a 32-bit scalar per:
+    // - VUID-InstanceIndex-InstanceIndex-04265
+    // - VUID-ShadingRateKHR-ShadingRateKHR-04492
     if (!T->isUnsignedIntegerType() ||
         !(isIntElementOfWidth(Ctx, T, 32) ||
           (!IsSPIRV && isIntElementOfWidth(Ctx, T, 16))))
@@ -2183,9 +2266,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::CullDistance:
   case SemanticKind::OutputControlPointID:
   case SemanticKind::DomainLocation:
-  case SemanticKind::PrimitiveID:
   case SemanticKind::GSInstanceID:
-  case SemanticKind::SampleIndex:
   case SemanticKind::IsFrontFace:
   case SemanticKind::Coverage:
   case SemanticKind::InnerCoverage:
@@ -2195,9 +2276,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::StencilRef:
   case SemanticKind::TessFactor:
   case SemanticKind::InsideTessFactor:
-  case SemanticKind::ViewID:
-  case SemanticKind::Barycentrics:
-  case SemanticKind::ShadingRate:
   case SemanticKind::CullPrimitive:
     Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
     return;
@@ -5756,7 +5834,42 @@ bool SemaHLSL::CanPerformPackedTypeCast(Expr *Src, QualType DestTy) {
           Ctx.hasSameUnqualifiedType(SrcTy, UIntTy));
 }
 
+ExprResult SemaHLSL::CreateOutArgExpr(Expr *Arg, QualType ArgTy,
+                                      QualType ParamTy,
+                                      InitializedEntity Entity,
+                                      SourceLocation Loc, bool IsInOut) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+
+  QualType Ty = ParamTy.getNonLValueExprType(Ctx);
+
+  auto *ArgOpV =
+      new (Ctx) OpaqueValueExpr(Loc, ArgTy, VK_LValue, OK_Ordinary, Arg);
+
+  // Parameters are initialized via copy initialization. This allows for
+  // overload resolution of argument constructors.
+  ExprResult Res = SemaRef.PerformCopyInitialization(Entity, Loc, ArgOpV);
+  if (Res.isInvalid())
+    return ExprError();
+  Expr *Base = Res.get();
+  // After the cast, drop the reference type when creating the exprs.
+  Ty = Ty.getNonLValueExprType(Ctx);
+  auto *OpV = new (Ctx) OpaqueValueExpr(Loc, Ty, VK_LValue, OK_Ordinary, Base);
+
+  // Writebacks are performed with `=` binary operator, which allows for
+  // overload resolution on writeback result expressions.
+  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
+                           tok::equal, ArgOpV, OpV);
+
+  if (Res.isInvalid())
+    return ExprError();
+  Expr *Writeback = Res.get();
+  auto *OutExpr =
+      HLSLOutArgExpr::Create(Ctx, Ty, ArgOpV, OpV, Writeback, IsInOut);
+  return ExprResult(OutExpr);
+}
+
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
+  ASTContext &Ctx = SemaRef.getASTContext();
   assert(Param->hasAttr<HLSLParamModifierAttr>() &&
          "We should not get here without a parameter modifier expression");
   const auto *Attr = Param->getAttr<HLSLParamModifierAttr>();
@@ -5770,8 +5883,6 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
     return ExprError();
   }
 
-  ASTContext &Ctx = SemaRef.getASTContext();
-
   QualType Ty = Param->getType().getNonLValueExprType(Ctx);
 
   // HLSL allows implicit conversions from scalars to vectors, but not the
@@ -5783,35 +5894,11 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
     return ExprError();
   }
 
-  auto *ArgOpV = new (Ctx) OpaqueValueExpr(Param->getBeginLoc(), Arg->getType(),
-                                           VK_LValue, OK_Ordinary, Arg);
-
-  // Parameters are initialized via copy initialization. This allows for
-  // overload resolution of argument constructors.
   InitializedEntity Entity =
       InitializedEntity::InitializeParameter(Ctx, Ty, false);
-  ExprResult Res =
-      SemaRef.PerformCopyInitialization(Entity, Param->getBeginLoc(), ArgOpV);
-  if (Res.isInvalid())
-    return ExprError();
-  Expr *Base = Res.get();
-  // After the cast, drop the reference type when creating the exprs.
-  Ty = Ty.getNonLValueExprType(Ctx);
-  auto *OpV = new (Ctx)
-      OpaqueValueExpr(Param->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Base);
 
-  // Writebacks are performed with `=` binary operator, which allows for
-  // overload resolution on writeback result expressions.
-  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
-                           tok::equal, ArgOpV, OpV);
-
-  if (Res.isInvalid())
-    return ExprError();
-  Expr *Writeback = Res.get();
-  auto *OutExpr =
-      HLSLOutArgExpr::Create(Ctx, Ty, ArgOpV, OpV, Writeback, IsInOut);
-
-  return ExprResult(OutExpr);
+  return CreateOutArgExpr(Arg, Arg->getType(), Param->getType(), Entity,
+                          Param->getBeginLoc(), IsInOut);
 }
 
 QualType SemaHLSL::getInoutParameterType(QualType Ty) {

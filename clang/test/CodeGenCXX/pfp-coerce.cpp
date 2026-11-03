@@ -124,15 +124,7 @@ void pass_trivial_abi_pointer(TrivialAbiPointer p, TrivialAbiPointer *pp) {
   // CHECK: store ptr %p.coerce, ptr %2, align 8
   // CHECK: store ptr %pp, ptr %pp.addr, align 8
   // CHECK: %3 = load ptr, ptr %pp.addr, align 8
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %3, ptr align 8 %p, i64 8, i1 false)
-  // CHECK: %4 = getelementptr inbounds i8, ptr %3, i64 0
-  // CHECK: %5 = ptrtoint ptr %3 to i64
-  // CHECK: %6 = call ptr @llvm.protected.field.ptr.p0(ptr %4, i64 %5, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
-  // CHECK: %7 = getelementptr inbounds i8, ptr %p, i64 0
-  // CHECK: %8 = ptrtoint ptr %p to i64
-  // CHECK: %9 = call ptr @llvm.protected.field.ptr.p0(ptr %7, i64 %8, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
-  // CHECK: %10 = load ptr, ptr %9, align 8
-  // CHECK: store ptr %10, ptr %6, align 8
+  // CHECK: %call = call noundef nonnull align 8 dereferenceable(8) ptr @_ZN17TrivialAbiPointeraSERKS_(ptr noundef nonnull align 8 dereferenceable(8) %3, ptr noundef nonnull align 8 dereferenceable(8) %p)
   // CHECK: call void @_ZN17TrivialAbiPointerD1Ev(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %p)
 
   *pp = p;

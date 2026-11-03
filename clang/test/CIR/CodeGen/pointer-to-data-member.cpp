@@ -111,14 +111,14 @@ int Diamond::*p_vbase_sibling_direct = &Diamond::d;
 
 // Checks for test1()
 
-// CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> attributes {{{.*}}nothrow} {
+// CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> attributes {{{.*}}nothrow, optnone} {
 // CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<[1]> : !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.store %[[MEMBER]], %[[RETVAL]] : !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Point>
 
-// CIR-AFTER: cir.func {{.*}} @_Z5test1v() -> !s64i attributes {{{.*}}nothrow} {
+// CIR-AFTER: cir.func {{.*}} @_Z5test1v() -> !s64i attributes {{{.*}}nothrow, optnone} {
 // CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s64i>
 // CIR-AFTER:   %[[OFFSET:.*]] = cir.const #cir.int<4> : !s64i
 // CIR-AFTER:   cir.store %[[OFFSET]], %[[RETVAL]] : !s64i, !cir.ptr<!s64i>

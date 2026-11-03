@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILRemoveUnusedResources.h"
 #include "DirectX.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/VectorUtils.h"

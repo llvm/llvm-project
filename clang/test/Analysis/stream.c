@@ -233,7 +233,7 @@ void f_leak(int c) {
   if (!p)
     return;
   if(c)
-    return; // expected-warning {{Opened stream never closed. Potential resource leak}}
+    return; // expected-warning {{Opened stream never closed; potential resource leak}}
   fclose(p);
 }
 
@@ -345,7 +345,7 @@ void check_leak_noreturn_1(void) {
     handle_error(); // no warning
   }
   rewind(F1);
-} // expected-warning {{Opened stream never closed. Potential resource leak}}
+} // expected-warning {{Opened stream never closed; potential resource leak}}
 
 // Check that "location uniqueing" works.
 // This results in reporting only one occurence of resource leak for a stream.
@@ -357,7 +357,7 @@ void check_leak_noreturn_2(void) {
     return; // no warning
   }
   rewind(F1);
-} // expected-warning {{Opened stream never closed. Potential resource leak}}
+} // expected-warning {{Opened stream never closed; potential resource leak}}
 // FIXME: This warning should be placed at the `return` above.
 // See https://reviews.llvm.org/D83120 about details.
 
