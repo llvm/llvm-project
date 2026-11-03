@@ -493,9 +493,11 @@ bool CodeGenTBAA::CollectFields(
   /* Otherwise, treat whatever it is as a field. */
   uint64_t Offset = BaseOffset;
   uint64_t Size = Context.getTypeSizeInChars(QTy).getQuantity();
-  llvm::MDNode *TBAAType = MayAlias ? getChar() : getTypeInfo(QTy);
-  llvm::MDNode *TBAATag =
-      getAccessTagInfo(TBAAAccessInfo(BaseType, TBAAType, Offset, Size));
+  llvm::MDNode *TBAATag;
+  if (MayAlias || !BaseType)
+    TBAATag = getAccessTagInfo(TBAAAccessInfo(getChar(), Size));
+  else
+    TBAATag = getAccessTagInfo(TBAAAccessInfo(BaseType, getTypeInfo(QTy), Offset, Size));
   Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
   return true;
 }

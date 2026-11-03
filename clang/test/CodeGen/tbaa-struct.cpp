@@ -280,6 +280,21 @@ void copy12(UnionMember2 *a1, UnionMember2 *a2) {
   *a1 = *a2;
 }
 
+struct __attribute__((may_alias)) MayAlias
+{
+  short a;
+  char b[10];
+};
+
+struct ComposedMayAlias{
+  MayAlias a;
+  int b;
+};
+
+void copy13(ComposedMayAlias* a, MayAlias* b){
+  a->a = *b;
+}
+
 // (offset, size) = (0,1) char; (4,2) short; (8,4) int; (12,1) char; (16,4) int; (20,4) int
 // (offset, size) = (0,8) char; (0,2) char; (4,8) char
 // CHECK-OLD  [[DOUBLE]] = !{!"double", [[CHAR]], i64 0}
