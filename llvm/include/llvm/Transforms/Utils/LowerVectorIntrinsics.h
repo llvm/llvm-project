@@ -27,9 +27,6 @@ class Module;
 /// deleted and replaced with a loop.
 LLVM_ABI bool lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI);
 
-/// Lower a unary intrinsic using lowerVectorIntrinsicAsLoop.
-LLVM_ABI bool lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI);
-
 } // namespace llvm
 
 #endif

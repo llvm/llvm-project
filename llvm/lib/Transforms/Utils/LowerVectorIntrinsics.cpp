@@ -67,15 +67,9 @@ bool llvm::lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   Function *Fn = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
                                                    ScalarRetTy, ArgTys);
 
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  CI->getOperandBundlesAsDefs(OpBundles);
-  CallInst *ScalarCall = LoopBuilder.CreateCall(Fn, Args, OpBundles);
-  ScalarCall->setDebugLoc(CI->getDebugLoc());
-  ScalarCall->setCallingConv(CI->getCallingConv());
-  ScalarCall->setAttributes(CI->getAttributes());
+  CallInst *ScalarCall = LoopBuilder.CreateCall(Fn, Args);
   if (isa<FPMathOperator>(CI))
     ScalarCall->copyFastMathFlags(CI);
-  ScalarCall->copyMetadata(*CI, {LLVMContext::MD_fpmath});
 
   SmallVector<Value *, 2> NewVecs(NumResults);
   for (unsigned I = 0; I != NumResults; ++I) {
@@ -107,8 +101,4 @@ bool llvm::lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   CI->replaceAllUsesWith(Res);
   CI->eraseFromParent();
   return true;
-}
-
-bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
-  return lowerVectorIntrinsicAsLoop(M, CI);
 }
