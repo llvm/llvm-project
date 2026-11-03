@@ -3315,22 +3315,33 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                            {KnownSrc});
     }
     case Intrinsic::ldexp: {
-      FPClassTest SrcDemandedMask = DemandedMask & fcInf;
+      Type *EltTy = VTy->getScalarType();
+      const fltSemantics &FltSem = EltTy->getFltSemantics();
+      DenormalMode Mode = F.getDenormalMode(FltSem);
+
+      FPClassTest SrcDemandedMask = fcNone;
       if (DemandedMask & fcNan)
         SrcDemandedMask |= fcNan;
 
       if (DemandedMask & fcPosInf)
-        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+        SrcDemandedMask |= fcPosInf | fcPosNormal | fcPosSubnormal;
       if (DemandedMask & fcNegInf)
-        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+        SrcDemandedMask |= fcNegInf | fcNegNormal | fcNegSubnormal;
 
       if (DemandedMask & (fcPosNormal | fcPosSubnormal))
         SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
       if (DemandedMask & (fcNegNormal | fcNegSubnormal))
         SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
 
-      if (DemandedMask & fcPosZero)
+      // Note: If we refine based on KnownExpBits in the future, then this
+      // denormal handling code will need to be updated.
+      if (DemandedMask & fcPosZero) {
         SrcDemandedMask |= fcPosFinite;
+        if (Mode.inputsMayBePositiveZero())
+          SrcDemandedMask |= fcNegSubnormal;
+        if (Mode.outputsMayBePositiveZero())
+          SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+      }
       if (DemandedMask & fcNegZero)
         SrcDemandedMask |= fcNegFinite;
 
@@ -3338,10 +3349,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownSrc, SQ,
                                   Depth + 1))
         return CI;
-
-      Type *EltTy = VTy->getScalarType();
-      const fltSemantics &FltSem = EltTy->getFltSemantics();
-      DenormalMode Mode = F.getDenormalMode(FltSem);
 
       KnownBits KnownExpBits =
           ::computeKnownBits(CI->getArgOperand(1), SQ, Depth + 1);
@@ -3472,8 +3479,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::canonicalize: {
       Type *EltTy = VTy->getScalarType();
 
-      // TODO: This could have more refined support for PositiveZero denormal
-      // mode.
       if (EltTy->isIEEELikeFPTy()) {
         DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
@@ -3486,8 +3491,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
         if (Mode != DenormalMode::getIEEE()) {
           // Any zero results may have come from flushed denormals.
-          if (DemandedMask & fcPosZero)
+          if (DemandedMask & fcPosZero) {
             SrcDemandedMask |= fcPosSubnormal;
+            if (Mode.inputsMayBePositiveZero() ||
+                Mode.outputsMayBePositiveZero())
+              SrcDemandedMask |= fcNegSubnormal;
+          }
           if (DemandedMask & fcNegZero)
             SrcDemandedMask |= fcNegSubnormal;
         }

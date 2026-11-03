@@ -1146,6 +1146,7 @@ def bundle__loader : Separate<["-"], "bundle_loader">;
 def bundle : Flag<["-"], "bundle">;
 def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   HelpText<"Pass -b <arg> to the linker on AIX">, MetaVarName<"<arg>">,
+  Visibility<[ClangOption, FlangOption]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
@@ -3786,6 +3787,13 @@ def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
   Group<f_Group>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
 
+defm module_local_hints : BoolFOption<"module-local-hints",
+  CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Mark inline functions and template instantiations defined in the "
+          "main source file as likely_module_local">,
+  NegFlag<SetFalse>>;
+
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Embed the contents of all files read by this compilation into "
@@ -5417,11 +5425,13 @@ def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
                                 Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CC1Option]>;
-def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def gpubnames : Flag<["-"], "gpubnames">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CC1Option]>;
-def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
 def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"

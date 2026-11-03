@@ -35,6 +35,7 @@ namespace llvm {
 LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
 
 class AAManager;
+class CSEConfigBase;
 using ModulePassManager = PassManager<Module>;
 
 class Function;
@@ -195,6 +196,9 @@ public:
   createPostMachineScheduler(MachineSchedContext *C) const {
     return nullptr;
   }
+
+  /// GlobalISel CSEConfig for the new PM. Return NULL for the standard one.
+  virtual CSEConfigBase *createCSEConfig() const { return nullptr; }
 
   /// Allocate and return a default initialized instance of the YAML
   /// representation for the MachineFunctionInfo.
