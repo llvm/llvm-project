@@ -16161,12 +16161,12 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
   SDLoc DL(N);
   uint32_t PermMask = 0x0c0c0c0c;
   if (V0) {
-    V0 = DAG.getBitcastedAnyExtOrTrunc(V0, DL, MVT::i32);
+    V0 = getDWordFromOffset(DAG, DL, V0, /*DWordOffset=*/0);
     PermMask = (PermMask & ~0xFF) | (BP0->SrcOffset + 4);
   }
 
   if (V1) {
-    V1 = DAG.getBitcastedAnyExtOrTrunc(V1, DL, MVT::i32);
+    V1 = getDWordFromOffset(DAG, DL, V1, /*DWordOffset=*/0);
     PermMask = (PermMask & ~(0xFF << 8)) | (BP1->SrcOffset << 8);
   }
 
@@ -17149,6 +17149,35 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
   SDValue Src1 = N->getOperand(1);
   if (Src0.isUndef() && Src1.isUndef())
     return DCI.DAG.getUNDEF(N->getValueType(0));
+  return SDValue();
+}
+
+/// V_CVT_SCALEF32_* conversions to a narrow format only read the exponent
+/// field of their f32 scale operand.
+SDValue
+SITargetLowering::performExponentOnlyScaleCombine(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  std::optional<unsigned> ScaleArgIdx =
+      AMDGPU::getExponentOnlyScaleArgIdx(N->getConstantOperandVal(0));
+  if (!ScaleArgIdx)
+    return SDValue();
+
+  // Operand 0 is the intrinsic ID.
+  unsigned OpIdx = *ScaleArgIdx + 1;
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Scale = N->getOperand(OpIdx);
+  APInt Demanded = AMDGPU::getExponentOnlyScaleDemandedBits();
+
+  if (SDValue DemandedScale =
+          SimplifyMultipleUseDemandedBits(Scale, Demanded, DAG)) {
+    SmallVector<SDValue> Ops(N->ops());
+    Ops[OpIdx] = DemandedScale;
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(), Ops);
+  }
+
+  if (SimplifyDemandedBits(Scale, Demanded, DCI))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 
@@ -19513,6 +19542,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFMed3Combine(N, DCI);
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
     return performCvtPkRTZCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    if (SDValue Res = performExponentOnlyScaleCombine(N, DCI))
+      return Res;
+    break;
   case AMDGPUISD::CLAMP:
     return performClampCombine(N, DCI);
   case ISD::SCALAR_TO_VECTOR: {
@@ -19996,13 +20029,6 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
-
-    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-    if (MI.getOpcode() == AMDGPU::V_PK_FMA_F32 &&
-        !TII->isLegalPkFMAF32OpSel(MI)) {
-      TII->decomposePkFMAF32(MI, MRI);
-      return;
-    }
 
     if (TII->isMAI(MI)) {
       // The ordinary src0, src1, src2 were legalized above.

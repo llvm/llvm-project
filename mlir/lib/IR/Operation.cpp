@@ -783,6 +783,10 @@ void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void OpState::dump() { state->dump(); }
+#endif
+
 /// Print an operation name, eliding the dialect prefix if necessary and doesn't
 /// lead to ambiguities.
 void OpState::printOpName(Operation *op, OpAsmPrinter &p,

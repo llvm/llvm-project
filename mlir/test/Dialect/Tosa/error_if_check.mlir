@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="level=none profiles=pro_int,pro_fp extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic" -tosa-validate="strict-op-spec-alignment validate-function-signature=false"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="level=none specification_version=1.1.draft profiles=pro_int,pro_fp extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,mx_common,mx_fp4e2m1,shape" -tosa-validate="strict-op-spec-alignment validate-function-signature=false"
 
 // -----
 
@@ -433,20 +433,67 @@ func.func @test_while_loop_body_not_isolated_from_above(%arg0: tensor<i32>, %arg
 
 // -----
 
-func.func @test_matmul_rank3_lhs_broadcast_dynamic_rhs(%arg0: tensor<1x4x7xf32>, %arg1: tensor<?x7x5xf32>) -> tensor<2x4x5xf32> {
-  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
-  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<1x4x7xf32>, tensor<?x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
-  return %0 : tensor<2x4x5xf32>
+func.func @test_slice_invalid_start_values(%arg0: tensor<4x31x31xf32>) {
+  %start = tosa.const_shape values(dense<[-2, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 1, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op start values must be non-negative, got [-2, 0, 0]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x1xf32>
+  return
 }
 
 // -----
 
-func.func @test_matmul_rank3_rhs_broadcast_dynamic_lhs(%arg0: tensor<?x4x7xf32>, %arg1: tensor<1x7x5xf32>) -> tensor<2x4x5xf32> {
-  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
-  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<?x4x7xf32>, tensor<1x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
-  return %0 : tensor<2x4x5xf32>
+func.func @test_slice_invalid_size_values(%arg0: tensor<4x31x31xf32>) {
+  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op size values must be > 0, got [1, 0, 1]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x?x?xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_output_shape_mismatch_dynamic(%arg0: tensor<?x5x6xf32>) {
+  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 2, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op expected output shape to match size values, got 'tensor<?x2x4xf32>' vs [1, 2, 3]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<?x5x6xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x2x4xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_block_scaled_invalid_block_size(%arg0: tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %start = tosa.const_shape values(dense<[0, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 1, 32]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op expected start innermost block size to match data type for block scaled input, got start block=1, scale block=32}}
+  %0 = tosa.slice %arg0, %start, %size {input_unsigned = false} : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// Regression test: a block-scaled slice whose start comes from tosa.dim must
+// not crash the validation pass. The start values are not compile-time
+// constants, so the block-alignment ERROR_IF is skipped (see
+// checkErrorIfSlice).
+func.func @test_slice_block_scaled_dynamic_start(%arg0: tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %s0 = tosa.dim %arg0 axis(0) : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> !tosa.shape<1>
+  %s1 = tosa.dim %arg0 axis(1) : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> !tosa.shape<1>
+  %s2 = tosa.dim %arg0 axis(2) : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> !tosa.shape<1>
+  %start = tosa.concat_shape %s0, %s1, %s2 : (!tosa.shape<1>, !tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 1, 32]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %0 = tosa.slice %arg0, %start, %size : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// Regression test: a rank-0 shape has no constant values, so the
+// block-alignment ERROR_IF must not read startValues.back() on an empty list.
+func.func @test_slice_block_scaled_rank0_start(%arg0: tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %start = tosa.const_shape values(dense<[]> : tensor<0xindex>) : () -> !tosa.shape<0>
+  %size = tosa.const_shape values(dense<[]> : tensor<0xindex>) : () -> !tosa.shape<0>
+  %0 = tosa.slice %arg0, %start, %size : (tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<0>, !tosa.shape<0>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
