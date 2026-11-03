@@ -9,18 +9,19 @@
 // RUN: rm %t.o %t.foo.o
 // RUN: %lldb %t -o "breakpoint set -f %s -l 28" -o exit 2>&1 | FileCheck %s
 // RUN: %lldb %t.two -o "breakpoint set -f %s -l 28" \
-// RUN:   -o "image dump separate-debug-info --errors-only" -o exit 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=TWO
+// RUN:   -o "image dump separate-debug-info --errors-only" -o exit \
+// RUN:   > %t.two.out 2>&1
+// RUN: FileCheck %s --check-prefix=TWO-ERR --implicit-check-not=error: \
+// RUN:   < %t.two.out
+// RUN: FileCheck %s --check-prefix=TWO < %t.two.out
 
 // CHECK: error: {{.*}}.o" containing debug info does not exist, debug info will not be loaded
 
-// TWO: error: {{.*}} 2 of 2 debug map object files do not exist: debug info cannot be loaded for them
-// TWO-NOT: error:
+// TWO-ERR: error: {{.*}} 2 of 2 debug map object files do not exist: debug info cannot be loaded for them
 // TWO: (lldb) image dump separate-debug-info --errors-only
 // TWO: Type: "oso"
 // TWO: E debug map object file "{{.*}}.tmp.o" containing debug info does not exist
 // TWO: E debug map object file "{{.*}}.tmp.foo.o" containing debug info does not exist
-// TWO-NOT: error:
 
 #ifdef FOO
 int foo() { return 1; }
