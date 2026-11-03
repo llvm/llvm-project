@@ -20,32 +20,32 @@ define void @scalar() {
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16toI16 = bitcast half poison to i16
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16toBF16 = bitcast i16 poison to bfloat
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %BF16toI16 = bitcast bfloat poison to i16
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32toF32 = bitcast i32 poison to float
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32toI32 = bitcast float poison to i32
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toF64 = bitcast i64 poison to double
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64toI64 = bitcast double poison to i64
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I32toF32 = bitcast i32 poison to float
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F32toI32 = bitcast float poison to i32
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toF64 = bitcast i64 poison to double
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toI64 = bitcast double poison to i64
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-LABEL: 'scalar'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16toF16 = bitcast i16 poison to half
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16toI16 = bitcast half poison to i16
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16toBF16 = bitcast i16 poison to bfloat
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %BF16toI16 = bitcast bfloat poison to i16
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32toF32 = bitcast i32 poison to float
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32toI32 = bitcast float poison to i32
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toF64 = bitcast i64 poison to double
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64toI64 = bitcast double poison to i64
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I16toF16 = bitcast i16 poison to half
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F16toI16 = bitcast half poison to i16
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I16toBF16 = bitcast i16 poison to bfloat
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %BF16toI16 = bitcast bfloat poison to i16
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I32toF32 = bitcast i32 poison to float
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F32toI32 = bitcast float poison to i32
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toF64 = bitcast i64 poison to double
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toI64 = bitcast double poison to i64
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'scalar'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16toF16 = bitcast i16 poison to half
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16toI16 = bitcast half poison to i16
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16toBF16 = bitcast i16 poison to bfloat
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %BF16toI16 = bitcast bfloat poison to i16
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32toF32 = bitcast i32 poison to float
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32toI32 = bitcast float poison to i32
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toF64 = bitcast i64 poison to double
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64toI64 = bitcast double poison to i64
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I16toF16 = bitcast i16 poison to half
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F16toI16 = bitcast half poison to i16
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I16toBF16 = bitcast i16 poison to bfloat
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %BF16toI16 = bitcast bfloat poison to i16
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I32toF32 = bitcast i32 poison to float
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F32toI32 = bitcast float poison to i32
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toF64 = bitcast i64 poison to double
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toI64 = bitcast double poison to i64
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I16toF16 = bitcast i16 poison to half
@@ -68,35 +68,35 @@ define void @scalar_vector() {
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F16toI32 = bitcast <2 x half> poison to i32
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4I8toI32 = bitcast <4 x i8> poison to i32
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32toV2I16 = bitcast float poison to <2 x i16>
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toV2F32 = bitcast i64 poison to <2 x float>
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32toI64 = bitcast <2 x float> poison to i64
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toV2I32 = bitcast i64 poison to <2 x i32>
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toV2F32 = bitcast i64 poison to <2 x float>
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2F32toI64 = bitcast <2 x float> poison to i64
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toV2I32 = bitcast i64 poison to <2 x i32>
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toV2F32 = bitcast double poison to <2 x float>
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I128toV4F32 = bitcast i128 poison to <4 x float>
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-LABEL: 'scalar_vector'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32toV2I16 = bitcast i32 poison to <2 x i16>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32toV2F16 = bitcast i32 poison to <2 x half>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16toI32 = bitcast <2 x half> poison to i32
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I32toV2I16 = bitcast i32 poison to <2 x i16>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I32toV2F16 = bitcast i32 poison to <2 x half>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2F16toI32 = bitcast <2 x half> poison to i32
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4I8toI32 = bitcast <4 x i8> poison to i32
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F32toV2I16 = bitcast float poison to <2 x i16>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toV2F32 = bitcast i64 poison to <2 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32toI64 = bitcast <2 x float> poison to i64
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toV2I32 = bitcast i64 poison to <2 x i32>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toV2F32 = bitcast i64 poison to <2 x float>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2F32toI64 = bitcast <2 x float> poison to i64
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toV2I32 = bitcast i64 poison to <2 x i32>
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toV2F32 = bitcast double poison to <2 x float>
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I128toV4F32 = bitcast i128 poison to <4 x float>
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'scalar_vector'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32toV2I16 = bitcast i32 poison to <2 x i16>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32toV2F16 = bitcast i32 poison to <2 x half>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F16toI32 = bitcast <2 x half> poison to i32
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I32toV2I16 = bitcast i32 poison to <2 x i16>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I32toV2F16 = bitcast i32 poison to <2 x half>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2F16toI32 = bitcast <2 x half> poison to i32
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4I8toI32 = bitcast <4 x i8> poison to i32
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F32toV2I16 = bitcast float poison to <2 x i16>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toV2F32 = bitcast i64 poison to <2 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32toI64 = bitcast <2 x float> poison to i64
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64toV2I32 = bitcast i64 poison to <2 x i32>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toV2F32 = bitcast i64 poison to <2 x float>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2F32toI64 = bitcast <2 x float> poison to i64
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toV2I32 = bitcast i64 poison to <2 x i32>
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toV2F32 = bitcast double poison to <2 x float>
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I128toV4F32 = bitcast i128 poison to <4 x float>
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
