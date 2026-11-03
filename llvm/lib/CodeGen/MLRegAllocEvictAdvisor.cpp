@@ -17,10 +17,10 @@
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
-#include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
 #endif
 #include "MLRegAllocEvictAdvisor.h"
+#include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/Utils/MLGOUtils.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
@@ -54,8 +54,6 @@ using CompiledModelType = RegAllocEvictModel;
 using CompiledModelType = NoopSavedModelImpl;
 #endif
 
-#if defined(LLVM_HAVE_MLIR_LOWERING_REGALLOC)
-constexpr bool HaveMLIRLoweringRegAlloc = true;
 #include "llvm/Analysis/EmitCModelRunner.h"
 #include "llvm/CodeGen/RegAllocEvictModels.h"
 
@@ -90,16 +88,6 @@ createMLGORegAllocModelRunner(LLVMContext &Ctx,
   }
   llvm_unreachable("Unknown MLGO model type!");
 }
-#else
-constexpr bool HaveMLIRLoweringRegAlloc = false;
-enum class MLGORegAllocModelChoice { Default };
-static const MLGORegAllocModelChoice SelectedMLGORegAllocModel =
-    MLGORegAllocModelChoice::Default;
-static inline std::unique_ptr<MLModelRunner>
-createMLGORegAllocModelRunner(LLVMContext &, const std::vector<TensorSpec> &) {
-  return nullptr;
-}
-#endif
 
 static cl::opt<std::string> InteractiveChannelBaseName(
     "regalloc-evict-interactive-channel-base", cl::Hidden,
@@ -406,6 +394,9 @@ public:
       : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {
     const std::vector<int64_t> PerLiveRangeShape{1, NumAllocatableRegs + 1};
     InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
+    Runner = createReleaseModeModelRunner<CompiledModelType>(
+        Ctx, InputFeatures, DecisionName, InteractiveChannelBaseName,
+        DecisionSpec, createMLGORegAllocModelRunner);
   }
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
@@ -415,14 +406,6 @@ public:
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
-    if (!Initialized) {
-      Initialized = true;
-      Runner = createReleaseModeModelRunner<CompiledModelType,
-                                            HaveMLIRLoweringRegAlloc>(
-          MF.getFunction().getContext(), InputFeatures, DecisionName,
-          InteractiveChannelBaseName, DecisionSpec,
-          createMLGORegAllocModelRunner);
-    }
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
     if (!Runner)
@@ -434,7 +417,6 @@ public:
 private:
   std::vector<TensorSpec> InputFeatures;
   std::unique_ptr<MLModelRunner> Runner;
-  bool Initialized = false;
 };
 
 class ReleaseModeEvictionAdvisorAnalysisLegacy final
@@ -639,6 +621,24 @@ float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
   return static_cast<float>(NumUsedRegs);
 }
 
+// Counts the super class because inflation can widen a class up to it.
+static unsigned getMaxAllocationOrderLength(const MachineFunction &MF,
+                                            const RegisterClassInfo &RCI) {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  unsigned Max = 0;
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    if (MRI.reg_nodbg_empty(Reg))
+      continue;
+    const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+    Max = std::max(
+        {Max, RCI.getNumAllocatableRegs(RC),
+         RCI.getNumAllocatableRegs(TRI.getLargestLegalSuperClass(RC, MF))});
+  }
+  return Max;
+}
+
 MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
                                MLModelRunner *Runner,
                                ArrayRef<TensorSpec> InputFeatures,
@@ -649,6 +649,12 @@ MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
       Runner(std::move(Runner)), MBFI(MBFI), Loops(Loops),
       InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
   assert(this->Runner);
+  unsigned MaxOrder = getMaxAllocationOrderLength(MF, RegClassInfo);
+  if (MaxOrder > NumAllocatableRegs)
+    reportFatalUsageError(
+        "Regalloc: " + MF.getName() +
+        " needs -mlregalloc-num-allocatable-regs=" + Twine(MaxOrder) +
+        " or more, got " + Twine(NumAllocatableRegs));
   Runner->switchContext(MF.getName());
   DoNotNormalize.set(FeatureIDs::mask);
   DoNotNormalize.set(FeatureIDs::is_free);
@@ -711,12 +717,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
         return false;
       if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
-      bool Urgent =
-          !VirtReg.isSpillable() &&
-          (Intf->isSpillable() ||
-           RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
-               RegClassInfo.getNumAllocatableRegs(
-                   MRI->getRegClass(Intf->reg())));
+      bool Urgent = isUrgentEviction(VirtReg, *Intf);
 
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       // There is a potential that the model could be adversarial and
@@ -725,11 +726,16 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       // threshold, prevent the range from being evicted. We still let the
       // range through if it is urgent as we are required to produce an
       // eviction if the candidate is not spillable.
-      if (getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
+      // The cap should not apply when the default advisor decides.
+      if (!isa<NoInferenceModelRunner>(Runner) &&
+          getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
       // Only evict older cascades or live ranges without a cascade.
-      if (Cascade <= IntfCascade) {
+      if (Cascade == IntfCascade)
+        return false;
+
+      if (Cascade < IntfCascade) {
         if (!Urgent)
           return false;
         ++NumUrgent;
@@ -795,7 +801,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     MCRegister PhysReg = *I;
     assert(!Regs[Pos].second);
     assert(PhysReg);
-    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg)) {
+    if (!canAllocatePhysReg(VirtReg, CostPerUseLimit, PhysReg)) {
       continue;
     }
     if (loadInterferenceFeatures(VirtReg, PhysReg, I.isHint(), FixedRegisters,
@@ -806,7 +812,6 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   }
   if (Available == 0) {
     // Nothing to decide, nothing to learn.
-    assert(!MustFindEviction);
     return MCRegister::NoRegister;
   }
   const size_t ValidPosLimit = Pos;

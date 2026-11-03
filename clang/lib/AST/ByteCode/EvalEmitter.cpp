@@ -147,23 +147,19 @@ void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
-Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
+Scope::Local EvalEmitter::createLocal(const Descriptor *D,
+                                      bool IsConstexprUnknown) {
+
+  BlockFlags Flags = BlockFlags().withConstexprUnknown(IsConstexprUnknown);
   // Allocate memory for a local.
-  char *Memory = reinterpret_cast<char *>(
-      S.allocate(sizeof(Block) + D->getAllocSize() + Block::InlineDescMD));
-  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
-                               /*IsStatic=*/false);
+  char *Memory =
+      reinterpret_cast<char *>(S.allocate(Block::allocSize(D, Block::Local)));
+  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::Local, Flags);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
-  Desc.Desc = D;
-  Desc.Offset = sizeof(InlineDescriptor);
-  Desc.IsActive = false;
-  Desc.IsBase = false;
-  Desc.IsFieldMutable = false;
-  Desc.IsConst = false;
-  Desc.IsInitialized = false;
+  new (&Desc) InlineDescriptor(D);
 
   // Register the local.
   unsigned Off = Locals.size();
@@ -308,7 +304,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
       ((DeclDesc->asVarDecl() == S.EvaluatingDecl &&
         S.getLangOpts().CPlusPlus23 &&
         S.EvaluatingDecl->getType()->isReferenceType()) ||
-       DeclDesc->IsConstexprUnknown)) {
+       Ptr.isConstexprUnknown())) {
     S.FFDiag(Info, diag::note_constexpr_var_init_non_constant, 1)
         << DeclDesc->asVarDecl();
     S.Note(DeclDesc->asVarDecl()->getLocation(), diag::note_declared_at);
@@ -331,7 +327,7 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
 
   if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
-  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+  if (!EvalResult.checkFullyInitialized(S, Ptr))
     return false;
   if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
     return false;
@@ -351,7 +347,7 @@ bool EvalEmitter::emitGetPtrLocal(uint32_t I, SourceInfo Info) {
     return true;
 
   Block *B = getLocal(I);
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+  S.Stk.push<Pointer>(B);
   return true;
 }
 

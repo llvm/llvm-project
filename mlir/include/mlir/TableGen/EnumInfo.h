@@ -72,11 +72,21 @@ public:
   // Returns true if this is a bit enum.
   bool isBitEnum() const;
 
+  // Returns true if this is a bit enum whose cases are parsed and printed as
+  // separate, unquoted keywords.
+  bool isNewStyleBitEnum() const;
+
+  // Returns true if a 'FieldParser' and a printer are generated for the enum.
+  bool hasParserPrinter() const;
+
   // Returns the enum class name.
   StringRef getEnumClassName() const;
 
   // Returns the C++ namespaces this enum class should be placed in.
   StringRef getCppNamespace() const;
+
+  // Returns the fully qualified C++ name of the enum class.
+  std::string getQualifiedName() const;
 
   // Returns the summary of the enum.
   StringRef getSummary() const;
@@ -123,6 +133,18 @@ public:
 
   bool printBitEnumPrimaryGroups() const;
   bool printBitEnumQuoted() const;
+
+  // Returns the string printed between the cases of a bit enum.
+  StringRef getBitEnumSeparator() const;
+
+  // The token that separates the cases of a bit enum, ignoring the spaces
+  // around it.
+  enum class BitEnumSeparatorKind { VerticalBar, Comma };
+  BitEnumSeparatorKind getBitEnumSeparatorKind() const;
+
+  // Returns the name of the `AsmParser` method that parses the separator
+  // between the cases of a bit enum.
+  StringRef getBitEnumSeparatorParser() const;
 
   // Returns the TableGen definition this EnumAttrCase was constructed from.
   const llvm::Record &getDef() const;

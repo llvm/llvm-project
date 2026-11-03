@@ -358,7 +358,9 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   if (TI->hasOneUse() || FI->hasOneUse()) {
     // Cond ? -X : -Y --> -(Cond ? X : Y)
     Value *X, *Y;
-    if (match(TI, m_FNeg(m_Value(X))) && match(FI, m_FNeg(m_Value(Y)))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(TI, m_FNegOrFSubNegZero(m_Value(X))) &&
+        match(FI, m_FNegOrFSubNegZero(m_Value(Y)))) {
       // Intersect FMF from the fneg instructions and union those with the
       // select.
       FastMathFlags FMF = TI->getFastMathFlags();
@@ -507,6 +509,47 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
+/// select C, f(..., X, ...), f(..., Y, ...) --> f(..., select C, X, Y, ...)
+static Instruction *
+foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
+                           IntrinsicInst *FII,
+                           InstCombiner::BuilderTy &Builder) {
+  if (TII->getCalledFunction() != FII->getCalledFunction())
+    return nullptr;
+
+  std::optional<unsigned> DiffArgNo;
+  for (unsigned I = 0, E = TII->arg_size(); I != E; ++I) {
+    if (TII->getArgOperand(I) == FII->getArgOperand(I))
+      continue;
+    if (DiffArgNo)
+      return nullptr;
+    DiffArgNo = I;
+  }
+  if (!DiffArgNo)
+    return nullptr;
+
+  if (!canReplaceOperandWithVariable(TII, *DiffArgNo))
+    return nullptr;
+
+  Value *TV = TII->getArgOperand(*DiffArgNo);
+  Value *FV = FII->getArgOperand(*DiffArgNo);
+  // powi keeps a scalar exponent even in its vector form.
+  if (SI.getCondition()->getType()->isVectorTy() &&
+      !TV->getType()->isVectorTy())
+    return nullptr;
+  // Constant args may enable cheaper lowering, e.g. pow(X, 2.0) -> X * X.
+  if (isa<Constant>(TV) || isa<Constant>(FV))
+    return nullptr;
+
+  SmallVector<Value *> Args(TII->args());
+  Args[*DiffArgNo] =
+      Builder.CreateSelect(SI.getCondition(), TV, FV, SI.getName() + ".v", &SI);
+  auto *NewCall = CallInst::Create(TII->getCalledFunction(), Args);
+  NewCall->copyIRFlags(TII);
+  NewCall->andIRFlags(FII);
+  return NewCall;
+}
+
 /// This transforms patterns of the form:
 ///   select cond, intrinsic(x, ...), intrinsic(y, ...)
 /// into:
@@ -538,16 +581,10 @@ Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
 
     return replaceInstUsesWith(SI, NewCall);
   }
-  case Intrinsic::ctpop: {
-    Value *TV = LHSIntrinsic->getArgOperand(0);
-    Value *FV = RHSIntrinsic->getArgOperand(0);
-
-    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
-    Value *NewCall = Builder.CreateUnaryIntrinsic(IID, NewSel);
-
-    return replaceInstUsesWith(SI, NewCall);
-  }
   default:
+    if (isTriviallyVectorizable(IID))
+      return foldSelectIntoIntrinsicArg(SI, LHSIntrinsic, RHSIntrinsic,
+                                        Builder);
     return nullptr;
   }
 }
@@ -1624,6 +1661,24 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   return nullptr;
 }
 
+/// SPF can match patterns like:
+/// (X <u C1) ? C1 : UMIN(X, C2) ==> UMAX(UMIN(X, C2), C1)
+/// However, if the UMIN has poison-generating annotations, the result may
+/// be more poisonous, because the poison is propagated unconditionally after
+/// the transform. Drop annotations in this case.
+/// FIXME: This is something of a hack that relies on details of patterns
+// supported by SPF.
+static void dropPoisonGeneratingAnnotationsForSPFCanonicalization(Value *Cond,
+                                                                  Value *LHS,
+                                                                  Value *RHS) {
+  if (!impliesPoison(LHS, Cond))
+    if (auto *I = dyn_cast<Instruction>(LHS))
+      I->dropPoisonGeneratingAnnotations();
+  if (!impliesPoison(RHS, Cond))
+    if (auto *I = dyn_cast<Instruction>(RHS))
+      I->dropPoisonGeneratingAnnotations();
+}
+
 static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
                               InstCombinerImpl &IC) {
   Value *LHS, *RHS;
@@ -1653,6 +1708,7 @@ static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
 
   if (SelectPatternResult::isMinOrMax(SPF)) {
     Intrinsic::ID IntrinsicID = getMinMaxIntrinsic(SPF);
+    dropPoisonGeneratingAnnotationsForSPFCanonicalization(&Cmp, LHS, RHS);
     return IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS);
   }
 
@@ -3365,7 +3421,8 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
       }
     }
 
-    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (!match(TrueVal, m_FNegOrFSubNegZero(m_Specific(X))))
       return nullptr;
 
     // Forward-propagate nnan and ninf from the fcmp to the select.
@@ -3442,7 +3499,8 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
                m_ICmp(Pred, m_ElementWiseBitCast(m_Specific(X)), m_APInt(C))) ||
         !isSignBitCheck(Pred, *C, TrueIfSigned))
       continue;
-    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (!match(TrueVal, m_FNegOrFSubNegZero(m_Specific(X))))
       return nullptr;
     if (Swap == TrueIfSigned && !CondVal->hasOneUse() && !TrueVal->hasOneUse())
       return nullptr;
@@ -3665,7 +3723,13 @@ foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
     return nullptr;
 
   Value *Xor = Builder.CreateXor(InnerCond, OuterCond);
-  return SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+  SelectInst *SI = SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+  // We cannot construct branch weights without assuming that the distributions
+  // of the two conditions are independent, so mark the branch weights as
+  // unknown.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE,
+                                              OuterSelVal.getFunction());
+  return SI;
 }
 
 /// Look for patterns like
@@ -4676,11 +4740,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return replaceInstUsesWith(SI, FalseVal);
   }
 
-  // If the type of select is not an integer type or if the condition and
-  // the selection type are not both scalar nor both vector types, there is no
-  // point in attempting to match these patterns.
+  // If the condition is a constant or if the condition and the selection
+  // type are not both scalar nor both vector types, there is no point in
+  // attempting to match these patterns.
   Type *CondType = CondVal->getType();
-  if (!isa<Constant>(CondVal) && SelType->isIntOrIntVectorTy() &&
+  if (!isa<Constant>(CondVal) &&
       CondType->isVectorTy() == SelType->isVectorTy()) {
     if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal,
                                           ConstantInt::getTrue(CondType), SQ,
@@ -5072,9 +5136,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         CmpInst::Predicate MinMaxPred = getMinMaxPred(SPF, SPR.Ordered);
 
         Value *Cmp;
-        if (CmpInst::isIntPredicate(MinMaxPred))
+        if (CmpInst::isIntPredicate(MinMaxPred)) {
+          dropPoisonGeneratingAnnotationsForSPFCanonicalization(CondVal, LHS,
+                                                                RHS);
           Cmp = Builder.CreateICmp(MinMaxPred, LHS, RHS);
-        else
+        } else
           Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS,
                                       cast<Instruction>(SI.getCondition()));
 
@@ -5318,29 +5384,34 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // TODO: preserve FMF flags
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
+    Instruction *MDFrom = nullptr;
+    // If the and/or is logical, we can propagate branch weights from that
+    // select. Otherwise, we cannot infer the branch weights in the
+    // general case.
+    if (auto *NestedSI = dyn_cast<SelectInst>(SI.getCondition()))
+      if (NestedSI->getCondition() == A)
+        MDFrom = NestedSI;
+
     if (Value *V = simplifySelectInst(B, TrueVal, FalseVal, FMF,
                                       SQ.getWithInstruction(&SI))) {
-      Value *NewTrueVal = IsAnd ? V : TrueVal;
-      Value *NewFalseVal = IsAnd ? FalseVal : V;
-
-      // If the True and False values don't change, then preserve the branch
-      // metadata of the original select as the net effect of this change is to
-      // simplify the conditional.
-      Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal) {
-        MDFrom = &SI;
-      }
-      return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
-                                MDFrom);
+      SelectInst *NewSI = SelectInst::Create(
+          A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
+      if (!MDFrom)
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
+      return NewSI;
     }
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
         if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
-          return SelectInst::Create(
+          SelectInst *NewSI = SelectInst::Create(
               A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
-              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+              ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
+          if (!MDFrom)
+            setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
+          return NewSI;
         }
     }
 

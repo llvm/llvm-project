@@ -535,6 +535,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "machine-block-address-taken";
       hasAttributes = true;
     }
+    if (hasLabelMustBeEmitted()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "label-must-be-emitted";
+      hasAttributes = true;
+    }
     if (isIRBlockAddressTaken()) {
       os << (hasAttributes ? ", " : " (");
       os << "ir-block-address-taken ";
@@ -661,6 +666,22 @@ bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
   livein_iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   return I != livein_end() && (I->LaneMask & LaneMask).any();
+}
+
+bool MachineBasicBlock::isLiveInOverlappedWith(
+    MCRegister Reg, const TargetRegisterInfo &TRI) const {
+  return any_of(LiveIns, [&](const RegisterMaskPair &LI) {
+    if (!TRI.regsOverlap(Reg, LI.PhysReg))
+      return false;
+    if (LI.LaneMask.all())
+      return true;
+    for (MCRegUnitMaskIterator U(LI.PhysReg, &TRI); U.isValid(); ++U) {
+      auto [Unit, UnitMask] = *U;
+      if ((UnitMask & LI.LaneMask).any() && TRI.hasRegUnit(Reg, Unit))
+        return true;
+    }
+    return false;
+  });
 }
 
 void MachineBasicBlock::sortUniqueLiveIns() {
@@ -1281,76 +1302,51 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
   }
 
-  // Fix PHI nodes in Succ so they refer to NMBB instead of this.
-  Succ->replacePhiUsesWith(this, NMBB);
+  // Fix PHI nodes in Succ so they refer to NMBB instead of this, and find the
+  // registers used from NMBB in them.
+  SmallSet<Register, 8> PHISrcRegs;
+  for (MachineInstr &MI : Succ->phis()) {
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+      MachineOperand &MBBOp = MI.getOperand(I + 1);
+      if (MBBOp.getMBB() != this)
+        continue;
+      MBBOp.setMBB(NMBB);
+      const MachineOperand &MO = MI.getOperand(I);
+      if (LIS && !MO.isUndef())
+        PHISrcRegs.insert(MO.getReg());
+    }
+  }
 
   // Inherit live-ins from the successor
   for (const auto &LI : Succ->liveins())
     NMBB->addLiveIn(LI);
 
   if (LIS) {
-    // After splitting the edge and updating SlotIndexes, live intervals may be
-    // in one of two situations, depending on whether this block was the last in
-    // the function. If the original block was the last in the function, all
-    // live intervals will end prior to the beginning of the new split block. If
-    // the original block was not at the end of the function, all live intervals
-    // will extend to the end of the new split block.
-
-    bool isLastMBB =
-      std::next(MachineFunction::iterator(NMBB)) == getParent()->end();
-
+    // NMBB takes over the end index of this block, so all live intervals
+    // that are live out of this block now extend to the end of NMBB.
     SlotIndex StartIndex = Indexes->getMBBEndIdx(this);
     SlotIndex PrevIndex = StartIndex.getPrevSlot();
     SlotIndex EndIndex = Indexes->getMBBEndIdx(NMBB);
 
-    // Find the registers used from NMBB in PHIs in Succ.
-    SmallSet<Register, 8> PHISrcRegs;
-    for (MachineBasicBlock::instr_iterator
-         I = Succ->instr_begin(), E = Succ->instr_end();
-         I != E && I->isPHI(); ++I) {
-      for (unsigned ni = 1, ne = I->getNumOperands(); ni != ne; ni += 2) {
-        if (I->getOperand(ni+1).getMBB() == NMBB) {
-          MachineOperand &MO = I->getOperand(ni);
-          Register Reg = MO.getReg();
-          if (MO.isUndef())
-            continue;
-          PHISrcRegs.insert(Reg);
-
-          LiveInterval &LI = LIS->getInterval(Reg);
-          VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
-          assert(VNI &&
-                 "PHI sources should be live out of their predecessors.");
-          LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-          for (auto &SR : LI.subranges()) {
-            if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
-              SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
-          }
-        }
-      }
+#ifndef NDEBUG
+    for (Register Reg : PHISrcRegs) {
+      assert(LIS->getInterval(Reg).liveAt(PrevIndex) &&
+             "PHI sources should be live out of their predecessors.");
     }
+#endif
 
-    MachineRegisterInfo *MRI = &getParent()->getRegInfo();
-    for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-      Register Reg = Register::index2VirtReg(i);
-      if (PHISrcRegs.count(Reg) || !LIS->hasInterval(Reg))
-        continue;
+    auto UpdateLiveOutReg = [&](Register Reg) {
+      if (PHISrcRegs.count(Reg))
+        return true;
+      if (!LIS->hasInterval(Reg))
+        return false;
 
       LiveInterval &LI = LIS->getInterval(Reg);
       if (!LI.liveAt(PrevIndex))
-        continue;
+        return false;
 
       bool isLiveOut = LI.liveAt(LIS->getMBBStartIdx(Succ));
-      if (isLiveOut && isLastMBB) {
-        VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
-        assert(VNI && "LiveInterval should have VNInfo where it is live.");
-        LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-        // Update subranges with live values
-        for (auto &SR : LI.subranges()) {
-          VNInfo *VNI = SR.getVNInfoAt(PrevIndex);
-          if (VNI)
-            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-        }
-      } else if (!isLiveOut && !isLastMBB) {
+      if (!isLiveOut) {
         LI.removeSegment(StartIndex, EndIndex);
         // The main range is live across NMBB, but an individual lane need not
         // be.
@@ -1359,6 +1355,21 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
             SR.removeSegment(StartIndex, EndIndex);
         }
       }
+      return isLiveOut;
+    };
+
+    if (std::vector<SparseBitVector<>> *LiveOutSets = Analyses.LiveOutSets) {
+      LiveOutSets->resize(MF->getNumBlockIDs());
+      const SparseBitVector<> &LiveOut = (*LiveOutSets)[getNumber()];
+      SparseBitVector<> &NewLiveOut = (*LiveOutSets)[NMBB->getNumber()];
+      for (unsigned Idx : LiveOut) {
+        if (UpdateLiveOutReg(Register::index2VirtReg(Idx)))
+          NewLiveOut.set(Idx);
+      }
+    } else {
+      MachineRegisterInfo *MRI = &getParent()->getRegInfo();
+      for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i)
+        UpdateLiveOutReg(Register::index2VirtReg(i));
     }
 
     // Update all intervals for registers whose uses may have been modified by
@@ -1812,10 +1823,7 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
-    // Prefer the "exception-model" module flag, else the TargetOptions default.
     ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
-    if (EH == ExceptionHandling::Default)
-      EH = TLI.getTargetMachine().getExceptionModel();
     ExceptionPointer = TLI.getExceptionPointerRegister(EH, PersonalityFn);
     ExceptionSelector = TLI.getExceptionSelectorRegister(EH, PersonalityFn);
   }

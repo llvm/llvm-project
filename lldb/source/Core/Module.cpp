@@ -143,9 +143,9 @@ Module::Module(const ModuleSpec &module_spec)
             static_cast<void *>(this),
             module_spec.GetArchitecture().GetArchitectureName(),
             module_spec.GetFileSpec().GetPath().c_str(),
-            module_spec.GetObjectName().IsEmpty() ? "" : "(",
-            module_spec.GetObjectName().AsCString(""),
-            module_spec.GetObjectName().IsEmpty() ? "" : ")");
+            module_spec.GetObjectName().empty() ? "" : "(",
+            module_spec.GetObjectName().c_str(),
+            module_spec.GetObjectName().empty() ? "" : ")");
 
   auto extractor_sp = module_spec.GetExtractor();
   lldb::offset_t file_size = 0;
@@ -216,9 +216,9 @@ Module::Module(const ModuleSpec &module_spec)
     m_symfile_spec = matching_module_spec.GetSymbolFileSpec();
 
   // Copy the object name over
-  if (matching_module_spec.GetObjectName())
+  if (!matching_module_spec.GetObjectName().empty())
     m_object_name = matching_module_spec.GetObjectName();
-  else
+  else if (!module_spec.GetObjectName().empty())
     m_object_name = module_spec.GetObjectName();
 
   // Always trust the object offset (file offset) and object modification time
@@ -229,11 +229,11 @@ Module::Module(const ModuleSpec &module_spec)
 }
 
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
-               ConstString object_name, lldb::offset_t object_offset,
+               std::string object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
     : UserID(g_unique_id++),
       m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
-      m_arch(arch), m_file(file_spec), m_object_name(object_name),
+      m_arch(arch), m_file(file_spec), m_object_name(std::move(object_name)),
       m_object_offset(object_offset), m_object_mod_time(object_mod_time),
       m_unwind_table(*this), m_file_has_changed(false),
       m_first_file_changed_log(false) {
@@ -1006,21 +1006,21 @@ Symtab *Module::GetSymtab(bool can_create) {
 }
 
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
-                                      ConstString object_name) {
+                                      std::string object_name) {
   // Container objects whose paths do not specify a file directly can call this
   // function to correct the file and object names.
   m_file = file;
   m_mod_time = FileSystem::Instance().GetModificationTime(file);
-  m_object_name = object_name;
+  m_object_name = std::move(object_name);
 }
 
 const ArchSpec &Module::GetArchitecture() const { return m_arch; }
 
 std::string Module::GetSpecificationDescription() const {
   std::string spec(GetFileSpec().GetPath());
-  if (m_object_name) {
+  if (!m_object_name.empty()) {
     spec += '(';
-    spec += m_object_name.GetCString();
+    spec += m_object_name;
     spec += ')';
   }
   if (m_memory_module_addr.has_value()) {
@@ -1048,9 +1048,8 @@ void Module::GetDescription(llvm::raw_ostream &s,
       s << path;
   }
 
-  const char *object_name = m_object_name.GetCString();
-  if (object_name)
-    s << llvm::formatv("({0})", object_name);
+  if (!m_object_name.empty())
+    s << llvm::formatv("({0})", m_object_name);
   if (m_memory_module_addr.has_value())
     s << llvm::formatv("({0})", m_memory_module_addr.value());
 }
@@ -1174,7 +1173,7 @@ void Module::Dump(Stream *s) {
   s->IndentLess();
 }
 
-ConstString Module::GetObjectName() const { return m_object_name; }
+llvm::StringRef Module::GetObjectName() const { return m_object_name; }
 
 ObjectFile *Module::GetObjectFile() {
   if (!m_did_load_objfile.load()) {
@@ -1222,12 +1221,16 @@ SectionList *Module::GetSectionList() {
   // Guard the lazy build with m_sections_mutex rather than m_mutex:
   // Module::PreloadSymbols holds m_mutex across the parallel DWARF index, whose
   // worker threads re-enter GetSectionList, so taking m_mutex here deadlocks.
-  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
-  if (!m_sections_up) {
-    if (ObjectFile *obj_file = GetObjectFile())
-      obj_file->CreateSections(*GetUnifiedSectionList());
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+    if (m_sections_up)
+      return m_sections_up.get();
   }
-  return m_sections_up.get();
+  ObjectFile *obj_file = GetObjectFile();
+  if (obj_file)
+    obj_file->GetSectionList();
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  return obj_file ? GetUnifiedSectionList() : m_sections_up.get();
 }
 
 LockedPtr<ObjectFile> Module::GetObjectFileLocked() {
@@ -1484,11 +1487,9 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
       return false;
   }
 
-  ConstString object_name = module_ref.GetObjectName();
-  if (object_name) {
-    if (object_name != GetObjectName())
-      return false;
-  }
+  llvm::StringRef object_name = module_ref.GetObjectName();
+  if (!object_name.empty() && object_name != GetObjectName())
+    return false;
 
   // A module read from memory is the image at the address it was read from.
   std::optional<lldb::addr_t> load_addr = module_ref.GetLoadAddress();
@@ -1645,7 +1646,7 @@ uint32_t Module::Hash() {
   std::string identifier;
   llvm::raw_string_ostream id_strm(identifier);
   id_strm << m_arch.GetTriple().str() << '-' << m_file.GetPath();
-  if (m_object_name)
+  if (!m_object_name.empty())
     id_strm << '(' << m_object_name << ')';
   if (m_object_offset > 0)
     id_strm << m_object_offset;
@@ -1659,7 +1660,7 @@ std::string Module::GetCacheKey() {
   std::string key;
   llvm::raw_string_ostream strm(key);
   strm << m_arch.GetTriple().str() << '-' << m_file.GetFilename();
-  if (m_object_name)
+  if (!m_object_name.empty())
     strm << '(' << m_object_name << ')';
   strm << '-' << llvm::format_hex(Hash(), 10);
   return key;

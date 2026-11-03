@@ -223,6 +223,16 @@ void RegisterContextUnwind::InitializeZerothFrame() {
           m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
     }
     m_current_offset_backed_up_one = m_current_offset;
+  } else if (Address start =
+                 pc_module_sp ? pc_module_sp->GetUnwindTable()
+                                    .GetFunctionStartFromObjectFileUnwindInfo(
+                                        m_current_pc)
+                              : Address();
+             start.IsValid()) {
+    m_start_pc = start;
+    m_current_offset =
+        m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
+    m_current_offset_backed_up_one = m_current_offset;
   } else {
     m_start_pc = m_current_pc;
     m_current_offset = std::nullopt;
@@ -914,9 +924,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
 
   // No FuncUnwinders available for this pc (stripped function symbols, lldb
   // could not augment its function table with another source, like
-  // LC_FUNCTION_STARTS or eh_frame in ObjectFileMachO). See if eh_frame or the
-  // .ARM.exidx tables have unwind information for this address, else fall back
-  // to the architectural default unwind.
+  // LC_FUNCTION_STARTS or eh_frame in ObjectFileMachO). See if eh_frame, the
+  // .ARM.exidx tables or the object file's own unwind info (e.g. the PE EH info
+  // in .pdata) have unwind information for this address, else fall back to the
+  // architectural default unwind.
   if (!func_unwinders_sp) {
     m_frame_type = eNormalFrame;
 
@@ -929,7 +940,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     if (DWARFCallFrameInfo *eh_frame =
             pc_module_sp->GetUnwindTable().GetEHFrameInfo()) {
       if (std::unique_ptr<UnwindPlan> plan_up =
-              eh_frame->GetUnwindPlan(m_current_pc))
+              eh_frame->GetUnwindPlan(m_current_pc, m_start_pc))
         return plan_up;
     }
 
@@ -1306,11 +1317,13 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
     const lldb_private::SymbolContext &m_sym_ctx) const {
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
   if (platform_sp) {
-    const std::vector<ConstString> trap_handler_names(
+    const std::vector<std::string> &trap_handler_names(
         platform_sp->GetTrapHandlerSymbolNames());
-    for (ConstString name : trap_handler_names) {
-      if ((m_sym_ctx.function && m_sym_ctx.function->GetName() == name) ||
-          (m_sym_ctx.symbol && m_sym_ctx.symbol->GetName() == name)) {
+    for (const std::string &name : trap_handler_names) {
+      if ((m_sym_ctx.function &&
+           m_sym_ctx.function->GetName().GetStringRef() == name) ||
+          (m_sym_ctx.symbol &&
+           m_sym_ctx.symbol->GetName().GetStringRef() == name)) {
         return true;
       }
     }

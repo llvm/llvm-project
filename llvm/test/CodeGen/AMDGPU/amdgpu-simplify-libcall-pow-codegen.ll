@@ -683,7 +683,7 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) #0 {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; CHECK-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    v_writelane_b32 v43, s16, 15
+; CHECK-NEXT:    v_writelane_b32 v43, s16, 14
 ; CHECK-NEXT:    s_addk_i32 s32, 0x800
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
@@ -700,9 +700,8 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v43, s51, 9
 ; CHECK-NEXT:    v_writelane_b32 v43, s52, 10
 ; CHECK-NEXT:    v_writelane_b32 v43, s53, 11
-; CHECK-NEXT:    v_writelane_b32 v43, s54, 12
-; CHECK-NEXT:    v_writelane_b32 v43, s30, 13
-; CHECK-NEXT:    v_writelane_b32 v43, s31, 14
+; CHECK-NEXT:    v_writelane_b32 v43, s30, 12
+; CHECK-NEXT:    v_writelane_b32 v43, s31, 13
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, _Z4log2d@gotpcrel32@lo+4
@@ -720,7 +719,6 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    v_or_b32_e32 v42, 1, v2
-; CHECK-NEXT:    s_brev_b32 s54, -2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_cvt_f64_i32_e32 v[2:3], v42
@@ -740,13 +738,13 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_bfi_b32 v1, s54, v1, v41
+; CHECK-NEXT:    s_brev_b32 s4, -2
+; CHECK-NEXT:    v_bfi_b32 v1, s4, v1, v41
 ; CHECK-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s30, v43, 13
-; CHECK-NEXT:    v_readlane_b32 s31, v43, 14
-; CHECK-NEXT:    v_readlane_b32 s54, v43, 12
+; CHECK-NEXT:    v_readlane_b32 s30, v43, 12
+; CHECK-NEXT:    v_readlane_b32 s31, v43, 13
 ; CHECK-NEXT:    v_readlane_b32 s53, v43, 11
 ; CHECK-NEXT:    v_readlane_b32 s52, v43, 10
 ; CHECK-NEXT:    v_readlane_b32 s51, v43, 9
@@ -760,7 +758,7 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s35, v43, 1
 ; CHECK-NEXT:    v_readlane_b32 s34, v43, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
-; CHECK-NEXT:    v_readlane_b32 s4, v43, 15
+; CHECK-NEXT:    v_readlane_b32 s4, v43, 14
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    buffer_load_dword v43, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]

@@ -186,7 +186,7 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
       rtlArgs = &rtlArgStorage;
       emitCallArgs(*rtlArgs, md->getType()->castAs<FunctionProtoType>(),
                    drop_begin(ce->arguments(), 1), ce->getDirectCallee(),
-                   /*ParamsToSkip*/ 0);
+                   /*ParamsToSkip*/ 0, EvaluationOrder::ForceRightToLeft);
     }
   }
 
@@ -764,10 +764,21 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   ///   to a replaceable global allocation function.
   ///
   /// We model such elidable calls with the 'builtin' attribute.
-  if (calleeDecl->isReplaceableGlobalAllocationFunction() && calleePtr &&
-      calleePtr->hasAttr(cir::CIRDialect::getNoBuiltinAttrName())) {
-    callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
-                           mlir::UnitAttr::get(callOrTryCall->getContext()));
+  if (calleeDecl->isReplaceableGlobalAllocationFunction() && calleePtr) {
+    if (calleePtr->hasAttr(cir::CIRDialect::getNoBuiltinAttrName()))
+      callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
+                             mlir::UnitAttr::get(callOrTryCall->getContext()));
+
+    // A sane operator new does not read or write accessible memory.
+    if (cgf.cgm.getCodeGenOpts().AssumeSaneOperatorNew &&
+        calleeDecl->getDeclName().isAnyOperatorNew()) {
+      // FIXME: inaccessiblemem could cause issues if LTO makes the
+      // previously inaccessible memory accessible after linking.
+      callOrTryCall.setMemoryEffectsAttr(
+          cir::MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
+              callOrTryCall->getContext(), cir::ModRefInfo::ModRef,
+              cir::ModRefInfo::Mod));
+    }
   }
 
   return rv;

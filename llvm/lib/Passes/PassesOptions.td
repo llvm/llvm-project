@@ -92,6 +92,8 @@ defm : ValueField<"instrument-cold-function-only-path", "StringRef", "",
   "File path for cold function only instrumentation(requires use with --pgo-instrument-cold-function-only)">;
 defm : BoolField<"mandatory-inlining-first", "false",
   "Perform mandatory inlinings module-wide, before performing inlining">;
+defm : BoolField<"memprof-preinline-ignore-profile", "true",
+  "When using both a memory profile and a sample profile, make the pre-inliner ignore the sample profile">;
 defm : BoolField<"opt-pipeline-trigger-crash", "false",
   "Trigger crash in optimization pipeline">;
 defm : ValueField<"preinline-threshold", "int", "75",
@@ -132,6 +134,8 @@ defm : BoolField<"dropped-variable-stats", "false",
 // work as expected.
 defm : ValueField<"exec-on-ir-change", "StringRef", "",
   "exe called with module IR after each pass that changes it">;
+defm : BoolField<"instnamer-after-each-pass", "false",
+  "Name unnamed IR values before and after each new-PM pass with fresh generated names across pass callbacks">;
 let MetaVarName = "<filename>" in
 defm : ValueField<"ir-dump-directory", "StringRef", "",
   "If specified, IR printed using the -print-[before|after]{-all} options will be dumped into files in this directory rather than written to stderr">;
