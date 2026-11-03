@@ -179,12 +179,18 @@ struct ol_symbol_impl_t {
   ol_symbol_impl_t(GenericKernelTy *Kernel)
       : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL),
         Name(Kernel->getName()) {}
-  ol_symbol_impl_t(GlobalTy &&Global)
+  /// Global variable symbol. \p Global holds the device address and size;
+  /// \p HostAddress is the address within the host-side program image, or
+  /// null if the image has no contents for the variable (e.g. `.bss`).
+  ol_symbol_impl_t(GlobalTy &&Global, void *HostAddress)
       : PluginImpl(std::move(Global)), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE),
-        Name(std::get<GlobalTy>(PluginImpl).getName()) {}
+        Name(std::get<GlobalTy>(PluginImpl).getName()),
+        HostAddress(HostAddress) {}
+
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
   llvm::StringRef Name;
+  void *HostAddress = nullptr;
 };
 
 struct ol_context_impl_t {
@@ -1441,13 +1447,54 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
     auto &Global = Program->GlobalSymbols[Name];
     if (!Global) {
-      GlobalTy GlobalObj{Name};
-      if (auto Res =
-              Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
-                  Device, *Program->Image, GlobalObj))
-        return Res;
+      auto &GlobalHandler = Device.Plugin.getGlobalHandler();
 
-      Global = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj));
+      GlobalTy GlobalObj{Name};
+      if (auto Err = GlobalHandler.getGlobalMetadataFromDevice(
+              Device, *Program->Image, GlobalObj)) {
+        Program->GlobalSymbols.erase(Name);
+        return std::move(Err);
+      }
+
+      // The host address is null for variables without contents in the image
+      // (e.g. `.bss`).
+      GlobalTy ImageObj{Name};
+      if (auto Err = GlobalHandler.getGlobalMetadataFromImage(
+              Device, *Program->Image, ImageObj)) {
+        Program->GlobalSymbols.erase(Name);
+        return std::move(Err);
+      }
+
+      void *HostAddress = ImageObj.getPtr();
+      if (HostAddress) {
+        // The address is a host pointer; make sure it lies inside the image.
+        uintptr_t Start = uintptr_t(Program->Image->getStart());
+        uintptr_t End = Start + Program->Image->getSize();
+        uintptr_t Ptr = (uintptr_t)HostAddress;
+        if (Ptr < Start || Ptr > End || ImageObj.getSize() > End - Ptr) {
+          Program->GlobalSymbols.erase(Name);
+          return createOffloadError(
+              ErrorCode::INVALID_BINARY,
+              "global variable '%s' lies outside of the program image",
+              Name.str().c_str());
+        }
+
+        // Some plugins only report the address from the device; a zero device
+        // size means unknown, so only check it when it was reported.
+        if (!GlobalObj.getSize())
+          GlobalObj.setSize(ImageObj.getSize());
+        else if (GlobalObj.getSize() != ImageObj.getSize()) {
+          Program->GlobalSymbols.erase(Name);
+          return createOffloadError(
+              ErrorCode::INVALID_BINARY,
+              "global variable '%s' has inconsistent sizes: %u (device) vs %u "
+              "(image)",
+              Name.str().c_str(), GlobalObj.getSize(), ImageObj.getSize());
+        }
+      }
+
+      Global =
+          std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj), HostAddress);
     }
 
     return Global.get();
@@ -1507,12 +1554,15 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
                                 void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
-  auto CheckKind = [&](ol_symbol_kind_t Required) {
-    if (Symbol->Kind != Required) {
+  auto CheckKind = [&](std::initializer_list<ol_symbol_kind_t> Allowed) {
+    if (!llvm::is_contained(Allowed, Symbol->Kind)) {
       std::string ErrBuffer;
-      raw_string_ostream(ErrBuffer)
-          << PropName << ": Expected a symbol of Kind " << Required
-          << " but given a symbol of Kind " << Symbol->Kind;
+      raw_string_ostream OS(ErrBuffer);
+      OS << PropName << ": Expected a symbol of Kind ";
+      ListSeparator LS(" or ");
+      for (ol_symbol_kind_t Kind : Allowed)
+        OS << LS << Kind;
+      OS << " but given a symbol of Kind " << Symbol->Kind;
       return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
     }
     return Plugin::success();
@@ -1524,20 +1574,24 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   case OL_SYMBOL_INFO_NAME:
     return Info.writeString(Symbol->Name);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
     return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS:
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
+      return Err;
+    return Info.write<void *>(Symbol->HostAddress);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
     return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
   case OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_KERNEL))
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_KERNEL}))
       return Err;
     return Info.write<uint32_t>(std::get<GenericKernelTy *>(Symbol->PluginImpl)
                                     ->getStaticBlockMemSize());
   case OL_SYMBOL_INFO_KERNEL_MAX_THREADS:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_KERNEL))
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_KERNEL}))
       return Err;
     return Info.write<uint32_t>(
         std::get<GenericKernelTy *>(Symbol->PluginImpl)->getMaxThreads());
