@@ -662,8 +662,24 @@ bool LTOCodeGenerator::compileOptimized(AddStreamFn AddStream,
   // > 1.
   FileCache PartitionsFC;
   if (!CacheOptions.Path.empty()) {
-    Expected<FileCache> FCOrErr =
-        localCache("LTO", "lto-partition", CacheOptions.Path);
+    // The cache hands back objects (both on hits and on misses) as buffers.
+    // Forward them to the caller's AddStream so they are delivered like
+    // uncached partitions.
+    AddBufferFn ForwardToStream =
+        [&AddStream](unsigned Task, const Twine &ModuleName,
+                     std::unique_ptr<MemoryBuffer> MB) {
+          Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
+              AddStream(Task, ModuleName);
+          if (Error Err = StreamOrErr.takeError())
+            report_fatal_error(std::move(Err));
+          std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+          *Stream->OS << MB->getBuffer();
+          if (Error Err = Stream->commit())
+            report_fatal_error(std::move(Err));
+        };
+
+    Expected<FileCache> FCOrErr = localCache(
+        "LTO", "lto-partition", CacheOptions.Path, std::move(ForwardToStream));
     if (!FCOrErr) {
       emitError(toString(FCOrErr.takeError()));
       return false;

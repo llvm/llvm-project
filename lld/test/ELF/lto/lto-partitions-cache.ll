@@ -53,10 +53,37 @@
 ; RUN: rm -fr %t/cache && mkdir %t/cache
 ; RUN: ld.lld --lto-partitions=2 --lto-partition-uses-thinlto-cache --thinlto-cache-dir=%t/cache --save-temps -o out %t.bc -M | FileCheck %s --check-prefix=MAP
 ; RUN: ls out.lto.1.o out.lto.o
+;; The saved files must have content on a cache miss...
+; RUN: llvm-nm out.lto.o out.lto.1.o | FileCheck %s --check-prefix=NM
+;; ... and on a cache hit.
+; RUN: rm -f out.lto.o out.lto.1.o
+; RUN: ld.lld --lto-partitions=2 --lto-partition-uses-thinlto-cache --thinlto-cache-dir=%t/cache --save-temps -o out %t.bc
+; RUN: llvm-nm out.lto.o out.lto.1.o | FileCheck %s --check-prefix=NM
 
 ; MAP: out.lto.o:(.text)
 ; MAP: out.lto.1.o:(.text)
 ; MAP: out.lto.1.o:(.text._start)
+
+; NM: T _start
+
+;; Check --lto-obj-path and --lto-emit-asm with a cold (miss) and warm (hit) cache.
+; RUN: rm -fr %t/cache && mkdir %t/cache
+; RUN: ld.lld --lto-partitions=2 --lto-partition-uses-thinlto-cache --thinlto-cache-dir=%t/cache --lto-obj-path=%t/objpath -o out %t.bc
+; RUN: llvm-nm %t/objpath %t/objpath1 | FileCheck %s --check-prefix=NM
+; RUN: rm -f %t/objpath %t/objpath1
+; RUN: ld.lld --lto-partitions=2 --lto-partition-uses-thinlto-cache --thinlto-cache-dir=%t/cache --lto-obj-path=%t/objpath -o out %t.bc
+; RUN: llvm-nm %t/objpath %t/objpath1 | FileCheck %s --check-prefix=NM
+
+;; Use a separate cache directory for assembly output.
+; RUN: rm -fr %t/cache-asm && mkdir %t/cache-asm
+; RUN: rm -f out.lto.s out.lto.1.s
+; RUN: ld.lld --lto-partitions=2 --lto-partition-uses-thinlto-cache --thinlto-cache-dir=%t/cache-asm --lto-emit-asm -shared -o out %t.bc
+; RUN: cat out.lto.s out.lto.1.s | FileCheck %s --check-prefix=ASM
+; RUN: rm -f out.lto.s out.lto.1.s
+; RUN: ld.lld --lto-partitions=2 --lto-partition-uses-thinlto-cache --thinlto-cache-dir=%t/cache-asm --lto-emit-asm -shared -o out %t.bc
+; RUN: cat out.lto.s out.lto.1.s | FileCheck %s --check-prefix=ASM
+
+; ASM: _start:
 
 ;; Check that mllvm options participate in the cache key
 ; RUN: rm -rf %t/cache && mkdir %t/cache
