@@ -1,13 +1,12 @@
-; RUN: not --crash llc -O2 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
-; RUN: not --crash llc -O2 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o /dev/null 2>&1 | FileCheck %s
-; REQUIRES: asserts
+; RUN: not llc -O2 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -O2 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o /dev/null 2>&1 | FileCheck %s
 
-; addrspacecast(inttoptr(4096)) followed by a constant GEP also reaches
-; G_PTR_ADD with a G_ADDRSPACE_CAST base. Selection aborts on the same base
-; assertion as a cast of a global; it does not emit a diagnostic.
+; addrspacecast(inttoptr(4096)) followed by a constant GEP reaches G_PTR_ADD
+; with an integer-typed base. Selection reports that base instead of replacing
+; it with null.
 
-; CHECK{LITERAL}: Assertion `((*II).getOpcode() == TargetOpcode::G_GLOBAL_VALUE || (*II).getOpcode() == TargetOpcode::COPY || (*II).getOpcode() == SPIRV::OpVariable || (*II).getOpcode() == SPIRV::OpUntypedVariableKHR) && getImm(I.getOperand(2), MRI)' failed.
-; CHECK: Running pass 'InstructionSelect' on function '@f'
+; CHECK{LITERAL}: error: <unknown>:0:0: in function f void (): address space cast of a non-null integer used as a G_PTR_ADD base
+; CHECK: LLVM ERROR: cannot select: {{.*}} = G_PTR_ADD {{.*}} (in function: f)
 
 @p = addrspace(1) global ptr addrspace(4) getelementptr (
     i8, ptr addrspace(4) addrspacecast (
