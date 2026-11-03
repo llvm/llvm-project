@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -stop-after=stackmap-liveness -o - | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -o /dev/null
 ;
 ; Check that a register without a DWARF register number is not recorded in
 ; the live-out list of a patchpoint. MXCSR is implicitly read by UCOMISD and

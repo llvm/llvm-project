@@ -152,9 +152,8 @@ void StackMapLiveness::addLiveOutSetToMI(MachineFunction &MF,
   MI.addOperand(MF, MO);
 }
 
-/// Returns true if \p Reg, or one of its super-registers, has a DWARF register
-/// number. Registers like MXCSR (X86), FPCR (AArch64) and FPC (SystemZ) are
-/// skipped.
+/// Registers without a DWARF number in their super-register chain
+/// (e.g. MXCSR/FPCR/FPC) return false.
 static bool hasDwarfRegNum(MCRegister Reg, const TargetRegisterInfo *TRI) {
   for (MCPhysReg SR : TRI->superregs_inclusive(Reg))
     if (TRI->getDwarfRegNum(SR, /*isEH=*/false) >= 0)
