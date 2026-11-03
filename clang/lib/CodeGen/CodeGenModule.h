@@ -706,6 +706,7 @@ private:
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
   MetadataTypeMap CallGraphMetadataIdMap;
+  MetadataTypeMap CallGraphMemberMetadataIdMap;
 
   // Helps squashing blocks of TopLevelStmtDecl into a single llvm::Function
   // when used with -fincremental-extensions.
@@ -1759,8 +1760,12 @@ public:
 
   /// Create a metadata identifier for the Call Graph Section.
   /// This is a generalized type identifier that is guaranteed to be an
-  /// MDString.
-  llvm::Metadata *CreateMetadataIdentifierForCallGraphType(QualType T);
+  /// MDString. Member functions with an implicit object parameter, and the
+  /// virtual and pointer-to-member calls that reach them, are identified
+  /// separately from free functions with the same signature (\p IsMember),
+  /// since an ordinary function pointer can never hold such a function.
+  llvm::Metadata *
+  CreateMetadataIdentifierForCallGraphType(QualType T, bool IsMember = false);
 
   /// Applies C default argument promotions to a parameter type for Call Graph
   /// Section type reconstruction.
@@ -1790,8 +1795,10 @@ public:
   /// indirect call target to support call graph section.
   void createIndirectFunctionTypeMD(const FunctionDecl *FD, llvm::Function *F);
 
-  /// Create and attach callee_type metadata to the given call.
-  void createCalleeTypeMetadataForIcall(const QualType &QT, llvm::CallBase *CB);
+  /// Create and attach callee_type metadata to the given call. \p IsMember is
+  /// true for calls to member functions with an implicit object parameter.
+  void createCalleeTypeMetadataForIcall(const QualType &QT, llvm::CallBase *CB,
+                                        bool IsMember = false);
 
   /// Set type metadata to the given function.
   void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
