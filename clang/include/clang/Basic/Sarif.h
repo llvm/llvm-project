@@ -475,7 +475,8 @@ public:
   void createRun(const llvm::StringRef ShortToolName,
                  const llvm::StringRef LongToolName,
                  const llvm::StringRef ToolVersion = CLANG_VERSION_STRING,
-                 const llvm::StringRef InformationUri = "");
+                 const llvm::StringRef InformationUri =
+                     "https://clang.llvm.org/docs/UsersManual.html");
 
   /// If there is a current run, end it.
   ///
