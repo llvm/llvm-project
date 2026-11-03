@@ -1756,6 +1756,33 @@ async coroutine until after coroutine splitting.
 The first argument should be an async coroutine of type `void (ptr, ptr, ptr)`.
 Lowering will replace this intrinsic with its coroutine function argument.
 
+(coro.prepare.retcon)=
+
+#### 'llvm.coro.prepare.retcon' Intrinsic
+```
+
+declare ptr @llvm.coro.prepare.retcon(ptr <coroutine function>)
+```
+
+##### Overview:
+
+The '`llvm.coro.prepare.retcon`' intrinsic keeps calls to a returned-continuation
+coroutine opaque to interprocedural optimizations until coroutine splitting.
+This prevents those optimizations from treating the pre-split body's exits as
+the returns from a call to the coroutine's ramp.
+
+Generic optimizations must not replace the prepared pointer with its argument
+before splitting. CoroSplit lowers the intrinsic to its function-pointer
+argument once it is safe to expose the ramp. For a separated local body, this
+requires that the body has been split; an imported body declaration instead
+refers to the ramp supplied by its defining module.
+
+##### Arguments:
+
+The argument is a pointer to a retcon or retcon.once coroutine. It may be a
+function reference or a computed function pointer. The result is a callable
+pointer with the same function signature and calling convention.
+
 (coro.suspend.retcon)=
 
 #### 'llvm.coro.suspend.retcon' Intrinsic
