@@ -1668,14 +1668,14 @@ std::string Module::GetCacheKey() {
   return key;
 }
 
-DataFileCache *Module::GetIndexCache(bool memory_module,
-                                     bool disable_memory_symtab_caching) {
+DataFileCache *Module::GetIndexCache(LLDBIndexType type) {
   bool lldb_index_enabled = false;
-  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache() &&
+      (type == eLLDBIndexTypeSymtab || eLLDBIndexTypeDwarfIndex))
     lldb_index_enabled = true;
-  if (memory_module && !disable_memory_symtab_caching &&
-      ModuleList::GetGlobalModuleListProperties()
-          .GetEnableLLDBIndexCacheMemoryModules())
+  if (ModuleList::GetGlobalModuleListProperties()
+          .GetEnableLLDBIndexCacheMemoryModules() &&
+      type == eLLDBIndexTypeMemoryModuleSymtab)
     lldb_index_enabled = true;
   if (!lldb_index_enabled)
     return nullptr;

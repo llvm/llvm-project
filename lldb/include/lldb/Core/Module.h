@@ -1042,6 +1042,12 @@ public:
   /// differentiate these different files.
   std::string GetCacheKey();
 
+  enum LLDBIndexType {
+    eLLDBIndexTypeSymtab,
+    eLLDBIndexTypeDwarfIndex,
+    eLLDBIndexTypeMemoryModuleSymtab
+  };
+
   /// Get the global index file cache.
   ///
   /// LLDB can cache data for a module between runs. This cache directory can be
@@ -1049,23 +1055,19 @@ public:
   /// debug. Examples include debug information indexes, symbol tables, memory
   /// module headerbytes, and more.
   ///
-  /// The arguments to this method give it context about the type of file we
-  /// are currently handling. It will combine that context with the user's
-  /// settings, to decide if a DataFileCache should be used.
+  /// The argument provided indicates the type of file that is being
+  /// read/written to in DataFileCache, and the user's settings for that
+  /// type of file will be consulted to decide whether it should be cached
+  /// or not.
   ///
-  /// \param[in] memory_module
-  ///     True if this binary exists only in memory.
-  ///
-  /// \param[in] disable_memory_symtab_caching
-  ///     If true, ignore the setting that enables the index cache for memory
-  ///     modules.
+  /// \param[in] type
+  ///     The type of file this code will read/write into the DataFileCache.
   ///
   /// \returns
-  ///   If caching is enabled in the lldb settings and based on the arguments
-  ///   for this current use case, return a pointer to the data file cache.
-  ///   If caching is not enabled for this context/settings, returns nullptr.
-  static DataFileCache *
-  GetIndexCache(bool memory_module, bool disable_memory_symtab_caching = false);
+  ///   If lldb settings have caching enabled for this type of file, return
+  ///   a pointer to the data file cache. If caching is not enabled,
+  ///   return nullptr.
+  static DataFileCache *GetIndexCache(LLDBIndexType type);
 
 protected:
   // Member Variables
