@@ -15,7 +15,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
@@ -317,7 +316,7 @@ static void copyLLVMDialectAttrs(Operation *from, Operation *to) {
   SmallVector<NamedAttribute> llvmAttrs;
   llvm::copy_if(from->getDiscardableAttrs(), std::back_inserter(llvmAttrs),
                 [](auto attr) {
-                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
+                  return attr.getValue().getDialect().getNamespace() == "llvm";
                 });
   to->setDiscardableAttrs(llvmAttrs);
 }
