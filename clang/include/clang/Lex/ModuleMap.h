@@ -219,6 +219,14 @@ private:
   /// header.
   llvm::DenseMap<const DirectoryEntry *, Module *> UmbrellaDirs;
 
+  /// Directories that a module has excluded from its umbrella directory via
+  /// an `exclude umbrella` declaration, mapped to the module that excluded
+  /// them.
+  ///
+  /// A header under an excluded directory does not resolve to the excluding
+  /// module through that module's umbrella, as if the directory were absent.
+  llvm::DenseMap<const DirectoryEntry *, Module *> ExcludedDirs;
+
   /// Mapping from (header, (sub)module) pairs to the source location where
   /// the header was added to the module (the header directive location).
   /// TODO: Consider moving this into Module::Header and serializing it into
