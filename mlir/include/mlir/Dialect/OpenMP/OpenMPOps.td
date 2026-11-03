@@ -247,7 +247,7 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -294,7 +294,7 @@ def TeamsOp : OpenMP_Op<"teams", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -357,7 +357,7 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) prop-dict attr-dict
   }];
 
@@ -419,7 +419,7 @@ def ScopeOp
 
   let assemblyFormat = clausesAssemblyFormat#[{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -866,7 +866,7 @@ def LoopOp : OpenMP_Op<"loop", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
+        $private_syms, $private_needs_barrier, $reduction_mods, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -922,7 +922,7 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
         type($linear_vars), $linear_step_vars, type($linear_step_vars),
         $linear_var_types, $linear_modifiers, $linear_syms, $private_vars,
         type($private_vars), $private_syms, $private_needs_barrier,
-        $reduction_mod, $reduction_vars, type($reduction_vars),
+        $reduction_mods, $reduction_vars, type($reduction_vars),
         $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -979,7 +979,7 @@ def SimdOp : OpenMP_Op<"simd", traits = [
         type($linear_vars), $linear_step_vars, type($linear_step_vars),
         $linear_var_types, $linear_modifiers, $linear_syms, $private_vars,
         type($private_vars), $private_syms, $private_needs_barrier,
-        $reduction_mod, $reduction_vars, type($reduction_vars),
+        $reduction_mods, $reduction_vars, type($reduction_vars),
         $reduction_byref, $reduction_syms) attr-dict
   }];
 
@@ -1202,7 +1202,7 @@ def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
         $region, $in_reduction_vars, type($in_reduction_vars),
         $in_reduction_byref, $in_reduction_syms, $private_vars,
         type($private_vars), $private_syms, $private_needs_barrier,
-        $reduction_mod, $reduction_vars, type($reduction_vars),
+        $reduction_mods, $reduction_vars, type($reduction_vars),
         $reduction_byref, $reduction_syms) attr-dict
   }];
 

@@ -672,6 +672,7 @@ public:
     unsigned ImmCost;
     unsigned SetupCost;
     unsigned ScaleCost;
+    unsigned NumPrePostIndex;
   };
 
   /// Parameters that control the generic loop unrolling transformation.

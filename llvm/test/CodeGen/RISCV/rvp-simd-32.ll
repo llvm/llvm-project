@@ -3921,7 +3921,7 @@ define <2 x i16> @test_pmhacc_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmhacc.h.b0 a0, a1, a2
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmhacc.b0.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
+  %res = call <2 x i16> @llvm.riscv.pmhacc.half.0.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
   ret <2 x i16> %res
 }
 
@@ -3930,7 +3930,7 @@ define <2 x i16> @test_pmhacc_b1_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmhacc.h.b1 a0, a1, a2
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmhacc.b1.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
+  %res = call <2 x i16> @llvm.riscv.pmhacc.half.1.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
   ret <2 x i16> %res
 }
 
@@ -3939,7 +3939,7 @@ define <2 x i16> @test_pmhaccsu_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8>
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmhaccsu.h.b0 a0, a1, a2
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmhaccsu.b0.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
+  %res = call <2 x i16> @llvm.riscv.pmhaccsu.half.0.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
   ret <2 x i16> %res
 }
 
@@ -3948,7 +3948,7 @@ define <2 x i16> @test_pmhaccsu_b1_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8>
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmhaccsu.h.b1 a0, a1, a2
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmhaccsu.b1.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
+  %res = call <2 x i16> @llvm.riscv.pmhaccsu.half.1.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
   ret <2 x i16> %res
 }
 
@@ -3958,7 +3958,7 @@ define <2 x i16> @test_pmulh_b0_v2i16(<2 x i16> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmulh.h.b0 a0, a0, a1
 ; CHECK-NEXT:    ret
-  %r = call <2 x i16> @llvm.riscv.pmulh.b0.v2i16(<2 x i16> %a, <4 x i8> %b)
+  %r = call <2 x i16> @llvm.riscv.pmulh.half.0.v2i16(<2 x i16> %a, <4 x i8> %b)
   ret <2 x i16> %r
 }
 
@@ -3967,7 +3967,7 @@ define <2 x i16> @test_pmulh_b1_v2i16(<2 x i16> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmulh.h.b1 a0, a0, a1
 ; CHECK-NEXT:    ret
-  %r = call <2 x i16> @llvm.riscv.pmulh.b1.v2i16(<2 x i16> %a, <4 x i8> %b)
+  %r = call <2 x i16> @llvm.riscv.pmulh.half.1.v2i16(<2 x i16> %a, <4 x i8> %b)
   ret <2 x i16> %r
 }
 
@@ -3976,7 +3976,7 @@ define <2 x i16> @test_pmulhsu_b0_v2i16(<2 x i16> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmulhsu.h.b0 a0, a0, a1
 ; CHECK-NEXT:    ret
-  %r = call <2 x i16> @llvm.riscv.pmulhsu.b0.v2i16(<2 x i16> %a, <4 x i8> %b)
+  %r = call <2 x i16> @llvm.riscv.pmulhsu.half.0.v2i16(<2 x i16> %a, <4 x i8> %b)
   ret <2 x i16> %r
 }
 
@@ -3985,7 +3985,7 @@ define <2 x i16> @test_pmulhsu_b1_v2i16(<2 x i16> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmulhsu.h.b1 a0, a0, a1
 ; CHECK-NEXT:    ret
-  %r = call <2 x i16> @llvm.riscv.pmulhsu.b1.v2i16(<2 x i16> %a, <4 x i8> %b)
+  %r = call <2 x i16> @llvm.riscv.pmulhsu.half.1.v2i16(<2 x i16> %a, <4 x i8> %b)
   ret <2 x i16> %r
 }
 
