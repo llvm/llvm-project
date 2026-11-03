@@ -5962,20 +5962,17 @@ uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     uint64_t ExplicitKernArgSize, const ImplicitParameter Param) const {
   unsigned ExplicitArgOffset = Subtarget->getExplicitKernelArgOffset();
   const Align Alignment = Subtarget->getAlignmentForImplicitArgPtr();
-  uint64_t ArgOffset =
-      alignTo(ExplicitKernArgSize, Alignment) + ExplicitArgOffset;
+  uint32_t ArgOffset = static_cast<uint32_t>(
+      alignTo(ExplicitKernArgSize, Alignment) + ExplicitArgOffset);
   switch (Param) {
   case FIRST_IMPLICIT:
-    return static_cast<uint32_t>(ArgOffset);
+    return ArgOffset;
   case PRIVATE_BASE:
-    return static_cast<uint32_t>(ArgOffset +
-                                 AMDGPU::ImplicitArg::PRIVATE_BASE_OFFSET);
+    return ArgOffset + AMDGPU::ImplicitArg::PRIVATE_BASE_OFFSET;
   case SHARED_BASE:
-    return static_cast<uint32_t>(ArgOffset +
-                                 AMDGPU::ImplicitArg::SHARED_BASE_OFFSET);
+    return ArgOffset + AMDGPU::ImplicitArg::SHARED_BASE_OFFSET;
   case QUEUE_PTR:
-    return static_cast<uint32_t>(ArgOffset +
-                                 AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET);
+    return ArgOffset + AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET;
   }
   llvm_unreachable("unexpected implicit parameter type");
 }
