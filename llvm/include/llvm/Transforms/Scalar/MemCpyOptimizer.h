@@ -74,6 +74,7 @@ private:
                             std::function<CallInst *()> GetC);
   bool processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep,
                                      BatchAAResults &BAA);
+  bool processStoreMemCpyDependence(MemCpyInst *MemCpy, StoreInst *Store);
   bool processMemSetMemCpyDependence(MemCpyInst *MemCpy, MemSetInst *MemSet,
                                      BatchAAResults &BAA);
   bool performMemCpyToMemSetOptzn(MemCpyInst *MemCpy, MemSetInst *MemSet,
