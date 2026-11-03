@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/UniqueVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -512,17 +513,11 @@ namespace {
 /// Uniques attribute sets, keyed by \p KeyT, and assigns them dense IDs in
 /// insertion order.
 template <typename KeyT> class AttributeSetTable {
-  std::map<KeyT, unsigned> IDs;
-  std::vector<const KeyT *> Sets;
+  UniqueVector<KeyT> Sets;
 
 public:
   /// Returns the ID of the set \p Attrs.
-  unsigned add(KeyT Attrs) {
-    auto [It, Inserted] = IDs.try_emplace(std::move(Attrs), size());
-    if (Inserted)
-      Sets.push_back(&It->first);
-    return It->second;
-  }
+  unsigned add(const KeyT &Attrs) { return Sets.insert(Attrs) - 1; }
 
   unsigned size() const { return static_cast<unsigned>(Sets.size()); }
 
@@ -539,13 +534,13 @@ public:
         WriteComment(OS, ID);
       }
 
-      if (Attrs->empty()) {
+      if (Attrs.empty()) {
         OS << "\n    return AttributeSet();";
         continue;
       }
 
       OS << "\n    return AttributeSet::get(C, {\n";
-      Print(OS, *Attrs);
+      Print(OS, Attrs);
       OS << "    });";
     }
   }
@@ -560,20 +555,16 @@ public:
 
 private:
   SequenceToOffsetTable<Sequence> Table{std::nullopt};
-  std::map<Sequence, unsigned> IDs;
-  std::vector<const Sequence *> Seqs;
+  UniqueVector<Sequence> Seqs;
 
 public:
   /// Returns the ID of \p Seq. Must be called before the table is laid out.
-  unsigned add(Sequence Seq) {
-    auto [It, Inserted] = IDs.try_emplace(std::move(Seq), numSequences());
-    if (Inserted) {
-      Seqs.push_back(&It->first);
-      if (!It->first.empty())
-        Table.add(It->first);
-    }
-
-    return It->second;
+  unsigned add(const Sequence &Seq) {
+    size_t NumSeqs = Seqs.size();
+    unsigned ID = Seqs.insert(Seq) - 1;
+    if (Seqs.size() != NumSeqs && !Seq.empty())
+      Table.add(Seq);
+    return ID;
   }
 
   void layout() { Table.layout(); }
@@ -592,9 +583,9 @@ public:
 
   /// Emits the start index and length of each sequence, in ID order.
   void emitInfo(raw_ostream &OS) const {
-    for (const Sequence *Seq : Seqs) {
-      unsigned Start = Seq->empty() ? 0 : Table.get(*Seq);
-      OS << formatv("  {{{}, {}},\n", Start, Seq->size());
+    for (const Sequence &Seq : Seqs) {
+      unsigned Start = Seq.empty() ? 0 : Table.get(Seq);
+      OS << formatv("  {{{}, {}},\n", Start, Seq.size());
     }
   }
 };
