@@ -9,7 +9,8 @@
 # RUN: llvm-readobj --sections --section-data %t.out1 \
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE1
 
-## Case 2: Add a new section into a nonexistent segment.
+## Case 2: Add a new section with a new segment name. The input is an object
+## file (MH_OBJECT), so the section goes into its only segment.
 # RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t %t.out2
 # RUN: llvm-readobj --sections --section-data %t.out2 \
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE2
@@ -84,9 +85,9 @@ LoadCommands:
 # CASE1-NEXT:     Offset: 224
 
 # CASE2-NEXT:     Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
-# CASE2-NEXT:     Address: 0x98
+# CASE2-NEXT:     Address: 0x4
 # CASE2-NEXT:     Size: 0x7
-# CASE2-NEXT:     Offset: 280
+# CASE2-NEXT:     Offset: 224
 
 # CASE3-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
 # CASE3-NEXT:     Address: 0x4

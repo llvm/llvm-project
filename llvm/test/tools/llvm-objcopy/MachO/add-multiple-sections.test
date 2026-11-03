@@ -129,7 +129,7 @@ LoadCommands:
 # CASE3-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
 # CASE3-NEXT:      Address: 0x0
 # CASE3-NEXT:      Size: 0x4
-# CASE3-NEXT:      Offset: 488
+# CASE3-NEXT:      Offset: 344
 # CASE3-NEXT:      Alignment: 0
 # CASE3-NEXT:      RelocationOffset: 0x0
 # CASE3-NEXT:      RelocationCount: 0
@@ -149,9 +149,9 @@ LoadCommands:
 # CASE3-NEXT:      Index: 1
 # CASE3-NEXT:      Name: __foo (5F 5F 66 6F 6F 00 00 00 00 00 00 00 00 00 00 00)
 # CASE3-NEXT:      Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:      Address: 0xB8
+# CASE3-NEXT:      Address: 0x4
 # CASE3-NEXT:      Size: 0xA
-# CASE3-NEXT:      Offset: 492
+# CASE3-NEXT:      Offset: 348
 # CASE3-NEXT:      Alignment: 0
 # CASE3-NEXT:      RelocationOffset: 0x0
 # CASE3-NEXT:      RelocationCount: 0
@@ -169,9 +169,9 @@ LoadCommands:
 # CASE3-NEXT:      Index: 2
 # CASE3-NEXT:      Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
 # CASE3-NEXT:      Segment: __BAR (5F 5F 42 41 52 00 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:      Address: 0x40B8
+# CASE3-NEXT:      Address: 0xE
 # CASE3-NEXT:      Size: 0xA
-# CASE3-NEXT:      Offset: 502
+# CASE3-NEXT:      Offset: 358
 # CASE3-NEXT:      Alignment: 0
 # CASE3-NEXT:      RelocationOffset: 0x0
 # CASE3-NEXT:      RelocationCount: 0
