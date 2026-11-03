@@ -92,9 +92,17 @@
 ; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_log10f,
 ; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN4v_log10f,
 ; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_log10f
-; LIBMVEC-X86-SAME: [2 x ptr] [
+; LIBMVEC-X86-SAME: [10 x ptr] [
 ; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_sin,
-; LIBMVEC-X86-SAME:   ptr @_ZGVdN4v_sin
+; LIBMVEC-X86-SAME:   ptr @_ZGVdN4v_sin,
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_acos,
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_tanh,
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN2vv_atan2,
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_cosh,
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN4v_coshf,
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_exp10,
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN4v_exp10f,
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN4v_log10f
 ; SLEEFGNUABI-SAME: [32 x ptr] [
 ; SLEEFGNUABI-SAME:   ptr @_ZGVnN2vl8_modf,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsNxvl8_modf,
@@ -276,6 +284,7 @@ define double @acos_f64(double %in) {
 ; AMDLIBM:            call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
 ; MASSV:              call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
 ; LIBMVEC-AARCH64:    call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
+; LIBMVEC-X86:        call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
 ; SLEEFGNUABI:        call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
 ; ARMPL:              call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
   %call = tail call double @acos(double %in)
@@ -289,6 +298,7 @@ define double @tanh_f64(double %in) {
 ; AMDLIBM:            call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
 ; MASSV:              call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
 ; LIBMVEC-AARCH64:    call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
+; LIBMVEC-X86:        call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
 ; SLEEFGNUABI:        call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
 ; ARMPL:              call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
   %call = tail call double @tanh(double %in)
@@ -302,6 +312,7 @@ define double @atan2_f64(double %y, double %x) {
 ; AMDLIBM:            call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
 ; MASSV:              call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
 ; LIBMVEC-AARCH64:    call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
+; LIBMVEC-X86:        call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
 ; SLEEFGNUABI:        call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
 ; ARMPL:              call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
   %call = tail call double @atan2(double %y, double %x)
@@ -315,6 +326,7 @@ define double @cosh_f64(double %in) {
 ; AMDLIBM:            call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
 ; MASSV:              call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
 ; LIBMVEC-AARCH64:    call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
+; LIBMVEC-X86:        call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
 ; SLEEFGNUABI:        call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
 ; ARMPL:              call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
   %call = tail call double @cosh(double %in)
@@ -329,6 +341,7 @@ define float @cosh_f32(float %in) {
 ; MASSV:              call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
 ; ACCELERATE:         call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
 ; LIBMVEC-AARCH64:    call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+; LIBMVEC-X86:        call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
 ; SLEEFGNUABI:        call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
 ; ARMPL:              call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
   %call = tail call float @coshf(float %in)
@@ -341,6 +354,7 @@ define double @exp10_f64(double %in) {
 ; COMMON-LABEL:       @exp10_f64(
 ; AMDLIBM:            call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
 ; LIBMVEC-AARCH64:    call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
+; LIBMVEC-X86:        call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
 ; SLEEFGNUABI:        call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
 ; ARMPL:              call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
   %call = tail call double @exp10(double %in)
@@ -353,6 +367,7 @@ define float @exp10_f32(float %in) {
 ; COMMON-LABEL:       @exp10_f32(
 ; AMDLIBM:            call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
 ; LIBMVEC-AARCH64:    call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
+; LIBMVEC-X86:        call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
 ; SLEEFGNUABI:        call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
 ; ARMPL:              call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
   %call = tail call float @exp10f(float %in)
@@ -366,7 +381,7 @@ define float @call_llvm.log10.f32(float %in) {
 ; SVML:               call float @llvm.log10.f32(float %{{.*}})
 ; AMDLIBM:            call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; LIBMVEC-AARCH64:    call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
-; LIBMVEC-X86:        call float @llvm.log10.f32(float %{{.*}})
+; LIBMVEC-X86:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; MASSV:              call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; ACCELERATE:         call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; SLEEFGNUABI:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
@@ -376,7 +391,6 @@ define float @call_llvm.log10.f32(float %in) {
 ; SVML-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
 ; AMDLIBM-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
 ; LIBMVEC-AARCH64-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
-; LIBMVEC-X86-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
   %call = tail call float @llvm.log10.f32(float %in)
   ret float %call
 }
@@ -466,6 +480,14 @@ declare double @ldexp(double, i32 signext) #0
 
 ; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_sin(<2 x double>)
 ; LIBMVEC-X86: declare <4 x double> @_ZGVdN4v_sin(<4 x double>)
+; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_acos(<2 x double>)
+; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_tanh(<2 x double>)
+; LIBMVEC-X86: declare <2 x double> @_ZGVbN2vv_atan2(<2 x double>, <2 x double>)
+; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_cosh(<2 x double>)
+; LIBMVEC-X86: declare <4 x float> @_ZGVbN4v_coshf(<4 x float>)
+; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_exp10(<2 x double>)
+; LIBMVEC-X86: declare <4 x float> @_ZGVbN4v_exp10f(<4 x float>)
+; LIBMVEC-X86: declare <4 x float> @_ZGVbN4v_log10f(<4 x float>)
 
 ; ACCELERATE: declare <4 x float> @vcoshf(<4 x float>)
 ; ACCELERATE: declare <4 x float> @vlog10f(<4 x float>)
@@ -654,6 +676,22 @@ attributes #0 = { nounwind readnone }
 ; LIBMVEC-X86:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_sin(_ZGVbN2v_sin),
 ; LIBMVEC-X86-SAME:   _ZGV_LLVM_N4v_sin(_ZGVdN4v_sin)" }
+; LIBMVEC-X86:      attributes #[[ACOS]] = { "vector-function-abi-variant"=
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_acos(_ZGVbN2v_acos)" }
+; LIBMVEC-X86:      attributes #[[TANH]] = { "vector-function-abi-variant"=
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_tanh(_ZGVbN2v_tanh)" }
+; LIBMVEC-X86:      attributes #[[ATAN2]] = { "vector-function-abi-variant"=
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2vv_atan2(_ZGVbN2vv_atan2)" }
+; LIBMVEC-X86:      attributes #[[COSH]] = { "vector-function-abi-variant"=
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_cosh(_ZGVbN2v_cosh)" }
+; LIBMVEC-X86:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N4v_coshf(_ZGVbN4v_coshf)" }
+; LIBMVEC-X86:      attributes #[[EXP10]] = { "vector-function-abi-variant"=
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_exp10(_ZGVbN2v_exp10)" }
+; LIBMVEC-X86:      attributes #[[EXP10F]] = { "vector-function-abi-variant"=
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N4v_exp10f(_ZGVbN4v_exp10f)" }
+; LIBMVEC-X86:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(_ZGVbN4v_log10f)" }
 
 ; SLEEFGNUABI:      attributes #[[MODF]] = { "vector-function-abi-variant"=
 ; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2vl8_modf(_ZGVnN2vl8_modf),
