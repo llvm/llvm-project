@@ -474,6 +474,7 @@ mlir:vector:
   - changed-files:
     - any-glob-to-any-file:
       - mlir/**/*Vector/**
+      - mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp
 
 mlir:execution-engine:
   - changed-files:
