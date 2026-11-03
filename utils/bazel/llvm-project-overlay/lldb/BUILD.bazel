@@ -800,6 +800,14 @@ cc_binary(
     linkopts = select({
         "@platforms//os:linux": [
             "-Wl,--export-dynamic-symbol-list=$(location :gen_exports_file_linux)",
+            # liblldb exports its copies of lldb_private and LLVM, and an
+            # executable that also links them statically, like the SB API unit
+            # tests, exports those symbols back to it. Bind liblldb's calls to
+            # its own copies so that its global state, like the registered
+            # LLVM command line options, isn't mixed with the executable's.
+            # CMake gets the same effect by linking those executables with
+            # --exclude-libs,ALL.
+            "-Wl,-Bsymbolic-functions",
         ],
         "@platforms//os:macos": [
             "-Wl,-exported_symbols_list,$(location :gen_exports_file_macos)",
