@@ -194,12 +194,17 @@ private:
 
   std::pair<Register, unsigned>
   selectVOP3PModsImpl(Register RootReg, const MachineRegisterInfo &MRI,
-                      bool IsDOT = false) const;
+                      bool IsDOT = false, bool NoOpSel0 = false) const;
   InstructionSelector::ComplexRendererFns
-  selectVOP3PRetHelper(MachineOperand &Root, bool IsDOT = false) const;
+  selectVOP3PRetHelper(MachineOperand &Root, bool IsDOT = false,
+                       bool NoOpSel0 = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PMods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsPkFmaOpSel0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsPkAddMulOpSel0(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsDOT(MachineOperand &Root) const;
