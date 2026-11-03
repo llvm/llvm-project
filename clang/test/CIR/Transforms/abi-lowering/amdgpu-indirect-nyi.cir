@@ -14,21 +14,21 @@ module attributes {
 } {
 
   // A multi-field kernel argument is passed byref in addrspace(4).
-  cir.func @kern_pair(%arg0: !rec_Pair) cc(amdgpu_kernel) {
+  cir.func @kern_pair(%arg0: !rec_Pair) cc(amdgpu_kernel) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"Pair"
 
   // An argument past the 16-register budget is passed byref in addrspace(5).
-  cir.func @take_big(%arg0: !rec_Big) {
+  cir.func @take_big(%arg0: !rec_Big) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"Big"
 
   // A return past the register budget goes through an sret in addrspace(5).
-  cir.func @ret_big(%arg0: !cir.ptr<!rec_Big>) -> !rec_Big {
+  cir.func @ret_big(%arg0: !cir.ptr<!rec_Big>) -> !rec_Big requires_call_conv_lowering {
     %0 = cir.load %arg0 : !cir.ptr<!rec_Big>, !rec_Big
     cir.return %0 : !rec_Big
   }

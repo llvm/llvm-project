@@ -1049,7 +1049,10 @@ void CallConvLoweringPass::runOnOperation() {
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
-    if (f.getCallConvLowered())
+    // A lowered signature uses ordinary CIR types and cannot be told apart
+    // from one that still needs lowering, so only a function that says it
+    // needs lowering is lowered.
+    if (!f.getRequiresCallConvLowering())
       return;
     // A complete type is required at any call or definition, so only a
     // declaration can carry an incomplete-by-value parameter or return type,
@@ -1091,8 +1094,7 @@ void CallConvLoweringPass::runOnOperation() {
     if (!call)
       return;
     cir::FuncOp callee = lookupCallee(op, symbolTable);
-    if (!callee || callee.getCallConvLowered() ||
-        op->hasAttr(cir::CIRDialect::getCallConvLoweredAttrName()))
+    if (!callee || !callee.getRequiresCallConvLowering())
       return;
     callers[callee].push_back(op);
 
@@ -1189,10 +1191,6 @@ void CallConvLoweringPass::runOnOperation() {
         assert(classifiesSamePrefix(fc, *callFc) &&
                "a call site's declared parameters must be classified the same "
                "way as the callee's");
-
-        if (callFc->needsRewrite())
-          callOp->setAttr(cir::CIRDialect::getCallConvLoweredAttrName(),
-                          UnitAttr::get(ctx));
       }
       if (hasIndirectSlot(*callFc))
         widenForArgMemory(cast<cir::CIRCallOpInterface>(callOp));
@@ -1203,9 +1201,6 @@ void CallConvLoweringPass::runOnOperation() {
     }
     for (cir::GetGlobalOp addrOp : addressTakers.lookup(func))
       rewriteCtx.rewriteFunctionAddress(addrOp, func, builder);
-
-    if (fc.needsRewrite())
-      func.setCallConvLowered(true);
   }
 
   // Rewrite indirect call sites.  The callee is opaque, so classify from the
@@ -1215,9 +1210,14 @@ void CallConvLoweringPass::runOnOperation() {
   // slot it erases that store, which is the operation a live walk has already
   // cached as the next one to visit.
   SmallVector<cir::CIRCallOpInterface> indirectCalls;
+  // An indirect call has no callee to say whether it is lowered, but it is
+  // lowered together with the function it is in.
+  auto inFunctionToLower = [](Operation *op) {
+    auto func = op->getParentOfType<cir::FuncOp>();
+    return func && func.getRequiresCallConvLowering();
+  };
   moduleOp.walk([&](cir::CIRCallOpInterface c) {
-    if (c.isIndirect() &&
-        !c->hasAttr(cir::CIRDialect::getCallConvLoweredAttrName()))
+    if (c.isIndirect() && inFunctionToLower(c))
       indirectCalls.push_back(c);
   });
   for (cir::CIRCallOpInterface c : indirectCalls) {
@@ -1229,10 +1229,6 @@ void CallConvLoweringPass::runOnOperation() {
     }
     if (hasIndirectSlot(*fc))
       widenForArgMemory(c);
-
-    if (fc->needsRewrite())
-      c->setAttr(cir::CIRDialect::getCallConvLoweredAttrName(),
-                 UnitAttr::get(ctx));
     if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;
@@ -1242,7 +1238,10 @@ void CallConvLoweringPass::runOnOperation() {
   // Collect the fetches before rewriting any, because rewriting one erases
   // it, and a live walk holds the op it is about to visit next.
   SmallVector<cir::VAArgOp> vaArgs;
-  moduleOp.walk([&](cir::VAArgOp v) { vaArgs.push_back(v); });
+  moduleOp.walk([&](cir::VAArgOp v) {
+    if (inFunctionToLower(v))
+      vaArgs.push_back(v);
+  });
   for (cir::VAArgOp v : vaArgs) {
     std::optional<ArgClassification> ac = classifier->classifyVAArg(v);
     if (!ac) {
@@ -1254,6 +1253,10 @@ void CallConvLoweringPass::runOnOperation() {
       return;
     }
   }
+
+  // Everything in and around these functions now uses the target ABI.
+  for (auto &kv : classifications)
+    kv.first.setRequiresCallConvLowering(false);
 }
 
 } // namespace
