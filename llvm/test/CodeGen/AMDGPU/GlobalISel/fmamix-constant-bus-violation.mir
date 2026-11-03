@@ -5,6 +5,7 @@
 name: foo
 legalized: true
 regBankSelected: true
+tracksRegLiveness: false
 machineFunctionInfo:
   mode:
     fp32-output-denormals: false
@@ -50,6 +51,7 @@ body: |
 name: hi16_from_s64
 legalized: true
 regBankSelected: true
+tracksRegLiveness: false
 machineFunctionInfo:
   mode:
     fp32-output-denormals: false

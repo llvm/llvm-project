@@ -53,6 +53,7 @@ void runChecks(
                    "...\n"
                    "---\n"
                    "name: sizes\n"
+                   "tracksRegLiveness: false\n"
                    "jumpTable:\n"
                    "  kind:            block-address\n"
                    "  entries:\n"
