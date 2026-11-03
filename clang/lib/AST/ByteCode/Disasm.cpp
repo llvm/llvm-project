@@ -456,9 +456,6 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " zero-size-array";
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
-
-  if (IsConstexprUnknown)
-    OS << " constexpr-unknown";
 }
 
 /// Dump descriptor, including all valid offsets.
@@ -627,12 +624,10 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
     OS << "-\n";
   OS << "  Pointers: " << NPointers << "\n";
   OS << "  Dead: " << isDead() << "\n";
-  OS << "  Static: " << IsStatic << "\n";
   OS << "  Extern: " << isExtern() << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
   OS << "  Weak: " << isWeak() << "\n";
   OS << "  Dynamic: " << isDynamic() << "\n";
-  OS << "  Metadata: " << MDSize << '\n';
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {

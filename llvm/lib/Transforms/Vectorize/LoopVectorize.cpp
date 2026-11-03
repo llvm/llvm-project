@@ -228,7 +228,8 @@ static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
     return 0;
   ScalarEvolution *SE = PSE.getSE();
   const SCEV *TripCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
-  ConstantRange TCRange = SE->getUnsignedRange(TripCount);
+  ConstantRange TCRange =
+      SE->getUnsignedRange(SE->applyLoopGuards(TripCount, L));
   APInt MaxTCFromRange = TCRange.getUnsignedMax();
   if (!MaxTCFromRange.isZero() && MaxTCFromRange.getActiveBits() <= 32)
     return MaxTCFromRange.getZExtValue();
@@ -400,10 +401,9 @@ enum EpilogueLowering {
   // Vectorization with OptForSize: don't allow epilogues.
   CM_EpilogueNotAllowedOptSize,
 
-  // A special case of vectorisation with OptForSize: loops with a very small
-  // trip count are considered for vectorization under OptForSize, thereby
-  // making sure the cost of their loop body is dominant, free of runtime
-  // guards and scalar iteration overheads.
+  // A special case for loops with a very small trip count: they are vectorized
+  // only if no scalar epilogue is required, ensuring the vectorized loop body
+  // is the dominant cost without scalar epilogue overheads.
   CM_EpilogueNotAllowedLowTripLoop,
 
   // Loop hint indicating an epilogue is undesired, apply tail folding.
@@ -1240,8 +1240,10 @@ public:
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
   /// un-linked from the IR and attached to VPlan as IR or recipes if
-  /// profitable. Otherwise, the check blocks are removed completely.
-  void create(Loop *L, const LoopAccessInfo &LAI,
+  /// profitable. Otherwise, the check blocks are removed completely. If \p LAI
+  /// is nullptr (outer loops have no LoopAccessInfo), no memory runtime checks
+  /// are generated.
+  void create(Loop *L, const LoopAccessInfo *LAI,
               const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC,
               OptimizationRemarkEmitter &ORE) {
 
@@ -1249,8 +1251,8 @@ public:
     // runtime checks needs to be generated.
     // TODO: Skip cutoff if the loop is guaranteed to execute, e.g. due to
     // profile info.
-    CostTooHigh = LAI.getNumRuntimePointerChecks() >
-                  VectorizerParams::VectorizeMemoryCheckThreshold;
+    CostTooHigh = LAI && LAI->getNumRuntimePointerChecks() >
+                             VectorizerParams::VectorizeMemoryCheckThreshold;
     if (CostTooHigh) {
       // Mark runtime checks as never succeeding when they exceed the threshold.
       MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
@@ -1286,11 +1288,12 @@ public:
       }
     }
 
-    const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
     // TODO: We need to estimate the cost of alias-masking in
     // GeneratedRTChecks::getCost(). We can't check the MemCheckBlock as the
     // alias-mask is generated later in VPlan.
-    if (RtPtrChecking.Need && !LoopUsesPartialAliasMasking) {
+    if (LAI && LAI->getRuntimePointerChecking()->Need &&
+        !LoopUsesPartialAliasMasking) {
+      const auto &RtPtrChecking = *LAI->getRuntimePointerChecking();
       auto *Pred = SCEVCheckBlock ? SCEVCheckBlock : Preheader;
       MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
                                  "vector.memcheck");
@@ -1346,6 +1349,11 @@ public:
       DT->eraseNode(SCEVCheckBlock);
       LI->removeBlock(SCEVCheckBlock);
     }
+
+    // Clean up directly if the memory checks folded to false, to avoid further
+    // expansions re-using anything left over from MemCheckExp.
+    if (MemCheckBlock && !getMemRuntimeChecks().first)
+      eraseMemCheckBlock();
 
     // Outer loop is used as part of the later cost calculations.
     OuterLoop = L->getParentLoop();
@@ -2634,13 +2642,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
                       << "vector loop.\n");
     break;
   case CM_EpilogueNotAllowedLowTripLoop:
-    // fallthrough as a special case of OptForSize
+    LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
+                      << "count.\n");
+    break;
   case CM_EpilogueNotAllowedOptSize:
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize)
-      LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
-    else
-      LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
-                        << "count.\n");
+    LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
 
     // Bail if runtime checks are required, which are not good when optimising
     // for size.
@@ -2713,10 +2719,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
-    // If we have a low-trip-count, and the fixed-width VF is known to divide
-    // the trip count the fixed-width factor in preference to allow the
-    // generation of a non-predicated loop.
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
+    // If we have a low-trip-count, or optimize for code size, and the
+    // fixed-width VF is known to divide the trip count the fixed-width factor
+    // in preference to allow the generation of a non-predicated loop.
+    if ((EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop ||
+         EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize) &&
         NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
       LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                            "remain for any chosen VF.\n");
@@ -2897,6 +2904,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             })
             .Case([](const VPReductionRecipe *R) {
               return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
+            })
+            .Case([](const VPBranchOnMaskRecipe *) {
+              return Instruction::CondBr;
             });
 
     // If the next recipe is different, or if there are no other pairs,
@@ -5256,21 +5266,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
 
-  // Pre-compute the costs for branches except for the backedge, as the number
-  // of replicate regions in a VPlan may not directly match the number of
-  // branches, which would lead to different decisions.
-  // TODO: Compute cost of branches for each replicate region in the VPlan,
-  // which is more accurate than the legacy cost model.
-  for (BasicBlock *BB : OrigLoop->blocks()) {
-    if (CostCtx.skipCostComputation(BB->getTerminator(), VF.isVector()))
-      continue;
-    CostCtx.SkipCostComputation.insert(BB->getTerminator());
-    if (BB == OrigLoop->getLoopLatch())
-      continue;
-    auto BranchCost = CostCtx.getLegacyCost(BB->getTerminator(), VF);
-    Cost += BranchCost;
-  }
-
   // Don't apply special costs when instruction cost is forced to make sure the
   // forced cost is used for each recipe.
   if (Opts.force_target_instruction_cost)
@@ -5577,19 +5572,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                    /*OnlyLatches=*/false);
-  if (BestVPlan.getEntry()->getSingleSuccessor() ==
-      BestVPlan.getScalarPreheader()) {
-    // TODO: The vector loop would be dead, should not even try to vectorize.
-    ORE->emit([&]() {
-      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationDead",
-                                        OrigLoop->getStartLoc(),
-                                        OrigLoop->getHeader())
-             << "Created vector loop never executes due to insufficient trip "
-                "count.";
-    });
-    return DenseMap<const SCEV *, Value *>();
-  }
-
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, BestVPlan);
 
   RUN_VPLAN_PASS(VPlanTransforms::convertToConcreteRecipes, BestVPlan);
@@ -5634,6 +5616,18 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                          EpilogueVectorizationKind::None))
     RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyKnownEVL, BestVPlan, BestVF, PSE);
+  if (BestVPlan.getEntry()->getSingleSuccessor() ==
+      BestVPlan.getScalarPreheader()) {
+    // TODO: The vector loop would be dead, should not even try to vectorize.
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationDead",
+                                        OrigLoop->getStartLoc(),
+                                        OrigLoop->getHeader())
+             << "Created vector loop never executes due to insufficient trip "
+                "count.";
+    });
+    return DenseMap<const SCEV *, Value *>();
+  }
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
   // making any changes to the CFG.
@@ -6170,10 +6164,8 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization =
       Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
-  bool OptForSize =
-      !ForceVectorization &&
-      (PlanCM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
-       PlanCM.EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+  bool OptForSize = !ForceVectorization && PlanCM.EpilogueLoweringStatus ==
+                                               CM_EpilogueNotAllowedOptSize;
   unsigned SCEVCheckThreshold = ForceVectorization
                                     ? Opts.pragma_vectorize_scev_check_threshold
                                     : Opts.vectorize_scev_check_threshold;
@@ -6723,10 +6715,10 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   }
   const auto &[MemCheckCond, MemCheckBlock] = RTChecks.getMemRuntimeChecks();
   if (MemCheckBlock && MemCheckBlock->hasNPredecessors(0)) {
-    // VPlan-native path does not do any analysis for runtime checks
+    // VPlan-native path does not do any analysis for memory runtime checks
     // currently.
     assert((!Opts.enable_vplan_native_path || !Plan.isOuterLoop()) &&
-           "Runtime checks are not supported for outer loops yet");
+           "Memory runtime checks are not supported for outer loops yet");
 
     if (Config.OptForSize) {
       assert(
@@ -7423,22 +7415,29 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       ExpectedTC->getFixedValue() < Opts.vectorizer_min_trip_count) {
     LLVM_DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                       << "This loop is worth vectorizing only if no scalar "
-                      << "iteration overheads are incurred.");
+                      << "epilogue is required.");
     if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
       LLVM_DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
     else {
       LLVM_DEBUG(dbgs() << "\n");
-      // Tail-folded loops are efficient even when the loop
-      // iteration count is low. However, setting the epilogue policy to
-      // `CM_EpilogueNotAllowedLowTripLoop` prevents vectorizing loops
-      // with runtime checks. It's more effective to let
-      // `isOutsideLoopWorkProfitable` determine if vectorization is
-      // beneficial for the loop. If the trip count is below the target's
-      // minimum for tail-folding, the tail cannot be folded, so treat it like
-      // any other low trip count loop.
-      if (SEL != CM_EpilogueNotNeededFoldTail ||
-          ExpectedTC->getFixedValue() <=
-              TTI->getMinTripCountTailFoldingThreshold())
+      // For loops with very small trip counts, require that no scalar epilogue
+      // is needed. Tail-folded loops are still allowed since they avoid
+      // epilogues, unless the trip count is below the target's minimum for
+      // tail-folding. In that case the tail cannot be folded, so the loop
+      // should be treated like any other low trip count loop.
+      // TODO: Remove the check for CM_EpilogueNotAllowedOptSize here. The
+      // EpilogueLowering enum currently conflates several pieces of
+      // information:
+      //   * Whether a scalar epilogue is permitted
+      //   * Whether tail folding is preferred or required
+      //   * Whether optimizing for code size
+      // Overwriting it here can drop OptForSize, breaking the
+      // runtimeChecksRequired() bail-out in computeMaxVF. Split
+      // EpilogueLowering into separate fields instead.
+      if (SEL != CM_EpilogueNotAllowedOptSize &&
+          (SEL != CM_EpilogueNotNeededFoldTail ||
+           ExpectedTC->getFixedValue() <=
+               TTI->getMinTripCountTailFoldingThreshold()))
         SEL = CM_EpilogueNotAllowedLowTripLoop;
     }
   }
@@ -7535,15 +7534,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   GeneratedRTChecks Checks(Opts, PSE, DT, LI, TTI, Config.CostKind,
                            LVP.getCostModel().maskPartialAliasing());
-  if (IsInnerLoop && LVP.hasPlanWithVF(VF.Width)) {
-    // Select the interleave count.
-    IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost);
+  if (LVP.hasPlanWithVF(VF.Width)) {
+    // Select the interleave count. Outer loops are not interleaved.
+    if (IsInnerLoop)
+      IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost);
 
     unsigned SelectedIC = UserIC > 0 ? UserIC : IC;
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1) {
-      Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,
+      Checks.create(L, LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,
                     *ORE);
 
       // Bail out early if either the SCEV or memory runtime checks are known to
@@ -7564,6 +7564,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+    assert((IsInnerLoop || ForceVectorization) &&
+           "Outer loops must be forced to vectorize");
     VPCostContext CostCtx(*TLI, *BestPlanPtr, LVP.getCostModel(), Config,
                           /*ReusePrintingSlotTracker=*/true);
     if (!ForceVectorization &&

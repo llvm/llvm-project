@@ -1130,8 +1130,8 @@ bool OpenMPReductionBinder<OpType>::processDefinedOperator(
   // fall through to createDeclareReduction below.
   reductionName =
       ReductionProcessor::getReductionName(redId, kindMap, redType, isByRef);
-  if (auto existingDecl =
-          builder.getModule().lookupSymbol<OpType>(reductionName)) {
+  mlir::ModuleOp module = builder.getModule();
+  if (auto existingDecl = module.lookupSymbol<OpType>(reductionName)) {
     reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), existingDecl.getSymName()));
     return true;

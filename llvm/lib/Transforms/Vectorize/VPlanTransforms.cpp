@@ -2364,6 +2364,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return hash_combine(Result, RFlags->getPredicate());
     if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
       return hash_combine(Result, SIVSteps->getInductionOpcode());
+    if (auto *DIV = dyn_cast<VPDerivedIVRecipe>(Def))
+      return hash_combine(Result, DIV->getInductionKind(), DIV->getFPBinOp());
     // Fold in the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
     if (auto *Load = dyn_cast<VPWidenMemoryRecipe>(Def))
@@ -2394,6 +2396,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LSIV->getInductionOpcode() !=
           cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
+    if (auto *LDIV = dyn_cast<VPDerivedIVRecipe>(L)) {
+      auto *RDIV = cast<VPDerivedIVRecipe>(R);
+      if (LDIV->getInductionKind() != RDIV->getInductionKind() ||
+          LDIV->getFPBinOp() != RDIV->getFPBinOp())
+        return false;
+    }
     // Compare the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
@@ -3547,6 +3555,7 @@ static bool handleUncountableExitsWithSideEffects(
 static bool loopHasStores(VPBasicBlock *HeaderVPBB) {
   return any_of(vp_rpo_plain_cfg_loop_body(HeaderVPBB), [](VPBasicBlock *VPBB) {
     return any_of(*VPBB, [VPBB](VPRecipeBase &R) {
+      (void)VPBB;
       if (match(&R, m_Intrinsic<Intrinsic::pseudoprobe>()))
         return false;
       if (!R.mayWriteToMemory()) {
@@ -4562,19 +4571,13 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
   if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
     // Narrow interleave group to wide load, as transformed VPlan will only
     // process one original iteration.
-    auto *LI = cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
+    const InterleaveGroup<Instruction> *IG = LoadGroup->getInterleaveGroup();
+    auto *LI = cast<LoadInst>(IG->getInsertPos());
     auto *L = VPBuilder(LoadGroup).createWidenLoad(
         *LI, LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-        LI->getAlign(), *LoadGroup, LoadGroup->getDebugLoc());
+        IG->getAlign(), *LoadGroup, LoadGroup->getDebugLoc());
     NarrowedOps.insert(L);
     return L;
-  }
-
-  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
-    assert(RepR->isSingleScalar() && RepR->getOpcode() == Instruction::Load &&
-           "must be a single scalar load");
-    NarrowedOps.insert(RepR);
-    return RepR;
   }
 
   auto *WideLoad = cast<VPWidenLoadRecipe>(R);
@@ -4724,11 +4727,11 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   for (auto *StoreGroup : StoreGroups) {
     VPValue *Res = narrowInterleaveGroupOp(StoreGroup->getStoredValues(),
                                            NarrowedOps, Preheader);
-    auto *SI =
-        cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
+    const InterleaveGroup<Instruction> *IG = StoreGroup->getInterleaveGroup();
+    auto *SI = cast<StoreInst>(IG->getInsertPos());
     VPBuilder(StoreGroup)
         .createWidenStore(*SI, StoreGroup->getAddr(), Res, nullptr,
-                          /*Consecutive=*/true, SI->getAlign(), *StoreGroup,
+                          /*Consecutive=*/true, IG->getAlign(), *StoreGroup,
                           StoreGroup->getDebugLoc());
     StoreGroup->eraseFromParent();
   }

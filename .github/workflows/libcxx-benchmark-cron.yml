@@ -105,6 +105,7 @@ jobs:
       lnt-machine: ${{ matrix.machine }}
       metric: ${{ matrix.metric }}
       direction: ${{ matrix.direction }}
+      min-change: ${{ matrix.min-change }}
       max-commits: ${{ matrix.max-commits }}
       artifact-name: refinement-${{ matrix.machine }}
 
