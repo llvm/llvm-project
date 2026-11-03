@@ -287,10 +287,8 @@ Error CodeGenPassBuilder::buildPipeline(
     flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
     addAsmPrinterEnd(PMW);
   } else if (PrintMIR) {
-    auto MIRBuffer = std::make_shared<std::string>();
-    addMachineFunctionPass(PrintMIRPass(MIRBuffer), PMW, /*Force=*/true);
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
-    addModulePass(PrintMIRFinalizePass(Out, MIRBuffer), PMW, /*Force=*/true);
+    flushFPMsToMPM(PMW);
+    addModulePass(PrintMIRPass(Out), PMW, /*Force=*/true);
   } else {
     flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
   }

@@ -24,17 +24,9 @@
 
 using namespace llvm;
 
-PreservedAnalyses PrintMIRPreparePass::run(Module &M, ModuleAnalysisManager &) {
-  M.renumberMetadataForAssembly();
-  printMIR(OS, M);
-  return PreservedAnalyses::all();
-}
-
-PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
-                                    MachineFunctionAnalysisManager &MFAM) {
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
-                  .getManager();
-
+static void printMachineFunction(raw_ostream &OS, FunctionAnalysisManager &FAM,
+                                 MachineFunctionAnalysisManager &MFAM,
+                                 MachineFunction &MF) {
   const VirtRegMap *VRM = MFAM.getCachedResult<VirtRegMapAnalysis>(MF);
   MachineModuleSlotTracker MST(
       [&](const Function &F) {
@@ -44,21 +36,29 @@ PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
       },
       &MF);
   MST.renumberMetadataForAssembly();
-  if (Buffer) {
-    raw_string_ostream BufOS(*Buffer);
-    printMIR(BufOS, FAM, MF, VRM);
-  } else {
-    printMIR(OS, FAM, MF, VRM);
+  printMIR(OS, FAM, MF, VRM);
+}
+
+PreservedAnalyses PrintMIRPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  M.renumberMetadataForAssembly();
+  printMIR(OS, M);
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    auto *MFA = FAM.getCachedResult<MachineFunctionAnalysis>(F);
+    if (!MFA)
+      continue;
+    auto &MFAM = FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(F)
+                     .getManager();
+    printMachineFunction(OS, FAM, MFAM, MFA->getMF());
   }
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses PrintMIRFinalizePass::run(Module &M,
-                                            ModuleAnalysisManager &) {
-  M.renumberMetadataForAssembly();
-  printMIR(OS, M);
-  OS << *Buffer;
-  Buffer->clear();
+PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  printMachineFunction(OS, FAM, MFAM, MF);
   return PreservedAnalyses::all();
 }
 

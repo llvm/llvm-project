@@ -168,13 +168,12 @@ int llvm::compileModuleWithNewPM(
 
     // FIXME: verify that there are no IR passes.
     ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
-    MPM.addPass(PrintMIRPreparePass(*OS));
-    MachineFunctionPassManager MFPM;
-    if (Opt.VerifyMachineCode == MachineVerifierMode::End)
-      MFPM.addPass(MachineVerifierPass());
-    MFPM.addPass(PrintMIRPass(*OS));
-    FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    if (Opt.VerifyMachineCode == MachineVerifierMode::End) {
+      FPM.addPass(
+          createFunctionToMachineFunctionPassAdaptor(MachineVerifierPass()));
+      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    }
+    MPM.addPass(PrintMIRPass(*OS));
 
   } else {
     ExitOnErr(Target->buildCodeGenPipeline(

@@ -265,7 +265,6 @@ bool isIgnored(StringRef PassID) {
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
                         "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
                         "VerifierPass", "PrintModulePass", "PrintMIRPass",
-                        "PrintMIRPreparePass", "PrintMIRFinalizePass",
                         "RequireAnalysisPass", "InvalidateAnalysisPass"});
 }
 

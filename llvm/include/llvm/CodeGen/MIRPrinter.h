@@ -17,8 +17,6 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
-#include <string>
 
 namespace llvm {
 
@@ -29,38 +27,15 @@ class Module;
 class VirtRegMap;
 template <typename T> class SmallVectorImpl;
 
-class PrintMIRPreparePass : public RequiredPassInfoMixin<PrintMIRPreparePass> {
-  raw_ostream &OS;
-
-public:
-  PrintMIRPreparePass(raw_ostream &OS = errs()) : OS(OS) {}
-  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
-};
-
 class PrintMIRPass : public RequiredPassInfoMixin<PrintMIRPass> {
   raw_ostream &OS;
-  std::shared_ptr<std::string> Buffer;
 
 public:
   PrintMIRPass(raw_ostream &OS = errs()) : OS(OS) {}
-  /// Append to \p Buffer for PrintMIRFinalizePass instead of printing.
-  PrintMIRPass(std::shared_ptr<std::string> Buffer)
-      : OS(nulls()), Buffer(std::move(Buffer)) {}
+  /// Print the module and all its machine functions.
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-};
-
-/// Print the module, then the functions that PrintMIRPass appended to
-/// \p Buffer. Printing the module last includes globals created by codegen.
-class PrintMIRFinalizePass
-    : public RequiredPassInfoMixin<PrintMIRFinalizePass> {
-  raw_ostream &OS;
-  std::shared_ptr<std::string> Buffer;
-
-public:
-  PrintMIRFinalizePass(raw_ostream &OS, std::shared_ptr<std::string> Buffer)
-      : OS(OS), Buffer(std::move(Buffer)) {}
-  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 /// Print LLVM IR using the MIR serialization format to the given output stream.
