@@ -12,6 +12,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include <cstdint>
+#include <map>
 
 #define DEBUG_TYPE "cs-preinliner"
 
@@ -22,6 +23,9 @@ STATISTIC(PreInlNumCSInlined,
           "Number of functions inlined with context sensitive profile");
 STATISTIC(PreInlNumCSNotInlined,
           "Number of functions not inlined with context sensitive profile");
+STATISTIC(PreInlNumCSICPRejected,
+          "Number of indirect call target contexts not inlined because the "
+          "sample profile loader would not promote them");
 STATISTIC(PreInlNumCSInlinedHitMinLimit,
           "Number of functions with FDO inline stopped due to min size limit");
 STATISTIC(PreInlNumCSInlinedHitMaxLimit,
@@ -48,6 +52,12 @@ static cl::opt<bool> SamplePreInlineReplay(
     "csspgo-replay-preinline", cl::Hidden, cl::init(false),
     cl::desc(
         "Replay previous inlining and adjust context profile accordingly"));
+
+static cl::opt<bool> CSPreinlHonorICPLimits(
+    "csspgo-preinliner-honor-icp-limits", cl::Hidden, cl::init(true),
+    cl::desc("Do not inline indirect call target contexts that the sample "
+             "profile loader will not promote (see "
+             "-sample-profile-icp-relative-hotness)."));
 
 static cl::opt<int> CSPreinlMultiplierForPrevInl(
     "csspgo-preinliner-multiplier-for-previous-inlining", cl::Hidden,
@@ -102,6 +112,115 @@ std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
   return Order;
 }
 
+// SampleProfileLoader inlines an indirect call target only after promoting it.
+// inlineHotFunctionsWithPriority walks the nested callee profiles at the call
+// site in descending head-sample order and promotes a target only if its count
+// is hot and, once ProfileICPRelativeHotnessSkip targets were promoted, at
+// least ProfileICPRelativeHotness percent of the site total; it stops at the
+// first target that fails. A target rejected by these checks should not be
+// predicted inline. Its samples would be stranded at the call site, and the
+// loader does not merge them back into the callee, so the out-of-line callee
+// would be compiled with an almost empty profile.
+//
+// Predicting a target inline changes how the loader counts it. When we nest
+// its profile under the caller, convertCSProfiles removes its call-target map
+// entry. The loader then uses the nested profile's head count instead. These
+// two counts can differ, changing the call site's total and each target's
+// percentage of that total.
+// Try targets in the loader's order. For each one, replace its map count with
+// its head count, then check that it and all previously accepted targets still
+// pass the hotness checks. Otherwise, reject it and the remaining targets.
+DenseSet<const ContextTrieNode *>
+CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
+                                    const FunctionSamples *CallerSamples) {
+  DenseSet<const ContextTrieNode *> Rejected;
+  LLVMContext C;
+  unsigned ProfileICPRelativeHotness = getSampleProfileICPRelativeHotness(C);
+  unsigned ProfileICPRelativeHotnessSkip =
+      getSampleProfileICPRelativeHotnessSkip(C);
+  // Only a pseudo probe identifies a single call instruction. With line-based
+  // profiles, distinct direct calls on one source line share a call site, so
+  // several targets there do not imply an indirect call.
+  if (!CSPreinlHonorICPLimits || SamplePreInlineReplay ||
+      !FunctionSamples::ProfileIsProbeBased)
+    return Rejected;
+
+  struct Target {
+    ContextTrieNode *Node;
+    uint64_t Head;
+    uint64_t MapCount;
+    bool HasMapEntry = false;
+  };
+  std::map<LineLocation, SmallVector<Target, 4>> CallSites;
+  for (auto &Child : CallerNode->getAllChildContext()) {
+    ContextTrieNode *CalleeNode = &Child.second;
+    if (FunctionSamples *CalleeSamples = CalleeNode->getFunctionSamples())
+      CallSites[CalleeNode->getCallSiteLoc()].push_back(
+          {CalleeNode, CalleeSamples->getHeadSamplesEstimate(), 0});
+  }
+
+  uint64_t HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
+      Summary->getDetailedSummary());
+  for (auto &[CallSite, Callees] : CallSites) {
+    // Site total with every target outlined, i.e. the raw call target map.
+    uint64_t Sum = 0;
+    size_t NumTargets = 0;
+    if (auto CallTargets = CallerSamples->findCallTargetMapAt(CallSite)) {
+      NumTargets = CallTargets->size();
+      for (const auto &[Name, Count] : *CallTargets) {
+        Sum += Count;
+        for (Target &T : Callees)
+          if (T.Node->getFuncName() == Name) {
+            T.MapCount = Count;
+            T.HasMapEntry = true;
+          }
+      }
+    }
+    for (Target &T : Callees)
+      if (!T.HasMapEntry)
+        ++NumTargets;
+    // A direct call site has a single target and is not subject to ICP.
+    if (NumTargets < 2)
+      continue;
+
+    llvm::sort(Callees, [](const Target &L, const Target &R) {
+      if (L.Head != R.Head)
+        return L.Head > R.Head;
+      return L.Node->getFunctionSamples()->getGUID() <
+             R.Node->getFunctionSamples()->getGUID();
+    });
+    auto Promotable = [&](size_t Index, uint64_t Head, uint64_t SiteSum) {
+      return Head >= HotCountThreshold &&
+             (Index < ProfileICPRelativeHotnessSkip ||
+              Head * 100 >= SiteSum * ProfileICPRelativeHotness);
+    };
+    LLVM_DEBUG(dbgs() << "  Indirect call site " << CallSite.LineOffset << "."
+                      << CallSite.Discriminator << ": " << NumTargets
+                      << " targets, total count " << Sum << "\n");
+    size_t NumAccepted = 0;
+    bool Stop = false;
+    for (Target &T : Callees) {
+      if (!Stop) {
+        uint64_t NewSum = Sum - T.MapCount + T.Head;
+        Stop = !Promotable(NumAccepted, T.Head, NewSum);
+        // Accepting this target must not push an accepted one below the bar.
+        for (size_t I = 0; !Stop && I < NumAccepted; ++I)
+          Stop = !Promotable(I, Callees[I].Head, NewSum);
+        if (!Stop) {
+          Sum = NewSum;
+          ++NumAccepted;
+          continue;
+        }
+      }
+      Rejected.insert(T.Node);
+      LLVM_DEBUG(dbgs() << "    Not promotable by ICP: "
+                        << ContextTracker.getContextString(T.Node) << " (head "
+                        << T.Head << ", site total " << Sum << ")\n");
+    }
+  }
+  return Rejected;
+}
+
 bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
                                        const FunctionSamples *CallerSamples) {
   assert(CallerSamples && "Expect non-null caller samples");
@@ -112,6 +231,8 @@ bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
   // targets from function profile.
   ContextTrieNode *CallerNode =
       ContextTracker.getContextNodeForProfile(CallerSamples);
+  DenseSet<const ContextTrieNode *> ICPRejected =
+      getICPRejectedCallees(CallerNode, CallerSamples);
 
   bool HasNewCandidate = false;
   for (auto &Child : CallerNode->getAllChildContext()) {
@@ -135,8 +256,10 @@ bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
     // check for that.
     HasNewCandidate = true;
     uint32_t CalleeSize = getFuncSize(CalleeNode);
-    CQueue.emplace(CalleeSamples, std::max(CallsiteCount, CalleeEntryCount),
-                   CalleeSize);
+    ProfiledInlineCandidate Candidate(
+        CalleeSamples, std::max(CallsiteCount, CalleeEntryCount), CalleeSize);
+    Candidate.ICPRejected = ICPRejected.contains(CalleeNode);
+    CQueue.push(Candidate);
   }
 
   return HasNewCandidate;
@@ -156,6 +279,11 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
   // profiled binary.
   if (SamplePreInlineReplay)
     return WasInlined;
+
+  if (Candidate.ICPRejected) {
+    ++PreInlNumCSICPRejected;
+    return false;
+  }
 
   unsigned int SampleThreshold = SampleColdCallSiteThreshold;
   uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(

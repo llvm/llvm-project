@@ -144,7 +144,16 @@ cl::opt<int> SampleHotCallSiteThreshold(
 cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
+
 } // namespace llvm
+
+unsigned llvm::getSampleProfileICPRelativeHotness(const LLVMContext &C) {
+  return getIPOOptions(C).sample_profile_icp_relative_hotness;
+}
+
+unsigned llvm::getSampleProfileICPRelativeHotnessSkip(const LLVMContext &C) {
+  return getIPOOptions(C).sample_profile_icp_relative_hotness_skip;
+}
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
