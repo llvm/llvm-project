@@ -215,8 +215,9 @@ def have_host_clang_repl_thread_local():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             input=testcode,
+            timeout=5,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return False
 
     return clang_repl_cmd.returncode == 0 and b"success" in clang_repl_cmd.stdout
@@ -264,7 +265,7 @@ if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
         config.available_features.add('host-supports-cuda')
 
     if have_host_clang_repl_thread_local():
-        config.available_features.add("host-supports-jit-thread-local")
+        config.available_features.add("jit-thread-local")
 
     hosttriple = run_clang_repl("--host-jit-triple")
     config.available_features.add("host-jit-triple=" + hosttriple.strip())
