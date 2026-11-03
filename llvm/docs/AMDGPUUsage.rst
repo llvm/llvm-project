@@ -15,6 +15,7 @@ User Guide for AMDGPU Backend
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
    AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
    AMDGPU/DeveloperGuideline
+   AMDGPU/StaticSimulator
 
 Introduction
 ============
