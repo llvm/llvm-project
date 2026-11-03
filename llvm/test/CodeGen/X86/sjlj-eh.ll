@@ -28,11 +28,11 @@ try.cont:
 
 ;     struct _Unwind_FunctionContext {
 ; +00   struct _Unwind_FunctionContext *prev;   -64(%ebp)
-; +04   uint32_t __callsite;                    -60(%ebp)
-; +08   uint32_t __buffer[4];                   -56(%ebp)
+; +04   int __callsite;                         -60(%ebp)
+; +08   _Unwind_Word __buffer[4];               -56(%ebp)
 ; +24   __personality_routine __personality;    -40(%ebp)
 ; +28   uintptr_t __lsda;                       -36(%ebp)
-; +32   ptr__jbuf[];                         -32(%ebp)
+; +32   void *__jbuf[];                         -32(%ebp)
 ;     };
 
 
@@ -74,12 +74,12 @@ try.cont:
 
 
 ;     struct _Unwind_FunctionContext {
-; +00   struct _Unwind_FunctionContext *prev;   -312(%rbp)
-; +08   uint32_t __callsite;                    -304(%rbp)
-; +12   uint32_t __buffer[4];                   -300(%rbp)
-; +32   __personality_routine __personality;    -280(%rbp)
-; +40   uintptr_t __lsda;                       -272(%rbp)
-; +48   ptr__jbuf[];                         -264(%rbp)
+; +00   struct _Unwind_FunctionContext *prev;   -328(%rbp)
+; +08   int __callsite;                         -320(%rbp)
+; +16   _Unwind_Word __buffer[4];               -312(%rbp)
+; +48   __personality_routine __personality;    -280(%rbp)
+; +56   uintptr_t __lsda;                       -272(%rbp)
+; +64   void *__jbuf[];                         -264(%rbp)
 ;     };
 
 
@@ -135,6 +135,15 @@ try.cont:
 ; CHECK-X64-LINUX: jmpq *(%rcx,%rax,8)
 
 ; x32 has 32-bit pointers and 64-bit __data words.
+;     struct _Unwind_FunctionContext {
+; +00   struct _Unwind_FunctionContext *prev;   -112(%ebp)
+; +04   int __callsite;                         -108(%ebp)
+; +08   _Unwind_Word __buffer[4];               -104(%ebp)
+; +40   __personality_routine __personality;    -72(%ebp)
+; +44   uintptr_t __lsda;                       -68(%ebp)
+; +48   void *__jbuf[];                         -64(%ebp)
+;     };
+
 ; CHECK-X32: movl %eax, -72(%ebp)
 ; CHECK-X32: movl $GCC_except_table0, -68(%ebp)
 ; CHECK-X32: movl %ebp, -64(%ebp)
