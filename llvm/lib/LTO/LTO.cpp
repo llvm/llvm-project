@@ -59,6 +59,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
@@ -974,6 +975,11 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 
   if (Error Err = M.materializeMetadata())
     return std::move(Err);
+
+  // Older bitcode, produced before GUID assignment was implemented, may not
+  // have GUIDs for definitions. Record them here, while the values still have
+  // their original names and linkages.
+  AssignGUIDPass::recordMissingGUIDs(M);
 
   if (LTOMode == LTOK_UnifiedRegular) {
     // cfi.functions metadata is intended to be used with ThinLTO and may

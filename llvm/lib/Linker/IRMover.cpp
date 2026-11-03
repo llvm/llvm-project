@@ -28,6 +28,7 @@
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <utility>
@@ -874,6 +875,13 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   NG->copyAttributesFrom(SrcGV);
   forceRenaming(NG, SrcGV->getName());
 
+  // Preserve a GUID already associated with either input. Appending globals
+  // are replaced by a new destination value, and GUID map entries deliberately
+  // do not follow RAUW.
+  if (DstGV)
+    AssignGUIDPass::transferGUID(*DstGV, *NG);
+  AssignGUIDPass::transferGUID(*SrcGV, *NG);
+
   Mapper.scheduleMapAppendingVariable(*NG, DstGV, IsOldStructor, SrcElements);
 
   // Replace any uses of the two global variables with uses of the new
@@ -986,6 +994,12 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
 
   if (!ShouldLink && ForIndirectSymbol)
     NewGV->setLinkage(GlobalValue::InternalLinkage);
+
+  // ValueToGUIDMap is keyed by values in its owning module, so explicitly
+  // transfer the entry when a source definition is linked to a newly-created
+  // destination value. This also covers definitions pulled in transitively.
+  if (ShouldLink || ForIndirectSymbol)
+    AssignGUIDPass::transferGUID(*SGV, *NewGV);
 
   Constant *C = NewGV;
   // Only create a bitcast if necessary. In particular, with

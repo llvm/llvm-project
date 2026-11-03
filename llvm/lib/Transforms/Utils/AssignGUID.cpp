@@ -38,3 +38,17 @@ void AssignGUIDPass::assignGUIDForMergedGV(GlobalVariable &GV) {
   GV.eraseMetadata(LLVMContext::MD_guid);
   GV.assignGUID();
 }
+
+void AssignGUIDPass::recordMissingGUIDs(Module &M) {
+  for (GlobalVariable &GV : M.globals())
+    if (!GV.isDeclaration() && !GV.getGUIDIfAssigned())
+      M.insertGUID(&GV, GV.getGUIDOrFallback());
+  for (Function &F : M.functions())
+    if (!F.isDeclaration() && !F.getGUIDIfAssigned())
+      M.insertGUID(&F, F.getGUIDOrFallback());
+}
+
+void AssignGUIDPass::transferGUID(const GlobalValue &Src, GlobalValue &Dst) {
+  if (auto GUID = Src.getParent()->getGUID(&Src))
+    Dst.getParent()->insertGUID(&Dst, *GUID);
+}
