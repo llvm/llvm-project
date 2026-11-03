@@ -293,12 +293,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
           attrs.set(mlir::LLVM::LLVMDialect::getDeadOnReturnAttrName(),
                     builder.getI64IntegerAttr(static_cast<int64_t>(
                         llvm::DeadOnReturnInfo().toIntValue())));
-        // The object spans its allocation size, which is larger than its
-        // size for a vector whose size is not a power of two.
         attrs.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
-                  builder.getI64IntegerAttr(cir::CIRDataLayout(module)
-                                                .getTypeAllocSize(pointeeTy)
-                                                .getFixedValue()));
+                  builder.getI64IntegerAttr(
+                      dl.getTypeAllocSize(pointeeTy).getFixedValue()));
       }
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
