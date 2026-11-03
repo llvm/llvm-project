@@ -18,6 +18,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
@@ -44,6 +45,57 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
   }
 };
 } // namespace
+
+/// Collect the read effects of `op`. A write can only block CSE of a read if
+/// it can conflict with one of these effects.
+static SmallVector<MemoryEffects::EffectInstance>
+getReadEffects(Operation *op) {
+  SmallVector<MemoryEffects::EffectInstance> readEffects;
+  if (auto memOp = dyn_cast<MemoryEffectOpInterface>(op)) {
+    SmallVector<MemoryEffects::EffectInstance> effects;
+    memOp.getEffects(effects);
+    for (MemoryEffects::EffectInstance &e : effects)
+      if (isa<MemoryEffects::Read>(e.getEffect()))
+        readEffects.push_back(e);
+  }
+  return readEffects;
+}
+
+/// Return true if `op` may perform a write that conflicts with `readEffects`,
+/// or if its effects are unknown (conservatively treated as a write).
+static bool
+mayConflictWithReads(Operation *op,
+                     ArrayRef<MemoryEffects::EffectInstance> readEffects) {
+  std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
+      getEffectsRecursively(op);
+  // If the operation does not implement the MemoryEffectOpInterface we
+  // conservatively assume it writes.
+  if (!effects)
+    return true;
+
+  for (const MemoryEffects::EffectInstance &effect : *effects) {
+    if (!isa<MemoryEffects::Write>(effect.getEffect()))
+      continue;
+    // A write on a resource disjoint from all read resources cannot conflict
+    // with the reads being CSE'd.
+    SideEffects::Resource *writeResource = effect.getResource();
+    bool canConflict = llvm::any_of(readEffects, [&](const auto &readEffect) {
+      SideEffects::Resource *readResource = readEffect.getResource();
+      if (writeResource->isDisjointFrom(readResource))
+        return false;
+      // A pointer-based access to an addressable resource cannot conflict
+      // with a non-addressable resource.
+      if (readEffect.getValue() && !writeResource->isAddressable())
+        return false;
+      if (effect.getValue() && !readResource->isAddressable())
+        return false;
+      return true;
+    });
+    if (canConflict)
+      return true;
+  }
+  return false;
+}
 
 namespace {
 /// Simple common sub-expression elimination.
@@ -107,8 +159,15 @@ private:
                             Operation *existing, bool hasSSADominance);
 
   /// Check if there is side-effecting operations other than the given effect
-  /// between the two operations.
+  /// between the two operations in the same block.
   bool hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp);
+
+  /// Check if a write conflicting with the reads of `existing` may execute on
+  /// any path from `existing` to `op`, where the two operations live in
+  /// different blocks of the same region and `existing` dominates `op`.
+  bool hasConflictingWriteAcrossBlocks(
+      Operation *existing, Operation *op,
+      ArrayRef<MemoryEffects::EffectInstance> readEffects);
 
   /// A rewriter for modifying the IR.
   RewriterBase &rewriter;
@@ -173,16 +232,8 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
   assert(hasEffect<MemoryEffects::Read>(toOp) &&
          "expected read effect on toOp");
 
-  // Collect the read effects of fromOp. A write can only block CSE if it
-  // can conflict with one of these reads.
-  SmallVector<MemoryEffects::EffectInstance> readEffects;
-  if (auto memOp = dyn_cast<MemoryEffectOpInterface>(fromOp)) {
-    SmallVector<MemoryEffects::EffectInstance> fromEffects;
-    memOp.getEffects(fromEffects);
-    for (MemoryEffects::EffectInstance &e : fromEffects)
-      if (isa<MemoryEffects::Read>(e.getEffect()))
-        readEffects.push_back(e);
-  }
+  SmallVector<MemoryEffects::EffectInstance> readEffects =
+      getReadEffects(fromOp);
 
   Operation *nextOp = fromOp->getNextNode();
   auto result =
@@ -200,40 +251,9 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
     }
   }
   while (nextOp && nextOp != toOp) {
-    std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
-        getEffectsRecursively(nextOp);
-    if (!effects) {
-      // TODO: Do we need to handle other effects generically?
-      // If the operation does not implement the MemoryEffectOpInterface we
-      // conservatively assume it writes.
-      result.first->second =
-          std::make_pair(nextOp, MemoryEffects::Write::get());
+    if (mayConflictWithReads(nextOp, readEffects)) {
+      result.first->second = {nextOp, MemoryEffects::Write::get()};
       return true;
-    }
-
-    for (const MemoryEffects::EffectInstance &effect : *effects) {
-      if (isa<MemoryEffects::Write>(effect.getEffect())) {
-        // A write on a resource disjoint from all read resources cannot
-        // conflict with the reads being CSE'd.
-        SideEffects::Resource *writeResource = effect.getResource();
-        bool canConflict =
-            llvm::any_of(readEffects, [&](const auto &readEffect) {
-              SideEffects::Resource *readResource = readEffect.getResource();
-              if (writeResource->isDisjointFrom(readResource))
-                return false;
-              // A pointer-based access to an addressable resource cannot
-              // conflict with a non-addressable resource.
-              if (readEffect.getValue() && !writeResource->isAddressable())
-                return false;
-              if (effect.getValue() && !readResource->isAddressable())
-                return false;
-              return true;
-            });
-        if (canConflict) {
-          result.first->second = {nextOp, MemoryEffects::Write::get()};
-          return true;
-        }
-      }
     }
     nextOp = nextOp->getNextNode();
   }
@@ -242,6 +262,76 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
   // a dangling pointer, so its predecessor is sufficient to reconstruct
   // the position.
   result.first->second = std::make_pair(toOp->getPrevNode(), nullptr);
+  return false;
+}
+
+bool CSEDriver::hasConflictingWriteAcrossBlocks(
+    Operation *existing, Operation *op,
+    ArrayRef<MemoryEffects::EffectInstance> readEffects) {
+  Block *fromBlock = existing->getBlock();
+  Block *toBlock = op->getBlock();
+  assert(fromBlock != toBlock && "expected different blocks");
+  assert(existing->getParentRegion() == op->getParentRegion() &&
+         "expected operations in the same region");
+
+  // Blocks that can reach `toBlock` (predecessor closure, including itself).
+  SmallPtrSet<Block *, 8> canReachTo;
+  SmallVector<Block *, 8> worklist(toBlock->pred_begin(), toBlock->pred_end());
+  canReachTo.insert(toBlock);
+  while (!worklist.empty()) {
+    Block *b = worklist.pop_back_val();
+    if (canReachTo.insert(b).second)
+      worklist.append(b->pred_begin(), b->pred_end());
+  }
+
+  // Blocks on some path from `fromBlock` to `toBlock`: reachable from
+  // `fromBlock` and able to reach `toBlock`. Every op that may execute between
+  // the two reads lives in such a block.
+  SmallPtrSet<Block *, 8> between;
+  worklist.assign(1, fromBlock);
+  while (!worklist.empty()) {
+    Block *b = worklist.pop_back_val();
+    if (canReachTo.contains(b) && between.insert(b).second)
+      worklist.append(b->succ_begin(), b->succ_end());
+  }
+
+  // Bail if the region between the reads contains a cycle: a back edge could
+  // carry a write to a later occurrence of the read. Kahn's algorithm reduces
+  // an acyclic graph completely by repeatedly removing sources.
+  DenseMap<Block *, unsigned> numPreds;
+  for (Block *b : between)
+    for (Block *s : b->getSuccessors())
+      if (between.contains(s))
+        ++numPreds[s];
+  SmallVector<Block *, 8> sources;
+  for (Block *b : between)
+    if (!numPreds.contains(b))
+      sources.push_back(b);
+  unsigned reduced = 0;
+  while (!sources.empty()) {
+    Block *b = sources.pop_back_val();
+    ++reduced;
+    for (Block *s : b->getSuccessors())
+      if (between.contains(s) && --numPreds[s] == 0)
+        sources.push_back(s);
+  }
+  if (reduced != between.size())
+    return true;
+
+  // Scan every op that may lie between the two reads: after `existing` in its
+  // block, before `op` in its block, and all of every intermediate block.
+  auto rangeHasConflict = [&](Block::iterator begin, Block::iterator end) {
+    return llvm::any_of(llvm::make_range(begin, end), [&](Operation &cur) {
+      return mayConflictWithReads(&cur, readEffects);
+    });
+  };
+  if (rangeHasConflict(std::next(existing->getIterator()), fromBlock->end()) ||
+      rangeHasConflict(toBlock->begin(), op->getIterator()))
+    return true;
+  for (Block *b : between)
+    if (b != fromBlock && b != toBlock &&
+        rangeHasConflict(b->begin(), b->end()))
+      return true;
   return false;
 }
 
@@ -270,11 +360,19 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
     // Look for an existing definition for the operation.
     if (auto *existing = knownValues.lookup(op)) {
-      if (existing->getBlock() == op->getBlock() &&
-          !hasOtherSideEffectingOpInBetween(existing, op)) {
-        // The operation that can be deleted has been reach with no
-        // side-effecting operations in between the existing operation and
-        // this one so we can remove the duplicate.
+      bool canRemove = false;
+      if (existing->getBlock() == op->getBlock()) {
+        // Both reads live in the same block: no side-effecting op may lie
+        // between them.
+        canRemove = !hasOtherSideEffectingOpInBetween(existing, op);
+      } else if (hasSSADominance &&
+                 existing->getParentRegion() == op->getParentRegion()) {
+        // The existing read dominates `op` from another block of the same
+        // region: no conflicting write may occur on any path between them.
+        canRemove = !hasConflictingWriteAcrossBlocks(existing, op,
+                                                     getReadEffects(existing));
+      }
+      if (canRemove) {
         replaceUsesAndDelete(knownValues, op, existing, hasSSADominance);
         return success();
       }
