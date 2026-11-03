@@ -141,6 +141,16 @@ func.func @kernels_construct(%arg0 : memref<i32>) attributes {acc.routine_info =
   return
 }
 
+acc.routine @acc_routine_serial_empty func(@empty_serial_construct) seq
+// CHECK-LABEL: func.func @empty_serial_construct
+// CHECK-NOT:   acc.serial
+// CHECK:       return
+func.func @empty_serial_construct() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_serial_empty]>} {
+  acc.serial {
+  }
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Declare enter/exit - erased (host fallback)
 //===----------------------------------------------------------------------===//
