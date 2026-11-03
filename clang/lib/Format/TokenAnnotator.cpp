@@ -2323,7 +2323,8 @@ private:
       for (FormatToken *Previous = Current.Previous;
            Previous && Previous->isOneOf(tok::star, tok::amp);
            Previous = Previous->Previous) {
-        Previous->setType(TT_PointerOrReference);
+        if (!Previous->isTypeFinalized())
+          Previous->setType(TT_PointerOrReference);
       }
       if (Line.MustBeDeclaration &&
           Contexts.front().ContextType != Context::CtorInitializer) {
