@@ -71,26 +71,18 @@ void DWARFASTParserFortran::ParseChildParameters(
     return;
 
   for (DWARFDIE die : parent_die.children()) {
-    const dw_tag_t tag = die.Tag();
-    switch (tag) {
-    case DW_TAG_formal_parameter: {
-      if (die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
-        continue;
+    if (die.Tag() != DW_TAG_formal_parameter ||
+        die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
+      continue;
 
-      DWARFDIE param_type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
-
-      Type *type = die.ResolveTypeUID(param_type_die);
-      if (!type)
-        break;
-
-      function_param_names.emplace_back(die.GetName());
-      function_param_types.push_back(type->GetForwardCompilerType());
-    } break;
-    default:
+    DWARFDIE param_type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
+    Type *type = die.ResolveTypeUID(param_type_die);
+    if (!type)
       break;
-    }
-  }
 
+    function_param_names.emplace_back(die.GetName());
+    function_param_types.push_back(type->GetForwardCompilerType());
+  }
   assert(function_param_names.size() == function_param_types.size());
 }
 
@@ -188,21 +180,19 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
       if (!attributes.ExtractFormValueAtIndex(i, form_value))
         continue;
       switch (attributes.AttributeAtIndex(i)) {
-      case DW_AT_name:
-        type_name_cstr = form_value.AsCString();
-        if (type_name_cstr &&
-            type_name_cstr[0]) { // Check for null AND empty string
+      case DW_AT_name: {
+        const char *type_name_cstr = form_value.AsCString();
+        if (type_name_cstr && type_name_cstr[0] != '\0') {
           type_name.SetString(type_name_cstr);
         } else {
           type_name.SetCString("UNKNOWN_FORTRAN_FUNCTION");
         }
         break;
-
+      }
       case DW_AT_type: {
         if (DWARFDIE type_die = form_value.Reference())
           if (Type *resolved_type = die.GetDWARF()->ResolveType(type_die))
             return_type = resolved_type->GetForwardCompilerType();
-
         break;
       }
 
@@ -211,12 +201,12 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
       }
     }
 
-    llvm::SmallVector<CompilerType, 4> function_params_types;
-    llvm::SmallVector<llvm::StringRef, 4> function_params_names;
-    ParseChildParameters(die, function_params_types, function_params_names);
+    llvm::SmallVector<CompilerType, 4> param_types;
+    llvm::SmallVector<llvm::StringRef, 4> param_names;
+    ParseChildParameters(die, param_types, param_names);
 
-    compiler_type = m_ast.CreateFortranFunction(
-        type_name, function_params_types, function_params_names, return_type);
+    compiler_type = m_ast.CreateFortranFunction(type_name, param_types,
+                                                param_names, return_type);
 
     type_sp = dwarf->MakeType(die.GetID(), type_name, 0, nullptr,
                               LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
@@ -263,7 +253,9 @@ lldb_private::Function *DWARFASTParserFortran::ParseFunctionFromDWARF(
     return nullptr;
 
   Mangled func_name;
-  // Mangled doesn't know how to demangle fortran names
+  // TODO: Once the Mangled class supports Fortran demangling, we should
+  // synthesize a demangled name here if GetDIENamesAndRanges fails to provide
+  // one.
   if (mangled)
     func_name.SetMangledName(ConstString(mangled));
 
