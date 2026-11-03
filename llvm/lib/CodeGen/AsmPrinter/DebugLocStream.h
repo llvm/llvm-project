@@ -190,6 +190,12 @@ public:
   /// Finalize the entry, deleting it if it's empty.
   ~EntryBuilder() { Locs.finalizeEntry(); }
 
+  /// Discard the expression, including any partially emitted location.
+  void discard() {
+    Locs.DWARFBytes.resize(Locs.Entries.back().ByteOffset);
+    Locs.Comments.resize(Locs.Entries.back().CommentOffset);
+  }
+
   BufferByteStreamer getStreamer() { return Locs.getStreamer(); }
 };
 
