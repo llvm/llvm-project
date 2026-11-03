@@ -2245,3 +2245,9 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
   def FSCALE_V128 : WInst<"vscale", "..(.S)", "QdQfQh">;
   def FSCALE_V64 : WInst<"vscale", "(.q)(.q)(.qS)", "fh">;
 }
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp-armv8" in {
+  // Non-temporal pair load/stores
+  def VSTNQ_X2 : SInst<"vstnq_x2", "v(*)(2!)", "HcHsHiHlHUcHUsHUiHUlHhHbHfHdHm">;
+  def VLDNQ_X2   : SInst<"vldnq_x2", "2(c*!)", "HcHsHiHlHUcHUsHUiHUlHhHbHfHdHm">;
+}
