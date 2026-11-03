@@ -175,7 +175,7 @@ protected:
 
     /// The device memory just before the kernel execution. It is kept until
     /// the epilogue to store the output snapshot as a diff against it.
-    mutable std::unique_ptr<WritableMemoryBuffer> InputSnapshot;
+    mutable std::unique_ptr<MemoryBuffer> InputSnapshot;
 
     InstanceTy(const KernelInfoTy &Kernel, uint32_t NumTeams,
                uint32_t NumThreads, uint32_t SharedMemorySize,

@@ -2441,9 +2441,13 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     }
   }
 
-  // Save the device allocation for future replays of the same kernel.
-  if (ReplayOutcome)
+  // Save the device allocation for future replays of the same kernel, and the
+  // input snapshot it is initialized with.
+  if (ReplayOutcome) {
     ReplayOutcome->ReplayDeviceAlloc = TgtPtr;
+    ReplayOutcome->InputSnapshot = DeviceMemory;
+    ReplayOutcome->InputSnapshotSize = DeviceMemorySize;
+  }
 
   // Initialize the device memory.
   if (DeviceMemorySize) {

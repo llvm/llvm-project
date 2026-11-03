@@ -234,6 +234,26 @@ void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
 
 Error NativeRecordReplayTy::recordPrologueImpl(const KernelInfoTy &Kernel,
                                                const InstanceTy &Instance) {
+  // When replaying, the device memory was initialized from an input snapshot
+  // on the host. If it covers the whole replay memory, use it instead of
+  // retrieving the device memory.
+  if (const KernelReplayOutcomeTy *Outcome = Instance.ReplayOutcome) {
+    AllocationLock.lock();
+    uint64_t ReplaySize = CurrentSize;
+    AllocationLock.unlock();
+
+    if (Outcome->InputSnapshotSize == ReplaySize &&
+        (!ReplaySize ||
+         (Outcome->InputSnapshot && Outcome->ReplayDeviceAlloc == StartAddr))) {
+      StringRef Snapshot(static_cast<const char *>(Outcome->InputSnapshot),
+                         ReplaySize);
+      Instance.InputSnapshot =
+          MemoryBuffer::getMemBuffer(Snapshot, /*BufferName=*/"",
+                                     /*RequiresNullTerminator=*/false);
+      return Plugin::success();
+    }
+  }
+
   auto SnapshotOrErr = retrieveSnapshot();
   if (!SnapshotOrErr)
     return SnapshotOrErr.takeError();
@@ -404,8 +424,7 @@ Error NativeRecordReplayTy::recordSnapshotDiff(StringRef Filename,
   AllocationLock.unlock();
 
   // Take the input snapshot so it is released once the diff is recorded.
-  std::unique_ptr<WritableMemoryBuffer> Input =
-      std::move(Instance.InputSnapshot);
+  std::unique_ptr<MemoryBuffer> Input = std::move(Instance.InputSnapshot);
   const char *InputData = Input ? Input->getBufferStart() : nullptr;
   uint64_t InputSize = Input ? Input->getBufferSize() : 0;
 
