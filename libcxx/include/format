@@ -31,7 +31,7 @@ namespace std {
 
     public:
       template<class T> consteval basic_format_string(const T& s);
-      basic_format_string(dynamic-format-string<charT> s) noexcept : str(s.str) {}   // since C++26
+      constexpr basic_format_string(dynamic-format-string<charT> s) noexcept : str(s.str) {}   // constexpr since C++26
 
       constexpr basic_string_view<charT> get() const noexcept { return str; }
     };
@@ -47,7 +47,7 @@ namespace std {
     basic_string_view<charT> str;                               // exposition-only
 
   public:
-    dynamic-format-string(basic_string_view<charT> s) noexcept : str(s) {}
+    dynamic-format-string(basic_string_view<charT> s) noexcept : str(s) {} // constexpr since C++26
 
     dynamic-format-string(const dynamic-format-string&) = delete;
     dynamic-format-string& operator=(const dynamic-format-string&) = delete;
@@ -62,32 +62,32 @@ namespace std {
 
   // [format.functions], formatting functions
   template<class... Args>
-    string format(format-string<Args...> fmt, Args&&... args);
+    string format(format-string<Args...> fmt, Args&&... args);   // constexpr since C++26
   template<class... Args>
-    wstring format(wformat-string<Args...> fmt, Args&&... args);
+    wstring format(wformat-string<Args...> fmt, Args&&... args); // constexpr since C++26
   template<class... Args>
     string format(const locale& loc, format-string<Args...> fmt, Args&&... args);
   template<class... Args>
     wstring format(const locale& loc, wformat-string<Args...> fmt, Args&&... args);
 
-  string vformat(string_view fmt, format_args args);
-  wstring vformat(wstring_view fmt, wformat_args args);
+  string vformat(string_view fmt, format_args args);    // constexpr since C++26
+  wstring vformat(wstring_view fmt, wformat_args args); // constexpr since C++26
   string vformat(const locale& loc, string_view fmt, format_args args);
   wstring vformat(const locale& loc, wstring_view fmt, wformat_args args);
 
   template<class Out, class... Args>
-    Out format_to(Out out, format-string<Args...> fmt, Args&&... args);
+    Out format_to(Out out, format-string<Args...> fmt, Args&&... args);  // constexpr since C++26
   template<class Out, class... Args>
-    Out format_to(Out out, wformat-string<Args...> fmt, Args&&... args);
+    Out format_to(Out out, wformat-string<Args...> fmt, Args&&... args); // constexpr since C++26
   template<class Out, class... Args>
     Out format_to(Out out, const locale& loc, format-string<Args...> fmt, Args&&... args);
   template<class Out, class... Args>
     Out format_to(Out out, const locale& loc, wformat-string<Args...> fmt, Args&&... args);
 
   template<class Out>
-    Out vformat_to(Out out, string_view fmt, format_args args);
+    Out vformat_to(Out out, string_view fmt, format_args args);   // constexpr since C++26
   template<class Out>
-    Out vformat_to(Out out, wstring_view fmt, wformat_args args);
+    Out vformat_to(Out out, wstring_view fmt, wformat_args args); // constexpr since C++26
   template<class Out>
     Out vformat_to(Out out, const locale& loc, string_view fmt,
                    format_args char> args);
@@ -101,10 +101,10 @@ namespace std {
   };
   template<class Out, class... Args>
     format_to_n_result<Out> format_to_n(Out out, iter_difference_t<Out> n,
-                                        format-string<Args...> fmt, Args&&... args);
+                                        format-string<Args...> fmt, Args&&... args);  // constexpr since C++26
   template<class Out, class... Args>
     format_to_n_result<Out> format_to_n(Out out, iter_difference_t<Out> n,
-                                        wformat-string<Args...> fmt, Args&&... args);
+                                        wformat-string<Args...> fmt, Args&&... args); // constexpr since C++26
   template<class Out, class... Args>
     format_to_n_result<Out> format_to_n(Out out, iter_difference_t<Out> n,
                                         const locale& loc, format-string<Args...> fmt,
@@ -115,9 +115,9 @@ namespace std {
                                         Args&&... args);
 
   template<class... Args>
-    size_t formatted_size(format-string<Args...> fmt, Args&&... args);
+    size_t formatted_size(format-string<Args...> fmt, Args&&... args);  // constexpr since C++26
   template<class... Args>
-    size_t formatted_size(wformat-string<Args...> fmt, Args&&... args);
+    size_t formatted_size(wformat-string<Args...> fmt, Args&&... args); // constexpr since C++26
   template<class... Args>
     size_t formatted_size(const locale& loc, format-string<Args...> fmt, Args&&... args);
   template<class... Args>
@@ -179,10 +179,10 @@ namespace std {
   template<class Context, class... Args> struct format-arg-store;    // exposition only
 
   template<class Context = format_context, class... Args>
-    format-arg-store<Context, Args...>
+    constexpr format-arg-store<Context, Args...>
       make_format_args(Args&... args);
   template<class... Args>
-    format-arg-store<wformat_context, Args...>
+    constexpr format-arg-store<wformat_context, Args...>
       make_wformat_args(Args&... args);
 
   // [format.error], class format_error

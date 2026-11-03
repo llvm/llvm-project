@@ -44,12 +44,14 @@
 #  include <__concepts/arithmetic.h>
 #  include <__concepts/same_as.h>
 #  include <__format/fmt_char_type.h>
+#  include <__format/format_context.h>
 #  include <__format/format_error.h>
 #  include <__format/format_functions.h>
 #  include <__format/format_parse_context.h>
 #  include <__format/formatter.h>
 #  include <__format/parser_std_format_spec.h>
 #  include <__format/write_escaped.h>
+#  include <__iterator/back_insert_iterator.h>
 #  include <__iterator/istreambuf_iterator.h>
 #  include <__iterator/ostreambuf_iterator.h>
 #  include <__locale_dir/num.h>
