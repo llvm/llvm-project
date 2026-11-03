@@ -7898,6 +7898,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_finline_max_stacksize_EQ);
 
+  if (const Arg *A = Args.getLastArg(options::OPT_finline_stringops_EQ,
+                                     options::OPT_fno_inline_stringops)) {
+    if (A->getOption().matches(options::OPT_finline_stringops_EQ)) {
+      for (StringRef Val : A->getValues()) {
+        if (Val != "memset") {
+          D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+        }
+      }
+      CmdArgs.push_back(Args.MakeArgString(Twine("-finline-stringops=") +
+                                           llvm::join(A->getValues(), ",")));
+    }
+  }
+
   // FIXME: Find a better way to determine whether we are in C++20.
   bool HaveCxx20 =
       Std &&

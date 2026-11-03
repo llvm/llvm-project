@@ -2288,6 +2288,12 @@ define void @f() "no-sse" { ... }
     C/C++). It is just a hint; it imposes no requirements on the
     inliner.
 
+`inline-memset`
+:   When this attribute is set to true, any calls to `llvm.memset` within this
+    function—including operations present after inlining or intermediate
+    transformations—must be expanded inline without generating external library
+    calls to `memset`.
+
 `jumptable`
 :   This attribute indicates that the function should be added to a
     jump-instruction table at code-generation time, and that all address-taken
