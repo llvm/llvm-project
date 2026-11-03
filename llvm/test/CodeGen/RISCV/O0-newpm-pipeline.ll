@@ -62,6 +62,7 @@
 ; CHECK-NEXT:     StackMapLivenessPass
 ; CHECK-NEXT:     live-debug-values<emit-debug-entry-values>
 ; CHECK-NEXT:     machine-sanmd
+; CHECK-NEXT:     cfi-fixup
 ; CHECK-NEXT:     stack-frame-layout
 ; CHECK-NEXT:     riscv-expand-pseudo-pre-emit
 ; CHECK-NEXT:     riscv-expand-pseudo-atomics
