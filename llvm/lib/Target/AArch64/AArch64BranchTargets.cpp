@@ -175,13 +175,14 @@ MachineBasicBlock::iterator getFirstExecutableInstr(MachineBasicBlock &MBB) {
 
 bool AArch64BranchTargetsImpl::replaceWithNonBranchTarget(
     MachineBasicBlock &MBB) {
+  bool MadeChange = false;
   auto MF = MBB.getParent();
   auto MBBI = getFirstExecutableInstr(MBB);
 
   if (MBBI == MBB.end() ||
       (&MBB == &MF->front() && (MBBI->getOpcode() == AArch64::PACIASPPC ||
                                 MBBI->getOpcode() == AArch64::PACIBSPPC)))
-    return false;
+    return MadeChange;
 
   // If there are any PACI[AB]SPPC instructions after the first executable
   // instruction, replace with the address signing opcode which is not a branch
@@ -194,11 +195,11 @@ bool AArch64BranchTargetsImpl::replaceWithNonBranchTarget(
                           : AArch64::PACNBIBSPPC;
 
       MBBI->setDesc(Subtarget->getInstrInfo()->get(NBOp));
-      return true;
+      MadeChange = true;
     }
   }
 
-  return false;
+  return MadeChange;
 }
 
 void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
