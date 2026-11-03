@@ -1,0 +1,62 @@
+## This test verifies that llvm-objcopy adds a new section
+## to the only segment of a Mach-O object file (MH_OBJECT)
+## and does not create a second segment.
+
+# REQUIRES: aarch64-registered-target, arm-registered-target
+
+# RUN: echo -n abcdefg > %t.data
+# RUN: llvm-mc -assemble -triple=arm64-apple-macos11 -filetype=obj %p/Inputs/macho_sections.s -o %t.o
+
+## 64-bit object, new segment name.
+# RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t.o %t.foo.o
+# RUN: llvm-otool -l %t.foo.o | FileCheck %s --check-prefixes=OBJ64,FOO
+
+## 64-bit object, segment name of an existing section.
+# RUN: llvm-objcopy --add-section __TEXT,__bar=%t.data %t.o %t.text.o
+# RUN: llvm-otool -l %t.text.o | FileCheck %s --check-prefixes=OBJ64,TEXT
+
+## 32-bit object (LC_SEGMENT), new segment name.
+# RUN: llvm-mc -assemble -triple=armv7-apple-darwin -filetype=obj %p/Inputs/macho_sections.s -o %t32.o
+# RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t32.o %t32.foo.o
+# RUN: llvm-otool -l %t32.foo.o | FileCheck %s --check-prefix=OBJ32
+
+### One segment with an empty name holds all three sections.
+# OBJ64:      Load command 0
+# OBJ64-NEXT: cmd LC_SEGMENT_64
+# OBJ64-NEXT: cmdsize 312
+# OBJ64-NEXT: segname {{$}}
+# OBJ64-NEXT: vmaddr 0x0000000000000000
+# OBJ64-NEXT: vmsize 0x00000000000000c7
+# OBJ64-NEXT: fileoff 472
+# OBJ64-NEXT: filesize 199
+# OBJ64-NEXT: maxprot 0x00000007
+# OBJ64-NEXT: initprot 0x00000007
+# OBJ64-NEXT: nsects 3
+
+### The new section keeps its own segment name.
+# OBJ64:      sectname __bar
+# FOO-NEXT:   segname __FOO
+# TEXT-NEXT:  segname __TEXT
+# OBJ64-NEXT: addr 0x00000000000000c0
+# OBJ64-NEXT: size 0x0000000000000007
+
+### No second segment.
+# OBJ64-NOT:  cmd LC_SEGMENT
+
+# OBJ32:      Load command 0
+# OBJ32-NEXT: cmd LC_SEGMENT{{$}}
+# OBJ32-NEXT: cmdsize 260
+# OBJ32-NEXT: segname {{$}}
+# OBJ32-NEXT: vmaddr 0x00000000
+# OBJ32-NEXT: vmsize 0x000000c7
+# OBJ32-NEXT: fileoff 288
+# OBJ32-NEXT: filesize 199
+# OBJ32-NEXT: maxprot 0x00000007
+# OBJ32-NEXT: initprot 0x00000007
+# OBJ32-NEXT: nsects 3
+# OBJ32:      sectname __bar
+# OBJ32-NEXT: segname __FOO
+# OBJ32-NEXT: addr 0x000000c0
+# OBJ32-NEXT: size 0x00000007
+# OBJ32-NOT:  cmd LC_SEGMENT
+
