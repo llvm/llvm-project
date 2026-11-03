@@ -72,9 +72,9 @@ NonTrivial test_nrvo() {
 // CIR:     cir.return
 // CIR:   } cleanup normal {
 // CIR:     %[[NRVO_FLAG_VAL:.*]] = cir.load{{.*}} %[[NRVO_FLAG]]
-// CIR:     %[[NOT_NRVO_VAL:.*]] = cir.not %[[NRVO_FLAG_VAL]]
-// CIR:     cir.if %[[NOT_NRVO_VAL]] {
-// CIR:       cir.call @_ZN10NonTrivialD1Ev(%[[RESULT]])
+// CIR-NEXT:     cir.if %[[NRVO_FLAG_VAL]] {
+// CIR-NEXT:     } else {
+// CIR-NEXT:       cir.call @_ZN10NonTrivialD1Ev(%[[RESULT]])
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   }
@@ -96,9 +96,13 @@ NonTrivial test_nrvo() {
 // LLVMCIR:   %[[NRVO_BYTE:.*]] = load i8, ptr %[[NRVO_FLAG]]
 // LLVMCIR:   %[[NRVO_VAL:.*]] = trunc i8 %[[NRVO_BYTE]] to i1
 // OGCG:   %[[NRVO_VAL:.*]] = load i1, ptr %[[NRVO_FLAG]]
-// LLVM-NEXT:   br i1 %[[NRVO_VAL]], label %[[NRVO_DONE:.*]], label %[[NRVO_UNUSED:.*]]
-// LLVM: [[NRVO_UNUSED]]:
+// LLVM-NEXT:   br i1 %[[NRVO_VAL]], label %[[NRVO_SKIP:[a-z0-9.]+]], label %[[NRVO_UNUSED:[a-z0-9.]+]]
+// LLVMCIR: {{^}}[[NRVO_SKIP]]:
+// LLVMCIR-NEXT:   br label %[[NRVO_DONE:[a-z0-9.]+]]
+// LLVM: {{^}}[[NRVO_UNUSED]]:
 // LLVM-NEXT:   call void @_ZN10NonTrivialD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[RESULT]])
-// LLVM-NEXT:   br label %[[NRVO_DONE]]
-// LLVM: [[NRVO_DONE]]:
+// LLVMCIR-NEXT:   br label %[[NRVO_DONE]]
+// LLVMCIR: {{^}}[[NRVO_DONE]]:
+// OGCG-NEXT:   br label %[[NRVO_SKIP]]
+// OGCG: {{^}}[[NRVO_SKIP]]:
 // LLVM:   ret void

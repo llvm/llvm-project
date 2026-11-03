@@ -18,15 +18,19 @@ void if_not(int *p) {
 
 // CIR-LABEL: cir.func{{.*}} @if_not(
 // CIR:         %[[B:.*]] = cir.cast ptr_to_bool %{{.*}} : !cir.ptr<!s32i> -> !cir.bool
-// CIR-NEXT:    %[[N:.*]] = cir.not %[[B]] : !cir.bool
-// CIR-NEXT:    cir.if %[[N]] {
+// CIR-NEXT:    cir.if %[[B]] {
+// CIR-NEXT:    } else {
+// CIR-NEXT:      cir.call @f()
 
 // LLVM-LABEL: define dso_local void @if_not(
 // LLVM:         %[[NONNULL:.*]] = icmp ne ptr %{{.*}}, null
-// LLVM-NEXT:    br i1 %[[NONNULL]], label %[[END:[a-z0-9.]+]], label %[[THEN:[a-z0-9.]+]]
+// LLVM-NEXT:    br i1 %[[NONNULL]], label %[[SKIP:[a-z0-9.]+]], label %[[THEN:[a-z0-9.]+]]
+// LLVMCIR:    {{^}}[[SKIP]]:
+// LLVMCIR-NEXT:  br label %[[END:[a-z0-9.]+]]
 // LLVM:       {{^}}[[THEN]]:
 // LLVM-NEXT:    call void @f()
-// LLVM-NEXT:    br label %[[END]]
+// LLVMCIR-NEXT: br label %[[END]]
+// OGCG-NEXT:    br label %[[SKIP]]
 
 void if_not_else(int *p) {
   if (!p)
@@ -36,30 +40,38 @@ void if_not_else(int *p) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @if_not_else(
-// CIR:         %[[N:.*]] = cir.not %{{.*}} : !cir.bool
-// CIR-NEXT:    cir.if %[[N]] {
+// CIR:         %[[B:.*]] = cir.cast ptr_to_bool %{{.*}} : !cir.ptr<!s32i> -> !cir.bool
+// CIR-NEXT:    cir.if %[[B]] {
+// CIR-NEXT:      cir.call @h()
+// CIR-NEXT:    } else {
+// CIR-NEXT:      cir.call @f()
 
 // LLVM-LABEL: define dso_local void @if_not_else(
 // LLVM:         %[[NONNULL:.*]] = icmp ne ptr %{{.*}}, null
 // LLVM-NEXT:    br i1 %[[NONNULL]], label %[[ELSE:[a-z0-9.]+]], label %[[THEN:[a-z0-9.]+]]
+// LLVMCIR:    {{^}}[[ELSE]]:
+// LLVMCIR-NEXT:  call void @h()
 // LLVM:       {{^}}[[THEN]]:
 // LLVM-NEXT:    call void @f()
-// LLVM:       {{^}}[[ELSE]]:
-// LLVM-NEXT:    call void @h()
+// OGCG:       {{^}}[[ELSE]]:
+// OGCG-NEXT:    call void @h()
 
 int not_ternary(int a) { return !a ? t() : u(); }
 
 // CIR-LABEL: cir.func{{.*}} @not_ternary(
-// CIR:         %[[N:.*]] = cir.not %{{.*}} : !cir.bool
-// CIR-NEXT:    %{{.*}} = cir.ternary(%[[N]], true {
+// CIR:         %[[B:.*]] = cir.cast int_to_bool %{{.*}} : !s32i -> !cir.bool
+// CIR-NEXT:    %{{.*}} = cir.ternary(%[[B]], true {
+// CIR-NEXT:      %{{.*}} = cir.call @u()
 
 // LLVM-LABEL: define dso_local i32 @not_ternary(
 // LLVM:         %[[NONZERO:.*]] = icmp ne i32 %{{.*}}, 0
 // LLVM-NEXT:    br i1 %[[NONZERO]], label %[[FALSE:[a-z0-9.]+]], label %[[TRUE:[a-z0-9.]+]]
+// LLVMCIR:    {{^}}[[FALSE]]:
+// LLVMCIR-NEXT:  %{{.*}} = call i32 @u()
 // LLVM:       {{^}}[[TRUE]]:
 // LLVM-NEXT:    %{{.*}} = call i32 @t()
-// LLVM:       {{^}}[[FALSE]]:
-// LLVM-NEXT:    %{{.*}} = call i32 @u()
+// OGCG:       {{^}}[[FALSE]]:
+// OGCG-NEXT:    %{{.*}} = call i32 @u()
 
 void while_not(volatile int *done) {
   while (!*done)
@@ -86,8 +98,10 @@ int not_or(int *p, int y) {
 
 // CIR-LABEL: cir.func{{.*}} @not_or(
 // CIR:         %[[B:.*]] = cir.cast ptr_to_bool %{{.*}} : !cir.ptr<!s32i> -> !cir.bool
-// CIR-NEXT:    %[[N:.*]] = cir.not %[[B]] : !cir.bool
-// CIR-NEXT:    %{{.*}} = cir.ternary(%[[N]], true {
+// CIR-NEXT:    %{{.*}} = cir.ternary(%[[B]], true {
+// CIR:           cir.cmp eq
+// CIR:         }, false {
+// CIR-NEXT:      %{{.+}} = cir.const #true
 
 // LLVM-LABEL: define dso_local i32 @not_or(
 // LLVM:         %[[NONNULL:.*]] = icmp ne ptr %{{.*}}, null
@@ -107,14 +121,15 @@ void not_of_or(int a, int b) {
 
 // CIR-LABEL: cir.func{{.*}} @not_of_or(
 // CIR:         %[[OR:.*]] = cir.ternary(
-// CIR:         %[[N:.*]] = cir.not %[[OR]] : !cir.bool
-// CIR-NEXT:    cir.if %[[N]] {
+// CIR:         cir.if %[[OR]] {
+// CIR-NEXT:    } else {
+// CIR-NEXT:      cir.call @f()
 
 // LLVM-LABEL: define dso_local void @not_of_or(
 // LLVMCIR:      %[[OR:.*]] = phi i1
 // LLVMCIR-NOT:  xor
 // LLVMCIR:      br i1 %[[OR]], label %{{[a-z0-9.]+}}, label %[[THEN:[a-z0-9.]+]]
-// OGCG:         br i1 %{{.*}}, label %[[END:[a-z0-9.]+]], label %{{[a-z0-9.]+}}
-// OGCG:         br i1 %{{.*}}, label %[[END]], label %[[THEN:[a-z0-9.]+]]
+// OGCG:         br i1 %{{[a-z0-9.]+}}, label %[[END:[a-z0-9.]+]], label %{{[a-z0-9.]+}}
+// OGCG:         br i1 %{{[a-z0-9.]+}}, label %[[END]], label %[[THEN:[a-z0-9.]+]]
 // LLVM:       {{^}}[[THEN]]:
 // LLVM-NEXT:    call void @f()
