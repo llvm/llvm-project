@@ -77,6 +77,13 @@ define i32 @wave_multi_prefix_bit_and(i32 %x) {
   ret i32 %ret
 }
 
+define i32 @wave_multi_prefix_bit_or(i32 %x) {
+  ; CHECK: Function wave_multi_prefix_bit_or : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.bit.or.i32(
+      i32 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
 define i32 @wave_multi_prefix_bit_xor(i32 %x) {
   ; CHECK: Function wave_multi_prefix_bit_xor : [[WAVE_FLAG]]
   %ret = call i32 @llvm.dx.wave.multi.prefix.bit.xor.i32(

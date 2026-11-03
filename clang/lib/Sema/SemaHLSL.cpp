@@ -5407,6 +5407,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_or:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_xor:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_product:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_sum: {

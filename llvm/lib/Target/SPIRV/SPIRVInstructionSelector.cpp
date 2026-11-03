@@ -5860,6 +5860,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveMultiPrefixOp(ResVReg, ResType, I,
                                    SPIRV::OpGroupNonUniformBitwiseAnd,
                                    "WaveMultiPrefixBitAnd");
+  case Intrinsic::spv_subgroup_multi_prefix_bit_or:
+    return selectWaveMultiPrefixOp(ResVReg, ResType, I,
+                                   SPIRV::OpGroupNonUniformBitwiseOr,
+                                   "WaveMultiPrefixBitOr");
   case Intrinsic::spv_subgroup_multi_prefix_bit_xor:
     return selectWaveMultiPrefixOp(ResVReg, ResType, I,
                                    SPIRV::OpGroupNonUniformBitwiseXor,
