@@ -57,8 +57,8 @@ static bool finalizeLinkage(Module &M) {
   return MadeChange;
 }
 
-PreservedAnalyses DXILFinalizeLinkage::run(Module &M,
-                                           ModuleAnalysisManager &AM) {
+PreservedAnalyses DXILFinalizeLinkagePass::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
   if (finalizeLinkage(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

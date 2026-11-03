@@ -1517,7 +1517,8 @@ public:
 };
 } // namespace
 
-PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
+PreservedAnalyses DXILOpLoweringPass::run(Module &M,
+                                          ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);

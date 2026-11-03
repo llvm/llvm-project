@@ -186,7 +186,7 @@ static bool lowerDXILDebugInfo(Module &M) {
   return Modified;
 }
 
-PreservedAnalyses DXILDebugInfo::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses DXILDebugInfoPass::run(Module &M, ModuleAnalysisManager &) {
   return lowerDXILDebugInfo(M) ? PreservedAnalyses::none()
                                : PreservedAnalyses::all();
 }

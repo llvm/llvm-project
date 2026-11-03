@@ -611,8 +611,8 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
     NamedMD->eraseFromParent();
 }
 
-PreservedAnalyses DXILTranslateMetadata::run(Module &M,
-                                             ModuleAnalysisManager &MAM) {
+PreservedAnalyses DXILTranslateMetadataPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const ModuleShaderFlags &ShaderFlags = MAM.getResult<ShaderFlagsAnalysis>(M);

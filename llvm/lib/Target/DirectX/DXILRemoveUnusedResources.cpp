@@ -110,8 +110,8 @@ static bool removeUnusedResources(Function &F) {
   return true;
 }
 
-PreservedAnalyses DXILRemoveUnusedResources::run(Function &F,
-                                                 FunctionAnalysisManager &AM) {
+PreservedAnalyses
+DXILRemoveUnusedResourcesPass::run(Function &F, FunctionAnalysisManager &AM) {
   removeUnusedResources(F);
   return PreservedAnalyses::all();
 }

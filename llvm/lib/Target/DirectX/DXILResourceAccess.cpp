@@ -1486,8 +1486,8 @@ static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   return !Resources.empty();
 }
 
-PreservedAnalyses DXILResourceAccess::run(Function &F,
-                                          FunctionAnalysisManager &FAM) {
+PreservedAnalyses DXILResourceAccessPass::run(Function &F,
+                                              FunctionAnalysisManager &FAM) {
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   DXILResourceTypeMap *DRTM =
       MAMProxy.getCachedResult<DXILResourceTypeAnalysis>(*F.getParent());

@@ -211,7 +211,8 @@ static bool eliminateMemIntrinsics(Module &M) {
   return HadMemIntrinsicUses;
 }
 
-PreservedAnalyses DXILMemIntrinsics::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses DXILMemIntrinsicsPass::run(Module &M,
+                                             ModuleAnalysisManager &) {
   if (eliminateMemIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

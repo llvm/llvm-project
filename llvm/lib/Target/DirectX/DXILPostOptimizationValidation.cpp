@@ -329,7 +329,7 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 }
 
 PreservedAnalyses
-DXILPostOptimizationValidation::run(Module &M, ModuleAnalysisManager &MAM) {
+DXILPostOptimizationValidationPass::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceBindingInfo &DRBI = MAM.getResult<DXILResourceBindingAnalysis>(M);
   RootSignatureBindingInfo &RSBI = MAM.getResult<RootSignatureAnalysis>(M);

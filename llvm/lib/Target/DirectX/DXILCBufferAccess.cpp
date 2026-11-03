@@ -74,7 +74,8 @@ static bool replaceCBufferAccesses(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILCBufferAccess::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses DXILCBufferAccessPass::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
   PreservedAnalyses PA;
   bool Changed = replaceCBufferAccesses(M);
 

@@ -1416,8 +1416,8 @@ static bool expansionIntrinsics(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
-                                              ModuleAnalysisManager &) {
+PreservedAnalyses DXILIntrinsicExpansionPass::run(Module &M,
+                                                  ModuleAnalysisManager &) {
   if (expansionIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

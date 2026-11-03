@@ -40,7 +40,7 @@ void initializeDXILPrepareModulePass(PassRegistry &);
 ModulePass *createDXILPrepareModulePass();
 
 /// Pass to downgrade debug information to forms supported by DXIL.
-class DXILDebugInfo : public OptionalPassInfoMixin<DXILDebugInfo> {
+class DXILDebugInfoPass : public OptionalPassInfoMixin<DXILDebugInfoPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
@@ -51,8 +51,8 @@ void initializeDXILDebugInfoLegacyPass(PassRegistry &);
 ModulePass *createDXILDebugInfoLegacyPass();
 
 /// Pass to expand intrinsic operations that lack DXIL opCodes
-class DXILIntrinsicExpansion
-    : public OptionalPassInfoMixin<DXILIntrinsicExpansion> {
+class DXILIntrinsicExpansionPass
+    : public OptionalPassInfoMixin<DXILIntrinsicExpansionPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
@@ -64,7 +64,8 @@ ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
 /// Pass to translate loads in the cbuffer address space to cbuffer
 /// load intrinsic.
-class DXILCBufferAccess : public OptionalPassInfoMixin<DXILCBufferAccess> {
+class DXILCBufferAccessPass
+    : public OptionalPassInfoMixin<DXILCBufferAccessPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
@@ -77,8 +78,8 @@ ModulePass *createDXILCBufferAccessLegacyPass();
 /// Pass to prepare vector data for DXIL by converting vector storage to
 /// scalar arrays and lowering dynamically indexed vector accesses to
 /// array accesses.
-class DXILDataScalarization
-    : public OptionalPassInfoMixin<DXILDataScalarization> {
+class DXILDataScalarizationPass
+    : public OptionalPassInfoMixin<DXILDataScalarizationPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
@@ -89,7 +90,8 @@ void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
 ModulePass *createDXILDataScalarizationLegacyPass();
 
 /// Pass to flatten arrays into a one dimensional DXIL legal form
-class DXILFlattenArrays : public OptionalPassInfoMixin<DXILFlattenArrays> {
+class DXILFlattenArraysPass
+    : public OptionalPassInfoMixin<DXILFlattenArraysPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
@@ -100,8 +102,8 @@ void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 ModulePass *createDXILFlattenArraysLegacyPass();
 
 /// Pass to eliminate redundant stores and loads from handle globals.
-class DXILForwardHandleAccesses
-    : public OptionalPassInfoMixin<DXILForwardHandleAccesses> {
+class DXILForwardHandleAccessesPass
+    : public OptionalPassInfoMixin<DXILForwardHandleAccessesPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -124,7 +126,8 @@ void initializeDXILLegalizeLegacyPass(PassRegistry &);
 FunctionPass *createDXILLegalizeLegacyPass();
 
 /// Pass to transform all llvm memory intrinsics to explicit loads and stores.
-class DXILMemIntrinsics : public OptionalPassInfoMixin<DXILMemIntrinsics> {
+class DXILMemIntrinsicsPass
+    : public OptionalPassInfoMixin<DXILMemIntrinsicsPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
@@ -135,7 +138,7 @@ void initializeDXILMemIntrinsicsLegacyPass(PassRegistry &);
 ModulePass *createDXILMemIntrinsicsLegacyPass();
 
 /// Pass to lowering LLVM intrinsic call to DXIL op function call.
-class DXILOpLowering : public OptionalPassInfoMixin<DXILOpLowering> {
+class DXILOpLoweringPass : public OptionalPassInfoMixin<DXILOpLoweringPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
@@ -147,8 +150,8 @@ ModulePass *createDXILOpLoweringLegacyPass();
 
 /// Pass to remove unused DXIL resources and associated
 /// global variables.
-class DXILRemoveUnusedResources
-    : public OptionalPassInfoMixin<DXILRemoveUnusedResources> {
+class DXILRemoveUnusedResourcesPass
+    : public OptionalPassInfoMixin<DXILRemoveUnusedResourcesPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -160,7 +163,8 @@ FunctionPass *createDXILRemoveUnusedResourcesLegacyPass();
 
 /// Pass to replace pointers to DXIL resources with load and store
 /// operations.
-class DXILResourceAccess : public OptionalPassInfoMixin<DXILResourceAccess> {
+class DXILResourceAccessPass
+    : public OptionalPassInfoMixin<DXILResourceAccessPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -171,8 +175,8 @@ void initializeDXILResourceAccessLegacyPass(PassRegistry &);
 FunctionPass *createDXILResourceAccessLegacyPass();
 
 /// Pass to assign register slots to resources without binding.
-class DXILResourceImplicitBinding
-    : public OptionalPassInfoMixin<DXILResourceImplicitBinding> {
+class DXILResourceImplicitBindingPass
+    : public OptionalPassInfoMixin<DXILResourceImplicitBindingPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
@@ -184,8 +188,8 @@ ModulePass *createDXILResourceImplicitBindingLegacyPass();
 
 /// Pass to emit metadata for DXIL, and to transforms existing LLVM
 /// metadata to its DXIL equivalent.
-class DXILTranslateMetadata
-    : public OptionalPassInfoMixin<DXILTranslateMetadata> {
+class DXILTranslateMetadataPass
+    : public OptionalPassInfoMixin<DXILTranslateMetadataPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
@@ -214,8 +218,8 @@ void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
 
 /// Pass for validating IR after optimizations are applied and before
 /// lowering to DXIL.
-class DXILPostOptimizationValidation
-    : public OptionalPassInfoMixin<DXILPostOptimizationValidation> {
+class DXILPostOptimizationValidationPass
+    : public OptionalPassInfoMixin<DXILPostOptimizationValidationPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
@@ -250,7 +254,8 @@ ModulePass *createDXContainerPDBPass();
 /// shader entry points and exported functions are visible from
 /// the module (have program linkage). All other functions will
 /// be updated to have internal linkage.
-class DXILFinalizeLinkage : public RequiredPassInfoMixin<DXILFinalizeLinkage> {
+class DXILFinalizeLinkagePass
+    : public RequiredPassInfoMixin<DXILFinalizeLinkagePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };

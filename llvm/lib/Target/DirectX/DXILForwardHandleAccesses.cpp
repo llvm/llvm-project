@@ -173,8 +173,8 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
   return Changed;
 }
 
-PreservedAnalyses DXILForwardHandleAccesses::run(Function &F,
-                                                 FunctionAnalysisManager &AM) {
+PreservedAnalyses
+DXILForwardHandleAccessesPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
 
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);

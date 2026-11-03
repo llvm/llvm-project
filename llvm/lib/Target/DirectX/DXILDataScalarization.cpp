@@ -477,8 +477,8 @@ static bool findAndReplaceVectors(Module &M) {
   return MadeChange;
 }
 
-PreservedAnalyses DXILDataScalarization::run(Module &M,
-                                             ModuleAnalysisManager &) {
+PreservedAnalyses DXILDataScalarizationPass::run(Module &M,
+                                                 ModuleAnalysisManager &) {
   bool MadeChanges = findAndReplaceVectors(M);
   if (!MadeChanges)
     return PreservedAnalyses::all();

@@ -129,8 +129,8 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
 
 } // end anonymous namespace
 
-PreservedAnalyses DXILResourceImplicitBinding::run(Module &M,
-                                                   ModuleAnalysisManager &AM) {
+PreservedAnalyses
+DXILResourceImplicitBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   DXILResourceBindingInfo &DRBI = AM.getResult<DXILResourceBindingAnalysis>(M);
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
