@@ -250,7 +250,7 @@ llvm::Error DeviceTy::deinit() {
 
   // Keep tearing down even if record/replay fails to finish cleanly.
   llvm::Error Result =
-    RecordReplay ? RecordReplay->deinit() : llvm::Error::success();
+      RecordReplay ? RecordReplay->deinit() : llvm::Error::success();
   RecordReplay.reset();
 
   if (!Context)
