@@ -545,6 +545,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
 
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
   // Asm may contain an intrinsically convergent op such as a barrier.
+  assert(!cir::MissingFeatures::asmNoConvergent());
   bool isConvergent = getLangOpts().assumeFunctionsAreConvergent();
 
   std::vector<mlir::Value> regResults;
