@@ -711,19 +711,30 @@ static Value *buildMul(IRBuilder<> &B, Value *LHS, Value *RHS) {
 Value *AMDGPUAtomicOptimizerImpl::extractDivergentIndex(
     Value *Ptr, const Instruction &User) const {
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP || UA.isDivergentAtUse(GEP->getOperandUse(0)))
+  if (!GEP)
     return nullptr;
 
   // Operands that are uniform inside a cycle can differ between lanes after a
-  // divergent exit, since lanes leave on different iterations.
-  if (any_of(UA.getTemporalDivergenceList(), [&](const auto &Entry) {
-        return std::get<0>(Entry) == GEP && std::get<1>(Entry) == &User;
-      }))
+  // divergent exit, since lanes leave on different iterations. Look them up in
+  // the list: isDivergentAtUse relies on CycleInfo, which does not know the
+  // blocks split off by rewriting earlier atomics.
+  auto IsTemporalDivergent = [&](const Value *V, const Instruction *UseInst) {
+    for (auto [Val, UseI, _] : UA.getTemporalDivergenceList())
+      if (Val == V && UseI == UseInst)
+        return true;
+    return false;
+  };
+  auto IsDivergentOperand = [&](const Use &U) {
+    return UA.isDivergentAtUse(U) || IsTemporalDivergent(U.get(), GEP);
+  };
+
+  if (IsTemporalDivergent(GEP, &User) ||
+      IsDivergentOperand(GEP->getOperandUse(0)))
     return nullptr;
 
   Value *Index = nullptr;
   for (Use &Idx : GEP->indices()) {
-    if (!UA.isDivergentAtUse(Idx))
+    if (!IsDivergentOperand(Idx))
       continue;
     if (Index)
       return nullptr;
