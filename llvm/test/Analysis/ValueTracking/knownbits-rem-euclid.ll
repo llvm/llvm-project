@@ -41,6 +41,22 @@ define i1 @positive_divisor(i8 noundef %x, i8 noundef %y) {
   ret i1 %result
 }
 
+define i1 @nonnegative_divisor(i8 noundef %x, i8 noundef %y) {
+; CHECK-LABEL: @nonnegative_divisor(
+; CHECK-NEXT:    [[NONNEGATIVE:%.*]] = icmp sgt i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEGATIVE]])
+; CHECK-NEXT:    ret i1 true
+;
+  %nonnegative = icmp sge i8 %y, 0
+  call void @llvm.assume(i1 %nonnegative)
+  %rem = srem i8 %x, %y
+  %negative = icmp slt i8 %rem, 0
+  %adjusted = add i8 %rem, %y
+  %euclid = select i1 %negative, i8 %adjusted, i8 %rem
+  %result = icmp sge i8 %euclid, 0
+  ret i1 %result
+}
+
 define i1 @positive_divisor_commuted(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @positive_divisor_commuted(
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
