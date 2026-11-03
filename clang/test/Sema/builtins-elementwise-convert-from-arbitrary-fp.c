@@ -101,14 +101,10 @@ void test_result_types(unsigned char b, v4u8 vb, g4u8 gb) {
 }
 
 void test_vector_shapes(v3u8 v3, v1u8 v1, v4ub8 vbi, g4u8 gb) {
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(v3)), v3f32), "");
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(v1)), v1f32), "");
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(vbi)), v4f32), "");
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_bf16(gb)), g4bf16), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_f32(v3)), v3f32), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_f32(v1)), v1f32), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_f32(vbi)), v4f32), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_bf16(gb)), g4bf16), "");
 }
 
 void test_source_formats(unsigned char b) {
@@ -151,8 +147,7 @@ void test_arity(unsigned char b) {
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(b, b); // expected-error {{too many arguments}}
 }
 
-void test_width(unsigned short b16, unsigned _BitInt(4) b4, v4u16 vb16,
-                v4ub16 vbi16) {
+void test_width(unsigned short b16, unsigned _BitInt(4) b4, v4u16 vb16, v4ub16 vbi16) {
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(b16); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'unsigned short')}}
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(b4); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'unsigned _BitInt(4)')}}
   (void)__builtin_elementwise_convert_from_f8e5m2_f32(vb16); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'v4u16' (vector of 4 'unsigned short' values))}}
