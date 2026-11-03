@@ -9,8 +9,11 @@
 # RUN:   -enable-shrink-wrap=false -filetype=obj -o %t-disabled.obj
 # RUN: llvm-readobj --unwind %t-disabled.obj | FileCheck %s --check-prefix=DISABLED
 # RUN: llc -O2 %s -mtriple=arm64ec-pc-windows-msvc -start-before=shrink-wrap \
-# RUN:   -enable-shrink-wrap=true -filetype=obj -o %t-arm64ec.obj
+# RUN:   -filetype=obj -o %t-arm64ec.obj
 # RUN: llvm-readobj --unwind %t-arm64ec.obj | FileCheck %s --check-prefix=ARM64EC
+# RUN: llc -O2 %s -mtriple=arm64ec-pc-windows-msvc -start-before=shrink-wrap \
+# RUN:   -enable-shrink-wrap=false -filetype=obj -o %t-arm64ec-disabled.obj
+# RUN: llvm-readobj --unwind %t-arm64ec-disabled.obj | FileCheck %s --check-prefix=DISABLED
 
 # Both Windows and Linux ARM64 place the prologue on the path that needs it.
 
@@ -25,7 +28,10 @@
 # UNWIND: 0xe4                ; end
 
 # DISABLED: Function: ?func@@YAHHH@Z (0x0)
-# ARM64EC: Function: ?func@@YAHHH@Z (0x0)
+# ARM64EC: Function: ?func@@YAHHH@Z +0x8 (0x8)
+# ARM64EC: Prologue [
+# ARM64EC: 0xc0fa              ; sub sp, #4000
+# ARM64EC: 0xe4                ; end
 
 # LINUX-LABEL: bb.0.entry:
 # LINUX-LABEL: bb.1:

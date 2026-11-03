@@ -46,7 +46,8 @@ yaml::AArch64FunctionInfo::AArch64FunctionInfo(
       HasStreamingModeChanges(
           MFI.hasStreamingModeChanges()
               ? std::optional<bool>(MFI.hasStreamingModeChanges())
-              : std::nullopt) {}
+              : std::nullopt),
+      HasExplicitWinCFIRanges(MFI.hasExplicitWinCFIRanges()) {}
 
 void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<AArch64FunctionInfo>::mapping(YamlIO, *this);
@@ -63,6 +64,7 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
     setHasStackFrame(*YamlMFI.HasStackFrame);
   if (YamlMFI.HasStreamingModeChanges)
     setHasStreamingModeChanges(*YamlMFI.HasStreamingModeChanges);
+  setHasExplicitWinCFIRanges(YamlMFI.HasExplicitWinCFIRanges);
 }
 
 static SignReturnAddress GetSignReturnAddress(const Function &F) {

@@ -14,11 +14,10 @@
 # RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
 # RUN:   -verify-machineinstrs -filetype=obj %t.mir -o %t-roundtrip.obj
 # RUN: llvm-readobj --unwind %t-roundtrip.obj | FileCheck %s
-# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=aarch64-win-cfi %s -o - \
-# RUN:   | FileCheck %s --check-prefix=UNCHANGED --implicit-check-not=SEH_StartProc
 # RUN: llc -mtriple=arm64ec-pc-windows-msvc -run-pass=aarch64-win-cfi %s -o - \
-# RUN:   | FileCheck %s --check-prefix=UNCHANGED --implicit-check-not=SEH_StartProc
-# UNCHANGED: name: frame_paths
+# RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=arm64ec-pc-windows-msvc -passes=aarch64-win-cfi,verify \
+# RUN:   %s -o - | FileCheck %s --check-prefix=MIR
 
 # RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=unpack-mi-bundles \
 # RUN:   -verify-machineinstrs -filetype=obj %s -o %t.obj
@@ -221,6 +220,7 @@ stack:
       callee-saved-register: '$x19' }
 body:             |
   ; MIR-LABEL: name: frame_paths
+  ; MIR: hasExplicitWinCFIRanges: true
   ; MIR: bb.0:
   ; MIR-NOT: SEH_StartProc
   ; MIR: bb.1:
@@ -312,6 +312,7 @@ frameInfo:
   adjustsStack:    true
 body:             |
   ; MIR-LABEL: name: frame_before_prologue
+  ; MIR: hasExplicitWinCFIRanges: true
   ; MIR: bb.0:
   ; MIR-NOT: SEH_StartProc
   ; MIR: bb.1:
@@ -379,6 +380,7 @@ stack:
   - { id: 0, type: variable-sized, alignment: 16 }
 body:             |
   ; MIR-LABEL: name: dynamic_frame_paths
+  ; MIR: hasExplicitWinCFIRanges: true
   ; MIR: bb.0:
   ; MIR-NOT: SEH_StartProc
   ; MIR: bb.1:
@@ -449,6 +451,7 @@ frameInfo:
   adjustsStack:    true
 body:             |
   ; MIR-LABEL: name: adjacent_epilogues
+  ; MIR: hasExplicitWinCFIRanges: true
   ; MIR: bb.0:
   ; MIR-NOT: SEH_StartProc
   ; MIR: bb.1:
@@ -528,6 +531,7 @@ frameInfo:
   adjustsStack:    true
 body:             |
   ; MIR-LABEL: name: epilogue_suffix
+  ; MIR: hasExplicitWinCFIRanges: true
   ; MIR: bb.1:
   ; MIR: SEH_StartProc
   ; MIR: bb.2:
