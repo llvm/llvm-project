@@ -1967,7 +1967,6 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixWMMAHazards(MI); // fall-through if co-execution is enabled.
   fixWMMACoexecutionHazards(MI);
   fixShift64HighRegBug(MI);
-  fixPkF32InvalidOpSel(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
   if (ST.hasVPermPk16Hazard())
@@ -3079,54 +3078,6 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   }
 
   return true;
-}
-
-// Handle GFX950 v_pk_{add,mul,fma}_f32 invalid op_sels
-// 1. Fix: opsel[1:0]==2’b10 : Packed ADD_F32/MUL_F32
-// 2. Fail: opsel[2:1]==2'b01/2'b10/2'b11 : Packed FMA_F32
-bool GCNHazardRecognizer::fixPkF32InvalidOpSel(MachineInstr *MI) {
-  if (!ST.hasPkF32InvalidOpSel())
-    return false;
-
-  switch (MI->getOpcode()) {
-  default:
-    return false;
-  case AMDGPU::V_PK_ADD_F32:
-  case AMDGPU::V_PK_MUL_F32:
-  case AMDGPU::V_PK_FMA_F32:
-    break;
-  }
-
-  const MachineOperand *Src0Mods =
-      TII.getNamedOperand(*MI, AMDGPU::OpName::src0_modifiers);
-  const MachineOperand *Src1Mods =
-      TII.getNamedOperand(*MI, AMDGPU::OpName::src1_modifiers);
-  if (!Src0Mods || !Src1Mods)
-    return false;
-
-  if (MI->getOpcode() != AMDGPU::V_PK_FMA_F32) {
-    if (!(Src0Mods->getImm() & SISrcMods::OP_SEL_0) &&
-        (Src1Mods->getImm() & SISrcMods::OP_SEL_0)) {
-      if (!TII.commuteInstruction(*MI)) {
-        reportFatalInternalError(
-            "cannot swap the GFX950 v_pk_add/mul_f32 src0 and src1: " +
-            Twine(TII.getName(MI->getOpcode())));
-      }
-      return true;
-    }
-    return false;
-  }
-
-  // Safety net: v_pk_fma_f32 invalid opsels are expected to already
-  // be prevented earlier, so just fail loudly if it is ever seen here
-  // instead of silently miscompiling, as a safeguard against future changes.
-  if (!TII.isLegalPkFMAF32OpSel(*MI)) {
-    reportFatalInternalError("GFX950 v_pk_fma_f32 has an invalid op_sel that "
-                             "should have been legalized earlier in the "
-                             "pipeline");
-  }
-
-  return false;
 }
 
 int GCNHazardRecognizer::checkNSAtoVMEMHazard(MachineInstr *MI) const {

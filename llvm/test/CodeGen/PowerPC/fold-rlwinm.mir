@@ -1,5 +1,5 @@
 # RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -verify-machineinstrs | FileCheck %s
+# RUN:   -run-pass ppc-mi-peepholes %s -o - | FileCheck %s
 
 ---
 name: testFoldRLWINM

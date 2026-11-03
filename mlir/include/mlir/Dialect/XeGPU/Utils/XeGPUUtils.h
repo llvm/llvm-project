@@ -242,6 +242,13 @@ bool requireTranspose(const DistributeLayoutAttr layout,
 /// Returns true if `type` has a static shape and static strides.
 bool hasStaticShapeAndStrides(MemRefType type);
 
+/// Returns `baseAddr + elemOffset * bitWidth / 8`, i.e. advances the byte
+/// address `baseAddr` by `elemOffset` elements of `memrefTy`'s element type.
+/// Sub-byte element types (e.g. i4) are supported. `baseAddr` and `elemOffset`
+/// must have the same index or integer type, which is also the result type.
+Value addElemOffsetInBytes(OpBuilder &builder, Location loc, Value baseAddr,
+                           Value elemOffset, MemRefType memrefTy);
+
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                            SmallVector<int64_t> &expandedUnitDims);

@@ -49,6 +49,7 @@
 
 ---
 name:            hazard_getpc1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_getpc1
@@ -65,6 +66,7 @@ body:            |
 
 ---
 name:            hazard_getpc2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_getpc2
@@ -81,6 +83,7 @@ body:            |
 
 ---
 name:            hazard_getpc3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_getpc3
@@ -103,6 +106,7 @@ body:            |
 
 ---
 name:            hazard_getpc4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_getpc4
@@ -128,6 +132,7 @@ body:            |
 
 ---
 name:            hazard_vcc1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_vcc1
@@ -144,6 +149,7 @@ body:            |
 
 ---
 name:            hazard_vcc2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_vcc2
@@ -160,6 +166,7 @@ body:            |
 
 ---
 name:            hazard_vcc3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_vcc3
@@ -176,6 +183,7 @@ body:            |
 
 ---
 name:            hazard_merge_vcc
+tracksRegLiveness: false
 body:            |
   ; GCN-LABEL: name: hazard_merge_vcc
   ; GCN: bb.0:
@@ -218,6 +226,7 @@ body:            |
 
 ---
 name:            hazard_addc1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_addc1
@@ -234,6 +243,7 @@ body:            |
 
 ---
 name:            hazard_addc2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_addc2
@@ -250,6 +260,7 @@ body:            |
 
 ---
 name:            hazard_addc3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_addc3
@@ -266,6 +277,7 @@ body:            |
 
 ---
 name:            hazard_addc4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_addc4
@@ -282,6 +294,7 @@ body:            |
 
 ---
 name:            hazard_addc5
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_addc5
@@ -302,6 +315,7 @@ body:            |
 
 ---
 name:            hazard_addc6
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_addc6
@@ -328,6 +342,7 @@ body:            |
 
 ---
 name:            hazard_vaddc1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_vaddc1
@@ -344,6 +359,7 @@ body:            |
 
 ---
 name:            hazard_gap1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_gap1
@@ -376,6 +392,7 @@ body:            |
 
 ---
 name:            hazard_gap2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_gap2
@@ -408,6 +425,7 @@ body:            |
 
 ---
 name:            hazard_gap3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_gap3
@@ -438,6 +456,7 @@ body:            |
 
 ---
 name:            hazard_gap4_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_gap4_no_hazard
@@ -474,6 +493,7 @@ body:            |
 
 ---
 name:            hazard_valu_write1_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_valu_write1_no_hazard
@@ -489,6 +509,7 @@ body:            |
 
 ---
 name:            hazard_post_order1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_post_order1
@@ -504,6 +525,7 @@ body:            |
 
 ---
 name:            hazard_post_order2
+tracksRegLiveness: false
 body:            |
   ; GCN-LABEL: name: hazard_post_order2
   ; GCN: bb.0:
@@ -528,6 +550,7 @@ body:            |
 
 ---
 name:            hazard_post_order_cycle
+tracksRegLiveness: false
 body:            |
   ; GCN-LABEL: name: hazard_post_order_cycle
   ; GCN: bb.0:
@@ -567,6 +590,7 @@ body:            |
 
 ---
 name:            hazard_calls
+tracksRegLiveness: false
 frameInfo:
   hasCalls: true
 body:            |
@@ -716,6 +740,7 @@ body:            |
 
 ---
 name:            hazard_callee1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; NOBC-LABEL: name: hazard_callee1
@@ -736,6 +761,7 @@ body:            |
 
 ---
 name:            hazard_callee2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; NOBC-LABEL: name: hazard_callee2
@@ -764,6 +790,7 @@ body:            |
 
 ---
 name:            hazard_carry_vcc
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_carry_vcc
@@ -780,6 +807,7 @@ body:            |
 
 ---
 name:            hazard_carry_vcc_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_carry_vcc_no_hazard
@@ -797,6 +825,7 @@ body:            |
 
 ---
 name:            hazard_carry_sgpr
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_carry_sgpr
@@ -813,6 +842,7 @@ body:            |
 
 ---
 name:            hazard_carry_sgpr_no_hazard1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_carry_sgpr_no_hazard1
@@ -830,6 +860,7 @@ body:            |
 
 ---
 name:            hazard_carry_sgpr_no_hazard2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_carry_sgpr_no_hazard2
@@ -847,6 +878,7 @@ body:            |
 
 ---
 name:            hazard_carry_sgpr_no_hazard3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_carry_sgpr_no_hazard3
@@ -864,6 +896,7 @@ body:            |
 
 ---
 name:            hazard_cull_vmem
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; NOMEMC-LABEL: name: hazard_cull_vmem
@@ -896,6 +929,7 @@ body:            |
 
 ---
 name:            hazard_cull_sample
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; NOMEMC-LABEL: name: hazard_cull_sample
@@ -928,6 +962,7 @@ body:            |
 
 ---
 name:            hazard_cull_bvh
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; NOMEMC-LABEL: name: hazard_cull_bvh
@@ -960,6 +995,7 @@ body:            |
 
 ---
 name:            hazard_nocull_scratch
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_nocull_scratch
@@ -980,6 +1016,7 @@ body:            |
 
 ---
 name:            hazard_cull_global
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; NOMEMC-LABEL: name: hazard_cull_global
@@ -1012,6 +1049,7 @@ body:            |
 
 ---
 name:            hazard_nocull_flat
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_nocull_flat
@@ -1032,6 +1070,7 @@ body:            |
 
 ---
 name:            hazard_existing_cull
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_existing_cull
