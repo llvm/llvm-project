@@ -20,11 +20,13 @@
 
 #include "Shared/APITypes.h"
 #include "Shared/EnvironmentVar.h"
+#include "Shared/RecordReplayBlocks.h"
 #include "Shared/RecordReplayPointers.h"
 #include "Shared/Utils.h"
 
 #include "OffloadError.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
@@ -154,6 +156,17 @@ protected:
   /// Mutex that protects dynamic allocations, globals and pointer locations.
   std::mutex AllocationLock;
 
+  /// Whether the input snapshots are recorded into the block store rather than
+  /// as full copies (LIBOMPTARGET_RECORD_BLOCK_STORE).
+  bool UseBlockStore = true;
+
+  /// The block store file shared by the input snapshots, its size, and the
+  /// stored block of each distinct block content, by its 128-bit hash.
+  std::unique_ptr<raw_fd_ostream> BlockStore;
+  uint64_t BlockStoreSize = 0;
+  DenseMap<std::pair<uint64_t, uint64_t>, RecordReplayBlockTy> StoredBlocks;
+  std::mutex BlockStoreLock;
+
   // An instance of a kernel record replay.
   struct InstanceTy {
     /// The kernel name.
@@ -236,6 +249,9 @@ public:
       OutputDirectory = std::filesystem::current_path();
     else
       OutputDirectory = OutputDirectoryStr.data();
+
+    BoolEnvar OMPX_RecordBlockStore("LIBOMPTARGET_RECORD_BLOCK_STORE", true);
+    UseBlockStore = OMPX_RecordBlockStore;
   }
 
   virtual ~RecordReplayTy() = default;
@@ -378,6 +394,10 @@ private:
 
   /// Record a memory snapshot to a file.
   Error recordSnapshot(StringRef Filename, const MemoryBuffer *Snapshot);
+
+  /// Record a memory snapshot to a file as a list of blocks, adding the blocks
+  /// not stored yet to the block store.
+  Error recordSnapshotBlocks(StringRef Filename, const MemoryBuffer *Snapshot);
 
   /// Record the device memory currently in use to a file, as a diff against
   /// the input snapshot of \p Instance.

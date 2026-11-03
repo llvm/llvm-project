@@ -1251,6 +1251,16 @@ output snapshots of the same recording are identical if and only if the device
 memory after the kernel execution is identical. The format of these files is
 described in `offload/include/Shared/RecordReplayDiff.h`.
 
+The kernels of a program mostly see the same device memory, so the input
+snapshots are not stored as full copies either. Each input snapshot is split
+into 64 KiB blocks, and every distinct block is stored once, compressed with
+zstd (or zlib if LLVM was built without zstd), in a `record_blocks.store` file
+shared by all the recordings of the output directory. The `.record_input` file
+of a kernel then lists its blocks, and the replay tool reassembles the snapshot
+from the store. Setting `LIBOMPTARGET_RECORD_BLOCK_STORE=FALSE` records full
+copies instead. The format is described in
+`offload/include/Shared/RecordReplayBlocks.h`.
+
 By default, the replay places the device memory at the same address as in the
 recording, so the pointers into that memory remain valid. The `--relocate` flag
 instead lets the device place the replay memory at any address, and only
@@ -1276,6 +1286,7 @@ is provided below.
 - `LIBOMPTARGET_RECORD_MEMSIZE=<Num> (default 8*1024*1024*1024)`
 - `LIBOMPTARGET_RECORD_DEVICE=<Num> (default 0)`
 - `LIBOMPTARGET_RECORD_OUTPUT=[TRUE/FALSE] (default TRUE)`
+- `LIBOMPTARGET_RECORD_BLOCK_STORE=[TRUE/FALSE] (default TRUE)`
 
 (libomptarget_record)=
 

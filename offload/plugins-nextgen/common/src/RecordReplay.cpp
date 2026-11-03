@@ -13,15 +13,22 @@
 #include "Shared/APITypes.h"
 
 #include "ErrorReporting.h"
+#include "Shared/RecordReplayBlocks.h"
 #include "Shared/RecordReplayDiff.h"
 #include "Shared/RecordReplayPointers.h"
 #include "Shared/Utils.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -84,6 +91,15 @@ Error RecordReplayTy::deinit() {
   if (isRecording() && EmitReport)
     if (auto Err = emitInstanceReport())
       return Err;
+
+  if (BlockStore) {
+    BlockStore->close();
+    if (BlockStore->has_error()) {
+      BlockStore->clear_error();
+      return Plugin::error(ErrorCode::HOST_IO, "saving block store file");
+    }
+    BlockStore.reset();
+  }
 
   if (StartAddr)
     return Device.deallocateWithVirtualAddress(StartAddr, TotalSize);
@@ -296,7 +312,9 @@ Error NativeRecordReplayTy::recordPrologueImpl(const KernelInfoTy &Kernel,
   if (isRecording()) {
     SmallString<128> SnapshotFilename =
         getFilename(Instance, FileTy::PrologueSnapshot);
-    if (auto Err = recordSnapshot(SnapshotFilename.c_str(), Snapshot.get()))
+    if (auto Err = UseBlockStore
+                       ? recordSnapshotBlocks(SnapshotFilename, Snapshot.get())
+                       : recordSnapshot(SnapshotFilename, Snapshot.get()))
       return Err;
 
     findInputPointers(Instance, Snapshot.get());
@@ -495,6 +513,98 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename,
   if (Snapshot)
     OS.write(Snapshot->getBufferStart(), Snapshot->getBufferSize());
   OS.close();
+  return Plugin::success();
+}
+
+Error NativeRecordReplayTy::recordSnapshotBlocks(StringRef Filename,
+                                                 const MemoryBuffer *Snapshot) {
+  constexpr uint64_t BlockSize = RecordReplayBlockSize;
+  static const char ZeroBlock[BlockSize] = {};
+  ArrayRef<uint8_t> Data;
+  if (Snapshot)
+    Data = arrayRefFromStringRef(Snapshot->getBuffer());
+  uint64_t NumBlocks = divideCeil(Data.size(), BlockSize);
+  SmallVector<RecordReplayBlockTy> Blocks(NumBlocks);
+
+  {
+    std::lock_guard<std::mutex> LG(BlockStoreLock);
+    if (!BlockStore) {
+      // Append to the block store of the directory, so that the snapshots
+      // recorded into it before remain valid.
+      SmallString<128> StorePath(OutputDirectory.string());
+      sys::path::append(StorePath, RecordReplayBlockStoreName);
+      uint64_t ExistingSize = 0;
+      if (sys::fs::exists(StorePath) &&
+          sys::fs::file_size(StorePath, ExistingSize))
+        return Plugin::error(ErrorCode::HOST_IO, "reading block store file");
+      std::error_code EC;
+      BlockStore =
+          std::make_unique<raw_fd_ostream>(StorePath, EC, sys::fs::OF_Append);
+      if (EC)
+        return Plugin::error(ErrorCode::HOST_IO, "opening block store file");
+      BlockStoreSize = ExistingSize;
+    }
+
+    SmallVector<uint8_t> Compressed;
+    for (uint64_t I = 0; I < NumBlocks; ++I) {
+      ArrayRef<uint8_t> Block = Data.slice(
+          I * BlockSize, std::min(BlockSize, Data.size() - I * BlockSize));
+      if (!std::memcmp(Block.data(), ZeroBlock, Block.size())) {
+        Blocks[I] = {/*Offset=*/0, /*StoredSize=*/0, RecordReplayBlockZero};
+        continue;
+      }
+
+      // Store each distinct block content once.
+      XXH128_hash_t Hash = xxh3_128bits(Block.data(), Block.size());
+      auto [It, Inserted] = StoredBlocks.try_emplace({Hash.high64, Hash.low64});
+      if (Inserted) {
+        ArrayRef<uint8_t> Stored = Block;
+        uint32_t Codec = RecordReplayBlockRaw;
+        Compressed.clear();
+        if (compression::zstd::isAvailable()) {
+          compression::zstd::compress(Block, Compressed, /*Level=*/3);
+          Codec = RecordReplayBlockZstd;
+        } else if (compression::zlib::isAvailable()) {
+          compression::zlib::compress(Block, Compressed);
+          Codec = RecordReplayBlockZlib;
+        }
+        if (Codec != RecordReplayBlockRaw && Compressed.size() < Block.size())
+          Stored = Compressed;
+        else
+          Codec = RecordReplayBlockRaw;
+
+        It->second = {BlockStoreSize, static_cast<uint32_t>(Stored.size()),
+                      Codec};
+        BlockStore->write(reinterpret_cast<const char *>(Stored.data()),
+                          Stored.size());
+        BlockStoreSize += Stored.size();
+      }
+      Blocks[I] = It->second;
+    }
+
+    // Make the stored blocks visible before the snapshot that uses them.
+    BlockStore->flush();
+    if (BlockStore->has_error())
+      return Plugin::error(ErrorCode::HOST_IO, "saving block store file");
+  }
+
+  std::error_code EC;
+  raw_fd_ostream OS(Filename, EC);
+  if (EC)
+    return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
+  RecordReplayBlocksHeaderTy Header;
+  std::memcpy(Header.Magic, RecordReplayBlocksMagic, sizeof(Header.Magic));
+  Header.Size = Data.size();
+  Header.BlockSize = BlockSize;
+  Header.NumBlocks = NumBlocks;
+  OS.write(reinterpret_cast<const char *>(&Header), sizeof(Header));
+  OS.write(reinterpret_cast<const char *>(Blocks.data()),
+           Blocks.size() * sizeof(RecordReplayBlockTy));
+  OS.close();
+  if (OS.has_error()) {
+    OS.clear_error();
+    return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
+  }
   return Plugin::success();
 }
 

@@ -11,19 +11,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Shared/RecordReplayBlocks.h"
 #include "Shared/RecordReplayDiff.h"
 #include "Shared/RecordReplayPointers.h"
 #include "Shared/Utils.h"
 #include "omptarget.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -146,6 +152,115 @@ static Error readDiffHeader(StringRef Buffer, StringRef Kind,
     return createErr("the kernel %s output file is not a memory diff",
                      Kind.data());
   return Error::success();
+}
+
+/// Load the record input file. If it is in block format, reassemble the input
+/// snapshot from the block store of its directory. \p Writable requests a
+/// writable buffer.
+static Expected<std::unique_ptr<MemoryBuffer>>
+loadRecordInput(const std::filesystem::path &Filepath, bool Writable) {
+  auto FileOrErr = MemoryBuffer::getFile(Filepath.c_str(), /*IsText=*/false,
+                                         /*RequiresNullTerminator=*/false);
+  if (!FileOrErr)
+    return createErr("failed to read the kernel record input file");
+  StringRef File = (*FileOrErr)->getBuffer();
+
+  RecordReplayBlocksHeaderTy Header;
+  if (File.size() < sizeof(Header) ||
+      std::memcmp(File.data(), RecordReplayBlocksMagic, sizeof(Header.Magic))) {
+    // A full snapshot.
+    if (!Writable)
+      return std::move(*FileOrErr);
+    auto Copy = WritableMemoryBuffer::getNewUninitMemBuffer(File.size());
+    if (!Copy)
+      return createErr("failed to allocate the kernel record input");
+    std::memcpy(Copy->getBufferStart(), File.data(), File.size());
+    return std::unique_ptr<MemoryBuffer>(std::move(Copy));
+  }
+
+  std::memcpy(&Header, File.data(), sizeof(Header));
+  if (!Header.BlockSize ||
+      Header.NumBlocks != divideCeil(Header.Size, Header.BlockSize) ||
+      File.size() - sizeof(Header) !=
+          Header.NumBlocks * sizeof(RecordReplayBlockTy))
+    return createErr("the kernel record input file has an invalid format");
+  SmallVector<RecordReplayBlockTy> Blocks(Header.NumBlocks);
+  std::memcpy(Blocks.data(), File.data() + sizeof(Header),
+              Blocks.size() * sizeof(RecordReplayBlockTy));
+  for (const RecordReplayBlockTy &Block : Blocks) {
+    if (Block.Codec == RecordReplayBlockZstd &&
+        !compression::zstd::isAvailable())
+      return createErr("the record input is compressed with zstd, which this "
+                       "build does not support");
+    if (Block.Codec == RecordReplayBlockZlib &&
+        !compression::zlib::isAvailable())
+      return createErr("the record input is compressed with zlib, which this "
+                       "build does not support");
+  }
+
+  std::filesystem::path StorePath =
+      Filepath.parent_path() / RecordReplayBlockStoreName;
+  auto StoreOrErr = MemoryBuffer::getFile(StorePath.c_str(), /*IsText=*/false,
+                                          /*RequiresNullTerminator=*/false);
+  if (!StoreOrErr)
+    return createErr("failed to read the block store file");
+  ArrayRef<uint8_t> Store = arrayRefFromStringRef((*StoreOrErr)->getBuffer());
+
+  auto Snapshot = WritableMemoryBuffer::getNewUninitMemBuffer(Header.Size);
+  if (!Snapshot)
+    return createErr("failed to allocate the kernel record input");
+
+  // Reassemble the blocks in parallel.
+  std::atomic<bool> Failed = false;
+  parallelFor(0, Blocks.size(), [&](size_t I) {
+    const RecordReplayBlockTy &Block = Blocks[I];
+    uint64_t Offset = I * Header.BlockSize;
+    size_t Size = std::min(Header.BlockSize, Header.Size - Offset);
+    uint8_t *Dst =
+        reinterpret_cast<uint8_t *>(Snapshot->getBufferStart()) + Offset;
+    if (Block.Codec == RecordReplayBlockZero) {
+      std::memset(Dst, 0, Size);
+      return;
+    }
+    if (Block.Offset > Store.size() ||
+        Block.StoredSize > Store.size() - Block.Offset) {
+      Failed = true;
+      return;
+    }
+    ArrayRef<uint8_t> Stored = Store.slice(Block.Offset, Block.StoredSize);
+    auto LoadBlock = [&]() -> bool {
+      size_t DecompressedSize = Size;
+      switch (Block.Codec) {
+      case RecordReplayBlockRaw:
+        if (Stored.size() != Size)
+          return false;
+        std::memcpy(Dst, Stored.data(), Size);
+        return true;
+      case RecordReplayBlockZstd:
+        if (Error Err =
+                compression::zstd::decompress(Stored, Dst, DecompressedSize)) {
+          consumeError(std::move(Err));
+          return false;
+        }
+        return DecompressedSize == Size;
+      case RecordReplayBlockZlib:
+        if (Error Err =
+                compression::zlib::decompress(Stored, Dst, DecompressedSize)) {
+          consumeError(std::move(Err));
+          return false;
+        }
+        return DecompressedSize == Size;
+      default:
+        return false;
+      }
+    };
+    if (!LoadBlock())
+      Failed = true;
+  });
+  if (Failed)
+    return createErr("failed to load the kernel record input from the block "
+                     "store");
+  return std::unique_ptr<MemoryBuffer>(std::move(Snapshot));
 }
 
 /// The relocation of the replay memory to another device address.
@@ -509,20 +624,12 @@ Error replayKernel() {
 
   // Load the record input file. A relocated input needs a writable copy.
   Filepath.replace_extension("record_input");
-  std::unique_ptr<MemoryBuffer> RecordInputBuffer;
-  if (Pointers) {
-    auto BufferOrErr =
-        WritableMemoryBuffer::getFile(Filepath.c_str(), /*IsVolatile=*/false);
-    if (BufferOrErr)
-      RecordInputBuffer = std::move(*BufferOrErr);
-  } else {
-    auto BufferOrErr = MemoryBuffer::getFile(Filepath.c_str(), /*IsText=*/false,
-                                             /*RequiresNullTerminator=*/false);
-    if (BufferOrErr)
-      RecordInputBuffer = std::move(*BufferOrErr);
-  }
-  if (!RecordInputBuffer)
-    return createErr("failed to read the kernel record input file");
+  auto RecordInputBufferOrErr =
+      loadRecordInput(Filepath, /*Writable=*/Pointers.has_value());
+  if (!RecordInputBufferOrErr)
+    return RecordInputBufferOrErr.takeError();
+  std::unique_ptr<MemoryBuffer> RecordInputBuffer =
+      std::move(*RecordInputBufferOrErr);
   uint64_t InputSize = RecordInputBuffer->getBufferSize();
 
   // A relocated replay memory only needs to hold the input snapshot.
