@@ -725,6 +725,35 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
   return reductionResult;
 }
 
+/// Returns the neutral value of the float min or max reduction `kind` over
+/// elements of `semantics`. Builds only values the format can represent:
+/// - A kind that ignores NaN operands uses a quiet NaN, if the format has one.
+/// - Otherwise it uses the infinity that never wins.
+/// - A format without that infinity uses its lowest (for max) or highest (for
+///   min) value. That value never wins either.
+static APFloat getMinMaxNeutral(const llvm::fltSemantics &semantics,
+                                vector::CombiningKind kind) {
+  bool isMax = kind == vector::CombiningKind::MAXIMUMF ||
+               kind == vector::CombiningKind::MAXNUMF ||
+               kind == vector::CombiningKind::MAXIMUMNUMF;
+  bool ignoresNaN = kind != vector::CombiningKind::MINIMUMF &&
+                    kind != vector::CombiningKind::MAXIMUMF;
+  if (ignoresNaN && APFloat::semanticsHasNaN(semantics))
+    return APFloat::getQNaN(semantics);
+  if (!isMax)
+    return APFloat::semanticsHasInf(semantics) ? APFloat::getInf(semantics)
+                                               : APFloat::getLargest(semantics);
+  // An unsigned format has no negative values. Its lowest value is zero, or
+  // its smallest positive value if it has no zero.
+  if (!APFloat::semanticsHasSignedRepr(semantics))
+    return APFloat::semanticsHasZero(semantics)
+               ? APFloat::getZero(semantics)
+               : APFloat::getSmallest(semantics);
+  return APFloat::semanticsHasInf(semantics)
+             ? APFloat::getInf(semantics, /*Negative=*/true)
+             : APFloat::getLargest(semantics, /*Negative=*/true);
+}
+
 Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
                                          Type type,
                                          vector::CombiningKind kind) {
@@ -776,25 +805,14 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return nullptr;
 
   case vector::CombiningKind::MINIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
-    return nullptr;
-
   case vector::CombiningKind::MAXIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy,
-          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
-    return nullptr;
-
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMNUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
+          elemTy, getMinMaxNeutral(floatTy.getFloatSemantics(), kind)));
     return nullptr;
   }
   return nullptr;

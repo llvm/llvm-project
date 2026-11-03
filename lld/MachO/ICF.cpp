@@ -9,11 +9,13 @@
 #include "ICF.h"
 #include "ConcatOutputSection.h"
 #include "Config.h"
+#include "EhFrame.h"
 #include "InputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 
 #include "lld/Common/CommonLinkerContext.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -110,11 +112,23 @@ static void getNormalizedData(const ConcatInputSection *isec,
     if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
       ++i; // Skip the paired minuend relocation
   }
+  // MC pads each FDE so that it ends at a multiple of its address size, so the
+  // padding of otherwise identical FDEs depends on where they start in
+  // __eh_frame. Ignore the length field and the trailing DW_CFA_nop padding.
+  if (isEhFrameSection(isec)) {
+    EhReader reader(cast<ObjFile>(isec->getFile()), isec->data,
+                    /*dataOff=*/0);
+    size_t off = 0;
+    reader.readLength(&off);
+    memset(buf.data(), 0, off);
+    while (!buf.empty() && buf.back() == dwarf::DW_CFA_nop)
+      buf.pop_back();
+  }
 }
 
 static bool compareData(const ConcatInputSection *ia,
                         const ConcatInputSection *ib) {
-  if (ia->data.size() != ib->data.size())
+  if (ia->data.size() != ib->data.size() && !isEhFrameSection(ia))
     return false;
   if (ia->data == ib->data)
     return true;

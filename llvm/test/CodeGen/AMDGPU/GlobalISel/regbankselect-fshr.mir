@@ -4,6 +4,7 @@
 ---
 name: fshr_sss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -26,6 +27,7 @@ body: |
 ---
 name: fshr_vss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -47,6 +49,7 @@ body: |
 ---
 name: fshr_svs
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -68,6 +71,7 @@ body: |
 ---
 name: fshr_ssv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -89,6 +93,7 @@ body: |
 ---
 name: fshr_vvs
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -109,6 +114,7 @@ body: |
 ---
 name: fshr_vsv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -129,6 +135,7 @@ body: |
 ---
 name: fshr_svv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -149,6 +156,7 @@ body: |
 ---
 name: fshr_vvv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
