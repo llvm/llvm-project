@@ -258,14 +258,17 @@ void pragma_optimize_foo() {
 #pragma execution_character_set(pop)
 
 #define PRAGMA_PACK _Pragma("pack(push, 1)")
-#pragma warning(PRAGMA_PACK) // expected-warning {{expected 'push', 'pop', 'default', 'disable', 'error', 'once', 'suppress', 1, 2, 3, or 4}} \
-                             // expected-error {{expected identifier or '('}}
+// The trailing ')' after an annotation-producing _Pragma is left unconsumed in
+// the token stream and diagnosed by the parser; ';' ends parser error recovery
+// before the next directive.
+#pragma warning(PRAGMA_PACK) // expected-warning {{expected 'push', 'pop', 'default', 'disable', 'error', 'once', 'suppress', 1, 2, 3, or 4}}
+                             // expected-error@-1 {{expected identifier or '('}}
 ;
-#pragma warning(disable : 4705 ; PRAGMA_PACK) // expected-warning {{expected 'push', 'pop', 'default', 'disable', 'error', 'once', 'suppress', 1, 2, 3, or 4}} \
-                                              // expected-error {{expected identifier or '('}}
+#pragma warning(disable : 4705 ; PRAGMA_PACK) // expected-warning {{expected 'push', 'pop', 'default', 'disable', 'error', 'once', 'suppress', 1, 2, 3, or 4}}
+                                              // expected-error@-1 {{expected identifier or '('}}
 ;
-#pragma execution_character_set(PRAGMA_PACK) // expected-warning {{expected 'push' or 'pop'}} \
-                                             // expected-error {{expected identifier or '('}}
+#pragma execution_character_set(PRAGMA_PACK) // expected-warning {{expected 'push' or 'pop'}}
+                                             // expected-error@-1 {{expected identifier or '('}}
 ;
 __pragma(warning(_Pragma("pack(push, 1)"))) // expected-warning {{expected 'push', 'pop', 'default', 'disable', 'error', 'once', 'suppress', 1, 2, 3, or 4}}
 __pragma(warning(disable : 4705 ; _Pragma("pack(push, 1)"))) // expected-warning {{expected 'push', 'pop', 'default', 'disable', 'error', 'once', 'suppress', 1, 2, 3, or 4}}
