@@ -866,12 +866,18 @@ class PatternTester {
 private:
   size_t LineNumber = 1;
   SourceMgr SM;
+  std::vector<SMDiagnostic> Diagnostics;
   FileCheckRequest Req;
   FileCheckPatternContext Context;
   Pattern P{Check::CheckPlain, &Context, LineNumber};
 
+  static void captureDiagnostic(const SMDiagnostic &Diag, void *Context) {
+    static_cast<PatternTester *>(Context)->Diagnostics.push_back(Diag);
+  }
+
 public:
   PatternTester() {
+    SM.setDiagHandler(captureDiagnostic, this);
     std::vector<StringRef> GlobalDefines = {"#FOO=42", "BAR=BAZ", "#add=7"};
     // An ASSERT_FALSE would make more sense but cannot be used in a
     // constructor.
@@ -887,10 +893,13 @@ public:
   }
 
   void initNextPattern() {
+    Diagnostics.clear();
     P = Pattern(Check::CheckPlain, &Context, ++LineNumber);
   }
 
   size_t getLineNumber() const { return LineNumber; }
+
+  ArrayRef<SMDiagnostic> getDiagnostics() const { return Diagnostics; }
 
   Expected<std::unique_ptr<Expression>>
   parseSubst(StringRef Expr, bool IsLegacyLineExpr = false) {
@@ -1258,6 +1267,35 @@ TEST_F(FileCheckTest, ParsePattern) {
 
   // Invalid legacy @LINE expression with non decimal literal.
   EXPECT_TRUE(Tester.parsePattern("[[@LINE+0x3]]"));
+}
+
+TEST_F(FileCheckTest, PathSepPseudoVariable) {
+  PatternTester Tester;
+  ASSERT_FALSE(Tester.parsePattern("before[[@PATHSEP]]after"));
+
+  for (char Separator : {'/', '\\'}) {
+    std::string Input = "before";
+    Input += Separator;
+    Input += "after";
+    EXPECT_THAT_EXPECTED(Tester.match(Input), Succeeded());
+  }
+
+  expectNotFoundError(Tester.match("before:after").takeError());
+
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("before{{[[@PATHSEP]]+}}after"));
+  EXPECT_THAT_EXPECTED(Tester.match("before//after"), Succeeded());
+  EXPECT_THAT_EXPECTED(Tester.match("before\\\\after"), Succeeded());
+
+  Tester.initNextPattern();
+  ASSERT_TRUE(Tester.parsePattern("{{[[@PATHSEP]](}}"));
+  ArrayRef<SMDiagnostic> Diagnostics = Tester.getDiagnostics();
+  ASSERT_EQ(Diagnostics.size(), 1u);
+  const SMDiagnostic &Diagnostic = Diagnostics.front();
+  EXPECT_EQ(Diagnostic.getFilename(), "TestBuffer");
+  EXPECT_EQ(Diagnostic.getLineNo(), 1);
+  EXPECT_EQ(Diagnostic.getColumnNo(), 2);
+  EXPECT_EQ(Diagnostic.getMessage(), "invalid regex: parentheses not balanced");
 }
 
 TEST_F(FileCheckTest, Match) {

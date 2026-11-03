@@ -288,6 +288,10 @@ Expected<std::string> NumericSubstitution::getResultForDiagnostics() const {
 }
 
 Expected<std::string> StringSubstitution::getResultRegex() const {
+  // @PATHSEP is a regex fragment rather than a literal string.
+  if (FromStr == "@PATHSEP")
+    return "[/\\\\]";
+
   // Look up the value and escape it so that we can put it into the regex.
   Expected<StringRef> VarVal = Context->getPatternVarValue(FromStr);
   if (!VarVal)
@@ -879,7 +883,27 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
         ++CurParen;
       }
 
-      if (AddRegExToRegEx(PatternStr.substr(2, End - 2), CurParen, SM))
+      StringRef RegexPattern = PatternStr.substr(2, End - 2);
+      std::string ExpandedRegexPattern;
+      StringRef PathSepPseudoVar = "[[@PATHSEP]]";
+      if (RegexPattern.contains(PathSepPseudoVar)) {
+        // Expand inside raw regex blocks to allow quantifiers on @PATHSEP.
+        while (!RegexPattern.empty()) {
+          size_t PathSepPos = RegexPattern.find(PathSepPseudoVar);
+          if (PathSepPos == StringRef::npos) {
+            ExpandedRegexPattern += RegexPattern;
+            break;
+          }
+          ExpandedRegexPattern += RegexPattern.take_front(PathSepPos);
+          ExpandedRegexPattern += "[/\\\\]";
+          RegexPattern =
+              RegexPattern.drop_front(PathSepPos + PathSepPseudoVar.size());
+        }
+        RegexPattern = ExpandedRegexPattern;
+      }
+
+      if (AddRegExToRegEx(RegexPattern, CurParen, SM,
+                          SMLoc::getFromPointer(PatternStr.data() + 2)))
         return true;
       if (HasAlternation)
         RegExStr += ')';
@@ -970,7 +994,9 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
           DefName = Name;
           MatchRegexp = MatchStr;
         } else {
-          if (IsPseudo) {
+          if (IsPseudo && Name == "@PATHSEP") {
+            SubstStr = Name;
+          } else if (IsPseudo) {
             MatchStr = OrigMatchStr;
             IsLegacyLineExpr = IsNumBlock = true;
           } else {
@@ -1041,7 +1067,9 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
         ++CurParen;
       }
 
-      if (!MatchRegexp.empty() && AddRegExToRegEx(MatchRegexp, CurParen, SM))
+      if (!MatchRegexp.empty() &&
+          AddRegExToRegEx(MatchRegexp, CurParen, SM,
+                          SMLoc::getFromPointer(MatchRegexp.data())))
         return true;
 
       if (IsDefinition)
@@ -1096,12 +1124,12 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
   return false;
 }
 
-bool Pattern::AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM) {
+bool Pattern::AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM,
+                              SMLoc Loc) {
   Regex R(RS);
   std::string Error;
   if (!R.isValid(Error)) {
-    SM.PrintMessage(SMLoc::getFromPointer(RS.data()), SourceMgr::DK_Error,
-                    "invalid regex: " + Error);
+    SM.PrintMessage(Loc, SourceMgr::DK_Error, "invalid regex: " + Error);
     return true;
   }
 
@@ -1427,6 +1455,9 @@ void Pattern::printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
 
 Expected<StringRef>
 FileCheckPatternContext::getPatternVarValue(StringRef VarName) {
+  if (VarName == "@PATHSEP")
+    return "[/\\\\]";
+
   auto VarIter = GlobalVariableTable.find(VarName);
   if (VarIter == GlobalVariableTable.end())
     return make_error<UndefVarError>(VarName);

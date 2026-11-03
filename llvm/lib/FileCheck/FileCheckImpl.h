@@ -751,7 +751,8 @@ public:
   int getCount() const { return CheckTy.getCount(); }
 
 private:
-  bool AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM);
+  bool AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM,
+                       SMLoc Loc);
   void AddBackrefToRegEx(unsigned BackrefNum);
   /// Computes an arbitrary estimate for the quality of matching this pattern
   /// at the start of \p Buffer; a distance of zero should correspond to a

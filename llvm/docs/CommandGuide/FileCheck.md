@@ -916,6 +916,13 @@ substitution block syntax: `[[@LINE]]`, `[[@LINE+<offset>]]` and
 `[[@LINE-<offset>]]` without any spaces inside the brackets and where
 `offset` is an integer.
 
+### FileCheck Pseudo String Variables
+
+`@PATHSEP` is a pseudo string variable that matches either path separator,
+`/` or `\`, regardless of the host running FileCheck. For example,
+`[[@PATHSEP]]` matches one separator, while `{{[[@PATHSEP]]+}}` matches one or
+more separators.
+
 ### Matching Newline Characters
 
 To match newline characters in regular expressions the character class
