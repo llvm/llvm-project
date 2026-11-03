@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve \
-// RUN:   -mvscale-min=1 -mvscale-max=1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=1 -mvscale-max=1 -fsyntax-only -verify %s
 
 typedef __SVUint8_t fixed_uint8_t __attribute__((arm_sve_vector_bits(128)));
 
