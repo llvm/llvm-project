@@ -979,14 +979,10 @@ bool AArch64FrameLowering::canUseAsPrologue(
 bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
     const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
   // The range-insertion pass currently runs only on Windows, not UEFI.
-  if (!MF.getTarget().getTargetTriple().isOSWindows())
-    return false;
-
-  // Split unwind ranges are currently supported only for native ARM64, not
-  // ARM64EC's hybrid unwinding model.
-  if (MF.getTarget().getTargetTriple().isWindowsArm64EC())
+  if (!Subtarget.isTargetWindows())
     return false;
 
   // Range insertion relies on SEH pseudos, which are emitted only when the
@@ -1008,9 +1004,7 @@ bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
 
   // Dynamically realigned frames need stack-pointer recovery that is not yet
   // supported by the split-range implementation.
-  if (MF.getSubtarget<AArch64Subtarget>()
-          .getRegisterInfo()
-          ->hasStackRealignment(MF))
+  if (Subtarget.getRegisterInfo()->hasStackRealignment(MF))
     return false;
 
   // Signed return addresses need authentication-state handling across ranges

@@ -12,6 +12,7 @@
 
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -19,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -65,13 +67,8 @@ static void endWinCFIRange(MachineBasicBlock &MBB, const AArch64InstrInfo &TII,
 static bool insertWinCFIRanges(MachineFunction &MF) {
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
 
-  // These range pseudos describe Windows SEH, not other unwind formats.
-  if (!ST.isTargetWindows())
-    return false;
-
-  // ARM64EC's hybrid unwinding model is not supported by range insertion yet.
-  if (ST.isWindowsArm64EC())
-    return false;
+  assert(ST.isTargetWindows() &&
+         "Windows CFI range insertion requires a Windows target");
 
   // Without Windows CFI, there is no SEH frame recipe to split into ranges.
   if (!MF.hasWinCFI())
@@ -119,7 +116,7 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
   // prologues later; do not collect the instructions that establish the frame.
   // The first frame-setup instruction also locates the real range's start,
   // excluding any frameless prefix within this block.
-  SmallVector<const MachineInstr *, 8> Prologue;
+  SmallVector<const MachineInstr *, 8> PrologueSEHInstructions;
   auto PrologueStart = PrologueBlock->end();
   for (MachineInstr &MI : *PrologueBlock) {
     if (MI.getOpcode() == AArch64::SEH_PrologEnd)
@@ -129,7 +126,7 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
     if (PrologueStart == PrologueBlock->end())
       PrologueStart = MI.getIterator();
     if (AArch64InstrInfo::isSEHInstruction(MI))
-      Prologue.push_back(&MI);
+      PrologueSEHInstructions.push_back(&MI);
   }
   // No prologue instructions, so nothing to do.
   if (PrologueStart == PrologueBlock->end())
@@ -148,13 +145,20 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
 
   // Region membership must agree with the frame state on every reachable edge,
   // including joins with frameless paths and loop backedges.
-  for (const MachineBasicBlock *Block : depth_first(&MF.front())) {
+  SmallPtrSet<const MachineBasicBlock *, 16> ReachableBlocks;
+  for (const MachineBasicBlock &Block : MF) {
     bool FrameOnExit =
-        FramedBlocks.contains(Block) && !EpilogueBlocks.contains(Block);
-    for (const MachineBasicBlock *Successor : Block->successors()) {
+        FramedBlocks.contains(&Block) && !EpilogueBlocks.contains(&Block);
+    for (const MachineBasicBlock *Successor : Block.successors()) {
       bool FrameOnEntry =
           Successor != PrologueBlock && FramedBlocks.contains(Successor);
-      if (FrameOnExit != FrameOnEntry)
+      if (FrameOnExit == FrameOnEntry)
+        continue;
+      // Only compute reachability on a mismatch. Dead predecessors do not
+      // constrain the frame state of their live successors.
+      if (ReachableBlocks.empty())
+        ReachableBlocks.insert_range(depth_first(&MF.front()));
+      if (ReachableBlocks.contains(&Block))
         reportFatalInternalError(
             "inconsistent Windows ARM64 frame state at CFG join");
     }
@@ -185,7 +189,7 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
         // end_c to prevent partial-prologue unwinding near the range start.
         auto InsertPt = MBB.begin();
         BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_StartProc));
-        for (const MachineInstr *MI : Prologue)
+        for (const MachineInstr *MI : PrologueSEHInstructions)
           MBB.insert(InsertPt, MF.CloneMachineInstr(MI));
         BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_EndC));
         BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_PrologEnd));
@@ -207,10 +211,11 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
                !AArch64InstrInfo::isSEHInstruction(MI);
       };
       auto FirstInstrAfterEpilog = llvm::find_if(Suffix, IsRealInstruction);
-      // A lone terminator is covered by the epilogue's implicit final
-      // instruction. Any other suffix executes without a frame.
+      // Only a lone four-byte terminator fits the epilogue's implicit final
+      // instruction. Terminator pseudos may expand to multiple instructions.
       if (FirstInstrAfterEpilog != MBB.end() &&
           (!FirstInstrAfterEpilog->isTerminator() ||
+           TII.getInstSizeInBytes(*FirstInstrAfterEpilog) != 4 ||
            llvm::any_of(make_range(std::next(FirstInstrAfterEpilog), MBB.end()),
                         IsRealInstruction))) {
         endWinCFIRange(MBB, TII, Suffix.begin());
@@ -226,6 +231,7 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
     }
     PreviousLayoutBlock = &MBB;
   }
+  MF.getInfo<AArch64FunctionInfo>()->setHasExplicitWinCFIRanges(true);
   return true;
 }
 
