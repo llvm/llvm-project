@@ -2692,8 +2692,8 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
 
     // Add restore libcall via tail call. Use the software guarded variant when
     // cf-protection-branch is enabled so the jump goes through X7.
-    unsigned TailOpc = RVFI->hasCFProtectionBranch() ? RISCV::PseudoTAILX7
-                                                     : RISCV::PseudoTAIL;
+    unsigned TailOpc =
+        RVFI->hasCFProtectionBranch() ? RISCV::PseudoTAILX7 : RISCV::PseudoTAIL;
     MachineInstrBuilder NewMI =
         BuildMI(MBB, MI, DL, TII.get(TailOpc))
             .addExternalSymbol(RestoreLibCall, RISCVII::MO_CALL)
