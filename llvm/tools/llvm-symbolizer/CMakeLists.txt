@@ -4,7 +4,7 @@
 # targets as well. Currently, there is no support for such a build strategy.
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)
-tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(SymbolizerOptsTableGen)
 
 set(LLVM_LINK_COMPONENTS
