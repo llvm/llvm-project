@@ -117,12 +117,11 @@ class LLVM_ABI ExecutionDomainFix : public MachineFunctionPass {
   SpecificBumpPtrAllocator<DomainValue> Allocator;
   SmallVector<DomainValue *, 16> Avail;
 
-  const TargetRegisterClass *const RC;
+  const TargetRegisterClass *RC;
   MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   std::vector<SmallVector<int, 1>> AliasMap;
-  const unsigned NumRegs;
   /// Value currently in each register, or NULL when no value is being tracked.
   /// This counts as a DomainValue reference.
   using LiveRegsDVInfo = std::vector<DomainValue *>;
@@ -136,8 +135,9 @@ class LLVM_ABI ExecutionDomainFix : public MachineFunctionPass {
   ReachingDefInfo *RDI = nullptr;
 
 public:
-  ExecutionDomainFix(char &PassID, const TargetRegisterClass &RC)
-      : MachineFunctionPass(PassID), RC(&RC), NumRegs(RC.getNumRegs()) {}
+  static char ID; // Pass identification, replacement for typeid
+
+  ExecutionDomainFix() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -150,6 +150,8 @@ public:
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
   }
+
+  StringRef getPassName() const override { return "Execution Domain Fix"; }
 
 private:
   /// Translate TRI register number to a list of indices into our smaller tables

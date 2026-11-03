@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -68,7 +69,7 @@ DomainValue *ExecutionDomainFix::resolve(DomainValue *&DVRef) {
 }
 
 void ExecutionDomainFix::setLiveReg(int rx, DomainValue *dv) {
-  assert(unsigned(rx) < NumRegs && "Invalid index");
+  assert(unsigned(rx) < RC->getNumRegs() && "Invalid index");
   assert(!LiveRegs.empty() && "Must enter basic block first.");
 
   if (LiveRegs[rx] == dv)
@@ -79,7 +80,7 @@ void ExecutionDomainFix::setLiveReg(int rx, DomainValue *dv) {
 }
 
 void ExecutionDomainFix::kill(int rx) {
-  assert(unsigned(rx) < NumRegs && "Invalid index");
+  assert(unsigned(rx) < RC->getNumRegs() && "Invalid index");
   assert(!LiveRegs.empty() && "Must enter basic block first.");
   if (!LiveRegs[rx])
     return;
@@ -89,7 +90,7 @@ void ExecutionDomainFix::kill(int rx) {
 }
 
 void ExecutionDomainFix::force(int rx, unsigned domain) {
-  assert(unsigned(rx) < NumRegs && "Invalid index");
+  assert(unsigned(rx) < RC->getNumRegs() && "Invalid index");
   assert(!LiveRegs.empty() && "Must enter basic block first.");
   if (DomainValue *dv = LiveRegs[rx]) {
     if (dv->isCollapsed())
@@ -119,7 +120,7 @@ void ExecutionDomainFix::collapse(DomainValue *dv, unsigned domain) {
 
   // If there are multiple users, give them new, unique DomainValues.
   if (!LiveRegs.empty() && dv->Refs > 1)
-    for (unsigned rx = 0; rx != NumRegs; ++rx)
+    for (unsigned rx = 0; rx != RC->getNumRegs(); ++rx)
       if (LiveRegs[rx] == dv)
         setLiveReg(rx, alloc(domain));
 }
@@ -141,7 +142,7 @@ bool ExecutionDomainFix::merge(DomainValue *A, DomainValue *B) {
   // All uses of B are referred to A.
   B->Next = retain(A);
 
-  for (unsigned rx = 0; rx != NumRegs; ++rx) {
+  for (unsigned rx = 0; rx != RC->getNumRegs(); ++rx) {
     assert(!LiveRegs.empty() && "no space allocated for live registers");
     if (LiveRegs[rx] == B)
       setLiveReg(rx, A);
@@ -157,7 +158,7 @@ void ExecutionDomainFix::enterBasicBlock(
   // Set up LiveRegs to represent registers entering MBB.
   // Set default domain values to 'no domain' (nullptr)
   if (LiveRegs.empty())
-    LiveRegs.assign(NumRegs, nullptr);
+    LiveRegs.assign(RC->getNumRegs(), nullptr);
 
   // This is the entry block.
   if (MBB->pred_empty()) {
@@ -175,7 +176,7 @@ void ExecutionDomainFix::enterBasicBlock(
     if (Incoming.empty())
       continue;
 
-    for (unsigned rx = 0; rx != NumRegs; ++rx) {
+    for (unsigned rx = 0; rx != RC->getNumRegs(); ++rx) {
       DomainValue *pdv = resolve(Incoming[rx]);
       if (!pdv)
         continue;
@@ -416,8 +417,11 @@ bool ExecutionDomainFix::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
+  RC = TRI->getRegClassToMinimizeDomainCrossings();
+  assert(RC &&
+         "getRegClassToMinimizeDomainCrossings in TRI must be implemented for "
+         "targets using ExecutionDomainFix");
   LiveRegs.clear();
-  assert(NumRegs == RC->getNumRegs() && "Bad regclass");
 
   LLVM_DEBUG(dbgs() << "********** FIX EXECUTION DOMAIN: "
                     << TRI->getRegClassName(RC) << " **********\n");
@@ -467,4 +471,15 @@ bool ExecutionDomainFix::runOnMachineFunction(MachineFunction &mf) {
   Allocator.DestroyAll();
 
   return false;
+}
+
+char ExecutionDomainFix::ID = 0;
+INITIALIZE_PASS_BEGIN(ExecutionDomainFix, DEBUG_TYPE, "execution-domain-fix",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
+INITIALIZE_PASS_END(ExecutionDomainFix, DEBUG_TYPE, "execution-domain-fix",
+                    false, false)
+
+FunctionPass *llvm::createExecutionDomainFixPass() {
+  return new ExecutionDomainFix();
 }
