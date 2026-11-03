@@ -24276,32 +24276,44 @@ static SDValue getScalablePrefixVL(SDValue Mask, SelectionDAG &DAG,
   if (!VL)
     return SDValue();
   unsigned BoundaryBits = VL.getScalarValueSizeInBits();
-  while (
-      VL.getOpcode() == ISD::TRUNCATE || VL.getOpcode() == ISD::ZERO_EXTEND ||
-      VL.getOpcode() == ISD::AssertZext || VL.getOpcode() == ISD::AssertSext) {
+  while (VL.getOpcode() == ISD::TRUNCATE ||
+         VL.getOpcode() == ISD::ZERO_EXTEND ||
+         VL.getOpcode() == ISD::AssertZext) {
     VL = VL.getOperand(0);
     BoundaryBits =
         std::min<unsigned>(BoundaryBits, VL.getScalarValueSizeInBits());
   }
   if (VL.getOpcode() != ISD::INTRINSIC_WO_CHAIN)
     return SDValue();
-  unsigned ID = VL.getConstantOperandVal(0);
-  bool HasAVL = ID == Intrinsic::riscv_vsetvli;
-  if (!HasAVL && ID != Intrinsic::riscv_vsetvlimax)
-    return SDValue();
-  unsigned SEWOperand = HasAVL ? 2 : 1;
-  unsigned LMULOperand = HasAVL ? 3 : 2;
-  unsigned SEW = RISCVVType::decodeVSEW(VL.getConstantOperandVal(SEWOperand));
-  auto LMUL =
-      static_cast<RISCVVType::VLMUL>(VL.getConstantOperandVal(LMULOperand));
   unsigned MinElts = Step.getValueType().getVectorMinNumElements();
-  // The configured VLMAX must equal the number of lanes in the stepvector.
-  if (RISCVVType::getSEWLMULRatio(SEW, LMUL) * MinElts !=
-      RISCV::RVVBitsPerBlock)
-    return SDValue();
+  unsigned ID = VL.getConstantOperandVal(0);
+  if (ID == Intrinsic::experimental_get_vector_length) {
+    // The scalable vectorization factor must describe the stepvector's lanes.
+    if (VL.getConstantOperandVal(2) != MinElts ||
+        !isOneConstant(VL.getOperand(3)))
+      return SDValue();
+  } else {
+    bool HasAVL = ID == Intrinsic::riscv_vsetvli;
+    if (!HasAVL && ID != Intrinsic::riscv_vsetvlimax)
+      return SDValue();
+    unsigned SEW =
+        RISCVVType::decodeVSEW(VL.getConstantOperandVal(HasAVL ? 2 : 1));
+    auto LMUL = static_cast<RISCVVType::VLMUL>(
+        VL.getConstantOperandVal(HasAVL ? 3 : 2));
+    // The configured VLMAX must equal the number of lanes in the stepvector.
+    if (RISCVVType::getSEWLMULRatio(SEW, LMUL) * MinElts !=
+        RISCV::RVVBitsPerBlock)
+      return SDValue();
+  }
   uint64_t MaxElts =
       uint64_t(MinElts) * Subtarget.getRealMaxVLen() / RISCV::RVVBitsPerBlock;
-  uint64_t MaxVL = DAG.computeKnownBits(VL).getMaxValue().getLimitedValue();
+  uint64_t MaxVL = std::min(
+      MaxElts, DAG.computeKnownBits(VL).getMaxValue().getLimitedValue());
+  // Both bounded VL intrinsics return no more than the requested count.
+  if (ID != Intrinsic::riscv_vsetvlimax)
+    MaxVL = std::min(
+        MaxVL,
+        DAG.computeKnownBits(VL.getOperand(1)).getMaxValue().getLimitedValue());
   // Indices must not wrap even beyond VL, where the select keeps its false
   // operand. The comparison boundary must also represent VL without truncation.
   unsigned IndexBits = Step.getScalarValueSizeInBits();
@@ -24325,10 +24337,12 @@ performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
 
   if (VT.isScalableVector() && DCI.isBeforeLegalize() &&
       Subtarget.hasVInstructions())
-    if (SDValue VL = getScalablePrefixVL(CC, DAG, Subtarget))
+    if (SDValue VL = getScalablePrefixVL(CC, DAG, Subtarget)) {
+      VL = DAG.getZExtOrTrunc(VL, DL, Subtarget.getXLenVT());
       return DAG.getNode(ISD::VP_MERGE, DL, VT,
                          DAG.getAllOnesConstant(DL, CC.getValueType()), TrueVal,
                          FalseVal, VL);
+    }
 
   // Convert (vselect CC, true, false) to (vselect InvertCC, false, true) when
   // false has one use and true has multiple use.
@@ -27516,11 +27530,8 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       MaxVL = (Fractional) ? MaxVL / LMul : MaxVL * LMul;
 
       // Result of vsetvli must be not larger than AVL.
-      if (HasAVL)
-        MaxVL =
-            std::min(MaxVL, DAG.computeKnownBits(Op.getOperand(1), Depth + 1)
-                                .getMaxValue()
-                                .getLimitedValue());
+      if (HasAVL && isa<ConstantSDNode>(Op.getOperand(1)))
+        MaxVL = std::min(MaxVL, Op.getConstantOperandVal(1));
 
       unsigned KnownZeroFirstBit = Log2_32(MaxVL) + 1;
       if (BitWidth > KnownZeroFirstBit)
