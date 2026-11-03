@@ -141,7 +141,8 @@ Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
 /// Given a `src` and an `acc` argumments from a vector::MultiDimReductionOp,
 /// lower to a set of vector::ReductionOp ops over 1D slices extracted from
 /// `src`. The reduction is performed along `reductionDim`. The result is a
-/// vector with the same shape as `acc`.
+/// vector with the same shape as `acc`. `fastmath` holds the fast-math flags
+/// of the vector::MultiDimReductionOp. Each new vector::ReductionOp gets them.
 /// TODO: Only 2D to 1D reduction is supported for now.
 Value lowerToVectorReductions(TypedValue<VectorType> src,
                               TypedValue<VectorType> acc,
@@ -169,7 +170,10 @@ Value createReductionNeutralValue(OpBuilder &builder, Location loc, Type type,
 /// Lowers cross-lane reductions to shuffle operations on a 2D vector.
 /// Extracts slices along the reduction dimension, performs subgroup reductions
 /// with shuffles across reductionSize work-items, and inserts the results back
-/// into an accumulator vector.
+/// into an accumulator vector. `fastmath` holds the fast-math flags of the
+/// reduction being lowered. For float kinds, they are set on every combining
+/// operation: the shuffle reductions (see subgroupReduction) and the combine
+/// with each accumulator element.
 Value lowerCrossLaneReductionToShuffles(
     TypedValue<VectorType> src, TypedValue<VectorType> acc,
     vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
