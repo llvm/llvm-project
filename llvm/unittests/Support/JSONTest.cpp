@@ -139,7 +139,7 @@ TEST(JSONTest, Array) {
   A.emplace_back(3);
   A.emplace(++A.begin(), 0);
   A.push_back(4);
-  A.insert(++++A.begin(), 99);
+  A.insert(++ ++A.begin(), 99);
 
   EXPECT_EQ(A.size(), 6u);
   EXPECT_EQ(R"([1,0,99,2,3,4])", s(std::move(A)));
@@ -263,6 +263,58 @@ TEST(JSONTest, UTF8) {
   }
 }
 
+TEST(JSONTest, SafeUTF8) {
+  // Valid UTF-8: safeUTF8 returns a Value with the same string content.
+  for (StringRef Valid : {
+           "this is ASCII text",
+           "thïs tëxt häs BMP chäräctërs",
+           "𐌶𐌰L𐌾𐍈 C𐍈𐌼𐌴𐍃",
+           "",
+       }) {
+    Value V = safeUTF8(Valid);
+    ASSERT_EQ(V.kind(), Value::String);
+    EXPECT_EQ(*V.getAsString(), Valid);
+  }
+
+  // Invalid UTF-8: safeUTF8 returns a Value with U+FFFD substitutions.
+  for (auto [Invalid, Expected] :
+       std::vector<std::pair<const char *, const char *>>{
+           {"lone trailing \x81\x82 bytes",
+            "lone trailing \xEF\xBF\xBD\xEF\xBF\xBD bytes"},
+           {"missing trailing \xD0 bytes",
+            "missing trailing \xEF\xBF\xBD bytes"},
+           {"truncated character \xD0", "truncated character \xEF\xBF\xBD"},
+           {"not \xC1\x80 the \xE0\x9f\xBF shortest \xF0\x83\x83\x83 encoding",
+            "not \xEF\xBF\xBD\xEF\xBF\xBD the "
+            "\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD shortest "
+            "\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD encoding"},
+           {"surrogate \xED\xA0\x80 invalid \xF4\x90\x80\x80",
+            "surrogate \xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD invalid "
+            "\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD"}}) {
+    Value V = safeUTF8(Invalid);
+    ASSERT_EQ(V.kind(), Value::String);
+    EXPECT_EQ(*V.getAsString(), Expected);
+  }
+
+  // safeUTF8 must not trigger assertions in debug mode — this is its
+  // primary reason for existing.  (The test above already covers this,
+  // but we add an explicit regression check for the clang-doc crash case.)
+  // Byte 0x97 is invalid UTF-8 and triggered:
+  //   assert(false && "Invalid UTF-8 in value used as JSON")
+  Value V = safeUTF8("\x97");
+  ASSERT_EQ(V.kind(), Value::String);
+
+  // Verify safeUTF8 integrates correctly into Object construction.
+  Object O;
+  O["valid"] = safeUTF8("no issue");
+  O["fixed"] = safeUTF8("bad \xD0 byte");
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  OS << Value(std::move(O));
+  EXPECT_NE(S.find("no issue"), std::string::npos);
+  EXPECT_NE(S.find("bad \xEF\xBF\xBD byte"), std::string::npos);
+}
+
 TEST(JSONTest, Inspection) {
   llvm::Expected<Value> Doc = parse(R"(
     {
@@ -318,49 +370,49 @@ TEST(JSONTest, Integers) {
     std::optional<int64_t> AsInt;
     std::optional<double> AsNumber;
   } TestCases[] = {
-    {
-        "Non-integer. Stored as double, not convertible.",
-        double{1.5},
-        "1.5",
-        std::nullopt,
-        1.5,
-    },
+      {
+          "Non-integer. Stored as double, not convertible.",
+          double{1.5},
+          "1.5",
+          std::nullopt,
+          1.5,
+      },
 
-    {
-        "Integer, not exact double. Stored as int64, convertible.",
-        int64_t{0x4000000000000001},
-        "4611686018427387905",
-        int64_t{0x4000000000000001},
-        double{0x4000000000000000},
-    },
+      {
+          "Integer, not exact double. Stored as int64, convertible.",
+          int64_t{0x4000000000000001},
+          "4611686018427387905",
+          int64_t{0x4000000000000001},
+          double{0x4000000000000000},
+      },
 
-    {
-        "Negative integer, not exact double. Stored as int64, convertible.",
-        int64_t{-0x4000000000000001},
-        "-4611686018427387905",
-        int64_t{-0x4000000000000001},
-        double{-0x4000000000000000},
-    },
+      {
+          "Negative integer, not exact double. Stored as int64, convertible.",
+          int64_t{-0x4000000000000001},
+          "-4611686018427387905",
+          int64_t{-0x4000000000000001},
+          double{-0x4000000000000000},
+      },
 
-      // PR46470,
-      // https://developercommunity.visualstudio.com/content/problem/1093399/incorrect-result-when-printing-6917529027641081856.html
+  // PR46470,
+  // https://developercommunity.visualstudio.com/content/problem/1093399/incorrect-result-when-printing-6917529027641081856.html
 #if !defined(_MSC_VER) || _MSC_VER < 1926
-    {
-        "Dynamically exact integer. Stored as double, convertible.",
-        double{0x6000000000000000},
-        "6.9175290276410819e+18",
-        int64_t{0x6000000000000000},
-        double{0x6000000000000000},
-    },
+      {
+          "Dynamically exact integer. Stored as double, convertible.",
+          double{0x6000000000000000},
+          "6.9175290276410819e+18",
+          int64_t{0x6000000000000000},
+          double{0x6000000000000000},
+      },
 #endif
 
-    {
-        "Dynamically integer, >64 bits. Stored as double, not convertible.",
-        1.5 * double{0x8000000000000000},
-        "1.3835058055282164e+19",
-        std::nullopt,
-        1.5 * double{0x8000000000000000},
-    },
+      {
+          "Dynamically integer, >64 bits. Stored as double, not convertible.",
+          1.5 * double{0x8000000000000000},
+          "1.3835058055282164e+19",
+          std::nullopt,
+          1.5 * double{0x8000000000000000},
+      },
   };
   for (const auto &T : TestCases) {
     EXPECT_EQ(T.Str, s(T.Val)) << T.Desc;
