@@ -1,4 +1,4 @@
-//===- SubsetInsertionOpInterfaceImpl.cpp - Tensor subsets ----------------===//
+//===- SubsetOpInterfaceImpl.cpp - Tensor subsets -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
+#include "mlir/Dialect/Tensor/Transforms/SubsetOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
@@ -16,7 +16,6 @@ using namespace mlir;
 using namespace mlir::tensor;
 
 namespace {
-
 struct ExtractSliceOpSubsetOpInterface
     : public SubsetOpInterface::ExternalModel<ExtractSliceOpSubsetOpInterface,
                                               tensor::ExtractSliceOp> {
@@ -81,7 +80,6 @@ struct InsertSliceLikeOpSubsetInsertionOpInterface
     return neededValues;
   }
 };
-
 } // namespace
 
 void mlir::tensor::registerSubsetOpInterfaceExternalModels(
