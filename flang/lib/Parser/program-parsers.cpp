@@ -91,10 +91,9 @@ static constexpr auto normalProgramUnit{
                     semicolons >> not(endOfLine))),
             skipToNextLineIfAny)};
 
-static constexpr auto globalCompilerDirective{
-    construct<ProgramUnit>(indirect(compilerDirective))};
-
-static constexpr auto globalOpenACCCompilerDirective{
+// Directives accepted at file scope as ordinary program units.
+static constexpr auto globalDirective{
+    construct<ProgramUnit>(indirect(compilerDirective)) ||
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
@@ -119,19 +118,27 @@ static constexpr auto externalSubprogramStmt{skipStuffBeforeStatement >>
     !statement(typeDeclarationStmt) >> maybe(label) >>
     (validFunctionStmt >> ok || validSubroutineStmt >> ok)};
 
-// Classify the whole directive prefix once, but retain its ordinary directive
-// nodes in order. Parsing the prefix together avoids quadratic suffix rescans
-// when compiler directives separate several DECLARE runs. Require consumption
-// to reach the header seen by lookahead; unsupported global directives retain
-// their normal parsing and diagnostics.
-static constexpr auto misplacedOpenACCDeclareAtFileScope{
+// A leading DECLARE is misplaced only when the directive prefix is followed
+// by a complete procedure header. This decision does not consume input.
+static constexpr auto misplacedOpenACCDeclareAhead{
     lookAhead("!$ACC "_sptok >> "DECLARE"_tok) >>
-    lookAhead(skipCompilerDirectiveLines >> externalSubprogramStmt) >>
-    applyFunction(prepend<ProgramUnit>, misplacedOpenACCDeclareRun,
-        many(skipStuffBeforeStatement >> (globalCompilerDirective ||
-                                             globalOpenACCCompilerDirective ||
-                                             misplacedOpenACCDeclareRun))) /
-        lookAhead(externalSubprogramStmt)};
+    lookAhead(skipCompilerDirectiveLines >> externalSubprogramStmt)};
+
+// After classification, parse the prefix once. Ordinary directives keep their
+// nodes; only DECLARE runs become recovery nodes. The final check ensures the
+// real directive parsers reach a procedure header: a directive skipped by the
+// generic lookahead but unsupported here must retain its normal diagnostics.
+static constexpr auto recoveredDirectivePrefix{
+    some(skipStuffBeforeStatement >>
+        (globalDirective || misplacedOpenACCDeclareRun)) /
+    lookAhead(externalSubprogramStmt)};
+
+// A file item contributes either one ordinary unit or the units in a recovered
+// prefix. All branches return lists, so normal repetition can collect them.
+static constexpr auto programUnitGroup{skipStuffBeforeStatement >>
+    (applyFunction(singletonList<ProgramUnit>, globalDirective) ||
+        misplacedOpenACCDeclareAhead >> recoveredDirectivePrefix ||
+        applyFunction(singletonList<ProgramUnit>, normalProgramUnit))};
 
 static std::list<ProgramUnit> flattenProgramUnits(
     std::list<std::list<ProgramUnit>> &&groups) {
@@ -142,21 +149,17 @@ static std::list<ProgramUnit> flattenProgramUnits(
   return result;
 }
 
+static constexpr auto programUnits{
+    applyFunction(flattenProgramUnits, some(programUnitGroup))};
+
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
 TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
     (extension<LanguageFeature::EmptySourceFile>(
          "nonstandard usage: empty source file"_port_en_US,
          consumedAllInput >> pure<std::list<ProgramUnit>>()) ||
-        applyFunction(flattenProgramUnits,
-            some(skipStuffBeforeStatement >>
-                (applyFunction(singletonList<ProgramUnit>,
-                     globalCompilerDirective ||
-                         globalOpenACCCompilerDirective) ||
-                    misplacedOpenACCDeclareAtFileScope ||
-                    applyFunction(
-                        singletonList<ProgramUnit>, normalProgramUnit)))) /
-            skipStuffBeforeStatement)))
+        programUnits) /
+        skipStuffBeforeStatement))
 
 // R507 declaration-construct ->
 //        specification-construct | data-stmt | format-stmt |
