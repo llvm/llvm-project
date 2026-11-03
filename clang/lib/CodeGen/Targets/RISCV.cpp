@@ -428,17 +428,23 @@ static unsigned getRVVFixedLengthDataMinElts(VectorKind VK,
   return SizeAtVScale1 / EltSizeInBits;
 }
 
+/// Minimum element count of the scalable vector a vbool<R>_t mask is coerced
+/// to, i.e. the N in <vscale x N x i1>.
+static unsigned getRVVFixedLengthMaskMinElts(VectorKind VK) {
+  return llvm::RISCV::RVVBitsPerBlock >> getRVVFixedLengthMaskRatioLog2(VK);
+}
+
 /// Minimum element count of the scalable vector \p VT is coerced to, in units
-/// of \p VT's own Clang element type. Masks are modelled as i8 vectors and are
-/// exactly VLEN * LMUL wide, so their LMUL is recovered from VLEN.
+/// of \p VT's own Clang element type. Masks are modelled as i8 vectors, so
+/// their i1 lane count is rounded up to whole bytes.
 unsigned RISCVABIInfo::getRVVFixedLengthMinElts(const VectorType *VT) const {
   unsigned EltSizeInBits = getContext().getTypeSize(VT->getElementType());
   if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()))
     return getRVVFixedLengthDataMinElts(VT->getVectorKind(), EltSizeInBits);
-
-  auto VScale = getContext().getTargetInfo().getVScaleRange(
-      getContext().getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
-  return llvm::divideCeil(VT->getNumElements(), VScale->first);
+  assert(isRVVFixedLengthMaskVectorKind(VT->getVectorKind()) &&
+         "not an RVV fixed-length vector");
+  return llvm::divideCeil(getRVVFixedLengthMaskMinElts(VT->getVectorKind()),
+                          EltSizeInBits);
 }
 
 llvm::Type *RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty,
@@ -587,17 +593,7 @@ RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(QualType Ty) const {
     return nullptr;
 
   auto IsFixedLengthRVVVector = [](const VectorType *VT) {
-    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()))
-      return true;
-    switch (VT->getVectorKind()) {
-    case VectorKind::RVVFixedLengthMask:
-    case VectorKind::RVVFixedLengthMask_1:
-    case VectorKind::RVVFixedLengthMask_2:
-    case VectorKind::RVVFixedLengthMask_4:
-      return true;
-    default:
-      return false;
-    }
+    return isRVVFixedLengthVectorKind(VT->getVectorKind());
   };
 
   QualType CommonTy;
@@ -688,24 +684,16 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
   auto VScale = getContext().getTargetInfo().getVScaleRange(
       getContext().getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
 
-  unsigned NumElts = VT->getNumElements();
-  llvm::Type *EltType = llvm::Type::getInt1Ty(getVMContext());
-  switch (VT->getVectorKind()) {
-  case VectorKind::RVVFixedLengthMask_1:
-    break;
-  case VectorKind::RVVFixedLengthMask_2:
-    NumElts *= 2;
-    break;
-  case VectorKind::RVVFixedLengthMask_4:
-    NumElts *= 4;
-    break;
-  case VectorKind::RVVFixedLengthMask:
-    NumElts *= 8;
-    break;
-  default:
+  unsigned NumElts;
+  llvm::Type *EltType;
+  if (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())) {
+    NumElts = VT->getRVVFixedLengthMaskLanes();
+    EltType = llvm::Type::getInt1Ty(getVMContext());
+  } else {
     assert((VT->getVectorKind() == VectorKind::Generic ||
             isRVVFixedLengthDataVectorKind(VT->getVectorKind())) &&
            "Unexpected vector kind");
+    NumElts = VT->getNumElements();
     EltType = CGT.ConvertType(VT->getElementType());
   }
 
@@ -717,6 +705,9 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
       // Use the LMUL of the type the typedef was written against.
       MinScalableElts = getRVVFixedLengthDataMinElts(
           VT->getVectorKind(), EltType->getScalarSizeInBits());
+    } else if (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())) {
+      // Use the ratio of the vbool<R>_t type the typedef was written against.
+      MinScalableElts = getRVVFixedLengthMaskMinElts(VT->getVectorKind());
     } else {
       // The MinNumElts is simplified from equation:
       // NumElts / VScale =
@@ -861,11 +852,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/419
   if (const VectorType *VT = Ty->getAs<VectorType>();
       VT && !VT->getElementType()->isBitIntType()) {
-    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
+    if (isRVVFixedLengthVectorKind(VT->getVectorKind()))
       return coerceVLSVector(Ty);
     if (VT->getVectorKind() == VectorKind::Generic && ABIVLen != 0)
       // Generic vector without riscv_vls_cc should fall through and pass by

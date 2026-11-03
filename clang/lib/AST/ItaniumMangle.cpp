@@ -35,7 +35,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 
 using namespace clang;
@@ -4316,11 +4315,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
-  assert((isRVVFixedLengthDataVectorKind(T->getVectorKind()) ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) &&
+  assert(isRVVFixedLengthVectorKind(T->getVectorKind()) &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4376,38 +4371,16 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     llvm_unreachable("unexpected element type for fixed-length RVV vector!");
   }
 
-  unsigned VecSizeInBits;
-  switch (T->getVectorKind()) {
-  case VectorKind::RVVFixedLengthMask_1:
-    VecSizeInBits = 1;
-    break;
-  case VectorKind::RVVFixedLengthMask_2:
-    VecSizeInBits = 2;
-    break;
-  case VectorKind::RVVFixedLengthMask_4:
-    VecSizeInBits = 4;
-    break;
-  default:
-    VecSizeInBits = getASTContext().getTypeInfo(T).Width;
-    break;
-  }
+  // A mask typedef is mangled with its lane count, which is less than its
+  // size in bits when it fits in a single byte.
+  unsigned VecSizeInBits = isRVVFixedLengthMaskVectorKind(T->getVectorKind())
+                               ? T->getRVVFixedLengthMaskLanes()
+                               : getASTContext().getTypeInfo(T).Width;
 
-  // Append the LMUL suffix. For data types the LMUL is recorded in the vector
-  // kind, so the mangled name names the type the typedef was written against
-  // even when the typedef is shorter than VLEN * LMUL, and does not depend on
-  // VLEN at all. Mask types are still tied to a fixed VLEN, so their ratio is
-  // derived from it.
-  if (isRVVFixedLengthDataVectorKind(T->getVectorKind())) {
-    TypeNameOS << getRVVFixedLengthDataLMulString(T->getVectorKind(),
-                                                  /*MF=*/true);
-  } else {
-    auto VScale = getASTContext().getTargetInfo().getVScaleRange(
-        getASTContext().getLangOpts(),
-        TargetInfo::ArmStreamingKind::NotStreaming);
-    unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
-    TypeNameOS << (VLen / VecSizeInBits);
-  }
-  TypeNameOS << "_t";
+  // Append the LMUL suffix of a data type, or the ratio of a mask type. Both
+  // are recorded in the vector kind, so the mangled name names the type the
+  // typedef was written against and does not depend on VLEN.
+  TypeNameOS << getRVVFixedLengthString(T->getVectorKind()) << "_t";
 
   Out << "9__RVV_VLSI";
   mangleVendorType(TypeNameStr);
@@ -4445,11 +4418,7 @@ void CXXNameMangler::mangleType(const VectorType *T) {
              T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (isRVVFixedLengthDataVectorKind(T->getVectorKind()) ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
+  } else if (isRVVFixedLengthVectorKind(T->getVectorKind())) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
