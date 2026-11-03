@@ -24,9 +24,9 @@
 
 using namespace llvm;
 
-static void printMachineFunction(raw_ostream &OS, FunctionAnalysisManager &FAM,
-                                 MachineFunctionAnalysisManager &MFAM,
-                                 MachineFunction &MF) {
+void PrintMIRPass::printMachineFunction(MachineFunction &MF,
+                                        FunctionAnalysisManager &FAM,
+                                        MachineFunctionAnalysisManager &MFAM) {
   const VirtRegMap *VRM = MFAM.getCachedResult<VirtRegMapAnalysis>(MF);
   MachineModuleSlotTracker MST(
       [&](const Function &F) {
@@ -44,21 +44,13 @@ PreservedAnalyses PrintMIRPass::run(Module &M, ModuleAnalysisManager &MAM) {
   printMIR(OS, M);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M) {
-    auto *MFA = FAM.getCachedResult<MachineFunctionAnalysis>(F);
-    if (!MFA)
+    if (F.isDeclaration() || F.hasAvailableExternallyLinkage())
       continue;
+    MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
     auto &MFAM = FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(F)
                      .getManager();
-    printMachineFunction(OS, FAM, MFAM, MFA->getMF());
+    printMachineFunction(MF, FAM, MFAM);
   }
-  return PreservedAnalyses::all();
-}
-
-PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
-                                    MachineFunctionAnalysisManager &MFAM) {
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
-                  .getManager();
-  printMachineFunction(OS, FAM, MFAM, MF);
   return PreservedAnalyses::all();
 }
 

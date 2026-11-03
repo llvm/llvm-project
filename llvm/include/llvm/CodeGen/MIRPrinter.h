@@ -30,12 +30,13 @@ template <typename T> class SmallVectorImpl;
 class PrintMIRPass : public RequiredPassInfoMixin<PrintMIRPass> {
   raw_ostream &OS;
 
+  void printMachineFunction(MachineFunction &MF, FunctionAnalysisManager &FAM,
+                            MachineFunctionAnalysisManager &MFAM);
+
 public:
-  PrintMIRPass(raw_ostream &OS = errs()) : OS(OS) {}
+  PrintMIRPass(raw_ostream &OS) : OS(OS) {}
   /// Print the module and all its machine functions.
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Print LLVM IR using the MIR serialization format to the given output stream.

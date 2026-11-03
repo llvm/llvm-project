@@ -155,7 +155,6 @@ int llvm::compileModuleWithNewPM(
   SI.registerCallbacks(PIC, &MAM);
 
   ModulePassManager MPM;
-  FunctionPassManager FPM;
 
   if (!PassPipeline.empty()) {
     // Construct a custom pass pipeline that starts after instruction
@@ -168,11 +167,9 @@ int llvm::compileModuleWithNewPM(
 
     // FIXME: verify that there are no IR passes.
     ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
-    if (Opt.VerifyMachineCode == MachineVerifierMode::End) {
-      FPM.addPass(
-          createFunctionToMachineFunctionPassAdaptor(MachineVerifierPass()));
-      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-    }
+    if (Opt.VerifyMachineCode == MachineVerifierMode::End)
+      MPM.addPass(createModuleToFunctionPassAdaptor(
+          createFunctionToMachineFunctionPassAdaptor(MachineVerifierPass())));
     MPM.addPass(PrintMIRPass(*OS));
 
   } else {
