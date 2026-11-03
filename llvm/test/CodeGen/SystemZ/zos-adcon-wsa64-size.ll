@@ -1,12 +1,11 @@
-; Test that a sub-8-byte address constant (ADCON) in a C_WSA64 section triggers
-; an assertion. The z/OS binder requires all ADCONs in C_WSA64 to be exactly 8
+; Test that a sub-8-byte address constant (ADCON) in a C_WSA64 section produces
+; an error. The z/OS binder requires all ADCONs in C_WSA64 to be exactly 8
 ; bytes and rejects 4-byte ADCONs with IEW2572E.
 ;
-; REQUIRES: asserts
-; RUN: not --crash llc < %s -mtriple=s390x-ibm-zos --filetype=obj 2>&1 | FileCheck %s
-; RUN: not --crash llc < %s -mtriple=s390x-ibm-zos 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=s390x-ibm-zos --filetype=obj 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=s390x-ibm-zos 2>&1 | FileCheck %s
 
-; CHECK: address constant in C_WSA64 must be 8 bytes
+; CHECK: error: address constant in C_WSA64 must be 8 bytes (z/OS binder restriction IEW2572E)
 
 @foo = global i32 42
 @arr = global [2 x i32] [

@@ -819,12 +819,15 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
   // The z/OS binder requires all ADCONs in C_WSA64 to be exactly 8 bytes; a
   // sub-pointer-width address constant in the writable static area cannot be
   // relocated by the binder (it would produce IEW2572E at bind time).
-  assert(!((RelocType == MCGOFFObjectTargetWriter::Reloc_Type_ACon ||
-            RelocType == MCGOFFObjectTargetWriter::Reloc_Type_VCon) &&
-           Length != 8 && PSection->getParent() &&
-           PSection->getParent()->getName() == GOFF::CLASS_WSA) &&
-         "address constant in C_WSA64 must be 8 bytes "
-         "(z/OS binder restriction IEW2572E)");
+  if ((RelocType == MCGOFFObjectTargetWriter::Reloc_Type_ACon ||
+       RelocType == MCGOFFObjectTargetWriter::Reloc_Type_VCon) &&
+      Length != 8 && PSection->getParent() &&
+      PSection->getParent()->getName() == GOFF::CLASS_WSA) {
+    Asm->reportError(Fixup.getLoc(),
+                     "address constant in C_WSA64 must be 8 bytes "
+                     "(z/OS binder restriction IEW2572E)");
+    return;
+  }
 
   // UseQCon causes class offsets versus absolute addresses to be used. This
   // is analogous to using QCONs in older OBJ object file format.
