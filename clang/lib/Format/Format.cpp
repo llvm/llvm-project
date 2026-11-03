@@ -1392,6 +1392,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakTemplateDeclarations);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
+    IO.mapOptional("CompactCaseLabels", Style.CompactCaseLabels);
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerIndentWidth",
                    Style.ConstructorInitializerIndentWidth);
@@ -1970,6 +1971,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
+  LLVMStyle.CompactCaseLabels = false;
   LLVMStyle.CompactNamespaces = false;
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;
@@ -3030,7 +3032,7 @@ public:
     ContinuationIndenter Indenter(Style, Tokens.getKeywords(),
                                   Env.getSourceManager(), Whitespaces, Encoding,
                                   BinPackInconclusiveFunctions);
-    unsigned Penalty =
+    uint64_t Penalty =
         UnwrappedLineFormatter(&Indenter, &Whitespaces, Style,
                                Tokens.getKeywords(), Env.getSourceManager(),
                                Status)
@@ -3043,7 +3045,8 @@ public:
     for (const auto &R : Whitespaces.generateReplacements())
       if (Result.add(R))
         return std::make_pair(Result, 0);
-    return std::make_pair(Result, Penalty);
+    return std::make_pair(
+        Result, static_cast<unsigned>(std::min<uint64_t>(Penalty, UINT_MAX)));
   }
 
 private:

@@ -136,6 +136,10 @@ int RTDECL(AllocatableDeallocatePolymorphic)(Descriptor &,
 // Variant of above that does not finalize; for intermediate results
 void RTDECL(AllocatableDeallocateNoFinal)(
     Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
+
+// For an existing descriptor, set a new base_addr
+void RTDECL(AllocatableSetBaseAddr)(Descriptor &, void *);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_ALLOCATABLE_H_

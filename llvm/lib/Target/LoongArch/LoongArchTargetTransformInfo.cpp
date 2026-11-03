@@ -153,6 +153,33 @@ bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   }
 }
 
+InstructionCost LoongArchTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                                  Align Alignment,
+                                                  unsigned AddressSpace,
+                                                  TTI::TargetCostKind CostKind,
+                                                  TTI::OperandValueInfo OpInfo,
+                                                  const Instruction *I) const {
+  // Vectors narrower than 128 bits are widened, and on LA64 loading or storing
+  // one takes a single instruction: FLD.{S/D} or VLDREPL.{B/H} for loads, and
+  // VSTELM.{B/H/W/D} for stores. The generic model costs them as scalarized.
+  // TODO: LA32 splits 64-bit loads and doesn't use VSTELM.{W/D} for stores.
+  auto *VTy = dyn_cast<FixedVectorType>(Src);
+  if (CostKind == TTI::TCK_RecipThroughput && ST->is64Bit() &&
+      ST->hasExtLSX() && VTy && isPowerOf2_32(VTy->getNumElements())) {
+    unsigned Size = VTy->getPrimitiveSizeInBits().getFixedValue();
+    EVT VT = getTLI()->getValueType(DL, Src);
+    if (Size >= 16 && Size < 128 &&
+        getTLI()->getTypeAction(Src->getContext(), VT) ==
+            TargetLowering::TypeWidenVector &&
+        getTLI()->allowsMemoryAccessForAlignment(Src->getContext(), DL, VT,
+                                                 AddressSpace, Alignment))
+      return 1;
+  }
+
+  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
+                                OpInfo, I);
+}
+
 LoongArchTTIImpl::TTI::MemCmpExpansionOptions
 LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
@@ -465,4 +492,52 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                        Args, CxtI);
+}
+
+// Returns true if Ty is a fixed vector type held in a single LSX/LASX register.
+static bool isSingleVRegType(const LoongArchSubtarget *ST, Type *Ty) {
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (!VTy)
+    return false;
+  unsigned Bits = VTy->getPrimitiveSizeInBits().getFixedValue();
+  return (Bits == 128 && ST->hasExtLSX()) || (Bits == 256 && ST->hasExtLASX());
+}
+
+InstructionCost LoongArchTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
+  // Element 0 of a floating-point vector is the aliased FPR, so extracting it
+  // is free.
+  if (Opcode == Instruction::ExtractElement && Index == 0 &&
+      Val->getScalarType()->isFloatingPointTy() && isSingleVRegType(ST, Val))
+    return 0;
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1, VIC);
+}
+
+InstructionCost LoongArchTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
+  if (isSingleVRegType(ST, SrcTy) && DstTy == SrcTy) {
+    Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+    unsigned EltBits = SrcTy->getScalarSizeInBits();
+    bool Is128 = SrcTy->getPrimitiveSizeInBits().getFixedValue() == 128;
+    switch (Kind) {
+    case TTI::SK_Broadcast:
+      // [x]vreplvei.{b/h/w/d}, xvreplve0.{b/h/w/d}, [x]vreplgr2vr.{b/h/w/d}.
+      return 1;
+    case TTI::SK_Reverse:
+    case TTI::SK_PermuteSingleSrc:
+      // vshuf4i.{w/d} handles any single-source permutation of 32/64-bit
+      // elements within a 128-bit register.
+      if (Is128 && EltBits >= 32)
+        return 1;
+      break;
+    default:
+      break;
+    }
+  }
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
+                               Args, CxtI, VIC);
 }
