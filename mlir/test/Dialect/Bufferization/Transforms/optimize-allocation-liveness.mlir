@@ -300,3 +300,25 @@ func.func @nested_result(%cond: i1) {
   }
   return
 }
+
+// -----
+// CHECK-LABEL:   func.func @alias_user_outside_alloc_block() -> f32 {
+// CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<4xf32>
+// CHECK:           %[[CALL_0:.*]] = func.call @callee(%[[ALLOC_0]])
+// CHECK-NEXT:      memref.dealloc %[[ALLOC_0]] : memref<4xf32>
+// CHECK-NEXT:      scf.yield %[[CALL_0]] : f32
+
+// This test ensures that a dealloc is left in place when an alias of its
+// buffer (here the call result, yielded out of the region) is used outside the
+// block of the allocation.
+func.func private @callee(%m: memref<4xf32>) -> f32
+
+func.func @alias_user_outside_alloc_block() -> f32 {
+  %0 = scf.execute_region -> f32 {
+    %alloc = memref.alloc() : memref<4xf32>
+    %r = func.call @callee(%alloc) : (memref<4xf32>) -> f32
+    memref.dealloc %alloc : memref<4xf32>
+    scf.yield %r : f32
+  }
+  return %0 : f32
+}
