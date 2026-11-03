@@ -2028,6 +2028,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
+  config->bindAtLoad = args.hasArg(OPT_bind_at_load);
   config->emitInitOffsets =
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
