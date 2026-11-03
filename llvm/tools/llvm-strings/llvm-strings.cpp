@@ -165,10 +165,8 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
     const size_t NumErrors = iconv(CD.value(), &PIn, &NIn, &POut, &NOut);
     // mbrtowc() may be lenient and accept invalid characters that iconv()
     // rejects.
-    if (NIn == BytesWritten)
-      return (size_t)-1;
     if (NumErrors || NIn || NOut)
-      llvm_unreachable("internal error: iconv failed on valid character");
+      return (size_t)-1;
   }
   return BytesRead;
 }
@@ -187,7 +185,7 @@ static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   if (NumErrors)
     return (size_t)-1;
   wchar_t WCh;
-  if (mbrtowc(&WCh, Cvt, PIn - Cvt, &CvtMBState) != size_t(PIn - Cvt))
+  if (mbrtowc(&WCh, Cvt, POut - Cvt, &CvtMBState) != size_t(POut - Cvt))
     llvm_unreachable("internal error: mbrtowc failed on valid character");
   return wcrtomb(S, WCh, MBState);
 }
