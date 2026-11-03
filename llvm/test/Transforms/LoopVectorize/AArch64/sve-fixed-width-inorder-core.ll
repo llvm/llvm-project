@@ -13,7 +13,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA510-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA510:       [[FOR_BODY_PREHEADER]]:
-; CHECK-CA510-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-CA510-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 12
 ; CHECK-CA510-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA510:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA510-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]
@@ -79,7 +79,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA520-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA520:       [[FOR_BODY_PREHEADER]]:
-; CHECK-CA520-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-CA520-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 12
 ; CHECK-CA520-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA520:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA520-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]
@@ -145,7 +145,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA320-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA320:       [[FOR_BODY_PREHEADER]]:
-; CHECK-CA320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-CA320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 12
 ; CHECK-CA320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA320:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA320-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]

@@ -122,7 +122,7 @@ exit:
 define void @test_tc_unknown(ptr %ptr.1, ptr %ptr.2, ptr %ptr.3, ptr %ptr.4, i64 %off.1, i64 %off.2, i64 %N) {
 ; CHECK-LABEL: define void @test_tc_unknown
 ; DEFAULT:       [[ADD:%.+]] = add i64 %N, 1
-; DEFAULT-NEXT:  [[C:%.+]] = icmp ult i64 [[ADD]], 16
+; DEFAULT-NEXT:  [[C:%.+]] = icmp ult i64 [[ADD]], 24
 ; DEFAULT-NEXT:  br i1 [[C]], label %scalar.ph, label %vector.memcheck
 ; THRESHOLD-NOT: vector.memcheck
 ; THRESHOLD-NOT: vector.body

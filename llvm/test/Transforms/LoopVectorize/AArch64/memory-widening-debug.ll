@@ -16,7 +16,7 @@ target triple = "aarch64"
 define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) {
 ; FIXED-LABEL: 'uniform_load'
 ; FIXED:  LV: Memory widening: calculating best strategy for %val = load i32, ptr %src, align 4
-; FIXED:  LV: Memory widening: uniform memory op has GatherScatterCost = Invalid, ScalarizationCost = 3
+; FIXED:  LV: Memory widening: uniform memory op has GatherScatterCost = Invalid, ScalarizationCost = 2
 ; FIXED:  LV: Setting widening decision to Scalarize for VF 4 and instruction: %val = load i32, ptr %src, align 4
 ; FIXED:  LV: Memory widening: calculating best strategy for store i32 %val, ptr %arrayidx, align 4
 ; FIXED:  LV: Memory widening: can be widened normally with cost 1
@@ -24,7 +24,7 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) {
 ;
 ; SVE-LABEL: 'uniform_load'
 ; SVE:  LV: Memory widening: calculating best strategy for %val = load i32, ptr %src, align 4
-; SVE:  LV: Memory widening: uniform memory op has GatherScatterCost = 21, ScalarizationCost = 3
+; SVE:  LV: Memory widening: uniform memory op has GatherScatterCost = 20, ScalarizationCost = 2
 ; SVE:  LV: Setting widening decision to Scalarize for VF vscale x 2 and instruction: %val = load i32, ptr %src, align 4
 ; SVE:  LV: Memory widening: calculating best strategy for store i32 %val, ptr %arrayidx, align 4
 ; SVE:  LV: Memory widening: can be widened normally with cost 1

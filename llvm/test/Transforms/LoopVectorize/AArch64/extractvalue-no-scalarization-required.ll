@@ -19,7 +19,7 @@
 ; CM:  CLONE ir<%add> = add ir<%a>, ir<%b>
 ; CM:  Successor(s): vector loop
 
-; CM: LV: Scalar loop costs: 5.
+; CM: LV: Scalar loop costs: 4.
 
 ; Check that the extractvalue operands are actually free in vector code.
 
@@ -76,7 +76,7 @@ declare float @powf(float, float) readnone nounwind
 ; CM:  CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CM:  Successor(s): vector loop
 
-; CM: LV: Scalar loop costs: 14.
+; CM: LV: Scalar loop costs: 13.
 
 define void @test_getVectorCallCost(ptr %dst, {float, float} %sv) {
 ; FORCED-LABEL: define void @test_getVectorCallCost(

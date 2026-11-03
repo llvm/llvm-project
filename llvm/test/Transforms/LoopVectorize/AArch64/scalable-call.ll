@@ -104,7 +104,7 @@ for.end:
 ; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin
 define void @vec_sin_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_no_mapping
-; CHECK: call fast <2 x float> @llvm.sin.v2f32
+; CHECK: call fast float @llvm.sin.f32
 ; CHECK-NOT: <vscale x
 entry:
   br label %for.body
@@ -164,7 +164,7 @@ for.cond.cleanup:
 ; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin
 define void @vec_sin_fixed_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_fixed_mapping
-; CHECK: call fast <2 x float> @llvm.sin.v2f32
+; CHECK: call fast float @llvm.sin.f32
 ; CHECK-NOT: <vscale x
 entry:
   br label %for.body
