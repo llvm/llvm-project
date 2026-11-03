@@ -214,6 +214,11 @@ Makes programs 10x faster by doing Special New Thing.
   `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
   `LLVM_ENABLE_LZMA`, and it has no effect in a standalone LLDB build.
 
+* The `tablegen()` CMake function has been renamed to `tablegen_internal()`.
+  Projects invoking `llvm-tblgen` should use the new `llvm_tablegen(ofn ...)`
+  in place of `tablegen(LLVM ofn ...)`, and projects invoking
+  `mlir-src-sharder` the new `mlir_src_sharder(ofn ...)`.
+
 * The DirectX backend is now an official target and has moved from
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
   default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
@@ -362,6 +367,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `-mcpu=tt-ascalon-xg` for the Tenstorrent Ascalon XG processor, the
   global variant of Ascalon X without `Zvkng` and with reduced vector FP64
   throughput.
+* Removed X5 from the preserve_most register list.
 
 ### Changes to the WebAssembly Backend
 
@@ -449,6 +455,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
+  tests which wish to opt out of liveness tracking should set
+  `tracksRegLiveness: false` explicitly.
 * Fixed a crash
   ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose

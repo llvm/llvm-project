@@ -23,8 +23,8 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
     return isAggregateTypeForABI(AT->getValueType());
 
   // Check for fundamental scalar types.
-  if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector() ||
-      Ty->isTuple())
+  if (Ty->isInteger() || Ty->isFloat() || Ty->isOpaqueFloat8() ||
+      Ty->isPointer() || Ty->isVector() || Ty->isTuple())
     return false;
 
   // Data member pointers have scalar evaluation kind.
@@ -295,7 +295,7 @@ bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
       // distinct from getIndirectReturnResult (plain aggregates), which uses
       // ByVal=true.
       FI.getReturnInfo() = ArgInfo::getIndirect(
-          RT->getAlignment(), /*ByVal=*/false, getSRetAddrSpace(RT));
+          RT->getAlignment(), /*ByVal=*/false, getSRetAddrSpace());
       return true;
     }
   }

@@ -87,6 +87,10 @@ public:
   /// alloca/stack space).
   virtual unsigned getAllocaAddrSpace() const { return 0; }
 
+  /// Address space of the sret pointer of a record that cannot be passed in
+  /// registers (e.g. one with a non-trivial copy constructor or destructor).
+  virtual unsigned getSRetAddrSpace() const { return 0; }
+
   /// Whether the target has a 128-bit integer type. Default true.
   virtual bool hasInt128Type() const { return true; }
 
@@ -137,8 +141,6 @@ protected:
   /// return Ty unchanged.
   LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
-  /// Address space of the sret pointer for \p RT, a record returned in memory.
-  virtual unsigned getSRetAddrSpace(const RecordType *RT) const { return 0; }
   /// Returns the scalar a single-element struct reduces to, else null.
   LLVM_ABI const Type *isSingleElementStruct(const Type *Ty) const;
 
@@ -192,6 +194,10 @@ struct AMDGPUABIOptions {
 LLVM_ABI std::unique_ptr<TargetInfo>
 createAMDGPUTargetInfo(TypeBuilder &TB,
                        const AMDGPUABIOptions &Opts = AMDGPUABIOptions());
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createSPIRVTargetInfo(TypeBuilder &TB, unsigned DefaultAddrSpace,
+                      bool KernelPassAggregatesIndirect = false);
 
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {
