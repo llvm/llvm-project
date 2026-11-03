@@ -568,45 +568,7 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         continue;
       }
 
-      // Group selects when either condition implies the other. This can expose
-      // the select folds in SimplifySelectsFeedingBinaryOp.
-      auto haveImpliedSelectConditions = [&](Value *X, Value *Y) {
-        auto *XSel = dyn_cast<SelectInst>(X);
-        auto *YSel = dyn_cast<SelectInst>(Y);
-        if (!XSel || !YSel ||
-            XSel->getCondition()->getType() != YSel->getCondition()->getType())
-          return false;
-        Value *XCond = XSel->getCondition();
-        Value *YCond = YSel->getCondition();
-        // Either arm of either select may determine the other's condition.
-        return isImpliedCondition(XCond, YCond, DL).has_value() ||
-               isImpliedCondition(XCond, YCond, DL, false).has_value() ||
-               isImpliedCondition(YCond, XCond, DL).has_value() ||
-               isImpliedCondition(YCond, XCond, DL, false).has_value();
-      };
-
-      auto reassociateSelects = [&](BinaryOperator *Inner, Value *A,
-                                    Value *C) -> Value * {
-        // Keep an existing pair of related selects together to avoid
-        // repeatedly regrouping three selects.
-        if (!Inner->hasOneUse() || !haveImpliedSelectConditions(A, C) ||
-            haveImpliedSelectConditions(Inner->getOperand(0),
-                                        Inner->getOperand(1)) ||
-            (isa<FPMathOperator>(&I) && !Inner->isAssociative()))
-          return nullptr;
-
-        auto *NewOp = BinaryOperator::Create(Opcode, A, C);
-        if (isa<FPMathOperator>(&I)) {
-          FastMathFlags FMF = I.getFastMathFlags() & Inner->getFastMathFlags();
-          NewOp->setFastMathFlags(FMF);
-          I.setFastMathFlags(FMF);
-        }
-        InsertNewInstWith(NewOp, I.getIterator());
-        return NewOp;
-      };
-
-      // Transform: "(A op B) op C" ==> "(C op A) op B" if "C op A"
-      // simplifies, or group "A op C" if those are related selects.
+      // Transform: "(A op B) op C" ==> "(C op A) op B" if "C op A" simplifies.
       if (Op0 && Op0->getOpcode() == Opcode) {
         Value *A = Op0->getOperand(0);
         Value *B = Op0->getOperand(1);
@@ -619,11 +581,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         }
 
         // Does "C op A" simplify?
-        Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I));
-        if (!V)
-          V = reassociateSelects(Op0, A, C);
-        if (V) {
-          // Form "V op B".
+        if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
+          // It simplifies to V.  Form "V op B".
           replaceOperand(I, 0, V);
           replaceOperand(I, 1, B);
           // Conservatively clear the optional flags, since they may not be
@@ -636,8 +595,7 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         }
       }
 
-      // Transform: "A op (B op C)" ==> "B op (C op A)" if "C op A"
-      // simplifies, or group "A op C" if those are related selects.
+      // Transform: "A op (B op C)" ==> "B op (C op A)" if "C op A" simplifies.
       if (Op1 && Op1->getOpcode() == Opcode) {
         Value *A = I.getOperand(0);
         Value *B = Op1->getOperand(0);
@@ -650,11 +608,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         }
 
         // Does "C op A" simplify?
-        Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I));
-        if (!V)
-          V = reassociateSelects(Op1, A, C);
-        if (V) {
-          // Form "B op V".
+        if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
+          // It simplifies to V.  Form "B op V".
           replaceOperand(I, 0, B);
           replaceOperand(I, 1, V);
           // Conservatively clear the optional flags, since they may not be
@@ -1424,6 +1379,46 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
   return true;
 }
 
+static void distributeBinOpOverSelect(InstCombinerImpl &IC,
+                                      Instruction::BinaryOps Opcode,
+                                      SelectInst *Sel, Value *Other,
+                                      bool SelIsLHS, FastMathFlags FMF,
+                                      const SimplifyQuery &SQ, Value *&True,
+                                      Value *&False) {
+  // If V is a select whose condition is implied by Cond, try to resolve it to
+  // the appropriate arm for this value of Cond.
+  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+                                           bool CondIsTrue) -> Value * {
+    auto *InnerSI = dyn_cast<SelectInst>(V);
+    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
+      return V;
+
+    if (Value *Arm = IC.simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond,
+                                                              CondIsTrue))
+      return Arm;
+    return V;
+  };
+
+  Value *Cond = Sel->getCondition();
+  Value *TVal = Sel->getTrueValue(), *FVal = Sel->getFalseValue();
+  Value *OtherT = SimplifySelectWithImpliedCond(Other, Cond, true);
+  Value *OtherF = SimplifySelectWithImpliedCond(Other, Cond, false);
+  auto [LHSTrueArm, RHSTrueArm] =
+      SelIsLHS ? std::pair(TVal, OtherT) : std::pair(OtherT, TVal);
+  auto [LHSFalseArm, RHSFalseArm] =
+      SelIsLHS ? std::pair(FVal, OtherF) : std::pair(OtherF, FVal);
+  True = simplifyBinOp(Opcode, LHSTrueArm, RHSTrueArm, FMF, SQ);
+  False = simplifyBinOp(Opcode, LHSFalseArm, RHSFalseArm, FMF, SQ);
+
+  if (!Other->hasOneUse())
+    return;
+
+  if (True && !False && OtherT != Other)
+    False = IC.Builder.CreateBinOp(Opcode, LHSFalseArm, RHSFalseArm);
+  else if (False && !True && OtherF != Other)
+    True = IC.Builder.CreateBinOp(Opcode, LHSTrueArm, RHSTrueArm);
+}
+
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {
@@ -1432,8 +1427,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   bool RHSIsSelect = match(RHS, m_Select(m_Value(D), m_Value(E), m_Value(F)));
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
-  bool BothSelectsOneUse =
-      LHSIsSelect && RHSIsSelect && LHS->hasOneUse() && RHS->hasOneUse();
 
   SelectInst *SI = cast<SelectInst>(LHSIsSelect ? LHS : RHS);
 
@@ -1448,20 +1441,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   Value *Cond, *True = nullptr, *False = nullptr;
-
-  // If V is a select whose condition is implied by Cond, try to resolve it to
-  // the appropriate arm for this value of Cond.
-  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
-                                           bool CondIsTrue) -> Value * {
-    auto *InnerSI = dyn_cast<SelectInst>(V);
-    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
-      return V;
-
-    if (Value *Arm =
-            simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond, CondIsTrue))
-      return Arm;
-    return V;
-  };
 
   // Special-case for add/negate combination. Replace the zero in the negation
   // with the trailing add operand:
@@ -1489,51 +1468,28 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     True = simplifyBinOp(Opcode, B, E, FMF, Q);
     False = simplifyBinOp(Opcode, C, F, FMF, Q);
 
-    if (BothSelectsOneUse) {
+    if (LHS->hasOneUse() && RHS->hasOneUse()) {
       if (False && !True)
         True = Builder.CreateBinOp(Opcode, B, E);
       else if (True && !False)
         False = Builder.CreateBinOp(Opcode, C, F);
     }
   } else {
+    // Prefer distributing over the LHS select.
     if (LHSIsSelect && LHS->hasOneUse()) {
-      // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
       Cond = A;
-      Value *TrueRHS = SimplifySelectWithImpliedCond(RHS, Cond, true);
-      Value *FalseRHS = SimplifySelectWithImpliedCond(RHS, Cond, false);
-      True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
-      False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
+      distributeBinOpOverSelect(*this, Opcode, SI, RHS, /*SelIsLHS=*/true, FMF,
+                                Q, True, False);
       if (Value *NewSel = foldAddNegate(B, C, RHS))
         return NewSel;
-
-      // Only create the remaining arm when its counterpart simplified after
-      // resolving the other select's condition.
-      if (BothSelectsOneUse) {
-        if (!True && False && FalseRHS != RHS)
-          True = Builder.CreateBinOp(Opcode, B, TrueRHS);
-        else if (True && !False && TrueRHS != RHS)
-          False = Builder.CreateBinOp(Opcode, C, FalseRHS);
-      }
     }
-
-    // Try the other select as the outer select if the first direction did not
-    // fully simplify or create its missing arm.
     if ((!True || !False) && RHSIsSelect && RHS->hasOneUse()) {
       SI = cast<SelectInst>(RHS);
       Cond = D;
-      Value *TrueLHS = SimplifySelectWithImpliedCond(LHS, Cond, true);
-      Value *FalseLHS = SimplifySelectWithImpliedCond(LHS, Cond, false);
-      True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
-      False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
+      distributeBinOpOverSelect(*this, Opcode, SI, LHS, /*SelIsLHS=*/false, FMF,
+                                Q, True, False);
       if (Value *NewSel = foldAddNegate(E, F, LHS))
         return NewSel;
-
-      if (BothSelectsOneUse) {
-        if (!True && False && FalseLHS != LHS)
-          True = Builder.CreateBinOp(Opcode, TrueLHS, E);
-        else if (True && !False && TrueLHS != LHS)
-          False = Builder.CreateBinOp(Opcode, FalseLHS, F);
-      }
     }
   }
 
