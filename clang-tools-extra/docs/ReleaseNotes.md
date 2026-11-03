@@ -92,10 +92,9 @@ infrastructure are described first, followed by tool-specific sections.
 
 - clangd now applies clang-tidy fix-it post-processing before exposing fixes.
 
-- The `Extract to function` tweak is now offered for selections consisting of
-  a single expression-statement (e.g. a lone function call or an overloaded
-  operator call such as `stream << 42;`), which it previously refused to
-  extract.
+- The `Extract to function` tweak is now offered for a single sub-expression
+  embedded in a larger expression or statement, e.g. just the `a < 5` in
+  `if (a < 5 && c)`, not just a selection spanning an entire statement.
 
 - The `Extract to function` tweak is now also available in C files, where
   it previously always refused to apply. Captured variables are passed by
