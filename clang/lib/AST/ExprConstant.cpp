@@ -16760,20 +16760,21 @@ static bool EvaluateBuiltinConstantP(EvalInfo &Info, const Expr *Arg) {
   // __builtin_constant_p always has one operand. The rules which gcc follows
   // are not precisely documented, but are as follows:
   //
-  //  - If the operand is of integral, floating, complex or enumeration type,
-  //    and can be folded to a known value of that type, it returns 1.
+  //  - If the operand is of integral, floating, complex, enumeration, or
+  //    record type, and can be folded to a known value of that type, it
+  //    returns 1.
   //  - If the operand can be folded to a pointer to the first character
   //    of a string literal (or such a pointer cast to an integral type)
   //    or to a null pointer or an integer cast to a pointer, it returns 1.
   //
   // Otherwise, it returns 0.
   //
-  // FIXME: GCC also intends to return 1 for literals of aggregate types, but
+  // FIXME: GCC also intends to return 1 for literals of arrays, but
   // its support for this did not work prior to GCC 9 and is not yet well
   // understood.
   if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
-      ArgType->isAnyComplexType() || ArgType->isPointerType() ||
-      ArgType->isNullPtrType()) {
+      ArgType->isAnyComplexType() || ArgType->isRecordType() ||
+      ArgType->isPointerType() || ArgType->isNullPtrType()) {
     APValue V;
     if (!::EvaluateAsRValue(Info, Arg, V) || Info.EvalStatus.HasSideEffects) {
       Fold.keepDiagnostics();
