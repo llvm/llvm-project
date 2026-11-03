@@ -191,10 +191,18 @@ public:
     return Result;
   }
 
-  TypeDependence type() const {
+  // If ValueDependenceImpliesTypeDependence is false, an expression that is
+  // only value-dependent (not type-dependent) does not set
+  // TypeDependence::Dependent on the result. This is appropriate for types
+  // that sugar an expression's type verbatim (e.g., __typeof), where the
+  // type cannot actually vary across instantiations unless the expression's
+  // own type does.
+  TypeDependence type(bool ValueDependenceImpliesTypeDependence = true) const {
+    Bits DependentBits =
+        ValueDependenceImpliesTypeDependence ? Dependent : Dependent & ~Value;
     return translate(V, UnexpandedPack, TypeDependence::UnexpandedPack) |
            translate(V, Instantiation, TypeDependence::Instantiation) |
-           translate(V, Dependent, TypeDependence::Dependent) |
+           translate(V, DependentBits, TypeDependence::Dependent) |
            translate(V, Error, TypeDependence::Error) |
            translate(V, VariablyModified, TypeDependence::VariablyModified);
   }
@@ -275,8 +283,10 @@ inline ExprDependence turnValueToTypeDependence(ExprDependence D) {
 }
 
 // Returned type-dependence will never have VariablyModified set.
-inline TypeDependence toTypeDependence(ExprDependence D) {
-  return Dependence(D).type();
+inline TypeDependence
+toTypeDependence(ExprDependence D,
+                 bool ValueDependenceImpliesTypeDependence = true) {
+  return Dependence(D).type(ValueDependenceImpliesTypeDependence);
 }
 inline TypeDependence toTypeDependence(NestedNameSpecifierDependence D) {
   return Dependence(D).type();

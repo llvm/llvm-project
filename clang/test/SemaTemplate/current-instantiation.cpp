@@ -247,3 +247,26 @@ namespace RebuildDependentScopeDeclRefExpr {
   // FIXME: We should issue a typo-correction here.
   template<typename T> N<X<T>::think> X<T>::foo() {} // expected-error {{no member named 'think' in 'RebuildDependentScopeDeclRefExpr::X<T>'}}
 }
+
+namespace TypeofValueDependence {
+  struct A { int value() const; };
+  A f(unsigned);
+
+  // 'sizeof(T)' makes 'f(sizeof(T))' value-dependent, but overload
+  // resolution for 'f' only looks at argument types, so the type of
+  // 'f(sizeof(T))' is always 'A' regardless of 'T'. '__typeof(f(sizeof(T)))'
+  // is therefore not type-dependent, so member access on it is checked
+  // immediately rather than deferred to instantiation.
+  template<typename T> struct B {
+    int g() {
+      __typeof(f(sizeof(T))) a = f(0);
+      return a.value();
+    }
+    int h() {
+      __typeof(f(sizeof(T))) a = f(0);
+      return a.nope(); // expected-error {{no member named 'nope' in 'TypeofValueDependence::A'}}
+    }
+  };
+
+  int i() { return B<int>().g() + B<int>().h(); }
+}
