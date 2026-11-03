@@ -6520,7 +6520,7 @@ bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
     // lanes in the mask.
     VPValue *BackedgeValue = CondIndPhi.getBackedgeValue();
     VPBasicBlock *InsertBlock = BackedgeValue->getDefiningRecipe()->getParent();
-    Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
+    Builder.setInsertPoint(InsertBlock->getFirstNonPhi());
 
     Type *UpdateType = CondIndPhi.getScalarType();
     if (UpdateType->isPointerTy())
