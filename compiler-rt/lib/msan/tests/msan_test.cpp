@@ -99,8 +99,8 @@ void *mempcpy(void *dest, const void *src, size_t n);
 # include <mntent.h>
 # include <netinet/ether.h>
 # if defined(__linux__)
-#  include <ftw.h>
-#  include <sys/uio.h>
+#    include <ftw.h>
+#    include <sys/uio.h>
 # endif
 #endif
 
@@ -5036,7 +5036,7 @@ TEST(MemorySanitizer, getservbyport_r_smallbuf) {
   EXPECT_POISONED(buf);
 }
 
-static int FtwCallback(const char *fpath, const struct stat *sb, int typeflag) {
+static int FtwCallback(const char* fpath, const struct stat* sb, int typeflag) {
   EXPECT_NOT_POISONED(fpath);
   EXPECT_NOT_POISONED(sb);
   EXPECT_NOT_POISONED(typeflag);
@@ -5045,8 +5045,8 @@ static int FtwCallback(const char *fpath, const struct stat *sb, int typeflag) {
   return 1;
 }
 
-static int NftwCallback(const char *fpath, const struct stat *sb, int typeflag,
-                        struct FTW *ftwbuf) {
+static int NftwCallback(const char* fpath, const struct stat* sb, int typeflag,
+                        struct FTW* ftwbuf) {
   EXPECT_NOT_POISONED(fpath);
   EXPECT_NOT_POISONED(sb);
   EXPECT_NOT_POISONED(typeflag);
