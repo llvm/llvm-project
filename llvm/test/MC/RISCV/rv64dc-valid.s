@@ -14,20 +14,16 @@
 
 # CHECK-ASM-AND-OBJ: c.fldsp  fs0, 504(sp)
 # CHECK-ASM: encoding: [0x7e,0x34]
-# expected-error@+2 {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
-# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions), 'D' (Double-Precision Floating-Point){{$}}
+# expected-error@+1 {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
 c.fldsp  fs0, 504(sp)
 # CHECK-ASM-AND-OBJ: c.fsdsp  fa7, 504(sp)
 # CHECK-ASM: encoding: [0xc6,0xbf]
-# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions), 'D' (Double-Precision Floating-Point){{$}}
 c.fsdsp  fa7, 504(sp) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.fld  fa3, 248(a5)
 # CHECK-ASM: encoding: [0xf4,0x3f]
-# expected-error@+2 {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
-# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions), 'D' (Double-Precision Floating-Point){{$}}
+# expected-error@+1 {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
 c.fld  fa3, 248(a5)
 # CHECK-ASM-AND-OBJ: c.fsd  fa2, 248(a1)
 # CHECK-ASM: encoding: [0xf0,0xbd]
-# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions), 'D' (Double-Precision Floating-Point){{$}}
 c.fsd  fa2, 248(a1) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)}}
