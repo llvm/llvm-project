@@ -156,6 +156,7 @@ LLDBServerMockAcceleratorPlugin::CreateConnection() {
       std::make_unique<ProcessMockAccelerator::Manager>(m_mock_main_loop);
   m_accelerator_gdb_server = std::make_unique<GDBRemoteCommunicationServerLLGS>(
       m_mock_main_loop, *m_process_manager_up);
+  m_accelerator_gdb_server->SetConnectionAcceleratorPlugin(*this);
 
   // LLGS creates its current process from a launch; the manager ignores the
   // path but requires a non-empty argument list.
