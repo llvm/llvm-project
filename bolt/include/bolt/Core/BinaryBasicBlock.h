@@ -768,8 +768,11 @@ public:
   /// range is empty.
   template <typename Itr>
   iterator insertInstructions(iterator At, Itr Begin, Itr End) {
+    if (Begin == End)
+    return At;
     adjustNumPseudos(Begin, End, 1);
-    return Instructions.insert(At, Begin, End);
+    auto InsertedAt = Instructions.insert(At, Begin, End);
+    return std::next(InsertedAt, std::distance(Begin, End));
   }
 
   /// Helper to retrieve any terminators in \p BB before \p Pos. This is used
