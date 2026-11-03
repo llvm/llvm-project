@@ -10,7 +10,6 @@
 # CHECK-DEBUG:      "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/debug"
 # CHECK-DEBUG:      "-libpath:{{.*}}multilib_msvc_tree{{[/\\]}}resource{{[/\\]}}lib{{[/\\]}}x86_64-pc-windows-msvc{{[/\\]}}debug"
 # CHECK-DEBUG:      "-libpath:{{[^"]*}}/debug"
-# CHECK-DEBUG:      "{{.*}}multilib_msvc_tree{{[/\\]}}resource{{[/\\]}}lib{{[/\\]}}x86_64-pc-windows-msvc{{[/\\]}}debug{{[/\\]}}clang_rt.builtins.lib"
 
 # Default behavior where no variant path is prepended.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
@@ -25,7 +24,7 @@
 # CHECK-DEFAULT-NOT: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/release"
 # CHECK-DEFAULT-NOT: "-internal-isystem" "{{[^"]*}}{{[/\\]}}x86_64-pc-windows-msvc/noexcept"
 # CHECK-DEFAULT:      "-internal-isystem" "{{.*}}multilib_msvc_tree{{[/\\]}}resource{{[/\\]}}include"
-# CHECK-DEFAULT:      "{{.*}}multilib_msvc_tree{{[/\\]}}resource{{[/\\]}}lib{{[/\\]}}x86_64-pc-windows-msvc{{[/\\]}}clang_rt.builtins.lib"
+# CHECK-DEFAULT:      "-libpath:{{.*}}multilib_msvc_tree{{[/\\]}}resource{{[/\\]}}lib{{[/\\]}}x86_64-pc-windows-msvc"
 
 # Multiple matches stacking on top of each-other.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
@@ -40,7 +39,6 @@
 # CHECK-LAYERED-SAME: "-libpath:{{.*}}multilib_msvc_tree{{[/\\]}}resource{{[/\\]}}lib{{[/\\]}}x86_64-pc-windows-msvc{{[/\\]}}debug"
 # CHECK-LAYERED:      "-libpath:{{[^"]*}}/noexcept"
 # CHECK-LAYERED-SAME: "-libpath:{{[^"]*}}/debug"
-# CHECK-LAYERED:      "{{.*}}multilib_msvc_tree{{[/\\]}}resource{{[/\\]}}lib{{[/\\]}}x86_64-pc-windows-msvc{{[/\\]}}noexcept{{[/\\]}}clang_rt.builtins.lib"
 
 # Lists selected variant directories.
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory 2>&1 \
