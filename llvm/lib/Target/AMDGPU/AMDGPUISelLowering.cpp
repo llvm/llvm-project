@@ -4716,8 +4716,8 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
 // instructions. If we only match on the legalized i64 mul expansion,
 // SimplifyDemandedBits will be unable to remove them because there will be
 // multiple uses due to the separate mul + mulh[su].
-static SDValue getMul24(SelectionDAG &DAG, const SDLoc &SL,
-                        SDValue N0, SDValue N1, uint64_t Size, bool Signed) {
+static SDValue getMul24(SelectionDAG &DAG, const SDLoc &SL, SDValue N0,
+                        SDValue N1, uint64_t Size, bool Signed) {
   if (Size <= 32) {
     unsigned MulOpc = Signed ? AMDGPUISD::MUL_I24 : AMDGPUISD::MUL_U24;
     return DAG.getNode(MulOpc, SL, MVT::i32, N0, N1);
@@ -5738,19 +5738,11 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     if (ConstantSDNode *CVal = dyn_cast<ConstantSDNode>(BitsFrom)) {
       if (Signed) {
         int32_t Val = static_cast<int32_t>(CVal->getSExtValue());
-        return constantFoldBFE<int32_t>(DAG,
-                                        Val,
-                                        OffsetVal,
-                                        WidthVal,
-                                        DL);
+        return constantFoldBFE<int32_t>(DAG, Val, OffsetVal, WidthVal, DL);
       }
 
       uint32_t Val = static_cast<uint32_t>(CVal->getZExtValue());
-      return constantFoldBFE<uint32_t>(DAG,
-                                       Val,
-                                       OffsetVal,
-                                       WidthVal,
-                                       DL);
+      return constantFoldBFE<uint32_t>(DAG, Val, OffsetVal, WidthVal, DL);
     }
 
     if ((OffsetVal + WidthVal) >= 32 &&
