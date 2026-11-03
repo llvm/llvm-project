@@ -103,7 +103,7 @@ static LogicalResult isCompatible(PatternRewriter &rewriter,
 class OuterProductFusion2Way
     : public OpRewritePattern<arm_sme::OuterProductOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arm_sme::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
@@ -252,7 +252,7 @@ private:
 class OuterProductFusion4Way
     : public OpRewritePattern<arm_sme::OuterProductOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arm_sme::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
@@ -437,7 +437,7 @@ private:
 // pass when the result is the input to an outer product.
 struct SwapVectorExtractOfArithExtend
     : public OpRewritePattern<vector::ExtractOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -488,7 +488,7 @@ struct SwapVectorExtractOfArithExtend
 // pass when the result is the input to an outer product.
 struct SwapVectorScalableExtractOfArithExtend
     : public OpRewritePattern<vector::ScalableExtractOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ScalableExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {

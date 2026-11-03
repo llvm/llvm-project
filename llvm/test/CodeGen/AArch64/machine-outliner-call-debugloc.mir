@@ -1,10 +1,11 @@
 # RUN: llc -mtriple=aarch64-apple-darwin -run-pass=prolog-epilog \
 # RUN:   -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
 
-# Each call replacing an outlined sequence takes the location of the last call
-# in the sequence it replaces, or else its first source location. Any link
-# register save/restore the target inserts around that call takes the same
-# location, so that the call site does not begin with a line 0 address.
+# Each call replacing an outlined sequence takes the merged location of the
+# calls in the sequence it replaces, or else its first source location. Any
+# link register save/restore the target inserts around that call takes the same
+# location, so that a locationless save or restore does not begin a call site
+# that has a source line with a line 0 address.
 
 # The link register is dead here, so the call needs no save/restore.
 # CHECK-LABEL: name: caller
@@ -49,6 +50,17 @@
 # CHECK:       BL @OUTLINED_FUNCTION_{{[0-9]+}}
 # CHECK-SAME:  debug-location !DILocation(line: 420, column: 1, scope: ![[#]]){{$}}
 
+# The sequence calls @leaf, which has no stack frame, twice: once directly and
+# once from an inlined scope. Both calls are symbolized at the outlined call,
+# so it takes their merged location rather than the inlined location of the
+# last call. The calls are on the same line in the first sequence, but not in
+# the second.
+# CHECK-LABEL: name: multi_call
+# CHECK:       BL @OUTLINED_FUNCTION_{{[0-9]+}}
+# CHECK-SAME:  debug-location !DILocation(line: 510, scope: ![[#]]){{$}}
+# CHECK:       BL @OUTLINED_FUNCTION_{{[0-9]+}}
+# CHECK-SAME:  debug-location !DILocation(line: 0, scope: ![[#]]){{$}}
+
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
   target triple = "aarch64--"
@@ -59,6 +71,10 @@
   declare void @callee3()
   declare void @callee4()
   declare void @getpc()
+
+  define void @leaf() #0 {
+    ret void
+  }
 
   define void @caller() #0 !dbg !6 {
     ret void
@@ -73,6 +89,10 @@
   }
 
   define void @thunk() #0 !dbg !40 {
+    ret void
+  }
+
+  define void @multi_call() #0 !dbg !50 {
     ret void
   }
 
@@ -111,6 +131,13 @@
   !43 = !DILocation(line: 901, column: 1, scope: !41, inlinedAt: !42)
   !44 = !DILocation(line: 420, column: 1, scope: !40)
   !45 = !DILocation(line: 901, column: 1, scope: !41, inlinedAt: !44)
+  !50 = distinct !DISubprogram(name: "multi_call", scope: !1, file: !1, line: 500, type: !5, scopeLine: 500, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !51 = !DILocation(line: 510, column: 3, scope: !50)
+  !52 = !DILocation(line: 510, column: 10, scope: !50)
+  !53 = !DILocation(line: 901, column: 1, scope: !41, inlinedAt: !52)
+  !54 = !DILocation(line: 520, column: 3, scope: !50)
+  !55 = !DILocation(line: 521, column: 3, scope: !50)
+  !56 = !DILocation(line: 901, column: 1, scope: !41, inlinedAt: !55)
 
 ...
 ---
@@ -241,6 +268,44 @@ body:             |
     $w11 = ORRWri $wzr, 10, debug-location !45
     $w11 = ORRWri $wzr, 11, debug-location !45
     BL @getpc, implicit-def dead $lr, implicit $sp, debug-location !44
+    $w0 = ORRWri $wzr, 2
+    RET undef $lr
+...
+---
+name:            leaf
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    RET undef $lr
+...
+---
+name:            multi_call
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $w12 = ORRWri $wzr, 7, debug-location !51
+    $w12 = ORRWri $wzr, 8, debug-location !51
+    $w12 = ORRWri $wzr, 9, debug-location !51
+    BL @leaf, implicit-def dead $lr, implicit $sp, debug-location !51
+    $w12 = ORRWri $wzr, 10, debug-location !53
+    $w12 = ORRWri $wzr, 11, debug-location !53
+    $w12 = ORRWri $wzr, 12, debug-location !53
+    BL @leaf, implicit-def dead $lr, implicit $sp, debug-location !53
+    $w12 = ORRWri $wzr, 13, debug-location !53
+    $w12 = ORRWri $wzr, 14, debug-location !53
+    $w12 = ORRWri $wzr, 15, debug-location !53
+    $w0 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 7, debug-location !54
+    $w12 = ORRWri $wzr, 8, debug-location !54
+    $w12 = ORRWri $wzr, 9, debug-location !54
+    BL @leaf, implicit-def dead $lr, implicit $sp, debug-location !54
+    $w12 = ORRWri $wzr, 10, debug-location !56
+    $w12 = ORRWri $wzr, 11, debug-location !56
+    $w12 = ORRWri $wzr, 12, debug-location !56
+    BL @leaf, implicit-def dead $lr, implicit $sp, debug-location !56
+    $w12 = ORRWri $wzr, 13, debug-location !56
+    $w12 = ORRWri $wzr, 14, debug-location !56
+    $w12 = ORRWri $wzr, 15, debug-location !56
     $w0 = ORRWri $wzr, 2
     RET undef $lr
 ...
