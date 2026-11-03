@@ -1400,6 +1400,7 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
   AMDGPUImageDimIntrinsic Intr = !cast<AMDGPUImageDimIntrinsic>(NAME);
 
   let TargetPrefix = "amdgcn";
+  let TargetFeatures = "image-insts";
 }
 
 // Marker class for intrinsics with a DMask that determines the returned
