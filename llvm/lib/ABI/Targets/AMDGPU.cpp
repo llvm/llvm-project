@@ -243,7 +243,7 @@ void AMDGPUTargetInfo::computeInfo(FunctionInfo &FI) const {
 
   unsigned NumRegsLeft = MaxNumRegsForArgsRet;
   for (ArgEntry &Arg : FI.arguments()) {
-    if (CC == CallingConv::AMDGPU_KERNEL) {
+    if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
       Arg.Info = classifyKernelArgumentType(Arg.ABIType);
     } else {
       bool FixedArgument = ArgumentIndex++ < NumFixedArguments;

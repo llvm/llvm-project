@@ -362,17 +362,16 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
-  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
-  // promotion rules and resource types are not modeled yet.
+  if (usesAMDGPUABI(T))
+    return true;
+
+  // HLSL's integer promotion rules and resource types are not modeled yet.
   if (T.isSPIRV())
-    return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
+    return !getLangOpts().HLSL;
 
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
       T.getArch() == llvm::Triple::aarch64_be)
-    return true;
-
-  if (usesAMDGPUABI(T))
     return true;
 
   if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() && !T.isUEFI() &&
