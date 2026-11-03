@@ -132,7 +132,7 @@ NativeProcessNetBSD::Extension
 NativeProcessNetBSD::Manager::GetSupportedExtensions() const {
   return Extension::multiprocess | Extension::fork | Extension::vfork |
          Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
-         Extension::savecore;
+         Extension::savecore | Extension::siginfo_read;
 }
 
 // Public Instance Methods
