@@ -11,7 +11,6 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "SyntheticSections.h"
 #include "UnwindInfoSection.h"
 
 #include "lld/Common/ErrorHandler.h"
@@ -108,9 +107,6 @@ void MarkLiveImpl<RecordWhyLive>::addSym(
   if constexpr (RecordWhyLive)
     if (!config->whyLive.empty() && config->whyLive.match(s->getName()))
       printWhyLive(s, prev);
-  if (ObjCStubsSection::isObjCClassStubSymbol(s))
-    if (auto *classSym = in.objcStubs->lookupClassSymbol(s))
-      addSym(classSym, prev);
   if (auto *d = dyn_cast<Defined>(s)) {
     if (d->isec())
       enqueue(d->isec(), d->value, prev);
