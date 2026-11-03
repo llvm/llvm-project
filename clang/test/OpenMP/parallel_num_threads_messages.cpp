@@ -42,7 +42,7 @@ T tmain(T argc, S **argv) {
   #pragma omp parallel num_threads(strict: // omp60-error {{expected expression}} omp60-error {{expected ')'}} omp60-note {{to match this '('}}
 
   // Invalid: unknown/missing modifier
-  #pragma omp parallel num_threads(foo: 4) // omp60-error {{expected ',' or ')' in 'num_threads' clause}} omp60-error {{expected ')'}} omp60-note {{to match this '('}} omp60-error 3 {{expression must have integral or unscoped enumeration type, not 'void ()'}}
+  #pragma omp parallel num_threads(foo: 4) // omp60-error {{expected ',' or ')' in 'num_threads' clause}} omp60-error {{expected ')'}} omp60-note {{to match this '('}} omp60-error {{expression must have integral or unscoped enumeration type, not 'void ()'}}
   #pragma omp parallel num_threads(: 4) // omp60-error {{expected expression}}
   #pragma omp parallel num_threads(:)// omp60-error {{expected expression}}
 

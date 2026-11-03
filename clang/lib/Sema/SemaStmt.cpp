@@ -1230,15 +1230,8 @@ ExprResult Sema::CheckSwitchCondition(SourceLocation SwitchLoc, Expr *Cond) {
   if (CondResult.isInvalid())
     return ExprError();
 
-  // FIXME: PerformContextualImplicitConversion doesn't always tell us if it
-  // failed and produced a diagnostic.
-  Cond = CondResult.get();
-  if (!Cond->isTypeDependent() &&
-      !Cond->getType()->isIntegralOrEnumerationType())
-    return ExprError();
-
   // C99 6.8.4.2p5 - Integer promotions are performed on the controlling expr.
-  return UsualUnaryConversions(Cond);
+  return UsualUnaryConversions(CondResult.get());
 }
 
 StmtResult Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
