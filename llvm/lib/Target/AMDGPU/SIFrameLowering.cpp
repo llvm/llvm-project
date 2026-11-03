@@ -2657,7 +2657,7 @@ void SIFrameLowering::buildCFIForSRegToSRegSpill(
   decomposeDwarfRegs(TRI, CopyReg, DwarfCopyRegs);
 
   if (DwarfRegs.size() == DwarfCopyRegs.size()) {
-    for (unsigned I = 0, E = DwarfRegs.size(); I < E; ++I) {
+    for (size_t I = 0, E = DwarfRegs.size(); I < E; ++I) {
       auto CFI = MCCFIInstruction::createRegister(nullptr, DwarfRegs[I],
                                                   DwarfCopyRegs[I]);
       buildCFI(MBB, MBBI, DL, CFI);
@@ -2673,7 +2673,7 @@ void SIFrameLowering::buildCFIForSRegToSRegSpill(
     return;
   }
 
-  for (unsigned I = 0, E = DwarfRegs.size(); I < E; ++I) {
+  for (size_t I = 0, E = DwarfRegs.size(); I < E; ++I) {
     auto CFI = MCCFIInstruction::createUndefined(nullptr, DwarfRegs[I]);
     buildCFI(MBB, MBBI, DL, CFI);
   }
@@ -2686,16 +2686,16 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVCCHalfCopy(
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   assert(isWave64VCCHalf(MF.getSubtarget<GCNSubtarget>(), VCCHalf));
 
-  int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
-  int DwarfVCC = MCRI.getDwarfRegNum(AMDGPU::VCC, false);
+  int64_t DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
+  int64_t DwarfVCC = MCRI.getDwarfRegNum(AMDGPU::VCC, false);
   assert(DwarfSGPR != -1 && DwarfVCC != -1);
 
   // Describe the copy as one 32-bit lane of VCC_64: lane 0 is vcc_lo and lane 1
   // is vcc_hi.
   MCCFIInstruction::VectorRegisterWithLane Half{
       unsigned(DwarfVCC), VCCHalf == AMDGPU::VCC_HI ? 1u : 0u, SGPRBitSize};
-  auto CFIInst =
-      MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR, {Half});
+  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(
+      nullptr, static_cast<unsigned>(DwarfSGPR), {Half});
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
