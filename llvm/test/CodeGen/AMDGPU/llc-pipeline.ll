@@ -111,6 +111,7 @@
 ; GCN-O0-NEXT:        Live Interval Analysis
 ; GCN-O0-NEXT:        SI Whole Quad Mode
 ; GCN-O0-NEXT:        AMDGPU Pre-RA Long Branch Reg
+; GCN-O0-NEXT:        Machine Register Class Info Analysis
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        Machine Cycle Info Analysis
 ; GCN-O0-NEXT:        SI lower SGPR spill instructions
@@ -118,7 +119,6 @@
 ; GCN-O0-NEXT:        Live Interval Analysis
 ; GCN-O0-NEXT:        Virtual Register Map
 ; GCN-O0-NEXT:        Live Register Matrix
-; GCN-O0-NEXT:        Machine Register Class Info Analysis
 ; GCN-O0-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Lower WWM Copies
@@ -370,13 +370,13 @@
 ; GCN-O1-NEXT:        Spill Code Placement Analysis
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
+; GCN-O1-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-NEXT:        Greedy Register Allocator
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        SI lower SGPR spill instructions
 ; GCN-O1-NEXT:        Virtual Register Map
 ; GCN-O1-NEXT:        Live Register Matrix
-; GCN-O1-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O1-NEXT:        Live Stack Slot Analysis
 ; GCN-O1-NEXT:        Greedy Register Allocator
@@ -389,6 +389,7 @@
 ; GCN-O1-NEXT:        GCN NSA Reassign
 ; GCN-O1-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O1-NEXT:        Virtual Register Rewriter
+; GCN-O1-NEXT:        Register Allocation Pass Scoring
 ; GCN-O1-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        Machine Copy Propagation Pass
@@ -694,13 +695,13 @@
 ; GCN-O1-OPTS-NEXT:        Spill Code Placement Analysis
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
+; GCN-O1-OPTS-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        SI lower SGPR spill instructions
 ; GCN-O1-OPTS-NEXT:        Virtual Register Map
 ; GCN-O1-OPTS-NEXT:        Live Register Matrix
-; GCN-O1-OPTS-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-OPTS-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O1-OPTS-NEXT:        Live Stack Slot Analysis
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
@@ -713,6 +714,7 @@
 ; GCN-O1-OPTS-NEXT:        GCN NSA Reassign
 ; GCN-O1-OPTS-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
+; GCN-O1-OPTS-NEXT:        Register Allocation Pass Scoring
 ; GCN-O1-OPTS-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        Machine Copy Propagation Pass
@@ -1023,13 +1025,13 @@
 ; GCN-O2-NEXT:        Spill Code Placement Analysis
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
+; GCN-O2-NEXT:        Machine Register Class Info Analysis
 ; GCN-O2-NEXT:        Greedy Register Allocator
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        SI lower SGPR spill instructions
 ; GCN-O2-NEXT:        Virtual Register Map
 ; GCN-O2-NEXT:        Live Register Matrix
-; GCN-O2-NEXT:        Machine Register Class Info Analysis
 ; GCN-O2-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O2-NEXT:        Live Stack Slot Analysis
 ; GCN-O2-NEXT:        Greedy Register Allocator
@@ -1042,6 +1044,7 @@
 ; GCN-O2-NEXT:        GCN NSA Reassign
 ; GCN-O2-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O2-NEXT:        Virtual Register Rewriter
+; GCN-O2-NEXT:        Register Allocation Pass Scoring
 ; GCN-O2-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        Machine Copy Propagation Pass
@@ -1367,13 +1370,13 @@
 ; GCN-O3-NEXT:        Spill Code Placement Analysis
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
+; GCN-O3-NEXT:        Machine Register Class Info Analysis
 ; GCN-O3-NEXT:        Greedy Register Allocator
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        SI lower SGPR spill instructions
 ; GCN-O3-NEXT:        Virtual Register Map
 ; GCN-O3-NEXT:        Live Register Matrix
-; GCN-O3-NEXT:        Machine Register Class Info Analysis
 ; GCN-O3-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O3-NEXT:        Live Stack Slot Analysis
 ; GCN-O3-NEXT:        Greedy Register Allocator
@@ -1386,6 +1389,7 @@
 ; GCN-O3-NEXT:        GCN NSA Reassign
 ; GCN-O3-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O3-NEXT:        Virtual Register Rewriter
+; GCN-O3-NEXT:        Register Allocation Pass Scoring
 ; GCN-O3-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        Machine Copy Propagation Pass

@@ -5,7 +5,7 @@ Test lldb-dap variables/stackTrace request for optimized code
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, ExpectVar
-from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap.types import CompileUnitsArgs, LaunchArgs
 
 
 class TestDAP_optimized(DAPTestCaseBase):
@@ -28,6 +28,31 @@ class TestDAP_optimized(DAPTestCaseBase):
         self.assertTrue(leaf_frame.name.endswith(" [opt]"))
         parent_frame = frames[1].frame
         self.assertTrue(parent_frame.name.endswith(" [opt]"))
+
+    def test_compile_unit_is_optimized(self):
+        """Test the compile unit of an optimized frame is marked optimized."""
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+
+        source = "main.cpp"
+        breakpoint_line = line_number(source, "// breakpoint 1")
+        with session.configure(LaunchArgs(program)) as ctx:
+            bp_ids = session.resolve_source_breakpoints(source, [breakpoint_line])
+
+        stop_event = session.verify_stopped_on_breakpoint(
+            bp_ids, after=ctx.process_event
+        )
+        thread_id = self.expect_not_none(stop_event.body.threadId)
+        frame = session.stack_trace(thread_id).body.stackFrames[0]
+        module_id = self.expect_not_none(frame.moduleId)
+        compile_unit_id = self.expect_not_none(frame.compileUnitId)
+
+        response = session.send_request(
+            CompileUnitsArgs(moduleId=module_id, compileUnitIds=[compile_unit_id])
+        ).result()
+        self.assertEqual(len(response.body.compileUnits), 1)
+        self.assertTrue(response.body.compileUnits[0].isOptimized)
+        session.continue_to_exit()
 
     @skipIfAsan  # On ASAN builds this test intermittently fails https://github.com/llvm/llvm-project/issues/111061
     @skipIfWasm  # an optimized out variable keeps a reused local, so reading it succeeds

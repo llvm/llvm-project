@@ -59,7 +59,9 @@ using namespace mlir::detail;
 
 void OperationName::print(raw_ostream &os) const { os << getStringRef(); }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void OperationName::dump() const { print(llvm::errs()); }
+#endif
 
 //===--------------------------------------------------------------------===//
 // AsmParser
@@ -4084,10 +4086,12 @@ void Attribute::print(raw_ostream &os, AsmState &state, bool elideType) const {
                                        : AttrTypeElision::Never);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Attribute::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void Attribute::printStripped(raw_ostream &os, AsmState &state) const {
   if (!*this) {
@@ -4133,6 +4137,7 @@ void Type::print(raw_ostream &os, AsmState &state) const {
   AsmPrinter::Impl(os, state.getImpl()).printType(*this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Type::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
@@ -4147,6 +4152,7 @@ void IntegerSet::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void AffineExpr::print(raw_ostream &os) const {
   if (!expr) {
@@ -4157,10 +4163,12 @@ void AffineExpr::print(raw_ostream &os) const {
   AsmPrinter::Impl(os, state.getImpl()).printAffineExpr(*this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void AffineExpr::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void AffineMap::print(raw_ostream &os) const {
   if (!map) {
@@ -4210,10 +4218,12 @@ raw_ostream &mlir::operator<<(raw_ostream &os, Value value) {
   return os;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Value::dump() const {
   print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
+#endif
 
 void Value::printAsOperand(raw_ostream &os, AsmState &state) const {
   // TODO: This doesn't necessarily capture all potential cases.
@@ -4278,10 +4288,12 @@ void Operation::print(raw_ostream &os, AsmState &state) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Operation::dump() {
   print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
+#endif
 
 void Operation::dumpPretty() {
   print(llvm::errs(), OpPrintingFlags().useLocalScope().assumeVerified());
@@ -4305,7 +4317,9 @@ void Block::print(raw_ostream &os, AsmState &state) {
   OperationPrinter(os, state.getImpl()).print(this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Block::dump() { print(llvm::errs()); }
+#endif
 
 /// Print out the name of the block without printing its body.
 void Block::printAsOperand(raw_ostream &os, bool printType) {

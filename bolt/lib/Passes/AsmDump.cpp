@@ -131,8 +131,8 @@ void dumpFunction(const BinaryFunction &BF) {
   BinaryContext::IndependentCodeEmitter MCEInstance =
       BC.createIndependentMCCodeEmitter();
   MCContext *LocalCtx = MCEInstance.LocalCtx.get();
-  std::unique_ptr<MCAsmBackend> MAB(
-      BC.TheTarget->createMCAsmBackend(*BC.STI, *BC.MRI, MCTargetOptions()));
+  std::unique_ptr<MCAsmBackend> MAB(BC.TheTarget->createMCAsmBackend(
+      *BC.STI, *BC.MRI, BC.Ctx->getTargetOptions()));
   int AsmPrinterVariant = BC.AsmInfo->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> InstructionPrinter(
       BC.TheTarget->createMCInstPrinter(*BC.TheTriple, AsmPrinterVariant,
