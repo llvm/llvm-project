@@ -353,5 +353,6 @@ defm : ValueField<"sve-tail-folding-insn-threshold", "unsigned", "15",
 defm : BoolField<"aarch64-postlegalizer-consecutive-memops", "true",
   "Enable consecutive memop optimization in AArch64PostLegalizerCombiner">;
 
+// Temporary option until minsize functions fully support async unwind info.
 defm : BoolField<"aarch64-enable-async-unwind-for-minsize", "false",
-  "Enable asynchronous unwind info generation for minsize functions">;
+  "Honor uwtable(async) for minsize functions (experimental)">;
