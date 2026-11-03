@@ -68,6 +68,10 @@ inline Type *toScalarizedTy(Type *Ty) {
   return Ty->getScalarType();
 }
 
+/// A helper for converting the return and parameter types of the function type
+/// \p FTy to scalarized types.
+LLVM_ABI FunctionType *toScalarizedFunctionTy(FunctionType *FTy);
+
 /// Returns true if `Ty` is a vector type or a struct of vector types where all
 /// vector types share the same VF.
 inline bool isVectorizedTy(Type *Ty) {
