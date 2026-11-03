@@ -2542,7 +2542,10 @@ private:
 
         // Build a unique name for the fir.local op, following the same
         // naming convention as privatizeSymbol (mangled name + suffix + type).
-        std::string sharedPrefix = mangleName(ultimate) + "_shared";
+        // Use a dot separator (".shared") rather than underscore to avoid
+        // potential collisions with user symbol names — dots cannot appear
+        // in Fortran identifiers.
+        std::string sharedPrefix = mangleName(ultimate) + ".shared";
         std::string uniqueName =
             fir::getTypeAsString(allocType, getKindMap(), sharedPrefix);
 
