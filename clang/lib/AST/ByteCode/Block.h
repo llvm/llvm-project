@@ -110,8 +110,6 @@ public:
   unsigned getSize() const { return DescSize; }
   /// Returns the size of the block, including metadata.
   unsigned getAllocSize() const { return DescSize + MDSize; }
-  /// Returns the size of the metadata.
-  unsigned getMetadataSize() const { return MDSize; }
   /// Returns the declaration ID.
   UnsignedOrNone getDeclID() const { return DeclID; }
   /// Returns whether the data of this block has been initialized via
@@ -144,7 +142,7 @@ public:
   template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
 
   template <typename T> T &getBlockDesc() {
-    assert(sizeof(T) == getMetadataSize());
+    assert(sizeof(T) == getMetadataSize(Kind));
 
     if constexpr (std::is_same_v<T, GlobalInlineDescriptor>)
       assert(Kind == Global);
