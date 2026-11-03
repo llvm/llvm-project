@@ -362,8 +362,8 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorIdEXT(
     uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder) {
   assert(NumElems != 2 && NumElems != 3 && NumElems != 4 &&
-          (!MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>().isKernel()
-           || (NumElems != 8 && NumElems != 16)) &&
+         (!MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>().isKernel() ||
+          (NumElems != 8 && NumElems != 16)) &&
          "SPIR-V OpTypeVectorIdExt should only be used for extended vectors");
   return getOpTypeVectorImpl(NumElems, ElemType, MIRBuilder, true);
 }
