@@ -1498,13 +1498,14 @@ bool StdLibraryFunctionsChecker::Signature::matches(
     return false;
 
   auto RemoveRestrict = [](QualType T) {
+    T = T.getCanonicalType();
     T.removeLocalRestrict();
     return T;
   };
 
   // Check the return type.
   if (!isIrrelevant(RetTy)) {
-    QualType FDRetTy = RemoveRestrict(FD->getReturnType().getCanonicalType());
+    QualType FDRetTy = RemoveRestrict(FD->getReturnType());
     if (RetTy != FDRetTy)
       return false;
   }
@@ -1513,8 +1514,7 @@ bool StdLibraryFunctionsChecker::Signature::matches(
   for (auto [Idx, ArgTy] : llvm::enumerate(ArgTys)) {
     if (isIrrelevant(ArgTy))
       continue;
-    QualType FDArgTy =
-        RemoveRestrict(FD->getParamDecl(Idx)->getType().getCanonicalType());
+    QualType FDArgTy = RemoveRestrict(FD->getParamDecl(Idx)->getType());
     if (ArgTy != FDArgTy)
       return false;
   }
