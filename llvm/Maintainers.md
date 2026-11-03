@@ -217,6 +217,15 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 Reid Kleckner \
 rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
+#### LightWeight Fault Isolation (LFI)
+
+Zachary Yedidia \
+zyedidia@gmail.com (email), [zyedidia](https://github.com/zyedidia) (GitHub) \
+Sharjeel Khan \
+sharjeelkhan@google.com (email), [Sharjeel-Khan](https://github.com/Sharjeel-Khan) \
+Nick Desaulniers \
+ndesaulniers@google.com (email), [nickdesaulniers](https://github.com/nickdesaulniers)
+
 ### Backends / Targets
 
 #### ARM and AArch64 backends

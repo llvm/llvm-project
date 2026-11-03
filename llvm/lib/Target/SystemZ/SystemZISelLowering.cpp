@@ -11571,7 +11571,7 @@ bool SystemZTargetLowering::verifyNarrowIntegerArgs(
 
   for (unsigned i = 0; i < Outs.size(); ++i) {
     EVT OrigArgVT = Outs[i].ArgVT;
-    if (!OrigArgVT.isInteger() || OrigArgVT.getSizeInBits() >= 64)
+    if (!OrigArgVT.isScalarInteger() || OrigArgVT.getSizeInBits() >= 64)
       continue;
     assert(Outs[i].VT == MVT::i32 && "Unexpected integer argument VT.");
     ISD::ArgFlagsTy Flags = Outs[i].Flags;

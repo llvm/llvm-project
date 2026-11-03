@@ -156,31 +156,42 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
+// PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
+// returns corresponding to C-level ints and unsigned ints.
+static bool shouldExtI32(const Triple &T) {
+  return T.isPPC64() || T.getArch() == Triple::sparcv9 ||
+         T.getArch() == Triple::systemz;
+}
+
+// LoongArch, Mips, and riscv64, on the other hand, need signext on i32
+// parameters corresponding to both signed and unsigned ints.
+static bool shouldSignExtI32Param(const Triple &T) {
+  return T.isLoongArch() || T.isMIPS() || T.isRISCV64();
+}
+
+// LoongArch and riscv64 need signext on i32 returns corresponding to both
+// signed and unsigned ints.
+static bool shouldSignExtI32Return(const Triple &T) {
+  return T.isLoongArch() || T.isRISCV64();
+}
+
 void RuntimeLibcallsInfo::initExtensionsForTriple(bool &ShouldExtI32Param,
                                                   bool &ShouldExtI32Return,
                                                   bool &ShouldSignExtI32Param,
                                                   bool &ShouldSignExtI32Return,
                                                   const Triple &T) {
-  ShouldExtI32Param = ShouldExtI32Return = false;
-  ShouldSignExtI32Param = ShouldSignExtI32Return = false;
+  ShouldExtI32Param = ShouldExtI32Return = shouldExtI32(T);
+  ShouldSignExtI32Param = shouldSignExtI32Param(T);
+  ShouldSignExtI32Return = shouldSignExtI32Return(T);
+}
 
-  // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
-  // returns corresponding to C-level ints and unsigned ints.
-  if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-      T.getArch() == Triple::systemz) {
-    ShouldExtI32Param = true;
-    ShouldExtI32Return = true;
-  }
-  // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
-  // parameters corresponding to both signed and unsigned ints.
-  if (T.isLoongArch() || T.isMIPS() || T.isRISCV64()) {
-    ShouldSignExtI32Param = true;
-  }
-  // LoongArch and riscv64 need signext on i32 returns corresponding to both
-  // signed and unsigned ints.
-  if (T.isLoongArch() || T.isRISCV64()) {
-    ShouldSignExtI32Return = true;
-  }
+static bool shouldZExtBool(const Triple &T) {
+  return !T.isAArch64() && !T.isOSDarwin();
+}
+
+void RuntimeLibcallsInfo::initBoolExtensionsForTriple(
+    bool &ShouldZExtBoolParam, bool &ShouldZExtBoolReturn, const Triple &T) {
+  ShouldZExtBoolParam = ShouldZExtBoolReturn = shouldZExtBool(T);
 }
 
 /// TODO: There is really no guarantee that sizeof(size_t) is equal to the index
@@ -188,6 +199,12 @@ void RuntimeLibcallsInfo::initExtensionsForTriple(bool &ShouldExtI32Param,
 /// be kept in sync.
 static IntegerType *getSizeTType(LLVMContext &Ctx, const DataLayout &DL) {
   return DL.getIndexType(Ctx, /*AddressSpace=*/0);
+}
+
+static unsigned getLongSize(const Triple &TT, const DataLayout &DL) {
+  if (TT.isOSWindowsOrUEFI() && !TT.isWindowsCygwinEnvironment())
+    return 32;
+  return std::max(32u, DL.getPointerSizeInBits(/*AS=*/0));
 }
 
 // TODO: NoCallback probably unsafe in general
@@ -213,16 +230,17 @@ static Type *getLongDoubleType(LLVMContext &Ctx, LongDoubleFormat Format) {
 }
 
 static std::pair<Type *, Attribute>
-convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
-                       unsigned IntBits, LongDoubleFormat LdblFormat) {
-
+convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const Triple &TT,
+                       const DataLayout &DL, unsigned IntBits,
+                       LongDoubleFormat LdblFormat) {
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
   case Void:
     return {Type::getVoidTy(Ctx), Attribute()};
   case Bool:
-    return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
+    return {IntegerType::get(Ctx, 1), Attribute()};
   case Int8:
+  case UInt8:
     return {IntegerType::get(Ctx, 8), Attribute()};
   case Int16:
   case UInt16:
@@ -234,17 +252,19 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   case UInt:
   case IntPlus:
   case UIntPlus:
-  case Long:
-  case ULong:
   case IntX:
   case UIntX:
     return {IntegerType::get(Ctx, IntBits), Attribute()};
+  case Long:
+  case ULong:
+    return {IntegerType::get(Ctx, getLongSize(TT, DL)), Attribute()};
   case Int64:
   case UInt64:
   case LLong:
   case ULLong:
     return {IntegerType::get(Ctx, 64), Attribute()};
   case Int128:
+  case UInt128:
     return {IntegerType::get(Ctx, 128), Attribute()};
   case SizeT:
   case SSizeT:
@@ -303,6 +323,60 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   }
 }
 
+static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
+  switch (ID) {
+  case Int8:
+  case Int16:
+  case Int32:
+  case Int:
+  case IntPlus:
+  case Long:
+  case Int64:
+  case LLong:
+  case Int128:
+  case SSizeT:
+    return true;
+  case UInt8:
+  case UInt16:
+  case UInt32:
+  case UInt:
+  case UIntPlus:
+  case ULong:
+  case UIntX:
+  case UInt64:
+  case ULLong:
+  case UInt128:
+  case SizeT:
+    return false;
+  default:
+    return std::nullopt;
+  }
+}
+
+static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
+                                         const Triple &TT, unsigned IntBits,
+                                         bool IsReturn) {
+  if (ID == Bool)
+    return shouldZExtBool(TT) ? Attribute::ZExt : Attribute::None;
+
+  std::optional<bool> Signed = isSignedIntArgType(ID);
+  if (!Signed)
+    return Attribute::None;
+
+  // All targets currently extend types narrower than int according to their
+  // signedness, but this could become target dependent if a target needs it.
+  unsigned Bits = Ty->getIntegerBitWidth();
+  if (Bits < IntBits)
+    return *Signed ? Attribute::SExt : Attribute::ZExt;
+  if (Bits != 32 || IntBits != 32)
+    return Attribute::None;
+  if (shouldExtI32(TT))
+    return *Signed ? Attribute::SExt : Attribute::ZExt;
+  if (IsReturn ? shouldSignExtI32Return(TT) : shouldSignExtI32Param(TT))
+    return Attribute::SExt;
+  return Attribute::None;
+}
+
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getDefaultFunctionTy(
     LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
@@ -316,13 +390,15 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   unsigned IntBits = getIntSize(TT);
   AttributeList Attrs;
 
+  FuncArgTypeID LastID = ProtoTypes[0];
   auto [RetTy, RetAttr] =
-      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits, LongDoubleFmt);
+      convertToIRTypeAndAttr(LastID, Ctx, TT, DL, IntBits, LongDoubleFmt);
   if (RetAttr.isValid())
     Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
+  if (Attribute::AttrKind AK =
+          getIntExtAttr(LastID, RetTy, TT, IntBits, /*IsReturn=*/true))
+    Attrs = Attrs.addRetAttribute(Ctx, AK);
 
-  Type *LastTy = RetTy, *ArgTy;
-  Attribute LastAttr = RetAttr, ArgAttr;
   SmallVector<Type *, 4> ArgTys;
   bool IsVarArg = false;
   unsigned Idx = 1;
@@ -336,19 +412,19 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
       break;
     }
 
-    if (TyID == Same) {
-      ArgTy = LastTy;
-      ArgAttr = LastAttr;
-    } else {
-      std::tie(ArgTy, ArgAttr) = convertToIRTypeAndAttr(
-          ProtoTypes[Idx], Ctx, DL, IntBits, LongDoubleFmt);
-      LastTy = ArgTy;
-      LastAttr = ArgAttr;
-    }
+    if (TyID == Same)
+      TyID = LastID;
+    else
+      LastID = TyID;
 
+    auto [ArgTy, ArgAttr] =
+        convertToIRTypeAndAttr(TyID, Ctx, TT, DL, IntBits, LongDoubleFmt);
     ArgTys.push_back(ArgTy);
     if (ArgAttr.isValid())
       Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, ArgAttr);
+    if (Attribute::AttrKind AK =
+            getIntExtAttr(TyID, ArgTy, TT, IntBits, /*IsReturn=*/false))
+      Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, AK);
   }
 
   if (RetTy->isVectorTy()) {
@@ -566,10 +642,24 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     return {FuncTy, Attrs};
 
   Type *VecTy = FuncTy->getParamType(0);
+  Align PtrAlign = DL.getABITypeAlign(VecTy->getScalarType());
+  switch (LibcallImpl) {
+  case RTLIB::impl_amd_vrd2_sincos:
+  case RTLIB::impl_amd_vrd4_sincos:
+  case RTLIB::impl_amd_vrd8_sincos:
+  case RTLIB::impl_amd_vrs4_sincosf:
+  case RTLIB::impl_amd_vrs8_sincosf:
+  case RTLIB::impl_amd_vrs16_sincosf:
+    PtrAlign = DL.getABITypeAlign(VecTy);
+    break;
+  default:
+    break;
+  }
+
   AttrBuilder ArgAttrBuilder(Ctx);
   for (Attribute::AttrKind AK : CommonPtrArgAttrs)
     ArgAttrBuilder.addAttribute(AK);
-  ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
+  ArgAttrBuilder.addAlignmentAttr(PtrAlign);
 
   bool HasPtrArg = false;
   for (auto [Idx, ParamTy] : enumerate(FuncTy->params())) {
