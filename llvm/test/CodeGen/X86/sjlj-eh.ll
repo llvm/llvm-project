@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple i386-windows-gnu -regalloc-csr-cost-scale=0 -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s
 ; RUN: llc -mtriple x86_64-windows-gnu -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s -check-prefix CHECK-X64
 ; RUN: llc -mtriple x86_64-linux -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s -check-prefix CHECK-X64-LINUX
+; RUN: llc -mtriple x86_64-linux-gnux32 -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s -check-prefix CHECK-X32
 
 declare void @_Z20function_that_throwsv()
 declare i32 @__gxx_personality_sj0(...)
@@ -132,3 +133,17 @@ try.cont:
 ;     *Handlers[UFC.__callsite]
 ; CHECK-X64-LINUX: leaq .[[TABLE:LJTI[0-9]+_[0-9]+]](%rip), %rcx
 ; CHECK-X64-LINUX: jmpq *(%rcx,%rax,8)
+
+; x32 has 32-bit pointers and 64-bit __data words.
+; CHECK-X32: movl %eax, -72(%ebp)
+; CHECK-X32: movl $GCC_except_table0, -68(%ebp)
+; CHECK-X32: movl %ebp, -64(%ebp)
+; CHECK-X32: movl %esp, -56(%ebp)
+; CHECK-X32: movl $.[[RESUME:LBB[0-9]+_[0-9]+]], -60(%ebp)
+; CHECK-X32: leal -112(%rbp), %edi
+; CHECK-X32: callq _Unwind_SjLj_Register@PLT
+; CHECK-X32: movl $1, -108(%ebp)
+; CHECK-X32: .[[RESUME]]:
+; CHECK-X32: movl -108(%ebp), %eax
+; CHECK-X32: movq -104(%ebp), %rax
+; CHECK-X32: movq -96(%ebp), %rcx

@@ -28,6 +28,8 @@
 
 #if defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 
+typedef unsigned _Unwind_SjLj_Word __attribute__((__mode__(__unwind_word__)));
+
 struct _Unwind_FunctionContext {
   // next function in stack of handlers
   struct _Unwind_FunctionContext *prev;
@@ -36,7 +38,7 @@ struct _Unwind_FunctionContext {
   int resumeLocation;
 
   // set by personality handler to be parameters passed to landing pad function
-  uintptr_t resumeParameters[4];
+  _Unwind_SjLj_Word resumeParameters[4];
 
   // set by calling function before registering
   _Unwind_Personality_Fn personality;          // arm offset=24
@@ -408,7 +410,7 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetGR(struct _Unwind_Context *context,
   _LIBUNWIND_TRACE_API("_Unwind_GetGR(context=%p, reg=%d)", (void *)context,
                        index);
   _Unwind_FunctionContext_t ufc = (_Unwind_FunctionContext_t) context;
-  return ufc->resumeParameters[index];
+  return (uintptr_t)ufc->resumeParameters[index];
 }
 
 

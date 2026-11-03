@@ -3,8 +3,8 @@
 ; any other model.
 
 ; RUN: split-file %s %t
-; RUN: opt -passes=sjlj-eh-prepare -S %t/sjlj.ll  | FileCheck --check-prefix=SJLJ %s
-; RUN: opt -passes=sjlj-eh-prepare -S %t/other.ll | FileCheck --check-prefix=OTHER %s
+; RUN: opt -passes=sjlj-eh-prepare -mtriple=x86_64-linux-gnu -S %t/sjlj.ll  | FileCheck --check-prefix=SJLJ %s
+; RUN: opt -passes=sjlj-eh-prepare -mtriple=x86_64-linux-gnu -S %t/other.ll | FileCheck --check-prefix=OTHER %s
 
 ;--- sjlj.ll
 ; SJLJ-LABEL: define void @f() personality ptr @__gxx_personality_sj0 {

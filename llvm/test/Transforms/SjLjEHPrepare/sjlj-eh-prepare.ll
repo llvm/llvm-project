@@ -1,4 +1,4 @@
-; RUN: opt -p sjlj-eh-prepare %s -S -o - | FileCheck %s
+; RUN: opt -p sjlj-eh-prepare -mtriple=x86_64-linux-gnu %s -S -o - | FileCheck %s
 
 ; Check that callsites are set up correctly:
 ; 1. Throwing call in the entry block does not set call_site

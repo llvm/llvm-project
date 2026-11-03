@@ -41,7 +41,7 @@ class SjLjEHPrepareImpl {
   IntegerType *DataTy = nullptr;
   Type *doubleUnderDataTy = nullptr;
   Type *doubleUnderJBufTy = nullptr;
-  Type *FunctionContextTy = nullptr;
+  StructType *FunctionContextTy = nullptr;
   FunctionCallee RegisterFn;
   FunctionCallee UnregisterFn;
   Function *BuiltinSetupDispatchFn = nullptr;
@@ -100,25 +100,30 @@ INITIALIZE_PASS(SjLjEHPrepare, DEBUG_TYPE, "Prepare SjLj exceptions",
 // Public Interface To the SjLjEHPrepare pass.
 FunctionPass *llvm::createSjLjEHPreparePass() { return new SjLjEHPrepare(); }
 
+StructType *llvm::getSjLjFunctionContextType(const Module &M) {
+  LLVMContext &Ctx = M.getContext();
+  Type *DataTy =
+      Type::getIntNTy(Ctx, M.getTargetTriple().getArchPointerBitWidth());
+  // builtin_setjmp uses a five word jbuf
+  Type *VoidPtrTy = PointerType::getUnqual(Ctx);
+  return StructType::get(VoidPtrTy,                   // __prev
+                         Type::getInt32Ty(Ctx),       // call_site
+                         ArrayType::get(DataTy, 4),   // __data
+                         VoidPtrTy,                   // __personality
+                         VoidPtrTy,                   // __lsda
+                         ArrayType::get(VoidPtrTy, 5) // __jbuf
+  );
+}
+
 // doInitialization - Set up decalarations and types needed to process
 // exceptions.
 bool SjLjEHPrepareImpl::doInitialization(Module &M) {
   ExceptionModel = M.getExceptionModel();
 
-  // Build the function context structure.
-  // builtin_setjmp uses a five word jbuf
-  Type *VoidPtrTy = PointerType::getUnqual(M.getContext());
-  DataTy = M.getDataLayout().getIntPtrType(M.getContext());
-  doubleUnderDataTy = ArrayType::get(DataTy, 4);
-  doubleUnderJBufTy = ArrayType::get(VoidPtrTy, 5);
-  Type *Int32Ty = Type::getInt32Ty(M.getContext());
-  FunctionContextTy = StructType::get(VoidPtrTy,         // __prev
-                                      Int32Ty,           // call_site
-                                      doubleUnderDataTy, // __data
-                                      VoidPtrTy,         // __personality
-                                      VoidPtrTy,         // __lsda
-                                      doubleUnderJBufTy  // __jbuf
-  );
+  FunctionContextTy = getSjLjFunctionContextType(M);
+  doubleUnderDataTy = FunctionContextTy->getElementType(2);
+  doubleUnderJBufTy = FunctionContextTy->getElementType(5);
+  DataTy = cast<IntegerType>(doubleUnderDataTy->getArrayElementType());
 
   return false;
 }
