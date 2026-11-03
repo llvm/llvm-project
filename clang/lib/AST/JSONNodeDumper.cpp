@@ -752,11 +752,10 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
     break;
   default:
     if (isRVVFixedLengthDataVectorKind(VT->getVectorKind())) {
-      JOS.attribute("vectorKind",
-                    "fixed-length rvv data vector lmul " +
-                        getRVVFixedLengthDataLMulString(VT->getVectorKind(),
-                                                        /*MF=*/false)
-                            .str());
+      JOS.attribute(
+          "vectorKind",
+          "fixed-length rvv data vector lmul " +
+              getRVVFixedLengthDataLMulString(VT->getVectorKind()).str());
     } else {
       assert(isRVVFixedLengthMaskVectorKind(VT->getVectorKind()) &&
              "unexpected vector kind");

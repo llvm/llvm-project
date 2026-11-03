@@ -2171,7 +2171,7 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
   default:
     if (isRVVFixedLengthDataVectorKind(T->getVectorKind())) {
       OS << " fixed-length rvv data vector lmul "
-         << getRVVFixedLengthDataLMulString(T->getVectorKind(), /*MF=*/false);
+         << getRVVFixedLengthDataLMulString(T->getVectorKind());
     } else {
       assert(isRVVFixedLengthMaskVectorKind(T->getVectorKind()) &&
              "unexpected vector kind");

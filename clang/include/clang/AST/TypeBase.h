@@ -4335,24 +4335,24 @@ inline int getRVVFixedLengthDataLMulLog2(VectorKind VK) {
   }
 }
 
-/// Return the LMUL of an RVV fixed-length data vector kind as a string:
-/// "mf8" .. "m8" if \p MF is true, "1/8" .. "8" otherwise.
-inline StringRef getRVVFixedLengthDataLMulString(VectorKind VK, bool MF) {
+/// Return the LMUL of an RVV fixed-length data vector kind as a string,
+/// "mf8" .. "m8".
+inline StringRef getRVVFixedLengthDataLMulString(VectorKind VK) {
   switch (VK) {
   case VectorKind::RVVFixedLengthData_MF8:
-    return MF ? "mf8" : "1/8";
+    return "mf8";
   case VectorKind::RVVFixedLengthData_MF4:
-    return MF ? "mf4" : "1/4";
+    return "mf4";
   case VectorKind::RVVFixedLengthData_MF2:
-    return MF ? "mf2" : "1/2";
+    return "mf2";
   case VectorKind::RVVFixedLengthData_M1:
-    return MF ? "m1" : "1";
+    return "m1";
   case VectorKind::RVVFixedLengthData_M2:
-    return MF ? "m2" : "2";
+    return "m2";
   case VectorKind::RVVFixedLengthData_M4:
-    return MF ? "m4" : "4";
+    return "m4";
   case VectorKind::RVVFixedLengthData_M8:
-    return MF ? "m8" : "8";
+    return "m8";
   default:
     llvm_unreachable("not an RVV fixed-length data vector kind");
   }

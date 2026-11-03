@@ -21,19 +21,19 @@ typedef __rvv_bool32_t fixed_b32 __attribute__((riscv_rvv_vector_bits(4)));
 typedef __rvv_bool64_t fixed_b64 __attribute__((riscv_rvv_vector_bits(2)));
 
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_i8mf8
-// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul 1/8 2
+// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul mf8 2
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_i16mf4
-// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul 1/4 2
+// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul mf4 2
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_i32mf2
-// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul 1/2 2
+// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul mf2 2
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_i32m1
-// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul 1 4
+// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul m1 4
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_i32m2
-// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul 2 8
+// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul m2 8
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_i64m4
-// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul 4 8
+// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul m4 8
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_i8m8
-// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul 8 128
+// CHECK:       VectorType {{.*}} fixed-length rvv data vector lmul m8 128
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_b1
 // CHECK:       VectorType {{.*}} fixed-length rvv mask vector ratio 1 16
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_b8
@@ -43,13 +43,13 @@ typedef __rvv_bool64_t fixed_b64 __attribute__((riscv_rvv_vector_bits(2)));
 // CHECK-LABEL: TypedefDecl {{.*}} fixed_b64
 // CHECK:       VectorType {{.*}} fixed-length rvv mask vector ratio 64 1
 
-// JSON: "vectorKind": "fixed-length rvv data vector lmul 1/8"
-// JSON: "vectorKind": "fixed-length rvv data vector lmul 1/4"
-// JSON: "vectorKind": "fixed-length rvv data vector lmul 1/2"
-// JSON: "vectorKind": "fixed-length rvv data vector lmul 1"
-// JSON: "vectorKind": "fixed-length rvv data vector lmul 2"
-// JSON: "vectorKind": "fixed-length rvv data vector lmul 4"
-// JSON: "vectorKind": "fixed-length rvv data vector lmul 8"
+// JSON: "vectorKind": "fixed-length rvv data vector lmul mf8"
+// JSON: "vectorKind": "fixed-length rvv data vector lmul mf4"
+// JSON: "vectorKind": "fixed-length rvv data vector lmul mf2"
+// JSON: "vectorKind": "fixed-length rvv data vector lmul m1"
+// JSON: "vectorKind": "fixed-length rvv data vector lmul m2"
+// JSON: "vectorKind": "fixed-length rvv data vector lmul m4"
+// JSON: "vectorKind": "fixed-length rvv data vector lmul m8"
 // JSON: "vectorKind": "fixed-length rvv mask vector ratio 1"
 // JSON: "vectorKind": "fixed-length rvv mask vector ratio 8"
 // JSON: "vectorKind": "fixed-length rvv mask vector ratio 32"

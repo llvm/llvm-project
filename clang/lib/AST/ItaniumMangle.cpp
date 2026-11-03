@@ -4382,8 +4382,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   // are recorded in the vector kind, so the mangled name names the type the
   // typedef was written against and does not depend on VLEN.
   if (isRVVFixedLengthDataVectorKind(T->getVectorKind())) {
-    TypeNameOS << getRVVFixedLengthDataLMulString(T->getVectorKind(),
-                                                  /*MF=*/true);
+    TypeNameOS << getRVVFixedLengthDataLMulString(T->getVectorKind());
   } else {
     TypeNameOS << (1u << getRVVFixedLengthMaskRatioLog2(T->getVectorKind()));
   }
