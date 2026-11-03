@@ -364,7 +364,7 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, half %unkno
 }
 
 ; fma can rule out NaN in places that fmuladd cannot. This is because fma can
-; distinguish between exact infinities and overflow whereas
+; distinguish between exact infinities and overflow.
 
 define nofpclass(inf zero sub norm) half @ret__only_nan__fma__no_nan_inf_zero__no_nan_inf_zero__no_nan_pinf(half nofpclass(nan inf zero) %arg0, half nofpclass(nan inf zero) %arg1, half nofpclass(nan pinf) %arg2) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret__only_nan__fma__no_nan_inf_zero__no_nan_inf_zero__no_nan_pinf(
