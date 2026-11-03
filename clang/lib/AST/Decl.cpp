@@ -4955,7 +4955,7 @@ const FieldDecl *FieldDecl::findCountedByField() const {
   return dyn_cast<FieldDecl>(CountDecl);
 }
 
-static bool InitializationHasSideEffects(const FieldDecl &FD) {
+static bool initializationHasSideEffects(const FieldDecl &FD) {
   const Type *T = FD.getType()->getBaseElementTypeUnsafe();
   // FIXME: Destruction of ObjC lifetime types has side-effects.
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
@@ -4964,7 +4964,7 @@ static bool InitializationHasSideEffects(const FieldDecl &FD) {
   return false;
 }
 
-template <typename AttrType> static bool HasAttribute(const QualType &T) {
+template <typename AttrType> static bool hasAttribute(QualType T) {
   if (const TagDecl *TD = T->getAsTagDecl())
     return TD->hasAttr<AttrType>();
   if (const TypedefType *TDT = T->getAs<TypedefType>())
@@ -4978,9 +4978,9 @@ bool FieldDecl::isUnusedPrivateField() const {
     return false;
 
   QualType FieldType = getType();
-  return !HasAttribute<UnusedAttr>(FieldType) &&
-         (HasAttribute<WarnUnusedAttr>(FieldType) ||
-          !InitializationHasSideEffects(*this));
+  return !hasAttribute<UnusedAttr>(FieldType) &&
+         (hasAttribute<WarnUnusedAttr>(FieldType) ||
+          !initializationHasSideEffects(*this));
 }
 
 //===----------------------------------------------------------------------===//
