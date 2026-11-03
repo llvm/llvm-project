@@ -1349,10 +1349,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::mask_beforefirst: {
-    if (!ST->isSVEorStreamingSVEAvailable() || !isa<ScalableVectorType>(RetTy))
-      break;
-
-    if (!TLI->isTypeLegal(getTLI()->getValueType(DL, RetTy)))
+    if (!ST->isSVEorStreamingSVEAvailable() ||
+        !isa<ScalableVectorType>(RetTy) ||
+        !TLI->isTypeLegal(getTLI()->getValueType(DL, RetTy)))
       break;
 
     // mask_beforefirst(mask) -> brkb_z(ptrue, mask) but we ignore ptrue
