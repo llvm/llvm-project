@@ -2,6 +2,7 @@
 
 // CHECK-LABEL: func @affine_apply_constant
 // CHECK: test.reflect_bounds <umin = 42 : index, umax = 42 : index, smin = 42 : index, smax = 42 : index>
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @affine_apply_constant() -> index {
   %0 = affine.apply affine_map<() -> (42)>()
   %1 = test.reflect_bounds %0 : index
@@ -170,4 +171,5 @@ func.func @affine_apply_mod_negative_dividend() -> index {
   %0 = affine.apply affine_map<(d0) -> (d0 mod 4)>(%d0)
   %1 = test.reflect_bounds %0 : index
   func.return %1 : index
+}
 }

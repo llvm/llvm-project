@@ -20,6 +20,11 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
     Allows operations to participate in range analysis for scalar integer values by
     providing a methods that allows them to specify lower and upper bounds on their
     result(s) given lower and upper bounds on their input(s) if known.
+
+    `indexBitwidth` is the runtime width of the index type, or std::nullopt
+    when it is unknown. Each operation must implement at least one of the
+    methods below. Inference that needs the index width must handle an unknown
+    width conservatively. Inference that does not need it can ignore it.
   }];
   let cppNamespace = "::mlir";
 
@@ -44,12 +49,12 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
     /*retTy=*/"void",
     /*methodName=*/"inferResultRanges",
     /*args=*/(ins "::llvm::ArrayRef<::mlir::ConstantIntRanges>":$argRanges,
+                  "::std::optional<unsigned>":$indexBitwidth,
                   "::mlir::SetIntRangeFn":$setResultRanges),
     /*methodBody=*/"",
     /*defaultImplementation=*/[{
-      ::mlir::intrange::detail::defaultInferResultRangesFromOptional($_op,
-                                                                     argRanges,
-                                                                     setResultRanges);
+      ::mlir::intrange::detail::defaultInferResultRanges(
+          $_op, argRanges, indexBitwidth, setResultRanges);
     }]>,
 
     InterfaceMethod<[{
@@ -66,12 +71,12 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
     /*retTy=*/"void",
     /*methodName=*/"inferResultRangesFromOptional",
     /*args=*/(ins "::llvm::ArrayRef<::mlir::IntegerValueRange>":$argRanges,
+                  "::std::optional<unsigned>":$indexBitwidth,
                   "::mlir::SetIntLatticeFn":$setResultRanges),
     /*methodBody=*/"",
     /*defaultImplementation=*/[{
-      ::mlir::intrange::detail::defaultInferResultRanges($_op,
-                                                         argRanges,
-                                                         setResultRanges);
+      ::mlir::intrange::detail::defaultInferResultRangesFromOptional(
+          $_op, argRanges, indexBitwidth, setResultRanges);
     }]>
   ];
 }

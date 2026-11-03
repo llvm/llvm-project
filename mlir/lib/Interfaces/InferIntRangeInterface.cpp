@@ -9,10 +9,20 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.cpp.inc"
 #include <optional>
 
 using namespace mlir;
+
+std::optional<unsigned>
+mlir::getIndexBitwidthForRangeInference(const DataLayout &layout) {
+  DataLayoutSpecInterface spec = layout.getSpec();
+  if (!spec || spec.getSpecForType<IndexType>().empty())
+    return std::nullopt;
+  return layout.getTypeSizeInBits(IndexType::get(spec.getContext()))
+      .getFixedValue();
+}
 
 bool ConstantIntRanges::operator==(const ConstantIntRanges &other) const {
   return umin().getBitWidth() == other.umin().getBitWidth() &&
@@ -28,14 +38,25 @@ const APInt &ConstantIntRanges::smin() const { return sminVal; }
 
 const APInt &ConstantIntRanges::smax() const { return smaxVal; }
 
-unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
+unsigned ConstantIntRanges::getBitwidth(Type type, unsigned indexBitwidth) {
   type = getElementTypeOrSelf(type);
-  if (type.isIndex())
-    return IndexType::kInternalStorageBitWidth;
+  if (type.isIndex()) {
+    assert(indexBitwidth > 0 &&
+           "Index range inference requires a runtime width");
+    return indexBitwidth;
+  }
   if (auto integerType = dyn_cast<IntegerType>(type))
     return integerType.getWidth();
   // Non-integer types have their bounds stored in width 0 `APInt`s.
   return 0;
+}
+
+std::optional<unsigned>
+ConstantIntRanges::getBitwidth(Type type,
+                               std::optional<unsigned> indexBitwidth) {
+  if (getElementTypeOrSelf(type).isIndex())
+    return indexBitwidth;
+  return getBitwidth(type, 0);
 }
 
 ConstantIntRanges ConstantIntRanges::maxRange(unsigned bitwidth) {
@@ -132,8 +153,10 @@ raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {
   return os << "] signed : [" << range.smin() << ", " << range.smax() << "]";
 }
 
-IntegerValueRange IntegerValueRange::getMaxRange(Value value) {
-  unsigned width = ConstantIntRanges::getStorageBitwidth(value.getType());
+IntegerValueRange IntegerValueRange::getMaxRange(Value value,
+                                                 unsigned indexBitwidth) {
+  unsigned width =
+      ConstantIntRanges::getBitwidth(value.getType(), indexBitwidth);
   APInt umin = APInt::getMinValue(width);
   APInt umax = APInt::getMaxValue(width);
   APInt smin = width != 0 ? APInt::getSignedMinValue(width) : umin;
@@ -166,34 +189,32 @@ mlir::getIntValueRanges(ArrayRef<OpFoldResult> values,
 }
 
 void mlir::intrange::detail::defaultInferResultRanges(
+    InferIntRangeInterface interface, ArrayRef<ConstantIntRanges> argRanges,
+    std::optional<unsigned> indexBitwidth, SetIntRangeFn setResultRanges) {
+  auto ranges = llvm::to_vector_of<IntegerValueRange>(argRanges);
+  interface.inferResultRangesFromOptional(
+      ranges, indexBitwidth,
+      [&setResultRanges](Value value, const IntegerValueRange &range) {
+        if (!range.isUninitialized())
+          setResultRanges(value, range.getValue());
+      });
+}
+
+void mlir::intrange::detail::defaultInferResultRangesFromOptional(
     InferIntRangeInterface interface, ArrayRef<IntegerValueRange> argRanges,
-    SetIntLatticeFn setResultRanges) {
+    std::optional<unsigned> indexBitwidth, SetIntLatticeFn setResultRanges) {
   // Inline size chosen empirically based on compilation profiling.
   // Profiled: 1.6M calls, avg=1.2+-0.8. N=2 covers ~84% of cases inline.
   llvm::SmallVector<ConstantIntRanges, 2> unpacked;
   unpacked.reserve(argRanges.size());
-
   for (const IntegerValueRange &range : argRanges) {
     if (range.isUninitialized())
       return;
     unpacked.push_back(range.getValue());
   }
-
   interface.inferResultRanges(
-      unpacked,
-      [&setResultRanges](Value value, const ConstantIntRanges &argRanges) {
-        setResultRanges(value, IntegerValueRange{argRanges});
-      });
-}
-
-void mlir::intrange::detail::defaultInferResultRangesFromOptional(
-    InferIntRangeInterface interface, ArrayRef<ConstantIntRanges> argRanges,
-    SetIntRangeFn setResultRanges) {
-  auto ranges = llvm::to_vector_of<IntegerValueRange>(argRanges);
-  interface.inferResultRangesFromOptional(
-      ranges,
-      [&setResultRanges](Value value, const IntegerValueRange &argRanges) {
-        if (!argRanges.isUninitialized())
-          setResultRanges(value, argRanges.getValue());
+      unpacked, indexBitwidth,
+      [&setResultRanges](Value value, const ConstantIntRanges &range) {
+        setResultRanges(value, IntegerValueRange{range});
       });
 }

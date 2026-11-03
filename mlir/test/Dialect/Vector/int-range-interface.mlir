@@ -3,6 +3,7 @@
 
 // CHECK-LABEL: func @constant_vec
 // CHECK: test.reflect_bounds <umin = 0 : index, umax = 7 : index, smin = 0 : index, smax = 7 : index>
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @constant_vec() -> vector<8xindex> {
   %0 = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7]> : vector<8xindex>
   %1 = test.reflect_bounds %0 : vector<8xindex>
@@ -150,4 +151,5 @@ func.func @vector_step_i8_wrap() -> vector<300xi8> {
   %0 = vector.step : vector<300xi8>
   %1 = test.reflect_bounds %0 : vector<300xi8>
   func.return %1 : vector<300xi8>
+}
 }

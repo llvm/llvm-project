@@ -13,6 +13,7 @@
 //       CHECK:  %[[RES_I8:.*]] = arith.addi %[[POS_I8]], %[[NEG_I8]] : i8
 //       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] : i8 to index
 //       CHECK:  return %[[RES]] : index
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @test_addi_neg() -> index {
   %0 = test.with_bounds < umin = 0 : index, umax = 1 : index, smin = 0 : index, smax = 1 : index > : index
   %1 = test.with_bounds < umin = 0 : index, umax = -1 : index, smin = -1 : index, smax = 0 : index > : index
@@ -819,4 +820,5 @@ func.func @zero_element_tensor_constant() -> tensor<2x0xi32> {
   // CHECK: arith.constant dense<> : tensor<2x0xi32>
   %0 = arith.constant dense<> : tensor<2x0xi32>
   return %0 : tensor<2x0xi32>
+}
 }

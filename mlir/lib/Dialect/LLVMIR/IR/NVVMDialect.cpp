@@ -5954,7 +5954,9 @@ void mlir::NVVM::nvvmInferResultRanges(
     setResultRanges(result, {range->getLower(), range->getUpper(),
                              range->getLower(), range->getUpper()});
   } else {
-    setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
+    setResultRanges(result,
+                    ConstantIntRanges::maxRange(
+                        cast<IntegerType>(result.getType()).getWidth()));
   }
 }
 

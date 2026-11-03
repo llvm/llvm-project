@@ -268,7 +268,7 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
     // Infer the result ranges based on the range attribute.
     void $cppClass::inferResultRanges(
         ArrayRef<::mlir::ConstantIntRanges> argRanges,
-        SetIntRangeFn setResultRanges) {
+        std::optional<unsigned> indexBitwidth, SetIntRangeFn setResultRanges) {
         nvvmInferResultRanges(getRange(), getResult(), argRanges,
                               setResultRanges);
     }

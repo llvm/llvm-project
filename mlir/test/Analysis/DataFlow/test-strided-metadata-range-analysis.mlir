@@ -1,5 +1,6 @@
 // RUN: mlir-opt -test-strided-metadata-range-analysis %s 2>&1 | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @memref_subview(%arg0: memref<8x16x4xf32, strided<[64, 4, 1]>>, %arg1: memref<1x128x1x32x1xf32, strided<[4096, 32, 32, 1, 1]>>, %arg2: memref<8x16x4xf32, strided<[1, 64, 8], offset: 16>>, %arg3: index, %arg4: index, %arg5: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -65,3 +66,4 @@ func.func @memref_subview(%arg0: memref<8x16x4xf32, strided<[64, 4, 1]>>, %arg1:
 // CHECK-NEXT:  %[[SV3]] = memref.subview
 // CHECK-NEXT:  %[[SV4]] = memref.subview
 // CHECK-NEXT:  %[[SV5]] = memref.subview
+}

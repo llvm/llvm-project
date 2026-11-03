@@ -23,9 +23,10 @@ include "mlir/IR/OpBase.td"
 //===----------------------------------------------------------------------===//
 
 /// Base class for Index dialect operations.
-class IndexOp<string mnemonic, list<Trait> traits = []>
+class IndexOp<string mnemonic, list<Trait> traits = [],
+              string rangeMethod = "inferResultRanges">
     : Op<IndexDialect, mnemonic,
-      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>] # traits>;
+      [DeclareOpInterfaceMethods<InferIntRangeInterface, [rangeMethod]>] # traits>;
 
 //===----------------------------------------------------------------------===//
 // IndexBinaryOp
@@ -465,7 +466,7 @@ def Index_XOrOp : IndexBinaryOp<"xor", [Commutative, Pure]> {
 //===----------------------------------------------------------------------===//
 
 def Index_CastSOp : IndexOp<"casts", [Pure,
-    DeclareOpInterfaceMethods<CastOpInterface>]> {
+    DeclareOpInterfaceMethods<CastOpInterface>], "inferResultRangesFromOptional"> {
   let summary = "index signed cast";
   let description = [{
     The `index.casts` operation enables conversions between values of index type
@@ -495,7 +496,7 @@ def Index_CastSOp : IndexOp<"casts", [Pure,
 //===----------------------------------------------------------------------===//
 
 def Index_CastUOp : IndexOp<"castu", [Pure,
-    DeclareOpInterfaceMethods<CastOpInterface>]> {
+    DeclareOpInterfaceMethods<CastOpInterface>], "inferResultRangesFromOptional"> {
   let summary = "index unsigned cast";
   let description = [{
     The `index.castu` operation enables conversions between values of index type
@@ -524,7 +525,7 @@ def Index_CastUOp : IndexOp<"castu", [Pure,
 // CmpOp
 //===----------------------------------------------------------------------===//
 
-def Index_CmpOp : IndexOp<"cmp", [Pure]> {
+def Index_CmpOp : IndexOp<"cmp", [Pure], "inferResultRangesFromOptional"> {
   let summary = "index compare";
   let description = [{
     The `index.cmp` operation takes two index values and compares them according

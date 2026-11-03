@@ -3,6 +3,7 @@
 // CHECK-LABEL: func @constant
 // CHECK: %[[cst:.*]] = "test.constant"() <{value = 3 : index}
 // CHECK: return %[[cst]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @constant() -> index {
   %0 = test.with_bounds < umin = 3 : index, umax = 3 : index,
                                smin = 3 : index, smax = 3 : index> : index
@@ -199,4 +200,5 @@ func.func @multiple_loop_ivs(%arg0: memref<?x64xi32>) {
     memref.store %c0_i32, %arg0[%1, %2] : memref<?x64xi32>
   }
   return
+}
 }
