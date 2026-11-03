@@ -1091,16 +1091,35 @@ gentbl_cc_library(
     deps = ["//llvm:OptParserTdFiles"],
 )
 
+# The lldb-dap implementation, shared by the lldb-dap tool and DAPTests like
+# CMake's lldbDAP library.
+cc_library(
+    name = "lldbDAP",
+    srcs = glob(
+        ["tools/lldb-dap/**/*.cpp"],
+        exclude = ["tools/lldb-dap/tool/**"],
+    ),
+    hdrs = glob(
+        ["tools/lldb-dap/**/*.h"],
+        exclude = ["tools/lldb-dap/tool/**"],
+    ),
+    includes = ["tools/lldb-dap"],
+    deps = [
+        ":Headers",
+        ":Host",
+        ":Utility",
+        ":liblldb.wrapper",
+        "//llvm:Support",
+        "//llvm:Telemetry",
+    ],
+)
+
 cc_binary(
     name = "lldb-dap",
-    srcs = glob([
-        "tools/lldb-dap/**/*.cpp",
-        "tools/lldb-dap/**/*.h",
-    ]),
+    srcs = ["tools/lldb-dap/tool/lldb-dap.cpp"],
     additional_linker_inputs = [
         ":lldb-dap-plist",
     ],
-    includes = ["tools/lldb-dap"],
     linkopts = select({
         "@platforms//os:macos": [
             "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-dap-plist)",
@@ -1112,10 +1131,10 @@ cc_binary(
         ":Host",
         ":Utility",
         ":liblldb.wrapper",
+        ":lldbDAP",
         ":lldb_dap_opts_gen",
         "//llvm:Option",
         "//llvm:Support",
-        "//llvm:Telemetry",
         "//llvm:config",
     ],
 )
@@ -1129,16 +1148,25 @@ expand_template(
     template = "tools/lldb-mcp/lldb-mcp-Info.plist.in",
 )
 
+# Shared by lldb-mcp and LLDBMCPTests, which CMake builds from the same source.
+cc_library(
+    name = "lldbMCPMultiplexer",
+    srcs = ["tools/lldb-mcp/Multiplexer.cpp"],
+    hdrs = ["tools/lldb-mcp/Multiplexer.h"],
+    includes = ["tools/lldb-mcp"],
+    deps = [
+        ":Headers",
+        ":ProtocolMCP",
+        "//llvm:Support",
+    ],
+)
+
 cc_binary(
     name = "lldb-mcp",
-    srcs = glob([
-        "tools/lldb-mcp/**/*.cpp",
-        "tools/lldb-mcp/**/*.h",
-    ]),
+    srcs = ["tools/lldb-mcp/lldb-mcp.cpp"],
     additional_linker_inputs = [
         ":lldb-mcp-plist",
     ],
-    includes = ["tools/lldb-mcp"],
     linkopts = select({
         "@platforms//os:macos": [
             "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-mcp-plist)",
@@ -1151,6 +1179,7 @@ cc_binary(
         ":ProtocolMCP",
         ":Utility",
         ":liblldb.wrapper",
+        ":lldbMCPMultiplexer",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:config",
