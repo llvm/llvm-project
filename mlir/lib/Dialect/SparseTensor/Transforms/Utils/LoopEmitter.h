@@ -253,10 +253,8 @@ private:
   // the set of tensors levels that the loop is iterating over.
   struct LoopInfo final {
     LoopInfo(ArrayRef<TensorLevel> tidLvls, Operation *loop, Block *userBlock,
-             Value iv, StringAttr loopTag,
-             ArrayRef<TensorLevel> auxiliaryDenseTidLvls = {})
-        : tidLvls(tidLvls), auxiliaryDenseTidLvls(auxiliaryDenseTidLvls),
-          loop(loop), userCodeBlock(userBlock), iv(iv) {
+             Value iv, StringAttr loopTag)
+        : tidLvls(tidLvls), loop(loop), userCodeBlock(userBlock), iv(iv) {
       // Attached a special tag to loop emitter generated loop.
       if (loopTag)
         loop->setDiscardableAttr(LoopEmitter::getLoopEmitterLoopAttrName(),
@@ -267,7 +265,6 @@ private:
     // required for levels with non-tivial index expressions, which is
     // maintained by the sliceDrivenInfo array below.
     const llvm::SmallVector<TensorLevel> tidLvls;
-    const llvm::SmallVector<TensorLevel> auxiliaryDenseTidLvls;
     Operation *loop;            // the loop operation
     Block *const userCodeBlock; // the block holding users' generated code.
     Value iv;                   // the induction variable for the loop
@@ -276,8 +273,6 @@ private:
   void categorizeIterators(ArrayRef<TensorLevel> tidLvls,
                            SmallVectorImpl<SparseIterator *> &raIters,
                            SmallVectorImpl<SparseIterator *> &spIters);
-  void linkSparseIteratorDenseLvls(OpBuilder &builder, Location loc,
-                                   ArrayRef<TensorLevel> tidLvls, Value crd);
   ///
   /// LoopEmitter internal helper functions.
   ///
