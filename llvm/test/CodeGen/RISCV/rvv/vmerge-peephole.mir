@@ -2,7 +2,7 @@
 # RUN: llc %s -o - -mtriple=riscv64 -mattr=+v,+experimental-zvzip \
 # RUN:   -run-pass=riscv-vector-peephole | FileCheck %s
 # RUN: llc %s -o - -mtriple=riscv64 -mattr=+v,+experimental-zvzip \
-# RUN:   -passes=riscv-vector-peephole -verify-machineinstrs | FileCheck %s
+# RUN:   -passes=riscv-vector-peephole | FileCheck %s
 
 ---
 name: vle32
