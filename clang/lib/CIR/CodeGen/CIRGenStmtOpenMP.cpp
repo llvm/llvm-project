@@ -228,8 +228,6 @@ CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
   mlir::Location end = getLoc(s.getEndLoc());
 
   return emitMasterOp(*this, begin, end, [&]() -> mlir::LogicalResult {
-    // emitStmt() rejects CapturedStmt directly; the parent construct
-    // must unwrap it, so emit the inner statement instead.
     const Stmt *innerStmt = s.getAssociatedStmt();
     return emitStmt(innerStmt, /*useCurrentScope=*/true);
   });
