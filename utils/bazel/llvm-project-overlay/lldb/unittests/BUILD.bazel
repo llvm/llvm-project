@@ -186,6 +186,11 @@ cc_test(
 cc_test(
     name = "APITests",
     srcs = glob(["API/*.cpp"]),
+    # Link LLVM and lldb's libraries into the test statically, as CMake does,
+    # rather than as shared libraries next to liblldb, which has its own
+    # copies. Shared copies would bind to liblldb's exported symbols and mix
+    # their global state with liblldb's.
+    linkstatic = 1,
     target_compatible_with = select({
         # CMake skips the tests that link liblldb on Windows, where that does
         # not work for the unit tests.
@@ -261,6 +266,11 @@ cc_test(
     data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["DAPTests"]],
     # The Handler/ tests include TestBase.h from the directory above.
     includes = ["DAP"],
+    # Link LLVM and lldb's libraries into the test statically, as CMake does,
+    # rather than as shared libraries next to liblldb, which has its own
+    # copies. Shared copies would bind to liblldb's exported symbols and mix
+    # their global state with liblldb's.
+    linkstatic = 1,
     target_compatible_with = select({
         # CMake skips the tests that link liblldb on Windows, where that does
         # not work for the unit tests.
