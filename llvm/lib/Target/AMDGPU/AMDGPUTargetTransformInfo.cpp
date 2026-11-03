@@ -1015,6 +1015,12 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         Elts && Src->isIntegerTy(*Elts))
       return InstructionCost(MaskUnpackCostPerElt) * *Elts *
              getFullRateInstrCost();
+    // Integer and floating-point values share the same registers, so a bitcast
+    // between legal types is free. A legalized type, such as a vector of i8,
+    // may need its lanes repacked.
+    if (TLI->isTypeLegal(TLI->getValueType(DL, Src)) &&
+        TLI->isTypeLegal(TLI->getValueType(DL, Dst)))
+      return 0;
   }
 
   // Each f32 lane is rounded and the halves are packed in pairs. A packed
