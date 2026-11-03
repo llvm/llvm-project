@@ -312,7 +312,7 @@ Error DataReader::readProfilePreCFG(BinaryContext &BC) {
       if (NextII == Function.Instructions.end())
         MemAccessProfile.NextInstrOffset = Function.getSize();
       else
-        MemAccessProfile.NextInstrOffset = II->first;
+        MemAccessProfile.NextInstrOffset = NextII->first;
     }
     Function.HasMemoryProfile = true;
   }
