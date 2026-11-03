@@ -17,6 +17,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -88,46 +89,67 @@ bool collectAliasTargets(const NamedDecl *Alias, const Tweak::Selection &Inputs,
   return !Targets.empty();
 }
 
+/// A using-directive gathered from the file/namespace-scope AST, holding the
+/// information needed to answer visibility queries without re-traversing the
+/// AST for every query.
+struct UsingDirectiveInfo {
+  const DeclContext *ActiveCtx; // primary context the directive is active in
+  const DeclContext *Nominated; // primary nominated namespace
+  SourceLocation Loc;           // expansion loc of the directive
+};
+
+/// Collects all file/namespace-scope using-directives of the TU in a single
+/// pass, so that repeated visibility queries do not each re-traverse the AST.
+llvm::SmallVector<UsingDirectiveInfo>
+collectUsingDirectives(ParsedAST &AST) {
+  auto &SM = AST.getSourceManager();
+  llvm::SmallVector<UsingDirectiveInfo> Directives;
+  auto ScanDecl = [&](auto &&Self, const Decl *D) -> void {
+    if (const auto *UDD = llvm::dyn_cast<UsingDirectiveDecl>(D)) {
+      if (const auto *Nom = UDD->getNominatedNamespace())
+        Directives.push_back({UDD->getDeclContext()->getPrimaryContext(),
+                              Nom->getPrimaryContext(),
+                              SM.getExpansionLoc(UDD->getBeginLoc())});
+      return;
+    }
+
+    if (llvm::isa<NamespaceDecl, LinkageSpecDecl, ExportDecl>(D)) {
+      for (const Decl *Child : llvm::cast<DeclContext>(D)->decls())
+        Self(Self, Child);
+    }
+  };
+
+  for (const Decl *D : AST.getLocalTopLevelDecls())
+    ScanDecl(ScanDecl, D);
+  return Directives;
+}
+
 /// Computes the set of primary file/namespace DeclContexts visible for
 /// unqualified lookup at (\p UseCtx, \p UseLoc), including namespaces nominated
-/// by active using-directives before \p UseLoc.
+/// by active using-directives before \p UseLoc. \p Directives must contain all
+/// file/namespace-scope using-directives of the TU (see collectUsingDirectives).
 llvm::SmallPtrSet<const DeclContext *, 8>
 collectVisibleContexts(const DeclContext *UseCtx, SourceLocation UseLoc,
-                       ParsedAST &AST) {
+                       llvm::ArrayRef<UsingDirectiveInfo> Directives,
+                       const SourceManager &SM) {
   llvm::SmallPtrSet<const DeclContext *, 8> Visible;
   for (const DeclContext *Ctx = UseCtx; Ctx; Ctx = Ctx->getParent()) {
     if (Ctx->isFileContext())
       Visible.insert(Ctx->getPrimaryContext());
   }
 
-  auto &SM = AST.getSourceManager();
   bool Changed = true;
   while (Changed) {
     Changed = false;
-    auto ScanDecl = [&](auto &&Self, const Decl *D) -> void {
-      SourceLocation DLoc = SM.getExpansionLoc(D->getBeginLoc());
-      if (DLoc.isValid() && UseLoc.isValid() &&
-          SM.isBeforeInTranslationUnit(UseLoc, DLoc))
-        return;
-
-      if (const auto *UDD = llvm::dyn_cast<UsingDirectiveDecl>(D)) {
-        if (Visible.contains(UDD->getDeclContext()->getPrimaryContext())) {
-          if (const auto *Nom = UDD->getNominatedNamespace()) {
-            if (Visible.insert(Nom->getPrimaryContext()).second)
-              Changed = true;
-          }
-        }
-        return;
-      }
-
-      if (llvm::isa<NamespaceDecl, LinkageSpecDecl, ExportDecl>(D)) {
-        for (const Decl *Child : llvm::cast<DeclContext>(D)->decls())
-          Self(Self, Child);
-      }
-    };
-
-    for (const Decl *D : AST.getLocalTopLevelDecls())
-      ScanDecl(ScanDecl, D);
+    for (const UsingDirectiveInfo &UDD : Directives) {
+      if (UDD.Loc.isValid() && UseLoc.isValid() &&
+          SM.isBeforeInTranslationUnit(UseLoc, UDD.Loc))
+        continue;
+      if (!Visible.contains(UDD.ActiveCtx))
+        continue;
+      if (Visible.insert(UDD.Nominated).second)
+        Changed = true;
+    }
   }
   return Visible;
 }
@@ -220,8 +242,9 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
       SM.getExpansionLoc(Prepared.QualifierToRemove.getBeginLoc());
   const DeclContext *SelectionCtx =
       &Inputs.ASTSelection.commonAncestor()->getDeclContext();
+  auto Directives = collectUsingDirectives(*Inputs.AST);
   auto VisibleContexts =
-      collectVisibleContexts(SelectionCtx, SelectionLoc, *Inputs.AST);
+      collectVisibleContexts(SelectionCtx, SelectionLoc, Directives, SM);
 
   llvm::DenseSet<const NamedDecl *> AliasTargets;
   for (const Decl *D : Inputs.AST->getLocalTopLevelDecls()) {
@@ -289,7 +312,9 @@ ReplaceQualifiedWithAlias::apply(const Selection &Inputs) {
 
   // When the alias is declared inside a namespace, only rewrite references in
   // declarations where that namespace is visible (either directly enclosed by
-  // the namespace or via an active using-directive).
+  // the namespace or via an active using-directive). Collect all using-
+  // directives once up front so visibility checks do not re-traverse the AST.
+  auto Directives = collectUsingDirectives(*Inputs.AST);
   auto ProcessDecl = [&](auto &&Self, const Decl *D) -> void {
     if (llvm::isa<NamespaceDecl, LinkageSpecDecl, ExportDecl>(D)) {
       const auto *DC = llvm::cast<DeclContext>(D);
@@ -304,7 +329,7 @@ ReplaceQualifiedWithAlias::apply(const Selection &Inputs) {
     const DeclContext *UseCtx = llvm::isa<DeclContext>(D)
                                     ? llvm::cast<DeclContext>(D)
                                     : D->getDeclContext();
-    auto Visible = collectVisibleContexts(UseCtx, DLoc, *Inputs.AST);
+    auto Visible = collectVisibleContexts(UseCtx, DLoc, Directives, SM);
     if (!Visible.contains(AliasPrimaryCtx))
       return;
 
