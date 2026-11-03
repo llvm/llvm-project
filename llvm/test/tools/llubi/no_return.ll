@@ -16,5 +16,5 @@ entry:
 ; CHECK-NEXT: Exiting function: f
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @f() at @main <stdin>:10
-; CHECK-NEXT: Immediate UB detected: Return from a noreturn function.
+; CHECK-NEXT: Immediate UB detected: Return from a noreturn function/callsite.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
