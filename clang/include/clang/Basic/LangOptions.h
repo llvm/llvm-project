@@ -668,6 +668,13 @@ public:
     return !isCompilingModule() && !ModuleName.empty();
   }
 
+  /// Whether this compilation captures version-independent API notes unapplied
+  /// for downstream importers to select and apply.
+  bool capturesVersionIndependentAPINotes(bool GeneratingPreamble) const {
+    return SwiftVersionIndependentAPINotes &&
+           (isCompilingModule() || (CompilingPCH && !GeneratingPreamble));
+  }
+
   /// Do we need to track the owning module for a local declaration?
   bool trackLocalOwningModule() const {
     return isCompilingModule() || ModulesLocalVisibility;

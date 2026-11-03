@@ -7520,13 +7520,15 @@ static NullabilityKind mapNullabilityAttrKind(ParsedAttr::Kind kind) {
   }
 }
 
-static bool CheckNullabilityTypeSpecifier(
-    Sema &S, TypeProcessingState *State, ParsedAttr *PAttr, QualType &QT,
-    NullabilityKind Nullability, SourceLocation NullabilityLoc,
-    bool IsContextSensitive, bool AllowOnArrayType, bool OverrideExisting) {
-  bool Implicit = (State == nullptr);
-  if (!Implicit)
-    recordNullabilitySeen(S, NullabilityLoc);
+static bool CheckNullabilityTypeSpecifier(TypeProcessingState &State,
+                                          QualType &QT, ParsedAttr &PAttr,
+                                          bool AllowOnArrayType) {
+  NullabilityKind Nullability = mapNullabilityAttrKind(PAttr.getKind());
+  SourceLocation NullabilityLoc = PAttr.getLoc();
+  bool IsContextSensitive = PAttr.isContextSensitiveKeywordAttribute();
+
+  Sema &S = State.getSema();
+  recordNullabilitySeen(S, NullabilityLoc);
 
   // Check for existing nullability attributes on the type.
   QualType Desugared = QT;
@@ -7535,9 +7537,6 @@ static bool CheckNullabilityTypeSpecifier(
     if (auto ExistingNullability = Attributed->getImmediateNullability()) {
       // Duplicated nullability.
       if (Nullability == *ExistingNullability) {
-        if (Implicit)
-          break;
-
         S.Diag(NullabilityLoc, diag::warn_nullability_duplicate)
             << DiagNullabilityKind(Nullability, IsContextSensitive)
             << FixItHint::CreateRemoval(NullabilityLoc);
@@ -7545,16 +7544,11 @@ static bool CheckNullabilityTypeSpecifier(
         break;
       }
 
-      if (!OverrideExisting) {
-        // Conflicting nullability.
-        S.Diag(NullabilityLoc, diag::err_nullability_conflicting)
-            << DiagNullabilityKind(Nullability, IsContextSensitive)
-            << DiagNullabilityKind(*ExistingNullability, false);
-        return true;
-      }
-
-      // Rebuild the attributed type, dropping the existing nullability.
-      QT = rebuildAttributedTypeWithoutNullability(S.Context, QT);
+      // Conflicting nullability.
+      S.Diag(NullabilityLoc, diag::err_nullability_conflicting)
+          << DiagNullabilityKind(Nullability, IsContextSensitive)
+          << DiagNullabilityKind(*ExistingNullability, false);
+      return true;
     }
 
     Desugared = Attributed->getModifiedType();
@@ -7565,13 +7559,13 @@ static bool CheckNullabilityTypeSpecifier(
   // have nullability specifiers on them, which means we cannot
   // provide a useful Fix-It.
   if (auto ExistingNullability = Desugared->getNullability()) {
-    if (Nullability != *ExistingNullability && !Implicit) {
+    if (Nullability != *ExistingNullability) {
       S.Diag(NullabilityLoc, diag::err_nullability_conflicting)
           << DiagNullabilityKind(Nullability, IsContextSensitive)
           << DiagNullabilityKind(*ExistingNullability, false);
 
       // Try to find the typedef with the existing nullability specifier.
-      if (auto TT = Desugared->getAs<TypedefType>()) {
+      if (const auto *TT = Desugared->getAs<TypedefType>()) {
         TypedefNameDecl *typedefDecl = TT->getDecl();
         QualType underlyingType = typedefDecl->getUnderlyingType();
         if (auto typedefNullability =
@@ -7590,9 +7584,8 @@ static bool CheckNullabilityTypeSpecifier(
   // If this definitely isn't a pointer type, reject the specifier.
   if (!Desugared->canHaveNullability() &&
       !(AllowOnArrayType && Desugared->isArrayType())) {
-    if (!Implicit)
-      S.Diag(NullabilityLoc, diag::err_nullability_nonpointer)
-          << DiagNullabilityKind(Nullability, IsContextSensitive) << QT;
+    S.Diag(NullabilityLoc, diag::err_nullability_nonpointer)
+        << DiagNullabilityKind(Nullability, IsContextSensitive) << QT;
 
     return true;
   }
@@ -7621,37 +7614,30 @@ static bool CheckNullabilityTypeSpecifier(
   }
 
   // Form the attributed type.
-  if (State) {
-    assert(PAttr);
-    Attr *A = createNullabilityAttr(S.Context, *PAttr, Nullability);
-    QT = State->getAttributedType(A, QT, QT);
-  } else {
-    QT = S.Context.getAttributedType(Nullability, QT, QT);
-  }
+  Attr *A = createNullabilityAttr(S.Context, PAttr, Nullability);
+  QT = State.getAttributedType(A, QT, QT);
   return false;
 }
 
-static bool CheckNullabilityTypeSpecifier(TypeProcessingState &State,
-                                          QualType &Type, ParsedAttr &Attr,
-                                          bool AllowOnArrayType) {
-  NullabilityKind Nullability = mapNullabilityAttrKind(Attr.getKind());
-  SourceLocation NullabilityLoc = Attr.getLoc();
-  bool IsContextSensitive = Attr.isContextSensitiveKeywordAttribute();
+bool Sema::OverrideImplicitNullability(ASTContext &Context, QualType &Type,
+                                       NullabilityKind Nullability,
+                                       bool AllowArrayTypes) {
+  QualType Desugared = Type;
+  while (auto *Attributed = dyn_cast<AttributedType>(Desugared.getTypePtr())) {
+    if (auto ExistingNullability = Attributed->getImmediateNullability()) {
+      if (Nullability == *ExistingNullability)
+        return false;
+      Type = rebuildAttributedTypeWithoutNullability(Context, Type);
+    }
+    Desugared = Attributed->getModifiedType();
+  }
 
-  return CheckNullabilityTypeSpecifier(State.getSema(), &State, &Attr, Type,
-                                       Nullability, NullabilityLoc,
-                                       IsContextSensitive, AllowOnArrayType,
-                                       /*overrideExisting*/ false);
-}
+  if (!Desugared->canHaveNullability() &&
+      !(AllowArrayTypes && Desugared->isArrayType()))
+    return true;
 
-bool Sema::CheckImplicitNullabilityTypeSpecifier(QualType &Type,
-                                                 NullabilityKind Nullability,
-                                                 SourceLocation DiagLoc,
-                                                 bool AllowArrayTypes,
-                                                 bool OverrideExisting) {
-  return CheckNullabilityTypeSpecifier(
-      *this, nullptr, nullptr, Type, Nullability, DiagLoc,
-      /*isContextSensitive*/ false, AllowArrayTypes, OverrideExisting);
+  Type = Context.getAttributedType(Nullability, Type, Type);
+  return false;
 }
 
 bool Sema::CheckVarDeclSizeAddressSpace(const VarDecl *VD, LangAS AS) {
