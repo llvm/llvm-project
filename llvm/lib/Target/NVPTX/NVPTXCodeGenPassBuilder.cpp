@@ -56,7 +56,7 @@
 using namespace llvm;
 
 extern cl::opt<bool> DisableLoadStoreVectorizer;
-extern cl::opt<bool> DisableNVPTXCodeGenPrepare;
+extern cl::opt<bool> DisableNVPTXIRPeephole;
 
 // byval arguments in NVPTX are special. We're only allowed to read from them
 // using a special instruction, and if we ever need to write to them or take an
@@ -233,8 +233,8 @@ void NVPTXCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
                                          /*AggregateToVector=*/true)),
                     PMW);
     addFunctionPass(NVPTXTagInvariantLoadsPass(), PMW);
-    if (!DisableNVPTXCodeGenPrepare)
-      addFunctionPass(NVPTXCodeGenPreparePass(), PMW);
+    if (!DisableNVPTXIRPeephole)
+      addFunctionPass(NVPTXIRPeepholePass(), PMW);
   }
 
   if (ST.hasPTXASUnreachableBug()) {

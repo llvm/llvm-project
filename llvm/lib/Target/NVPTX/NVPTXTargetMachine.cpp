@@ -45,12 +45,11 @@ cl::opt<bool>
                                cl::desc("Disable load/store vectorizer"),
                                cl::init(false), cl::Hidden);
 
-// NVPTX CodeGenPrepare is a new pass; this option will lets us turn it off in
-// case we encounter some issues.
-cl::opt<bool>
-    DisableNVPTXCodeGenPrepare("disable-nvptx-codegen-prepare",
-                               cl::desc("Disable NVPTX CodeGenPrepare"),
-                               cl::init(false), cl::Hidden);
+// NVPTX IR Peephole is a new pass; this option will lets us turn it off in case
+// we encounter some issues.
+cl::opt<bool> DisableNVPTXIRPeephole("disable-nvptx-ir-peephole",
+                                     cl::desc("Disable NVPTX IR Peephole"),
+                                     cl::init(false), cl::Hidden);
 
 // TODO: Remove this flag when we are confident with no regressions.
 static cl::opt<bool> DisableRequireStructuredCFG(
@@ -90,7 +89,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholeLegacyPassPass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
-  initializeNVPTXCodeGenPreparePass(PR);
+  initializeNVPTXIRPeepholePass(PR);
   initializeNVPTXPrologEpilogLegacyPassPass(PR);
 }
 
@@ -316,8 +315,8 @@ void NVPTXPassConfig::addIRPasses() {
     addPass(createSROAPass(/*PreserveCFG=*/true,
                            /*AggregateToVector=*/true));
     addPass(createNVPTXTagInvariantLoadsPass());
-    if (!DisableNVPTXCodeGenPrepare)
-      addPass(createNVPTXCodeGenPreparePass());
+    if (!DisableNVPTXIRPeephole)
+      addPass(createNVPTXIRPeepholePass());
   }
 
   if (ST.hasPTXASUnreachableBug()) {
