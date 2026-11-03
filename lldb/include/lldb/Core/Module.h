@@ -1046,8 +1046,13 @@ public:
   ///
   /// LLDB can cache data for a module between runs. This cache directory can be
   /// used to stored data that previously was manually created each time you
-  /// debug. Examples include debug information indexes, symbol tables, symbol
-  /// table indexes, and more.
+  /// debug. Examples include debug information indexes, symbol tables, memory
+  /// module headerbytes, and more.
+  ///
+  /// The arguments to this method give it context about the type of file being
+  /// cache.  It will integrate the user's settings to decide if a DataFileCache
+  /// should be used in this case.
+  ///
   ///
   /// \param[in] memory_module
   ///     True if this binary exists only in memory.
@@ -1057,8 +1062,9 @@ public:
   ///     modules.
   ///
   /// \returns
-  ///   If caching is enabled in the lldb settings, return a pointer to the data
-  ///   file cache. If caching is not enabled, return NULL.
+  ///   If caching is enabled in the lldb settings and based on the arguments
+  ///   for this currentu se case, , return a pointer to the data file cache.
+  ///   If caching is not enabled for this context/settings, returns nullptr.
   static DataFileCache *
   GetIndexCache(bool memory_module, bool disable_memory_symtab_caching = false);
 
