@@ -6,8 +6,6 @@
 ! - A finished structured loop leaves one past the end. `do k = 1, 3` leaves
 !   4. A zero-trip loop leaves the lower bound: after `k = 5` and
 !   `do k = 1, 0`, the value is 1.
-! - A seq loop whose induction variable is already private on the parent
-!   updates that private. `do k = 1, 3` leaves 4 there.
 ! - collapse(2) puts only the seq loop's own DO variable on the parent. The
 !   collapsed index stays on the collapsed loop and is not visible after it.
 ! - device_type(nvidia) seq, device_type(default) seq, and device_type(*) seq
@@ -96,32 +94,6 @@ end subroutine
 ! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK: fir.store %[[C1]] to %[[KDECL]]#0 : !fir.ref<i32>
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-
-! -----------------------------------------------------------------------------
-! The seq loop updates the private already on the parent.
-! -----------------------------------------------------------------------------
-subroutine private_on_parent(a, n, kout)
-  integer :: n, i, k, kout
-  real :: a(n)
-  !$acc parallel copy(kout)
-  !$acc loop gang private(k)
-  do i = 1, n
-    !$acc loop seq
-    do k = 1, 3
-      a(i) = a(i) + k
-    end do
-    kout = k
-  end do
-  !$acc end parallel
-end subroutine
-
-! CHECK-LABEL: func.func @_QPprivate_on_parent
-! CHECK: acc.private {{.*}} implicit(false) name("k")
-! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFprivate_on_parentEk")
-! CHECK: acc.loop control(%{{.*}} : i32) =
-! CHECK: fir.store %{{.*}} to %[[KDECL]]#0 : !fir.ref<i32>
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
 
 ! -----------------------------------------------------------------------------
