@@ -8719,8 +8719,8 @@ struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
 /// Conservatively compute the regions reachable from an operation entry.
 /// Region-to-region edges are included: an entry-only check is insufficient for
 /// loops and operations that enter one region through another.
-static bool isRegionReachable(RegionBranchOpInterface branch, Region *target,
-                              ArrayRef<Attribute> operands) {
+bool isRegionReachable(RegionBranchOpInterface branch, Region *target,
+                       ArrayRef<Attribute> operands) {
   SmallVector<RegionSuccessor> successors;
   branch.getEntrySuccessorRegions(operands, successors);
   SmallVector<Region *> worklist;
@@ -8765,9 +8765,7 @@ struct SelectReductionBranch : OpRewritePattern<arith::SelectOp> {
         if (inserted) {
           for (Value operand : parent->getOperands()) {
             auto reduction = operand.getDefiningOp<ReductionOp>();
-            if (!reduction ||
-                !reduction.getDest().getType().isSignlessInteger(1) ||
-                reduction.getAcc() || reduction.isMasked() ||
+            if (!reduction || reduction.getAcc() || reduction.isMasked() ||
                 reduction.getVector() != select.getCondition())
               continue;
             bool value;
