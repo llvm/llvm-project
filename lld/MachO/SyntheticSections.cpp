@@ -440,7 +440,7 @@ static void writeArm64eChainedBind(uint8_t *buf, const Symbol *sym,
   auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
   bind->ordinal = ordinal;
   bind->zero = 0;
-  bind->addend = inlineAddend & 0x7ffff; // signed 19 bits
+  bind->addend = inlineAddend;
   bind->next = 0;
   bind->bind = 1;
   bind->auth = 0;
@@ -2523,9 +2523,10 @@ bool ChainedFixupsSection::isNeeded() const {
 }
 
 // Whether a bind keeps its addend in its own addend field rather than in the
-// imports table. Like ld64, the arm64e formats keep addends below 256 KiB in
-// magnitude there, but DYLD_CHAINED_PTR_ARM64E no negative ones, which ld64
-// rejects for that format.
+// imports table. The 19-bit addend field is two's complement, but Xcode's ld
+// inlines only addends below 256 KiB in magnitude, and with
+// DYLD_CHAINED_PTR_ARM64E no negative ones, which it rejects ("addend cannot
+// fit in fixup"); we move those to the imports table instead.
 static bool fitsInlineAddend(int64_t addend) {
   switch (config->chainedFixupsPointerFormat) {
   case DYLD_CHAINED_PTR_64:
