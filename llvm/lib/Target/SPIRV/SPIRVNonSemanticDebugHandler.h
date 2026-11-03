@@ -308,7 +308,7 @@ public:
   /// Output the NSDI OpStrings built by generateModuleDebugInfo() into the
   /// debug section (section 7 of the SPIR-V module layout). Must be called
   /// from SPIRVAsmPrinter::outputDebugSourceAndStrings().
-  void emitNonSemanticDebugStrings(SPIRV::ModuleAnalysisInfo &MAI);
+  void emitNonSemanticDebugStrings(SPIRV::ModuleAnalysisInfo &);
 
   /// Add SPV_KHR_non_semantic_info extension and
   /// NonSemantic.Shader.DebugInfo.100 ext inst set entry to MAI. Must be called
@@ -325,7 +325,7 @@ public:
   /// Output the module-scope NSDI built by generateModuleDebugInfo(). Called
   /// by SPIRVAsmPrinter::outputModuleSections() at section 10 in place of
   /// outputModuleSection(MB_NonSemanticGlobalDI).
-  void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+  void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &);
 
   /// Called after the synthesized entry \c OpLabel has been emitted.
   void notifyEntryLabelEmitted(const MachineFunction &MF);
