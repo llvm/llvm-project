@@ -964,12 +964,12 @@ TEST_F(CppBoundedBuffersTest, RHSNewArrayMacroSizeExprRewritten) {
   // rewrite would land only the closing ')' without ever inserting the
   // 'bounded_ptr<int>::_new(' prefix.
   StringRef Code = "#define HALF 9\n"
-                    "void g() { int *p = new int[HALF + 1]; }\n";
+                   "void g() { int *p = new int[HALF + 1]; }\n";
   Captured C =
       run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
   EXPECT_EQ(C.Rewritten, "#define HALF 9\n"
-                          "void g() { bounded_ptr<int> p = "
-                          "bounded_ptr<int>::_new(HALF + 1); }\n");
+                         "void g() { bounded_ptr<int> p = "
+                         "bounded_ptr<int>::_new(HALF + 1); }\n");
   EXPECT_TRUE(C.Reports.empty());
 }
 
@@ -1077,6 +1077,205 @@ TEST_F(CppBoundedBuffersTest, RHSQualifiedMallocCallRewritten) {
   EXPECT_EQ(C.Rewritten, R"cpp(
     extern "C" void *malloc(decltype(sizeof(0)) n);
     void g(int n) { bounded_ptr<char> p = ::_malloc(n); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSAddrOfPlainVarRewritten) {
+  // '&a' has no decl-linked entity of its own (unlike '&arr[i]'/'&*p', which
+  // resolve back to arr/p's own entity), so it is rewritten based on the LHS
+  // ('p') being transformed rather than the RHS.
+  StringRef Code = R"cpp(
+    void g(int *p) { int a; p = &a; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return paramEntity("g", 0, Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g(bounded_ptr<int> p) { int a; p = addr_of(a); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSAddrOfMemberExprRewritten) {
+  // '&s.a' has no decl-linked entity of its own (the field 'S::a' is never
+  // itself transformed here; only the destination 'p' is), so it is
+  // rewritten based on the LHS being transformed, same as the plain-DRE
+  // case above.
+  StringRef Code = R"cpp(
+    struct S { int a; };
+    void g(int *p) { S s; p = &s.a; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return paramEntity("g", 0, Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    struct S { int a; };
+    void g(bounded_ptr<int> p) { S s; p = addr_of(s.a); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSThisRewrittenToMakeSingle) {
+  // 'this' has no decl-linked entity of its own, so it is rewritten based on
+  // the LHS ('m') being transformed rather than the RHS.
+  StringRef Code = R"cpp(
+    struct S {
+      S *m;
+      void f() { m = this; }
+    };
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return fieldEntity("m", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    struct S {
+      bounded_ptr<S> m;
+      void f() { m = make_single(this); }
+    };
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSArrayInitEmptyBraceNotWrapped) {
+  // '{}' binds directly to bounded_array's default constructor, so no extra
+  // braces are inserted.
+  StringRef Code = R"cpp(
+    void g() { int a[2] = {}; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g() { bounded_array<int, 2> a = {}; }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSArrayInitNonEmptyBraceWrapped) {
+  // bounded_array is not an aggregate, so a non-empty list-init needs an
+  // extra level of braces to bind to its single std::array<T,N>&& ctor
+  // parameter.
+  StringRef Code = R"cpp(
+    void g() { int a[2] = {1, 2}; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g() { bounded_array<int, 2> a = {{1, 2}}; }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSArrayFieldInitBraceElided) {
+  // 'a's sub-initializer has no explicit '{...}' of its own (brace elision),
+  // so Sema creates an implicit InitListExpr with no source braces. Since
+  // 'a' becomes a bounded_array, its sub-initializer still needs its own
+  // explicit braces inserted, same as the non-empty top-level case.
+  StringRef Code = R"cpp(
+    struct S { int a[3]; int x; };
+    S s = {1, 2, 3, 4};
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return fieldEntity("a", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    struct S { bounded_array<int, 3> a; int x; };
+    S s = {{1, 2, 3}, 4};
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, UnionFieldGetsDefaultInit) {
+  StringRef Code = R"cpp(
+    union U { int *p; int x; };
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return fieldEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    union U { bounded_ptr<int> p = {}; int x; };
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest,
+       UnionFieldNoDefaultInitWhenSiblingHasInitializer) {
+  StringRef Code = R"cpp(
+    union U { int *p; int x = 0; };
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return fieldEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    union U { bounded_ptr<int> p; int x = 0; };
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest,
+       UnionFieldNoDefaultInitWhenUserDeclaredCtorExists) {
+  StringRef Code = R"cpp(
+    union U { int *p; int x; U() : x(0) {} };
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return fieldEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    union U { bounded_ptr<int> p; int x; U() : x(0) {} };
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, DeleteAddDataCall) {
+  // 'p' is transformed, so 'delete p;' needs the raw pointer via '.data()'.
+  StringRef Code = R"cpp(
+    void f() { int *p; delete p; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f() { bounded_ptr<int> p; delete (p).data(); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, DeleteArrayAddDataCall) {
+  // Same as DeleteAddDataCall, but for the array form 'delete[] p;'.
+  StringRef Code = R"cpp(
+    void f() { int *p; delete[] p; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f() { bounded_ptr<int> p; delete[] (p).data(); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, DeleteNoChangeWhenNotTransformed) {
+  // 'p' is not transformed, so the delete-expression is left untouched.
+  StringRef Code = R"cpp(
+    void f() { int *p; delete p; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {});
+  EXPECT_EQ(C.Rewritten, Code);
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, DeleteAddrOfDerefAddDataCall) {
+  StringRef Code = R"cpp(
+    void f() { int *p; delete &*p; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f() { bounded_ptr<int> p; delete (p).data(); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, DeleteAddrOfSubscriptAddDataCall) {
+  StringRef Code = R"cpp(
+    void f(int i) { int *p; delete &p[0]; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(int i) { bounded_ptr<int> p; delete ((p + 0)).data(); }
   )cpp");
   EXPECT_TRUE(C.Reports.empty());
 }
