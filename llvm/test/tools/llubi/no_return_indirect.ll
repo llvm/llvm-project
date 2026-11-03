@@ -20,6 +20,6 @@ define i32 @main() {
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: foo
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void %callee() at @main <stdin>:11
+; CHECK-NEXT: #0   call void %callee() at @main <stdin>:12
 ; CHECK-NEXT: Immediate UB detected: Return from a noreturn function/callsite.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
