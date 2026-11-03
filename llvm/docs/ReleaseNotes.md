@@ -214,6 +214,11 @@ Makes programs 10x faster by doing Special New Thing.
   `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
   `LLVM_ENABLE_LZMA`, and it has no effect in a standalone LLDB build.
 
+* The `tablegen()` CMake function has been renamed to `tablegen_internal()`.
+  Projects invoking `llvm-tblgen` should use the new `llvm_tablegen(ofn ...)`
+  in place of `tablegen(LLVM ofn ...)`, and projects invoking
+  `mlir-src-sharder` the new `mlir_src_sharder(ofn ...)`.
+
 * The DirectX backend is now an official target and has moved from
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
   default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
@@ -308,6 +313,34 @@ Makes programs 10x faster by doing Special New Thing.
   * `llvm.amdgcn.icmp`
   * `llvm.amdgcn.fcmp`
 
+* The AMDGPU buffer intrinsics that take their buffer resource (rsrc/V#)
+  argument as a `<4 x i32>` are deprecated and will be removed in a future
+  LLVM release.
+
+  They all have `.ptr.` equivalents that take a `ptr addrspace(8)`, produced by
+  `llvm.amdgcn.make.buffer.rsrc`, loaded directly from memory, or, if
+  necessary, converted from an existing descriptor with
+  `bitcast <4 x i32> %rsrc to i128` followed by `inttoptr i128 %i to ptr
+  addrspace(8)`. To migrate, insert `ptr` after the `raw`/`struct` component of
+  the intrinsic name; `llvm.amdgcn.s.buffer.load` is the sole exception and
+  becomes `llvm.amdgcn.ptr.s.buffer.load`.
+
+  ```llvm
+  ; Before
+  %v = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %off, i32 0, i32 0)
+
+  ; After
+  %p = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i32(ptr addrspace(1) %base, i16 0, i32 %numrecords, i32 %flags)
+  %v = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %p, i32 %off, i32 0, i32 0)
+  ```
+
+  This migration enables future flexibility in resource size and usage and
+  allows for more accurate analysis of memory usage.
+
+  Note that when emitting `llvm.amdgcn.ptr.s.buffer.load`, you must tag the intrinsic with `!invariant.load` metadata in order to recover the merging and loop hoisting behavior that `llvm.amdgcn.s.buffer.load` had because it lied about 'not reading memory'. Explicitly tagging these buffer loads as invariant will teach LLVM's general infrastructure about the property that users of the old ``s.buffer.load`` intrinsic were already asserting.
+
+  While we do intend to autoupgrade the old intrinsics when they are removed, this upgrade will have to use `inttoptr` to convert buffer resources, losing pointer provenance. Therefore, we strongly encourage users to migrate to the new forms (which have been available for years) before this removal.
+
 ### Changes to the ARM Backend
 
 * Using the hard-float procedure call standard without floating-point registers
@@ -362,6 +395,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `-mcpu=tt-ascalon-xg` for the Tenstorrent Ascalon XG processor, the
   global variant of Ascalon X without `Zvkng` and with reduced vector FP64
   throughput.
+* Removed X5 from the preserve_most register list.
 
 ### Changes to the WebAssembly Backend
 
@@ -518,6 +552,7 @@ Makes programs 10x faster by doing Special New Thing.
 
 #### Windows
 
+* When using the MSVC ABI, dynamic values are now resolved.
 * Python 3.11 or later is now required for building LLDB 24 on Windows.
 * For better performance, LLDB now turns off the Windows debug heap by default when debugging.
   If you need the debug heap enabled, set `platform.plugin.windows.disable-debug-heap` to `false`.
