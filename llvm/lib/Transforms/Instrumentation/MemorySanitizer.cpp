@@ -1982,8 +1982,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             }
           }
 
+          bool NoUndef =
+              FArg.hasAttribute(Attribute::NoUndef) || FArg.hasStructRetAttr();
           if (!PropagateShadow || Overflow || FArg.hasByValAttr() ||
-              (MS.EagerChecks && FArg.hasAttribute(Attribute::NoUndef))) {
+              (MS.EagerChecks && NoUndef)) {
             ShadowPtr = getCleanShadow(V);
             setOrigin(A, getCleanOrigin());
           } else {
@@ -7774,7 +7776,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       const DataLayout &DL = F.getDataLayout();
 
       bool ByVal = CB.isByValArgument(i);
-      bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef);
+      bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef) ||
+                     CB.paramHasAttr(i, Attribute::StructRet);
       bool EagerCheck = MayCheckCall && !ByVal && NoUndef;
 
       if (EagerCheck) {
