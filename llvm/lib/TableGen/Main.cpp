@@ -126,7 +126,10 @@ static int WriteOutput(const char *argv0, StringRef Filename,
         return 0;
   }
   std::error_code EC;
-  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
+  // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
+  // OF_ForceUTF8 has no effect on other platforms.
+  ToolOutputFile OutFile(Filename, EC,
+                         sys::fs::OF_Text | sys::fs::OF_ForceUTF8);
   if (EC)
     return reportError(argv0, "error opening " + Filename + ": " +
                                   EC.message() + "\n");

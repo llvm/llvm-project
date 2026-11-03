@@ -131,7 +131,7 @@ using WebAssembly::WasmEnableSjLj;
 static void basicCheckForEHAndSjLj() {
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
-    report_fatal_error(
+    reportFatalUsageError(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
 }
 

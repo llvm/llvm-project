@@ -509,8 +509,7 @@ static bool compareFnAttributes(const CodeGenIntrinsic *L,
     return std::tie(I->canThrow, I->isNoDuplicate, I->isNoMerge, I->isNoReturn,
                     I->isNoCallback, I->isNoSync, I->isNoFree, I->isWillReturn,
                     I->isCold, I->isConvergent, I->isSpeculatable,
-                    I->hasSideEffects, I->isStrictFP,
-                    I->isNoCreateUndefOrPoison);
+                    I->isStrictFP, I->isNoCreateUndefOrPoison);
   };
 
   auto TieL = TieBoolAttributes(L);
