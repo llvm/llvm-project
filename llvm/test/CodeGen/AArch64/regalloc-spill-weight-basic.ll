@@ -102,37 +102,36 @@ define void @optspeed(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 
 ; CHECK-NEXT:    mov x20, x3
 ; CHECK-NEXT:    mov x23, x2
 ; CHECK-NEXT:    mov w19, w1
-; CHECK-NEXT:    b .LBB1_2
-; CHECK-NEXT:  .LBB1_1: // %bb10
-; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:  .LBB1_1: // %bb8
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    cmp w19, #33
+; CHECK-NEXT:    b.gt .LBB1_5
+; CHECK-NEXT:  // %bb.2: // %bb8
+; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    cbz w19, .LBB1_1
+; CHECK-NEXT:  // %bb.3: // %bb8
+; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    cmp w19, #10
+; CHECK-NEXT:    b.ne .LBB1_1
+; CHECK-NEXT:  // %bb.4: // %bb9
+; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    str wzr, [x23]
+; CHECK-NEXT:    b .LBB1_1
+; CHECK-NEXT:  .LBB1_5: // %bb8
+; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    cmp w19, #34
+; CHECK-NEXT:    b.eq .LBB1_7
+; CHECK-NEXT:  // %bb.6: // %bb8
+; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    cmp w19, #39
+; CHECK-NEXT:    b.ne .LBB1_1
+; CHECK-NEXT:  .LBB1_7: // %bb10
+; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    mov w0, w22
 ; CHECK-NEXT:    mov x1, x20
 ; CHECK-NEXT:    str wzr, [x21]
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:  .LBB1_2: // %bb8
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmp w19, #33
-; CHECK-NEXT:    b.gt .LBB1_6
-; CHECK-NEXT:  // %bb.3: // %bb8
-; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    cbz w19, .LBB1_2
-; CHECK-NEXT:  // %bb.4: // %bb8
-; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    cmp w19, #10
-; CHECK-NEXT:    b.ne .LBB1_2
-; CHECK-NEXT:  // %bb.5: // %bb9
-; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    str wzr, [x23]
-; CHECK-NEXT:    b .LBB1_2
-; CHECK-NEXT:  .LBB1_6: // %bb8
-; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    cmp w19, #34
-; CHECK-NEXT:    b.eq .LBB1_1
-; CHECK-NEXT:  // %bb.7: // %bb8
-; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    cmp w19, #39
-; CHECK-NEXT:    b.eq .LBB1_1
-; CHECK-NEXT:    b .LBB1_2
+; CHECK-NEXT:    b .LBB1_1
 bb:
   br label %bb7
 
