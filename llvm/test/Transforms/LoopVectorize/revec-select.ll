@@ -191,6 +191,49 @@ exit:
 }
 
 ; TODO-REVEC: LV does not handle stretching a nxv1i1 predicate to nxv4i1
+define void @icmp_select_scalar_cond(ptr noalias %dst, ptr noalias %lhs, ptr noalias %preds) vscale_range(1, 16) {
+; CHECK-LABEL: define void @icmp_select_scalar_cond(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[PREDS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[VECTOR_PH:.*]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[LHS]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[PREDS]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    [[A:%.*]] = load <4 x i32>, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[COND_I1:%.*]] = icmp ugt i32 [[B]], 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND_I1]], <4 x i32> [[A]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    store <4 x i32> [[SEL]], ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %lhs.gep = getelementptr inbounds <4 x i32>, ptr %lhs, i64 %iv
+  %preds.gep = getelementptr inbounds i32, ptr %preds, i64 %iv
+  %dst.gep = getelementptr inbounds <4 x i32>, ptr %dst, i64 %iv
+  %a = load <4 x i32>, ptr %lhs.gep, align 16
+  %b = load i32, ptr %preds.gep, align 4
+  %cond.i1 = icmp ugt i32 %b, 8
+  %sel = select i1 %cond.i1, <4 x i32> %a, <4 x i32> zeroinitializer
+  store <4 x i32> %sel, ptr %dst.gep, align 16
+  %iv.next = add nuw i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; TODO-REVEC: LV does not handle stretching a nxv1i1 predicate to nxv4i1
 define void @icmp_select_scalar_cond_iv(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @icmp_select_scalar_cond_iv(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]]) #[[ATTR0]] {
