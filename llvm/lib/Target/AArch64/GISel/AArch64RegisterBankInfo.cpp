@@ -166,8 +166,8 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
 
 #define CHECK_VALUEMAP_CROSSREGCPY(RBNameDst, RBNameSrc, Size)                 \
   do {                                                                         \
-    unsigned PartialMapDstIdx = PMI_##RBNameDst##Size - PMI_Min;               \
-    unsigned PartialMapSrcIdx = PMI_##RBNameSrc##Size - PMI_Min;               \
+    unsigned PartialMapDstIdx = PMI_##RBNameDst##Size;                         \
+    unsigned PartialMapSrcIdx = PMI_##RBNameSrc##Size;                         \
     (void)PartialMapDstIdx;                                                    \
     (void)PartialMapSrcIdx;                                                    \
     const ValueMapping *Map = getCopyMapping(AArch64::RBNameDst##RegBankID,    \
@@ -196,20 +196,20 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
 
 #define CHECK_VALUEMAP_FPEXT(DstSize, SrcSize)                                 \
   do {                                                                         \
-    unsigned PartialMapDstIdx = PMI_FPR##DstSize - PMI_Min;                    \
-    unsigned PartialMapSrcIdx = PMI_FPR##SrcSize - PMI_Min;                    \
+    unsigned PartialMapDstIdx = PMI_FPR##DstSize;                              \
+    unsigned PartialMapSrcIdx = PMI_FPR##SrcSize;                              \
     (void)PartialMapDstIdx;                                                    \
     (void)PartialMapSrcIdx;                                                    \
     const ValueMapping *Map = getFPExtMapping(DstSize, SrcSize);               \
     (void)Map;                                                                 \
     assert(Map[0].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapDstIdx] &&  \
-           Map[0].NumBreakDowns == 1 && "FPR" #DstSize                         \
-                                        " Dst is incorrectly initialized");    \
+           Map[0].NumBreakDowns == 1 &&                                        \
+           "FPR" #DstSize " Dst is incorrectly initialized");                  \
     assert(Map[1].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapSrcIdx] &&  \
-           Map[1].NumBreakDowns == 1 && "FPR" #SrcSize                         \
-                                        " Src is incorrectly initialized");    \
+           Map[1].NumBreakDowns == 1 &&                                        \
+           "FPR" #SrcSize " Src is incorrectly initialized");                  \
                                                                                \
   } while (false)
 

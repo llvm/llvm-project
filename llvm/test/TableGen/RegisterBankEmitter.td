@@ -9,6 +9,8 @@ let Size = 32 in {
   def ClassB : RegisterClass<"MyTarget", [i1], 32, (add ClassA)>;
 }
 
+// CHECK: PMI_GPR32,
+
 // CHECK: GPRRegBankCoverageData
 // CHECK: MyTarget::ClassARegClassID
 // CHECK: MyTarget::ClassBRegClassID
