@@ -504,14 +504,15 @@ private:
   /// survived codegen and in what form, and because an expression synthesized
   /// during lowering never appears in the IR at all. Must be called from
   /// module-scope emission, which is where the resulting \c DebugExpression
-  /// instructions have to be emitted; every \c MachineFunction is still
-  /// reachable at that point through \c MachineModuleInfo.
+  /// instructions have to be emitted. The debug values come from
+  /// \c SPIRVModuleAnalysis, which sees every \c MachineFunction.
   ///
   /// Deliberately independent of what the consumers can currently emit, so
   /// that adding an instruction that needs an expression (\c DebugValue) needs
   /// no change here. The cost is a \c DebugExpression that nothing references
   /// yet, for a debug value no instruction is emitted for.
-  void collectDebugExpressions(SetVector<const DIExpression *> &Out) const;
+  void collectDebugExpressions(const SPIRV::ModuleAnalysisInfo &MAI,
+                               SetVector<const DIExpression *> &Out) const;
 
   /// Emit one \c DebugOperation for \p Op, reusing a cached result id when the
   /// same opcode and arguments were already emitted.

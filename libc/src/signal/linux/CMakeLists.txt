@@ -30,6 +30,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  killpg
+  SRCS
+    killpg.cpp
+  HDRS
+    ../killpg.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.kill
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   raise
   SRCS
     raise.cpp
@@ -93,6 +108,18 @@ add_entrypoint_object(
     .signal_utils
     libc.hdr.types.sigset_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigsuspend
+  SRCS
+    sigsuspend.cpp
+  HDRS
+    ../sigsuspend.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigsuspend
     libc.src.errno.errno
 )
 
