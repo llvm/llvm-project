@@ -1267,14 +1267,29 @@ bool SITargetLowering::isFPExtFoldable(const MachineInstr &MI, unsigned Opcode,
          denormalModeIsFlushAllF32(*MI.getMF());
 }
 
-bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT VT) const {
-  // Preserve packed 16-bit pairs so lowering can use op_sel and v_pk_mov_b32
-  // instead of extracting each half into a separate register. Prefer
-  // scalarization for other shapes. Larger vectors can inhibit load narrowing,
-  // while 32-bit shuffles can add register copies.
-  return VT.isFixedLengthVector() && VT.getScalarSizeInBits() == 16 &&
-         VT.getVectorNumElements() == 4 && isTypeLegal(VT) &&
-         isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, VT);
+bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const {
+  if (!VT.isFixedLengthVector() || !isTypeLegal(VT) ||
+      !isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, VT))
+    return false;
+
+  // Preserve packed 16-bit pairs. Larger vectors can inhibit load narrowing.
+  if (VT.getScalarSizeInBits() == 16)
+    return VT.getVectorNumElements() == 4;
+
+  if (VT.getScalarSizeInBits() != 32 || !Subtarget->hasPkMovB32())
+    return false;
+
+  // Preserve swaps within 32-bit pairs for v_pk_mov_b32. Other fully defined
+  // pairs can introduce register copies or additional wait states.
+  bool HasSwap = false;
+  for (unsigned I = 0; I != Mask.size(); I += 2) {
+    if (Mask[I] < 0 || Mask[I + 1] < 0)
+      continue;
+    if (!(Mask[I] & 1) || Mask[I + 1] != Mask[I] - 1)
+      return false;
+    HasSwap = true;
+  }
+  return HasSwap;
 }
 
 MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
