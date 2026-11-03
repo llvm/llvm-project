@@ -19,85 +19,48 @@ enum __attribute__((packed)) byte_enum {
   BYTE_ZERO,
 };
 
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e5m2_f16), "");
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e5m2_bf16), "");
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e5m2_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f64), "");
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e4m3fn_f16), "");
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e4m3fn_bf16), "");
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e4m3fn_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e4m3fn_f64), "");
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e5m3fnu_f16), "");
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e5m3fnu_bf16), "");
-_Static_assert(
-    __has_builtin(__builtin_elementwise_convert_from_f8e5m3fnu_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e5m3fnu_f64), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f6e3m2fn_f16), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f6e3m2fn_bf16), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f6e3m2fn_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f6e3m2fn_f64), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f6e2m3fn_f16), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f6e2m3fn_bf16), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f6e2m3fn_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f6e2m3fn_f64), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f16), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e5m2_bf16), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f64), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e4m3fn_f16), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e4m3fn_bf16), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e4m3fn_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e4m3fn_f64), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e5m3fnu_f16), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e5m3fnu_bf16), "");
+_Static_assert(__has_builtin(__builtin_elementwise_convert_from_f8e5m3fnu_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e5m3fnu_f64), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f6e3m2fn_f16), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f6e3m2fn_bf16), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f6e3m2fn_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f6e3m2fn_f64), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f6e2m3fn_f16), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f6e2m3fn_bf16), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f6e2m3fn_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f6e2m3fn_f64), "");
 // FP4 is deferred: _BitInt(4) vectors have no coherent memory layout yet.
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f4e2m1fn_f16), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f4e2m1fn_bf16), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f4e2m1fn_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f4e2m1fn_f64), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f4e2m1fn_f16), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f4e2m1fn_bf16), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f4e2m1fn_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f4e2m1fn_f64), "");
 
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e5m2fnuz_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e4m3_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e4m3fnuz_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e4m3b11fnuz_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e3m4_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e8m0fnu_f32), "");
-_Static_assert(
-    !__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f80), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e5m2fnuz_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e4m3_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e4m3fnuz_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e4m3b11fnuz_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e3m4_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e8m0fnu_f32), "");
+_Static_assert(!__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f80), "");
 _Static_assert(!__has_builtin(__builtin_convert_from_arbitrary_fp), "");
 
 void test_result_types(unsigned char b, v4u8 vb, g4u8 gb) {
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_f16(b)), _Float16), "");
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_bf16(b)), __bf16), "");
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(b)), float), "");
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(vb)), v4f32), "");
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e5m2_f32(gb)), g4f32), "");
-  _Static_assert(__builtin_types_compatible_p(
-      typeof(__builtin_elementwise_convert_from_f8e4m3fn_f16(vb)), v4f16), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_f16(b)), _Float16), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_bf16(b)), __bf16), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_f32(b)), float), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_f32(vb)), v4f32), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e5m2_f32(gb)), g4f32), "");
+  _Static_assert(__builtin_types_compatible_p(typeof(__builtin_elementwise_convert_from_f8e4m3fn_f16(vb)), v4f16), "");
 }
 
 void test_vector_shapes(v3u8 v3, v1u8 v1, v4ub8 vbi, g4u8 gb) {
@@ -166,6 +129,5 @@ void test_disallowed_integer_types(_Bool b, enum byte_enum e, v4bool vb) {
 }
 
 void test_volatile_source(volatile unsigned char *b) {
-  __builtin_assume(
-      __builtin_elementwise_convert_from_f8e5m2_f32(*b)); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
+  __builtin_assume(__builtin_elementwise_convert_from_f8e5m2_f32(*b)); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
 }

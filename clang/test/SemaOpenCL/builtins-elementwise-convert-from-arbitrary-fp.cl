@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple spir-unknown-unknown -x cl \
-// RUN:   -finclude-default-header -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -x cl -finclude-default-header -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 #if !__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f32)

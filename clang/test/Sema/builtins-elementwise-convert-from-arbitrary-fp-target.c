@@ -1,13 +1,8 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -DTEST_BF16 \
-// RUN:   -emit-llvm -o /dev/null -verify=bf16 %s
-// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -DTEST_F16 \
-// RUN:   -emit-llvm -o /dev/null -verify=f16 %s
-// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -fopenmp \
-// RUN:   -fopenmp-is-target-device -DTEST_OMP_BF16 \
-// RUN:   -emit-llvm -o /dev/null -verify=omp-bf16 %s
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -DTEST_BF16 -emit-llvm -o /dev/null -verify=bf16 %s
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -DTEST_F16 -emit-llvm -o /dev/null -verify=f16 %s
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -fopenmp -fopenmp-is-target-device -DTEST_OMP_BF16 -emit-llvm -o /dev/null -verify=omp-bf16 %s
 
-#if !__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f16) ||          \
-    !__has_builtin(__builtin_elementwise_convert_from_f8e5m2_bf16)
+#if !__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f16) || !__has_builtin(__builtin_elementwise_convert_from_f8e5m2_bf16)
 #error "target-independent builtin spellings must remain available"
 #endif
 
