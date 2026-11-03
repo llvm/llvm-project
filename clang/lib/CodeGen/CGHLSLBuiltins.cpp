@@ -453,22 +453,22 @@ static Value *handleInterlockedCompareOp(CodeGenFunction &CGF,
 
 static Value *handleHLSLUnpackOp(CodeGenFunction &CGF, const CallExpr *E,
                                  unsigned BuiltinID, const Twine &Name,
-                                 const bool Short) {
+                                 const bool Short, const bool Signed) {
   Value *Op0 = CGF.EmitScalarExpr(E->getArg(0));
-  IntegerType *IntSizeType =
+  IntegerType *IntSizeTy =
       Short ? CGF.Builder.getInt16Ty() : CGF.Builder.getInt32Ty();
+  auto *RetTy = FixedVectorType::get(IntSizeTy, 4);
 
   if (CGF.CGM.getTarget().getTriple().isDXIL()) {
     // DXIL Intrinsic returns struct of 4 i32 or i16
     // We have to call intrinsic then reassemble these to a vector
-    StructType *StructType =
-        StructType::get(CGF.getLLVMContext(),
-                        {IntSizeType, IntSizeType, IntSizeType, IntSizeType});
+    StructType *StructTy = StructType::get(
+        CGF.getLLVMContext(), {IntSizeTy, IntSizeTy, IntSizeTy, IntSizeTy});
     Value *StructVal = CGF.Builder.CreateIntrinsic(
-        /*ReturnType=*/StructType, BuiltinID, {Op0}, nullptr, Name);
+        /*ReturnType=*/StructTy, BuiltinID, {Op0}, nullptr, Name);
 
-    llvm::Type *VecType = FixedVectorType::get(IntSizeType, 4);
-    Value *VecVal = PoisonValue::get(VecType);
+    llvm::Type *VecTy = FixedVectorType::get(IntSizeTy, 4);
+    Value *VecVal = PoisonValue::get(VecTy);
     for (unsigned I = 0; I < 4; ++I) {
       Value *Elt = CGF.Builder.CreateExtractValue(StructVal, I);
       VecVal =
@@ -479,9 +479,10 @@ static Value *handleHLSLUnpackOp(CodeGenFunction &CGF, const CallExpr *E,
   }
 
   if (CGF.CGM.getTarget().getTriple().isSPIRV()) {
-    FixedVectorType *RetTy = FixedVectorType::get(IntSizeType, 4);
-    return CGF.Builder.CreateIntrinsic(/*ReturnType=*/RetTy, BuiltinID, {Op0},
-                                       nullptr, Name);
+    llvm::Type *I8VecTy = FixedVectorType::get(CGF.Builder.getInt8Ty(), 4);
+    Value *Cast = CGF.Builder.CreateBitCast(Op0, I8VecTy, "hlsl.unpack");
+    return Signed ? CGF.Builder.CreateSExt(Cast, RetTy, Name)
+                  : CGF.Builder.CreateZExt(Cast, RetTy, Name);
   }
 
   llvm_unreachable("Unpack_ is only supported for DXIL and SPIRV targets");
@@ -1973,24 +1974,25 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                    "hlsl.ddy.fine");
   }
   case Builtin::BI__builtin_hlsl_unpack_u8u16: {
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getUnpackU8U16Intrinsic();
-    return handleHLSLUnpackOp(*this, E, ID, "hlsl.unpack.u8u16",
-                              /*Short=*/true);
+
+    return handleHLSLUnpackOp(*this, E, llvm::Intrinsic::dx_unpack_u8u16,
+                              "hlsl.unpack.u8u16",
+                              /*Short=*/true, /*Signed=*/false);
   }
   case Builtin::BI__builtin_hlsl_unpack_u8u32: {
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getUnpackU8U32Intrinsic();
-    return handleHLSLUnpackOp(*this, E, ID, "hlsl.unpack.u8u32",
-                              /*Short=*/false);
+    return handleHLSLUnpackOp(*this, E, llvm::Intrinsic::dx_unpack_u8u32,
+                              "hlsl.unpack.u8u32",
+                              /*Short=*/false, /*Signed=*/false);
   }
   case Builtin::BI__builtin_hlsl_unpack_s8s16: {
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getUnpackS8S16Intrinsic();
-    return handleHLSLUnpackOp(*this, E, ID, "hlsl.unpack.s8s16",
-                              /*Short=*/true);
+    return handleHLSLUnpackOp(*this, E, llvm::Intrinsic::dx_unpack_s8s16,
+                              "hlsl.unpack.s8s16",
+                              /*Short=*/true, /*Signed=*/true);
   }
   case Builtin::BI__builtin_hlsl_unpack_s8s32: {
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getUnpackS8S32Intrinsic();
-    return handleHLSLUnpackOp(*this, E, ID, "hlsl.unpack.s8s32",
-                              /*Short=*/false);
+    return handleHLSLUnpackOp(*this, E, llvm::Intrinsic::dx_unpack_s8s32,
+                              "hlsl.unpack.s8s32",
+                              /*Short=*/false, /*Signed=*/true);
   }
   case Builtin::BI__builtin_get_spirv_spec_constant_bool:
   case Builtin::BI__builtin_get_spirv_spec_constant_short:
