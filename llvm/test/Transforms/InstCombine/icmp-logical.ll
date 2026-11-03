@@ -1923,3 +1923,72 @@ define i1 @pr120361_v2(i32 %x) {
   %and = select i1 %cmp1, i1 %cmp2, i1 false
   ret i1 %and
 }
+
+define <2 x i1> @masked_icmps_logical_or_vec_poison_cmp_const(<2 x i8> %x) {
+; CHECK-LABEL: @masked_icmps_logical_or_vec_poison_cmp_const(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt <2 x i8> [[X]], <i8 poison, i8 -1>
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> splat (i1 true), <2 x i1> [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
+;
+  %cmp1 = icmp eq <2 x i8> %x, zeroinitializer
+  %cmp2 = icmp sgt <2 x i8> %x, <i8 poison, i8 -1>
+  %or = select <2 x i1> %cmp1, <2 x i1> splat (i1 true), <2 x i1> %cmp2
+  ret <2 x i1> %or
+}
+
+define <2 x i1> @masked_icmps_logical_and_vec_poison_and_mask(<2 x i8> %x) {
+; CHECK-LABEL: @masked_icmps_logical_and_vec_poison_and_mask(
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -6)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 poison, i8 -14>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %and1 = and <2 x i8> %x, splat (i8 5)
+  %cmp1 = icmp ne <2 x i8> %and1, %x
+  %and2 = and <2 x i8> %x, <i8 poison, i8 13>
+  %cmp2 = icmp ne <2 x i8> %and2, %x
+  %and = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
+}
+
+define <2 x i1> @masked_icmps_logical_or_vec_poison_not(<2 x i8> %x) {
+; CHECK-LABEL: @masked_icmps_logical_or_vec_poison_not(
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 3)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i8> [[AND1]], zeroinitializer
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i8> [[X]] to <2 x i1>
+; CHECK-NEXT:    [[CMP2:%.*]] = xor <2 x i1> [[TRUNC]], <i1 true, i1 poison>
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> splat (i1 true), <2 x i1> [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
+;
+  %and1 = and <2 x i8> %x, splat (i8 3)
+  %cmp1 = icmp eq <2 x i8> %and1, zeroinitializer
+  %trunc = trunc <2 x i8> %x to <2 x i1>
+  %cmp2 = xor <2 x i1> %trunc, <i1 true, i1 poison>
+  %or = select <2 x i1> %cmp1, <2 x i1> splat (i1 true), <2 x i1> %cmp2
+  ret <2 x i1> %or
+}
+
+define <2 x i1> @masked_icmps_logical_or_vec_splat(<2 x i8> %x) {
+; CHECK-LABEL: @masked_icmps_logical_or_vec_splat(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i1> [[CMP2]]
+;
+  %cmp1 = icmp eq <2 x i8> %x, zeroinitializer
+  %cmp2 = icmp sgt <2 x i8> %x, splat (i8 -1)
+  %or = select <2 x i1> %cmp1, <2 x i1> splat (i1 true), <2 x i1> %cmp2
+  ret <2 x i1> %or
+}
+
+define <2 x i1> @masked_icmps_or_vec_poison_cmp_const(<2 x i8> %x) {
+; CHECK-LABEL: @masked_icmps_or_vec_poison_cmp_const(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 poison, i8 -1>
+; CHECK-NEXT:    ret <2 x i1> [[CMP2]]
+;
+  %cmp1 = icmp eq <2 x i8> %x, zeroinitializer
+  %cmp2 = icmp sgt <2 x i8> %x, <i8 poison, i8 -1>
+  %or = or <2 x i1> %cmp1, %cmp2
+  ret <2 x i1> %or
+}
