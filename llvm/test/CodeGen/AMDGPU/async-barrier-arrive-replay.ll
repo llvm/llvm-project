@@ -1,0 +1,46 @@
+; NOTE: Do not autogenerate. Check workaround ordering on affected targets and absence on unaffected targets.
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.51-amd-amdhsa < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.51-amd-amdhsa < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu13.10-amd-amdhsa -mattr=+lds-barrier-arrive-atomic < %s | FileCheck --check-prefix=UNAFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-xnack=0 < %s | FileCheck --check-prefix=UNAFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-xnack=1 < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-xnack=0 < %s | FileCheck --check-prefix=UNAFFECTED %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-xnack=1 < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.51-amd-amdhsa -amdgpu-xnack=0 < %s | FileCheck --check-prefix=UNAFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.51-amd-amdhsa -amdgpu-xnack=1 < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.51-amd-amdhsa -amdgpu-xnack=0 < %s | FileCheck --check-prefix=UNAFFECTED %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.51-amd-amdhsa -amdgpu-xnack=1 < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50s-amd-amdhsa -amdgpu-xnack=0 < %s | FileCheck --check-prefix=UNAFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50s-amd-amdhsa -amdgpu-xnack=1 < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50s-amd-amdhsa -amdgpu-xnack=0 < %s | FileCheck --check-prefix=UNAFFECTED %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50s-amd-amdhsa -amdgpu-xnack=1 < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.5-amd-amdhsa < %s | FileCheck --check-prefix=AFFECTED %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa -mattr=-async-barrier-arrive-replay-bug < %s | FileCheck --check-prefix=UNAFFECTED %s
+
+; Check an LDS barrier arrival followed by a global load.
+@bar = internal addrspace(3) global i64 undef, align 8
+
+; AFFECTED-LABEL: replay_window:
+; AFFECTED: ds_atomic_async_barrier_arrive_b64
+; AFFECTED-NOT: global_load_b32
+; AFFECTED: s_mov_b32 [[SAVED:s[0-9]+]], exec_lo
+; AFFECTED-NEXT: s_mov_b32 exec_lo, 0
+; AFFECTED-NEXT: global_load_async_to_lds_b8
+; AFFECTED-NEXT: s_mov_b32 exec_lo, [[SAVED]]
+; AFFECTED: global_load_b32
+;
+; UNAFFECTED-LABEL: replay_window:
+; UNAFFECTED: ds_atomic_async_barrier_arrive_b64
+; UNAFFECTED-NOT: global_load_async_to_lds
+; UNAFFECTED: global_load_b32
+define amdgpu_kernel void @replay_window(ptr addrspace(1) %src,
+                                         ptr addrspace(1) %dst) {
+entry:
+  store i64 0, ptr addrspace(3) @bar, align 8
+  call void @llvm.amdgcn.ds.atomic.async.barrier.arrive.b64(ptr addrspace(3) @bar)
+  %value = load volatile i32, ptr addrspace(1) %src, align 4
+  store volatile i32 %value, ptr addrspace(1) %dst, align 4
+  ret void
+}
