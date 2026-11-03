@@ -100,8 +100,7 @@ struct UsingDirectiveInfo {
 
 /// Collects all file/namespace-scope using-directives of the TU in a single
 /// pass, so that repeated visibility queries do not each re-traverse the AST.
-llvm::SmallVector<UsingDirectiveInfo>
-collectUsingDirectives(ParsedAST &AST) {
+llvm::SmallVector<UsingDirectiveInfo> collectUsingDirectives(ParsedAST &AST) {
   auto &SM = AST.getSourceManager();
   llvm::SmallVector<UsingDirectiveInfo> Directives;
   auto ScanDecl = [&](auto &&Self, const Decl *D) -> void {
@@ -127,7 +126,8 @@ collectUsingDirectives(ParsedAST &AST) {
 /// Computes the set of primary file/namespace DeclContexts visible for
 /// unqualified lookup at (\p UseCtx, \p UseLoc), including namespaces nominated
 /// by active using-directives before \p UseLoc. \p Directives must contain all
-/// file/namespace-scope using-directives of the TU (see collectUsingDirectives).
+/// file/namespace-scope using-directives of the TU (see
+/// collectUsingDirectives).
 llvm::SmallPtrSet<const DeclContext *, 8>
 collectVisibleContexts(const DeclContext *UseCtx, SourceLocation UseLoc,
                        llvm::ArrayRef<UsingDirectiveInfo> Directives,
