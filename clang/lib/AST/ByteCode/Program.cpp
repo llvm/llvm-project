@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "PrimType.h"
-#include "Reflect.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -80,11 +79,12 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
 }
 
 UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
-                                     bool IsConstexprUnknown) {
+                                     bool IsConstexprUnknown,
+                                     bool CanBeExtern) {
   bool IsExtern;
   bool IsWeak = VD->isWeak();
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
-    IsExtern = Var->hasExternalStorage();
+    IsExtern = CanBeExtern && !Init && Var->hasExternalStorage();
   } else {
     assert((isa<UnnamedGlobalConstantDecl, MSGuidDecl, TemplateParamObjectDecl>(
         VD)));
@@ -163,12 +163,13 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
 
   if (!Desc)
     return std::nullopt;
-  Desc->IsConstexprUnknown = IsConstexprUnknown;
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
-  BlockFlags Flags = BlockFlags().withExtern(IsExtern).withWeak(IsWeak);
+  BlockFlags Flags =
+      BlockFlags().withExtern(IsExtern).withWeak(IsWeak).withConstexprUnknown(
+          IsConstexprUnknown);
   auto *G = new (Allocator,
                  Desc->getAllocSize() + Block::getMetadataSize(Block::Global))
       Global(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::Global, Flags);
