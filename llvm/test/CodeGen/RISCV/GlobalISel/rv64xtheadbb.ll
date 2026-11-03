@@ -130,3 +130,220 @@ define i32 @ctlz_zero_poison_i32(i32 %a) nounwind {
   %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
   ret i32 %1
 }
+
+define i8 @cttz_i8(i8 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_i8:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    zext.b a1, a0
+; RV64XTHEADBB-NEXT:    beqz a1, .LBB11_2
+; RV64XTHEADBB-NEXT:  # %bb.1: # %cond.false
+; RV64XTHEADBB-NEXT:    addi sp, sp, -16
+; RV64XTHEADBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADBB-NEXT:    not a1, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a1, a0
+; RV64XTHEADBB-NEXT:    zext.b a1, a0
+; RV64XTHEADBB-NEXT:    srli a1, a1, 1
+; RV64XTHEADBB-NEXT:    andi a1, a1, 85
+; RV64XTHEADBB-NEXT:    sub a0, a0, a1
+; RV64XTHEADBB-NEXT:    zext.b a1, a0
+; RV64XTHEADBB-NEXT:    srli a1, a1, 2
+; RV64XTHEADBB-NEXT:    andi a1, a1, 51
+; RV64XTHEADBB-NEXT:    andi a0, a0, 51
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    srli a1, a0, 4
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    andi a0, a0, 15
+; RV64XTHEADBB-NEXT:    li a1, 1
+; RV64XTHEADBB-NEXT:    call __muldi3
+; RV64XTHEADBB-NEXT:    zext.b a0, a0
+; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64XTHEADBB-NEXT:    addi sp, sp, 16
+; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NEXT:  .LBB11_2:
+; RV64XTHEADBB-NEXT:    li a0, 8
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i8 @llvm.cttz.i8(i8 %a, i1 false)
+  ret i8 %1
+}
+
+define i16 @cttz_i16(i16 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_i16:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    slli a1, a0, 48
+; RV64XTHEADBB-NEXT:    srli a1, a1, 48
+; RV64XTHEADBB-NEXT:    beqz a1, .LBB12_2
+; RV64XTHEADBB-NEXT:  # %bb.1: # %cond.false
+; RV64XTHEADBB-NEXT:    not a1, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    lui a2, 16
+; RV64XTHEADBB-NEXT:    and a0, a1, a0
+; RV64XTHEADBB-NEXT:    addi a2, a2, -1
+; RV64XTHEADBB-NEXT:    and a1, a0, a2
+; RV64XTHEADBB-NEXT:    lui a3, 5
+; RV64XTHEADBB-NEXT:    srli a1, a1, 1
+; RV64XTHEADBB-NEXT:    addi a3, a3, 1365
+; RV64XTHEADBB-NEXT:    and a1, a1, a3
+; RV64XTHEADBB-NEXT:    sub a0, a0, a1
+; RV64XTHEADBB-NEXT:    and a2, a0, a2
+; RV64XTHEADBB-NEXT:    lui a1, 3
+; RV64XTHEADBB-NEXT:    srli a2, a2, 2
+; RV64XTHEADBB-NEXT:    addi a1, a1, 819
+; RV64XTHEADBB-NEXT:    and a2, a2, a1
+; RV64XTHEADBB-NEXT:    and a0, a0, a1
+; RV64XTHEADBB-NEXT:    add a0, a2, a0
+; RV64XTHEADBB-NEXT:    srli a1, a0, 4
+; RV64XTHEADBB-NEXT:    lui a2, 1
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    addi a1, a2, -241
+; RV64XTHEADBB-NEXT:    and a0, a0, a1
+; RV64XTHEADBB-NEXT:    srli a1, a0, 8
+; RV64XTHEADBB-NEXT:    add a0, a0, a1
+; RV64XTHEADBB-NEXT:    zext.b a0, a0
+; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NEXT:  .LBB12_2:
+; RV64XTHEADBB-NEXT:    li a0, 16
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i16 @llvm.cttz.i16(i16 %a, i1 false)
+  ret i16 %1
+}
+
+define i32 @cttz_i32(i32 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_i32:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    sext.w a1, a0
+; RV64XTHEADBB-NEXT:    beqz a1, .LBB13_2
+; RV64XTHEADBB-NEXT:  # %bb.1: # %cond.false
+; RV64XTHEADBB-NEXT:    addi sp, sp, -16
+; RV64XTHEADBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADBB-NEXT:    not a1, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    lui a2, 349525
+; RV64XTHEADBB-NEXT:    and a0, a1, a0
+; RV64XTHEADBB-NEXT:    addi a1, a2, 1365
+; RV64XTHEADBB-NEXT:    srliw a2, a0, 1
+; RV64XTHEADBB-NEXT:    and a1, a2, a1
+; RV64XTHEADBB-NEXT:    lui a2, 209715
+; RV64XTHEADBB-NEXT:    sub a0, a0, a1
+; RV64XTHEADBB-NEXT:    addi a1, a2, 819
+; RV64XTHEADBB-NEXT:    srliw a2, a0, 2
+; RV64XTHEADBB-NEXT:    and a0, a0, a1
+; RV64XTHEADBB-NEXT:    and a1, a2, a1
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    sraiw a1, a0, 4
+; RV64XTHEADBB-NEXT:    lui a2, 61681
+; RV64XTHEADBB-NEXT:    addw a0, a1, a0
+; RV64XTHEADBB-NEXT:    addi a1, a2, -241
+; RV64XTHEADBB-NEXT:    lui a2, 4112
+; RV64XTHEADBB-NEXT:    and a0, a0, a1
+; RV64XTHEADBB-NEXT:    addi a1, a2, 257
+; RV64XTHEADBB-NEXT:    call __muldi3
+; RV64XTHEADBB-NEXT:    srliw a0, a0, 24
+; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64XTHEADBB-NEXT:    addi sp, sp, 16
+; RV64XTHEADBB-NEXT:    ret
+; RV64XTHEADBB-NEXT:  .LBB13_2:
+; RV64XTHEADBB-NEXT:    li a0, 32
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i32 @llvm.cttz.i32(i32 %a, i1 false)
+  ret i32 %1
+}
+
+define i8 @cttz_zero_poison_i8(i8 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_zero_poison_i8:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    addi sp, sp, -16
+; RV64XTHEADBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADBB-NEXT:    not a1, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a1, a0
+; RV64XTHEADBB-NEXT:    zext.b a1, a0
+; RV64XTHEADBB-NEXT:    srli a1, a1, 1
+; RV64XTHEADBB-NEXT:    andi a1, a1, 85
+; RV64XTHEADBB-NEXT:    sub a0, a0, a1
+; RV64XTHEADBB-NEXT:    zext.b a1, a0
+; RV64XTHEADBB-NEXT:    srli a1, a1, 2
+; RV64XTHEADBB-NEXT:    andi a1, a1, 51
+; RV64XTHEADBB-NEXT:    andi a0, a0, 51
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    srli a1, a0, 4
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    andi a0, a0, 15
+; RV64XTHEADBB-NEXT:    li a1, 1
+; RV64XTHEADBB-NEXT:    call __muldi3
+; RV64XTHEADBB-NEXT:    zext.b a0, a0
+; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64XTHEADBB-NEXT:    addi sp, sp, 16
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i8 @llvm.cttz.i8(i8 %a, i1 true)
+  ret i8 %1
+}
+
+define i16 @cttz_zero_poison_i16(i16 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_zero_poison_i16:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    lui a1, 16
+; RV64XTHEADBB-NEXT:    not a2, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a2, a0
+; RV64XTHEADBB-NEXT:    addi a1, a1, -1
+; RV64XTHEADBB-NEXT:    and a2, a0, a1
+; RV64XTHEADBB-NEXT:    lui a3, 5
+; RV64XTHEADBB-NEXT:    srli a2, a2, 1
+; RV64XTHEADBB-NEXT:    addi a3, a3, 1365
+; RV64XTHEADBB-NEXT:    and a2, a2, a3
+; RV64XTHEADBB-NEXT:    sub a0, a0, a2
+; RV64XTHEADBB-NEXT:    and a1, a0, a1
+; RV64XTHEADBB-NEXT:    lui a2, 3
+; RV64XTHEADBB-NEXT:    srli a1, a1, 2
+; RV64XTHEADBB-NEXT:    addi a2, a2, 819
+; RV64XTHEADBB-NEXT:    and a1, a1, a2
+; RV64XTHEADBB-NEXT:    and a0, a0, a2
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    srli a1, a0, 4
+; RV64XTHEADBB-NEXT:    lui a2, 1
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    addi a1, a2, -241
+; RV64XTHEADBB-NEXT:    and a0, a0, a1
+; RV64XTHEADBB-NEXT:    srli a1, a0, 8
+; RV64XTHEADBB-NEXT:    add a0, a0, a1
+; RV64XTHEADBB-NEXT:    zext.b a0, a0
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i16 @llvm.cttz.i16(i16 %a, i1 true)
+  ret i16 %1
+}
+
+define i32 @cttz_zero_poison_i32(i32 %a) nounwind {
+; RV64XTHEADBB-LABEL: cttz_zero_poison_i32:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    addi sp, sp, -16
+; RV64XTHEADBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADBB-NEXT:    lui a1, 349525
+; RV64XTHEADBB-NEXT:    not a2, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    and a0, a2, a0
+; RV64XTHEADBB-NEXT:    addi a1, a1, 1365
+; RV64XTHEADBB-NEXT:    srliw a2, a0, 1
+; RV64XTHEADBB-NEXT:    and a1, a2, a1
+; RV64XTHEADBB-NEXT:    lui a2, 209715
+; RV64XTHEADBB-NEXT:    sub a0, a0, a1
+; RV64XTHEADBB-NEXT:    addi a1, a2, 819
+; RV64XTHEADBB-NEXT:    srliw a2, a0, 2
+; RV64XTHEADBB-NEXT:    and a0, a0, a1
+; RV64XTHEADBB-NEXT:    and a1, a2, a1
+; RV64XTHEADBB-NEXT:    add a0, a1, a0
+; RV64XTHEADBB-NEXT:    sraiw a1, a0, 4
+; RV64XTHEADBB-NEXT:    lui a2, 61681
+; RV64XTHEADBB-NEXT:    addw a0, a1, a0
+; RV64XTHEADBB-NEXT:    addi a1, a2, -241
+; RV64XTHEADBB-NEXT:    lui a2, 4112
+; RV64XTHEADBB-NEXT:    and a0, a0, a1
+; RV64XTHEADBB-NEXT:    addi a1, a2, 257
+; RV64XTHEADBB-NEXT:    call __muldi3
+; RV64XTHEADBB-NEXT:    srliw a0, a0, 24
+; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64XTHEADBB-NEXT:    addi sp, sp, 16
+; RV64XTHEADBB-NEXT:    ret
+  %1 = call i32 @llvm.cttz.i32(i32 %a, i1 true)
+  ret i32 %1
+}
