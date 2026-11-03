@@ -1,4 +1,4 @@
-add_custom_target(libc-gpu-ctype-benchmarks)
+add_libc_testsuite(libc-gpu-ctype-benchmarks PARENT gpu-benchmark)
 
 add_benchmark(
   isalnum_benchmark

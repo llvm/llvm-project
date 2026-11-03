@@ -44,7 +44,6 @@
 #include "flang/Support/default-kinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -220,7 +219,7 @@ public:
   MaybeSubscriptIntExpr EvaluateSubscriptIntExpr(const T &expr) {
     if (MaybeIntExpr maybeIntExpr{EvaluateIntExpr(expr)}) {
       return FoldExpr(evaluate::ConvertToType<evaluate::SubscriptInteger>(
-          std::move(*maybeIntExpr)));
+          evaluate::SubscriptIntegerKind, std::move(*maybeIntExpr)));
     } else {
       return std::nullopt;
     }
@@ -1852,6 +1851,16 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
+  void Post(const parser::OmpAssumesDirective &x) {
+    if (llvm::any_of(x.v.Clauses().v, [](const parser::OmpClause &clause) {
+          return std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u);
+        })) {
+      if (Symbol * symbol{currScope().symbol()}) {
+        symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+      }
+    }
+  }
+
   // Make sure that the following code is properly handled:
   //
   // function baz(a)
@@ -2145,47 +2154,6 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 
   Walk(clauses);
   PopScope();
-}
-
-parser::CharBlock MakeNameFromOperator(
-    const parser::DefinedOperator::IntrinsicOperator &op,
-    SemanticsContext &context) {
-  switch (op) {
-  case parser::DefinedOperator::IntrinsicOperator::Multiply:
-    return parser::CharBlock{"op.*", 4};
-  case parser::DefinedOperator::IntrinsicOperator::Add:
-    return parser::CharBlock{"op.+", 4};
-  case parser::DefinedOperator::IntrinsicOperator::Subtract:
-    return parser::CharBlock{"op.-", 4};
-
-  case parser::DefinedOperator::IntrinsicOperator::AND:
-    return parser::CharBlock{"op.AND", 6};
-  case parser::DefinedOperator::IntrinsicOperator::OR:
-    return parser::CharBlock{"op.OR", 5};
-  case parser::DefinedOperator::IntrinsicOperator::EQV:
-    return parser::CharBlock{"op.EQV", 6};
-  case parser::DefinedOperator::IntrinsicOperator::NEQV:
-    return parser::CharBlock{"op.NEQV", 7};
-
-  default:
-    context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
-    return parser::CharBlock{"op.?", 4};
-  }
-}
-
-parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name) {
-  return llvm::StringSwitch<parser::CharBlock>(name.ToString())
-      .Case("max", {"op.max", 6})
-      .Case("min", {"op.min", 6})
-      .Case("iand", {"op.iand", 7})
-      .Case("ior", {"op.ior", 6})
-      .Case("ieor", {"op.ieor", 7})
-      .Default(name);
-}
-
-std::string MangleDefinedOperator(const parser::CharBlock &name) {
-  CHECK(name[0] == '.' && name[name.size() - 1] == '.');
-  return "op" + name.ToString();
 }
 
 void OmpVisitor::ProcessReductionSpecifier(
@@ -2617,8 +2585,11 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     return;
   }
   symbol.SetIsCDefined(isCDefined_);
-  std::optional<std::string> label{
-      evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
+  std::optional<std::string> label;
+  if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+          evaluate::AsciiKind, bindName_)}) {
+    label = charVal->AsStdString();
+  }
   // 18.9.2(2): discard leading and trailing blanks
   if (label) {
     symbol.SetIsExplicitBindName(true);
@@ -6511,7 +6482,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
     // Enumerators are treated as PARAMETER (section 7.6 paragraph (4))
     symbol = &MakeSymbol(name, Attrs{Attr::PARAMETER}, ObjectEntityDetails{});
     symbol->SetType(context().MakeNumericType(
-        TypeCategory::Integer, evaluate::CInteger::kind));
+        TypeCategory::Integer, evaluate::CIntegerKind));
   }
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
@@ -6522,7 +6493,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
       // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
       // has the value specified by INT(boz-literal-constant, C_INT).
       const evaluate::DynamicType cIntType{
-          TypeCategory::Integer, evaluate::CInteger::kind};
+          TypeCategory::Integer, evaluate::CIntegerKind};
       if (MaybeExpr maybeExpr{EvaluateExpr(expr)}) {
         if (auto converted{
                 evaluate::ConvertToType(cIntType, std::move(*maybeExpr))}) {
@@ -6548,8 +6519,8 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (symbol) {
     if (enumerationState_.value) {
-      symbol->get<ObjectEntityDetails>().set_init(SomeExpr{
-          evaluate::Expr<evaluate::CInteger>{*enumerationState_.value}});
+      symbol->get<ObjectEntityDetails>().set_init(
+          SomeExpr{evaluate::MakeCIntegerExpr(*enumerationState_.value)});
     } else {
       context().SetError(*symbol);
     }
@@ -6613,7 +6584,7 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
   ordinalSym.set_details(ObjectEntityDetails{});
   ordinalSym.SetType(
-      currScope().MakeNumericType(TypeCategory::Integer, KindExpr{4}));
+      currScope().MakeNumericType(TypeCategory::Integer, MakeKindExpr(4)));
   ordinalSym.set(Symbol::Flag::CompilerCreated);
   symbol.get<DerivedTypeDetails>().add_component(ordinalSym);
 }
@@ -6659,7 +6630,7 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     CHECK(ordinalIter != currScope().end());
     const Symbol &ordinalSym{*ordinalIter->second};
     enumCtor.Add(ordinalSym,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::CInteger>{ordinal}));
+        evaluate::AsGenericExpr(evaluate::MakeCIntegerExpr(ordinal)));
     enumerator.get<ObjectEntityDetails>().set_init(
         SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
             evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
@@ -7063,7 +7034,7 @@ void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   }
   if (!charInfo_.kind) {
     charInfo_.kind =
-        KindExpr{context().GetDefaultKind(TypeCategory::Character)};
+        MakeKindExpr(context().GetDefaultKind(TypeCategory::Character));
   }
   SetDeclTypeSpec(currScope().MakeCharacterType(
       std::move(*charInfo_.length), std::move(*charInfo_.kind)));
@@ -9549,11 +9520,11 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
   if (length) {
     return currScope().MakeCharacterType(
         ParamValue{SomeIntExpr{*std::move(length)}, common::TypeParamAttr::Len},
-        KindExpr{type.kind()});
+        MakeKindExpr(type.kind()));
   } else {
     return currScope().MakeCharacterType(
         ParamValue::Deferred(common::TypeParamAttr::Len),
-        KindExpr{type.kind()});
+        MakeKindExpr(type.kind()));
   }
 }
 
@@ -9765,12 +9736,14 @@ public:
   bool Pre(const parser::IoControlSpec::Asynchronous &async) {
     if (auto folded{evaluate::Fold(
             context_.foldingContext(), AnalyzeExpr(context_, async.v))}) {
-      if (auto str{
-              evaluate::GetScalarConstantValue<evaluate::Ascii>(*folded)}) {
-        for (char ch : *str) {
-          if (ch != ' ') {
-            inAsyncIO_ = ch == 'y' || ch == 'Y';
-            break;
+      if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *folded)}) {
+        if (auto str{charVal->AsStdString()}) {
+          for (char ch : *str) {
+            if (ch != ' ') {
+              inAsyncIO_ = ch == 'y' || ch == 'Y';
+              break;
+            }
           }
         }
       }

@@ -1170,7 +1170,7 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   // significant! Re-ordering these variables will cause GVN when run alone to
   // be less effective! We should fix memdep and basic-aa to not exhibit this
   // behavior, but until then don't change the order here.
-  Impl->Opts = &F.getContext().getLibraryOptions().get<ScalarOptions>();
+  Impl->Opts = &getScalarOptions(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
@@ -4394,7 +4394,7 @@ public:
     if (skipFunction(F))
       return false;
 
-    Impl.Opts = &F.getContext().getLibraryOptions().get<ScalarOptions>();
+    Impl.Opts = &getScalarOptions(F);
     auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
     return Impl.run(
         F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),

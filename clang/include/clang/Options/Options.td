@@ -1146,6 +1146,7 @@ def bundle__loader : Separate<["-"], "bundle_loader">;
 def bundle : Flag<["-"], "bundle">;
 def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   HelpText<"Pass -b <arg> to the linker on AIX">, MetaVarName<"<arg>">,
+  Visibility<[ClangOption, FlangOption]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
@@ -2027,6 +2028,10 @@ def fno_profile_use : Flag<["-"], "fno-profile-use">,
 def ftest_coverage : Flag<["-"], "ftest-coverage">, Group<f_Group>,
     HelpText<"Produce gcov notes files (*.gcno)">;
 def fno_test_coverage : Flag<["-"], "fno-test-coverage">, Group<f_Group>;
+def fprofile_abs_path : Flag<["-"], "fprofile-abs-path">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    HelpText<"Use absolute paths in gcov notes files (*.gcno)">;
+def fno_profile_abs_path : Flag<["-"], "fno-profile-abs-path">, Group<f_Group>;
 def fprofile_arcs : Flag<["-"], "fprofile-arcs">, Group<f_Group>,
     HelpText<"Instrument code to produce gcov data files (*.gcda)">;
 def fno_profile_arcs : Flag<["-"], "fno-profile-arcs">, Group<f_Group>;
@@ -3781,6 +3786,13 @@ def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduce
 def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
   Group<f_Group>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
+
+defm module_local_hints : BoolFOption<"module-local-hints",
+  CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Mark inline functions and template instantiations defined in the "
+          "main source file as likely_module_local">,
+  NegFlag<SetFalse>>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -8128,16 +8140,6 @@ let Visibility = [CC1Option, CC1AsOption] in {
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
-def debug_info_macro_expansion_loc
-    : Flag<["-"], "debug-info-macro-expansion-loc">,
-      HelpText<"Use expansion location for debug info for multi line macros">,
-      MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
-def debug_info_macro_max_depth_EQ
-    : Joined<["-"], "debug-info-macro-max-depth=">,
-      MetaVarName<"<N>">,
-      HelpText<"Use expansion location for debug info for macro arguments "
-               "nested deeper than <N> macro expansions (default 64)">,
-      MarshallingInfoInt<CodeGenOpts<"DebugInfoMacroMaxDepth">, "64">;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;
@@ -8269,6 +8271,8 @@ def : Joined<["-"], "coverage-data-file=">,
   MarshallingInfoString<CodeGenOpts<"CoverageDataFile">>;
 def : Joined<["-"], "coverage-notes-file=">,
   MarshallingInfoString<CodeGenOpts<"CoverageNotesFile">>;
+def : Joined<["-"], "coverage-notes-abs-paths">,
+  MarshallingInfoFlag<CodeGenOpts<"UseAbsolutePathsInNotesFile">>;
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
   HelpText<"Four-byte version string for gcov files.">;
 def dump_coverage_mapping : Flag<["-"], "dump-coverage-mapping">,
@@ -9290,6 +9294,13 @@ def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
   MarshallingInfoString<LangOpts<"OMPHostIRFile">>;
 
 } // let Visibility = [CC1Option, FC1Option]
+
+def fopenmp_metadirective_runtime_selection
+    : Flag<["-"], "fopenmp-metadirective-runtime-selection">,
+      Visibility<[CC1Option]>,
+      HelpText<"Enable runtime selection of metadirective variants with "
+               "non-constant user conditions.">,
+      MarshallingInfoFlag<LangOpts<"OpenMPMetadirectiveRuntimeSelection">>;
 
 //===----------------------------------------------------------------------===//
 // SYCL Options

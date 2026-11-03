@@ -230,6 +230,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### C++2c Feature Support
 
+- `#embed` ([P1967R14](https://wg21.link/P1967R14)) is no longer diagnosed as
+  an extension in C++26 mode. In earlier C++ language modes, the directive is
+  now diagnosed as a C++26 extension under `-Wc++26-extensions` (previously it
+  was diagnosed as a Clang extension under `-Wc23-extensions`), and a new
+  `-Wpre-c++26-compat` warning is available in C++26 mode. The
+  `__cpp_pp_embed` feature-test macro is now defined.
+
 - Added `__builtin_type_order` for compatibility with GCC as part of the
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
 
@@ -456,7 +463,18 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
   working. Without the flag both forward references remain errors.
 
+- Fixed thread safety attributes on a member of a nested struct or union, named
+  or anonymous, naming a member of the enclosing struct, such as
+  `struct Dst { unsigned len GUARDED_BY(lock); } dst;` after `Mutex lock;`.
+  The requirement is resolved on the enclosing object, `s->lock` for
+  `s->dst.len`, and is reported as `dst->Scratch::lock` when no enclosing
+  object is reachable.
+
 ### Improvements to Clang's diagnostics
+
+- Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
+  tentative definitions of structure types which contain a field marked with
+  the `require_explicit_initialization` attribute. (#GH232483)
 
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
@@ -575,6 +593,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `-Wlifetime-safety-experimental-field-origin-escape`, which warns when a
     member function returns a value derived from a pointer, reference, or view
     field rather than from `*this`.
+  - `-Wlifetime-safety-experimental-destructor-use`, which warns when an object
+    whose non-trivial destructor may read a borrow is destroyed after the
+    storage it borrows from.
 
 - Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
   flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
@@ -754,6 +775,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Bug Fixes in This Version
 
+- Fixed an assertion failure when a token followed an `#embed` parameter whose
+  expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
+  (#GH212075)
+- Fixed an assertion failure while recovering from invalid `__has_embed` parameters at the end of a preprocessing directive. (#GH236416)
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
@@ -772,12 +797,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
+- Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
   enclosing context, which is now diagnosed, a data member inside a member function template, or a structured
   binding. (#GH217893)
+- Fixed a crash when template argument substitution fails in the type of an OpenMP `declare reduction` or
+  `declare mapper` directive. (#GH223366)
 - Fixed an assertion failure when a variable implicitly mapped by an OpenMP `target` directive has a class type
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
@@ -787,6 +815,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when a local register variable bound to a pseudo or status register by an `asm` label,
   such as `register long double t __asm("17");` (the flags register), was used as an inline asm operand.
   Such declarations are now rejected, matching GCC. (#GH225033)
+- Fixed a crash on `break` out of a `for` loop whose init-statement declares a variable in C89 mode (a Clang
+  extension), which happened at `-O1` and above or when the variable had a `cleanup` attribute. (#GH170243)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
@@ -798,13 +828,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
+- Fixed acceptance of redefinition of a struct with different bit-field width in C23 mode. (#GH232748)
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
+- Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 
 #### Bug Fixes to Compiler Builtins
 
+- Dropped invalid ``constexpr`` specifier from ``__builtin_assume_separate_storage``, which is not supported in constexpr evaluation. (#GH225335)
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
 - Fixed an assertion failure when diagnosing a constant evaluation failure
@@ -833,6 +866,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when constant-evaluating `__builtin_object_size`
   or `__builtin_dynamic_object_size` with a type argument that is not an
   integer constant expression. (#GH231108)
+- Fixed a crash on BPF targets when `__builtin_preserve_field_info` is
+  applied to a field of a record marked `preserve_static_offset`.
 
 - `__has_unique_object_representations` now returns `true` for `_Atomic` types
   whose object representation is identical to that of their value type, such
@@ -841,6 +876,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
 
 #### Bug Fixes to Attribute Support
+
+- Fixed a crash when using a zero-argument call to an undeclared
+  `__CFStringMakeConstantString` as a format string. (#GH225034)
 
 - Fixed an assertion failure when parsing malformed GNU `__attribute__`
   syntax followed by a parenthesized expression list in C code. (#GH225045)
@@ -874,7 +912,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `alias` are now correctly diagnosed as definitions when followed by an
   out-of-line definition. (#GH204762)
 
+- Fixed an assertion failure when generating code for an x86 function with the
+  `interrupt` attribute whose first parameter uses a typedef for a pointer
+  type. (#GH204756)
+
 #### Bug Fixes to C++ Support
+- Clang now recovers from invalid single pointer declarators in structured
+  bindings (such as ``auto *[x, y] = s;``) by removing the pointer declarator.
+  This allows type deduction to proceed and avoids redundant follow-up
+  diagnostics. (#GH222605)
+
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
@@ -901,6 +948,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when `#embed` was used in the braced initializer
   of an array new-expression, or of an array whose elements are of class type.
   (#GH128985)
+
+- Fixed list-initialization from `#embed` passing only the first embedded
+  element to a constructor, reference, scalar or `auto` deduction. (#GH222796)
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
@@ -941,6 +991,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a spurious unused function warning when using `operator<=>` within an anonymous namespace. (#GH125233)
 
 - Fixed a regression where the rewritten comparison operator was not instantiated properly. (#GH104720)
+
+- Fixed a crash when a defaulted comparison operator of a union with no variant members was called. (#GH140368)
 
 - Fixed an assertion failure when a parenthesized structured binding declarator
   was followed by a function declarator and body (e.g. ``([a, b])() {}``).
@@ -989,6 +1041,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a crash issue when a value dependent recovery init appeared in constant
   evaluation context in default constant evaluator.
+
+- Fixed crashes when parsing lambdas containing errors. (#GH175173), (#GH150733), and (#GH170185)
 
 - Fixed a bug where Clang incorrectly required `promise.return_value()` for a
   dependent `co_return` operand that inits to `void`, instead of using
@@ -1100,6 +1154,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   whose parameter type uses pack indexing, and makes such valid matches
   succeed instead of being rejected. (#GH232220)
 
+- Fixed missing destructor cleanups and incorrect initialization for lambda
+  init-captures in default member initializers used during aggregate
+  initialization. (#GH196469)
+
+- Fixed incorrect evaluation of compound requirements when a return-type
+  requirement contains a lambda with constrained template parameters.
+
+- Fixed a bug where Clang could ignore lambda constraints in return-type
+  requirements.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1112,7 +1176,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Added missed information to the AST node representing the member function
   when calling a explicit object member function. (#GH218829)
 
+- Fixed a crash when encountering C2y labeled `break`/`continue` statements
+  in a statement expression within a `switch` condition. (#GH184060)
+
 #### Miscellaneous Bug Fixes
+
+- Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
+  `/Ox` being ignored when compiling HIP device code or using a non-MSVC
+  host toolchain. Macro definitions using `#` as the value separator and
+  `/permissive` options are also translated consistently for host and device
+  compilation.
 
 #### Miscellaneous Clang Crashes Fixed
 
@@ -1157,6 +1230,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   parameter substituted through an alias template is used as the base of an
   unresolved name, such as `TT<T>::value` in a non-type template parameter's
   type. (#GH88592)
+- Fixed an assertion failure that caused clangd to crash on preprocessor 
+  directives that contain an undefined identifier and end inside an unfinished 
+  subexpression, e.g. due to unclosed parenthesis. (#GH226555)
+- Fixed an assertion when emitting base destructor as alias on targets (such
+  as AVR) which have different address spaces for code and data. (#GH236285)
 
 ### OpenACC Specific Changes
 
@@ -1179,6 +1257,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `__builtin_amdgcn_sicmpl`
   - `__builtin_amdgcn_fcmp`
   - `__builtin_amdgcn_fcmpf`
+
+#### BPF Support
+
+- Added `-mcpu=v5` and the `__BPF_FEATURE_HMUL` predefined macro for unsigned
+  and signed high-half multiply instructions.
 
 #### DirectX Support
 
@@ -1356,6 +1439,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 ### Static Analyzer
 
 #### Crash and bug fixes
+- `unix.BlockInCriticalSection` checker now recognizes `mtx_timedlock`
+  calls with 2 arguments as a locking call. This fixes false negatives.
+  (#GH237154)
 
 % comment:
 % This is for the Static Analyzer.
@@ -1368,6 +1454,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Improvements
 
+- `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
+  declarations such as `fopen` when targeting MSVC to avoid false negatives in
+  C99 and later C standards.
+
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
@@ -1378,6 +1468,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 #### Diagnostic changes
 
 - For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
+- The diagnostics of the Clang Static Analyzer no longer have two spaces after a sentence ending (#GH228777). The RFC for this change can be found here: https://discourse.llvm.org/t/rfc-standardization-of-reports-sentence-spacing/92428
 
 (release-notes-sanitizers)=
 
@@ -1428,11 +1519,15 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   matching the behavior of such maps outside a mapper.
 - Fixed a crash when the `safelen` and `simdlen` clauses of an OpenMP directive
   have arguments of different integer types. (#GH108367)
+- Fixed a crash when the init or increment of an OpenMP loop uses a braced
+  list, such as `int i = {0}`. (#GH202562)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
 - Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
   `_BitInt` type wider than any standard integer type. (#GH140074)
+- Fixed a crash when a non-static data member appears in a `lastprivate` clause
+  inside a member function template of a non-template class. (#GH144302)
 - Loop-transforming constructs such as `tile` and `unroll` are now allowed
   inside a `simd` region for OpenMP 6.0 or later, which classifies them as
   simdizable.
@@ -1463,6 +1558,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
   and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+- Fixed variables shared by an enclosing region (e.g. `parallel`) being
+  captured by copy when a nested construct has `default(firstprivate)` or
+  `default(private)`, which could silently lose writes such as the result of
+  a reduction on the nested construct.
 
 ### SYCL Support
 

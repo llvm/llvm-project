@@ -329,7 +329,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
       CurrentInstantiationScope(nullptr), NonInstantiationEntries(0),
-      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
+      ArgPackSubstIndex(std::nullopt) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -627,11 +627,7 @@ Sema::~Sema() {
     ExternalSema->ForgetSema();
 
   // Delete cached satisfactions.
-  std::vector<ConstraintSatisfaction *> Satisfactions;
-  Satisfactions.reserve(SatisfactionCache.size());
-  for (auto &Node : SatisfactionCache)
-    Satisfactions.push_back(&Node);
-  for (auto *Node : Satisfactions)
+  for (auto [_, Node] : SatisfactionCache)
     delete Node;
 
   threadSafety::threadSafetyCleanup(ThreadSafetyDeclCache);
@@ -1548,6 +1544,20 @@ void Sema::ActOnEndOfTranslationUnit() {
           VD->getLocation());
 
       Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
+    }
+
+    // Uninitialized tentative definitions are zero-initialized (C17 6.9.2p2) so
+    // diagnose fields requiring explicit initialization.
+    if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
+        !VD->getAnyInitializer()) {
+      if (const RecordDecl *RD = Type->getAsRecordDecl();
+          RD && RD->hasUninitializedExplicitInitFields()) {
+        Diag(VD->getLocation(), diag::warn_field_requires_explicit_init)
+            << /*Var-in-Record=*/1 << RD;
+        for (const FieldDecl *FD : RD->fields())
+          if (FD->hasAttr<ExplicitInitAttr>())
+            Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+      }
     }
 
     // Notify the consumer that we've completed a tentative definition.
