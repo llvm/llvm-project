@@ -59,8 +59,12 @@ bar:                                    # @bar
 	.byte	4                               # DW_LLE_offset_pair
 	.uleb128 .Ltmp0-.Lfunc_begin0           #   starting offset
 	.uleb128 .Ltmp1-.Lfunc_begin0           #   ending offset
-	.byte	1                               # Loc expr size
-	.byte	80                              # super-register DW_OP_reg0
+	.uleb128 .Ldebug_loc0_expr_end-.Ldebug_loc0_expr # Loc expr size
+.Ldebug_loc0_expr:
+	.byte	48                              # DW_OP_lit0
+	.byte	168                             # DW_OP_convert
+	.uleb128 .Lbase_type0-.Lcu_begin0
+.Ldebug_loc0_expr_end:
 	.byte	0                               # DW_LLE_end_of_list
 .Ldebug_loc1:
 	.byte	4                               # DW_LLE_offset_pair
@@ -218,10 +222,12 @@ bar:                                    # @bar
 	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
 	.long	.Laddr_table_base0              # DW_AT_addr_base
 	.long	.Lloclists_table_base0          # DW_AT_loclists_base
+.Lcu0_base_type_char:
 	.byte	2                               # Abbrev [2] 0x27:0x4 DW_TAG_base_type
 	.byte	5                               # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	1                               # DW_AT_byte_size
+.Lcu0_base_type_int:
 	.byte	2                               # Abbrev [2] 0x2b:0x4 DW_TAG_base_type
 	.byte	4                               # DW_AT_name
 	.byte	5                               # DW_AT_encoding
@@ -235,34 +241,38 @@ bar:                                    # @bar
 	.byte	1                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
                                         # DW_AT_prototyped
-	.long	96                              # DW_AT_type
+	.long	.Lbase_type0-.Lcu_begin0        # DW_AT_type
                                         # DW_AT_external
 	.byte	4                               # Abbrev [4] 0x3e:0x9 DW_TAG_formal_parameter
 	.byte	0                               # DW_AT_location
 	.byte	10                              # DW_AT_name
 	.byte	1                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
-	.long	96                              # DW_AT_type
+	.long	.Lbase_type0-.Lcu_begin0        # DW_AT_type
 	.byte	5                               # Abbrev [5] 0x47:0x18 DW_TAG_variable
-	.byte	15                              # DW_AT_location
+	.uleb128 .Linline_expr0_end-.Linline_expr0 # DW_AT_location
+.Linline_expr0:
 	.byte	16
 	.byte	32
 	.byte	48
 	.byte	34
 	.byte	168
-	.asciz	"\247\200\200"
+	.uleb128 .Lcu0_base_type_char-.Lcu_begin0
 	.byte	168
-	.asciz	"\253\200\200"
+	.uleb128 .Lcu0_base_type_int-.Lcu_begin0
 	.byte	159
+.Linline_expr0_end:
 	.byte	11                              # DW_AT_name
 	.byte	1                               # DW_AT_decl_file
 	.byte	9                               # DW_AT_decl_line
-	.long	100                             # DW_AT_type
+	.long	.Lbase_type_int0-.Lcu_begin0    # DW_AT_type
 	.byte	0                               # End Of Children Mark
+.Lbase_type0:
 	.byte	2                               # Abbrev [2] 0x60:0x4 DW_TAG_base_type
 	.byte	8                               # DW_AT_name
 	.byte	6                               # DW_AT_encoding
 	.byte	1                               # DW_AT_byte_size
+.Lbase_type_int0:
 	.byte	2                               # Abbrev [2] 0x64:0x4 DW_TAG_base_type
 	.byte	12                              # DW_AT_name
 	.byte	5                               # DW_AT_encoding
@@ -304,14 +314,14 @@ bar:                                    # @bar
 	.byte	2                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
                                         # DW_AT_prototyped
-	.long	.debug_info+96                  # DW_AT_type
+	.long	.Lbase_type0                    # DW_AT_type
                                         # DW_AT_external
 	.byte	7                               # Abbrev [7] 0x3e:0x9 DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
 	.byte	10                              # DW_AT_name
 	.byte	2                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.long	.debug_info+96                  # DW_AT_type
+	.long	.Lbase_type0                    # DW_AT_type
 	.byte	5                               # Abbrev [5] 0x47:0x18 DW_TAG_variable
 	.byte	15                              # DW_AT_location
 	.byte	16
@@ -326,8 +336,9 @@ bar:                                    # @bar
 	.byte	13                              # DW_AT_name
 	.byte	2                               # DW_AT_decl_file
 	.byte	3                               # DW_AT_decl_line
-	.long	96                              # DW_AT_type
+	.long	.Lbase_type1-.Lcu_begin1        # DW_AT_type
 	.byte	0                               # End Of Children Mark
+.Lbase_type1:
 	.byte	2                               # Abbrev [2] 0x60:0x4 DW_TAG_base_type
 	.byte	14                              # DW_AT_name
 	.byte	5                               # DW_AT_encoding

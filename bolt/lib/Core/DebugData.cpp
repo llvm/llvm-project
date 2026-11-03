@@ -613,7 +613,7 @@ void DebugLocWriter::init() {
 }
 
 void DebugLocWriter::addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
-                             DebugLocationsVector &LocList) {
+                             DebugLocationsVector &LocList, DWARFUnit &) {
   if (LocList.empty()) {
     replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(),
                         DebugLocWriter::EmptyListOffset);
@@ -645,6 +645,8 @@ std::unique_ptr<DebugBufferVector> DebugLocWriter::getBuffer() {
 
 // DWARF 4: 2.6.2
 void DebugLocWriter::finalize(DIEBuilder &DIEBldr, DIE &Die) {}
+
+void DebugLocWriter::updateReferences(DIEBuilder &) {}
 
 /// Rebases all pending location list offsets by adding \p Base,
 /// updating the corresponding attributes in each patched DIE.
@@ -715,64 +717,70 @@ static void writeLegacyLocList(DIEValue &AttrInfo,
   replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(), EntryOffset);
 }
 
-static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
-                               DebugLocationsVector &LocList, DIE &Die,
-                               DIEBuilder &DIEBldr, DebugAddrWriter &AddrWriter,
-                               DebugBufferVector &LocBodyBuffer,
-                               std::vector<uint64_t> &RelativeLocListOffsets,
-                               DWARFUnit &CU,
-                               raw_svector_ostream &LocBodyStream) {
-
+void DebugLoclistWriter::writeDWARF5LocList(DIEBuilder &DIEBldr, DIE &Die,
+                                            DIEValue &AttrInfo,
+                                            DebugLocationsVector &LocList,
+                                            DWARFUnit &Unit) {
   replaceLocValbyForm(DIEBldr, Die, AttrInfo, dwarf::DW_FORM_loclistx,
                       NumberOfEntries);
 
-  RelativeLocListOffsets.push_back(LocBodyBuffer.size());
+  RelativeLocListOffsets.push_back(LocBodyBuffer->size());
   ++NumberOfEntries;
   if (LocList.empty()) {
-    writeEmptyListDwarf5(LocBodyStream);
+    writeEmptyListDwarf5(*LocBodyStream);
     return;
   }
 
   auto writeExpression = [&](uint32_t Index) -> void {
     const DebugLocationEntry &Entry = LocList[Index];
-    encodeULEB128(Entry.Expr.size(), LocBodyStream);
-    LocBodyStream << StringRef(
-        reinterpret_cast<const char *>(Entry.Expr.data()), Entry.Expr.size());
+    SmallVector<uint8_t, 32> Expression;
+    const bool HasReference = DIEBldr.rewriteExpressionReferences(
+        Entry.Expr, Unit, Expression, false);
+    const ArrayRef<uint8_t> ExpressionBytes =
+        HasReference ? ArrayRef<uint8_t>(Expression)
+                     : ArrayRef<uint8_t>(Entry.Expr);
+    encodeULEB128(ExpressionBytes.size(), *LocBodyStream);
+    const uint64_t ExpressionOffset = LocBodyBuffer->size();
+    *LocBodyStream << StringRef(
+        reinterpret_cast<const char *>(ExpressionBytes.data()),
+        ExpressionBytes.size());
+    if (HasReference)
+      LocExpressionReferences.push_back(
+          {ExpressionOffset, &Unit, std::move(Expression)});
   };
   for (unsigned I = 0; I < LocList.size();) {
     if (emitWithBase<DebugLocationsVector, dwarf::LoclistEntries,
-                     DebugLocationEntry>(LocBodyStream, LocList, AddrWriter, CU,
-                                         I, dwarf::DW_LLE_base_addressx,
+                     DebugLocationEntry>(*LocBodyStream, LocList, AddrWriter,
+                                         CU, I, dwarf::DW_LLE_base_addressx,
                                          dwarf::DW_LLE_offset_pair,
                                          writeExpression))
       continue;
 
     const DebugLocationEntry &Entry = LocList[I];
-    support::endian::write(LocBodyStream,
+    support::endian::write(*LocBodyStream,
                            static_cast<uint8_t>(dwarf::DW_LLE_startx_length),
                            llvm::endianness::little);
     const uint32_t Index = AddrWriter.getIndexFromAddress(Entry.LowPC, CU);
-    encodeULEB128(Index, LocBodyStream);
-    encodeULEB128(Entry.HighPC - Entry.LowPC, LocBodyStream);
+    encodeULEB128(Index, *LocBodyStream);
+    encodeULEB128(Entry.HighPC - Entry.LowPC, *LocBodyStream);
     writeExpression(I);
     ++I;
   }
 
-  support::endian::write(LocBodyStream,
+  support::endian::write(*LocBodyStream,
                          static_cast<uint8_t>(dwarf::DW_LLE_end_of_list),
                          llvm::endianness::little);
 }
 
 void DebugLoclistWriter::addList(DIEBuilder &DIEBldr, DIE &Die,
                                  DIEValue &AttrInfo,
-                                 DebugLocationsVector &LocList) {
+                                 DebugLocationsVector &LocList,
+                                 DWARFUnit &Unit) {
   if (DwarfVersion < 5)
     writeLegacyLocList(AttrInfo, LocList, DIEBldr, Die, AddrWriter, *LocBuffer,
                        CU, *LocStream);
   else
-    writeDWARF5LocList(NumberOfEntries, AttrInfo, LocList, Die, DIEBldr,
-                       AddrWriter, *LocBodyBuffer, RelativeLocListOffsets, CU,
-                       *LocBodyStream);
+    writeDWARF5LocList(DIEBldr, Die, AttrInfo, LocList, Unit);
 }
 
 void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
@@ -805,6 +813,10 @@ void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
   std::unique_ptr<DebugBufferVector> Header =
       getDWARF5Header({Format, SizeOfArraySection + LocBodyBuffer->size(), 5, 8,
                        0, NumberOfEntries});
+  const uint64_t LocBodyOffset =
+      LocBuffer->size() + Header->size() + LocArrayBuffer->size();
+  for (LocExpressionReference &Reference : LocExpressionReferences)
+    Reference.Offset += LocBodyOffset;
   *LocStream << *Header;
   *LocStream << *LocArrayBuffer;
   *LocStream << *LocBodyBuffer;
@@ -830,6 +842,21 @@ void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
 void DebugLoclistWriter::finalize(DIEBuilder &DIEBldr, DIE &Die) {
   if (DwarfVersion >= 5)
     finalizeDWARF5(DIEBldr, Die);
+}
+
+void DebugLoclistWriter::updateReferences(DIEBuilder &DIEBldr) {
+  for (LocExpressionReference &Reference : LocExpressionReferences) {
+    SmallVector<uint8_t, 32> Expression;
+    const bool HasReference = DIEBldr.rewriteExpressionReferences(
+        Reference.Expression, *Reference.Unit, Expression, true);
+    assert(HasReference && "location expression reference disappeared");
+    assert(Expression.size() == Reference.Expression.size() &&
+           "location expression size changed while patching references");
+    assert(Reference.Offset + Expression.size() <= LocBuffer->size() &&
+           "location expression patch exceeds section buffer");
+    std::copy(Expression.begin(), Expression.end(),
+              LocBuffer->begin() + Reference.Offset);
+  }
 }
 
 static std::string encodeLE(size_t ByteSize, uint64_t NewValue) {
