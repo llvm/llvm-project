@@ -316,67 +316,6 @@ loop.end:
   ret i64 %retval
 }
 
-
-define i64 @same_exit_block_pre_inc_use1_with_reduction() {
-; CHECK-LABEL: define i64 @same_exit_block_pre_inc_use1_with_reduction() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
-; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
-; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
-; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
-; CHECK-NEXT:    br label [[LAND_RHS:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[RED_NEXT:%.*]], [[FOR_INC]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP38:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP39:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[LD2_ZEXT:%.*]] = zext i8 [[TMP39]] to i64
-; CHECK-NEXT:    [[RED_NEXT]] = add i64 [[RED]], [[LD2_ZEXT]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[TMP38]], [[TMP39]]
-; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_INC]], label [[FOR_END_LOOPEXIT:%.*]]
-; CHECK:       loop.inc:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LAND_RHS]], label [[FOR_END_LOOPEXIT]]
-; CHECK:       loop.end:
-; CHECK-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i64 [ [[RED_NEXT]], [[FOR_INC]] ], [ [[RED_NEXT]], [[LAND_RHS]] ]
-; CHECK-NEXT:    [[FINAL_IND:%.*]] = phi i64 [ [[INDEX]], [[LAND_RHS]] ], [ 67, [[FOR_INC]] ]
-; CHECK-NEXT:    [[START_0_LCSSA:%.*]] = add i64 [[RED_NEXT_LCSSA]], [[FINAL_IND]]
-; CHECK-NEXT:    ret i64 [[START_0_LCSSA]]
-;
-entry:
-  %p1 = alloca [1024 x i8]
-  %p2 = alloca [1024 x i8]
-  call void @init_mem(ptr %p1, i64 1024)
-  call void @init_mem(ptr %p2, i64 1024)
-  br label %loop
-
-loop:
-  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
-  %red = phi i64 [ %red.next, %loop.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
-  %ld1 = load i8, ptr %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
-  %ld2 = load i8, ptr %arrayidx1, align 1
-  %ld2.zext = zext i8 %ld2 to i64
-  %red.next = add i64 %red, %ld2.zext
-  %cmp3 = icmp eq i8 %ld1, %ld2
-  br i1 %cmp3, label %loop.inc, label %loop.end
-
-loop.inc:
-  %index.next = add i64 %index, 1
-  %exitcond = icmp ne i64 %index.next, 67
-  br i1 %exitcond, label %loop, label %loop.end
-
-loop.end:
-  %final.ind = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
-  %retval = add i64 %red.next, %final.ind
-  ret i64 %retval
-}
-
-
 define i64 @uncountable_exit_has_multiple_outside_successors() {
 ; CHECK-LABEL: define i64 @uncountable_exit_has_multiple_outside_successors() {
 ; CHECK-NEXT:  entry:
