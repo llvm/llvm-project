@@ -114,7 +114,7 @@ $ sudo bash run-qemu.sh --arch arm64 --rootfs <path of rootfs image> \
 - Login emulation environment and install dependencies
 
 ```
-$ sudo apt install python-dev libedit-dev libncurses5-dev libexpat1-dev
+$ sudo apt install python-dev libedit-dev libexpat1-dev
 ```
 
 - Cross compile LLDB server for AArch64 Linux: Please visit [the build instructions](build.md) for instructions on how to cross compile LLDB server.
