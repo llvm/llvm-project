@@ -16,11 +16,12 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSIM_SIMSTATE_H
 
 #include "HWModel.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <array>
 #include <climits>
-#include <deque>
 #include <optional>
 
 namespace llvm {
@@ -74,8 +75,8 @@ struct GPUSimState {
     /// Latency from issue until the dependency becomes ready.
     unsigned Latency;
   };
-  std::deque<RecentInst> RecentVALU;
-  std::deque<RecentInst> RecentTRANS;
+  SmallVector<RecentInst, 6> RecentVALU;
+  SmallVector<RecentInst, 5> RecentTRANS;
 
   /// Most recent SALU issue cycle used to enforce S_DELAY_ALU spacing.
   unsigned LastSALUCycle = 0;
@@ -86,7 +87,7 @@ struct GPUSimState {
     /// Cycle when the result becomes ready.
     unsigned ReadyCycle;
   };
-  std::deque<PendingVALUWrite> PendingVaVdst;
+  SmallVector<PendingVALUWrite, 16> PendingVaVdst;
 
   /// Most recent VALU resource issue cycle, including scaled WMMA scale reads.
   /// All ones indicates no prior VALU resource issue.
@@ -108,12 +109,12 @@ struct GPUSimState {
   std::optional<PendingDelayAlu> PendingInstId1;
   InstClass PreviousInstClass = InstClass::OTHER;
 
-  std::deque<PendingMemOp> PendingDS;
-  std::deque<PendingMemOp> PendingVMEMLoad;
-  std::deque<PendingMemOp> PendingVMEMStore;
-  std::deque<PendingMemOp> PendingSMEM;
-  std::deque<PendingMemOp> PendingTDM;
-  std::deque<PendingMemOp> PendingXACK;
+  SmallVector<PendingMemOp> PendingDS;
+  SmallVector<PendingMemOp> PendingVMEMLoad;
+  SmallVector<PendingMemOp> PendingVMEMStore;
+  SmallVector<PendingMemOp> PendingSMEM;
+  SmallVector<PendingMemOp> PendingTDM;
+  SmallVector<PendingMemOp> PendingXACK;
 
   /// Return whether a WMMA coexecution window is active.
   bool inWMMAWindow() const { return ActiveWMMA.Active; }
@@ -204,9 +205,11 @@ struct GPUSimState {
     if (ActiveWMMA.Active && CurrentCycle >= ActiveWMMA.EndCycle)
       ActiveWMMA.Active = false;
     retireCompletedMemOps();
-    while (!PendingVaVdst.empty() &&
-           PendingVaVdst.front().ReadyCycle <= CurrentCycle)
-      PendingVaVdst.pop_front();
+    // Retire ready VaVdst writes from the front up to the first pending one.
+    PendingVaVdst.erase(PendingVaVdst.begin(),
+                        llvm::find_if(PendingVaVdst, [&](const auto &Write) {
+                          return Write.ReadyCycle > CurrentCycle;
+                        }));
     return Delta;
   }
 
@@ -229,14 +232,14 @@ struct GPUSimState {
   void trackVALU(unsigned Latency) {
     RecentVALU.push_back({CurrentCycle, Latency});
     if (RecentVALU.size() > 5)
-      RecentVALU.pop_front();
+      RecentVALU.erase(RecentVALU.begin());
   }
 
   /// Record a TRANS issue for later S_DELAY_ALU dependency decoding.
   void trackTRANS(unsigned Latency) {
     RecentTRANS.push_back({CurrentCycle, Latency});
     if (RecentTRANS.size() > 4)
-      RecentTRANS.pop_front();
+      RecentTRANS.erase(RecentTRANS.begin());
   }
 
   /// Return the modeled VaVdst count, capped at its counter maximum.
@@ -293,7 +296,7 @@ struct GPUSimState {
   }
 
   /// Return the issue delay until the issue ordered queue has capacity.
-  unsigned getFIFOStall(const std::deque<PendingMemOp> &Queue,
+  unsigned getFIFOStall(ArrayRef<PendingMemOp> Queue,
                         unsigned MaxInFlight) const {
     if (Queue.size() < MaxInFlight)
       return 0;
@@ -318,14 +321,14 @@ struct GPUSimState {
   }
 
   /// Add an operation that completes \p Latency cycles after CurrentCycle.
-  void issueMemOp(std::deque<PendingMemOp> &Queue, unsigned Latency) {
+  void issueMemOp(SmallVectorImpl<PendingMemOp> &Queue, unsigned Latency) {
     Queue.emplace_back(CurrentCycle + Latency);
   }
 
   void issueDS(unsigned Latency) { issueMemOp(PendingDS, Latency); }
 
   void issueVMEM(unsigned Latency, bool IsLoad) {
-    std::deque<PendingMemOp> &Queue =
+    SmallVectorImpl<PendingMemOp> &Queue =
         IsLoad ? PendingVMEMLoad : PendingVMEMStore;
     issueMemOp(Queue, Latency);
   }
@@ -337,7 +340,7 @@ struct GPUSimState {
   void issueXACK(unsigned Latency) { issueMemOp(PendingXACK, Latency); }
 
   /// Return the cycles until at most \p WaitCount operations remain pending.
-  unsigned computeWaitStall(const std::deque<PendingMemOp> &Queue,
+  unsigned computeWaitStall(ArrayRef<PendingMemOp> Queue,
                             unsigned WaitCount) const {
     unsigned Pending = Queue.size();
     if (Pending <= WaitCount)
@@ -347,16 +350,19 @@ struct GPUSimState {
     return CompletionCycle > CurrentCycle ? CompletionCycle - CurrentCycle : 0;
   }
 
-  void retireCompletedFrom(std::deque<PendingMemOp> &Queue) {
-    while (!Queue.empty() && Queue.front().CompletionCycle <= CurrentCycle)
-      Queue.pop_front();
+  void retireCompletedFrom(SmallVectorImpl<PendingMemOp> &Queue) {
+    // Retire completed operations from the front up to the first pending one.
+    Queue.erase(Queue.begin(),
+                llvm::find_if(Queue, [&](const PendingMemOp &Op) {
+                  return Op.CompletionCycle > CurrentCycle;
+                }));
   }
 
   /// Remove oldest tracked operations until \p Queue satisfies \p WaitCount.
   /// This mutates pending state without advancing CurrentCycle.
-  void applyWait(std::deque<PendingMemOp> &Queue, unsigned WaitCount) {
-    while (Queue.size() > WaitCount)
-      Queue.pop_front();
+  void applyWait(SmallVectorImpl<PendingMemOp> &Queue, unsigned WaitCount) {
+    if (Queue.size() > WaitCount)
+      Queue.erase(Queue.begin(), Queue.end() - WaitCount);
   }
 
   // The wait methods below return the required delay and apply the requested
