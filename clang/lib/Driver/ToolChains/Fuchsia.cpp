@@ -68,7 +68,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("rel");
     CmdArgs.push_back("--pack-dyn-relocs=relr");
 
-    // When hardware control-flow protection is enabled for code generation (by
+    // When hardware branch target protection is enabled for code generation (by
     // default on 64-bit Fuchsia targets or via explicit compiler flags), pass
     // the corresponding ld.lld report switches so the linker requires every
     // input object file to carry the matching .note.gnu.property feature bit.
@@ -82,28 +82,21 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       // `-msign-return-address=` only changes PAC scope and leaves BTI at the
       // target default).
       bool IndirectBranches = true;
-      bool GuardedControlStack = false;
       if (const Arg *A = Args.getLastArg(options::OPT_msign_return_address_EQ,
                                          options::OPT_mbranch_protection_EQ)) {
         if (A->getOption().matches(options::OPT_mbranch_protection_EQ)) {
           StringRef DiagMsg;
           llvm::ARM::ParsedBranchProtection PBP;
           if (llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
-                                               Triple)) {
+                                               Triple))
             IndirectBranches = PBP.BranchTargetEnforcement;
-            GuardedControlStack = PBP.GuardedControlStack;
-          } else {
+          else
             IndirectBranches = false;
-          }
         }
       }
       if (IndirectBranches) {
         CmdArgs.push_back("-z");
         CmdArgs.push_back("bti-report=error");
-      }
-      if (GuardedControlStack) {
-        CmdArgs.push_back("-z");
-        CmdArgs.push_back("gcs-report=error");
       }
     } else if (Triple.isRISCV64() ||
                ToolChain.getArch() == llvm::Triple::x86_64) {
@@ -114,38 +107,24 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (const Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ))
         CFProtection = A->getValue();
       const bool Branch = CFProtection == "branch" || CFProtection == "full";
-      const bool Return = CFProtection == "return" || CFProtection == "full";
       if (Triple.isRISCV64()) {
         // On RISC-V, `-fcf-protection=branch` uses the `unlabeled` Zicfilp
         // scheme (`GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED`) by default
-        // unless `-mcf-branch-label-scheme=func-sig` is specified, and
-        // `-fcf-protection=return` enables Zicfiss shadow stack
-        // (`GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS`).
+        // unless `-mcf-branch-label-scheme=func-sig` is specified.
+        const Arg *SA =
+            Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ);
         if (Branch) {
-          const Arg *SA =
-              Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ);
           CmdArgs.push_back("-z");
           if (SA && StringRef(SA->getValue()) == "func-sig")
             CmdArgs.push_back("zicfilp-func-sig-report=error");
           else
             CmdArgs.push_back("zicfilp-unlabeled-report=error");
         }
-        if (Return) {
-          CmdArgs.push_back("-z");
-          CmdArgs.push_back("zicfiss-report=error");
-        }
-      } else {
+      } else if (Branch) {
         // On x86-64, `-fcf-protection=branch` enables CET IBT
-        // (`GNU_PROPERTY_X86_FEATURE_1_IBT`) and `-fcf-protection=return`
-        // enables CET shadow stack (`GNU_PROPERTY_X86_FEATURE_1_SHSTK`).
-        if (Branch) {
-          CmdArgs.push_back("-z");
-          CmdArgs.push_back("ibt-report=error");
-        }
-        if (Return) {
-          CmdArgs.push_back("-z");
-          CmdArgs.push_back("shstk-report=error");
-        }
+        // (`GNU_PROPERTY_X86_FEATURE_1_IBT`).
+        CmdArgs.push_back("-z");
+        CmdArgs.push_back("ibt-report=error");
       }
     }
   }

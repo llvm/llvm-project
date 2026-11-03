@@ -1254,6 +1254,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Enabled PAC and BTI by default for AArch64 Android targets.
 
+#### Fuchsia Support
+
+- Enabled hardware forward-edge control-flow protection by default on 64-bit Fuchsia targets: Branch Target Identification (`-mbranch-target-enforce`) on AArch64, Indirect Branch Tracking (`-fcf-protection=branch` with `-fno-jump-tables`) on x86-64, and `Zicfilp` landing pads (`-fcf-protection=branch`) on RISC-V.
+
+- When linking with `ld.lld`, the Fuchsia driver now passes `-z bti-report=error`, `-z ibt-report=error`, `-z zicfilp-unlabeled-report=error`, or `-z zicfilp-func-sig-report=error` when the corresponding forward-edge protection is enabled.
+
+- Incremented `__Fuchsia_Compiler_ABI__` from `1` to `2`.
+
 #### Windows Support
 
 - Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler

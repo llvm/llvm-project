@@ -7519,25 +7519,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     CmdArgs.push_back("--no-offloadlib");
 
-  const bool DefaultCfProtectionBranch =
-      (Triple.getArch() == llvm::Triple::x86_64 &&
-       (Triple.isOSOpenBSD() || Triple.isOSFuchsia())) ||
-      (Triple.getArch() == llvm::Triple::riscv64 && Triple.isOSFuchsia());
-  // On x86-64 with -fcf-protection=branch, jump tables emit `notrack jmp`
-  // rather than `endbr64` on target blocks. Targets that avoid `notrack` (so
-  // CET can disallow `notrack` indirect branches) disable jump tables by
-  // default when branch protection is enabled. For OpenBSD and Fuchsia on
-  // x86-64, avoiding `notrack` is the preferred security choice.
-  const bool DefaultX86NoTrackAvoided =
-      Triple.getArch() == llvm::Triple::x86_64 &&
-      (Triple.isOSOpenBSD() || Triple.isOSFuchsia());
-
   bool CFProtectionBranch = false;
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString(Twine("-fcf-protection=") + Val));
     CFProtectionBranch = Val == "branch" || Val == "full";
-  } else if (DefaultCfProtectionBranch) {
+  } else if (Triple.isOSOpenBSD() && Triple.getArch() == llvm::Triple::x86_64) {
+    // Emit IBT endbr64 instructions by default
+    CmdArgs.push_back("-fcf-protection=branch");
+    // jump-table can generate indirect jumps, which are not permitted
+    CmdArgs.push_back("-fno-jump-tables");
+  } else if (Triple.isOSFuchsia() &&
+             (Triple.getArch() == llvm::Triple::x86_64 ||
+              Triple.getArch() == llvm::Triple::riscv64)) {
     // Emit IBT endbr64 / Zicfilp lpad instructions by default.
     CmdArgs.push_back("-fcf-protection=branch");
     CFProtectionBranch = true;
@@ -7547,7 +7541,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(Twine("-mcf-branch-label-scheme=") +
                                            SA->getValue()));
   }
-  if (CFProtectionBranch && DefaultX86NoTrackAvoided &&
+  // On x86-64 with -fcf-protection=branch, jump tables emit `notrack jmp`
+  // rather than `endbr64` on target blocks. On Fuchsia x86-64, disable jump
+  // tables by default when branch protection is enabled so `notrack` indirect
+  // branches are avoided unless `-fjump-tables` is passed explicitly.
+  if (CFProtectionBranch && Triple.isOSFuchsia() &&
+      Triple.getArch() == llvm::Triple::x86_64 &&
       !Args.hasArg(options::OPT_fjump_tables, options::OPT_fno_jump_tables))
     CmdArgs.push_back("-fno-jump-tables");
 

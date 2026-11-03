@@ -33,7 +33,11 @@
 // RUN: %clang -### %s --target=x86_64-fuchsia -fcf-protection=full \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-FULL,CHECK-X86-IBT,CHECK-X86-SHSTK,CHECK-DEF-NO-JT %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-FULL,CHECK-X86-IBT,CHECK-DEF-NO-JT %s
+// RUN: %clang -### %s --target=x86_64-fuchsia -fcf-protection=return \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64,CHECK-CF-RET,CHECK-CF-NOPROT-LINK,CHECK-JT %s
 // RUN: %clang -### %s --target=arm-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
@@ -57,11 +61,11 @@
 // RUN: %clang -### %s --target=riscv64-fuchsia -fcf-protection=none \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-NOPROT,CHECK-JT %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-NOPROT,CHECK-CF-NOPROT-LINK,CHECK-JT %s
 // RUN: %clang -### %s --target=riscv64-fuchsia -fcf-protection=full \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-FULL,CHECK-ZICFILP,CHECK-ZICFISS,CHECK-JT %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64,CHECK-CF-FULL,CHECK-ZICFILP,CHECK-JT %s
 // RUN: %clang -### %s --target=riscv64-fuchsia -mcf-branch-label-scheme=func-sig \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
@@ -83,6 +87,7 @@
 // CHECK: "-stack-protector" "2"
 // CHECK-CF-PROT: "-fcf-protection=branch"
 // CHECK-CF-FULL: "-fcf-protection=full"
+// CHECK-CF-RET: "-fcf-protection=return"
 // CHECK-CF-NOPROT: "-fcf-protection=none"
 // CHECK-ZICFILP-FUNC-SIG: "-mcf-branch-label-scheme=func-sig"
 // CHECK-DEF-NO-JT: "-fno-jump-tables"
@@ -94,14 +99,15 @@
 // CHECK-NOT: "-fcommon"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "start-stop-visibility=hidden" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
 // CHECK-ARM-BTI-SAME: "-z" "bti-report=error"
-// CHECK-ARM-GCS-SAME: "-z" "gcs-report=error"
+// CHECK-ARM-GCS-NOT: "gcs-report=error"
 // CHECK-ARM-NOBTI-NOT: "bti-report=error"
 // CHECK-ZICFILP-SAME: "-z" "zicfilp-unlabeled-report=error"
 // CHECK-ZICFILP-FUNC-SIG-SAME: "-z" "zicfilp-func-sig-report=error"
-// CHECK-ZICFISS-SAME: "-z" "zicfiss-report=error"
 // CHECK-X86-IBT-SAME: "-z" "ibt-report=error"
-// CHECK-X86-SHSTK-SAME: "-z" "shstk-report=error"
+// CHECK-CF-FULL-NOT: "zicfiss-report=error"
+// CHECK-CF-FULL-NOT: "shstk-report=error"
 // CHECK-CF-NOPROT-NOT: "-report=error"
+// CHECK-CF-NOPROT-LINK-NOT: "-report=error"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"
