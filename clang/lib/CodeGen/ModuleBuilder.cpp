@@ -155,6 +155,8 @@ namespace {
       return M.get();
     }
 
+    void forgetDecl(GlobalDecl GD) { Builder->forgetDecl(GD); }
+
     void Initialize(ASTContext &Context) override {
       Ctx = &Context;
 
@@ -392,6 +394,10 @@ llvm::Constant *CodeGenerator::GetAddrOfVTable(BaseSubobject base,
 llvm::Module *CodeGenerator::StartModule(llvm::StringRef ModuleName,
                                          llvm::LLVMContext &C) {
   return static_cast<CodeGeneratorImpl*>(this)->StartModule(ModuleName, C);
+}
+
+void CodeGenerator::forgetDecl(GlobalDecl GD) {
+  static_cast<CodeGeneratorImpl *>(this)->forgetDecl(GD);
 }
 
 std::unique_ptr<CodeGenerator>
