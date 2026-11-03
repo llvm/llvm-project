@@ -11,7 +11,7 @@ define void @uitofp() {
 ; CHECK-NONEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-WITHSVE-LABEL: 'uitofp'
-; CHECK-WITHSVE-NEXT:  Cost Model: Found costs of 16 for: %conv = uitofp <16 x i64> poison to <16 x float>
+; CHECK-WITHSVE-NEXT:  Cost Model: Found costs of 32 for: %conv = uitofp <16 x i64> poison to <16 x float>
 ; CHECK-WITHSVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %conv = uitofp <16 x i64> poison to <16 x float>
