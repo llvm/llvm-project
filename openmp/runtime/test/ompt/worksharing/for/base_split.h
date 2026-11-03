@@ -7,6 +7,9 @@
 #ifndef SCHED_OUTPUT
 #define SCHED_OUTPUT STR(SCHEDULE)
 #endif
+#ifndef DIST_OUTPUT
+#define DIST_OUTPUT STR(DIST)
+#endif
 
 /* With the combined parallel-for construct (base.h), the return-addresses are
    hard to compare. With the separate parallel and for-nowait construct, the
@@ -18,6 +21,7 @@
 int main() {
   unsigned int i;
   printf("0: Schedule: " SCHED_OUTPUT "\n");
+  printf("0: Dist-Flag: " DIST_OUTPUT "\n");
 
 #pragma omp parallel num_threads(4)
   {
@@ -71,6 +75,12 @@ int main() {
   // CHECK-LOOP: {{^}}{{[0-9]+}}: fuzzy_address={{.*}}[[LOOP_BEGIN_RETURN_ADDRESS]]
   // CHECK-LOOP: {{^}}{{[0-9]+}}: fuzzy_address={{.*}}[[LOOP_BEGIN_RETURN_ADDRESS]]
   // CHECK-LOOP: {{^}}{{[0-9]+}}: fuzzy_address={{.*}}[[LOOP_BEGIN_RETURN_ADDRESS]]
+
+
+  // Depending on the schedule, libomp might decide to run all iterations on a single thread.
+  // Hence, check the flag for the dispatch callback independently.
+  // CHECK-DIST: 0: Dist-Flag: [[DISTFLAG:[a-z_]+]]
+  // CHECK-DIST: {{^}}{{[0-9]+}}: ompt_event_[[DISTFLAG]]_begin: parallel_id={{[0-f]+}}, task_id={{[0-f]+}}
   // clang-format on
 
   return 0;
