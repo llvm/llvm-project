@@ -199,6 +199,12 @@ void CIRGenOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *vd) {
                "registerTargetGlobalVariable: declare target variable");
 }
 
+bool CIRGenOpenMPRuntime::hasRequiresUnifiedSharedMemory() const {
+  // OGCG also sets this from '#pragma omp requires unified_shared_memory'.
+  assert(!cir::MissingFeatures::openMPRequiresUnifiedSharedMemory());
+  return cgm.getLangOpts().OpenMPForceUSM;
+}
+
 void CIRGenOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *fd,
                                                     cir::FuncOp funcOp) {
   const auto *attr = fd->getAttr<OMPDeclareTargetDeclAttr>();

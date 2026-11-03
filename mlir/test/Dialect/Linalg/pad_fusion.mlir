@@ -51,6 +51,34 @@ func.func @dynamic_pad_fusion(%arg0 : tensor<?x?xf32>, %arg1 : index, %arg2 : in
 
 // -----
 
+func.func @folded_padding_value(%input: tensor<1xf32>,
+                                %init: tensor<1xf32>) -> tensor<2xf32> {
+  %producer = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]}
+      ins(%input : tensor<1xf32>) outs(%init : tensor<1xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %neg = arith.negf %in : f32
+      linalg.yield %neg : f32
+  } -> tensor<1xf32>
+  %padded = tensor.pad %producer low[1] high[0] {
+    ^bb0(%i: index):
+      %c4 = arith.constant 4.0 : f32
+      %c8 = arith.addf %c4, %c4 : f32
+      tensor.yield %c8 : f32
+  } : tensor<1xf32> to tensor<2xf32>
+  return %padded : tensor<2xf32>
+}
+
+// CHECK-LABEL: func.func @folded_padding_value
+//       CHECK:   %[[PAD_VALUE:.*]] = arith.constant 8.000000e+00 : f32
+//       CHECK:   %{{.*}} = linalg.fill ins(%[[PAD_VALUE]] : f32)
+//       CHECK:   tensor.insert_slice
+//   CHECK-NOT:   tensor.pad
+//       CHECK:   return
+
+// -----
+
 func.func @mixed_pad_fusion(%arg0 : tensor<?x42xf32>, %arg1 : index, %arg2 : index,
     %arg3 : f32) -> tensor<49x?xf32> {
   %c0 = arith.constant 0 : index

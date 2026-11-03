@@ -2790,7 +2790,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   Instruction *Sel;
   Value *Cond;
   Constant *TrueC, *FalseC;
-  if (!match(GEP.getPointerOperand(), m_Instruction(Sel)) ||
+  if (!match(GEP.getPointerOperand(), m_OneUse(m_Instruction(Sel))) ||
       !match(Sel,
              m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
     return nullptr;
@@ -4763,7 +4763,8 @@ static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
 
   Value *NewSel = Builder.CreateSelectFMF(
       Cond, ConstIsTrue ? ConstantMantissa : NewEV,
-      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp");
+      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp",
+      ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
   return NewSel;
 }
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
@@ -5902,7 +5903,7 @@ bool InstCombinerImpl::run() {
           // removed.
           auto II = dyn_cast<IntrinsicInst>(User);
           if (II->getIntrinsicID() != Intrinsic::assume ||
-              !II->getOperandBundle("dereferenceable"))
+              !II->hasOperandBundle(LLVMContext::OB_Dereferenceable))
             continue;
         }
 
