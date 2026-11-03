@@ -196,3 +196,38 @@ func.func @matmul_km_nk_nm_4x4xi32(%arg0: vector<4x4xi32>, %arg1: vector<4x4xi32
                           kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<4x4xi32>, vector<4x4xi32> into vector<4x4xi32>
   return %res : vector<4x4xi32>
 }
+
+// Masked contractions are not rewritten: the mask would not be updated.
+// CHECK-LABEL: func.func @masked_matmul_mk_kn_mn_4x4xi32
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<4x4xi32>, [[ARG1:%.+]]: vector<4x4xi32>, [[ARG2:%.+]]: vector<4x4xi32>
+// CHECK-NEXT:    [[MASK:%.+]] = vector.create_mask
+// CHECK-NEXT:    [[RES:%.+]] = vector.mask [[MASK]] { vector.contract {{.+}} [[ARG0]], [[ARG1]], [[ARG2]]
+// CHECK-NEXT:    return [[RES]]
+func.func @masked_matmul_mk_kn_mn_4x4xi32(%arg0: vector<4x4xi32>, %arg1: vector<4x4xi32>, %arg2: vector<4x4xi32>, %m: index, %n: index, %k: index) -> vector<4x4xi32> {
+  %mask = vector.create_mask %m, %n, %k : vector<4x4x4xi1>
+  %res = vector.mask %mask {
+    vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                                      affine_map<(d0, d1, d2) -> (d2, d1)>,
+                                      affine_map<(d0, d1, d2) -> (d0, d1)>],
+                     iterator_types = ["parallel", "parallel", "reduction"],
+                     kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<4x4xi32>, vector<4x4xi32> into vector<4x4xi32>
+  } : vector<4x4x4xi1> -> vector<4x4xi32>
+  return %res : vector<4x4xi32>
+}
+
+// CHECK-LABEL: func.func @masked_matmul_mk_nk_nm_4x4xi32
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<4x4xi32>, [[ARG1:%.+]]: vector<4x4xi32>, [[ARG2:%.+]]: vector<4x4xi32>
+// CHECK-NEXT:    [[MASK:%.+]] = vector.create_mask
+// CHECK-NEXT:    [[RES:%.+]] = vector.mask [[MASK]] { vector.contract {{.+}} [[ARG0]], [[ARG1]], [[ARG2]]
+// CHECK-NEXT:    return [[RES]]
+func.func @masked_matmul_mk_nk_nm_4x4xi32(%arg0: vector<4x4xi32>, %arg1: vector<4x4xi32>, %arg2: vector<4x4xi32>, %m: index, %n: index, %k: index) -> vector<4x4xi32> {
+  %mask = vector.create_mask %m, %n, %k : vector<4x4x4xi1>
+  %res = vector.mask %mask {
+    vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                                      affine_map<(d0, d1, d2) -> (d1, d2)>,
+                                      affine_map<(d0, d1, d2) -> (d1, d0)>],
+                     iterator_types = ["parallel", "parallel", "reduction"],
+                     kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<4x4xi32>, vector<4x4xi32> into vector<4x4xi32>
+  } : vector<4x4x4xi1> -> vector<4x4xi32>
+  return %res : vector<4x4xi32>
+}

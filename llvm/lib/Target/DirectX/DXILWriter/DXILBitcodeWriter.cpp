@@ -116,10 +116,6 @@ class DXILBitcodeWriter {
   /// Tracks the last value id recorded in the GUIDToValueMap.
   unsigned GlobalValueId;
 
-  /// Saves the offset of the VSTOffset record that must eventually be
-  /// backpatched with the offset of the actual VST.
-  uint64_t VSTOffsetPlaceholder = 0;
-
   /// Pointer to the buffer allocated by caller for bitcode writing.
   const SmallVectorImpl<char> &Buffer;
 
@@ -155,7 +151,6 @@ public:
   static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind);
   static void writeStringRecord(BitstreamWriter &Stream, unsigned Code,
                                 StringRef Str, unsigned AbbrevToUse);
-  static void writeIdentificationBlock(BitstreamWriter &Stream);
   static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V);
   static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A);
 
@@ -175,17 +170,6 @@ public:
 private:
   void writeModuleVersion();
   void writePerModuleGlobalValueSummary();
-
-  void writePerModuleFunctionSummaryRecord(SmallVector<uint64_t, 64> &NameVals,
-                                           GlobalValueSummary *Summary,
-                                           unsigned ValueID,
-                                           unsigned FSCallsAbbrev,
-                                           unsigned FSCallsProfileAbbrev,
-                                           const Function &F);
-  void writeModuleLevelReferences(const GlobalVariable &V,
-                                  SmallVector<uint64_t, 64> &NameVals,
-                                  unsigned FSModRefsAbbrev,
-                                  unsigned FSModVTableRefsAbbrev);
 
   void assignValueId(GlobalValue::GUID ValGUID) {
     GUIDToValueIdMap[ValGUID] = ++GlobalValueId;
@@ -210,8 +194,6 @@ private:
   std::map<GlobalValue::GUID, unsigned> &valueIds() { return GUIDToValueIdMap; }
 
   uint64_t bitcodeStartBit() { return BitcodeStartBit; }
-
-  size_t addToStrtab(StringRef Str);
 
   unsigned createDILocationAbbrev();
   unsigned createGenericDINodeAbbrev();
@@ -299,6 +281,14 @@ private:
     //   See https://github.com/llvm/llvm-project/issues/58989
     llvm_unreachable("DXIL cannot contain DIAssignID Nodes");
   }
+  void writeDILayerLoc(const DILayerLoc *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DILayerLoc Nodes");
+  }
+  void writeDILayerLocList(const DILayerLocList *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DILayerLocList Nodes");
+  }
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
   void writeDITemplateTypeParameter(const DITemplateTypeParameter *N,
@@ -332,8 +322,6 @@ private:
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
-  unsigned createNamedMetadataAbbrev();
-  void writeNamedMetadata(SmallVectorImpl<uint64_t> &Record);
   unsigned createMetadataStringsAbbrev();
   void writeMetadataStrings(ArrayRef<const Metadata *> Strings,
                             SmallVectorImpl<uint64_t> &Record);
@@ -344,16 +332,11 @@ private:
   void writeModuleMetadata();
   void writeFunctionMetadata(const Function &F);
   void writeFunctionMetadataAttachment(const Function &F);
-  void pushGlobalMetadataAttachment(SmallVectorImpl<uint64_t> &Record,
-                                    const GlobalObject &GO);
   void writeModuleMetadataKinds();
-  void writeOperandBundleTags();
-  void writeSyncScopeNames();
   void writeConstants(unsigned FirstVal, unsigned LastVal, bool isGlobal);
   void writeModuleConstants();
   bool pushValueAndType(const Value *V, unsigned InstID,
                         SmallVectorImpl<unsigned> &Vals);
-  void writeOperandBundles(const CallBase &CB, unsigned InstID);
   void pushValue(const Value *V, unsigned InstID,
                  SmallVectorImpl<unsigned> &Vals);
   void pushValueSigned(const Value *V, unsigned InstID,
@@ -361,8 +344,6 @@ private:
   void writeInstruction(const Instruction &I, unsigned InstID,
                         SmallVectorImpl<unsigned> &Vals);
   void writeFunctionLevelValueSymbolTable(const ValueSymbolTable &VST);
-  void writeGlobalValueSymbolTable(
-      DenseMap<const Function *, uint64_t> &FunctionToBitcodeIndex);
   void writeFunction(const Function &F);
   void writeBlockInfo();
 

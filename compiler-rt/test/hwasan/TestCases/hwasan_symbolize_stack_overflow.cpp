@@ -9,6 +9,9 @@
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t/hwasan_overflow 1000000 2>&1 | hwasan_symbolize --symbols %t --index | FileCheck %s --check-prefixes=TOOFAR
 
 // REQUIRES: aarch64-target-arch
+// This test occasionally fails because it assumes that x+offset will not fall
+// into the previous or following 1MB range: https://github.com/llvm/llvm-project/issues/228477
+// UNSUPPORTED: aarch64-target-arch
 
 #include <stdlib.h>
 

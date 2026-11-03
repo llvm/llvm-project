@@ -1907,6 +1907,10 @@ bool LookupResult::isAcceptableSlow(Sema &SemaRef, NamedDecl *D,
         }
         DC = DC->getLexicalParent();
       } while (!IsEffectivelyFileContext(DC));
+    } else if (auto *FD = dyn_cast<FunctionDecl>(DC);
+               FD && !FD->getDefinition()) {
+      // This is possible as the definition are removed in reduced BMI.
+      AcceptableWithinParent = isAcceptable(SemaRef, FD, Kind);
     } else {
       AcceptableWithinParent =
           SemaRef.hasAcceptableDefinition(cast<NamedDecl>(DC), Kind);
@@ -2445,18 +2449,20 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     llvm_unreachable("Declaration context must already be complete!");
 #endif
 
+  // Inform the external source that we're looking for a qualified name.
   struct QualifiedLookupInScope {
-    bool oldVal;
-    DeclContext *Context;
-    // Set flag in DeclContext informing debugger that we're looking for qualified name
-    QualifiedLookupInScope(DeclContext *ctx)
-        : oldVal(ctx->shouldUseQualifiedLookup()), Context(ctx) {
-      ctx->setUseQualifiedLookup();
+    ExternalSemaSource *Source;
+    const DeclContext *Context;
+    QualifiedLookupInScope(ExternalSemaSource *Source, const DeclContext *Ctx)
+        : Source(Source), Context(Ctx) {
+      if (Source)
+        Source->StartedQualifiedLookup(Context);
     }
     ~QualifiedLookupInScope() {
-      Context->setUseQualifiedLookup(oldVal);
+      if (Source)
+        Source->FinishedQualifiedLookup(Context);
     }
-  } QL(LookupCtx);
+  } QL(ExternalSource.get(), LookupCtx);
 
   CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   // FIXME: Per [temp.dep.general]p2, an unqualified name is also dependent
@@ -4262,7 +4268,10 @@ private:
             // there anyway.
             continue;
           }
-          const auto *TST = BaseType->getAs<TemplateSpecializationType>();
+          // Look through an alias template, whose TemplateName is a
+          // TypeAliasTemplateDecl rather than the ClassTemplateDecl we are
+          // after; otherwise the base is skipped entirely.
+          const auto *TST = BaseType->getAsNonAliasTemplateSpecializationType();
           if (!TST)
             continue;
           TemplateName TN = TST->getTemplateName();

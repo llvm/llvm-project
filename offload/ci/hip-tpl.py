@@ -36,6 +36,13 @@ def check_test_suite_build_dir(test_suite_src, test_suite_build_dir):
         raise RuntimeError("test-suite build dir must not be the test-suite source dir")
 
 
+def clean_gpu_core_dumps(root):
+    for directory, _, files in os.walk(root):
+        for name in files:
+            if name.startswith("gpucore.") and name[8:].isdigit():
+                os.unlink(os.path.join(directory, name))
+
+
 parser = argparse.ArgumentParser(
     description="Build LLVM and run llvm-test-suite External HIP TPL tests."
 )
@@ -116,6 +123,11 @@ with worker.run(
                 f"-DCMAKE_C_COMPILER={clang}",
                 f"-DCMAKE_CXX_COMPILER={clangxx}",
             ]
+        )
+
+    with w.step("clean GPU core dumps"):
+        clean_gpu_core_dumps(
+            os.path.join(test_suite_externals, "hip", "managed", "kokkos")
         )
 
     with w.step("build kokkos and kokkos test suite", halt_on_fail=True):

@@ -108,8 +108,8 @@ bool PathMappingList::AppendUnique(llvm::StringRef path,
   {
     std::lock_guard<std::mutex> lock(m_pairs_mutex);
     for (const auto &pair : m_pairs) {
-      if (pair.first.GetStringRef() == normalized_path &&
-          pair.second.GetStringRef() == normalized_replacement)
+      if (llvm::StringRef(pair.first) == normalized_path &&
+          llvm::StringRef(pair.second) == normalized_replacement)
         return false;
     }
     AppendNoLock(path, replacement);
@@ -170,13 +170,12 @@ void PathMappingList::Dump(Stream *s, int pair_index) {
   if (pair_index < 0) {
     unsigned int index;
     for (index = 0; index < numPairs; ++index)
-      s->Printf("[%d] \"%s\" -> \"%s\"\n", index,
-                m_pairs[index].first.GetCString(),
-                m_pairs[index].second.GetCString());
+      s->Printf("[%d] \"%s\" -> \"%s\"\n", index, m_pairs[index].first.c_str(),
+                m_pairs[index].second.c_str());
   } else {
     if (static_cast<unsigned int>(pair_index) < numPairs)
-      s->Printf("%s -> %s", m_pairs[pair_index].first.GetCString(),
-                m_pairs[pair_index].second.GetCString());
+      s->Printf("%s -> %s", m_pairs[pair_index].first.c_str(),
+                m_pairs[pair_index].second.c_str());
   }
 }
 
@@ -184,8 +183,7 @@ llvm::json::Value PathMappingList::ToJSON() const {
   llvm::json::Array entries;
   std::lock_guard<std::mutex> lock(m_pairs_mutex);
   for (const auto &pair : m_pairs) {
-    llvm::json::Array entry{pair.first.GetStringRef().str(),
-                            pair.second.GetStringRef().str()};
+    llvm::json::Array entry{pair.first, pair.second};
     entries.emplace_back(std::move(entry));
   }
   return entries;
@@ -201,10 +199,10 @@ void PathMappingList::Clear(bool notify) {
   Notify(notify);
 }
 
-bool PathMappingList::RemapPath(ConstString path,
-                                ConstString &new_path) const {
-  if (std::optional<FileSpec> remapped = RemapPath(path.GetStringRef())) {
-    new_path.SetString(remapped->GetPath());
+bool PathMappingList::RemapPath(llvm::StringRef path,
+                                std::string &new_path) const {
+  if (std::optional<FileSpec> remapped = RemapPath(path)) {
+    new_path = remapped->GetPath();
     return true;
   }
   return false;
@@ -230,7 +228,7 @@ std::optional<FileSpec> PathMappingList::RemapPath(llvm::StringRef mapping_path,
   LazyBool path_is_relative = eLazyBoolCalculate;
 
   for (const auto &it : m_pairs) {
-    llvm::StringRef prefix = it.first.GetStringRef();
+    llvm::StringRef prefix(it.first);
     // We create a copy of mapping_path because StringRef::consume_from
     // effectively modifies the instance itself.
     llvm::StringRef path = mapping_path;
@@ -249,7 +247,7 @@ std::optional<FileSpec> PathMappingList::RemapPath(llvm::StringRef mapping_path,
       if (!path_is_relative)
         continue;
     }
-    FileSpec remapped(it.second.GetStringRef());
+    FileSpec remapped(it.second);
     auto orig_style = FileSpec::GuessPathStyle(prefix).value_or(
         llvm::sys::path::Style::native);
     AppendPathComponents(remapped, path, orig_style);
@@ -265,10 +263,10 @@ PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const {
   llvm::StringRef path_ref(path);
   std::lock_guard<std::mutex> lock(m_pairs_mutex);
   for (const auto &it : m_pairs) {
-    llvm::StringRef removed_prefix = it.second.GetStringRef();
-    if (!path_ref.consume_front(it.second.GetStringRef()))
+    llvm::StringRef removed_prefix(it.second);
+    if (!path_ref.consume_front(it.second))
       continue;
-    auto orig_file = it.first.GetStringRef();
+    llvm::StringRef orig_file(it.first);
     auto orig_style = FileSpec::GuessPathStyle(orig_file).value_or(
         llvm::sys::path::Style::native);
     fixed.SetFile(orig_file, orig_style);
@@ -298,13 +296,13 @@ bool PathMappingList::Replace(llvm::StringRef path, llvm::StringRef new_path,
     if (idx >= m_pairs.size())
       return false;
     ++m_mod_id;
-    m_pairs[idx].second = ConstString(new_path);
+    m_pairs[idx].second = new_path.str();
   }
   Notify(notify);
   return true;
 }
 
-bool PathMappingList::Remove(ConstString path, bool notify) {
+bool PathMappingList::Remove(llvm::StringRef path, bool notify) {
   {
     std::lock_guard<std::mutex> lock(m_pairs_mutex);
     iterator pos = FindIteratorForPath(path);
@@ -319,7 +317,7 @@ bool PathMappingList::Remove(ConstString path, bool notify) {
 }
 
 PathMappingList::iterator
-PathMappingList::FindIteratorForPath(ConstString path) {
+PathMappingList::FindIteratorForPath(llvm::StringRef path) {
   std::lock_guard<std::mutex> lock(m_pairs_mutex);
   iterator pos;
   iterator begin = m_pairs.begin();
@@ -332,8 +330,8 @@ PathMappingList::FindIteratorForPath(ConstString path) {
   return pos;
 }
 
-bool PathMappingList::GetPathsAtIndex(uint32_t idx, ConstString &path,
-                                      ConstString &new_path) const {
+bool PathMappingList::GetPathsAtIndex(uint32_t idx, std::string &path,
+                                      std::string &new_path) const {
   std::lock_guard<std::mutex> lock(m_pairs_mutex);
   if (idx < m_pairs.size()) {
     path = m_pairs[idx].first;
@@ -345,7 +343,7 @@ bool PathMappingList::GetPathsAtIndex(uint32_t idx, ConstString &path,
 
 uint32_t
 PathMappingList::FindIndexForPathNoLock(llvm::StringRef orig_path) const {
-  const ConstString path = ConstString(NormalizePath(orig_path));
+  const std::string path = NormalizePath(orig_path);
   const_iterator pos;
   const_iterator begin = m_pairs.begin();
   const_iterator end = m_pairs.end();

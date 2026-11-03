@@ -10,8 +10,8 @@
 #ifndef liblldb_NativeRegisterContextWindows_x86_64_h_
 #define liblldb_NativeRegisterContextWindows_x86_64_h_
 
-#include "Plugins/Process/Utility/RegisterContext_x86.h"
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "Register/Arch/RegisterContext_x86.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 
 #include "NativeRegisterContextWindows.h"
 

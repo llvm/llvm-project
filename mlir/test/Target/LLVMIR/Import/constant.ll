@@ -80,6 +80,18 @@ define ptr @gep_const_expr() {
 
 ; // -----
 
+@vt = external constant [3 x ptr]
+
+; CHECK-LABEL: @gep_const_expr_inrange
+define ptr @gep_const_expr_inrange() {
+  ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @vt : !llvm.ptr
+  ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr inbounds inrange <i{{[0-9]+}}, -16, 8> %[[ADDR]][{{.*}}] : (!llvm.ptr{{.*}}) -> !llvm.ptr
+  ; CHECK-DAG:  llvm.return %[[GEP]] : !llvm.ptr
+  ret ptr getelementptr inbounds inrange(-16, 8) ([3 x ptr], ptr @vt, i64 0, i64 2)
+}
+
+; // -----
+
 @global = external global i32, align 8
 
 ; CHECK-LABEL: @const_expr_with_duplicate

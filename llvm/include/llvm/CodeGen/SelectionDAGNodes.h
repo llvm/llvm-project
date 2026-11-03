@@ -1493,6 +1493,14 @@ public:
     return getMemOperand()->getMemCacheHint();
   }
 
+  /// Returns metadata that can be copied unchanged to an access covering
+  /// all or part of this access's bytes, even if the value type changes.
+  /// Metadata describing the loaded value (e.g. !range) is excluded, since
+  /// it may not apply to a value loaded with a different type or byte range.
+  MMOMetadata getMMOMetadataForSubAccess() const {
+    return MMOMetadata(getAAInfo(), /*Ranges=*/nullptr, getMemCacheHint());
+  }
+
   /// Returns the synchronization scope ID for this memory operation.
   SyncScope::ID getSyncScopeID() const {
     return getMemOperand()->getSyncScopeID();
@@ -2068,11 +2076,6 @@ LLVM_ABI bool isOneOrOneSplatFP(SDValue V, bool AllowUndefs = false);
 /// constant -1 integer (with no undefs).
 /// Does not permit build vector implicit truncation.
 LLVM_ABI bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
-
-/// Return true if the value is a constant 1 integer or a splatted vector of a
-/// constant 1 integer (with no undefs).
-/// Does not permit build vector implicit truncation.
-LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
 
 /// Return true if the value is a constant 0 integer or a splatted vector of a
 /// constant 0 integer (with no undefs).
