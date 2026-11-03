@@ -3468,9 +3468,10 @@ LValue CodeGenFunction::EmitLoadOfPointerLValue(Address PtrAddr,
   return MakeAddrLValue(Addr, PtrTy->getPointeeType(), BaseInfo, TBAAInfo);
 }
 
-template<typename BuilderTy>
-static llvm::Value *GetCastedThreadLocalAddress(
-    BuilderTy &Builder, llvm::AddrSpaceCastOperator *ASC) {
+template <typename BuilderTy>
+static llvm::Value *
+GetCastedThreadLocalAddress(BuilderTy &Builder,
+                            llvm::AddrSpaceCastOperator *ASC) {
   // On targets with a non-default Global AS, we might have inserted a cast,
   // so we need to ensure that we create the TLS address from the global
   // itself, and then cast it, rather than trying to use the casted value.
@@ -3839,7 +3840,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       //       EmitGlobalVarDeclLValue, possibly by refactoring
       //       CreateThreadLocalAddress
       if (auto *ASC =
-            dyn_cast<llvm::AddrSpaceCastOperator>(addr.getBasePointer()))
+              dyn_cast<llvm::AddrSpaceCastOperator>(addr.getBasePointer()))
         addr = addr.withPointer(GetCastedThreadLocalAddress(Builder, ASC),
                                 NotKnownNonNull);
       else
