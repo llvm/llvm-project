@@ -816,13 +816,13 @@ struct IntRangeNarrowingPass final
                                                bitwidthsSupported);
 
     // TODO: Index folders must use the runtime index width. They can currently
-    // remove lossy casts when the runtime width differs from the attribute width.
-    // We specifically need bottom-up traversal as cmpi pattern needs range
-    // data, attached to its original argument values.
-    if (failed(applyPatternsGreedily(op, std::move(patterns),
-                                     GreedyRewriteConfig()
-                                         .setUseTopDownTraversal(false)
-                                         .setListener(&listener))))
+    // remove lossy casts when the runtime width differs from the attribute
+    // width. We specifically need bottom-up traversal as cmpi pattern needs
+    // range data, attached to its original argument values.
+    if (failed(applyPatternsGreedily(
+            op, std::move(patterns),
+            GreedyRewriteConfig().setUseTopDownTraversal(false).setListener(
+                &listener))))
       signalPassFailure();
   }
 };

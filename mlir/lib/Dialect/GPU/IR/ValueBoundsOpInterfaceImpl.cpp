@@ -34,7 +34,8 @@ struct GpuIdOpInterface
       assert(v == value &&
              "GPU ID op inferring values for something that's not its result");
       // Value bounds constraints accept int64_t constants. Runtime index bounds
-      // can be wider. Omit bounds that do not fit to keep the constraints sound.
+      // can be wider. Omit bounds that do not fit to keep the constraints
+      // sound.
       if (range.smin().isSignedIntN(64))
         cstr.bound(v) >= range.smin().getSExtValue();
       if (range.smax().isSignedIntN(64))
