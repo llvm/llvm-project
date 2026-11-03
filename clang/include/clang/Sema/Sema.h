@@ -16112,40 +16112,47 @@ public:
   ///@}
 };
 
-enum class DestructorKind {
-  // SMF is deleted, private, protected, or otherwise inaccessible.
-  NotAvailable,
+/// Evaluates whether a type is trivially-destructible, non-trivially
+/// destructible, or cannot be destroyed in the current context. Caches
+/// the results from evaluation to allow for independently determining
+/// if the type's destructor throws.
+class DestructibleTraits {
+public:
+  /// Indicates whether a type is trivially-destructible, non-trivially
+  /// destructible, or not destructible.
+  enum class Destructibility : std::uint8_t {
+    /// Type is not destructible from this context.
+    NotAvailable,
 
-  // SMF is trivial.
-  Trivial,
+    /// Type is trivially-destructible.
+    TriviallyDestructible,
 
-  // SMF is non-trivial and nothrow.
-  NonTrivial,
+    /// Type is destructible, but not trivially-destructible.
+    Destructible,
+  };
+
+  DestructibleTraits(Sema &S, const ASTContext &C, SourceLocation Loc,
+                     QualType T);
+
+  /// Returns the raw destructor kind.
+  Destructibility GetKind() const;
+
+  /// Returns true if, and only if, the type is destructible.
+  bool IsDestructible() const;
+
+  /// Returns true if, and only if, the type is trivially-destructible.
+  bool IsTriviallyDestructible() const;
+
+  /// Returns true if, and only if, the type is destructible, and the chosen
+  /// destructor is non-throwing.
+  bool IsNoThrowDestructible(Sema &S, const ASTContext &C);
+
+private:
+  SourceLocation Loc;
+  Destructibility Kind = Destructibility::NotAvailable;
+  const CXXDestructorDecl *Destructor = nullptr;
+  std::optional<bool> NoThrow = std::nullopt;
 };
-
-/// Returns whether a type is trivially-destructible, non-trivially
-/// destructible, or cannot be destroyed in the current context, and a
-/// pointer type's destructor, if it is a class type (otherwise null).
-///
-/// It is possible for a type to have a trivial destructor without being
-/// trivially-destructible. For example, `struct S { ~S() = delete; };`
-/// has a trivial destructor: its destructor is non-virtual, all of its
-/// bases have trivial destructors, and all of its members are trivially
-/// destructible. `S` isn't trivially-destructible because its destructor
-/// has been deleted. Similarly, `class C { ~C() = default; }` isn't
-/// trivially-destructible because `~C()`---although trivial for the
-/// same reasons---is private.
-///
-/// This would ideally be placed in `QualType`, but libClangBasic
-/// doesn't include `Sema`.
-std::pair<DestructorKind, const CXXDestructorDecl *>
-GetDestructorKind(Sema &S, const ASTContext &C, SourceLocation Loc, QualType T);
-
-/// Returns true if a class type's destructor is nothrow.
-///
-///
-bool IsDestructorNoThrow(Sema &S, const ASTContext &C, SourceLocation Loc,
-                         const CXXDestructorDecl *Destructor);
 
 DeductionFailureInfo
 MakeDeductionFailureInfo(ASTContext &Context, TemplateDeductionResult TDK,
