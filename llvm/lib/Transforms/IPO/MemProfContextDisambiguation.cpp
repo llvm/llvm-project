@@ -6737,7 +6737,7 @@ static const CallsiteInfo *findIndirectTailCallCallsite(
     const DenseMap<ValueInfo, CallsiteInfo> &MapTailCallCalleeVIToCallsite,
     std::optional<DenseMap<uint64_t, const CallsiteInfo *>>
         &OrigNameGUIDToTailCallCallsite,
-    std::optional<DenseMap<ValueInfo, const GlobalValue *>> &AliasVIToGV,
+    std::optional<DenseMap<ValueInfo, const GlobalAlias *>> &AliasVIToGV,
     const Module &M, const ModuleSummaryIndex *ImportSummary,
     InstrProfSymtab &Symtab) {
   auto End = MapTailCallCalleeVIToCallsite.end();
@@ -6770,33 +6770,13 @@ static const CallsiteInfo *findIndirectTailCallCallsite(
     for (const auto &[CalleeVI, Callsite] : MapTailCallCalleeVIToCallsite) {
       const GlobalValue *Callee = Symtab.getFunction(CalleeVI.getGUID());
       if (!Callee) {
-        // InstrProfSymtab only indexes functions (not GlobalAliases), and
-        // imported copies of promoted local aliases are indexed under the
-        // aliasee's !guid rather than the alias's GUID. Lazily build a
-        // module-wide map from alias ValueInfo to GlobalValue once per module
-        // so we can recover the alias's pre-promotion name.
+        // InstrProfSymtab only indexes Functions, not GlobalAliases (imported
+        // alias copies are materialized as Functions with thinlto_alias_guid
+        // metadata and are found via Symtab above). Lazily build a module-wide
+        // map for same-module function GlobalAliases once per module so we can
+        // recover the alias's pre-promotion name.
         if (!AliasVIToGV) {
           AliasVIToGV.emplace();
-          // Collect imported copies of aliases (materialized as Functions with
-          // thinlto_alias_guid metadata). Skip memprof clones created earlier
-          // in applyImport.
-          // TODO: Consider indexing thinlto_alias_guid on imported alias
-          // functions in InstrProfSymtab::addFuncWithName (if attached
-          // unconditionally in replaceAliasWithAliasee), which would avoid
-          // scanning M.functions() here and enable ICP to imported promoted
-          // local aliases. Note that we would still need AliasVIToGV below for
-          // non-imported (same-module) GlobalAliases, since GlobalAlias cannot
-          // carry !guid metadata and mapping alias GUIDs to the aliasee
-          // Function in InstrProfSymtab would lose the alias's name.
-          for (const Function &Fn : M) {
-            if (Fn.isDeclaration() || isMemProfClone(Fn))
-              continue;
-            if (auto AliasGUID = getImportedAliasGUID(Fn))
-              if (ValueInfo VI = ImportSummary->getValueInfo(*AliasGUID))
-                AliasVIToGV->try_emplace(VI, &Fn);
-          }
-          // Collect same-module function GlobalAliases (skipping memprof alias
-          // clones and non-function aliases).
           for (const GlobalAlias &A : M.aliases()) {
             if (isMemProfClone(A) ||
                 !isa_and_nonnull<Function>(A.getAliaseeObject()))
@@ -6912,10 +6892,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
   if (!initializeIndirectCallPromotionInfo(M))
     return false;
 
-  // Lazily populated map from alias ValueInfo to the corresponding imported
-  // function copy or same-module GlobalAlias, used by
-  // findIndirectTailCallCallsite when a local alias target is not in Symtab.
-  std::optional<DenseMap<ValueInfo, const GlobalValue *>> AliasVIToGV;
+  // Lazily populated map from alias ValueInfo to the corresponding same-module
+  // GlobalAlias, used by findIndirectTailCallCallsite when a local alias target
+  // is not in Symtab.
+  std::optional<DenseMap<ValueInfo, const GlobalAlias *>> AliasVIToGV;
 
   for (auto &F : M) {
     if (F.isDeclaration() || isMemProfClone(F))

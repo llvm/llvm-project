@@ -646,8 +646,16 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   // Also key the function by its GUID, if it has one. The GUID is the hash of
   // the function's name when the GUID was assigned, so this still finds the
   // function if LTO has renamed it since. This used to need !PGOFuncName.
-  if (auto GUID = F.getGUIDIfAssigned();
-      GUID && *GUID != Function::getGUIDAssumingExternalLinkage(PGOFuncName))
+  // If F is an imported copy of an alias (materialized as a Function by
+  // replaceAliasWithAliasee while retaining the aliasee's !guid metadata for
+  // body-level passes), key it by its original alias GUID instead so it can be
+  // found via the alias GUID and does not shadow the aliasee's !guid.
+  std::optional<GlobalValue::GUID> GUID;
+  if (auto *MD = F.getMetadata("thinlto_alias_guid"))
+    GUID = mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+  else
+    GUID = F.getGUIDIfAssigned();
+  if (GUID && *GUID != Function::getGUIDAssumingExternalLinkage(PGOFuncName))
     MD5FuncMap.emplace_back(*GUID, &F);
 
   if (!AddCanonical)
