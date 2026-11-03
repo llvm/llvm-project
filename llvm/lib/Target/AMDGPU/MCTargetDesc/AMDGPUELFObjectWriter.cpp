@@ -97,10 +97,11 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
     // local symbol defined in another section.
     if (Fixup.getKind() == AMDGPU::fixup_si_smem_pcrel) {
       const auto *SymELF = static_cast<const MCSymbolELF *>(SymA);
-      reportError(Fixup.getLoc(),
-                  SymELF->getBinding() == ELF::STB_LOCAL
-                      ? "PC-relative prefetch target must be in the same section"
-                      : "PC-relative prefetch target must be a local label");
+      reportError(
+          Fixup.getLoc(),
+          SymELF->getBinding() == ELF::STB_LOCAL
+              ? "PC-relative prefetch target must be in the same section"
+              : "PC-relative prefetch target must be a local label");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;
