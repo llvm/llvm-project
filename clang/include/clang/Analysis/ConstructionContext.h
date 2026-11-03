@@ -275,7 +275,7 @@ private:
   // A helper function for constructing an instance into a bump vector context.
   template <typename T, typename... ArgTypes>
   static T *create(BumpVectorContext &C, ArgTypes... Args) {
-    auto *CC = C.getAllocator().Allocate<T>();
+    void *CC = C.getAllocator().Allocate(sizeof(T), alignof(T));
     return new (CC) T(Args...);
   }
 
