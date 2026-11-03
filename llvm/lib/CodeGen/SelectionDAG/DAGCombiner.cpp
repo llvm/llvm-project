@@ -15299,24 +15299,23 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   if (IsSExt || (!ISD::isSignedIntSetCC(Cond) &&
                  sd_match(N, m_SetCC(m_OneUse(m_ZExt(m_Value(LHS))),
                                      m_OneUse(m_ZExt(m_Value(RHS))))))) {
-    EVT SmallVT =
-        LHS.getScalarValueSizeInBits() > RHS.getScalarValueSizeInBits()
-            ? LHS.getValueType()
-            : RHS.getValueType();
+    EVT LHSVT = LHS.getValueType();
+    EVT RHSVT = RHS.getValueType();
+    EVT InnerVT = LHSVT.bitsGT(RHSVT) ? LHSVT : RHSVT;
     // Profitability checks
     if (TLI.isTypeLegal(LHS.getValueType()) &&
         TLI.isTypeLegal(RHS.getValueType()) &&
         (!TLI.isTypeLegal(N0.getValueType()) ||
-         TLI.isNarrowingProfitable(N, N0.getValueType(), SmallVT)) &&
-        TLI.isOperationLegalOrCustom(ISD::SETCC, SmallVT, LegalOperations) &&
-        TLI.isTypeDesirableForOp(ISD::SETCC, SmallVT) &&
+         TLI.isNarrowingProfitable(N, N0.getValueType(), InnerVT)) &&
+        TLI.isOperationLegalOrCustom(ISD::SETCC, InnerVT, LegalOperations) &&
+        TLI.isTypeDesirableForOp(ISD::SETCC, InnerVT) &&
         (!LegalOperations ||
-         TLI.isCondCodeLegal(Cond, SmallVT.getSimpleVT()))) {
-      LHS = DAG.getExtOrTrunc(IsSExt, LHS, SDLoc(LHS), SmallVT);
-      RHS = DAG.getExtOrTrunc(IsSExt, RHS, SDLoc(RHS), SmallVT);
+         TLI.isCondCodeLegal(Cond, InnerVT.getSimpleVT()))) {
+      LHS = DAG.getExtOrTrunc(IsSExt, LHS, SDLoc(LHS), InnerVT);
+      RHS = DAG.getExtOrTrunc(IsSExt, RHS, SDLoc(RHS), InnerVT);
       SDValue NewSetCC =
-          DAG.getSetCC(DL, getSetCCResultType(SmallVT), LHS, RHS, Cond);
-      return DAG.getBoolExtOrTrunc(NewSetCC, DL, VT, SmallVT);
+          DAG.getSetCC(DL, getSetCCResultType(InnerVT), LHS, RHS, Cond);
+      return DAG.getBoolExtOrTrunc(NewSetCC, DL, VT, InnerVT);
     }
   }
 
