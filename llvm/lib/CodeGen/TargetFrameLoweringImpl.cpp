@@ -18,8 +18,10 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
@@ -28,6 +30,17 @@
 using namespace llvm;
 
 TargetFrameLowering::~TargetFrameLowering() = default;
+
+void TargetFrameLowering::adjustForStackLimitCheck(MachineFunction &MF) const {
+  // Reaching the generic implementation means a function requested a
+  // stack-limit check (via -fstack-limit-variable) but the current target does
+  // not implement one. Because the feature is about stack-overflow safety,
+  // surface that as a hard error rather than silently leaving the function
+  // unprotected.
+  const Function &F = MF.getFunction();
+  F.getContext().diagnose(DiagnosticInfoUnsupported(
+      F, "-fstack-limit-variable is not supported for this target"));
+}
 
 bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const {
   assert(MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
