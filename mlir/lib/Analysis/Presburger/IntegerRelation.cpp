@@ -619,41 +619,6 @@ bool IntegerRelation::hasInvalidConstraint() const {
   return check(/*isEq=*/false);
 }
 
-/// Eliminate variable from constraint at `rowIdx` based on coefficient at
-/// pivotRow, pivotCol. Columns in range [elimColStart, pivotCol) will not be
-/// updated as they have already been eliminated.
-static void eliminateFromConstraint(IntegerRelation *constraints,
-                                    unsigned rowIdx, unsigned pivotRow,
-                                    unsigned pivotCol, unsigned elimColStart,
-                                    bool isEq) {
-  // Skip if equality 'rowIdx' if same as 'pivotRow'.
-  if (isEq && rowIdx == pivotRow)
-    return;
-  auto at = [&](unsigned i, unsigned j) -> DynamicAPInt {
-    return isEq ? constraints->atEq(i, j) : constraints->atIneq(i, j);
-  };
-  DynamicAPInt leadCoeff = at(rowIdx, pivotCol);
-  // Skip if leading coefficient at 'rowIdx' is already zero.
-  if (leadCoeff == 0)
-    return;
-  DynamicAPInt pivotCoeff = constraints->atEq(pivotRow, pivotCol);
-  int sign = (leadCoeff * pivotCoeff > 0) ? -1 : 1;
-  DynamicAPInt lcm = llvm::lcm(pivotCoeff, leadCoeff);
-  DynamicAPInt pivotMultiplier = sign * (lcm / abs(pivotCoeff));
-  DynamicAPInt rowMultiplier = lcm / abs(leadCoeff);
-
-  unsigned numCols = constraints->getNumCols();
-  for (unsigned j = 0; j < numCols; ++j) {
-    // Skip updating column 'j' if it was just eliminated.
-    if (j >= elimColStart && j < pivotCol)
-      continue;
-    DynamicAPInt v = pivotMultiplier * constraints->atEq(pivotRow, j) +
-                     rowMultiplier * at(rowIdx, j);
-    isEq ? constraints->atEq(rowIdx, j) = v
-         : constraints->atIneq(rowIdx, j) = v;
-  }
-}
-
 /// Returns the position of the variable that has the minimum <number of lower
 /// bounds> times <number of upper bounds> from the specified range of
 /// variables [start, end). It is often best to eliminate in the increasing
@@ -1098,19 +1063,9 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
       continue;
     }
 
-    // Eliminate variable at 'pivotCol' from each equality row.
-    for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, pivotCol, posStart,
-                              /*isEq=*/true);
-      equalities.normalizeRow(i);
-    }
-
-    // Eliminate variable at 'pivotCol' from each inequality row.
-    for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, pivotCol, posStart,
-                              /*isEq=*/false);
-      inequalities.normalizeRow(i);
-    }
+    // Eliminate variable at 'pivotCol' from every other constraint.
+    eliminateVarUsingEquality(*pivotRow, pivotCol);
+    normalizeConstraintsByGCD();
     removeEquality(*pivotRow);
     gcdTightenInequalities();
   }
@@ -1156,13 +1111,15 @@ bool IntegerRelation::gaussianEliminate() {
       *pivotRow = nowDone;
     }
 
-    // Normalize all lower equations and all inequalities.
+    // Normalize all lower equations and all inequalities. Only rows other
+    // than the pivot row are modified, so this view of it stays valid.
+    ArrayRef<DynamicAPInt> pivot = equalities.getRow(*pivotRow);
     for (unsigned i = nowDone + 1; i < eqs; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, firstVar, 0, true);
+      equalities.eliminateColumnUsingRow(i, pivot, firstVar);
       equalities.normalizeRow(i);
     }
     for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, firstVar, firstVar, false);
+      inequalities.eliminateColumnUsingRow(i, pivot, firstVar);
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
@@ -1268,6 +1225,19 @@ void IntegerRelation::eliminateVarUsingEquality(ArrayRef<DynamicAPInt> eq,
   assert(col < getNumVars() && "column must be a variable");
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
     equalities.eliminateColumnUsingRow(i, eq, col);
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
+    inequalities.eliminateColumnUsingRow(i, eq, col);
+}
+
+void IntegerRelation::eliminateVarUsingEquality(unsigned eqIdx, unsigned col) {
+  assert(eqIdx < getNumEqualities() && "equality index out of bounds");
+  assert(col < getNumVars() && "column must be a variable");
+  // Only rows other than the pivot row are modified, so this view of it stays
+  // valid.
+  ArrayRef<DynamicAPInt> eq = equalities.getRow(eqIdx);
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
+    if (i != eqIdx)
+      equalities.eliminateColumnUsingRow(i, eq, col);
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
     inequalities.eliminateColumnUsingRow(i, eq, col);
 }
@@ -1557,18 +1527,12 @@ void IntegerRelation::removeRedundantLocalVars() {
     if (i == e)
       break;
 
-    // Use the ith equality to simplify other equalities. If any changes
-    // are made to an equality constraint, it is normalized by GCD.
-    for (unsigned k = 0, t = getNumEqualities(); k < t; ++k) {
-      if (atEq(k, j) != 0) {
-        eliminateFromConstraint(this, k, i, j, j, /*isEq=*/true);
-        equalities.normalizeRow(k);
-      }
-    }
-
-    // Use the ith equality to simplify inequalities.
-    for (unsigned k = 0, t = getNumInequalities(); k < t; ++k)
-      eliminateFromConstraint(this, k, i, j, j, /*isEq=*/false);
+    // Use the ith equality to eliminate the local variable from every other
+    // constraint. Equalities are then normalized by GCD; this only affects
+    // the ones that changed, since the others are already normalized.
+    eliminateVarUsingEquality(i, j);
+    for (unsigned k = 0, t = getNumEqualities(); k < t; ++k)
+      equalities.normalizeRow(k);
 
     // Remove the ith equality and the found local variable.
     removeVar(j);
