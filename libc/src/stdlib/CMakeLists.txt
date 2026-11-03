@@ -416,21 +416,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  reallocarray
-  SRCS
-    reallocarray.cpp
-  HDRS
-    reallocarray.h
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.func.realloc
-    libc.hdr.types.size_t
-    libc.src.__support.common
-    libc.src.__support.libc_errno
-    libc.src.__support.macros.config
-)
-
-add_entrypoint_object(
   srand
   SRCS
     srand.cpp
@@ -576,6 +561,11 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
         ${SCUDO_DEPS}
     )
     add_entrypoint_external(
+      reallocarray
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
       aligned_alloc
       DEPENDS
         ${SCUDO_DEPS}
@@ -604,6 +594,9 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       realloc
+    )
+    add_entrypoint_external(
+      reallocarray
     )
     add_entrypoint_external(
       aligned_alloc
