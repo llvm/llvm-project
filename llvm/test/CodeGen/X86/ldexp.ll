@@ -50,11 +50,7 @@ define bfloat @ldexp_bf16(i8 zeroext %x) nounwind {
 ; X64-NEXT:    callq ldexpf@PLT
 ; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    btl $16, %eax
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    orl $4194304, %eax # imm = 0x400000
-; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    cmovnpl %ecx, %eax
+; X64-NEXT:    adcl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    shrl $16, %eax
 ; X64-NEXT:    pinsrw $0, %eax, %xmm0
 ; X64-NEXT:    popq %rax
@@ -69,11 +65,7 @@ define bfloat @ldexp_bf16(i8 zeroext %x) nounwind {
 ; WIN64-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; WIN64-NEXT:    movd %xmm0, %eax
 ; WIN64-NEXT:    btl $16, %eax
-; WIN64-NEXT:    movl %eax, %ecx
-; WIN64-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; WIN64-NEXT:    orl $4194304, %eax # imm = 0x400000
-; WIN64-NEXT:    ucomiss %xmm0, %xmm0
-; WIN64-NEXT:    cmovnpl %ecx, %eax
+; WIN64-NEXT:    adcl $32767, %eax # imm = 0x7FFF
 ; WIN64-NEXT:    shrl $16, %eax
 ; WIN64-NEXT:    pinsrw $0, %eax, %xmm0
 ; WIN64-NEXT:    addq $40, %rsp

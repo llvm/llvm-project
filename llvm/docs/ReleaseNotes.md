@@ -205,12 +205,19 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed the legacy pass manager's `RegionPass` and `RGPassManager` classes,
   which no longer had any users.
 
+* Removed `LiveVariables` analysis
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
   controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
   `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
   `LLVM_ENABLE_LZMA`, and it has no effect in a standalone LLDB build.
+
+* The `tablegen()` CMake function has been renamed to `tablegen_internal()`.
+  Projects invoking `llvm-tblgen` should use the new `llvm_tablegen(ofn ...)`
+  in place of `tablegen(LLVM ofn ...)`, and projects invoking
+  `mlir-src-sharder` the new `mlir_src_sharder(ofn ...)`.
 
 * The DirectX backend is now an official target and has moved from
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
@@ -320,6 +327,10 @@ Makes programs 10x faster by doing Special New Thing.
   and signed high-half multiply instructions (`UHMUL` and `SHMUL`). Use
   `-disable-hmul` to disable their generation.
 
+* Added `-mattr=+func-table`: a pointer to a function is an index into
+  a read-only table of functions, and an indirect call is `callx` through
+  the table. It is for programs that keep pointers to functions in arena.
+
 ### Changes to the DirectX Backend
 
 * The DirectX backend has been promoted from experimental to an official,
@@ -356,6 +367,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `-mcpu=tt-ascalon-xg` for the Tenstorrent Ascalon XG processor, the
   global variant of Ascalon X without `Zvkng` and with reduced vector FP64
   throughput.
+* Removed X5 from the preserve_most register list.
 
 ### Changes to the WebAssembly Backend
 
@@ -443,6 +455,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
+  tests which wish to opt out of liveness tracking should set
+  `tracksRegLiveness: false` explicitly.
 * Fixed a crash
   ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose
@@ -516,13 +531,6 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to BOLT
 
 ### Changes to Sanitizers
-
-* AddressSanitizer's `operator new` now calls the current
-  `std::new_handler` on allocation failure, as the C++ standard
-  requires. With `allocator_may_return_null=1`, throwing `operator new`
-  throws `std::bad_alloc` instead of aborting (on runtimes built with
-  exceptions), and nothrow `operator new` returns `nullptr`. By default
-  it still aborts once the handler chain is exhausted.
 
 ### Other Changes
 
