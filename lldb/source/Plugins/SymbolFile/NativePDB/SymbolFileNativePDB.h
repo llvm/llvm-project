@@ -19,8 +19,8 @@
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 #include "CompileUnitIndex.h"
-#include "PdbIndex.h"
 #include "PdbAstBuilder.h"
+#include "PdbIndex.h"
 #include <optional>
 #include <set>
 
