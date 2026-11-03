@@ -809,6 +809,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
+- Fixed a crash when compiling C code with `-fsanitize=function` targeting the MSVC ABI, where a function returns an anonymous struct. (#GH215689)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
