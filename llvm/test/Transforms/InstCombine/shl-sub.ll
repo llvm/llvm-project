@@ -66,6 +66,78 @@ define <3 x i64> @shl_sub_i64_vec_poison(<3 x i64> %x) {
   ret <3 x i64> %r
 }
 
+define i32 @shl_allones_sub_bwm1(i32 %x) {
+; CHECK-LABEL: @shl_allones_sub_bwm1(
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -2147483648, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = sub i32 31, %x
+  %r = shl i32 -1, %s
+  ret i32 %r
+}
+
+define i32 @lshr_signmask_sub_bwm1(i32 %x) {
+; CHECK-LABEL: @lshr_signmask_sub_bwm1(
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = sub i32 31, %x
+  %r = lshr i32 -2147483648, %s
+  ret i32 %r
+}
+
+define i32 @ashr_signmask_sub_bwm1(i32 %x) {
+; CHECK-LABEL: @ashr_signmask_sub_bwm1(
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 -1, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = sub i32 31, %x
+  %r = ashr i32 -2147483648, %s
+  ret i32 %r
+}
+
+define <2 x i8> @lshr_signmask_sub_bwm1_vec(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_signmask_sub_bwm1_vec(
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> splat (i8 1), [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %s = sub <2 x i8> splat (i8 7), %x
+  %r = lshr <2 x i8> splat (i8 -128), %s
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_signmask_sub_bwm1_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_signmask_sub_bwm1_vec_poison(
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> splat (i8 1), [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %s = sub <2 x i8> splat (i8 7), %x
+  %r = lshr <2 x i8> <i8 -128, i8 poison>, %s
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_signmask_sub_bwm1_vec_poison_sub(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_signmask_sub_bwm1_vec_poison_sub(
+; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> <i8 7, i8 poison>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> splat (i8 -128), [[S]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %s = sub <2 x i8> <i8 7, i8 poison>, %x
+  %r = lshr <2 x i8> splat (i8 -128), %s
+  ret <2 x i8> %r
+}
+
+define i32 @lshr_signmask_sub_bwm2(i32 %x) {
+; CHECK-LABEL: @lshr_signmask_sub_bwm2(
+; CHECK-NEXT:    [[S:%.*]] = sub i32 30, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 -2147483648, [[S]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = sub i32 30, %x
+  %r = lshr i32 -2147483648, %s
+  ret i32 %r
+}
+
 ; Negative tests
 
 define i32 @shl_bad_sub_i32(i32 %x) {
