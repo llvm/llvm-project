@@ -94,14 +94,16 @@ bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq,
 LLVM_ABI bool
 shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
                       BlockFrequencyInfo *BFI,
-                      PGSOQueryType QueryType = PGSOQueryType::Other);
+                      PGSOQueryType QueryType = PGSOQueryType::Other,
+                      bool UseProfilingInfo = true);
 
 /// Returns true if basic block \p BB is suggested to be size-optimized based on
 /// the profile.
 LLVM_ABI bool
 shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
                       BlockFrequencyInfo *BFI,
-                      PGSOQueryType QueryType = PGSOQueryType::Other);
+                      PGSOQueryType QueryType = PGSOQueryType::Other,
+                      bool UseProfilingInfo = true);
 
 } // end namespace llvm
 
