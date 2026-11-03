@@ -1,0 +1,20 @@
+## Check that --load can bring in a target: MCTargetPlugin registers the
+## "mcplugin" target from a static initializer at dlopen time, and llvm-mc
+## then assembles with it.
+
+# REQUIRES: plugins, examples
+# UNSUPPORTED: target={{.*windows.*}}
+## Plugins are currently broken on AIX, at least in the CI.
+# XFAIL: target={{.*}}-aix{{.*}}
+
+# RUN: llvm-mc %loadmctargetplugin --arch=mcplugin --show-encoding %s \
+# RUN:   | FileCheck %s
+# RUN: llvm-mc %loadmctargetplugin --version | FileCheck %s --check-prefix=VERSION
+# RUN: not llvm-mc --arch=mcplugin %s 2>&1 | FileCheck %s --check-prefix=NOPLUGIN
+
+# CHECK: nop # encoding: [0x2a]
+# VERSION: mcplugin - Example MC target plugin
+## Without the plugin there is no such target, so --arch is rejected.
+# NOPLUGIN: error: invalid target 'mcplugin'.
+
+nop
