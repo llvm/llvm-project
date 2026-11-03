@@ -1903,6 +1903,11 @@ The following target-specific calling conventions are known to backend:
   others via stack. Callee is responsible for stack cleaning. This convention is
   used by MSVC by default for methods in its ABI (CC ID = 70).
 
+* **x86_WinCall** --- The WinCall calling convention for Windows x86-64 (APX).
+  It is the default calling convention for the ``x86_64apx-windows-*`` triples
+  and passes up to eight integer and eight FP/SIMD arguments in registers,
+  allocated independently. See {doc}`WinCall` for details (CC ID = 128).
+
 (X86 addressing mode)=
 
 #### Representing X86 addressing modes in MachineInstrs

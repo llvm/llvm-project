@@ -168,6 +168,19 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("console");
   }
 
+  // x86_64apx targets default to a 64 KiB section alignment (matching the
+  // NVIDIA Grace CPU's 64 KiB page size) so that Windows can move to 64 KiB
+  // pages by adopting this calling convention. The user can still override it
+  // with their own -Wl,--section-alignment flag.
+  if (TC.getEffectiveTriple().isX86_64APX()) {
+    bool HasExplicitSectionAlignment = false;
+    for (Arg *A : Args.filtered(options::OPT_Wl_COMMA, options::OPT_Xlinker))
+      if (StringRef(A->getValue()).contains_insensitive("section-alignment"))
+        HasExplicitSectionAlignment = true;
+    if (!HasExplicitSectionAlignment)
+      CmdArgs.push_back("--section-alignment=0x10000");
+  }
+
   if (Args.hasArg(options::OPT_mdll))
     CmdArgs.push_back("--dll");
   else if (Args.hasArg(options::OPT_shared))

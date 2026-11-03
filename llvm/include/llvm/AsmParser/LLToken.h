@@ -143,6 +143,7 @@ enum Kind {
   kw_x86_fastcallcc,
   kw_x86_thiscallcc,
   kw_x86_vectorcallcc,
+  kw_x86_wincallcc,
   kw_x86_regcallcc,
   kw_arm_apcscc,
   kw_arm_aapcscc,

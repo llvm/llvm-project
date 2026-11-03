@@ -372,6 +372,22 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                            Output.getFilename() + "_dwo"));
   }
 
+  // x86_64apx targets default to a 64 KiB section alignment (matching the
+  // NVIDIA Grace CPU's 64 KiB page size) so that Windows can move to 64 KiB
+  // pages by adopting this calling convention. The user can still override it
+  // with their own -Wl,/section-alignment: flag.
+  if (TC.getTriple().isX86_64APX()) {
+    bool HasExplicitSectionAlignment = false;
+    for (Arg *A :
+         Args.filtered(options::OPT_Wl_COMMA, options::OPT__SLASH_link))
+      if (StringRef(A->getValue()).contains_insensitive("section-alignment"))
+        HasExplicitSectionAlignment = true;
+    if (!HasExplicitSectionAlignment) {
+      CmdArgs.push_back("/section-alignment:0x10000");
+      CmdArgs.push_back("/driver");
+    }
+  }
+
   // Add filenames, libraries, and other linker inputs.
   for (const auto &Input : Inputs) {
     if (Input.isFilename()) {
