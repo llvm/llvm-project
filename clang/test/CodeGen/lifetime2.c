@@ -146,3 +146,69 @@ label1:
   return -1;
 // O2: call void @llvm.lifetime.end.p0(
 }
+
+// CHECK-LABEL: @stmt_expr_label(
+void stmt_expr_label(int n) {
+  ({
+    __label__ l;
+  l:
+    if (n--)
+      goto l;
+  });
+  // O2: call void @llvm.lifetime.start.p0(
+  char x;
+  bar(&x, 1);
+  // O2: call void @llvm.lifetime.end.p0(
+}
+
+// CHECK-LABEL: @label_without_backward_jump(
+void label_without_backward_jump(int n) {
+  if (n)
+    goto l1;
+  bar(0, 0);
+l1:;
+  // O2: call void @llvm.lifetime.start.p0(
+  char x;
+  bar(&x, 1);
+  // O2: call void @llvm.lifetime.end.p0(
+}
+
+// CHECK-LABEL: @inner_block_backward_goto_to_outer(
+void inner_block_backward_goto_to_outer(int n) {
+l1:
+  if (n <= 0)
+    return;
+  {
+    // O2: call void @llvm.lifetime.start.p0(
+    char x;
+    bar(&x, 1);
+    // O2: call void @llvm.lifetime.end.p0(
+    --n;
+    goto l1;
+  }
+}
+
+// Verify bypass detection runs on non-FunctionDecl bodies (CapturedDecl):
+// `p` before `label1` gets lifetime markers, while `i` crossed by `goto label1`
+// does not.
+// CHECK-LABEL: @captured_stmt_backward_goto(
+// O2-LABEL: define internal void @__captured_stmt(
+// O2: %p = alloca ptr
+// O2: %i = alloca i32
+// O2: call void @llvm.lifetime.start.p0(ptr %p)
+// O2: call void @llvm.lifetime.end.p0(ptr %p)
+void captured_stmt_backward_goto(void) {
+  #pragma clang __debug captured
+  {
+    int *p = 0;
+  label1:
+    if (p) {
+      foo2(*p);
+      goto out;
+    }
+    int i = 999;
+    p = &i;
+    goto label1;
+  out:;
+  }
+}

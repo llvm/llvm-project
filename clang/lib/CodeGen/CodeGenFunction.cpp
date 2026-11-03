@@ -759,6 +759,19 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD && FD->usesSEHTry())
     CurSEHParent = GD;
+  if (const Stmt *Body = D ? D->getBody() : nullptr) {
+    // Coroutines always emit lifetime markers.
+    if (isa<CoroutineBodyStmt>(Body))
+      ShouldEmitLifetimeMarkers = true;
+
+    // Detect jumps that invalidate lifetime markers or bypass auto-var-init.
+    bool NeedsBypassDetection =
+        ShouldEmitLifetimeMarkers ||
+        (CGM.getLangOpts().getTrivialAutoVarInit() !=
+         LangOptions::TrivialAutoVarInitKind::Uninitialized);
+    if (NeedsBypassDetection)
+      Bypasses.Init(CGM, Body);
+  }
   CurFuncDecl = (D ? D->getNonClosureContext() : nullptr);
   FnRetTy = RetTy;
   CurFn = Fn;
@@ -1575,20 +1588,6 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       Loc = SpecDecl->getLocation();
 
   Stmt *Body = FD->getBody();
-
-  if (Body) {
-    // Coroutines always emit lifetime markers.
-    if (isa<CoroutineBodyStmt>(Body))
-      ShouldEmitLifetimeMarkers = true;
-
-    // Detect jumps that invalidate lifetime markers or bypass auto-var-init.
-    bool NeedsBypassDetection =
-        ShouldEmitLifetimeMarkers ||
-        (CGM.getLangOpts().getTrivialAutoVarInit() !=
-         LangOptions::TrivialAutoVarInitKind::Uninitialized);
-    if (NeedsBypassDetection)
-      Bypasses.Init(CGM, Body);
-  }
 
   // Emit the standard function prologue.
   StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());

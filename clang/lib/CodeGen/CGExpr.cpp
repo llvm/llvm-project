@@ -6160,12 +6160,10 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
 
-  if (!getLangOpts().CPlusPlus) {
-    if (HaveInsertPoint() && !hasLabelBeenSeenInCurrentScope() &&
-        EmitLifetimeStart(DeclPtr.getBasePointer()))
-      pushCleanupAfterFullExpr<CallLifetimeEnd>(NormalEHLifetimeMarker,
-                                                DeclPtr);
-  }
+  if (!getLangOpts().CPlusPlus && HaveInsertPoint() &&
+      !Bypasses.IsBackwardBypassed(E) &&
+      EmitLifetimeStart(DeclPtr.getBasePointer()))
+    pushCleanupAfterFullExpr<CallLifetimeEnd>(NormalEHLifetimeMarker, DeclPtr);
 
   EmitAnyExprToMem(InitExpr, DeclPtr, E->getType().getQualifiers(),
                    /*Init*/ true);
