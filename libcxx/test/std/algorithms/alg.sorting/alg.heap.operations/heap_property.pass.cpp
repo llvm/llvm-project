@@ -24,7 +24,7 @@
 // comp(a[i], a[R]) is false whenever R = 2*i+2 < b-a.
 template <class Comp, class Iter>
 TEST_CONSTEXPR_CXX20 bool lwg2166_heap(Iter a, Iter b, Comp cmp) {
-  using difference_type = std::iterator_traits<Iter>::difference_type;
+  using difference_type = typename std::iterator_traits<Iter>::difference_type;
 
   const difference_type n = b - a;
   for (difference_type i = 1; i < n; ++i)
