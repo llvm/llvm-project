@@ -1049,10 +1049,9 @@ public:
   /// debug. Examples include debug information indexes, symbol tables, memory
   /// module headerbytes, and more.
   ///
-  /// The arguments to this method give it context about the type of file being
-  /// cache.  It will integrate the user's settings to decide if a DataFileCache
-  /// should be used in this case.
-  ///
+  /// The arguments to this method give it context about the type of file we
+  /// are currently handling. It will combine that context with the user's
+  /// settings, to decide if a DataFileCache should be used.
   ///
   /// \param[in] memory_module
   ///     True if this binary exists only in memory.
