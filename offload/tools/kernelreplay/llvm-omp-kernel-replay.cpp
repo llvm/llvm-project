@@ -24,18 +24,24 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 using namespace llvm;
 
@@ -47,7 +53,13 @@ cl::OptionCategory ReplayOptions(TOOL_NAME " Options");
 /// The filename to read the JSON kernel description.
 static cl::opt<std::string> JsonFilename(cl::Positional,
                                          cl::desc("<input kernel JSON file>"),
-                                         cl::Required);
+                                         cl::Optional);
+
+static cl::opt<std::string> CompactStoreOpt(
+    "compact-store",
+    cl::desc("Compact the block store of the given recording directory, "
+             "removing the blocks that no input snapshot refers to, and exit."),
+    cl::value_desc("directory"), cl::cat(ReplayOptions));
 
 static cl::opt<bool> VerifyOpt(
     "verify",
@@ -154,11 +166,223 @@ static Error readDiffHeader(StringRef Buffer, StringRef Kind,
   return Error::success();
 }
 
+/// A lock of a recording directory, held until destroyed.
+class DirectoryLockTy {
+  int FD = -1;
+
+public:
+  DirectoryLockTy() = default;
+  DirectoryLockTy(const DirectoryLockTy &) = delete;
+  DirectoryLockTy &operator=(const DirectoryLockTy &) = delete;
+  ~DirectoryLockTy() {
+    if (FD < 0)
+      return;
+    sys::fs::unlockFile(FD);
+    sys::Process::SafelyCloseFileDescriptor(FD);
+  }
+
+  /// Lock the directory \p Dir, waiting up to \p Timeout. A shared lock is
+  /// skipped if the lock file cannot be opened, e.g., in a read-only directory.
+  Error lock(StringRef Dir, bool Exclusive,
+             std::chrono::milliseconds Timeout = std::chrono::milliseconds(0)) {
+    SmallString<128> Path(Dir);
+    sys::path::append(Path, RecordReplayBlockLockName);
+    if (sys::fs::openFileForReadWrite(Path, FD, sys::fs::CD_OpenAlways,
+                                      sys::fs::OF_None) &&
+        sys::fs::openFileForRead(Path, FD)) {
+      FD = -1;
+      if (Exclusive)
+        return createErr("failed to open the lock file %s", Path.c_str());
+      return Error::success();
+    }
+    if (sys::fs::tryLockFile(FD, Timeout,
+                             Exclusive ? sys::fs::LockKind::Exclusive
+                                       : sys::fs::LockKind::Shared)) {
+      sys::Process::SafelyCloseFileDescriptor(FD);
+      FD = -1;
+      return createErr("the recording directory %s is in use by a recording "
+                       "or a compaction",
+                       Dir.str().c_str());
+    }
+    return Error::success();
+  }
+};
+
+/// Read the header and the block entries of an input snapshot \p File, and
+/// return whether it is in block format.
+static Expected<bool>
+readBlockSnapshot(StringRef File, RecordReplayBlocksHeaderTy &Header,
+                  SmallVectorImpl<RecordReplayBlockTy> &Blocks) {
+  if (File.size() < sizeof(Header) ||
+      std::memcmp(File.data(), RecordReplayBlocksMagic, sizeof(Header.Magic)))
+    return false;
+  std::memcpy(&Header, File.data(), sizeof(Header));
+  if (!Header.BlockSize ||
+      Header.NumBlocks != divideCeil(Header.Size, Header.BlockSize) ||
+      File.size() - sizeof(Header) !=
+          Header.NumBlocks * sizeof(RecordReplayBlockTy))
+    return createErr("the kernel record input file has an invalid format");
+  Blocks.resize(Header.NumBlocks);
+  std::memcpy(Blocks.data(), File.data() + sizeof(Header),
+              Blocks.size() * sizeof(RecordReplayBlockTy));
+  return true;
+}
+
+/// Compact the block store of the recording directory \p Dir: copy the blocks
+/// that the input snapshots refer to into a new generation of the store, switch
+/// each snapshot to it, and delete the previous generations. The snapshots are
+/// replaced atomically, and the previous generations are only deleted once no
+/// snapshot refers to them, so an interrupted compaction leaves the recordings
+/// valid; compacting again completes it.
+static Error compactBlockStore(StringRef Dir) {
+  DirectoryLockTy Lock;
+  if (auto Err = Lock.lock(Dir, /*Exclusive=*/true))
+    return Err;
+
+  // Find the block store generations and the snapshots in block format.
+  struct SnapshotTy {
+    std::string Path;
+    RecordReplayBlocksHeaderTy Header;
+    SmallVector<RecordReplayBlockTy> Blocks;
+  };
+  std::vector<SnapshotTy> Snapshots;
+  std::map<uint64_t, std::string> Stores;
+  uint64_t NewGeneration = 0;
+  std::error_code EC;
+  for (sys::fs::directory_iterator It(Dir, EC), End; It != End && !EC;
+       It.increment(EC)) {
+    StringRef Path = It->path();
+    StringRef Name = sys::path::filename(Path);
+    uint64_t Generation;
+    if (Name.consume_front("record_blocks.") && Name.consume_back(".store") &&
+        !Name.getAsInteger(10, Generation)) {
+      Stores[Generation] = Path.str();
+      NewGeneration = std::max(NewGeneration, Generation + 1);
+      continue;
+    }
+    if (sys::path::extension(Path) != ".record_input")
+      continue;
+    auto FileOrErr = MemoryBuffer::getFile(Path, /*IsText=*/false,
+                                           /*RequiresNullTerminator=*/false);
+    if (!FileOrErr)
+      return createErr("failed to read %s", Path.str().c_str());
+    SnapshotTy Snapshot{Path.str(), {}, {}};
+    auto IsBlocksOrErr = readBlockSnapshot((*FileOrErr)->getBuffer(),
+                                           Snapshot.Header, Snapshot.Blocks);
+    if (!IsBlocksOrErr)
+      return IsBlocksOrErr.takeError();
+    if (*IsBlocksOrErr) {
+      NewGeneration =
+          std::max(NewGeneration, Snapshot.Header.StoreGeneration + 1);
+      Snapshots.push_back(std::move(Snapshot));
+    }
+  }
+  if (EC)
+    return createErr("failed to read the directory %s", Dir.str().c_str());
+
+  // Copy the blocks that the snapshots refer to into the new generation.
+  SmallString<128> NewStorePath(Dir);
+  sys::path::append(NewStorePath, getRecordReplayBlockStoreName(NewGeneration));
+  std::string TmpStorePath = (NewStorePath + ".tmp").str();
+  std::map<uint64_t, std::unique_ptr<MemoryBuffer>> OldStores;
+  DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> NewOffsets;
+  uint64_t OldSize = 0, NewSize = 0;
+  {
+    raw_fd_ostream OS(TmpStorePath, EC);
+    if (EC)
+      return createErr("failed to create %s", TmpStorePath.c_str());
+    for (SnapshotTy &Snapshot : Snapshots) {
+      std::unique_ptr<MemoryBuffer> &Store =
+          OldStores[Snapshot.Header.StoreGeneration];
+      if (!Store) {
+        auto It = Stores.find(Snapshot.Header.StoreGeneration);
+        if (It != Stores.end())
+          if (auto StoreOrErr =
+                  MemoryBuffer::getFile(It->second, /*IsText=*/false,
+                                        /*RequiresNullTerminator=*/false))
+            Store = std::move(*StoreOrErr);
+        if (!Store) {
+          OS.close();
+          sys::fs::remove(TmpStorePath);
+          return createErr("%s refers to a missing block store",
+                           Snapshot.Path.c_str());
+        }
+      }
+      for (RecordReplayBlockTy &Block : Snapshot.Blocks) {
+        if (Block.Codec == RecordReplayBlockZero)
+          continue;
+        auto [It, Inserted] =
+            NewOffsets.try_emplace({Block.HashHigh, Block.HashLow}, NewSize);
+        if (Inserted) {
+          if (Block.Offset > Store->getBufferSize() ||
+              Block.StoredSize > Store->getBufferSize() - Block.Offset) {
+            OS.close();
+            sys::fs::remove(TmpStorePath);
+            return createErr("%s refers to data beyond its block store",
+                             Snapshot.Path.c_str());
+          }
+          OS.write(Store->getBufferStart() + Block.Offset, Block.StoredSize);
+          NewSize += Block.StoredSize;
+        }
+        Block.Offset = It->second;
+      }
+      Snapshot.Header.StoreGeneration = NewGeneration;
+    }
+    OS.close();
+    if (OS.has_error()) {
+      OS.clear_error();
+      sys::fs::remove(TmpStorePath);
+      return createErr("failed to write %s", TmpStorePath.c_str());
+    }
+  }
+  if (sys::fs::rename(TmpStorePath, NewStorePath))
+    return createErr("failed to create %s", NewStorePath.c_str());
+
+  // Switch each snapshot to the new generation.
+  for (const SnapshotTy &Snapshot : Snapshots) {
+    std::string TmpPath = Snapshot.Path + ".tmp";
+    raw_fd_ostream OS(TmpPath, EC);
+    if (EC)
+      return createErr("failed to create %s", TmpPath.c_str());
+    OS.write(reinterpret_cast<const char *>(&Snapshot.Header),
+             sizeof(Snapshot.Header));
+    OS.write(reinterpret_cast<const char *>(Snapshot.Blocks.data()),
+             Snapshot.Blocks.size() * sizeof(RecordReplayBlockTy));
+    OS.close();
+    if (OS.has_error()) {
+      OS.clear_error();
+      sys::fs::remove(TmpPath);
+      return createErr("failed to write %s", TmpPath.c_str());
+    }
+    if (sys::fs::rename(TmpPath, Snapshot.Path))
+      return createErr("failed to replace %s", Snapshot.Path.c_str());
+  }
+
+  // No snapshot refers to the previous generations anymore.
+  for (const auto &[Generation, Path] : Stores) {
+    uint64_t Size = 0;
+    if (!sys::fs::file_size(Path, Size))
+      OldSize += Size;
+    sys::fs::remove(Path);
+  }
+
+  outs() << TOOL_PREFIX << " Compacted the block store of " << Snapshots.size()
+         << " snapshots from " << OldSize << " to " << NewSize << " bytes ("
+         << NewOffsets.size() << " blocks)\n";
+  return Error::success();
+}
+
 /// Load the record input file. If it is in block format, reassemble the input
 /// snapshot from the block store of its directory. \p Writable requests a
 /// writable buffer.
 static Expected<std::unique_ptr<MemoryBuffer>>
 loadRecordInput(const std::filesystem::path &Filepath, bool Writable) {
+  // Do not load the snapshot while the directory is being compacted.
+  DirectoryLockTy Lock;
+  if (auto Err = Lock.lock(Filepath.parent_path().string(),
+                           /*Exclusive=*/false, std::chrono::minutes(1)))
+    return std::move(Err);
+
   auto FileOrErr = MemoryBuffer::getFile(Filepath.c_str(), /*IsText=*/false,
                                          /*RequiresNullTerminator=*/false);
   if (!FileOrErr)
@@ -166,8 +390,11 @@ loadRecordInput(const std::filesystem::path &Filepath, bool Writable) {
   StringRef File = (*FileOrErr)->getBuffer();
 
   RecordReplayBlocksHeaderTy Header;
-  if (File.size() < sizeof(Header) ||
-      std::memcmp(File.data(), RecordReplayBlocksMagic, sizeof(Header.Magic))) {
+  SmallVector<RecordReplayBlockTy> Blocks;
+  auto IsBlocksOrErr = readBlockSnapshot(File, Header, Blocks);
+  if (!IsBlocksOrErr)
+    return IsBlocksOrErr.takeError();
+  if (!*IsBlocksOrErr) {
     // A full snapshot.
     if (!Writable)
       return std::move(*FileOrErr);
@@ -178,15 +405,6 @@ loadRecordInput(const std::filesystem::path &Filepath, bool Writable) {
     return std::unique_ptr<MemoryBuffer>(std::move(Copy));
   }
 
-  std::memcpy(&Header, File.data(), sizeof(Header));
-  if (!Header.BlockSize ||
-      Header.NumBlocks != divideCeil(Header.Size, Header.BlockSize) ||
-      File.size() - sizeof(Header) !=
-          Header.NumBlocks * sizeof(RecordReplayBlockTy))
-    return createErr("the kernel record input file has an invalid format");
-  SmallVector<RecordReplayBlockTy> Blocks(Header.NumBlocks);
-  std::memcpy(Blocks.data(), File.data() + sizeof(Header),
-              Blocks.size() * sizeof(RecordReplayBlockTy));
   for (const RecordReplayBlockTy &Block : Blocks) {
     if (Block.Codec == RecordReplayBlockZstd &&
         !compression::zstd::isAvailable())
@@ -199,7 +417,8 @@ loadRecordInput(const std::filesystem::path &Filepath, bool Writable) {
   }
 
   std::filesystem::path StorePath =
-      Filepath.parent_path() / RecordReplayBlockStoreName;
+      Filepath.parent_path() /
+      getRecordReplayBlockStoreName(Header.StoreGeneration);
   auto StoreOrErr = MemoryBuffer::getFile(StorePath.c_str(), /*IsText=*/false,
                                           /*RequiresNullTerminator=*/false);
   if (!StoreOrErr)
@@ -721,7 +940,14 @@ int main(int Argc, char **Argv) {
   cl::HideUnrelatedOptions(ReplayOptions);
   cl::ParseCommandLineOptions(Argc, Argv, TOOL_NAME "\n");
 
-  if (auto Err = replayKernel()) {
+  auto Run = []() -> Error {
+    if (!CompactStoreOpt.empty())
+      return compactBlockStore(CompactStoreOpt);
+    if (JsonFilename.empty())
+      return createErr("no input kernel JSON file");
+    return replayKernel();
+  };
+  if (auto Err = Run()) {
     errs() << TOOL_PREFIX << " Error: " << llvm::toString(std::move(Err))
            << "\n";
     return 1;

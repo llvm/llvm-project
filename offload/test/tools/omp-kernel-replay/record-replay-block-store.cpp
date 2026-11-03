@@ -5,18 +5,18 @@
 // RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.blocks %libomptarget-run-generic 2>&1 | %fcheck-generic
 // The 16 MiB of repeated values are stored as a few blocks, and each input
 // snapshot only lists its blocks.
-// RUN: test -f %t.blocks/record_blocks.store
-// RUN: sh -c 'test $(wc -c < %t.blocks/record_blocks.store) -lt 1048576'
+// RUN: test -f %t.blocks/record_blocks.0.store
+// RUN: sh -c 'test $(wc -c < %t.blocks/record_blocks.0.store) -lt 1048576'
 // RUN: ls %t.blocks/*.record_input | xargs -I {} sh -c 'test $(wc -c < {}) -lt 16384'
 // RUN: ls %t.blocks/*.json | xargs -I {} %omp-kernel-replay --verify {} | FileCheck --check-prefix=VERIFY %s
 // RUN: ls %t.blocks/*.json | xargs -I {} %omp-kernel-replay --verify --relocate {} | FileCheck --check-prefix=VERIFY %s
 // Full copies when the block store is disabled.
 // RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_BLOCK_STORE=0 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.full %libomptarget-run-generic 2>&1 | %fcheck-generic
-// RUN: not test -e %t.full/record_blocks.store
+// RUN: not test -e %t.full/record_blocks.0.store
 // RUN: ls %t.full/*.record_input | xargs -I {} sh -c 'test $(wc -c < {}) -ge 16777216'
 // RUN: ls %t.full/*.json | xargs -I {} %omp-kernel-replay --verify {} | FileCheck --check-prefix=VERIFY %s
 // A missing block store is reported.
-// RUN: rm %t.blocks/record_blocks.store
+// RUN: rm %t.blocks/record_blocks.0.store
 // RUN: ls %t.blocks/*.json | head -n 1 | xargs -I {} not %omp-kernel-replay {} 2>&1 | FileCheck --check-prefix=NOSTORE %s
 // clang-format on
 

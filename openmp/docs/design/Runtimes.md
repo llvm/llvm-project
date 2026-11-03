@@ -1254,12 +1254,27 @@ described in `offload/include/Shared/RecordReplayDiff.h`.
 The kernels of a program mostly see the same device memory, so the input
 snapshots are not stored as full copies either. Each input snapshot is split
 into 64 KiB blocks, and every distinct block is stored once, compressed with
-zstd (or zlib if LLVM was built without zstd), in a `record_blocks.store` file
-shared by all the recordings of the output directory. The `.record_input` file
-of a kernel then lists its blocks, and the replay tool reassembles the snapshot
-from the store. Setting `LIBOMPTARGET_RECORD_BLOCK_STORE=FALSE` records full
-copies instead. The format is described in
+zstd (or zlib if LLVM was built without zstd), in a `record_blocks.<N>.store`
+file shared by all the recordings of the output directory. The `.record_input`
+file of a kernel then lists its blocks, and the replay tool reassembles the
+snapshot from the store. Recording into the same directory again only adds the
+blocks that are not stored yet. Setting `LIBOMPTARGET_RECORD_BLOCK_STORE=FALSE`
+records full copies instead. The format is described in
 `offload/include/Shared/RecordReplayBlocks.h`.
+
+Deleting the files of a recorded kernel leaves its blocks in the store. To
+remove the blocks that no recorded kernel refers to anymore, compact the
+directory:
+
+```console
+$ llvm-omp-kernel-replay --compact-store records
+[llvm-omp-kernel-replay] Compacted the block store of 7 snapshots from 75808768 to 37904384 bytes (2908 blocks)
+```
+
+Compaction writes a new generation of the store and switches the recordings to
+it one at a time, so an interrupted compaction leaves the recordings valid, and
+running it again completes it. A lock file in the directory prevents compacting
+while a program records into the directory.
 
 By default, the replay places the device memory at the same address as in the
 recording, so the pointers into that memory remain valid. The `--relocate` flag

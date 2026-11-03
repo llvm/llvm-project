@@ -15,13 +15,20 @@
 // The input snapshot file of a kernel is then a RecordReplayBlocksHeaderTy
 // followed by NumBlocks RecordReplayBlockTy entries, one per block of the
 // snapshot in order. The last block may be shorter than BlockSize. The block
-// store file, named RecordReplayBlockStoreName and placed next to the snapshot
-// files, is the concatenation of the stored blocks; entries refer to them by
-// offset. All integers use the host byte order.
+// store file is the concatenation of the stored blocks; entries refer to them
+// by offset. All integers use the host byte order.
 //
-// The block store is only appended to, so the snapshots recorded earlier into
-// the same directory remain valid. Only one process should record into a
-// directory at a time.
+// The block store files are versioned by a generation number, and each
+// snapshot names the generation it refers to:
+//  - A recording appends to the latest generation, and stores a block only if
+//    no snapshot of that generation already refers to the same content, which
+//    it finds through the block hashes in the snapshots.
+//  - Compacting the directory writes the blocks still referenced by the
+//    snapshots into a new generation, switches each snapshot to it with an
+//    atomic rename, and only then deletes the previous generations, so an
+//    interrupted compaction leaves every snapshot valid.
+//  - Recording and compacting hold the exclusive lock of the lock file of the
+//    directory, and loading a snapshot holds the shared lock.
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,16 +36,22 @@
 #define OMPTARGET_SHARED_RECORD_REPLAY_BLOCKS_H
 
 #include <cstdint>
+#include <string>
 
-/// The magic number identifying an input snapshot in block format ("OMPRRBL1").
+/// The magic number identifying an input snapshot in block format ("OMPRRBL2").
 static constexpr char RecordReplayBlocksMagic[8] = {'O', 'M', 'P', 'R',
-                                                    'R', 'B', 'L', '1'};
+                                                    'R', 'B', 'L', '2'};
 
-/// The name of the block store file in the output directory.
-static constexpr char RecordReplayBlockStoreName[] = "record_blocks.store";
+/// The name of the lock file of the output directory.
+static constexpr char RecordReplayBlockLockName[] = "record_blocks.lock";
 
 /// The block size used when recording.
 static constexpr uint64_t RecordReplayBlockSize = 64 * 1024;
+
+/// Return the name of the block store file of generation \p Generation.
+inline std::string getRecordReplayBlockStoreName(uint64_t Generation) {
+  return "record_blocks." + std::to_string(Generation) + ".store";
+}
 
 /// The header of an input snapshot in block format.
 struct RecordReplayBlocksHeaderTy {
@@ -50,6 +63,8 @@ struct RecordReplayBlocksHeaderTy {
   uint64_t BlockSize;
   /// The number of block entries that follow the header.
   uint64_t NumBlocks;
+  /// The generation of the block store file that the entries refer to.
+  uint64_t StoreGeneration;
 };
 
 /// How a block is stored.
@@ -72,6 +87,9 @@ struct RecordReplayBlockTy {
   uint32_t StoredSize;
   /// A RecordReplayBlockCodecTy value.
   uint32_t Codec;
+  /// The 128-bit xxh3 hash of the block content, or zero for a zero block.
+  uint64_t HashHigh;
+  uint64_t HashLow;
 };
 
 #endif // OMPTARGET_SHARED_RECORD_REPLAY_BLOCKS_H

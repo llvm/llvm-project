@@ -160,10 +160,13 @@ protected:
   /// as full copies (LIBOMPTARGET_RECORD_BLOCK_STORE).
   bool UseBlockStore = true;
 
-  /// The block store file shared by the input snapshots, its size, and the
-  /// stored block of each distinct block content, by its 128-bit hash.
+  /// The block store file shared by the input snapshots, its generation and
+  /// size, the stored block of each distinct block content, by its 128-bit
+  /// hash, and the descriptor of the locked lock file of the directory.
   std::unique_ptr<raw_fd_ostream> BlockStore;
+  uint64_t BlockStoreGeneration = 0;
   uint64_t BlockStoreSize = 0;
+  int BlockLockFD = -1;
   DenseMap<std::pair<uint64_t, uint64_t>, RecordReplayBlockTy> StoredBlocks;
   std::mutex BlockStoreLock;
 
@@ -394,6 +397,10 @@ private:
 
   /// Record a memory snapshot to a file.
   Error recordSnapshot(StringRef Filename, const MemoryBuffer *Snapshot);
+
+  /// Open the latest block store of the output directory, and index the
+  /// blocks it holds.
+  Error openBlockStore();
 
   /// Record a memory snapshot to a file as a list of blocks, adding the blocks
   /// not stored yet to the block store.

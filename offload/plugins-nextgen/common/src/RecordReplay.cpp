@@ -27,6 +27,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
 
@@ -78,6 +79,22 @@ Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "creating output directory");
 
+  // Hold the lock of the directory while recording into its block store, so
+  // that no other process records into it or compacts it at the same time.
+  // Take it before recording anything, so that a refused recording leaves the
+  // directory unchanged.
+  if (isRecording() && UseBlockStore) {
+    SmallString<128> LockPath(OutputDirectory.string());
+    sys::path::append(LockPath, RecordReplayBlockLockName);
+    if (sys::fs::openFileForReadWrite(LockPath, BlockLockFD,
+                                      sys::fs::CD_OpenAlways, sys::fs::OF_None))
+      return Plugin::error(ErrorCode::HOST_IO, "opening block store lock file");
+    if (sys::fs::tryLockFile(BlockLockFD))
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "the output directory is in use by another "
+                           "recording or a compaction");
+  }
+
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
        "%s initialized with starting address %p, "
        "memory size %" PRIu64 " bytes, and output directory in %s\n",
@@ -99,6 +116,11 @@ Error RecordReplayTy::deinit() {
       return Plugin::error(ErrorCode::HOST_IO, "saving block store file");
     }
     BlockStore.reset();
+  }
+  if (BlockLockFD >= 0) {
+    sys::fs::unlockFile(BlockLockFD);
+    sys::Process::SafelyCloseFileDescriptor(BlockLockFD);
+    BlockLockFD = -1;
   }
 
   if (StartAddr)
@@ -516,6 +538,68 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename,
   return Plugin::success();
 }
 
+Error NativeRecordReplayTy::openBlockStore() {
+  SmallString<128> Dir(OutputDirectory.string());
+
+  // Append to the latest generation of the block store.
+  std::error_code EC;
+  for (sys::fs::directory_iterator It(Dir, EC), End; It != End && !EC;
+       It.increment(EC)) {
+    StringRef Name = sys::path::filename(It->path());
+    uint64_t Generation;
+    if (Name.consume_front("record_blocks.") && Name.consume_back(".store") &&
+        !Name.getAsInteger(10, Generation))
+      BlockStoreGeneration = std::max(BlockStoreGeneration, Generation);
+  }
+  if (EC)
+    return Plugin::error(ErrorCode::HOST_IO, "reading output directory");
+
+  SmallString<128> StorePath(Dir);
+  sys::path::append(StorePath,
+                    getRecordReplayBlockStoreName(BlockStoreGeneration));
+  if (sys::fs::exists(StorePath) &&
+      sys::fs::file_size(StorePath, BlockStoreSize))
+    return Plugin::error(ErrorCode::HOST_IO, "reading block store file");
+
+  // Index the blocks already stored, through the snapshots that refer to them,
+  // so that recording into the directory again does not store them twice.
+  for (sys::fs::directory_iterator It(Dir, EC), End; It != End && !EC;
+       It.increment(EC)) {
+    if (sys::path::extension(It->path()) != ".record_input")
+      continue;
+    auto FileOrErr = MemoryBuffer::getFile(It->path(), /*IsText=*/false,
+                                           /*RequiresNullTerminator=*/false);
+    if (!FileOrErr)
+      continue;
+    StringRef File = (*FileOrErr)->getBuffer();
+    RecordReplayBlocksHeaderTy Header;
+    if (File.size() < sizeof(Header) ||
+        std::memcmp(File.data(), RecordReplayBlocksMagic, sizeof(Header.Magic)))
+      continue;
+    std::memcpy(&Header, File.data(), sizeof(Header));
+    if (Header.StoreGeneration != BlockStoreGeneration ||
+        File.size() - sizeof(Header) !=
+            Header.NumBlocks * sizeof(RecordReplayBlockTy))
+      continue;
+    for (uint64_t I = 0; I < Header.NumBlocks; ++I) {
+      RecordReplayBlockTy Block;
+      std::memcpy(&Block, File.data() + sizeof(Header) + I * sizeof(Block),
+                  sizeof(Block));
+      if (Block.Codec != RecordReplayBlockZero &&
+          Block.Offset + Block.StoredSize <= BlockStoreSize)
+        StoredBlocks.try_emplace({Block.HashHigh, Block.HashLow}, Block);
+    }
+  }
+  if (EC)
+    return Plugin::error(ErrorCode::HOST_IO, "reading output directory");
+
+  BlockStore =
+      std::make_unique<raw_fd_ostream>(StorePath, EC, sys::fs::OF_Append);
+  if (EC)
+    return Plugin::error(ErrorCode::HOST_IO, "opening block store file");
+  return Plugin::success();
+}
+
 Error NativeRecordReplayTy::recordSnapshotBlocks(StringRef Filename,
                                                  const MemoryBuffer *Snapshot) {
   constexpr uint64_t BlockSize = RecordReplayBlockSize;
@@ -528,29 +612,17 @@ Error NativeRecordReplayTy::recordSnapshotBlocks(StringRef Filename,
 
   {
     std::lock_guard<std::mutex> LG(BlockStoreLock);
-    if (!BlockStore) {
-      // Append to the block store of the directory, so that the snapshots
-      // recorded into it before remain valid.
-      SmallString<128> StorePath(OutputDirectory.string());
-      sys::path::append(StorePath, RecordReplayBlockStoreName);
-      uint64_t ExistingSize = 0;
-      if (sys::fs::exists(StorePath) &&
-          sys::fs::file_size(StorePath, ExistingSize))
-        return Plugin::error(ErrorCode::HOST_IO, "reading block store file");
-      std::error_code EC;
-      BlockStore =
-          std::make_unique<raw_fd_ostream>(StorePath, EC, sys::fs::OF_Append);
-      if (EC)
-        return Plugin::error(ErrorCode::HOST_IO, "opening block store file");
-      BlockStoreSize = ExistingSize;
-    }
+    if (!BlockStore)
+      if (auto Err = openBlockStore())
+        return Err;
 
     SmallVector<uint8_t> Compressed;
     for (uint64_t I = 0; I < NumBlocks; ++I) {
       ArrayRef<uint8_t> Block = Data.slice(
           I * BlockSize, std::min(BlockSize, Data.size() - I * BlockSize));
       if (!std::memcmp(Block.data(), ZeroBlock, Block.size())) {
-        Blocks[I] = {/*Offset=*/0, /*StoredSize=*/0, RecordReplayBlockZero};
+        Blocks[I] = {/*Offset=*/0, /*StoredSize=*/0, RecordReplayBlockZero,
+                     /*HashHigh=*/0, /*HashLow=*/0};
         continue;
       }
 
@@ -574,7 +646,7 @@ Error NativeRecordReplayTy::recordSnapshotBlocks(StringRef Filename,
           Codec = RecordReplayBlockRaw;
 
         It->second = {BlockStoreSize, static_cast<uint32_t>(Stored.size()),
-                      Codec};
+                      Codec, Hash.high64, Hash.low64};
         BlockStore->write(reinterpret_cast<const char *>(Stored.data()),
                           Stored.size());
         BlockStoreSize += Stored.size();
@@ -597,6 +669,7 @@ Error NativeRecordReplayTy::recordSnapshotBlocks(StringRef Filename,
   Header.Size = Data.size();
   Header.BlockSize = BlockSize;
   Header.NumBlocks = NumBlocks;
+  Header.StoreGeneration = BlockStoreGeneration;
   OS.write(reinterpret_cast<const char *>(&Header), sizeof(Header));
   OS.write(reinterpret_cast<const char *>(Blocks.data()),
            Blocks.size() * sizeof(RecordReplayBlockTy));
