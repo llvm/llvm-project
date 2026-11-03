@@ -217,7 +217,9 @@ void copy12(UnionMember2 *a1, UnionMember2 *a2) {
 // CHECK-NEW: [[META8]] = !{[[META4]], i64 2, !"short"}
 // CHECK-NEW: [[TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0, i64 24}
 // CHECK-NEW: [[META13]] = !{[[META4]], i64 24, !"_ZTS1B", [[META4]], i64 0, i64 1, [[META7]], i64 4, i64 16, [[META3]], i64 20, i64 4}
-// CHECK-NEW: [[TBAA15]] = !{[[META4]], [[META4]], i64 0, i64 12}
+// CHECK-NEW: [[TBAA15]] = !{[[UNION_U:![0-9]+]], [[UNION_U]], i64 0, i64 12}
+// CHECK-NEW: [[UNION_U]] = !{[[META4]], i64 12, !"_ZTS1U", [[META4]], i64 0, i64 8, [[STRUCT_S:![0-9]+]], i64 0, i64 12}
+// CHECK-NEW: [[STRUCT_S]] = !{[[META4]], i64 12, !"_ZTS1S", [[META4]], i64 0, i64 2, [[META4]], i64 4, i64 8}
 // CHECK-NEW: [[TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0, i64 3}
 // CHECK-NEW: [[META18]] = !{[[META4]], i64 3, !"_ZTS1C", [[META4]], i64 0, i64 1, [[META4]], i64 1, i64 1, [[META4]], i64 2, i64 1}
 // CHECK-NEW: [[TBAA20]] = !{[[META21:![0-9]+]], [[META21]], i64 0, i64 6}
@@ -231,7 +233,9 @@ void copy12(UnionMember2 *a1, UnionMember2 *a2) {
 // CHECK-NEW: [[TBAA33]] = !{[[META34:![0-9]+]], [[META34]], i64 0, i64 16}
 // CHECK-NEW: [[META34]] = !{[[META4]], i64 16, !"_ZTS15NamedBitfields3", [[META3]], i64 1, i64 4, [[META3]], i64 2, i64 4, [[META26]], i64 8, i64 8}
 // CHECK-NEW: [[TBAA37]] = !{[[META38:![0-9]+]], [[META38]], i64 0, i64 16}
-// CHECK-NEW: [[META38]] = !{[[META4]], i64 16, !"_ZTS12UnionMember1", [[META4]], i64 0, i64 8, [[META3]], i64 8, i64 4}
+// CHECK-NEW: [[META38]] = !{[[META4]], i64 16, !"_ZTS12UnionMember1", [[UNION_U2:![0-9]+]], i64 0, i64 8, [[META3]], i64 8, i64 4}
+// CHECK-NEW: [[UNION_U2]] = !{[[META4]], i64 8, !"_ZTS2U2", [[META26]], i64 0, i64 8, [[FLOAT:![0-9]+]], i64 0, i64 4}
+// CHECK-NEW: [[FLOAT]] = !{[[META4]], i64 4, !"float"}
 // CHECK-NEW: [[TBAA41]] = !{[[META42:![0-9]+]], [[META42]], i64 0, i64 16}
-// CHECK-NEW: [[META42]] = !{[[META4]], i64 16, !"_ZTS12UnionMember2", [[META3]], i64 0, i64 4, [[META4]], i64 8, i64 8}
+// CHECK-NEW: [[META42]] = !{[[META4]], i64 16, !"_ZTS12UnionMember2", [[META3]], i64 0, i64 4, [[UNION_U2]], i64 8, i64 8}
 //.
