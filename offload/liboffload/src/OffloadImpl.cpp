@@ -1650,6 +1650,8 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
   return Device->DeviceNum;
 }
 
+// Downstream: used by libomptarget for OMPT device tracing and forced
+// synchronous execution.
 __tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
   return Queue ? Queue->AsyncInfo : nullptr;
 }

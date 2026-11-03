@@ -16,8 +16,8 @@
 
 using namespace llvm::omp::target::debug;
 
-// Temporary helper from liboffload until all usage of AsyncInfo is migrated
-// to liboffload queues.
+// Downstream: helper from liboffload, see AsyncInfoTy::operator
+// __tgt_async_info *().
 namespace llvm::offload::tmp {
 __tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue);
 } // namespace llvm::offload::tmp

@@ -137,6 +137,9 @@ private:
   ol_queue_handle_t Queue = nullptr;
   DeviceTy &Device;
 
+  /// See getKernelLaunchEnvironment().
+  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
 public:
   /// Synchronization method to be used.
   SyncTy SyncType;
@@ -151,8 +154,15 @@ public:
   AsyncInfoTy(AsyncInfoTy &&) = delete;
   AsyncInfoTy &operator=(AsyncInfoTy &&) = delete;
 
-  /// Implicit conversion to the __tgt_async_info which is used in the
-  /// plugin interface.
+  /// The kernel launch environment used to issue a kernel. Stored here to
+  /// ensure it is a valid location while the transfer to the device is
+  /// happening.
+  KernelLaunchEnvironmentTy &getKernelLaunchEnvironment() {
+    return KernelLaunchEnvironment;
+  }
+
+  /// Downstream: the queue's __tgt_async_info, used for OMPT device tracing
+  /// and forced synchronous execution.
   operator __tgt_async_info *();
 
   /// Get the underlying queue handle.
