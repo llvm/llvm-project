@@ -1396,3 +1396,54 @@ T:
 F:
   br label %T
 }
+
+; Variable bound version of phi_sgt_high_bits.
+; x >= bound where bound in [0, 127] implies x >= 0, bit 7 known zero.
+define i8 @phi_sge_variable_high_bits(i8 %x, i8 %b) {
+; CHECK-LABEL: @phi_sge_variable_high_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = and i8 [[B:%.*]], 127
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i8 [[X:%.*]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i8 0
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %bound = and i8 %b, 127
+  %cmp = icmp sge i8 %x, %bound
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry ], [ 0, %F ]
+  %r = and i8 %v, -128
+  ret i8 %r
+F:
+  br label %T
+}
+
+; Variable bound version of phi_slt_high_bits.
+; x < bound where bound in [-64, -1] implies x in [-128, -2],
+; bit 7 known one.
+define i8 @phi_slt_variable_high_bits(i8 %x, i8 %b) {
+; CHECK-LABEL: @phi_slt_variable_high_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = or i8 [[B:%.*]], -64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i8 -128
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %bound = or i8 %b, -64
+  %cmp = icmp slt i8 %x, %bound
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry ], [ -1, %F ]
+  %r = and i8 %v, -128
+  ret i8 %r
+F:
+  br label %T
+}
