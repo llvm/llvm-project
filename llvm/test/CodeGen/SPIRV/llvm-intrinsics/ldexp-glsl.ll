@@ -31,14 +31,13 @@ define double @test_ldexp_f64(double %x, i32 %k) {
 }
 
 ; CHECK-LABEL: Begin function test_ldexp_v4f32
-; CHECK: %[[#Splat:]] = OpCompositeConstruct %[[#Int4]]
-; CHECK: %[[#]] = OpExtInst %[[#Float4]] %[[#ExtInstSetId]] Ldexp %[[#]] %[[#Splat]]
-define <4 x float> @test_ldexp_v4f32(<4 x float> %x, i32 %k) {
-  %res = call <4 x float> @llvm.ldexp.v4f32.i32(<4 x float> %x, i32 %k)
+; CHECK: %[[#]] = OpExtInst %[[#Float4]] %[[#ExtInstSetId]] Ldexp
+define <4 x float> @test_ldexp_v4f32(<4 x float> %x, <4 x i32> %k) {
+  %res = call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> %x, <4 x i32> %k)
   ret <4 x float> %res
 }
 
 declare half @llvm.ldexp.f16.i32(half, i32)
 declare float @llvm.ldexp.f32.i32(float, i32)
 declare double @llvm.ldexp.f64.i32(double, i32)
-declare <4 x float> @llvm.ldexp.v4f32.i32(<4 x float>, i32)
+declare <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float>, <4 x i32>)
