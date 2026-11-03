@@ -1039,6 +1039,28 @@ static uint32_t getDeviceBlockLimit(const DeviceGeometryPropsTy &Props,
   return BlockLimit;
 }
 
+/// Get the default number of blocks for a kernel in Generic-SPMD mode.
+static uint32_t
+getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
+  // Envar to set the default number of blocks per compute unit for a kernel in
+  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
+  // default number of blocks of other kernels.
+  static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
+  // Downstream: the former name of the envar, honored if the new one is unset.
+  static UInt32Envar OMPX_AMDGPUGenericSPMDTeamsPerCU(
+      "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 6);
+  uint32_t TeamsPerCU = !OMPX_GenericSPMDTeamsPerCU.isPresent() &&
+                                OMPX_AMDGPUGenericSPMDTeamsPerCU.isPresent()
+                            ? OMPX_AMDGPUGenericSPMDTeamsPerCU.get()
+                            : OMPX_GenericSPMDTeamsPerCU.get();
+
+  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU || !TeamsPerCU ||
+      !Props.NumComputeUnits)
+    return Props.DefaultNumBlocks;
+  return Props.NumComputeUnits * TeamsPerCU;
+}
+
 /// Threshold for the reduction data size (in bytes) above which a cross-team
 /// reduction classifies as "large".
 static constexpr uint32_t LargeTeamsReductionBytes = 32;
@@ -1099,28 +1121,6 @@ getXTeamReductionNumBlocks(const DeviceGeometryPropsTy &Props,
     NumBlocks = std::min(NumBlocks, TripCountNumBlocks);
   }
   return NumBlocks;
-}
-
-/// Get the default number of blocks for a kernel in Generic-SPMD mode.
-static uint32_t
-getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
-  // Envar to set the default number of blocks per compute unit for a kernel in
-  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
-  // default number of blocks of other kernels.
-  static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
-      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
-  // Downstream: the former name of the envar, honored if the new one is unset.
-  static UInt32Envar OMPX_AMDGPUGenericSPMDTeamsPerCU(
-      "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 6);
-  uint32_t TeamsPerCU = !OMPX_GenericSPMDTeamsPerCU.isPresent() &&
-                                OMPX_AMDGPUGenericSPMDTeamsPerCU.isPresent()
-                            ? OMPX_AMDGPUGenericSPMDTeamsPerCU.get()
-                            : OMPX_GenericSPMDTeamsPerCU.get();
-
-  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU || !TeamsPerCU ||
-      !Props.NumComputeUnits)
-    return Props.DefaultNumBlocks;
-  return Props.NumComputeUnits * TeamsPerCU;
 }
 
 /// Get the number of blocks for each thread to run one iteration of a loop of
