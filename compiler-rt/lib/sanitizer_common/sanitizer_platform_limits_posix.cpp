@@ -84,10 +84,10 @@
 #    include <linux/hdreg.h>
 #    include <linux/input.h>
 #    include <linux/ioctl.h>
+#    include <linux/posix_types.h>
 #    include <linux/soundcard.h>
 #    include <linux/sysctl.h>
 #    include <linux/utsname.h>
-#    include <linux/posix_types.h>
 #    include <net/if_arp.h>
 #endif
 
