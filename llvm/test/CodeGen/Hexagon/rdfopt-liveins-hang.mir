@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=hexagon-unknown-linux-musl -run-pass=hexagon-rdf-opt \
-# RUN: -o /dev/null %s
+# RUN:     -o /dev/null %s
 #
 # Regression test for a HexagonRDFOpt compile-time hang.
 #

@@ -7,7 +7,7 @@
 
 # RUN: llc -mtriple=aarch64-linux-gnu -run-pass=machine-outliner \
 # RUN:   -machine-outliner-reruns=2 -debug-only=machine-outliner \
-# RUN: %s -o /dev/null 2>&1 | FileCheck --check-prefix=ITER3 %s
+# RUN:   %s -o /dev/null 2>&1 | FileCheck --check-prefix=ITER3 %s
 
 --- |
   declare void @z1(i32, i32)
