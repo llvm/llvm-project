@@ -2,11 +2,18 @@
 
 constinit int a;
 constinit thread_local int b;
+#ifdef __MVS__
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
+#endif
 constinit static int c;
 
 void f() {
   constinit static int a;
   constinit thread_local int b;
+#ifdef __MVS__
+  // expected-error@-2 {{local variable cannot be declared 'constinit'}}
+  // expected-error@-3 {{thread-local storage is not supported for the current target}}
+#endif
   constinit int c; // expected-error {{local variable cannot be declared 'constinit'}}
 }
 
