@@ -136,8 +136,8 @@ struct RawCoverage {
   read(const std::string &FileName);
 
   // Add the addresses of binary .sancov file to Addrs and return its header.
-  static ErrorOr<FileHeader> append(const std::string &FileName,
-                                    RawAddrSet &Addrs);
+  static ErrorOr<FileHeader> readInPlace(const std::string &FileName,
+                                         RawAddrSet &Addrs);
 
   // Write binary .sancov file.
   static void write(const std::string &FileName, const RawCoverage &Coverage);
@@ -238,14 +238,14 @@ static void readInts(const char *Start, const char *End, RawAddrSet *Ints) {
 ErrorOr<std::unique_ptr<RawCoverage>>
 RawCoverage::read(const std::string &FileName) {
   auto Addrs = std::make_unique<RawAddrSet>();
-  ErrorOr<FileHeader> Header = append(FileName, *Addrs);
+  ErrorOr<FileHeader> Header = readInPlace(FileName, *Addrs);
   if (!Header)
     return Header.getError();
   return std::make_unique<RawCoverage>(std::move(Addrs), *Header);
 }
 
-ErrorOr<FileHeader> RawCoverage::append(const std::string &FileName,
-                                        RawAddrSet &Addrs) {
+ErrorOr<FileHeader> RawCoverage::readInPlace(const std::string &FileName,
+                                             RawAddrSet &Addrs) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
       MemoryBuffer::getFile(FileName);
   if (!BufOrErr)
@@ -1137,7 +1137,8 @@ static void unionRawCoverage(const std::vector<std::string> &InputFiles,
   const FileHeader &UnionHeader = UnionCov.get()->Header;
 
   for (size_t I = 1; I < InputFiles.size(); ++I) {
-    auto CurHeader = RawCoverage::append(InputFiles[I], *UnionCov.get()->Addrs);
+    auto CurHeader =
+        RawCoverage::readInPlace(InputFiles[I], *UnionCov.get()->Addrs);
     failIfError(CurHeader);
 
     warnIfDifferentBitness(UnionHeader, *CurHeader, InputFiles[0],
