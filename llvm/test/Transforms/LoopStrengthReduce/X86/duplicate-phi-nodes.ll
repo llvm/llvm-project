@@ -8,24 +8,21 @@ define i64 @testDuplicateLCSSA(ptr nocapture %a, i64 signext %m, i64 signext %n)
 ; CHECK-LABEL: define i64 @testDuplicateLCSSA(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], i64 signext [[M:%.*]], i64 signext [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], [[M]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[FOR_BODY]] ], [ [[A]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[N]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[INDVARS_IV_PROL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL:%.*]], %[[FOR_BODY]] ], [ [[M]], %[[ENTRY]] ]
 ; CHECK-NEXT:    store i64 55, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL]] = add i64 [[INDVARS_IV_PROL]], 1
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 8
 ; CHECK-NEXT:    [[I_CMP_NOT:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[I_CMP_NOT]], label %[[FOR_EXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_EXIT]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL_LCSSA1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL_LCSSA2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[INDVARS_IV_UNR1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL_LCSSA1]], %[[FOR_EXIT]] ]
-; CHECK-NEXT:    [[INDVARS_IV_UNR2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL_LCSSA2]], %[[FOR_EXIT]] ]
+; CHECK-NEXT:    [[INDVARS_IV_UNR1:%.*]] = phi i64 [ [[TMP0]], %[[FOR_EXIT]] ]
+; CHECK-NEXT:    [[INDVARS_IV_UNR2:%.*]] = phi i64 [ [[TMP0]], %[[FOR_EXIT]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i64 [[INDVARS_IV_UNR1]], [[INDVARS_IV_UNR2]]
 ; CHECK-NEXT:    ret i64 [[SUM]]
 ;
