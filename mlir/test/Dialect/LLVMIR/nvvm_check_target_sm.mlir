@@ -460,6 +460,18 @@ gpu.module @tcgen05_mma_i8_sm100a [#nvvm.target<chip = "sm_100a">] {
 
 // -----
 
+// sm_101a is an alias of sm_110a in the NVPTX backend.
+
+gpu.module @tcgen05_mma_i8_sm101a [#nvvm.target<chip = "sm_101a">] {
+  func.func @tcgen05_mma_i8_sm101a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = i8, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
 gpu.module @tcgen05_mma_ti16_sm100a [#nvvm.target<chip = "sm_100a">] {
   func.func @tcgen05_mma_ti16_sm100a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
     // expected-error @below {{'nvvm.tcgen05.mma' op is not supported on sm_100a}}
@@ -583,6 +595,16 @@ gpu.module @tcgen05_mma_sp_block_scale_mxf4_sm100f [#nvvm.target<chip = "sm_100f
 
 gpu.module @tcgen05_mma_sp_block_scale_mxf4_sm103a [#nvvm.target<chip = "sm_103a">] {
   func.func @tcgen05_mma_sp_block_scale_mxf4_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1, %sp: !llvm.ptr<6>, %sa: !llvm.ptr<6>, %sb: !llvm.ptr<6>) {
+    nvvm.tcgen05.mma.sp.block_scale %d, %a, %b, %idesc, %en, %sp, %sa, %sb
+      , kind = mxf4, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>, !llvm.ptr<6>, !llvm.ptr<6>)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_sp_block_scale_mxf4_sm101a [#nvvm.target<chip = "sm_101a">] {
+  func.func @tcgen05_mma_sp_block_scale_mxf4_sm101a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1, %sp: !llvm.ptr<6>, %sa: !llvm.ptr<6>, %sb: !llvm.ptr<6>) {
     nvvm.tcgen05.mma.sp.block_scale %d, %a, %b, %idesc, %en, %sp, %sa, %sb
       , kind = mxf4, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>, !llvm.ptr<6>, !llvm.ptr<6>)
     return

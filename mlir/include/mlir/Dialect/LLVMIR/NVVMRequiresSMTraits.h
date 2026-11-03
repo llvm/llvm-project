@@ -15,6 +15,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StorageUniquerSupport.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <limits>
@@ -44,6 +45,9 @@ struct NVVMCheckSMVersion {
   template <typename... Versions>
   NVVMCheckSMVersion(Versions... fullSmVersions)
       : fullSmVersionList({fullSmVersions...}) {}
+
+  explicit NVVMCheckSMVersion(llvm::ArrayRef<unsigned> fullSmVersions)
+      : fullSmVersionList(fullSmVersions.begin(), fullSmVersions.end()) {}
 
   bool isCompatibleWith(const unsigned &targetFullSmVersion) const {
     return llvm::any_of(

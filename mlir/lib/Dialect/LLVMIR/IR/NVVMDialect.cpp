@@ -6235,25 +6235,19 @@ mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
 // Full SM versions as encoded by NVVMCheckSMVersion: the SM version times 10,
 // plus 2 for the family-specific ('f') and 3 for the architecture-specific
 // ('a') variant.
-static constexpr unsigned kSM100a = 1003, kSM100f = 1002, kSM101f = 1012,
-                          kSM103a = 1033, kSM107a = 1073, kSM107f = 1072,
-                          kSM110a = 1103, kSM110f = 1102;
+static constexpr unsigned kSM100a = 1003, kSM100f = 1002, kSM101a = 1013,
+                          kSM101f = 1012, kSM103a = 1033, kSM107a = 1073,
+                          kSM107f = 1072, kSM110a = 1103, kSM110f = 1102;
 
 // The requirements below mirror the predicates of the tcgen05.mma instructions
 // in the NVPTX backend.
 static constexpr unsigned kTcgen05MMABaseSM[] = {kSM100f, kSM101f, kSM110f};
 
-static NVVMCheckSMVersion makeSMRequirement(ArrayRef<unsigned> versions) {
-  NVVMCheckSMVersion requirement;
-  requirement.fullSmVersionList.assign(versions.begin(), versions.end());
-  return requirement;
-}
-
 static ArrayRef<unsigned> getTcgen05MMAKindRequiredSM(Tcgen05MMAKind kind,
                                                       bool hasScaleInputD) {
   static constexpr unsigned kRubin[] = {kSM107f};
   static constexpr unsigned kScaleInputD[] = {kSM100f};
-  static constexpr unsigned kI8[] = {kSM100a, kSM110a};
+  static constexpr unsigned kI8[] = {kSM100a, kSM101a, kSM110a};
   if (kind == Tcgen05MMAKind::TI16)
     return kRubin;
   if (hasScaleInputD)
@@ -6269,7 +6263,7 @@ static ArrayRef<unsigned> getTcgen05MMAKindRequiredSM(Tcgen05MMAKind kind,
 static NVVMCheckSMVersion
 getTcgen05MMARequiredSM(Tcgen05MMACollectorOp collectorOpB,
                         ArrayRef<unsigned> kindRequirement) {
-  NVVMCheckSMVersion requirement = makeSMRequirement(kindRequirement);
+  NVVMCheckSMVersion requirement(kindRequirement);
   if (collectorOpB == Tcgen05MMACollectorOp::DISCARD)
     return requirement;
   if (requirement.isCompatibleWith(kSM107f))
@@ -6296,8 +6290,8 @@ NVVMCheckSMVersion Tcgen05MMABlockScaleOp::getRequiredMinSMVersion() {
 }
 
 NVVMCheckSMVersion Tcgen05MMASparseBlockScaleOp::getRequiredMinSMVersion() {
-  static constexpr unsigned kSparseMxf4[] = {kSM100a, kSM103a, kSM110a,
-                                             kSM107a};
+  static constexpr unsigned kSparseMxf4[] = {kSM100a, kSM101a, kSM103a, kSM107a,
+                                             kSM110a};
   Tcgen05MMAKind kind = getKind();
   bool isMxf4 =
       kind == Tcgen05MMAKind::MXF4 || kind == Tcgen05MMAKind::MXF4NVF4;
@@ -6307,12 +6301,12 @@ NVVMCheckSMVersion Tcgen05MMASparseBlockScaleOp::getRequiredMinSMVersion() {
 }
 
 NVVMCheckSMVersion Tcgen05MMAWsOp::getRequiredMinSMVersion() {
-  return makeSMRequirement(
+  return NVVMCheckSMVersion(
       getTcgen05MMAKindRequiredSM(getKind(), /*hasScaleInputD=*/false));
 }
 
 NVVMCheckSMVersion Tcgen05MMAWsSparseOp::getRequiredMinSMVersion() {
-  return makeSMRequirement(
+  return NVVMCheckSMVersion(
       getTcgen05MMAKindRequiredSM(getKind(), /*hasScaleInputD=*/false));
 }
 
