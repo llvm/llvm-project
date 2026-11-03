@@ -56,6 +56,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPreLegalizerCombinerLegacyPass(PR);
   initializeSPIRVLegalizePointerCastLegacyPass(PR);
   initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
+  initializeSPIRVLowerDynamicLocalMemoryLegacyPass(PR);
   initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerLegacyPass(PR);
   initializeSPIRVPostLegalizerLegacyPass(PR);
@@ -193,6 +194,9 @@ void SPIRVPassConfig::addIRPasses() {
   }
 
   addPass(createSPIRVRegularizerPass());
+  // Before the global constructor kernels exist, which do not need the
+  // dynamic local memory.
+  addPass(createSPIRVLowerDynamicLocalMemoryPass(TM));
   addPass(createSPIRVCtorDtorLoweringLegacyPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
