@@ -58,8 +58,9 @@ void TensorDialect::initialize() {
                             InsertSliceOp, ReshapeOp>();
   declarePromisedInterfaces<ReifyRankedShapedTypeOpInterface, ExpandShapeOp,
                             CollapseShapeOp, PadOp>();
-  declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, DimOp,
-                            ExtractOp, InsertOp, ExtractSliceOp>();
+  declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, ConcatOp,
+                            DimOp, ExpandShapeOp, ExtractOp, InsertOp,
+                            ExtractSliceOp, ReshapeOp>();
   declarePromisedInterfaces<SubsetOpInterface, ExtractSliceOp, InsertSliceOp,
                             ParallelInsertSliceOp>();
   declarePromisedInterfaces<SubsetInsertionOpInterface, InsertSliceOp,
