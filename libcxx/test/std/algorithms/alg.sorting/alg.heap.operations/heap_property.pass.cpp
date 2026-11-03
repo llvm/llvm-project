@@ -41,7 +41,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
     int* const last = std::end(a);
     assert(lwg2166_heap(a, last, cmp));
     assert(std::is_heap_until(a, last, cmp) == last);
-
     for (int* end = last; end - a > 1; --end) {
       std::pop_heap(a, end, cmp);
       assert(lwg2166_heap(a, end - 1, cmp));
@@ -52,7 +51,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
   {
     int a[] = {42, 4, 5, 1, 2};
     const std::ptrdiff_t num = std::end(a) - a;
-
     for (std::ptrdiff_t len = 1; len <= num; ++len) {
       std::push_heap(a, a + len, cmp);
       assert(lwg2166_heap(a, a + len, cmp));
