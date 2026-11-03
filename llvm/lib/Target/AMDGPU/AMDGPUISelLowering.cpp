@@ -3913,7 +3913,9 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
             : MVT::i32;
 
     const SDValue ResultVTOp = DAG.getValueType(ResultVT);
-    const uint64_t ResultWidth = ResultVT.getScalarSizeInBits();
+    const unsigned ResultWidth =
+        static_cast<unsigned>(ResultVT.getScalarSizeInBits());
+    const unsigned SatWidthEnc = static_cast<unsigned>(SatWidth);
 
     // First, convert input float into selected integer (i16 or i32)
     SDValue FpToInt = DAG.getNode(OpOpcode, DL, ResultVT, Src, ResultVTOp);
@@ -3922,20 +3924,16 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
     // Then, clamp at the saturation width using either i16 or i32 instructions
     if (OpOpcode == ISD::FP_TO_SINT_SAT) {
       SDValue MinConst = DAG.getConstant(
-          APInt::getSignedMaxValue(static_cast<unsigned>(SatWidth))
-              .sext(static_cast<unsigned>(ResultWidth)),
-          DL, ResultVT);
+          APInt::getSignedMaxValue(SatWidthEnc).sext(ResultWidth), DL,
+          ResultVT);
       SDValue MaxConst = DAG.getConstant(
-          APInt::getSignedMinValue(static_cast<unsigned>(SatWidth))
-              .sext(static_cast<unsigned>(ResultWidth)),
-          DL, ResultVT);
+          APInt::getSignedMinValue(SatWidthEnc).sext(ResultWidth), DL,
+          ResultVT);
       SDValue MinVal = DAG.getNode(ISD::SMIN, DL, ResultVT, FpToInt, MinConst);
       IntSatVal = DAG.getNode(ISD::SMAX, DL, ResultVT, MinVal, MaxConst);
     } else {
-      SDValue MinConst =
-          DAG.getConstant(APInt::getMaxValue(static_cast<unsigned>(SatWidth))
-                              .zext(static_cast<unsigned>(ResultWidth)),
-                          DL, ResultVT);
+      SDValue MinConst = DAG.getConstant(
+          APInt::getMaxValue(SatWidthEnc).zext(ResultWidth), DL, ResultVT);
       IntSatVal = DAG.getNode(ISD::UMIN, DL, ResultVT, FpToInt, MinConst);
     }
 
