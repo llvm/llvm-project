@@ -149,3 +149,134 @@ latch:
 exit:
   ret void
 }
+
+define void @ule_start_rhs_below_umax(i32 %start, i32 %n) {
+; CHECK-LABEL: 'ule_start_rhs_below_umax'
+; CHECK-NEXT:  Determining loop execution counts for: @ule_start_rhs_below_umax
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + ((1 + %start) umax (1 + %n)<u nuw>))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + ((1 + %start) umax (1 + %n)<u nuw>))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp ult i32 %n, -1
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ %start, %entry ], [ %i.next, %loop ]
+  %i.next = add nuw nsw i32 %i, 1
+  %c = icmp ule i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @sle_start_rhs_below_smax(i32 %start, i32 %n) {
+; CHECK-LABEL: 'sle_start_rhs_below_smax'
+; CHECK-NEXT:  Determining loop execution counts for: @sle_start_rhs_below_smax
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + ((1 + %start) smax (1 + %n)<u nsw>))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + ((1 + %start) smax (1 + %n)<u nsw>))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp slt i32 %n, 2147483647
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ %start, %entry ], [ %i.next, %loop ]
+  %i.next = add nuw nsw i32 %i, 1
+  %c = icmp sle i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @ule_start_guard_umax_minus_one(i32 %start, i32 %n) {
+; CHECK-LABEL: 'ule_start_guard_umax_minus_one'
+; CHECK-NEXT:  Determining loop execution counts for: @ule_start_guard_umax_minus_one
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + ((1 + %start) umax (1 + %n)<u nuw>))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + ((1 + %start) umax (1 + %n)<u nuw>))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp ule i32 %n, -2
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ %start, %entry ], [ %i.next, %loop ]
+  %i.next = add nuw nsw i32 %i, 1
+  %c = icmp ule i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @ule_start_guard_umax(i32 %start, i32 %n) {
+; CHECK-LABEL: 'ule_start_guard_umax'
+; CHECK-NEXT:  Determining loop execution counts for: @ule_start_guard_umax
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (zext i32 (1 + %start) to i64))<nsw> + ((zext i32 (1 + %start) to i64) umax (1 + (zext i32 %n to i64))<nuw><nsw>))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967296
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (zext i32 (1 + %start) to i64))<nsw> + ((zext i32 (1 + %start) to i64) umax (1 + (zext i32 %n to i64))<nuw><nsw>))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp ule i32 %n, -1
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ %start, %entry ], [ %i.next, %loop ]
+  %i.next = add nuw nsw i32 %i, 1
+  %c = icmp ule i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @sle_start_guard_smax(i32 %start, i32 %n) {
+; CHECK-LABEL: 'sle_start_guard_smax'
+; CHECK-NEXT:  Determining loop execution counts for: @sle_start_guard_smax
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (sext i32 (1 + %start) to i64))<nsw> + ((sext i32 (1 + %start) to i64) smax (1 + (sext i32 %n to i64))<nsw>))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967296
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (sext i32 (1 + %start) to i64))<nsw> + ((sext i32 (1 + %start) to i64) smax (1 + (sext i32 %n to i64))<nsw>))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp sle i32 %n, 2147483647
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ %start, %entry ], [ %i.next, %loop ]
+  %i.next = add nuw nsw i32 %i, 1
+  %c = icmp sle i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @ule_start_no_guard(i32 %start, i32 %n) {
+; CHECK-LABEL: 'ule_start_no_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @ule_start_no_guard
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %start) + (%start umax %n))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %start) + (%start umax %n))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ %start, %entry ], [ %i.next, %loop ]
+  %i.next = add nuw nsw i32 %i, 1
+  %c = icmp ule i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}

@@ -9427,9 +9427,14 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       if (isLoopInvariant(RHS, L) &&
           isLoopEntryGuardedByCond(L, ICmpInst::getStrictPredicate(Pred), RHS,
                                    getConstant(Max))) {
-        ExitLimit EL = howManyLessThans(
-            LHS, getAddExpr(getOne(OldType), RHS), L, IsSigned,
-            /*Invert=*/false, ControlsOnlyExit, AllowPredicates);
+        // The guard only holds at loop entry, so record the no-wrap fact on
+        // this use of the add instead of the shared expression.
+        SCEVUse Next = getAddExpr(
+            getOne(OldType), RHS,
+            {SCEV::FlagNone, IsSigned ? SCEV::FlagNSW : SCEV::FlagNUW});
+        ExitLimit EL = howManyLessThans(LHS, Next, L, IsSigned,
+                                        /*Invert=*/false, ControlsOnlyExit,
+                                        AllowPredicates);
         if (EL.hasFullInfo())
           return EL;
       }
@@ -13302,8 +13307,8 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
 }
 
 ScalarEvolution::ExitLimit
-ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
-                                  const Loop *L, bool IsSigned, bool Invert,
+ScalarEvolution::howManyLessThans(const SCEV *LHS, SCEVUse RHS, const Loop *L,
+                                  bool IsSigned, bool Invert,
                                   bool ControlsOnlyExit, bool AllowPredicates) {
   SmallVector<const SCEVPredicate *> Predicates;
 
