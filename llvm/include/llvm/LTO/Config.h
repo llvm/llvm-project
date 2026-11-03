@@ -322,6 +322,10 @@ struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {
   LTOLLVMDiagnosticHandler(DiagnosticHandlerFunction *DiagHandlerFn)
       : Fn(DiagHandlerFn) {}
   bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    // Let the context apply its default handling if the client did not
+    // provide a callback.
+    if (!*Fn)
+      return false;
     (*Fn)(DI);
     return true;
   }
