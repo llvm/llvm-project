@@ -54,7 +54,7 @@ jobs:
           path: golden-images
       - name: Build DXC
         run: |
-            & $env:ProgramFiles\$env:VsDevShell -Arch=amd64
+            & $env:ProgramFiles\$env:VsDevShell -Arch amd64
             cd DXC
             mkdir build
             cd build
@@ -62,7 +62,7 @@ jobs:
             ninja dxv llvm-dis
       - name: Build LLVM
         run: |
-            & $env:ProgramFiles\$env:VsDevShell -Arch=amd64
+            & $env:ProgramFiles\$env:VsDevShell -Arch amd64
             cd llvm-project
             mkdir build
             cd build
@@ -70,7 +70,7 @@ jobs:
             ninja llc llvm-objcopy filecheck hlsl-test-depends
       - name: Run HLSL Tests
         run: |
-            & $env:ProgramFiles\$env:VsDevShell -Arch=amd64
+            & $env:ProgramFiles\$env:VsDevShell -Arch amd64
             cd llvm-project
             cd build
             ninja check-llvm-tools-dxil-dis
