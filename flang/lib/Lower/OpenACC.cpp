@@ -82,6 +82,13 @@ static llvm::cl::opt<bool> enableSymbolRemapping(
     llvm::cl::desc("Whether to remap symbols that appears in data clauses."),
     llvm::cl::init(true));
 
+static llvm::cl::opt<bool> shareSeqLoopIv(
+    "openacc-share-seq-loop-iv",
+    llvm::cl::desc("Privatize the induction variable of a seq acc.loop on the "
+                   "enclosing acc.loop, so the value left in it is seen after "
+                   "the loop."),
+    llvm::cl::init(true));
+
 static llvm::cl::opt<bool> emitIndependentLoopsAsUnstructured(
     "emit-independent-loops-as-unstructured",
     llvm::cl::desc("Whether to allow lowering unstructured do loops inside "
@@ -1558,6 +1565,67 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
+/// \p value is \p target, or an hlfir.declare of it.
+static bool valueOrDeclareOf(mlir::Value value, mlir::Value target) {
+  if (value == target)
+    return true;
+  auto declare = value.getDefiningOp<hlfir::DeclareOp>();
+  return declare &&
+         (declare.getMemref() == target || declare.getOriginalBase() == target);
+}
+
+/// Privatize one seq-loop induction variable on the enclosing acc.loop. The
+/// seq loop and the code after it then use that copy. Returns false when no
+/// acc.loop encloses the current insertion point.
+static bool privatizeSeqIvOnParent(Fortran::lower::AbstractConverter &converter,
+                                   const Fortran::semantics::Symbol &sym,
+                                   mlir::Location loc, mlir::Value ivValue) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Operation *here = builder.getInsertionBlock()->getParentOp();
+  auto parent = mlir::dyn_cast<mlir::acc::LoopOp>(here);
+  if (!parent)
+    parent = here->getParentOfType<mlir::acc::LoopOp>();
+  if (!parent)
+    return false;
+
+  for (mlir::Value priv : parent.getPrivateOperands())
+    if (mlir::acc::getVar(priv.getDefiningOp()) == ivValue ||
+        valueOrDeclareOf(ivValue, priv))
+      return true;
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(parent);
+  llvm::SmallVector<mlir::Value> noBounds;
+  mlir::SymbolRefAttr recipe =
+      fir::acc::createOrGetPrivateRecipe(builder, loc, ivValue, noBounds);
+  std::stringstream asFortran;
+  asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym.name()));
+  auto op = createDataEntryOp<mlir::acc::PrivateOp>(
+      builder, loc, ivValue, asFortran, {}, /*structured=*/true,
+      /*implicit=*/true, mlir::acc::DataClause::acc_private, ivValue.getType(),
+      /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+  op.setRecipeAttr(recipe);
+  parent.getPrivateOperandsMutable().append(op.getAccVar());
+
+  builder.setInsertionPointToStart(&parent.getRegion().front());
+  auto declare = hlfir::DeclareOp::create(
+      builder, loc, op.getAccVar(), converter.mangleName(sym),
+      /*shape=*/nullptr, /*typeparams=*/{}, /*dummyScope=*/nullptr,
+      /*storage=*/nullptr, /*storage_offset=*/0,
+      Fortran::lower::translateSymbolAttributes(builder.getContext(),
+                                                sym.GetUltimate()));
+  ivValue.replaceUsesWithIf(declare.getBase(), [&](mlir::OpOperand &use) {
+    return parent->isProperAncestor(use.getOwner());
+  });
+  // The current scope is the seq loop and is popped when that construct ends.
+  // Bind in the enclosing scope so the code after the loop still sees this.
+  Fortran::lower::SymMap &symMap = converter.getSymbolMap();
+  symMap.popScope();
+  symMap.addVariableDefinition(sym, declare, /*force=*/true);
+  symMap.pushScope();
+  return true;
+}
+
 static void privatizeIv(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::Symbol &sym, mlir::Location loc,
@@ -1566,7 +1634,7 @@ static void privatizeIv(
     llvm::SmallVector<mlir::Value> &privateOperands,
     llvm::SmallVectorImpl<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
         &ivPrivate,
-    bool isDoConcurrent = false) {
+    bool isDoConcurrent = false, bool shareIv = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   mlir::Type ivTy = getTypeFromIvTypeSize(builder, sym);
@@ -1588,6 +1656,15 @@ static void privatizeIv(
       privateOp = privateVal.getDefiningOp();
       break;
     }
+  }
+
+  // One IV at a time. A seq loop puts its IV on the enclosing acc.loop; the
+  // null value keeps this loop from privatizing it again. No enclosing loop
+  // means it stays here.
+  if (privateOp == nullptr && shareIv && ivValue &&
+      privatizeSeqIvOnParent(converter, sym, loc, ivValue)) {
+    ivPrivate.emplace_back(mlir::Value(), Fortran::semantics::SymbolRef(sym));
+    return;
   }
 
   if (privateOp == nullptr) {
@@ -1972,9 +2049,9 @@ static void processDoLoopBounds(
     llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess,
     llvm::SmallVector<mlir::Value> &reductionOperands,
     llvm::SmallVector<mlir::Value> &firstprivateOperands, AccDataMap &dataMap,
-    llvm::SmallVector<
-        std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
-        &localSymPairs) {
+    llvm::SmallVector<std::pair<Fortran::semantics::SymbolRef,
+                                Fortran::semantics::SymbolRef>> &localSymPairs,
+    bool shareIvs = false) {
   assert(loopsToProcess > 0 && "expect at least one loop");
   bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
 
@@ -2014,7 +2091,7 @@ static void processDoLoopBounds(
 
       const auto &name = std::get<Fortran::parser::Name>(control.t);
       privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate, isDoConcurrent);
+                  privateOperands, ivPrivate, isDoConcurrent, shareIvs);
 
       // A DO CONCURRENT index-name is a construct entity living in the
       // construct's own (Forall-kind) scope, distinct from any like-named
@@ -2057,7 +2134,8 @@ static void processDoLoopBounds(
           Fortran::semantics::Symbol &ivSym =
               bounds.Name().thing.symbol->GetUltimate();
           privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
-                      privateOperands, ivPrivate);
+                      privateOperands, ivPrivate, /*isDoConcurrent=*/false,
+                      shareIvs);
 
           inclusiveBounds.push_back(true);
         });
@@ -2255,7 +2333,8 @@ static void privatizeInductionVariables(
     llvm::SmallVector<mlir::Value> &privateOperands,
     llvm::SmallVectorImpl<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
         &ivPrivate,
-    llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess) {
+    llvm::SmallVector<mlir::Location> &locs, uint64_t loopsToProcess,
+    bool shareIvs = false) {
   // ivTypes and locs will be ignored since no acc.loop control arguments will
   // be created.
   llvm::SmallVector<mlir::Type> ivTypes;
@@ -2277,29 +2356,29 @@ static void privatizeInductionVariables(
         Fortran::semantics::Symbol &ivSym =
             bounds.Name().thing.symbol->GetUltimate();
         privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
-                    privateOperands, ivPrivate);
+                    privateOperands, ivPrivate, /*isDoConcurrent=*/false,
+                    shareIvs);
       },
       /*markInnerCollapsed=*/false);
 }
 
-static mlir::acc::LoopOp
-buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
-               mlir::Location currentLocation,
-               Fortran::semantics::SemanticsContext &semanticsContext,
-               Fortran::lower::StatementContext &stmtCtx,
-               const Fortran::parser::DoConstruct &outerDoConstruct,
-               Fortran::lower::pft::Evaluation &eval,
-               llvm::SmallVector<mlir::Value> &privateOperands,
-               llvm::SmallVector<mlir::Value> &firstprivateOperands,
-               AccDataMap &dataMap,
-               llvm::SmallVector<mlir::Value> &gangOperands,
-               llvm::SmallVector<mlir::Value> &workerNumOperands,
-               llvm::SmallVector<mlir::Value> &vectorOperands,
-               llvm::SmallVector<mlir::Value> &tileOperands,
-               llvm::SmallVector<mlir::Value> &cacheOperands,
-               llvm::SmallVector<mlir::Value> &reductionOperands,
-               llvm::SmallVector<mlir::Type> &retTy, mlir::Value yieldValue,
-               uint64_t loopsToProcess, bool hasDirective) {
+static mlir::acc::LoopOp buildACCLoopOp(
+    Fortran::lower::AbstractConverter &converter,
+    mlir::Location currentLocation,
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::StatementContext &stmtCtx,
+    const Fortran::parser::DoConstruct &outerDoConstruct,
+    Fortran::lower::pft::Evaluation &eval,
+    llvm::SmallVector<mlir::Value> &privateOperands,
+    llvm::SmallVector<mlir::Value> &firstprivateOperands, AccDataMap &dataMap,
+    llvm::SmallVector<mlir::Value> &gangOperands,
+    llvm::SmallVector<mlir::Value> &workerNumOperands,
+    llvm::SmallVector<mlir::Value> &vectorOperands,
+    llvm::SmallVector<mlir::Value> &tileOperands,
+    llvm::SmallVector<mlir::Value> &cacheOperands,
+    llvm::SmallVector<mlir::Value> &reductionOperands,
+    llvm::SmallVector<mlir::Type> &retTy, mlir::Value yieldValue,
+    uint64_t loopsToProcess, bool hasDirective, bool shareIvs = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
@@ -2322,14 +2401,14 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
                         upperbounds, steps, privateOperands, ivPrivate, ivTypes,
                         ivLocs, inclusiveBounds, locs, loopsToProcess,
                         reductionOperands, firstprivateOperands, dataMap,
-                        localSymPairs);
+                        localSymPairs, shareIvs);
   } else {
     // When the loop contains early exits, privatize induction variables, but do
     // not create acc.loop bounds. The control flow of the loop will be
     // generated explicitly in the acc.loop body that is just a container.
     privatizeInductionVariables(converter, currentLocation, outerDoConstruct,
                                 eval, privateOperands, ivPrivate, locs,
-                                loopsToProcess);
+                                loopsToProcess, shareIvs);
   }
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
@@ -2368,8 +2447,11 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   // Ensure the iv symbol is mapped to private iv SSA value for the scope of
   // the loop even if it did not appear explicitly in a PRIVATE clause (if it
   // appeared explicitly in such clause, that is also fine because duplicates
-  // in the list are ignored).
-  dataMap.symbols.append(ivPrivate.begin(), ivPrivate.end());
+  // in the list are ignored). An IV privatized on the enclosing loop has no
+  // value of its own here.
+  for (const auto &iv : ivPrivate)
+    if (iv.first)
+      dataMap.symbols.push_back(iv);
   // Remap symbols from data clauses to use data operation results
   dataMap.remapDataOperandSymbols(converter, builder, loopOp.getRegion());
 
@@ -2668,12 +2750,20 @@ static mlir::acc::LoopOp createLoopOp(
     }
   }
 
+  // seq for the default device type. Each IV is privatized on the enclosing
+  // acc.loop, for a structured or unstructured loop alike.
+  const bool isSeq = llvm::any_of(seqDeviceTypes, [](mlir::Attribute attr) {
+    return mlir::cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
+           mlir::acc::DeviceType::None;
+  });
+  const bool shareIvs = shareSeqLoopIv && isSeq && !combinedConstructs;
+
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
       eval, privateOperands, firstprivateOperands, dataMap, gangOperands,
       workerNumOperands, vectorOperands, tileOperands, cacheOperands,
       reductionOperands, retTy, yieldValue, loopsToProcess,
-      /*hasDirective=*/true);
+      /*hasDirective=*/true, shareIvs);
 
   if (!gangDeviceTypes.empty())
     loopOp.setGangAttr(builder.getArrayAttr(gangDeviceTypes));
