@@ -22,8 +22,10 @@
 #include "Shared/APITypes.h"
 #include "Shared/Requirements.h"
 
+#include "Platform.h"
 #include "device.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
@@ -69,6 +71,12 @@ struct PluginManager {
   /// Return the device presented to the user as device \p DeviceNo if it is
   /// initialized and ready. Otherwise return an error explaining the problem.
   llvm::Expected<DeviceTy &> getDevice(uint32_t DeviceNo);
+
+  /// Return the platform for \p Handle, or nullptr if it is not known.
+  const PlatformTy *getPlatform(ol_platform_handle_t Handle) const {
+    auto It = Platforms.find(Handle);
+    return It == Platforms.end() ? nullptr : &It->second;
+  }
 
   /// Iterate over all initialized and ready devices registered with this
   /// plugin.
@@ -152,6 +160,9 @@ private:
 
   // List of all plugins, in use or not.
   llvm::SmallVector<GenericPluginTy *> Plugins;
+
+  // Platforms reported by liboffload, indexed by their handle.
+  llvm::DenseMap<ol_platform_handle_t, PlatformTy> Platforms;
 
   // Mapping of device handles to the OpenMP device identifier.
   llvm::DenseMap<ol_device_handle_t, int32_t> DeviceIds;
