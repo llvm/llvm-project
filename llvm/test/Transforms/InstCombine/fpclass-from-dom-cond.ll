@@ -78,7 +78,7 @@ define i1 @test3(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X]], 3.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq float [[X]], +inf
+; CHECK-NEXT:    [[RET:%.*]] = fcmp nnan oeq float [[X]], +inf
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
@@ -159,7 +159,7 @@ define i1 @test6(double %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[X]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 ; CHECK:       land.rhs:
-; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp oeq double [[X]], +inf
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp nnan oeq double [[X]], +inf
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP_I]], [[LAND_RHS]] ]
