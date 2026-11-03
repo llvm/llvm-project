@@ -607,6 +607,14 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else if (Val != "single")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
+    else if (SanArgs.needsTsanRt() &&
+             (PGOGenerateArg || CSPGOGenerateArg || ProfileGenerateArg)) {
+      // Non-atomic counter updates would be reported as data races, so the
+      // instrprof lowering forces atomic updates in TSan-instrumented
+      // functions.
+      D.Diag(diag::warn_drv_fprofile_update_single_ignored_tsan)
+          << A->getAsString(Args);
+    }
   }
   if (const auto *A = Args.getLastArg(options::OPT_fprofile_continuous)) {
     if (!PGOGenerateArg && !CSPGOGenerateArg && !ProfileGenerateArg)

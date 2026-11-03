@@ -13,6 +13,28 @@
 
 // ERROR: error: unsupported argument 'unknown' to option '-fprofile-update='
 
+/// Under -fsanitize=thread, instrprof counter updates are always atomic in
+/// TSan-instrumented functions, so an explicit -fprofile-update=single is
+/// ignored with a warning.
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fsanitize=thread -fprofile-instr-generate -fprofile-update=single 2>&1 | FileCheck %s --check-prefix=TSAN-SINGLE
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fsanitize=thread -fprofile-generate -fprofile-update=single 2>&1 | FileCheck %s --check-prefix=TSAN-SINGLE
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fsanitize=thread -fcs-profile-generate -fprofile-update=single 2>&1 | FileCheck %s --check-prefix=TSAN-SINGLE
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fsanitize=thread -fprofile-instr-generate -fprofile-update=atomic -fprofile-update=single 2>&1 | FileCheck %s --check-prefix=TSAN-SINGLE
+// TSAN-SINGLE: warning: '-fprofile-update=single' is ignored for functions instrumented by '-fsanitize=thread'; profile counter updates in those functions are atomic [-Woption-ignored]
+// TSAN-SINGLE-NOT: "-fprofile-update=atomic"
+
+/// No warning without -fsanitize=thread
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fprofile-instr-generate -fprofile-update=single 2>&1 | FileCheck %s --check-prefix=NO-WARN
+
+/// No warning with -fsanitize=thread and non-single updates
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fsanitize=thread -fprofile-instr-generate -fprofile-update=atomic 2>&1 | FileCheck %s --check-prefix=NO-WARN
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fsanitize=thread -fprofile-instr-generate 2>&1 | FileCheck %s --check-prefix=NO-WARN
+
+/// No warning with -fsanitize=thread when no instrumentation is enabled.
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fsanitize=thread -fprofile-update=single 2>&1 | FileCheck %s --check-prefix=NO-WARN
+// RUN: %clang -### %s -c --target=x86_64-linux-gnu -fsanitize=thread -fprofile-instr-generate -fno-profile-instr-generate -fprofile-update=single 2>&1 | FileCheck %s --check-prefix=NO-WARN
+// NO-WARN-NOT: warning: '-fprofile-update=single' is ignored
+
 // AIX specific tests
 // RUN: %clang -### %s --target=powerpc-unknown-aix -fprofile-generate -fprofile-update=atomic 2>&1 | FileCheck %s --check-prefix=AIX
 // RUN: %clang -### %s --target=powerpc-unknown-aix -fprofile-generate -fprofile-update=prefer-atomic 2>&1 | FileCheck %s --check-prefix=AIX

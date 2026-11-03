@@ -168,6 +168,10 @@ def warn_drv_unsupported_option_for_flang : Warning<
 def warn_drv_unsupported_diag_option_for_flang : Warning<
   "the warning option '-%0' is not supported">,
   InGroup<OptionIgnored>;
+def warn_drv_fprofile_update_single_ignored_tsan : Warning<
+  "'%0' is ignored for functions instrumented by '-fsanitize=thread'; profile "
+  "counter updates in those functions are atomic">,
+  InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_processor : Warning<
   "ignoring '%0' option as it is not currently supported for processor '%1'">,
   InGroup<OptionIgnored>;

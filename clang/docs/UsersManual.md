@@ -3693,11 +3693,16 @@ it reads from `pathname/default.profdata`.
 
 :::{option} -fprofile-update[=<method>]
 
-Unless `-fsanitize=thread` is specified, the default is `single`, which
-uses non-atomic increments. The counters can be inaccurate under thread
-contention. `atomic` uses atomic increments which is accurate but has
-overhead. `prefer-atomic` will be transformed to `atomic` when supported
-by the target, or `single` otherwise.
+The default is `single`, which uses non-atomic increments. The counters can
+be inaccurate under thread contention. `atomic` uses atomic increments which
+is accurate but has overhead. `prefer-atomic` will be transformed to `atomic`
+when supported by the target, or `single` otherwise.
+
+When `-fsanitize=thread` is used with `-fprofile-instr-generate`,
+`-fprofile-generate` or `-fcs-profile-generate`, counter updates in
+functions instrumented by ThreadSanitizer are always atomic. An explicit
+`-fprofile-update=single` is ignored for those functions, and Clang emits a
+warning.
 :::
 
 :::{option} -fprofile-continuous
