@@ -710,3 +710,308 @@ define void @testLeftNotAllConstantBuildVec8x8(<8 x i8> %src1, <8 x i8> %src2, p
   store <8 x i8> %result, ptr %dest, align 8
   ret void
 }
+
+; Known bits can provide the implicit mask required by SLI/SRI.
+
+define <8 x i16> @sli_zext_v8i16(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-LABEL: sli_zext_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    shl.8h v1, v1, #8
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %base = zext <8 x i8> %a to <8 x i16>
+  %shift = shl <8 x i16> %b, splat (i16 8)
+  %result = or <8 x i16> %base, %shift
+  ret <8 x i16> %result
+}
+
+define <4 x i32> @sli_zext_v4i32(<4 x i16> %a, <4 x i32> %b) {
+; CHECK-LABEL: sli_zext_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    shl.4s v1, v1, #16
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %base = zext <4 x i16> %a to <4 x i32>
+  %shift = shl <4 x i32> %b, splat (i32 16)
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <2 x i64> @sli_zext_v2i64(<2 x i32> %a, <2 x i64> %b) {
+; CHECK-LABEL: sli_zext_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.2d v0, v0, #0
+; CHECK-NEXT:    shl.2d v1, v1, #32
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %base = zext <2 x i32> %a to <2 x i64>
+  %shift = shl <2 x i64> %b, splat (i64 32)
+  %result = or <2 x i64> %base, %shift
+  ret <2 x i64> %result
+}
+
+define <4 x i16> @sli_zext_v4i16(<4 x i8> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: sli_zext_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sli.4h v0, v1, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_zext_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    shl.4h v1, v1, #8
+; CHECK-GI-NEXT:    and.8b v0, v0, v2
+; CHECK-GI-NEXT:    orr.8b v0, v0, v1
+; CHECK-GI-NEXT:    ret
+  %base = zext <4 x i8> %a to <4 x i16>
+  %shift = shl <4 x i16> %b, splat (i16 8)
+  %result = or <4 x i16> %base, %shift
+  ret <4 x i16> %result
+}
+
+define <2 x i32> @sli_zext_v2i32(<2 x i16> %a, <2 x i32> %b) {
+; CHECK-SD-LABEL: sli_zext_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sli.2s v0, v1, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_zext_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d2, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    shl.2s v1, v1, #16
+; CHECK-GI-NEXT:    and.8b v0, v0, v2
+; CHECK-GI-NEXT:    orr.8b v0, v0, v1
+; CHECK-GI-NEXT:    ret
+  %base = zext <2 x i16> %a to <2 x i32>
+  %shift = shl <2 x i32> %b, splat (i32 16)
+  %result = or <2 x i32> %base, %shift
+  ret <2 x i32> %result
+}
+
+define <1 x i64> @sli_zext_v1i64(<1 x i32> %a, <1 x i64> %b) {
+; CHECK-SD-LABEL: sli_zext_v1i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi.2d v2, #0000000000000000
+; CHECK-SD-NEXT:    shl d1, d1, #32
+; CHECK-SD-NEXT:    zip1.2s v0, v0, v2
+; CHECK-SD-NEXT:    orr.8b v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_zext_v1i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov.s w8, v0[0]
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    orr x8, x8, x9, lsl #32
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
+  %base = zext <1 x i32> %a to <1 x i64>
+  %shift = shl <1 x i64> %b, splat (i64 32)
+  %result = or <1 x i64> %base, %shift
+  ret <1 x i64> %result
+}
+
+define <4 x i32> @sli_shifted_zext(<4 x i8> %a, <4 x i32> %b) {
+; CHECK-SD-LABEL: sli_shifted_zext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-SD-NEXT:    shl.4s v1, v1, #22
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #12
+; CHECK-SD-NEXT:    orr.16b v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_shifted_zext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi.2d v2, #0x0000ff000000ff
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    shl.4s v1, v1, #22
+; CHECK-GI-NEXT:    and.16b v0, v0, v2
+; CHECK-GI-NEXT:    shl.4s v0, v0, #12
+; CHECK-GI-NEXT:    orr.16b v0, v0, v1
+; CHECK-GI-NEXT:    ret
+  %ext = zext <4 x i8> %a to <4 x i32>
+  %base = shl <4 x i32> %ext, splat (i32 12)
+  %shift = shl <4 x i32> %b, splat (i32 22)
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_shifted_zext_commuted(<4 x i8> %a, <4 x i32> %b) {
+; CHECK-SD-LABEL: sli_shifted_zext_commuted:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-SD-NEXT:    shl.4s v1, v1, #22
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #12
+; CHECK-SD-NEXT:    orr.16b v0, v1, v0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_shifted_zext_commuted:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi.2d v2, #0x0000ff000000ff
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    shl.4s v1, v1, #22
+; CHECK-GI-NEXT:    and.16b v0, v0, v2
+; CHECK-GI-NEXT:    shl.4s v0, v0, #12
+; CHECK-GI-NEXT:    orr.16b v0, v1, v0
+; CHECK-GI-NEXT:    ret
+  %ext = zext <4 x i8> %a to <4 x i32>
+  %base = shl <4 x i32> %ext, splat (i32 12)
+  %shift = shl <4 x i32> %b, splat (i32 22)
+  %result = or <4 x i32> %shift, %base
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_subset_mask(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-SD-LABEL: sli_subset_mask:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #65534 // =0xfffe
+; CHECK-SD-NEXT:    shl.4s v1, v1, #16
+; CHECK-SD-NEXT:    dup.4s v2, w8
+; CHECK-SD-NEXT:    and.16b v0, v0, v2
+; CHECK-SD-NEXT:    orr.16b v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sli_subset_mask:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI38_0
+; CHECK-GI-NEXT:    shl.4s v1, v1, #16
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_0]
+; CHECK-GI-NEXT:    and.16b v0, v0, v2
+; CHECK-GI-NEXT:    orr.16b v0, v0, v1
+; CHECK-GI-NEXT:    ret
+  %base = and <4 x i32> %a, splat (i32 65534)
+  %shift = shl <4 x i32> %b, splat (i32 16)
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_nonuniform_mask(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: sli_nonuniform_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI39_0
+; CHECK-NEXT:    shl.4s v1, v1, #16
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI39_0]
+; CHECK-NEXT:    and.16b v0, v0, v2
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %base = and <4 x i32> %a, <i32 255, i32 65535, i32 1023, i32 3>
+  %shift = shl <4 x i32> %b, splat (i32 16)
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sri_known_zero_low_bits(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-SD-LABEL: sri_known_zero_low_bits:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shl.4s v0, v0, #16
+; CHECK-SD-NEXT:    usra.4s v0, v1, #20
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sri_known_zero_low_bits:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    shl.4s v0, v0, #16
+; CHECK-GI-NEXT:    ushr.4s v1, v1, #20
+; CHECK-GI-NEXT:    orr.16b v0, v0, v1
+; CHECK-GI-NEXT:    ret
+  %base = shl <4 x i32> %a, splat (i32 16)
+  %shift = lshr <4 x i32> %b, splat (i32 20)
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_overlapping_zext(<4 x i16> %a, <4 x i32> %b) {
+; CHECK-LABEL: sli_overlapping_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    shl.4s v1, v1, #15
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %base = zext <4 x i16> %a to <4 x i32>
+  %shift = shl <4 x i32> %b, splat (i32 15)
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_unknown_bits(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: sli_unknown_bits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl.4s v1, v1, #16
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %shift = shl <4 x i32> %b, splat (i32 16)
+  %result = or <4 x i32> %a, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_variable_shift(<4 x i16> %a, <4 x i32> %b, <4 x i32> %amount) {
+; CHECK-LABEL: sli_variable_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    ushl.4s v1, v1, v2
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %base = zext <4 x i16> %a to <4 x i32>
+  %shift = shl <4 x i32> %b, %amount
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_nonuniform_shift(<4 x i16> %a, <4 x i32> %b) {
+; CHECK-LABEL: sli_nonuniform_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI44_0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI44_0]
+; CHECK-NEXT:    ushl.4s v1, v1, v2
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %base = zext <4 x i16> %a to <4 x i32>
+  %shift = shl <4 x i32> %b, <i32 16, i32 17, i32 18, i32 19>
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_shared_base(<4 x i16> %a, <4 x i32> %b, ptr %out) {
+; CHECK-LABEL: sli_shared_base:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.4s v2, v0, #0
+; CHECK-NEXT:    shl.4s v0, v1, #16
+; CHECK-NEXT:    orr.16b v0, v2, v0
+; CHECK-NEXT:    str q2, [x0]
+; CHECK-NEXT:    ret
+  %base = zext <4 x i16> %a to <4 x i32>
+  %shift = shl <4 x i32> %b, splat (i32 16)
+  store <4 x i32> %base, ptr %out
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sli_shared_shift(<4 x i16> %a, <4 x i32> %b, ptr %out) {
+; CHECK-LABEL: sli_shared_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    shl.4s v1, v1, #16
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+  %base = zext <4 x i16> %a to <4 x i32>
+  %shift = shl <4 x i32> %b, splat (i32 16)
+  store <4 x i32> %shift, ptr %out
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @sri_overlapping_bits(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: sri_overlapping_bits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl.4s v0, v0, #11
+; CHECK-NEXT:    ushr.4s v1, v1, #20
+; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %base = shl <4 x i32> %a, splat (i32 11)
+  %shift = lshr <4 x i32> %b, splat (i32 20)
+  %result = or <4 x i32> %base, %shift
+  ret <4 x i32> %result
+}
