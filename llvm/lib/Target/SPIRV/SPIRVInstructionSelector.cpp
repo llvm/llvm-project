@@ -5873,12 +5873,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     MIB.constrainAllUses(TII, TRI, RBI);
     return true;
   }
-  case Intrinsic::spv_unpack_u8u16:
-  case Intrinsic::spv_unpack_u8u32:
-    return selectUnpackInst(ResVReg, ResType, I, false);
-  case Intrinsic::spv_unpack_s8s16:
-  case Intrinsic::spv_unpack_s8s32:
-    return selectUnpackInst(ResVReg, ResType, I, true);
   default:
     return diagnoseUnsupported(I, "intrinsic selection not implemented.");
   }
