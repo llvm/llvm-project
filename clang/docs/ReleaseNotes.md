@@ -1548,6 +1548,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
   and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+- Added support for the combined `#pragma omp target loop` construct, which
+  previously crashed the compiler. It is lowered like `#pragma omp target simd`.
 
 ### SYCL Support
 

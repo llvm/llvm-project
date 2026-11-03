@@ -4094,7 +4094,8 @@ public:
   void EmitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &S);
   void EmitOMPTargetParallelForSimdDirective(
       const OMPTargetParallelForSimdDirective &S);
-  void EmitOMPTargetSimdDirective(const OMPTargetSimdDirective &S);
+  /// Also emits 'target loop'.
+  void EmitOMPTargetSimdDirective(const OMPLoopDirective &S);
   void EmitOMPTeamsDistributeDirective(const OMPTeamsDistributeDirective &S);
   void
   EmitOMPTeamsDistributeSimdDirective(const OMPTeamsDistributeSimdDirective &S);
@@ -4149,10 +4150,10 @@ public:
   static void EmitOMPTargetTeamsDistributeSimdDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
       const OMPTargetTeamsDistributeSimdDirective &S);
-  /// Emit device code for the target simd directive.
+  /// Emit device code for the target simd and target loop directives.
   static void EmitOMPTargetSimdDeviceFunction(CodeGenModule &CGM,
                                               StringRef ParentName,
-                                              const OMPTargetSimdDirective &S);
+                                              const OMPLoopDirective &S);
   /// Emit device code for the target teams distribute parallel for simd
   /// directive.
   static void EmitOMPTargetTeamsDistributeParallelForSimdDeviceFunction(

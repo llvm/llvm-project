@@ -601,6 +601,12 @@ mlir::LogicalResult CIRGenFunction::emitOMPTargetParallelGenericLoopDirective(
                              "OpenMP OMPTargetParallelGenericLoopDirective");
   return mlir::failure();
 }
+mlir::LogicalResult CIRGenFunction::emitOMPTargetGenericLoopDirective(
+    const OMPTargetGenericLoopDirective &s) {
+  getCIRGenModule().errorNYI(s.getSourceRange(),
+                             "OpenMP OMPTargetGenericLoopDirective");
+  return mlir::failure();
+}
 mlir::LogicalResult CIRGenFunction::emitOMPTargetParallelForSimdDirective(
     const OMPTargetParallelForSimdDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(),

@@ -1244,6 +1244,12 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *Node) {
+  Indent() << "#pragma omp target loop";
+  PrintOMPExecutableDirective(Node);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC construct printing methods
 //===----------------------------------------------------------------------===//

@@ -369,14 +369,16 @@ public:
 
 } // namespace
 
-// Map `loop` with a bind clause, `teams loop`, and `target teams loop` to the
-// construct CodeGen emits.
+// Map `loop` with a bind clause, `teams loop`, `target loop`, and
+// `target teams loop` to the construct CodeGen emits.
 static OpenMPDirectiveKind
 getEffectiveDirectiveKind(const OMPExecutableDirective &S) {
   OpenMPDirectiveKind Kind = S.getDirectiveKind();
 
   if (Kind == OMPD_teams_loop)
     return OMPD_teams_distribute;
+  if (Kind == OMPD_target_loop)
+    return OMPD_target_simd;
   if (Kind == OMPD_target_teams_loop)
     return cast<OMPTargetTeamsGenericLoopDirective>(S).canBeParallelFor()
                ? OMPD_target_teams_distribute_parallel_for
@@ -3982,7 +3984,7 @@ void CodeGenFunction::EmitOMPDistributeSimdDirective(
 }
 
 void CodeGenFunction::EmitOMPTargetSimdDeviceFunction(
-    CodeGenModule &CGM, StringRef ParentName, const OMPTargetSimdDirective &S) {
+    CodeGenModule &CGM, StringRef ParentName, const OMPLoopDirective &S) {
   // Emit SPMD target parallel for region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     emitOMPSimdRegion(CGF, S, Action);
@@ -3995,8 +3997,7 @@ void CodeGenFunction::EmitOMPTargetSimdDeviceFunction(
   assert(Fn && Addr && "Target device function emission failed.");
 }
 
-void CodeGenFunction::EmitOMPTargetSimdDirective(
-    const OMPTargetSimdDirective &S) {
+void CodeGenFunction::EmitOMPTargetSimdDirective(const OMPLoopDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     emitOMPSimdRegion(CGF, S, Action);
   };
