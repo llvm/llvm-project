@@ -158,6 +158,16 @@ entry:
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
 
+  %call_03a = call x86_fp80 @tanl(x86_fp80 %value)
+; CHECK: [[COND1:%[0-9]+]] = fcmp oeq x86_fp80 %value, -inf
+; CHECK: [[COND2:%[0-9]+]] = fcmp oeq x86_fp80 %value, +inf
+; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
+; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
+; CHECK: [[CALL_LABEL]]:
+; CHECK-NEXT: %call_03a = call x86_fp80 @tanl(x86_fp80 %value)
+; CHECK-NEXT: br label %[[END_LABEL]]
+; CHECK: [[END_LABEL]]:
+
   %call_04 = call x86_fp80 @acoshl(x86_fp80 %value)
 ; CHECK: [[COND:%[0-9]+]] = fcmp olt x86_fp80 %value, 1.000000e+00
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
@@ -269,6 +279,16 @@ entry:
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
 
+  %call_03a = call x86_fp80 @tanl(x86_fp80 %value) strictfp
+; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f80(x86_fp80 [[VALUE]], x86_fp80 -inf, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND2:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f80(x86_fp80 [[VALUE]], x86_fp80 +inf, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
+; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
+; CHECK: [[CALL_LABEL]]:
+; CHECK-NEXT: %call_03a = call x86_fp80 @tanl(x86_fp80 %value)
+; CHECK-NEXT: br label %[[END_LABEL]]
+; CHECK: [[END_LABEL]]:
+
   %call_04 = call x86_fp80 @acoshl(x86_fp80 %value) strictfp
 ; CHECK: [[COND:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f80(x86_fp80 [[VALUE]], x86_fp80 1.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
@@ -342,6 +362,7 @@ declare x86_fp80 @acosl(x86_fp80)
 declare x86_fp80 @asinl(x86_fp80)
 declare x86_fp80 @cosl(x86_fp80)
 declare x86_fp80 @sinl(x86_fp80)
+declare x86_fp80 @tanl(x86_fp80)
 declare x86_fp80 @acoshl(x86_fp80)
 declare x86_fp80 @sqrtl(x86_fp80)
 declare x86_fp80 @atanhl(x86_fp80)
