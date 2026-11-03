@@ -393,23 +393,21 @@ define half @vreduce_fminimum_nxv32f16(<vscale x 32 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v16, v16
 ; ZVFHMIN-NEXT:    vcpop.m a0, v8
-; ZVFHMIN-NEXT:    bnez a0, .LBB13_5
+; ZVFHMIN-NEXT:    beqz a0, .LBB13_5
 ; ZVFHMIN-NEXT:  # %bb.4:
-; ZVFHMIN-NEXT:    vfredmin.vs v8, v16, v16
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
-; ZVFHMIN-NEXT:  .LBB13_5:
-; ZVFHMIN-NEXT:    feq.s a0, fa5, fa5
-; ZVFHMIN-NEXT:    fmv.s fa3, fa4
-; ZVFHMIN-NEXT:    bnez a0, .LBB13_7
-; ZVFHMIN-NEXT:  # %bb.6:
 ; ZVFHMIN-NEXT:    fmv.s fa3, fa5
-; ZVFHMIN-NEXT:  .LBB13_7:
+; ZVFHMIN-NEXT:    j .LBB13_6
+; ZVFHMIN-NEXT:  .LBB13_5:
+; ZVFHMIN-NEXT:    vfredmin.vs v8, v16, v16
+; ZVFHMIN-NEXT:    vfmv.f.s fa3, v8
+; ZVFHMIN-NEXT:  .LBB13_6:
 ; ZVFHMIN-NEXT:    feq.s a0, fa4, fa4
-; ZVFHMIN-NEXT:    bnez a0, .LBB13_9
-; ZVFHMIN-NEXT:  # %bb.8:
-; ZVFHMIN-NEXT:    fmv.s fa5, fa4
-; ZVFHMIN-NEXT:  .LBB13_9:
-; ZVFHMIN-NEXT:    fmin.s fa5, fa5, fa3
+; ZVFHMIN-NEXT:    feq.s a1, fa3, fa3
+; ZVFHMIN-NEXT:    and a0, a1, a0
+; ZVFHMIN-NEXT:    beqz a0, .LBB13_8
+; ZVFHMIN-NEXT:  # %bb.7:
+; ZVFHMIN-NEXT:    fmin.s fa5, fa3, fa4
+; ZVFHMIN-NEXT:  .LBB13_8:
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
   %red = call half @llvm.vector.reduce.fminimum.nxv32f16(<vscale x 32 x half> %v)
@@ -455,23 +453,21 @@ define half @vreduce_fmaximum_nxv32f16(<vscale x 32 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v16, v16
 ; ZVFHMIN-NEXT:    vcpop.m a0, v8
-; ZVFHMIN-NEXT:    bnez a0, .LBB14_5
+; ZVFHMIN-NEXT:    beqz a0, .LBB14_5
 ; ZVFHMIN-NEXT:  # %bb.4:
-; ZVFHMIN-NEXT:    vfredmax.vs v8, v16, v16
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
-; ZVFHMIN-NEXT:  .LBB14_5:
-; ZVFHMIN-NEXT:    feq.s a0, fa5, fa5
-; ZVFHMIN-NEXT:    fmv.s fa3, fa4
-; ZVFHMIN-NEXT:    bnez a0, .LBB14_7
-; ZVFHMIN-NEXT:  # %bb.6:
 ; ZVFHMIN-NEXT:    fmv.s fa3, fa5
-; ZVFHMIN-NEXT:  .LBB14_7:
+; ZVFHMIN-NEXT:    j .LBB14_6
+; ZVFHMIN-NEXT:  .LBB14_5:
+; ZVFHMIN-NEXT:    vfredmax.vs v8, v16, v16
+; ZVFHMIN-NEXT:    vfmv.f.s fa3, v8
+; ZVFHMIN-NEXT:  .LBB14_6:
 ; ZVFHMIN-NEXT:    feq.s a0, fa4, fa4
-; ZVFHMIN-NEXT:    bnez a0, .LBB14_9
-; ZVFHMIN-NEXT:  # %bb.8:
-; ZVFHMIN-NEXT:    fmv.s fa5, fa4
-; ZVFHMIN-NEXT:  .LBB14_9:
-; ZVFHMIN-NEXT:    fmax.s fa5, fa5, fa3
+; ZVFHMIN-NEXT:    feq.s a1, fa3, fa3
+; ZVFHMIN-NEXT:    and a0, a1, a0
+; ZVFHMIN-NEXT:    beqz a0, .LBB14_8
+; ZVFHMIN-NEXT:  # %bb.7:
+; ZVFHMIN-NEXT:    fmax.s fa5, fa3, fa4
+; ZVFHMIN-NEXT:  .LBB14_8:
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
   %red = call half @llvm.vector.reduce.fmaximum.nxv32f16(<vscale x 32 x half> %v)
