@@ -1,0 +1,126 @@
+# RUN: llc -mtriple=arm64ec-pc-windows-msvc -run-pass=aarch64-win-cfi \
+# RUN:   -verify-machineinstrs %s -o %t.mir
+# RUN: FileCheck %s --check-prefix=MIR --input-file=%t.mir
+# RUN: llc -mtriple=arm64ec-pc-windows-msvc -passes=aarch64-win-cfi,verify \
+# RUN:   %s -o - | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=arm64ec-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   -verify-machineinstrs -filetype=obj %t.mir -o %t-roundtrip.obj
+# RUN: llvm-readobj --unwind %t-roundtrip.obj | FileCheck %s --check-prefix=UNWIND
+# RUN: llc -mtriple=arm64ec-pc-windows-msvc -start-after=unpack-mi-bundles \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.obj
+# RUN: llvm-readobj --unwind %t.obj | FileCheck %s --check-prefix=UNWIND
+# RUN: llc -mtriple=arm64ec-pc-windows-msvc -start-after=unpack-mi-bundles \
+# RUN:   -verify-machineinstrs %s -o %t.s
+# RUN: FileCheck %s --check-prefix=ASM --input-file=%t.s
+# RUN: llvm-mc -triple=arm64ec-pc-windows-msvc -filetype=obj %t.s -o %t-asm.obj
+# RUN: llvm-readobj --unwind %t-asm.obj | FileCheck %s --check-prefix=UNWIND
+
+# Copy ARM64EC's full-width SIMD save operation into a phantom prologue when
+# a frameless block interrupts the framed region in layout. The shared leaf
+# return must remain uncovered on both paths.
+# UNWIND: Format: COFF-ARM64EC
+# UNWIND: Function: ec_fragments +0x4 (0x4)
+# UNWIND: FunctionLength: 16
+# UNWIND: Prologue [
+# UNWIND-NEXT: 0xe74681            ; stp q6, q7, [sp, #16]
+# UNWIND-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# UNWIND-NEXT: 0x03                ; sub sp, #48
+# UNWIND-NEXT: 0xe4                ; end
+# UNWIND: Function: ec_fragments +0x18 (0x18)
+# UNWIND: FunctionLength: 20
+# UNWIND: Prologue [
+# UNWIND-NEXT: 0xe5                ; end_c
+# UNWIND-NEXT: 0xe74681            ; stp q6, q7, [sp, #16]
+# UNWIND-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# UNWIND-NEXT: 0x03                ; sub sp, #48
+# UNWIND-NEXT: 0xe4                ; end
+# UNWIND: Epilogue [
+# UNWIND-NEXT: 0xe74681            ; ldp q6, q7, [sp, #16]
+# UNWIND-NEXT: 0xd600              ; ldp x19, lr, [sp, #0]
+# UNWIND-NEXT: 0x03                ; add sp, #48
+# UNWIND-NEXT: 0xe4                ; end
+# UNWIND-NOT: RuntimeFunction {
+
+# ASM-LABEL: ec_fragments:
+# ASM: .seh_proc ec_fragments
+# ASM: .seh_save_any_reg_p q6, 16
+# ASM: b
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM: ret
+# ASM: .seh_proc ec_fragments
+# ASM-NEXT: .seh_stackalloc 48
+# ASM-NEXT: .seh_save_lrpair x19, 0
+# ASM-NEXT: .seh_save_any_reg_p q6, 16
+# ASM-NEXT: .seh_end_c
+# ASM-NEXT: .seh_endprologue
+
+--- |
+  define internal void @ec_fragments() uwtable {
+    ret void
+  }
+...
+---
+name: ec_fragments
+alignment: 4
+hasWinCFI: true
+noPhis: true
+isSSA: false
+noVRegs: true
+frameInfo:
+  stackSize: 48
+  maxAlignment: 16
+  adjustsStack: true
+body: |
+  ; MIR-LABEL: name: ec_fragments
+  ; MIR: hasExplicitWinCFIRanges: true
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 48, 0
+  ; MIR: B %bb.3 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.2:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: RET
+  ; MIR: bb.3:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: frame-setup SEH_StackAlloc 48
+  ; MIR-NEXT: frame-setup SEH_SaveRegP 19, 30, 0
+  ; MIR-NEXT: frame-setup SEH_SaveAnyRegQP 6, 7, 16
+  ; MIR-NEXT: SEH_EndC
+  ; MIR-NEXT: SEH_PrologEnd
+  ; MIR: B %bb.2 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  bb.0:
+    successors: %bb.1, %bb.2
+    CBZW $w0, %bb.2
+
+  bb.1:
+    successors: %bb.3
+    $sp = frame-setup SUBXri $sp, 48, 0
+    frame-setup SEH_StackAlloc 48
+    frame-setup STPXi $x19, $lr, $sp, 0
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup STPQi $q6, $q7, $sp, 1
+    frame-setup SEH_SaveAnyRegQP 6, 7, 16
+    frame-setup SEH_PrologEnd
+    B %bb.3
+
+  bb.2:
+    RET undef $lr
+
+  bb.3:
+    successors: %bb.2
+    HINT 0
+    frame-destroy SEH_EpilogStart
+    $q6, $q7 = frame-destroy LDPQi $sp, 1
+    frame-destroy SEH_SaveAnyRegQP 6, 7, 16
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 48, 0
+    frame-destroy SEH_StackAlloc 48
+    frame-destroy SEH_EpilogEnd
+    B %bb.2
+...

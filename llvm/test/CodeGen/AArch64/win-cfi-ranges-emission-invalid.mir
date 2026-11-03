@@ -1,0 +1,121 @@
+# REQUIRES: asserts
+# RUN: split-file %s %t
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   %t/missing-ranges.mir -o - 2>&1 | FileCheck %s --check-prefix=FLAG
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   %t/missing-flag.mir -o - 2>&1 | FileCheck %s --check-prefix=FLAG
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   %t/unclosed-range.mir -o - 2>&1 | FileCheck %s --check-prefix=OPEN
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   %t/unmatched-end.mir -o - 2>&1 | FileCheck %s --check-prefix=END
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   %t/nested-start.mir -o - 2>&1 | FileCheck %s --check-prefix=START
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   %t/reset-state.mir -o - | FileCheck %s --check-prefix=RESET
+
+# FLAG: Explicit Windows CFI ranges should only be used for flagged
+# FLAG-SAME: functions. If a function is flagged then it must have explicit
+# FLAG-SAME: Windows CFI ranges.
+# OPEN: Explicit Windows CFI range is still open at function end
+# END: Ending an explicit Windows CFI range without a matching start
+# START: Starting an explicit Windows CFI range
+# START-SAME: before ending the previous one
+# RESET-LABEL: explicit_ranges:
+# RESET: .seh_proc explicit_ranges
+# RESET: .seh_endproc
+# RESET-LABEL: implicit_ranges:
+# RESET-NOT: .seh_proc
+# RESET: ret
+
+#--- missing-ranges.mir
+---
+name: missing_ranges
+hasWinCFI: true
+noVRegs: true
+machineFunctionInfo:
+  hasExplicitWinCFIRanges: true
+body: |
+  bb.0:
+    RET undef $lr
+...
+
+# No implicit range is emitted when hasWinCFI is false, allowing the flag check
+# to diagnose explicit pseudos without their flag at the end of emission.
+#--- missing-flag.mir
+---
+name: missing_flag
+noVRegs: true
+body: |
+  bb.0:
+    SEH_StartProc
+    HINT 0
+    SEH_EndProc
+    RET undef $lr
+...
+
+#--- unclosed-range.mir
+---
+name: unclosed_range
+hasWinCFI: true
+noVRegs: true
+machineFunctionInfo:
+  hasExplicitWinCFIRanges: true
+body: |
+  bb.0:
+    SEH_StartProc
+    RET undef $lr
+...
+
+#--- unmatched-end.mir
+---
+name: unmatched_end
+hasWinCFI: true
+noVRegs: true
+machineFunctionInfo:
+  hasExplicitWinCFIRanges: true
+body: |
+  bb.0:
+    SEH_EndProc
+    RET undef $lr
+...
+
+#--- nested-start.mir
+---
+name: nested_start
+hasWinCFI: true
+noVRegs: true
+machineFunctionInfo:
+  hasExplicitWinCFIRanges: true
+body: |
+  bb.0:
+    SEH_StartProc
+    SEH_StartProc
+    RET undef $lr
+...
+
+# Emission state must be reset before processing a subsequent unflagged function.
+#--- reset-state.mir
+--- |
+  define void @explicit_ranges() uwtable { ret void }
+  define void @implicit_ranges() { ret void }
+...
+---
+name: explicit_ranges
+hasWinCFI: true
+noVRegs: true
+machineFunctionInfo:
+  hasExplicitWinCFIRanges: true
+body: |
+  bb.0:
+    SEH_StartProc
+    HINT 0
+    SEH_EndProc
+    RET undef $lr
+...
+---
+name: implicit_ranges
+noVRegs: true
+body: |
+  bb.0:
+    RET undef $lr
+...

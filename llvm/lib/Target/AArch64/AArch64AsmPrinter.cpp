@@ -96,6 +96,8 @@ class AArch64AsmPrinter : public AsmPrinter {
   bool PtrauthInitFiniAddressDisc = false;
 #ifndef NDEBUG
   unsigned InstsEmitted;
+  bool ExplicitWinCFIRangeOpen = false;
+  bool EmittedExplicitWinCFIRange = false;
 #endif
   bool EnableImportCallOptimization = false;
   MapVector<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
@@ -112,14 +114,7 @@ public:
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
   bool hasExplicitWinCFIRanges() const override {
-    // The late Windows CFI pass inserts SEH_StartProc only when range
-    // boundaries are explicit in MIR. Its presence tells WinException to leave
-    // procedure boundaries to the SEH_StartProc/SEH_EndProc pseudos.
-    return llvm::any_of(*MF, [](const MachineBasicBlock &MBB) {
-      return llvm::any_of(MBB, [](const MachineInstr &MI) {
-        return MI.getOpcode() == AArch64::SEH_StartProc;
-      });
-    });
+    return AArch64FI->hasExplicitWinCFIRanges();
   }
 
   /// Wrapper for MCInstLowering.lowerOperand() for the
@@ -325,6 +320,10 @@ public:
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
     STI = &MF.getSubtarget<AArch64Subtarget>();
 
+#ifndef NDEBUG
+    ExplicitWinCFIRangeOpen = false;
+    EmittedExplicitWinCFIRange = false;
+#endif
     SetupMachineFunction(MF);
 
     if (STI->isTargetCOFF()) {
@@ -1192,6 +1191,14 @@ void AArch64AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
 }
 
 void AArch64AsmPrinter::emitFunctionBodyEnd() {
+#ifndef NDEBUG
+  assert(!ExplicitWinCFIRangeOpen &&
+         "Explicit Windows CFI range is still open at function end");
+  assert(EmittedExplicitWinCFIRange == AArch64FI->hasExplicitWinCFIRanges() &&
+         "Explicit Windows CFI ranges should only be used for flagged "
+         "functions. If a function is flagged then it must have explicit "
+         "Windows CFI ranges.");
+#endif
   if (!AArch64FI->getLOHRelated().empty())
     emitLOHs();
 }
@@ -4008,10 +4015,21 @@ void AArch64AsmPrinter::emitInstructionImpl(const MachineInstr *MI) {
     return;
 
   case AArch64::SEH_StartProc:
+#ifndef NDEBUG
+    assert(!ExplicitWinCFIRangeOpen && "Starting an explicit Windows CFI range "
+                                       "before ending the previous one");
+    ExplicitWinCFIRangeOpen = true;
+    EmittedExplicitWinCFIRange = true;
+#endif
     OutStreamer->emitWinCFIStartProc(CurrentFnSym);
     return;
 
   case AArch64::SEH_EndProc:
+#ifndef NDEBUG
+    assert(ExplicitWinCFIRangeOpen &&
+           "Ending an explicit Windows CFI range without a matching start");
+    ExplicitWinCFIRangeOpen = false;
+#endif
     OutStreamer->emitWinCFIFuncletOrFuncEnd();
     OutStreamer->emitWinCFIEndProc();
     return;

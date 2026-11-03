@@ -805,8 +805,7 @@ void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundlesLegacy(nullptr));
-  if (TM->getTargetTriple().isOSWindows() &&
-      !TM->getTargetTriple().isWindowsArm64EC())
+  if (TM->getTargetTriple().isOSWindows())
     addPass(createAArch64WinCFIPass());
 }
 
