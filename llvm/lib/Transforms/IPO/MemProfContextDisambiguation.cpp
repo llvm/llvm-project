@@ -2495,8 +2495,8 @@ static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
   return (Base + MemProfCloneSuffix + Twine(CloneNo)).str();
 }
 
-static bool isMemProfClone(const Function &F) {
-  return F.getName().contains(MemProfCloneSuffix);
+static bool isMemProfClone(const GlobalValue &GV) {
+  return GV.getName().contains(MemProfCloneSuffix);
 }
 
 // Return the clone number of the given function by extracting it from the
@@ -6730,13 +6730,16 @@ static ValueInfo findValueInfoForGV(const GlobalValue &GV, const Module &M,
 // CandidateGUID of an indirect tail call, in MapTailCallCalleeVIToCallsite
 // (which maps each synthesized record's callee to the record). Returns null if
 // there is none. OrigNameGUIDToTailCallCallsite caches a map from the original
-// name GUID of each record's callee to the record, and is built on first use.
+// name GUID of each record's callee to the record, and is built on first use
+// (along with AliasVIToGV, which caches alias ValueInfos in M).
 static const CallsiteInfo *findIndirectTailCallCallsite(
     uint64_t CandidateGUID,
     const DenseMap<ValueInfo, CallsiteInfo> &MapTailCallCalleeVIToCallsite,
     std::optional<DenseMap<uint64_t, const CallsiteInfo *>>
         &OrigNameGUIDToTailCallCallsite,
-    const ModuleSummaryIndex *ImportSummary, InstrProfSymtab &Symtab) {
+    std::optional<DenseMap<ValueInfo, const GlobalValue *>> &AliasVIToGV,
+    const Module &M, const ModuleSummaryIndex *ImportSummary,
+    InstrProfSymtab &Symtab) {
   auto End = MapTailCallCalleeVIToCallsite.end();
   // The callee of the synthesized record is normally the VP metadata GUID, so
   // check that first.
@@ -6758,17 +6761,54 @@ static const CallsiteInfo *findIndirectTailCallCallsite(
   // The index for a distributed ThinLTO backend does not record the original
   // names of local functions, in which case the above lookup via
   // getGUIDFromOriginalID fails. Instead, compute the original name GUID of
-  // each record's callee from its function in this module, located via its
-  // GUID (which is recorded in the function's !guid metadata), using its name
-  // before any promotion.
+  // each record's callee from its function or alias in this module, using its
+  // name before any promotion.
   if (!OrigNameGUIDToTailCallCallsite) {
     // Construct the (initially empty) map so that it is marked as built, even
     // if no entries are added below, to avoid rebuilding it on later calls.
     OrigNameGUIDToTailCallCallsite.emplace();
     for (const auto &[CalleeVI, Callsite] : MapTailCallCalleeVIToCallsite) {
-      Function *Callee = Symtab.getFunction(CalleeVI.getGUID());
-      if (!Callee)
-        continue;
+      const GlobalValue *Callee = Symtab.getFunction(CalleeVI.getGUID());
+      if (!Callee) {
+        // InstrProfSymtab only indexes functions (not GlobalAliases), and
+        // imported copies of promoted local aliases are indexed under the
+        // aliasee's !guid rather than the alias's GUID. Lazily build a
+        // module-wide map from alias ValueInfo to GlobalValue once per module
+        // so we can recover the alias's pre-promotion name.
+        if (!AliasVIToGV) {
+          AliasVIToGV.emplace();
+          // Collect imported copies of aliases (materialized as Functions with
+          // thinlto_alias_guid metadata). Skip memprof clones created earlier
+          // in applyImport.
+          // TODO: Consider indexing thinlto_alias_guid on imported alias
+          // functions in InstrProfSymtab::addFuncWithName (if attached
+          // unconditionally in replaceAliasWithAliasee), which would avoid
+          // scanning M.functions() here and enable ICP to imported promoted
+          // local aliases. Note that we would still need AliasVIToGV below for
+          // non-imported (same-module) GlobalAliases, since GlobalAlias cannot
+          // carry !guid metadata and mapping alias GUIDs to the aliasee
+          // Function in InstrProfSymtab would lose the alias's name.
+          for (const Function &Fn : M) {
+            if (Fn.isDeclaration() || isMemProfClone(Fn))
+              continue;
+            if (auto AliasGUID = getImportedAliasGUID(Fn))
+              if (ValueInfo VI = ImportSummary->getValueInfo(*AliasGUID))
+                AliasVIToGV->try_emplace(VI, &Fn);
+          }
+          // Collect same-module function GlobalAliases (skipping memprof alias
+          // clones and non-function aliases).
+          for (const GlobalAlias &A : M.aliases()) {
+            if (isMemProfClone(A) ||
+                !isa_and_nonnull<Function>(A.getAliaseeObject()))
+              continue;
+            if (ValueInfo VI = findValueInfoForGV(A, M, ImportSummary))
+              AliasVIToGV->try_emplace(VI, &A);
+          }
+        }
+        Callee = AliasVIToGV->lookup(CalleeVI);
+        if (!Callee)
+          continue;
+      }
       StringRef OrigName =
           ModuleSummaryIndex::getOriginalNameBeforePromote(Callee->getName());
       auto [It, Inserted] = OrigNameGUIDToTailCallCallsite->try_emplace(
@@ -6871,6 +6911,11 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
   if (!initializeIndirectCallPromotionInfo(M))
     return false;
+
+  // Lazily populated map from alias ValueInfo to the corresponding imported
+  // function copy or same-module GlobalAlias, used by
+  // findIndirectTailCallCallsite when a local alias target is not in Symtab.
+  std::optional<DenseMap<ValueInfo, const GlobalValue *>> AliasVIToGV;
 
   for (auto &F : M) {
     if (F.isDeclaration() || isMemProfClone(F))
@@ -7229,7 +7274,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               [&](const InstrProfValueData &Candidate) {
                 return findIndirectTailCallCallsite(
                     Candidate.Value, MapTailCallCalleeVIToCallsite,
-                    OrigNameGUIDToTailCallCallsite, ImportSummary, *Symtab);
+                    OrigNameGUIDToTailCallCallsite, AliasVIToGV, M,
+                    ImportSummary, *Symtab);
               },
               ICallAnalysisInfo);
           if (ICallAnalysisInfo.size() > PrevNumICallAnalysisInfo)
