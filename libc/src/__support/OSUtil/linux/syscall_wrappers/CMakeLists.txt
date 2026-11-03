@@ -1484,7 +1484,6 @@ add_header_library(
   HDRS
     copy_file_range.h
   DEPENDS
-    libc.hdr.errno_macros
     libc.hdr.types.off_t
     libc.hdr.types.size_t
     libc.hdr.types.ssize_t
