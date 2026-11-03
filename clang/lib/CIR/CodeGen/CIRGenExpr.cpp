@@ -860,10 +860,14 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
 
   // HLSL allows treating scalars as one-element vectors. Converting the scalar
   // IR value to a vector here allows the rest of codegen to behave as normal.
-  if (getLangOpts().HLSL && !mlir::isa<cir::VectorType>(vec.getType())) {
+  if (getLangOpts().HLSL &&
+      !mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) {
     cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: HLSL");
     return {};
   }
+
+  assert((mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) &&
+         "ExtVecElement with non vector or matrix type on non-HLSL mode");
 
   const mlir::ArrayAttr elts = lv.getExtVectorElts();
 
@@ -874,7 +878,14 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
     int64_t indexValue = getAccessedFieldNo(0, elts);
     cir::ConstantOp index =
         builder.getConstInt(loc, builder.getSInt64Ty(), indexValue);
-    return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
+    if (mlir::isa<cir::VectorType>(vec.getType()))
+      return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
+
+    cir::ConstantOp columnIdx =
+        builder.getConstInt(loc, builder.getSInt64Ty(), 0);
+    mlir::Value element =
+        cir::MatrixExtractOp::create(builder, loc, vec, index, columnIdx);
+    return RValue::get(element);
   }
 
   // Always use shuffle vector to try to retain the original program structure
@@ -1657,6 +1668,60 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
                                   base.getBaseInfo());
 }
 
+LValue CIRGenFunction::emitMatrixElementExpr(const MatrixElementExpr *e) {
+  LValue base;
+  if (e->getBase()->isGLValue()) {
+    base = emitLValue(e->getBase());
+  } else {
+    cgm.errorNYI(e->getSourceRange(), "emitMatrixElementExpr base not GLValue");
+    return {};
+  }
+
+  QualType resultType =
+      e->getType().withCVRQualifiers(base.getQuals().getCVRQualifiers());
+
+  // Encode the element access list into a vector of unsigned indices.
+  // getEncodedElementAccess returns row-major linearized indices.
+  SmallVector<uint32_t, 4> indices;
+  e->getEncodedElementAccess(indices);
+
+  // getEncodedElementAccess returns row-major linearized indices
+  // If the matrix memory layout is column-major, convert indices
+  // to column-major indices.
+  bool isRowMajor = isMatrixRowMajor(getLangOpts(), e->getBase()->getType());
+  if (!isRowMajor) {
+    const auto *matrixTy =
+        e->getBase()->getType()->castAs<ConstantMatrixType>();
+    unsigned numCols = matrixTy->getNumColumns();
+    for (uint32_t &idx : indices) {
+      // Decompose row-major index: Row = Idx / NumCols, Col = Idx % NumCols
+      unsigned row = idx / numCols;
+      unsigned column = idx % numCols;
+      // Re-linearize as column-major
+      idx = matrixTy->getColumnMajorFlattenedIndex(row, column);
+    }
+  }
+
+  if (base.isSimple()) {
+    Address matrixAddr = base.getAddress();
+    if (getLangOpts().HLSL &&
+        e->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant) {
+      cgm.errorNYI(
+          e->getSourceRange(),
+          "emitMatrixElementExpr simple & HLSL address space hlsl_constant");
+      return {};
+    }
+
+    SmallVector<int64_t> attrElts(indices.begin(), indices.end());
+    mlir::ArrayAttr elts = builder.getI64ArrayAttr(attrElts);
+    return LValue::makeExtVectorElt(matrixAddr, elts, resultType,
+                                    base.getBaseInfo());
+  }
+
+  cgm.errorNYI(e->getSourceRange(), "emitMatrixElementExpr not simple");
+  return {};
+}
+
 LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
                                                llvm::StringRef name) {
   cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e, name);
@@ -1906,7 +1971,9 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
       // If the member was explicitly marked as nontemporal, mark it as
       // nontemporal. If the base lvalue is marked as nontemporal, mark access
       // to children as nontemporal too.
-      cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: OpenMP");
+      assert(!cir::MissingFeatures::openMPNontemporalDecl());
+      if (baseLV.isNontemporal())
+        lv.setNontemporal(true);
     }
     return lv;
   }
@@ -2272,10 +2339,7 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     else
       emitStoreThroughLValue(rv, lv);
 
-    if (getLangOpts().OpenMP) {
-      cgm.errorNYI(e->getSourceRange(), "openmp");
-      return {};
-    }
+    assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
     return lv;
   }

@@ -22,8 +22,8 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vssrc = COPY $f1
     ; CHECK-NEXT: [[XSSUBSP:%[0-9]+]]:vssrc = nsz contract reassoc nofpexcept XSSUBSP [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[ADDIStocHA8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
-    ; CHECK-NEXT: [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
-    ; CHECK-NEXT: [[XSMADDASP:%[0-9]+]]:vssrc = nsz contract reassoc nofpexcept XSMADDASP killed [[XSSUBSP]], undef %8:vssrc, killed [[DFLOADf32_]]
+    ; CHECK-NEXT: [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
+    ; CHECK-NEXT: [[XSMADDASP:%[0-9]+]]:vssrc = nsz contract reassoc nofpexcept XSMADDASP [[XSSUBSP]], undef %8:vssrc, [[DFLOADf32_]]
     ; CHECK-NEXT: $f1 = COPY [[XSMADDASP]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $f1
     %3:vssrc = COPY $f4
@@ -32,8 +32,8 @@ body: |
     %0:vssrc = COPY $f1
     %5:vssrc = nsz contract reassoc nofpexcept XSSUBSP %2, %3
     %6:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
-    %7:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed %6 :: (load (s32) from constant-pool)
-    %8:vssrc = nsz contract reassoc nofpexcept XSMADDASP killed %5, undef %4:vssrc, killed %7
+    %7:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, %6 :: (load (s32) from constant-pool)
+    %8:vssrc = nsz contract reassoc nofpexcept XSMADDASP %5, undef %4:vssrc, %7
     $f1 = COPY %8
     BLR8 implicit $lr8, implicit $rm, implicit $f1
 ...
@@ -56,8 +56,8 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vssrc = COPY $f1
     ; CHECK-NEXT: [[XSSUBSP:%[0-9]+]]:vssrc = nsz contract reassoc nofpexcept XSSUBSP [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[ADDIStocHA8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
-    ; CHECK-NEXT: [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
-    ; CHECK-NEXT: [[XSMADDASP:%[0-9]+]]:vssrc = nsz contract reassoc nofpexcept XSMADDASP killed [[XSSUBSP]], killed [[DFLOADf32_]], undef %8:vssrc
+    ; CHECK-NEXT: [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
+    ; CHECK-NEXT: [[XSMADDASP:%[0-9]+]]:vssrc = nsz contract reassoc nofpexcept XSMADDASP [[XSSUBSP]], [[DFLOADf32_]], undef %8:vssrc
     ; CHECK-NEXT: $f1 = COPY [[XSMADDASP]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $f1
     %3:vssrc = COPY $f4
@@ -66,8 +66,8 @@ body: |
     %0:vssrc = COPY $f1
     %5:vssrc = nsz contract reassoc nofpexcept XSSUBSP %2, %3
     %6:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
-    %7:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed %6 :: (load (s32) from constant-pool)
-    %8:vssrc = nsz contract reassoc nofpexcept XSMADDASP killed %5, killed %7, undef %4:vssrc
+    %7:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, %6 :: (load (s32) from constant-pool)
+    %8:vssrc = nsz contract reassoc nofpexcept XSMADDASP %5, %7, undef %4:vssrc
     $f1 = COPY %8
     BLR8 implicit $lr8, implicit $rm, implicit $f1
 ...

@@ -707,6 +707,40 @@ bool ClauseProcessor::processNogroup(
   return markClauseOccurrence<omp::clause::Nogroup>(result.nogroup);
 }
 
+bool ClauseProcessor::processNocontext(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NocontextClauseOps &result) const {
+  const parser::CharBlock *source = nullptr;
+  if (auto *clause = findUniqueClause<omp::clause::Nocontext>(&source)) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.genLocation(*source);
+
+    mlir::Value nocontextVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.nocontext = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), nocontextVal);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNovariants(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NovariantsClauseOps &result) const {
+  const parser::CharBlock *source = nullptr;
+  if (auto *clause = findUniqueClause<omp::clause::Novariants>(&source)) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.genLocation(*source);
+
+    mlir::Value novariantsVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.novariants = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), novariantsVal);
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }
@@ -1287,7 +1321,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   std::string copyFuncName =
       fir::getTypeAsString(varType, builder.getKindMap(), "_copy");
 
-  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
+  if (auto decl = builder.getNamedFunction(copyFuncName))
     return decl;
 
   // create function
@@ -1298,6 +1332,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(builder.getMLIRSymbolTable(), funcOp);
   fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
@@ -1787,7 +1822,7 @@ bool ClauseProcessor::processLinear(
                   clause.t)) {
         mlir::Value operand =
             fir::getBase(converter.genExprValue(toEvExpr(*mod), stmtCtx));
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       } else {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1795,7 +1830,7 @@ bool ClauseProcessor::processLinear(
         mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
         mlir::Value operand =
             firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       }
 
       // Determine the linear modifier:
