@@ -16368,25 +16368,38 @@ public:
       Cost += TTI.getCastInstrCost(
           Instruction::ZExt, getWidenedType(ScalarTy, Mask.size()),
           getWidenedType(FieldTy, Mask.size()), CCH, CostKind);
-    // The extraction instructions die once the fields are emitted from the
-    // source scalar; their scalar cost is credited back for the gathers
-    // directly feeding the reduction. Instructions vectorized elsewhere are
-    // skipped: their scalar cost is already a part of the scalar baseline.
+    // The extraction instructions and their chains of single-use operands die
+    // once the fields are emitted from the source scalar; their scalar cost is
+    // credited back for the gathers directly feeding the reduction.
+    // Instructions vectorized elsewhere are skipped: their scalar cost is
+    // already a part of the scalar baseline.
     if (R.UserIgnoreList &&
-        (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0))
-      for (Instruction *I : make_isa_range<Instruction>(E.Scalars))
-        if (CheckedExtracts.insert(I).second && !R.isVectorized(I) &&
-            R.areAllUsersVectorized(I, &VectorizedVals))
-          Cost -= isa<CastInst>(I)
-                      ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
-                                             I->getOperand(0)->getType(),
-                                             TTI::getCastContextHint(I),
-                                             CostKind, I)
-                      : TTI.getArithmeticInstrCost(
-                            I->getOpcode(), I->getType(), CostKind,
-                            TTI::getOperandInfo(I->getOperand(0)),
-                            TTI::getOperandInfo(I->getOperand(1)),
-                            {I->getOperand(0), I->getOperand(1)}, I);
+        (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0)) {
+      auto GetScalarCost = [&](Instruction *I) {
+        return isa<CastInst>(I)
+                   ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
+                                          I->getOperand(0)->getType(),
+                                          TTI::getCastContextHint(I), CostKind,
+                                          I)
+                   : TTI.getArithmeticInstrCost(
+                         I->getOpcode(), I->getType(), CostKind,
+                         TTI::getOperandInfo(I->getOperand(0)),
+                         TTI::getOperandInfo(I->getOperand(1)),
+                         {I->getOperand(0), I->getOperand(1)}, I);
+      };
+      for (Instruction *I : make_isa_range<Instruction>(E.Scalars)) {
+        if (!CheckedExtracts.insert(I).second || R.isVectorized(I) ||
+            !R.areAllUsersVectorized(I, &VectorizedVals))
+          continue;
+        Cost -= GetScalarCost(I);
+        for (auto *Op = dyn_cast<Instruction>(I->getOperand(0));
+             Op && Op != Src && isa<BinaryOperator, CastInst>(Op) &&
+             Op->hasOneUse() && !R.isVectorized(Op) &&
+             CheckedExtracts.insert(Op).second;
+             Op = dyn_cast<Instruction>(Op->getOperand(0)))
+          Cost -= GetScalarCost(Op);
+      }
+    }
     return Cost;
   }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
