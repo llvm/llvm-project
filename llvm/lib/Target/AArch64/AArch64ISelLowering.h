@@ -982,6 +982,18 @@ private:
   bool hasMultipleConditionRegisters(EVT VT) const override {
     return VT.isScalableVector();
   }
+
+  bool canOpTrap(unsigned Op, EVT VT) const override {
+    switch (Op) {
+    default:
+      return false;
+    case ISD::SDIV:
+    case ISD::UDIV:
+    case ISD::SREM:
+    case ISD::UREM:
+      return !VT.isScalableVector();
+    }
+  }
 };
 
 namespace AArch64 {

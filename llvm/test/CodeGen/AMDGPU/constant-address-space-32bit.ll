@@ -1871,19 +1871,19 @@ define amdgpu_vs <2 x half> @load_v2f16(ptr addrspace(6) inreg %p0, ptr addrspac
 define amdgpu_vs <3 x half> @load_v3f16(ptr addrspace(6) inreg %p0, ptr addrspace(6) inreg %p1) #0 {
 ; GFX67-LABEL: load_v3f16:
 ; GFX67:       ; %bb.0:
-; GFX67-NEXT:    s_mov_b32 s2, s1
 ; GFX67-NEXT:    s_mov_b32 s3, 0
-; GFX67-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x4
+; GFX67-NEXT:    s_mov_b32 s2, s1
 ; GFX67-NEXT:    s_mov_b32 s1, s3
+; GFX67-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x4
 ; GFX67-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX67-NEXT:    s_lshr_b32 s2, s4, 16
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v1, s2
-; GFX67-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v2, s2
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v3, s4
+; GFX67-NEXT:    s_lshr_b32 s4, s2, 16
+; GFX67-NEXT:    s_lshr_b32 s5, s0, 16
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v1, s4
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v2, s5
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v3, s2
 ; GFX67-NEXT:    v_cvt_f32_f16_e32 v4, s0
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v0, s5
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v0, s3
 ; GFX67-NEXT:    v_cvt_f32_f16_e32 v5, s1
 ; GFX67-NEXT:    v_add_f32_e32 v1, v2, v1
 ; GFX67-NEXT:    v_cvt_f16_f32_e32 v2, v1
@@ -2019,35 +2019,35 @@ define amdgpu_vs <4 x half> @load_v4f16(ptr addrspace(6) inreg %p0, ptr addrspac
 define amdgpu_vs <6 x half> @load_v6f16(ptr addrspace(6) inreg %p0, ptr addrspace(6) inreg %p1) #0 {
 ; GFX67-LABEL: load_v6f16:
 ; GFX67:       ; %bb.0:
-; GFX67-NEXT:    s_mov_b32 s3, 0
-; GFX67-NEXT:    s_mov_b32 s2, s1
-; GFX67-NEXT:    s_mov_b32 s1, s3
-; GFX67-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x8
+; GFX67-NEXT:    s_mov_b32 s5, 0
+; GFX67-NEXT:    s_mov_b32 s4, s1
+; GFX67-NEXT:    s_mov_b32 s1, s5
 ; GFX67-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX67-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x8
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v1, s2
 ; GFX67-NEXT:    v_cvt_f32_f16_e32 v0, s6
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v1, s2
-; GFX67-NEXT:    s_lshr_b32 s2, s2, 16
-; GFX67-NEXT:    s_lshr_b32 s3, s6, 16
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v2, s3
+; GFX67-NEXT:    s_lshr_b32 s8, s2, 16
+; GFX67-NEXT:    s_lshr_b32 s6, s6, 16
+; GFX67-NEXT:    s_lshr_b32 s7, s1, 16
+; GFX67-NEXT:    s_lshr_b32 s9, s5, 16
 ; GFX67-NEXT:    v_add_f32_e32 v0, v1, v0
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v1, s2
-; GFX67-NEXT:    s_lshr_b32 s2, s5, 16
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v3, s2
-; GFX67-NEXT:    s_lshr_b32 s2, s1, 16
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v4, s2
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v1, s6
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v2, s8
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v3, s9
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v4, s7
+; GFX67-NEXT:    s_lshr_b32 s3, s0, 16
+; GFX67-NEXT:    s_lshr_b32 s2, s4, 16
 ; GFX67-NEXT:    v_cvt_f16_f32_e32 v5, v0
-; GFX67-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX67-NEXT:    v_add_f32_e32 v0, v2, v1
 ; GFX67-NEXT:    v_cvt_f16_f32_e32 v2, v0
 ; GFX67-NEXT:    v_add_f32_e32 v0, v4, v3
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v3, s1
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v6, s0
-; GFX67-NEXT:    s_lshr_b32 s1, s4, 16
-; GFX67-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX67-NEXT:    v_cvt_f32_f16_e32 v1, s5
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v3, s1
 ; GFX67-NEXT:    v_cvt_f32_f16_e32 v4, s4
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v7, s1
-; GFX67-NEXT:    v_cvt_f32_f16_e32 v8, s0
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v6, s0
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v7, s2
+; GFX67-NEXT:    v_cvt_f32_f16_e32 v8, s3
 ; GFX67-NEXT:    v_add_f32_e32 v1, v3, v1
 ; GFX67-NEXT:    v_add_f32_e32 v3, v6, v4
 ; GFX67-NEXT:    v_cvt_f16_f32_e32 v0, v0

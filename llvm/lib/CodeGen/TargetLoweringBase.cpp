@@ -1058,7 +1058,6 @@ EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
 }
 
 bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
-  assert(isTypeLegal(VT));
   switch (Op) {
   default:
     return false;
