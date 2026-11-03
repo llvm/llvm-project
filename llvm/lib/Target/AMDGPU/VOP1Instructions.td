@@ -236,6 +236,7 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
 }
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+let CoexecYoungerGFX942 = CoexecA, CoexecOlderGFX942 = CoexecA in
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit],
@@ -251,6 +252,7 @@ def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
 
 // FIXME: Specify SchedRW for READFIRSTLANE_B32
 // TODO: There is VOP3 encoding also
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecA in
 def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
                                        [], 1> {
   let isConvergent = 1;
@@ -375,6 +377,7 @@ let SubtargetPredicate = HasTanhInsts in
 defm V_TANH_F32 : VOP1Inst <"v_tanh_f32", VOP_F32_F32, int_amdgcn_tanh>;
 } // End TRANS = 1, SchedRW = [WriteTrans32], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
+let CoexecYoungerGFX942 = CoexecA in
 defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
 defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, DivergentUnaryFrag<bitreverse>>;
 defm V_FFBH_U32 : VOP1Inst <"v_ffbh_u32", VOP_I32_I32, AMDGPUffbh_u32>;
@@ -651,6 +654,7 @@ def VOP_SWAP_I32 : VOPProfile<[i32, i32, untyped, untyped]> {
 
 let SubtargetPredicate = isGFX9Plus in {
   let GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
+  let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecC in
   def V_SWAP_B32 : VOP1_Pseudo<"v_swap_b32", VOP_SWAP_I32, [], 1> {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
     let SchedRW = [Write64Bit, Write64Bit];
@@ -691,7 +695,9 @@ let SubtargetPredicate = HasCvtFP8SDWASrcSel, mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
   defm V_CVT_F32_FP8    : VOP1Inst<"v_cvt_f32_fp8", VOPProfileCVT_F32_F8>;
   defm V_CVT_F32_BF8    : VOP1Inst<"v_cvt_f32_bf8", VOPProfileCVT_F32_F8>;
+  let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecC in
   defm V_CVT_PK_F32_FP8 : VOP1Inst<"v_cvt_pk_f32_fp8", VOPProfileCVT_PK_F32_F8>;
+  let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecC in
   defm V_CVT_PK_F32_BF8 : VOP1Inst<"v_cvt_pk_f32_bf8", VOPProfileCVT_PK_F32_F8>;
 }
 
@@ -910,6 +916,7 @@ def VOPProfileAccMov : VOP_NO_EXT<VOP_I32_I32> {
   let Asm32 = " $vdst, $src0";
 }
 
+let CoexecYoungerGFX942 = CoexecA, CoexecOlderGFX942 = CoexecA in
 def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1> {
   let SubtargetPredicate = isGFX90APlus;
   let isReMaterializable = 1;
@@ -949,10 +956,12 @@ let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
      SchedRW = [Write32Bit, WriteVALUDummy],
      isConvergent = 1, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 let SubtargetPredicate = HasPermlane16Swap in {
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecC in
 defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP>;
 }
 
 let SubtargetPredicate = HasPermlane32Swap in {
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecC in
 defm V_PERMLANE32_SWAP_B32 : VOP1Inst<"v_permlane32_swap_b32", VOP_PERMLANE_SWAP>;
 }
 }

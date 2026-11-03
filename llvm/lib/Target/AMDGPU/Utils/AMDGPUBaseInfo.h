@@ -144,6 +144,14 @@ struct WMMAInstInfo {
   WMMAVariant CoExecVariant;
 };
 
+struct VOPCoexecClassInfo {
+  uint32_t Opcode;
+  uint8_t CoexecYoungerGFX942;
+  uint8_t CoexecOlderGFX942;
+  uint8_t CoexecYoungerGFX950;
+  uint8_t CoexecOlderGFX950;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -155,6 +163,7 @@ struct WMMAInstInfo {
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
 #define GET_True16D16Table_DECL
 #define GET_WMMAInstInfoTable_DECL
+#define GET_VOPCoexecClassTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 using TargetIDSetting = AMDGPU::TargetIDSetting;
