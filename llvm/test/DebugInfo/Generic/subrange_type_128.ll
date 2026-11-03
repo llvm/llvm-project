@@ -1,5 +1,8 @@
 ;; Check output of DISubrangeType with 128-bit values.
 
+; AIX doesn't currently support DWARF 5.
+; XFAIL: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
+
 ; RUN: %llc_dwarf -filetype=obj --dwarf-version=5 -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; CHECK: DW_TAG_array_type
@@ -7,8 +10,8 @@
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_subrange_type
 ; CHECK-NOT: NULL
-; CHECK: DW_AT_lower_bound (f0ffffffffffffff0000000000000000)
-; CHECK-NEXT: DW_AT_upper_bound (00000000000000000100000000000000)
+; CHECK: DW_AT_lower_bound (05050505050505050505050505050505)
+; CHECK-NEXT: DW_AT_upper_bound (70707070707070707070707070707070)
 
 ; ModuleID = 'subrange_type.ll'
 source_filename = "/dir/subrange_type.adb"
@@ -27,7 +30,7 @@ source_filename = "/dir/subrange_type.adb"
 !8 = !{null}
 !9 = !{!10}
 !10 = !DILocalVariable(name: "x", scope: !6, file: !3, line: 3, type: !31, align: 32)
-!11 = !DISubrangeType(name: "sr__int_range", file: !3, line: 2, size: 32, align: 32, baseType: !12, lowerBound: i128 18446744073709551600, upperBound: i128 18446744073709551616)
+!11 = !DISubrangeType(name: "sr__int_range", file: !3, line: 2, size: 32, align: 32, baseType: !12, lowerBound: i128 6672203272959577714968129557485651205, upperBound: i128 149457353314294540815286102087678586992)
 !12 = !DIBasicType(name: "sr__Tint_rangeB", size: 32, encoding: DW_ATE_signed)
 !13 = !DILocation(line: 3, column: 4, scope: !6)
 !14 = !DILocation(line: 6, column: 5, scope: !6)

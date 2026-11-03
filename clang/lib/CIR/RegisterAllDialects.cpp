@@ -8,6 +8,7 @@
 
 #include "clang/CIR/InitAllDialects.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -24,9 +25,10 @@ namespace cir {
 void registerAllDialects(mlir::DialectRegistry &registry) {
   // The LLVM dialect is needed to parse CIR: data layout specs use LLVM
   // pointer types as keys.
-  registry.insert<mlir::BuiltinDialect, cir::CIRDialect, mlir::DLTIDialect,
-                  mlir::LLVM::LLVMDialect, mlir::omp::OpenMPDialect,
-                  mlir::acc::OpenACCDialect>();
+  registry
+      .insert<mlir::BuiltinDialect, cir::CIRDialect, mlir::arith::ArithDialect,
+              mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
+              mlir::omp::OpenMPDialect, mlir::acc::OpenACCDialect>();
   // Register extensions to integrate CIR types with OpenACC and OpenMP.
   cir::omp::registerOpenMPExtensions(registry);
   cir::acc::registerOpenACCExtensions(registry);

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/netinet_in_macros.h"
+#include "hdr/netinet_tcp_macros.h"
 #include "hdr/sys_socket_macros.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_linger.h"
@@ -81,6 +83,42 @@ TEST_F(LlvmLibcSocketOptTest, BasicSocketOpt) {
   ASSERT_EQ(lin.l_onoff, 1);
   ASSERT_EQ(lin.l_linger, 5);
   ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(lin)));
+}
+
+TEST_F(LlvmLibcSocketOptTest, TcpSocketOpt) {
+  static_assert(SOL_TCP == IPPROTO_TCP);
+
+  int sock = LIBC_NAMESPACE::socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(sock, 0);
+  scope_exit close_sock(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0)); });
+
+  static constexpr socklen_t INT_OPTLEN = sizeof(int);
+
+  int optval = 1;
+  socklen_t optlen = INT_OPTLEN;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::setsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, optlen),
+      Succeeds(0));
+
+  optval = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::getsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, &optlen),
+      Succeeds(0));
+  ASSERT_EQ(optval, 1);
+  ASSERT_EQ(optlen, INT_OPTLEN);
+
+  optval = 47;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen),
+      Succeeds(0));
+
+  optval = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::getsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, &optlen),
+      Succeeds(0));
+  ASSERT_EQ(optval, 47);
+  ASSERT_EQ(optlen, INT_OPTLEN);
 }
 
 TEST_F(LlvmLibcSocketOptTest, NotASocket) {
