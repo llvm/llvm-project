@@ -224,6 +224,48 @@ static bool shouldLoopVersion(const ArgList &Args, options::ID PosFlag,
   return false;
 }
 
+/// Return the kind of split DWARF that \p JA generates, or None if it generates
+/// none. Diagnoses a -gsplit-dwarf that cannot be honoured.
+static DwarfFissionKind
+getSplitDWARFKind(const ArgList &Args, const JobAction &JA, const ToolChain &TC,
+                  llvm::codegenoptions::DebugInfoKind DebugInfoKind) {
+  const Driver &D = TC.getDriver();
+  if (Args.hasArg(options::OPT_gsplit_dwarf) ||
+      Args.hasArg(options::OPT_gsplit_dwarf_EQ)) {
+    // FIXME: -gsplit-dwarf on AIX is currently unimplemented.
+    if (TC.getTriple().isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << Args.getLastArg(options::OPT_gsplit_dwarf)->getSpelling()
+          << TC.getTriple().str();
+      return DwarfFissionKind::None;
+    }
+    if (DebugInfoKind == llvm::codegenoptions::NoDebugInfo)
+      return DwarfFissionKind::None;
+
+    Arg *SplitDWARFArg;
+    DwarfFissionKind DwarfFission = getDebugFissionKind(D, Args, SplitDWARFArg);
+
+    if (DwarfFission == DwarfFissionKind::None ||
+        !checkDebugInfoOption(SplitDWARFArg, Args, D, TC))
+      return DwarfFissionKind::None;
+
+    if (!TC.getTriple().isOSBinFormatELF() &&
+        !TC.getTriple().isOSBinFormatWasm() &&
+        !TC.getTriple().isOSBinFormatCOFF()) {
+      D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
+          << SplitDWARFArg->getSpelling() << TC.getTriple().str();
+      return DwarfFissionKind::None;
+    }
+
+    if (!isa<AssembleJobAction>(JA) && !isa<CompileJobAction>(JA) &&
+        isa<BackendJobAction>(JA))
+      return DwarfFissionKind::None;
+
+    return DwarfFission;
+  }
+  return DwarfFissionKind::None;
+}
+
 void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                             const InputInfo &Output, const InputInfo &Input,
                             llvm::opt::ArgStringList &CmdArgs) const {
@@ -273,37 +315,10 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
   }
-  if (Args.hasArg(options::OPT_gsplit_dwarf) ||
-      Args.hasArg(options::OPT_gsplit_dwarf_EQ)) {
-    // FIXME: -gsplit-dwarf on AIX is currently unimplemented.
-    if (TC.getTriple().isOSAIX()) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << Args.getLastArg(options::OPT_gsplit_dwarf)->getSpelling()
-          << TC.getTriple().str();
-      return;
-    }
-    if (DebugInfoKind == llvm::codegenoptions::NoDebugInfo)
-      return;
 
-    Arg *SplitDWARFArg;
-    DwarfFissionKind DwarfFission = getDebugFissionKind(D, Args, SplitDWARFArg);
-
-    if (DwarfFission == DwarfFissionKind::None ||
-        !checkDebugInfoOption(SplitDWARFArg, Args, D, TC))
-      return;
-
-    if (!TC.getTriple().isOSBinFormatELF() &&
-        !TC.getTriple().isOSBinFormatWasm() &&
-        !TC.getTriple().isOSBinFormatCOFF()) {
-      D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
-          << SplitDWARFArg->getSpelling() << TC.getTriple().str();
-      return;
-    }
-
-    if (!isa<AssembleJobAction>(JA) && !isa<CompileJobAction>(JA) &&
-        isa<BackendJobAction>(JA))
-      return;
-
+  DwarfFissionKind DwarfFission =
+      getSplitDWARFKind(Args, JA, TC, DebugInfoKind);
+  if (DwarfFission != DwarfFissionKind::None) {
     const char *SplitDWARFOut = SplitDebugName(JA, Args, Input, Output);
     CmdArgs.push_back("-split-dwarf-file");
     CmdArgs.push_back(SplitDWARFOut);
@@ -311,6 +326,22 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back("-split-dwarf-output");
       CmdArgs.push_back(SplitDWARFOut);
     }
+  }
+
+  // Handle name table requests (-gpubnames, -ggnu-pubnames). As in clang,
+  // split DWARF implies -ggnu-pubnames unless one of these says otherwise.
+  // TODO: Clang does not imply it when tuning for LLDB. Add that exception once
+  // flang has debugger tuning options (-glldb, -ggdb).
+  const Arg *PubnamesArg =
+      Args.getLastArg(options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
+                      options::OPT_gpubnames, options::OPT_gno_pubnames);
+  if (DwarfFission != DwarfFissionKind::None ||
+      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC))) {
+    if (!PubnamesArg ||
+        PubnamesArg->getOption().matches(options::OPT_ggnu_pubnames))
+      CmdArgs.push_back("-ggnu-pubnames");
+    else if (PubnamesArg->getOption().matches(options::OPT_gpubnames))
+      CmdArgs.push_back("-gpubnames");
   }
 
   // Handle compressed debug sections (-gz).
