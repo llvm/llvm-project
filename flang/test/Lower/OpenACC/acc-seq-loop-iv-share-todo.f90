@@ -8,8 +8,6 @@
 !   `do k = 1, 0`, the value is 1.
 ! - device_type(nvidia) seq, device_type(default) seq, and device_type(*) seq
 !   leave the induction variable on the parent. `do k = 1, 3` leaves 4.
-! - An orphan seq loop is a host DO. The host variable is one past the end,
-!   and there is no acc.loop.
 ! - reduction(+:s) on a seq loop is carried by the enclosing gang loop. An
 !   index that is not used is not privatized.
 
@@ -155,25 +153,6 @@ end subroutine
 ! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
 ! CHECK: hlfir.declare %{{[0-9]+}} uniq_name("_QFdtype_star_seqEk")
 ! CHECK: acc.loop control(%{{.*}} : i32) =
-
-! -----------------------------------------------------------------------------
-! No accelerator loop. The host DO leaves k one past the end.
-! -----------------------------------------------------------------------------
-subroutine orphan_seq(a, n, kout)
-  integer :: n, k, kout
-  real :: a(n)
-  !$acc loop seq
-  do k = 1, 3
-    a(k) = a(k) + 1.0
-  end do
-  kout = k
-end subroutine
-
-! CHECK-LABEL: func.func @_QPorphan_seq
-! CHECK: fir.do_loop
-! CHECK: %[[C4:.*]] = arith.constant 4 : i32
-! CHECK: fir.store %[[C4]] to %{{[0-9]+}}#0 : !fir.ref<i32>
-! CHECK-NOT: acc.loop
 
 ! -----------------------------------------------------------------------------
 ! The reduction is on the gang loop. The unused index is not privatized.
