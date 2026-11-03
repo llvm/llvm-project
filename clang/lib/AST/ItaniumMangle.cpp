@@ -4315,8 +4315,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
-  assert((isRVVFixedLengthDataVectorKind(T->getVectorKind()) ||
-          isRVVFixedLengthMaskVectorKind(T->getVectorKind())) &&
+  assert(isRVVFixedLengthVectorKind(T->getVectorKind()) &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4381,12 +4380,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   // Append the LMUL suffix of a data type, or the ratio of a mask type. Both
   // are recorded in the vector kind, so the mangled name names the type the
   // typedef was written against and does not depend on VLEN.
-  if (isRVVFixedLengthDataVectorKind(T->getVectorKind())) {
-    TypeNameOS << getRVVFixedLengthDataLMulString(T->getVectorKind());
-  } else {
-    TypeNameOS << (1u << getRVVFixedLengthMaskRatioLog2(T->getVectorKind()));
-  }
-  TypeNameOS << "_t";
+  TypeNameOS << getRVVFixedLengthString(T->getVectorKind()) << "_t";
 
   Out << "9__RVV_VLSI";
   mangleVendorType(TypeNameStr);
@@ -4424,8 +4418,7 @@ void CXXNameMangler::mangleType(const VectorType *T) {
              T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (isRVVFixedLengthDataVectorKind(T->getVectorKind()) ||
-             isRVVFixedLengthMaskVectorKind(T->getVectorKind())) {
+  } else if (isRVVFixedLengthVectorKind(T->getVectorKind())) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }

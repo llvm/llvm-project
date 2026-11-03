@@ -593,8 +593,7 @@ RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(QualType Ty) const {
     return nullptr;
 
   auto IsFixedLengthRVVVector = [](const VectorType *VT) {
-    return isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
-           isRVVFixedLengthMaskVectorKind(VT->getVectorKind());
+    return isRVVFixedLengthVectorKind(VT->getVectorKind());
   };
 
   QualType CommonTy;
@@ -853,8 +852,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/419
   if (const VectorType *VT = Ty->getAs<VectorType>();
       VT && !VT->getElementType()->isBitIntType()) {
-    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
-        isRVVFixedLengthMaskVectorKind(VT->getVectorKind()))
+    if (isRVVFixedLengthVectorKind(VT->getVectorKind()))
       return coerceVLSVector(Ty);
     if (VT->getVectorKind() == VectorKind::Generic && ABIVLen != 0)
       // Generic vector without riscv_vls_cc should fall through and pass by

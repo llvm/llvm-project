@@ -4335,29 +4335,6 @@ inline int getRVVFixedLengthDataLMulLog2(VectorKind VK) {
   }
 }
 
-/// Return the LMUL of an RVV fixed-length data vector kind as a string,
-/// "mf8" .. "m8".
-inline StringRef getRVVFixedLengthDataLMulString(VectorKind VK) {
-  switch (VK) {
-  case VectorKind::RVVFixedLengthData_MF8:
-    return "mf8";
-  case VectorKind::RVVFixedLengthData_MF4:
-    return "mf4";
-  case VectorKind::RVVFixedLengthData_MF2:
-    return "mf2";
-  case VectorKind::RVVFixedLengthData_M1:
-    return "m1";
-  case VectorKind::RVVFixedLengthData_M2:
-    return "m2";
-  case VectorKind::RVVFixedLengthData_M4:
-    return "m4";
-  case VectorKind::RVVFixedLengthData_M8:
-    return "m8";
-  default:
-    llvm_unreachable("not an RVV fixed-length data vector kind");
-  }
-}
-
 /// Inverse of getRVVFixedLengthDataLMulLog2().
 inline VectorKind getRVVFixedLengthDataVectorKind(int LMulLog2) {
   switch (LMulLog2) {
@@ -4460,6 +4437,38 @@ inline unsigned getRVVFixedLengthMaskRatioLog2(VectorKind VK) {
   default:
     llvm_unreachable("not an RVV fixed-length mask vector kind");
   }
+}
+
+/// True if \p VK is one of the RVV fixed-length data or mask vector kinds.
+inline bool isRVVFixedLengthVectorKind(VectorKind VK) {
+  return isRVVFixedLengthDataVectorKind(VK) ||
+         isRVVFixedLengthMaskVectorKind(VK);
+}
+
+/// Return the LMUL of an RVV fixed-length data vector kind, "mf8" .. "m8", or
+/// the ratio of a mask vector kind, "1" .. "64".
+inline StringRef getRVVFixedLengthString(VectorKind VK) {
+  switch (VK) {
+  case VectorKind::RVVFixedLengthData_MF8:
+    return "mf8";
+  case VectorKind::RVVFixedLengthData_MF4:
+    return "mf4";
+  case VectorKind::RVVFixedLengthData_MF2:
+    return "mf2";
+  case VectorKind::RVVFixedLengthData_M1:
+    return "m1";
+  case VectorKind::RVVFixedLengthData_M2:
+    return "m2";
+  case VectorKind::RVVFixedLengthData_M4:
+    return "m4";
+  case VectorKind::RVVFixedLengthData_M8:
+    return "m8";
+  default:
+    break;
+  }
+  static constexpr const char *Ratios[] = {"1",  "2",  "4", "8",
+                                           "16", "32", "64"};
+  return Ratios[getRVVFixedLengthMaskRatioLog2(VK)];
 }
 
 /// Return the number of lanes (1, 2 or 4) of an RVV fixed-length mask vector

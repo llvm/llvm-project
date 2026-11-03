@@ -751,19 +751,13 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
     JOS.attribute("vectorKind", "fixed-length sve predicate vector");
     break;
   default:
-    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind())) {
-      JOS.attribute(
-          "vectorKind",
-          "fixed-length rvv data vector lmul " +
-              getRVVFixedLengthDataLMulString(VT->getVectorKind()).str());
-    } else {
-      assert(isRVVFixedLengthMaskVectorKind(VT->getVectorKind()) &&
-             "unexpected vector kind");
-      JOS.attribute("vectorKind",
-                    "fixed-length rvv mask vector ratio " +
-                        std::to_string(1u << getRVVFixedLengthMaskRatioLog2(
-                                           VT->getVectorKind())));
-    }
+    assert(isRVVFixedLengthVectorKind(VT->getVectorKind()) &&
+           "unexpected vector kind");
+    JOS.attribute("vectorKind",
+                  (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())
+                       ? "fixed-length rvv mask vector ratio "
+                       : "fixed-length rvv data vector lmul ") +
+                      getRVVFixedLengthString(VT->getVectorKind()).str());
     break;
   }
 }

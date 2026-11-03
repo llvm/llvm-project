@@ -719,9 +719,7 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     printBefore(T->getElementType(), OS);
     break;
   default:
-    // The RVV fixed-length data and mask kinds.
-    assert((isRVVFixedLengthDataVectorKind(T->getVectorKind()) ||
-            isRVVFixedLengthMaskVectorKind(T->getVectorKind())) &&
+    assert(isRVVFixedLengthVectorKind(T->getVectorKind()) &&
            "unexpected vector kind");
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
@@ -806,9 +804,7 @@ void TypePrinter::printDependentVectorBefore(
     printBefore(T->getElementType(), OS);
     break;
   default:
-    // The RVV fixed-length data and mask kinds.
-    assert((isRVVFixedLengthDataVectorKind(T->getVectorKind()) ||
-            isRVVFixedLengthMaskVectorKind(T->getVectorKind())) &&
+    assert(isRVVFixedLengthVectorKind(T->getVectorKind()) &&
            "unexpected vector kind");
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.

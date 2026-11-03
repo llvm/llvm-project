@@ -2156,8 +2156,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     else if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       // Adjust the alignment for fixed-length SVE predicates.
       Align = 16;
-    else if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
-             isRVVFixedLengthMaskVectorKind(VT->getVectorKind()))
+    else if (isRVVFixedLengthVectorKind(VT->getVectorKind()))
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
     // Vector types have their natural alignment resist reduction by
@@ -10769,10 +10768,8 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       First->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
       Second->getVectorKind() != VectorKind::SveFixedLengthData &&
       Second->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
-      !isRVVFixedLengthDataVectorKind(First->getVectorKind()) &&
-      !isRVVFixedLengthDataVectorKind(Second->getVectorKind()) &&
-      !isRVVFixedLengthMaskVectorKind(First->getVectorKind()) &&
-      !isRVVFixedLengthMaskVectorKind(Second->getVectorKind()))
+      !isRVVFixedLengthVectorKind(First->getVectorKind()) &&
+      !isRVVFixedLengthVectorKind(Second->getVectorKind()))
     return true;
 
   // In OpenCL, treat half and _Float16 vector types as compatible.
