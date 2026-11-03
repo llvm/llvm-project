@@ -687,17 +687,24 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     if (needsBinding(sym))
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      addNonLazyPointerEntry(sym);
+    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym)) {
+      if (usesAuthGot(isec))
+        in.authGot->addEntry(sym);
+      else
+        addNonLazyPointerEntry(sym);
+    }
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
       addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
-    // need of rebase opcodes.
-    if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
-      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend());
+    // need of rebase opcodes. Authenticated pointers are pointers, not offsets.
+    bool isAuth = relocAttrs.hasAttr(RelocAttrBits::AUTH);
+    if (isAuth ||
+        !(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
+      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend(),
+                               /*forceOutlineAuth=*/isAuth);
   }
 }
 
@@ -1327,8 +1334,15 @@ void Writer::buildFixupChains() {
       }
 
       // The "next" field is in the same location for bind and rebase entries.
-      reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-          ->next = offset / ChainedFixupsSection::chainStride;
+      uint8_t *prev = buf + loc[i - 1].offset;
+      if (config->arch() == AK_arm64e) {
+        auto *entry =
+            reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(prev);
+        entry->next = offset / ChainedFixupsSection::chainStride();
+      } else {
+        auto *entry = reinterpret_cast<dyld_chained_ptr_64_bind *>(prev);
+        entry->next = offset / ChainedFixupsSection::chainStride();
+      }
       ++i;
     }
   }
@@ -1438,6 +1452,8 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
+  if (config->arch() == AK_arm64e)
+    in.authGot = make<AuthGotSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();

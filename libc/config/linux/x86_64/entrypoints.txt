@@ -1602,6 +1602,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # signal.h entrypoints
     libc.src.signal.kill
+    libc.src.signal.killpg
     libc.src.signal.pthread_kill
     libc.src.signal.pthread_sigmask
     libc.src.signal.raise
@@ -1614,6 +1615,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigismember
     libc.src.signal.signal
     libc.src.signal.sigprocmask
+    libc.src.signal.sigsuspend
 
     # spawn.h entrypoints
     libc.src.spawn.posix_spawn

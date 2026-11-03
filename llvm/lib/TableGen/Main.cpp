@@ -19,7 +19,6 @@
 #include "TGParser.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -127,20 +126,13 @@ static int WriteOutput(const char *argv0, StringRef Filename,
         return 0;
   }
   std::error_code EC;
-  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
+  // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
+  // OF_ForceUTF8 has no effect on other platforms.
+  ToolOutputFile OutFile(Filename, EC,
+                         sys::fs::OF_Text | sys::fs::OF_ForceUTF8);
   if (EC)
     return reportError(argv0, "error opening " + Filename + ": " +
                                   EC.message() + "\n");
-#ifdef __MVS__
-  // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
-  // Tag the file as UTF-8 before any content is written.
-  if (Filename != "-") {
-    EC = setzOSFileTag(OutFile.os().get_fd(), CCSID_UTF_8, /*IsText=*/true);
-    if (EC)
-      return reportError(argv0, "error tagging " + Filename + ": " +
-                                    EC.message() + "\n");
-  }
-#endif
   OutFile.os() << Content;
   if (ErrorsPrinted == 0)
     OutFile.keep();
