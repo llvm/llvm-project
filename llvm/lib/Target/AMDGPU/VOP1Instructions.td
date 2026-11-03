@@ -240,6 +240,7 @@ defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit],
     GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
+let IsDPMACCInstruction = 1 in
 defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
@@ -275,6 +276,7 @@ let IsDPMACCInstruction = 1 in
 defm V_CVT_I32_F64 : VOP1Inst <"v_cvt_i32_f64", VOP_I32_F64_SPECIAL_OMOD,  fp_to_sint>;
 
 let mayRaiseFPException = 0 in {
+let IsDPMACCInstruction = 1 in
 defm V_CVT_F64_I32 : VOP1Inst <"v_cvt_f64_i32", VOP1_F64_I32, sint_to_fp>;
 }
 
@@ -283,9 +285,11 @@ defm V_CVT_F32_F64 : VOP1Inst <"v_cvt_f32_f64", VOP_F32_F64,  fpround>;
 // OMod clears exceptions when set in this instruction
 defm V_CVT_U32_F64 : VOP1Inst <"v_cvt_u32_f64", VOP_I32_F64_SPECIAL_OMOD,  fp_to_uint>;
 } // IsDPMACCInstruction = 1
+let IsDPMACCInstruction = 1 in
 defm V_CVT_F64_F32 : VOP1Inst <"v_cvt_f64_f32", VOP_F64_F32,  any_fpextend>;
 
 let mayRaiseFPException = 0 in {
+let IsDPMACCInstruction = 1 in
 defm V_CVT_F64_U32 : VOP1Inst <"v_cvt_f64_u32", VOP1_F64_I32, uint_to_fp>;
 }
 
