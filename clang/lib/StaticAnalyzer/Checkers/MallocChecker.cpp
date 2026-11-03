@@ -826,7 +826,7 @@ private:
   ///   but could be known to free a particular symbol. In this case, false is
   ///   returned and the single escaping symbol is returned through the out
   ///   parameter.
-  bool ignoreDirectEscapeTo(const CallEvent *Call, ProgramStateRef State,
+  bool ignoreDirectEscapeTo(const CallEvent *Call,
                             SymbolRef &EscapingSymbol) const;
 
   /// Implementation of the checkPointerEscape callbacks.
@@ -3722,7 +3722,6 @@ ProgramStateRef MallocChecker::evalAssume(ProgramStateRef state,
 }
 
 bool MallocChecker::ignoreDirectEscapeTo(const CallEvent *Call,
-                                         ProgramStateRef State,
                                          SymbolRef &EscapingSymbol) const {
   assert(Call);
   EscapingSymbol = nullptr;
@@ -3922,7 +3921,7 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
     if (isa<SimpleFunctionCall>(Call) && isMemCall(*Call))
       return State;
     // If we know that the call cannot release memory, don't discard state.
-    if (ignoreDirectEscapeTo(Call, State, EscapingSymbol))
+    if (ignoreDirectEscapeTo(Call, EscapingSymbol))
       return State;
   }
 
