@@ -51,6 +51,8 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
 llvm::omp::target::plugin::DeviceImageTy *
 __ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
+llvm::omp::target::plugin::PluginContextTy *
+__ol_tgt_GetPluginContext(ol_context_handle_t Context);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -157,6 +159,8 @@ llvm::Error DeviceTy::init() {
   if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
                         &Backend))
     Backend = OL_PLATFORM_BACKEND_UNKNOWN;
+
+  MaxDirectWriteSize = getInfo<uint64_t>(OL_DEVICE_INFO_MAX_DIRECT_WRITE_SIZE);
 
   getInfoString(OL_DEVICE_INFO_UID, Uid);
   if (Uid.empty())
@@ -409,6 +413,10 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   return Program;
 }
 
+llvm::omp::target::plugin::PluginContextTy *DeviceTy::getPluginContext() {
+  return llvm::offload::tmp::__ol_tgt_GetPluginContext(Context);
+}
+
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
@@ -417,7 +425,24 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
                     DeviceID, HstPtr, &TargetPtr, Size,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
+  auto *PluginCtx = getPluginContext();
+  if (!PluginCtx) {
+    REPORT() << "Failure to allocate device memory: device " << DeviceID
+             << " has no context";
+    return nullptr;
+  }
+
+  auto AllocOrErr =
+      PluginCtx->allocate(RTL->getDevice(RTLDeviceID), Size, HstPtr,
+                          static_cast<TargetAllocTy>(Kind), /*Alignment=*/0);
+  if (!AllocOrErr) {
+    REPORT() << "Failure to allocate device memory: "
+             << llvm::toString(AllocOrErr.takeError());
+    return nullptr;
+  }
+  assert(*AllocOrErr && "Null pointer upon successful allocation");
+
+  TargetPtr = *AllocOrErr;
   return TargetPtr;
 }
 
@@ -428,7 +453,22 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
                     DeviceID, TgtAllocBegin,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
+  auto *PluginCtx = getPluginContext();
+  if (!PluginCtx) {
+    REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin
+             << ": device " << DeviceID << " has no context";
+    return OFFLOAD_FAIL;
+  }
+
+  if (auto Err =
+          PluginCtx->deallocate(RTL->getDevice(RTLDeviceID), TgtAllocBegin,
+                                static_cast<TargetAllocTy>(Kind))) {
+    REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
+             << llvm::toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
 }
 
 llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size,
@@ -469,6 +509,17 @@ int32_t DeviceTy::submitDataSync(void *TgtPtrBegin, void *HstPtrBegin,
                                  const ident_t *Loc, const char *Name) {
   return submitDataImpl(TgtPtrBegin, HstPtrBegin, Size, /*Queue=*/nullptr,
                         Entry, HDTTMapPtr, Loc, Name);
+}
+
+int32_t DeviceTy::submitDataIndependently(void *TgtPtrBegin, void *HstPtrBegin,
+                                          int64_t Size, AsyncInfoTy &AsyncInfo,
+                                          const char *Name) {
+  if (Size > 0 && uint64_t(Size) <= MaxDirectWriteSize)
+    return submitDataSync(TgtPtrBegin, HstPtrBegin, Size, /*Entry=*/nullptr,
+                          /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr, Name);
+  return submitData(TgtPtrBegin, HstPtrBegin, Size, AsyncInfo,
+                    /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                    Name);
 }
 
 int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
@@ -794,12 +845,13 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  if (Device.submitData(*AllocOrErr, &LocalKLE,
-                        sizeof(KernelLaunchEnvironmentTy), AsyncInfo,
-                        /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
-                        /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv"))
+  if (Device.submitDataIndependently(*AllocOrErr, &LocalKLE,
+                                     sizeof(KernelLaunchEnvironmentTy),
+                                     AsyncInfo, "KernelLaunchEnv"))
     return createError(ErrorCode::BackendFailure,
-                       "failed to copy the kernel launch environment");
+                       "failed to copy the kernel launch environment to "
+                       "device %d",
+                       Device.DeviceID);
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
