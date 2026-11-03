@@ -1541,9 +1541,9 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
 ///
 /// The procedure record has them as the offsets DbgStart and DbgEnd. Either
 /// is 0 if the producer didn't provide it.
-template <typename LineSet>
-static void MarkPrologueAndEpilogue(LineSet &line_set, lldb::addr_t func_addr,
-                                    const ProcSym &proc) {
+void SymbolFileNativePDB::MarkPrologueAndEpilogue(LineSet &line_set,
+                                                  lldb::addr_t func_addr,
+                                                  const ProcSym &proc) {
   auto entry_containing = [&](lldb::addr_t addr) {
     auto it = line_set.upper_bound(
         LineTable::Entry(addr, 0, 0, 0, false, false, false, false, false));
@@ -1602,7 +1602,7 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
   // in this CU. Add line entries into the set first so that if there are line
   // entries with same addres, the later is always more accurate than the
   // former.
-  std::set<LineTable::Entry, LineTableEntryComparator> line_set;
+  LineSet line_set;
 
   // This is basically a copy of the .debug$S subsections from all original COFF
   // object files merged together with address relocations applied.  We are
@@ -1694,9 +1694,15 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     uint32_t record_offset = iter.offset();
     CVSymbol func_record =
         cii->m_debug_stream.readSymbolAtOffset(record_offset);
-    SegmentOffsetLength sol = GetSegmentOffsetAndLength(func_record);
+    ProcSym proc(static_cast<SymbolRecordKind>(func_record.kind()));
+    if (llvm::Error error =
+            SymbolDeserializer::deserializeAs<ProcSym>(func_record, proc)) {
+      llvm::consumeError(std::move(error));
+      iter = syms.at(getScopeEndOffset(func_record));
+      continue;
+    }
     addr_t file_vm_addr =
-        m_index->MakeVirtualAddress(sol.so.segment, sol.so.offset);
+        m_index->MakeVirtualAddress(proc.Segment, proc.CodeOffset);
     if (file_vm_addr == LLDB_INVALID_ADDRESS) {
       iter = syms.at(getScopeEndOffset(func_record));
       continue;
@@ -1727,12 +1733,7 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     };
     ParseSymbolArrayInScope(func_id, parse_inline_sites);
 
-    ProcSym proc(static_cast<SymbolRecordKind>(func_record.kind()));
-    if (llvm::Error error =
-            SymbolDeserializer::deserializeAs<ProcSym>(func_record, proc))
-      llvm::consumeError(std::move(error));
-    else
-      MarkPrologueAndEpilogue(line_set, file_vm_addr, proc);
+    MarkPrologueAndEpilogue(line_set, file_vm_addr, proc);
 
     // Jump to the end of the function record.
     iter = syms.at(getScopeEndOffset(func_record));
