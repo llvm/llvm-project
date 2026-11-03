@@ -32,6 +32,8 @@ struct GpuIdOpInterface
     auto translateConstraint = [&](Value v, const ConstantIntRanges &range) {
       assert(v == value &&
              "GPU ID op inferring values for something that's not its result");
+      if (!range.hasBounds())
+        return;
       cstr.bound(v) >= range.smin().getSExtValue();
       cstr.bound(v) <= range.smax().getSExtValue();
     };

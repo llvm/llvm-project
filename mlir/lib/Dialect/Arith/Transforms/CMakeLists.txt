@@ -33,6 +33,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRTensorDialect
   MLIRTransforms
   MLIRTransformUtils
+  MLIRUBDialect
   MLIRValueBoundsOpInterface
   MLIRVectorDialect
   )

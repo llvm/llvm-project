@@ -683,6 +683,30 @@ func.func @select_undefined_union(%arg0: i1) -> i1 {
   return %5 : i1
 }
 
+func.func private @consume_unsigned_iv(i32)
+
+// CHECK-LABEL: func @unsigned_loop_pending_iv
+// CHECK: scf.for unsigned %[[IV:.*]] =
+// CHECK: %[[SELECT:.*]] = arith.select %{{.*}}, %[[IV]], %{{.*}}
+// CHECK: %[[MERGE:.*]] = arith.select %{{.*}}, %[[SELECT]], %{{.*}}
+// CHECK: call @consume_unsigned_iv(%[[MERGE]])
+func.func @unsigned_loop_pending_iv(%condition: i1, %branch: i1) {
+  %zero = arith.constant 0 : i32
+  %lower = arith.constant 2147483647 : i32
+  %upper = arith.constant -2147483647 : i32
+  %step = arith.constant 1 : i32
+  scf.for unsigned %iv = %lower to %upper step %step : i32 {
+    %selected = arith.select %condition, %iv, %zero : i32
+    %merged = scf.if %branch -> i32 {
+      scf.yield %selected : i32
+    } else {
+      scf.yield %zero : i32
+    }
+    func.call @consume_unsigned_iv(%merged) : (i32) -> ()
+  }
+  return
+}
+
 // CHECK-LABEL: func @if_union
 // CHECK: %[[true:.*]] = arith.constant true
 // CHECK: return %[[true]]

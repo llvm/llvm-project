@@ -26,14 +26,27 @@ func.func @repro_crash() -> !test.i32 {
   return %0 : !test.i32
 }
 
-// The divisor is poison (0 - 1 with nuw), giving an empty range.
+// The divisor is poison (0 - 1 with nuw). Index inference ignores the overflow
+// flags and can refine the result to -1.
 // This used to divide by zero in inferDivSRange.
 // CHECK-LABEL: func.func @divs_by_poison_sub
-// CHECK: index.divs
+// CHECK: %[[RESULT:.*]] = index.constant -1
+// CHECK: return %[[RESULT]]
 func.func @divs_by_poison_sub() -> index {
   %z = arith.constant 0 : index
   %o = arith.constant 1 : index
   %bad = arith.subi %z, %o overflow<nsw, nuw> : index
+  %q = index.divs %o, %bad
+  return %q : index
+}
+
+// An explicit poison divisor still has an empty range.
+// CHECK-LABEL: func.func @divs_by_poison
+// CHECK: %[[POISON:.*]] = ub.poison : index
+// CHECK: return %[[POISON]]
+func.func @divs_by_poison() -> index {
+  %o = arith.constant 1 : index
+  %bad = ub.poison : index
   %q = index.divs %o, %bad
   return %q : index
 }

@@ -233,6 +233,11 @@ void CmpOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   intrange::CmpPredicate pred = static_cast<intrange::CmpPredicate>(indexPred);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
+  if (lhs.isEmpty() || rhs.isEmpty()) {
+    setResultRange(getResult(), ConstantIntRanges::empty(1));
+    return;
+  }
+
   APInt min = APInt::getZero(1);
   APInt max = APInt::getAllOnes(1);
 

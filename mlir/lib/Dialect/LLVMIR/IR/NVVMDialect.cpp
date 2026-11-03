@@ -31,9 +31,11 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/InliningUtils.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/Casting.h"
@@ -5951,8 +5953,12 @@ void mlir::NVVM::nvvmInferResultRanges(
     ArrayRef<::mlir::ConstantIntRanges> argRanges,
     SetIntRangeFn setResultRanges) {
   if (range) {
-    setResultRanges(result, {range->getLower(), range->getUpper(),
-                             range->getLower(), range->getUpper()});
+    llvm::ConstantRange bounds(range->getLower(), range->getUpper());
+    if (bounds.isEmptySet())
+      return setResultRanges(result,
+                             ConstantIntRanges::empty(bounds.getBitWidth()));
+    setResultRanges(result, {bounds.getUnsignedMin(), bounds.getUnsignedMax(),
+                             bounds.getSignedMin(), bounds.getSignedMax()});
   } else {
     setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
   }

@@ -820,3 +820,19 @@ func.func @zero_element_tensor_constant() -> tensor<2x0xi32> {
   %0 = arith.constant dense<> : tensor<2x0xi32>
   return %0 : tensor<2x0xi32>
 }
+
+// A negative induction range must keep its signed bounds during addition.
+// CHECK-LABEL: func @negative_induction_range
+// CHECK: scf.for {{.*}} : i32 {
+// CHECK: memref.store
+func.func @negative_induction_range(%m: memref<20xi32>) {
+  %lo = arith.constant -10 : i32
+  %hi = arith.constant 10 : i32
+  %step = arith.constant 1 : i32
+  scf.for %i = %lo to %hi step %step : i32 {
+    %off = arith.subi %i, %lo : i32
+    %idx = arith.index_cast %off : i32 to index
+    memref.store %i, %m[%idx] : memref<20xi32>
+  }
+  return
+}

@@ -1001,6 +1001,10 @@ void TestWithBoundsRegionOp::inferResultRanges(
 void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRanges) {
   const ConstantIntRanges &range = argRanges[0];
+  if (!range.hasBounds()) {
+    setResultRanges(getResult(), range);
+    return;
+  }
   APInt one(range.umin().getBitWidth(), 1);
   setResultRanges(getResult(),
                   {range.umin().uadd_sat(one), range.umax().uadd_sat(one),
@@ -1014,6 +1018,10 @@ void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 void TestReflectBoundsOp::inferResultRanges(
     ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
   const ConstantIntRanges &range = argRanges[0];
+  if (!range.hasBounds()) {
+    setResultRanges(getResult(), range);
+    return;
+  }
   MLIRContext *ctx = getContext();
   Builder b(ctx);
   Type sIntTy, uIntTy;

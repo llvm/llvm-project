@@ -14,31 +14,68 @@
 
 using namespace mlir;
 
-bool ConstantIntRanges::operator==(const ConstantIntRanges &other) const {
-  return umin().getBitWidth() == other.umin().getBitWidth() &&
-         umin() == other.umin() && umax() == other.umax() &&
-         smin() == other.smin() && smax() == other.smax();
+ConstantIntRanges::ConstantIntRanges(unsigned bitwidth)
+    : uminVal(bitwidth, 0), umaxVal(bitwidth, 0), sminVal(bitwidth, 0),
+      smaxVal(bitwidth, 0) {}
+
+ConstantIntRanges ConstantIntRanges::empty(unsigned bitwidth) {
+  assert(bitwidth > 0 && "Integer ranges require a nonzero bitwidth");
+  ConstantIntRanges result(bitwidth);
+  result.uminVal.setAllBits();
+  result.sminVal.setAllBits();
+  result.sminVal.clearSignBit();
+  result.smaxVal.setSignBit();
+  return result;
 }
 
-const APInt &ConstantIntRanges::umin() const { return uminVal; }
+ConstantIntRanges::ConstantIntRanges(const APInt &umin, const APInt &umax,
+                                     const APInt &smin, const APInt &smax)
+    : uminVal(umin), umaxVal(umax), sminVal(smin), smaxVal(smax) {
+  unsigned width = umin.getBitWidth();
+  assert(width > 0 && width == umax.getBitWidth() &&
+         width == smin.getBitWidth() && width == smax.getBitWidth() &&
+         "Integer range bounds must have the same nonzero bitwidth");
+  if (isUnsignedEmpty() || isSignedEmpty())
+    *this = empty(width);
+}
 
-const APInt &ConstantIntRanges::umax() const { return umaxVal; }
+bool ConstantIntRanges::operator==(const ConstantIntRanges &other) const {
+  return getBitWidth() == other.getBitWidth() && uminVal == other.uminVal &&
+         umaxVal == other.umaxVal && sminVal == other.sminVal &&
+         smaxVal == other.smaxVal;
+}
 
-const APInt &ConstantIntRanges::smin() const { return sminVal; }
-
-const APInt &ConstantIntRanges::smax() const { return smaxVal; }
+const APInt &ConstantIntRanges::umin() const {
+  assert(!isUnsignedEmpty() && "Unsigned endpoints require a nonempty range");
+  return uminVal;
+}
+const APInt &ConstantIntRanges::umax() const {
+  assert(!isUnsignedEmpty() && "Unsigned endpoints require a nonempty range");
+  return umaxVal;
+}
+const APInt &ConstantIntRanges::smin() const {
+  assert(!isSignedEmpty() && "Signed endpoints require a nonempty range");
+  return sminVal;
+}
+const APInt &ConstantIntRanges::smax() const {
+  assert(!isSignedEmpty() && "Signed endpoints require a nonempty range");
+  return smaxVal;
+}
 
 unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
+  if (isa<BaseMemRefType>(type))
+    return 0;
   type = getElementTypeOrSelf(type);
   if (type.isIndex())
     return IndexType::kInternalStorageBitWidth;
   if (auto integerType = dyn_cast<IntegerType>(type))
     return integerType.getWidth();
-  // Non-integer types have their bounds stored in width 0 `APInt`s.
+  // Zero means that integer range inference does not apply to this type.
   return 0;
 }
 
 ConstantIntRanges ConstantIntRanges::maxRange(unsigned bitwidth) {
+  assert(bitwidth > 0 && "Integer ranges require a nonzero bitwidth");
   return fromUnsigned(APInt::getZero(bitwidth), APInt::getMaxValue(bitwidth));
 }
 
@@ -55,6 +92,8 @@ ConstantIntRanges ConstantIntRanges::range(const APInt &min, const APInt &max,
 
 ConstantIntRanges ConstantIntRanges::fromSigned(const APInt &smin,
                                                 const APInt &smax) {
+  if (smin.sgt(smax))
+    return empty(smin.getBitWidth());
   unsigned int width = smin.getBitWidth();
   APInt umin, umax;
   if (smin.isNonNegative() == smax.isNonNegative()) {
@@ -69,6 +108,8 @@ ConstantIntRanges ConstantIntRanges::fromSigned(const APInt &smin,
 
 ConstantIntRanges ConstantIntRanges::fromUnsigned(const APInt &umin,
                                                   const APInt &umax) {
+  if (umin.ugt(umax))
+    return empty(umin.getBitWidth());
   unsigned int width = umin.getBitWidth();
   APInt smin, smax;
   if (umin.isNonNegative() == umax.isNonNegative()) {
@@ -83,12 +124,12 @@ ConstantIntRanges ConstantIntRanges::fromUnsigned(const APInt &umin,
 
 ConstantIntRanges
 ConstantIntRanges::rangeUnion(const ConstantIntRanges &other) const {
-  // "Not an integer" poisons everything and also cannot be fed to comparison
-  // operators.
-  if (umin().getBitWidth() == 0)
-    return *this;
-  if (other.umin().getBitWidth() == 0)
+  assert(getBitWidth() == other.getBitWidth() &&
+         "Cannot combine integer ranges with different bitwidths");
+  if (isEmpty())
     return other;
+  if (other.isEmpty())
+    return *this;
 
   const APInt &uminUnion = umin().ult(other.umin()) ? umin() : other.umin();
   const APInt &umaxUnion = umax().ugt(other.umax()) ? umax() : other.umax();
@@ -100,12 +141,10 @@ ConstantIntRanges::rangeUnion(const ConstantIntRanges &other) const {
 
 ConstantIntRanges
 ConstantIntRanges::intersection(const ConstantIntRanges &other) const {
-  // "Not an integer" poisons everything and also cannot be fed to comparison
-  // operators.
-  if (umin().getBitWidth() == 0)
-    return *this;
-  if (other.umin().getBitWidth() == 0)
-    return other;
+  assert(getBitWidth() == other.getBitWidth() &&
+         "Cannot combine integer ranges with different bitwidths");
+  if (isEmpty() || other.isEmpty())
+    return empty(getBitWidth());
 
   const APInt &uminIntersect = umin().ugt(other.umin()) ? umin() : other.umin();
   const APInt &umaxIntersect = umax().ult(other.umax()) ? umax() : other.umax();
@@ -116,15 +155,18 @@ ConstantIntRanges::intersection(const ConstantIntRanges &other) const {
 }
 
 std::optional<APInt> ConstantIntRanges::getConstantValue() const {
-  // Note: we need to exclude the trivially-equal width 0 values here.
-  if (umin() == umax() && umin().getBitWidth() != 0)
+  if (!hasBounds())
+    return std::nullopt;
+  if (umin() == umax())
     return umin();
-  if (smin() == smax() && smin().getBitWidth() != 0)
+  if (smin() == smax())
     return smin();
   return std::nullopt;
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {
+  if (range.isEmpty())
+    return os << "empty<i" << range.getBitWidth() << ">";
   os << "unsigned : [";
   range.umin().print(os, /*isSigned*/ false);
   os << ", ";
@@ -134,11 +176,8 @@ raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {
 
 IntegerValueRange IntegerValueRange::getMaxRange(Value value) {
   unsigned width = ConstantIntRanges::getStorageBitwidth(value.getType());
-  APInt umin = APInt::getMinValue(width);
-  APInt umax = APInt::getMaxValue(width);
-  APInt smin = width != 0 ? APInt::getSignedMinValue(width) : umin;
-  APInt smax = width != 0 ? APInt::getSignedMaxValue(width) : umax;
-  return IntegerValueRange{ConstantIntRanges{umin, umax, smin, smax}};
+  return width ? IntegerValueRange{ConstantIntRanges::maxRange(width)}
+               : IntegerValueRange{};
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const IntegerValueRange &range) {
@@ -168,11 +207,22 @@ mlir::getIntValueRanges(ArrayRef<OpFoldResult> values,
 void mlir::intrange::detail::defaultInferResultRanges(
     InferIntRangeInterface interface, ArrayRef<IntegerValueRange> argRanges,
     SetIntLatticeFn setResultRanges) {
+  if (interface->getNumRegions() == 0 &&
+      llvm::none_of(interface->getResultTypes(), [](Type type) {
+        return ConstantIntRanges::getStorageBitwidth(type) != 0;
+      }))
+    return;
+
   // Inline size chosen empirically based on compilation profiling.
   // Profiled: 1.6M calls, avg=1.2+-0.8. N=2 covers ~84% of cases inline.
   llvm::SmallVector<ConstantIntRanges, 2> unpacked;
   unpacked.reserve(argRanges.size());
 
+  assert(llvm::all_of(interface->getOperandTypes(),
+                      [](Type type) {
+                        return ConstantIntRanges::getStorageBitwidth(type) != 0;
+                      }) &&
+         "Non-integer operands require inferResultRangesFromOptional");
   for (const IntegerValueRange &range : argRanges) {
     if (range.isUninitialized())
       return;
