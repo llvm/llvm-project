@@ -3788,11 +3788,11 @@ def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
 
 defm module_local_hints : BoolFOption<"module-local-hints",
-  CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Mark inline functions and template instantiations defined in the "
-          "main source file as likely_module_local">,
-  NegFlag<SetFalse>>;
+  CodeGenOpts<"ModuleLocalHints">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Mark">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't mark">,
+  BothFlags<[], [ClangOption], " inline functions and template instantiations "
+            "defined in the main source file as likely_module_local">>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
