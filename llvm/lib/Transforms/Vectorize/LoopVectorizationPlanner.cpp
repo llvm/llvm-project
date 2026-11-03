@@ -125,12 +125,11 @@ bool VFSelectionContext::useMaxBandwidth(VectorKind Kind,
   // if a specific element type is unsupported, avoid maximizing it for vector
   // calls.
   bool TargetHasMaxBW = TTI.shouldMaximizeVectorBandwidth(Kind);
-  return valueOr(
-      Opts.vectorizer_maximize_bandwidth,
-      (TargetHasMaxBW && TTI.shouldMaximizeVectorBandwidth(Kind, ElementTy)) ||
-          (!TargetHasMaxBW &&
-           Opts.vectorizer_maximize_bandwidth_for_vector_calls &&
-           Legal->hasVectorCallVariants()));
+  bool ShouldEnableMaxBW =
+      TargetHasMaxBW ? TTI.shouldMaximizeVectorBandwidth(Kind, ElementTy)
+                     : Opts.vectorizer_maximize_bandwidth_for_vector_calls &&
+                           Legal->hasVectorCallVariants();
+  return valueOr(Opts.vectorizer_maximize_bandwidth, ShouldEnableMaxBW);
 }
 
 bool VFSelectionContext::shouldConsiderRegPressureForVF(ElementCount VF) const {

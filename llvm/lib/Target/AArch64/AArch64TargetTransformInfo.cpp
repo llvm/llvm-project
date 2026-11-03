@@ -439,12 +439,9 @@ bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
   if (K == TargetTransformInfo::VectorKind::FixedWidth && ST->isNeonAvailable())
     return true;
 
-  if (K == TargetTransformInfo::VectorKind::Scalable &&
-      ST->isSVEorStreamingSVEAvailable() &&
-      !ST->disableMaximizeScalableBandwidth())
-    return true;
-
-  return false;
+  return K == TargetTransformInfo::VectorKind::Scalable &&
+         ST->isSVEorStreamingSVEAvailable() &&
+         !ST->disableMaximizeScalableBandwidth();
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
