@@ -311,13 +311,13 @@ module ieee_arithmetic
 #undef IEEE_COPY_SIGN_RR
 
 #define IEEE_GET_ROUNDING_MODE_I(RKIND) \
-  subroutine ieee_get_rounding_mode_i##RKIND(round_value, radix); \
+  simple subroutine ieee_get_rounding_mode_i##RKIND(round_value, radix); \
     import ieee_round_type; \
     type(ieee_round_type), intent(out) :: round_value; \
     integer(RKIND), intent(in) :: radix; \
   end subroutine ieee_get_rounding_mode_i##RKIND;
   interface ieee_get_rounding_mode
-    subroutine ieee_get_rounding_mode_0(round_value)
+    simple subroutine ieee_get_rounding_mode_0(round_value)
       import ieee_round_type
       type(ieee_round_type), intent(out) :: round_value
     end subroutine ieee_get_rounding_mode_0
@@ -327,7 +327,7 @@ module ieee_arithmetic
 #undef IEEE_GET_ROUNDING_MODE_I
 
 #define IEEE_GET_UNDERFLOW_MODE_L(GKIND) \
-  subroutine ieee_get_underflow_mode_l##GKIND(gradual); \
+  simple subroutine ieee_get_underflow_mode_l##GKIND(gradual); \
     logical(GKIND), intent(out) :: gradual; \
   end subroutine ieee_get_underflow_mode_l##GKIND;
   interface ieee_get_underflow_mode
@@ -521,13 +521,13 @@ module ieee_arithmetic
 #undef IEEE_RINT_R
 
 #define IEEE_SET_ROUNDING_MODE_I(RKIND) \
-  subroutine ieee_set_rounding_mode_i##RKIND(round_value, radix); \
+  simple subroutine ieee_set_rounding_mode_i##RKIND(round_value, radix); \
     import ieee_round_type; \
     type(ieee_round_type), intent(in) :: round_value; \
     integer(RKIND), intent(in) :: radix; \
   end subroutine ieee_set_rounding_mode_i##RKIND;
   interface ieee_set_rounding_mode
-    subroutine ieee_set_rounding_mode_0(round_value)
+    simple subroutine ieee_set_rounding_mode_0(round_value)
       import ieee_round_type
       type(ieee_round_type), intent(in) :: round_value
     end subroutine ieee_set_rounding_mode_0
@@ -537,7 +537,7 @@ module ieee_arithmetic
 #undef IEEE_SET_ROUNDING_MODE_I
 
 #define IEEE_SET_UNDERFLOW_MODE_L(GKIND) \
-  subroutine ieee_set_underflow_mode_l##GKIND(gradual); \
+  simple subroutine ieee_set_underflow_mode_l##GKIND(gradual); \
     logical(GKIND), intent(in) :: gradual; \
   end subroutine ieee_set_underflow_mode_l##GKIND;
   interface ieee_set_underflow_mode
