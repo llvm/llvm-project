@@ -111,6 +111,37 @@ func.func @split_vector_transfer_read_strided_2d(
   return %1 : vector<4x8xf32>
 }
 
+// CHECK-LABEL: split_vector_transfer_read_2d_non_constant_padding(
+//  CHECK-SAME: %[[A:[a-zA-Z0-9_]*]]: memref
+//  CHECK-SAME: %[[i:[a-zA-Z0-9_]*]]: index
+//  CHECK-SAME: %[[j:[a-zA-Z0-9_]*]]: index
+//  CHECK-SAME: %[[pad:[a-zA-Z0-9_]*]]: f32
+func.func @split_vector_transfer_read_2d_non_constant_padding(
+    %A: memref<?x8xf32>, %i: index, %j: index, %pad: f32) -> vector<4x8xf32> {
+  //      CHECK: %[[alloc:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
+  //      CHECK: %[[ifres:.*]]:3 = scf.if %{{.*}} -> (memref<?x8xf32>, index, index) {
+  //      CHECK:   scf.yield %[[A]], %[[i]], %[[j]] : memref<?x8xf32>, index, index
+  //      CHECK: } else {
+  //               slow path, fill tmp alloc with the broadcasted padding value
+  //      CHECK:   %[[pad_vec:.*]] = vector.broadcast %[[pad]] : f32 to vector<4x8xf32>
+  //      CHECK:   %[[alloc_vec:.*]] = vector.type_cast %[[alloc]] : memref<4x8xf32> to memref<vector<4x8xf32>>
+  //      CHECK:   memref.store %[[pad_vec]], %[[alloc_vec]][] : memref<vector<4x8xf32>>
+  //      CHECK:   %[[sv:.*]] = memref.subview %[[A]][%[[i]], %[[j]]]
+  //      CHECK:   %[[alloc_view:.*]] = memref.subview %[[alloc]][0, 0]
+  //      CHECK:   memref.copy %[[sv]], %[[alloc_view]]
+  //      CHECK:   %[[yielded:.*]] = memref.cast %[[alloc]] :
+  // CHECK-SAME:     memref<4x8xf32> to memref<?x8xf32>
+  //      CHECK:   scf.yield %[[yielded]], %{{.*}}, %{{.*}} :
+  // CHECK-SAME:     memref<?x8xf32>, index, index
+  //      CHECK: }
+  //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %[[pad]]
+  // CHECK-SAME:   {in_bounds = [true, true]} : memref<?x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %A[%i, %j], %pad : memref<?x8xf32>, vector<4x8xf32>
+
+  // CHECK: return %[[res]] : vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
