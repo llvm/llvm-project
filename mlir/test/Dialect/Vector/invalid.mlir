@@ -1078,7 +1078,7 @@ func.func @contraction_invalid_kind(%arg0: vector<4x3xf32>,
 func.func @contraction_one_sided_reduction(%arg0: vector<4x3xf32>,
                                            %arg1: vector<7xf32>,
                                            %arg2: vector<4x7xf32>) {
-  // expected-error @+1 {{iteration space dim at index 2 is neither a contracting dim nor of parallel iteration type}}
+  // expected-error @+1 {{reduction dim at index 2 must appear in both LHS and RHS}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
     : vector<4x3xf32>, vector<7xf32> into vector<4x7xf32>
   return

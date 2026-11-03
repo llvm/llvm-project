@@ -4856,9 +4856,8 @@ verifyContractionDims(size_t iterationSpaceDims, ArrayRef<size_t> inOccurrences,
     // TODO: Remove following once we have comprehensive support for input-only
     //       reduction dims, at both the linalg- and vector-dialect levels.
     if (inOccCount == 1 && outOccCount != 1)
-      return emitError()
-             << "iteration space dim at index " << dimIndex
-             << " is neither a contracting dim nor of parallel iteration type";
+      return emitError() << "reduction dim at index " << dimIndex
+                         << " must appear in both LHS and RHS";
   }
 
   if (!hasContractingDim)

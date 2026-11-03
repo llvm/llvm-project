@@ -1043,7 +1043,7 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
     });
 
   int64_t resIndex = getResultIndex(iMap[2], iterIndex).value_or(-1);
-  assert(resIndex != -1 && "A dimension issing from the accumulator indexing "
+  assert(resIndex != -1 && "A dimension missing from the accumulator indexing "
                            "map is not a parallel dim!");
 
   // Construct new iterator types and affine map array attribute.
