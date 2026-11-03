@@ -10,12 +10,7 @@ constexpr int h(int n) {
 constexpr int i(int n) {
   if (!n)
     return 0;
-  thread_local const int m = n;
-#ifdef __MVS__
-  // expected-error@-2 {{thread-local storage is not supported for the current target}}
-#else
-  // expected-warning@-4 {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++23}}
-#endif
+  thread_local const int m = n; // expected-warning {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
 
@@ -46,9 +41,6 @@ constexpr int c_thread_local(int n) {
   if (!n)
     return 0;
   static _Thread_local int a; // expected-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
-#ifdef __MVS__
-  // expected-error@-2 {{thread-local storage is not supported for the current target}}
-#endif
   _Thread_local int b;        // // expected-error {{'_Thread_local' variables must have global storage}}
   return 0;
 }
@@ -57,9 +49,6 @@ constexpr int gnu_thread_local(int n) {
   if (!n)
     return 0;
   static __thread int a; // expected-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
-#ifdef __MVS__
-  // expected-error@-2 {{thread-local storage is not supported for the current target}}
-#endif
   __thread int b;        // expected-error {{'__thread' variables must have global storage}}
   return 0;
 }

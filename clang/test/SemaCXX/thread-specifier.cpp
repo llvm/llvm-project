@@ -1,4 +1,3 @@
-// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify %s
 
 namespace GH140509 {
