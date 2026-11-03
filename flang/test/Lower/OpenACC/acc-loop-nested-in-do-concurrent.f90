@@ -25,13 +25,15 @@ subroutine nested_acc_loop_in_do_concurrent(a, n)
   !$acc end parallel
 end subroutine
 
-! The outer acc.loop privatizes the DO CONCURRENT index `i`.
-! CHECK: acc.loop private({{.*}}) control(%[[IARG:[a-z0-9_]+]] : i32)
+! The outer acc.loop privatizes the DO CONCURRENT index `i` and the seq IV `l`.
+! CHECK: acc.private {{.*}} name("l")
+! CHECK: acc.loop private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%[[IARG:[a-z0-9_]+]] : i32)
+! CHECK: hlfir.declare {{.*}} uniq_name("_QFnested_acc_loop_in_do_concurrentEl")
 ! CHECK: %[[IDECL:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFnested_acc_loop_in_do_concurrentEi")
 ! CHECK: fir.store %[[IARG]] to %[[IDECL]]#0 : !fir.ref<i32>
 
 ! The nested acc.loop body reads the outer index from that same storage.
-! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32)
+! CHECK: acc.loop control(%{{[a-z0-9_]+}} : i32)
 ! CHECK: %[[ILOAD:[0-9]+]] = fir.load %[[IDECL]]#0 : !fir.ref<i32>
 ! CHECK: %[[ICONV:[0-9]+]] = fir.convert %[[ILOAD]] : (i32) -> i64
 ! CHECK: hlfir.designate %{{.*}} (%[[ICONV]])
@@ -54,11 +56,13 @@ subroutine multi_index(a, n, m)
   !$acc end parallel
 end subroutine
 
-! The outer acc.loop privatizes both indices; the nested loop reads both.
-! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32, %{{[a-z0-9_]+}} : i32)
+! The outer acc.loop privatizes both indices and the seq IV `l`.
+! CHECK: acc.private {{.*}} name("l")
+! CHECK: acc.loop private({{.*}}, {{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) control(%{{[a-z0-9_]+}} : i32, %{{[a-z0-9_]+}} : i32)
+! CHECK: hlfir.declare {{.*}} uniq_name("_QFmulti_indexEl")
 ! CHECK: %[[MI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFmulti_indexEi")
 ! CHECK: %[[MJ:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFmulti_indexEj")
-! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32)
+! CHECK: acc.loop control(%{{[a-z0-9_]+}} : i32)
 ! CHECK: fir.load %[[MI]]#0 : !fir.ref<i32>
 ! CHECK: fir.load %[[MJ]]#0 : !fir.ref<i32>
 
@@ -82,10 +86,13 @@ end subroutine
 
 ! The nested loop's lower bound is loaded from the outer index's privatized
 ! storage (the declare inside the outer acc.loop, not the host-level one).
-! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32)
+! The seq IV `l` is private on that outer loop.
+! CHECK: acc.private {{.*}} name("l")
+! CHECK: acc.loop private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{[a-z0-9_]+}} : i32)
+! CHECK: hlfir.declare {{.*}} uniq_name("_QFouter_index_in_boundsEl")
 ! CHECK: %[[BI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFouter_index_in_boundsEi")
 ! CHECK: %[[LB:[0-9]+]] = fir.load %[[BI]]#0 : !fir.ref<i32>
-! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32) = (%[[LB]] : i32)
+! CHECK: acc.loop control(%{{[a-z0-9_]+}} : i32) = (%[[LB]] : i32)
 
 ! -----------------------------------------------------------------------------
 ! Same nested shape under acc serial, acc kernels, and combined parallel loop.

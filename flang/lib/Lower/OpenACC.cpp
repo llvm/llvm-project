@@ -1565,44 +1565,24 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
-/// \p value is \p target, or an hlfir.declare of it.
-static bool valueOrDeclareOf(mlir::Value value, mlir::Value target) {
-  if (value == target)
-    return true;
-  auto declare = value.getDefiningOp<hlfir::DeclareOp>();
-  return declare &&
-         (declare.getMemref() == target || declare.getOriginalBase() == target);
-}
-
 /// Privatize one seq-loop induction variable on the enclosing acc.loop. The
 /// seq loop and the code after it then use that copy. Returns false when no
-/// acc.loop encloses the current insertion point.
+/// acc.loop encloses the current insertion point, or when \p ivValue is
+/// already defined inside that loop.
 static bool privatizeSeqIvOnParent(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::semantics::Symbol &sym,
                                    mlir::Location loc, mlir::Value ivValue) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::Operation *here = builder.getInsertionBlock()->getParentOp();
-  auto parent = mlir::dyn_cast<mlir::acc::LoopOp>(here);
-  if (!parent)
-    parent = here->getParentOfType<mlir::acc::LoopOp>();
+  // Same walk as isInOpenACCLoop: the loop that owns the current region.
+  auto parent =
+      builder.getBlock()->getParent()->getParentOfType<mlir::acc::LoopOp>();
   if (!parent)
     return false;
 
-  // An address already inside the parent cannot be the varPtr of a private
-  // placed before that loop. It is the parent's own copy; leave it on this
-  // loop.
-  if (auto blockArg = llvm::dyn_cast<mlir::BlockArgument>(ivValue)) {
-    if (parent->isAncestor(blockArg.getOwner()->getParentOp()))
-      return false;
-  } else if (mlir::Operation *def = ivValue.getDefiningOp();
-             def && (def == parent || parent->isAncestor(def))) {
+  // A private is placed before the parent, so its varPtr has to be defined
+  // outside that region. An address already inside is left on this loop.
+  if (parent.getRegion().isAncestor(ivValue.getParentRegion()))
     return false;
-  }
-
-  for (mlir::Value priv : parent.getPrivateOperands())
-    if (mlir::acc::getVar(priv.getDefiningOp()) == ivValue ||
-        valueOrDeclareOf(ivValue, priv))
-      return true;
 
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(parent);
