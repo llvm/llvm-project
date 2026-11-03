@@ -145,8 +145,8 @@ _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
-                                matrix<int16_t, R, C>> asuint16(matrix<T, R, C>
-                                                                    V) {
+                                matrix<uint16_t, R, C>> asuint16(matrix<T, R, C>
+                                                                     V) {
   return __detail::bit_cast<uint16_t, T, R, C>(V);
 }
 
