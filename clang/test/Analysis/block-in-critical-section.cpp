@@ -50,8 +50,10 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex);
 int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
 struct mtx_t;
+struct timespec;
 int mtx_lock(mtx_t *mutex);
-int mtx_timedlock(mtx_t *mutex);
+int mtx_timedlock(mtx_t *mutex,
+                  const timespec *timepoint);
 int mtx_trylock(mtx_t *mutex);
 int mtx_unlock(mtx_t *mutex);
 
@@ -123,7 +125,7 @@ void testBlockInCriticalSectionC11Locks(mtx_t *mutex) {
           // expected-note@-1 {{Call to blocking function 'recv' inside of critical section}}
   mtx_unlock(mutex);
 
-  mtx_timedlock(mutex); // expected-note 5{{Entering critical section here}}
+  mtx_timedlock(mutex, nullptr); // expected-note 5{{Entering critical section here}}
   sleep(3); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
             // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
   getc(stream); // expected-warning {{Call to blocking function 'getc' inside of critical section}}

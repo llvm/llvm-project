@@ -15,6 +15,8 @@
 #define LLVM_LIB_TARGET_MIPS_MIPS_H
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define IsMFLOMFHI(instr)                                                      \
@@ -38,9 +40,37 @@ class MipsTargetMachine;
 class ModulePass;
 class PassRegistry;
 
+class Mips16ISelDAGPass : public SelectionDAGISelPass {
+public:
+  Mips16ISelDAGPass(MipsTargetMachine &TM, CodeGenOptLevel OptLevel);
+  static StringRef name() { return "Mips16ISelDAGPass"; }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    StringRef ClassName = name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << PassName;
+  }
+};
+
+FunctionPass *createMips16ISelDAGLegacyPass(MipsTargetMachine &TM,
+                                            CodeGenOptLevel OptLevel);
 ModulePass *createMipsOs16Pass();
 ModulePass *createMips16HardFloatPass();
 
+class MipsSEISelDAGPass : public SelectionDAGISelPass {
+public:
+  MipsSEISelDAGPass(MipsTargetMachine &TM, CodeGenOptLevel OptLevel);
+  static StringRef name() { return "MipsSEISelDAGPass"; }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    StringRef ClassName = name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << PassName;
+  }
+};
+
+FunctionPass *createMipsSEISelDAGLegacyPass(MipsTargetMachine &TM,
+                                            CodeGenOptLevel OptLevel);
 FunctionPass *createMipsOptimizePICCallPass();
 FunctionPass *createMipsDelaySlotFillerPass();
 FunctionPass *createMipsBranchExpansion();

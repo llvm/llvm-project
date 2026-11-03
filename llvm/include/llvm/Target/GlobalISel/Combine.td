@@ -1736,6 +1736,25 @@ def bitfield_extract_from_shr : GICombineRule<
     [{ return Helper.matchBitfieldExtractFromShr(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+// Replace a 1-bit G_UBFX of a bit that is a copy of the sign bit with a shift
+// of the sign bit into bit 0, which can fold into users such as G_ADD.
+def ubfx_sign_bit_to_lshr : GICombineRule<
+  (defs root:$root),
+  (match (G_CONSTANT $lsb, $lsbimm),
+         (G_UBFX $dst, $src, $lsb, 1):$root,
+         [{ LLT Ty = MRI.getType(${dst}.getReg());
+            unsigned BitWidth = Ty.getSizeInBits();
+            const APInt &Lsb = ${lsbimm}.getCImm()->getValue();
+            return Ty.isScalar() && Lsb.ult(BitWidth) &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                       BitWidth - Lsb.getZExtValue(); }]),
+  (apply [{ LLT Ty = MRI.getType(${dst}.getReg());
+            LLT ShiftAmtTy =
+                Helper.getTargetLowering().getPreferredShiftAmountTy(Ty);
+            auto Amt = B.buildConstant(ShiftAmtTy, Ty.getSizeInBits() - 1);
+            B.buildLShr(${dst}.getReg(), ${src}.getReg(), Amt);
+            ${root}->eraseFromParent(); }])>;
+
 def bitfield_extract_from_shr_and : GICombineRule<
   (defs root:$dst, build_fn_matchinfo:$info),
   (match (ashr_lshr_frags $dst):$root,
@@ -2770,6 +2789,28 @@ def SubUmaxSub: GICombineRule<
                     MRI.hasOneNonDBGUse(${max}.getReg()); }]),
    (apply (G_SUB $sub1, 0, $A), 
           (G_UMIN $root, $A, $sub1))>;
+          
+// (sub 0, (smin X, (sub 0, X))) --> (smax X, (sub 0, X))
+def NegSminNeg: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_SMIN $max, $A, $sub),
+          (G_SUB $root, 0, $max),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_SMAX $root, $A, $sub1))>;
+
+// (sub 0, (umin X, (sub 0, X))) --> (umax X, (sub 0, X))
+def NegUminNeg: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_UMIN $max, $A, $sub),
+          (G_SUB $root, 0, $max),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_UMAX $root, $A, $sub1))>;
    
 def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCMinusB,
@@ -2795,7 +2836,9 @@ def integer_reassoc_combines: GICombineGroup<[
 
 def max_min_combines: GICombineGroup<[
   SubSmaxSub, 
-  SubUmaxSub
+  SubUmaxSub,
+  NegSminNeg, 
+  NegUminNeg
 ]>;
 
 // fold (A+(shl (0-B), C)) -> (A-(shl B, C))

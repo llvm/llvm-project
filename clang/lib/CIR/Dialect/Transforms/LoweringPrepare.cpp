@@ -1561,9 +1561,13 @@ cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
 
 void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   CIRBaseBuilderTy builder(getContext());
+  mlir::ptr::MemorySpaceAttrInterface eltAS;
+  if (unsigned targetAS =
+          getTargetInfo().getTargetAddressSpace(clang::LangAS::Default))
+    eltAS = cir::TargetAddressSpaceAttr::get(&getContext(), targetAS);
+  cir::PointerType voidPtrTy = builder.getVoidPtrTy(eltAS);
   mlir::Attribute entry = cir::GlobalViewAttr::get(
-      builder.getVoidPtrTy(),
-      mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
+      voidPtrTy, mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
 
   mlir::StringAttr usedName = builder.getStringAttr("llvm.used");
   cir::GlobalOp used =
@@ -1577,8 +1581,7 @@ void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   }
   elements.push_back(entry);
 
-  cir::ArrayType arrayTy =
-      cir::ArrayType::get(builder.getVoidPtrTy(), elements.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(voidPtrTy, elements.size());
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&getContext(), elements));
 
@@ -1589,8 +1592,10 @@ void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   }
 
   builder.setInsertionPointToStart(mlirModule.getBody());
-  used = cir::GlobalOp::create(builder, mlirModule.getLoc(),
-                               usedName.getValue(), arrayTy);
+  used = cir::GlobalOp::create(
+      builder, mlirModule.getLoc(), usedName.getValue(), arrayTy,
+      /*isConstant=*/false,
+      cir::CIRDataLayout(mlirModule).getDefaultGlobalsAddrSpace(&getContext()));
   used.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   used.setInitialValueAttr(initAttr);
   used.setSectionAttr(builder.getStringAttr("llvm.metadata"));
