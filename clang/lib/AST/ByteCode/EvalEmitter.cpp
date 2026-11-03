@@ -220,7 +220,8 @@ bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
   if (T == PT_Ptr) {
     const auto &Ptr = S.Stk.pop<Pointer>();
-    return this->emitBool(CheckBCPResult(S, Ptr), E);
+    return this->emitBool(
+        CheckBCPResult(S, CodePtr(), Ptr, Arg->getType()->isRecordType()), E);
   }
 
   // Otherwise, this is fine!
