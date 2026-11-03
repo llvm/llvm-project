@@ -917,6 +917,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   type. (#GH204756)
 
 #### Bug Fixes to C++ Support
+- Clang now recovers from invalid single pointer declarators in structured
+  bindings (such as ``auto *[x, y] = s;``) by removing the pointer declarator.
+  This allows type deduction to proceed and avoids redundant follow-up
+  diagnostics. (#GH222605)
+
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
@@ -1549,6 +1554,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
   and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+- Fixed variables shared by an enclosing region (e.g. `parallel`) being
+  captured by copy when a nested construct has `default(firstprivate)` or
+  `default(private)`, which could silently lose writes such as the result of
+  a reduction on the nested construct.
 
 ### SYCL Support
 

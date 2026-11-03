@@ -84,7 +84,8 @@ public:
 
   /// Creates a global and returns its index.
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,
-                              bool IsConstexprUnknown = false);
+                              bool IsConstexprUnknown = false,
+                              bool CanBeExtern = true);
 
   /// Creates a global from a lifetime-extended temporary.
   UnsignedOrNone createGlobal(const Expr *E, QualType ExprType);
