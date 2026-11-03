@@ -1219,10 +1219,8 @@ def : InstRW<[A78Write_2c_1L01_1V, ReadAdrBase],
 
 // Store vector pair, immed offset, S-form
 // Store vector pair, immed offset, D-form
-def : InstRW<[A78Write_2c_1L01_1V], (instregex "^STN?P[SD]i$")>;
-
 // Store vector pair, immed offset, Q-form
-def : InstRW<[A78Write_2c_1L01_2V], (instrs STPQi, STNPQi)>;
+def : InstRW<[A78Write_2c_1L01_1V], (instregex "^STN?P[SDQ]i$")>;
 
 // Store vector pair, immed post-index, S-form
 // Store vector pair, immed post-index, D-form
