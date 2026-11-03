@@ -275,14 +275,7 @@ define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16(<16 x bfloat> %A, <16 x bflo
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    s_mov_b32 s0, 0x3f803f80
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    s_mov_b32 s1, s0
-; GISEL-NEXT:    s_mov_b32 s2, s0
-; GISEL-NEXT:    s_mov_b32 s3, s0
-; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[0:1]
-; GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[2:3]
-; GISEL-NEXT:    v_wmma_bf16_16x16x32_bf16 v[18:21], v[0:7], v[8:15], v[18:21]
+; GISEL-NEXT:    v_wmma_bf16_16x16x32_bf16 v[18:21], v[0:7], v[8:15], 1.0
 ; GISEL-NEXT:    global_store_b128 v[16:17], v[18:21], off
 ; GISEL-NEXT:    s_endpgm
 bb:
