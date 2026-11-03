@@ -14,6 +14,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -293,7 +294,8 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
 
   void visitCallBase(CallBase &CB) {
     for (unsigned Op = 0, OpCount = CB.arg_size(); Op < OpCount; ++Op)
-      if (U->get() == CB.getArgOperand(Op) && !CB.doesNotCapture(Op))
+      if (U->get() == CB.getArgOperand(Op) &&
+          capturesAnyProvenance(CB.getCaptureInfo(Op)))
         PI.setEscaped(&CB);
     handleMayWrite(CB);
   }
