@@ -1380,8 +1380,8 @@ void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
 
 AMDGPU::Waitcnt
 WaitcntBrackets::determineAsyncWait(unsigned N, AMDGPU::AsyncStages Stages) {
-  // Trim each stage the wait names down to at most N marks. The waits
-  // implied by the marks dropped from each stage accumulate into one Waitcnt,
+  // Trim each named stage to at most N marks. The dropped marks imply waits
+  // that get accumulated into one Waitcnt,
   // so a wait covering several stages is the union of their requirements.
   AMDGPU::Waitcnt Wait;
   for (AMDGPU::AsyncStages S : AMDGPU::asyncStages(Stages)) {
