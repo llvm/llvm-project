@@ -24283,37 +24283,22 @@ static SDValue getScalablePrefixVL(SDValue Mask, SelectionDAG &DAG,
     BoundaryBits =
         std::min<unsigned>(BoundaryBits, VL.getScalarValueSizeInBits());
   }
-  if (VL.getOpcode() != ISD::INTRINSIC_WO_CHAIN)
+  if (VL.getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      VL.getConstantOperandVal(0) != Intrinsic::experimental_get_vector_length)
     return SDValue();
   unsigned MinElts = Step.getValueType().getVectorMinNumElements();
-  unsigned ID = VL.getConstantOperandVal(0);
-  if (ID == Intrinsic::experimental_get_vector_length) {
-    // The scalable vectorization factor must describe the stepvector's lanes.
-    if (VL.getConstantOperandVal(2) != MinElts ||
-        !isOneConstant(VL.getOperand(3)))
-      return SDValue();
-  } else {
-    bool HasAVL = ID == Intrinsic::riscv_vsetvli;
-    if (!HasAVL && ID != Intrinsic::riscv_vsetvlimax)
-      return SDValue();
-    unsigned SEW =
-        RISCVVType::decodeVSEW(VL.getConstantOperandVal(HasAVL ? 2 : 1));
-    auto LMUL = static_cast<RISCVVType::VLMUL>(
-        VL.getConstantOperandVal(HasAVL ? 3 : 2));
-    // The configured VLMAX must equal the number of lanes in the stepvector.
-    if (RISCVVType::getSEWLMULRatio(SEW, LMUL) * MinElts !=
-        RISCV::RVVBitsPerBlock)
-      return SDValue();
-  }
+  // The scalable vectorization factor must describe the stepvector's lanes.
+  if (VL.getConstantOperandVal(2) != MinElts ||
+      !isOneConstant(VL.getOperand(3)))
+    return SDValue();
   uint64_t MaxElts =
       uint64_t(MinElts) * Subtarget.getRealMaxVLen() / RISCV::RVVBitsPerBlock;
   uint64_t MaxVL = std::min(
       MaxElts, DAG.computeKnownBits(VL).getMaxValue().getLimitedValue());
-  // Both bounded VL intrinsics return no more than the requested count.
-  if (ID != Intrinsic::riscv_vsetvlimax)
-    MaxVL = std::min(
-        MaxVL,
-        DAG.computeKnownBits(VL.getOperand(1)).getMaxValue().getLimitedValue());
+  // The returned VL cannot exceed the requested count.
+  MaxVL = std::min(
+      MaxVL,
+      DAG.computeKnownBits(VL.getOperand(1)).getMaxValue().getLimitedValue());
   // Indices must not wrap even beyond VL, where the select keeps its false
   // operand. The comparison boundary must also represent VL without truncation.
   unsigned IndexBits = Step.getScalarValueSizeInBits();

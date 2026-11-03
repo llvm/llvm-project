@@ -632,23 +632,3 @@ define i64 @vsetvl_e64mf8_and9bits(i64 %avl) {
   %b = and i64 %a, 511
   ret i64 %b
 }
-
-; Default VectorToLLVM lowering of vector.create_mask(actual VL), after LLVM
-; optimization removes the INT32_MAX clamp using the vsetvli result range.
-define <vscale x 2 x i32> @prefix_create_mask_i32_indices(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, i64 %avl) {
-; CHECK-LABEL: prefix_create_mask_i32_indices:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v10, v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
-  %vl = tail call range(i64 0, 2049) i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 2, i64 0)
-  %id = tail call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
-  %vl32 = trunc nuw nsw i64 %vl to i32
-  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl32, i64 0
-  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-  %mask = icmp slt <vscale x 2 x i32> %id, %bound
-  %sum = add <vscale x 2 x i32> %b, %a
-  %result = select <vscale x 2 x i1> %mask, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
-  ret <vscale x 2 x i32> %result
-}

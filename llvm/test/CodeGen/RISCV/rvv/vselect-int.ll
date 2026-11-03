@@ -810,8 +810,8 @@ define <vscale x 8 x i64> @vmerge_falselhs_nxv8i64_0(<vscale x 8 x i64> %va, <vs
   ret <vscale x 8 x i64> %vc
 }
 
-define <vscale x 2 x i32> @prefix_create_mask(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; CHECK-LABEL: prefix_create_mask:
+define <vscale x 2 x i32> @prefix_generic_select(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
+; CHECK-LABEL: prefix_generic_select:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vadd.vv v10, v8, v9
@@ -827,13 +827,29 @@ define <vscale x 2 x i32> @prefix_create_mask(<vscale x 2 x i32> %a, <vscale x 2
   ret <vscale x 2 x i32> %r
 }
 
-define <vscale x 2 x i32> @prefix_vsetvli_range(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; CHECK-LABEL: prefix_vsetvli_range:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v10, v8, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
+define <vscale x 2 x i32> @negative_prefix_target_vl(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
+; RV32-LABEL: negative_prefix_target_vl:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; RV32-NEXT:    vid.v v11
+; RV32-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; RV32-NEXT:    vmslt.vx v0, v11, a0
+; RV32-NEXT:    vadd.vv v10, v8, v9, v0.t
+; RV32-NEXT:    vmv.v.v v8, v10
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: negative_prefix_target_vl:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; RV64-NEXT:    vid.v v12
+; RV64-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
+; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; RV64-NEXT:    vmslt.vx v0, v12, a0
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV64-NEXT:    vadd.vv v10, v8, v9, v0.t
+; RV64-NEXT:    vmv.v.v v8, v10
+; RV64-NEXT:    ret
   %vl = call range(iXLen 0, 2049) iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 0)
   %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
   %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
@@ -844,73 +860,42 @@ define <vscale x 2 x i32> @prefix_vsetvli_range(<vscale x 2 x i32> %a, <vscale x
   ret <vscale x 2 x i32> %r
 }
 
-define <vscale x 2 x i32> @prefix_vl_equivalent_vtype(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; CHECK-LABEL: prefix_vl_equivalent_vtype:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v10, v8, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 1, iXLen 7)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
-  %sum = add <vscale x 2 x i32> %a, %b
-  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
-  ret <vscale x 2 x i32> %r
-}
-
-define <vscale x 2 x i32> @prefix_vl_zero(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru) {
-; CHECK-LABEL: prefix_vl_zero:
+define <vscale x 2 x i32> @prefix_generic_zero(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru) {
+; CHECK-LABEL: prefix_generic_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, ma
 ; CHECK-NEXT:    vadd.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 0, iXLen 2, iXLen 0)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
+  %vl = call i32 @llvm.experimental.get.vector.length.iXLen(iXLen 0, i32 2, i1 true)
+  %id = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl, i64 0
+  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %m = icmp ult <vscale x 2 x i32> %id, %bound
   %sum = add <vscale x 2 x i32> %a, %b
   %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
   ret <vscale x 2 x i32> %r
 }
 
-define <vscale x 2 x i32> @prefix_vl_shared_mask(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; RV32-LABEL: prefix_vl_shared_mask:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV32-NEXT:    vid.v v11
-; RV32-NEXT:    vsetvli a1, a0, e32, m1, ta, ma
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmsltu.vx v0, v11, a1
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; RV32-NEXT:    vadd.vv v10, v8, v9
-; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
-; RV32-NEXT:    vadd.vi v10, v10, 1, v0.t
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: prefix_vl_shared_mask:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vid.v v12
-; RV64-NEXT:    vsetvli a1, a0, e32, m1, ta, ma
-; RV64-NEXT:    vsetvli a2, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmsltu.vx v0, v12, a1
-; RV64-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; RV64-NEXT:    vadd.vv v10, v8, v9
-; RV64-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
-; RV64-NEXT:    vadd.vi v10, v10, 1, v0.t
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 0)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
+define <vscale x 2 x i32> @prefix_generic_shared_mask(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
+; CHECK-LABEL: prefix_generic_shared_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v11
+; CHECK-NEXT:    vsetvli a1, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmsltu.vx v0, v11, a1
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v10, v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vi v10, v10, 1, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %vl = call i32 @llvm.experimental.get.vector.length.iXLen(iXLen %avl, i32 2, i1 true)
+  %id = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl, i64 0
+  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %m = icmp ult <vscale x 2 x i32> %id, %bound
   %sum = add <vscale x 2 x i32> %a, %b
   %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
   %bits = zext <vscale x 2 x i1> %m to <vscale x 2 x i32>
@@ -918,8 +903,8 @@ define <vscale x 2 x i32> @prefix_vl_shared_mask(<vscale x 2 x i32> %a, <vscale 
   ret <vscale x 2 x i32> %result
 }
 
-define <vscale x 2 x i32> @negative_prefix_vl_unknown_bound(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; RV32-LABEL: negative_prefix_vl_unknown_bound:
+define <vscale x 2 x i32> @negative_prefix_raw_count(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
+; RV32-LABEL: negative_prefix_raw_count:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
 ; RV32-NEXT:    vid.v v11
@@ -928,7 +913,7 @@ define <vscale x 2 x i32> @negative_prefix_vl_unknown_bound(<vscale x 2 x i32> %
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: negative_prefix_vl_unknown_bound:
+; RV64-LABEL: negative_prefix_raw_count:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vid.v v12
@@ -946,238 +931,80 @@ define <vscale x 2 x i32> @negative_prefix_vl_unknown_bound(<vscale x 2 x i32> %
   ret <vscale x 2 x i32> %r
 }
 
-define <vscale x 2 x i32> @negative_prefix_vl_larger_vlmax(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; RV32-LABEL: negative_prefix_vl_larger_vlmax:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV32-NEXT:    vid.v v11
-; RV32-NEXT:    vsetvli a0, a0, e32, m2, ta, ma
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
-; RV32-NEXT:    vmsltu.vx v0, v11, a0
-; RV32-NEXT:    vadd.vv v10, v8, v9, v0.t
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: negative_prefix_vl_larger_vlmax:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vid.v v12
-; RV64-NEXT:    vsetvli a0, a0, e32, m2, ta, ma
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmsltu.vx v0, v12, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; RV64-NEXT:    vadd.vv v10, v8, v9, v0.t
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 1)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
-  %sum = add <vscale x 2 x i32> %a, %b
-  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
-  ret <vscale x 2 x i32> %r
-}
-
-define <vscale x 2 x i32> @negative_prefix_vl_stride(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; RV32-LABEL: negative_prefix_vl_stride:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV32-NEXT:    vid.v v11
-; RV32-NEXT:    vadd.vv v11, v11, v11
-; RV32-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
-; RV32-NEXT:    vmsltu.vx v0, v11, a0
-; RV32-NEXT:    vadd.vv v10, v8, v9, v0.t
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: negative_prefix_vl_stride:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vid.v v12
-; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmsltu.vx v0, v12, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; RV64-NEXT:    vadd.vv v10, v8, v9, v0.t
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 0)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %scaled = mul <vscale x 2 x iXLen> %id, splat (iXLen 2)
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %scaled, %bound
-  %sum = add <vscale x 2 x i32> %a, %b
-  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
-  ret <vscale x 2 x i32> %r
-}
-
-define <vscale x 2 x i32> @negative_prefix_vl_offset(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; RV32-LABEL: negative_prefix_vl_offset:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV32-NEXT:    vid.v v11
-; RV32-NEXT:    vadd.vi v11, v11, 1
-; RV32-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
-; RV32-NEXT:    vmsltu.vx v0, v11, a0
-; RV32-NEXT:    vadd.vv v10, v8, v9, v0.t
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: negative_prefix_vl_offset:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vid.v v12
-; RV64-NEXT:    vadd.vi v12, v12, 1
-; RV64-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmsltu.vx v0, v12, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; RV64-NEXT:    vadd.vv v10, v8, v9, v0.t
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 0)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %shifted = add <vscale x 2 x iXLen> %id, splat (iXLen 1)
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %shifted, %bound
-  %sum = add <vscale x 2 x i32> %a, %b
-  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
-  ret <vscale x 2 x i32> %r
-}
-
-define <vscale x 2 x i32> @negative_prefix_vl_narrow_bound(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; RV32-LABEL: negative_prefix_vl_narrow_bound:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV32-NEXT:    vid.v v11
-; RV32-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
-; RV32-NEXT:    zext.b a0, a0
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
-; RV32-NEXT:    vmsltu.vx v0, v11, a0
-; RV32-NEXT:    vadd.vv v10, v8, v9, v0.t
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: negative_prefix_vl_narrow_bound:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vid.v v12
-; RV64-NEXT:    vsetvli a0, a0, e32, m1, ta, ma
-; RV64-NEXT:    zext.b a0, a0
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmsltu.vx v0, v12, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
-; RV64-NEXT:    vadd.vv v10, v8, v9, v0.t
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 0)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %byte = trunc iXLen %vl to i8
-  %narrow = zext i8 %byte to iXLen
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %narrow, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
-  %sum = add <vscale x 2 x i32> %a, %b
-  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
-  ret <vscale x 2 x i32> %r
-}
-
-define <vscale x 8 x i8> @negative_prefix_vl_wrapping_indices(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %passthru) {
-; CHECK-LABEL: negative_prefix_vl_wrapping_indices:
+define <vscale x 2 x i32> @negative_prefix_generic_stride(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
+; CHECK-LABEL: negative_prefix_generic_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v11
-; CHECK-NEXT:    vsetivli a0, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vadd.vv v11, v11, v11
+; CHECK-NEXT:    vsetvli a0, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vmsltu.vx v0, v11, a0
 ; CHECK-NEXT:    vadd.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen 4, iXLen 0, iXLen 0)
-  %byte = trunc iXLen %vl to i8
-  %id = call <vscale x 8 x i8> @llvm.stepvector.nxv8i8()
-  %seed = insertelement <vscale x 8 x i8> poison, i8 %byte, i64 0
-  %bound = shufflevector <vscale x 8 x i8> %seed, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-  %m = icmp ult <vscale x 8 x i8> %id, %bound
-  %sum = add <vscale x 8 x i8> %a, %b
-  %r = select <vscale x 8 x i1> %m, <vscale x 8 x i8> %sum, <vscale x 8 x i8> %passthru
-  ret <vscale x 8 x i8> %r
+  %vl = call i32 @llvm.experimental.get.vector.length.iXLen(iXLen %avl, i32 2, i1 true)
+  %id = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %scaled = mul <vscale x 2 x i32> %id, splat (i32 2)
+  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl, i64 0
+  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %m = icmp ult <vscale x 2 x i32> %scaled, %bound
+  %sum = add <vscale x 2 x i32> %a, %b
+  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
+  ret <vscale x 2 x i32> %r
 }
 
-define <vscale x 2 x i32> @prefix_vl_copy(<vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; CHECK-LABEL: prefix_vl_copy:
+define <vscale x 2 x i32> @negative_prefix_generic_offset(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
+; CHECK-LABEL: negative_prefix_generic_offset:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v11
+; CHECK-NEXT:    vadd.vi v11, v11, 1
+; CHECK-NEXT:    vsetvli a0, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vmsltu.vx v0, v11, a0
+; CHECK-NEXT:    vadd.vv v10, v8, v9, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %vl = call i32 @llvm.experimental.get.vector.length.iXLen(iXLen %avl, i32 2, i1 true)
+  %id = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %shifted = add <vscale x 2 x i32> %id, splat (i32 1)
+  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl, i64 0
+  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %m = icmp ult <vscale x 2 x i32> %shifted, %bound
+  %sum = add <vscale x 2 x i32> %a, %b
+  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x i32> @prefix_generic_copy(<vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, iXLen %avl) {
+; CHECK-LABEL: prefix_generic_copy:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.v.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 0)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
+  %vl = call i32 @llvm.experimental.get.vector.length.iXLen(iXLen %avl, i32 2, i1 true)
+  %id = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl, i64 0
+  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %m = icmp ult <vscale x 2 x i32> %id, %bound
   %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru
   ret <vscale x 2 x i32> %r
 }
 
-define <vscale x 2 x i32> @prefix_vl_narrow_bound(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; CHECK-LABEL: prefix_vl_narrow_bound:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 31
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v10, v8, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
-  %limit = and iXLen %avl, 31
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %limit, iXLen 2, iXLen 0)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %byte = trunc iXLen %vl to i8
-  %narrow = zext i8 %byte to iXLen
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %narrow, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
-  %sum = add <vscale x 2 x i32> %a, %b
-  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
-  ret <vscale x 2 x i32> %r
-}
-
-define <vscale x 2 x i32> @prefix_vl_cast(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
-; CHECK-LABEL: prefix_vl_cast:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v10, v8, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %avl, iXLen 2, iXLen 0)
-  %short = trunc iXLen %vl to i16
-  %wide = zext i16 %short to iXLen
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %wide, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
-  %sum = add <vscale x 2 x i32> %a, %b
-  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
-  ret <vscale x 2 x i32> %r
-}
-
-define <vscale x 2 x i32> @prefix_vlmax(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru) {
-; CHECK-LABEL: prefix_vlmax:
+define <vscale x 2 x i32> @prefix_generic_max_count(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru) {
+; CHECK-LABEL: prefix_generic_max_count:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vadd.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
-  %vl = call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 2, iXLen 0)
-  %id = call <vscale x 2 x iXLen> @llvm.stepvector.nxv2iXLen()
-  %seed = insertelement <vscale x 2 x iXLen> poison, iXLen %vl, i64 0
-  %bound = shufflevector <vscale x 2 x iXLen> %seed, <vscale x 2 x iXLen> poison, <vscale x 2 x i32> zeroinitializer
-  %m = icmp ult <vscale x 2 x iXLen> %id, %bound
+  %vl = call i32 @llvm.experimental.get.vector.length.iXLen(iXLen -1, i32 2, i1 true)
+  %id = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl, i64 0
+  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %m = icmp ult <vscale x 2 x i32> %id, %bound
   %sum = add <vscale x 2 x i32> %a, %b
   %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
   ret <vscale x 2 x i32> %r
@@ -1294,10 +1121,10 @@ define <vscale x 2 x i32> @negative_prefix_generic_fixed(<vscale x 2 x i32> %a, 
 ; CHECK-LABEL: negative_prefix_generic_fixed:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 2
-; CHECK-NEXT:    bltu a0, a1, .LBB91_2
+; CHECK-NEXT:    bltu a0, a1, .LBB85_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:  .LBB91_2:
+; CHECK-NEXT:  .LBB85_2:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vmslt.vx v0, v11, a0
@@ -1331,6 +1158,23 @@ define <vscale x 2 x i32> @prefix_generic_i32_avl(<vscale x 2 x i32> %a, <vscale
 ; RV64-NEXT:    vmv1r.v v8, v10
 ; RV64-NEXT:    ret
   %vl = call i32 @llvm.experimental.get.vector.length.i32(i32 %avl, i32 2, i1 true)
+  %id = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+  %seed = insertelement <vscale x 2 x i32> poison, i32 %vl, i64 0
+  %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %m = icmp slt <vscale x 2 x i32> %id, %bound
+  %sum = add <vscale x 2 x i32> %a, %b
+  %r = select <vscale x 2 x i1> %m, <vscale x 2 x i32> %sum, <vscale x 2 x i32> %passthru
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x i32> @prefix_generic_range(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, iXLen %avl) {
+; CHECK-LABEL: prefix_generic_range:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v10, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    ret
+  %vl = call range(i32 0, 2049) i32 @llvm.experimental.get.vector.length.iXLen(iXLen %avl, i32 2, i1 true)
   %id = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
   %seed = insertelement <vscale x 2 x i32> poison, i32 %vl, i64 0
   %bound = shufflevector <vscale x 2 x i32> %seed, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
