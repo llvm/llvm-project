@@ -21474,15 +21474,13 @@ static SDValue canonicalizeMaskForVLPredicate(
   // + i is exact breaks. We also check that (NumElts - 1) doesn't overflow
   // otherwise it will be truncated and the check against start will be .
   if (IsSigned) {
-    if (!isIntN(ElementSize, NumElts - 1)) {
+    if (!isIntN(ElementSize, NumElts - 1))
       return SDValue();
-    }
 
     (void)Start.sadd_ov(APInt(ElementSize, NumElts - 1), Overflow);
   } else {
-    if (!isUIntN(ElementSize, NumElts - 1)) {
+    if (!isUIntN(ElementSize, NumElts - 1))
       return SDValue();
-    }
 
     (void)Start.uadd_ov(APInt(ElementSize, NumElts - 1), Overflow);
   }
