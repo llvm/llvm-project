@@ -263,5 +263,15 @@ const EHPersonality &getEHPersonality(CIRGenModule &cgm,
 /// emitted.
 const EHPersonality &getEHPersonality(CIRGenFunction &cgf);
 
+struct CallLifetimeEnd final : EHScopeStack::Cleanup {
+  // The raw alloca pointer (in the alloca address space). Mirrors classic
+  // CodeGen's CallLifetimeEnd, which stores the llvm::Value pointer rather
+  // than an Address.
+  mlir::Value addr;
+  CallLifetimeEnd(mlir::Value addr) : addr(addr) {}
+  bool isRedundantBeforeReturn() override { return true; }
+  void emit(CIRGenFunction &cgf, Flags flags) override;
+};
+
 } // namespace clang::CIRGen
 #endif // CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H

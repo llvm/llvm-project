@@ -32,18 +32,6 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-struct CallLifetimeEnd final : EHScopeStack::Cleanup {
-  // The raw alloca pointer (in the alloca address space). Mirrors classic
-  // CodeGen's CallLifetimeEnd, which stores the llvm::Value pointer rather
-  // than an Address.
-  mlir::Value addr;
-  CallLifetimeEnd(mlir::Value addr) : addr(addr) {}
-  bool isRedundantBeforeReturn() override { return true; }
-  void emit(CIRGenFunction &cgf, Flags flags) override {
-    cgf.emitLifetimeEndOp(addr.getLoc(), addr);
-  }
-};
-
 CIRGenFunction::AutoVarEmission
 CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
                                   mlir::OpBuilder::InsertPoint ip) {
@@ -390,32 +378,37 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
 }
 
 namespace {
-/// Finds the temporaries with a destructor that the initializer of a variable
-/// with automatic storage duration lifetime-extends. Their cleanups are pushed
-/// onto the EH stack when the initializer's full-expression ends.
+/// Finds the temporaries that the initializer of a variable with automatic
+/// storage duration lifetime-extends. Their cleanups are pushed onto the EH
+/// stack when the initializer's full-expression ends.
 class LifetimeExtendedTemporaryFinder
     : public RecursiveASTVisitor<LifetimeExtendedTemporaryFinder> {
   const VarDecl &var;
   llvm::SmallPtrSet<const MaterializeTemporaryExpr *, 2> visited;
   SmallVector<QualType, 2> types;
+  bool any = false;
 
 public:
   explicit LifetimeExtendedTemporaryFinder(const VarDecl &var) : var(var) {}
 
-  /// The types of the temporaries that were found.
+  /// The types of the found temporaries that have a destructor.
   ArrayRef<QualType> found() const { return types; }
+
+  /// Whether any temporary was found, including trivially destructible ones.
+  bool foundAny() const { return any; }
 
   // Look into the semantic form of initializer lists, which holds the backing
   // array of a std::initializer_list, and into default member initializers.
   // The array filler of an initializer list is not visited.
   bool shouldVisitImplicitCode() const { return true; }
 
-  /// Records the type of each temporary requiring destruction whose lifetime
-  /// is extended by \c var.
+  /// Records each temporary whose lifetime is extended by \c var, and the
+  /// type of those requiring destruction.
   bool VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *m) {
     if (m->getExtendingDecl() != &var ||
         m->getStorageDuration() != SD_Automatic || !visited.insert(m).second)
       return true;
+    any = true;
     // Like pushTemporaryCleanup, look at the type of the whole temporary, not
     // at the subobject that the reference binds to.
     SmallVector<const Expr *, 2> commaLHSs;
@@ -439,19 +432,19 @@ static bool destructorMayThrow(QualType type) {
          !fpt->isNothrow();
 }
 
-SmallVector<QualType, 2>
-CIRGenFunction::getLifetimeExtendedTemporariesWithDestructor(const VarDecl &d) {
+CIRGenFunction::ExtendedTemporaries
+CIRGenFunction::getLifetimeExtendedTemporaries(const VarDecl &d) {
   const Expr *init = d.getInit();
   if (!init)
     return {};
   LifetimeExtendedTemporaryFinder finder(d);
   finder.TraverseStmt(const_cast<Expr *>(init));
-  return SmallVector<QualType, 2>(finder.found());
+  return {SmallVector<QualType, 2>(finder.found()), finder.foundAny()};
 }
 
 void CIRGenFunction::emitLoopConditionVariable(
     const VarDecl &d, CapturedCleanups &condCleanup,
-    ArrayRef<QualType> extendedTemporaries) {
+    const ExtendedTemporaries &temps) {
   // A condition variable always has automatic storage duration, so this
   // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. Capture the
   // lifetime-end cleanup pushed while emitting the alloca, but emit the
@@ -488,17 +481,20 @@ void CIRGenFunction::emitLoopConditionVariable(
   // The temporaries that the initializer lifetime-extends are destroyed with
   // the variable as well ([class.temporary]p6). Their cleanups are pushed when
   // the initializer's full-expression ends, so capture them too and guard them
-  // with the same flag.
+  // with the same flag. Their lifetime-end cleanups are captured unguarded, as
+  // their lifetimes start before the initializer runs.
   bool needsCleanup = d.needsDestruction(getContext()) != QualType::DK_none;
-  bool extendsTemporaries = !extendedTemporaries.empty();
+  bool extendsTemporaries = !temps.withDestructor.empty();
+  bool capturesExtendedCleanups =
+      extendsTemporaries || extendedTemporariesNeedLifetimeEnd(temps);
 
   // Destroy the variable first, then the temporaries in reverse order of
   // construction. A throw would skip the remaining destructors because CFG
   // flattening does not yet support EH paths in loop cleanup regions.
   if (getLangOpts().Exceptions && extendsTemporaries &&
       ((needsCleanup && destructorMayThrow(d.getType())) ||
-       (extendedTemporaries.size() > 1 &&
-        llvm::any_of(extendedTemporaries, destructorMayThrow))))
+       (temps.withDestructor.size() > 1 &&
+        llvm::any_of(temps.withDestructor, destructorMayThrow))))
     cgm.errorNYI(d.getSourceRange(),
                  "loop condition variable cleanup with a potentially-throwing "
                  "destructor before another destructor");
@@ -517,15 +513,16 @@ void CIRGenFunction::emitLoopConditionVariable(
   {
     LifetimeExtensionCapture capture{&d, &condCleanup, activeFlag};
     llvm::SaveAndRestore<const LifetimeExtensionCapture *> captureExtended(
-        lifetimeExtensionCapture, extendsTemporaries ? &capture : nullptr);
+        lifetimeExtensionCapture,
+        capturesExtendedCleanups ? &capture : nullptr);
     emitAutoVarInit(emission);
   }
 
-  // Only lifetime-extended cleanups remain after initialization. If the AST
-  // walk found no extended temporaries, these cleanups are uncaptured and wrap
+  // Only lifetime-extended cleanups remain after initialization. If none were
+  // expected to be captured, these cleanups are uncaptured and wrap
   // cir.condition in cir.cleanup.scope (e.g. for initializer-list array
   // fillers).
-  if (!extendsTemporaries && ehStack.stable_begin() != initDepth) {
+  if (!capturesExtendedCleanups && ehStack.stable_begin() != initDepth) {
     cgm.errorNYI(d.getSourceRange(),
                  "loop condition variable whose initializer leaves uncaptured "
                  "cleanups");
@@ -1361,8 +1358,14 @@ void CIRGenFunction::pushPendingCleanupToEHStack(
   std::optional<CapturedCleanups::CaptureScope> capture;
   if (entry.capturedBy)
     capture.emplace(*entry.capturedBy);
-  ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
-                                     entry.destroyer);
+  if (entry.kind & LifetimeMarker) {
+    assert(entry.addr.getDefiningOp<cir::AllocaOp>() &&
+           "lifetime cleanup requires the raw alloca address");
+    ehStack.pushCleanup<CallLifetimeEnd>(entry.kind, entry.addr.getPointer());
+  } else {
+    ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
+                                       entry.destroyer);
+  }
 
   if (entry.activeFlag.isValid()) {
     EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
