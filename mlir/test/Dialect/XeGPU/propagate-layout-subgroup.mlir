@@ -691,3 +691,54 @@ gpu.func @forward_fill_loop_carried(%arg0: memref<128x64xf16>, %arg1: memref<64x
   gpu.return
 }
 }
+
+// -----
+// one subgroup per row pair owns every column
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_split_inner_not_distributed(
+// CHECK: arith.constant {{.*}}layout_result_0 = #xegpu.layout<sg_layout = [2], sg_data = [16]
+// CHECK: vector.shape_cast {{.*}}layout_result_0 = #xegpu.layout<sg_layout = [2, 1], sg_data = [2, 4]
+  gpu.func @shape_cast_split_inner_not_distributed(%dst: memref<4x8xf32>) kernel {
+    %src = arith.constant dense<0.0> : vector<32xf32>
+    %result = vector.shape_cast %src : vector<32xf32> to vector<4x8xf32>
+    %td = xegpu.create_nd_tdesc %dst : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32>
+    xegpu.store_nd %result, %td[0, 0]
+      <{layout = #xegpu.layout<sg_layout = [2, 1], sg_data = [2, 4]>}>
+      : vector<4x8xf32>, !xegpu.tensor_desc<4x8xf32>
+    gpu.return
+  }
+}
+
+// -----
+// No source layout exists: each 2x2 tile spans rows while the columns are
+// also distributed. The source must be left without a layout.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_split_not_foldable(
+// CHECK: arith.constant dense<0.000000e+00> : vector<16xf32>
+  gpu.func @shape_cast_split_not_foldable(%dst: memref<4x4xf32>) kernel {
+    %src = arith.constant dense<0.0> : vector<16xf32>
+    %result = vector.shape_cast %src : vector<16xf32> to vector<4x4xf32>
+    %td = xegpu.create_nd_tdesc %dst : memref<4x4xf32> -> !xegpu.tensor_desc<4x4xf32>
+    xegpu.store_nd %result, %td[0, 0]
+      <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [2, 2]>}>
+      : vector<4x4xf32>, !xegpu.tensor_desc<4x4xf32>
+    gpu.return
+  }
+}
+
+// -----
+// Same as shape_cast_split_one_row_per_sg, but subgroup ids count down the rows
+// first, so the flattened order is S0 S2 S1 S3 and no source layout exists.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_split_order_blocks_fold(
+// CHECK: arith.constant dense<0.000000e+00> : vector<8xf32>
+  gpu.func @shape_cast_split_order_blocks_fold(%dst: memref<2x4xf32>) kernel {
+    %src = arith.constant dense<0.0> : vector<8xf32>
+    %result = vector.shape_cast %src : vector<8xf32> to vector<2x4xf32>
+    %td = xegpu.create_nd_tdesc %dst : memref<2x4xf32> -> !xegpu.tensor_desc<2x4xf32>
+    xegpu.store_nd %result, %td[0, 0]
+      <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [1, 2], order = [0, 1]>}>
+      : vector<2x4xf32>, !xegpu.tensor_desc<2x4xf32>
+    gpu.return
+  }
+}
