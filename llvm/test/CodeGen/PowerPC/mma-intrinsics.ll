@@ -5,6 +5,12 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-aix- \
+; RUN:   -mcpu=pwr10 -target-abi=vec-extabi \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-AIX64
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-aix- \
+; RUN:   -mcpu=pwr10 -target-abi=vec-extabi \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-AIX32
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=future -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-WACC
@@ -47,6 +53,38 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-AIX64-LABEL: ass_acc:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    vmr 3, 2
+; CHECK-AIX64-NEXT:    xxlor 0, 2, 2
+; CHECK-AIX64-NEXT:    xxlor 1, 3, 3
+; CHECK-AIX64-NEXT:    xxlor 2, 0, 0
+; CHECK-AIX64-NEXT:    xxlor 3, 1, 1
+; CHECK-AIX64-NEXT:    xxmtacc 0
+; CHECK-AIX64-NEXT:    xvf32gerpp 0, 2, 2
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(3)
+; CHECK-AIX64-NEXT:    stxv 0, 0(3)
+; CHECK-AIX64-NEXT:    stxv 3, 48(3)
+; CHECK-AIX64-NEXT:    stxv 2, 32(3)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: ass_acc:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    vmr 3, 2
+; CHECK-AIX32-NEXT:    xxlor 0, 2, 2
+; CHECK-AIX32-NEXT:    xxlor 1, 3, 3
+; CHECK-AIX32-NEXT:    xxlor 2, 0, 0
+; CHECK-AIX32-NEXT:    xxlor 3, 1, 1
+; CHECK-AIX32-NEXT:    xxmtacc 0
+; CHECK-AIX32-NEXT:    xvf32gerpp 0, 2, 2
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(3)
+; CHECK-AIX32-NEXT:    stxv 0, 0(3)
+; CHECK-AIX32-NEXT:    stxv 3, 48(3)
+; CHECK-AIX32-NEXT:    stxv 2, 32(3)
+; CHECK-AIX32-NEXT:    blr
 ;
 ; CHECK-WACC-LABEL: ass_acc:
 ; CHECK-WACC:       # %bb.0: # %entry
@@ -106,6 +144,32 @@ define void @int_xxmtacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-AIX64-LABEL: int_xxmtacc:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    xxlor 3, 2, 2
+; CHECK-AIX64-NEXT:    xxlor 2, 2, 2
+; CHECK-AIX64-NEXT:    xxlor 0, 2, 2
+; CHECK-AIX64-NEXT:    xxlor 1, 3, 3
+; CHECK-AIX64-NEXT:    xxmtacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(3)
+; CHECK-AIX64-NEXT:    stxv 0, 0(3)
+; CHECK-AIX64-NEXT:    stxv 3, 48(3)
+; CHECK-AIX64-NEXT:    stxv 2, 32(3)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: int_xxmtacc:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    xxlor 3, 2, 2
+; CHECK-AIX32-NEXT:    xxlor 2, 2, 2
+; CHECK-AIX32-NEXT:    xxlor 0, 2, 2
+; CHECK-AIX32-NEXT:    xxlor 1, 3, 3
+; CHECK-AIX32-NEXT:    xxmtacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(3)
+; CHECK-AIX32-NEXT:    stxv 0, 0(3)
+; CHECK-AIX32-NEXT:    stxv 3, 48(3)
+; CHECK-AIX32-NEXT:    stxv 2, 32(3)
+; CHECK-AIX32-NEXT:    blr
 ;
 ; CHECK-WACC-LABEL: int_xxmtacc:
 ; CHECK-WACC:       # %bb.0: # %entry
@@ -174,6 +238,40 @@ define void @int_xxmfacc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    blr
 ;
+; CHECK-AIX64-LABEL: int_xxmfacc:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    vmr 3, 2
+; CHECK-AIX64-NEXT:    xxlor 0, 2, 2
+; CHECK-AIX64-NEXT:    xxlor 1, 3, 3
+; CHECK-AIX64-NEXT:    xxlor 2, 0, 0
+; CHECK-AIX64-NEXT:    xxlor 3, 1, 1
+; CHECK-AIX64-NEXT:    xxmtacc 0
+; CHECK-AIX64-NEXT:    xvf32gerpp 0, 2, 2
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(3)
+; CHECK-AIX64-NEXT:    stxv 0, 0(3)
+; CHECK-AIX64-NEXT:    stxv 3, 48(3)
+; CHECK-AIX64-NEXT:    stxv 2, 32(3)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: int_xxmfacc:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    vmr 3, 2
+; CHECK-AIX32-NEXT:    xxlor 0, 2, 2
+; CHECK-AIX32-NEXT:    xxlor 1, 3, 3
+; CHECK-AIX32-NEXT:    xxlor 2, 0, 0
+; CHECK-AIX32-NEXT:    xxlor 3, 1, 1
+; CHECK-AIX32-NEXT:    xxmtacc 0
+; CHECK-AIX32-NEXT:    xvf32gerpp 0, 2, 2
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(3)
+; CHECK-AIX32-NEXT:    stxv 0, 0(3)
+; CHECK-AIX32-NEXT:    stxv 3, 48(3)
+; CHECK-AIX32-NEXT:    stxv 2, 32(3)
+; CHECK-AIX32-NEXT:    blr
+;
 ; CHECK-WACC-LABEL: int_xxmfacc:
 ; CHECK-WACC:       # %bb.0: # %entry
 ; CHECK-WACC-NEXT:    vmr v3, v2
@@ -230,6 +328,26 @@ define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    blr
 ;
+; CHECK-AIX64-LABEL: int_xxsetaccz:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(3)
+; CHECK-AIX64-NEXT:    stxv 0, 0(3)
+; CHECK-AIX64-NEXT:    stxv 3, 48(3)
+; CHECK-AIX64-NEXT:    stxv 2, 32(3)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: int_xxsetaccz:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(3)
+; CHECK-AIX32-NEXT:    stxv 0, 0(3)
+; CHECK-AIX32-NEXT:    stxv 3, 48(3)
+; CHECK-AIX32-NEXT:    stxv 2, 32(3)
+; CHECK-AIX32-NEXT:    blr
+;
 ; CHECK-WACC-LABEL: int_xxsetaccz:
 ; CHECK-WACC:       # %bb.0: # %entry
 ; CHECK-WACC-NEXT:    dmxxsetaccz wacc0
@@ -277,6 +395,26 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-BE-NEXT:    stxv vs2, 0(r5)
 ; CHECK-BE-NEXT:    stxv vs3, 0(r6)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-AIX64-LABEL: disass_acc:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 0, 0(3)
+; CHECK-AIX64-NEXT:    stxv 1, 0(4)
+; CHECK-AIX64-NEXT:    stxv 2, 0(5)
+; CHECK-AIX64-NEXT:    stxv 3, 0(6)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: disass_acc:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 0, 0(3)
+; CHECK-AIX32-NEXT:    stxv 1, 0(4)
+; CHECK-AIX32-NEXT:    stxv 2, 0(5)
+; CHECK-AIX32-NEXT:    stxv 3, 0(6)
+; CHECK-AIX32-NEXT:    blr
 ;
 ; CHECK-WACC-LABEL: disass_acc:
 ; CHECK-WACC:       # %bb.0: # %entry
@@ -356,6 +494,50 @@ define void @testBranch(ptr %ptr, <16 x i8> %vc, i32 %val) {
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-AIX64-LABEL: testBranch:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    cmplwi 4, 0
+; CHECK-AIX64-NEXT:    beq 0, L..BB5_2
+; CHECK-AIX64-NEXT:  # %bb.1: # %if.then
+; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    b L..BB5_3
+; CHECK-AIX64-NEXT:  L..BB5_2: # %if.else
+; CHECK-AIX64-NEXT:    lxv 3, 48(3)
+; CHECK-AIX64-NEXT:    lxv 2, 32(3)
+; CHECK-AIX64-NEXT:    lxv 1, 16(3)
+; CHECK-AIX64-NEXT:    lxv 0, 0(3)
+; CHECK-AIX64-NEXT:    xxmtacc 0
+; CHECK-AIX64-NEXT:    xvi4ger8pp 0, 2, 2
+; CHECK-AIX64-NEXT:  L..BB5_3: # %if.end
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(3)
+; CHECK-AIX64-NEXT:    stxv 0, 0(3)
+; CHECK-AIX64-NEXT:    stxv 3, 48(3)
+; CHECK-AIX64-NEXT:    stxv 2, 32(3)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: testBranch:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    cmplwi 4, 0
+; CHECK-AIX32-NEXT:    beq 0, L..BB5_2
+; CHECK-AIX32-NEXT:  # %bb.1: # %if.then
+; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    b L..BB5_3
+; CHECK-AIX32-NEXT:  L..BB5_2: # %if.else
+; CHECK-AIX32-NEXT:    lxv 3, 48(3)
+; CHECK-AIX32-NEXT:    lxv 2, 32(3)
+; CHECK-AIX32-NEXT:    lxv 1, 16(3)
+; CHECK-AIX32-NEXT:    lxv 0, 0(3)
+; CHECK-AIX32-NEXT:    xxmtacc 0
+; CHECK-AIX32-NEXT:    xvi4ger8pp 0, 2, 2
+; CHECK-AIX32-NEXT:  L..BB5_3: # %if.end
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(3)
+; CHECK-AIX32-NEXT:    stxv 0, 0(3)
+; CHECK-AIX32-NEXT:    stxv 3, 48(3)
+; CHECK-AIX32-NEXT:    stxv 2, 32(3)
+; CHECK-AIX32-NEXT:    blr
 ;
 ; CHECK-WACC-LABEL: testBranch:
 ; CHECK-WACC:       # %bb.0: # %entry
@@ -454,6 +636,36 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    stxv vs2, 96(r3)
 ; CHECK-BE-NEXT:    blr
 ;
+; CHECK-AIX64-LABEL: testcse:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    xvf32gerpp 0, 2, 2
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(3)
+; CHECK-AIX64-NEXT:    stxv 0, 0(3)
+; CHECK-AIX64-NEXT:    stxv 3, 48(3)
+; CHECK-AIX64-NEXT:    stxv 2, 32(3)
+; CHECK-AIX64-NEXT:    stxv 1, 80(3)
+; CHECK-AIX64-NEXT:    stxv 0, 64(3)
+; CHECK-AIX64-NEXT:    stxv 3, 112(3)
+; CHECK-AIX64-NEXT:    stxv 2, 96(3)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: testcse:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    xvf32gerpp 0, 2, 2
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(3)
+; CHECK-AIX32-NEXT:    stxv 0, 0(3)
+; CHECK-AIX32-NEXT:    stxv 3, 48(3)
+; CHECK-AIX32-NEXT:    stxv 2, 32(3)
+; CHECK-AIX32-NEXT:    stxv 1, 80(3)
+; CHECK-AIX32-NEXT:    stxv 0, 64(3)
+; CHECK-AIX32-NEXT:    stxv 3, 112(3)
+; CHECK-AIX32-NEXT:    stxv 2, 96(3)
+; CHECK-AIX32-NEXT:    blr
+;
 ; CHECK-WACC-LABEL: testcse:
 ; CHECK-WACC:       # %bb.0: # %entry
 ; CHECK-WACC-NEXT:    dmxxsetaccz wacc0
@@ -530,6 +742,42 @@ define void @testcse2(ptr %res, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    stxv vs3, 112(r3)
 ; CHECK-BE-NEXT:    stxv vs2, 96(r3)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-AIX64-LABEL: testcse2:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    xxsetaccz 1
+; CHECK-AIX64-NEXT:    xvf32gerpp 1, 2, 2
+; CHECK-AIX64-NEXT:    xvf32gerpn 0, 2, 2
+; CHECK-AIX64-NEXT:    xxmfacc 1
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 5, 16(3)
+; CHECK-AIX64-NEXT:    stxv 4, 0(3)
+; CHECK-AIX64-NEXT:    stxv 7, 48(3)
+; CHECK-AIX64-NEXT:    stxv 6, 32(3)
+; CHECK-AIX64-NEXT:    stxv 1, 80(3)
+; CHECK-AIX64-NEXT:    stxv 0, 64(3)
+; CHECK-AIX64-NEXT:    stxv 3, 112(3)
+; CHECK-AIX64-NEXT:    stxv 2, 96(3)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: testcse2:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    xxsetaccz 1
+; CHECK-AIX32-NEXT:    xvf32gerpp 1, 2, 2
+; CHECK-AIX32-NEXT:    xvf32gerpn 0, 2, 2
+; CHECK-AIX32-NEXT:    xxmfacc 1
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 5, 16(3)
+; CHECK-AIX32-NEXT:    stxv 4, 0(3)
+; CHECK-AIX32-NEXT:    stxv 7, 48(3)
+; CHECK-AIX32-NEXT:    stxv 6, 32(3)
+; CHECK-AIX32-NEXT:    stxv 1, 80(3)
+; CHECK-AIX32-NEXT:    stxv 0, 64(3)
+; CHECK-AIX32-NEXT:    stxv 3, 112(3)
+; CHECK-AIX32-NEXT:    stxv 2, 96(3)
+; CHECK-AIX32-NEXT:    blr
 ;
 ; CHECK-WACC-LABEL: testcse2:
 ; CHECK-WACC:       # %bb.0: # %entry
@@ -613,6 +861,42 @@ define void @testcse3(ptr %res, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    stxv vs3, 112(r3)
 ; CHECK-BE-NEXT:    stxv vs2, 96(r3)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-AIX64-LABEL: testcse3:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    xxsetaccz 1
+; CHECK-AIX64-NEXT:    xvf32gerpp 1, 2, 2
+; CHECK-AIX64-NEXT:    xvf32gerpn 0, 2, 2
+; CHECK-AIX64-NEXT:    xxmfacc 1
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 5, 16(3)
+; CHECK-AIX64-NEXT:    stxv 4, 0(3)
+; CHECK-AIX64-NEXT:    stxv 7, 48(3)
+; CHECK-AIX64-NEXT:    stxv 6, 32(3)
+; CHECK-AIX64-NEXT:    stxv 1, 80(3)
+; CHECK-AIX64-NEXT:    stxv 0, 64(3)
+; CHECK-AIX64-NEXT:    stxv 3, 112(3)
+; CHECK-AIX64-NEXT:    stxv 2, 96(3)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: testcse3:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    xxsetaccz 1
+; CHECK-AIX32-NEXT:    xvf32gerpp 1, 2, 2
+; CHECK-AIX32-NEXT:    xvf32gerpn 0, 2, 2
+; CHECK-AIX32-NEXT:    xxmfacc 1
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 5, 16(3)
+; CHECK-AIX32-NEXT:    stxv 4, 0(3)
+; CHECK-AIX32-NEXT:    stxv 7, 48(3)
+; CHECK-AIX32-NEXT:    stxv 6, 32(3)
+; CHECK-AIX32-NEXT:    stxv 1, 80(3)
+; CHECK-AIX32-NEXT:    stxv 0, 64(3)
+; CHECK-AIX32-NEXT:    stxv 3, 112(3)
+; CHECK-AIX32-NEXT:    stxv 2, 96(3)
+; CHECK-AIX32-NEXT:    blr
 ;
 ; CHECK-WACC-LABEL: testcse3:
 ; CHECK-WACC:       # %bb.0: # %entry
@@ -753,6 +1037,100 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-BE-NEXT:    bdnz .LBB9_2
 ; CHECK-BE-NEXT:  # %bb.3: # %for.cond.cleanup
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-AIX64-LABEL: testcse4:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    cmpwi 4, 1
+; CHECK-AIX64-NEXT:    bltlr 0
+; CHECK-AIX64-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-AIX64-NEXT:    clrldi 6, 4, 32
+; CHECK-AIX64-NEXT:    addi 4, 5, 48
+; CHECK-AIX64-NEXT:    li 5, 0
+; CHECK-AIX64-NEXT:    mtctr 6
+; CHECK-AIX64-NEXT:    .align 4
+; CHECK-AIX64-NEXT:  L..BB9_2: # %for.body
+; CHECK-AIX64-NEXT:    #
+; CHECK-AIX64-NEXT:    lxv 0, -48(4)
+; CHECK-AIX64-NEXT:    lxv 1, -32(4)
+; CHECK-AIX64-NEXT:    xxsetaccz 2
+; CHECK-AIX64-NEXT:    xxsetaccz 1
+; CHECK-AIX64-NEXT:    rldic 6, 5, 6, 26
+; CHECK-AIX64-NEXT:    addi 5, 5, 3
+; CHECK-AIX64-NEXT:    add 7, 3, 6
+; CHECK-AIX64-NEXT:    xvf32gerpp 2, 0, 1
+; CHECK-AIX64-NEXT:    lxv 0, -16(4)
+; CHECK-AIX64-NEXT:    lxv 1, 0(4)
+; CHECK-AIX64-NEXT:    xvf32gerpn 1, 0, 1
+; CHECK-AIX64-NEXT:    lxv 12, 16(4)
+; CHECK-AIX64-NEXT:    lxv 13, 32(4)
+; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    addi 4, 4, 96
+; CHECK-AIX64-NEXT:    xvf32gernp 0, 12, 13
+; CHECK-AIX64-NEXT:    xxmfacc 2
+; CHECK-AIX64-NEXT:    xxmfacc 1
+; CHECK-AIX64-NEXT:    stxvx 8, 3, 6
+; CHECK-AIX64-NEXT:    stxv 9, 16(7)
+; CHECK-AIX64-NEXT:    stxv 11, 48(7)
+; CHECK-AIX64-NEXT:    stxv 10, 32(7)
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 5, 80(7)
+; CHECK-AIX64-NEXT:    stxv 4, 64(7)
+; CHECK-AIX64-NEXT:    stxv 7, 112(7)
+; CHECK-AIX64-NEXT:    stxv 6, 96(7)
+; CHECK-AIX64-NEXT:    stxv 1, 144(7)
+; CHECK-AIX64-NEXT:    stxv 0, 128(7)
+; CHECK-AIX64-NEXT:    stxv 3, 176(7)
+; CHECK-AIX64-NEXT:    stxv 2, 160(7)
+; CHECK-AIX64-NEXT:    bdnz L..BB9_2
+; CHECK-AIX64-NEXT:  # %bb.3: # %for.cond.cleanup
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: testcse4:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    cmpwi 4, 0
+; CHECK-AIX32-NEXT:    blelr 0
+; CHECK-AIX32-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-AIX32-NEXT:    li 6, 0
+; CHECK-AIX32-NEXT:    li 7, 0
+; CHECK-AIX32-NEXT:    .align 4
+; CHECK-AIX32-NEXT:  L..BB9_2: # %for.body
+; CHECK-AIX32-NEXT:    #
+; CHECK-AIX32-NEXT:    lxv 0, 0(5)
+; CHECK-AIX32-NEXT:    lxv 1, 16(5)
+; CHECK-AIX32-NEXT:    xxsetaccz 2
+; CHECK-AIX32-NEXT:    xxsetaccz 1
+; CHECK-AIX32-NEXT:    addic 6, 6, 1
+; CHECK-AIX32-NEXT:    addze 7, 7
+; CHECK-AIX32-NEXT:    xor 8, 6, 4
+; CHECK-AIX32-NEXT:    or. 8, 8, 7
+; CHECK-AIX32-NEXT:    xvf32gerpp 2, 0, 1
+; CHECK-AIX32-NEXT:    lxv 0, 32(5)
+; CHECK-AIX32-NEXT:    lxv 1, 48(5)
+; CHECK-AIX32-NEXT:    xvf32gerpn 1, 0, 1
+; CHECK-AIX32-NEXT:    lxv 12, 64(5)
+; CHECK-AIX32-NEXT:    lxv 13, 80(5)
+; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    addi 5, 5, 96
+; CHECK-AIX32-NEXT:    xxmfacc 2
+; CHECK-AIX32-NEXT:    xvf32gernp 0, 12, 13
+; CHECK-AIX32-NEXT:    stxv 9, 16(3)
+; CHECK-AIX32-NEXT:    stxv 8, 0(3)
+; CHECK-AIX32-NEXT:    stxv 11, 48(3)
+; CHECK-AIX32-NEXT:    xxmfacc 1
+; CHECK-AIX32-NEXT:    stxv 10, 32(3)
+; CHECK-AIX32-NEXT:    stxv 5, 80(3)
+; CHECK-AIX32-NEXT:    stxv 4, 64(3)
+; CHECK-AIX32-NEXT:    stxv 7, 112(3)
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 6, 96(3)
+; CHECK-AIX32-NEXT:    stxv 1, 144(3)
+; CHECK-AIX32-NEXT:    stxv 0, 128(3)
+; CHECK-AIX32-NEXT:    stxv 3, 176(3)
+; CHECK-AIX32-NEXT:    stxv 2, 160(3)
+; CHECK-AIX32-NEXT:    addi 3, 3, 192
+; CHECK-AIX32-NEXT:    bne 0, L..BB9_2
+; CHECK-AIX32-NEXT:  # %bb.3: # %for.cond.cleanup
+; CHECK-AIX32-NEXT:    blr
 ;
 ; CHECK-WACC-LABEL: testcse4:
 ; CHECK-WACC:       # %bb.0: # %entry
@@ -973,6 +1351,74 @@ define void @testRedundantPrimeUnprime(ptr %dst, <16 x i8> %vc) nounwind {
 ; CHECK-BE-NEXT:    mtlr r0
 ; CHECK-BE-NEXT:    blr
 ;
+; CHECK-AIX64-LABEL: testRedundantPrimeUnprime:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    mflr 0
+; CHECK-AIX64-NEXT:    std 0, 16(1)
+; CHECK-AIX64-NEXT:    stdu 1, -192(1)
+; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    xxsetaccz 1
+; CHECK-AIX64-NEXT:    std 31, 184(1) # 8-byte Folded Spill
+; CHECK-AIX64-NEXT:    mr 31, 3
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(3)
+; CHECK-AIX64-NEXT:    stxv 0, 0(3)
+; CHECK-AIX64-NEXT:    stxv 3, 48(3)
+; CHECK-AIX64-NEXT:    stxv 2, 32(3)
+; CHECK-AIX64-NEXT:    xvf32gerpp 1, 2, 2
+; CHECK-AIX64-NEXT:    xxmfacc 1
+; CHECK-AIX64-NEXT:    stxv 4, 112(1)
+; CHECK-AIX64-NEXT:    stxv 5, 128(1)
+; CHECK-AIX64-NEXT:    stxv 6, 144(1)
+; CHECK-AIX64-NEXT:    stxv 7, 160(1)
+; CHECK-AIX64-NEXT:    bl .testRedundantPrimeUnprimeF[PR]
+; CHECK-AIX64-NEXT:    nop
+; CHECK-AIX64-NEXT:    lxvp 0, 112(1)
+; CHECK-AIX64-NEXT:    lxvp 2, 144(1)
+; CHECK-AIX64-NEXT:    stxv 3, 112(31)
+; CHECK-AIX64-NEXT:    stxv 2, 96(31)
+; CHECK-AIX64-NEXT:    stxv 1, 80(31)
+; CHECK-AIX64-NEXT:    stxv 0, 64(31)
+; CHECK-AIX64-NEXT:    ld 31, 184(1) # 8-byte Folded Reload
+; CHECK-AIX64-NEXT:    addi 1, 1, 192
+; CHECK-AIX64-NEXT:    ld 0, 16(1)
+; CHECK-AIX64-NEXT:    mtlr 0
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: testRedundantPrimeUnprime:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    mflr 0
+; CHECK-AIX32-NEXT:    stw 0, 8(1)
+; CHECK-AIX32-NEXT:    stwu 1, -144(1)
+; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    xxsetaccz 1
+; CHECK-AIX32-NEXT:    stw 31, 140(1) # 4-byte Folded Spill
+; CHECK-AIX32-NEXT:    mr 31, 3
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(3)
+; CHECK-AIX32-NEXT:    stxv 0, 0(3)
+; CHECK-AIX32-NEXT:    stxv 3, 48(3)
+; CHECK-AIX32-NEXT:    stxv 2, 32(3)
+; CHECK-AIX32-NEXT:    xvf32gerpp 1, 2, 2
+; CHECK-AIX32-NEXT:    xxmfacc 1
+; CHECK-AIX32-NEXT:    stxv 4, 64(1)
+; CHECK-AIX32-NEXT:    stxv 5, 80(1)
+; CHECK-AIX32-NEXT:    stxv 6, 96(1)
+; CHECK-AIX32-NEXT:    stxv 7, 112(1)
+; CHECK-AIX32-NEXT:    bl .testRedundantPrimeUnprimeF[PR]
+; CHECK-AIX32-NEXT:    nop
+; CHECK-AIX32-NEXT:    lxvp 0, 64(1)
+; CHECK-AIX32-NEXT:    lxvp 2, 96(1)
+; CHECK-AIX32-NEXT:    stxv 3, 112(31)
+; CHECK-AIX32-NEXT:    stxv 2, 96(31)
+; CHECK-AIX32-NEXT:    stxv 1, 80(31)
+; CHECK-AIX32-NEXT:    stxv 0, 64(31)
+; CHECK-AIX32-NEXT:    lwz 31, 140(1) # 4-byte Folded Reload
+; CHECK-AIX32-NEXT:    addi 1, 1, 144
+; CHECK-AIX32-NEXT:    lwz 0, 8(1)
+; CHECK-AIX32-NEXT:    mtlr 0
+; CHECK-AIX32-NEXT:    blr
+;
 ; CHECK-WACC-LABEL: testRedundantPrimeUnprime:
 ; CHECK-WACC:       # %bb.0: # %entry
 ; CHECK-WACC-NEXT:    mflr r0
@@ -1084,6 +1530,38 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 ;
+; CHECK-AIX64-LABEL: test_ldst_1:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    lxv 3, 48(3)
+; CHECK-AIX64-NEXT:    lxv 2, 32(3)
+; CHECK-AIX64-NEXT:    lxv 1, 16(3)
+; CHECK-AIX64-NEXT:    lxv 0, 0(3)
+; CHECK-AIX64-NEXT:    plxvp 36, 8(4), 0
+; CHECK-AIX64-NEXT:    xxmtacc 0
+; CHECK-AIX64-NEXT:    pmxvf64gernn 0, 36, 2, 0, 0
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(5)
+; CHECK-AIX64-NEXT:    stxv 0, 0(5)
+; CHECK-AIX64-NEXT:    stxv 3, 48(5)
+; CHECK-AIX64-NEXT:    stxv 2, 32(5)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test_ldst_1:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    lxv 3, 48(3)
+; CHECK-AIX32-NEXT:    lxv 2, 32(3)
+; CHECK-AIX32-NEXT:    lxv 1, 16(3)
+; CHECK-AIX32-NEXT:    lxv 0, 0(3)
+; CHECK-AIX32-NEXT:    plxvp 36, 8(4), 0
+; CHECK-AIX32-NEXT:    xxmtacc 0
+; CHECK-AIX32-NEXT:    pmxvf64gernn 0, 36, 2, 0, 0
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(5)
+; CHECK-AIX32-NEXT:    stxv 0, 0(5)
+; CHECK-AIX32-NEXT:    stxv 3, 48(5)
+; CHECK-AIX32-NEXT:    stxv 2, 32(5)
+; CHECK-AIX32-NEXT:    blr
+;
 ; CHECK-WACC-LABEL: test_ldst_1:
 ; CHECK-WACC:       # %bb.0: # %entry
 ; CHECK-WACC-NEXT:    lxv v5, 0(r3)
@@ -1158,6 +1636,38 @@ define void @test_ldst_2(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-BE-NEXT:    stxv vs2, 32(r7)
 ; CHECK-BE-NEXT:    blr
 ;
+; CHECK-AIX64-LABEL: test_ldst_2:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    lxv 3, 48(3)
+; CHECK-AIX64-NEXT:    lxv 2, 32(3)
+; CHECK-AIX64-NEXT:    lxv 1, 16(3)
+; CHECK-AIX64-NEXT:    lxv 0, 0(3)
+; CHECK-AIX64-NEXT:    xxmtacc 0
+; CHECK-AIX64-NEXT:    lxvp 36, 0(4)
+; CHECK-AIX64-NEXT:    xvf64gernp 0, 36, 2
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(5)
+; CHECK-AIX64-NEXT:    stxv 0, 0(5)
+; CHECK-AIX64-NEXT:    stxv 3, 48(5)
+; CHECK-AIX64-NEXT:    stxv 2, 32(5)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test_ldst_2:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    lxv 3, 48(3)
+; CHECK-AIX32-NEXT:    lxv 2, 32(3)
+; CHECK-AIX32-NEXT:    lxv 1, 16(3)
+; CHECK-AIX32-NEXT:    lxv 0, 0(3)
+; CHECK-AIX32-NEXT:    xxmtacc 0
+; CHECK-AIX32-NEXT:    lxvp 36, 0(4)
+; CHECK-AIX32-NEXT:    xvf64gernp 0, 36, 2
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(5)
+; CHECK-AIX32-NEXT:    stxv 0, 0(5)
+; CHECK-AIX32-NEXT:    stxv 3, 48(5)
+; CHECK-AIX32-NEXT:    stxv 2, 32(5)
+; CHECK-AIX32-NEXT:    blr
+;
 ; CHECK-WACC-LABEL: test_ldst_2:
 ; CHECK-WACC:       # %bb.0: # %entry
 ; CHECK-WACC-NEXT:    lxv v5, 0(r3)
@@ -1230,6 +1740,38 @@ define void @test_ldst_3(ptr nocapture readonly %vqp, i64 %offs, ptr %vpp, <16 x
 ; CHECK-BE-NEXT:    stxv vs3, 48(r9)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r9)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-AIX64-LABEL: test_ldst_3:
+; CHECK-AIX64:       # %bb.0: # %entry
+; CHECK-AIX64-NEXT:    lxv 3, 48(3)
+; CHECK-AIX64-NEXT:    lxv 2, 32(3)
+; CHECK-AIX64-NEXT:    lxv 1, 16(3)
+; CHECK-AIX64-NEXT:    lxv 0, 0(3)
+; CHECK-AIX64-NEXT:    xxmtacc 0
+; CHECK-AIX64-NEXT:    lxvp 36, 0(5)
+; CHECK-AIX64-NEXT:    xvf64gernp 0, 36, 2
+; CHECK-AIX64-NEXT:    xxmfacc 0
+; CHECK-AIX64-NEXT:    stxv 1, 16(6)
+; CHECK-AIX64-NEXT:    stxv 0, 0(6)
+; CHECK-AIX64-NEXT:    stxv 3, 48(6)
+; CHECK-AIX64-NEXT:    stxv 2, 32(6)
+; CHECK-AIX64-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test_ldst_3:
+; CHECK-AIX32:       # %bb.0: # %entry
+; CHECK-AIX32-NEXT:    lxv 3, 48(3)
+; CHECK-AIX32-NEXT:    lxv 2, 32(3)
+; CHECK-AIX32-NEXT:    lxv 1, 16(3)
+; CHECK-AIX32-NEXT:    lxv 0, 0(3)
+; CHECK-AIX32-NEXT:    xxmtacc 0
+; CHECK-AIX32-NEXT:    lxvp 36, 0(6)
+; CHECK-AIX32-NEXT:    xvf64gernp 0, 36, 2
+; CHECK-AIX32-NEXT:    xxmfacc 0
+; CHECK-AIX32-NEXT:    stxv 1, 16(7)
+; CHECK-AIX32-NEXT:    stxv 0, 0(7)
+; CHECK-AIX32-NEXT:    stxv 3, 48(7)
+; CHECK-AIX32-NEXT:    stxv 2, 32(7)
+; CHECK-AIX32-NEXT:    blr
 ;
 ; CHECK-WACC-LABEL: test_ldst_3:
 ; CHECK-WACC:       # %bb.0: # %entry
