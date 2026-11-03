@@ -118,9 +118,7 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   if (TII.isFLAT(Inst)) {
     if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
       HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
-      // GLOBAL_INV increments xcnt, like the FLAT VMEM accesses below.
-      if (Inst.getOpcode() == AMDGPU::GLOBAL_INV && ST.hasWaitXcnt() &&
-          ST.isXNACKEnabled())
+      if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
         E |= HWEvents::VMEM_GROUP;
       return E;
     }
