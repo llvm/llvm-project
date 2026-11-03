@@ -6066,6 +6066,8 @@ def mharden_sls_EQ : Joined<["-"], "mharden-sls=">, Group<m_Group>,
            " blr(ARM/AArch64), comdat(ARM/AArch64), nocomdat(ARM/AArch64),"
            " return(X86), indirect-jmp(X86)">;
 
+def macquire_release_atomics : Flag<["-"], "macquire-release-atomics">, Group<m_wasm_Features_Group>;
+def mno_acquire_release_atomics : Flag<["-"], "mno-acquire-release-atomics">, Group<m_wasm_Features_Group>;
 def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
 def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
@@ -6094,8 +6096,6 @@ def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Fea
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
 def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
-def mrelaxed_atomics : Flag<["-"], "mrelaxed-atomics">, Group<m_wasm_Features_Group>;
-def mno_relaxed_atomics : Flag<["-"], "mno-relaxed-atomics">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
