@@ -357,3 +357,64 @@ body:             |
   bb.1:
     SI_RETURN
 ...
+
+# A reader in a successor block takes the first lane too.
+---
+name:            m0_live_out
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: m0_live_out
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, %5, %bb.3
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; CHECK-NEXT:   V_CMPX_EQ_U32_nosdst_e32_term [[V_READFIRSTLANE_B32_1]], [[COPY]], implicit-def $exec, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $m0 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; CHECK-NEXT:   [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+  ; CHECK-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_B32 [[PHI]], $exec_lo, implicit-def dead $scc
+  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_ANDN2_B32_]]
+  ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; CHECK-NEXT:   $m0 = COPY [[V_READFIRSTLANE_B32_]]
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $m0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SENDMSG 1, implicit $exec, implicit $m0
+  ; CHECK-NEXT:   $vgpr0 = COPY [[V_LOAD_IDX_B32_]]
+  ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
+  bb.0:
+    successors: %bb.1
+    liveins: $vgpr0
+
+    %0:vgpr_32 = COPY $vgpr0
+    $m0 = COPY %0
+    %1:vgpr_32 = V_LOAD_IDX_B32 0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $m0
+
+    S_SENDMSG 1, implicit $exec, implicit $m0
+    $vgpr0 = COPY %1
+    SI_RETURN implicit $vgpr0
+...

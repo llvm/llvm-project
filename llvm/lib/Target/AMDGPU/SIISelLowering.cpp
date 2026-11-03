@@ -13674,7 +13674,9 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
   // reach the containing dword rather than the bytes asked for.
   if (MemOp->getAlign() < Align(4))
     return reportUnsupported();
-  if (!AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(BitWidth))
+  // Only a width some VGPR tuple has is looked up.
+  if (!Subtarget->getRegisterInfo()->getVGPRClassForBitWidth(BitWidth) ||
+      !AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(BitWidth))
     return reportUnsupported();
   auto *Store = dyn_cast<StoreSDNode>(MemOp);
   if (Store && Store->isTruncatingStore())

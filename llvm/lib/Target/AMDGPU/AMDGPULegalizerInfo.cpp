@@ -554,7 +554,7 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 
 // Whole-dword accesses only, for now.
 static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
-  return MemSize == ValSize &&
+  return MemSize == ValSize && MemSize <= MaxRegisterSize &&
          AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(MemSize);
 }
 
@@ -1865,9 +1865,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
   // 64-bits.
   //
+  // VGPR accesses are always custom, to be lowered or diagnosed.
+  //
   // TODO: Should generalize bitcast action into coerce, which will also cover
   // inserting addrspacecasts.
-  ExtLoads.customIf(typeIs(1, Constant32Ptr));
+  ExtLoads.customIf(typeInSet(1, {Constant32Ptr, VGPRPtr}));
 
   ExtLoads.narrowScalarIf(
       [](const LegalityQuery &Query) {
@@ -3522,7 +3524,7 @@ static LLT widenToNextPowerOf2(LLT Ty) {
   return Ty.changeElementSize(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
-/// Lower a whole-dword G_LOAD / G_STORE on AMDGPUAS::VGPR into
+/// Lower a whole-dword load or store on AMDGPUAS::VGPR into
 /// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels
 /// SITargetLowering::lowerLoadStoreVGPR.
 static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
@@ -3538,6 +3540,31 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   const LLT ValTy = MRI.getType(ValReg);
   const unsigned ValSize = ValTy.getSizeInBits();
   const LLT I32 = LLT::integer(32);
+
+  // The combiner turns a masked or sign-extended whole-dword load into an
+  // extending load of its low bits. Load the dword back and extend it in
+  // registers; a load that really is sub-dword gets the checks below.
+  auto *ExtLoad = dyn_cast<GExtLoad>(&LdSt);
+  if (ExtLoad && MMO.getMemoryType().isScalar()) {
+    const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
+    LLT LoadTy = LLT::integer(MemSize);
+    if (MemSize < 32 && LdSt.getAlign() >= Align(4))
+      LoadTy = I32;
+    Register Loaded =
+        B.buildLoad(LoadTy, PtrReg,
+                    *B.getMF().getMachineMemOperand(&MMO, 0, LoadTy))
+            .getReg(0);
+    const bool IsSigned = isa<GSExtLoad>(ExtLoad);
+    if (LoadTy.getSizeInBits() != MemSize)
+      Loaded = IsSigned ? B.buildSExtInReg(LoadTy, Loaded, MemSize).getReg(0)
+                        : B.buildZExtInReg(LoadTy, Loaded, MemSize).getReg(0);
+    if (IsSigned)
+      B.buildSExtOrTrunc(ValReg, Loaded);
+    else
+      B.buildZExtOrTrunc(ValReg, Loaded);
+    LdSt.eraseFromParent();
+    return true;
+  }
 
   // The index is the pointer >> 2, so an under-aligned access would silently
   // reach the containing dword.
@@ -3621,6 +3648,9 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     Observer.changedInstr(MI);
     return true;
   }
+
+  if (AddrSpace == AMDGPUAS::VGPR && isa<GExtLoad>(MI))
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
 
   if (MI.getOpcode() != AMDGPU::G_LOAD)
     return false;

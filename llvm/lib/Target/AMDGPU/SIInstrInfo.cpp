@@ -8445,6 +8445,7 @@ void SIInstrInfo::handleCopyToPhysHelper(
     // waterfalled into M0 for it. Every other reader takes the first lane.
     MachineBasicBlock &MBB = *Inst.getParent();
     SmallVector<MachineInstr *, 2> Accesses, OtherReaders;
+    bool Redefined = false;
     for (MachineInstr &MI :
          make_range(std::next(MachineBasicBlock::iterator(Inst)), MBB.end())) {
       auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI);
@@ -8452,8 +8453,10 @@ void SIInstrInfo::handleCopyToPhysHelper(
         Accesses.push_back(&MI);
       else if (!MI.isDebugInstr() && MI.readsRegister(AMDGPU::M0, &RI))
         OtherReaders.push_back(&MI);
-      if (MI.modifiesRegister(AMDGPU::M0, &RI))
+      if (MI.modifiesRegister(AMDGPU::M0, &RI)) {
+        Redefined = true;
         break;
+      }
     }
 
     if (Accesses.empty()) {
@@ -8462,7 +8465,13 @@ void SIInstrInfo::handleCopyToPhysHelper(
       assert(!Inst.getOperand(1).getSubReg() &&
              "selection copies a whole register into M0");
       Register Idx = Inst.getOperand(1).getReg();
-      if (!OtherReaders.empty()) {
+      // The loops leave M0 holding the last index they handled, so a successor
+      // reading the copy needs the first lane put back.
+      bool LiveOut =
+          !Redefined && any_of(MBB.successors(), [](MachineBasicBlock *Succ) {
+            return Succ->isLiveIn(AMDGPU::M0);
+          });
+      if (!OtherReaders.empty() || LiveOut) {
         Register FirstLane =
             MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         BuildMI(MBB, Inst, Inst.getDebugLoc(), get(AMDGPU::V_READFIRSTLANE_B32),
@@ -8470,6 +8479,11 @@ void SIInstrInfo::handleCopyToPhysHelper(
             .addReg(Idx);
         for (MachineInstr *Reader : OtherReaders)
           BuildMI(*Reader->getParent(), Reader, Reader->getDebugLoc(),
+                  get(AMDGPU::COPY), AMDGPU::M0)
+              .addReg(FirstLane);
+        // Built before the loops, so splitting the block moves it after them.
+        if (LiveOut)
+          BuildMI(MBB, MBB.getFirstTerminator(), Inst.getDebugLoc(),
                   get(AMDGPU::COPY), AMDGPU::M0)
               .addReg(FirstLane);
       }

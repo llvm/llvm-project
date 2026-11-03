@@ -680,3 +680,18 @@ body:             |
     SI_RETURN
 
 ...
+
+---
+# A set hasVGPRAsMemoryAccess parsed from the YAML must round-trip.
+# ALL-LABEL: name: vgpr_as_memory_access
+# FULL: hasVGPRAsMemoryAccess: true
+# SIMPLE: hasVGPRAsMemoryAccess: true
+name: vgpr_as_memory_access
+tracksRegLiveness: false
+machineFunctionInfo:
+  hasVGPRAsMemoryAccess: true
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
