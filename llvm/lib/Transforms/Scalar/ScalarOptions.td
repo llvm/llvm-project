@@ -168,6 +168,10 @@ defm : BoolField<"indvars-predicate-loops", "true",
   "Predicate conditions in read only loops">;
 defm : BoolField<"indvars-widen-indvars", "true",
   "Allow widening of indvars to eliminate s/zext">;
+defm : BoolField<"indvars-simplify-pointer-ivs", "false",
+  "Allow simplification of pointer induction variables">;
+defm : ValueField<"indvars-max-pointer-iv-stride", "int64_t", "64",
+  "Maximum stride value for pointer IV simplification. Larger strides are unlikely to benefit from this optimization">;
 defm : EnumField<"replexitval", "ReplaceExitVal", "OnlyCheapRepl",
   "never,cheap,unusedindvarinloop,noharduse,always",
   ["NeverRepl", "OnlyCheapRepl", "UnusedIndVarInLoop", "NoHardUse", "AlwaysRepl"],
