@@ -1244,6 +1244,13 @@ recording phase. Because this verification performs a strict binary difference
 between the two memory snapshots, the check may fail for kernels operating on
 floating-point data due to normal variations in precision and operation order.
 
+To reduce their size, the output snapshots (the `.record_output` and
+`.replay_output` files) only store the device memory regions that the kernel
+changed, as a diff against the input snapshot (the `.record_input` file). Two
+output snapshots of the same recording are identical if and only if the device
+memory after the kernel execution is identical. The format of these files is
+described in `offload/include/Shared/RecordReplayDiff.h`.
+
 The recording phase, implemented by `libomptarget`, can be controlled via
 environment variables. A full list of environment variables and their definition
 is provided below.

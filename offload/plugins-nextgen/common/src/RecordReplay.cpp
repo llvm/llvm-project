@@ -13,6 +13,7 @@
 #include "Shared/APITypes.h"
 
 #include "ErrorReporting.h"
+#include "Shared/RecordReplayDiff.h"
 #include "Shared/Utils.h"
 
 #include "llvm/Support/Error.h"
@@ -20,7 +21,9 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 
 using namespace llvm;
@@ -180,13 +183,13 @@ RecordReplayTy::recordPrologue(const KernelInfoTy &Kernel,
   if (!First)
     return Handle;
 
-  if (isRecording()) {
+  if (isRecording())
     if (auto Err = recordDescImpl(Kernel, Instance, RecordArgs))
       return Err;
 
+  if (shouldRecordPrologue())
     if (auto Err = recordPrologueImpl(Kernel, Instance))
       return Err;
-  }
 
   // Start the timer for the kernel execution.
   Instance.recordBeginTime();
@@ -231,26 +234,41 @@ void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
 
 Error NativeRecordReplayTy::recordPrologueImpl(const KernelInfoTy &Kernel,
                                                const InstanceTy &Instance) {
-  SmallString<128> SnapshotFilename =
-      getFilename(Instance, FileTy::PrologueSnapshot);
-  if (auto Err = recordSnapshot(SnapshotFilename.c_str()))
-    return Err;
+  auto SnapshotOrErr = retrieveSnapshot();
+  if (!SnapshotOrErr)
+    return SnapshotOrErr.takeError();
+  std::unique_ptr<WritableMemoryBuffer> Snapshot = std::move(*SnapshotOrErr);
 
-  SmallString<128> GlobalsFilename = getFilename(Instance, FileTy::Globals);
-  if (auto Err = recordGlobals(GlobalsFilename.c_str()))
-    return Err;
+  if (isRecording()) {
+    SmallString<128> SnapshotFilename =
+        getFilename(Instance, FileTy::PrologueSnapshot);
+    if (auto Err = recordSnapshot(SnapshotFilename.c_str(), Snapshot.get()))
+      return Err;
 
-  SmallString<128> ImageFilename = getFilename(Instance, FileTy::Program);
+    SmallString<128> GlobalsFilename = getFilename(Instance, FileTy::Globals);
+    if (auto Err = recordGlobals(GlobalsFilename.c_str()))
+      return Err;
 
-  SmallString<128> IRImageFilename = getFilename(Instance, FileTy::IRImage);
-  return recordImage(Kernel, ImageFilename.c_str(), IRImageFilename.c_str());
+    SmallString<128> ImageFilename = getFilename(Instance, FileTy::Program);
+
+    SmallString<128> IRImageFilename = getFilename(Instance, FileTy::IRImage);
+    if (auto Err =
+            recordImage(Kernel, ImageFilename.c_str(), IRImageFilename.c_str()))
+      return Err;
+  }
+
+  // Keep the input snapshot to record the output snapshot as a diff against it.
+  // When replaying, this is the only purpose of the prologue.
+  if (shouldRecordEpilogue())
+    Instance.InputSnapshot = std::move(Snapshot);
+  return Plugin::success();
 }
 
 Error NativeRecordReplayTy::recordEpilogueImpl(const KernelInfoTy &Kernel,
                                                const InstanceTy &Instance) {
   SmallString<128> SnapshotFilename =
       getFilename(Instance, FileTy::EpilogueSnapshot);
-  return recordSnapshot(SnapshotFilename);
+  return recordSnapshotDiff(SnapshotFilename, Instance);
 }
 
 Error NativeRecordReplayTy::recordDescImpl(
@@ -333,31 +351,159 @@ NativeRecordReplayTy::getFilenameImpl(const InstanceTy &Instance,
   return Filename;
 }
 
-Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
+Expected<std::unique_ptr<WritableMemoryBuffer>>
+NativeRecordReplayTy::retrieveSnapshot() {
   // Another thread may be allocating memory. The size can only increase.
   AllocationLock.lock();
   uint64_t RecordSize = CurrentSize;
   AllocationLock.unlock();
 
-  std::unique_ptr<WritableMemoryBuffer> DeviceMB;
-  if (RecordSize) {
-    DeviceMB = WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
-    if (!DeviceMB)
-      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                           "creating MemoryBuffer for device memory");
+  if (!RecordSize)
+    return nullptr;
 
-    if (auto Err = Device.dataRetrieve(DeviceMB->getBufferStart(), StartAddr,
-                                       RecordSize, nullptr))
-      return Err;
-  }
+  auto DeviceMB = WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
+  if (!DeviceMB)
+    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                         "creating MemoryBuffer for device memory");
+
+  if (auto Err = Device.dataRetrieve(DeviceMB->getBufferStart(), StartAddr,
+                                     RecordSize, nullptr))
+    return std::move(Err);
+  return std::move(DeviceMB);
+}
+
+Error NativeRecordReplayTy::recordSnapshot(StringRef Filename,
+                                           const MemoryBuffer *Snapshot) {
+  std::error_code EC;
+  raw_fd_ostream OS(Filename, EC);
+  if (EC)
+    return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
+  if (Snapshot)
+    OS.write(Snapshot->getBufferStart(), Snapshot->getBufferSize());
+  OS.close();
+  return Plugin::success();
+}
+
+/// Return the number of leading bytes that are equal in \p A and \p B.
+static uint64_t getNumEqualBytes(const char *A, const char *B, uint64_t Size) {
+  // Skip the equal blocks before comparing byte by byte.
+  constexpr uint64_t BlockSize = 4096;
+  uint64_t I = 0;
+  while (I + BlockSize <= Size && std::memcmp(A + I, B + I, BlockSize) == 0)
+    I += BlockSize;
+  while (I < Size && A[I] == B[I])
+    ++I;
+  return I;
+}
+
+Error NativeRecordReplayTy::recordSnapshotDiff(StringRef Filename,
+                                               const InstanceTy &Instance) {
+  // Another thread may be allocating memory. The size can only increase.
+  AllocationLock.lock();
+  uint64_t OutputSize = CurrentSize;
+  AllocationLock.unlock();
+
+  // Take the input snapshot so it is released once the diff is recorded.
+  std::unique_ptr<WritableMemoryBuffer> Input =
+      std::move(Instance.InputSnapshot);
+  const char *InputData = Input ? Input->getBufferStart() : nullptr;
+  uint64_t InputSize = Input ? Input->getBufferSize() : 0;
 
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
-  if (DeviceMB)
-    OS.write(DeviceMB->getBufferStart(), RecordSize);
+
+  RecordReplayDiffHeaderTy Header;
+  std::memcpy(Header.Magic, RecordReplayDiffMagic, sizeof(Header.Magic));
+  Header.InputSize = InputSize;
+  Header.OutputSize = OutputSize;
+  OS.write(reinterpret_cast<const char *>(&Header), sizeof(Header));
+
+  // The region being written, if any, and the end of its bytes written so far.
+  // Its descriptor is written once its size is known, at the file position
+  // where it was reserved.
+  bool RegionOpen = false;
+  RecordReplayDiffRegionTy Region;
+  uint64_t RegionFilePos = 0;
+  uint64_t RegionEnd = 0;
+  auto CloseRegion = [&]() {
+    Region.Size = RegionEnd - Region.Offset;
+    OS.pwrite(reinterpret_cast<const char *>(&Region), sizeof(Region),
+              RegionFilePos);
+  };
+
+  // Retrieve the output memory in chunks to bound the host memory usage. The
+  // regions do not depend on the chunk size, since a region can span chunks.
+  constexpr uint64_t MaxChunkSize = 64 * 1024 * 1024;
+  std::unique_ptr<WritableMemoryBuffer> ChunkMB;
+  if (OutputSize) {
+    ChunkMB = WritableMemoryBuffer::getNewUninitMemBuffer(
+        std::min(MaxChunkSize, OutputSize));
+    if (!ChunkMB)
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "creating MemoryBuffer for device memory");
+  }
+
+  for (uint64_t ChunkOffset = 0; ChunkOffset < OutputSize;
+       ChunkOffset += MaxChunkSize) {
+    uint64_t ChunkSize = std::min(MaxChunkSize, OutputSize - ChunkOffset);
+    char *Chunk = ChunkMB->getBufferStart();
+    if (auto Err = Device.dataRetrieve(
+            Chunk, utils::advancePtr(StartAddr, ChunkOffset), ChunkSize,
+            nullptr))
+      return Err;
+
+    // A byte is changed if it differs from the input snapshot or lies beyond
+    // it.
+    auto IsChanged = [&](uint64_t I) {
+      uint64_t Offset = ChunkOffset + I;
+      return Offset >= InputSize || Chunk[I] != InputData[Offset];
+    };
+
+    uint64_t I = 0;
+    while (I < ChunkSize) {
+      // Skip the unchanged bytes.
+      uint64_t Offset = ChunkOffset + I;
+      if (Offset < InputSize) {
+        uint64_t Size = std::min(ChunkSize - I, InputSize - Offset);
+        I += getNumEqualBytes(Chunk + I, InputData + Offset, Size);
+        if (I == ChunkSize)
+          break;
+        Offset = ChunkOffset + I;
+      }
+
+      // Find the end of the changed bytes.
+      uint64_t End = I + 1;
+      while (End < ChunkSize && IsChanged(End))
+        ++End;
+
+      // Extend the current region over a short gap of unchanged bytes, which
+      // are taken from the input snapshot, or start a new region.
+      if (RegionOpen && Offset - RegionEnd < RecordReplayDiffMaxGap) {
+        if (Offset > RegionEnd)
+          OS.write(InputData + RegionEnd, Offset - RegionEnd);
+      } else {
+        if (RegionOpen)
+          CloseRegion();
+        RegionOpen = true;
+        Region.Offset = Offset;
+        RegionFilePos = OS.tell();
+        OS.write_zeros(sizeof(Region));
+      }
+      OS.write(Chunk + I, End - I);
+      RegionEnd = ChunkOffset + End;
+      I = End;
+    }
+  }
+  if (RegionOpen)
+    CloseRegion();
+
   OS.close();
+  if (OS.has_error()) {
+    OS.clear_error();
+    return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
+  }
   return Plugin::success();
 }
 
