@@ -88,7 +88,7 @@ subroutine final_value(a, n, kdone, kzero)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPfinal_value
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPfinal_valueEk")
+! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFfinal_valueEk")
 ! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK: %[[C4:.*]] = arith.constant 4 : i32
 ! CHECK: fir.store %[[C4]] to %[[KDECL]]#0 : !fir.ref<i32>
@@ -119,7 +119,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPprivate_on_parent
 ! CHECK: acc.private {{.*}} implicit(false) name("k")
 ! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPprivate_on_parentEk")
+! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFprivate_on_parentEk")
 ! CHECK: acc.loop control(%{{.*}} : i32) =
 ! CHECK: fir.store %{{.*}} to %[[KDECL]]#0 : !fir.ref<i32>
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
@@ -150,7 +150,7 @@ end subroutine
 ! CHECK: acc.private {{.*}} name("j")
 ! CHECK-NOT: acc.private {{.*}} name("k")
 ! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: %[[JDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPcollapse_seqEj")
+! CHECK: %[[JDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFcollapse_seqEj")
 ! CHECK: acc.private {{.*}} name("k")
 ! CHECK: acc.loop private({{.*}} : !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32) =
 ! CHECK: fir.load %[[JDECL]]#0 : !fir.ref<i32>
@@ -176,7 +176,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPdtype_nvidia_seq
 ! CHECK: acc.private {{.*}} name("k")
 ! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPdtype_nvidia_seqEk")
+! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFdtype_nvidia_seqEk")
 ! CHECK: acc.loop control(%{{.*}} : i32) =
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
 
@@ -198,7 +198,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPdtype_default_seq
 ! CHECK: acc.private {{.*}} name("k")
 ! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: hlfir.declare %{{[0-9]+}} uniq_name("_QPdtype_default_seqEk")
+! CHECK: hlfir.declare %{{[0-9]+}} uniq_name("_QFdtype_default_seqEk")
 ! CHECK: acc.loop control(%{{.*}} : i32) =
 
 subroutine dtype_star_seq(a, n, kout)
@@ -219,7 +219,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPdtype_star_seq
 ! CHECK: acc.private {{.*}} name("k")
 ! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: hlfir.declare %{{[0-9]+}} uniq_name("_QPdtype_star_seqEk")
+! CHECK: hlfir.declare %{{[0-9]+}} uniq_name("_QFdtype_star_seqEk")
 ! CHECK: acc.loop control(%{{.*}} : i32) =
 
 ! -----------------------------------------------------------------------------
@@ -242,7 +242,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPparent_serial
 ! CHECK: acc.private {{.*}} name("k")
 ! CHECK: acc.serial {{.*}} private({{.*}} : !fir.ref<i32>)
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPparent_serialEk")
+! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFparent_serialEk")
 ! CHECK: acc.loop
 ! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
@@ -262,7 +262,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPparent_parallel
 ! CHECK: acc.private {{.*}} name("k")
 ! CHECK: acc.parallel {{.*}} private({{.*}} : !fir.ref<i32>)
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPparent_parallelEk")
+! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFparent_parallelEk")
 ! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
 
@@ -280,7 +280,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPparent_kernels
 ! CHECK: acc.copyout {{.*}} name("k")
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QPparent_kernelsEk")
+! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFparent_kernelsEk")
 ! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
 
