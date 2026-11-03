@@ -83,6 +83,8 @@ void MPIChecker::checkUnmatchedWaits(const CallEvent &PreCallEvent,
     if (!Req) {
       if (!ErrorNode) {
         ErrorNode = Ctx.generateNonFatalErrorNode(State);
+        if (!ErrorNode)
+          continue;
         State = ErrorNode->getState();
       }
       // A wait has no matching nonblocking call.
@@ -114,6 +116,8 @@ void MPIChecker::checkMissingWaits(SymbolReaper &SymReaper,
 
         if (!ErrorNode) {
           ErrorNode = Ctx.generateNonFatalErrorNode(State);
+          if (!ErrorNode)
+            continue;
           State = ErrorNode->getState();
         }
         BReporter.reportMissingWait(Req.second, Req.first, ErrorNode,
