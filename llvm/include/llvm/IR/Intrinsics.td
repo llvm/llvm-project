@@ -1325,13 +1325,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
   def int_llrint : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                          [llvm_anyfloat_same_width_ty<0>]>;
 
-  // TODO: int operand should be constrained to same number of elements as the
-  // result.
   def int_ldexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>,
-                                                             llvm_anyint_ty]>;
+                                                             llvm_anyint_same_width_ty<0>]>;
 
-  // TODO: Should constrain all element counts to match.
-  def int_frexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty, llvm_anyint_ty],
+  def int_frexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty, llvm_anyint_same_width_ty<0>],
                     [LLVMMatchType<0>]>;
 }
 
