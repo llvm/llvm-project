@@ -72,13 +72,13 @@ define i64 @test_poisonous(i64 %a, i32 %n) {
 ; CHECK-NEXT:  Loop %loop.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.body: Predicated backedge-taken count is (-1 + (1 smax (1 + (sext i32 %n to i64))<nsw>))<nsw>
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nssw>
+; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nsuw>
 ; CHECK-NEXT:  Loop %loop.body: Predicated constant max backedge-taken count is i64 2147483647
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nssw>
+; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nsuw>
 ; CHECK-NEXT:  Loop %loop.body: Predicated symbolic max backedge-taken count is (-1 + (1 smax (1 + (sext i32 %n to i64))<nsw>))<nsw>
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nssw>
+; CHECK-NEXT:      {1,+,1}<%loop.body> Added Flags: <nsuw>
 ;
 entry:
   br label %loop.body
