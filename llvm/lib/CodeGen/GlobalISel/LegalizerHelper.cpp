@@ -7516,6 +7516,45 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
   return Legalized;
 }
 
+/// Compute the high half of the product of two values that are split into two
+/// narrow parts each, adding the partial products with carry chains instead of
+/// summing zero-extended carries.
+static void buildMulHighWithCarries(MachineIRBuilder &B, LLT NarrowTy,
+                                    ArrayRef<Register> Src1Parts,
+                                    ArrayRef<Register> Src2Parts,
+                                    SmallVectorImpl<Register> &HighParts) {
+  LLT CarryTy = LLT::integer(1);
+  Register A0 = Src1Parts[0], A1 = Src1Parts[1];
+  Register B0 = Src2Parts[0], B1 = Src2Parts[1];
+  auto Zero = B.buildConstant(NarrowTy, 0);
+
+  // The partial products that contribute to the high half.
+  auto Hi00 = B.buildUMulH(NarrowTy, A0, B0);
+  auto Lo01 = B.buildMul(NarrowTy, A0, B1);
+  auto Hi01 = B.buildUMulH(NarrowTy, A0, B1);
+  auto Lo10 = B.buildMul(NarrowTy, A1, B0);
+  auto Hi10 = B.buildUMulH(NarrowTy, A1, B0);
+  auto Lo11 = B.buildMul(NarrowTy, A1, B1);
+  auto Hi11 = B.buildUMulH(NarrowTy, A1, B1);
+
+  // Add A0 * B1 to the high half of A0 * B0. The upper word cannot overflow.
+  auto Col1 = B.buildUAddo(NarrowTy, CarryTy, Hi00, Lo01);
+  auto Col2 = B.buildUAdde(NarrowTy, CarryTy, Hi01, Zero, Col1.getReg(1));
+  // Add A1 * B0. This can carry out of the second column.
+  auto Col1B = B.buildUAddo(NarrowTy, CarryTy, Col1.getReg(0), Lo10);
+  auto Col2B =
+      B.buildUAdde(NarrowTy, CarryTy, Col2.getReg(0), Hi10, Col1B.getReg(1));
+  // Add that carry to the high half of A1 * B1, which cannot overflow.
+  auto Hi11C = B.buildUAdde(NarrowTy, CarryTy, Hi11, Zero, Col2B.getReg(1));
+  // Add A1 * B1 to get the two high words of the product.
+  auto Res0 = B.buildUAddo(NarrowTy, CarryTy, Col2B.getReg(0), Lo11);
+  auto Res1 =
+      B.buildUAdde(NarrowTy, CarryTy, Hi11C.getReg(0), Zero, Res0.getReg(1));
+
+  HighParts.push_back(Res0.getReg(0));
+  HighParts.push_back(Res1.getReg(0));
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   auto [DstReg, Src1, Src2] = MI.getFirst3Regs();
@@ -7535,13 +7574,23 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   unsigned DstTmpParts = NumParts * (IsMulHigh ? 2 : 1);
 
   SmallVector<Register, 2> Src1Parts, Src2Parts;
-  SmallVector<Register, 2> DstTmpRegs(DstTmpParts);
   extractParts(Src1, NarrowTy, NumParts, Src1Parts, MIRBuilder, MRI);
   extractParts(Src2, NarrowTy, NumParts, Src2Parts, MIRBuilder, MRI);
-  multiplyRegisters(DstTmpRegs, Src1Parts, Src2Parts, NarrowTy);
 
-  // Take only high half of registers if this is high mul.
-  ArrayRef<Register> DstRegs(&DstTmpRegs[DstTmpParts - NumParts], NumParts);
+  SmallVector<Register, 2> DstTmpRegs;
+  ArrayRef<Register> DstRegs;
+  if (IsMulHigh && NumParts == 2 &&
+      LI.isLegal({TargetOpcode::G_UADDE, {NarrowTy, LLT::integer(1)}})) {
+    // Chain the carries directly when add-with-carry is available.
+    buildMulHighWithCarries(MIRBuilder, NarrowTy, Src1Parts, Src2Parts,
+                            DstTmpRegs);
+    DstRegs = DstTmpRegs;
+  } else {
+    DstTmpRegs.resize(DstTmpParts);
+    multiplyRegisters(DstTmpRegs, Src1Parts, Src2Parts, NarrowTy);
+    // Take only high half of registers if this is high mul.
+    DstRegs = ArrayRef<Register>(&DstTmpRegs[DstTmpParts - NumParts], NumParts);
+  }
 
   if (MI.getOpcode() == TargetOpcode::G_SMULH) {
     Register UnsignedHigh = MRI.createGenericVirtualRegister(Ty);
