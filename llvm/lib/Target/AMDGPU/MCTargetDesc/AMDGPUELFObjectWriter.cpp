@@ -11,6 +11,7 @@
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 
 using namespace llvm;
@@ -92,9 +93,14 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
       return ELF::R_AMDGPU_NONE;
     }
     // No ELF relocation describes the 24-bit field at bits [55:32].
+    // A PC-relative fixup is left unresolved for a non-local symbol and for a
+    // local symbol defined in another section.
     if (Fixup.getKind() == AMDGPU::fixup_si_smem_pcrel) {
+      const auto *SymELF = static_cast<const MCSymbolELF *>(SymA);
       reportError(Fixup.getLoc(),
-                  "PC-relative prefetch target must be a local label");
+                  SymELF->getBinding() == ELF::STB_LOCAL
+                      ? "PC-relative prefetch target must be in the same section"
+                      : "PC-relative prefetch target must be a local label");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;

@@ -1,5 +1,6 @@
 # RUN: split-file %s %t
 # RUN: not llvm-mc -triple=amdgpu12.00 -filetype=obj %t/global.s 2>&1 | FileCheck %s --check-prefix=GLOBAL
+# RUN: not llvm-mc -triple=amdgpu12.00 -filetype=obj %t/section.s 2>&1 | FileCheck %s --check-prefix=SECTION
 # RUN: not llvm-mc -triple=amdgpu12.00 -filetype=obj %t/specifier.s 2>&1 | FileCheck %s --check-prefix=SPECIFIER
 # RUN: not llvm-mc -triple=amdgpu12.00 -filetype=obj %t/absolute.s 2>&1 | FileCheck %s --check-prefix=ABSOLUTE
 
@@ -11,6 +12,14 @@
 s_prefetch_inst_pc_rel global_target, s10, 7
 # GLOBAL: prefetch target must be a local label
 global_target:
+
+#--- section.s
+# A local label in another section is defined, but still cannot be resolved.
+.section .text.other,"ax",@progbits
+other_target:
+.section .text.prefetch,"ax",@progbits
+s_prefetch_inst_pc_rel other_target, s10, 7
+# SECTION: prefetch target must be in the same section
 
 #--- specifier.s
 # Relocation specifiers would select a 32-bit relocation and overwrite the
