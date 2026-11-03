@@ -7,8 +7,7 @@
 // vintXm1_t  -> bound = zvl
 // vintXm2_t  -> bound = zvl * 2
 // vintXmf2_t -> bound = zvl / 2
-//
-// Mask types still need -mrvv-vector-bits=.
+// vbool<R>_t -> bound = zvl / R lanes
 
 // zvl128b: ISA minimum VLEN = 128.
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu \
@@ -49,6 +48,12 @@ typedef vint32mf2_t mf2_lt  __attribute__((riscv_rvv_vector_bits(64)));
 typedef vint32mf2_t mf2_too __attribute__((riscv_rvv_vector_bits(256)));
 // expected-error@-1 {{invalid RVV vector size '256', must not exceed '128' based on LMUL of type and the minimum VLEN}}
 
+// zvl256b: vbool32_t bound is 8 lanes.
+typedef vbool32_t mask_eq  __attribute__((riscv_rvv_vector_bits(8)));
+typedef vbool32_t mask_lt  __attribute__((riscv_rvv_vector_bits(4)));
+typedef vbool32_t mask_too __attribute__((riscv_rvv_vector_bits(16)));
+// expected-error@-1 {{invalid RVV vector size '16', must not exceed '8' based on LMUL of type and the minimum VLEN}}
+
 #else // zvl128b
 
 // zvl128b: m1 bound is 128.
@@ -74,7 +79,10 @@ typedef vint32mf2_t mf2_too __attribute__((riscv_rvv_vector_bits(128)));
 typedef vint32m1_t m1_npow2 __attribute__((riscv_rvv_vector_bits(96)));
 // expected-error@-1 {{invalid RVV vector size '96', the resulting element count '3' must be a power of 2}}
 
-typedef vbool32_t mask __attribute__((riscv_rvv_vector_bits(4)));
-// expected-error@-1 {{'riscv_rvv_vector_bits' is only supported when '-mrvv-vector-bits=<bits>' is specified with a value of "zvl" or a power 2 in the range [64,65536]}}
+// zvl128b: vbool32_t bound is 4 lanes.
+typedef vbool32_t mask_eq  __attribute__((riscv_rvv_vector_bits(4)));
+typedef vbool32_t mask_lt  __attribute__((riscv_rvv_vector_bits(2)));
+typedef vbool32_t mask_too __attribute__((riscv_rvv_vector_bits(8)));
+// expected-error@-1 {{invalid RVV vector size '8', must not exceed '4' based on LMUL of type and the minimum VLEN}}
 
 #endif

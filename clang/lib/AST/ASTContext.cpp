@@ -10879,15 +10879,15 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
       if (const auto *VT = SecondType->getAs<VectorType>()) {
         if (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())) {
           BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
-          // A mask typedef converts to and from the vbool<R>_t type it was
-          // written against: vbool<R>_t has RVVBitsPerBlock / R lanes at
-          // vscale=1.
+          // A mask typedef may have fewer lanes than the sizeless type, but
+          // only converts to and from the vbool<R>_t type it was written
+          // against: vbool<R>_t has RVVBitsPerBlock / R lanes at vscale=1.
           return FirstType->isRVVVLSBuiltinType() &&
                  Info.ElementType == BoolTy &&
                  (llvm::RISCV::RVVBitsPerBlock >>
                   getRVVFixedLengthMaskRatioLog2(VT->getVectorKind())) ==
                      Info.EC.getKnownMinValue() &&
-                 VT->getRVVFixedLengthMaskLanes() == getRVVTypeSize(*this, BT);
+                 VT->getRVVFixedLengthMaskLanes() <= getRVVTypeSize(*this, BT);
         }
         if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
             VT->getVectorKind() == VectorKind::Generic) {

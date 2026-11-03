@@ -92,3 +92,34 @@ vint32m1_t pass_short(fixed_i32x2 x) { return sizeless_callee(x); }
 // OPT-NEXT:  entry:
 // OPT-NEXT:    ret <vscale x 2 x i32> %x.coerce
 vint32m1_t widen_full(fixed_i32x4 x) { return x; }
+
+// Masks work the same way, through their byte storage. vbool4_t covers 32
+// lanes (4 bytes); fixed_b4x16 declares the first 16 lanes (2 bytes).
+typedef vbool4_t fixed_b4x16 __attribute__((riscv_rvv_vector_bits(16)));
+// vbool64_t covers 2 lanes; fixed_b64x1 declares the first one, which lives in
+// the low bit of a single byte.
+typedef vbool64_t fixed_b64x1 __attribute__((riscv_rvv_vector_bits(1)));
+
+// RAW-LABEL: define dso_local <vscale x 16 x i1> @widen_mask(
+// RAW:         [[F:%.*]] = load <2 x i8>
+// RAW:         [[S:%.*]] = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> [[F]], i64 0)
+// RAW:         bitcast <vscale x 2 x i8> [[S]] to <vscale x 16 x i1>
+vbool4_t widen_mask(fixed_b4x16 x) { return x; }
+
+// RAW-LABEL: define dso_local <vscale x 16 x i1> @narrow_mask(
+// RAW:         [[B:%.*]] = bitcast <vscale x 16 x i1> {{.*}} to <vscale x 2 x i8>
+// RAW:         call <2 x i8> @llvm.vector.extract.v2i8.nxv2i8(<vscale x 2 x i8> [[B]], i64 0)
+fixed_b4x16 narrow_mask(vbool4_t x) { return x; }
+
+// RAW-LABEL: define dso_local <vscale x 1 x i1> @widen_mask_sub_byte(
+// RAW:         [[F:%.*]] = load <1 x i8>
+// RAW:         [[S:%.*]] = call <vscale x 1 x i8> @llvm.vector.insert.nxv1i8.v1i8(<vscale x 1 x i8> poison, <1 x i8> [[F]], i64 0)
+// RAW:         [[B:%.*]] = bitcast <vscale x 1 x i8> [[S]] to <vscale x 8 x i1>
+// RAW:         call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv8i1(<vscale x 8 x i1> [[B]], i64 0)
+vbool64_t widen_mask_sub_byte(fixed_b64x1 x) { return x; }
+
+// RAW-LABEL: define dso_local <vscale x 1 x i1> @narrow_mask_sub_byte(
+// RAW:         [[W:%.*]] = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> zeroinitializer,
+// RAW:         [[B:%.*]] = bitcast <vscale x 8 x i1> [[W]] to <vscale x 1 x i8>
+// RAW:         call <1 x i8> @llvm.vector.extract.v1i8.nxv1i8(<vscale x 1 x i8> [[B]], i64 0)
+fixed_b64x1 narrow_mask_sub_byte(vbool64_t x) { return x; }

@@ -3370,26 +3370,30 @@ unsupported for sizeless types.
 
 The attribute can be attached to a single RVV vector (such as `vint8m1_t`).
 
+`VLEN` below is the value set by `-mrvv-vector-bits` (exposed as
+`__riscv_v_fixed_vlen`) if given, otherwise the minimum VLEN required by the
+`-march` string (its `Zvl*b` extension). `-mrvv-vector-bits` is therefore not
+required.
+
 For data types, `N` is a size in bits. It must be a positive multiple of the
 element size, `N` divided by the element size must be a power of 2, and `N`
 must not exceed `VLEN*LMUL`.
 
-A data type with `N` smaller than `VLEN*LMUL` uses only the low lanes of the
+For `vbool*_t` types, `N` is a number of lanes. It must be a power of 2 and
+must not exceed `VLEN` divided by the number from the type name. For example,
+`vbool8_t` allows at most `VLEN / 8`.
+
+A type with `N` smaller than that maximum uses only the low lanes of the
 register group:
 
-- It keeps the LMUL of the type it was written against. For example,
-  `vint32m1_t` with `riscv_rvv_vector_bits(64)` occupies one vector register
-  and is a different type from `vint32mf2_t` with `riscv_rvv_vector_bits(64)`.
+- It keeps the LMUL, or for a mask the `vbool*_t` ratio, of the type it was
+  written against. For example, `vint32m1_t` with `riscv_rvv_vector_bits(64)`
+  occupies one vector register and is a different type from `vint32mf2_t` with
+  `riscv_rvv_vector_bits(64)`.
 - It converts implicitly to and from its own sizeless type only. Converting to
   the sizeless type leaves the upper lanes undefined; converting back keeps the
-  first `N` bits. When such a value is passed to an RVV intrinsic, the
+  first `N` bits or lanes. When such a value is passed to an RVV intrinsic, the
   programmer must keep `vl` (and any `vrgather` index) within those lanes.
-
-For `vbool*_t` types, the attribute will be rejected unless
-`-mrvv-vector-bits` is given and `N` is `__riscv_v_fixed_vlen` divided by the
-number from the type name. For example, `vbool8_t` needs to use
-`__riscv_v_fixed_vlen` / 8. If the resulting value is not a multiple of 8,
-the type is not supported for that value of `__riscv_v_fixed_vlen`.
 }];
 }
 

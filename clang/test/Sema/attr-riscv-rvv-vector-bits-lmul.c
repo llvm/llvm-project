@@ -123,3 +123,85 @@ void full_size(void) {
   vint32m2_t bad = a; // expected-error {{initializing 'vint32m2_t' (aka '__rvv_int32m2_t') with an expression of incompatible type 'm1_128'}}
   (void)bad;
 }
+
+//===----------------------------------------------------------------------===//
+// Mask typedefs keep the ratio of the vbool<R>_t type they were written
+// against in the same way. A shorter mask has fewer lanes than VLEN / R, so
+// the ratio cannot be recovered from the lane count.
+//
+// VLEN=128: vbool4_t covers 32 lanes, vbool8_t 16, vbool32_t 4.
+//===----------------------------------------------------------------------===//
+
+typedef vbool4_t  b4_32 __attribute__((riscv_rvv_vector_bits(32)));
+typedef vbool8_t  b8_16 __attribute__((riscv_rvv_vector_bits(16)));
+typedef vbool32_t b32_4 __attribute__((riscv_rvv_vector_bits(4)));
+
+// Shorter masks.
+typedef vbool4_t  b4_16 __attribute__((riscv_rvv_vector_bits(16)));
+typedef vbool8_t  b8_8  __attribute__((riscv_rvv_vector_bits(8)));
+typedef vbool4_t  b4_8  __attribute__((riscv_rvv_vector_bits(8)));
+typedef vbool32_t b32_2 __attribute__((riscv_rvv_vector_bits(2)));
+typedef vbool32_t b32_1 __attribute__((riscv_rvv_vector_bits(1)));
+
+void mask_conversions(void) {
+  b4_32 a;
+
+  vbool4_t ok = a;
+  (void)ok;
+
+  // Only the mask type of the matching ratio is compatible.
+  vbool8_t bad = a; // expected-error {{initializing 'vbool8_t' (aka '__rvv_bool8_t') with an expression of incompatible type 'b4_32'}}
+  (void)bad;
+}
+
+// Different ratios have different lane counts, so they are distinct types
+// regardless of the lax vector conversion setting.
+void mask_distinct(void) {
+  b4_32 a;
+  b8_16 b;
+  a = b; // expected-error {{assigning to 'b4_32' (vector of 4 'unsigned char' values) from incompatible type 'b8_16' (vector of 2 'unsigned char' values)}}
+}
+
+void mask_intrinsics(b4_32 a, b4_32 b) {
+  b4_32 r = __riscv_vmand_mm_b4(a, b, 4);
+  (void)r;
+
+  (void)__riscv_vmand_mm_b8(a, b, 4); // expected-error {{passing 'b4_32' (vector of 4 'unsigned char' values) to parameter of incompatible type '__rvv_bool8_t'}} \
+                                      // expected-note {{passing argument to parameter here}}
+}
+
+// A shorter mask converts to and from its own vbool<R>_t type only.
+void short_mask_conversions(void) {
+  b4_16 a;
+
+  vbool4_t ok = a;
+  a = ok;
+
+  vbool8_t bad = a; // expected-error {{initializing 'vbool8_t' (aka '__rvv_bool8_t') with an expression of incompatible type 'b4_16'}}
+  (void)bad;
+}
+
+// Same lane count, different ratio: distinct types. b8_8 and b4_8 both hold 8
+// lanes in one byte, so like the data types above they only convert through
+// lax vector conversions.
+void short_mask_distinct(void) {
+  b8_8 a;
+  b4_8 b;
+  a = b; // nolax-error {{assigning to 'b8_8' (vector of 1 'unsigned char' value) from incompatible type 'b4_8' (vector of 1 'unsigned char' value)}}
+}
+
+// Masks that fit in one byte are distinct by their lane count too.
+void sub_byte_mask_distinct(void) {
+  b32_2 a;
+  b32_1 b;
+  a = b; // nolax-error {{assigning to 'b32_2' (vector of 1 'unsigned char' value) from incompatible type 'b32_1' (vector of 1 'unsigned char' value)}}
+}
+
+// A mask typedef pairs with a data typedef through the ratio matching the data
+// type's LMUL and SEW (vint32m1_t -> vbool32_t). A shorter data typedef
+// pairs with a mask of the same lane count.
+void mask_with_short_data(m1_64 a, m1_64 b) {
+  b32_2 m = __riscv_vmseq_vv_i32m1_b32(a, b, 2);
+  m1_64 r = __riscv_vadd_vv_i32m1_m(m, a, b, 2);
+  (void)r;
+}

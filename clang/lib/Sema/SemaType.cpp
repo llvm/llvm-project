@@ -8883,11 +8883,10 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   unsigned MinElts = Info.EC.getKnownMinValue();
   bool IsMask = Info.ElementType == S.Context.BoolTy;
 
-  // A data type needs only the minimum VLEN; a mask type needs a fixed VLEN.
+  // Only the minimum VLEN is needed.
   auto VScale = S.Context.getTargetInfo().getVScaleRange(
       S.getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
-  if (!VScale || !VScale->first ||
-      (IsMask && VScale->first != VScale->second)) {
+  if (!VScale || !VScale->first) {
     S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
         << Attr;
     Attr.setInvalid();
@@ -8909,9 +8908,10 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
       if (VecSize == 1 || VecSize == 2 || VecSize == 4)
         SubByteLanes = VecSize;
     }
-    // Record the ratio of the vbool<R>_t type in the vector kind, so that
-    // later stages do not have to re-derive it from VLEN and the lane count.
-    // vbool<R>_t has RVVBitsPerBlock / R lanes at vscale=1.
+    // Record the ratio of the vbool<R>_t type in the vector kind as well. It
+    // cannot be recovered later from the lane count, since the typedef may
+    // have fewer lanes than VLEN / R. vbool<R>_t has RVVBitsPerBlock / R lanes
+    // at vscale=1.
     VecKind = getRVVFixedLengthMaskVectorKind(
         llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock / MinElts), SubByteLanes);
   } else {
@@ -8926,16 +8926,8 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
         int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock)));
   }
 
-  // The size of a mask type must match -mrvv-vector-bits.
-  if (IsMask && VecSize != ExpectedSize) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
-        << VecSize << ExpectedSize;
-    Attr.setInvalid();
-    return;
-  }
-
-  // A data type may be shorter than VLEN * LMUL, with a power-of-2 number of
-  // elements.
+  // The typedef may be shorter than VLEN * LMUL bits, or VLEN / R lanes for a
+  // mask, with a power-of-2 number of elements.
   if (VecSize > ExpectedSize) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size_too_large)
         << VecSize << ExpectedSize;

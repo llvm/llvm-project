@@ -178,3 +178,105 @@ struct s3_m4 { m4_64 a, b, c; };
 // CHECK-LABEL: define dso_local void @st3_m4(
 // CHECK-SAME:    ptr
 void st3_m4(struct s3_m4 s) {}
+
+//===----------------------------------------------------------------------===//
+// Mask typedefs keep the ratio of the vbool<R>_t type they were written
+// against, so the coerced type is that sizeless mask type even when the
+// typedef has fewer lanes.
+//
+// VLEN=128: vbool4_t covers 32 lanes, vbool8_t 16, vbool32_t 4, vbool64_t 2.
+//===----------------------------------------------------------------------===//
+
+typedef vbool4_t  b4_32 __attribute__((riscv_rvv_vector_bits(32)));
+typedef vbool8_t  b8_16 __attribute__((riscv_rvv_vector_bits(16)));
+typedef vbool32_t b32_4 __attribute__((riscv_rvv_vector_bits(4)));  // sub-byte
+typedef vbool64_t b64_2 __attribute__((riscv_rvv_vector_bits(2)));  // sub-byte
+
+// Shorter masks.
+typedef vbool4_t  b4_16 __attribute__((riscv_rvv_vector_bits(16)));
+typedef vbool4_t  b4_8  __attribute__((riscv_rvv_vector_bits(8)));
+typedef vbool8_t  b8_8  __attribute__((riscv_rvv_vector_bits(8)));
+typedef vbool32_t b32_2 __attribute__((riscv_rvv_vector_bits(2)));  // sub-byte
+typedef vbool64_t b64_1 __attribute__((riscv_rvv_vector_bits(1)));  // sub-byte
+
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 16 x i1> @id_b4(
+// CHECK-SAME:    <vscale x 16 x i1>
+b4_32 id_b4(b4_32 x) { return x; }
+
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 8 x i1> @id_b8(
+// CHECK-SAME:    <vscale x 8 x i1>
+b8_16 id_b8(b8_16 x) { return x; }
+
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 2 x i1> @id_b32(
+// CHECK-SAME:    <vscale x 2 x i1>
+b32_4 id_b32(b32_4 x) { return x; }
+
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 1 x i1> @id_b64(
+// CHECK-SAME:    <vscale x 1 x i1>
+b64_2 id_b64(b64_2 x) { return x; }
+
+// Shorter masks are passed as the full sizeless mask type. b4_8 and b8_8 both
+// hold 8 lanes but keep their own ratio.
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 16 x i1> @id_b4_16(
+// CHECK-SAME:    <vscale x 16 x i1>
+b4_16 id_b4_16(b4_16 x) { return x; }
+
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 16 x i1> @id_b4_8(
+// CHECK-SAME:    <vscale x 16 x i1>
+b4_8 id_b4_8(b4_8 x) { return x; }
+
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 8 x i1> @id_b8_8(
+// CHECK-SAME:    <vscale x 8 x i1>
+b8_8 id_b8_8(b8_8 x) { return x; }
+
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 2 x i1> @id_b32_2(
+// CHECK-SAME:    <vscale x 2 x i1>
+b32_2 id_b32_2(b32_2 x) { return x; }
+
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 1 x i1> @id_b64_1(
+// CHECK-SAME:    <vscale x 1 x i1>
+b64_1 id_b64_1(b64_1 x) { return x; }
+
+// Mask-only intrinsic.
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 2 x i1> @mand_b32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[R:%.*]] = {{.*}}call <vscale x 2 x i1> @llvm.riscv.vmand.nxv2i1.i64(
+// CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
+b32_4 mand_b32(b32_4 a, b32_4 b) { return __riscv_vmand_mm_b32(a, b, 2); }
+
+// A comparison over a *shorter* data typedef produces a mask of the same lane
+// count: the data side keeps LMUL 1 (<vscale x 2 x i32>) and the mask side
+// keeps vbool32_t (<vscale x 2 x i1>).
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 2 x i1> @cmp_short(
+// CHECK-SAME:    <vscale x 2 x i32> {{[^,]*}}, <vscale x 2 x i32> {{.*}})
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[R:%.*]] = {{.*}}call <vscale x 2 x i1> @llvm.riscv.vmseq.nxv2i32.nxv2i32.i64(
+// CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
+b32_2 cmp_short(m1_64 a, m1_64 b) { return __riscv_vmseq_vv_i32m1_b32(a, b, 2); }
+
+// Masked op mixing a shorter mask typedef with a shorter data typedef.
+// CHECK-LABEL: define dso_local {{.*}}<vscale x 2 x i32> @masked_short(
+// CHECK-SAME:    <vscale x 2 x i1> {{[^,]*}}, <vscale x 2 x i32> {{[^,]*}}, <vscale x 2 x i32> {{.*}})
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[R:%.*]] = {{.*}}call <vscale x 2 x i32> @llvm.riscv.vadd.mask.nxv2i32.nxv2i32.i64(<vscale x 2 x i32> poison, <vscale x 2 x i32> {{[^,]*}}, <vscale x 2 x i32> {{[^,]*}}, <vscale x 2 x i1> {{.*}})
+// CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+m1_64 masked_short(b32_2 m, m1_64 a, m1_64 b) {
+  return __riscv_vadd_vv_i32m1_m(m, a, b, 2);
+}
+
+// Structs of masks are coerced through i8: vbool4_t has 16 lanes, i.e. 2
+// bytes, at vscale=1, so it is passed as <vscale x 2 x i8>, shorter or not.
+struct s1_b4 { b4_32 a; };
+// CHECK-LABEL: define dso_local void @st1_b4(
+// CHECK-SAME:    <vscale x 2 x i8>
+void st1_b4(struct s1_b4 s) {}
+
+struct s2_b4 { b4_32 a, b; };
+// CHECK-LABEL: define dso_local void @st2_b4(
+// CHECK-SAME:    target("riscv.vector.tuple", <vscale x 2 x i8>, 2)
+void st2_b4(struct s2_b4 s) {}
+
+struct s1_b4_16 { b4_16 a; };
+// CHECK-LABEL: define dso_local void @st1_b4_16(
+// CHECK-SAME:    <vscale x 2 x i8>
+void st1_b4_16(struct s1_b4_16 s) {}
