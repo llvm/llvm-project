@@ -128,6 +128,12 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
+- On 64-bit PowerPC ELFv1, a union argument that wraps a single floating-point
+  or vector value, or a struct that wraps such a union, is now passed in
+  general-purpose registers rather than in a floating-point or vector register,
+  matching GCC. ELFv2 is unchanged. `-fclang-abi-compat=23` restores the
+  previous behavior.
+
 - Except on PlayStation, on x86-64 System V a non-zero-width unnamed bit-field
   now classifies the eightbytes it occupies as INTEGER, like a named bit-field,
   matching GCC. Aggregates where this changes the classification may be passed
@@ -158,6 +164,10 @@ features cannot lower the translation-unit ABI level;
   enclosing record still reduces the alignment. (#GH208256)
 
 ### AST Dumping Potentially Breaking Changes
+
+- The AST printer (`-ast-print`) now prints a floating-point literal as the
+  shortest decimal form that round-trips to the same value. For example,
+  `3.14` printed as `3.1400000000000001` before and prints as `3.14` now.
 
 ### Clang Frontend Potentially Breaking Changes
 
@@ -1164,6 +1174,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a bug where Clang could ignore lambda constraints in return-type
   requirements.
 
+- Fixed a crash when the operand of `__builtin_addressof` is an overload set.
+  A function template specialization such as `f<int>` is now resolved like the
+  argument of `std::addressof`, and an unresolvable overload set is diagnosed.
+  (#GH77928)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1454,6 +1469,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Improvements
 
+- `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
+  declarations such as `fopen` when targeting MSVC to avoid false negatives in
+  C99 and later C standards.
+
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
@@ -1464,7 +1483,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 #### Diagnostic changes
 
 - For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
-- The diagnostics of the Clang Static Analyzer no longer have two spaces after a sentence ending (#GH228777). The RFC for this change can be found here: https://discourse.llvm.org/t/rfc-standardization-of-reports-sentence-spacing/92428
+- The diagnostics of the Clang Static Analyzer no longer have two spaces after a sentence ending (#GH228777) and the diagnostics that contained multiple sentences got turned into single sentences using `;` (#GH236804, #GH237410).
+  The RFC for these changes can be found here: https://discourse.llvm.org/t/rfc-standardization-of-reports-sentence-spacing/92428
 
 (release-notes-sanitizers)=
 
