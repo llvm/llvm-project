@@ -334,8 +334,8 @@ TEST(LlvmLibcRegexTest, UnimplementedSyntaxAndFlags) {
   LIBC_NAMESPACE::regfree(&preg);
 
   // Unimplemented ERE metacharacters and special escapes return REG_BADPAT.
-  const char *const bad_patterns[] = {"a+",    "a?",      "a{1}",   R"(\1)",
-                                      R"(\b)", "[[:<:]]", "[[:>:]]"};
+  const char *const bad_patterns[] = {"a{1}", R"(\1)", R"(\b)", "[[:<:]]",
+                                      "[[:>:]]"};
   for (const char *pat : bad_patterns) {
     EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_BADPAT);
     LIBC_NAMESPACE::regfree(&preg);
@@ -551,6 +551,52 @@ TEST(LlvmLibcRegexTest, AlternationAndGrouping) {
     deep_150[i] = '(';
   deep_150[150] = '\0';
   check_err(deep_150, REG_ESPACE);
+}
+
+TEST(LlvmLibcRegexTest, PlusAndQuestionQuantifiers) {
+  auto check = [](const char *pat, const char *match1, const char *match2,
+                  const char *nomatch1, const char *nomatch2) {
+    regex_t preg{};
+    ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED | REG_NOSUB), 0);
+    scope_exit free_guard([&preg] { LIBC_NAMESPACE::regfree(&preg); });
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, match1, 0, nullptr, 0), 0);
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, match2, 0, nullptr, 0), 0);
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, nomatch1, 0, nullptr, 0),
+              REG_NOMATCH);
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, nomatch2, 0, nullptr, 0),
+              REG_NOMATCH);
+  };
+
+  // Framed '+' and '?' near-miss checks (distinguishing '+', '?', and '*').
+  check("xa+y", "xay", "xaaay", "xy", "xaby");
+  check("xa?y", "xy", "xay", "xaay", "xby");
+
+  // Non-nullable '+' enforcement and anchored nullable '?' rule.
+  check("a+", "a", "aaa", "", "bbb");
+  check("^a?$", "", "a", "aa", "b");
+
+  // Adjacent and mixed quantifiers.
+  check("^a+b+c+$", "abc", "aaabbbccc", "ab", "ac");
+  check("^a?b?c?$", "", "ac", "aabc", "d");
+  check("^a+b?c*$", "a", "aaabccc", "bc", "abbc");
+
+  // Grouping, alternation, bracket classes, and escaped '+' / '?'.
+  check("^(ab)+$", "ab", "ababab", "", "aba");
+  check("^(ab)?$", "", "ab", "abab", "a");
+  check("^(a|b)+$", "a", "abba", "", "abc");
+  check("^a()+b?$", "a", "ab", "", "abb");
+  check("^a()?b+$", "ab", "abbb", "a", "");
+  check(R"(^\d+-\w?$)", "123-a", "7-", "-a", "7-ab");
+  check(R"(a\+b\?c)", "a+b?c", "xx a+b?c yy", "abc", "aabbc");
+
+  // Invalid repetition errors (REG_BADRPT).
+  const char *const bad_rpt[] = {"^+",  "$+",  "^?",  "$?",   "a++", "a??",
+                                 "a*+", "a+?", "a?*", "(+a)", "(?a)"};
+  for (const char *pat : bad_rpt) {
+    regex_t preg{};
+    EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_BADRPT);
+    LIBC_NAMESPACE::regfree(&preg);
+  }
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)

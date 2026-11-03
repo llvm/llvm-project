@@ -75,8 +75,9 @@ enum GDBRemoteServerError {
 
 // GDBRemoteCommunicationServerLLGS constructor
 GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
-    MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager)
-    : GDBRemoteCommunicationServerCommon(), m_mainloop(mainloop),
+    MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager,
+    llvm::StringRef name)
+    : GDBRemoteCommunicationServerCommon(name), m_mainloop(mainloop),
       m_process_manager(process_manager), m_current_process(nullptr),
       m_continue_process(nullptr), m_stdio_communication() {
   RegisterPacketHandlers();
@@ -210,6 +211,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_QPassSignals,
       &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
 
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jLLDBSettings,
+      &GDBRemoteCommunicationServerLLGS::Handle_jLLDBSettings);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jLLDBTraceSupported,
       &GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceSupported);
@@ -4568,6 +4572,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
   }
   if (!m_accelerator_plugins.empty())
     ret.push_back("accelerator-plugins+");
+  if (bool(plugin_features & Extension::lldb_settings))
+    ret.push_back("lldb-settings+");
 
   // check for client features
   m_extensions_supported = {};
@@ -4665,6 +4671,24 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
 void GDBRemoteCommunicationServerLLGS::InstallPlugin(
     std::unique_ptr<LLDBServerAcceleratorPlugin> plugin_up) {
   m_accelerator_plugins.emplace_back(std::move(plugin_up));
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jLLDBSettings(
+    StringExtractorGDBRemote &) {
+  if (!m_connection_accelerator_plugin)
+    return SendErrorResponse(
+        Status::FromErrorString("invalid accelerator plugin"));
+
+  std::optional<LLDBSettings> settings =
+      m_connection_accelerator_plugin->GetLLDBSettings();
+  if (!settings)
+    return SendErrorResponse(
+        Status::FromErrorString("no LLDB settings available"));
+
+  StreamGDBRemote response;
+  response.PutAsJSON(*settings, /*hex_ascii=*/false);
+  return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult

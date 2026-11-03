@@ -67,6 +67,7 @@ public:
   }
 
   unsigned countLeadingZeros() const { return V ? 0 : 1; }
+  unsigned getActiveBits() const { return V; }
 
   Boolean truncate(unsigned TruncBits) const { return *this; }
 

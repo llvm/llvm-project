@@ -887,6 +887,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
   // X u/ Y -> 0  iff X u< Y
   // X u% Y -> X  iff X u< Y
   if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
+    salvageDebugInfo(*Instr);
     Instr->replaceAllUsesWith(IsRem ? X : Constant::getNullValue(Ty));
     Instr->eraseFromParent();
     ++NumUDivURemsNarrowedExpanded;
@@ -1012,6 +1013,7 @@ bool CVPImpl::processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
   assert(SDI->getOpcode() == Instruction::SRem);
 
   if (LCR.abs().icmp(CmpInst::ICMP_ULT, RCR.abs())) {
+    salvageDebugInfo(*SDI);
     SDI->replaceAllUsesWith(SDI->getOperand(0));
     SDI->eraseFromParent();
     return true;
