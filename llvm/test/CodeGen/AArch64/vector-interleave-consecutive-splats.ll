@@ -73,21 +73,11 @@ define void @interleave4_nonshuffle_operand(<8 x i16> %src, ptr %dst0, ptr %dst1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8h, #1
 ; CHECK-NEXT:    dup v2.8h, v0.h[0]
-; CHECK-NEXT:    dup v3.8h, v0.h[2]
-; CHECK-NEXT:    dup v4.8h, v0.h[3]
-; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    zip2 v1.8h, v2.8h, v3.8h
-; CHECK-NEXT:    zip1 v2.8h, v2.8h, v3.8h
-; CHECK-NEXT:    zip2 v5.8h, v0.8h, v4.8h
-; CHECK-NEXT:    zip1 v0.8h, v0.8h, v4.8h
-; CHECK-NEXT:    zip1 v3.8h, v1.8h, v5.8h
-; CHECK-NEXT:    zip2 v1.8h, v1.8h, v5.8h
-; CHECK-NEXT:    zip1 v4.8h, v2.8h, v0.8h
-; CHECK-NEXT:    zip2 v0.8h, v2.8h, v0.8h
-; CHECK-NEXT:    stp q3, q1, [x0, #32]
-; CHECK-NEXT:    stp q4, q0, [x0]
-; CHECK-NEXT:    stp q4, q0, [x1]
-; CHECK-NEXT:    stp q3, q1, [x1, #32]
+; CHECK-NEXT:    add v3.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v4.8h, v0.h[2]
+; CHECK-NEXT:    dup v5.8h, v0.h[3]
+; CHECK-NEXT:    st4 { v2.8h, v3.8h, v4.8h, v5.8h }, [x0]
+; CHECK-NEXT:    st4 { v2.8h, v3.8h, v4.8h, v5.8h }, [x1]
 ; CHECK-NEXT:    ret
   %splat0 = shufflevector <8 x i16> %src, <8 x i16> poison, <8 x i32> zeroinitializer
   %added = add <8 x i16> %src, splat (i16 1)
