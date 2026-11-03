@@ -126,18 +126,24 @@ static bool functionIsVerifiable(const FunctionDecl *FD) {
 }
 
 static bool isNoexcept(const FunctionDecl *FD) {
+  assert(FD != nullptr);
   const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
   return FPT && (FPT->isNothrow() || FD->hasAttr<NoThrowAttr>());
 }
 
 static bool isNoexcept(const Decl *D) {
+  assert(D != nullptr);
   if (const auto *FD = D->getAsFunction())
     return isNoexcept(FD);
   if (const auto *BD = dyn_cast<BlockDecl>(D)) {
-    if (auto *TSI = BD->getSignatureAsWritten()) {
-      auto *FPT = TSI->getType()->castAs<FunctionProtoType>();
-      return FPT->isNothrow() || BD->hasAttr<NoThrowAttr>();
-    }
+    // The written signature is only the return type when the block has no
+    // explicit parameter list (e.g. `^int { ... }`), so it may not be a
+    // function type at all.
+    if (auto *TSI = BD->getSignatureAsWritten())
+      if (const auto *FPT = TSI->getType()->getAs<FunctionProtoType>())
+        if (FPT->isNothrow())
+          return true;
+    return BD->hasAttr<NoThrowAttr>();
   }
   return false;
 }
@@ -346,12 +352,16 @@ public:
     Impl->push_back(Viol);
   }
 
-  const Violation *lookup(FunctionEffect Key) { return lookupMutable(Key); }
+  const Violation *lookup(FunctionEffect Key) const {
+    return lookupMutable(Key);
+  }
 
   size_t size() const { return Impl ? Impl->size() : 0; }
 
 private:
-  Violation *lookupMutable(FunctionEffect Key) {
+  // const so that lookup() can share it: Impl's constness is shallow, so the
+  // Violations it owns are mutable here. Only maybeInsert() may modify them.
+  Violation *lookupMutable(FunctionEffect Key) const {
     if (Impl == nullptr)
       return nullptr;
 
@@ -440,7 +450,7 @@ public:
   // Analysis is complete when there are no unverified direct calls.
   bool isComplete() const { return UnverifiedDirectCalls.empty(); }
 
-  const Violation *violationForInferrableEffect(FunctionEffect effect) {
+  const Violation *violationForInferrableEffect(FunctionEffect effect) const {
     return InferrableEffectToFirstViolation.lookup(effect);
   }
 
@@ -505,13 +515,13 @@ public:
         std::move(Pending.InferrableEffectToFirstViolation);
   }
 
-  const Violation *firstViolationForEffect(FunctionEffect Effect) {
+  const Violation *firstViolationForEffect(FunctionEffect Effect) const {
     return InferrableEffectToFirstViolation.lookup(Effect);
   }
 
   // True if every reason this function lacks Effect is an exception escaping
   // it, i.e. it would have the effect but for throwing.
-  bool isThrowOnly(FunctionEffect Effect) {
+  bool isThrowOnly(FunctionEffect Effect) const {
     const Violation *V = firstViolationForEffect(Effect);
     return V != nullptr && V->ThrowOnly;
   }
