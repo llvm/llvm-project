@@ -1157,8 +1157,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX12-FLATSCR-NEXT:    s_mov_b32 s32, 0
 ; GFX12-FLATSCR-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX12-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 17, v0
-; GFX12-FLATSCR-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_and_b32 v0, 0xff, v0
+; GFX12-FLATSCR-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_lshlrev_b32 v1, 17, v0
+; GFX12-FLATSCR-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_and_b32 v0, 0xff, v0
 ; GFX12-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x7f
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FLATSCR-NEXT:    v_and_b32_e32 v6, 0xfe000000, v1
@@ -1175,84 +1175,84 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX12-FLATSCR-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX12-FLATSCR-NEXT:    ; Child Loop BB1_2 Depth 2
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-FLATSCR-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
+; GFX12-FLATSCR-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v2, v0
 ; GFX12-FLATSCR-NEXT:    s_mov_b32 s1, 0
 ; GFX12-FLATSCR-NEXT:  .LBB1_2: ; %for.body
 ; GFX12-FLATSCR-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; GFX12-FLATSCR-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX12-FLATSCR-NEXT:    s_clause 0xa
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[8:9], v[4:5], off offset:-10240
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[10:11], v[4:5], off offset:-8192
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[12:13], v[4:5], off offset:-6144
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[14:15], v[4:5], off offset:-4096
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[16:17], v[4:5], off offset:-2048
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[18:19], v[4:5], off
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[20:21], v[4:5], off offset:2048
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[22:23], v[4:5], off offset:4096
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[24:25], v[4:5], off offset:6144
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[26:27], v[4:5], off offset:8192
-; GFX12-FLATSCR-NEXT:    global_load_b64 v[28:29], v[4:5], off offset:10240
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 0x10000
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[8:9], v[2:3], off offset:-10240
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[10:11], v[2:3], off offset:-8192
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[12:13], v[2:3], off offset:-6144
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[14:15], v[2:3], off offset:-4096
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[16:17], v[2:3], off offset:-2048
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[18:19], v[2:3], off
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[20:21], v[2:3], off offset:2048
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[22:23], v[2:3], off offset:4096
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[24:25], v[2:3], off offset:6144
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[26:27], v[2:3], off offset:8192
+; GFX12-FLATSCR-NEXT:    global_load_b64 v[28:29], v[2:3], off offset:10240
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 0x10000
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-FLATSCR-NEXT:    s_addk_co_i32 s1, 0x2000
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-FLATSCR-NEXT:    s_cmp_lt_u32 s1, 0x400000
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0xa
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v8, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v8, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v9, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v9, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x9
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v10, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v10, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v11, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v11, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x8
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v12, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v12, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v13, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v13, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v14, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v14, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v15, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v15, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v16, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v16, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v17, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v17, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x5
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v18, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v18, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v19, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v19, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x4
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v20, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v20, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v21, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v21, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x3
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v22, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v22, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v23, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v23, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v24, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v24, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v25, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v25, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v26, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, s0, v26, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v27, v3, s0
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v27, v5, s0
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, vcc_lo, v28, v2
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, vcc_lo, v28, v4
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v29, v3, vcc_lo
+; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, v29, v5, vcc_lo
 ; GFX12-FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX12-FLATSCR-NEXT:  ; %bb.3: ; %while.cond.loopexit
 ; GFX12-FLATSCR-NEXT:    ; in Loop: Header=BB1_1 Depth=1
@@ -1264,7 +1264,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX12-FLATSCR-NEXT:    v_add_co_u32 v0, s0, s34, v6
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, s35, 0, s0
-; GFX12-FLATSCR-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX12-FLATSCR-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX12-FLATSCR-NEXT:    s_endpgm
 entry:
   %call = tail call i64 @_Z13get_global_idj(i32 0)
