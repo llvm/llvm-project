@@ -539,6 +539,32 @@ gpu.module @tcgen05_mma_scale_d_sm110a [#nvvm.target<chip = "sm_110a">] {
 
 // -----
 
+// sm_101 is an alias of sm_110, which has no scale_input_d.
+
+gpu.module @tcgen05_mma_scale_d_sm101a [#nvvm.target<chip = "sm_101a">] {
+  func.func @tcgen05_mma_scale_d_sm101a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    %scale = llvm.mlir.constant(0 : i64) : i64
+    // expected-error @below {{'nvvm.tcgen05.mma' op is not supported on sm_101a}}
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en scale = %scale
+      , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, i64)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_scale_d_sm101f [#nvvm.target<chip = "sm_101f">] {
+  func.func @tcgen05_mma_scale_d_sm101f(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    %scale = llvm.mlir.constant(0 : i64) : i64
+    // expected-error @below {{'nvvm.tcgen05.mma' op is not supported on sm_101f}}
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en scale = %scale
+      , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, i64)
+    return
+  }
+}
+
+// -----
+
 gpu.module @tcgen05_mma_scale_d_sm103a [#nvvm.target<chip = "sm_103a">] {
   func.func @tcgen05_mma_scale_d_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
     %scale = llvm.mlir.constant(0 : i64) : i64
