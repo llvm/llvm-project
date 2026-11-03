@@ -76,8 +76,8 @@ void populatePromotableAliasMap(PromotableAliaserInterface aliaser,
 /// (e.g., a memcpy between two aliases of the same root), the result is one
 /// of them; use `referencesAtMostOneAliasOfSlot` to rule this out.
 /// If `op` owns its wrapped blocking uses (e.g., `vector.mask` wrapping a
-/// `vector.transfer_read`), the wrapped operation's operands are also
-/// considered.
+/// `vector.transfer_read`), the wrapped operation's operands are considered
+/// instead.
 std::optional<MemorySlot> getOpAliasSlot(Operation *op,
                                          const MemorySlot &rootSlot,
                                          const PromotableAliasMap &aliasMap);
@@ -88,7 +88,7 @@ std::optional<MemorySlot> getOpAliasSlot(Operation *op,
 /// guard `PromotableMemOpInterface` calls, which assume a single slot per
 /// operation. If `op` owns its wrapped blocking uses (e.g., `vector.mask`
 /// wrapping a `vector.transfer_read`), the wrapped operation's operands are
-/// also considered.
+/// considered instead.
 bool referencesAtMostOneAliasOfSlot(Operation *op, const MemorySlot &rootSlot,
                                     const PromotableAliasMap &aliasMap);
 
