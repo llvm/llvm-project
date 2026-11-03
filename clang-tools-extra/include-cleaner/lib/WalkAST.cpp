@@ -442,7 +442,27 @@ public:
   // Objective-C support
 
   bool VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
-    reportType(TL.getNameLoc(), TL.getIFaceDecl());
+    ObjCInterfaceDecl *IFace = TL.getIFaceDecl();
+    if (!IFace)
+      return true;
+
+    SourceLocation Loc = TL.getNameLoc();
+    ASTContext &Ctx = IFace->getASTContext();
+    StringRef SpelledName =
+        Lexer::getSourceText(CharSourceRange::getTokenRange(Loc),
+                             Ctx.getSourceManager(), Ctx.getLangOpts());
+    if (!SpelledName.empty() && SpelledName != IFace->getName()) {
+      // We may have a @compatibility_alias.
+      for (auto *D : Ctx.getTranslationUnitDecl()->decls()) {
+        if (auto *Alias = dyn_cast<ObjCCompatibleAliasDecl>(D)) {
+          if (Alias->getName() == SpelledName) {
+            report(Loc, Alias);
+            return true;
+          }
+        }
+      }
+    }
+    reportType(Loc, IFace);
     return true;
   }
 
