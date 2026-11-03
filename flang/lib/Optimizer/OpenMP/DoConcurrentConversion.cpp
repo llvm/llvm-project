@@ -1233,9 +1233,32 @@ warnAboutCalleesWithoutDeviceVersion(mlir::ModuleOp module,
           << fir::NameUniquer::deconstruct(funcOp.getSymName()).second.name
           << "' is called from device code generated for a DO CONCURRENT "
              "loop, but it is not defined in this file and is not marked "
-             "DECLARE TARGET; add '!$omp declare target' to its definition to "
-             "generate a device version of it";
+             "DECLARE TARGET; add '!$omp declare target' to its definition, or "
+             "compile the file defining it with "
+             "'-fdo-concurrent-device-pure-procedures', to generate a device "
+             "version of it";
     });
+  }
+}
+
+/// Only pure procedures can be referenced in a `do concurrent` loop, but the
+/// loop and the procedure can be in different translation units. Marks every
+/// pure procedure defined here as implicitly `declare target`, so that a device
+/// version is emitted for device-mapped loops in other translation units.
+static void markPureProceduresDeclareTarget(mlir::ModuleOp module) {
+  for (auto funcOp : module.getOps<mlir::func::FuncOp>()) {
+    if (funcOp.isExternal() ||
+        !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(funcOp))
+      continue;
+
+    auto declareTargetOp =
+        mlir::dyn_cast<mlir::omp::DeclareTargetInterface>(*funcOp);
+    if (!declareTargetOp || declareTargetOp.getDeclareTarget())
+      continue;
+
+    declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
+                                     mlir::omp::DeclareTargetCaptureClause::to,
+                                     /*automap=*/false, /*implicit=*/true);
   }
 }
 
@@ -1262,8 +1285,12 @@ public:
       return;
     }
 
-    if (mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device)
-      warnAboutCalleesWithoutDeviceVersion(module, moduleSymbolTable);
+    if (mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device) {
+      if (devicePureProcedures)
+        markPureProceduresDeclareTarget(module);
+      else
+        warnAboutCalleesWithoutDeviceVersion(module, moduleSymbolTable);
+    }
 
     llvm::DenseSet<fir::DoConcurrentOp> concurrentLoopsToSkip;
     CallbackListener callbackListener([&](mlir::Operation *op) {
@@ -1294,10 +1321,12 @@ public:
 } // namespace
 
 std::unique_ptr<mlir::Pass>
-flangomp::createDoConcurrentConversionPass(bool mapToDevice) {
+flangomp::createDoConcurrentConversionPass(bool mapToDevice,
+                                           bool devicePureProcedures) {
   DoConcurrentConversionPassOptions options;
   options.mapTo = mapToDevice ? flangomp::DoConcurrentMappingKind::DCMK_Device
                               : flangomp::DoConcurrentMappingKind::DCMK_Host;
+  options.devicePureProcedures = devicePureProcedures;
 
   return std::make_unique<DoConcurrentConversionPass>(options);
 }

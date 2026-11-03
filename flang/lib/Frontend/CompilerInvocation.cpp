@@ -201,6 +201,9 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
 static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
+  opts.DoConcurrentDevicePureProcedures =
+      args.hasArg(clang::options::OPT_fdo_concurrent_device_pure_procedures);
+
   llvm::opt::Arg *arg =
       args.getLastArg(clang::options::OPT_fdo_concurrent_to_openmp_EQ);
   if (!arg)

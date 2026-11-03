@@ -54,7 +54,7 @@ module local
 contains
   pure real function defined(x)
     real, intent(in) :: x
-! CHECK-DAG: warning: loc("{{.*}}main.f90":[[@LINE+1]]:{{[0-9]+}}): 'ext_indirect' is called from device code generated for a DO CONCURRENT loop, but it is not defined in this file and is not marked DECLARE TARGET; add '!$omp declare target' to its definition to generate a device version of it
+! CHECK-DAG: warning: loc("{{.*}}main.f90":[[@LINE+1]]:{{[0-9]+}}): 'ext_indirect' is called from device code generated for a DO CONCURRENT loop, but it is not defined in this file and is not marked DECLARE TARGET; add '!$omp declare target' to its definition, or compile the file defining it with '-fdo-concurrent-device-pure-procedures', to generate a device version of it
     defined = ext_indirect(x)
   end function
 end module

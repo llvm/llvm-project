@@ -159,6 +159,13 @@ static llvm::cl::opt<std::string> enableDoConcurrentToOpenMPConversion(
         "Try to map `do concurrent` loops to OpenMP [none|host|device]"),
     llvm::cl::init("none"));
 
+static llvm::cl::opt<bool> enableDoConcurrentDevicePureProcedures(
+    "fdo-concurrent-device-pure-procedures",
+    llvm::cl::desc("Emit a device version of every pure procedure defined in "
+                   "the file when `do concurrent` loops are mapped to the "
+                   "device"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool>
     enableOpenMPGPU("fopenmp-is-gpu",
                     llvm::cl::desc("enable openmp GPU target codegen"),
@@ -404,6 +411,8 @@ static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
           .Case("host", DoConcurrentMappingKind::DCMK_Host)
           .Case("device", DoConcurrentMappingKind::DCMK_Device)
           .Default(DoConcurrentMappingKind::DCMK_None);
+  opts.doConcurrentDevicePureProcedures =
+      enableDoConcurrentDevicePureProcedures;
 
   fir::createOpenMPFIRPassPipeline(pm, opts);
   (void)mlir::applyPassManagerCLOptions(pm);

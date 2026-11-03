@@ -396,7 +396,8 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None)
     pm.addPass(flangomp::createDoConcurrentConversionPass(
-        opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device));
+        opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device,
+        opts.doConcurrentDevicePureProcedures));
 
   // The MapsForPrivatizedSymbols and AutomapToTargetDataPass pass need to run
   // before MapInfoFinalizationPass because they create new MapInfoOp

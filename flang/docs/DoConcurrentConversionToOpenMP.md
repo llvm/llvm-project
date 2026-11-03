@@ -48,6 +48,14 @@ fails with an undefined symbol. `flang` warns about such calls when compiling
 the loop. Note that `declare target` in a `pure` procedure requires
 `-fopenmp-version=45` or later.
 
+Alternatively, compiling with `-fdo-concurrent-device-pure-procedures` (in
+addition to `-fdo-concurrent-to-openmp=device`) emits a device version of
+every pure procedure defined in the file, whether or not a loop calls it. This
+avoids adding OpenMP directives to the source code, at the cost of larger
+object files. For it to work, every file that defines a procedure called from a
+device-mapped loop must be compiled with this flag. When the flag is given, the
+warning above is not emitted.
+
 ## Current status
 
 As of LLVM 22, flang adds more extensive support for parallelizing `do concurrent` loops

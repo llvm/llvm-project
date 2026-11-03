@@ -331,6 +331,8 @@ bool CodeGenAction::beginSourceFileAction() {
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
   opts.doConcurrentMappingKind =
       ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
+  opts.doConcurrentDevicePureProcedures =
+      ci.getInvocation().getCodeGenOpts().DoConcurrentDevicePureProcedures;
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
       (!isOpenMPEnabled || opts.isSimdOnly)) {

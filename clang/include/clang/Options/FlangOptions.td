@@ -317,6 +317,11 @@ def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
   HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
       Values<"none, host, device">;
 
+def fdo_concurrent_device_pure_procedures
+    : Flag<["-"], "fdo-concurrent-device-pure-procedures">,
+      HelpText<"Emit a device version of every pure procedure defined in the "
+               "file when `do concurrent` loops are mapped to the device">;
+
 def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Group<gfortran_Group>, Alias<module_dir>;
 
