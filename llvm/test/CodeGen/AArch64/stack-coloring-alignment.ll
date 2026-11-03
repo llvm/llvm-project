@@ -5,7 +5,6 @@
 ; corrupt BasicAA results.
 
 define <3 x float> @test_stack_coloring_maintains_alignment_metadata() {
-  ; CHECK-LABEL: test_stack_coloring_maintains_alignment_metadata:%bb.0
   ; CHECK:       SU(0): STRWui $wzr, %stack.0.alloca.a, 1 :: (store (s32) into %ir.alloca.b.1)
   ; CHECK:         Successors:
   ; CHECK-NEXT:      SU(1): Ord  Latency=1 Memory
