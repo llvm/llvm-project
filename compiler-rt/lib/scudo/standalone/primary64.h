@@ -703,6 +703,7 @@ u16 SizeClassAllocator64<Config>::popBlocksImpl(
   const u16 PopCount = ClassId == SizeClassMap::BatchClassId
                            ? B->getCount()
                            : Min(MaxBlockCount, B->getCount());
+  CHECK_LE(PopCount, MaxBlockCount);
   B->moveNToArray(ToArray, PopCount);
 
   // TODO(chiahungduan): The deallocation of unused BatchClassId blocks can be
@@ -928,7 +929,7 @@ void SizeClassAllocator64<Config>::pushBlocksImpl(
     DCHECK_NE(CurBatch, nullptr);
 
     for (u32 I = 0; I < Size;) {
-      DCHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
+      CHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
       u16 UnusedSlots =
           static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
       if (UnusedSlots == 0) {
@@ -1090,6 +1091,7 @@ void SizeClassAllocator64<Config>::pushBatchClassBlocks(RegionInfo *Region,
   DCHECK_NE(CurBatch, nullptr);
 
   for (u32 I = 0; I < Size;) {
+    CHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
     u16 UnusedSlots =
         static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
     if (UnusedSlots == 0) {
