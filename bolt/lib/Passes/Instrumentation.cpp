@@ -276,8 +276,8 @@ insertInstructions(const InstructionListType &Instrs, BinaryBasicBlock &BB,
                    BinaryBasicBlock::iterator Iter) {
   if (Instrs.empty())
     return Iter;
-  return BB.insertInstructions(Iter, Instrs.begin(), Instrs.end()) +
-         Instrs.size();
+  auto InsertedAt = BB.insertInstructions(Iter, Instrs.begin(), Instrs.end());
+  return std::next(InsertedAt, Instrs.size());
 }
 
 void Instrumentation::instrumentLeafNode(BinaryBasicBlock &BB,
