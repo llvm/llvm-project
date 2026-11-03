@@ -50,6 +50,105 @@ func.func @fuse_ops_between(%A: f32, %B: f32) -> f32 {
 
 // -----
 
+func.func @fuse_across_empty_region(%A: memref<16xf32>, %B: memref<16xf32>, %cond: i1) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %value = arith.constant 6.0 : f32
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    memref.store %value, %A[%i] : memref<16xf32>
+    scf.reduce
+  }
+  scf.if %cond {
+  } else {
+  }
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    %v = memref.load %A[%i] : memref<16xf32>
+    memref.store %v, %B[%i] : memref<16xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @fuse_across_empty_region
+// CHECK-NOT:   scf.parallel
+// CHECK:       scf.if
+// CHECK:       scf.parallel
+// CHECK-NEXT:    memref.store
+// CHECK-NEXT:    %[[V:.*]] = memref.load
+// CHECK-NEXT:    memref.store %[[V]]
+// CHECK-NEXT:    scf.reduce
+// CHECK-NEXT:  }
+// CHECK-NOT:   scf.parallel
+// CHECK:       return
+
+// -----
+
+func.func @fuse_across_pure_region(%A: memref<16xf32>, %B: memref<16xf32>, %cond: i1) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %value = arith.constant 6.0 : f32
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    memref.store %value, %A[%i] : memref<16xf32>
+    scf.reduce
+  }
+  scf.if %cond {
+    %x = arith.addi %c0, %c1 : index
+  }
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    %v = memref.load %A[%i] : memref<16xf32>
+    memref.store %v, %B[%i] : memref<16xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @fuse_across_pure_region
+// CHECK-NOT:   scf.parallel
+// CHECK:       scf.if
+// CHECK-NEXT:    %{{.*}} = arith.addi
+// CHECK-NEXT:  }
+// CHECK-NEXT:  scf.parallel
+// CHECK-NEXT:    memref.store
+// CHECK-NEXT:    %[[V:.*]] = memref.load
+// CHECK-NEXT:    memref.store %[[V]]
+// CHECK-NEXT:    scf.reduce
+// CHECK-NEXT:  }
+// CHECK-NOT:   scf.parallel
+// CHECK:       return
+
+// -----
+
+func.func @do_not_fuse_across_region_store(%A: memref<16xf32>, %B: memref<16xf32>, %cond: i1) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %value = arith.constant 6.0 : f32
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    memref.store %value, %A[%i] : memref<16xf32>
+    scf.reduce
+  }
+  scf.if %cond {
+    memref.store %value, %A[%c0] : memref<16xf32>
+  }
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    %v = memref.load %A[%i] : memref<16xf32>
+    memref.store %v, %B[%i] : memref<16xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_across_region_store
+// CHECK:       scf.parallel
+// CHECK:         memref.store
+// CHECK:       scf.if
+// CHECK-NEXT:     memref.store
+// CHECK:       scf.parallel
+// CHECK-NEXT:    %[[V:.*]] = memref.load
+// CHECK-NEXT:    memref.store %[[V]]
+// CHECK:       return
+
+// -----
+
 func.func @fuse_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>) {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
