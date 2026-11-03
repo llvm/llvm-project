@@ -8,7 +8,7 @@ define void @sym_extent(ptr %A, i32 %m0, i64 %n) {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][(zext i32 %m0 to i64)] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%i.h>][{0,+,1}<nuw><nsw><%j.b>]
-; CHECK-NEXT:  Delinearization validation: Failed
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   %m = zext i32 %m0 to i64

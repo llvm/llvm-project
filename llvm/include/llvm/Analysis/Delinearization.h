@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_DELINEARIZATION_H
 #define LLVM_ANALYSIS_DELINEARIZATION_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 
@@ -142,12 +144,17 @@ delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                           SmallVectorImpl<const SCEV *> &Sizes,
                           const SCEV *ElementSize);
 
+/// Table for the range proofs, keyed on the (subscript, size) pair.
+using DelinearizationRangeCache =
+    DenseMap<std::pair<const SCEV *, const SCEV *>, bool>;
+
 /// Check that each subscript in \p Subscripts is within the corresponding size
 /// in \p Sizes. For the outermost dimension, the subscript being negative is
 /// allowed.
-LLVM_ABI bool validateDelinearizationResult(ScalarEvolution &SE,
-                                            ArrayRef<const SCEV *> Sizes,
-                                            ArrayRef<const SCEV *> Subscripts);
+LLVM_ABI bool
+validateDelinearizationResult(ScalarEvolution &SE, ArrayRef<const SCEV *> Sizes,
+                              ArrayRef<const SCEV *> Subscripts,
+                              DelinearizationRangeCache *RangeCache = nullptr);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///
