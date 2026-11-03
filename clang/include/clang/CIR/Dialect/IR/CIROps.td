@@ -8775,12 +8775,12 @@ def CIR_LdexpOp : CIR_Op<"ldexp",
   }];
 
   let arguments = (ins
-    CIR_AnyFloatType:$src,
-    CIR_AnyIntType:$exp,
+    CIR_AnyFloatOrVecOfFloatType:$src,
+    CIR_AnyIntOrVecOfIntType:$exp,
     OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
-  let results = (outs CIR_AnyFloatType:$result);
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = [{
     $src `,` $exp `:` qualified(type($src)) `,` qualified(type($exp))
@@ -8792,6 +8792,8 @@ def CIR_LdexpOp : CIR_Op<"ldexp",
       build($_builder, $_state, src, exp, cir::FenvAttr{});
     }]>
   ];
+
+  let hasVerifier = 1;
 
   let llvmOp = "LoadExpOp";
   let constrainedLLVMIntrinsic = "ldexp";

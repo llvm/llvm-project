@@ -1128,10 +1128,9 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_ldexpl:
   case Builtin::BI__builtin_ldexpf16:
   case Builtin::BI__builtin_ldexpf128:
+  case Builtin::BI__builtin_elementwise_ldexp:
     return RValue::get(
         emitBinaryMaybeConstrainedFPBuiltin<cir::LdexpOp>(cgf, *e));
-  case Builtin::BI__builtin_elementwise_ldexp:
-    return errorBuiltinNYI(cgf, e, builtinID);
   default:
     break;
   }
