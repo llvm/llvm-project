@@ -2134,9 +2134,11 @@ static void processDoLoopBounds(
                 1));
           Fortran::semantics::Symbol &ivSym =
               bounds.Name().thing.symbol->GetUltimate();
+          // Only the seq loop's own DO variable is shared. A collapsed inner
+          // index stays on the collapsed loop.
           privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                       privateOperands, ivPrivate, /*isDoConcurrent=*/false,
-                      shareIvs);
+                      shareIvs && ivPrivate.empty());
 
           inclusiveBounds.push_back(true);
         });
@@ -2356,9 +2358,11 @@ static void privatizeInductionVariables(
         locs.push_back(loc);
         Fortran::semantics::Symbol &ivSym =
             bounds.Name().thing.symbol->GetUltimate();
+        // Only the seq loop's own DO variable is shared. A collapsed inner
+        // index stays on the collapsed loop.
         privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                     privateOperands, ivPrivate, /*isDoConcurrent=*/false,
-                    shareIvs);
+                    shareIvs && ivPrivate.empty());
       },
       /*markInnerCollapsed=*/false);
 }

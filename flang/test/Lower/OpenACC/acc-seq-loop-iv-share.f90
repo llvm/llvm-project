@@ -245,6 +245,37 @@ end subroutine
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
 
 ! -----------------------------------------------------------------------------
+! Only j, the seq loop's own DO variable, is private on the parent. k stays
+! on the collapsed loop.
+! -----------------------------------------------------------------------------
+subroutine collapse_seq(a, n, jout, kout)
+  integer :: n, i, j, k, jout, kout
+  real :: a(n)
+  !$acc parallel copy(jout, kout)
+  !$acc loop gang
+  do i = 1, n
+    !$acc loop seq collapse(2)
+    do j = 1, 3
+      do k = 1, 4
+        a(i) = a(i) + j + k
+      end do
+    end do
+    jout = j
+    kout = k
+  end do
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcollapse_seq
+! CHECK: acc.private {{.*}} name("j")
+! CHECK-NOT: acc.private {{.*}} name("k")
+! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
+! CHECK: %[[JDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFcollapse_seqEj")
+! CHECK: acc.private {{.*}} name("k")
+! CHECK: acc.loop private({{.*}} : !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32) =
+! CHECK: fir.load %[[JDECL]]#0 : !fir.ref<i32>
+
+! -----------------------------------------------------------------------------
 ! integer(8) induction variable.
 ! -----------------------------------------------------------------------------
 subroutine i64_iv(a, n, kout)

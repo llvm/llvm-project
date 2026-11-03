@@ -6,8 +6,6 @@
 ! - A finished structured loop leaves one past the end. `do k = 1, 3` leaves
 !   4. A zero-trip loop leaves the lower bound: after `k = 5` and
 !   `do k = 1, 0`, the value is 1.
-! - collapse(2) puts only the seq loop's own DO variable on the parent. The
-!   collapsed index stays on the collapsed loop and is not visible after it.
 ! - device_type(nvidia) seq, device_type(default) seq, and device_type(*) seq
 !   leave the induction variable on the parent. `do k = 1, 3` leaves 4.
 ! - When the parent is serial or parallel, the induction variable is private
@@ -95,37 +93,6 @@ end subroutine
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK: fir.store %[[C1]] to %[[KDECL]]#0 : !fir.ref<i32>
 ! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-
-! -----------------------------------------------------------------------------
-! Only j, the seq loop's own DO variable, is private on the parent. k stays
-! on the collapsed loop.
-! -----------------------------------------------------------------------------
-subroutine collapse_seq(a, n, jout, kout)
-  integer :: n, i, j, k, jout, kout
-  real :: a(n)
-  !$acc parallel copy(jout, kout)
-  !$acc loop gang
-  do i = 1, n
-    !$acc loop seq collapse(2)
-    do j = 1, 3
-      do k = 1, 4
-        a(i) = a(i) + j + k
-      end do
-    end do
-    jout = j
-    kout = k
-  end do
-  !$acc end parallel
-end subroutine
-
-! CHECK-LABEL: func.func @_QPcollapse_seq
-! CHECK: acc.private {{.*}} name("j")
-! CHECK-NOT: acc.private {{.*}} name("k")
-! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
-! CHECK: %[[JDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFcollapse_seqEj")
-! CHECK: acc.private {{.*}} name("k")
-! CHECK: acc.loop private({{.*}} : !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32) =
-! CHECK: fir.load %[[JDECL]]#0 : !fir.ref<i32>
 
 ! -----------------------------------------------------------------------------
 ! seq for a named device type is shared. `do k = 1, 3` leaves 4.
