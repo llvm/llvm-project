@@ -32,7 +32,7 @@ class raw_ostream;
 void initializeDXILWriterLegacyPass(PassRegistry &);
 
 /// Initializer for dxil embedder pass
-void initializeEmbedDXILPassPass(PassRegistry &);
+void initializeDXILEmbedderLegacyPass(PassRegistry &);
 
 /// Initializer for DXIL-prepare
 void initializeDXILPrepareModuleLegacyPass(PassRegistry &);
