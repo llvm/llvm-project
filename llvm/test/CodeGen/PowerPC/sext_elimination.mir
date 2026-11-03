@@ -35,7 +35,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_nox0 = COPY $x3
     ; CHECK-NEXT: [[LBZU:%[0-9]+]]:gprc, [[LBZU1:%[0-9]+]]:g8rc_nox0 = LBZU 0, [[COPY]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprc = COPY [[LBZU1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprc = COPY [[LBZU1]].sub_32
     ; CHECK-NEXT: [[EXTSW_32_64_:%[0-9]+]]:g8rc = EXTSW_32_64 [[COPY1]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[LBZU]], %subreg.sub_32
@@ -58,7 +58,7 @@ body:             |
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:g8rc = COPY [[INSERT_SUBREG5]]
     %0:g8rc_nox0 = COPY $x3
     %1:gprc, %2:g8rc_nox0 = LBZU 0, %0:g8rc_nox0
-    %3:gprc = COPY %2:g8rc_nox0
+    %3:gprc = COPY %2.sub_32:g8rc_nox0
     %4:g8rc = EXTSW_32_64 %3:gprc ; should not be eliminated
     %5:g8rc = EXTSW_32_64 %1:gprc
 
