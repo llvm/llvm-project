@@ -89,6 +89,22 @@ func.func @type_attribute() {
 
 // -----
 
+// Signed and unsigned integer memory spaces are mapped like signless ones.
+
+// VULKAN-LABEL: func @non_signless_memory_spaces
+// OPENCL-LABEL: func @non_signless_memory_spaces
+func.func @non_signless_memory_spaces() {
+  // VULKAN: memref<10xf32, #spirv.storage_class<Generic>>
+  // OPENCL: memref<10xf32, #spirv.storage_class<Generic>>
+  %0 = "dialect.memref_producer"() : () -> (memref<10xf32, 1 : ui64>)
+  // VULKAN: memref<4xi32, #spirv.storage_class<Workgroup>>
+  // OPENCL: memref<4xi32, #spirv.storage_class<Workgroup>>
+  %1 = "dialect.memref_producer"() : () -> (memref<4xi32, 3 : si32>)
+  return
+}
+
+// -----
+
 // VULKAN-LABEL: func.func @function_io
 // OPENCL-LABEL: func.func @function_io
 func.func @function_io
@@ -142,6 +158,15 @@ func.func @non_memref_types(%arg: f32) -> f32 {
 func.func @missing_mapping() {
   // expected-error @+1 {{failed to legalize}}
   %0 = "dialect.memref_producer"() : () -> (memref<f32, 2>)
+  return
+}
+
+// -----
+
+// Values wider than 64 bits used to trip an APInt assertion.
+func.func @memory_space_too_wide() {
+  // expected-error @+1 {{failed to legalize}}
+  %0 = "dialect.memref_producer"() : () -> (memref<f32, 18446744073709551616 : i128>)
   return
 }
 
