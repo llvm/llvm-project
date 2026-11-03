@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv64 %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple spirv32 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple spirv64 -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple spirv32 -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: define spir_func void @func(ptr noundef %{{.*}})
 void func(int* arg) {

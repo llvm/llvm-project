@@ -1186,9 +1186,6 @@ private:
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
-  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
-  void DiagnoseInvalidCXXModuleImport();
-
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
   void CodeCompleteDirective(bool InConditional) override;
@@ -1544,7 +1541,6 @@ private:
   /// Diagnose a late-parsed attribute naming a parameter that it cannot, and
   /// return true if it must be dropped.
   bool checkLateAttributeParamRefs(const LateParsedAttribute &LPA,
-                                   const Decl *D,
                                    ArrayRef<const DeclRefExpr *> ParamRefs,
                                    bool ReenteredProtoParams);
 
