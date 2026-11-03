@@ -19,6 +19,8 @@
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -237,6 +239,26 @@ static wasm::WasmLimits defaultLimits() {
   return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0, 0};
 }
 
+// Compare only the union member the opcode selects: bytes past it are
+// uninitialized.
+static bool sameInitExpr(const wasm::WasmInitExprMVP &A,
+                         const wasm::WasmInitExprMVP &B) {
+  if (A.Opcode != B.Opcode)
+    return false;
+  switch (A.Opcode) {
+  case wasm::WASM_OPCODE_I32_CONST:
+    return A.Value.Int32 == B.Value.Int32;
+  case wasm::WASM_OPCODE_I64_CONST:
+    return A.Value.Int64 == B.Value.Int64;
+  case wasm::WASM_OPCODE_F32_CONST:
+    return A.Value.Float32 == B.Value.Float32;
+  case wasm::WASM_OPCODE_F64_CONST:
+    return A.Value.Float64 == B.Value.Float64;
+  default:
+    llvm_unreachable("only number types carry an init expression");
+  }
+}
+
 static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
                                                     const StringRef &Name,
                                                     bool Is64) {
@@ -292,6 +314,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
 
   MCSymbolWasm *DefaultFunctionTable = nullptr;
   MCSymbol *LastFunctionLabel = nullptr;
+  MapVector<MCSymbolWasm *, SMLoc> GlobalInitLocs;
 
   bool Is64;
 
@@ -470,25 +493,95 @@ public:
     Parser.Lex();
   }
 
-  bool parseSingleFloat(bool IsNegative, OperandVector &Operands) {
+  // Parses a global's initial value, spelled like the matching const
+  // instruction's immediate: `i32.const 42`, `f32.const 0x1p1`.
+  bool parseGlobalInit(wasm::ValType Type,
+                       std::optional<wasm::WasmInitExpr> &Result) {
+    auto MnemonicTok = Lexer.getTok();
+    auto Mnemonic = expectIdent();
+    if (Mnemonic.empty())
+      return true;
+    StringRef TypeName = Mnemonic;
+    std::optional<wasm::ValType> InitType;
+    if (TypeName.consume_back(".const"))
+      InitType = WebAssembly::parseType(TypeName);
+    if (!InitType)
+      return error("Expected a const instruction in .globalinit: ",
+                   MnemonicTok);
+    if (*InitType != Type)
+      return error("Initial value does not match the global's type: ",
+                   MnemonicTok);
+    if (!WebAssembly::isNumType(Type))
+      return error("Initial value is not supported for this global type: ",
+                   MnemonicTok);
+
+    SMLoc SignLoc = Lexer.getTok().getLoc();
+    bool Negative = isNext(AsmToken::Minus);
+    auto ValueTok = Lexer.getTok();
+    uint64_t Bits;
+    if (Type == wasm::ValType::I32 || Type == wasm::ValType::I64) {
+      if (ValueTok.isNot(AsmToken::Integer) && ValueTok.isNot(AsmToken::BigNum))
+        return error("Expected integer constant, instead got: ", ValueTok);
+      // Accept either the signed or the unsigned spelling of a value of this
+      // width, the way the fixed-width integer directives do.
+      APInt Val = ValueTok.getAPIntVal();
+      Val = Val.zext(Val.getBitWidth() + 1);
+      if (Negative)
+        Val.negate();
+      unsigned Width = Type == wasm::ValType::I32 ? 32 : 64;
+      if (!Val.isIntN(Width) && !Val.isSignedIntN(Width))
+        return error("Integer constant does not fit in the global's type: " +
+                         Twine(Negative ? "-" : "") + ValueTok.getString(),
+                     Negative ? SignLoc : ValueTok.getLoc());
+      Parser.Lex();
+      Bits = Val.trunc(64).getZExtValue();
+    } else {
+      double Val;
+      if (ValueTok.is(AsmToken::Real)) {
+        if (parseSingleFloat(Negative, Val))
+          return true;
+      } else if (parseSpecialFloatMaybe(Negative, Val)) {
+        return error("Expected floating-point constant, instead got: ",
+                     ValueTok);
+      }
+      // A host float conversion need not keep a NaN's sign.
+      APFloat Flt(Val);
+      if (Type == wasm::ValType::F32) {
+        bool LosesInfo;
+        Flt.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
+                    &LosesInfo);
+      }
+      Bits = Flt.bitcastToAPInt().getZExtValue();
+    }
+    Result = WebAssembly::makeGlobalInitExpr(Type, Bits);
+    assert(Result && "a parsed const type must have an init expression");
+    return false;
+  }
+
+  bool parseSingleFloat(bool IsNegative, double &Val) {
     auto &Flt = Lexer.getTok();
-    double Val;
     if (Flt.getString().getAsDouble(Val, false))
       return error("Cannot parse real: ", Flt);
     if (IsNegative)
       Val = -Val;
-    Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        Flt.getLoc(), Flt.getEndLoc(), WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
     return false;
   }
 
-  bool parseSpecialFloatMaybe(bool IsNegative, OperandVector &Operands) {
+  bool parseSingleFloat(bool IsNegative, OperandVector &Operands) {
+    SMLoc Start = Lexer.getTok().getLoc(), End = Lexer.getTok().getEndLoc();
+    double Val;
+    if (parseSingleFloat(IsNegative, Val))
+      return true;
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
+        Start, End, WebAssemblyOperand::FltOp{Val}));
+    return false;
+  }
+
+  bool parseSpecialFloatMaybe(bool IsNegative, double &Val) {
     if (Lexer.isNot(AsmToken::Identifier))
       return true;
-    auto &Flt = Lexer.getTok();
-    auto S = Flt.getString();
-    double Val;
+    auto S = Lexer.getTok().getString();
     if (S.compare_insensitive("infinity") == 0) {
       Val = std::numeric_limits<double>::infinity();
     } else if (S.compare_insensitive("nan") == 0) {
@@ -498,9 +591,17 @@ public:
     }
     if (IsNegative)
       Val = -Val;
-    Operands.push_back(std::make_unique<WebAssemblyOperand>(
-        Flt.getLoc(), Flt.getEndLoc(), WebAssemblyOperand::FltOp{Val}));
     Parser.Lex();
+    return false;
+  }
+
+  bool parseSpecialFloatMaybe(bool IsNegative, OperandVector &Operands) {
+    SMLoc Start = Lexer.getTok().getLoc(), End = Lexer.getTok().getEndLoc();
+    double Val;
+    if (parseSpecialFloatMaybe(IsNegative, Val))
+      return true;
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
+        Start, End, WebAssemblyOperand::FltOp{Val}));
     return false;
   }
 
@@ -1004,6 +1105,7 @@ public:
     auto &Ctx = Out.getContext();
 
     if (DirectiveID.getString() == ".globaltype") {
+      auto SymNameTok = Lexer.getTok();
       auto SymName = expectIdent();
       if (SymName.empty())
         return ParseStatus::Failure;
@@ -1034,10 +1136,49 @@ public:
       // Now set this symbol with the correct type.
       auto *WasmSym =
           static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
+      if (WasmSym->hasGlobalInitExpr()) {
+        std::optional<wasm::WasmInitExpr> Expected =
+            WebAssembly::makeGlobalInitExpr(*Type, 0);
+        if (!Expected ||
+            Expected->Inst.Opcode != WasmSym->getGlobalInitExpr().Inst.Opcode)
+          return error(
+              "Type does not match the .globalinit already given for: ",
+              SymNameTok);
+      }
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
       WasmSym->setGlobalType(wasm::WasmGlobalType{uint8_t(*Type), Mutable});
       // And emit the directive again.
       TOut.emitGlobalType(WasmSym);
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
+    if (DirectiveID.getString() == ".globalinit") {
+      // .globalinit SYM, <type>.const VALUE
+      auto SymNameTok = Lexer.getTok();
+      auto SymName = expectIdent();
+      if (SymName.empty())
+        return ParseStatus::Failure;
+      if (expect(AsmToken::Comma, ","))
+        return ParseStatus::Failure;
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
+      if (WasmSym->getType() && !WasmSym->isGlobal())
+        return error(".globalinit is only valid for a global: ", SymNameTok);
+      if (!WasmSym->isGlobal() || !WasmSym->hasGlobalType())
+        return error(".globalinit requires a preceding .globaltype for: ",
+                     SymNameTok);
+      std::optional<wasm::WasmInitExpr> InitExpr;
+      if (parseGlobalInit(
+              static_cast<wasm::ValType>(WasmSym->getGlobalType().Type),
+              InitExpr))
+        return ParseStatus::Failure;
+      // An .include'd header may repeat the same .globalinit.
+      if (WasmSym->hasGlobalInitExpr() &&
+          !sameInitExpr(WasmSym->getGlobalInitExpr().Inst, InitExpr->Inst))
+        return error("Conflicting .globalinit for: ", SymNameTok);
+      WasmSym->setGlobalInitExpr(*InitExpr);
+      GlobalInitLocs.try_emplace(WasmSym, SymNameTok.getLoc());
+      TOut.emitGlobalInit(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
@@ -1384,7 +1525,14 @@ public:
     TC.clear();
   }
 
-  void onEndOfFile() override { ensureEmptyNestingStack(); }
+  void onEndOfFile() override {
+    ensureEmptyNestingStack();
+    // A later directive can re-declare the symbol as another kind, including
+    // .type, which this parser does not handle.
+    for (auto &[Sym, Loc] : GlobalInitLocs)
+      if (!Sym->isGlobal())
+        error(".globalinit is only valid for a global: " + Sym->getName(), Loc);
+  }
 };
 } // end anonymous namespace
 
