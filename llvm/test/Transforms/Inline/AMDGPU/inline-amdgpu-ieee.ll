@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=amdgpu-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -S -passes=inline < %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -S -passes=inline < %s | FileCheck --check-prefixes=CHECK,MODE %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -mcpu=gfx1200 -S -passes=inline < %s | FileCheck --check-prefixes=CHECK,NOMODE %s
 
 define i32 @func_default() #0 {
   ret i32 0
@@ -34,21 +35,24 @@ define i32 @ieee_enabled_call_ieee_enabled() #1 {
 }
 
 ; CHECK-LABEL: @ieee_enabled_call_ieee_disabled(
-; CHECK-NEXT: call i32 @func_ieee_disabled()
+; MODE-NEXT: call i32 @func_ieee_disabled()
+; NOMODE-NEXT: ret i32 0
 define i32 @ieee_enabled_call_ieee_disabled() #1 {
   %call = call i32 @func_ieee_disabled()
   ret i32 %call
 }
 
 ; CHECK-LABEL: @ieee_disabled_call_default(
-; CHECK-NEXT: call i32 @func_default()
+; MODE-NEXT: call i32 @func_default()
+; NOMODE-NEXT: ret i32 0
 define i32 @ieee_disabled_call_default() #2 {
   %call = call i32 @func_default()
   ret i32 %call
 }
 
 ; CHECK-LABEL: @ieee_disabled_call_ieee_enabled(
-; CHECK-NEXT: call i32 @func_ieee_enabled()
+; MODE-NEXT: call i32 @func_ieee_enabled()
+; NOMODE-NEXT: ret i32 0
 define i32 @ieee_disabled_call_ieee_enabled() #2 {
   %call = call i32 @func_ieee_enabled()
   ret i32 %call
@@ -63,7 +67,8 @@ define i32 @ieee_disabled_call_ieee_disabled() #2 {
 
 ; Shader calling a compute function
 ; CHECK-LABEL: @amdgpu_ps_default_call_default(
-; CHECK-NEXT: call i32 @func_default()
+; MODE-NEXT: call i32 @func_default()
+; NOMODE-NEXT: ret i32 0
 define amdgpu_ps i32 @amdgpu_ps_default_call_default() #0 {
   %call = call i32 @func_default()
   ret i32 %call
@@ -78,7 +83,8 @@ define amdgpu_ps i32 @amdgpu_ps_ieee_enabled_call_default() #1 {
 }
 
 ; CHECK-LABEL: @amdgpu_ps_ieee_disabled_call_default(
-; CHECK-NEXT: call i32 @func_default()
+; MODE-NEXT: call i32 @func_default()
+; NOMODE-NEXT: ret i32 0
 define amdgpu_ps i32 @amdgpu_ps_ieee_disabled_call_default() #2 {
   %call = call i32 @func_default()
   ret i32 %call
