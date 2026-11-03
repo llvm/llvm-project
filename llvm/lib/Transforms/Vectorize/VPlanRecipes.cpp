@@ -3192,7 +3192,7 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   /// Vectorize casts.
   assert(State.VF.isVector() && "Not vectorizing?");
-  Type *DestTy = VectorType::get(getScalarType(), State.VF);
+  Type *DestTy = toVectorTy(getScalarType(), State.VF);
   VPValue *Op = getOperand(0);
   Value *A = State.get(Op);
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
