@@ -36,7 +36,7 @@ void baz() {
 // Template instantiation - foo
 // Since the order of instantiation may vary during runs, run FileCheck twice
 // to make sure each instantiation is in the correct spot.
-// CHECK1: template<> struct foo<5, int, 5> {
+// CHECK1: template<> struct foo<5, int> {
 // CHECK2: template<> struct foo<2, double, 3> {
 
 // Template definition - bar
