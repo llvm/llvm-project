@@ -5648,10 +5648,10 @@ mlir::LogicalResult CIRToLLVMVecFCmpOpLowering::matchAndRewrite(
     llvm::ElementCount size = op.getLhs().getType().getSize();
     auto i1VecTy = mlir::VectorType::get(
         size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
-    bitResult = createConstrainedFCmpCall(
-                    rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-                    op.getKind(), op.getSignaling(), fenv, i1VecTy)
-                    .getResult(0);
+    mlir::LLVM::CallIntrinsicOp CFCmpCall = createConstrainedFCmpCall(
+        rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(), op.getKind(),
+        op.getSignaling(), fenv, i1VecTy);
+    bitResult = CFCmpCall.getResult(0);
   } else {
     bitResult = mlir::LLVM::FCmpOp::create(
         rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
