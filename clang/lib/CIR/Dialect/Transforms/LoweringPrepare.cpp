@@ -3503,8 +3503,8 @@ void LoweringPreparePass::runOnOperation() {
     // of this pass from registering them again.
     for (auto &entry : cudaKernelMap)
       entry.getValue()->removeAttr(CUDAKernelNameAttr::getMnemonic());
-    for (auto &[global, regAttr] : cudaDeviceVars)
-      global->removeAttr(CUDAVarRegistrationInfoAttr::getMnemonic());
+    for (auto &deviceVar : cudaDeviceVars)
+      deviceVar.first->removeAttr(CUDAVarRegistrationInfoAttr::getMnemonic());
   }
 
   buildGlobalCtorDtorList();
