@@ -461,29 +461,80 @@ public:
     return true;
   }
 
+  /// Determines whether a protocol is already covered by the receiver's type,
+  /// either through adopted protocol qualifiers (e.g. `id<Proto>` or an
+  /// inheriting sub-protocol) or through class conformance on the receiver
+  /// interface (e.g. `MyClass <Proto>`).
+  bool IsProtocolCoveredByReceiver(ObjCProtocolDecl *Proto,
+                                   const ObjCObjectPointerType *ObjCPtr,
+                                   ObjCInterfaceDecl *IFace) {
+    if (ObjCPtr) {
+      ASTContext &Ctx = Proto->getASTContext();
+      for (auto *ReceiverProto : ObjCPtr->quals())
+        if (Ctx.ProtocolCompatibleWithProtocol(Proto, ReceiverProto))
+          return true;
+    }
+    return IFace && IFace->ClassImplementsProtocol(Proto, true);
+  }
+
+  void ReportMemberDecl(SourceLocation Loc, NamedDecl *Member,
+                        const ObjCObjectPointerType *ObjCPtr,
+                        ObjCInterfaceDecl *ReceiverIFace, bool IsSuperReceiver,
+                        bool IsClassReceiver) {
+    if (!Member)
+      return;
+    auto *DC = Member->getDeclContext();
+    if (auto *Cat = dyn_cast<ObjCCategoryDecl>(DC)) {
+      // Category members (methods, properties, accessors) must be reported so
+      // the category's header is included.
+      report(Loc, Cat);
+    } else if (auto *Proto = dyn_cast<ObjCProtocolDecl>(DC)) {
+      // Report the protocol member unless the receiver's type already covers
+      // conformance to this protocol.
+      if (IsSuperReceiver ||
+          !IsProtocolCoveredByReceiver(Proto, ObjCPtr, ReceiverIFace))
+        report(Loc, Member);
+    } else if (auto *IFace = dyn_cast<ObjCInterfaceDecl>(DC)) {
+      // If the member is declared on the receiver's interface or an inherited
+      // superclass, the receiver's header already provides it.
+      // Report the member explicitly only if there is no receiver interface,
+      // the interface is not an ancestor, it is a class receiver, or super is
+      // used.
+      if (!ReceiverIFace ||
+          (ReceiverIFace != IFace && !IFace->isSuperClassOf(ReceiverIFace)) ||
+          (IsClassReceiver && ReceiverIFace == IFace) || IsSuperReceiver)
+        report(Loc, Member);
+    } else {
+      report(Loc, Member);
+    }
+  }
+
   bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
     auto StartLoc = E->getSelectorStartLoc();
-    // Identify the selector and the method declaration
-    if (auto *Method = E->getMethodDecl()) {
-      // Report the method as a used symbol
-      report(StartLoc, Method);
-    }
+    auto *Method = E->getMethodDecl();
+    auto *ReceiverIFace = E->getReceiverInterface();
+    const auto *ObjCPtr = E->getReceiverType()->getAs<ObjCObjectPointerType>();
+    auto ReceiverKind = E->getReceiverKind();
+    bool IsSuper = ReceiverKind == ObjCMessageExpr::SuperInstance ||
+                   ReceiverKind == ObjCMessageExpr::SuperClass;
+    bool IsClass = ReceiverKind == ObjCMessageExpr::Class;
 
-    // If it's a class message, report the interface/class as used
-    if (E->getReceiverKind() == ObjCMessageExpr::Class) {
-      if (auto *Interface = E->getReceiverInterface()) {
-        report(E->getReceiverRange().getBegin(), Interface);
+    ReportMemberDecl(StartLoc, Method, ObjCPtr, ReceiverIFace, IsSuper,
+                     IsClass);
+
+    switch (ReceiverKind) {
+    case ObjCMessageExpr::Class:
+      report(E->getReceiverRange().getBegin(), ReceiverIFace);
+      break;
+    case ObjCMessageExpr::Instance:
+    case ObjCMessageExpr::SuperInstance:
+    case ObjCMessageExpr::SuperClass:
+      report(StartLoc, ReceiverIFace, RefType::Implicit);
+      if (ObjCPtr) {
+        for (auto *Proto : ObjCPtr->quals())
+          report(StartLoc, Proto, RefType::Implicit);
       }
-      return true;
-    }
-    if (auto *Interface = E->getReceiverInterface()) {
-      report(StartLoc, Interface, RefType::Implicit);
-    }
-    QualType Type = E->getReceiverType();
-    if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
-      for (auto *Proto : ObjCPtr->quals()) {
-        report(StartLoc, Proto, RefType::Implicit);
-      }
+      break;
     }
     return true;
   }
@@ -494,26 +545,45 @@ public:
   }
 
   bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *E) {
-    // Unconditionally report property declarations and their backing accessor
-    // methods. Dot-notation or pseudo-object references (`foo.bar`) require
-    // the underlying property definition or getters/setters to compile.
-    // Bypassing transient compiler state flags (isMessagingGetter/
-    // isMessagingSetter) guarantees that the declaring
-    // header keeps the properties recorded as used.
+    ObjCInterfaceDecl *ReceiverIFace = nullptr;
+    const ObjCObjectPointerType *ObjCPtr = nullptr;
+    bool IsSuper = E->isSuperReceiver();
+    bool IsClass = E->isClassReceiver();
+    auto Loc = E->getLocation();
+    if (IsClass) {
+      ReceiverIFace = E->getClassReceiver();
+      report(E->getReceiverLocation(), ReceiverIFace);
+    } else if (IsSuper) {
+      QualType SuperType = E->getSuperReceiverType();
+      if (const auto *ObjCTy = SuperType->getAs<ObjCObjectType>()) {
+        ReceiverIFace = ObjCTy->getInterface();
+        report(Loc, ReceiverIFace, RefType::Implicit);
+      }
+    } else if (E->isObjectReceiver()) {
+      QualType BaseType = E->getBase()->getType();
+      ObjCPtr = BaseType->getAs<ObjCObjectPointerType>();
+      if (ObjCPtr) {
+        ReceiverIFace = ObjCPtr->getInterfaceDecl();
+        report(Loc, ObjCPtr->getInterfaceDecl(), RefType::Implicit);
+        for (auto *Proto : ObjCPtr->quals())
+          report(Loc, Proto, RefType::Implicit);
+      }
+    }
+
+    NamedDecl *GetterDecl = nullptr;
+    NamedDecl *SetterDecl = nullptr;
     if (E->isExplicitProperty()) {
       if (auto *Prop = E->getExplicitProperty()) {
-        report(E->getLocation(), Prop);
-        if (auto *Getter = Prop->getGetterMethodDecl())
-          report(E->getLocation(), Getter);
-        if (auto *Setter = Prop->getSetterMethodDecl())
-          report(E->getLocation(), Setter);
+        ReportMemberDecl(Loc, Prop, ObjCPtr, ReceiverIFace, IsSuper, IsClass);
+        GetterDecl = Prop->getGetterMethodDecl();
+        SetterDecl = Prop->getSetterMethodDecl();
       }
     } else {
-      if (auto *Getter = E->getImplicitPropertyGetter())
-        report(E->getLocation(), Getter);
-      if (auto *Setter = E->getImplicitPropertySetter())
-        report(E->getLocation(), Setter);
+      GetterDecl = E->getImplicitPropertyGetter();
+      SetterDecl = E->getImplicitPropertySetter();
     }
+    ReportMemberDecl(Loc, GetterDecl, ObjCPtr, ReceiverIFace, IsSuper, IsClass);
+    ReportMemberDecl(Loc, SetterDecl, ObjCPtr, ReceiverIFace, IsSuper, IsClass);
     return true;
   }
 
