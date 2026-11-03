@@ -11,7 +11,7 @@
 #define _LIBCPP___ITERATOR_EMPTY_H
 
 #include <__config>
-#include <initializer_list>
+#include <__cstddef/size_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,11 +30,6 @@ empty(const _Cont& __c) noexcept(noexcept(__c.empty())) -> decltype(__c.empty())
 template <class _Tp, size_t _Sz>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty(const _Tp (&)[_Sz]) noexcept {
   return false;
-}
-
-template <class _Ep>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty(initializer_list<_Ep> __il) noexcept {
-  return __il.size() == 0;
 }
 
 _LIBCPP_END_NAMESPACE_STD
