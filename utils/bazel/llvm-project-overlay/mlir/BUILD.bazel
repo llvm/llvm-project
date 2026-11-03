@@ -8762,7 +8762,6 @@ cc_library(
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":IR",
-        ":LLVMDialect",
         ":SCFDialect",
         ":SCFTransforms",
         ":TransformUtils",
