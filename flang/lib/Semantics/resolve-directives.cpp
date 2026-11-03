@@ -501,11 +501,15 @@ public:
     if (x.moduleName.symbol) {
       Scope &thisScope{context_.FindScope(x.moduleName.source)};
       const auto version{context_.langOptions().getOpenMPVersion()};
-      if ((version == 51 || version == 52) &&
-          x.moduleName.symbol->test(Symbol::Flag::OmpAssumesNoOpenmp)) {
+      if (version == 51 || version == 52) {
         if (auto *symbol{const_cast<Symbol *>(
                 omp::GetProgramUnit(thisScope).symbol())}) {
-          symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+          for (auto flag : {Symbol::Flag::OmpAssumesNoOpenmp,
+                   Symbol::Flag::OmpAssumesNoParallelism}) {
+            if (x.moduleName.symbol->test(flag)) {
+              symbol->set(flag);
+            }
+          }
         }
       }
       common::visit(

@@ -2,12 +2,13 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK5X,SCOPE,SCOPE5X
 ! RUN: FileCheck %s --check-prefix=MODFILE --input-file=%t/assumes_module.mod
 ! RUN: FileCheck %s --check-prefix=USE-MODFILE --input-file=%t/use_parent-use_child.mod
+! RUN: FileCheck %s --check-prefix=PARALLELISM-MODFILE --input-file=%t/parallelism_module.mod
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK60,SCOPE,SCOPE60
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -module-dir %t -o - %s | FileCheck %s --check-prefix=SIMD
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 -module-dir %t %s | FileCheck %s --check-prefix=SYMBOLS
 
 ! SIMD: module
-! SIMD-NOT: "omp_no_openmp"
+! SIMD-NOT: "llvm.assume"
 
 ! SYMBOLS-DAG: assume_block (Subroutine): Subprogram
 ! SYMBOLS-DAG: assumes_module (OmpAssumesNoOpenmp): Module
@@ -15,6 +16,12 @@
 ! SYMBOLS-DAG: assumes_no_openmp_parallel (Subroutine, OmpAssumesNoOpenmp): Subprogram
 ! SYMBOLS-DAG: assumes_no_openmp_host (Subroutine, OmpAssumesNoOpenmp): Subprogram
 ! SYMBOLS-DAG: uses_assumes_module (Subroutine, OmpAssumesNoOpenmp): Subprogram
+! SYMBOLS-DAG: assumes_no_parallelism (Subroutine, OmpAssumesNoParallelism): Subprogram
+! SYMBOLS-DAG: parallelism_module (OmpAssumesNoParallelism): Module
+! SYMBOLS-DAG: reexport_parallelism (OmpAssumesNoParallelism): Module
+! SYMBOLS-DAG: uses_parallelism_module (Subroutine, OmpAssumesNoParallelism): Subprogram
+! SYMBOLS-DAG: assumes_mixed (Subroutine, OmpAssumesNoOpenmp, OmpAssumesNoParallelism): Subprogram
+! SYMBOLS-DAG: assumes_mixed_reverse (Subroutine, OmpAssumesNoOpenmp, OmpAssumesNoParallelism): Subprogram
 
 ! Lowering of the OpenMP ASSUME construct. The HOLDS clause asserts a scalar
 ! logical expression, which is lowered to an llvm.assume intrinsic. The block is
@@ -131,14 +138,14 @@ end subroutine assumes_no_openmp_local
 
 module scoped_assumes
   implicit none
-  !$omp assumes no_openmp
+  !$omp assumes no_openmp no_parallelism
   interface
     module subroutine independent_work() bind(C, name="independent_work")
     end subroutine independent_work
   end interface
 contains
   ! SCOPE-LABEL: func.func @_QMscoped_assumesPmodule_work()
-  ! SCOPE-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+  ! SCOPE-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_parallelism"]]
   subroutine module_work()
   end subroutine module_work
 end module scoped_assumes
@@ -146,7 +153,7 @@ end module scoped_assumes
 submodule (scoped_assumes) scoped_implementation
 contains
   ! SCOPE-LABEL: func.func @independent_work()
-  ! SCOPE-NOT: "omp_no_openmp"
+  ! SCOPE-NOT: "llvm.assume"
   module procedure independent_work
     ! SCOPE: omp.parallel {
     !$omp parallel
@@ -171,13 +178,113 @@ module use_parent
 end module use_parent
 
 ! USE-MODFILE: !$omp assumes no_openmp
+! USE-MODFILE-NEXT: !$omp assumes no_parallelism
 submodule (use_parent) use_child
   use scoped_assumes, only:
   implicit none
 contains
   ! SCOPE-LABEL: func.func @_QMuse_parentPimported_work()
-  ! SCOPE5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
-  ! SCOPE60-NOT: "omp_no_openmp"
+  ! SCOPE5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_parallelism"]]
+  ! SCOPE60-NOT: "llvm.assume"
   module procedure imported_work
   end procedure imported_work
 end submodule use_child
+
+! CHECK-LABEL: func.func @_QPassumes_no_parallelism()
+! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+subroutine assumes_no_parallelism()
+  implicit none
+  !$omp assumes no_parallelism
+  ! CHECK: omp.barrier
+  !$omp barrier
+end subroutine assumes_no_parallelism
+
+! PARALLELISM-MODFILE: module parallelism_module
+! PARALLELISM-MODFILE: !$omp assumes no_parallelism
+module parallelism_module
+  implicit none
+  !$omp assumes no_parallelism
+  interface
+    module subroutine separate_parallel_work()
+    end subroutine separate_parallel_work
+  end interface
+contains
+  ! CHECK-LABEL: func.func @_QMparallelism_modulePmodule_work()
+  ! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+  subroutine module_work()
+  end subroutine module_work
+end module parallelism_module
+
+module reexport_parallelism
+  use parallelism_module, only: module_work
+  implicit none
+end module reexport_parallelism
+
+! CHECK-LABEL: func.func @_QPuses_parallelism_module()
+! CHECK5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+! CHECK60-NOT: "llvm.assume"
+subroutine uses_parallelism_module()
+  use parallelism_module, only:
+  use reexport_parallelism, only: module_work
+  implicit none
+  ! CHECK: fir.call @_QMparallelism_modulePmodule_work()
+  call module_work()
+end subroutine uses_parallelism_module
+
+! CHECK-LABEL: func.func @_QPassumes_mixed_import()
+! CHECK5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_parallelism"]]
+! CHECK60-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+subroutine assumes_mixed_import()
+  use parallelism_module, only:
+  implicit none
+  !$omp assumes no_openmp
+end subroutine assumes_mixed_import
+
+! CHECK-LABEL: func.func @_QPassumes_mixed()
+! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_parallelism"]]
+subroutine assumes_mixed()
+  implicit none
+  !$omp assumes no_openmp no_parallelism
+end subroutine assumes_mixed
+
+! CHECK-LABEL: func.func @_QPassumes_mixed_reverse()
+! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_parallelism"]]
+subroutine assumes_mixed_reverse()
+  implicit none
+  !$omp assumes no_parallelism no_openmp
+end subroutine assumes_mixed_reverse
+
+! CHECK-LABEL: func.func @_QPassumes_parallelism_host()
+! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+subroutine assumes_parallelism_host()
+  implicit none
+  !$omp assumes no_parallelism
+  !$omp assumes no_parallelism
+  call internal_work()
+  call mixed_work()
+contains
+  ! CHECK-LABEL: func.func {{.*}}@_QFassumes_parallelism_hostPinternal_work()
+  ! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+  subroutine internal_work()
+  end subroutine internal_work
+
+  ! CHECK-LABEL: func.func {{.*}}@_QFassumes_parallelism_hostPmixed_work()
+  ! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_parallelism"]]
+  subroutine mixed_work()
+    implicit none
+    !$omp assumes no_openmp
+  end subroutine mixed_work
+end subroutine assumes_parallelism_host
+
+! CHECK-LABEL: func.func @_QPwithout_parallelism_assumption()
+! CHECK-NOT: "llvm.assume"
+! CHECK: return
+subroutine without_parallelism_assumption()
+end subroutine without_parallelism_assumption
+
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+program assumes_parallelism_program
+  implicit none
+  !$omp assumes no_parallelism
+end program assumes_parallelism_program

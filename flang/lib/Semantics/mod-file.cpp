@@ -484,6 +484,9 @@ void ModFileWriter::PutSymbols(
   if (scope.symbol()->test(Symbol::Flag::OmpAssumesNoOpenmp)) {
     decls_ << "!$omp assumes no_openmp\n";
   }
+  if (scope.symbol()->test(Symbol::Flag::OmpAssumesNoParallelism)) {
+    decls_ << "!$omp assumes no_parallelism\n";
+  }
   PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
 
   for (const auto &set : scope.equivalenceSets()) {

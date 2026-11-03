@@ -123,4 +123,25 @@ subroutine assumes_no_openmp_duplicate
   !$omp assumes no_openmp no_openmp
 end subroutine assumes_no_openmp_duplicate
 
+module assumes_no_parallelism_module
+  implicit none
+  !$omp assumes no_parallelism
+contains
+  pure subroutine work()
+    !$omp assumes no_openmp no_parallelism
+  end subroutine work
+end module assumes_no_parallelism_module
+
+subroutine assumes_no_parallelism_procedure
+  use assumes_no_parallelism_module, only: work
+  implicit none
+  !$omp assumes no_parallelism no_openmp
+  call work()
+end subroutine assumes_no_parallelism_procedure
+
+subroutine assumes_no_parallelism_duplicate
+  !ERROR: At most one NO_PARALLELISM clause can appear on ASSUMES directive
+  !$omp assumes no_parallelism no_parallelism
+end subroutine assumes_no_parallelism_duplicate
+
 end

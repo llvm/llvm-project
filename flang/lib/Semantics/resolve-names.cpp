@@ -1852,11 +1852,14 @@ public:
   bool Pre(const parser::OmpClause::From &);
 
   void Post(const parser::OmpAssumesDirective &x) {
-    if (llvm::any_of(x.v.Clauses().v, [](const parser::OmpClause &clause) {
-          return std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u);
-        })) {
-      if (Symbol * symbol{currScope().symbol()}) {
-        symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+    if (Symbol * symbol{currScope().symbol()}) {
+      for (const parser::OmpClause &clause : x.v.Clauses().v) {
+        if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
+          symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+        } else if (std::holds_alternative<parser::OmpClause::NoParallelism>(
+                       clause.u)) {
+          symbol->set(Symbol::Flag::OmpAssumesNoParallelism);
+        }
       }
     }
   }

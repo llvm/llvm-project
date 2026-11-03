@@ -6510,24 +6510,35 @@ private:
                                      const Fortran::semantics::Scope &scope) {
     if (bridge.getSemanticsContext().langOptions().OpenMPSimd)
       return;
+    bool noOpenmp = false;
+    bool noParallelism = false;
     const auto *assumptionScopeEnd =
         &Fortran::semantics::omp::GetProgramUnit(scope).parent();
     for (const auto *assumptionScope = &scope;
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
-      if (const auto *symbol = assumptionScope->symbol();
-          !symbol ||
-          !symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
-        continue;
-      llvm::SmallVector<mlir::Attribute> llvmAttrs;
-      if (auto existing =
-              func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
-        llvm::append_range(llvmAttrs, existing);
-      llvmAttrs.push_back(
-          builder->getStrArrayAttr({llvm::AssumptionAttrKey, "omp_no_openmp"}));
-      func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
-      break;
+      if (const auto *symbol = assumptionScope->symbol()) {
+        noOpenmp |=
+            symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp);
+        noParallelism |= symbol->test(
+            Fortran::semantics::Symbol::Flag::OmpAssumesNoParallelism);
+      }
     }
+    if (!noOpenmp && !noParallelism)
+      return;
+    std::string assumptions = noOpenmp ? "omp_no_openmp" : "";
+    if (noParallelism) {
+      if (!assumptions.empty())
+        assumptions += ',';
+      assumptions += "omp_no_parallelism";
+    }
+    llvm::SmallVector<mlir::Attribute> llvmAttrs;
+    if (auto existing =
+            func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
+      llvm::append_range(llvmAttrs, existing);
+    llvmAttrs.push_back(
+        builder->getStrArrayAttr({llvm::AssumptionAttrKey, assumptions}));
+    func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
   }
 
   /// Start translation of a function.

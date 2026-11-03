@@ -1,6 +1,6 @@
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix="PARSE-TREE" %s
-!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
+!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
 
 subroutine sub1
   integer :: r
@@ -150,3 +150,27 @@ end program p
 !PARSE-TREE: | OmpClauseList -> OmpClause -> NoOpenmp
 !PARSE-TREE: | Flags = {}
 !PARSE-TREE: ImplicitPart ->
+
+subroutine assumes_parallelism
+  implicit none
+  !$omp assumes no_parallelism
+  !$omp assumes no_openmp no_parallelism
+  !$omp assumes no_parallelism no_openmp
+end subroutine assumes_parallelism
+
+!UNPARSE: SUBROUTINE assumes_parallelism
+!UNPARSE: IMPLICIT NONE
+!UNPARSE: !$OMP ASSUMES NO_PARALLELISM
+!UNPARSE: !$OMP ASSUMES NO_OPENMP NO_PARALLELISM
+!UNPARSE: !$OMP ASSUMES NO_PARALLELISM NO_OPENMP
+!UNPARSE: END SUBROUTINE assumes_parallelism
+
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = assumes
+!PARSE-TREE: | OmpClauseList -> OmpClause -> NoParallelism
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpClauseList -> OmpClause -> NoOpenmp
+!PARSE-TREE: | | OmpClause -> NoParallelism
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpClauseList -> OmpClause -> NoParallelism
+!PARSE-TREE: | | OmpClause -> NoOpenmp
