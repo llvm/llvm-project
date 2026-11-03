@@ -7,7 +7,7 @@ declare noundef i32 @callx()
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef i32 @cally()
 
-@array = internal unnamed_addr addrspace(3) global [1000 x i32] undef, align 4
+@array = internal unnamed_addr addrspace(3) global [1000 x i32] poison, align 4
 
 ; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 define void @foo(ptr nocapture %b, i32 %x, i32 %y) {

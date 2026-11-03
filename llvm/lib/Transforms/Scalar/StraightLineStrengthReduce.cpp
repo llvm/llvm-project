@@ -516,6 +516,13 @@ private:
   /// getMinusSCEV to save compile time.
   /// 3. For other cases, we run getMinusSCEV to compute the difference(A - B).
   std::optional<const SCEV *> getDiffSCEV(const SCEV *A, const SCEV *B) const {
+    // Although getMinusSCEV has a "X - X --> 0" fast path, it is not redundant
+    // because it may return std::nullopt without calling getMinusSCEV when both
+    // SCEVs are Div/Truncate/ZeroExtend/SignExtend. So we test equality up
+    // front to return 0 when A == B.
+    if (A == B)
+      return SE->getZero(A->getType());
+
     // For these SCEV types, getMinusSCEV is likely to give very conservative
     // results, which is not helpful for SLSR/PSR. So we skip them.
     auto IsConservativeExpr = [](const SCEV *A) {
@@ -529,9 +536,6 @@ private:
         return false;
       }
     };
-
-    if (A == B)
-      return SE->getZero(A->getType());
 
     // We only skip when both SCEVs are Div/Truncate/ZeroExtend/SignExtend.
     // This is because we may have the following case:
@@ -1241,21 +1245,14 @@ static bool canHoistTo(Instruction *InsertPoint, Instruction *Expr,
       return false;
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
-      bool CanHoist = false;
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CB))
-        if (TTI->isTriviallyMovableIntrinsic(II))
-          CanHoist = true;
-
-      if (!CanHoist)
+      if (CB->isConvergent() || !isSafeToSpeculativelyExecute(CB))
         return false;
     }
     // TODO: Compile-time. If an operand is present in multiple instructions,
     // it will be added to the worklist multiple times. Each time it will
     // re-check if it can be hoisted.
 
-    HoistInstInDegree[I]++;
-
-    if (HoistInstInDegree[I] == 1)
+    if (++HoistInstInDegree[I] == 1)
       for (Value *Op : I->operands())
         if (Instruction *OpInst = dyn_cast<Instruction>(Op))
           WorkList.push_back(OpInst);

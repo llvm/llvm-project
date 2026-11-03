@@ -159,10 +159,6 @@ public:
     return false;
   }
 
-  virtual bool isTriviallyMovableIntrinsic(IntrinsicInst *II) const {
-    return false;
-  }
-
   virtual bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
 
   virtual std::pair<KnownBits, KnownBits>

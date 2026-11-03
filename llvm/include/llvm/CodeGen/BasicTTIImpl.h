@@ -448,10 +448,6 @@ public:
     return false;
   }
 
-  bool isTriviallyMovableIntrinsic(IntrinsicInst *II) const override {
-    return false;
-  }
-
   bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     return getTLI()->getTargetMachine().isNoopAddrSpaceCast(DL, FromAS, ToAS);
   }
