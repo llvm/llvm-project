@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wunused -Wunused-template -Wunused-member-function -Wno-unused-local-typedefs \
 // RUN:            -Wno-c++11-extensions -Wno-c++14-extensions -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wunused -Wunused-template -Wunused-member-function -Wno-unused-local-typedefs -std=c++14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunused -Wunused-template -Wunused-member-function -Wno-unused-local-typedefs -std=c++20 %s
 
 #ifdef HEADER
 
@@ -131,7 +132,9 @@ namespace test4 {
 
 namespace rdar8733476 {
 static void foo() {}                         // expected-warning {{function 'foo' is not needed and will not be emitted}}
-template <typename T> static void foo_t() {} // expected-warning {{unused function template 'foo_t'}}
+// foo_t<void> below is referenced from the never-instantiated bar<>, which
+// counts as a use of the template (see GH218429 at the end of this file).
+template <typename T> static void foo_t() {}
 template <> void foo_t<int>() {}             // expected-warning {{function 'foo_t<int>' is not needed and will not be emitted}}
 
 template <int>
@@ -233,6 +236,31 @@ namespace pr19713 {
   // FIXME: We should warn on both of these.
 static constexpr int constexpr3() { return 1; } // expected-warning {{unused function 'constexpr3'}}
 constexpr int constexpr4() { return 2; }
+#endif
+}
+
+namespace GH218429 {
+// A template whose only uses are in unevaluated operands is still a use: the
+// template determined the meaning of the expression even though no
+// specialization was odr-used or had its definition instantiated.
+#if __cplusplus >= 201103L
+template <typename T> static T in_decltype(T t) { return t; }
+using A = decltype(in_decltype(1));
+template <typename T> static T in_sizeof(T t) { return t; }
+static_assert(sizeof(in_sizeof(1)) == sizeof(int), "");
+template <typename T> static T in_noexcept(T t) { return t; }
+static_assert(!noexcept(in_noexcept(1)), "");
+template <typename T> static T never_named(T t) { return t; } // expected-warning {{unused function template 'never_named'}}
+#endif
+#if __cplusplus >= 201402L
+template <typename T> static T var_in_decltype = T{};
+using D = decltype(var_in_decltype<int>);
+template <typename T> static T var_never_named = T{}; // expected-warning {{unused variable template 'var_never_named'}}
+#endif
+#if __cplusplus >= 202002L
+template <typename T> static void in_requires(T) {}
+template <typename T> static constexpr bool satisfied = requires { in_requires(T{}); };
+static_assert(satisfied<int>);
 #endif
 }
 
