@@ -1,5 +1,4 @@
-# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - \
-# RUN:     | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
 # RUN: llc -O0 -run-pass=avr-expand-pseudo -mattr=avrtiny %s -o - \
 # RUN:     | FileCheck %s --check-prefix=CHECK-TINY
 
