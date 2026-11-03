@@ -12,7 +12,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -22,7 +21,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
@@ -32,12 +30,19 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include <cassert>
 
 using namespace llvm;
+
+// When disabled, unwrap a DILexicalBlockFile to its enclosing scope.
+static cl::opt<bool> SPIRVDebugLexicalBlockDiscriminatorScope(
+    "spirv-debug-lexical-block-discriminator-scope",
+    cl::desc("Use a DebugLexicalBlockDiscriminator as a DebugScope"),
+    cl::init(false));
 
 namespace {
 
@@ -306,14 +311,15 @@ static void collectDebugLocationsAndLocalVariables(
   }
 }
 
-// Insert \p S and its enclosing DILexicalBlock/DINamespace chain into \p Out,
-// parent before child, so single-pass emission never needs a forward
-// reference for the Parent operand.
+// Insert \p S and its enclosing DILexicalBlock/DINamespace/DILexicalBlockFile
+// chain into \p Out, parent before child, so single-pass emission never needs
+// a forward reference for the Parent operand.
 static void collectLexicalBlockChain(const DIScope *S,
                                      SetVector<const DIScope *> &Out) {
   // Walk up child-first, then insert in reverse to get parents in first.
   SmallVector<const DIScope *, 8> Chain;
-  while (S && !Out.contains(S) && isa<DILexicalBlock, DINamespace>(S)) {
+  while (S && !Out.contains(S) &&
+         isa<DILexicalBlock, DINamespace, DILexicalBlockFile>(S)) {
     Chain.push_back(S);
     S = S->getScope();
   }
@@ -427,7 +433,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
                                          LocalVariables);
 
   // DILexicalBlock and DINamespace scopes are lowered to DebugLexicalBlock.
-  // Collect them in parent-before-child order so they can be later emitted in a
+  // DILexicalBlockFile is lowered to DebugLexicalBlockDiscriminator.
+  // Collect them in parent-before-child order so they can be emitted in a
   // single pass.
   for (const DIScope *S : Finder.scopes())
     collectLexicalBlockChain(S, LexicalBlocks);
@@ -859,6 +866,9 @@ auto SPIRVNonSemanticDebugHandler::emitDebugScope(const DIScope *S)
   if (isa<DILexicalBlock, DINamespace>(S))
     return emitDebugLexicalBlock(S, VoidTypeReg, I32TypeReg, ExtInstSetReg,
                                  MAI);
+  if (const auto *LBF = dyn_cast<DILexicalBlockFile>(S))
+    return emitDebugLexicalBlockDiscriminator(LBF, VoidTypeReg, I32TypeReg,
+                                              ExtInstSetReg, MAI);
   if (const auto *SP = dyn_cast<DISubprogram>(S)) {
     if (SP->isDefinition())
       return emitDebugFunction(SP, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
@@ -986,14 +996,16 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 }
 
 // Match SPIRV-LLVM-Translator's selection logic for the Parent operand.
-SPIRVNonSemanticDebugHandler::EmitResult<MCRegister>
-SPIRVNonSemanticDebugHandler::resolveScope(const DIScope *Scope,
-                                           const DICompileUnit *FallbackCU) {
-  // DebugLexicalBlockDiscriminator cannot be used as a scope, so unwrap it.
-  while (const auto *DLBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
-    Scope = DLBF->getScope();
+auto SPIRVNonSemanticDebugHandler::resolveScope(const DIScope *Scope,
+                                                const DICompileUnit *FallbackCU)
+    -> EmitResult<MCRegister> {
+  if (!SPIRVDebugLexicalBlockDiscriminatorScope)
+    while (const auto *LBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
+      Scope = LBF->getScope();
 
-  if (isa_and_nonnull<DIType, DILexicalBlock, DINamespace, DISubprogram>(Scope))
+  // These scopes have their own debug instruction.
+  if (isa_and_nonnull<DIType, DILexicalBlock, DINamespace, DISubprogram,
+                      DILexicalBlockFile>(Scope))
     return getOrCreateDebugScope(Scope);
 
   // For a file, compile-unit, or absent scope, fall back to a compile unit.
@@ -1043,6 +1055,26 @@ auto SPIRVNonSemanticDebugHandler::emitDebugLexicalBlock(
 
   return EmitResult<PreparedScope>::emitted(
       PreparedScope{SPIRV::NonSemanticExtInst::DebugLexicalBlock, Ops});
+}
+
+auto SPIRVNonSemanticDebugHandler::emitDebugLexicalBlockDiscriminator(
+    const DILexicalBlockFile *LBF, MCRegister VoidTypeReg,
+    MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) -> EmitResult<PreparedScope> {
+  assert(LBF && "LBF must not be null");
+  EmitResult<MCRegister> Parent = resolveScope(LBF->getScope());
+  if (!Parent)
+    return EmitResult<PreparedScope>::failure(Parent);
+
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      LBF->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+  MCRegister DiscReg = emitOpConstantI32(
+      static_cast<uint32_t>(LBF->getDiscriminator()), I32TypeReg, MAI);
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugLexicalBlockDiscriminator,
+                    {SrcReg, DiscReg, *Parent.Value}});
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugInlinedAt(
@@ -1723,8 +1755,6 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     emitAndCacheScopePathOpStringReg(LV->getFile(), MAI);
   }
 
-  // Cache the path OpString each DebugLexicalBlock uses (source file), plus
-  // the Name OpString for the DINamespace case.
   for (const DIScope *S : LexicalBlocks) {
     emitAndCacheScopePathOpStringReg(S->getFile(), MAI);
     if (const auto *NS = dyn_cast<DINamespace>(S))
@@ -2275,27 +2305,11 @@ void SPIRVNonSemanticDebugHandler::notifyEntryLabelEmitted(
   tryEmitDebugFunctionDefinition(*CurrentMAI);
 }
 
-static void forEachDebugValueLike(const MachineModuleInfo &ModuleInfo,
-                                  function_ref<void(const MachineInstr &)> Fn) {
-  for (const Function &F : *ModuleInfo.getModule()) {
-    const MachineFunction *MF = ModuleInfo.getMachineFunction(F);
-    if (!MF)
-      continue;
-    for (const MachineBasicBlock &MBB : *MF)
-      for (const MachineInstr &MI : MBB)
-        if (MI.isDebugValueLike())
-          Fn(MI);
-  }
-}
-
 void SPIRVNonSemanticDebugHandler::collectDebugExpressions(
+    const SPIRV::ModuleAnalysisInfo &MAI,
     SetVector<const DIExpression *> &Out) const {
-  MachineModuleInfo *ModuleInfo = Asm->MMI;
-  assert(ModuleInfo && "MachineModuleInfo must be set during module output");
-
-  forEachDebugValueLike(*ModuleInfo, [&](const MachineInstr &MI) {
-    Out.insert(MI.getDebugExpression());
-  });
+  for (const MachineInstr *MI : MAI.DebugValueMIs)
+    Out.insert(MI->getDebugExpression());
 }
 
 void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
@@ -2384,7 +2398,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   // directly from the MIR to avoid inconsistencies with those in the LLVM IR
   // module.
   SetVector<const DIExpression *> Expressions;
-  collectDebugExpressions(Expressions);
+  collectDebugExpressions(MAI, Expressions);
   for (const DIExpression *Expr : Expressions)
     if (auto ExprReg = emitDebugExpression(Expr, VoidTypeReg, I32TypeReg,
                                            ExtInstSetReg, MAI))
@@ -2402,22 +2416,20 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   // Repeating the lookups emitDebugBinding() performs emits a type and a
   // constant only for an assignment that will reach a DebugValue.
-  MachineModuleInfo *ModuleInfo = Asm->MMI;
-  assert(ModuleInfo && "MachineModuleInfo must be set during module output");
-  forEachDebugValueLike(*ModuleInfo, [&](const MachineInstr &MI) {
+  for (const MachineInstr *MI : MAI.DebugValueMIs) {
     std::optional<std::pair<const DIBasicType *, uint64_t>> Const =
-        getConstantDbgValueBits(MI);
+        getConstantDbgValueBits(*MI);
     if (!Const)
-      return;
-    if (!DebugLocalVariableRegs.contains(MI.getDebugVariable()) ||
-        !DebugExpressionRegs.contains(MI.getDebugExpression()))
-      return;
+      continue;
+    if (!DebugLocalVariableRegs.contains(MI->getDebugVariable()) ||
+        !DebugExpressionRegs.contains(MI->getDebugExpression()))
+      continue;
     auto [It, Inserted] = ConstantValueRegs.try_emplace(*Const, MCRegister());
     if (Inserted)
       It->second = findOrEmitScalarConstant(Const->first, Const->second, MAI);
     if (!It->second.isValid())
       ConstantValueRegs.erase(It);
-  });
+  }
 
   for (const DILocation *DL : UniqueDebugLocations) {
     emitOpConstantI32(DL->getLine(), I32TypeReg, MAI);
