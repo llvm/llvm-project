@@ -92,7 +92,7 @@ private:
 
   void optimizeDivergentAddress(const ReplacementInfo &Info) const;
 
-  Value *extractDivergentIndex(Value *Ptr) const;
+  Value *extractDivergentIndex(Value *Ptr, const Instruction &User) const;
 
 public:
   AMDGPUAtomicOptimizerImpl() = delete;
@@ -708,9 +708,17 @@ static Value *buildMul(IRBuilder<> &B, Value *LHS, Value *RHS) {
 // If Ptr is a GEP whose base and indices are uniform except for a single index
 // that fits in 32 bits, return that index. Lanes with equal values of it access
 // the same address.
-Value *AMDGPUAtomicOptimizerImpl::extractDivergentIndex(Value *Ptr) const {
+Value *AMDGPUAtomicOptimizerImpl::extractDivergentIndex(
+    Value *Ptr, const Instruction &User) const {
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   if (!GEP || UA.isDivergentAtUse(GEP->getOperandUse(0)))
+    return nullptr;
+
+  // Operands that are uniform inside a cycle can differ between lanes after a
+  // divergent exit, since lanes leave on different iterations.
+  if (any_of(UA.getTemporalDivergenceList(), [&](const auto &Entry) {
+        return std::get<0>(Entry) == GEP && std::get<1>(Entry) == &User;
+      }))
     return nullptr;
 
   Value *Index = nullptr;
@@ -757,7 +765,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeDivergentAddress(
   Value *FullMatchMask;
 
   if (Is64bit)
-    Index = extractDivergentIndex(I.getOperand(Info.PtrIdx));
+    Index = extractDivergentIndex(I.getOperand(Info.PtrIdx), I);
 
   if (Index) {
     Index = B.CreateSExtOrTrunc(Index, Int32Ty);
