@@ -106,6 +106,7 @@ void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 
   addFunctionPass(SPIRVRegularizerPass(), PMW);
   flushFPMsToMPM(PMW);
+  addModulePass(SPIRVLowerDynamicLocalMemoryPass(getTM()), PMW);
   addModulePass(SPIRVCtorDtorLoweringPass(), PMW);
   addModulePass(SPIRVPrepareFunctionsPass(getTM()), PMW);
   addModulePass(SPIRVPrepareGlobalsPass(), PMW);
