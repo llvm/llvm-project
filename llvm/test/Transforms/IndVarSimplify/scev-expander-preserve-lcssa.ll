@@ -23,8 +23,8 @@ define void @test1(i8 %x, ptr %ptr) {
 ; CHECK-NEXT:    br label [[WHILE_COND192:%.*]]
 ; CHECK:       while.cond192:
 ; CHECK-NEXT:    switch i8 [[X:%.*]], label [[WHILE_BODY205:%.*]] [
-; CHECK-NEXT:    i8 59, label [[WHILE_COND215_PREHEADER:%.*]]
-; CHECK-NEXT:    i8 10, label [[IF_END224_LOOPEXIT1:%.*]]
+; CHECK-NEXT:      i8 59, label [[WHILE_COND215_PREHEADER:%.*]]
+; CHECK-NEXT:      i8 10, label [[IF_END224_LOOPEXIT1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       while.cond215.preheader:
 ; CHECK-NEXT:    br label [[WHILE_COND215:%.*]]
@@ -103,8 +103,8 @@ define void @test2(i16 %x)  {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    switch i16 [[X:%.*]], label [[RETURN_LOOPEXIT1:%.*]] [
-; CHECK-NEXT:    i16 41, label [[FOR_END:%.*]]
-; CHECK-NEXT:    i16 43, label [[FOR_COND]]
+; CHECK-NEXT:      i16 41, label [[FOR_END:%.*]]
+; CHECK-NEXT:      i16 43, label [[FOR_COND]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[I_0_LCSSA2:%.*]] = phi i32 [ 0, [[FOR_COND]] ]
@@ -336,13 +336,14 @@ if.end1824:                                       ; preds = %for.end1326
 define void @test5(ptr %header, i32 %conv, i8 %n) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP7_I:%.*]] = icmp slt i8 [[N:%.*]], 0
+; CHECK-NEXT:    [[CMP7_I4:%.*]] = icmp slt i8 [[N]], 0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
 ; CHECK:       for.inner:
 ; CHECK-NEXT:    [[I_0_I:%.*]] = phi i32 [ 0, [[FOR_BODY]] ], [ [[INC_I:%.*]], [[FOR_INNER]] ]
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
-; CHECK-NEXT:    [[CMP7_I:%.*]] = icmp slt i8 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP7_I]], label [[FOR_INNER]], label [[FOR_INNER_EXIT:%.*]]
 ; CHECK:       for.inner.exit:
 ; CHECK-NEXT:    [[INC_I_LCSSA:%.*]] = phi i32 [ [[INC_I]], [[FOR_INNER]] ]
@@ -350,7 +351,6 @@ define void @test5(ptr %header, i32 %conv, i8 %n) {
 ; CHECK:       for.inner.2:
 ; CHECK-NEXT:    [[I_0_I1:%.*]] = phi i32 [ 0, [[FOR_INNER_EXIT]] ], [ [[INC_I3:%.*]], [[FOR_INNER_2]] ]
 ; CHECK-NEXT:    [[INC_I3]] = add nuw nsw i32 [[I_0_I1]], 1
-; CHECK-NEXT:    [[CMP7_I4:%.*]] = icmp slt i8 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP7_I4]], label [[FOR_INNER_2]], label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC_I3_LCSSA:%.*]] = phi i32 [ [[INC_I3]], [[FOR_INNER_2]] ]
@@ -427,8 +427,8 @@ define void @test6(i8 %x) {
 ; CHECK-NEXT:    br label [[WHILE_COND192:%.*]]
 ; CHECK:       while.cond192:
 ; CHECK-NEXT:    switch i8 [[X:%.*]], label [[WHILE_BODY205:%.*]] [
-; CHECK-NEXT:    i8 59, label [[WHILE_COND215_PREHEADER:%.*]]
-; CHECK-NEXT:    i8 10, label [[IF_END224:%.*]]
+; CHECK-NEXT:      i8 59, label [[WHILE_COND215_PREHEADER:%.*]]
+; CHECK-NEXT:      i8 10, label [[IF_END224:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       while.cond215.preheader:
 ; CHECK-NEXT:    [[I_7_LCSSA:%.*]] = phi i32 [ 0, [[WHILE_COND192]] ]

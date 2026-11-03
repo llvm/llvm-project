@@ -582,10 +582,10 @@ define void @ult_query_nonpos(i32 %x, ptr %p, ptr %pz) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], [[Z]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], [[Z]]
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -669,10 +669,10 @@ define void @ult_y_guarded(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -714,11 +714,11 @@ define void @ult_query_offset(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[TMP0]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[X_1:%.*]] = add nsw i32 [[X]], 1
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X_1]], 1
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -757,10 +757,10 @@ define void @neg_ult_unknown_y(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -797,10 +797,10 @@ define void @neg_ult_smin_plus_1(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -838,10 +838,10 @@ define void @neg_ugt_smin_plus_1(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -879,10 +879,10 @@ define void @neg_ule_smin(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -920,10 +920,10 @@ define void @neg_uge_smin(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[Y]], [[X]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -962,10 +962,10 @@ define void @neg_slt(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -1004,10 +1004,10 @@ define void @neg_ult_other(i32 %x, i32 %w, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[W]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -1046,10 +1046,10 @@ define void @neg_ult_reversed(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Y]], [[X]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -1088,10 +1088,10 @@ define void @neg_query_sgt_zero(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
@@ -1131,10 +1131,10 @@ define void @neg_query_nonpos(i32 %x, ptr %p, ptr %pz) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 [[X]], [[Z]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 [[X]], [[Z]]
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()

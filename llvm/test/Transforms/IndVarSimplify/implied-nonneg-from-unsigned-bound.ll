@@ -223,11 +223,11 @@ define void @neg_ugt_smin_plus_1(i32 %x, i32 %w, ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[W]], i32 [[X]])
+; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[SMAX]], 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[M]], 0
 ; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
