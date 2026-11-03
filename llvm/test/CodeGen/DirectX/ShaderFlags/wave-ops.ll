@@ -105,6 +105,20 @@ define i32 @wave_multi_prefix_uproduct(i32 %x) {
   ret i32 %ret
 }
 
+define float @wave_multi_prefix_sum(float %x) {
+  ; CHECK: Function wave_multi_prefix_sum : [[WAVE_FLAG]]
+  %ret = call float @llvm.dx.wave.multi.prefix.sum.f32(
+      float %x, i32 1, i32 2, i32 4, i32 8)
+  ret float %ret
+}
+
+define i32 @wave_multi_prefix_usum(i32 %x) {
+  ; CHECK: Function wave_multi_prefix_usum : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.usum.i32(
+      i32 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
 define noundef i1 @wave_all_equal(i1 %x) {
 entry:
   ; CHECK: Function wave_all_equal : [[WAVE_FLAG]]

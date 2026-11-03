@@ -5408,7 +5408,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_xor:
-  case Builtin::BI__builtin_hlsl_wave_multi_prefix_product: {
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_product:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_sum: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
 
@@ -5418,14 +5419,15 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     QualType ValueTy = TheCall->getArg(0)->getType();
     QualType ElementTy = getScalarComponentType(ValueTy);
-    bool IsProduct =
-        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_product;
+    bool IsArithmetic =
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_product ||
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_sum;
     if ((!ElementTy->isIntegerType() &&
-         !(IsProduct && ElementTy->hasFloatingRepresentation())) ||
+         !(IsArithmetic && ElementTy->hasFloatingRepresentation())) ||
         ElementTy->isBooleanType()) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                    diag::err_builtin_invalid_arg_type)
-          << 1 << (ValueTy->isMatrixType() ? 3 : 5) << 1 << IsProduct
+          << 1 << (ValueTy->isMatrixType() ? 3 : 5) << 1 << IsArithmetic
           << ValueTy;
       return true;
     }

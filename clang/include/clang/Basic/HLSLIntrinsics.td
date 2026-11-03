@@ -1921,6 +1921,16 @@ def hlsl_wave_multi_prefix_product :
   let Availability = SM6_5;
 }
 
+def hlsl_wave_multi_prefix_sum :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixSum",
+                      "__builtin_hlsl_wave_multi_prefix_sum"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllNumericTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
 // Returns the count of bits set to 1 on prior lanes.
 def hlsl_wave_prefix_count_bits :
     HLSLBuiltin<"WavePrefixCountBits",
