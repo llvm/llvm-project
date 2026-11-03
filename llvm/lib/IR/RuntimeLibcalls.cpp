@@ -397,6 +397,10 @@ static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
   return Attribute::None;
 }
 
+static bool isFPVectorTy(Type *Ty) {
+  return Ty->isVectorTy() && Ty->isFPOrFPVectorTy();
+}
+
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getDefaultFunctionTy(
     LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
@@ -440,7 +444,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
       Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, AK);
   }
 
-  if (RetTy->isVectorTy()) {
+  if (RetTy->isVectorTy() && !ArgTys.empty() && isFPVectorTy(ArgTys[0])) {
     AttrBuilder FuncAttrBuilder(Ctx);
     for (Attribute::AttrKind Attr : CommonFnAttrs)
       FuncAttrBuilder.addAttribute(Attr);
@@ -651,7 +655,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
 
   auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
   if (!FuncTy || FuncTy->getNumParams() == 0 ||
-      !FuncTy->getParamType(0)->isVectorTy())
+      !isFPVectorTy(FuncTy->getParamType(0)))
     return {FuncTy, Attrs};
 
   Type *VecTy = FuncTy->getParamType(0);
