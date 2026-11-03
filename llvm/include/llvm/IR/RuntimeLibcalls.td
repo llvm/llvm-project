@@ -827,8 +827,8 @@ def DEOPTIMIZE : RuntimeLibcall<Void, [Ellip]>;
 def RETURN_ADDRESS : RuntimeLibcall<Ptr, [Int]>;
 
 // GPU profiling
-def PROFILE_INSTRUMENT_GPU : RuntimeLibcall;
-def PROFILE_SAMPLING_GPU : RuntimeLibcall;
+def PROFILE_INSTRUMENT_GPU : RuntimeLibcall<Void, [Ptr, Ptr, UInt64]>;
+def PROFILE_SAMPLING_GPU : RuntimeLibcall<Int, [UInt32]>;
 
 // Clear cache
 def CLEAR_CACHE : RuntimeLibcall<Void, [Ptr, Ptr]>;
@@ -1089,10 +1089,12 @@ def SETBUF : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def SETITIMER : RuntimeLibcall<Int, [Int, Ptr, Ptr]>;
 def SETVBUF : RuntimeLibcall<Int, [Ptr, Ptr, Int, SizeT]>;
 def SIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def SIZE_RETURNING_NEW : RuntimeLibcall<NoneType, []>;
-def SIZE_RETURNING_NEW_ALIGNED : RuntimeLibcall<NoneType, []>;
-def SIZE_RETURNING_NEW_ALIGNED_HOT_COLD : RuntimeLibcall<NoneType, []>;
-def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall<NoneType, []>;
+def SizedPtr : StructFuncArgType<[Ptr, SizeT]>;
+def SIZE_RETURNING_NEW : RuntimeLibcall<SizedPtr, [SizeT]>;
+def SIZE_RETURNING_NEW_ALIGNED : RuntimeLibcall<SizedPtr, [SizeT, AlignValT]>;
+def SIZE_RETURNING_NEW_ALIGNED_HOT_COLD
+    : RuntimeLibcall<SizedPtr, [SizeT, AlignValT, UInt8]>;
+def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall<SizedPtr, [SizeT, UInt8]>;
 def SMALL_FPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def SMALL_PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
 def SMALL_SPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
