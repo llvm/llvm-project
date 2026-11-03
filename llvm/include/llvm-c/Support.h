@@ -50,6 +50,10 @@ LLVM_C_ABI LLVMBool LLVMLoadLibraryPermanently(const char *Filename);
 LLVM_C_ABI void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                             const char *Overview);
 
+LLVM_C_ABI void LLVMParseCommandLineOptionsWithError(int argc,
+                                                     const char *const *argv,
+                                                     const char *Overview);
+
 /**
  * This function will search through all previously loaded dynamic
  * libraries for the symbol \p symbolName. If it is found, the address of
