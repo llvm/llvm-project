@@ -1814,12 +1814,12 @@ void SPIRVNonSemanticDebugHandler::generateModuleDebugInfo(
 }
 
 void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
-    SPIRV::ModuleAnalysisInfo &MAI) {
+    SPIRV::ModuleAnalysisInfo &) {
   flushPendingInsts(PendingStrings);
 }
 
 void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
-    SPIRV::ModuleAnalysisInfo &MAI) {
+    SPIRV::ModuleAnalysisInfo &) {
   flushPendingInsts(PendingGlobalDI);
 }
 
