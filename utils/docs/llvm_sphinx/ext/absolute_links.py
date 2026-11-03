@@ -257,9 +257,11 @@ def run_tests() -> None:
         "target.html#target-section",
         "project:target.md#target-document",
         "target.html#target-document",
-        "project:rest.rst#rest-section",
+        "project:rest.md#rest-section",
         "rest.html#rest-section",
-        "project:rest.rst",
+        "project:rest.md",
+        "project:reST-source.rst#reST-source",
+        "reST-source.html#reST-source",
     )
     for link in expected_nonportable_links:
         if link not in warnings:

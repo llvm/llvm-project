@@ -11,14 +11,16 @@ These nonportable internal links should warn:
 - [generated HTML section](target.html#target-section)
 - [reference-style project link][project-target]
 - [reference-style generated HTML link][html-target]
-- [reST source section](project:rest.rst#rest-section)
+- [reST source section](project:rest.md#rest-section)
 - [generated reST HTML section](rest.html#rest-section)
+- [reST source section](project:reST-source.rst#reST-source)
+- [generated reST HTML section](reST-source.html#reST-source)
 
 [project-target]: project:target.md#target-document
 [html-target]: target.html#target-document
 
 :::{note}
-[A project link in Markdown directive content](project:rest.rst)
+[A project link in Markdown directive content](project:rest.md)
 :::
 
 These links should not warn:
@@ -27,7 +29,7 @@ These links should not warn:
 - [a nonexistent document](https://example.test/docs/missing.html)
 - [a non-document page](https://example.test/docs/downloads/package.tar.xz)
 - [source document](target.md)
-- [reStructuredText source document](rest.rst)
+- [reStructuredText source document](rest.md)
 - [source heading](target.md#target-section)
 - [same-document heading](#markdown-absolute-link-tests)
 - [an HTML file that is not a document](static.html)
