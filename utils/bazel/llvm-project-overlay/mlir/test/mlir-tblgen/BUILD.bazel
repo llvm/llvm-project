@@ -14,6 +14,7 @@ package(default_visibility = ["//visibility:public"])
             "//llvm:include/llvm/Frontend/Directive/DirectiveBase.td",
             "//llvm:include/llvm/Frontend/OpenMP/OMP.td",
             "//llvm:include/llvm/IR/Intrinsics.td",
+            "//llvm:include/llvm/IR/Attributes.td",
             "//mlir:BuiltinDialectBytecodeTdFiles",
             "//mlir:SideEffectInterfacesTdFiles",
             "//mlir:include/mlir/Bindings/Python/PythonBindings.td",
