@@ -1282,7 +1282,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::resize(size_type _
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::splice_after(const_iterator __p, forward_list& __x) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(
-      this != std::addressof(__x), "forward_list::splice_after(iterator, forward_list) called with this == &forward_list");
+      this != std::addressof(__x),
+      "forward_list::splice_after(iterator, forward_list) called with this == &forward_list");
   if (!__x.empty()) {
     if (__p.__ptr_->__next_ != nullptr) {
       const_iterator __lm1 = __x.before_begin();
