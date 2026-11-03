@@ -90,6 +90,18 @@ int test(uint64_t n_rt, uint32_t step2_rt, uint32_t step4_rt) {
     }
   }
 
+  // Increment written as subtraction of a negative step.
+  {
+    int count = 0;
+#pragma omp parallel for reduction(+ : count)
+    for (uint32_t i = 0; i < n_rt; i -= -2)
+      count++;
+    if (count != 7) {
+      printf("runtime ub, step -(-2): count = %d (expected 7)\n", count);
+      fails++;
+    }
+  }
+
   // Lower bound with the top bit set must not be treated as negative.
   {
     int count = 0;
