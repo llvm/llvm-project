@@ -2846,6 +2846,39 @@ TEST(YAMLIO, TestCustomMappingStruct) {
   EXPECT_EQ(4, y["bar"].bar);
 }
 
+namespace llvm {
+namespace yaml {
+template <>
+struct CustomMappingTraits<std::map<std::string, double>>
+    : public StdMapStringCustomMappingTraitsImpl<double> {
+  static const bool flow = true;
+};
+} // namespace yaml
+} // namespace llvm
+
+TEST(YAMLIO, TestCustomMappingWithFlow) {
+  std::map<std::string, double> x;
+  x["foo"] = 1.5;
+  x["bar"] = 2.5;
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+  xout << x;
+
+  EXPECT_EQ("---\n"
+            "{ bar: 2.5, foo: 1.5 }\n"
+            "...\n",
+            out);
+
+  Input yin(out);
+  std::map<std::string, double> y;
+  yin >> y;
+  EXPECT_EQ(2ul, y.size());
+  EXPECT_EQ(1.5, y["foo"]);
+  EXPECT_EQ(2.5, y["bar"]);
+}
+
 struct FooBarMapMap {
   std::map<std::string, FooBar> fbm;
 };
