@@ -1568,16 +1568,29 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
 /// Privatize one seq-loop induction variable on the enclosing acc.loop. The
 /// seq loop and the code after it then use that copy. Returns false when no
 /// acc.loop encloses the current insertion point, or when \p ivValue is
-/// already defined inside that loop.
+/// already defined inside that loop and is not one of its privates.
 static bool privatizeSeqIvOnParent(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::semantics::Symbol &sym,
-                                   mlir::Location loc, mlir::Value ivValue) {
+                                   mlir::Location loc, mlir::Value ivValue,
+                                   bool isDoConcurrent) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   // Same walk as isInOpenACCLoop: the loop that owns the current region.
   auto parent =
       builder.getBlock()->getParent()->getParentOfType<mlir::acc::LoopOp>();
   if (!parent)
     return false;
+
+  // The parent already has this private. A DO CONCURRENT index keeps a private
+  // of its own; a DO loop writes the parent's copy.
+  if (!isDoConcurrent &&
+      llvm::any_of(parent.getPrivateOperands(), [&](mlir::Value priv) {
+        if (ivValue == priv)
+          return true;
+        auto declare = ivValue.getDefiningOp<hlfir::DeclareOp>();
+        return declare && (declare.getMemref() == priv ||
+                           declare.getOriginalBase() == priv);
+      }))
+    return true;
 
   // A private is placed before the parent, so its varPtr has to be defined
   // outside that region. An address already inside is left on this loop.
@@ -1653,7 +1666,7 @@ static void privatizeIv(
   // null value keeps this loop from privatizing it again. No enclosing loop
   // means it stays here.
   if (privateOp == nullptr && shareIv && ivValue &&
-      privatizeSeqIvOnParent(converter, sym, loc, ivValue)) {
+      privatizeSeqIvOnParent(converter, sym, loc, ivValue, isDoConcurrent)) {
     ivPrivate.emplace_back(mlir::Value(), Fortran::semantics::SymbolRef(sym));
     return;
   }
