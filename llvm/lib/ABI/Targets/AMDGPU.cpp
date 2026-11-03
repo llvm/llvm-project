@@ -47,9 +47,7 @@ public:
   /// Indirect arguments live in the private (alloca) address space on AMDGPU.
   unsigned getAllocaAddrSpace() const override { return Opts.PrivateAddrSpace; }
 
-  unsigned getSRetAddrSpace() const override {
-    return Opts.GenericAddrSpace;
-  }
+  unsigned getSRetAddrSpace() const override { return Opts.GenericAddrSpace; }
 
   void computeInfo(FunctionInfo &FI) const override;
 };
