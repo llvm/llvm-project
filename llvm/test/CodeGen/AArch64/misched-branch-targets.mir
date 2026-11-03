@@ -50,7 +50,7 @@
   }
 
   attributes #0 = { nounwind memory(none) "target-features"="+v8.2a" }
-  attributes #1 = { nounwind memory(none) "target-features"="+v9a" "target-features"="+pauth-lr" }
+  attributes #1 = { nounwind memory(none) "target-features"="+pauth-lr" }
 
 ...
 ---
