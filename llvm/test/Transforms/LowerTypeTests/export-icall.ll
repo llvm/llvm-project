@@ -1,9 +1,6 @@
-; RUN: rm -rf %t && split-file %s %t
 ; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%t/summary.ll -lowertypetests-write-summary=%t/out.summary %t/main.ll | FileCheck %s
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t/out.summary %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t/out.summary
-
-;--- main.ll
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -107,7 +104,6 @@ define void @f3(i32 %x) !type !8 !guid !{i64 4197650231481825559} {
 ; SUMMARY-NEXT:     GUID:            5227079976482001346
 ; SUMMARY-NEXT: ...
 
-;--- summary.ll
 ^0 = module: (path: "test.o", hash: (0, 0, 0, 0, 0))
 ^1 = gv: (guid: 42,                   summaries: (function: (module: ^0, flags: (live: 1), insts: 1, refs: (^2, ^3, ^4, ^5, ^6, ^7, ^8), typeIdInfo: (typeTests: (14276520915468743435, 15427464259790519041)))))
 ^2 = gv: (guid: 14740650423002898831, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
