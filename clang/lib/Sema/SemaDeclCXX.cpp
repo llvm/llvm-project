@@ -863,8 +863,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // The syntax only allows a single ref-qualifier prior to the decomposition
   // declarator. No other declarator chunks are permitted. Also check the type
   // specifier here.
-  if (DS.getTypeSpecType() != DeclSpec::TST_auto ||
-      D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
+  if (DS.getTypeSpecType() != DeclSpec::TST_auto || D.hasGroupingParens() ||
+      D.getNumTypeObjects() > 1 ||
       (D.getNumTypeObjects() == 1 &&
        D.getTypeObject(0).Kind != DeclaratorChunk::Reference)) {
     Diag(Decomp.getLSquareLoc(),
@@ -880,6 +880,17 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // shouldn't be called for such a type.
     if (R->isFunctionType())
       D.setInvalidType();
+
+    // Recover from an invalid 'auto *' structured binding by removing the
+    // pointer declarator. This allows type deduction to proceed and keeps
+    // the bindings usable in subsequent code.
+    if (D.getNumTypeObjects() == 1 &&
+        D.getTypeObject(0).Kind == DeclaratorChunk::Pointer &&
+        D.getTypeObject(0).Ptr.TypeQuals == 0) {
+      D.DropFirstTypeObject();
+      TInfo = GetTypeForDeclarator(D);
+      R = TInfo->getType();
+    }
   }
 
   // Constrained auto is prohibited by [decl.pre]p6, so check that here.
