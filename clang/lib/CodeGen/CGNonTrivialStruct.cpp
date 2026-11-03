@@ -414,9 +414,11 @@ template <class Derived> struct GenFuncBase {
                     StartAddrs[I].getAlignment().alignmentAtOffset(EltSize));
 
     EltQT = IsVolatile ? EltQT.withVolatile() : EltQT;
-    this->asDerived().visitWithKind(FK, EltQT, nullptr, CharUnits::Zero(),
-                                    NewAddrs);
-
+    {
+      CodeGenFunction::RunCleanupsScope Scope(CGF);
+      this->asDerived().visitWithKind(FK, EltQT, nullptr, CharUnits::Zero(),
+                                      NewAddrs);
+    }
     LoopBB = CGF.Builder.GetInsertBlock();
 
     for (unsigned I = 0; I < N; ++I) {
