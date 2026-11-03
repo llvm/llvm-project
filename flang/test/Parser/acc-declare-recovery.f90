@@ -18,21 +18,21 @@
 ! Check filenames and exact locations, as well as the diagnostic text. The
 ! malformed directives have balanced parentheses and reach parser recovery.
 ! ONE: error: Could not parse
-! ONE: [[FILE]]:[[LINE]]:[[COL]]: error: OpenACC DECLARE directive must appear in a specification part
+! ONE: [[FILE]]:[[LINE]]:[[COL]]: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! ONE-NEXT: !$acc declare
 ! ONE-NEXT: {{^  \^$}}
 ! INDENTED: error: Could not parse
-! INDENTED: indented.f90:3:5: error: OpenACC DECLARE directive must appear in a specification part
+! INDENTED: indented.f90:3:5: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! INDENTED-NEXT:     !$acc declare create(x)
 ! INDENTED-NEXT: {{^      \^$}}
 ! INTERPOSED: error: Could not parse
-! INTERPOSED: interposed.f90:1:1: error: OpenACC DECLARE directive must appear in a specification part
-! INTERPOSED: interposed.f90:4:1: error: OpenACC DECLARE directive must appear in a specification part
+! INTERPOSED: interposed.f90:1:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
+! INTERPOSED: interposed.f90:4:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! CONSECUTIVE: error: Could not parse
-! CONSECUTIVE: consecutive-module.f90:3:1: error: OpenACC DECLARE directive must appear in a specification part
-! CONSECUTIVE: consecutive-module.f90:4:1: error: OpenACC DECLARE directive must appear in a specification part
+! CONSECUTIVE: consecutive-module.f90:3:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
+! CONSECUTIVE: consecutive-module.f90:4:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! FIXED: error: Could not parse
-! FIXED: fixed-continued.f:1:1: error: OpenACC DECLARE directive must appear in a specification part
+! FIXED: fixed-continued.f:1:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! FIXED-NEXT: c$acc declare
 ! FIXED-NEXT: {{^  \^$}}
 

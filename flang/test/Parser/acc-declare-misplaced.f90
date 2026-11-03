@@ -32,24 +32,24 @@
 ! Require exactly three errors at the directives, with no parser cascades.
 
 ! CHECK: error: Could not parse
-! CHECK: [[FILE]]:[[LINE1]]:1: error: OpenACC DECLARE directive must appear in a specification part, not between procedures or interface bodies
+! CHECK: [[FILE]]:[[LINE1]]:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! CHECK-NEXT: {{[!c*]}}$acc declare create(x)
 ! CHECK-NEXT: {{^  \^$}}
-! CHECK: [[FILE]]:[[LINE2]]:1: error: OpenACC DECLARE directive must appear in a specification part, not between procedures or interface bodies
+! CHECK: [[FILE]]:[[LINE2]]:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! CHECK-NEXT: {{[!c*]}}$acc declare create(x)
 ! CHECK-NEXT: {{^  \^$}}
-! CHECK: [[FILE]]:[[LINE3]]:1: error: OpenACC DECLARE directive must appear in a specification part, not between procedures or interface bodies
+! CHECK: [[FILE]]:[[LINE3]]:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! CHECK-NEXT: {{[!c*]}}$acc declare create(x)
 ! CHECK-NEXT: {{^  \^$}}
 
 ! CONTINUED: error: Could not parse
-! CONTINUED: [[FILE]]:[[LINE1]]:1: error: OpenACC DECLARE directive must appear in a specification part, not between procedures or interface bodies
+! CONTINUED: [[FILE]]:[[LINE1]]:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! CONTINUED-NEXT: !$acc declare &
 ! CONTINUED-NEXT: {{^  \^$}}
-! CONTINUED: [[FILE]]:[[LINE2]]:1: error: OpenACC DECLARE directive must appear in a specification part, not between procedures or interface bodies
+! CONTINUED: [[FILE]]:[[LINE2]]:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! CONTINUED-NEXT: !$acc declare &
 ! CONTINUED-NEXT: {{^  \^$}}
-! CONTINUED: [[FILE]]:[[LINE3]]:1: error: OpenACC DECLARE directive must appear in a specification part, not between procedures or interface bodies
+! CONTINUED: [[FILE]]:[[LINE3]]:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! CONTINUED-NEXT: !$acc declare &
 ! CONTINUED-NEXT: {{^  \^$}}
 ! The unmatched parenthesis is a prescanner control; balanced malformed

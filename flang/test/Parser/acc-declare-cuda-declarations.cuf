@@ -15,7 +15,7 @@
 ! Genuine CUDA procedure headers must still expose a misplaced DECLARE.
 
 ! CHECK: error: Could not parse
-! CHECK: [[FILE]]:1:1: error: OpenACC DECLARE directive must appear in a specification part
+! CHECK: [[FILE]]:1:1: error: OpenACC DECLARE directive must appear in the specification part of the scope to which it applies
 ! CHECK-NEXT: !$acc declare create(x)
 ! CHECK-NEXT: {{^  \^$}}
 

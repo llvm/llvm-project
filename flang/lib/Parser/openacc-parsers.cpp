@@ -345,10 +345,9 @@ TYPE_PARSER(sourced(construct<AccDeclarativeDirective>(
 std::optional<Success> MisplacedOpenACCDeclare::Parse(ParseState &state) const {
   static constexpr auto parser{skipStuffBeforeStatement >>
       lookAhead("!$ACC "_sptok >> "DECLARE"_tok) >>
-      recovery(
-          fail<Success>(
-              "OpenACC DECLARE directive must appear in a specification part, "
-              "not between procedures or interface bodies"_err_en_US),
+      recovery(fail<Success>(
+                   "OpenACC DECLARE directive must appear in the specification "
+                   "part of the scope to which it applies"_err_en_US),
           startAccLine >>
               Parser<OpenACCStandaloneDeclarativeConstruct>{} / endAccLine >>
               ok)};
