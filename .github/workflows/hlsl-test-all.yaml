@@ -22,11 +22,8 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.SKU }}
-    defaults:
-      run:
-        shell: cmd
     env:
-      VsDevCmd: 'Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat'
+      VsDevShell: 'Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1'
     steps:
       - name: Checkout DXC
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -57,7 +54,7 @@ jobs:
           path: golden-images
       - name: Build DXC
         run: |
-            call "%ProgramFiles%\%VsDevCmd%" -arch=amd64
+            & $env:ProgramFiles\$env:VsDevShell -Arch=amd64
             cd DXC
             mkdir build
             cd build
@@ -65,7 +62,7 @@ jobs:
             ninja dxv llvm-dis
       - name: Build LLVM
         run: |
-            call "%ProgramFiles%\%VsDevCmd%" -arch=amd64
+            & $env:ProgramFiles\$env:VsDevShell -Arch=amd64
             cd llvm-project
             mkdir build
             cd build
@@ -73,7 +70,7 @@ jobs:
             ninja llc llvm-objcopy filecheck hlsl-test-depends
       - name: Run HLSL Tests
         run: |
-            call "%ProgramFiles%\%VsDevCmd%" -arch=amd64
+            & $env:ProgramFiles\$env:VsDevShell -Arch=amd64
             cd llvm-project
             cd build
             ninja check-llvm-tools-dxil-dis
