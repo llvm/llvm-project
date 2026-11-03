@@ -26,6 +26,7 @@ setup(
     description="A Software Testing Tool",
     keywords="test C++ automatic discovery",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
