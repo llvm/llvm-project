@@ -553,7 +553,7 @@ GlobalISelEmitter::getEquivNode(const Record &Equiv,
   }
 
   if (!Equiv.isValueUnset("IfConvergent") &&
-      N.getIntrinsicInfo(CGP)->isConvergent)
+      N.getIntrinsicInfo(CGP)->isConvergent())
     return &Target.getInstruction(Equiv.getValueAsDef("IfConvergent"));
 
   bool IsAnyExtLoad = false;
@@ -663,7 +663,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     }
   }
 
-  if (Predicate.isStore()) {
+  if (Predicate.isStore() || Predicate.isAtomic()) {
     if (Predicate.isTruncStore()) {
       if (Predicate.getMemoryVT() != nullptr) {
         // FIXME: If MemoryVT is set, we end up with 2 checks for the MMO size.

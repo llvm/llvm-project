@@ -10,6 +10,7 @@
 #define LLVM_IR_BUNDLE_ATTRIBUTES_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/InstrTypes.h"
 
 enum class BundleAttr {
@@ -21,15 +22,16 @@ enum class BundleAttr {
 namespace llvm {
 
 LLVM_ABI StringRef getNameFromBundleAttr(BundleAttr);
-LLVM_ABI BundleAttr getBundleAttrFromString(StringRef);
+LLVM_ABI BundleAttr getBundleAttrFromID(uint32_t);
 
 inline BundleAttr getBundleAttrFromOBU(OperandBundleUse OBU) {
-  return getBundleAttrFromString(OBU.getTagName());
+  return getBundleAttrFromID(OBU.getTagID());
 }
 
 struct AssumeAlignInfo {
   const Use &Ptr;
   const Use &Alignment;
+  const Use *Offset;
   std::optional<uint64_t> AlignmentVal;
   std::optional<uint64_t> OffsetVal;
 };
@@ -56,6 +58,13 @@ struct AssumeNoUndefInfo {
 };
 
 LLVM_ABI AssumeNoUndefInfo getAssumeNoUndefInfo(OperandBundleUse);
+
+struct AssumeRangeInfo {
+  const Use &Val;
+  ConstantRange Range;
+};
+
+LLVM_ABI AssumeRangeInfo getAssumeRangeInfo(OperandBundleUse);
 
 struct AssumeSeparateStorageInfo {
   const Use &Ptr1;

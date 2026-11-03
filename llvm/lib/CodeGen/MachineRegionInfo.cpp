@@ -26,11 +26,25 @@ STATISTIC(numMachineSimpleRegions, "The # of simple machine regions");
 
 namespace llvm {
 
-template class RegionBase<RegionTraits<MachineFunction>>;
-template class RegionNodeBase<RegionTraits<MachineFunction>>;
-template class RegionInfoBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE RegionBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE
+    RegionNodeBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE
+    RegionInfoBase<RegionTraits<MachineFunction>>;
 
 } // end namespace llvm
+
+//===----------------------------------------------------------------------===//
+// RegionTraits<MachineFunction> implementation
+//
+
+void RegionTraits<MachineFunction>::updateStatistics(MachineRegion *R) {
+  ++numMachineRegions;
+
+  // TODO: Slow. Should only be enabled if -stats is used.
+  if (R->isSimple())
+    ++numMachineSimpleRegions;
+}
 
 //===----------------------------------------------------------------------===//
 // MachineRegion implementation
@@ -49,14 +63,6 @@ MachineRegionInfo::MachineRegionInfo() = default;
 
 MachineRegionInfo::~MachineRegionInfo() = default;
 
-void MachineRegionInfo::updateStatistics(MachineRegion *R) {
-  ++numMachineRegions;
-
-  // TODO: Slow. Should only be enabled if -stats is used.
-  if (R->isSimple())
-    ++numMachineSimpleRegions;
-}
-
 void MachineRegionInfo::recalculate(MachineFunction &F,
                                     MachineDominatorTree *DT_,
                                     MachinePostDominatorTree *PDT_,
@@ -68,8 +74,41 @@ void MachineRegionInfo::recalculate(MachineFunction &F,
   MachineBasicBlock *Entry = GraphTraits<MachineFunction*>::getEntryNode(&F);
 
   TopLevelRegion = new MachineRegion(Entry, nullptr, this, DT, nullptr);
-  updateStatistics(TopLevelRegion);
+  RegionTraits<MachineFunction>::updateStatistics(TopLevelRegion);
   calculate(F);
+}
+
+bool MachineRegionInfo::invalidate(
+    MachineFunction &F, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG has been preserved.
+  auto PAC = PA.getChecker<MachineRegionInfoAnalysis>();
+  return !(PAC.preserved() ||
+           PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
+//===----------------------------------------------------------------------===//
+// MachineRegionAnalysis implementation
+//
+AnalysisKey MachineRegionInfoAnalysis::Key;
+MachineRegionInfo
+MachineRegionInfoAnalysis::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  MachineRegionInfo MRI;
+  MRI.recalculate(MF, &MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
+                  &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF),
+                  &MFAM.getResult<MachineDominanceFrontierAnalysis>(MF));
+  return MRI;
+}
+
+PreservedAnalyses
+MachineRegionInfoPrinterPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MachineRegionInfo &MRI = MFAM.getResult<MachineRegionInfoAnalysis>(MF);
+  MRI.print(OS);
+  return PreservedAnalyses::all();
 }
 
 //===----------------------------------------------------------------------===//
@@ -100,9 +139,7 @@ void MachineRegionInfoPass::releaseMemory() {
 }
 
 void MachineRegionInfoPass::verifyAnalysis() const {
-  // Only do verification when user wants to, otherwise this expensive check
-  // will be invoked by PMDataManager::verifyPreservedAnalysis when
-  // a regionpass (marked PreservedAll) finish.
+  // Only do verification when user wants to.
   if (MachineRegionInfo::VerifyRegionInfo)
     RI.verifyAnalysis();
 }

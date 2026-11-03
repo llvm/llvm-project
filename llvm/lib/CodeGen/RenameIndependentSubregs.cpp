@@ -337,6 +337,7 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
     // There must be a def (or live-in) before every use. Splitting vregs may
     // violate this principle as the splitted vreg may not have a definition on
     // every path. Fix this by creating IMPLICIT_DEF instruction as necessary.
+    bool NeedsUnusedSubrange = UnusedMask.any();
     for (const LiveInterval::SubRange &SR : LI.subranges()) {
       // Search for "PHI" value numbers in the subranges. We must find a live
       // value in each predecessor block, add an IMPLICIT_DEF where it is
@@ -365,10 +366,15 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
             VNInfo *SRVNI = SR.getNextValue(RegDefIdx, Allocator);
             SR.addSegment(LiveRange::Segment(RegDefIdx, PredEnd, SRVNI));
           }
-          if (!UnusedMask.none()) {
+          if (NeedsUnusedSubrange) {
             LiveInterval::SubRange *SR =
                 LI.createSubRange(Allocator, UnusedMask);
             SR->createDeadDef(RegDefIdx, Allocator);
+            // We only need to create a new subrange once, otherwise we end up
+            // with duplicate sub ranges for the unused lanes. The following
+            // iterations will attach their segment to this new subrange in the
+            // loop above.
+            NeedsUnusedSubrange = false;
           }
         }
       }

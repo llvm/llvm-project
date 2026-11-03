@@ -20,13 +20,10 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <vector>
 
 namespace llvm {
-
-namespace vfs {
-class FileSystem;
-} // end namespace vfs
 
 class raw_ostream;
 class SMDiagnostic;
@@ -146,7 +143,9 @@ public:
     return Buffers[i - 1].Buffer.get();
   }
 
-  unsigned getNumBuffers() const { return Buffers.size(); }
+  unsigned getNumBuffers() const {
+    return static_cast<unsigned>(Buffers.size());
+  }
 
   unsigned getMainFileID() const {
     assert(getNumBuffers());
@@ -166,7 +165,7 @@ public:
     NB.Buffer = std::move(F);
     NB.IncludeLoc = IncludeLoc;
     Buffers.push_back(std::move(NB));
-    return Buffers.size();
+    return static_cast<unsigned>(Buffers.size());
   }
 
   /// Takes the source buffers from the given source manager and append them to
@@ -272,6 +271,11 @@ public:
   /// \param IncludeLoc The location of the include.
   /// \param OS the raw_ostream to print on.
   LLVM_ABI void PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const;
+
+  /// Prints the include stack of a buffer unless it is a macro instantiation
+  /// buffer.
+  LLVM_ABI void printIncludeStackForDiagnostic(SMLoc Loc,
+                                               raw_ostream &OS) const;
 };
 
 /// Represents a single fixit, a replacement of one range of text with another.

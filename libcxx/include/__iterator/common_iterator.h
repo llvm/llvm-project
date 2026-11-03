@@ -11,6 +11,7 @@
 #define _LIBCPP___ITERATOR_COMMON_ITERATOR_H
 
 #include <__assert>
+#include <__concepts/arithmetic.h>
 #include <__concepts/assignable.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
@@ -45,7 +46,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter>
 concept __can_use_postfix_proxy =
-    constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>> && move_constructible<iter_value_t<_Iter>>;
+    indirectly_readable<_Iter> && constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>> &&
+    move_constructible<iter_value_t<_Iter>>;
 
 template <input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
   requires(!same_as<_Iter, _Sent> && copyable<_Iter>)
@@ -282,14 +284,22 @@ struct __arrow_type_or_void<_Iter, _Sent> {
   using type _LIBCPP_NODEBUG = decltype(std::declval<const common_iterator<_Iter, _Sent>&>().operator->());
 };
 
-template <input_iterator _Iter, class _Sent>
-struct iterator_traits<common_iterator<_Iter, _Sent>> {
-  using iterator_concept  = _If<forward_iterator<_Iter>, forward_iterator_tag, input_iterator_tag>;
+template <class _Iter>
+struct __common_iterator_category_base {};
+
+template <class _Iter>
+  requires integral<iter_difference_t<_Iter>>
+struct __common_iterator_category_base<_Iter> {
   using iterator_category = _If<__denotes_forward_iter<_Iter>, forward_iterator_tag, input_iterator_tag>;
-  using pointer           = typename __arrow_type_or_void<_Iter, _Sent>::type;
-  using value_type        = iter_value_t<_Iter>;
-  using difference_type   = iter_difference_t<_Iter>;
-  using reference         = iter_reference_t<_Iter>;
+};
+
+template <input_iterator _Iter, class _Sent>
+struct iterator_traits<common_iterator<_Iter, _Sent>> : __common_iterator_category_base<_Iter> {
+  using iterator_concept = _If<forward_iterator<_Iter>, forward_iterator_tag, input_iterator_tag>;
+  using pointer          = typename __arrow_type_or_void<_Iter, _Sent>::type;
+  using value_type       = iter_value_t<_Iter>;
+  using difference_type  = iter_difference_t<_Iter>;
+  using reference        = iter_reference_t<_Iter>;
 };
 
 #endif // _LIBCPP_STD_VER >= 20

@@ -34,7 +34,7 @@ public:
 
   bool Empty() const { return !GetSize(); }
 
-  lldb::TypeSP GetTypeAtIndex(uint32_t idx);
+  lldb::TypeSP GetTypeAtIndex(uint32_t idx) const;
 
   typedef std::vector<lldb::TypeSP> collection;
   typedef llvm::iterator_range<collection::const_iterator> TypeIterable;

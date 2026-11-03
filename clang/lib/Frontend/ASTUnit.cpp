@@ -1533,6 +1533,9 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 
   // We'll manage file buffers ourselves.
   CI->getPreprocessorOpts().RetainRemappedFileBuffers = true;
+  // libclang and other ASTUnit clients query documentation comments after
+  // parsing, so keep them in the AST.
+  CI->getLangOpts().CommentOpts.RetainComments = true;
   CI->getFrontendOpts().DisableFree = false;
   ProcessWarningOptions(AST->getDiagnostics(), CI->getDiagnosticOpts(),
                         AST->getFileManager().getVirtualFileSystem());
@@ -1641,6 +1644,9 @@ bool ASTUnit::LoadFromCompilerInvocation(
 
   // We'll manage file buffers ourselves.
   Invocation->getPreprocessorOpts().RetainRemappedFileBuffers = true;
+  // libclang and other ASTUnit clients query documentation comments after
+  // parsing, so keep them in the AST.
+  Invocation->getLangOpts().CommentOpts.RetainComments = true;
   Invocation->getFrontendOpts().DisableFree = false;
   getDiagnostics().Reset();
   ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
@@ -1679,6 +1685,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST(new ASTUnit(false));
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
+  *AST->CodeGenOpts = CI->getCodeGenOpts();
   AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->OnlyLocalDecls = OnlyLocalDecls;

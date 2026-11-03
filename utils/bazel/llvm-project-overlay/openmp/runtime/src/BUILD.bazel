@@ -16,6 +16,7 @@
 # runtime without them.
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
@@ -84,6 +85,7 @@ expand_template(
         "#cmakedefine01 LIBOMP_STATS": "#define LIBOMP_STATS 0",
         "#cmakedefine01 LIBOMP_TASKGRAPH_EXPERIMENTAL": "#define LIBOMP_TASKGRAPH_EXPERIMENTAL 0",
         "#cmakedefine01 LIBOMP_USE_ADAPTIVE_LOCKS": "#define LIBOMP_USE_ADAPTIVE_LOCKS 1",
+        "#cmakedefine01 LIBOMP_USE_CANCEL_THREADS": "#define LIBOMP_USE_CANCEL_THREADS 0",
         "#cmakedefine01 LIBOMP_USE_DEBUGGER": "#define LIBOMP_USE_DEBUGGER 0",
         "#cmakedefine01 LIBOMP_USE_HIER_SCHED": "#define LIBOMP_USE_HIER_SCHED 0",
         "#cmakedefine01 LIBOMP_USE_HWLOC": "#define LIBOMP_USE_HWLOC 0",
@@ -184,35 +186,25 @@ expand_template(
 # (see message-converter.py:414: Windows path), so we pass --target-system-override
 # on Windows to ensure we get a Windows-formatted catalog even when generating
 # the inc files on another host.
-_i18n_target_system_arg = select({
-    "@platforms//os:windows": "--target-system-override=Windows ",
-    "//conditions:default": "",
+_i18n_target_system_args = select({
+    "@platforms//os:windows": ["--target-system-override=Windows"],
+    "//conditions:default": [],
 })
 
-genrule(
+run_binary(
     name = "kmp_i18n_id_inc_gen",
-    srcs = [
-        "i18n/en_US.txt",
-        "//openmp/runtime/tools:message-converter.py",
-        "//openmp/runtime/tools:libomputils.py",
-    ],
+    srcs = ["i18n/en_US.txt"],
     outs = ["kmp_i18n_id.inc"],
-    cmd = "PYTHONPATH=$$(dirname $(location //openmp/runtime/tools:libomputils.py)) " +
-          "python3 $(location //openmp/runtime/tools:message-converter.py) " +
-          "--enum=$@ " + _i18n_target_system_arg + "$(location i18n/en_US.txt)",
+    args = ["--enum=$(execpath kmp_i18n_id.inc)"] + _i18n_target_system_args + ["$(execpath i18n/en_US.txt)"],
+    tool = "//openmp/runtime/tools:message-converter",
 )
 
-genrule(
+run_binary(
     name = "kmp_i18n_default_inc_gen",
-    srcs = [
-        "i18n/en_US.txt",
-        "//openmp/runtime/tools:message-converter.py",
-        "//openmp/runtime/tools:libomputils.py",
-    ],
+    srcs = ["i18n/en_US.txt"],
     outs = ["kmp_i18n_default.inc"],
-    cmd = "PYTHONPATH=$$(dirname $(location //openmp/runtime/tools:libomputils.py)) " +
-          "python3 $(location //openmp/runtime/tools:message-converter.py) " +
-          "--default=$@ " + _i18n_target_system_arg + "$(location i18n/en_US.txt)",
+    args = ["--default=$(execpath kmp_i18n_default.inc)"] + _i18n_target_system_args + ["$(execpath i18n/en_US.txt)"],
+    tool = "//openmp/runtime/tools:message-converter",
 )
 
 # ---------------------------------------------------------------------------
@@ -227,12 +219,14 @@ cc_library(
     name = "omp_headers",
     hdrs = [
         "kmp.h",
+        "kmp_adt.h",
         "kmp_affinity.h",
         "kmp_atomic.h",
         "kmp_barrier.h",
         "kmp_collapse.h",
         "kmp_config.h",
         "kmp_debug.h",
+        "kmp_device_env.h",
         "kmp_dispatch.h",
         "kmp_dispatch_hier.h",
         "kmp_environment.h",
@@ -255,6 +249,7 @@ cc_library(
         "kmp_stats_timing.h",
         "kmp_str.h",
         "kmp_taskdeps.h",
+        "kmp_traits.h",
         "kmp_utils.h",
         "kmp_version.h",
         "kmp_wait_release.h",
@@ -300,6 +295,7 @@ cc_library(
 cc_library(
     name = "omp",
     srcs = [
+        "kmp_adt.cpp",
         "kmp_affinity.cpp",
         "kmp_alloc.cpp",
         "kmp_atomic.cpp",
@@ -308,6 +304,7 @@ cc_library(
         "kmp_collapse.cpp",
         "kmp_csupport.cpp",
         "kmp_debug.cpp",
+        "kmp_device_env.cpp",
         "kmp_dispatch.cpp",
         "kmp_environment.cpp",
         "kmp_error.cpp",
@@ -326,6 +323,7 @@ cc_library(
         "kmp_taskdeps.cpp",
         "kmp_tasking.cpp",
         "kmp_threadprivate.cpp",
+        "kmp_traits.cpp",
         "kmp_utility.cpp",
         "kmp_version.cpp",
         "kmp_wait_release.cpp",
@@ -368,6 +366,10 @@ cc_library(
             "-lm",
         ],
     }),
+    local_defines = [
+        "KMP_SPEC_DATE=201611",
+        "KMP_SPEC_VERSION=5.0",
+    ],
     deps = [
         ":omp_headers",
     ],

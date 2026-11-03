@@ -19,6 +19,7 @@ lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
 llvm_tools_dir = "@LLVM_TOOLS_DIR_CONFIGURED@"
 lldb_obj_root = "@LLDB_BINARY_DIR@"
 lldb_launcher = "@LLDB_LAUNCHER_CONFIGURED@"
+lldb_enable_mte = @LLDB_ENABLE_MTE@
 has_libcxx = @LLDB_HAS_LIBCXX@
 libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
@@ -57,6 +58,11 @@ if __name__ == '__main__':
         cmd.extend(['--enable-plugin', 'intel-pt'])
     if lldb_build_mock_accelerator == "1":
         cmd.extend(['--enable-plugin', 'mock-accelerator'])
+    if lldb_enable_mte:
+        # The launcher below runs the suite under MTE, and debuggees inherit it.
+        # dotest has to know so that MTE-aware decorators and expectations
+        # reflect how the tests actually run.
+        cmd.extend(['--enable-mte'])
     if lldb_enable_arm64e_debugserver:
         cmd.extend(['--arm64e-debugserver'])
     cmd.extend(['--lldb-obj-root', lldb_obj_root])

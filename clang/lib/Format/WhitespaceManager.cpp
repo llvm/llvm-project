@@ -28,12 +28,15 @@ static const FormatToken &getLineStart(const FormatToken &Tok) {
   return *Result;
 }
 
-static unsigned indentLevelFor(const WhitespaceManager::Change &C) {
+static unsigned indentLevelFor(const WhitespaceManager::Change &C,
+                               FormatStyle::UseTabStyle UseTab) {
   if (!C.AlignedTo)
     return C.Tok->IndentLevel;
 
   const FormatToken &LineStart = getLineStart(*C.AlignedTo);
-  return std::max(LineStart.IndentLevel, LineStart.AppliedIndentLevel);
+  return UseTab == FormatStyle::UT_ForIndentation
+             ? LineStart.IndentLevel
+             : std::max(LineStart.IndentLevel, LineStart.AppliedIndentLevel);
 }
 
 bool WhitespaceManager::Change::IsBeforeInFile::operator()(
@@ -67,19 +70,17 @@ WhitespaceManager::Change::Change(
       StartOfBlockComment(nullptr), IndentationOffset(0), ConditionalsLevel(0) {
 }
 
-void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
-                                          unsigned Spaces,
-                                          unsigned StartOfTokenColumn,
-                                          const FormatToken *AlignedTo,
-                                          bool InPPDirective,
-                                          unsigned IndentedFromColumn) {
+void WhitespaceManager::replaceWhitespace(
+    FormatToken &Tok, unsigned Newlines, unsigned Spaces,
+    unsigned StartOfTokenColumn, const FormatToken *AlignedTo,
+    bool InPPDirective, unsigned IndentedFromColumn, bool CreateReplacement) {
   if (Tok.Finalized || (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg))
     return;
-  Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
-  Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
-                           Spaces, StartOfTokenColumn, IndentedFromColumn,
-                           Newlines, "", "", AlignedTo,
-                           InPPDirective && !Tok.IsFirst,
+  if (CreateReplacement)
+    Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
+  Changes.push_back(Change(Tok, CreateReplacement, Tok.WhitespaceRange, Spaces,
+                           StartOfTokenColumn, IndentedFromColumn, Newlines, "",
+                           "", AlignedTo, InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
 }
 
@@ -154,6 +155,7 @@ void WhitespaceManager::calculateLineBreakInformation() {
     auto &C = Changes[I];
     auto &P = Changes[I - 1];
     auto &PrevTokLength = P.TokenLength;
+    const auto *PP = I > 1 ? &Changes[I - 2] : nullptr;
     SourceLocation OriginalWhitespaceStart =
         C.OriginalWhitespaceRange.getBegin();
     SourceLocation PreviousOriginalWhitespaceEnd =
@@ -214,6 +216,7 @@ void WhitespaceManager::calculateLineBreakInformation() {
         (C.NewlinesBefore > 0 || C.Tok->is(tok::eof) ||
          (C.IsInsideToken && C.Tok->is(tok::comment))) &&
         P.Tok->is(tok::comment) &&
+        (P.NewlinesBefore == 0 || !PP || PP->IsTrailingComment) &&
         // FIXME: This is a dirty hack. The problem is that
         // BreakableLineCommentSection does comment reflow changes and here is
         // the aligning of trailing comments. Consider the case where we reflow
@@ -1031,6 +1034,14 @@ void WhitespaceManager::alignTrailingComments() {
         Newlines = 0;
       }
     }
+    if (NewLineThreshold > 1 && C.Tok->is(BK_Block)) {
+      alignTrailingComments(StartOfSequence, I, MinColumn);
+      MinColumn = 0;
+      MaxColumn = INT_MAX;
+      StartOfSequence = I + 1;
+      Newlines = 0;
+      continue;
+    }
     if (!C.IsTrailingComment)
       continue;
 
@@ -1625,7 +1636,7 @@ void WhitespaceManager::generateChanges() {
       }
       // FIXME: This assert should hold if we computed the column correctly.
       // assert((int)C.StartOfTokenColumn >= C.Spaces);
-      unsigned IndentLevel = indentLevelFor(C);
+      unsigned IndentLevel = indentLevelFor(C, Style.UseTab);
       appendIndentText(ReplacementText, IndentLevel, std::max(0, C.Spaces),
                        std::max((int)C.StartOfTokenColumn, C.Spaces) -
                            std::max(0, C.Spaces),

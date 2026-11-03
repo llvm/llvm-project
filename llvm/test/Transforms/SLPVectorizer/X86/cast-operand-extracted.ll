@@ -20,11 +20,11 @@ define void @test(ptr %0, i32 %add651) {
 ; CHECK-NEXT:    [[ARRAYIDX689:%.*]] = getelementptr i8, ptr [[TMP4]], i64 7816
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP3]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[ADD651]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> poison, i32 [[ADD651]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 1, i32 poison>, i32 [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 1, i32 poison>, i32 [[TMP5]], i64 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <4 x i32> [[TMP14]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr <4 x i32> [[TMP21]], splat (i32 1)
 ; CHECK-NEXT:    [[SHR685:%.*]] = lshr i32 [[TMP2]], 1
@@ -32,9 +32,9 @@ define void @test(ptr %0, i32 %add651) {
 ; CHECK-NEXT:    [[CONV686:%.*]] = trunc i32 [[SHR685]] to i16
 ; CHECK-NEXT:    store i16 [[CONV686]], ptr [[ARRAYIDX689]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX727:%.*]] = getelementptr i8, ptr [[TMP4]], i64 7818
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i16> [[TMP16]], i32 2
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i16> [[TMP16]], i64 2
 ; CHECK-NEXT:    store i16 [[TMP17]], ptr [[ARRAYIDX727]], align 2
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i16> [[TMP16]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i16> [[TMP16]], i64 3
 ; CHECK-NEXT:    store i16 [[TMP18]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store <4 x i16> [[TMP16]], ptr [[ARRAYIDX660]], align 8
 ; CHECK-NEXT:    ret void

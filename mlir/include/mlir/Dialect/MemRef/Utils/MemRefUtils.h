@@ -194,6 +194,22 @@ LogicalResult resolveSourceIndicesRankReducingSubview(
     Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
     SmallVectorImpl<Value> &sourceIndices);
 
+/// Returns true if any stride of `memRefTy` is statically known to be
+/// negative.
+bool hasNegativeStaticStride(MemRefType memRefTy);
+
+/// Return "true" when no other access nested in `scope` can alias `base`.
+///
+/// The underlying buffer is found by looking through the view ops defining
+/// `base`, and its transitive in-`scope` users are visited. A user conflicts
+/// unless it is effect-free, in `excludedOps`, or each of its memref operands
+/// that resolves to the buffer touches a slice disjoint from `base`'s static
+/// footprint (or, when `readsAreSafe`, is only read). `excludedOps` are left
+/// out of the analysis, typically because the caller intends to relocate them.
+bool hasNoAliasingAccessInScope(Value base, Operation *scope,
+                                ArrayRef<Operation *> excludedOps = {},
+                                bool readsAreSafe = false);
+
 } // namespace memref
 } // namespace mlir
 

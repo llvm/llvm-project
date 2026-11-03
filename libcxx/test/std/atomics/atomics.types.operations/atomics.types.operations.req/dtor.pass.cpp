@@ -28,6 +28,7 @@ struct CheckTriviallyDestructible {
 };
 
 int main(int, char**) {
+  CheckTriviallyDestructible<bool>()(); // LWG3949
   TestEachIntegralType<CheckTriviallyDestructible>()();
   TestEachFloatingPointType<CheckTriviallyDestructible>()();
   TestEachPointerType<CheckTriviallyDestructible>()();

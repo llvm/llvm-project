@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-apple-ios -run-pass=register-coalescer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-apple-ios -run-pass=register-coalescer %s -o - | FileCheck %s
 --- |
   declare void @f2()
 
@@ -10,6 +10,7 @@
 # Check coalescing of COPYs from reserved physregs.
 # CHECK-LABEL: name: func0
 name: func0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; We usually should not coalesce copies from allocatable physregs.
@@ -32,7 +33,7 @@ body: |
     $fp = SUBXri $fp, 4, 0
     STRXui %2, $x1, 0
 
-    ; Is is fine to coalesce copies from constant physregs even when they are
+    ; It is fine to coalesce copies from constant physregs even when they are
     ; clobbered.
     ; CHECK-NOT: COPY
     ; CHECK: STRWui $wzr, $x1
@@ -40,7 +41,7 @@ body: |
     dead $wzr = SUBSWri $w1, 0, 0, implicit-def $nzcv
     STRWui %3, $x1, 0
 
-    ; Is is fine to coalesce copies from constant physregs even when they are
+    ; It is fine to coalesce copies from constant physregs even when they are
     ; clobbered.
     ; CHECK-NOT: COPY
     ; CHECK: STRXui $xzr, $x1
@@ -91,6 +92,7 @@ body: |
 # Check coalescing of COPYs from reserved physregs.
 # CHECK-LABEL: name: func1
 name: func1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; Cannot coalesce physreg because we have reads on other CFG paths (we
@@ -114,6 +116,7 @@ body: |
 ---
 # CHECK-LABEL: name: func2
 name: func2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; We can coalesce copies from physreg to vreg across multiple blocks.

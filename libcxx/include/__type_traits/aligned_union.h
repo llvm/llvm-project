@@ -19,25 +19,22 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <size_t _I0, size_t... _In>
-struct __static_max;
-
-template <size_t _I0>
-struct __static_max<_I0> {
-  static const size_t value = _I0;
+template <class _Arg0, class... _Args>
+union __union {
+  _ALIGNAS(_LIBCPP_PREFERRED_ALIGNOF(_Arg0)) _Arg0 __arg;
+  __union<_Args...> __u;
 };
 
-template <size_t _I0, size_t _I1, size_t... _In>
-struct __static_max<_I0, _I1, _In...> {
-  static const size_t value = _I0 >= _I1 ? __static_max<_I0, _In...>::value : __static_max<_I1, _In...>::value;
+template <class _Arg>
+union __union<_Arg> {
+  _ALIGNAS(_LIBCPP_PREFERRED_ALIGNOF(_Arg)) _Arg __arg;
 };
 
 template <size_t _Len, class _Type0, class... _Types>
 struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_NO_SPECIALIZATIONS aligned_union {
-  static const size_t alignment_value =
-      __static_max<_LIBCPP_PREFERRED_ALIGNOF(_Type0), _LIBCPP_PREFERRED_ALIGNOF(_Types)...>::value;
-  static const size_t __len = __static_max<_Len, sizeof(_Type0), sizeof(_Types)...>::value;
-  typedef typename aligned_storage<__len, alignment_value>::type type;
+  using _Union _LIBCPP_NODEBUG        = __union<char[_Len], _Type0, _Types...>;
+  static const size_t alignment_value = _LIBCPP_ALIGNOF(_Union);
+  using type _LIBCPP_NODEBUG          = typename aligned_storage<sizeof(_Union), alignment_value>::type;
 };
 
 #if _LIBCPP_STD_VER >= 14

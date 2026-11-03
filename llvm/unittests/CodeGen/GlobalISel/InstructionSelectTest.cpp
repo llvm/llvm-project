@@ -3,6 +3,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/CodeGen.h"
 
 namespace {
 
@@ -65,7 +66,7 @@ TEST_F(AArch64GISelMITest, TestInstructionSelectErase) {
     ISel.MIs.push_back(&MI);
   }
 
-  InstructionSelect ISelPass;
+  InstructionSelectImpl ISelPass(CodeGenOptLevel::Default);
   ISelPass.setInstructionSelector(&ISel);
   ISelPass.selectMachineFunction(*MF);
   EXPECT_EQ(ISel.NumSelected, 3);

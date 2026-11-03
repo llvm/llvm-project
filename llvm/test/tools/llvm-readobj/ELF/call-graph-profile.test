@@ -19,7 +19,7 @@
 # LLVM-NEXT:  }
 # LLVM-NEXT: ]
 
-# GNU: GNUStyle::printCGProfile not implemented
+# GNU: GNU output style is not supported for --cg-profile
 
 --- !ELF
 FileHeader:
@@ -271,7 +271,7 @@ Symbols:
 # LLVM-RELA-NEXT:  }
 # LLVM-RELA-NEXT: ]
 
-# GNU-RELA: GNUStyle::printCGProfile not implemented
+# GNU-RELA: GNU output style is not supported for --cg-profile
 
 --- !ELF
 FileHeader:

@@ -395,7 +395,7 @@ public:
                                  rewriter);
 
     // Initialize parameters for unrolling.
-    iterationBounds = *op.getShapeForUnroll();
+    iterationBounds = *op.getIterationShapeToUnroll();
     if (iterationBounds.size() == 3)
       subTileShape = SmallVector<int64_t>({dimM == 1 ? 1 : 2, 2, 8});
     else
@@ -436,7 +436,7 @@ public:
     acc = op.getAcc();
 
     // Initialize parameters for unrolling.
-    iterationBounds = *op.getShapeForUnroll();
+    iterationBounds = *op.getIterationShapeToUnroll();
     if (iterationBounds.size() == 3)
       subTileShape = SmallVector<int64_t>({dimM == 1 ? 1 : 2, 2, 4});
     else
@@ -454,9 +454,12 @@ public:
 class LowerContractionToNeonI8MMPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
+    if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
+      return rewriter.notifyMatchFailure(
+          op, "masked contractions are not supported");
 
     VectorContractRewriterI8MM vcr;
     if (failed(vcr.matchAndInit(op, rewriter)))
@@ -470,9 +473,12 @@ public:
 class LowerContractionToNeonBFMMLAPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
+    if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
+      return rewriter.notifyMatchFailure(
+          op, "masked contractions are not supported");
 
     VectorContractRewriterBFMMLA vcr;
     if (failed(vcr.matchAndInit(op, rewriter)))

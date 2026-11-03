@@ -1,7 +1,9 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=machine-region-info %s -debug-only=machine-region-info -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -p 'print<machine-regions>' %s -debug-only=machine-region-info -o /dev/null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 ---
 name:            fun
+tracksRegLiveness: false
 body:             |
   bb.0:
     CMP32ri8 $edi, 40, implicit-def $eflags

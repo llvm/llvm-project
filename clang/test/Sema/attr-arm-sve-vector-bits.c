@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=1 -mvscale-max=1 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=2 -mvscale-max=2 -mvscale-streaming-min=2 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected -mvscale-min=4 -mvscale-max=4 -mvscale-streaming-min=4 -mvscale-streaming-max=4 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=8 -mvscale-max=8 -mvscale-streaming-min=4 -mvscale-streaming-max=8 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=16 -mvscale-max=16 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=1 -mvscale-max=1 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=2 -mvscale-max=2 -mvscale-streaming-min=2 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected -mvscale-min=4 -mvscale-max=4 -mvscale-streaming-min=4 -mvscale-streaming-max=4 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=8 -mvscale-max=8 -mvscale-streaming-min=4 -mvscale-streaming-max=8 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=16 -mvscale-max=16 %s
 
 #include <stdint.h>
 
@@ -76,6 +76,8 @@ typedef svint8_t non_int_size2 __attribute__((arm_sve_vector_bits("256"))); // e
 
 typedef __clang_svint8x2_t svint8x2_t;
 typedef __clang_svfloat32x3_t svfloat32x3_t;
+typedef __clang_svboolx2_t svboolx2_t;
+typedef __clang_svboolx4_t svboolx4_t;
 
 // Attribute must be attached to a single SVE vector or predicate type.
 typedef void *badtype1 __attribute__((arm_sve_vector_bits(N)));         // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'void *'}}
@@ -83,6 +85,8 @@ typedef int badtype2 __attribute__((arm_sve_vector_bits(N)));           // expec
 typedef float badtype3 __attribute__((arm_sve_vector_bits(N)));         // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'float'}}
 typedef svint8x2_t badtype4 __attribute__((arm_sve_vector_bits(N)));    // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'svint8x2_t' (aka '__clang_svint8x2_t')}}
 typedef svfloat32x3_t badtype5 __attribute__((arm_sve_vector_bits(N))); // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'svfloat32x3_t' (aka '__clang_svfloat32x3_t')}}
+typedef svboolx2_t badtype6 __attribute__((arm_sve_vector_bits(N)));    // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'svboolx2_t' (aka '__clang_svboolx2_t')}}
+typedef svboolx4_t badtype7 __attribute__((arm_sve_vector_bits(N)));    // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'svboolx4_t' (aka '__clang_svboolx4_t')}}
 
 // Attribute only applies to typedefs.
 svint8_t non_typedef_type __attribute__((arm_sve_vector_bits(N)));  // expected-error {{'arm_sve_vector_bits' attribute only applies to typedefs}}

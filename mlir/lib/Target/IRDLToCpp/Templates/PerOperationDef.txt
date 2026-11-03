@@ -35,9 +35,9 @@ __OP_CPP_NAME__::create(::mlir::OpBuilder &odsBuilder,
 {
   ::mlir::OperationState state(location, getOperationName());
   build(odsBuilder, state, resultTypes, operands, attributes);
-  auto res = ::llvm::dyn_cast<__OP_CPP_NAME__>(odsBuilder.create(state));
-  assert(res && "builder didn't return the right type");
-  return res;
+  auto res = odsBuilder.create(state);
+  assert((::llvm::isa<__OP_CPP_NAME__>(res)) && "builder didn't return the right type");
+  return ::llvm::cast<__OP_CPP_NAME__>(res);
 }
 
 __OP_CPP_NAME__

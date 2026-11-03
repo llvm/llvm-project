@@ -23,6 +23,12 @@ struct SideEffectsPass
   void runOnOperation() override {
     auto module = getOperation();
 
+    // Emit recursive memory effects.
+    module.walk([](Operation *op) {
+      if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+        op->emitRemark() << "recursive memory effects";
+    });
+
     // Walk operations detecting side effects.
     SmallVector<MemoryEffects::EffectInstance, 8> effects;
     module.walk([&](MemoryEffectOpInterface op) {
@@ -62,6 +68,8 @@ struct SideEffectsPass
           diag << " on a symbol '" << symbolRef << "',";
 
         diag << " on resource '" << instance.getResource()->getName() << "'";
+        if (Attribute parameters = instance.getParameters())
+          diag << " with parameters " << parameters;
       }
     });
 

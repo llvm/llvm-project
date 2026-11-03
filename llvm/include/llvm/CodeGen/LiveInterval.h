@@ -490,6 +490,13 @@ namespace llvm {
     /// may have grown since it was inserted).
     LLVM_ABI iterator addSegment(Segment S);
 
+    /// Merge the segment pointed to by @p I with its immediate neighbors when
+    /// they use the same value number and touch it. @p I must be a valid
+    /// iterator into this live range. Returns an iterator to the merged
+    /// segment, which may be @p I or the previous segment if @p I was merged
+    /// into it.
+    LLVM_ABI iterator mergeAdjacentSegments(iterator I);
+
     /// Attempt to extend a value defined after @p StartIdx to include @p Use.
     /// Both @p StartIdx and @p Use should be in the same basic block. In case
     /// of subranges, an extension could be prevented by an explicit "undef"

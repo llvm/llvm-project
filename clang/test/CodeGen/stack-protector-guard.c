@@ -67,7 +67,7 @@ void bar(int x) {
 // RISCV: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"tp"}
 // RISCV: [[ATTR3]] = !{i32 1, !"stack-protector-guard-offset", i32 44}
 
-// POWERPC64: !llvm.module.flags = !{[[ATTR1:![0-9]+]], [[ATTR2:![0-9]+]], [[ATTR3:![0-9]+]]}
+// POWERPC64: !llvm.module.flags = !{{{.*}}[[ATTR1:![0-9]+]], [[ATTR2:![0-9]+]], [[ATTR3:![0-9]+]]}
 // POWERPC64: [[ATTR1]] = !{i32 1, !"stack-protector-guard", !"tls"}
 // POWERPC64: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"r13"}
 // POWERPC64: [[ATTR3]] = !{i32 1, !"stack-protector-guard-offset", i32 52}

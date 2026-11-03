@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=obj < %s | llvm-objdump --triple=amdgcn-amd-amdhsa --mcpu=gfx803 --disassemble - | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -filetype=obj < %s | llvm-objdump --triple=amdgpu8.03-amd-amdhsa --disassemble - | FileCheck %s
 
 ; Make sure computed instruction sizes for madak/madmk are correct and
 ; pass the instruction size verifier.

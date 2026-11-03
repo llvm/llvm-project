@@ -7,14 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++20
-// UNSUPPORTED: no-filesystem, no-localization, no-tzdb
+// REQUIRES: can-test-hardening-assertions-extensive
+// UNSUPPORTED: no-filesystem, no-tzdb
 
 // XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
-
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// REQUIRES: has-unix-headers
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <chrono>
 //

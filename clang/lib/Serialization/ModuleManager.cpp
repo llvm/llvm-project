@@ -56,7 +56,7 @@ ModuleManager::makeKey(const ModuleFileName &Name) const {
       return ModuleFileKey(Buf);
   } else {
     if (auto ModuleFile = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/true,
-                                                     /*CacheFailure=*/false,
+                                                     /*CacheFailure=*/true,
                                                      /*IsText=*/false))
       return ModuleFileKey(*ModuleFile);
   }
@@ -206,7 +206,7 @@ AddModuleResult ModuleManager::addModule(
           FileName == StringRef("-")
               ? FileMgr.getSTDIN()
               : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
-                                   /*CacheFailure=*/false,
+                                   /*CacheFailure=*/true,
                                    /*IsText=*/false);
       if (!Entry)
         return Entry.takeError();

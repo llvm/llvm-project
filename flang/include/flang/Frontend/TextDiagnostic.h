@@ -20,7 +20,6 @@
 #define FORTRAN_FRONTEND_TEXTDIAGNOSTIC_H
 
 #include "clang/Basic/Diagnostic.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace Fortran::frontend {
 

@@ -8,23 +8,21 @@
 
 #include "src/sys/utsname/uname.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "hdr/types/struct_utsname.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/uname.h"
 #include "src/__support/common.h"
-
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
-#include <sys/utsname.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, uname, (struct utsname * name)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_uname, name);
-
-  if (ret >= 0)
-    return 1;
-  libc_errno = -ret;
-  return -1;
+  auto result = linux_syscalls::uname(name);
+  if (!result) {
+    libc_errno = result.error();
+    return -1;
+  }
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

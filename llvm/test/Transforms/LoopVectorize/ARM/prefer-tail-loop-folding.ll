@@ -48,7 +48,7 @@
 ; RUN:   -tail-predication=enabled -passes=loop-vectorize \
 ; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
-; RUN:   FileCheck %s -check-prefixes=CHECK
+; RUN: FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
@@ -422,10 +422,10 @@ for.body:
 attributes #0 = { nofree norecurse nounwind "target-features"="+armv8.1-m.main,+mve.fp" }
 
 !5 = distinct !{!5, !6}
-!6 = !{!"llvm.loop.vectorize.enable", i1 true}
+!6 = !{!"llvm.loop.vectorize.enable"}
 
 !7 = distinct !{!7, !8}
-!8 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
+!8 = !{!"llvm.loop.vectorize.predicate.disable"}
 
 !10 = distinct !{!10, !11}
 !11 = !{!"llvm.loop.vectorize.width", i32 4}

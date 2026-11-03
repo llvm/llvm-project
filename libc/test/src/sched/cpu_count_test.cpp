@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/sched/sched_clrcpuset.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_getcpucount.h"
 #include "src/sched/sched_getcpuisset.h"
@@ -46,4 +47,12 @@ TEST_F(LlvmLibcSchedCpuCountTest, CpuSetMacros) {
   LIBC_NAMESPACE::CPU_SET(1, &mask);
   ASSERT_EQ(LIBC_NAMESPACE::CPU_ISSET(1, &mask), 1);
   ASSERT_EQ(LIBC_NAMESPACE::CPU_COUNT(&mask), 1);
+
+  LIBC_NAMESPACE::CPU_CLR(1, &mask);
+  ASSERT_EQ(LIBC_NAMESPACE::CPU_ISSET(1, &mask), 0);
+
+  LIBC_NAMESPACE::CPU_SET_S(1, sizeof(cpu_set_t), &mask);
+  ASSERT_EQ(LIBC_NAMESPACE::CPU_ISSET_S(1, sizeof(cpu_set_t), &mask), 1);
+  LIBC_NAMESPACE::CPU_CLR_S(1, sizeof(cpu_set_t), &mask);
+  ASSERT_EQ(LIBC_NAMESPACE::CPU_ISSET_S(1, sizeof(cpu_set_t), &mask), 0);
 }

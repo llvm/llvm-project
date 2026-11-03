@@ -20,7 +20,7 @@ class RegisterContextMemory : public lldb_private::RegisterContext {
 public:
   RegisterContextMemory(lldb_private::Thread &thread,
                         uint32_t concrete_frame_idx,
-                        lldb_private::DynamicRegisterInfo &reg_info,
+                        lldb::DynamicRegisterInfoSP reg_info_sp,
                         lldb::addr_t reg_data_addr);
 
   ~RegisterContextMemory() override;
@@ -59,7 +59,7 @@ public:
 protected:
   void SetAllRegisterValid(bool b);
 
-  lldb_private::DynamicRegisterInfo &m_reg_infos;
+  lldb::DynamicRegisterInfoSP m_reg_infos_sp;
   std::vector<bool> m_reg_valid;
   lldb::WritableDataBufferSP m_data;
   lldb_private::DataExtractor m_reg_data;

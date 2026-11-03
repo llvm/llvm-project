@@ -3,9 +3,10 @@
 // Check that the runtime name is emitted and used instead of the class
 // identifier.
 
-// CHECK: module asm {{.*}}objc_class_name_XYZ=0
-// CHECK: module asm {{.*}}globl .objc_class_name_XYZ
-// CHECK: module asm {{.*}}lazy_reference .objc_class_name_XYZ
+// CHECK: module asm
+// CHECK-NEXT: {{.*}}objc_class_name_XYZ=0
+// CHECK-NEXT: {{.*}}globl .objc_class_name_XYZ
+// CHECK-NEXT: {{.*}}lazy_reference .objc_class_name_XYZ
 
 // CHECK: @[[OBJC_CLASS_NAME:.*]] = private unnamed_addr constant [4 x i8] c"XYZ{{.*}}, section "__TEXT,__cstring,cstring_literals",
 // CHECK: = private global {{.*}} @[[OBJC_CLASS_NAME]], section "__OBJC,__cls_refs,literal_pointers,no_dead_strip"

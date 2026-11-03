@@ -47,7 +47,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
 // GDBRemoteCommunication constructor
-GDBRemoteCommunication::GDBRemoteCommunication()
+GDBRemoteCommunication::GDBRemoteCommunication(llvm::StringRef name)
     : Communication(),
 #ifdef LLDB_CONFIGURATION_DEBUG
       m_packet_timeout(1000),
@@ -56,7 +56,7 @@ GDBRemoteCommunication::GDBRemoteCommunication()
 #endif
       m_echo_number(0), m_supports_qEcho(eLazyBoolCalculate), m_history(512),
       m_send_acks(true), m_is_platform(false),
-      m_compression_type(CompressionType::None) {
+      m_compression_type(CompressionType::None), m_name(name) {
 }
 
 // Destructor
@@ -85,7 +85,8 @@ size_t GDBRemoteCommunication::SendAck() {
   ConnectionStatus status = eConnectionStatusSuccess;
   char ch = '+';
   const size_t bytes_written = WriteAll(&ch, 1, status, nullptr);
-  LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
+  LLDB_LOGF(log, "%s <%4" PRIu64 "> send packet: %c", m_name.c_str(),
+            (uint64_t)bytes_written, ch);
   m_history.AddPacket(ch, GDBRemotePacket::ePacketTypeSend, bytes_written);
   return bytes_written;
 }
@@ -95,7 +96,8 @@ size_t GDBRemoteCommunication::SendNack() {
   ConnectionStatus status = eConnectionStatusSuccess;
   char ch = '-';
   const size_t bytes_written = WriteAll(&ch, 1, status, nullptr);
-  LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
+  LLDB_LOGF(log, "%s <%4" PRIu64 "> send packet: %c", m_name.c_str(),
+            (uint64_t)bytes_written, ch);
   m_history.AddPacket(ch, GDBRemotePacket::ePacketTypeSend, bytes_written);
   return bytes_written;
 }
@@ -170,8 +172,9 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
       if (binary_start_offset) {
         StreamString strm;
         // Print non binary data header
-        strm.Printf("<%4" PRIu64 "> send packet: %.*s", (uint64_t)bytes_written,
-                    (int)binary_start_offset, packet_data);
+        strm.Printf("%s <%4" PRIu64 "> send packet: %.*s", m_name.c_str(),
+                    (uint64_t)bytes_written, (int)binary_start_offset,
+                    packet_data);
         const uint8_t *p;
         // Print binary data exactly as sent
         for (p = (const uint8_t *)packet_data + binary_start_offset; *p != '#';
@@ -181,7 +184,7 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
         strm.Printf("%*s", (int)3, p);
         log->PutString(strm.GetString());
       } else
-        LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %.*s",
+        LLDB_LOGF(log, "%s <%4" PRIu64 "> send packet: %.*s", m_name.c_str(),
                   (uint64_t)bytes_written, (int)packet_length, packet_data);
     }
 
@@ -242,8 +245,15 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
   Log *log = GetLog(GDBRLog::Packets);
 
   // Check for a packet from our cache first without trying any reading...
-  if (CheckForPacket(nullptr, 0, packet) != PacketType::Invalid)
+  switch (CheckForPacketIgnoreNotifications(nullptr, 0, packet)) {
+  case PacketType::Standard:
     return PacketResult::Success;
+  case PacketType::Invalid:
+    break;
+  case PacketType::Notify:
+    // These are ignored by CheckForPacketIgnoreNotifications.
+    llvm_unreachable("unreachable");
+  }
 
   bool timed_out = false;
   bool disconnected = false;
@@ -258,8 +268,15 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                      error, bytes_read);
 
     if (bytes_read > 0) {
-      if (CheckForPacket(buffer, bytes_read, packet) != PacketType::Invalid)
+      switch (CheckForPacketIgnoreNotifications(buffer, bytes_read, packet)) {
+      case PacketType::Standard:
         return PacketResult::Success;
+      case PacketType::Invalid:
+        break;
+      case PacketType::Notify:
+        // These are ignored by CheckForPacketIgnoreNotifications.
+        llvm_unreachable("unreachable");
+      }
     } else {
       switch (status) {
       case eConnectionStatusTimedOut:
@@ -613,7 +630,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
 static void AddToLog(llvm::StringRef content, llvm::StringRef payload,
                      uint64_t original_packet_size,
                      GDBRemoteCommunicationHistory &history,
-                     bool compression_enabled) {
+                     bool compression_enabled, llvm::StringRef name) {
   Log *log = GetLog(GDBRLog::Packets);
   if (!log)
     return;
@@ -635,22 +652,24 @@ static void AddToLog(llvm::StringRef content, llvm::StringRef payload,
   uint64_t total_length = payload.size();
   if (!binary) {
     if (compression_enabled)
-      LLDB_LOGF(log, "<%4" PRIu64 ":%" PRIu64 "> read packet: %.*s",
-                original_packet_size, total_length, (int)(total_length),
-                payload.data());
+      LLDB_LOGF(log, "%.*s <%4" PRIu64 ":%" PRIu64 "> read packet: %.*s",
+                (int)name.size(), name.data(), original_packet_size,
+                total_length, (int)(total_length), payload.data());
     else
-      LLDB_LOGF(log, "<%4" PRIu64 "> read packet: %.*s", total_length,
-                (int)(total_length), payload.data());
+      LLDB_LOGF(log, "%.*s <%4" PRIu64 "> read packet: %.*s", (int)name.size(),
+                name.data(), total_length, (int)(total_length), payload.data());
     return;
   }
 
   StreamString strm;
   // Packet header.
   if (compression_enabled)
-    strm.Printf("<%4" PRIu64 ":%" PRIu64 "> read packet: %c",
-                original_packet_size, total_length, payload[0]);
+    strm.Printf("%.*s <%4" PRIu64 ":%" PRIu64 "> read packet: %c",
+                (int)name.size(), name.data(), original_packet_size,
+                total_length, payload[0]);
   else
-    strm.Printf("<%4" PRIu64 "> read packet: %c", total_length, payload[0]);
+    strm.Printf("%.*s <%4" PRIu64 "> read packet: %c", (int)name.size(),
+                name.data(), total_length, payload[0]);
   for (size_t i = 0; i < content.size(); ++i) {
     // Remove binary escaped bytes when displaying the packet.
     const char ch = content[i];
@@ -779,7 +798,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
       AddToLog(llvm::StringRef(m_bytes).slice(content_start, content_end),
                llvm::StringRef(m_bytes).take_front(total_length),
-               original_packet_size, m_history, CompressionIsEnabled());
+               original_packet_size, m_history, CompressionIsEnabled(), m_name);
 
       m_history.AddPacket(m_bytes, total_length,
                           GDBRemotePacket::ePacketTypeRecv, total_length);
@@ -837,6 +856,30 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
   }
   packet.Clear();
   return GDBRemoteCommunication::PacketType::Invalid;
+}
+
+GDBRemoteCommunication::PacketType
+GDBRemoteCommunication::CheckForPacketIgnoreNotifications(
+    const uint8_t *src, size_t src_len, StringExtractorGDBRemote &packet) {
+  for (;;) {
+    switch (CheckForPacket(src, src_len, packet)) {
+    case PacketType::Standard:
+      return PacketType::Standard;
+    case PacketType::Invalid:
+      // Either an incomplete packet or an invalid one that was removed.
+      // There may be more data in the buffer that contains valid
+      // packets but CheckForPacket does not distinguish these cases.
+      return PacketType::Invalid;
+    case PacketType::Notify:
+      // No notifications are currently supported so they should be ignored.
+      // There may be more packets in the buffer so go back to check.
+
+      // Set src_len=0 so that it doesn't add the
+      // data we read to the internal buffer again.
+      src_len = 0;
+      break;
+    }
+  }
 }
 
 Status GDBRemoteCommunication::StartDebugserverProcess(

@@ -1,15 +1,15 @@
-add_custom_target(libc_sys_ioctl_unittests)
+add_libc_testsuite(libc-sys-ioctl-tests)
 
-add_libc_unittest(
+add_libc_test(
   ioctl_test
   SUITE
-    libc_sys_ioctl_unittests
+    libc-sys-ioctl-tests
   SRCS
     ioctl_test.cpp
   DEPENDS
+    libc.hdr.types.struct_winsize
     libc.hdr.sys_ioctl_macros
     libc.src.sys.ioctl.ioctl
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.read
@@ -17,4 +17,3 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
-

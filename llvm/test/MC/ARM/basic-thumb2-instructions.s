@@ -4168,3 +4168,9 @@ adds sp, #-4096
 @ rdar://14214063
          subs pc, lr, #4
 @ CHECK: subs pc, lr, #4                @ encoding: [0xde,0xf3,0x04,0x8f]
+
+@ SUBS PC, LR, #imm is also predicable inside an IT block.
+         it ne
+         subsne pc, lr, #2
+@ CHECK: it ne                          @ encoding: [0x18,0xbf]
+@ CHECK: subsne pc, lr, #2              @ encoding: [0xde,0xf3,0x02,0x8f]

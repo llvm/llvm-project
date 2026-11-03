@@ -10,6 +10,7 @@
 #include <sycl/__impl/device_selector.hpp>
 
 #include <detail/device_impl.hpp>
+#include <detail/program_manager.hpp>
 
 #include <algorithm>
 
@@ -21,14 +22,19 @@ static constexpr int CPUDeviceDefaultScore = 300;
 static constexpr int AccDeviceDefaultScore = 75;
 static constexpr int RejectDeviceScore = -1;
 
+static constexpr int CompatibleImageBonus = 1000;
+static constexpr int LevelZeroBonus = 50;
+
 static int getDevicePreference(const device &Device) {
   int Score = 0;
-  const auto &DeviceImpl = detail::getSyclObjImpl(Device);
+  detail::DeviceImpl *Impl = detail::getSyclObjImpl(Device);
 
-  // TODO: increase score for devices with compatible program  images.
+  auto &ProgramManager = detail::ProgramAndKernelManager::getInstance();
+  if (ProgramManager.hasCompatibleImage(*Impl))
+    Score += CompatibleImageBonus;
 
-  if (DeviceImpl->getBackend() == backend::level_zero)
-    Score += 50;
+  if (Impl->getBackend() == backend::level_zero)
+    Score += LevelZeroBonus;
 
   return Score;
 }
@@ -46,39 +52,39 @@ _LIBSYCL_EXPORT int default_selector_v(const device &dev) {
   return Score;
 }
 
-_LIBSYCL_EXPORT int gpu_selector_v(const device &Dev) {
-  return Dev.is_gpu() ? MatchedTypeDefaultScore + getDevicePreference(Dev)
+_LIBSYCL_EXPORT int gpu_selector_v(const device &dev) {
+  return dev.is_gpu() ? MatchedTypeDefaultScore + getDevicePreference(dev)
                       : RejectDeviceScore;
 }
 
-_LIBSYCL_EXPORT int cpu_selector_v(const device &Dev) {
-  return Dev.is_cpu() ? MatchedTypeDefaultScore + getDevicePreference(Dev)
+_LIBSYCL_EXPORT int cpu_selector_v(const device &dev) {
+  return dev.is_cpu() ? MatchedTypeDefaultScore + getDevicePreference(dev)
                       : RejectDeviceScore;
 }
 
-_LIBSYCL_EXPORT int accelerator_selector_v(const device &Dev) {
-  return Dev.is_accelerator()
-             ? MatchedTypeDefaultScore + getDevicePreference(Dev)
+_LIBSYCL_EXPORT int accelerator_selector_v(const device &dev) {
+  return dev.is_accelerator()
+             ? MatchedTypeDefaultScore + getDevicePreference(dev)
              : RejectDeviceScore;
 }
 
 _LIBSYCL_EXPORT detail::DeviceSelectorInvocableType
-aspect_selector(const std::vector<aspect> &RequireList,
-                const std::vector<aspect> &DenyList) {
+aspect_selector(const std::vector<aspect> &aspectList,
+                const std::vector<aspect> &denyList) {
   return [=](const sycl::device &Dev) {
     // 4.6.1.1. Device selector:
     // If no aspects are passed in, the generated selector behaves like
     // default_selector_v.
-    if (RequireList.empty() && DenyList.empty())
+    if (aspectList.empty() && denyList.empty())
       return default_selector_v(Dev);
 
     auto HasAspect = [&Dev](const aspect &Aspect) -> bool {
       return Dev.has(Aspect);
     };
-    if (!std::all_of(RequireList.begin(), RequireList.end(), HasAspect))
+    if (!std::all_of(aspectList.begin(), aspectList.end(), HasAspect))
       return RejectDeviceScore;
 
-    if (std::any_of(DenyList.begin(), DenyList.end(), HasAspect))
+    if (std::any_of(denyList.begin(), denyList.end(), HasAspect))
       return RejectDeviceScore;
 
     return MatchedTypeDefaultScore + getDevicePreference(Dev);
@@ -98,7 +104,7 @@ SelectDevice(const DeviceSelectorInvocableType &DeviceSelector) {
     if (CurrentDevScore < 0)
       continue;
 
-    if ((ChosenDeviceScore < CurrentDevScore) ||
+    if (!ChosenDevice || (ChosenDeviceScore < CurrentDevScore) ||
         ((ChosenDeviceScore == CurrentDevScore) &&
          (getDevicePreference(*ChosenDevice) < getDevicePreference(Device)))) {
       ChosenDevice = &Device;

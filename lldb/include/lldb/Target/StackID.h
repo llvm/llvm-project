@@ -50,6 +50,11 @@ public:
 
   void Dump(Stream *s);
 
+  /// Returns true if this StackID corresponds to a frame younger (i.e. higher
+  /// on the call stack) than `other`, and false otherwise (including when the
+  /// frames are not comparable, in some cases where this can be detected).
+  bool IsYoungerThan(const StackID &other) const;
+
 protected:
   friend class StackFrame;
   friend class SyntheticStackFrameList;
@@ -80,10 +85,6 @@ protected:
 
 bool operator==(const StackID &lhs, const StackID &rhs);
 bool operator!=(const StackID &lhs, const StackID &rhs);
-
-// frame_id_1 < frame_id_2 means "frame_id_1 is YOUNGER than frame_id_2"
-bool operator<(const StackID &lhs, const StackID &rhs);
-
 } // namespace lldb_private
 
 #endif // LLDB_TARGET_STACKID_H

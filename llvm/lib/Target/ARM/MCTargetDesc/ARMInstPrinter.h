@@ -59,8 +59,6 @@ public:
                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printAddrMode2Operand(const MCInst *MI, unsigned OpNum,
                              const MCSubtargetInfo &STI, raw_ostream &O);
-  void printAM2PostIndexOp(const MCInst *MI, unsigned OpNum,
-                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printAM2PreOrOffsetIndexOp(const MCInst *MI, unsigned OpNum,
                                   const MCSubtargetInfo &STI, raw_ostream &O);
   void printAddrMode2OffsetOperand(const MCInst *MI, unsigned OpNum,

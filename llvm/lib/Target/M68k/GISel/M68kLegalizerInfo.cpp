@@ -48,5 +48,5 @@ M68kLegalizerInfo::M68kLegalizerInfo(const M68kSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, s32}});
 
-  getLegacyLegalizerInfo().computeTables();
+  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
 }

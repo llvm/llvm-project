@@ -9,8 +9,8 @@
 // Implements the RPC server-side handlling of the I/O statement API needed for
 // basic list-directed output (PRINT *) of intrinsic types for the GPU.
 
-#include "array.h"
 #include "io-api-gpu.h"
+#include "flang-rt/runtime/array.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang/Runtime/io-api.h"
@@ -305,6 +305,11 @@ extern "C" void register_rpc_callback_stub(RPCCallbackTy) {
 #pragma comment(linker, \
     "/alternatename:__tgt_register_rpc_callback=" \
     "register_rpc_callback_stub")
+#if defined(_M_ARM64EC)
+#pragma comment(linker, \
+    "/alternatename:#__tgt_register_rpc_callback=" \
+    "#register_rpc_callback_stub")
+#endif
 #endif
 
 // Used for I/O from the offloading device runtime.

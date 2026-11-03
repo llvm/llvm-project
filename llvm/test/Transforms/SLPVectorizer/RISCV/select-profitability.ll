@@ -4,10 +4,10 @@
 define i32 @pow2_zero_constant_shift(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i16 zeroext %d) {
 ; CHECK-LABEL: define i32 @pow2_zero_constant_shift(
 ; CHECK-SAME: i16 zeroext [[A:%.*]], i16 zeroext [[B:%.*]], i16 zeroext [[C:%.*]], i16 zeroext [[D:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[B]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> [[TMP2]], i16 [[C]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> [[TMP3]], i16 [[D]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> [[TMP2]], i16 [[C]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> [[TMP3]], i16 [[D]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> splat (i32 65536), <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP6]])

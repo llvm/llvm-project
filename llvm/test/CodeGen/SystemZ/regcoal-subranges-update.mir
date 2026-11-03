@@ -25,20 +25,20 @@ body:             |
 
     ; CHECK-LABEL: name: main
     ; CHECK: [[LGHI:%[0-9]+]]:gr64bit = LGHI 43
+    ; CHECK-NEXT: undef [[LGHI:%[0-9]+]].subreg_l32:gr64bit = MSR [[LGHI]].subreg_l32, [[LGHI]].subreg_l32
     ; CHECK-NEXT: [[LGHI1:%[0-9]+]]:gr64bit = LGHI 43
-    ; CHECK-NEXT: undef [[LGHI1:%[0-9]+]].subreg_l32:gr64bit = MSR [[LGHI1]].subreg_l32, [[LGHI1]].subreg_l32
-    ; CHECK-NEXT: [[LGHI1:%[0-9]+]].subreg_l32:gr64bit = AHIMux [[LGHI1]].subreg_l32, 9, implicit-def dead $cc
-    ; CHECK-NEXT: undef [[LGFI:%[0-9]+]].subreg_l64:gr128bit = LGFI -245143785, implicit [[LGHI1]].subreg_l32
-    ; CHECK-NEXT: [[LGFI:%[0-9]+]]:gr128bit = DLGR [[LGFI]], [[LGHI]]
+    ; CHECK-NEXT: [[LGHI:%[0-9]+]].subreg_l32:gr64bit = AHIMux [[LGHI]].subreg_l32, 9, implicit-def dead $cc
+    ; CHECK-NEXT: undef [[LGFI:%[0-9]+]].subreg_l64:gr128bit = LGFI -245143785, implicit [[LGHI]].subreg_l32
+    ; CHECK-NEXT: [[LGFI:%[0-9]+]]:gr128bit = DLGR [[LGFI]], [[LGHI1]]
     ; CHECK-NEXT: Return implicit [[LGFI]]
     %0:gr64bit = LGHI 43
     %1:gr32bit = COPY %0.subreg_l32
     %1:gr32bit = MSR %1, %1
-    %2:gr32bit = COPY killed %1
-    %2:gr32bit = AHIMux killed %2, 9, implicit-def dead $cc
-    undef %3.subreg_l64:gr128bit = LGFI -245143785, implicit killed %2
-    %3:gr128bit = DLGR %3:gr128bit, killed %0
-    Return implicit killed %3
+    %2:gr32bit = COPY %1
+    %2:gr32bit = AHIMux %2, 9, implicit-def dead $cc
+    undef %3.subreg_l64:gr128bit = LGFI -245143785, implicit %2
+    %3:gr128bit = DLGR %3:gr128bit, %0
+    Return implicit %3
 
 ...
 
@@ -82,18 +82,18 @@ body:             |
   bb.1:
     successors: %bb.1(0x80000000)
 
-    %0:addr64bit = COPY killed %7
+    %0:addr64bit = COPY %7
     ADJCALLSTACKDOWN 0, 0
     %3:gr32bit = COPY %0.subreg_l32
-    %4:gr64bit = LGFR killed %3
+    %4:gr64bit = LGFR %3
     $r2d = COPY %5
     $r3d = COPY %2
     $r4d = COPY %2
-    $r5d = COPY killed %4
+    $r5d = COPY %4
     KILL killed $r2d, killed $r3d, killed $r4d, killed $r5d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
-    %1:gr64bit = nuw nsw LA killed %0, 1, $noreg
-    %7:addr64bit = COPY killed %1
+    %1:gr64bit = nuw nsw LA %0, 1, $noreg
+    %7:addr64bit = COPY %1
     J %bb.1
 
 ...

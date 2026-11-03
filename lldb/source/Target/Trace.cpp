@@ -49,16 +49,15 @@ bool fromJSON(const Value &value, JSONSimpleTraceBundleDescription &bundle,
 /// Optionals version can't return the inner data by reference because of
 /// limitations in move constructors.
 /// \{
-template <typename K, typename V>
-static std::optional<V> Lookup(DenseMap<K, V> &map, K k) {
+template <typename V>
+static std::optional<V> Lookup(StringMap<V> &map, StringRef k) {
   auto it = map.find(k);
   if (it == map.end())
     return std::nullopt;
   return it->second;
 }
 
-template <typename K, typename V>
-static V *LookupAsPtr(DenseMap<K, V> &map, K k) {
+template <typename V> static V *LookupAsPtr(StringMap<V> &map, StringRef k) {
   auto it = map.find(k);
   if (it == map.end())
     return nullptr;
@@ -66,9 +65,9 @@ static V *LookupAsPtr(DenseMap<K, V> &map, K k) {
 }
 
 /// Similar to the methods above but it looks for an item in a map of maps.
-template <typename K1, typename K2, typename V>
-static std::optional<V> Lookup(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1,
-                               K2 k2) {
+template <typename K, typename V>
+static std::optional<V> Lookup(DenseMap<K, StringMap<V>> &map, K k1,
+                               StringRef k2) {
   auto it = map.find(k1);
   if (it == map.end())
     return std::nullopt;
@@ -76,8 +75,8 @@ static std::optional<V> Lookup(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1,
 }
 
 /// Similar to the methods above but it looks for an item in a map of maps.
-template <typename K1, typename K2, typename V>
-static V *LookupAsPtr(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1, K2 k2) {
+template <typename K, typename V>
+static V *LookupAsPtr(DenseMap<K, StringMap<V>> &map, K k1, StringRef k2) {
   auto it = map.find(k1);
   if (it == map.end())
     return nullptr;
@@ -112,8 +111,7 @@ Trace::LoadPostMortemTraceFromFile(Debugger &debugger,
   }
 
   return Trace::FindPluginForPostMortemProcess(
-      debugger, *session_file,
-      trace_description_file.GetDirectory().GetStringRef());
+      debugger, *session_file, trace_description_file.GetDirectory());
 }
 
 Expected<lldb::TraceSP> Trace::FindPluginForPostMortemProcess(
@@ -187,19 +185,19 @@ Expected<std::string> Trace::GetLiveProcessState() {
 std::optional<uint64_t>
 Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid, llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
-  return Lookup(storage.live_thread_data, tid, ConstString(kind));
+  return Lookup(storage.live_thread_data, tid, kind);
 }
 
 std::optional<uint64_t> Trace::GetLiveCpuBinaryDataSize(lldb::cpu_id_t cpu_id,
                                                         llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
-  return Lookup(storage.live_cpu_data_sizes, cpu_id, ConstString(kind));
+  return Lookup(storage.live_cpu_data_sizes, cpu_id, kind);
 }
 
 std::optional<uint64_t>
 Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
-  return Lookup(storage.live_process_data, ConstString(kind));
+  return Lookup(storage.live_process_data, kind);
 }
 
 Expected<std::vector<uint8_t>>
@@ -314,7 +312,7 @@ const char *Trace::RefreshLiveProcessState() {
          live_process_state->traced_threads) {
       for (const TraceBinaryData &item : thread_state.binary_data)
         m_storage.live_thread_data[thread_state.tid].insert(
-            {ConstString(item.kind), item.size});
+            {item.kind, item.size});
     }
 
     LLDB_LOG(log, "== Found {0} threads being traced",
@@ -326,14 +324,14 @@ const char *Trace::RefreshLiveProcessState() {
         m_storage.cpus->push_back(cpu_state.id);
         for (const TraceBinaryData &item : cpu_state.binary_data)
           m_storage.live_cpu_data_sizes[cpu_state.id].insert(
-              {ConstString(item.kind), item.size});
+              {item.kind, item.size});
       }
       LLDB_LOG(log, "== Found {0} cpu cpus being traced",
                live_process_state->cpus->size());
     }
 
     for (const TraceBinaryData &item : live_process_state->process_binary_data)
-      m_storage.live_process_data.insert({ConstString(item.kind), item.size});
+      m_storage.live_process_data.insert({item.kind, item.size});
 
     return DoRefreshLiveProcessState(std::move(*live_process_state),
                                      *json_string);
@@ -375,7 +373,7 @@ llvm::Expected<FileSpec>
 Trace::GetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
   if (std::optional<FileSpec> file =
-          Lookup(storage.postmortem_thread_data, tid, ConstString(kind)))
+          Lookup(storage.postmortem_thread_data, tid, kind))
     return *file;
   else
     return createStringError(
@@ -388,7 +386,7 @@ llvm::Expected<FileSpec> Trace::GetPostMortemCpuDataFile(lldb::cpu_id_t cpu_id,
                                                          llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
   if (std::optional<FileSpec> file =
-          Lookup(storage.postmortem_cpu_data, cpu_id, ConstString(kind)))
+          Lookup(storage.postmortem_cpu_data, cpu_id, kind))
     return *file;
   else
     return createStringError(
@@ -400,13 +398,13 @@ llvm::Expected<FileSpec> Trace::GetPostMortemCpuDataFile(lldb::cpu_id_t cpu_id,
 void Trace::SetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind,
                                         FileSpec file_spec) {
   Storage &storage = GetUpdatedStorage();
-  storage.postmortem_thread_data[tid].insert({ConstString(kind), file_spec});
+  storage.postmortem_thread_data[tid].insert({kind, file_spec});
 }
 
 void Trace::SetPostMortemCpuDataFile(lldb::cpu_id_t cpu_id,
                                      llvm::StringRef kind, FileSpec file_spec) {
   Storage &storage = GetUpdatedStorage();
-  storage.postmortem_cpu_data[cpu_id].insert({ConstString(kind), file_spec});
+  storage.postmortem_cpu_data[cpu_id].insert({kind, file_spec});
 }
 
 llvm::Error
@@ -423,14 +421,13 @@ llvm::Error Trace::OnLiveCpuBinaryDataRead(lldb::cpu_id_t cpu_id,
                                            OnBinaryDataReadCallback callback) {
   Storage &storage = GetUpdatedStorage();
   if (std::vector<uint8_t> *cpu_data =
-          LookupAsPtr(storage.live_cpu_data, cpu_id, ConstString(kind)))
+          LookupAsPtr(storage.live_cpu_data, cpu_id, kind))
     return callback(*cpu_data);
 
   Expected<std::vector<uint8_t>> data = GetLiveCpuBinaryData(cpu_id, kind);
   if (!data)
     return data.takeError();
-  auto it = storage.live_cpu_data[cpu_id].insert(
-      {ConstString(kind), std::move(*data)});
+  auto it = storage.live_cpu_data[cpu_id].insert({kind, std::move(*data)});
   return callback(it.first->second);
 }
 

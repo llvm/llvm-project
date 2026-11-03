@@ -1,10 +1,11 @@
-# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 
 # readlane, readfirstlane is always uniform
 
 ---
 name:            readlane
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -23,6 +24,7 @@ body:             |
 # Readlane with physical register as operand
 ---
 name:            readlane2
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -63,6 +65,7 @@ body:             |
 ---
 name:            dyn_stackalloc_divergent_size
 legalized:       true
+tracksRegLiveness: false
 frameInfo:
   maxAlignment: 4
 stack:

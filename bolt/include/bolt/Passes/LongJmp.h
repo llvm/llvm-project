@@ -10,9 +10,12 @@
 #define BOLT_PASSES_LONGJMP_H
 
 #include "bolt/Passes/BinaryPasses.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace bolt {
+
+class BranchLivenessInfo;
 
 /// LongJmp is veneer-insertion pass originally written for AArch64 that
 /// compensates for its short-range branches, typically done during linking. We
@@ -67,14 +70,15 @@ class LongJmpPass : public BinaryFunctionPass {
   static constexpr size_t ShortestJumpBits = 11;
   static constexpr size_t ShortestJumpSpan = 1ULL << (ShortestJumpBits - 1);
 
-  /// The longest single-instruction branch.
-  static constexpr size_t LongestJumpBits = 28;
-  static constexpr size_t LongestJumpSpan = 1ULL << (LongestJumpBits - 1);
-
   /// Relax all internal function branches including those between fragments.
   /// Assume that fragments are placed in different sections but are within
-  /// 128MB of each other.
-  void relaxLocalBranches(BinaryFunction &BF);
+  /// 128MB of each other. Return false and report an error if a branch cannot
+  /// be relaxed.
+  bool relaxLocalBranches(BinaryFunction &BF,
+                          const BranchLivenessInfo *BLI = nullptr);
+
+  /// Relax calls and direct unconditional branches using one cluster layout.
+  void relaxWithClusters(BinaryContext &BC);
 
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions

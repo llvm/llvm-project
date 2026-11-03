@@ -6,6 +6,7 @@
 
 ---
 name:            test_arg_stack
+tracksRegLiveness: false
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 4, alignment: 4 }
   - { id: 1, type: default, offset: 4, size: 4, alignment: 8 }
@@ -17,6 +18,7 @@ body:             |
 
 ---
 name:            test_arg_nostack
+tracksRegLiveness: false
 body:             |
   bb.1:
     RET 0, implicit $eax

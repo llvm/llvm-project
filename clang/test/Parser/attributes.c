@@ -116,3 +116,8 @@ __attribute__(()) struct t;
 void f5() {
   __attribute__(()) struct t;
 }
+
+// GH225045: attribute recovery must not parse a C++ direct initializer in C.
+// expected-error@+2 {{expected '(' after 'attribute'}}
+// expected-error@+1 {{expected ';' after top level declarator}}
+int a __attribute__ ) (1, 2);

@@ -1,4 +1,4 @@
-# RUN: llc %s -x mir -o - -mtriple=x86_64-unknown-unknown -run-pass=prologepilog | FileCheck %s
+# RUN: llc %s -x mir -o - -mtriple=x86_64-unknown-unknown -run-pass=prolog-epilog | FileCheck %s
 #
 # Check when the DBG_VALUE on a stack slot below (for var "c") has its  stack
 # slot replaced with $rsp and a complex expression, it has DW_OP_stack_value

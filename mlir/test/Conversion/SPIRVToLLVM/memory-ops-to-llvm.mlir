@@ -110,7 +110,7 @@ spirv.func @load_none() "None" {
 // CHECK-LABEL: @load_with_alignment
 spirv.func @load_with_alignment() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.load %{{.*}} {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: llvm.load %{{.*}} <alignment = 4> : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 ["Aligned", 4] : f32
   spirv.Return
 }
@@ -126,7 +126,7 @@ spirv.func @load_volatile() "None" {
 // CHECK-LABEL: @load_nontemporal
 spirv.func @load_nontemporal() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.load %{{.*}} {nontemporal} : !llvm.ptr -> f32
+  // CHECK: llvm.load %{{.*}} <nontemporal> : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 ["Nontemporal"] : f32
   spirv.Return
 }
@@ -154,7 +154,7 @@ spirv.func @store_composite(%arg0 : !spirv.struct<(f64)>) "None" {
 // CHECK-LABEL: @store_with_alignment
 spirv.func @store_with_alignment(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} <alignment = 4> : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 ["Aligned", 4] : f32
   spirv.Return
 }
@@ -170,7 +170,7 @@ spirv.func @store_volatile(%arg0 : f32) "None" {
 // CHECK-LABEL: @store_nontemporal
 spirv.func @store_nontemporal(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} {nontemporal} : f32, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} <nontemporal> : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 ["Nontemporal"] : f32
   spirv.Return
 }
@@ -227,3 +227,56 @@ spirv.func @variable_array() "None" {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<10 x i32>, Function>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.CopyMemory
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @copy_memory_scalar
+spirv.func @copy_memory_scalar(%arg0: !spirv.ptr<f32, Function>, %arg1: !spirv.ptr<f32, Function>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Function" %arg1 : f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @copy_memory_composite
+spirv.func @copy_memory_composite(%arg0: !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xi32>)>, Function>, %arg1: !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xi32>)>, Private>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(20 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Private" %arg1 : !spirv.struct<(f32, !spirv.array<4xi32>)>
+  spirv.Return
+}
+
+// CHECK-LABEL: @copy_memory_volatile
+spirv.func @copy_memory_volatile(%arg0: !spirv.ptr<i64, Function>, %arg1: !spirv.ptr<i64, Function>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(8 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Function" %arg1 ["Volatile"] : i64
+  spirv.Return
+}
+
+// CHECK-LABEL: @copy_memory_nontemporal
+spirv.func @copy_memory_nontemporal(%arg0: !spirv.ptr<i32, Function>, %arg1: !spirv.ptr<i32, Function>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Function" %arg1 ["Nontemporal"] : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @copy_memory_aligned_single_mask
+spirv.func @copy_memory_aligned_single_mask(%arg0: !spirv.ptr<vector<4xf32>, Function>, %arg1: !spirv.ptr<vector<4xf32>, Function>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(16 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{arg_attrs = [{llvm.align = 16 : i64}, {llvm.align = 16 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Function" %arg1 ["Aligned", 16] : vector<4xf32>
+  spirv.Return
+}
+
+// CHECK-LABEL: @copy_memory_two_masks
+spirv.func @copy_memory_two_masks(%arg0: !spirv.ptr<i32, Function>, %arg1: !spirv.ptr<i32, Function>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 4 : i64}, {}], isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Function" %arg1 ["Aligned", 8], ["Volatile|Aligned", 4] : i32
+  spirv.Return
+}
+

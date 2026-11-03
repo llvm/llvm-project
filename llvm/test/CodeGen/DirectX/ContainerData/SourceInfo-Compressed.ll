@@ -1,14 +1,15 @@
 ; RUN: opt %S/Inputs/SourceInfo.ll -dxil-embed -dxil-globals -S -o - | FileCheck %s
-; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-pdb-path=%t.pdb -o /dev/null
+; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=DXC
 ; REQUIRES: zlib
 
-; CHECK: @dx.srci = private constant [348 x i8] c"{{.*}}", section "SRCI", align 4
+; CHECK: @dx.srci = private constant [{{[0-9]+}} x i8] c"{{.*}}", section "SRCI", align 4
 
 ; DXC:      - Name:            SRCI
-; DXC-NEXT:   Size:            348
+; DXC-NEXT:   Size:            {{[0-9]+}}
 ; DXC-NEXT:   SourceInfo:
 ; DXC-NEXT:     Header:
-; DXC-NEXT:       AlignedSizeInBytes: 348
+; DXC-NEXT:       AlignedSizeInBytes: {{[0-9]+}}
 ; DXC-NEXT:       Flags:           0
 ; DXC-NEXT:       SectionCount:    3
 ; DXC-NEXT:     Names:
@@ -38,14 +39,14 @@
 ; DXC-NEXT:           FileName:        'C:\b.hlsl'
 ; DXC-NEXT:     Contents:
 ; DXC-NEXT:       SectionHeader:
-; DXC-NEXT:         AlignedSizeInBytes: 124
+; DXC-NEXT:         AlignedSizeInBytes: {{[0-9]+}}
 ; DXC-NEXT:         Flags:           0
 ; DXC-NEXT:         Type:            SourceContents
 ; DXC-NEXT:       Header:
-; DXC-NEXT:         AlignedSizeInBytes: 116
+; DXC-NEXT:         AlignedSizeInBytes: {{[0-9]+}}
 ; DXC-NEXT:         Flags:           0
 ; DXC-NEXT:         Type:            Zlib
-; DXC-NEXT:         EntriesSizeInBytes: 96
+; DXC-NEXT:         EntriesSizeInBytes: {{[0-9]+}}
 ; DXC-NEXT:         UncompressedEntriesSizeInBytes: 164
 ; DXC-NEXT:         Count:           3
 ; DXC-NEXT:       Entries:

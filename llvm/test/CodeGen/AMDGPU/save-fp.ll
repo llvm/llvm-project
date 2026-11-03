@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 < %s | FileCheck -check-prefixes=GCN,GFX908 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX900 %s
+; RUN: llc -mtriple=amdgpu9.08 < %s | FileCheck -check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX900 %s
 
 define void @foo() {
 bb:

@@ -50,7 +50,14 @@ uint16_t utils::elf::getTargetMachine() {
 #elif defined(__loongarch__)
   return EM_LOONGARCH;
 #else
-#warning "Unknown ELF compilation target architecture"
+// #warning directive is available starting in C23 and C++23.
+#define UNKNOWN_ARCH_MSG "Unknown ELF compilation target architecture"
+#ifdef _MSC_VER
+#pragma message(UNKNOWN_ARCH_MSG)
+#else
+#warning UNKNOWN_ARCH_MSG
+#endif
+#undef UNKNOWN_ARCH_MSG
   return EM_NONE;
 #endif
 }
@@ -68,9 +75,7 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
     if (Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V5 &&
         Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V6)
       return createError("invalid AMD ABI version, must be version 5 or above");
-    if ((Header.e_flags & EF_AMDGPU_MACH) < EF_AMDGPU_MACH_AMDGCN_GFX700 ||
-        (Header.e_flags & EF_AMDGPU_MACH) >
-            EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC)
+    if ((Header.e_flags & EF_AMDGPU_MACH) < EF_AMDGPU_MACH_AMDGCN_GFX700)
       return createError("unsupported AMDGPU architecture");
   } else if (Header.e_machine == EM_CUDA) {
     if (Header.e_ident[EI_ABIVERSION] == ELFABIVERSION_CUDA_V1) {
@@ -334,10 +339,9 @@ getSymbolAddressImpl(const ELFObjectFile<ELFT> &ELFObj,
   const auto &Section = *SecOrErr;
 
   // A section with SHT_NOBITS occupies no space in the file and has no
-  // offset.
+  // offset, so the symbol has no address in the file.
   if (Section->sh_type == ELF::SHT_NOBITS)
-    return createError(
-        "invalid sh_type for symbol lookup, cannot be SHT_NOBITS");
+    return nullptr;
 
   uint64_t Offset = Section->sh_offset - Section->sh_addr + Symbol.st_value;
   if (Offset > ELFFile.getBufSize())

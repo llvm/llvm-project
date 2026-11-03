@@ -7,20 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Compilation.h"
+#include "ClangCLArgs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <cassert>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -55,29 +63,28 @@ Compilation::~Compilation() {
 }
 
 const DerivedArgList &
-Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
+Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                                  Action::OffloadKind DeviceOffloadKind) {
   if (!TC)
     TC = &DefaultToolChain;
 
-  DerivedArgList *&Entry = TCArgs[{TC, BoundArch, DeviceOffloadKind}];
+  DerivedArgList *&Entry = TCArgs[{TC, BA, DeviceOffloadKind}];
   if (!Entry) {
     SmallVector<Arg *, 4> AllocatedArgs;
     DerivedArgList *OpenMPArgs = nullptr;
     // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
     if (DeviceOffloadKind == Action::OFK_OpenMP) {
       const ToolChain *HostTC = getSingleOffloadToolChain<Action::OFK_Host>();
-      bool SameTripleAsHost = (TC->getTriple() == HostTC->getTriple());
       OpenMPArgs = TC->TranslateOpenMPTargetArgs(
-          *TranslatedArgs, SameTripleAsHost, AllocatedArgs);
+          *TranslatedArgs, HostTC->getTriple(), AllocatedArgs);
     }
 
     DerivedArgList *NewDAL = nullptr;
     if (!OpenMPArgs) {
-      NewDAL = TC->TranslateXarchArgs(*TranslatedArgs, BoundArch,
-                                      DeviceOffloadKind, &AllocatedArgs);
+      NewDAL = TC->TranslateXarchArgs(*TranslatedArgs, BA, DeviceOffloadKind,
+                                      &AllocatedArgs);
     } else {
-      NewDAL = TC->TranslateXarchArgs(*OpenMPArgs, BoundArch, DeviceOffloadKind,
+      NewDAL = TC->TranslateXarchArgs(*OpenMPArgs, BA, DeviceOffloadKind,
                                       &AllocatedArgs);
       if (!NewDAL)
         NewDAL = OpenMPArgs;
@@ -85,12 +92,21 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
         delete OpenMPArgs;
     }
 
+    if (NewDAL && TheDriver.IsCLMode()) {
+      // Forwarding can introduce clang-cl options after the shared
+      // translation. Keep synthesized arguments in the compilation-owned list.
+      auto *DAL = ClangCLArgs::translateArgs(
+          *NewDAL, DefaultToolChain.getTriple(), *TranslatedArgs);
+      delete NewDAL;
+      NewDAL = DAL;
+    }
+
     if (!NewDAL) {
-      Entry = TC->TranslateArgs(*TranslatedArgs, BoundArch, DeviceOffloadKind);
+      Entry = TC->TranslateArgs(*TranslatedArgs, BA, DeviceOffloadKind);
       if (!Entry)
         Entry = TranslatedArgs;
     } else {
-      Entry = TC->TranslateArgs(*NewDAL, BoundArch, DeviceOffloadKind);
+      Entry = TC->TranslateArgs(*NewDAL, BA, DeviceOffloadKind);
       if (!Entry)
         Entry = NewDAL;
       else
@@ -232,6 +248,127 @@ static bool ActionFailed(const Action *A,
   return false;
 }
 
+static bool ActionDependsOn(const Action *A, const Action *Other) {
+  return A == Other || llvm::any_of(A->inputs(), [&](const Action *Input) {
+           return ActionDependsOn(Input, Other);
+         });
+}
+
+static bool CanRunInParallelOffloadJobGroup(const Command &Job) {
+  return !Job.InProcess && !Job.PrintInputFilenames &&
+         !Job.getBoundArch().empty() &&
+         !Job.getOffloadDeviceParallelJobGroup().empty();
+}
+
+static bool SameParallelOffloadJobGroup(const Command &A, const Command &B) {
+  return A.getOffloadDeviceParallelJobGroup() ==
+         B.getOffloadDeviceParallelJobGroup();
+}
+
+static bool HasDistinctBoundArch(const Command &Candidate,
+                                 ArrayRef<const Command *> Jobs) {
+  BoundArch CandidateArch = Candidate.getBoundArch();
+  return llvm::none_of(Jobs, [&](const Command *Job) {
+    return Job->getBoundArch() == CandidateArch;
+  });
+}
+
+static std::optional<llvm::ThreadPoolStrategy>
+getParallelOffloadJobsStrategy(const ArgList &Args, unsigned NumJobs) {
+  if (NumJobs < 2)
+    return std::nullopt;
+
+  auto OffloadJobs = tools::parseOffloadJobs(Args);
+  if (!OffloadJobs.isValid())
+    return std::nullopt;
+
+  if (OffloadJobs.K == tools::OffloadJobsOpt::Kind::Jobserver)
+    return llvm::jobserver_concurrency();
+
+  if (OffloadJobs.NumThreads < 2)
+    return std::nullopt;
+
+  return llvm::hardware_concurrency(std::min(OffloadJobs.NumThreads, NumJobs));
+}
+
+struct ParallelJobResult {
+  int Res = 0;
+  bool ExecutionFailed = false;
+  std::string Error;
+};
+
+// Device-only compiles in one group can be separated by device links.
+static bool
+tryExecuteParallelOffloadJobGroup(const Driver &D, const ArgList &Args,
+                                  ArrayRef<std::optional<StringRef>> Redirects,
+                                  const JobList::list_type &JobStorage,
+                                  size_t StartIndex,
+                                  llvm::SmallPtrSetImpl<const Command *> &Done,
+                                  FailingCommandList &FailingCommands) {
+  const Command &Job = *JobStorage[StartIndex];
+  if (!CanRunInParallelOffloadJobGroup(Job))
+    return false;
+
+  // The start job's dependencies precede it in the topologically ordered job
+  // list and have already run, so it is always safe to run here.
+  SmallVector<const Command *, 4> ParallelJobs{&Job};
+  for (size_t I = StartIndex + 1; I < JobStorage.size(); ++I) {
+    const Command &Candidate = *JobStorage[I];
+    if (Done.contains(&Candidate) ||
+        ActionFailed(&Candidate.getSource(), FailingCommands) ||
+        !CanRunInParallelOffloadJobGroup(Candidate) ||
+        !SameParallelOffloadJobGroup(Job, Candidate) ||
+        !HasDistinctBoundArch(Candidate, ParallelJobs))
+      continue;
+
+    // In this topologically ordered list, only the candidate can depend on
+    // an earlier job, such as preprocessing with -save-temps.
+    auto EarlierJobs = llvm::make_range(JobStorage.begin() + StartIndex,
+                                        JobStorage.begin() + I);
+    if (!llvm::all_of(EarlierJobs, [&](const auto &Other) {
+          return Done.contains(Other.get()) ||
+                 !ActionDependsOn(&Candidate.getSource(), &Other->getSource());
+        }))
+      continue;
+
+    ParallelJobs.push_back(&Candidate);
+  }
+
+  std::optional<llvm::ThreadPoolStrategy> Strategy =
+      getParallelOffloadJobsStrategy(Args, ParallelJobs.size());
+  if (!Strategy)
+    return false;
+
+  SmallVector<ParallelJobResult, 4> Results(ParallelJobs.size());
+  llvm::DefaultThreadPool Pool(*Strategy);
+  for (auto IndexedJob : llvm::enumerate(ParallelJobs)) {
+    size_t Index = IndexedJob.index();
+    const Command *ParallelJob = IndexedJob.value();
+    Pool.async([&, Index, ParallelJob] {
+      Results[Index].Res = ParallelJob->Execute(
+          Redirects, &Results[Index].Error, &Results[Index].ExecutionFailed);
+    });
+  }
+  Pool.wait();
+
+  for (auto [Index, ParallelJob] : llvm::enumerate(ParallelJobs)) {
+    ParallelJobResult &Result = Results[Index];
+    if (!Result.Error.empty()) {
+      assert(Result.Res && "Error string set with 0 result code!");
+      D.Diag(diag::err_drv_command_failure) << Result.Error;
+    }
+
+    if (Result.Res) {
+      FailingCommands.push_back(
+          std::make_pair(Result.ExecutionFailed ? 1 : Result.Res, ParallelJob));
+    }
+  }
+
+  for (const Command *ParallelJob : ParallelJobs)
+    Done.insert(ParallelJob);
+  return true;
+}
+
 void Compilation::ExecuteJobs(const JobList &Jobs,
                               FailingCommandList &FailingCommands,
                               bool LogOnly) const {
@@ -239,9 +376,29 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
   // inputs on the command line even one of them failed.
   // In all but CLMode, execute all the jobs unless the necessary inputs for the
   // job is missing due to previous failures.
-  for (const auto &Job : Jobs) {
+  bool CanRunJobsInParallel =
+      !LogOnly && !getDriver().CCPrintOptions &&
+      !getDriver().CCPrintProcessStats && !getDriver().CCGenDiagnostics &&
+      !getDriver().IsCLMode() && !getArgs().hasArg(options::OPT_v) &&
+      Redirects.empty() && !PostCallback;
+
+  // Jobs run as part of a parallel offload group. Group members are not
+  // necessarily adjacent, so track them and skip them when the loop reaches
+  // them.
+  llvm::SmallPtrSet<const Command *, 16> Done;
+  const auto &JobStorage = Jobs.getJobs();
+  for (size_t I = 0; I < JobStorage.size(); ++I) {
+    const auto &Job = *JobStorage[I];
+    if (Done.contains(&Job))
+      continue;
     if (ActionFailed(&Job.getSource(), FailingCommands))
       continue;
+
+    if (CanRunJobsInParallel &&
+        tryExecuteParallelOffloadJobGroup(getDriver(), getArgs(), Redirects,
+                                          JobStorage, I, Done, FailingCommands))
+      continue;
+
     const Command *FailingCommand = nullptr;
     if (int Res = ExecuteCommand(Job, FailingCommand, LogOnly)) {
       FailingCommands.push_back(std::make_pair(Res, FailingCommand));

@@ -172,7 +172,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_remainder_piby2_small(
   *rh = result.lo;
   *rt = result.hi;
 
-  return __CLC_CONVERT_INTN(dn_pi2) & 0x3;
+  return __clc_select(__CLC_CONVERT_INTN(dn_pi2) & 0x3, (__CLC_INTN)0,
+                      __CLC_CONVERT_UINTN(__clc_isnan(dn_pi2)));
 }
 
 // Given positive argument x, reduce it to the range [-pi/4,pi/4] using
@@ -257,7 +258,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionS(
     private __CLC_DOUBLEN *r_lo, private __CLC_DOUBLEN *r_hi, __CLC_DOUBLEN x) {
   __CLC_LONGN is_large = x >= (__CLC_DOUBLEN)0x1.0p+30;
 
-#ifdef __CLC_SCALAR1
+#ifdef __CLC_SCALAR
   if (is_large)
     return __clc_remainder_piby2_large(x, r_lo, r_hi);
   return __clc_remainder_piby2_small(x, r_lo, r_hi);

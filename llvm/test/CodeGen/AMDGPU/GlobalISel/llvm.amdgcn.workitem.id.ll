@@ -1,13 +1,13 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor -o %t.v4.ll
-; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor -o %t.v6.ll
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa < %t.v4.ll | FileCheck --check-prefixes=ALL,HSA,UNPACKED %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=hawaii -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=tonga -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=+flat-for-global -mcpu=hawaii < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx11-generic -amdgpu-enable-vopd=0 < %t.v6.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -S -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-attributor -o %t.v4.ll
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | opt -S -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-attributor -o %t.v6.ll
+; RUN: llc -global-isel -mtriple=amdgpu7.00-unknown-amdhsa < %t.v4.ll | FileCheck --check-prefixes=ALL,HSA,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu7.01-- -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu8.02-- -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu7.01-unknown-mesa3d -mattr=+flat-for-global < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu8.02-unknown-mesa3d < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu9.0a-unknown-amdhsa < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00-unknown-amdhsa -amdgpu-enable-vopd=0 < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -mtriple=amdgpu11-unknown-amdhsa --amdhsa-code-object-version=6 -amdgpu-enable-vopd=0 < %t.v6.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0
@@ -141,7 +141,7 @@ define void @test_workitem_id_z_func(ptr addrspace(1) %out) #1 {
 
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
-define amdgpu_kernel void @test_reqd_workgroup_size_x_only(ptr %out) !reqd_work_group_size !0 {
+define amdgpu_kernel void @test_reqd_workgroup_size_x_only(ptr %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
@@ -163,7 +163,7 @@ define amdgpu_kernel void @test_reqd_workgroup_size_x_only(ptr %out) !reqd_work_
 ; PACKED: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
 
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
-define amdgpu_kernel void @test_reqd_workgroup_size_y_only(ptr %out) !reqd_work_group_size !1 {
+define amdgpu_kernel void @test_reqd_workgroup_size_y_only(ptr %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !1 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
@@ -184,7 +184,7 @@ define amdgpu_kernel void @test_reqd_workgroup_size_y_only(ptr %out) !reqd_work_
 
 ; PACKED: v_bfe_u32 [[MASKED:v[0-9]+]], v0, 10, 20
 ; PACKED: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
-define amdgpu_kernel void @test_reqd_workgroup_size_z_only(ptr %out) !reqd_work_group_size !2 {
+define amdgpu_kernel void @test_reqd_workgroup_size_z_only(ptr %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !2 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()

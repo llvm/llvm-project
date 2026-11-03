@@ -70,28 +70,28 @@ define fastcc void @undef_phi_callbr(i64 %i5247, i1 %i4530, i1 %i4936.not) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[I5247]] to i32
 ; CHECK-NEXT:    [[I5290:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[I5290]])
-; CHECK-NEXT:            to label %[[MBB3932]] [label %mbb4321.target.mbb5291]
+; CHECK-NEXT:            to label %[[MBB3932]] [label %[[MBB4321_TARGET_MBB5291:.*]]]
 ; CHECK:       [[MBB4454]]:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[I4530]])
-; CHECK-NEXT:            to label %[[MBB4535:.*]] [label %mbb4454.target.mbb4454.target.mbb4531]
+; CHECK-NEXT:            to label %[[MBB4535:.*]] [label %[[MBB4454_TARGET_MBB4454_TARGET_MBB4531:.*]]]
 ; CHECK:       [[MBB4531:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[MBB4535]]:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[I4936_NOT]])
-; CHECK-NEXT:            to label %[[MBB4535_TARGET_MBB4321:.*]] [label %mbb4454]
+; CHECK-NEXT:            to label %[[MBB4535_TARGET_MBB4321:.*]] [label %[[MBB4454]]]
 ; CHECK:       [[MBB5291:.*]]:
 ; CHECK-NEXT:    [[I5293:%.*]] = insertvalue [2 x i32] zeroinitializer, i32 [[DOTMOVED:%.*]], 1
 ; CHECK-NEXT:    store volatile [2 x i32] [[I5293]], ptr addrspace(5) null, align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[MBB4454_TARGET_MBB4531:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD:.*]]
-; CHECK:       [[MBB4321_TARGET_MBB5291:.*]]:
+; CHECK:       [[MBB4321_TARGET_MBB5291]]:
 ; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
 ; CHECK:       [[LOOP_EXIT_GUARD]]:
 ; CHECK-NEXT:    [[DOTMOVED]] = phi i32 [ poison, %[[MBB4454_TARGET_MBB4531]] ], [ [[TMP0]], %[[MBB4321_TARGET_MBB5291]] ]
 ; CHECK-NEXT:    [[GUARD_MBB4531:%.*]] = phi i1 [ true, %[[MBB4454_TARGET_MBB4531]] ], [ false, %[[MBB4321_TARGET_MBB5291]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_MBB4531]], label %[[MBB4531]], label %[[MBB5291]]
-; CHECK:       [[MBB4454_TARGET_MBB4454_TARGET_MBB4531:.*]]:
+; CHECK:       [[MBB4454_TARGET_MBB4454_TARGET_MBB4531]]:
 ; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD1:.*]]
 ; CHECK:       [[MBB4535_TARGET_MBB4321]]:
 ; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD1]]
@@ -123,4 +123,198 @@ mbb5291:                                           ; preds = %mbb4321
   %i5293 = insertvalue [2 x i32] zeroinitializer, i32 %0, 1
   store volatile [2 x i32] %i5293, ptr addrspace(5) null, align 4
   ret void
+}
+
+define fastcc void @undef_phi_switch(i64 %i5247, i1 %i4530, i1 %i4936.not, i1 %Pred) {
+; CHECK-LABEL: define fastcc void @undef_phi_switch(
+; CHECK-SAME: i64 [[I5247:%.*]], i1 [[I4530:%.*]], i1 [[I4936_NOT:%.*]], i1 [[PRED:%.*]]) {
+; CHECK-NEXT:  [[MBB:.*:]]
+; CHECK-NEXT:    switch i1 [[PRED]], label %[[MBB3932:.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       [[MBB3932]]:
+; CHECK-NEXT:    switch i1 [[PRED]], label %[[MBB4454:.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       [[MBB4321:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[I5247]] to i32
+; CHECK-NEXT:    [[I5290:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    switch i1 [[I5290]], label %[[MBB3932]] [
+; CHECK-NEXT:      i1 false, label %[[MBB4321_TARGET_MBB5291:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[MBB4454]]:
+; CHECK-NEXT:    switch i1 [[I4530]], label %[[MBB4535:.*]] [
+; CHECK-NEXT:      i1 false, label %[[MBB4454_TARGET_MBB4454_TARGET_MBB4531:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[MBB4531:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[MBB4535]]:
+; CHECK-NEXT:    switch i1 [[I4936_NOT]], label %[[MBB4535_TARGET_MBB4321:.*]] [
+; CHECK-NEXT:      i1 false, label %[[MBB4454]]
+; CHECK-NEXT:    ]
+; CHECK:       [[MBB5291:.*]]:
+; CHECK-NEXT:    [[I5293:%.*]] = insertvalue [2 x i32] zeroinitializer, i32 [[DOTMOVED:%.*]], 1
+; CHECK-NEXT:    store volatile [2 x i32] [[I5293]], ptr addrspace(5) null, align 4
+; CHECK-NEXT:    ret void
+; CHECK:       [[MBB4454_TARGET_MBB4531:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD:.*]]
+; CHECK:       [[MBB4321_TARGET_MBB5291]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[DOTMOVED]] = phi i32 [ poison, %[[MBB4454_TARGET_MBB4531]] ], [ [[TMP0]], %[[MBB4321_TARGET_MBB5291]] ]
+; CHECK-NEXT:    [[GUARD_MBB4531:%.*]] = phi i1 [ true, %[[MBB4454_TARGET_MBB4531]] ], [ false, %[[MBB4321_TARGET_MBB5291]] ]
+; CHECK-NEXT:    br i1 [[GUARD_MBB4531]], label %[[MBB4531]], label %[[MBB5291]]
+; CHECK:       [[MBB4454_TARGET_MBB4454_TARGET_MBB4531]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD1:.*]]
+; CHECK:       [[MBB4535_TARGET_MBB4321]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD1]]
+; CHECK:       [[LOOP_EXIT_GUARD1]]:
+; CHECK-NEXT:    [[GUARD_MBB4454_TARGET_MBB4531:%.*]] = phi i1 [ true, %[[MBB4454_TARGET_MBB4454_TARGET_MBB4531]] ], [ false, %[[MBB4535_TARGET_MBB4321]] ]
+; CHECK-NEXT:    br i1 [[GUARD_MBB4454_TARGET_MBB4531]], label %[[MBB4454_TARGET_MBB4531]], label %[[MBB4321]]
+;
+mbb:
+  switch i1 %Pred, label %mbb3932 []
+
+mbb3932:                                           ; preds = %mbb4321, %mbb
+  switch i1 %Pred, label %mbb4454 []
+
+mbb4321:                                           ; preds = %mbb4535
+  %0 = trunc i64 %i5247 to i32
+  %i5290 = icmp eq i32 %0, 0
+  switch i1 %i5290, label %mbb3932 [ i1 0, label %mbb5291 ]
+
+mbb4454:                                           ; preds = %mbb4535, %mbb3932
+  switch i1 %i4530, label %mbb4535 [ i1 0, label %mbb4531 ]
+
+mbb4531:                                           ; preds = %mbb4454
+  ret void
+
+mbb4535:                                           ; preds = %mbb4454
+  switch i1 %i4936.not, label %mbb4321 [ i1 0, label %mbb4454 ]
+
+mbb5291:                                           ; preds = %mbb4321
+  %i5293 = insertvalue [2 x i32] zeroinitializer, i32 %0, 1
+  store volatile [2 x i32] %i5293, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; The only value of %p moved into the guard block is undef from %h.
+define i32 @exit_phi_moved_undef(i1 %c, i1 %d) {
+; CHECK-LABEL: define i32 @exit_phi_moved_undef(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[H:.*]]
+; CHECK:       [[H]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_EXIT_GUARD:.*]], label %[[L:.*]]
+; CHECK:       [[L]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[H]], label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[E1:.*]]:
+; CHECK-NEXT:    [[Z:%.*]] = and i32 undef, 0
+; CHECK-NEXT:    ret i32 [[Z]]
+; CHECK:       [[E2:.*]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[GUARD_E1:%.*]] = phi i1 [ true, %[[H]] ], [ false, %[[L]] ]
+; CHECK-NEXT:    br i1 [[GUARD_E1]], label %[[E1]], label %[[E2]]
+;
+entry:
+  br label %h
+
+h:
+  br i1 %c, label %e1, label %l
+
+l:
+  br i1 %d, label %h, label %e2
+
+e1:
+  %p = phi i32 [ undef, %h ]
+  %z = and i32 %p, 0
+  ret i32 %z
+
+e2:
+  ret i32 1
+}
+
+; The values of %p moved into the guard block are undef from %h and poison from
+; %l, so the result is undef.
+define i32 @exit_phi_moved_undef_and_poison(i1 %c, i1 %d, i1 %e) {
+; CHECK-LABEL: define i32 @exit_phi_moved_undef_and_poison(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]], i1 [[E:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[H:.*]]
+; CHECK:       [[H]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_EXIT_GUARD:.*]], label %[[L:.*]]
+; CHECK:       [[L]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[LOOP_EXIT_GUARD]], label %[[L2:.*]]
+; CHECK:       [[L2]]:
+; CHECK-NEXT:    br i1 [[E]], label %[[H]], label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[E1:.*]]:
+; CHECK-NEXT:    [[Z:%.*]] = and i32 undef, 0
+; CHECK-NEXT:    ret i32 [[Z]]
+; CHECK:       [[E2:.*]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[GUARD_E1:%.*]] = phi i1 [ true, %[[H]] ], [ true, %[[L]] ], [ false, %[[L2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_E1]], label %[[E1]], label %[[E2]]
+;
+entry:
+  br label %h
+
+h:
+  br i1 %c, label %e1, label %l
+
+l:
+  br i1 %d, label %e1, label %l2
+
+l2:
+  br i1 %e, label %h, label %e2
+
+e1:
+  %p = phi i32 [ undef, %h ], [ poison, %l ]
+  %z = and i32 %p, 0
+  ret i32 %z
+
+e2:
+  ret i32 1
+}
+
+; All the values of %p moved into the guard block are poison, so the result is
+; poison.
+define i32 @exit_phi_moved_poison(i1 %c, i1 %d, i1 %e) {
+; CHECK-LABEL: define i32 @exit_phi_moved_poison(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]], i1 [[E:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[H:.*]]
+; CHECK:       [[H]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_EXIT_GUARD:.*]], label %[[L:.*]]
+; CHECK:       [[L]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[LOOP_EXIT_GUARD]], label %[[L2:.*]]
+; CHECK:       [[L2]]:
+; CHECK-NEXT:    br i1 [[E]], label %[[H]], label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[E1:.*]]:
+; CHECK-NEXT:    [[Z:%.*]] = and i32 poison, 0
+; CHECK-NEXT:    ret i32 [[Z]]
+; CHECK:       [[E2:.*]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[GUARD_E1:%.*]] = phi i1 [ true, %[[H]] ], [ true, %[[L]] ], [ false, %[[L2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_E1]], label %[[E1]], label %[[E2]]
+;
+entry:
+  br label %h
+
+h:
+  br i1 %c, label %e1, label %l
+
+l:
+  br i1 %d, label %e1, label %l2
+
+l2:
+  br i1 %e, label %h, label %e2
+
+e1:
+  %p = phi i32 [ poison, %h ], [ poison, %l ]
+  %z = and i32 %p, 0
+  ret i32 %z
+
+e2:
+  ret i32 1
 }
