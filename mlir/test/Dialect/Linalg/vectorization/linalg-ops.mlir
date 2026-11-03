@@ -498,6 +498,44 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Same combiner, but without reduction loops: this is a plain elementwise op.
+// It must not be turned into a reduction, and the invariant operand is only
+// broadcast once, by the elementwise vectorization.
+
+func.func @vectorize_parallel_with_invariant_operand(%arg0: tensor<4x8xf32>,
+                                                     %arg1: tensor<4x8xf32>,
+                                                     %arg2: f32) -> tensor<4x8xf32> {
+  %0 = linalg.generic { indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                         affine_map<(d0, d1) -> (d0, d1)>],
+                        iterator_types = ["parallel", "parallel"] }
+    ins(%arg0 : tensor<4x8xf32>)
+    outs(%arg1 : tensor<4x8xf32>) {
+    ^bb(%in: f32, %out: f32) :
+      %0 = arith.addf %out, %arg2 : f32
+      linalg.yield %0 : f32
+    } -> tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   @vectorize_parallel_with_invariant_operand(
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<4x8xf32>, %[[ARG1:.*]]: tensor<4x8xf32>, %[[ARG2:.*]]: f32)
+// CHECK-NOT:       vector.multi_reduction
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<4x8xf32>
+// CHECK-NOT:       vector.broadcast
+// CHECK:           arith.addf %{{.*}}, %[[BCAST]] : vector<4x8xf32>
+// CHECK-NOT:       vector.multi_reduction
+// CHECK:           vector.transfer_write
+
+// -----
+
 func.func @vectorize_dynamic_transpose_reduction(%arg0: tensor<?x?x?xf32>,
                                                  %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic { indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
