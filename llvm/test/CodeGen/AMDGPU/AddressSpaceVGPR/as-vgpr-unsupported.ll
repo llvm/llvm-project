@@ -29,6 +29,21 @@ define void @store_i16(ptr addrspace(13) inreg %p, i16 %v) {
   ret void
 }
 
+; So are the extending loads both combiners make of these.
+; CHECK: error: {{.*}}unsupported access of VGPR 'as memory' address space (13); only dword-aligned whole-dword loads and stores are implemented
+define i32 @zextload_i16(ptr addrspace(13) inreg %p) {
+  %x = load i16, ptr addrspace(13) %p
+  %z = zext i16 %x to i32
+  ret i32 %z
+}
+
+; CHECK: error: {{.*}}unsupported access of VGPR 'as memory' address space (13); only dword-aligned whole-dword loads and stores are implemented
+define i32 @sextload_i16(ptr addrspace(13) inreg %p) {
+  %x = load i16, ptr addrspace(13) %p
+  %s = sext i16 %x to i32
+  ret i32 %s
+}
+
 ; The index is the pointer >> 2, so an under-aligned access would silently reach
 ; the containing dword.
 ; CHECK: error: {{.*}}unsupported access of VGPR 'as memory' address space (13); only dword-aligned whole-dword loads and stores are implemented
