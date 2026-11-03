@@ -86,6 +86,8 @@ def UInt128 : FuncArgType;
 def SizeT : FuncArgType;    // size_t.
 def SSizeT : FuncArgType;   // POSIX ssize_t.
 defvar AlignValT = SizeT;  // std::align_val_t.
+def Half : FuncArgType;     // IEEE half.
+def BFloat : FuncArgType;   // bfloat16.
 def Flt : FuncArgType;      // IEEE float.
 def Dbl : FuncArgType;      // IEEE double.
 def LDbl : FuncArgType;     // Any floating type (TODO: tighten this up).
