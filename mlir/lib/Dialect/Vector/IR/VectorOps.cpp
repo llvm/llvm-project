@@ -1198,11 +1198,11 @@ LogicalResult ContractionOp::verify() {
              << index << " to be a projected permutation of its inputs";
   }
 
-  // TODO: For better code re-use-, unify this with linalg.contract.
+  // TODO: For better code re-use, unify this with linalg.contract.
   auto dimIdx = getOneSidedReductionDim(this);
   if (dimIdx.has_value())
-    return emitError() << "reduction dim at index " << dimIdx.value()
-                       << " must appear in both LHS and RHS";
+    return emitOpError("reduction dim at index ")
+           << dimIdx.value() << " must appear in both LHS and RHS";
 
   auto contractingDimMap = getContractingDimMap();
   auto batchDimMap = getBatchDimMap();
