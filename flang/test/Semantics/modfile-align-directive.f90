@@ -7,6 +7,11 @@ module m
   !dir$ attributes align : 128 :: b
   real(8) :: b
   real :: c
+  ! A member of COMMON storage keeps no alignment request: the directive is
+  ! ignored with a warning and not written to the module file.
+  !dir$ align(64) :: d
+  real :: d
+  common /blk/ d
 end
 
 !Expect: m.mod
@@ -16,4 +21,6 @@ end
 !real(8)::b
 !!dir$ align(128) :: b
 !real(4)::c
+!real(4)::d
+!common/blk/d
 !end

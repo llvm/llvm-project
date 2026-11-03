@@ -11184,6 +11184,20 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
   }
+  // !DIR$ ALIGN cannot move an object whose placement is fixed by storage
+  // association. Warn and drop the request, so that neither lowering nor the
+  // module file sees it.
+  for (auto &pair : currScope()) {
+    Symbol &symbol{*pair.second};
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}; object &&
+        object->alignment() &&
+        (FindCommonBlockContaining(symbol) || FindEquivalenceSet(symbol))) {
+      context().Warn(common::UsageWarning::IgnoredDirective, symbol.name(),
+          "!DIR$ ALIGN is ignored for '%s' because it is in COMMON or EQUIVALENCE storage"_warn_en_US,
+          symbol.name());
+      object->set_alignment(std::nullopt);
+    }
+  }
 }
 
 // Analyze the bodies of statement functions now that the symbols in this

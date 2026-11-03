@@ -829,10 +829,6 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say(
           "!DIR$ ALIGN may not apply to function result '%s'"_err_en_US,
           symbol.name());
-    } else if (commonBlock || FindEquivalenceSet(symbol)) {
-      Warn(common::UsageWarning::IgnoredDirective,
-          "!DIR$ ALIGN is ignored for '%s' because it is in COMMON or EQUIVALENCE storage"_warn_en_US,
-          symbol.name());
     } else if (IsAllocatableOrPointer(symbol)) {
       messages_.Say(
           "!DIR$ ALIGN is not yet supported for ALLOCATABLE or POINTER '%s'"_err_en_US,

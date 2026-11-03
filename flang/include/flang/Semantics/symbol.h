@@ -468,7 +468,9 @@ public:
   void set_ignoreTKR(common::IgnoreTKRSet set) { ignoreTKR_ = set; }
   // Byte alignment requested with !DIR$ ALIGN, if any.
   std::optional<std::uint64_t> alignment() const { return alignment_; }
-  void set_alignment(std::uint64_t alignment) { alignment_ = alignment; }
+  void set_alignment(std::optional<std::uint64_t> alignment) {
+    alignment_ = alignment;
+  }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
   bool IsAssumedShape() const {
