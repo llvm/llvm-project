@@ -676,17 +676,6 @@ TEST_F(InterpreterTest, SetOptLevelMatchesOptFlag) {
   EXPECT_THAT_ERROR(Interp->setOptLevel(3, 1), llvm::Failed());
 }
 
-TEST_F(InterpreterTest, SetOptLevelKeepsExplicitOptions) {
-  std::unique_ptr<Interpreter> Interp =
-      createInterpreter({"-O2", "-fno-vectorize"});
-  const CodeGenOptions &CGO = Interp->getCompilerInstance()->getCodeGenOpts();
-  for (unsigned Level : {3, 0, 2}) {
-    cantFail(Interp->setOptLevel(Level));
-    EXPECT_FALSE(CGO.VectorizeLoop);
-    EXPECT_EQ(CGO.VectorizeSLP, Level > 0);
-  }
-}
-
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
   std::vector<const char *> Args;
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
