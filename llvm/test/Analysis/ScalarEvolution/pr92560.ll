@@ -9,7 +9,7 @@ define dso_local void @simple(i32 noundef %n) local_unnamed_addr {
 ; CHECK-NEXT:    %left.05 = phi i32 [ %inc, %while.body ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%while.body> U: [0,2147483641) S: [0,2147483641) Exits: (4 * (((-4 + (-1 * (1 umin (-4 + (4 smax (-4 + %n)))<nsw>))<nuw><nsw> + (4 smax (-4 + %n))) /u 8) + (1 umin (-4 + (4 smax (-4 + %n)))<nsw>)))<nuw> LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %left.05, 4
-; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%while.body> U: [4,2147483645) S: [4,2147483645) Exits: (4 + (4 * (((-4 + (-1 * (1 umin (-4 + (4 smax (-4 + %n)))<nsw>))<nuw><nsw> + (4 smax (-4 + %n))) /u 8) + (1 umin (-4 + (4 smax (-4 + %n)))<nsw>)))<nuw>)<nuw> LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%while.body> U: [4,2147483645) S: [4,2147483645) Exits: (4 + (4 * (((-4 + (-1 * (1 umin (-4 + (4 smax (-4 + %n)))<nsw>))<nuw><nsw> + (4 smax (-4 + %n))) /u 8) + (1 umin (-4 + (4 smax (-4 + %n)))<nsw>)))<nuw><u nsw>)<nuw><u nsw> LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:    %dec = add nsw i32 %right.06, -4
 ; CHECK-NEXT:    --> {(-4 + %n),+,-4}<nsw><%while.body> U: full-set S: full-set Exits: (-4 + (-4 * (((-4 + (-1 * (1 umin (-4 + (4 smax (-4 + %n)))<nsw>))<nuw><nsw> + (4 smax (-4 + %n))) /u 8) + (1 umin (-4 + (4 smax (-4 + %n)))<nsw>)))<nsw> + %n) LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @simple

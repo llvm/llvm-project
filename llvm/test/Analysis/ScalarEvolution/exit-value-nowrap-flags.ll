@@ -148,7 +148,7 @@ define void @exit_value_nsw_nonneg(i64 %start.raw, i64 %step.raw) {
 ; CHECK-NEXT:    %step = and i64 %step.raw, 7
 ; CHECK-NEXT:    --> (zext i3 (trunc i64 %step.raw to i3) to i64) U: [0,8) S: [0,8)
 ; CHECK-NEXT:    %x = phi i64 [ %start, %entry ], [ %x.next, %up ]
-; CHECK-NEXT:    --> {(zext i8 (trunc i64 %start.raw to i8) to i64),+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nuw><nsw><%up> U: [0,319) S: [0,319) Exits: ((zext i8 (trunc i64 %start.raw to i8) to i64) + (9 * (zext i3 (trunc i64 %step.raw to i3) to i64))<nuw><nsw>)<u nuw> LoopDispositions: { %up: Computable }
+; CHECK-NEXT:    --> {(zext i8 (trunc i64 %start.raw to i8) to i64),+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nuw><nsw><%up> U: [0,319) S: [0,319) Exits: ((zext i8 (trunc i64 %start.raw to i8) to i64) + (9 * (zext i3 (trunc i64 %step.raw to i3) to i64))<nuw><nsw>)<u nuw><u nsw> LoopDispositions: { %up: Computable }
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %up ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%up> U: [0,10) S: [0,10) Exits: 9 LoopDispositions: { %up: Computable }
 ; CHECK-NEXT:    %x.next = add nsw i64 %x, %step
@@ -185,7 +185,7 @@ define void @exit_value_nsw_nonpos(i64 %start.raw, i64 %step.raw) {
 ; CHECK-NEXT:    %step = or i64 %step.raw, -8
 ; CHECK-NEXT:    --> %step U: [-8,0) S: [-8,0)
 ; CHECK-NEXT:    %x = phi i64 [ %start, %entry ], [ %x.next, %up ]
-; CHECK-NEXT:    --> {%start,+,%step}<nsw><%up> U: [-328,0) S: [-328,0) Exits: ((9 * %step)<nsw> + %start) LoopDispositions: { %up: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nsw><%up> U: [-328,0) S: [-328,0) Exits: ((9 * %step)<nsw> + %start)<u nsw> LoopDispositions: { %up: Computable }
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %up ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%up> U: [0,10) S: [0,10) Exits: 9 LoopDispositions: { %up: Computable }
 ; CHECK-NEXT:    %x.next = add nsw i64 %x, %step
@@ -245,6 +245,85 @@ up:
   %x = phi i64 [ %start, %entry ], [ %x.next, %up ]
   %i = phi i32 [ 0, %entry ], [ %i.next, %up ]
   %x.next = add nsw i64 %x, %step
+  %i.next = add i32 %i, 1
+  %c = icmp ult i32 %i.next, 10
+  br i1 %c, label %up, label %exit
+exit:
+  ret void
+}
+
+; Same as @exit_value_nsw_mixed_signs, but with a bit width where the multiply
+; really does overflow: for %step == 63 the recurrence steps through
+; -128, -65, -2, 61 without wrapping, while 3 * 63 = 189 is not representable
+; in i8, so the multiply must not be nsw.
+define void @exit_value_nsw_mixed_signs_mul_overflows(i8 %start.raw, i8 %step.raw) {
+; CHECK-LABEL: 'exit_value_nsw_mixed_signs_mul_overflows'
+; CHECK-NEXT:  Classifying expressions for: @exit_value_nsw_mixed_signs_mul_overflows
+; CHECK-NEXT:    %start = or i8 %start.raw, -128
+; CHECK-NEXT:    --> %start U: [-128,0) S: [-128,0)
+; CHECK-NEXT:    %step = and i8 %step.raw, 63
+; CHECK-NEXT:    --> (zext i6 (trunc i8 %step.raw to i6) to i8) U: [0,64) S: [0,64)
+; CHECK-NEXT:    %x = phi i8 [ %start, %entry ], [ %x.next, %up ]
+; CHECK-NEXT:    --> {%start,+,(zext i6 (trunc i8 %step.raw to i6) to i8)}<nsw><%up> U: full-set S: full-set Exits: ((3 * (zext i6 (trunc i8 %step.raw to i6) to i8))<nuw> + %start) LoopDispositions: { %up: Computable }
+; CHECK-NEXT:    %i = phi i8 [ 0, %entry ], [ %i.next, %up ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%up> U: [0,4) S: [0,4) Exits: 3 LoopDispositions: { %up: Computable }
+; CHECK-NEXT:    %x.next = add nsw i8 %x, %step
+; CHECK-NEXT:    --> {((zext i6 (trunc i8 %step.raw to i6) to i8) + %start),+,(zext i6 (trunc i8 %step.raw to i6) to i8)}<nw><%up> U: full-set S: full-set Exits: ((4 * (zext i6 (trunc i8 %step.raw to i6) to i8))<nuw> + %start) LoopDispositions: { %up: Computable }
+; CHECK-NEXT:    %i.next = add i8 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%up> U: [1,5) S: [1,5) Exits: 4 LoopDispositions: { %up: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @exit_value_nsw_mixed_signs_mul_overflows
+; CHECK-NEXT:  Loop %up: backedge-taken count is i8 3
+; CHECK-NEXT:  Loop %up: constant max backedge-taken count is i8 3
+; CHECK-NEXT:  Loop %up: symbolic max backedge-taken count is i8 3
+; CHECK-NEXT:  Loop %up: Trip multiple is 4
+;
+entry:
+  %start = or i8 %start.raw, -128
+  %step = and i8 %step.raw, 63
+  br label %up
+up:
+  %x = phi i8 [ %start, %entry ], [ %x.next, %up ]
+  %i = phi i8 [ 0, %entry ], [ %i.next, %up ]
+  %x.next = add nsw i8 %x, %step
+  %i.next = add i8 %i, 1
+  %c = icmp ult i8 %i.next, 4
+  br i1 %c, label %up, label %exit
+exit:
+  ret void
+}
+
+; Both %start and %step are non-negative and the count is a non-negative
+; constant, so the multiply keeps nsw even though its operands' ranges alone do
+; not rule out an overflow.
+define void @exit_value_nsw_nonneg_wide_ranges(i32 %start.raw, i32 %step.raw) {
+; CHECK-LABEL: 'exit_value_nsw_nonneg_wide_ranges'
+; CHECK-NEXT:  Classifying expressions for: @exit_value_nsw_nonneg_wide_ranges
+; CHECK-NEXT:    %start = and i32 %start.raw, 2147483647
+; CHECK-NEXT:    --> (zext i31 (trunc i32 %start.raw to i31) to i32) U: [0,-2147483648) S: [0,-2147483648)
+; CHECK-NEXT:    %step = and i32 %step.raw, 2147483647
+; CHECK-NEXT:    --> (zext i31 (trunc i32 %step.raw to i31) to i32) U: [0,-2147483648) S: [0,-2147483648)
+; CHECK-NEXT:    %x = phi i32 [ %start, %entry ], [ %x.next, %up ]
+; CHECK-NEXT:    --> {(zext i31 (trunc i32 %start.raw to i31) to i32),+,(zext i31 (trunc i32 %step.raw to i31) to i32)}<nuw><nsw><%up> U: [0,-2147483648) S: [0,-2147483648) Exits: ((zext i31 (trunc i32 %start.raw to i31) to i32) + (9 * (zext i31 (trunc i32 %step.raw to i31) to i32))<u nuw><u nsw>)<u nuw><u nsw> LoopDispositions: { %up: Computable }
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %up ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%up> U: [0,10) S: [0,10) Exits: 9 LoopDispositions: { %up: Computable }
+; CHECK-NEXT:    %x.next = add nsw i32 %x, %step
+; CHECK-NEXT:    --> {((zext i31 (trunc i32 %step.raw to i31) to i32) + (zext i31 (trunc i32 %start.raw to i31) to i32)),+,(zext i31 (trunc i32 %step.raw to i31) to i32)}<nw><%up> U: full-set S: full-set Exits: ((zext i31 (trunc i32 %start.raw to i31) to i32) + (10 * (zext i31 (trunc i32 %step.raw to i31) to i32))) LoopDispositions: { %up: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%up> U: [1,11) S: [1,11) Exits: 10 LoopDispositions: { %up: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @exit_value_nsw_nonneg_wide_ranges
+; CHECK-NEXT:  Loop %up: backedge-taken count is i32 9
+; CHECK-NEXT:  Loop %up: constant max backedge-taken count is i32 9
+; CHECK-NEXT:  Loop %up: symbolic max backedge-taken count is i32 9
+; CHECK-NEXT:  Loop %up: Trip multiple is 10
+;
+entry:
+  %start = and i32 %start.raw, 2147483647
+  %step = and i32 %step.raw, 2147483647
+  br label %up
+up:
+  %x = phi i32 [ %start, %entry ], [ %x.next, %up ]
+  %i = phi i32 [ 0, %entry ], [ %i.next, %up ]
+  %x.next = add nsw i32 %x, %step
   %i.next = add i32 %i, 1
   %c = icmp ult i32 %i.next, 10
   br i1 %c, label %up, label %exit
