@@ -36,6 +36,9 @@ static bool RunExpressionAsLLDBCommand(DAP &dap, lldb::SBFrame &frame,
   if (context != eEvaluateContextRepl && context != eEvaluateContextUnknown)
     return false;
 
+  if (!dap.IsCommandInterpreterActive())
+    return true;
+
   // Since we don't know this context do not try to repeat the last command;
   if (context == eEvaluateContextUnknown && expression.empty())
     return false;
@@ -97,9 +100,12 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
 
   EvaluateResponseBody body;
   lldb::SBFrame frame = dap.GetLLDBFrame(arguments.frameId);
-  std::string expression = llvm::StringRef(arguments.expression).trim().str();
   const EvaluateContext evaluate_context = arguments.context;
   const bool is_repl_context = evaluate_context == eEvaluateContextRepl;
+
+  std::string expression = arguments.expression;
+  if (dap.IsCommandInterpreterActive())
+    expression = llvm::StringRef(expression).trim().str();
 
   if (RunExpressionAsLLDBCommand(dap, frame, expression, evaluate_context)) {
     // Since the current expression is not for a variable, clear the
@@ -109,23 +115,29 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     // focus_tid to the current frame for any thread related events.
     if (frame.IsValid()) {
       dap.focus_tid = frame.GetThread().GetThreadID();
+      dap.target.GetProcess().SetSelectedThread(frame.GetThread());
+      frame.GetThread().SetSelectedFrame(frame.GetFrameID());
     }
 
-    SBCommandInterpreter interp = dap.debugger.GetCommandInterpreter();
-    auto ctx = frame ? SBExecutionContext(frame) : SBExecutionContext();
-    SBCommandReturnObject result{};
-    interp.HandleCommand(expression.c_str(), ctx, result,
-                         /*add_to_history=*/true);
+    Expected<lldb::SBCommandReturnObject> result =
+        dap.EvaluateCommand(expression);
+    if (!result)
+      return llvm::make_error<DAPError>(
+          llvm::toString(result.takeError()),
+          /*error_code=*/llvm::inconvertibleErrorCode(),
+          /*show_user=*/false);
 
-    if (!result.Succeeded()) {
-      const char *error = result.GetError(/*only_if_no_immediate=*/true);
+    const bool success = result->Succeeded() ||
+                         result->GetStatus() == lldb::eReturnStatusStarted;
+    if (!success) {
+      const char *error = result->GetError(/*only_if_no_immediate=*/true);
       return llvm::make_error<DAPError>(
           error ? std::string(error) : "error: evaluate failed",
-          /**error_code=*/llvm::inconvertibleErrorCode(),
-          /**show_user= */ false);
+          /*error_code=*/llvm::inconvertibleErrorCode(),
+          /*show_user=*/false);
     }
 
-    const char *output = result.GetOutput(/*only_if_no_immediate=*/true);
+    const char *output = result->GetOutput(/*only_if_no_immediate=*/true);
     body.result = output ? std::string(output) : std::string();
     return body;
   }
