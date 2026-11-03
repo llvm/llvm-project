@@ -1,4 +1,3 @@
-// XFAIL: system-zos
 // RUN: rm -rf %t
 // RUN: mkdir %t
 
