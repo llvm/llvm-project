@@ -29,6 +29,9 @@
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
+#include <atomic>
+#include <deque>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -37,6 +40,8 @@
 // C inclues
 #include <cstdlib>
 #include <dlfcn.h>
+#include <mach/kern_return.h>
+#include <mach/mach_vm.h>
 #include <sys/sysctl.h>
 #include <sys/syslimits.h>
 #include <sys/types.h>
@@ -746,12 +751,92 @@ const LazyDyldSPIs &GetLazyDyldSPIs() {
   return g_spis;
 }
 
+/// Whether lldb can read the byte at \p addr in its own address space. This is
+/// used to prevent the case where a file mapping becomes unavailable because
+/// its volume was force-unmounted. In such a case, the file stays mapped, but
+/// operating on it raises a SIGBUS. This is avoided by calling
+/// mach_vm_read_overwrite, which will return an error instead.
+static bool IsUnreadable(const void *addr) {
+  uint8_t byte;
+  mach_vm_size_t size = 0;
+  auto result =
+      mach_vm_read_overwrite(mach_task_self(), (mach_vm_address_t)addr, 1,
+                             (mach_vm_address_t)&byte, &size);
+  return result != KERN_SUCCESS;
+}
+
+/// Tracks whether a dyld shared cache is still safe to read.
+///
+/// lldb reads the cache's images through memory mappings files. If the volume
+/// holding those files goes away, for example because a simulator runtime was
+/// deleted or replaced, the mappings stay in lldb's address space, but reading
+/// from them raises SIGBUS.
+///
+/// To detect this, the class records the addresses of a few of the segment
+/// mappings lldb makes from the cache, and checks that they can still be read
+/// before the cache is used. The first time a check fails, the cache becomes
+/// stale, and stays stale for the life of the process. When stale, lldb stops
+/// handing out its images.
+class MappedSharedCache {
+public:
+  explicit MappedSharedCache(UUID uuid) : m_uuid(uuid) {}
+
+  bool IsStale() const { return m_stale; }
+
+  void SetStale() {
+    if (!m_stale.exchange(true))
+      LLDB_LOG(GetLog(LLDBLog::Modules),
+               "No longer using shared cache {0}: file volume may have been "
+               "unmounted.",
+               m_uuid.GetAsString());
+  }
+
+  /// Returns false, and marks the cache stale, if any of the mappings
+  /// recorded for it is unreadable.
+  bool CheckMappings() {
+    if (m_stale)
+      return false;
+    std::lock_guard<std::mutex> guard(m_mutex);
+    for (const void *addr : m_segment_mappings) {
+      if (IsUnreadable(addr)) {
+        SetStale();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Records an image segment lldb mapped from the cache. A few are enough to
+  /// notice the cache's volume going away.
+  void AddSegmentMapping(const void *addr) {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    if (m_segment_mappings.size() < 16)
+      m_segment_mappings.push_back(addr);
+  }
+
+private:
+  UUID m_uuid;
+  std::atomic<bool> m_stale = false;
+  std::mutex m_mutex;
+  std::vector<const void *> m_segment_mappings;
+};
+
+using MappedSharedCacheSP = std::shared_ptr<MappedSharedCache>;
+
+/// What map_shared_cache_binary_segments needs to map one image.
+struct ImageBaton {
+  dyld_image_t image;
+  MappedSharedCacheSP cache_sp;
+};
+
 class SharedCacheInfo {
 public:
   SharedCacheImageInfo GetByFilename(UUID sc_uuid, llvm::StringRef filename) {
     llvm::sys::ScopedReader guard(m_mutex);
     if (!sc_uuid)
       sc_uuid = m_host_uuid;
+    if (IsInvalid(sc_uuid))
+      return {};
     if (!m_filename_map.contains(sc_uuid))
       return {};
     if (!m_filename_map[sc_uuid].contains(filename))
@@ -764,6 +849,8 @@ public:
     llvm::sys::ScopedReader guard(m_mutex);
     if (!sc_uuid)
       sc_uuid = m_host_uuid;
+    if (IsInvalid(sc_uuid))
+      return {};
     if (!m_uuid_map.contains(sc_uuid))
       return {};
     if (!m_uuid_map[sc_uuid].contains(file_uuid))
@@ -781,6 +868,22 @@ public:
 private:
   bool CreateSharedCacheInfoWithInstrospectionSPIs();
   bool CreateHostSharedCacheImageList();
+
+  /// Returns true once the shared cache \p sc_uuid has turned out to be
+  /// unreadable. Shared caches lldb doesn't map (see m_mapped_caches) are
+  /// never invalid. Must be called with m_mutex held.
+  bool IsInvalid(const UUID &sc_uuid);
+
+  /// The shared caches indexed through libdyld.
+  llvm::SmallDenseMap<UUID, MappedSharedCacheSP> m_mapped_caches;
+
+  /// One per image of a mapped shared cache. Indexes are never dropped, so
+  /// these live as long as the SharedCacheImageInfos that point to them.
+  ///
+  /// Each SharedCacheImageInfo holds a raw pointer into this collection, so
+  /// elements must not move. A std::vector will reallocate as it grows,
+  /// resulting in dangling pointers.
+  std::deque<ImageBaton> m_image_batons;
 
   // These three ivars have an initial key of a shared cache UUID.
   // All of the entries for a given shared cache are in m_file_infos.
@@ -834,8 +937,12 @@ struct segment {
 class DataBufferDispatchData : public DataBufferUnowned {
 public:
   DataBufferDispatchData(uint8_t *bytes, lldb::offset_t size,
-                         std::vector<dispatch_data_t> mappings)
-      : DataBufferUnowned(bytes, size), m_mappings(std::move(mappings)) {}
+                         std::vector<dispatch_data_t> mappings,
+                         std::vector<const void *> segment_starts,
+                         MappedSharedCacheSP cache_sp)
+      : DataBufferUnowned(bytes, size), m_mappings(std::move(mappings)),
+        m_segment_starts(std::move(segment_starts)),
+        m_cache_sp(std::move(cache_sp)) {}
   DataBufferDispatchData(const DataBufferDispatchData &) = delete;
   DataBufferDispatchData &operator=(const DataBufferDispatchData &) = delete;
 
@@ -844,12 +951,31 @@ public:
       dispatch_release(mapping);
   }
 
+  bool IsStale() const override {
+    if (m_cache_sp->IsStale())
+      return true;
+    // Segments can come from different mappings, so check each of them.
+    for (const void *start : m_segment_starts) {
+      if (IsUnreadable(start)) {
+        m_cache_sp->SetStale();
+        return true;
+      }
+    }
+    return false;
+  }
+
 private:
   std::vector<dispatch_data_t> m_mappings;
+  std::vector<const void *> m_segment_starts;
+  MappedSharedCacheSP m_cache_sp;
 };
 } // namespace
 
-static DataExtractorSP map_shared_cache_binary_segments(void *image) {
+static DataExtractorSP map_shared_cache_binary_segments(void *baton) {
+  auto [image, cache_sp] = *static_cast<ImageBaton *>(baton);
+  if (cache_sp->IsStale())
+    return {};
+
   // dyld_image_segment_data_4HWTrace can't be called on
   // multiple threads simultaneously.
   static std::mutex g_mutex;
@@ -860,9 +986,9 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
     return {};
 
   __block std::vector<segment> segments;
-  __block dyld_image_t image_copy = (dyld_image_t)image;
+  __block dyld_image_t image_copy = image;
   dyld_image_for_each_segment_info(
-      (dyld_image_t)image,
+      image,
       ^(const char *segmentName, uint64_t vmAddr, uint64_t vmSize, int perm) {
         segment seg;
         seg.name = segmentName;
@@ -888,15 +1014,28 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
   if (!segments.size())
     return {};
 
+  // libdyld hands out mappings of the cache's files even when their volume
+  // has been force-unmounted. Don't build a module on top of those.
+  for (const segment &seg : segments) {
+    if (IsUnreadable(seg.data)) {
+      for (const segment &seg : segments)
+        dispatch_release(seg.mapping);
+      cache_sp->SetStale();
+      return {};
+    }
+  }
+  for (const segment &seg : segments)
+    cache_sp->AddSegmentMapping(seg.data);
+
   Log *log = GetLog(LLDBLog::Modules);
   LLDB_LOGF(log,
             "map_shared_cache_binary_segments() mapping segments of "
             "dyld_image_t %p into lldb address space",
-            image);
+            (void *)image);
   for (const segment &seg : segments) {
     LLDB_LOGF_VERBOSE(
         log, "image %p %s vmaddr 0x%llx vmsize 0x%zx mapped to lldb vm addr %p",
-        image, seg.name.c_str(), seg.vmaddr, seg.vmsize, seg.data);
+        (void *)image, seg.name.c_str(), seg.vmaddr, seg.vmsize, seg.data);
   }
 
   // Calculate the virtual address range in lldb's
@@ -916,11 +1055,14 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
     min_file_vm_addr = std::min(min_file_vm_addr, (uint64_t)seg.vmaddr);
   }
   std::vector<dispatch_data_t> mappings;
-  for (const segment &seg : segments)
+  std::vector<const void *> segment_starts;
+  for (const segment &seg : segments) {
     mappings.push_back(seg.mapping);
+    segment_starts.push_back(seg.data);
+  }
   DataBufferSP data_sp = std::make_shared<DataBufferDispatchData>(
       (uint8_t *)min_lldb_vm_addr, max_lldb_vm_addr - min_lldb_vm_addr,
-      std::move(mappings));
+      std::move(mappings), std::move(segment_starts), cache_sp);
   VirtualDataExtractor::LookupTable remap_table;
   for (const segment &seg : segments)
     remap_table.Append(VirtualDataExtractor::LookupTable::Entry(
@@ -928,6 +1070,11 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
         (uint64_t)seg.data - (uint64_t)min_lldb_vm_addr));
 
   return std::make_shared<VirtualDataExtractor>(data_sp, remap_table);
+}
+
+bool SharedCacheInfo::IsInvalid(const UUID &sc_uuid) {
+  auto it = m_mapped_caches.find(sc_uuid);
+  return it != m_mapped_caches.end() && !it->second->CheckMappings();
 }
 
 // Scan the binaries in the specified shared cache filepath
@@ -945,8 +1092,12 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
 
   Log *log = GetLog(LLDBLog::Modules);
 
-  // Have we already indexed this shared cache.
+  // Have we already indexed this shared cache. Once it has become unreadable,
+  // don't open it again, even from a different path: libdyld can keep state
+  // for a shared cache, keyed by its UUID, that is just as unreadable.
   if (m_file_infos.contains(sc_uuid)) {
+    if (IsInvalid(sc_uuid))
+      return false;
     LLDB_LOGF(log, "Have already indexed shared cache UUID %s",
               sc_uuid.GetAsString().c_str());
     return true;
@@ -955,6 +1106,7 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
   LLDB_LOGF(log, "Opening shared cache at %s to check for matching UUID %s",
             filepath.c_str(), sc_uuid.GetAsString().c_str());
 
+  auto mapped_cache = std::make_shared<MappedSharedCache>(sc_uuid);
   __block bool return_failed = false;
   dyld_shared_cache_for_file(filepath.c_str(), ^(dyld_shared_cache_t cache) {
     uuid_t uuid;
@@ -982,12 +1134,17 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
                         (void *)image);
 
       dyld.image_retain_4HWTrace(image);
-      m_file_infos[sc_uuid].push_back(SharedCacheImageInfo(
-          installname, image_uuid, map_shared_cache_binary_segments, image));
+      m_image_batons.push_back({image, mapped_cache});
+      m_file_infos[sc_uuid].push_back(
+          SharedCacheImageInfo(installname, image_uuid,
+                               map_shared_cache_binary_segments,
+                               &m_image_batons.back()));
     });
   });
   if (return_failed)
     return false;
+
+  m_mapped_caches[sc_uuid] = mapped_cache;
 
   // Vector of SharedCacheImageInfos has been fully populated, we can
   // take pointers to the objects now.
