@@ -1,0 +1,48 @@
+# RUN: llc -mattr=+exception-handling -wasm-enable-eh -exception-model=wasm -verify-machineinstrs -run-pass=liveintervals %s
+
+# This is a regression test for a bug where MachineVerifier compute live-outs of
+# a BB not from the end of a BB but the last call instruction, which is not
+# correct when there is another unwinding instruction after the call.
+
+--- |
+  target triple = "wasm32-unknown-unknown"
+
+  declare void @foo()
+  declare void @bar(i32)
+  define void @cleanupret_live_range_test() {
+    ret void
+  }
+...
+---
+name: cleanupret_live_range_test
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    EH_LABEL <mcsymbol .Ltmp2>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp3>
+    BR %bb.1, implicit-def dead $arguments
+
+  bb.1:
+  ; predecessors: %bb.0
+    UNREACHABLE implicit-def dead $arguments
+
+  bb.2 (landing-pad):
+  ; predecessors: %bb.0
+    successors: %bb.3
+    EH_LABEL <mcsymbol .Ltmp4>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    ; Because bb.3's use of %0's def is here, the live-outs from the predecessor
+    ; bb.2 should be from the terminator (CLEANUPRET) and not the 'CALL @foo'
+    ; above.
+    %0:i32 = CONST_I32 0, implicit-def dead $arguments
+    CLEANUPRET %bb.2, implicit-def dead $arguments
+
+  bb.3 (landing-pad):
+  ; predecessors: %bb.2
+    EH_LABEL <mcsymbol .Ltmp5>
+    CALL @bar, %0:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    CLEANUPRET %bb.3, implicit-def dead $arguments
