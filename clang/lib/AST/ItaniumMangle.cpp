@@ -649,6 +649,18 @@ static const CXXRecordDecl *getLambdaForInitCapture(const VarDecl *VD) {
   return Lambda;
 }
 
+/// Returns true if \p S contains the lambda expression defining \p Lambda.
+static bool containsLambdaExpr(const Stmt *S, const CXXRecordDecl *Lambda) {
+  if (!S)
+    return false;
+  if (const auto *LE = dyn_cast<LambdaExpr>(S))
+    if (LE->getLambdaClass() == Lambda)
+      return true;
+  return llvm::any_of(S->children(), [&](const Stmt *Child) {
+    return containsLambdaExpr(Child, Lambda);
+  });
+}
+
 /// Retrieve the declaration context that should be used when mangling the given
 /// declaration.
 const DeclContext *
@@ -664,6 +676,24 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
       if (ParmVarDecl *ContextParam =
               dyn_cast_or_null<ParmVarDecl>(RD->getLambdaContextDecl()))
         return ContextParam->getDeclContext();
+
+    // A lambda in the condition of an enable_if/diagnose_if attribute is
+    // instantiated with the function as its DeclContext, but the ABI treats it
+    // like the dependent pattern: it lives in the function's parent context.
+    // Mangling it relative to the function would recurse forever, since the
+    // function's encoding includes the attribute condition.
+    if (RD->isLambda() && !RD->getLambdaContextDecl())
+      if (const auto *FD = dyn_cast<FunctionDecl>(RD->getDeclContext())) {
+        for (const Attr *A : FD->attrs()) {
+          const Expr *Cond = nullptr;
+          if (const auto *EIA = dyn_cast<EnableIfAttr>(A))
+            Cond = EIA->getCond();
+          else if (const auto *DIA = dyn_cast<DiagnoseIfAttr>(A))
+            Cond = DIA->getCond();
+          if (containsLambdaExpr(Cond, RD))
+            return FD->getDeclContext();
+        }
+      }
   }
 
   // Perform the same check for block literals.
