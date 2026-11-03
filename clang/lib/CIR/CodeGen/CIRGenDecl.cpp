@@ -32,6 +32,49 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+namespace {
+/// Call the function named by a variable's `cleanup` attribute with the
+/// variable's address when it goes out of scope.
+struct CallCleanupFunction final : EHScopeStack::Cleanup {
+  const CIRGenFunctionInfo &fnInfo;
+  Address addr;
+  QualType varType;
+  CIRGenCallee callee;
+  SourceRange attrRange;
+
+  CallCleanupFunction(cir::FuncOp cleanupFn, const CIRGenFunctionInfo *info,
+                      Address addr, QualType varType, const CleanupAttr *attr)
+      : fnInfo(*info), addr(addr), varType(varType),
+        callee(CIRGenCallee::forDirect(
+            cleanupFn, CIRGenCalleeInfo(attr->getFunctionDecl()))),
+        attrRange(attr->getRange()) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    assert(!fnInfo.arguments().empty());
+    QualType argTy = fnInfo.arguments()[0];
+    // Sema only guarantees that these are assignable/convertible pointers (that
+    // is, the address-of the cleanup variable and the function parameter type),
+    // which don't necessarily match in either pointee type or address space.
+    // For example: address-of-g is void**, but the function takes void*.
+    // void f(void* arg);
+    // __attribute__((cleanup(f))) void *g;
+    // Likewise `int *__ptr32` parameters are accepted for an `int` variable.
+    // Classic codegen only emits a bitcast, which asserts for the latter.
+    // Both casts are no-ops when the types already match.
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    auto argPtrTy = mlir::cast<cir::PointerType>(cgf.convertType(argTy));
+    mlir::Value arg =
+        builder.createPtrBitcast(addr.getPointer(), argPtrTy.getPointee());
+    arg = cgf.performAddrSpaceCast(arg, argPtrTy);
+
+    CallArgList args;
+    args.add(RValue::get(arg), cgf.getContext().getPointerType(varType));
+    cgf.emitCall(fnInfo, callee, ReturnValueSlot(), args,
+                 /*callOp=*/nullptr, /*isMustTail=*/false, attrRange);
+  }
+};
+} // namespace
+
 struct CallLifetimeEnd final : EHScopeStack::Cleanup {
   // The raw alloca pointer (in the alloca address space). Mirrors classic
   // CodeGen's CallLifetimeEnd, which stores the llvm::Value pointer rather
@@ -376,8 +419,18 @@ void CIRGenFunction::emitAutoVarCleanups(
   assert(!cir::MissingFeatures::opAllocaPreciseLifetime());
 
   // Handle the cleanup attribute.
-  if (d.hasAttr<CleanupAttr>())
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: CleanupAttr");
+  if (const CleanupAttr *ca = d.getAttr<CleanupAttr>()) {
+    const FunctionDecl *fd = ca->getFunctionDecl();
+
+    cir::FuncOp f = cgm.getAddrOfFunction(fd);
+    assert(f && "Could not find function!");
+
+    const CIRGenFunctionInfo &info =
+        cgm.getTypes().arrangeFunctionDeclaration(fd);
+    ehStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, f, &info,
+                                             emission.getObjectAddress(*this),
+                                             d.getType(), ca);
+  }
 }
 
 /// Emit code and set up symbol table for a variable declaration with auto,
