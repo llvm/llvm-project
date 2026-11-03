@@ -1322,6 +1322,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BitReaderOptionsTableGen",
+    strip_include_prefix = "lib/Bitcode/Reader",
+    tbl_outs = {"lib/Bitcode/Reader/BitReaderOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Bitcode/Reader/BitReaderOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "BitReader",
     srcs = glob([
@@ -1338,8 +1347,10 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":BitReaderOptionsTableGen",
         ":BitstreamReader",
         ":Core",
+        ":Option",
         ":Support",
         ":TargetParser",
         ":config",
@@ -1636,6 +1647,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BitWriterOptionsTableGen",
+    strip_include_prefix = "lib/Bitcode/Writer",
+    tbl_outs = {"lib/Bitcode/Writer/BitWriterOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Bitcode/Writer/BitWriterOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "BitWriter",
     srcs = glob([
@@ -1655,10 +1675,12 @@ cc_library(
         ":Analysis",
         ":BinaryFormat",
         ":BitReader",
+        ":BitWriterOptionsTableGen",
         ":BitstreamWriter",
         ":Core",
         ":MC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Support",
         ":TargetParser",

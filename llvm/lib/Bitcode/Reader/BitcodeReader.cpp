@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "BitReaderOptions.h"
 #include "MetadataLoader.h"
 #include "ValueList.h"
 #include "llvm/ADT/APFloat.h"
@@ -96,11 +97,6 @@ static cl::opt<bool> PrintSummaryGUIDs(
     "print-summary-global-ids", cl::init(false), cl::Hidden,
     cl::desc(
         "Print the global id for each value when reading the module summary"));
-
-static cl::opt<bool> ExpandConstantExprs(
-    "expand-constant-exprs", cl::Hidden,
-    cl::desc(
-        "Expand constant expressions to instructions for testing purposes"));
 
 namespace {
 
@@ -583,6 +579,7 @@ public:
 };
 
 class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
+  const BitReaderOptions &Opts;
   LLVMContext &Context;
   Module *TheModule = nullptr;
   std::optional<Triple> TargetTriple;
@@ -1092,7 +1089,8 @@ std::error_code llvm::errorToErrorCodeAndEmitErrors(LLVMContext &Ctx,
 BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              StringRef ProducerIdentification,
                              LLVMContext &Context)
-    : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
+    : BitcodeReaderBase(std::move(Stream), Strtab),
+      Opts(getBitReaderOptions(Context)), Context(Context),
       ValueList(this->Stream.SizeInBytes(),
                 [this](unsigned ValID, BasicBlock *InsertBB) {
                   return materializeValue(ValID, InsertBB);
@@ -1568,7 +1566,8 @@ static GEPNoWrapFlags toGEPNoWrapFlags(uint64_t Flags) {
   return NW;
 }
 
-static bool isConstExprSupported(const BitcodeConstant *BC) {
+static bool isConstExprSupported(const BitReaderOptions &Opts,
+                                 const BitcodeConstant *BC) {
   uint8_t Opcode = BC->Opcode;
 
   // These are not real constant expressions, always consider them supported.
@@ -1577,7 +1576,7 @@ static bool isConstExprSupported(const BitcodeConstant *BC) {
 
   // If -expand-constant-exprs is set, we want to consider all expressions
   // as unsupported.
-  if (ExpandConstantExprs)
+  if (Opts.expand_constant_exprs)
     return false;
 
   if (Instruction::isBinaryOp(Opcode))
@@ -1652,7 +1651,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         ConstOps.push_back(C);
 
     // Materialize as constant expression if possible.
-    if (isConstExprSupported(BC) && ConstOps.size() == Ops.size()) {
+    if (isConstExprSupported(Opts, BC) && ConstOps.size() == Ops.size()) {
       Constant *C;
       if (Instruction::isCast(BC->Opcode)) {
         C = UpgradeBitCastExpr(BC->Opcode, ConstOps[0], BC->getType());
