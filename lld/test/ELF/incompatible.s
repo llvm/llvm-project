@@ -26,21 +26,36 @@
 
 // RUN: not ld.lld -m elf64ppc %ta.o -o /dev/null 2>&1 | \
 // RUN:   FileCheck --check-prefix=A-ONLY %s
+// RUN: not env LDEMULATION=elf64ppc \
+// RUN:   ld.lld %ta.o -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=A-ONLY %s
 // A-ONLY: a.o is incompatible with elf64ppc
 
 // RUN: not ld.lld -m elf64ppc %tb.o -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=B-ONLY %s
+// RUN: not env LDEMULATION=elf64ppc \
+// RUN:   ld.lld %tb.o -o /dev/null 2>&1 | \
 // RUN:   FileCheck --check-prefix=B-ONLY %s
 // B-ONLY: b.o is incompatible with elf64ppc
 
 // RUN: not ld.lld -m elf64ppc %tc.o -o /dev/null 2>&1 | \
 // RUN:   FileCheck --check-prefix=C-ONLY %s
+// RUN: not env LDEMULATION=elf64ppc \
+// RUN:   ld.lld %tc.o -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=C-ONLY %s
 // C-ONLY: c.o is incompatible with elf64ppc
 
 // RUN: not ld.lld -m elf_i386 %tc.o %ti686.so -o /dev/null 2>&1 | \
 // RUN:   FileCheck --check-prefix=C-AND-SO-I386 %s
+// RUN: not env LDEMULATION=elf_i386 \
+// RUN:   ld.lld %tc.o %ti686.so -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=C-AND-SO-I386 %s
 // C-AND-SO-I386: c.o is incompatible with elf_i386
 
 // RUN: not ld.lld -m elf_i386 %ti686.so %tc.o -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=SO-AND-C-I386 %s
+// RUN: not env LDEMULATION=elf_i386 \
+// RUN:   ld.lld %ti686.so %tc.o -o /dev/null 2>&1 | \
 // RUN:   FileCheck --check-prefix=SO-AND-C-I386 %s
 // SO-AND-C-I386: c.o is incompatible with elf_i386
 
