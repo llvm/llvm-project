@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -41,17 +42,17 @@ cl::opt<bool> dxil::SourceInDebugModule(
     cl::init(false));
 
 namespace {
-class WriteDXILPass : public llvm::ModulePass {
+class DXILWriterLegacy : public llvm::ModulePass {
   raw_ostream &OS; // raw_ostream to print on
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WriteDXILPass() : ModulePass(ID), OS(dbgs()) {
-    initializeWriteDXILPassPass(*PassRegistry::getPassRegistry());
+  DXILWriterLegacy() : ModulePass(ID), OS(dbgs()) {
+    initializeDXILWriterLegacyPass(*PassRegistry::getPassRegistry());
   }
 
-  explicit WriteDXILPass(raw_ostream &o) : ModulePass(ID), OS(o) {
-    initializeWriteDXILPassPass(*PassRegistry::getPassRegistry());
+  explicit DXILWriterLegacy(raw_ostream &o) : ModulePass(ID), OS(o) {
+    initializeDXILWriterLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override { return "Bitcode Writer"; }
@@ -276,18 +277,23 @@ public:
 };
 } // namespace
 
-char WriteDXILPass::ID = 0;
-INITIALIZE_PASS_BEGIN(WriteDXILPass, "dxil-write-bitcode", "Write Bitcode",
-                      false, true)
+char DXILWriterLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(DXILWriterLegacy, "dxil-writer", "Write Bitcode", false,
+                      true)
 INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)
-INITIALIZE_PASS_END(WriteDXILPass, "dxil-write-bitcode", "Write Bitcode", false,
+INITIALIZE_PASS_END(DXILWriterLegacy, "dxil-writer", "Write Bitcode", false,
                     true)
 
-ModulePass *llvm::createDXILWriterPass(raw_ostream &Str) {
-  return new WriteDXILPass(Str);
+ModulePass *llvm::createDXILWriterLegacyPass(raw_ostream &Str) {
+  return new DXILWriterLegacy(Str);
 }
 
 char EmbedDXILPass::ID = 0;
 INITIALIZE_PASS(EmbedDXILPass, "dxil-embed", "Embed DXIL", false, true)
 
 ModulePass *llvm::createDXILEmbedderPass() { return new EmbedDXILPass(); }
+
+PreservedAnalyses DXILWriterPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  WriteDXILToFile(M, OS);
+  return PreservedAnalyses::all();
+}
