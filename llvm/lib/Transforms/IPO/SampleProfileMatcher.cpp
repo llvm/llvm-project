@@ -399,7 +399,6 @@ void SampleProfileMatcher::runStaleProfileMatching(
   // during previous fuzzy matching, create a new profile the same as the
   // flattened profile as a top-level function.
   for (const auto &IR : IRAnchors) {
-    bool ProfileConflicted = false;
     const auto &IRLoc = IR.first;
     Function *IRFunc = M.getFunction(IR.second.stringRef());
     if (!IRFunc)
@@ -416,7 +415,6 @@ void SampleProfileMatcher::runStaleProfileMatching(
     if (ProfId != ProfAnchor->second) {
       // Only load the flattened profile if a new profile is created in the
       // SampleProfReader
-      FunctionSamples &NewFS = FlattenedProfiles.create(ProfId);
       SampleProfileMap UpdatedProfile;
       if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef())) {
         UpdatedProfile.create(ProfId).merge(*FS);
@@ -829,7 +827,8 @@ SampleProfileMatcher::recordMatchedStaleProfile(Function *IRFunc,
     LLVM_DEBUG(dbgs() << "Function:" << IRFunc->getName()
                       << " matches profile:" << ProfFuncName << "\n");
 
-  } else if (PrevMatched->second != IRFunc) {
+  } else if (PrevMatched->second != IRFunc &&
+             !Reader.getSamplesFor(IRFuncName)) {
     // Create a flattened profile using the IR function name to avoid profile
     // name conflicts
     const auto *FSForMatching = getFlattenedSamplesFor(ProfFuncName);
@@ -853,6 +852,7 @@ SampleProfileMatcher::recordMatchedStaleProfile(Function *IRFunc,
     NewFS.merge(*FSForMatching);
 
     FuncProfileMatchCache[{IRFunc, ProfFuncName}] = false;
+    FunctionsWithoutProfile.erase(NewProfId);
 
     LLVM_DEBUG(dbgs() << "Function:" << IRFunc->getName()
                       << " encounters conflicting profile matchings, "
