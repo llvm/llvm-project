@@ -22,6 +22,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <array>
+
 namespace llvm {
 namespace memprof {
 namespace {
@@ -111,6 +113,26 @@ declare !dbg !19 void @_Z2f3v()
       ElementsAre(Pair(LineLocation(1, 3), memprof::getGUID("_Z2f1v")),
                   Pair(LineLocation(2, 3), memprof::getGUID("_Z2f2v")),
                   Pair(LineLocation(2, 9), memprof::getGUID("_Z2f3v"))));
+
+  const std::array<uint8_t, 16> ModuleId = {0x81, 0x78, 0xc7, 0xa8, 0x38, 0x0f,
+                                            0x9e, 0x15, 0x64, 0x1f, 0x28, 0x07,
+                                            0x9e, 0x9e, 0x29, 0x70};
+  M->addModuleFlag(Module::Error, "MemProfModuleId",
+                   MDString::get(Ctx, StringRef(reinterpret_cast<const char *>(
+                                                    ModuleId.data()),
+                                                ModuleId.size())));
+  Calls = extractCallsFromIR(*M, TLI);
+
+  ASSERT_THAT(Calls, SizeIs(1));
+  auto ModuleIt = Calls.begin();
+  const auto &[ModuleCallerGUID, ModuleCallSites] = *ModuleIt;
+  EXPECT_EQ(ModuleCallerGUID, memprof::getGUID("_Z3foov", ModuleId));
+  EXPECT_THAT(
+      ModuleCallSites,
+      ElementsAre(
+          Pair(LineLocation(1, 3), memprof::getGUID("_Z2f1v", ModuleId)),
+          Pair(LineLocation(2, 3), memprof::getGUID("_Z2f2v", ModuleId)),
+          Pair(LineLocation(2, 9), memprof::getGUID("_Z2f3v", ModuleId))));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRInline) {

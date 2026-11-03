@@ -11,6 +11,7 @@
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
@@ -53,7 +54,9 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
                                    ctx.arg.thinLTOPrefixReplaceNew);
 }
 
-static lto::Config createConfig(Ctx &ctx) {
+static lto::Config
+createConfig(Ctx &ctx,
+             const std::optional<std::array<uint8_t, 16>> &memProfModuleId) {
   lto::Config c;
   c.LibraryOptions = &ctx.arg.libraryOptions;
   c.PTO = PipelineTuningOptions(c.LibraryOptions);
@@ -135,6 +138,8 @@ static lto::Config createConfig(Ctx &ctx) {
   c.StatsFile = std::string(ctx.arg.optStatsFilename);
 
   c.SampleProfile = std::string(ctx.arg.ltoSampleProfile);
+  c.MemoryProfile = std::string(ctx.arg.ltoMemProfProfile);
+  c.MemProfModuleId = memProfModuleId;
   for (StringRef pluginFn : ctx.arg.passPlugins)
     c.PassPluginFilenames.push_back(std::string(pluginFn));
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
@@ -178,7 +183,8 @@ static lto::Config createConfig(Ctx &ctx) {
   return c;
 }
 
-BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
+BitcodeCompiler::BitcodeCompiler(Ctx &ctx)
+    : ctx(ctx), memProfModuleId(computeMemProfModuleId(ctx)) {
   // Initialize indexFile.
   if (!ctx.arg.thinLTOIndexOnlyArg.empty())
     indexFile = openFile(ctx.arg.thinLTOIndexOnlyArg);
@@ -206,13 +212,13 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
       llvm::lto::LTO::LTOKind::LTOK_Default};
 
   if (ctx.arg.dtltoDistributor.empty())
-    ltoObj = std::make_unique<lto::LTO>(createConfig(ctx), backend,
-                                        ctx.arg.ltoPartitions,
+    ltoObj = std::make_unique<lto::LTO>(createConfig(ctx, memProfModuleId),
+                                        backend, ctx.arg.ltoPartitions,
                                         ltoModes[ctx.arg.ltoKind]);
   else
     ltoObj = std::make_unique<lto::DTLTO>(
-        createConfig(ctx), ctx.arg.ltoPartitions, ltoModes[ctx.arg.ltoKind],
-        onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
+        createConfig(ctx, memProfModuleId), ctx.arg.ltoPartitions,
+        ltoModes[ctx.arg.ltoKind], onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
         ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile,
         ctx.arg.dtltoDistributor, ctx.arg.dtltoDistributorArgs,
         ctx.arg.dtltoCompiler, ctx.arg.dtltoCompilerPrependArgs,

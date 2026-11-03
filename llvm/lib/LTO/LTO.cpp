@@ -1449,6 +1449,15 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   updatePublicTypeTestCalls(*RegularLTO.CombinedModule,
                             WholeProgramVisibilityEnabledInLTO);
 
+  if (Conf.MemProfModuleId) {
+    ArrayRef<uint8_t> Id = *Conf.MemProfModuleId;
+    RegularLTO.CombinedModule->addModuleFlag(
+        Module::Error, "MemProfModuleId",
+        MDString::get(
+            RegularLTO.CombinedModule->getContext(),
+            StringRef(reinterpret_cast<const char *>(Id.data()), Id.size())));
+  }
+
   if (Conf.PreOptModuleHook &&
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
     return Error::success();

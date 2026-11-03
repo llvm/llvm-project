@@ -24,7 +24,9 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm::lto {
@@ -45,6 +47,9 @@ public:
   SmallVector<std::unique_ptr<InputFile>, 0> compile();
   void setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs);
   void waitForLTOCleanup();
+  const std::optional<std::array<uint8_t, 16>> &getMemProfModuleId() const {
+    return memProfModuleId;
+  }
 
 private:
   Ctx &ctx;
@@ -56,6 +61,7 @@ private:
   llvm::DenseSet<StringRef> usedStartStop;
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
   llvm::DenseSet<StringRef> thinIndices;
+  std::optional<std::array<uint8_t, 16>> memProfModuleId;
 };
 } // namespace lld::elf
 

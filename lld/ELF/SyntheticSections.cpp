@@ -34,9 +34,11 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cinttypes>
@@ -215,6 +217,22 @@ void BuildIdSection::writeTo(uint8_t *buf) {
 void BuildIdSection::writeBuildId(ArrayRef<uint8_t> buf) {
   assert(buf.size() == hashSize);
   memcpy(hashBuf, buf.data(), hashSize);
+}
+
+MemProfModuleIdSection::MemProfModuleIdSection(Ctx &ctx, ArrayRef<uint8_t> id)
+    : SyntheticSection(ctx, ".note.llvm.memprof.module-id", SHT_NOTE, SHF_ALLOC,
+                       4) {
+  assert(id.size() == moduleId.size());
+  llvm::copy(id, moduleId.begin());
+}
+
+void MemProfModuleIdSection::writeTo(uint8_t *buf) {
+  write32(ctx, buf, 5);                             // Name size
+  write32(ctx, buf + 4, moduleId.size());           // Content size
+  write32(ctx, buf + 8, NT_LLVM_MEMPROF_MODULE_ID); // Type
+  memcpy(buf + 12, "LLVM", 5);                      // Name string
+  memset(buf + 17, 0, 3);                           // Name padding
+  memcpy(buf + 20, moduleId.data(), moduleId.size());
 }
 
 BssSection::BssSection(Ctx &ctx, StringRef name, uint64_t size,
@@ -4472,6 +4490,138 @@ static OutputSection *findSection(Ctx &ctx, StringRef name) {
   return nullptr;
 }
 
+static void collectMemProfTUIDs(Ctx &ctx, ArrayRef<InputSectionBase *> sections,
+                                SmallVectorImpl<std::array<uint8_t, 16>> &ids) {
+  for (InputSectionBase *sec : sections) {
+    if (!sec || sec == &InputSection::discarded ||
+        sec->name != ".note.llvm.memprof.tu-id")
+      continue;
+
+    if (sec->addralign != 4) {
+      Err(ctx) << sec << ": MemProf TU ID note alignment must be 4";
+      continue;
+    }
+
+    ArrayRef<uint8_t> data = sec->content();
+    while (!data.empty()) {
+      if (data.size() < 12) {
+        Err(ctx) << sec << ": MemProf TU ID note header is too short";
+        break;
+      }
+
+      uint32_t nameSize = read32(ctx, data.data());
+      uint32_t descSize = read32(ctx, data.data() + 4);
+      uint32_t type = read32(ctx, data.data() + 8);
+      size_t descOffset = alignTo(12 + nameSize, sec->addralign);
+      size_t size = descOffset + alignTo(descSize, sec->addralign);
+      if (size > data.size()) {
+        Err(ctx) << sec << ": MemProf TU ID note is too short";
+        break;
+      }
+
+      StringRef name(reinterpret_cast<const char *>(data.data() + 12),
+                     nameSize ? nameSize - 1 : 0);
+      if (name != "LLVM" || type != NT_LLVM_MEMPROF_TU_ID || descSize != 16) {
+        Err(ctx) << sec << ": invalid MemProf TU ID note";
+        break;
+      }
+
+      std::array<uint8_t, 16> id;
+      llvm::copy(data.slice(descOffset, descSize), id.begin());
+      ids.push_back(id);
+      data = data.slice(size);
+    }
+  }
+}
+
+std::optional<std::array<uint8_t, 16>> elf::computeMemProfModuleId(Ctx &ctx) {
+  if (!ctx.arg.shared || ctx.bitcodeFiles.empty())
+    return std::nullopt;
+
+  SmallVector<std::array<uint8_t, 16>, 0> ids;
+  for (ELFFileBase *file : ctx.objectFiles)
+    collectMemProfTUIDs(ctx, file->getSections(), ids);
+
+  for (BitcodeFile *file : ctx.bitcodeFiles) {
+    llvm::lto::InputFile &obj = *file->obj;
+    bool hasMemProfTUID =
+        !ctx.arg.ltoMemProfProfile.empty() ||
+        llvm::any_of(obj.symbols(), [](const auto &sym) {
+          return sym.getIRName() == "__memprof_profile_filename";
+        });
+    if (!hasMemProfTUID)
+      continue;
+    ids.push_back(MD5::hash(arrayRefFromStringRef(obj.getSourceFileName())));
+  }
+
+  if (ids.empty())
+    return std::nullopt;
+
+  llvm::sort(ids);
+  MD5 hash;
+  for (const std::array<uint8_t, 16> &id : ids)
+    hash.update(ArrayRef<uint8_t>(id));
+  return hash.final();
+}
+
+template <class ELFT>
+static std::optional<MD5::MD5Result> collectMemProfTUIDs(Ctx &ctx) {
+  using Elf_Nhdr = typename ELFT::Nhdr;
+  using Elf_Note = typename ELFT::Note;
+
+  SmallVector<std::array<uint8_t, 16>, 0> ids;
+  for (InputSectionBase *sec : ctx.inputSections) {
+    if (!sec->isLive() || sec->name != ".note.llvm.memprof.tu-id")
+      continue;
+
+    if (sec->addralign != 4) {
+      Err(ctx) << sec << ": MemProf TU ID note alignment must be 4";
+      sec->markDead();
+      continue;
+    }
+
+    ArrayRef<uint8_t> data = sec->content();
+    while (!data.empty()) {
+      if (data.size() < sizeof(Elf_Nhdr)) {
+        Err(ctx) << sec << ": MemProf TU ID note header is too short";
+        break;
+      }
+
+      auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
+      size_t size = nhdr->getSize(sec->addralign);
+      if (size > data.size()) {
+        Err(ctx) << sec << ": MemProf TU ID note is too short";
+        break;
+      }
+
+      Elf_Note note(*nhdr);
+      ArrayRef<uint8_t> desc = note.getDesc(sec->addralign);
+      if (note.getName() != "LLVM" || note.getType() != NT_LLVM_MEMPROF_TU_ID ||
+          desc.size() != 16) {
+        Err(ctx) << sec << ": invalid MemProf TU ID note";
+        break;
+      }
+
+      std::array<uint8_t, 16> id;
+      llvm::copy(desc, id.begin());
+      ids.push_back(id);
+      data = data.slice(size);
+    }
+
+    // Replace all input TU ID notes with one module ID note.
+    sec->markDead();
+  }
+
+  if (ids.empty())
+    return std::nullopt;
+
+  llvm::sort(ids);
+  MD5 hash;
+  for (const std::array<uint8_t, 16> &id : ids)
+    hash.update(ArrayRef<uint8_t>(id));
+  return hash.final();
+}
+
 template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // Add the .interp section first because it is not a SyntheticSection.
   // The removeUnusedSyntheticSections() function relies on the
@@ -4483,6 +4633,21 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   }
 
   auto add = [&](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
+
+  if (ctx.arg.shared) {
+    std::optional<MD5::MD5Result> collectedId = collectMemProfTUIDs<ELFT>(ctx);
+    std::optional<std::array<uint8_t, 16>> id;
+    if (const auto *ltoId = ctx.driver.getMemProfModuleId())
+      id = *ltoId;
+    if (!id && collectedId) {
+      id.emplace();
+      llvm::copy(*collectedId, id->begin());
+    }
+    if (id) {
+      auto *sec = make<MemProfModuleIdSection>(ctx, *id);
+      add(*sec);
+    }
+  }
 
   if (ctx.arg.zSectionHeader)
     ctx.in.shStrTab =

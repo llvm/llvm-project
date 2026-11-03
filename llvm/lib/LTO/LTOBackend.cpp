@@ -43,6 +43,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 #include <optional>
@@ -366,6 +367,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     break;
   }
 
+  if (!Conf.MemoryProfile.empty())
+    MPM.addPass(MemProfUsePass(Conf.MemoryProfile));
+
   // Parse a custom pipeline if asked to.
   if (!Conf.OptPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, Conf.OptPipeline)) {
@@ -680,6 +684,15 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // Set the partial sample profile ratio in the profile summary module flag of
   // the module, if applicable.
   Mod.setPartialSampleProfileRatio(CombinedIndex);
+
+  if (Conf.MemProfModuleId) {
+    ArrayRef<uint8_t> Id = *Conf.MemProfModuleId;
+    Mod.addModuleFlag(
+        Module::Error, "MemProfModuleId",
+        MDString::get(
+            Mod.getContext(),
+            StringRef(reinterpret_cast<const char *>(Id.data()), Id.size())));
+  }
 
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   if (CodeGenOnly) {

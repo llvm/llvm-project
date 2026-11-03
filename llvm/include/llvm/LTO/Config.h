@@ -26,6 +26,7 @@
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Target/TargetOptions.h"
 
+#include <array>
 #include <functional>
 #include <optional>
 
@@ -139,6 +140,12 @@ struct Config {
 
   /// Sample PGO profile path.
   std::string SampleProfile;
+
+  /// Memory profile path.
+  std::string MemoryProfile;
+
+  /// Stable identifier for the final MemProf-instrumented shared object.
+  std::optional<std::array<uint8_t, 16>> MemProfModuleId;
 
   /// Name remapping file for profile data.
   std::string ProfileRemapping;

@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -48,6 +49,36 @@ namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
 } // namespace llvm
 
+static GlobalValue::GUID getMemProfGUID(const Module &M, StringRef FunctionName,
+                                        bool UseModuleId = true) {
+  auto *ModuleId =
+      dyn_cast_or_null<MDString>(M.getModuleFlag("MemProfModuleId"));
+  if (!UseModuleId || !ModuleId || ModuleId->getString().size() != 16)
+    return memprof::getGUID(FunctionName);
+  return memprof::getGUID(FunctionName,
+                          arrayRefFromStringRef(ModuleId->getString()));
+}
+
+static bool profileUsesModuleIds(const Module &M,
+                                 IndexedInstrProfReader &Reader) {
+  auto *ModuleId =
+      dyn_cast_or_null<MDString>(M.getModuleFlag("MemProfModuleId"));
+  if (!ModuleId || ModuleId->getString().size() != 16)
+    return false;
+
+  // Profiles produced from a single binary retain the original name-only
+  // GUIDs for compatibility. Only use the module ID when this module has a
+  // corresponding module-qualified record in the profile.
+  for (const Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    auto Record = Reader.getMemProfRecord(getMemProfGUID(M, F.getName()));
+    if (Record)
+      return true;
+    consumeError(Record.takeError());
+  }
+  return false;
+}
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
 STATISTIC(NumOfMemProfMismatch,
@@ -240,7 +271,8 @@ struct AllocMatchInfo {
 
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
 memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
-                            function_ref<bool(uint64_t)> IsPresentInProfile) {
+                            function_ref<bool(uint64_t)> IsPresentInProfile,
+                            bool UseModuleId) {
   const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
@@ -272,8 +304,8 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
           StringRef CallerName = DIL->getSubprogramLinkageName();
           assert(!CallerName.empty() &&
                  "Be sure to enable -fdebug-info-for-profiling");
-          uint64_t CallerGUID = memprof::getGUID(CallerName);
-          uint64_t CalleeGUID = memprof::getGUID(CalleeName);
+          uint64_t CallerGUID = getMemProfGUID(M, CallerName, UseModuleId);
+          uint64_t CalleeGUID = getMemProfGUID(M, CalleeName, UseModuleId);
           // Pretend that we are calling a function with GUID == 0 if we are
           // in the inline stack leading to a heap allocation function.
           if (IsAlloc) {
@@ -312,15 +344,16 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
 
 DenseMap<uint64_t, LocToLocMap>
 memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
-                           const TargetLibraryInfo &TLI) {
+                           const TargetLibraryInfo &TLI, bool UseModuleId) {
   DenseMap<uint64_t, LocToLocMap> UndriftMaps;
 
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromProfile =
       MemProfReader->getMemProfCallerCalleePairs();
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromIR =
-      extractCallsFromIR(M, TLI, [&](uint64_t GUID) {
-        return CallsFromProfile.contains(GUID);
-      });
+      extractCallsFromIR(
+          M, TLI,
+          [&](uint64_t GUID) { return CallsFromProfile.contains(GUID); },
+          UseModuleId);
 
   // Compute an undrift map for each CallerGUID.
   for (const auto &[CallerGUID, IRAnchors] : CallsFromIR) {
@@ -602,7 +635,7 @@ static void dumpInlineCallStack(Instruction &I, CallBase *CI,
                                 OptimizationRemarkEmitter &ORE,
                                 DenseSet<uint64_t> &SeenFrames,
                                 DenseSet<uint64_t> &SeenStacks,
-                                bool ProfileHasColumns) {
+                                bool ProfileHasColumns, bool UseModuleId) {
   // Dump frame info.  Frames are deduplicated using FrameID.
   std::string CallStack;
   raw_string_ostream CallStackOS(CallStack);
@@ -612,7 +645,7 @@ static void dumpInlineCallStack(Instruction &I, CallBase *CI,
     StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
       Name = DIL->getScope()->getSubprogram()->getName();
-    auto CalleeGUID = Function::getGUIDAssumingExternalLinkage(Name);
+    auto CalleeGUID = getMemProfGUID(*I.getModule(), Name, UseModuleId);
     uint64_t FrameID = computeStackId(CalleeGUID, getLineOffset(DIL),
                                       ProfileHasColumns ? DIL->getColumn() : 0);
     if (SeenFrames.insert(FrameID).second) {
@@ -649,7 +682,8 @@ readMemprof(const InstrumentationOptions &Opts, Module &M, Function &F,
             std::set<std::vector<uint64_t>> &MatchedCallSites,
             DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
             OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize,
-            DenseSet<uint64_t> &SeenStacks, DenseSet<uint64_t> &SeenFrames) {
+            DenseSet<uint64_t> &SeenStacks, DenseSet<uint64_t> &SeenFrames,
+            bool UseModuleId) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOObjectName() here. If F is local linkage,
   // getIRPGOObjectName() returns FuncName with prefix 'FileName;'. But
@@ -659,7 +693,7 @@ readMemprof(const InstrumentationOptions &Opts, Module &M, Function &F,
   // 'unique-internal-linkage-names' can make MemProf work better for local
   // linkage function.
   auto FuncName = F.getName();
-  auto FuncGUID = Function::getGUIDAssumingExternalLinkage(FuncName);
+  auto FuncGUID = getMemProfGUID(M, FuncName, UseModuleId);
   if (Opts.memprof_print_function_guids)
     errs() << "MemProf: Function GUID " << FuncGUID << " is " << FuncName
            << "\n";
@@ -767,7 +801,7 @@ readMemprof(const InstrumentationOptions &Opts, Module &M, Function &F,
 
       if (ORE.allowExtraAnalysis(DEBUG_TYPE))
         dumpInlineCallStack(I, CI, ORE, SeenFrames, SeenStacks,
-                            ProfileHasColumns);
+                            ProfileHasColumns, UseModuleId);
 
       // List of call stack ids computed from the location hashes on debug
       // locations (leaf to inlined at root).
@@ -788,7 +822,7 @@ readMemprof(const InstrumentationOptions &Opts, Module &M, Function &F,
         StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
         if (Name.empty())
           Name = DIL->getScope()->getSubprogram()->getName();
-        auto CalleeGUID = Function::getGUIDAssumingExternalLinkage(Name);
+        auto CalleeGUID = getMemProfGUID(M, Name, UseModuleId);
         auto StackId = computeStackId(CalleeGUID, getLineOffset(DIL),
                                       ProfileHasColumns ? DIL->getColumn() : 0);
         // Check if we have found the profile's leaf frame. If yes, collect
@@ -867,6 +901,8 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
     return PreservedAnalyses::all();
   }
 
+  const bool UseModuleId = profileUsesModuleIds(M, *MemProfReader);
+
   const bool Changed =
       Opts.memprof_annotate_static_data_prefix &&
       annotateGlobalVariables(M, MemProfReader->getDataAccessProfileData());
@@ -881,7 +917,7 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(*M.begin());
   DenseMap<uint64_t, LocToLocMap> UndriftMaps;
   if (Opts.memprof_salvage_stale_profile)
-    UndriftMaps = computeUndriftMap(M, MemProfReader.get(), TLI);
+    UndriftMaps = computeUndriftMap(M, MemProfReader.get(), TLI, UseModuleId);
 
   // Map from the stack hash of each matched allocation context in the function
   // profiles to match info such as the total profiled size (bytes), allocation
@@ -908,7 +944,7 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     readMemprof(Opts, M, F, MemProfReader.get(), TLI,
                 FullStackIdToAllocMatchInfo, MatchedCallSites, UndriftMaps, ORE,
-                MaxColdSize, SeenStacks, SeenFrames);
+                MaxColdSize, SeenStacks, SeenFrames, UseModuleId);
   }
 
   if (Opts.memprof_print_match_info) {
