@@ -230,6 +230,7 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   const unsigned ValIdx = 1;
 
   const bool IsLDS = I.getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  bool ValDivergent = UA.isDivergentAtUse(I.getOperandUse(ValIdx));
 
   // If the pointer operand is divergent, then each lane is doing an atomic
   // operation on a different address, and we cannot optimize that.
@@ -237,12 +238,10 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   if (UA.isDivergentAtUse(I.getOperandUse(PtrIdx))) {
     if (ST.hasWaveMatchInsts() && ST.hasExclusiveScanInsts() &&
         I.getType()->isIntegerTy() && I.getType()->getIntegerBitWidth() <= 32)
-      ToReplace.push_back({&I, Op, ValIdx, /*ValDivergent=*/false, IsLDS,
-                           PtrIdx, /*PtrDivergent=*/true});
+      ToReplace.push_back(
+          {&I, Op, ValIdx, ValDivergent, IsLDS, PtrIdx, /*PtrDivergent=*/true});
     return;
   }
-
-  bool ValDivergent = UA.isDivergentAtUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
@@ -340,7 +339,7 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
     return;
 
   unsigned OffsetArg;
-  bool IsVOffsetDivergent = true;
+  bool CanOptimizeDivergentOffset = true;
   switch (I.getIntrinsicID()) {
   default: {
     OffsetArg = 2;
@@ -369,31 +368,30 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   }
   }
 
-  //  Everything except offset should be uniform
+  // Everything except offset should be uniform
   for (unsigned Idx = 1; Idx < I.getNumOperands(); Idx++) {
     if (Idx == OffsetArg)
       continue;
     if (UA.isDivergentAtUse(I.getOperandUse(Idx))) {
-      IsVOffsetDivergent = false;
+      CanOptimizeDivergentOffset = false;
       break;
     }
   }
 
   // Offset should be divergent
   if (!UA.isDivergentAtUse(I.getOperandUse(OffsetArg)))
-    IsVOffsetDivergent = false;
-
-  if (IsVOffsetDivergent) {
-    if (ST.hasWaveMatchInsts() && ST.hasExclusiveScanInsts() &&
-        I.getType()->isIntegerTy(32))
-      ToReplace.push_back(
-          {&I, Op, 0, false, /*IsLDS=*/false, OffsetArg, IsVOffsetDivergent});
-    return;
-  }
+    CanOptimizeDivergentOffset = false;
 
   const unsigned ValIdx = 0;
-
   const bool ValDivergent = UA.isDivergentAtUse(I.getOperandUse(ValIdx));
+
+  if (CanOptimizeDivergentOffset) {
+    if (ST.hasWaveMatchInsts() && ST.hasExclusiveScanInsts() &&
+        I.getType()->isIntegerTy(32))
+      ToReplace.push_back({&I, Op, ValIdx, ValDivergent, /*IsLDS=*/false,
+                           OffsetArg, /*PtrDivergent=*/true});
+    return;
+  }
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
