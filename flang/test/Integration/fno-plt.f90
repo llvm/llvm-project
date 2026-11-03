@@ -27,8 +27,8 @@ end subroutine
 ! NOPLT: declare void @ext_() #[[ATTR:[0-9]+]]
 ! NOPLT: declare ptr @_FortranAioBeginExternalListOutput({{.*}}) #[[ATTR]]
 ! NOPLT: declare float @llvm.sin.f32(float) #[[INTR:[0-9]+]]
-! NOPLT: attributes #[[ATTR]] = { nonlazybind }
+! NOPLT: attributes #[[ATTR]] = { {{.*}}nonlazybind
 ! NOPLT-NOT: attributes #[[INTR]] = {{.*}}nonlazybind
-! NOPLT: !"RtLibUseGOT"
+! NOPLT: !{i32 7, !"RtLibUseGOT", i32 1}
 ! PLT-NOT: nonlazybind
 ! PLT-NOT: RtLibUseGOT
