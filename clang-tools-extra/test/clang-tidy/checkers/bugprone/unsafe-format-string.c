@@ -5,6 +5,8 @@
 void test_sprintf() {
   char buffer[100];
   const char* input = "user input";
+  const wchar_t* winput = L"wide user input";
+
 
   /* unsafe %s without field width */
   sprintf(buffer, "%s", input);
@@ -38,6 +40,9 @@ void test_sprintf() {
 
   /*limit is taken as 0*/
   sprintf(buffer, "%.s", 99, input);
+
+  /*limit is taken as 0*/
+  sprintf(buffer, "%.1ls", winput);
 
   /*other format specifiers are safe */
   sprintf(buffer, "%d %f", 42, 3.14);

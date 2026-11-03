@@ -53,5 +53,5 @@ extern int fprintf( FILE*          stream, const char*          format, ... );
 extern int snprintf( char* restrict buffer, size_t bufsz,
               const char* restrict format, ... );
 #ifdef __cplusplus
-} //namespace std {
+} // namespace std
 #endif

@@ -19,15 +19,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringRef OptionNameCustomPrintfFunctions =
+static constexpr StringRef OptionNameCustomPrintfFunctions =
     "CustomPrintfFunctions";
-static constexpr llvm::StringRef OptionNameCustomScanfFunctions =
+static constexpr StringRef OptionNameCustomScanfFunctions =
     "CustomScanfFunctions";
 
-static constexpr llvm::StringRef BuiltInFormatBind = "format";
-static constexpr llvm::StringRef BuiltInCallBind = "call";
-static constexpr llvm::StringRef PrintfCallBind = "printfcall";
-static constexpr llvm::StringRef ScanfCallBind = "scanfcall";
+static constexpr StringRef BuiltInFormatBind = "format";
+static constexpr StringRef BuiltInCallBind = "call";
+static constexpr StringRef PrintfCallBind = "printfcall";
+static constexpr StringRef ScanfCallBind = "scanfcall";
 
 static std::vector<UnsafeFormatStringCheck::CheckedFunction>
 parseCheckedFunctions(StringRef OptionName, StringRef Option,
@@ -46,7 +46,7 @@ parseCheckedFunctions(StringRef OptionName, StringRef Option,
         ParamCount.trim().getAsInteger(10, Count)) {
       Context->configurationDiag(
           "invalid configuration value for option '%0'; "
-          "expected <functionname>, <paramcount>; pairs.")
+          "expected '<functionname>, <paramcount>;' pairs")
           << OptionName;
       continue;
     }
@@ -57,6 +57,20 @@ parseCheckedFunctions(StringRef OptionName, StringRef Option,
   }
 
   return Result;
+}
+
+void UnsafeFormatStringCheck::registerFunctionMatchers(
+    MatchFinder *Finder, const std::vector<CheckedFunction> &Funcs,
+    StringRef BindTo) {
+  std::vector<llvm::StringRef> FunctionNames;
+  FunctionNames.reserve(Funcs.size());
+  for (const CheckedFunction &Entry : Funcs)
+    FunctionNames.emplace_back(Entry.Name);
+  const auto CustomFunctionsMatcher =
+      matchers::matchesAnyListedRegexName(FunctionNames);
+  Finder->addMatcher(
+      callExpr(callee(functionDecl(CustomFunctionsMatcher))).bind(BindTo),
+      this);
 }
 
 UnsafeFormatStringCheck::UnsafeFormatStringCheck(StringRef Name,
@@ -95,35 +109,10 @@ void UnsafeFormatStringCheck::registerMatchers(MatchFinder *Finder) {
           .bind(BuiltInCallBind),
       this);
 
-  if (!CustomPrintfFunctions.empty()) {
-    std::vector<llvm::StringRef> FunctionNames;
-    FunctionNames.reserve(CustomPrintfFunctions.size());
-
-    for (const CheckedFunction &Entry : CustomPrintfFunctions)
-      FunctionNames.emplace_back(Entry.Name);
-
-    const auto CustomFunctionsMatcher =
-        matchers::matchesAnyListedRegexName(FunctionNames);
-
-    Finder->addMatcher(callExpr(callee(functionDecl(CustomFunctionsMatcher)))
-                           .bind(PrintfCallBind),
-                       this);
-  }
-
-  if (!CustomScanfFunctions.empty()) {
-    std::vector<llvm::StringRef> FunctionNames;
-    FunctionNames.reserve(CustomScanfFunctions.size());
-
-    for (const CheckedFunction &Entry : CustomScanfFunctions)
-      FunctionNames.emplace_back(Entry.Name);
-
-    const auto CustomFunctionsMatcher =
-        matchers::matchesAnyListedRegexName(FunctionNames);
-
-    Finder->addMatcher(callExpr(callee(functionDecl(CustomFunctionsMatcher)))
-                           .bind(ScanfCallBind),
-                       this);
-  }
+  if (!CustomPrintfFunctions.empty())
+    registerFunctionMatchers(Finder, CustomPrintfFunctions, PrintfCallBind);
+  if (!CustomScanfFunctions.empty())
+    registerFunctionMatchers(Finder, CustomScanfFunctions, ScanfCallBind);
 }
 
 std::string UnsafeFormatStringCheck::serializeConfig(
@@ -198,19 +187,14 @@ static bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily) {
     // Check for precision
     bool HasPrecision = false;
     if (SpecPos < N && Fmt[SpecPos] == '.') {
+      HasPrecision = true;
       SpecPos++;
       if (SpecPos < N && Fmt[SpecPos] == '*') {
         // precision in argument
-        HasPrecision = true;
         SpecPos++;
-      } else if (SpecPos < N && Fmt[SpecPos] == 's') {
-        // precision is 0
-        HasPrecision = true;
-      } else {
-        while (SpecPos < N && isdigit(Fmt[SpecPos])) {
-          HasPrecision = true;
+      } else  {
+        while (SpecPos < N && isdigit(Fmt[SpecPos]))
           SpecPos++;
-        }
       }
     }
 
@@ -247,8 +231,7 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
   if ((Call = Result.Nodes.getNodeAs<CallExpr>(BuiltInCallBind))) {
     Format = Result.Nodes.getNodeAs<StringLiteral>(BuiltInFormatBind);
     const auto *Callee = cast<FunctionDecl>(Call->getCalleeDecl());
-    const StringRef FunctionName = Callee->getName();
-    IsScanfFamily = FunctionName.contains("scanf");
+    IsScanfFamily = Callee->getName().contains("scanf");
   } else if ((Call = Result.Nodes.getNodeAs<CallExpr>(PrintfCallBind))) {
     Format =
         UnsafeFormatStringCheck::getFormatLiteral(Call, CustomPrintfFunctions);

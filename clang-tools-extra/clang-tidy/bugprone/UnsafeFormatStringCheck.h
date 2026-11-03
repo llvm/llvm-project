@@ -35,6 +35,9 @@ public:
 private:
   const std::vector<CheckedFunction> CustomPrintfFunctions;
   const std::vector<CheckedFunction> CustomScanfFunctions;
+  void registerFunctionMatchers(ast_matchers::MatchFinder *Finder,
+                                const std::vector<CheckedFunction> &Funcs,
+                                StringRef BindTo);
   std::string serializeConfig(const std::vector<CheckedFunction> &Functions);
   static const StringLiteral *
   getFormatLiteral(const CallExpr *,
