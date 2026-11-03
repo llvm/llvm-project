@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -136,6 +137,8 @@ private:
   }
 };
 
+} // end anonymous namespace
+
 struct SLSHardeningInserter : ThunkInserter<SLSHardeningInserter, ThunksSet> {
 public:
   const char *getThunkPrefix() { return CommonNamePrefix.data(); }
@@ -161,8 +164,6 @@ private:
                       MachineBasicBlock::instr_iterator MBBI,
                       ThunksSet &Thunks);
 };
-
-} // end anonymous namespace
 
 const ThunkKind ThunkKind::BR = {ThunkBR, "", /*HasXmOperand=*/false,
                                  /*NeedsPAuth=*/false, AArch64::BR};
@@ -527,6 +528,12 @@ FunctionPass *llvm::createAArch64SLSHardeningLegacyPass() {
   return new AArch64SLSHardeningLegacy();
 }
 
+AArch64SLSHardeningPass::AArch64SLSHardeningPass() {}
+
+AArch64SLSHardeningPass::AArch64SLSHardeningPass(AArch64SLSHardeningPass &&) =
+    default;
+AArch64SLSHardeningPass::~AArch64SLSHardeningPass() = default;
+
 PreservedAnalyses
 AArch64SLSHardeningPass::run(MachineFunction &MF,
                              MachineFunctionAnalysisManager &MFAM) {
@@ -536,10 +543,12 @@ AArch64SLSHardeningPass::run(MachineFunction &MF,
               *MF.getFunction().getParent());
   assert(MMI && "MachineModuleAnalysis must be available");
 
-  SLSHardeningInserter Inserter;
-  Inserter.init(*MF.getFunction().getParent());
+  if (!Inserter) {
+    Inserter = std::make_unique<SLSHardeningInserter>();
+    Inserter->init(*MF.getFunction().getParent());
+  }
 
-  if (Inserter.run(MMI->getMMI(), MF)) {
+  if (Inserter->run(MMI->getMMI(), MF)) {
     PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
     PA.preserveSet<CFGAnalyses>();
     return PA;
