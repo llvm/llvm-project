@@ -310,8 +310,7 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
       break;
   }
 
-  if (OldMBB)
-    MIRBuilder.setInsertPt(*OldMBB, oldInsertPoint);
+  MIRBuilder.setInsertPt(*OldMBB, oldInsertPoint);
   return ConstOrType;
 }
 
