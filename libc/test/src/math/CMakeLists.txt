@@ -328,6 +328,7 @@ add_fp_unittest(
     libc.src.math.fabsbf16
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
