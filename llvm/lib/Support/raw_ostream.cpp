@@ -62,6 +62,26 @@
 
 using namespace llvm;
 
+namespace {
+// raw_ostream records I/O failures out of band. Use a distinct ErrorInfo type
+// so callers can propagate them as Error values and add file context without
+// altering errors returned by the output callback.
+class RawOstreamError : public ErrorInfo<RawOstreamError> {
+public:
+  static char ID;
+
+  explicit RawOstreamError(std::error_code EC) : EC(EC) {}
+
+  void log(raw_ostream &OS) const override { OS << EC.message(); }
+  std::error_code convertToErrorCode() const override { return EC; }
+
+private:
+  std::error_code EC;
+};
+} // namespace
+
+char RawOstreamError::ID;
+
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
   // in their destructors.
@@ -664,6 +684,14 @@ raw_fd_ostream::~raw_fd_ostream() {
                           error().message());
 }
 
+Error raw_fd_ostream::takeError() {
+  if (!has_error())
+    return Error::success();
+  Error E = make_error<RawOstreamError>(error());
+  clear_error();
+  return E;
+}
+
 #if defined(_WIN32)
 // The most reliable way to print unicode in a Windows console is with
 // WriteConsoleW. To use that, first transcode from UTF-8 to UTF-16. This
@@ -933,6 +961,15 @@ ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
   return Ret;
 }
 
+Error raw_fd_stream::resize(uint64_t Size) {
+  flush();
+  if (has_error())
+    return takeError();
+  if (std::error_code EC = sys::fs::resize_file(get_fd(), Size))
+    return make_error<RawOstreamError>(EC);
+  return Error::success();
+}
+
 bool raw_fd_stream::classof(const raw_ostream *OS) {
   return OS->get_kind() == OStreamKind::OK_FDStream;
 }
@@ -1027,14 +1064,22 @@ Error llvm::writeToOutput(StringRef OutputFileName,
   }
 #endif
 
-  raw_fd_ostream Out(Temp->FD, false);
+  Error E = handleErrors(
+      [&]() -> Error {
+        raw_fd_stream Out(Temp->FD, false);
+        Error WriteError = Write(Out);
+        Out.flush();
+        return joinErrors(std::move(WriteError), Out.takeError());
+      }(),
+      [&](std::unique_ptr<RawOstreamError> StreamError) {
+        return createFileError(OutputFileName, Error(std::move(StreamError)));
+      });
 
-  if (Error E = Write(Out)) {
+  if (E) {
     if (Error DiscardError = Temp->discard())
       return joinErrors(std::move(E), std::move(DiscardError));
     return E;
   }
-  Out.flush();
 
   return Temp->keep(OutputFileName);
 }
