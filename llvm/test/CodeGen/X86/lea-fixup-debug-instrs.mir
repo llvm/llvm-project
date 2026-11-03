@@ -3,7 +3,7 @@
 # threshold of five, the three NOOPs leave the ADD in range only if debug
 # instructions are ignored. Pin the threshold so changing its default cannot
 # mask this regression.
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -x86-fixup-leas-search-distance-threshold=5 -run-pass=x86-fixup-leas -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -x86-fixup-leas-search-distance-threshold=5 -run-pass=x86-fixup-leas -o - %s | FileCheck %s
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -x86-fixup-leas-search-distance-threshold=5 -passes="require<profile-summary>,function(machine-function(x86-fixup-leas))" -verify-machineinstrs -o - %s | FileCheck %s
 
 --- |

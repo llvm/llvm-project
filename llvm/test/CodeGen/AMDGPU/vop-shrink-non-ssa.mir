@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs -passes si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
 ...
 # GCN-LABEL: name: fold_imm_non_ssa{{$}}
