@@ -38,9 +38,9 @@ inline bool CC_PPC64_ELF_Shadow_GPR_Regs(unsigned &ValNo, MVT &ValVT,
     return false;
 
   // As described in 2.2.4.1 under the "float" section, shadow a single GPR
-  // for single/double precision. ppcf128 gets broken up into two doubles
+  // for half/single/double precision. ppcf128 gets broken up into two doubles
   // and will also shadow GPRs within this section.
-  if (LocVT == MVT::f32 || LocVT == MVT::f64)
+  if (LocVT == MVT::f16 || LocVT == MVT::f32 || LocVT == MVT::f64)
     State.AllocateReg(ELF64ArgGPRs);
   else if (LocVT.is128BitVector() || (LocVT == MVT::f128)) {
     // For vector and __float128 (which is represents the "vector" section

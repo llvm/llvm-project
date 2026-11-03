@@ -34,7 +34,8 @@ PPCRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
                                             LLT Ty) const {
   switch (RC.getID()) {
   case PPC::VSFRCRegClassID:
-  case PPC::SPILLTOVSRRC_and_VSFRCRegClassID:
+  case PPC::VHFRCRegClassID:
+  case PPC::SPILLTOVSRRC_and_VHFRCRegClassID:
   case PPC::SPILLTOVSRRC_and_VFRCRegClassID:
   case PPC::SPILLTOVSRRC_and_F4RCRegClassID:
   case PPC::F8RCRegClassID:
