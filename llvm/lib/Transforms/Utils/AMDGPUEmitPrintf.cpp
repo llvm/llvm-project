@@ -372,7 +372,7 @@ static void
 callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
                           Value *PtrToStore, SparseBitVector<8> &SpecIsCString,
                           SmallVectorImpl<StringData> &StringContents,
-                          bool IsConstFmtStr) {
+                          bool IsConstFmtStr, Align SlotAlign) {
   Module *M = Builder.getModule();
   const DataLayout &DL = M->getDataLayout();
   auto StrIt = StringContents.begin();
@@ -401,7 +401,7 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       // to alignment padding is not populated with any specific value
       // here. This would be safe as long as runtime is sync with
       // the offsets.
-      Builder.CreateMemCpy(PtrToStore, /*DstAlign*/ Align(1), Args[i],
+      Builder.CreateMemCpy(PtrToStore, /*DstAlign*/ SlotAlign, Args[i],
                            /*SrcAlign*/ Args[i]->getPointerAlignment(DL),
                            StrIt->RealSize);
 
@@ -486,7 +486,14 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
 
     Builder.CreateStore(ControlDWord, Ptr);
 
-    Ptr = Builder.CreateConstInBoundsGEP1_32(Int8Ty, Ptr, 4);
+    // The device runtime places frames back to back and every frame size is a
+    // multiple of 4 bytes, so a frame is only guaranteed to be 4-byte aligned.
+    // Everything after the control dword is padded to 8 bytes, so all later
+    // slots share the alignment of the first one.
+    uint64_t ControlDWordSize =
+        M->getDataLayout().getTypeStoreSize(ControlDWord->getType());
+    Align SlotAlign = commonAlignment(Align(4), ControlDWordSize);
+    Ptr = Builder.CreateConstInBoundsGEP1_32(Int8Ty, Ptr, ControlDWordSize);
 
     // Create MD5 hash for constant format string, push low 64 bits of the
     // same onto buffer and metadata.
@@ -522,7 +529,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
 
     // Push The printf arguments onto buffer
     callBufferedPrintfArgPush(Builder, Args, Ptr, SpecIsCString, StringContents,
-                              IsConstFmtStr);
+                              IsConstFmtStr, SlotAlign);
 
     // End block, returns -1 on failure
     UncondBrInst::Create(End, ArgPush);

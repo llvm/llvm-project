@@ -61,7 +61,7 @@ extern "C" __device__ int printf(const char *format, ...);
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
 // CHECK-NEXT:    store i64 4, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
-// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[PRINTBUFFNEXTPTR3]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[PRINTBUFFNEXTPTR3]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], i64 [[TMP13]]
 // CHECK-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 8
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], i32 8
@@ -117,7 +117,7 @@ extern "C" __device__ int printf(const char *format, ...);
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
 // CHECK_CONSTRAINED-NEXT:    store i64 4, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
-// CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[PRINTBUFFNEXTPTR3]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
+// CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[PRINTBUFFNEXTPTR3]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], i64 [[TMP13]]
 // CHECK_CONSTRAINED-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], i32 8
@@ -171,7 +171,7 @@ __device__ const
 // CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
 // CHECK-NEXT:    store i64 7257695813269076350, ptr addrspace(1) [[TMP20]], align 8
 // CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP20]], i32 8
-// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP21]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP21]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP13]]
 // CHECK-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
@@ -222,7 +222,7 @@ __device__ const
 // CHECK_CONSTRAINED-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
 // CHECK_CONSTRAINED-NEXT:    store i64 7257695813269076350, ptr addrspace(1) [[TMP20]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP20]], i32 8
-// CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP21]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
+// CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP21]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP13]]
 // CHECK_CONSTRAINED-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
@@ -414,7 +414,7 @@ __device__ int foo3() {
 // CHECK-NEXT:    [[TMP17:%.*]] = shl i32 [[TMP14]], 2
 // CHECK-NEXT:    store i32 [[TMP17]], ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
 // CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
-// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP18]], ptr align 1 [[TMP0]], i64 [[TMP10]], i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP18]], ptr align 1 [[TMP0]], i64 [[TMP10]], i1 false)
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP18]], i64 [[TMP12]]
 // CHECK-NEXT:    store i64 10, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
@@ -458,7 +458,7 @@ __device__ int foo3() {
 // CHECK_CONSTRAINED-NEXT:    [[TMP17:%.*]] = shl i32 [[TMP14]], 2
 // CHECK_CONSTRAINED-NEXT:    store i32 [[TMP17]], ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
-// CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP18]], ptr align 1 [[TMP0]], i64 [[TMP10]], i1 false)
+// CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP18]], ptr align 1 [[TMP0]], i64 [[TMP10]], i1 false)
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP18]], i64 [[TMP12]]
 // CHECK_CONSTRAINED-NEXT:    store i64 10, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
