@@ -59,7 +59,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
       std::push_heap(a, a + len, cmp);
       assert(lwg2166_heap(a, a + len, cmp));
     }
-  } 
+  }
 
   // all equal elements.
   {
