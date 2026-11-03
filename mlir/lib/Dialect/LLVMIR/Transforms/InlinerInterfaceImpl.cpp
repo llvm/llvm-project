@@ -521,7 +521,8 @@ handleLoopAnnotations(Operation *call,
         loopAnnotation.getDistribute(), loopAnnotation.getPipeline(),
         loopAnnotation.getPeeled(), loopAnnotation.getUnswitch(),
         loopAnnotation.getMustProgress(), loopAnnotation.getIsVectorized(),
-        newStartLoc, newEndLoc, loopAnnotation.getParallelAccesses());
+        loopAnnotation.getAlign(), newStartLoc, newEndLoc,
+        loopAnnotation.getParallelAccesses());
     // Needs to advance, as loop annotations can be nested.
     return {newLoopAnnotation, WalkResult::advance()};
   });

@@ -34,6 +34,7 @@ class APInt;
 class Instruction;
 class IntrinsicInst;
 class Loop;
+class LoopInfo;
 class SCEV;
 class ScalarEvolution;
 class Type;
@@ -322,12 +323,6 @@ public:
     if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors()) {
-      unsigned Bits = DataType->getPrimitiveSizeInBits();
-      if (Bits != 64 && Bits != 128)
-        return false; // Fall back to scalarization of masked operations.
-    }
-
     // Type legalization cannot scalarize the data of a masked load/store.
     // Reject types that would be legalized to a scalar (e.g. <1 x half>).
     if (isa<FixedVectorType>(DataType) &&
@@ -568,8 +563,8 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
-  bool isProfitableToSinkOperands(Instruction *I,
-                                  SmallVectorImpl<Use *> &Ops) const override;
+  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops,
+                                  const LoopInfo *LI) const override;
 
   bool enableAggressiveInterleaving(bool) const override {
     return ST->enableAggressiveInterleaving();

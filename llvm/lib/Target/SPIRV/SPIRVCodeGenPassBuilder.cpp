@@ -196,7 +196,7 @@ void SPIRVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  addModulePass(SPIRVAsmPrinterBeginPass(), PMW);
+  addModulePass(SPIRVAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
@@ -210,7 +210,7 @@ void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  addModulePass(SPIRVAsmPrinterEndPass(), PMW);
+  addModulePass(SPIRVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace

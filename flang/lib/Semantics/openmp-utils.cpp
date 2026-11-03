@@ -44,6 +44,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <array>
 #include <cinttypes>
@@ -77,7 +78,9 @@ bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
       return true;
     }
   }
-  return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+
+  const auto &desc{llvm::omp::getDescriptor(dirId)};
+  return descriptor::GetAllowedElements(desc, version).test(clauseId);
 }
 
 bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
@@ -146,14 +149,13 @@ SourcedActionStmt GetActionStmt(const parser::Block &block) {
 }
 
 std::string ThisVersion(llvm::omp::Version version) {
-  auto v{static_cast<unsigned>(version)};
+  auto v{version.value()};
   std::string tv{std::to_string(v / 10) + "." + std::to_string(v % 10)};
   return "OpenMP v" + tv;
 }
 
 std::string TryVersion(llvm::omp::Version version) {
-  return "try -fopenmp-version=" +
-      std::to_string(static_cast<unsigned>(version));
+  return "try -fopenmp-version=" + std::to_string(version.value());
 }
 
 static const Symbol *GetFunctionReferenceSymbol(
@@ -327,13 +329,23 @@ bool IsVariableListItem(
   return false;
 }
 
-bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx) {
-  if (auto *desg{GetDesignatorFromObj(object)}) {
+std::optional<bool> IsSubstringAndValidate(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  // Whole objects and other designators cannot be substrings. Analyzing them
+  // as expressions can reject otherwise valid OpenMP list items.
+  if (auto *desg{GetDesignatorFromObj(object)}; desg &&
+      (std::holds_alternative<parser::Substring>(desg->u) ||
+          GetArrayElementFromObj(object))) {
+    // This query also validates potential substrings, including in clauses
+    // where they are permitted. Expression analysis can mark symbols erroneous
+    // and rewrite the parse tree, so it is not free of side effects. Retain its
+    // diagnostics: discarding them leaves erroneous symbols without a reported
+    // error and can cause assertion failures when those symbols are used again.
     evaluate::ExpressionAnalyzer ea(*semaCtx);
-    auto restorer{ea.GetContextualMessages().DiscardMessages()};
     if (MaybeExpr expr{ea.Analyze(*desg)}) {
       return ExtractSubstring(*expr).has_value();
     }
+    return std::nullopt;
   }
   return false;
 }
@@ -1166,8 +1178,8 @@ struct ArrayExpressionRecognizer {
     return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
   }
 
-  template <TypeCategory C, int K>
-  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C, K>> &x) {
+  template <TypeCategory C>
+  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C>> &x) {
     return common::visit([](auto &&s) { return isArrayExpression(s); },
         evaluate::match::deparen(x).u);
   }
@@ -1328,7 +1340,19 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
   bool allowsOrdered{IsClauseAllowedOnDirective(
       llvm::omp::Clause::OMPC_ordered, dir, version, overrides)};
 
-  if (allowsCollapse || allowsOrdered) {
+  // KLUDGE:
+  // LOOP is the only non-loop-transforming loop-associated directive
+  // that is not present in 4.5. With version=45 both allowsCollapse and
+  // allowsOrdered will be false, and the function will return nullopt.
+  // This will be handled properly once version checks for directives
+  // are present: LOOP will be added to the semantic overrides if it
+  // ends up being allowed.
+  // Until then treat it as a special case.
+  bool hasLoopConstruct{
+      llvm::is_contained(llvm::omp::getLeafConstructsOrSelf(dir),
+          llvm::omp::Directive::OMPD_loop)};
+
+  if (allowsCollapse || allowsOrdered || hasLoopConstruct) {
     auto [ccount, creason]{GetArgumentValueWithReason(
         spec, llvm::omp::Clause::OMPC_collapse, version, semaCtx)};
     auto [ocount, oreason]{GetArgumentValueWithReason(
@@ -2353,7 +2377,8 @@ std::optional<bool> EvaluateUserCondition(
     return *constVal != 0;
 
   if (auto logicalVal =
-          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(foldedExpr))
+          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
+              evaluate::LogicalResultKind, foldedExpr))
     return logicalVal->IsTrue();
 
   return std::nullopt;
@@ -2775,11 +2800,9 @@ struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
     return common::Clone(parentheses.left());
   }
 
-  template <int KIND>
-  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
-  operator()(evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
-                 &&expr,
-      const evaluate::LogicalOperation<KIND> &operation) {
+  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>> operator()(
+      evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>> &&expr,
+      const evaluate::LogicalOperation &operation) {
     if ((operation.logicalOperator == evaluate::LogicalOperator::And ||
             operation.logicalOperator == evaluate::LogicalOperator::Or) &&
         AreSameMetadirectiveCondition(operation.left(), operation.right()))
@@ -3243,10 +3266,5 @@ const Symbol *FindOperatorUserReductionSymbol(
     const Scope &scope, const Symbol &operatorSym, const DeclTypeSpec *type) {
   return FindUserReductionSymbol(
       scope, MangleDefinedOperator(operatorSym.name()), type);
-}
-
-parser::CharBlock MangledIntrinsicOperatorReductionName(
-    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context) {
-  return MakeNameFromOperator(op, context);
 }
 } // namespace Fortran::semantics::omp
