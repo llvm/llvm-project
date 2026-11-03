@@ -44,7 +44,7 @@ define i32 @caller_i64_in_regs() nounwind {
   ; ILP32-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32-NEXT:   $x11 = COPY [[UV]](s32)
   ; ILP32-NEXT:   $x12 = COPY [[UV1]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i64_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i64_in_regs, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -59,7 +59,7 @@ define i32 @caller_i64_in_regs() nounwind {
   ; ILP32F-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32F-NEXT:   $x11 = COPY [[UV]](s32)
   ; ILP32F-NEXT:   $x12 = COPY [[UV1]](s32)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i64_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i64_in_regs, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -74,7 +74,7 @@ define i32 @caller_i64_in_regs() nounwind {
   ; ILP32D-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32D-NEXT:   $x11 = COPY [[UV]](s32)
   ; ILP32D-NEXT:   $x12 = COPY [[UV1]](s32)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i64_in_regs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i64_in_regs, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -149,7 +149,7 @@ define i32 @callee_128i_indirect_refernce_in_stack( ) {
   ; ILP32-NEXT:   $x15 = COPY [[UV5]](s32)
   ; ILP32-NEXT:   $x16 = COPY [[UV6]](s32)
   ; ILP32-NEXT:   $x17 = COPY [[UV7]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
@@ -187,7 +187,7 @@ define i32 @callee_128i_indirect_refernce_in_stack( ) {
   ; ILP32F-NEXT:   $x15 = COPY [[UV5]](s32)
   ; ILP32F-NEXT:   $x16 = COPY [[UV6]](s32)
   ; ILP32F-NEXT:   $x17 = COPY [[UV7]](s32)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
   ; ILP32F-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
@@ -225,7 +225,7 @@ define i32 @callee_128i_indirect_refernce_in_stack( ) {
   ; ILP32D-NEXT:   $x15 = COPY [[UV5]](s32)
   ; ILP32D-NEXT:   $x16 = COPY [[UV6]](s32)
   ; ILP32D-NEXT:   $x17 = COPY [[UV7]](s32)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
   ; ILP32D-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
@@ -346,7 +346,7 @@ define i32 @caller_128i_indirect_reference_in_stack_not_first() {
   ; ILP32-NEXT:   $x15 = COPY [[UV5]](s32)
   ; ILP32-NEXT:   $x16 = COPY [[UV6]](s32)
   ; ILP32-NEXT:   $x17 = COPY [[UV7]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack_not_first, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack_not_first, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 36, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
@@ -413,7 +413,7 @@ define i32 @caller_128i_indirect_reference_in_stack_not_first() {
   ; ILP32F-NEXT:   $x15 = COPY [[UV5]](s32)
   ; ILP32F-NEXT:   $x16 = COPY [[UV6]](s32)
   ; ILP32F-NEXT:   $x17 = COPY [[UV7]](s32)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack_not_first, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack_not_first, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
   ; ILP32F-NEXT:   ADJCALLSTACKUP 36, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
@@ -480,7 +480,7 @@ define i32 @caller_128i_indirect_reference_in_stack_not_first() {
   ; ILP32D-NEXT:   $x15 = COPY [[UV5]](s32)
   ; ILP32D-NEXT:   $x16 = COPY [[UV6]](s32)
   ; ILP32D-NEXT:   $x17 = COPY [[UV7]](s32)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack_not_first, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_stack_not_first, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10, implicit-def $x11
   ; ILP32D-NEXT:   ADJCALLSTACKUP 36, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
@@ -526,7 +526,7 @@ define i32 @caller_128i_indirect_reference_in_regs( ) {
   ; ILP32-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -546,7 +546,7 @@ define i32 @caller_128i_indirect_reference_in_regs( ) {
   ; ILP32F-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -566,7 +566,7 @@ define i32 @caller_128i_indirect_reference_in_regs( ) {
   ; ILP32D-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -612,7 +612,7 @@ define i32 @caller_256i_indirect_reference_in_regs( ) {
   ; ILP32-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 8)
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -632,7 +632,7 @@ define i32 @caller_256i_indirect_reference_in_regs( ) {
   ; ILP32F-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 8)
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -652,7 +652,7 @@ define i32 @caller_256i_indirect_reference_in_regs( ) {
   ; ILP32D-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 8)
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -744,7 +744,7 @@ define i32 @caller_many_scalars() nounwind {
   ; ILP32-NEXT:   $x15 = COPY [[C4]](s32)
   ; ILP32-NEXT:   $x16 = COPY [[C5]](s32)
   ; ILP32-NEXT:   $x17 = COPY [[UV2]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_many_scalars, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_many_scalars, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -780,7 +780,7 @@ define i32 @caller_many_scalars() nounwind {
   ; ILP32F-NEXT:   $x15 = COPY [[C4]](s32)
   ; ILP32F-NEXT:   $x16 = COPY [[C5]](s32)
   ; ILP32F-NEXT:   $x17 = COPY [[UV2]](s32)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_many_scalars, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_many_scalars, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -816,7 +816,7 @@ define i32 @caller_many_scalars() nounwind {
   ; ILP32D-NEXT:   $x15 = COPY [[C4]](s32)
   ; ILP32D-NEXT:   $x16 = COPY [[C5]](s32)
   ; ILP32D-NEXT:   $x17 = COPY [[UV2]](s32)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_many_scalars, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_many_scalars, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; ILP32D-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -859,7 +859,7 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -876,7 +876,7 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32F-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -893,7 +893,7 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32D-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -968,7 +968,7 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32-NEXT:   $x15 = COPY [[C5]](s32)
   ; ILP32-NEXT:   $x16 = COPY [[C6]](s32)
   ; ILP32-NEXT:   $x17 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -1006,7 +1006,7 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32F-NEXT:   $x15 = COPY [[C5]](s32)
   ; ILP32F-NEXT:   $x16 = COPY [[C6]](s32)
   ; ILP32F-NEXT:   $x17 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -1044,7 +1044,7 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32D-NEXT:   $x15 = COPY [[C5]](s32)
   ; ILP32D-NEXT:   $x16 = COPY [[C6]](s32)
   ; ILP32D-NEXT:   $x17 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; ILP32D-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -1083,7 +1083,7 @@ define i32 @caller_small_coerced_struct() nounwind {
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32-NEXT:   $x11 = COPY [[C1]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -1096,7 +1096,7 @@ define i32 @caller_small_coerced_struct() nounwind {
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32F-NEXT:   $x11 = COPY [[C1]](s32)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -1109,7 +1109,7 @@ define i32 @caller_small_coerced_struct() nounwind {
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32D-NEXT:   $x11 = COPY [[C1]](s32)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -1136,7 +1136,7 @@ define i32 @caller_small_scalar_ret() nounwind {
   ; ILP32: bb.1 (%ir-block.0):
   ; ILP32-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 987654321234567
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32_lp64, implicit-def dead $x1, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -1150,7 +1150,7 @@ define i32 @caller_small_scalar_ret() nounwind {
   ; ILP32F: bb.1 (%ir-block.0):
   ; ILP32F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 987654321234567
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32f_lp64f, implicit-def dead $x1, implicit-def $x10, implicit-def $x11
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -1164,7 +1164,7 @@ define i32 @caller_small_scalar_ret() nounwind {
   ; ILP32D: bb.1 (%ir-block.0):
   ; ILP32D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 987654321234567
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32d_lp64d, implicit-def dead $x1, implicit-def $x10, implicit-def $x11
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -1198,7 +1198,7 @@ define i32 @caller_small_struct_ret() nounwind {
   ; ILP32-LABEL: name: caller_small_struct_ret
   ; ILP32: bb.1 (%ir-block.0):
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_struct_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_struct_ret, csr_ilp32_lp64, implicit-def dead $x1, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
@@ -1210,7 +1210,7 @@ define i32 @caller_small_struct_ret() nounwind {
   ; ILP32F-LABEL: name: caller_small_struct_ret
   ; ILP32F: bb.1 (%ir-block.0):
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_struct_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_struct_ret, csr_ilp32f_lp64f, implicit-def dead $x1, implicit-def $x10, implicit-def $x11
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
@@ -1222,7 +1222,7 @@ define i32 @caller_small_struct_ret() nounwind {
   ; ILP32D-LABEL: name: caller_small_struct_ret
   ; ILP32D: bb.1 (%ir-block.0):
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_struct_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_struct_ret, csr_ilp32d_lp64d, implicit-def dead $x1, implicit-def $x10, implicit-def $x11
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
@@ -1258,7 +1258,7 @@ define void @caller_large_scalar_ret() nounwind {
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s128) from %stack.0)
   ; ILP32-NEXT:   PseudoRET
@@ -1268,7 +1268,7 @@ define void @caller_large_scalar_ret() nounwind {
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s128) from %stack.0)
   ; ILP32F-NEXT:   PseudoRET
@@ -1278,7 +1278,7 @@ define void @caller_large_scalar_ret() nounwind {
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s128) from %stack.0)
   ; ILP32D-NEXT:   PseudoRET
@@ -1327,7 +1327,7 @@ define i32 @caller_large_struct_ret() nounwind {
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.1)
   ; ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
@@ -1342,7 +1342,7 @@ define i32 @caller_large_struct_ret() nounwind {
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.1)
   ; ILP32F-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
@@ -1357,7 +1357,7 @@ define i32 @caller_large_struct_ret() nounwind {
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.1)
   ; ILP32D-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
@@ -1414,7 +1414,7 @@ define i32 @caller_large_struct_ret2() nounwind {
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %stack.0, align 8)
   ; ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
@@ -1435,7 +1435,7 @@ define i32 @caller_large_struct_ret2() nounwind {
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %stack.0, align 8)
   ; ILP32F-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
@@ -1456,7 +1456,7 @@ define i32 @caller_large_struct_ret2() nounwind {
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
-  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %stack.0, align 8)
   ; ILP32D-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4

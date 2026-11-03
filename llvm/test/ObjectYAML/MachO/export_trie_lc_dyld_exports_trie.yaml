@@ -1,6 +1,19 @@
 # RUN: yaml2obj %s -o %t
-# RUN: obj2yaml %t | FileCheck %s
+# RUN: obj2yaml %t | FileCheck %s -DUNDERSCORE_OFFSET=5 -DMH_OFFSET=33 -DMAIN_OFFSET=37
 # RUN: llvm-objdump --macho --exports-trie %t | FileCheck %s --check-prefix=OBJDUMP-VERIFY
+
+## Trie nodes don't have to be in preorder. Xcode's ld puts the leaf nodes
+## before their parent.
+# RUN: yaml2obj -DUNDERSCORE_OFFSET=18 -DMH_OFFSET=9 -DMAIN_OFFSET=13 %s -o %t.leaves-first
+# RUN: obj2yaml %t.leaves-first | \
+# RUN:     FileCheck %s -DUNDERSCORE_OFFSET=18 -DMH_OFFSET=9 -DMAIN_OFFSET=13
+# RUN: llvm-objdump --macho --exports-trie %t.leaves-first | \
+# RUN:     FileCheck %s --check-prefix=OBJDUMP-VERIFY
+
+## Nodes may not overlap. The root node takes up the first 5 bytes.
+# RUN: not yaml2obj -DUNDERSCORE_OFFSET=4 %s -o /dev/null 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=OVERLAP
+# OVERLAP: error: export trie node '_' at offset 4 overlaps the previous node, which ends at offset 5
 
 --- !mach-o
 FileHeader:
@@ -147,7 +160,7 @@ LinkEditData:
     ImportName:      ''
     Children:
       - TerminalSize:    0
-        NodeOffset:      5
+        NodeOffset:      [[UNDERSCORE_OFFSET=5]]
         Name:            _
         Flags:           0x0000000000000000
         Address:         0x0000000000000000
@@ -155,14 +168,14 @@ LinkEditData:
         ImportName:      ''
         Children:
           - TerminalSize:    2
-            NodeOffset:      33
+            NodeOffset:      [[MH_OFFSET=33]]
             Name:            _mh_execute_header
             Flags:           0x0000000000000000
             Address:         0x0000000000000000
             Other:           0x0000000000000000
             ImportName:      ''
           - TerminalSize:    3
-            NodeOffset:      37
+            NodeOffset:      [[MAIN_OFFSET=37]]
             Name:            main
             Flags:           0x0000000000000000
             Address:         0x0000000000003FA0
@@ -187,15 +200,15 @@ LinkEditData:
 #CHECK:     Name:            ''
 #CHECK:     Children:
 #CHECK:       - TerminalSize:    0
-#CHECK:         NodeOffset:      5
+#CHECK:         NodeOffset:      [[UNDERSCORE_OFFSET]]
 #CHECK:         Name:            _
 #CHECK:         Children:
 #CHECK:           - TerminalSize:    2
-#CHECK:             NodeOffset:      33
+#CHECK:             NodeOffset:      [[MH_OFFSET]]
 #CHECK:             Name:            _mh_execute_header
 #CHECK:             Address:         0x0
 #CHECK:           - TerminalSize:    3
-#CHECK:             NodeOffset:      37
+#CHECK:             NodeOffset:      [[MAIN_OFFSET]]
 #CHECK:             Name:            main
 #CHECK:             Address:         0x3FA0
 

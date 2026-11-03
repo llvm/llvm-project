@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/Interfaces/ScriptedCommandInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
+#include "lldb/Interpreter/ScriptedInstanceRegistry.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -20,6 +21,8 @@ public:
   GetAbstractMethodRequirements() const override {
     return {};
   }
+
+  llvm::StringRef GetPluginName() override { return "DummyPlugin"; }
 };
 
 class DummyScriptedCommandInterface : public ScriptedCommandInterface {
@@ -34,9 +37,42 @@ public:
   GetAbstractMethodRequirements() const override {
     return {};
   }
+
+  llvm::StringRef GetPluginName() override { return "DummyPlugin"; }
+};
+
+class RegisteredScriptedInterface : public DummyScriptedInterface {
+public:
+  RegisteredScriptedInterface(
+      const lldb::ScriptedInstanceRegistrySP &registry_sp,
+      llvm::StringRef class_name) {
+    RegisterInstance(registry_sp, class_name.str(), /*source_path=*/{},
+                     /*args_sp=*/nullptr);
+  }
 };
 
 } // namespace
+
+TEST(ScriptedInterfaceTest, DestroyedInstanceIsUnregistered) {
+  auto registry_sp = std::make_shared<ScriptedInstanceRegistry>();
+  auto first = std::make_unique<RegisteredScriptedInterface>(registry_sp,
+                                                             "module.First");
+  RegisteredScriptedInterface second(registry_sp, "module.Second");
+  ASSERT_EQ(registry_sp->GetInstances().size(), 2u);
+
+  first.reset();
+  std::vector<ScriptedInstanceInfo> instances = registry_sp->GetInstances();
+  ASSERT_EQ(instances.size(), 1u);
+  EXPECT_EQ(instances[0].class_name, "module.Second");
+}
+
+TEST(ScriptedInterfaceTest, InterfaceCanOutliveRegistry) {
+  auto registry_sp = std::make_shared<ScriptedInstanceRegistry>();
+  auto interface =
+      std::make_unique<RegisteredScriptedInterface>(registry_sp, "module.A");
+  registry_sp.reset();
+  interface.reset();
+}
 
 TEST(ScriptedInterfaceTest, ExtensionsCannotBeRunDirectly) {
   DummyScriptedInterface interface;

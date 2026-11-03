@@ -27,7 +27,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i64 4
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[TMP2]], ptr align 8 [[TMP4]], <4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[TMP3]], ptr align 8 [[TMP5]], <4 x i1> [[ACTIVE_LANE_MASK2]])
-; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT]], i64 9)
 ; CHECK-UF4-NEXT:    [[EXTRACT_NEXT_ALM_PART]] = call <4 x i1> @llvm.vector.extract.v4i1.v8i1(<8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0)
 ; CHECK-UF4-NEXT:    [[EXTRACT_NEXT_ALM_PART4]] = call <4 x i1> @llvm.vector.extract.v4i1.v8i1(<8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 4)

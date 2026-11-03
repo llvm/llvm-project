@@ -62,7 +62,8 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
   if (BaseDesc->isPrimitiveArray()) {
     if (BasePtr.allElementsInitialized())
       return true;
-    DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+    if (const FieldDecl *F = BasePtr.getField())
+      DiagnoseUninitializedSubobject(S, Loc, F);
     return false;
   }
   const Descriptor *ElemDesc = BaseDesc->ElemDesc;
@@ -384,6 +385,11 @@ static bool lval(InterpState &S, const ASTContext &Ctx, const Pointer &Ptr,
   }
 
   if (const auto *VD = dyn_cast_if_present<VarDecl>(BaseVD)) {
+    // We might allow creating pointers into invalid records, but do not allow
+    // returning them from an evaluation.
+    if (const RecordDecl *TypeRD = VD->getType()->getAsRecordDecl();
+        TypeRD && TypeRD->isInvalidDecl())
+      return false;
     // Check if this is a thread-local variable.
     if (VD->getTLSKind()) {
       // FIXME: Diagnostic!

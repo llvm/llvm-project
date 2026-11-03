@@ -1124,7 +1124,7 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {"lld", opt.data()};
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  if (cl::parseCommandLineOptions(config->libraryOptions, argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
 }
@@ -1562,7 +1562,7 @@ static void codegenDataGenerate() {
     }
   }
 
-  globalMergeRecord.finalize();
+  globalMergeRecord.finalize(config->libraryOptions);
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
@@ -2443,7 +2443,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     createSyntheticSections();
     createSyntheticSymbols();
-    addSynthenticMethnames();
 
     createAliases();
     // If we are in "explicit exports" mode, hide everything that isn't
@@ -2460,6 +2459,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // compileBitcodeFiles, so we are done if that's the case.
     if (config->thinLTOIndexOnly || config->emitLLVM)
       return errorCount() == 0;
+
+    addSynthenticMethnames();
 
     // LTO may emit a non-hidden (extern) object file symbol even if the
     // corresponding bitcode symbol is hidden. In particular, this happens for

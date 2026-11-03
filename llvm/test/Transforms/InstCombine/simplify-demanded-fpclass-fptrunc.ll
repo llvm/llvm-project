@@ -313,7 +313,7 @@ define nofpclass(nan ninf nnorm nsub nzero) half @ret_no_negative_no_nan__fptrun
 define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 ; CHECK-NEXT:    [[ZERO:%.*]] = call float @returns_zero_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[ZERO]] to half
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan ninf float [[ZERO]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %zero = call float @returns_zero_f32()
@@ -324,7 +324,7 @@ define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero_or_nan() {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero_or_nan() {
 ; CHECK-NEXT:    [[ZERO_OR_NAN:%.*]] = call float @returns_zero_or_nan_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc float [[ZERO_OR_NAN]] to half
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[ZERO_OR_NAN]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %zero.or.nan = call float @returns_zero_or_nan_f32()

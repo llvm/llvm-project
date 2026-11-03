@@ -10,6 +10,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/PathMappingList.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -70,7 +71,7 @@ TEST_F(FindFileTest, FindFileTests) {
   ASSERT_NO_ERROR(createUniqueDirectory(Info->name(), DirName));
 
   sys::path::append(FileName, Twine(DirName), Twine("test"));
-  ASSERT_NO_ERROR(openFile(FileName, fd, CD_CreateAlways, FA_Read, OF_None));
+  ASSERT_NO_ERROR(openFile(FileName, fd, CD_OpenAlways, FA_Read, OF_None));
 
   llvm::FileRemover dir_remover(DirName);
   llvm::FileRemover file_remover(FileName);
