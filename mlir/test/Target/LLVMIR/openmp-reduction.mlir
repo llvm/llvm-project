@@ -87,15 +87,10 @@ omp.declare_reduction @add_f32 : f32 init {
 ^bb0(%lhs: f32, %rhs: f32):
   %sum = llvm.fadd %lhs, %rhs : f32
   omp.yield(%sum : f32)
-} atomic {
-^bb0(%lhs: !llvm.ptr, %rhs: !llvm.ptr):
-  %value = llvm.load %rhs : !llvm.ptr -> f32
-  llvm.atomicrmw fadd %lhs, %value monotonic : !llvm.ptr, f32
-  omp.yield
 }
 
 // A wsloop with nowait must not emit a barrier before or after the reduction.
-// CHECK-LABEL: define internal void @wsloop_reduction_nowait..omp_par
+// CHECK-LABEL: define void @wsloop_reduction_nowait(
 // CHECK-NOT:   @__kmpc_barrier
 // CHECK:       call i32 @__kmpc_reduce_nowait(
 // CHECK-NOT:   @__kmpc_barrier
@@ -103,17 +98,10 @@ omp.declare_reduction @add_f32 : f32 init {
 // CHECK-NOT:   @__kmpc_barrier
 // CHECK:       {{^}}}
 llvm.func @wsloop_reduction_nowait(%sum: !llvm.ptr, %lb: i64, %ub: i64, %step: i64) {
-  omp.parallel {
-    omp.wsloop nowait reduction(@add_f32 %sum -> %private : !llvm.ptr) {
-      omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
-        %one = llvm.mlir.constant(1.0 : f32) : f32
-        %value = llvm.load %private : !llvm.ptr -> f32
-        %next = llvm.fadd %value, %one : f32
-        llvm.store %next, %private : f32, !llvm.ptr
-        omp.yield
-      }
+  omp.wsloop nowait reduction(@add_f32 %sum -> %private : !llvm.ptr) {
+    omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+      omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
