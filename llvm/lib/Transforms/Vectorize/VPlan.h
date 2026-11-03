@@ -1520,9 +1520,6 @@ public:
   /// ExtractLastActive, FirstActiveLane, LastActiveLane.
   void addOperand(VPValue *Op);
 
-  /// Generate the instruction.
-  /// TODO: We currently execute only per-part unless a specific instance is
-  /// provided.
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPInstruction.

@@ -1,4 +1,4 @@
-//===- ShardingExtensions.h - Linalg sharding extensions --------*- C++ -*-===//
+//===- ShardingInterfaceImpl.h - Bufferization sharding models --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_EXTENSIONS_SHARDINGEXTENSIONS_H_
-#define MLIR_DIALECT_LINALG_EXTENSIONS_SHARDINGEXTENSIONS_H_
+#ifndef MLIR_DIALECT_BUFFERIZATION_EXTENSIONS_SHARDINGINTERFACEIMPL_H
+#define MLIR_DIALECT_BUFFERIZATION_EXTENSIONS_SHARDINGINTERFACEIMPL_H
 
 namespace mlir {
 class DialectRegistry;
 
-namespace linalg {
+namespace bufferization {
+namespace shard_ext {
 void registerShardingInterfaceExternalModels(DialectRegistry &registry);
-} // namespace linalg
+} // namespace shard_ext
+} // namespace bufferization
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_EXTENSIONS_SHARDINGEXTENSIONS_H_
+#endif // MLIR_DIALECT_BUFFERIZATION_EXTENSIONS_SHARDINGINTERFACEIMPL_H

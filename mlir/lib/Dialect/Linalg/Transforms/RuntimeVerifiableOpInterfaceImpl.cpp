@@ -1,4 +1,4 @@
-//===- RuntimeOpVerification.cpp - Op Verification ------------------------===//
+//===- RuntimeVerifiableOpInterfaceImpl.cpp - Op Verification -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Transforms/RuntimeOpVerification.h"
+#include "mlir/Dialect/Linalg/Transforms/RuntimeVerifiableOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"

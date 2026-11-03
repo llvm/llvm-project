@@ -1,4 +1,4 @@
-//===- SubsetInsertionOpInterfaceImpl.h - Tensor subsets --------*- C++ -*-===//
+//===- SubsetOpInterfaceImpl.h - Tensor subsets -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_SUBSETINSERTIONOPINTERFACEIMPL_H
-#define MLIR_DIALECT_LINALG_SUBSETINSERTIONOPINTERFACEIMPL_H
+#ifndef MLIR_DIALECT_LINALG_TRANSFORMS_SUBSETOPINTERFACEIMPL_H
+#define MLIR_DIALECT_LINALG_TRANSFORMS_SUBSETOPINTERFACEIMPL_H
 
 namespace mlir {
 class DialectRegistry;
@@ -17,4 +17,4 @@ void registerSubsetOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_SUBSETINSERTIONOPINTERFACEIMPL_H
+#endif // MLIR_DIALECT_LINALG_TRANSFORMS_SUBSETOPINTERFACEIMPL_H

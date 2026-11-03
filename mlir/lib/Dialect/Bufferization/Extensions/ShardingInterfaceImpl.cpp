@@ -1,4 +1,4 @@
-//===- ShardingExtensions.cpp ---------------------------------------------===//
+//===- ShardingInterfaceImpl.cpp - Bufferization sharding models ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Bufferization/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Bufferization/Extensions/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
 #include "mlir/IR/DialectRegistry.h"

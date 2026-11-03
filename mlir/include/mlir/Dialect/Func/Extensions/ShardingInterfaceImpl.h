@@ -1,4 +1,4 @@
-//===- ShardingExtensions.h - Arith sharding extensions ---------*- C++ -*-===//
+//===- ShardingInterfaceImpl.h - Func sharding models -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_ARITH_EXTENSIONS_SHARDINGEXTENSIONS_H_
-#define MLIR_DIALECT_ARITH_EXTENSIONS_SHARDINGEXTENSIONS_H_
+#ifndef MLIR_DIALECT_FUNC_EXTENSIONS_SHARDINGINTERFACEIMPL_H_
+#define MLIR_DIALECT_FUNC_EXTENSIONS_SHARDINGINTERFACEIMPL_H_
 
 namespace mlir {
 class DialectRegistry;
 
-namespace arith {
+namespace func {
 void registerShardingInterfaceExternalModels(DialectRegistry &registry);
-} // namespace arith
+} // namespace func
 } // namespace mlir
 
-#endif // MLIR_DIALECT_ARITH_EXTENSIONS_SHARDINGEXTENSIONS_H_
+#endif // MLIR_DIALECT_FUNC_EXTENSIONS_SHARDINGINTERFACEIMPL_H_

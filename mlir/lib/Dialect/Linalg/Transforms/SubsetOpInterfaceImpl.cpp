@@ -1,4 +1,4 @@
-//===- SubsetInsertionOpInterfaceImpl.cpp - Tensor subsets ----------------===//
+//===- SubsetOpInterfaceImpl.cpp - Tensor subsets -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Transforms/SubsetInsertionOpInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/Transforms/SubsetOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"

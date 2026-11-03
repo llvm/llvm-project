@@ -917,6 +917,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   type. (#GH204756)
 
 #### Bug Fixes to C++ Support
+- Clang now recovers from invalid single pointer declarators in structured
+  bindings (such as ``auto *[x, y] = s;``) by removing the pointer declarator.
+  This allows type deduction to proceed and avoids redundant follow-up
+  diagnostics. (#GH222605)
+
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
@@ -1448,6 +1453,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 %   - Diagnostic changes
 
 #### Improvements
+
+- `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
+  declarations such as `fopen` when targeting MSVC to avoid false negatives in
+  C99 and later C standards.
 
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
