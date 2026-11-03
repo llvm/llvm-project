@@ -717,6 +717,14 @@ public:
     return ConvergentFunctions;
   }
 
+  /// Return true if using -fbounds-safety in full or attribute-only mode.
+  /// Attribute-only mode exists only downstream, where this predicate gates
+  /// behavior that diverges from upstream. It is kept here to minimize that
+  /// divergence.
+  // TODO: Remove this once upstream and downstream no longer diverge and
+  // attribute-only mode is deprecated downstream.
+  bool hasBoundsSafetyAttributes() const { return BoundsSafety; }
+
   /// Return true if atomicrmw operations targeting allocations in private
   /// memory are undefined.
   bool threadPrivateMemoryAtomicsAreUndefined() const {
