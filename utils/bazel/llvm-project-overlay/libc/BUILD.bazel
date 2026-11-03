@@ -2418,6 +2418,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_null_check",
         ":__support_macros_optimization",
+        ":__support_math_extras",
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
