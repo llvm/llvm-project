@@ -564,6 +564,9 @@ constexpr remove_reference_t<T>&& move(T&& x);
 template <typename T>
 void swap(T& a, T& b) noexcept;
 
+template <typename T, typename U = T>
+T exchange(T& obj, U&& new_value);
+
 } // namespace std
 
 #endif // UTILITY_H
