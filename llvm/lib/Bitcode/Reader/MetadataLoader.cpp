@@ -2219,9 +2219,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
           HasTargetFuncName ? getMDString(Record[19 + OffsetB])
                             : nullptr, // targetFuncName
           UsesKeyInstructions);
+      SP = Tmp.get();
       Context.getDebugTypeODRUniquer()->addUnresolvedODRSubprogramDecl(
           std::move(Tmp));
-      SP = Tmp.get();
     } else {
 
       if (MaybeODRUnique)
