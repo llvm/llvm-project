@@ -287,10 +287,9 @@ body:             |
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
 
   auto [Down, Up] = getMaxPressureOfBlock(MF, LIS);
-  // FIXME: The maximum adds the AV peak to the VGPR peak. Both should be 1.
   for (const GCNRegPressure *RP : {&Down, &Up}) {
-    EXPECT_EQ(RP->getArchVGPRNum(), 2U);
-    EXPECT_EQ(RP->getVGPRNum(/*UnifiedVGPRFile=*/false), 2U);
+    EXPECT_EQ(RP->getArchVGPRNum(), 1U);
+    EXPECT_EQ(RP->getVGPRNum(/*UnifiedVGPRFile=*/false), 1U);
   }
 }
 
@@ -315,14 +314,12 @@ body:             |
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   unsigned TupleWeight =
-      TRI->getRegClassWeight(&AMDGPU::AV_64RegClass).RegWeight +
-      TRI->getRegClassWeight(&AMDGPU::VReg_64RegClass).RegWeight;
+      std::max(TRI->getRegClassWeight(&AMDGPU::AV_64RegClass).RegWeight,
+               TRI->getRegClassWeight(&AMDGPU::VReg_64RegClass).RegWeight);
 
-  // FIXME: The maximum adds the AV peak to the VGPR peak. The ArchVGPR count
-  // should be 2, and the tuple weight should be the weight of one register.
   auto [Down, Up] = getMaxPressureOfBlock(MF, LIS);
   for (const GCNRegPressure *RP : {&Down, &Up}) {
-    EXPECT_EQ(RP->getArchVGPRNum(), 4U);
+    EXPECT_EQ(RP->getArchVGPRNum(), 2U);
     EXPECT_EQ(RP->getVGPRTuplesWeight(), TupleWeight);
   }
 }

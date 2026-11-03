@@ -5,6 +5,7 @@
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MUL_F32
 name:            trans32_write_non_trans32_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr1 = V_RCP_F32_e32 $vgpr0, implicit $mode, implicit $exec
@@ -15,6 +16,7 @@ body:             |
 # GCN:      V_SIN_F32
 # GCN-NEXT: V_COS_F32
 name:            trans32_write_trans_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_SIN_F32_e32 $vgpr1, implicit $mode, implicit $exec
@@ -26,6 +28,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_OR_B32
 name:            trans64_write_non_trans_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1 = V_RCP_F64_e32 $vgpr2_vgpr3, implicit $mode, implicit $exec
@@ -37,6 +40,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MUL_F64
 name:            trans32_write_non_trans64_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr1 = V_EXP_F32_e32 $vgpr0, implicit $mode, implicit $exec
@@ -48,6 +52,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MUL_F64
 name:            opsel_hi16_write_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ADD_I16_e64 8, $vgpr1, 0, $vgpr2, 0, 0, implicit $exec
@@ -58,6 +63,7 @@ body:             |
 # GCN:      V_ADD_I16
 # GCN-NEXT: V_MUL_F64
 name:            opsel_lo16_write_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ADD_I16_e64 0, $vgpr1, 0, $vgpr2, 0, 0, implicit $exec
@@ -69,6 +75,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MOV_B32_e32
 name:            sdwa_hi16_write_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_sdwa 0, $vgpr1, 0, 5, 2, 5, implicit $vgpr0(tied-def 0), implicit $exec
@@ -80,6 +87,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MOV_B32_e32
 name:            sdwa_lo16_write_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_sdwa 0, $vgpr1, 0, 4, 2, 5, implicit $vgpr0(tied-def 0), implicit $exec
@@ -90,6 +98,7 @@ body:             |
 # GCN:      V_MOV_B32_sdwa
 # GCN-NEXT: V_MOV_B32_e32
 name:            sdwa_dword_write_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_sdwa 0, $vgpr1, 0, 6, 2, 5, implicit $vgpr0(tied-def 0), implicit $exec
@@ -100,6 +109,7 @@ body:             |
 # GCN:      V_CMP_EQ_U32_sdwa
 # GCN-NEXT: V_MOV_B32_e32
 name:            sdwa_lo16_no_write_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vcc = V_CMP_EQ_U32_sdwa 0, $vgpr1, 0, $vgpr0, 0, 5, 2, implicit $exec
@@ -111,6 +121,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MOV_B32_e32
 name:            valu_write_sgpr_valu_read_as_constant
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
@@ -122,6 +133,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ADDC_U32_e32
 name:            valu_write_vcc_valu_read_as_constant
+tracksRegLiveness: false
 body:             |
   bb.0:
     V_CMP_NE_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $exec
@@ -133,6 +145,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_READLANE_B32
 name:            valu_write_sgpr_readlane_read_as_laneselect
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
@@ -144,6 +157,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_WRITELANE_B32
 name:            valu_write_sgpr_writelane_read_as_laneselect
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0, $sgpr0_sgpr1 = V_ADD_CO_U32_e64 $vgpr0, 1, 0, implicit $exec
@@ -155,6 +169,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MOV_B32_e32
 name:            vcmpx_write_exec_valu_read_as_constant
+tracksRegLiveness: false
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -166,6 +181,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_READLANE_B32
 name:            vcmpx_write_exec_readlane
+tracksRegLiveness: false
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -177,6 +193,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_READFIRSTLANE_B32
 name:            vcmpx_write_exec_readfirstlane
+tracksRegLiveness: false
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -188,6 +205,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_WRITELANE_B32
 name:            vcmpx_write_exec_writelane
+tracksRegLiveness: false
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -199,6 +217,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_READLANE_B32
 name:            valu_write_vgpr_readlane_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr1 = V_ADD_CO_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $exec
@@ -210,6 +229,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_READFIRSTLANE_B32
 name:            valu_write_vgpr_readfirstlane_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr1 = V_ADD_CO_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $exec
@@ -221,6 +241,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MOV_B32_e32
 name: global_store_dwordx4_data_hazard
+tracksRegLiveness: false
 
 body:             |
   bb.0:
@@ -234,6 +255,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MOV_B32_e32
 name: global_store_dwordx3_data_hazard
+tracksRegLiveness: false
 
 body:             |
   bb.0:

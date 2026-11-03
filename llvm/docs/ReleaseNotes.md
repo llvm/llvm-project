@@ -205,6 +205,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed the legacy pass manager's `RegionPass` and `RGPassManager` classes,
   which no longer had any users.
 
+* Removed `LiveVariables` analysis
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
@@ -319,6 +321,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `-mcpu=v5`, which includes the v4 instruction set and enables unsigned
   and signed high-half multiply instructions (`UHMUL` and `SHMUL`). Use
   `-disable-hmul` to disable their generation.
+
+* Added `-mattr=+func-table`: a pointer to a function is an index into
+  a read-only table of functions, and an indirect call is `callx` through
+  the table. It is for programs that keep pointers to functions in arena.
 
 ### Changes to the DirectX Backend
 
@@ -443,6 +449,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
+  tests which wish to opt out of liveness tracking should set
+  `tracksRegLiveness: false` explicitly.
 * Fixed a crash
   ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose
