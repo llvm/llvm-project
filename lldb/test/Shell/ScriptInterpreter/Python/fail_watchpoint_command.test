@@ -1,7 +1,7 @@
 # XFAIL: system-netbsd
 # RUN: split-file %s %t
 # RUN: %clang_host -x c %t/main.c -g -o %t.out
-# RUN: %lldb -b -s %t/commands.in --script-language python %t.out 2>&1 \
+# RUN: env LLDB_USE_LLDB_SERVER=1 %lldb -b -s %t/commands.in --script-language python %t.out 2>&1 \
 # RUN:   | FileCheck %s
 
 # CHECK: error: SyntaxError({{.*}})
