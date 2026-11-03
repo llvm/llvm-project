@@ -16,13 +16,7 @@ add_library(omptarget SHARED
   OpenMP/OMPT/OmptTracing.cpp
   OpenMP/OMPT/OmptTracingBuffer.cpp
 
-  ../libompaccsupport/AsyncInfo.cpp
-  ../libompaccsupport/device.cpp
-  ../libompaccsupport/PluginManager.cpp
-  ../libompaccsupport/DeviceImage.cpp
-  ../libompaccsupport/Mapping.cpp
-  ../libompaccsupport/OmpAccError.cpp
-  ../libompaccsupport/Program.cpp
+  ${LIBOMPACCSUPPORT_SOURCES}
 
   KernelLanguage/API.cpp
 )

@@ -1,6 +1,6 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS AnalysisOptions.td)
-tablegen(LLVM AnalysisOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(AnalysisOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(AnalysisOptionsTableGen)
 
 include(MLGOLower)
