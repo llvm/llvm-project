@@ -1783,6 +1783,8 @@ def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
 def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
 
+def Hi16ZeroSrc : ComplexPattern<i16, 2, "SelectHi16ZeroSrc">;
+
 def VOP3PMadMixModsExt : ComplexPattern<untyped, 2, "SelectVOP3PMadMixModsExt">;
 def VOP3PMadMixMods : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
 def VOP3PMadMixModsExtNeg : ComplexPattern<untyped, 2, "SelectVOP3PMadMixModsExtNeg">;
