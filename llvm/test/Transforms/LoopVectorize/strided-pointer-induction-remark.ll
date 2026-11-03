@@ -2,7 +2,7 @@
 
 define void @strided_pointer_induction(ptr noalias %d, ptr noalias %s, i64 %n, i64 %st) {
 ; CHECK-LABEL: Function: strided_pointer_induction
-; CHECK:         - String: disallowed pointer induction
+; CHECK:         - String: pointer induction with a non-constant step could not be vectorized
 entry:
   br label %loop
 

@@ -933,7 +933,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
     if (isDisallowedStridedPointerInduction(ID, Opts)) {
       reportVectorizationFailure("Found a disallowed pointer induction",
-                                 "disallowed pointer induction",
+                                 "pointer induction with a non-constant step "
+                                 "could not be vectorized",
                                  "StridedPointerInduction", ORE, TheLoop, Phi);
       return false;
     }
