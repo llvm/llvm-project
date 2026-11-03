@@ -62,11 +62,7 @@ void PluginManager::init() {
             auto *PM = static_cast<PluginManager *>(Data);
             auto *Plugin =
                 llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
-            PlatformTy &P =
-                PM->Platforms
-                    .try_emplace(Platform, PlatformTy::create(Platform))
-                    .first->second;
-            ODBG(ODT_Init) << "Adding plugin " << P.getName()
+            ODBG(ODT_Init) << "Adding plugin " << Plugin->getName()
                            << " from liboffload";
             PM->Plugins.push_back(Plugin);
           },
@@ -106,7 +102,6 @@ void PluginManager::deinit() {
 #endif
 
   Plugins.clear();
-  Platforms.clear();
   if (LibOffloadInitialized) {
     if (auto Err = olShutDown())
       REPORT() << "Failed to denitialize liboffload: " << Err->Details;
@@ -229,10 +224,21 @@ bool PluginManager::registerImageOnDevice(
     PlatformHandle = nullptr;
   }
 
-  llvm::StringRef PlatformName = "Unknown";
-  if (PlatformHandle)
-    if (const PlatformTy *Platform = getPlatform(PlatformHandle))
-      PlatformName = Platform->getName();
+  llvm::SmallString<256> PlatformName("Unknown");
+  if (PlatformHandle) {
+    size_t PlatformNameSize = 0;
+    if (olGetPlatformInfoSize(PlatformHandle, OL_PLATFORM_INFO_NAME,
+                              &PlatformNameSize))
+      PlatformNameSize = 0;
+
+    PlatformName.resize(PlatformNameSize);
+    if (PlatformNameSize > 0) {
+      if (olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_NAME,
+                            PlatformNameSize, PlatformName.data()))
+        PlatformName = "Unknown";
+    } else
+      PlatformName = "Unknown";
+  }
 
   // We only want a single matching image to be registered for each binary
   // descriptor. This prevents multiple of the same image from being registered
