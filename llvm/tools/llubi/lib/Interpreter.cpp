@@ -1126,7 +1126,8 @@ public:
       return;
 
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
-    if (CB.doesNotReturn())
+    if (CB.doesNotReturn() || (CurrentFrame->ResolvedCallee &&
+                               CurrentFrame->ResolvedCallee->doesNotReturn()))
       reportImmediateUB() << "Return from a noreturn function/callsite.";
 
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
