@@ -2479,6 +2479,12 @@ void Attributor::identifyDeadInternalFunctions() {
       ToBeDeletedFunctions.insert(F);
 }
 
+/// Return true if using \p V may add a call graph reference to a function, as
+/// only constants that are not plain data can reference functions.
+static bool mayAddCallGraphReference(const Value *V) {
+  return isa<Constant>(V) && !isa<ConstantData>(V);
+}
+
 ChangeStatus Attributor::cleanupIR() {
   TimeTraceScope TimeScope("Attributor::cleanupIR");
   // Delete stuff at the end to avoid invalid references and a nice order.
@@ -2528,11 +2534,12 @@ ChangeStatus Attributor::cleanupIR() {
                       << " instead of " << *OldV << "\n");
     U->set(NewV);
 
-    // The new value may reference a function, e.g., if an argument is replaced
-    // by a function pointer, so the call graph of the user's function changes.
-    if (I)
+    // E.g., an argument may be replaced by a function pointer. References that
+    // are only dropped can stay until the next update.
+    if (I && mayAddCallGraphReference(NewV))
       CGModifiedFunctions.insert(I->getFunction());
     if (Instruction *OldI = dyn_cast<Instruction>(OldV)) {
+      CGModifiedFunctions.insert(OldI->getFunction());
       if (!isa<PHINode>(OldI) && !ToBeDeletedInsts.count(OldI) &&
           isInstructionTriviallyDead(OldI))
         DeadInsts.push_back(OldI);
