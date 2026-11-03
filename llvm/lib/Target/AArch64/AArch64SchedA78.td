@@ -1139,7 +1139,7 @@ def : InstRW<[A78Write_5c_1L], (instregex "^LDR[SDQ]l$",
 
 // Load vector reg, immed post-index
 // Load vector reg, immed pre-index
-def : InstRW<[WriteAdr, A78Write_5c_1I_1L], (instregex "^LDR[BHSDQ](post|pre)$")>;
+def : InstRW<[A78Write_5c_1I_1L], (instregex "^LDR[BHSDQ](post|pre)$")>;
 
 // Load vector reg, unsigned immed
 def : InstRW<[A78Write_5c_1L], (instregex "^LDR[BHSDQ]ui$")>;
@@ -1168,13 +1168,11 @@ def : InstRW<[A78Write_5c_2L, WriteLDHi], (instrs LDPQi, LDNPQi)>;
 
 // Load vector pair, immed post-index, S/D-form
 // Load vector pair, immed pre-index, S/D-form
-def : InstRW<[WriteAdr, A78Write_5c_1I_1L, WriteLDHi],
-             (instregex "^LDP[SD](pre|post)$")>;
+def : InstRW<[A78Write_5c_1I_1L, WriteLDHi], (instregex "^LDP[SD](pre|post)$")>;
 
 // Load vector pair, immed post-index, Q-form
 // Load vector pair, immed pre-index, Q-form
-def : InstRW<[WriteAdr, A78Write_5c_2I_2L, WriteLDHi], (instrs LDPQpost,
-                                                              LDPQpre)>;
+def : InstRW<[A78Write_5c_2I_2L, WriteLDHi], (instrs LDPQpost, LDPQpre)>;
 
 // FP store instructions
 // -----------------------------------------------------------------------------
