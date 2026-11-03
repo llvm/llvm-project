@@ -12,26 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
-#include "DXILCBufferAccess.h"
-#include "DXILDataScalarization.h"
-#include "DXILFinalizeLinkage.h"
-#include "DXILFlattenArrays.h"
-#include "DXILForwardHandleAccesses.h"
-#include "DXILIntrinsicExpansion.h"
-#include "DXILLegalizePass.h"
-#include "DXILMemIntrinsics.h"
-#include "DXILOpLowering.h"
-#include "DXILPostOptimizationValidation.h"
-#include "DXILPrettyPrinter.h"
-#include "DXILRemoveUnusedResources.h"
-#include "DXILResourceAccess.h"
-#include "DXILResourceImplicitBinding.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
-#include "DXILTranslateMetadata.h"
+#include "DXILSignatureAnalysis.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
@@ -84,6 +69,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXILPostOptimizationValidationLegacyPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
   initializeRootSignatureAnalysisWrapperPass(*PR);
+  initializeSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
   initializeDXILPrettyPrinterLegacyPass(*PR);
   initializeDXILForwardHandleAccessesLegacyPass(*PR);
@@ -159,8 +145,8 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
-                               Reloc::Static, CodeModel::Small, OL),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options, Reloc::Static,
+                               CodeModel::Small, OL),
       TLOF(std::make_unique<DXILTargetObjectFile>()),
       Subtarget(std::make_unique<DirectXSubtarget>(TT, CPU, FS, *this)) {
   initAsmInfo();
@@ -192,7 +178,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     PM.add(createDXILPrettyPrinterLegacyPass(Out));
     break;
   case CodeGenFileType::ObjectFile:
-    if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (PassConfig->willCompleteCodeGenPipeline()) {
       PM.add(createDXILEmbedderPass());
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.

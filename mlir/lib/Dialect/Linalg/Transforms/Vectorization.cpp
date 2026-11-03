@@ -37,6 +37,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -65,7 +66,8 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
 ///   * inferred from the static dims in the input and output tensors.
 /// Bails out if:
 ///   * vector sizes are not user-provided, and
-///   * at least one dim is dynamic (in both the input and output tensors).
+///   * at least one dim is dynamic (in both the input and output tensors),
+/// or if the strides are not 1.
 ///
 /// Before:
 ///     !t_in_type = tensor<1x2x3xf32>
@@ -88,22 +90,6 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 /// a scalar and static/fixed for all the padded values. Returns an empty value
 /// otherwise.
 static Value getStaticPadVal(Operation *op);
-
-/// Return the unique instance of OpType in `block` if it is indeed unique.
-/// Return null if none or more than 1 instances exist.
-template <typename OpType>
-static OpType getSingleOpOfType(Block &block) {
-  OpType res;
-  block.walk([&](OpType op) {
-    if (res) {
-      res = nullptr;
-      return WalkResult::interrupt();
-    }
-    res = op;
-    return WalkResult::advance();
-  });
-  return res;
-}
 
 /// Helper function to extract the input slices after filter is unrolled along
 /// kw.
@@ -650,10 +636,12 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case([&](arith::MaxUIOp op) { return CombiningKind::MAXUI; })
       .Case([&](arith::MaximumFOp op) { return CombiningKind::MAXIMUMF; })
       .Case([&](arith::MaxNumFOp op) { return CombiningKind::MAXNUMF; })
+      .Case([&](arith::MaximumNumFOp op) { return CombiningKind::MAXIMUMNUMF; })
       .Case([&](arith::MinSIOp op) { return CombiningKind::MINSI; })
       .Case([&](arith::MinUIOp op) { return CombiningKind::MINUI; })
       .Case([&](arith::MinimumFOp op) { return CombiningKind::MINIMUMF; })
       .Case([&](arith::MinNumFOp op) { return CombiningKind::MINNUMF; })
+      .Case([&](arith::MinimumNumFOp op) { return CombiningKind::MINIMUMNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case([&](arith::OrIOp op) { return CombiningKind::OR; })
@@ -706,8 +694,13 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
                                       ArrayRef<bool> dimsToMask) {
   auto maybeKind = getCombinerOpKind(reduceOp);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
-  return vector::MultiDimReductionOp::create(
-      b, reduceOp->getLoc(), valueToReduce, acc, dimsToMask, *maybeKind);
+  // Keep the combiner's fast-math flags on the reduction.
+  arith::FastMathFlags fastMathFlags = arith::FastMathFlags::none;
+  if (auto fmfOp = dyn_cast<arith::ArithFastMathInterface>(reduceOp))
+    fastMathFlags = fmfOp.getFastMathFlagsAttr().getValue();
+  return vector::MultiDimReductionOp::create(b, reduceOp->getLoc(),
+                                             valueToReduce, acc, dimsToMask,
+                                             *maybeKind, fastMathFlags);
 }
 
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
@@ -977,39 +970,52 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
                           [](int64_t dimSize) { return dimSize > 1; }) == 1)) &&
          "n-D vectors are not yet supported");
 
-  // Blocks outside _this_ linalg.generic are effectively loop invariant.
-  // However, analysing block arguments for _this_ linalg.generic Op is a bit
-  // tricky. Just bail out in the latter case.
-  // TODO: We could try analysing the corresponding affine map here.
   auto *block = linalgOp.getBlock();
-  if (isa<BlockArgument>(val))
-    return !llvm::is_contained(block->getArguments(), val);
 
-  Operation *defOp = val.getDefiningOp();
-  assert(defOp && "This is neither a block argument nor an operation result");
+  // A shared DAG has exponentially many paths; a revisit adds nothing.
+  SmallPtrSet<Operation *, 8> visited;
+  SmallVector<Value> worklist{val};
 
-  // IndexOp is loop invariant as long as its result remains constant across
-  // iterations. Note that for dynamic shapes, the corresponding dim will also
-  // be conservatively treated as != 1.
-  if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
-    return linalgOp.getStaticLoopRanges()[indexOp.getDim()] == 1;
+  while (!worklist.empty()) {
+    Value v = worklist.pop_back_val();
+
+    // Blocks outside _this_ linalg.generic are effectively loop invariant.
+    // However, analysing block arguments for _this_ linalg.generic Op is a bit
+    // tricky. Just bail out in the latter case.
+    // TODO: We could try analysing the corresponding affine map here.
+    if (isa<BlockArgument>(v)) {
+      if (llvm::is_contained(block->getArguments(), v))
+        return false;
+      continue;
+    }
+
+    Operation *defOp = v.getDefiningOp();
+    assert(defOp && "This is neither a block argument nor an operation result");
+
+    // IndexOp is loop invariant as long as its result remains constant across
+    // iterations. Note that for dynamic shapes, the corresponding dim will also
+    // be conservatively treated as != 1.
+    if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
+      if (linalgOp.getStaticLoopRanges()[indexOp.getDim()] != 1)
+        return false;
+      continue;
+    }
+
+    auto *ancestor = block->findAncestorOpInBlock(*defOp);
+
+    // Values define outside `linalgOp` are loop invariant.
+    if (!ancestor)
+      continue;
+
+    // Values defined inside `linalgOp`, which are constant, are loop invariant.
+    if (isa<arith::ConstantOp>(ancestor))
+      continue;
+
+    if (visited.insert(ancestor).second)
+      llvm::append_range(worklist, ancestor->getOperands());
   }
 
-  auto *ancestor = block->findAncestorOpInBlock(*defOp);
-
-  // Values define outside `linalgOp` are loop invariant.
-  if (!ancestor)
-    return true;
-
-  // Values defined inside `linalgOp`, which are constant, are loop invariant.
-  if (isa<arith::ConstantOp>(ancestor))
-    return true;
-
-  bool result = true;
-  for (auto op : ancestor->getOperands())
-    result &= isLoopInvariantIdx(linalgOp, op, resType);
-
-  return result;
+  return true;
 }
 
 /// Check whether `val` could be used for calculating the trailing index for a
@@ -1953,7 +1959,9 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unpackOp.hasPureTensorSemantics())
     return failure();
 
@@ -1989,6 +1997,13 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
   auto sourceType = source.getType();
   if (!VectorType::isValidElementType(sourceType.getElementType()))
     return failure();
+
+  // The write is a vector.transfer_write at the slice offsets, which cannot
+  // express a stride.
+  if (!sliceOp.hasUnitStride()) {
+    LDBG() << "Only unit strides are supported";
+    return failure();
+  }
 
   // Get the pad value.
   // TransferReadOp (which is used to vectorize InsertSliceOp), requires a
@@ -2205,10 +2220,12 @@ static bool isSupportedPoolKind(vector::CombiningKind kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
     return true;
@@ -2331,7 +2348,9 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 static LogicalResult
 vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -3065,9 +3084,20 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   // Create write
   auto writeIndices =
       getValueOrCreateConstantIndexOp(rewriter, loc, sliceOp.getMixedOffsets());
-  Operation *write =
-      vector::createWriteOrMaskedWrite(rewriter, loc, read, sliceOp.getDest(),
-                                       writeIndices, inputVectorSizes.empty());
+  // For a rank-reducing slice the vector need not cover the trailing result
+  // dims, so state which result dim each vector dim writes to.
+  AffineMap writeMap;
+  if (sourceType.getRank() != resultType.getRank()) {
+    SmallVector<AffineExpr> exprs;
+    for (int64_t resultDim : resultDimsForSourceDims)
+      exprs.push_back(rewriter.getAffineDimExpr(resultDim));
+    writeMap = AffineMap::get(resultType.getRank(), /*symbolCount=*/0, exprs,
+                              rewriter.getContext());
+  }
+
+  Operation *write = vector::createWriteOrMaskedWrite(
+      rewriter, loc, read, sliceOp.getDest(), writeIndices,
+      inputVectorSizes.empty(), writeMap);
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));
@@ -4224,7 +4254,7 @@ static FailureOr<Operation *> vectorizeConvolution(
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {

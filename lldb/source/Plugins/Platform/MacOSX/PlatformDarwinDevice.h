@@ -11,6 +11,8 @@
 
 #include "PlatformDarwin.h"
 
+#include "lldb/Utility/Locked.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <string>
@@ -64,14 +66,17 @@ protected:
   const char *GetDeviceSupportDirectoryForOSVersion();
 
   virtual llvm::StringRef GetPlatformName() = 0;
-  virtual llvm::StringRef GetDeviceSupportDirectoryName() = 0;
+  virtual llvm::SmallVector<llvm::StringRef>
+  GetDeviceSupportDirectoryNames() = 0;
 
   std::mutex m_sdk_dir_mutex;
   SDKDirectoryInfoCollection m_sdk_directory_infos;
 
 private:
   std::string m_device_support_directory;
-  std::string m_device_support_directory_for_os_version;
+  /// Dependent modules are loaded in parallel, so more than one thread can
+  /// fill this at the same time.
+  Guarded<std::string, std::mutex> m_device_support_directory_for_os_version;
 };
 } // namespace lldb_private
 

@@ -126,6 +126,11 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(size_t idx) {
   return nullptr;
 }
 
+bool ValueObjectRegisterSet::IsSameRegister(const RegisterInfo *a,
+                                            const RegisterInfo *b) {
+  return a && b && a->kinds[eRegisterKindLLDB] == b->kinds[eRegisterKindLLDB];
+}
+
 std::optional<std::pair<size_t, const RegisterInfo *>>
 ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
   if (!m_reg_ctx_sp || !m_reg_set)
@@ -133,18 +138,26 @@ ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
 
   // See if the register exists at all in any set.
   const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
-  if (!reg_info)
-    return {};
 
-  // See if this register is in this register set.
+  // See if this register is in this register set, falling back to the name as
+  // written. The generic name may alias a register in another set while this
+  // set has a register of that exact name. A match on the name itself always
+  // wins over one on the alt name.
+  std::optional<std::pair<size_t, const RegisterInfo *>> match;
   for (size_t i = 0; i < m_reg_set->num_registers; ++i) {
     const RegisterInfo *contained_reg_info =
         m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[i]);
-    if (contained_reg_info == reg_info)
+    if (!contained_reg_info)
+      continue;
+    if (IsSameRegister(contained_reg_info, reg_info))
       return std::make_pair(i, reg_info);
+    if (name.equals_insensitive(contained_reg_info->name))
+      match = std::make_pair(i, contained_reg_info);
+    else if (!match && name.equals_insensitive(contained_reg_info->alt_name))
+      match = std::make_pair(i, contained_reg_info);
   }
 
-  return {};
+  return match;
 }
 
 lldb::ValueObjectSP
@@ -216,7 +229,7 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
   if (!target)
     return {};
 
-  if (llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeVector>(
+  if (llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeComposite>(
           m_reg_info.register_type)) {
     m_compiler_type = target->GetRegisterType(m_reg_info);
     if (m_compiler_type.IsValid())
@@ -271,12 +284,13 @@ bool ValueObjectRegister::UpdateValue() {
     RegisterValue m_old_reg_value(m_reg_value);
     if (m_reg_ctx_sp->ReadRegister(&m_reg_info, m_reg_value)) {
       Target *target = exe_ctx.GetTargetPtr();
-      const bool has_vector_type =
-          llvm::isa_and_present<RegisterTypeVector>(m_reg_info.register_type);
-      // Scalar registers remain in host byte order, while CompilerType vector
-      // children need target-order bytes to interpret their layout.
+      const bool has_structured_type =
+          llvm::isa_and_present<RegisterTypeComposite>(
+              m_reg_info.register_type);
+      // Scalar registers remain in host byte order, while CompilerType
+      // children need target-order bytes to interpret structured layouts.
       const bool got_data =
-          has_vector_type && target
+          has_structured_type && target
               ? m_reg_value.GetData(m_data, m_reg_info.byte_size,
                                     target->GetArchitecture().GetByteOrder())
               : m_reg_value.GetData(m_data);

@@ -13,8 +13,8 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit %t.bc -o %t-none.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SPLIT-NONE
 ; SPLIT-NONE:      link: inputs: {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
-; SPLIT-NONE-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
-; SPLIT-NONE-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; SPLIT-NONE-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}.spv
+; SPLIT-NONE-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
 ; SPLIT-NONE-NOT:  {{.+}}
 ;
 ; Test the split mode ("kernel"): each SPIR_KERNEL function produces its own device image.
@@ -25,12 +25,12 @@
 ; SPLIT-KERNEL-NEXT: [[SPLIT0:.*]].bc [kernel_c ]
 ; SPLIT-KERNEL-NEXT: [[SPLIT1:.*]].bc [kernel_b ]
 ; SPLIT-KERNEL-NEXT: [[SPLIT2:.*]].bc [kernel_a ]
-; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT0]].bc, output: {{.*}}_0.spv
-; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT1]].bc, output: {{.*}}_1.spv
-; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT2]].bc, output: {{.*}}_2.spv
-; SPLIT-KERNEL-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
-; SPLIT-KERNEL-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
-; SPLIT-KERNEL-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT0]].bc, output: {{.*}}.spv
+; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT1]].bc, output: {{.*}}.spv
+; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT2]].bc, output: {{.*}}.spv
+; SPLIT-KERNEL-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
+; SPLIT-KERNEL-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
+; SPLIT-KERNEL-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
 ; SPLIT-KERNEL-NOT:  {{.+}}
 ;
 ; Test default split mode ('translation_unit'): no --module-split-mode flag needed.
@@ -47,10 +47,10 @@
 ; SPLIT-SRC-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, mode: translation_unit
 ; SPLIT-SRC-NEXT: [[S0:.*]].bc [kernel_b kernel_c ]
 ; SPLIT-SRC-NEXT: [[S1:.*]].bc [kernel_a ]
-; SPLIT-SRC-NEXT: LLVM backend: input: [[S0]].bc, output: {{.*}}_0.spv
-; SPLIT-SRC-NEXT: LLVM backend: input: [[S1]].bc, output: {{.*}}_1.spv
-; SPLIT-SRC-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
-; SPLIT-SRC-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; SPLIT-SRC-NEXT: LLVM backend: input: [[S0]].bc, output: {{.*}}.spv
+; SPLIT-SRC-NEXT: LLVM backend: input: [[S1]].bc, output: {{.*}}.spv
+; SPLIT-SRC-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
+; SPLIT-SRC-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
 ; SPLIT-SRC-NOT:  {{.+}}
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"

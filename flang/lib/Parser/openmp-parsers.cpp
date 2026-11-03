@@ -1342,8 +1342,9 @@ TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
 TYPE_PARSER(construct<OmpDefaultClause>(
     Parser<OmpDefaultClause::DataSharingAttribute>{}))
 
-TYPE_PARSER(construct<OmpDefaultVariantClause>(
-    indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
+TYPE_PARSER(construct<OmpDefaultVariantClause>( //
+    indirect(OmpStylizedInstanceCreator(
+        OmpDirectiveSpecificationParser(/*allowCommas=*/false)))))
 
 TYPE_PARSER(construct<OmpDynGroupprivateClause>(
     maybe(nonemptyList(Parser<OmpDynGroupprivateClause::Modifier>{}) / ":"),
@@ -1571,8 +1572,9 @@ TYPE_PARSER(construct<OmpOrderClause>(
 TYPE_PARSER(construct<OmpMatchClause>(
     Parser<traits::OmpContextSelectorSpecification>{}))
 
-TYPE_PARSER(construct<OmpOtherwiseClause>(
-    maybe(indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false)))))
+TYPE_PARSER(construct<OmpOtherwiseClause>( //
+    maybe(indirect(OmpStylizedInstanceCreator(
+        OmpDirectiveSpecificationParser(/*allowCommas=*/false))))))
 
 TYPE_PARSER(construct<OmpWhenClause>(
     maybe(nonemptyList(Parser<OmpWhenClause::Modifier>{}) / ":"),
@@ -2377,7 +2379,7 @@ struct OmpLoopConstructParser {
               llvm::transformOptional(std::move(*end),
                   [](auto &&s) { return OmpEndDirective(std::move(s)); })};
         }
-      } else if (assoc == llvm::omp::Association::LoopSeq) {
+      } else if (assoc == llvm::omp::Association::LoopSequence) {
         // Parse loop sequence as a block.
         if (auto &&body{validBlock.Parse(state)}) {
           auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
@@ -2848,7 +2850,7 @@ static constexpr llvm::omp::Directives GetLoopDirectives() {
   for (auto dirId : llvm::omp::directives()) {
     auto assoc{getDirectiveAssociation(dirId)};
     if (assoc == llvm::omp::Association::LoopNest ||
-        assoc == llvm::omp::Association::LoopSeq) {
+        assoc == llvm::omp::Association::LoopSequence) {
       auto langs{getDirectiveLanguages(dirId)};
       if (llvm::to_underlying(langs & SourceLanguage::Fortran) != 0) {
         loopDirectives.set(dirId);

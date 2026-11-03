@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #ifdef __APPLE__
 #include <dlfcn.h>
@@ -106,20 +109,14 @@ bool UnwindInfoManager::TryEnable() {
 }
 
 void UnwindInfoManager::addBootstrapSymbols(StringMap<ExecutorAddr> &M) {
-  M[rt_alt::UnwindInfoManagerRegisterActionName] =
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  // Provide the symbols for the StandaloneMachOUnwindInfoRegistrar SPS
+  // interface in the ORC runtime.
+  const auto &SNs = rt::orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
+  M[Mangle.mangledCopy(SNs.RegisterSectionsName)] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
-  M[rt_alt::UnwindInfoManagerDeregisterActionName] =
+  M[Mangle.mangledCopy(SNs.DeregisterSectionsName)] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
-
-  {
-    // Also provide symbols defined by StandaloneMachOUnwindInfoRegistrar
-    // in the new ORC runtime.
-    const auto &SNs = rt::orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
-    M[SNs.RegisterSectionsName] =
-        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
-    M[SNs.DeregisterSectionsName] =
-        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
-  }
 }
 
 Error UnwindInfoManager::registerSections(

@@ -101,9 +101,7 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool JIT)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : CodeGenTargetMachineImpl(T,
-                               TT.computeDataLayout(Options.MCOptions.ABIName),
-                               TT, CPU, FS, Options, Reloc::PIC_,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options, Reloc::PIC_,
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {
@@ -259,6 +257,11 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&ShrinkWrapID);
   disablePass(&RemoveLoadsIntoFakeUsesID);
 
+  // Leave block placement to ptxas. Its CFG transformations can invalidate
+  // layout decisions made at the PTX level, and block placement here can
+  // interfere with ptxas analyses.
+  disablePass(&MachineBlockPlacementID);
+
   addPass(createNVPTXAAWrapperPass());
   addPass(createNVPTXExternalAAWrapperPass());
 
@@ -366,7 +369,6 @@ void NVPTXPassConfig::addFastRegAlloc() {
 
 void NVPTXPassConfig::addOptimizedRegAlloc() {
   addPass(&ProcessImplicitDefsID);
-  addPass(&LiveVariablesID);
   addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID);
 

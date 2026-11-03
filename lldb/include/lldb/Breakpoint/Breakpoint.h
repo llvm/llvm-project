@@ -433,6 +433,7 @@ public:
 
   /// Return the breakpoint condition.
   const StopCondition &GetCondition() const;
+  StopCondition &GetCondition();
 
   // The next section are various utility functions.
 

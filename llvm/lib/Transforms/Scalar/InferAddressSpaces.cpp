@@ -70,7 +70,7 @@
 // The monotone transfer function moves the address space of a pointer down a
 // lattice path from uninitialized to specific and then to generic. A join
 // operation of two different specific address spaces pushes the expression down
-// to the generic address space. The analysis completes once it reaches a fixed
+// to their common address space. The analysis completes once it reaches a fixed
 // point.
 //
 // Second, IR rewriting in Step 2 also needs to be circular. For example,
@@ -121,7 +121,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -140,11 +139,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-static cl::opt<bool> AssumeDefaultIsFlatAddressSpace(
-    "assume-default-is-flat-addrspace", cl::init(false), cl::ReallyHidden,
-    cl::desc("The default address space is assumed as the flat address space. "
-             "This is mainly for test purpose."));
 
 static const unsigned UninitializedAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -195,6 +189,11 @@ class InferAddressSpacesImpl {
   /// Target specific address space which uses of should be replaced if
   /// possible.
   unsigned FlatAddrSpace = 0;
+
+  /// The default address space is assumed as the flat address space. This is
+  /// mainly for test purpose.
+  const bool AssumeDefaultIsFlatAddressSpace = false;
+
   DenseMap<const Value *, Value *> PtrIntCastPairs;
 
   // Tries to find if the inttoptr instruction is derived from an pointer have
@@ -294,8 +293,10 @@ class InferAddressSpacesImpl {
 
 public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
-                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace)
-      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace) {}
+                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace,
+                         bool AssumeDefaultIsFlatAddressSpace)
+      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace),
+        AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
   bool run(Function &F);
 };
 
@@ -458,10 +459,23 @@ InferAddressSpacesImpl::getIntToPtrPointerOperand(const Operator *I2P) const {
   if (auto *OldPtr = PtrIntCastPairs.lookup(I2P))
     return OldPtr;
 
-  Value *LogicalOp = I2P->getOperand(0);
+  // Not m_c_BitwiseLogic: the binary-op matchers only match instructions, and
+  // a round trip over a compile-time address folds into a constant expression.
+  // m_PtrToInt below accepts either form.
+  auto *LogicalOp = dyn_cast<Operator>(I2P->getOperand(0));
+  if (!LogicalOp || !Instruction::isBitwiseLogicOp(LogicalOp->getOpcode()))
+    return nullptr;
+
+  // Either side can hold the pointer; the other is then the mask. Both sides
+  // being a pointer needs no special case: such a "mask" has no known bits, so
+  // its worst-case bit change is unbounded and the check below rejects it.
+  Value *LHS = LogicalOp->getOperand(0), *RHS = LogicalOp->getOperand(1);
   Value *OldPtr, *Mask;
-  if (!match(LogicalOp,
-             m_c_BitwiseLogic(m_PtrToInt(m_Value(OldPtr)), m_Value(Mask))))
+  if (match(LHS, m_PtrToInt(m_Value(OldPtr))))
+    Mask = RHS;
+  else if (match(RHS, m_PtrToInt(m_Value(OldPtr))))
+    Mask = LHS;
+  else
     return nullptr;
 
   Operator *AsCast = dyn_cast<AddrSpaceCastOperator>(OldPtr);
@@ -474,7 +488,7 @@ InferAddressSpacesImpl::getIntToPtrPointerOperand(const Operator *I2P) const {
   if (PreservedPtrMask.isZero())
     return nullptr;
   APInt ChangedPtrBits =
-      computeMaxChangedPtrBits(cast<Operator>(LogicalOp), Mask, *DL, &AC, DT);
+      computeMaxChangedPtrBits(LogicalOp, Mask, *DL, &AC, DT);
   // Check if the address bits change is within the preserved mask. If the bits
   // change is not preserved, it is not safe to perform address space cast.
   // The following pattern is not safe to cast address space.
@@ -489,13 +503,40 @@ InferAddressSpacesImpl::getIntToPtrPointerOperand(const Operator *I2P) const {
 }
 
 void InferAddressSpacesImpl::collectIntToPtrPointerOperand() {
-  // Only collect inttoptr instruction.
-  // TODO: We need to collect inttoptr constant expression as well.
+  auto Collect = [&](const Operator *I2P) {
+    if (auto *OldPtr = getIntToPtrPointerOperand(I2P))
+      PtrIntCastPairs.insert({I2P, OldPtr});
+  };
+
+  // A compile-time address folds the whole round trip into a constant
+  // expression, which is not an instruction. Within a function it is reached
+  // as an operand of an instruction, possibly nested under further constant
+  // expressions as when a gep indexes it. Without walking those, every access
+  // to a fixed address stays flat. The rewrite side already handles them; see
+  // cloneConstantExprWithNewAddressSpace. Only constant expressions reachable
+  // from instruction operands are visited; the initializers of global values
+  // are not, and the originals are never modified, so those are unaffected.
+  DenseSet<ConstantExpr *> VisitedCE;
+  SmallVector<ConstantExpr *, 8> Worklist;
+  auto PushConstantExpr = [&](Value *V) {
+    if (auto *CE = dyn_cast<ConstantExpr>(V))
+      if (VisitedCE.insert(CE).second)
+        Worklist.push_back(CE);
+  };
+
   for (Instruction &I : instructions(F)) {
-    if (!dyn_cast<IntToPtrInst>(&I))
-      continue;
-    if (auto *OldPtr = getIntToPtrPointerOperand(cast<Operator>(&I)))
-      PtrIntCastPairs.insert({&I, OldPtr});
+    if (isa<IntToPtrInst>(&I))
+      Collect(cast<Operator>(&I));
+    for (Value *Op : I.operands())
+      PushConstantExpr(Op);
+  }
+
+  while (!Worklist.empty()) {
+    ConstantExpr *CE = Worklist.pop_back_val();
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      Collect(cast<Operator>(CE));
+    for (Value *Op : CE->operands())
+      PushConstantExpr(Op);
   }
 }
 
@@ -563,8 +604,10 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
     Value *Rewrite = TTI->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
     if (!Rewrite)
       return false;
-    if (Rewrite != II)
+    if (Rewrite != II) {
       II->replaceAllUsesWith(Rewrite);
+      II->eraseFromParent();
+    }
     return true;
   }
   }
@@ -790,27 +833,32 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
   if (Constant *C = dyn_cast<Constant>(Operand))
     return ConstantExpr::getAddrSpaceCast(C, NewPtrTy);
 
-  if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand))
-    return NewOperand;
-
   Instruction *Inst = cast<Instruction>(OperandUse.getUser());
-  auto I = PredicatedAS.find(std::make_pair(Inst, Operand));
-  if (I != PredicatedAS.end()) {
-    // Insert an addrspacecast on that operand before the user.
-    unsigned NewAS = I->second;
-    Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(Operand->getType(), NewAS);
-    auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
-
-    if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
-      return phiNodeOperandWithNewAddressSpace(NewI, Operand);
-
-    NewI->insertBefore(Inst->getIterator());
-    NewI->setDebugLoc(Inst->getDebugLoc());
-    return NewI;
+  if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand)) {
+    Operand = NewOperand;
+  } else if (!PredicatedAS.contains(std::make_pair(Inst, Operand))) {
+    assert(PoisonUsesToFix && "missing inferred operand replacement");
+    PoisonUsesToFix->push_back(&OperandUse);
+    return PoisonValue::get(NewPtrTy);
   }
 
-  PoisonUsesToFix->push_back(&OperandUse);
-  return PoisonValue::get(NewPtrTy);
+  if (Operand->getType() == NewPtrTy)
+    return Operand;
+
+  auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
+  if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
+    return phiNodeOperandWithNewAddressSpace(NewI, OperandUse.get());
+
+  // During cloning phase, the cast is placed before the original flat
+  // instruction, as its clone in the new address space has not been inserted
+  // yet. During poison fixup phase, the clone already exists, thus make sure
+  // the cast is inserted before it.
+  Instruction *InsertPt = Inst;
+  if (Value *NewUser = ValueWithNewAddrSpace.lookup(Inst))
+    InsertPt = cast<Instruction>(NewUser);
+  NewI->insertBefore(InsertPt->getIterator());
+  NewI->setDebugLoc(Inst->getDebugLoc());
+  return NewI;
 }
 
 // A helper function for cloneInstructionWithNewAddressSpace. Handles the
@@ -987,70 +1035,59 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
           ? getPtrOrVecOfPtrsWithNewAS(CE->getType(), NewAddrSpace)
           : CE->getType();
 
-  if (CE->getOpcode() == Instruction::AddrSpaceCast) {
+  switch (CE->getOpcode()) {
+  case Instruction::AddrSpaceCast:
     // Because CE is flat, the source address space must be specific.
     // Therefore, the inferred address space must be the source space according
     // to our algorithm.
     assert(CE->getOperand(0)->getType()->getPointerAddressSpace() ==
            NewAddrSpace);
     return CE->getOperand(0);
-  }
 
-  if (CE->getOpcode() == Instruction::BitCast) {
+  case Instruction::BitCast:
     if (Value *NewOperand = ValueWithNewAddrSpace.lookup(CE->getOperand(0)))
       return ConstantExpr::getBitCast(cast<Constant>(NewOperand), TargetType);
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
-  }
 
-  if (CE->getOpcode() == Instruction::IntToPtr) {
+  case Instruction::IntToPtr:
     if (isNoopPtrIntCastPair(cast<Operator>(CE), *DL, TTI)) {
       Constant *Src = cast<ConstantExpr>(CE->getOperand(0))->getOperand(0);
-      assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
-      return Src;
+      // If we had a no-op inttoptr/ptrtoint pair, we may still have inferred a
+      // source address space from a generic pointer source, so insert a cast
+      // back. See cloneInstructionWithNewAddressSpace.
+      if (Src->getType() == TargetType)
+        return Src;
+      return ConstantExpr::getAddrSpaceCast(Src, TargetType);
     }
     assert(isSafeToCastIntToPtrAddrSpace(cast<Operator>(CE)));
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
-  }
 
-  // Computes the operands of the new constant expression.
-  bool IsNew = false;
-  SmallVector<Constant *, 4> NewOperands;
-  for (unsigned Index = 0; Index < CE->getNumOperands(); ++Index) {
-    Constant *Operand = CE->getOperand(Index);
-    // If the address space of `Operand` needs to be modified, the new operand
-    // with the new address space should already be in ValueWithNewAddrSpace
-    // because (1) the constant expressions we consider (i.e. addrspacecast,
-    // bitcast, and getelementptr) do not incur cycles in the data flow graph
-    // and (2) this function is called on constant expressions in postorder.
-    if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand)) {
-      IsNew = true;
-      NewOperands.push_back(cast<Constant>(NewOperand));
-      continue;
-    }
-    if (auto *CExpr = dyn_cast<ConstantExpr>(Operand))
-      if (Value *NewOperand = cloneConstantExprWithNewAddressSpace(
-              CExpr, NewAddrSpace, ValueWithNewAddrSpace, DL, TTI)) {
-        IsNew = true;
-        NewOperands.push_back(cast<Constant>(NewOperand));
-        continue;
-      }
-    // Otherwise, reuses the old operand.
-    NewOperands.push_back(Operand);
-  }
+  case Instruction::GetElementPtr: {
+    // Only the pointer operand is rewritten: the indices are not related to
+    // the pointer and NewAddrSpace may not be valid for them. The pointer
+    // operand is an address expression, but it is not guaranteed to have been
+    // cloned already, so clone it here if needed.
+    Constant *Base = CE->getOperand(0);
+    Value *NewBase = ValueWithNewAddrSpace.lookup(Base);
+    if (!NewBase)
+      NewBase = cloneConstantExprWithNewAddressSpace(
+          cast<ConstantExpr>(Base), NewAddrSpace, ValueWithNewAddrSpace, DL,
+          TTI);
+    assert(NewBase && "pointer operand of a rewritten GEP was not rewritten");
 
-  // If !IsNew, we will replace the Value with itself. However, replaced values
-  // are assumed to wrapped in an addrspacecast cast later so drop it now.
-  if (!IsNew)
-    return nullptr;
-
-  if (CE->getOpcode() == Instruction::GetElementPtr) {
+    SmallVector<Constant *, 4> NewOperands;
+    NewOperands.push_back(cast<Constant>(NewBase));
+    for (unsigned Index = 1; Index < CE->getNumOperands(); ++Index)
+      NewOperands.push_back(CE->getOperand(Index));
     // Needs to specify the source type while constructing a getelementptr
     // constant expression.
     return CE->getWithOperands(NewOperands, TargetType, /*OnlyIfReduced=*/false,
                                cast<GEPOperator>(CE)->getSourceElementType());
   }
 
-  return CE->getWithOperands(NewOperands, TargetType);
+  default:
+    llvm_unreachable("unexpected constant expression");
+  }
 }
 
 // Returns a clone of the value `V`, with its operands replaced as specified in
@@ -1100,6 +1137,9 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
 // comments).
 unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
                                                    unsigned AS2) const {
+  if (AS1 == AS2)
+    return AS1;
+
   if (AS1 == FlatAddrSpace || AS2 == FlatAddrSpace)
     return FlatAddrSpace;
 
@@ -1108,8 +1148,7 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
   if (AS2 == UninitializedAddressSpace)
     return AS1;
 
-  // The join of two different specific address spaces is flat.
-  return (AS1 == AS2) ? AS1 : FlatAddrSpace;
+  return TTI->getAddressSpaceJoin(AS1, AS2);
 }
 
 bool InferAddressSpacesImpl::run(Function &CurFn) {
@@ -1163,6 +1202,20 @@ void InferAddressSpacesImpl::enqueueUsers(
       continue;
 
     Worklist.insert(User);
+  }
+
+  // An inttoptr that round-trips a pointer depends on that pointer, but the
+  // chain between them runs through a ptrtoint, which is not an address
+  // expression and so is absent from InferredAddrSpace. Requeue such
+  // dependents directly; PtrIntCastPairs holds only round trips already proven
+  // safe, so this scan is over a handful of entries rather than the function.
+  for (auto &[I2P, OldPtr] : PtrIntCastPairs) {
+    if (OldPtr != &V)
+      continue;
+    auto Pos = InferredAddrSpace.find(I2P);
+    if (Pos == InferredAddrSpace.end() || Pos->second == FlatAddrSpace)
+      continue;
+    Worklist.insert(const_cast<Value *>(I2P));
   }
 }
 
@@ -1332,8 +1385,9 @@ static bool replaceOperandIfSame(Instruction *Inst, unsigned OpIdx,
 
 template <typename InstrType>
 static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
-                                    InstrType *MemInstr, unsigned AddrSpace,
-                                    Value *OldV, Value *NewV) {
+                                    InstrType *MemInstr, Value *OldV,
+                                    Value *NewV) {
+  unsigned AddrSpace = NewV->getType()->getPointerAddressSpace();
   if (!MemInstr->isVolatile() || TTI.hasVolatileVariant(MemInstr, AddrSpace)) {
     return replaceOperandIfSame(MemInstr, InstrType::getPointerOperandIndex(),
                                 OldV, NewV);
@@ -1350,19 +1404,18 @@ static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
 ///
 /// \p returns true the user replacement was made.
 static bool replaceIfSimplePointerUse(const TargetTransformInfo &TTI,
-                                      User *Inst, unsigned AddrSpace,
-                                      Value *OldV, Value *NewV) {
+                                      User *Inst, Value *OldV, Value *NewV) {
   if (auto *LI = dyn_cast<LoadInst>(Inst))
-    return replaceSimplePointerUse(TTI, LI, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, LI, OldV, NewV);
 
   if (auto *SI = dyn_cast<StoreInst>(Inst))
-    return replaceSimplePointerUse(TTI, SI, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, SI, OldV, NewV);
 
   if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
-    return replaceSimplePointerUse(TTI, RMW, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, RMW, OldV, NewV);
 
   if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst))
-    return replaceSimplePointerUse(TTI, CmpX, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, CmpX, OldV, NewV);
 
   return false;
 }
@@ -1462,8 +1515,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
 
   User *CurUser = U.getUser();
 
-  unsigned AddrSpace = V->getType()->getPointerAddressSpace();
-  if (replaceIfSimplePointerUse(*TTI, CurUser, AddrSpace, V, NewV))
+  if (replaceIfSimplePointerUse(*TTI, CurUser, V, NewV))
     return;
 
   // Skip if the current user is the new value itself.
@@ -1588,9 +1640,10 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
     unsigned OperandNo = PoisonUse->getOperandNo();
     assert(isa<PoisonValue>(NewV->getOperand(OperandNo)));
-    WeakTrackingVH NewOp = ValueWithNewAddrSpace.lookup(PoisonUse->get());
-    assert(NewOp &&
-           "poison replacements in ValueWithNewAddrSpace shouldn't be null");
+    unsigned NewAS =
+        NewV->getOperand(OperandNo)->getType()->getPointerAddressSpace();
+    Value *NewOp = operandWithNewAddressSpaceOrCreatePoison(
+        *PoisonUse, NewAS, ValueWithNewAddrSpace, PredicatedAS, nullptr);
     NewV->setOperand(OperandNo, NewOp);
   }
 
@@ -1661,8 +1714,12 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
     }
   }
 
-  for (Instruction *I : DeadInstructions)
-    RecursivelyDeleteTriviallyDeadInstructions(I);
+  // Deleting one instruction may recursively delete another queued
+  // instruction. Create handles before the first deletion so overlapping
+  // entries are nulled instead of leaving dangling pointers.
+  auto DeadInstructionHandles =
+      to_vector_of<WeakTrackingVH, 16>(DeadInstructions);
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInstructionHandles);
 
   return true;
 }
@@ -1676,7 +1733,7 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   return InferAddressSpacesImpl(
              getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), DT,
              &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
-             FlatAddrSpace)
+             FlatAddrSpace, /*AssumeDefaultIsFlatAddressSpace=*/false)
       .run(F);
 }
 
@@ -1684,17 +1741,22 @@ FunctionPass *llvm::createInferAddressSpacesPass(unsigned AddressSpace) {
   return new InferAddressSpaces(AddressSpace);
 }
 
-InferAddressSpacesPass::InferAddressSpacesPass()
-    : FlatAddrSpace(UninitializedAddressSpace) {}
-InferAddressSpacesPass::InferAddressSpacesPass(unsigned AddressSpace)
-    : FlatAddrSpace(AddressSpace) {}
+InferAddressSpacesPass::InferAddressSpacesPass(
+    bool AssumeDefaultIsFlatAddressSpace)
+    : FlatAddrSpace(UninitializedAddressSpace),
+      AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
+InferAddressSpacesPass::InferAddressSpacesPass(
+    unsigned AddressSpace, bool AssumeDefaultIsFlatAddressSpace)
+    : FlatAddrSpace(AddressSpace),
+      AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
 
 PreservedAnalyses InferAddressSpacesPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   bool Changed =
       InferAddressSpacesImpl(AM.getResult<AssumptionAnalysis>(F),
                              AM.getCachedResult<DominatorTreeAnalysis>(F),
-                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace)
+                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace,
+                             AssumeDefaultIsFlatAddressSpace)
           .run(F);
   if (Changed) {
     PreservedAnalyses PA;
@@ -1702,4 +1764,12 @@ PreservedAnalyses InferAddressSpacesPass::run(Function &F,
     return PA;
   }
   return PreservedAnalyses::all();
+}
+
+void InferAddressSpacesPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<InferAddressSpacesPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (AssumeDefaultIsFlatAddressSpace)
+    OS << "<assume-default-is-flat-addrspace>";
 }

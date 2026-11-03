@@ -21,6 +21,7 @@ unittest("SerializationTests") {
     "ModuleCacheTest.cpp",
     "NamespaceLookupTest.cpp",
     "PreambleInNamedModulesTest.cpp",
+    "ResolveImportedPathTest.cpp",
     "SourceLocationEncodingTest.cpp",
     "VarDeclConstantInitTest.cpp",
   ]
