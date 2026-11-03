@@ -60,10 +60,8 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   if (auto Err = readKernelProperties(Program))
     return Err;
 
-  // Dynamic SLM arguments use the same memory as static SLM.
-  // Dynamic SLM region starts after static block aligned to 1024
-  // bytes, so here we store the aligned number used later
-  // to determine if we exceed the total SLM size.
+  // When checking that dynamic SLM arguments fit, the driver counts static
+  // SLM in 1 KiB units
   StaticBlockMemSize = alignTo(getProperties().LocalMemSize, 1024);
 
   return Plugin::success();
