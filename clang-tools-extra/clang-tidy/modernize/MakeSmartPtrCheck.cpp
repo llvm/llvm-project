@@ -16,6 +16,18 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
+
+AST_MATCHER(Decl, hasInaccessibleDtor) {
+  if (const auto *RD = llvm::dyn_cast<CXXRecordDecl>(&Node)) {
+    if (const auto *Destructor = RD->getDestructor())
+      return Destructor->isDeleted() || Destructor->getAccess() != AS_public;
+  }
+  return false;
+}
+
+} // namespace
+
 static constexpr char ConstructorCall[] = "constructorCall";
 static constexpr char DirectVar[] = "directVar";
 static constexpr char ResetCall[] = "resetCall";
@@ -73,6 +85,13 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   const auto CanCallCtor = unless(has(ignoringImpCasts(
       cxxConstructExpr(hasDeclaration(decl(unless(isPublic())))))));
 
+  // A private/deleted destructor would require somehow making std::make_unique
+  // or some of its internal befriend the created type, so better be
+  // conservative in that case.
+  const auto CanCallDtor = unless(hasType(hasUnqualifiedDesugaredType(
+      pointerType(pointee(hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(hasInaccessibleDtor()))))))));
+
   auto IsPlacement = hasAnyPlacementArg(anything());
 
   Finder->addMatcher(
@@ -95,8 +114,9 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
           TK_AsIs,
           cxxMemberCallExpr(
               unless(isInTemplateInstantiation()),
-              hasArgument(0, cxxNewExpr(CanCallCtor, unless(IsPlacement))
-                                 .bind(NewExpression)),
+              hasArgument(
+                  0, cxxNewExpr(CanCallCtor, CanCallDtor, unless(IsPlacement))
+                         .bind(NewExpression)),
               callee(cxxMethodDecl(hasName("reset"))),
               anyOf(thisPointerType(getSmartPointerTypeMatcher()),
                     on(ignoringImplicit(anyOf(

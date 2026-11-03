@@ -37,8 +37,8 @@ entry:
 }
 
 ; CHECK:  r[[OFFSET:[0-9]+]] = 0
-; CHECK:  r1 += r[[OFFSET]]
-; CHECK:  *(u64 *)(r10 - 8) = r1
+; CHECK:  r[[OFFSET]] += r1
+; CHECK:  *(u64 *)(r10 - 8) = r[[OFFSET]]
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata)

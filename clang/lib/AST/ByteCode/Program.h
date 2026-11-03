@@ -84,7 +84,8 @@ public:
 
   /// Creates a global and returns its index.
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,
-                              bool IsConstexprUnknown = false);
+                              bool IsConstexprUnknown = false,
+                              bool CanBeExtern = true);
 
   /// Creates a global from a lifetime-extended temporary.
   UnsignedOrNone createGlobal(const Expr *E, QualType ExprType);
@@ -159,9 +160,8 @@ public:
 private:
   friend class DeclScope;
 
-  UnsignedOrNone createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
-                              bool IsExtern, bool IsWeak,
-                              bool IsConstexprUnknown,
+  UnsignedOrNone createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
+                              bool IsWeak, bool IsConstexprUnknown,
                               const Expr *Init = nullptr);
 
   /// Reference to the VM context.

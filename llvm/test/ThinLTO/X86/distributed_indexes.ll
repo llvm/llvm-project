@@ -21,9 +21,10 @@
 ; BACKEND1-DAG: <VALUE_GUID {{.*}} op0={{.*}}
 ; BACKEND1-DAG: <VALUE_GUID {{.*}} op0={{.*}}
 ; BACKEND1-DAG: <VALUE_GUID {{.*}} op0={{.*}}
-; BACKEND1-NEXT: <COMBINED_PROFILE {{.*}} op1=0
-; BACKEND1-NEXT: <COMBINED_PROFILE {{.*}} op1=0
-; BACKEND1-NEXT: <COMBINED_PROFILE {{.*}} op1=1
+; Summaries are written in GUID order, so they may interleave across modules.
+; BACKEND1-DAG: <COMBINED_PROFILE {{.*}} op1=0
+; BACKEND1-DAG: <COMBINED_PROFILE {{.*}} op1=0
+; BACKEND1-DAG: <COMBINED_PROFILE {{.*}} op1=1
 ; BACKEND1-NEXT: <COMBINED_ALIAS {{.*}} op1=1
 ; BACKEND1-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
