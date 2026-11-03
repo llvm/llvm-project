@@ -6612,14 +6612,19 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
     emitAlignedClause(*this, S);
     // Emit 'then' code.
     {
+      const bool NoLoopKernel = RT.canPromoteToNoLoop(S);
+      // A promoted 'teams loop' has the effective kind 'teams distribute', but
+      // its inner parallel region reads the combined bounds.
+      const bool UseCombinedBounds =
+          isOpenMPLoopBoundSharingDirective(EKind) || NoLoopKernel;
       // Emit helper vars inits.
 
       LValue LB = EmitOMPHelperVar(
-          *this, cast<DeclRefExpr>(isOpenMPLoopBoundSharingDirective(EKind)
+          *this, cast<DeclRefExpr>(UseCombinedBounds
                                        ? S.getCombinedLowerBoundVariable()
                                        : S.getLowerBoundVariable()));
       LValue UB = EmitOMPHelperVar(
-          *this, cast<DeclRefExpr>(isOpenMPLoopBoundSharingDirective(EKind)
+          *this, cast<DeclRefExpr>(UseCombinedBounds
                                        ? S.getCombinedUpperBoundVariable()
                                        : S.getUpperBoundVariable()));
       LValue ST =
@@ -6642,7 +6647,6 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
           !isOpenMPTeamsDirective(S.getDirectiveKind()))
         EmitOMPReductionClauseInit(S, LoopScope);
 
-      const bool NoLoopKernel = CGM.getOpenMPRuntime().canPromoteToNoLoop(S);
       if (!NoLoopKernel)
         HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
 
