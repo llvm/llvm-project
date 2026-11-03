@@ -1,4 +1,4 @@
-# REQUIRES: aarch64
+# REQUIRES: arm
 
 # RUN: llvm-mc -triple arm-windows-msvc %s -filetype=obj -o %t.arm.obj
 # RUN: lld-link -dll -noentry -winsysroot:%t.dir/sysroot -vctoolsversion:1.1.1.1 -winsdkversion:10.0.1 -libpath:custom-dir \
