@@ -786,7 +786,7 @@ def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall<Void, [Ptr]>;
 
 // Deoptimization
-def DEOPTIMIZE : RuntimeLibcall;
+def DEOPTIMIZE : RuntimeLibcall<Void, [Ellip]>;
 
 // Return address
 def RETURN_ADDRESS : RuntimeLibcall<Ptr, [Int]>;
