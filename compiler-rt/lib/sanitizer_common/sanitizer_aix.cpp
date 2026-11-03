@@ -24,13 +24,18 @@
 #  include <sys/errno.h>
 #  include <sys/mman.h>
 #  include <sys/stat.h>
+#  include <sys/thread.h>
 #  include <sys/time.h>
 #  include <sys/types.h>
 #  include <unistd.h>
 
 #  include "sanitizer_aix.h"
 #  include "sanitizer_common.h"
+#  include "sanitizer_file.h"
 #  include "sanitizer_libc.h"
+
+extern char** environ;
+extern char** p_xargv;
 
 namespace __sanitizer {
 
@@ -85,6 +90,10 @@ int internal_mprotect(void* addr, uptr length, int prot) {
 int internal_madvise(uptr addr, uptr length, int advice) {
   DEFINE__REAL(madvise);
   return _REAL(madvise, reinterpret_cast<caddr_t>(addr), length, advice);
+}
+
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
+  return -1;  // Not supported.
 }
 
 uptr internal_close(fd_t fd) {
@@ -158,6 +167,13 @@ uptr internal_sched_yield() {
   DEFINE__REAL(sched_yield);
   return _REAL(sched_yield);
 }
+
+void FutexWait(atomic_uint32_t* p, u32 cmp) {
+  // FIXME: implement actual blocking.
+  internal_sched_yield();
+}
+
+void FutexWake(atomic_uint32_t* p, u32 count) {}
 
 void internal__exit(int exitcode) {
   DEFINE__REAL(_exit);
@@ -234,6 +250,95 @@ uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void* tp) {
   return _REAL(clock_gettime, static_cast<clockid_t>(clk_id),
                static_cast<struct timespec*>(tp));
 }
+
+const char* GetEnv(const char* name) { return getenv(name); }
+
+ThreadID GetTid() { return thread_self(); }
+
+// The 64-bit AIX user address space ends with the stack segment at
+// 0x0fffffffffffffff. See
+// https://www.ibm.com/docs/en/aix/7.3?topic=concepts-system-memory-allocation-using-malloc-subsystem
+uptr GetMaxVirtualAddress() {
+#  if SANITIZER_WORDSIZE == 64
+  return (1ULL << 60) - 1;
+#  else
+  return 0xffffffff;
+#  endif
+}
+
+uptr GetMaxUserVirtualAddress() { return GetMaxVirtualAddress(); }
+
+void InitializePlatformCommonFlags(CommonFlags* cf) {}
+
+void InitializePlatformEarly() {}
+
+uptr GetPageSize() { return getpagesize(); }
+
+void CheckASLR() {}
+
+HandleSignalMode GetHandleSignalMode(int signum) {
+  switch (signum) {
+    case SIGABRT:
+      return common_flags()->handle_abort;
+    case SIGILL:
+      return common_flags()->handle_sigill;
+    case SIGTRAP:
+      return common_flags()->handle_sigtrap;
+    case SIGFPE:
+      return common_flags()->handle_sigfpe;
+    case SIGSEGV:
+      return common_flags()->handle_segv;
+    case SIGBUS:
+      return common_flags()->handle_sigbus;
+  }
+  return kHandleSignalNo;
+}
+
+void InitTlsSize() {}
+
+bool FileExists(const char* filename) {
+  struct stat st;
+  if (internal_stat(filename, &st))
+    return false;
+  // Sanity check: filename is a regular file.
+  return S_ISREG(st.st_mode);
+}
+
+bool DirExists(const char* path) {
+  struct stat st;
+  if (internal_stat(path, &st))
+    return false;
+  return S_ISDIR(st.st_mode);
+}
+
+uptr GetTlsSize() {
+  // FIXME: implement.
+  return 0;
+}
+
+SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
+  return SignalContext::Unknown;
+}
+
+bool SignalContext::IsTrueFaultingAddress() const { return true; }
+
+void SignalContext::DumpAllRegisters(void* context) {}
+
+char** GetEnviron() { return environ; }
+
+// p_xargv is set by the AIX C runtime to the argv passed to main.
+char** GetArgv() { return p_xargv; }
+
+void ListOfModules::fallbackInit() { clear(); }
+
+u64 MonotonicNanoTime() {
+  timespec ts;
+  internal_clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (u64)ts.tv_sec * (1000ULL * 1000 * 1000) + ts.tv_nsec;
+}
+
+// FIXME: implement.
+void GetMemoryProfile(fill_profile_f cb, uptr* stats) {}
 
 }  // namespace __sanitizer
 
