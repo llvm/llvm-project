@@ -210,15 +210,15 @@ public:
   bool mayModify(AliasAnalysis &aliasAnalysis, LoopLikeOpInterface loopLike,
                  Value location) {
     auto key = std::make_pair(loopLike.getOperation(), location);
-    auto it = answers.find(key);
-    if (it != answers.end()) {
+    auto [it, inserted] = answers.try_emplace(key);
+    if (!inserted) {
       ++numHits;
       return it->second;
     }
     ++numMisses;
     bool modifies =
         aliasAnalysis.getModRef(loopLike.getOperation(), location).isMod();
-    answers.try_emplace(key, modifies);
+    it->second = modifies;
     return modifies;
   }
 
