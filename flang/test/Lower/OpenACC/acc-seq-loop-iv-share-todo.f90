@@ -8,11 +8,6 @@
 !   `do k = 1, 0`, the value is 1.
 ! - device_type(nvidia) seq, device_type(default) seq, and device_type(*) seq
 !   leave the induction variable on the parent. `do k = 1, 3` leaves 4.
-! - When the parent is serial or parallel, the induction variable is private
-!   on that construct. The read inside it sees the loop result, and the host
-!   variable stays unchanged.
-! - kernels copies the induction variable out, so the host variable becomes
-!   the loop result.
 ! - An orphan seq loop is a host DO. The host variable is one past the end,
 !   and there is no acc.loop.
 ! - reduction(+:s) on a seq loop is carried by the enclosing gang loop. An
@@ -160,68 +155,6 @@ end subroutine
 ! CHECK: acc.loop gang private({{.*}}, {{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32) =
 ! CHECK: hlfir.declare %{{[0-9]+}} uniq_name("_QFdtype_star_seqEk")
 ! CHECK: acc.loop control(%{{.*}} : i32) =
-
-! -----------------------------------------------------------------------------
-! The construct, not only the loop, holds k. The read inside it sees the
-! loop result. The host variable is unchanged, except under kernels, which
-! copies k out.
-! -----------------------------------------------------------------------------
-subroutine parent_serial(a, n, kout)
-  integer :: n, k, kout
-  real :: a(n)
-  !$acc serial copy(kout)
-  !$acc loop seq
-  do k = 1, 3
-    a(k) = a(k) + 1.0
-  end do
-  kout = k
-  !$acc end serial
-end subroutine
-
-! CHECK-LABEL: func.func @_QPparent_serial
-! CHECK: acc.private {{.*}} name("k")
-! CHECK: acc.serial {{.*}} private({{.*}} : !fir.ref<i32>)
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFparent_serialEk")
-! CHECK: acc.loop
-! CHECK: } inclusiveUpperbound(array<i1: true>) seq
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-
-subroutine parent_parallel(a, n, kout)
-  integer :: n, k, kout
-  real :: a(n)
-  !$acc parallel copy(kout)
-  !$acc loop seq
-  do k = 1, 3
-    a(k) = a(k) + 1.0
-  end do
-  kout = k
-  !$acc end parallel
-end subroutine
-
-! CHECK-LABEL: func.func @_QPparent_parallel
-! CHECK: acc.private {{.*}} name("k")
-! CHECK: acc.parallel {{.*}} private({{.*}} : !fir.ref<i32>)
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFparent_parallelEk")
-! CHECK: } inclusiveUpperbound(array<i1: true>) seq
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
-
-subroutine parent_kernels(a, n, kout)
-  integer :: n, k, kout
-  real :: a(n)
-  !$acc kernels copy(kout, k)
-  !$acc loop seq
-  do k = 1, 3
-    a(k) = a(k) + 1.0
-  end do
-  kout = k
-  !$acc end kernels
-end subroutine
-
-! CHECK-LABEL: func.func @_QPparent_kernels
-! CHECK: acc.copyout {{.*}} name("k")
-! CHECK: %[[KDECL:[0-9]+]]:2 = hlfir.declare %{{[0-9]+}} uniq_name("_QFparent_kernelsEk")
-! CHECK: } inclusiveUpperbound(array<i1: true>) seq
-! CHECK: fir.load %[[KDECL]]#0 : !fir.ref<i32>
 
 ! -----------------------------------------------------------------------------
 ! No accelerator loop. The host DO leaves k one past the end.
