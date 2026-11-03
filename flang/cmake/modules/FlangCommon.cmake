@@ -19,10 +19,11 @@ include(CMakePushCheckState)
 # to be composable. Failure to synchronize this setting may result
 # in linking errors or fatal failures in F128 runtime functions.
 set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
-  "Specifies the target library used for implementing IEEE-754 128-bit float \
-  math in F18 runtime, e.g. it might be libquadmath for targets where \
-  REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
-  is mapped to long double, etc."
+  "Library implementing IEEE-754 binary128 math in the Fortran runtime. \
+  Accepted values: libquadmath, for GCC's __float128 support; or libm, on a \
+  glibc 2.26 or later that exports the *f128 entry points, which needs no \
+  third-party library. Leave empty to build without REAL(16) support - the \
+  type is then disabled in the compiler as well as the runtime."
   )
 if (FLANG_RUNTIME_F128_MATH_LIB)
   add_compile_definitions(FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}")
