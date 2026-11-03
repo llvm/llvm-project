@@ -8802,7 +8802,7 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
 // for a store.
 // A simple example to illustrate:
 //
-//  %vec.ind = phi <vscale x 2 x i64> [ %start, %entry ],
+//  %vec.ind = phi <vscale x 2 x i64> [ %start, %vector.ph ],
 //                                    [ %vec.ind.next, %vector.body ]
 //  %data.gep = getelementptr inbounds nuw [72 x i8], ptr %datap,
 //                            <vscale x 2 x i64> %vec.ind
@@ -8811,14 +8811,16 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
 //  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %elt.cnt.splat
 //
 // We want to change this to:
-//  %base = gep i8, %datap, (<stepvector> * 72)
-//  %stride = splat(elementcount) * 72
+//  vector.ph:
+//    %base = gep i8, %datap, (<stepvector> * 72)
+//    %stride = splat(elementcount) * 72
+//
 //  vector.body:
-//  %vec.lsr.phi = phi <vscale x 2 x ptr> [ %base, %entry ],
-//                                        [ %vec.lsr.next, %vector.body ]
-//  %addr.gep = gep inbounds nuw [8 x i8], ptr %addrp, i64 %index
-//  store <vscale x 2 x ptr> %vec.lsr.phi, ptr %addr.gep, align 8
-//  %vec.lsr.next = gep i8, %vec.lsr.phi, %stride
+//    %vec.lsr.phi = phi <vscale x 2 x ptr> [ %base, %vector.ph ],
+//                                          [ %vec.lsr.next, %vector.body ]
+//    %addr.gep = gep inbounds nuw [8 x i8], ptr %addrp, i64 %index
+//    store <vscale x 2 x ptr> %vec.lsr.phi, ptr %addr.gep, align 8
+//    %vec.lsr.next = gep i8, %vec.lsr.phi, %stride
 //
 // Doing so will remove a multiply from the loop, and leave the update as just
 // an add.
@@ -8833,12 +8835,22 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *PreHeader = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
-  if (!PreHeader || !Latch || Phi->getParent() != Header)
+  if (!PreHeader || !Latch || Phi->getParent() != Header ||
+      Phi->getNumIncomingValues() != 2)
     return false;
 
   // Check the progression of the phi.
   Value *Start = Phi->getIncomingValueForBlock(PreHeader);
   Value *Step = Phi->getIncomingValueForBlock(Latch);
+
+  // Check that the elements are integers equal in size to pointers.
+  DataLayout DL = Phi->getFunction()->getDataLayout();
+  VectorType *VTy = dyn_cast<VectorType>(Start->getType());
+  if (!VTy)
+    return false;
+  Type *ITy = VTy->getElementType();
+  if (DL.getTypeStoreSize(ITy) != DL.getPointerSize())
+    return false;
 
   // TODO: Handle offsets from stepvector.
   if (!match(Start, m_Intrinsic<Intrinsic::stepvector>()))
@@ -8855,19 +8867,13 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (!match(
           LoopStride,
           m_Splat(m_Value(PtrStride, m_Shl(m_VScale(), m_APInt(ShiftAmt))))) ||
-      1ULL << ShiftAmt->getZExtValue() != EltCnt.getKnownMinValue())
-    return false;
-
-  // Check that the elements are integers equal in size to pointers.
-  DataLayout DL = Phi->getFunction()->getDataLayout();
-  VectorType *VTy = cast<VectorType>(Start->getType());
-  Type *ITy = VTy->getElementType();
-  if (DL.getTypeStoreSize(ITy) != DL.getPointerSize())
+      (1ULL << ShiftAmt->getZExtValue()) != EltCnt.getKnownMinValue())
     return false;
 
   // For the simplest case, we're only interested if the phi has two users;
   // The Step forming the incoming value for the backedge, and a GEP.
   GetElementPtrInst *GEP = nullptr;
+  Value *Base = nullptr;
   for (User *U : Phi->users()) {
     // Skip over the step, handled above.
     if (Step == U)
@@ -8882,12 +8888,12 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
     GEP = dyn_cast<GetElementPtrInst>(U);
     if (!GEP || GEP->getNumOperands() != 2)
       return false;
-  }
 
-  // Reject if the base isn't loop invariant.
-  Value *Base = GEP->getOperand(0);
-  if (!L->isLoopInvariant(Base))
-    return false;
+    // Reject if the base isn't loop invariant.
+    Base = GEP->getOperand(0);
+    if (!L->isLoopInvariant(Base))
+      return false;
+  }
 
   // Check that the indexed size is also the same.
   unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
@@ -8920,12 +8926,9 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   Builder.SetInsertPoint(GEP);
   GEP->replaceAllUsesWith(NewPhi);
 
-  // Remove incoming values for the old phi.
-  // TODO: It would be nice to erase it at this point, but removing the GEP
-  //       seems to cause crashes even if removeAllAssertingVHReferences is
-  //       called, so we're currently relying on the backend to remove it.
-  Phi->removeIncomingValue(1u);
-  Phi->removeIncomingValue(0u);
+  // Remove old phi, gep, and step.
+  Phi->replaceAllUsesWith(llvm::PoisonValue::get(Phi->getType()));
+  llvm::RecursivelyDeleteTriviallyDeadInstructions(Phi);
 
   return true;
 }

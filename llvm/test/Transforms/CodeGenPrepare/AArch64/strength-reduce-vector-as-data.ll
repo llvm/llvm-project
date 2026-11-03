@@ -11,8 +11,6 @@ define void @init_array_of_ptrs_to_structs(ptr noalias %arc_ptrs, ptr %arc_new, 
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = sub nsw i64 0, [[STEP]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[DOTNOT]], [[NUM_ARCS]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[STEP]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <vscale x 2 x i64> [[TMP0]], splat (i64 72)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARC_NEW]], <vscale x 2 x i64> [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[STEP]], 72
@@ -29,7 +27,6 @@ define void @init_array_of_ptrs_to_structs(ptr noalias %arc_ptrs, ptr %arc_new, 
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP9]] = getelementptr i8, <vscale x 2 x ptr> [[VEC_LSR_PHI]], <vscale x 2 x i64> [[DOTSPLAT2]]
-; CHECK-NEXT:    [[VEC_IND_NEXT:%.*]] = add nuw nsw <vscale x 2 x i64> poison, [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -368,8 +365,6 @@ define void @update_first_elt_of_strided_structs(ptr noalias %struct_ptr, i64 %n
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = sub nsw i64 0, [[STEP]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[DOTNOT]], [[NUM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[STEP]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <vscale x 2 x i64> [[TMP0]], splat (i64 72)
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[STRUCT_PTR]], <vscale x 2 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[STEP]], 72
@@ -387,7 +382,6 @@ define void @update_first_elt_of_strided_structs(ptr noalias %struct_ptr, i64 %n
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP6]] = getelementptr i8, <vscale x 2 x ptr> [[WIDE_GEP]], <vscale x 2 x i64> [[DOTSPLAT1]]
-; CHECK-NEXT:    [[VEC_IND_NEXT:%.*]] = add nuw nsw <vscale x 2 x i64> poison, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
