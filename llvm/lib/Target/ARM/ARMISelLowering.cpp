@@ -53,6 +53,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -113,6 +114,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "arm-isel"
 
@@ -12781,6 +12783,9 @@ static SDValue AddCombineTo64bitMLAL(SDNode *AddeSubeNode,
          AddeSubeNode->getOperand(2).getValueType() == MVT::i32 &&
          "ADDE node has the wrong inputs");
 
+  if (AddeSubeNode->hasAnyUseOfValue(1))
+    return SDValue();
+
   // Check that we are chained to the right ADDC or SUBC node.
   SDNode *AddcSubcNode = AddeSubeNode->getOperand(2).getNode();
   if ((AddeSubeNode->getOpcode() == ARMISD::ADDE &&
@@ -12879,7 +12884,7 @@ static SDValue AddCombineTo64bitMLAL(SDNode *AddeSubeNode,
   // part of the result of the MLAL, furthermore the LowAddSub must be a constant
   // addition or subtraction with the value of 0x800000.
   if (Subtarget->hasV6Ops() && Subtarget->hasDSP() && Subtarget->useMulOps() &&
-      FinalOpc == ARMISD::SMLAL && !AddeSubeNode->hasAnyUseOfValue(1) &&
+      FinalOpc == ARMISD::SMLAL &&
       LowAddSub->getNode()->getOpcode() == ISD::Constant &&
       static_cast<ConstantSDNode *>(LowAddSub->getNode())->getZExtValue() ==
           0x80000000) {
@@ -12924,6 +12929,9 @@ static SDValue AddCombineTo64bitUMAAL(SDNode *AddeNode,
   // chance to use UMAAL. Check if Addc uses a node which has already
   // been combined into a UMLAL. The other pattern is UMLAL using Addc/Adde
   // as the addend, and it's handled in PerformUMLALCombine.
+
+  if (AddeNode->hasAnyUseOfValue(1))
+    return SDValue();
 
   if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP())
     return AddCombineTo64bitMLAL(AddeNode, DCI, Subtarget);
@@ -15473,6 +15481,35 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
 /// Target-specific dag combine xforms for ARMISD::BUILD_VECTOR.
 static SDValue
 PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+
+  // Fold buildvector(extractelt(bitcast(build_vector(a,b,_,_))),
+  //                  extractelt(bitcast(build_vector(_,_,c,d))))
+  //   -> bitcast(build_vector(a,b,c,d))
+  if (VT.getScalarSizeInBits() == 64 && N->getNumOperands() == 2) {
+    auto IsExtractFromBuildVec = [](SDValue V, SDValue &BV, int64_t &Lane) {
+      if (!sd_match(V, m_ExtractElt(m_Value(BV), m_ConstInt(Lane))))
+        return false;
+      while (BV.getOpcode() == ISD::BITCAST)
+        BV = BV.getOperand(0);
+      return BV.getOpcode() == ARMISD::BUILD_VECTOR &&
+             BV.getNumOperands() == 4 &&
+             BV.getValueType().getScalarSizeInBits() == 32;
+    };
+    SDValue BV1, BV2;
+    int64_t Lane1, Lane2;
+    if (IsExtractFromBuildVec(N->getOperand(0), BV1, Lane1) &&
+        IsExtractFromBuildVec(N->getOperand(1), BV2, Lane2))
+      return DAG.getBitcast(
+          VT, DAG.getNode(
+                  ARMISD::BUILD_VECTOR, N, MVT::v4f32,
+                  DAG.getBitcast(MVT::f32, BV1->getOperand(Lane1 * 2 + 0)),
+                  DAG.getBitcast(MVT::f32, BV1->getOperand(Lane1 * 2 + 1)),
+                  DAG.getBitcast(MVT::f32, BV2->getOperand(Lane2 * 2 + 0)),
+                  DAG.getBitcast(MVT::f32, BV2->getOperand(Lane2 * 2 + 1))));
+  }
+
   // ARMISD::BUILD_VECTOR is introduced when legalizing ISD::BUILD_VECTOR.
   // At that time, we may have inserted bitcasts from integer to float.
   // If these bitcasts have survived DAGCombine, change the lowering of this
@@ -15485,7 +15522,6 @@ PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   //    1.1. Vector is used only once.
   //    1.2. Use is a bit convert to an integer type.
   // 2. The size of its operands are 32-bits (64-bits are not legal).
-  EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
 
   // Check 1.1. and 2.
@@ -15525,7 +15561,6 @@ PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (NumOfBitCastedElts <= NumOfRelevantElts / 2)
     return SDValue();
 
-  SelectionDAG &DAG = DCI.DAG;
   // Create the new vector type.
   EVT VecVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts);
   // Check if the type is legal.
@@ -21468,6 +21503,14 @@ ARMTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
   if (VT == MVT::f64 && Subtarget->hasFP64())
     return ARM_AM::getFP64Imm(Imm) != -1 ? FPImmAction::Legal
                                          : FPImmAction::ConstantPool;
+  return FPImmAction::ConstantPool;
+}
+
+TargetLowering::FPImmAction
+ARMTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                  bool ForCodeSize) const {
+  if (Subtarget->useSoftFloat() || !Subtarget->hasVFP2Base())
+    return FPImmAction::Bitcast;
   return FPImmAction::ConstantPool;
 }
 

@@ -330,7 +330,7 @@ public:
   void writeTo(uint8_t *buf) const override;
   void setUp();
 
-  static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+  static constexpr llvm::StringLiteral objcMsgSendStubPrefix = "_objc_msgSend$";
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
   ArrayRef<Defined *> getSymbols() const { return symbols; }
@@ -343,6 +343,8 @@ private:
   size_t getStubSize() const;
 
   std::vector<Defined *> symbols;
+  // Total byte size of all stubs added so far.
+  size_t stubsSectionSize = 0;
   Symbol *objcMsgSend = nullptr;
 };
 
@@ -783,6 +785,10 @@ public:
                                           int64_t addend) const;
 
   const std::vector<Location> &getLocations() const { return locations; }
+
+  // Each fixup's "next" field holds the distance to the next fixup on its page
+  // in units of this stride, so every fixup must be aligned to it.
+  static constexpr uint32_t chainStride = 4; // for DYLD_CHAINED_PTR_64
 
   bool hasWeakBinding() const { return hasWeakBind; }
   bool hasNonWeakDefinition() const { return hasNonWeakDef; }

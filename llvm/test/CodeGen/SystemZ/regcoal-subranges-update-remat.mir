@@ -39,8 +39,8 @@ body:             |
     %1:gr32bit = COPY %0.subreg_l32
     %1:gr32bit = MSFI %1, -117440512
     %2:grx32bit = COPY %0.subreg_l32
-    CHIMux killed %2, 0, implicit-def $cc
-    %3:gr32bit = COPY killed %1
+    CHIMux %2, 0, implicit-def $cc
+    %3:gr32bit = COPY %1
     Return implicit %3
 ...
 

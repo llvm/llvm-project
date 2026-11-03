@@ -1514,22 +1514,37 @@ def OpenMP_PriorityClause : OpenMP_PriorityClauseSkip<>;
 
 class OpenMP_PrivateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    // Only sections currently consumes the recipe-effect assumption.
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
     BlockArgOpenMPOpInterface
   ];
 
-  let arguments = (ins
+  let arguments = !con((ins
     Variadic<AnyType>:$private_vars,
     OptionalAttr<SymbolRefArrayAttr>:$private_syms,
     // Set this attribute if a barrier is needed after initialization and
     // copying of lastprivate variables.
     UnitAttr:$private_needs_barrier
-  );
+  ), !if(boundedRecipeEffects, (ins
+    UnitAttr:$private_assume_bounded_recipe_effects
+  ), (ins)));
 
-  // TODO: Add description.
+  let description = [{
+    The optional `private_assume_bounded_recipe_effects` unit attribute asserts
+    that all regions of every referenced privatisation recipe may only read the
+    original variable and allocate, write or free private storage.
+    Lastprivate copy-back is represented by explicit nested operations.
+
+    These effects apply only to storage directly designated by the original
+    variables and their corresponding private block arguments. Recipes may not
+    access other storage, including globals or pointees reached by loading
+    pointers from these variables. Without the attribute, referenced
+    privatisation recipes are assumed to have arbitrary memory effects.
+  }];
   // Assembly format not defined because this clause must be processed together
   // with the first region of the operation, as it defines entry block
   // arguments.
@@ -1568,19 +1583,23 @@ def OpenMP_ProcBindClause : OpenMP_ProcBindClauseSkip<>;
 
 class OpenMP_ReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    // Only sections currently consumes the recipe-effect assumption.
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
     BlockArgOpenMPOpInterface
   ];
 
-  let arguments = (ins
+  let arguments = !con((ins
     OptionalAttr<ReductionModifierAttr>:$reduction_mod,
     Variadic<OpenMP_PointerLikeType>:$reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$reduction_syms
-  );
+  ), !if(boundedRecipeEffects, (ins
+    UnitAttr:$reduction_assume_bounded_recipe_effects
+  ), (ins)));
 
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
@@ -1601,6 +1620,17 @@ class OpenMP_ReductionClauseSkip<
     specifies how to combine the values from each iteration, section, team,
     thread or simd lane defined by the operation's region into the final value,
     which is available in the accumulator after they all complete.
+
+    The optional `reduction_assume_bounded_recipe_effects` unit attribute
+    asserts that all regions of every referenced reduction recipe may only read
+    or write the original variable and allocate, free, read or write private
+    accumulators.
+
+    These effects apply only to storage directly designated by the original
+    variables and their corresponding private block arguments. Recipes may not
+    access other storage, including globals or pointees reached by loading
+    pointers from these variables. Without the attribute, referenced reduction
+    recipes are assumed to have arbitrary memory effects.
   }];
 
   // Assembly format not defined because this clause must be processed together

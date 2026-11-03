@@ -29,6 +29,7 @@
 ...
 ---
 name:            foo
+tracksRegLiveness: false
 body: |
   bb.0.entry:
     successors: %bb.1, %bb.2
@@ -48,6 +49,7 @@ body: |
 ...
 ---
 name:            implicit_subregister1
+tracksRegLiveness: false
 body: |
   bb.0.entry:
   ; Verify that the implicit register verifier won't report an error on implicit
@@ -59,6 +61,7 @@ body: |
 ...
 ---
 name:            implicit_subregister2
+tracksRegLiveness: false
 body: |
   bb.0.entry:
   ; CHECK-LABEL: name: implicit_subregister2
