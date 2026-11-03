@@ -23,7 +23,7 @@ STATISTIC(NumSkippedPasses, "Number of skipped passes");
 STATISTIC(NumLRTQueries, "Number of LastRunTracking queries");
 
 bool LastRunTrackingInfo::shouldSkipImpl(PassID ID, OptionPtr Ptr) const {
-  if (!Opts.last_run_tracking)
+  if (!Opts.enable_last_run_tracking)
     return false;
   ++NumLRTQueries;
   auto Iter = TrackedPasses.find(ID);

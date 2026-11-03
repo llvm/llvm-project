@@ -284,7 +284,7 @@ defm : BoolField<"interactive-model-runner-echo-reply", "false",
   "The InteractiveModelRunner will echo back to stderr the data received from the host (for debugging purposes)">;
 
 // LastRunTrackingAnalysis.cpp
-defm : BoolField<"last-run-tracking", "true",
+defm : BoolField<"enable-last-run-tracking", "true",
   "Enable last run tracking">;
 
 // LazyValueInfo.cpp
@@ -473,4 +473,4 @@ def : AliasOf<"da-disable-delinearization-checks", "da-delinearization-checks=fa
 def : AliasOf<"disable-gep-const-evaluation", "gep-const-evaluation=false">;
 
 // TODO: Remove the old spellings after 2027-05.
-def : AliasOf<"disable-last-run-tracking", "last-run-tracking=false">;
+def : AliasOf<"disable-last-run-tracking", "enable-last-run-tracking=false">;

@@ -48,8 +48,6 @@ struct AnalysisOptions;
 /// bool isCompatibleWith(const OptionT& LastOpt) const to check compatibility.
 class LastRunTrackingInfo {
 public:
-  explicit LastRunTrackingInfo(const AnalysisOptions &Opts) : Opts(Opts) {}
-
   using PassID = const void *;
   using OptionPtr = const void *;
   // CompatibilityCheckFn is a closure that stores the parameters of last run.
@@ -85,6 +83,9 @@ public:
   }
 
 private:
+  friend class LastRunTrackingAnalysis;
+  explicit LastRunTrackingInfo(const AnalysisOptions &Opts) : Opts(Opts) {}
+
   LLVM_ABI bool shouldSkipImpl(PassID ID, OptionPtr Ptr) const;
   LLVM_ABI void updateImpl(PassID ID, bool Changed,
                            CompatibilityCheckFn CheckFn);
