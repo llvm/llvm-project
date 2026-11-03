@@ -161,7 +161,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
   ^more text
   */
 )cpp",
-   R"cpp(
+                     R"cpp(
  /*
   * existing comment
   * ^more text
@@ -174,7 +174,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
   ^more text
   */
 )cpp",
-   R"cpp(
+                     R"cpp(
  /**
   * existing comment
   * ^more text
@@ -187,7 +187,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
 ^
 */
 )cpp",
-   R"cpp(
+                     R"cpp(
 /*
 ^
 */
@@ -200,7 +200,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
  ^second line
  */
 )cpp",
-   R"cpp(
+                     R"cpp(
 /*
  * first line
  * ^second line
@@ -215,7 +215,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
 ^
  */
 )cpp",
-   R"cpp(
+                     R"cpp(
 /*
  * first line
  * second line
@@ -229,7 +229,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
 ^
  */
 )cpp",
-   R"cpp(
+                     R"cpp(
 /**
  * ^
  */
@@ -242,7 +242,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
 ^
  */
 )cpp",
-   R"cpp(
+                     R"cpp(
 /**
  * first line
  * ^
@@ -255,7 +255,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
  * ^
  */
 )cpp",
-   R"cpp(
+                     R"cpp(
 /**
  * ^
  */
@@ -268,7 +268,7 @@ TEST(FormatIncremental, ContinueBlockComment) {
  */
 ^
 )cpp",
-   R"cpp(
+                     R"cpp(
 /*
  * comment
  */

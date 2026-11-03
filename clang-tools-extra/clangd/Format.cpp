@@ -179,9 +179,9 @@ inline unsigned columnWidthWithTabs(StringRef Text, unsigned TabWidth) {
 //  - we continue any line-comment that was split
 //  - we format the old line in addition to the cursor
 //  - we represent the cursor with a line comment to preserve the newline
-IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
-                                                     unsigned Cursor,
-                                                     const format::FormatStyle &Style) {
+IncrementalChanges
+getIncrementalChangesAfterNewline(llvm::StringRef Code, unsigned Cursor,
+                                  const format::FormatStyle &Style) {
   IncrementalChanges Result;
   // Before newline, code looked like:
   //    leading^trailing
