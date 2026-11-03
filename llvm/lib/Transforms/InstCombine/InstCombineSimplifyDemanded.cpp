@@ -3319,14 +3319,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       const fltSemantics &FltSem = EltTy->getFltSemantics();
       DenormalMode Mode = F.getDenormalMode(FltSem);
 
-      FPClassTest SrcDemandedMask = DemandedMask & fcInf;
+      FPClassTest SrcDemandedMask = fcNone;
       if (DemandedMask & fcNan)
         SrcDemandedMask |= fcNan;
 
       if (DemandedMask & fcPosInf)
-        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+        SrcDemandedMask |= fcPosInf | fcPosNormal | fcPosSubnormal;
       if (DemandedMask & fcNegInf)
-        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+        SrcDemandedMask |= fcNegInf | fcNegNormal | fcNegSubnormal;
 
       if (DemandedMask & (fcPosNormal | fcPosSubnormal))
         SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
