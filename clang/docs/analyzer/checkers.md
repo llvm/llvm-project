@@ -1821,7 +1821,20 @@ void test() {
 
 #### security.insecureAPI.strcpy (C)
 
-Warn on uses of the `strcpy` and `strcat` functions.
+Warn on uses of unbounded string copying and concatenation functions that may
+cause buffer overflows.
+
+The checker recognizes the following functions:
+
+- Narrow-character functions: `strcpy`, `strcat`, `lstrcpyA`, `lstrcatA`.
+- Wide-character functions: `wcscpy`, `wcscat`, `lstrcpyW`, `lstrcatW`.
+- Clang builtin and fortified variants of `strcpy` and `strcat`.
+
+The checker requires function declarations to have compatible character-pointer
+parameter types. For copying functions, it suppresses the warning when a string
+literal fits into a destination array of the same character type. Concatenation
+functions are still reported because the current contents of the destination
+buffer may affect whether the operation is safe.
 
 ```c
 void test() {
@@ -1830,7 +1843,13 @@ void test() {
 
   strcpy(x, y); // warn
 }
+
+void test_safe_copy() {
+  char x[6];
+  strcpy(x, "hello"); // no warning
+}
 ```
+
 
 (security-insecureapi-vfork)=
 

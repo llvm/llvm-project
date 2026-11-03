@@ -101,7 +101,10 @@ public:
   void VisitChildren(Stmt *S);
 
   // Helpers.
-  bool checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD);
+  bool checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD,
+                        bool IsWide);
+  void emitUnboundedStringDiagnostic(const CallExpr *CE, StringRef Name,
+                                     StringRef NarrowReplacement, bool IsWide);
 
   typedef void (WalkAST::*FnCheck)(const CallExpr *, const FunctionDecl *);
   typedef void (WalkAST::*MsgCheck)(const ObjCMessageExpr *);
@@ -163,8 +166,10 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
           .Case("mkstemp", &WalkAST::checkCall_mkstemp)
           .Case("mkdtemp", &WalkAST::checkCall_mkstemp)
           .Case("mkstemps", &WalkAST::checkCall_mkstemp)
-          .Cases({"strcpy", "__strcpy_chk"}, &WalkAST::checkCall_strcpy)
-          .Cases({"strcat", "__strcat_chk"}, &WalkAST::checkCall_strcat)
+          .Cases({"strcpy", "__strcpy_chk", "lstrcpyA", "wcscpy", "lstrcpyW"},
+                 &WalkAST::checkCall_strcpy)
+          .Cases({"strcat", "__strcat_chk", "lstrcatA", "wcscat", "lstrcatW"},
+                 &WalkAST::checkCall_strcat)
           .Cases({"sprintf", "vsprintf", "scanf", "wscanf", "fscanf", "fwscanf",
                   "vscanf", "vwscanf", "vfscanf", "vfwscanf"},
                  &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
@@ -682,37 +687,85 @@ void WalkAST::checkCall_mkstemp(const CallExpr *CE, const FunctionDecl *FD) {
 // the Bounds of a Memory Buffer
 //===----------------------------------------------------------------------===//
 
+
+void WalkAST::emitUnboundedStringDiagnostic(const CallExpr *CE, StringRef Name,
+                                            StringRef NarrowReplacement,
+                                            bool IsWide) {
+  // Construct the warning title and description.
+  SmallString<128> Buf1;
+  SmallString<512> Buf2;
+  llvm::raw_svector_ostream Out1(Buf1);
+  llvm::raw_svector_ostream Out2(Buf2);
+
+  Out1 << "Potential insecure memory buffer bounds restriction in call '"
+       << Name << "'";
+
+  Out2 << "Call to function '" << Name
+       << "' is insecure as it does not "
+          "provide bounding of the memory buffer. Replace "
+          "unbounded copy functions with analogous functions that "
+          "support length arguments";
+
+  if (IsWide)
+    Out2 << " for wide-character strings";
+  else
+    Out2 << " such as '" << NarrowReplacement << "'";
+
+  Out2 << ". CWE-119.";
+
+  // Issue a warning.
+  PathDiagnosticLocation CELoc =
+      PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
+
+  BR.EmitBasicReport(AC->getDecl(), filter.checkName_strcpy, Out1.str(),
+                     "Security", Out2.str(), CELoc,
+                     CE->getCallee()->getSourceRange());
+}
+
+
 void WalkAST::checkCall_strcpy(const CallExpr *CE, const FunctionDecl *FD) {
   if (!filter.check_strcpy)
     return;
 
-  if (!checkCall_strCommon(CE, FD))
+  // Get the function name and normalize fortified variants.
+  StringRef Name = FD->getIdentifier()->getName();
+  Name.consume_front("__builtin_");
+
+  if (Name == "__strcpy_chk")
+    Name = "strcpy";
+
+  bool IsWide = Name == "wcscpy" || Name == "lstrcpyW";
+
+  if (!checkCall_strCommon(CE, FD, IsWide))
     return;
 
-  const auto *Target = CE->getArg(0)->IgnoreImpCasts(),
-             *Source = CE->getArg(1)->IgnoreImpCasts();
+  const auto *Target = CE->getArg(0)->IgnoreImpCasts();
+  const auto *Source = CE->getArg(1)->IgnoreImpCasts();
 
+  // Check whether a string literal fits into the destination array.
   if (const auto *Array = dyn_cast<ConstantArrayType>(Target->getType())) {
-    uint64_t ArraySize = BR.getContext().getTypeSize(Array) / 8;
+    uint64_t ArraySize = Array->getSize().getZExtValue();
+
     if (const auto *String = dyn_cast<StringLiteral>(Source)) {
-      if (ArraySize >= String->getLength() + 1)
+      ASTContext &Ctx = BR.getContext();
+
+      QualType DestElementType =
+          Ctx.getCanonicalType(Array->getElementType()).getUnqualifiedType();
+
+      QualType SrcElementType =
+          Ctx.getCanonicalType(
+                 String->getType()->getAsArrayTypeUnsafe()->getElementType())
+              .getUnqualifiedType();
+
+      if (DestElementType == SrcElementType &&
+          ArraySize >= String->getLength() + 1)
         return;
     }
   }
 
-  // Issue a warning.
-  PathDiagnosticLocation CELoc =
-    PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
-  BR.EmitBasicReport(AC->getDecl(), filter.checkName_strcpy,
-                     "Potential insecure memory buffer bounds restriction in "
-                     "call 'strcpy'",
-                     "Security",
-                     "Call to function 'strcpy' is insecure as it does not "
-                     "provide bounding of the memory buffer. Replace "
-                     "unbounded copy functions with analogous functions that "
-                     "support length arguments such as 'strlcpy'. CWE-119.",
-                     CELoc, CE->getCallee()->getSourceRange());
+  emitUnboundedStringDiagnostic(CE, Name, "strlcpy", IsWide);
 }
+
 
 //===----------------------------------------------------------------------===//
 // Check: Any use of 'strcat' is insecure.
@@ -725,22 +778,21 @@ void WalkAST::checkCall_strcat(const CallExpr *CE, const FunctionDecl *FD) {
   if (!filter.check_strcpy)
     return;
 
-  if (!checkCall_strCommon(CE, FD))
+  // Get the function name and normalize fortified variants.
+  StringRef Name = FD->getIdentifier()->getName();
+  Name.consume_front("__builtin_");
+
+  if (Name == "__strcat_chk")
+    Name = "strcat";
+
+  bool IsWide = Name == "wcscat" || Name == "lstrcatW";
+
+  if (!checkCall_strCommon(CE, FD, IsWide))
     return;
 
-  // Issue a warning.
-  PathDiagnosticLocation CELoc =
-    PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
-  BR.EmitBasicReport(AC->getDecl(), filter.checkName_strcpy,
-                     "Potential insecure memory buffer bounds restriction in "
-                     "call 'strcat'",
-                     "Security",
-                     "Call to function 'strcat' is insecure as it does not "
-                     "provide bounding of the memory buffer. Replace "
-                     "unbounded copy functions with analogous functions that "
-                     "support length arguments such as 'strlcat'. CWE-119.",
-                     CELoc, CE->getCallee()->getSourceRange());
+  emitUnboundedStringDiagnostic(CE, Name, "strlcat", IsWide);
 }
+
 
 //===----------------------------------------------------------------------===//
 // Check: Any use of 'sprintf', 'vsprintf', 'scanf', 'wscanf', 'fscanf',
@@ -828,7 +880,9 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
 // Common check for str* functions with no bounds parameters.
 //===----------------------------------------------------------------------===//
 
-bool WalkAST::checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD) {
+
+bool WalkAST::checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD,
+                                 bool IsWide) {
   const FunctionProtoType *FPT = FD->getType()->getAs<FunctionProtoType>();
   if (!FPT)
     return false;
@@ -838,15 +892,21 @@ bool WalkAST::checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD) {
   if (numArgs != 2 && numArgs != 3)
     return false;
 
-  // Verify the type for both arguments.
+  ASTContext &Ctx = BR.getContext();
+  QualType ExpectedType =
+      Ctx.getCanonicalType(IsWide ? Ctx.getWideCharType() : Ctx.CharTy)
+          .getUnqualifiedType();
+
+  // Verify that both parameters use the expected character type.
   for (int i = 0; i < 2; i++) {
-    // Verify that the arguments are pointers.
     const PointerType *PT = FPT->getParamType(i)->getAs<PointerType>();
     if (!PT)
       return false;
 
-    // Verify that the argument is a 'char*'.
-    if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().CharTy)
+    QualType PointeeType =
+        Ctx.getCanonicalType(PT->getPointeeType()).getUnqualifiedType();
+
+    if (PointeeType != ExpectedType)
       return false;
   }
 
