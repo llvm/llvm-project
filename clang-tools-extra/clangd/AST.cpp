@@ -571,7 +571,6 @@ public:
   }
 
   // Handle functions/lambdas with `auto` typed parameters.
-  // We deduce the type if there's exactly one instantiation visible.
   bool VisitParmVarDecl(ParmVarDecl *PVD) {
     if (!PVD->getType()->isDependentType())
       return true;
@@ -596,8 +595,8 @@ public:
     }
 
     // Now find the instantiation and the deduced template type arg.
-    auto *Instantiation =
-        llvm::dyn_cast_or_null<FunctionDecl>(getOnlyInstantiation(Templated));
+    auto *Instantiation = llvm::dyn_cast_or_null<FunctionDecl>(
+        getInstantiationForTypeDeduction(Templated));
     if (!Instantiation)
       return true;
     const auto *Args = Instantiation->getTemplateSpecializationArgs();
@@ -648,10 +647,12 @@ TemplateTypeParmTypeLoc getContainedAutoParamType(TypeLoc TL) {
 }
 
 template <typename TemplateDeclTy>
-static NamedDecl *getOnlyInstantiationImpl(TemplateDeclTy *TD) {
+static NamedDecl *getOnlyInstantiationImpl(TemplateDeclTy *TD,
+                                           bool OnlyUsed = false) {
   NamedDecl *Only = nullptr;
   for (auto *Spec : TD->specializations()) {
-    if (Spec->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+    if (Spec->getTemplateSpecializationKind() == TSK_ExplicitSpecialization ||
+        (OnlyUsed && !Spec->isUsed()))
       continue;
     if (Only != nullptr)
       return nullptr;
@@ -670,6 +671,27 @@ NamedDecl *getOnlyInstantiation(NamedDecl *TemplatedDecl) {
       return getOnlyInstantiationImpl(VTD);
   }
   return nullptr;
+}
+
+NamedDecl *getOnlyUsedInstantiation(NamedDecl *TemplatedDecl) {
+  if (TemplateDecl *TD = TemplatedDecl->getDescribedTemplate()) {
+    if (auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(TD))
+      return getOnlyInstantiationImpl(CTD, /*OnlyUsed=*/true);
+    if (auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(TD))
+      return getOnlyInstantiationImpl(FTD, /*OnlyUsed=*/true);
+    if (auto *VTD = llvm::dyn_cast<VarTemplateDecl>(TD))
+      return getOnlyInstantiationImpl(VTD, /*OnlyUsed=*/true);
+  }
+  return nullptr;
+}
+
+NamedDecl *getInstantiationForTypeDeduction(NamedDecl *TemplatedDecl) {
+  // Unevaluated contexts, such as requires-expressions, can create additional
+  // specializations. Prefer the unique used instantiation when this happens.
+  if (auto *Used = getOnlyUsedInstantiation(TemplatedDecl))
+    return Used;
+  // A single visible instantiation remains useful even if it is not used.
+  return getOnlyInstantiation(TemplatedDecl);
 }
 
 std::vector<const Attr *> getAttributes(const DynTypedNode &N) {

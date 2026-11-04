@@ -2915,6 +2915,28 @@ TEST(Hover, All) {
             HI.Definition = "/* not deduced */";
           }},
       {
+          R"cpp(
+            struct Foo {
+              template <class Fn>
+              void call(Fn &&fn) requires requires { fn(*this); } {
+                fn(*this);
+              }
+              template <class Fn>
+              void call(Fn &&fn) const requires requires { fn(*this); } {
+                fn(*this);
+              }
+            };
+            void test() {
+              Foo foo;
+              foo.call([](^[[auto]] &&x) {});
+            }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "auto";
+            HI.Kind = index::SymbolKind::TypeAlias;
+            HI.Definition = "Foo &";
+          }},
+      {
           R"cpp(// Undeduced decltype(auto) return type
             template<typename T>
             ^[[decltype]](auto) foo() {

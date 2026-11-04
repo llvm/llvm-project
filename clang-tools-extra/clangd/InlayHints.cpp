@@ -662,7 +662,7 @@ public:
       }
     }
 
-    // Handle templates like `int foo(auto x)` with exactly one instantiation.
+    // Handle deduced parameter types in templates like `int foo(auto x)`.
     if (auto *PVD = llvm::dyn_cast<ParmVarDecl>(D)) {
       if (D->getIdentifier() && PVD->getType()->isDependentType() &&
           !getContainedAutoParamType(D->getTypeSourceInfo()->getTypeLoc())
@@ -680,7 +680,7 @@ public:
     if (!TemplateFunction)
       return nullptr;
     auto *InstantiatedFunction = llvm::dyn_cast_or_null<FunctionDecl>(
-        getOnlyInstantiation(TemplateFunction));
+        getInstantiationForTypeDeduction(TemplateFunction));
     if (!InstantiatedFunction)
       return nullptr;
 
