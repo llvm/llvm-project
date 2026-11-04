@@ -9,9 +9,7 @@ define amdgpu_kernel void @simulated_trap_pseudo_expand(i64 %offset, i1 %should_
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x8
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %normal_path
 ; CHECK-NEXT:    s_clause 0x1

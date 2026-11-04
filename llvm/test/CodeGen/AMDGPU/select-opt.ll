@@ -8,9 +8,8 @@
 ; GCN-DAG: s_cmp_lg_u32
 ; GCN: s_cselect_b64 [[CMP1:s\[[0-9]+:[0-9]+\]]], -1, 0
 ; GCN-DAG: s_cmp_lg_u32
-; GCN: s_cselect_b64 [[CMP2:s\[[0-9]+:[0-9]+\]]], -1, 0
-; GCN: s_and_b64 [[AND1:s\[[0-9]+:[0-9]+\]]], [[CMP1]], [[CMP2]]
-; GCN: s_and_b64 [[AND2:s\[[0-9]+:[0-9]+\]]], [[AND1]], exec
+; GCN: s_cselect_b64 [[CMP2:s\[[0-9]+:[0-9]+\]]], [[CMP1]], 0
+; GCN: s_and_b64 [[AND2:s\[[0-9]+:[0-9]+\]]], [[CMP2]], exec
 ; GCN: s_cselect_b32 [[RESULT:s[0-9]+]]
 ; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
 ; GCN: buffer_store_dword [[VRESULT]]
@@ -44,9 +43,8 @@ define amdgpu_kernel void @opt_select_i32_and_cmp_f32(ptr addrspace(1) %out, flo
 ; GCN-DAG: s_cmp_lg_u32
 ; GCN: s_cselect_b64 [[CMP1:s\[[0-9]+:[0-9]+\]]], -1, 0
 ; GCN-DAG: s_cmp_lg_u32
-; GCN: s_cselect_b64 [[CMP2:s\[[0-9]+:[0-9]+\]]], -1, 0
-; GCN: s_and_b64 [[AND1:s\[[0-9]+:[0-9]+\]]], [[CMP1]], [[CMP2]]
-; GCN: s_and_b64 [[AND2:s\[[0-9]+:[0-9]+\]]], [[AND1]], exec
+; GCN: s_cselect_b64 [[CMP2:s\[[0-9]+:[0-9]+\]]], [[CMP1]], 0
+; GCN: s_and_b64 [[AND2:s\[[0-9]+:[0-9]+\]]], [[CMP2]], exec
 ; GCN-DAG: s_cselect_b32 [[RESULT0:s[0-9]+]]
 ; GCN-DAG: s_cselect_b32 [[RESULT1:s[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
