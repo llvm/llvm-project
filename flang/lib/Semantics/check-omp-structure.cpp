@@ -6474,6 +6474,19 @@ void OmpStructureChecker::Enter(const parser::OmpClause::DeviceSafesync &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_device_safesync);
 }
 
+void OmpStructureChecker::Enter(
+    const parser::OmpClause::NoParallelism &clause) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  llvm::omp::Version v60{60};
+  if (clause.v && version < v60) {
+    context_.Say(GetContext().clauseSource,
+        "An argument to %s is an %s feature, %s"_warn_en_US,
+        parser::omp::GetUpperName(
+            llvm::omp::Clause::OMPC_no_parallelism, version),
+        ThisVersion(v60), TryVersion(v60));
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_dynamic_allocators);
 }

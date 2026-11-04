@@ -1,11 +1,14 @@
-! RUN: mkdir -p %t
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK5X,SCOPE,SCOPE5X
+! RUN: split-file %s %t
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -module-dir %t -o - %t/bare.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK5X,SCOPE,SCOPE5X
 ! RUN: FileCheck %s --check-prefix=MODFILE --input-file=%t/assumes_module.mod
 ! RUN: FileCheck %s --check-prefix=USE-MODFILE --input-file=%t/use_parent-use_child.mod
 ! RUN: FileCheck %s --check-prefix=PARALLELISM-MODFILE --input-file=%t/parallelism_module.mod
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK60,SCOPE,SCOPE60
-! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -module-dir %t -o - %s | FileCheck %s --check-prefix=SIMD
-! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 -module-dir %t %s | FileCheck %s --check-prefix=SYMBOLS
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK60,SCOPE,SCOPE60,CONDITIONAL
+! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -module-dir %t -o - %t/bare.f90 | FileCheck %s --check-prefix=SIMD
+! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 -module-dir %t %t/bare.f90 | FileCheck %s --check-prefix=SYMBOLS
+! RUN: FileCheck %s --check-prefix=TRUE-MODFILE --input-file=%t/conditional_true.mod
+! RUN: FileCheck %s --check-prefix=FALSE-MODFILE --input-file=%t/conditional_false.mod
+! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=60 -module-dir %t -o - %s | FileCheck %s --check-prefix=SIMD
 
 ! SIMD: module
 ! SIMD-NOT: "llvm.assume"
@@ -23,6 +26,7 @@
 ! SYMBOLS-DAG: assumes_mixed (Subroutine, OmpAssumesNoOpenmp, OmpAssumesNoParallelism): Subprogram
 ! SYMBOLS-DAG: assumes_mixed_reverse (Subroutine, OmpAssumesNoOpenmp, OmpAssumesNoParallelism): Subprogram
 
+!--- bare.f90
 ! Lowering of the OpenMP ASSUME construct. The HOLDS clause asserts a scalar
 ! logical expression, which is lowered to an llvm.assume intrinsic. The block is
 ! always lowered.
@@ -288,3 +292,116 @@ program assumes_parallelism_program
   implicit none
   !$omp assumes no_parallelism
 end program assumes_parallelism_program
+
+!--- conditional.f90
+! CONDITIONAL-LABEL: func.func @_QPconditional_literal_true()
+! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+subroutine conditional_literal_true()
+  !$omp assumes no_parallelism(.true.)
+  ! CONDITIONAL: omp.barrier
+  !$omp barrier
+end subroutine
+
+! CONDITIONAL-LABEL: func.func @_QPconditional_literal_false()
+! CONDITIONAL-NOT: "llvm.assume"
+subroutine conditional_literal_false()
+  !$omp assumes no_parallelism(.false.)
+  ! CONDITIONAL: omp.parallel
+  !$omp parallel
+  ! CONDITIONAL: omp.barrier
+  !$omp barrier
+  !$omp end parallel
+end subroutine
+
+! CONDITIONAL-LABEL: func.func @_QPconditional_folded()
+! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+subroutine conditional_folded()
+  !$omp assumes no_parallelism(enabled .and. .not. disabled)
+  logical(kind=1), parameter :: enabled = .true., disabled = .false.
+end subroutine
+
+! CONDITIONAL-LABEL: func.func @_QPconditional_mixed_false()
+! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+subroutine conditional_mixed_false()
+  !$omp assumes no_openmp no_parallelism(.false.)
+end subroutine
+
+! CONDITIONAL-LABEL: func.func @_QPconditional_mixed_true()
+! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_parallelism"]]
+subroutine conditional_mixed_true()
+  !$omp assumes no_parallelism(.true.) no_openmp
+end subroutine
+
+! CONDITIONAL-LABEL: func.func @_QPconditional_true_then_false()
+! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+subroutine conditional_true_then_false()
+  !$omp assumes no_parallelism(.true.)
+  !$omp assumes no_parallelism(.false.)
+end subroutine
+
+! CONDITIONAL-LABEL: func.func @_QPconditional_false_then_true()
+! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+subroutine conditional_false_then_true()
+  !$omp assumes no_parallelism(.false.)
+  !$omp assumes no_parallelism(.true.)
+end subroutine
+
+! CONDITIONAL-LABEL: func.func @_QPconditional_default_then_false()
+! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+subroutine conditional_default_then_false()
+  !$omp assumes no_parallelism
+  !$omp assumes no_parallelism(.false.)
+end subroutine
+
+module conditional_true
+  logical :: enabled
+  !$omp assumes no_parallelism(enabled)
+  interface
+    subroutine interface_condition()
+      !$omp assumes no_parallelism(.false.)
+    end subroutine
+  end interface
+  parameter (enabled = .true.)
+contains
+  ! CONDITIONAL-LABEL: func.func @_QMconditional_truePwork()
+  ! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+  subroutine work()
+    !$omp assumes no_parallelism(.false.)
+  end subroutine
+end module
+
+! TRUE-MODFILE: module conditional_true
+! TRUE-MODFILE: !$omp assumes no_parallelism{{ *$}}
+
+module conditional_false
+  !$omp assumes no_parallelism(enabled)
+  logical, parameter :: enabled = .false.
+contains
+  ! CONDITIONAL-LABEL: func.func @_QMconditional_falsePwork()
+  ! CONDITIONAL-NOT: "llvm.assume"
+  ! CONDITIONAL: return
+  subroutine work()
+  end subroutine
+end module
+
+! FALSE-MODFILE: module conditional_false
+! FALSE-MODFILE-NOT: !$omp assumes
+! FALSE-MODFILE: end
+
+module conditional_host_shadowing
+  logical, parameter :: enabled = .true.
+contains
+  ! CONDITIONAL-LABEL: func.func @_QMconditional_host_shadowingPlocal_condition()
+  ! CONDITIONAL-NOT: "llvm.assume"
+  ! CONDITIONAL: return
+  subroutine local_condition()
+    !$omp assumes no_parallelism(enabled)
+    logical, parameter :: enabled = .false.
+  end subroutine
+
+  ! CONDITIONAL-LABEL: func.func @_QMconditional_host_shadowingPhost_condition()
+  ! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+  subroutine host_condition()
+    !$omp assumes no_parallelism(enabled)
+  end subroutine
+end module

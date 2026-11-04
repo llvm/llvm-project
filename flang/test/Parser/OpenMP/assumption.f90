@@ -1,7 +1,10 @@
-!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
-!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix="PARSE-TREE" %s
-!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
+!RUN: split-file %s %t
+!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %t/bare.f90 | FileCheck --check-prefix="UNPARSE" %s
+!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %t/bare.f90 | FileCheck --check-prefix="PARSE-TREE" %s
+!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefixes=UNPARSE,CONDITIONAL %s
+!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefixes=PARSE-TREE,CONDITIONAL-TREE %s
 
+!--- bare.f90
 subroutine sub1
   integer :: r
   !$omp assume no_openmp
@@ -174,3 +177,19 @@ end subroutine assumes_parallelism
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpClauseList -> OmpClause -> NoParallelism
 !PARSE-TREE: | | OmpClause -> NoOpenmp
+
+!--- conditional.f90
+subroutine conditional_parallelism
+  !$omp assumes no_parallelism(.true.)
+  !$omp assumes no_parallelism(.false.)
+end subroutine conditional_parallelism
+
+!CONDITIONAL: SUBROUTINE conditional_parallelism
+!CONDITIONAL: !$OMP ASSUMES NO_PARALLELISM(.TRUE.)
+!CONDITIONAL: !$OMP ASSUMES NO_PARALLELISM(.FALSE.)
+!CONDITIONAL: END SUBROUTINE conditional_parallelism
+
+!CONDITIONAL-TREE: NoParallelism -> OmpNoParallelismClause
+!CONDITIONAL-TREE: LogicalLiteralConstant
+!CONDITIONAL-TREE: NoParallelism -> OmpNoParallelismClause
+!CONDITIONAL-TREE: LogicalLiteralConstant

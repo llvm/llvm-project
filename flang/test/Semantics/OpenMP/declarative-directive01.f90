@@ -1,5 +1,10 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
+! RUN: split-file %s %t
+! RUN: %python %S/../test_errors.py %t/declarative.f90 %flang -fopenmp -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %t/pure_assumes.f90 %flang -fopenmp -fopenmp-version=51
+! RUN: %python %S/../test_errors.py %t/assumes.f90 %flang -fopenmp -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %t/conditional.f90 %flang -fopenmp -fopenmp-version=60
 
+!--- declarative.f90
 ! Check OpenMP declarative directives
 
 ! 2.4 requires
@@ -100,6 +105,7 @@ subroutine declare_red_1()
   print *, "sum of thread numbers is ", my_var
 end subroutine declare_red_1
 
+!--- assumes.f90
 module assumes_no_openmp_module
   implicit none
   !$omp assumes no_openmp
@@ -144,4 +150,63 @@ subroutine assumes_no_parallelism_duplicate
   !$omp assumes no_parallelism no_parallelism
 end subroutine assumes_no_parallelism_duplicate
 
-end
+subroutine conditional_version()
+  !WARNING: An argument to NO_PARALLELISM is an OpenMP v6.0 feature, try -fopenmp-version=60
+  !$omp assumes no_parallelism(.true.)
+end subroutine
+
+!--- pure_assumes.f90
+pure subroutine work()
+  !ERROR: The OpenMP directive 'ASSUMES' is not allowed in a PURE procedure in OpenMP v5.1, try -fopenmp-version=52
+  !$omp assumes no_openmp no_parallelism
+end subroutine work
+
+!--- conditional.f90
+pure subroutine conditional_valid()
+  logical, parameter :: enabled = .true., disabled = .false.
+  !$omp assumes no_parallelism
+  !$omp assumes no_parallelism(enabled .and. .not. disabled)
+  !$omp assumes no_parallelism(.false.) no_openmp
+end subroutine
+
+subroutine conditional_parameter_statement_later()
+  logical :: enabled
+  !$omp assumes no_parallelism(enabled)
+  parameter (enabled = .true.)
+end subroutine
+
+subroutine conditional_parameter_declaration_later()
+  !$omp assumes no_parallelism(enabled)
+  logical, parameter :: enabled = .true.
+end subroutine
+
+subroutine conditional_host_shadowing()
+  logical, parameter :: enabled = .true.
+contains
+  subroutine local_condition()
+    !$omp assumes no_parallelism(enabled)
+    logical, parameter :: enabled = .false.
+  end subroutine
+end subroutine
+
+subroutine conditional_nonconstant(condition)
+  !ERROR: Must be a constant value
+  !$omp assumes no_parallelism(condition)
+  logical :: condition
+end subroutine
+
+subroutine conditional_wrong_type()
+  !ERROR: Must have LOGICAL type, but is INTEGER(4)
+  !$omp assumes no_parallelism(1)
+end subroutine
+
+subroutine conditional_array()
+  logical, parameter :: conditions(2) = [.true., .false.]
+  !ERROR: Must be a scalar value, but is a rank-1 array
+  !$omp assumes no_parallelism(conditions)
+end subroutine
+
+subroutine conditional_duplicate()
+  !ERROR: At most one NO_PARALLELISM clause can appear on ASSUMES directive
+  !$omp assumes no_parallelism(.true.) no_parallelism(.false.)
+end subroutine

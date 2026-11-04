@@ -823,6 +823,8 @@ protected:
     // of the specification part, since the declaration typing the index's
     // name may follow the DATA statement (F'2023 19.4 p5)
     std::vector<MutableSymbolRef> deferredDataIDoVars;
+    std::vector<const parser::ScalarLogicalConstantExpr *>
+        ompAssumesNoParallelismConditions;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -1851,14 +1853,24 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
+  bool Pre(const parser::OmpClause::NoParallelism &) {
+    return !inSpecificationPart_;
+  }
+
   void Post(const parser::OmpAssumesDirective &x) {
     if (Symbol * symbol{currScope().symbol()}) {
       for (const parser::OmpClause &clause : x.v.Clauses().v) {
         if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
           symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
-        } else if (std::holds_alternative<parser::OmpClause::NoParallelism>(
-                       clause.u)) {
-          symbol->set(Symbol::Flag::OmpAssumesNoParallelism);
+        } else if (const auto *noParallelism{
+                       std::get_if<parser::OmpClause::NoParallelism>(
+                           &clause.u)}) {
+          if (const auto &condition{noParallelism->v}) {
+            specPartState_.ompAssumesNoParallelismConditions.push_back(
+                &condition->v);
+          } else {
+            symbol->set(Symbol::Flag::OmpAssumesNoParallelism);
+          }
         }
       }
     }
@@ -11114,6 +11126,16 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     // TODO: warn for the case where the EQUIVALENCE statement is in a
     // procedure declaration in an interface block
     CheckEquivalenceSets();
+  }
+  if (Symbol * symbol{currScope().symbol()}) {
+    for (const auto *condition :
+        specPartState_.ompAssumesNoParallelismConditions) {
+      Walk(*condition);
+      if (auto value{EvaluateExpr(*condition)};
+          value && omp::GetLogicalValue(*value).value_or(false)) {
+        symbol->set(Symbol::Flag::OmpAssumesNoParallelism);
+      }
+    }
   }
 }
 

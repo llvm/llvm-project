@@ -1,5 +1,6 @@
-! RUN: mkdir -p %t
-! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=51 -module-dir %t %S/assumption.f90
+! RUN: split-file %S/assumption.f90 %t
+! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=51 -module-dir %t %t/bare.f90
+! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=60 -module-dir %t %t/conditional.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -I %t -module-dir %t -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK5X
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -I %t -module-dir %t -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK60
 
@@ -48,3 +49,18 @@ subroutine uses_reloaded_parallelism()
   ! CHECK: fir.call @_QMparallelism_modulePmodule_work()
   call module_work()
 end subroutine uses_reloaded_parallelism
+
+! CHECK-LABEL: func.func @_QPuses_reloaded_true()
+! CHECK5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
+! CHECK60-NOT: "llvm.assume"
+! CHECK: return
+subroutine uses_reloaded_true()
+  use conditional_true, only:
+end subroutine
+
+! CHECK-LABEL: func.func @_QPuses_reloaded_false()
+! CHECK-NOT: "llvm.assume"
+! CHECK: return
+subroutine uses_reloaded_false()
+  use conditional_false, only:
+end subroutine
