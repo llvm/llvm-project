@@ -2854,7 +2854,8 @@ SDValue SITargetLowering::getPreloadedValue(
   };
 
   if (Subtarget->hasArchitectedSGPRs() &&
-      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx ||
+       AMDGPU::isChainCC(CC) || CC == CallingConv::AMDGPU_Gfx_WholeWave)) {
     AMDGPU::ClusterDimsAttr ClusterDims = MFI.getClusterDims();
     bool HasFixedDims = ClusterDims.isFixedDims();
 
@@ -17152,6 +17153,35 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
   return SDValue();
 }
 
+/// V_CVT_SCALEF32_* conversions to a narrow format only read the exponent
+/// field of their f32 scale operand.
+SDValue
+SITargetLowering::performExponentOnlyScaleCombine(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  std::optional<unsigned> ScaleArgIdx =
+      AMDGPU::getExponentOnlyScaleArgIdx(N->getConstantOperandVal(0));
+  if (!ScaleArgIdx)
+    return SDValue();
+
+  // Operand 0 is the intrinsic ID.
+  unsigned OpIdx = *ScaleArgIdx + 1;
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Scale = N->getOperand(OpIdx);
+  APInt Demanded = AMDGPU::getExponentOnlyScaleDemandedBits();
+
+  if (SDValue DemandedScale =
+          SimplifyMultipleUseDemandedBits(Scale, Demanded, DAG)) {
+    SmallVector<SDValue> Ops(N->ops());
+    Ops[OpIdx] = DemandedScale;
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(), Ops);
+  }
+
+  if (SimplifyDemandedBits(Scale, Demanded, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 // Check if EXTRACT_VECTOR_ELT/INSERT_VECTOR_ELT (<n x e>, var-idx) should be
 // expanded into a set of cmp/select instructions.
 bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
@@ -19513,6 +19543,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFMed3Combine(N, DCI);
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
     return performCvtPkRTZCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    if (SDValue Res = performExponentOnlyScaleCombine(N, DCI))
+      return Res;
+    break;
   case AMDGPUISD::CLAMP:
     return performClampCombine(N, DCI);
   case ISD::SCALAR_TO_VECTOR: {
@@ -19997,13 +20031,6 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
 
-    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-    if (MI.getOpcode() == AMDGPU::V_PK_FMA_F32 &&
-        !TII->isLegalPkFMAF32OpSel(MI)) {
-      TII->decomposePkFMAF32(MI, MRI);
-      return;
-    }
-
     if (TII->isMAI(MI)) {
       // The ordinary src0, src1, src2 were legalized above.
       //
@@ -20274,15 +20301,27 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
+    case 'm':
+      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
+    if (Constraint == "RF")
+      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
+}
+
+InlineAsm::ConstraintCode
+SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  if (ConstraintCode == "RF")
+    return InlineAsm::ConstraintCode::RF;
+
+  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {

@@ -332,6 +332,19 @@ static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
   return Ctx.emitError(I, ErrMsg);
 }
 
+/// Emit a fatal error if the broken down registers don't match part type
+/// or count.
+static void ensureMatchedVecRegParts(unsigned NumRegs, unsigned NumParts,
+                                     MVT RegisterVT, MVT PartVT) {
+  if (NumRegs == NumParts && RegisterVT == PartVT)
+    return;
+
+  llvm::reportFatalInternalError(
+      Twine("Part count doesn't match vector breakdown! ") + Twine(NumRegs) +
+      " registers, " + Twine(NumParts) + " parts, " + RegisterVT.getString() +
+      " RegisterVT, " + PartVT.getString() + " PartVT");
+}
+
 /// getCopyFromPartsVector - Create a value that contains the specified legal
 /// parts combined into the value they represent.  If the parts combine to a
 /// type larger than ValueVT then AssertOp can be used to specify whether the
@@ -366,9 +379,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                      NumIntermediates, RegisterVT);
     }
 
-    assert(NumRegs == NumParts && "Part count doesn't match vector breakdown!");
-    NumParts = NumRegs; // Silence a compiler warning.
-    assert(RegisterVT == PartVT && "Part type doesn't match vector breakdown!");
+    ensureMatchedVecRegParts(NumRegs, NumParts, RegisterVT, PartVT);
     assert(RegisterVT.getSizeInBits() ==
            Parts[0].getSimpleValueType().getSizeInBits() &&
            "Part type sizes don't match!");
@@ -771,10 +782,7 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                    NumIntermediates, RegisterVT);
   }
 
-  assert(NumRegs == NumParts && "Part count doesn't match vector breakdown!");
-  NumParts = NumRegs; // Silence a compiler warning.
-  assert(RegisterVT == PartVT && "Part type doesn't match vector breakdown!");
-
+  ensureMatchedVecRegParts(NumRegs, NumParts, RegisterVT, PartVT);
   assert(IntermediateVT.isScalableVector() == ValueVT.isScalableVector() &&
          "Mixing scalable and fixed vectors when copying in parts");
 
@@ -10759,8 +10767,14 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         assert((OpInfo.isIndirect ||
                 OpInfo.ConstraintType != TargetLowering::C_Memory) &&
                "Operand must be indirect to be a mem!");
+
         assert(InOperandVal.getValueType() ==
-                   TLI.getPointerTy(DAG.getDataLayout()) &&
+                   TLI.getPointerTy(
+                       DAG.getDataLayout(),
+                       OpInfo.CallOperandVal
+                           ? cast<PointerType>(OpInfo.CallOperandVal->getType())
+                                 ->getAddressSpace()
+                           : 0) &&
                "Memory operands expect pointer values");
 
         const InlineAsm::ConstraintCode ConstraintID =
