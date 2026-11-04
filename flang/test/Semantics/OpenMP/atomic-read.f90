@@ -41,10 +41,12 @@ subroutine f03
 
   !$omp atomic read
   !ERROR: Atomic variable x should be a scalar
+  !ERROR: Capture variable v should be a scalar
   v = x
 
   !$omp atomic read
   !ERROR: Atomic variable y(2_8:4_8:1_8) should be a scalar
+  !ERROR: Capture variable v should be a scalar
   v = y(2:4)
 end
 
@@ -73,6 +75,7 @@ subroutine f06
 
   !$omp atomic read
   !ERROR: Atomic variable x cannot have CHARACTER type
+  !ERROR: Capture variable v cannot have CHARACTER type
   v = x
 end
 
@@ -95,6 +98,7 @@ subroutine f08
 
   !$omp atomic read
   !ERROR: Atomic variable x should have an intrinsic type
+  !ERROR: Capture variable v should have an intrinsic type
   v = x
 end
 
@@ -103,6 +107,7 @@ subroutine f09(x, v)
 
   !$omp atomic read
   !ERROR: Atomic variable x cannot be a pointer to a polymorphic type
+  !ERROR: Capture variable v cannot be a pointer to a polymorphic type
   v => x
 end
 
@@ -114,5 +119,61 @@ subroutine f10(x, v)
 
   !$omp atomic read
   !ERROR: Atomic variable x is a pointer to a type with non-constant length parameter
+  !ERROR: Capture variable v is a pointer to a type with non-constant length parameter
   v => x
+end
+
+subroutine f11
+  integer :: x, v(3)
+  integer, allocatable :: w
+
+  !$omp atomic read
+  !ERROR: Capture variable v should be a scalar
+  v = x
+
+  !$omp atomic read
+  !ERROR: Capture variable v(1_8:2_8:1_8) should be a scalar
+  v(1:2) = x
+
+  ! An array element is a scalar, and v can be ALLOCATABLE. Expect no
+  ! diagnostics.
+  !$omp atomic read
+  v(1) = x
+
+  !$omp atomic read
+  w = x
+end
+
+subroutine f12(x, v)
+  integer, pointer :: x
+  class(*), pointer :: v
+
+  !$omp atomic read
+  !ERROR: Capture variable v cannot be a pointer to a polymorphic type
+  v => x
+end
+
+module m13
+  type t
+    integer :: i
+  end type
+  interface assignment(=)
+    module procedure assign_t
+  end interface
+contains
+  subroutine assign_t(a, b)
+    type(t), intent(out) :: a
+    integer, intent(in) :: b
+    a%i = b
+  end
+end
+
+subroutine f13(x)
+  use m13
+  integer :: x
+  type(t) :: v
+
+  !$omp atomic read
+  !ERROR: Capture variable v should have an intrinsic type
+  v = x
 end

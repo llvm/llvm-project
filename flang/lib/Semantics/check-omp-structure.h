@@ -274,9 +274,11 @@ private:
       bool isError = false);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
   void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
-      std::string_view name, bool checkTypeOnPointer = true);
+      std::string_view what, std::string_view name,
+      bool checkTypeOnPointer = true);
   void CheckAtomicVariable(const evaluate::Expr<evaluate::SomeType> &,
-      parser::CharBlock, bool checkTypeOnPointer = true);
+      parser::CharBlock, bool checkTypeOnPointer = true,
+      bool isCapture = false);
   std::pair<const parser::ExecutionPartConstruct *,
       const parser::ExecutionPartConstruct *>
   CheckUpdateCapture(const parser::ExecutionPartConstruct *ec1,
