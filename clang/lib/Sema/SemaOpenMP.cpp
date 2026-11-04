@@ -24267,8 +24267,6 @@ class MapBaseChecker final : public StmtVisitor<MapBaseChecker, bool> {
   SourceRange ERange;
 
   void emitErrorMsg() {
-    if (NoDiagnose)
-      return;
     // If nothing else worked, this is not a valid map clause expression.
     if (SemaRef.getLangOpts().OpenMP < 50) {
       SemaRef.Diag(ELoc,
