@@ -2516,6 +2516,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
              MFC3OP_FM<0x12, 0, 0>, ISA_MIPS1;
   def MTC2 : MTC3OP<"mtc2", COP2Opnd, GPR32Opnd>,
              MFC3OP_FM<0x12, 4, 0>, ISA_MIPS1;
+  def CFC2 : InstSE<(outs GPR32Opnd:$rt), (ins COP2Opnd:$rd),
+                    "cfc2\t$rt, $rd", [], FrmFR, "cfc2">,
+             CFC2_FM<2>, ISA_MIPS1;
+  def CTC2 : InstSE<(outs COP2Opnd:$rd), (ins GPR32Opnd:$rt),
+                    "ctc2\t$rt, $rd", [], FrmFR, "ctc2">,
+             CFC2_FM<6>, ISA_MIPS1;
 }
 
 class Barrier<string asmstr> :
