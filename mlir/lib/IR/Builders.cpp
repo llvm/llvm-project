@@ -341,7 +341,7 @@ TypedAttr Builder::getZeroAttr(Type type) {
   if (llvm::isa<RankedTensorType, VectorType>(type)) {
     auto vtType = llvm::cast<ShapedType>(type);
     auto element = getZeroAttr(vtType.getElementType());
-    if (!element)
+    if (!element || isa<DenseElementsAttr>(element))
       return {};
     return DenseElementsAttr::get(vtType, element);
   }
