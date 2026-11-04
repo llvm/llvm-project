@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/CallingConv.h"
@@ -38813,8 +38814,11 @@ void X86TargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
           .addReg(0);
   }
 
+  const DataLayout &DL = MF->getDataLayout();
+  const StructLayout *SL = DL.getStructLayout(
+      getSjLjFunctionContextType(*MF->getFunction().getParent()));
   MachineInstrBuilder MIB = BuildMI(*MBB, MI, MIMD, TII->get(Op));
-  addFrameReference(MIB, FI, Subtarget.is64Bit() ? 56 : 36);
+  addFrameReference(MIB, FI, SL->getElementOffset(5) + DL.getPointerSize());
   if (UseImmLabel)
     MIB.addMBB(DispatchBB);
   else
@@ -38920,8 +38924,10 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
 
   // IReg is used as an index in a memory operand and therefore can't be SP
   Register IReg = MRI->createVirtualRegister(&X86::GR32_NOSPRegClass);
+  const StructLayout *SL = MF->getDataLayout().getStructLayout(
+      getSjLjFunctionContextType(*MF->getFunction().getParent()));
   addFrameReference(BuildMI(DispatchBB, MIMD, TII->get(X86::MOV32rm), IReg), FI,
-                    Subtarget.is64Bit() ? 8 : 4);
+                    SL->getElementOffset(1));
   BuildMI(DispatchBB, MIMD, TII->get(X86::CMP32ri))
       .addReg(IReg)
       .addImm(LPadList.size());
