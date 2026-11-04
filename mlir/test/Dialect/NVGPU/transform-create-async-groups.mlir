@@ -206,6 +206,57 @@ builtin.module {
 
 // -----
 
+// Same for a mask extracted from a 2D vector.create_mask: the size of the
+// last dimension is clamped to [0, 4].
+builtin.module {
+  // CHECK-LABEL: @read_2d_with_mask_larger_than_vector(
+  func.func @read_2d_with_mask_larger_than_vector(%sz0: index, %a: memref<1024x1024xf32>, %i: index) {
+    %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %sz1 = arith.constant 8 : index
+    %cst_0 = arith.constant 0.000000e+00 : f32
+    // CHECK: %[[n:.*]] = arith.constant 4 : index
+    // CHECK: %[[s0:.*]] = arith.select %{{.*}}, %[[n]], %{{.*}}
+    // CHECK: nvgpu.device_async_copy {{.*}}, {{.*}}, 4, %[[s0]] bypassL1
+    // CHECK: %[[s1:.*]] = arith.select %{{.*}}, %[[n]], %{{.*}}
+    // CHECK: nvgpu.device_async_copy {{.*}}, {{.*}}, 4, %[[s1]] bypassL1
+    %mask = vector.create_mask %sz0, %sz1 : vector<2x4xi1>
+    %1 = vector.transfer_read %a[%i, %i], %cst_0, %mask {in_bounds = [true, true]} : memref<1024x1024xf32>, vector<2x4xf32>
+    vector.transfer_write %1, %0[%i, %i, %i] {in_bounds = [true, true]} : vector<2x4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    return
+  }
+
+  // CHECK-LABEL: @read_2d_with_mask_negative_size(
+  func.func @read_2d_with_mask_negative_size(%sz0: index, %a: memref<1024x1024xf32>, %i: index) {
+    %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %sz1 = arith.constant -1 : index
+    %cst_0 = arith.constant 0.000000e+00 : f32
+    // CHECK: %[[n:.*]] = arith.constant 0 : index
+    // CHECK: %[[s0:.*]] = arith.select %{{.*}}, %[[n]], %{{.*}}
+    // CHECK: nvgpu.device_async_copy {{.*}}, {{.*}}, 4, %[[s0]] bypassL1
+    // CHECK: %[[s1:.*]] = arith.select %{{.*}}, %[[n]], %{{.*}}
+    // CHECK: nvgpu.device_async_copy {{.*}}, {{.*}}, 4, %[[s1]] bypassL1
+    %mask = vector.create_mask %sz0, %sz1 : vector<2x4xi1>
+    %1 = vector.transfer_read %a[%i, %i], %cst_0, %mask {in_bounds = [true, true]} : memref<1024x1024xf32>, vector<2x4xf32>
+    vector.transfer_write %1, %0[%i, %i, %i] {in_bounds = [true, true]} : vector<2x4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    return
+  }
+
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.apply_patterns to %top_level_func {
+        transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
+      } : !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func bypass_l1 : (!transform.any_op) -> (!transform.any_op)
+      %top_level_func_2 = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.apply_cse to %top_level_func_2 : !transform.any_op
+      transform.yield
+    }
+  }
+}
+
+// -----
+
 // 2D vector.transfer_read with a mask.
 builtin.module {
   // CHECK-LABEL: @read_2d_with_mask(
