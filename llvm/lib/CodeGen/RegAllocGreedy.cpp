@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1355,10 +1356,73 @@ unsigned RAGreedy::calculateRegionSplitCost(const LiveInterval &VirtReg,
                                             BlockFrequency &BestCost,
                                             unsigned &NumCands,
                                             bool IgnoreCSR) {
+  // The interference seen by a candidate is fully determined by the live
+  // segments of its register units and by the regmasks in the blocks where
+  // VirtReg is live. If a candidate has no unit segments anywhere in the slot
+  // range spanned by those blocks, its interference is determined by the
+  // regmasks alone, and two such candidates clobbered by the same regmasks
+  // have identical interference.
+  //
+  // The split cost computed by calculateRegionSplitCostAroundReg() only
+  // depends on the candidate's interference, and a candidate only replaces
+  // the best one if it is strictly cheaper. As such, only the first of a set
+  // of candidates with identical interference can become the best candidate,
+  // so skip the others.
+  //
+  // Regmasks are not uniqued (some calls allocate their own), so a candidate's
+  // signature is the set of distinct regmask pointers that clobber it.
+  // Different pointers to identical masks only result in redundant bits.
+  SlotIndex Start =
+      Indexes->getMBBStartIdx(LIS->getMBBFromIndex(VirtReg.beginIndex()));
+  SlotIndex End = Indexes->getMBBEndIdx(
+      LIS->getMBBFromIndex(VirtReg.endIndex().getPrevSlot()));
+  auto HasOnlyRegMaskInterference = [&](MCRegister PhysReg) {
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      LiveIntervalUnion::SegmentIter SI =
+          Matrix->getLiveUnions()[static_cast<unsigned>(Unit)].find(Start);
+      if (SI.valid() && SI.start() < End)
+        return false;
+      if (LIS->getRegUnit(Unit).overlaps(Start, End))
+        return false;
+    }
+    return true;
+  };
+
+  // Collected lazily, on the first candidate with only regmask interference.
+  // It is not modified afterwards, so its iteration order is stable.
+  std::optional<SmallPtrSet<const uint32_t *, 4>> Masks;
+  SmallVector<SmallBitVector, 4> SeenClobbers;
+  auto HasSeenInterference = [&](MCRegister PhysReg) {
+    if (HasOnlyRegMaskInterference(PhysReg)) {
+      if (!Masks) {
+        Masks.emplace();
+        ArrayRef<SlotIndex> Slots = LIS->getRegMaskSlots();
+        auto SlotBegin = llvm::lower_bound(Slots, Start);
+        auto SlotEnd = std::lower_bound(SlotBegin, Slots.end(), End);
+        Masks->insert_range(LIS->getRegMaskBits().slice(
+            SlotBegin - Slots.begin(), SlotEnd - SlotBegin));
+      }
+      SmallBitVector Clobbers(Masks->size());
+      for (auto [I, M] : enumerate(*Masks))
+        if (MachineOperand::clobbersPhysReg(M, PhysReg))
+          Clobbers.set(I);
+      if (is_contained(SeenClobbers, Clobbers)) {
+        LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
+                          << "\tsame interference as earlier candidate\n");
+        return true;
+      }
+      SeenClobbers.push_back(std::move(Clobbers));
+    }
+    return false;
+  };
+
   unsigned BestCand = NoCand;
   for (MCRegister PhysReg : Order) {
     assert(PhysReg);
     if (IgnoreCSR && EvictAdvisor->getUnusedCalleeSavedReg(VirtReg, PhysReg))
+      continue;
+
+    if (HasSeenInterference(PhysReg))
       continue;
 
     calculateRegionSplitCostAroundReg(PhysReg, Order, BestCost, NumCands,
@@ -2788,7 +2852,9 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     // When NewVRegs is not empty, we may have made decisions such as evicting
     // a virtual register, go with the earlier decisions and use the physical
     // register.
-    if (CSRCost.getFrequency() &&
+    // An empty interval does not make the CSR used and has no defs that would
+    // require saving it, so it has no first-use cost.
+    if (CSRCost.getFrequency() && !VirtReg.empty() &&
         EvictAdvisor->getUnusedCalleeSavedReg(VirtReg, PhysReg) &&
         NewVRegs.empty()) {
       MCRegister CSRReg = tryAssignCSRFirstTime(VirtReg, Order, PhysReg,
