@@ -31779,12 +31779,15 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       }
 
       // Give rejected lanes a chance to collect and vectorize by using
-      // itself as root.
+      // itself as root. Every retry tree contains the rejected one, so only
+      // the first few levels of users may turn it profitable.
       if (StandaloneSeeds && FirstSkipped) {
         SmallVector<Value *> Lanes(Ops);
         SmallPtrSet<Value *, 8> Tried(llvm::from_range, Ops);
         bool UsersVectorized = false;
-        while (RejectedTreesSize <= RejectedTreesBudget) {
+        for (unsigned Depth = 0; Depth < Opts->slp_retry_max_depth &&
+                                 RejectedTreesSize <= RejectedTreesBudget;
+             ++Depth) {
           SmallVector<Value *> Users;
           for (Value *Lane : Lanes) {
             auto *It = find_if(VL.drop_front(*FirstSkipped), [&](Value *V) {
