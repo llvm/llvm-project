@@ -1,0 +1,12 @@
+// Branch execution counts that do not fit in 32 bits must be printed in full in
+// the LCOV output. The input is branch-showBranchPercentage.proftext with the
+// counter of the loop condition on line 53 raised by 2^32 (50 -> 4294967346).
+// Before the fix, BRDA printed the count modulo 2^32 (i.e. 50) while DA for the
+// same line and the JSON exporter already showed the 64-bit value.
+
+// RUN: llvm-profdata merge %S/Inputs/branch-lcov-large-counts.proftext -o %t.profdata
+// RUN: llvm-cov export --format=lcov %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s
+
+// CHECK-DAG: DA:53,4294967351
+// CHECK-DAG: BRDA:53,0,0,4294967346
+// CHECK-DAG: BRDA:53,0,1,5
