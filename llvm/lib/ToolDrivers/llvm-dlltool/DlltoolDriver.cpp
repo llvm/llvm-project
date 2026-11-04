@@ -239,7 +239,7 @@ bool identifyImportName(const COFFObjectFile &Obj, StringRef ObjName,
 
 int doIdentify(StringRef File, bool IdentifyStrict) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf = MemoryBuffer::getFile(
-      File, /*IsText=*/false, /*RequiredNullTerminator=*/false);
+      File, sys::fs::OF_None, /*RequiredNullTerminator=*/false);
   if (!MaybeBuf)
     return printError(errorCodeToError(MaybeBuf.getError()), File);
   if (identify_magic(MaybeBuf.get()->getBuffer()) != file_magic::archive) {

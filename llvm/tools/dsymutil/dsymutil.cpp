@@ -772,7 +772,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     auto ParseAllowDisallowFile =
         [&](const std::string &FilePath) -> Expected<StringSet<>> {
-      auto BufOrErr = MemoryBuffer::getFile(FilePath, /*IsText=*/true);
+      auto BufOrErr = MemoryBuffer::getFile(FilePath, sys::fs::OF_TextWithCRLF);
       if (!BufOrErr)
         return make_error<StringError>(
             Twine("cannot open allow/disallow file '") + FilePath +

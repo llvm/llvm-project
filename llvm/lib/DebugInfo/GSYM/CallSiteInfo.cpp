@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -149,7 +150,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionYAML)
 
 Error CallSiteInfoLoader::loadYAML(StringRef YAMLFile) {
   // Step 1: Read YAML file
-  auto BufferOrError = MemoryBuffer::getFile(YAMLFile, /*IsText=*/true);
+  auto BufferOrError =
+      MemoryBuffer::getFile(YAMLFile, sys::fs::OF_TextWithCRLF);
   if (!BufferOrError)
     return errorCodeToError(BufferOrError.getError());
 

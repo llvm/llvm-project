@@ -103,7 +103,7 @@ static Error validatePdbMagic(StringRef PdbPath) {
 static Expected<std::unique_ptr<PDBFile>>
 loadPdbFile(StringRef PdbPath, std::unique_ptr<BumpPtrAllocator> &Allocator) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
-      MemoryBuffer::getFile(PdbPath, /*IsText=*/false,
+      MemoryBuffer::getFile(PdbPath, /*Flags=*/sys::fs::OF_None,
                             /*RequiresNullTerminator=*/false);
   if (!ErrorOrBuffer)
     return make_error<RawError>(ErrorOrBuffer.getError());

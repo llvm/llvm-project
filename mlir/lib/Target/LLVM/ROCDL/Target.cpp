@@ -369,7 +369,7 @@ mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef lldPath,
 
   // Load the HSA code object.
   auto hsacoFile =
-      llvm::MemoryBuffer::getFile(tempHsacoFilename, /*IsText=*/false);
+      llvm::MemoryBuffer::getFile(tempHsacoFilename, llvm::sys::fs::OF_None);
   if (!hsacoFile)
     return emitError()
            << "failed to read the HSA code object from the temp file";

@@ -1336,7 +1336,7 @@ void SymbolTable::assignExportOrdinals() {
 void SymbolTable::parseModuleDefs(StringRef path) {
   llvm::TimeTraceScope timeScope("Parse def file");
   std::unique_ptr<MemoryBuffer> mb =
-      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+      CHECK(MemoryBuffer::getFile(path, sys::fs::OF_None,
                                   /*RequiresNullTerminator=*/false,
                                   /*IsVolatile=*/true),
             "could not open " + path);

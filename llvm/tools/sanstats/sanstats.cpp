@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
                               "Sanitizer Statistics Processing Tool");
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getFile(
-      ClInputFile, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+      ClInputFile, sys::fs::OF_None, /*RequiresNullTerminator=*/false);
   if (!MBOrErr) {
     errs() << argv[0] << ": " << ClInputFile << ": "
            << MBOrErr.getError().message() << '\n';

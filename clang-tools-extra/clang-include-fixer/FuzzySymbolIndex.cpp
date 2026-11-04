@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "FuzzySymbolIndex.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
 
 using clang::find_all_symbols::SymbolAndSignals;
@@ -131,7 +132,8 @@ FuzzySymbolIndex::queryRegexp(const std::vector<std::string> &Tokens) {
 
 llvm::Expected<std::unique_ptr<FuzzySymbolIndex>>
 FuzzySymbolIndex::createFromYAML(StringRef FilePath) {
-  auto Buffer = llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/true);
+  auto Buffer =
+      llvm::MemoryBuffer::getFile(FilePath, llvm::sys::fs::OF_TextWithCRLF);
   if (!Buffer)
     return llvm::errorCodeToError(Buffer.getError());
   return std::make_unique<MemSymbolIndex>(

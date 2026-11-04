@@ -181,7 +181,8 @@ static int WriteOutput(const char *argv0, StringRef Filename,
     // Only updates the real output file if there are any differences.
     // This prevents recompilation of all the files depending on it if there
     // aren't any.
-    if (auto ExistingOrErr = MemoryBuffer::getFile(Filename, /*IsText=*/true))
+    if (auto ExistingOrErr =
+            MemoryBuffer::getFile(Filename, sys::fs::OF_TextWithCRLF))
       if (std::move(ExistingOrErr.get())->getBuffer() == Content)
         return 0;
   }
@@ -202,7 +203,7 @@ static int WriteOutput(const char *argv0, StringRef Filename,
 
 int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(InputFilename, sys::fs::OF_TextWithCRLF);
   if (std::error_code EC = FileOrErr.getError())
     return reportError(argv0, "Could not open input file '" + InputFilename +
                                   "': " + EC.message() + "\n");

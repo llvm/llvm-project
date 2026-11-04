@@ -284,7 +284,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
 }
 
 std::error_code llvm::identify_magic(const Twine &Path, file_magic &Result) {
-  auto FileOrError = MemoryBuffer::getFile(Path, /*IsText=*/false,
+  auto FileOrError = MemoryBuffer::getFile(Path, /*Flags=*/sys::fs::OF_None,
                                            /*RequiresNullTerminator=*/false);
   if (!FileOrError)
     return FileOrError.getError();
