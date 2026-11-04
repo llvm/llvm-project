@@ -2194,3 +2194,26 @@ func.func @_QQmain_eoshift_bounded_poly(
   hlfir.destroy %4 : !hlfir.expr<?x?x?x!fir.type<_QMmTbase{i:i32}>?>
   return
 }
+
+// ! BOUNDARY is statically absent and the element type has no default
+// ! boundary value: hlfir.eoshift must not be inlined.
+// CHECK-LABEL:   func.func @_QPeoshift_vector_expr_no_boundary(
+// CHECK:           hlfir.eoshift
+// CHECK-NOT:       hlfir.elemental
+// CHECK-NOT:       hlfir.eval_in_mem
+func.func @_QPeoshift_vector_expr_no_boundary(%arg0: !hlfir.expr<4x!fir.vector<4:f32>>, %arg1: i32) {
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<4x!fir.vector<4:f32>>, i32) -> !hlfir.expr<4x!fir.vector<4:f32>>
+  hlfir.destroy %0 : !hlfir.expr<4x!fir.vector<4:f32>>
+  return
+}
+
+// ! Same, with ARRAY being a variable (hlfir.eval_in_mem path).
+// CHECK-LABEL:   func.func @_QPeoshift_vector_var_no_boundary(
+// CHECK:           hlfir.eoshift
+// CHECK-NOT:       hlfir.elemental
+// CHECK-NOT:       hlfir.eval_in_mem
+func.func @_QPeoshift_vector_var_no_boundary(%arg0: !fir.box<!fir.array<?x!fir.vector<4:f32>>>, %arg1: i32) {
+  %0 = hlfir.eoshift %arg0 %arg1 : (!fir.box<!fir.array<?x!fir.vector<4:f32>>>, i32) -> !hlfir.expr<?x!fir.vector<4:f32>>
+  hlfir.destroy %0 : !hlfir.expr<?x!fir.vector<4:f32>>
+  return
+}
