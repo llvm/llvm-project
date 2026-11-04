@@ -110,6 +110,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   /// uniform result even taking non-uniform arguments.
   bool isAlwaysUniform(const Value *V) const;
 
+  bool hasUniformPointerOperand(const Instruction *I) const;
+
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
