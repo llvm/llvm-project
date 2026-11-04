@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AllocationState.h"
 #include "Move.h"
 #include "SmartPtr.h"
 
@@ -639,6 +640,17 @@ void SmartPtrModeling::handleRelease(const CallEvent &Call,
   if (InnerPointVal) {
     State = State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
                             *InnerPointVal);
+
+    // Transfer ownership to the caller. If MallocChecker previously registered
+    // the inner pointer as a AF_CXXNew allocation (and then marked it Escaped
+    // when it was stored in the unique_ptr), we now reclaim it: transition
+    // Escaped -> Allocated so that checkDeadSymbols fires a leak if the caller
+    // never calls delete. We guard with isReleasedByNew to avoid false
+    // positives on unique_ptrs with unknown provenance (e.g., parameters).
+    if (SymbolRef ReleasedSym = InnerPointVal->getAsLocSymbol())
+      if (allocation_state::isReleasedByNew(State, ReleasedSym))
+        State = allocation_state::transferToCallerNew(State, ReleasedSym,
+                                                      Call.getOriginExpr());
   }
 
   QualType ThisType = cast<CXXMethodDecl>(Call.getDecl())->getThisType();
@@ -655,8 +667,6 @@ void SmartPtrModeling::handleRelease(const CallEvent &Call,
     checkAndPrettyPrintRegion(OS, ThisRegion);
     OS << " is released and set to null";
   }));
-  // TODO: Add support to enable MallocChecker to start tracking the raw
-  // pointer.
 }
 
 void SmartPtrModeling::handleSwapMethod(const CallEvent &Call,
