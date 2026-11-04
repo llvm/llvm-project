@@ -1177,7 +1177,7 @@ CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_mask);
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_flags);
 #endif
 #  if SANITIZER_LINUX && (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && \
-      !defined(__alpha__)
+      !defined(__alpha__) && !defined(__hppa__)
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_restorer);
 #endif
 

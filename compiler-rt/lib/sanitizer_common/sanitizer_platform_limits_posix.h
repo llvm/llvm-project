@@ -765,7 +765,7 @@ struct __sanitizer_sigaction {
 #    else
 #      if defined(__s390x__)
   int sa_resv;
-#      else
+#      elif !defined(__hppa__)
   __sanitizer_sigset_t sa_mask;
 #      endif
 #      if !defined(__mips__) || SANITIZER_MUSL
@@ -786,13 +786,14 @@ struct __sanitizer_sigaction {
 #        endif
 #      endif
 #    endif
-#    if (SANITIZER_LINUX || SANITIZER_HAIKU) && !defined(__alpha__)
+#    if (SANITIZER_LINUX || SANITIZER_HAIKU) && !defined(__alpha__) && \
+        !defined(__hppa__)
   void (*sa_restorer)();
 #    endif
 #    if defined(__mips__) && (SANITIZER_WORDSIZE == 32) && !SANITIZER_MUSL
   int sa_resv[1];
 #    endif
-#    if defined(__s390x__)
+#    if defined(__s390x__) || defined(__hppa__)
   __sanitizer_sigset_t sa_mask;
 #    endif
 };
@@ -818,6 +819,15 @@ struct __sanitizer_kernel_sigaction_t {
   };
   __sanitizer_kernel_sigset_t sa_mask;
   void (*sa_restorer)(void);
+};
+#  elif defined(__hppa__)
+struct __sanitizer_kernel_sigaction_t {
+  union {
+    void (*handler)(int signo);
+    void (*sigaction)(int signo, __sanitizer_siginfo* info, void* ctx);
+  };
+  unsigned long sa_flags;
+  __sanitizer_kernel_sigset_t sa_mask;
 };
 #  else
 struct __sanitizer_kernel_sigaction_t {
