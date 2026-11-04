@@ -1,10 +1,10 @@
 set(LLVM_OPTIONAL_SOURCES
   AllExtensions.cpp
-  ShardingExtensions.cpp
+  ShardingInterfaceImpl.cpp
   )
 
-add_mlir_extension_library(MLIRLinalgShardingExtensions
-  ShardingExtensions.cpp
+add_mlir_extension_library(MLIRLinalgShardingInterfaceImpl
+  ShardingInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg/Extensions
@@ -30,5 +30,5 @@ add_mlir_extension_library(MLIRLinalgAllExtensions
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg/Extensions
 
   LINK_LIBS PUBLIC
-  MLIRLinalgShardingExtensions
+  MLIRLinalgShardingInterfaceImpl
   )
