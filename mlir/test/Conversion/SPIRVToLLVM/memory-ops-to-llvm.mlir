@@ -40,6 +40,17 @@ spirv.func @in_bounds_access_chain() "None" {
   spirv.Return
 }
 
+// CHECK-LABEL: @in_bounds_access_chain_no_indices
+spirv.func @in_bounds_access_chain_no_indices() "None" {
+  // CHECK: %[[VAR:.*]] = llvm.alloca
+  // CHECK-NOT: llvm.getelementptr
+  // CHECK: llvm.load %[[VAR]]
+  %0 = spirv.Variable : !spirv.ptr<!spirv.array<4xf32>, Function>
+  %1 = "spirv.InBoundsAccessChain"(%0) : (!spirv.ptr<!spirv.array<4xf32>, Function>) -> !spirv.ptr<!spirv.array<4xf32>, Function>
+  %2 = spirv.Load "Function" %1 : !spirv.array<4xf32>
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.GlobalVariable and spirv.mlir.addressof
 //===----------------------------------------------------------------------===//
