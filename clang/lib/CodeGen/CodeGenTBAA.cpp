@@ -493,6 +493,18 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
     return true;
   }
 
+  if (const auto *CTy = QTy->getAsCanonical<ComplexType>()) {
+    QualType ElemQTy = CTy->getElementType();
+    uint64_t Size = Context.getTypeSizeInChars(ElemQTy).getQuantity();
+    llvm::MDNode *TBAAType = MayAlias ? getChar() : getTypeInfo(ElemQTy);
+    llvm::MDNode *TBAATag = getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+    Fields.push_back(
+        llvm::MDBuilder::TBAAStructField(BaseOffset, Size, TBAATag));
+    Fields.push_back(
+        llvm::MDBuilder::TBAAStructField(BaseOffset + Size, Size, TBAATag));
+    return true;
+  }
+
   /* Otherwise, treat whatever it is as a field. */
   uint64_t Offset = BaseOffset;
   uint64_t Size = Context.getTypeSizeInChars(QTy).getQuantity();

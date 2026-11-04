@@ -3,8 +3,8 @@
 
 # REQUIRES: amdgpu-registered-target
 
-# RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %s | llvm-readobj --notes - | FileCheck %s --match-full-lines --check-prefix=LLVM
-# RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %s | llvm-readelf --notes - | FileCheck %s --match-full-lines --check-prefix=GNU
+# RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -filetype=obj < %s | llvm-readobj --notes - | FileCheck %s --match-full-lines --check-prefix=LLVM
+# RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -filetype=obj < %s | llvm-readelf --notes - | FileCheck %s --match-full-lines --check-prefix=GNU
 
 #LLVM:       NoteSections [
 #LLVM-NEXT:    NoteSection {
