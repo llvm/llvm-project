@@ -13,7 +13,8 @@ body:             |
     ; GFX950-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr10 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr11 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
-    ; GFX950-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr12 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr13 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
@@ -41,7 +42,8 @@ body:             |
     ; GFX950-NEXT: $vgpr13 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr14 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr15 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
-    ; GFX950-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr16 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr17 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr18_vgpr19 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr20_vgpr21 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0

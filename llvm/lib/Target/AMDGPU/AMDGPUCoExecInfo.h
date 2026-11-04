@@ -52,12 +52,14 @@ enum class CoExecMask : uint16_t {
   VMEM = 1 << 5,  // Global memory
   SMEM = 1 << 6,  // Scalar memory
   WMMA = 1 << 7,  // Next WMMA (V stages only), or MFMA
+  // V_PK_{ADD,FMA,MUL}_F32 and V_PK_MOV_B32
+  PK_F32 = 1 << 8,
   All = 0xFFFF,
 
   MEM = DS | VMEM | SMEM,
-  StageE0 = CTRL,                            // Issue: control only
-  StageE = CTRL | SALU | MEM,                // External: mem/salu
-  StageI = CTRL | SALU | MEM | VALU | TRANS, // Internal: all ALU
+  StageE0 = CTRL,                                     // Issue: control only
+  StageE = CTRL | SALU | MEM,                         // External: mem/salu
+  StageI = CTRL | SALU | MEM | VALU | PK_F32 | TRANS, // Internal: all ALU
   // Internal + scaled-WMMA absorb: same as StageI but the next scaled
   // WMMA may issue here - its LD_SCALE consumes the I cycle and the matrix
   // multiply lands in the V slot that follows. Used for the last I before
@@ -127,35 +129,8 @@ inline StringRef getFlavorName(InstructionFlavor F) {
 InstructionFlavor classifyFlavor(const MachineInstr &MI,
                                  const SIInstrInfo &SII);
 
-/// Map a flavor to the co-execution class it occupies in a window slot.
-inline CoExecMaskT getCoExecMask(InstructionFlavor F) {
-  switch (F) {
-  case InstructionFlavor::WMMA:
-    return CoExecMask::WMMA;
-  case InstructionFlavor::TRANS:
-    return CoExecMask::TRANS;
-  case InstructionFlavor::SingleCycleVALU:
-  case InstructionFlavor::MultiCycleVALU:
-  // LDS DMA and tensor DMA issue on the VALU pipe.
-  case InstructionFlavor::DMA:
-    return CoExecMask::VALU;
-  case InstructionFlavor::DS:
-    return CoExecMask::DS;
-  case InstructionFlavor::VMEM:
-    return CoExecMask::VMEM;
-  case InstructionFlavor::SMEM:
-    return CoExecMask::SMEM;
-  case InstructionFlavor::SALU:
-  // Fences are s_barrier_*/s_wait_*, which issue on the scalar pipe.
-  case InstructionFlavor::Fence:
-    return CoExecMask::SALU;
-  case InstructionFlavor::Other:
-    return CoExecMask::CTRL;
-  case InstructionFlavor::NUM_FLAVORS:
-    break;
-  }
-  llvm_unreachable("Unknown InstructionFlavor");
-}
+/// Get the co-execution class \p MI occupies in a window slot.
+CoExecMaskT getCoExecMaskForMI(const MachineInstr &MI, const SIInstrInfo &SII);
 
 //===----------------------------------------------------------------------===//
 // Co-execution Stage Type
@@ -193,7 +168,7 @@ inline const char *getStageTypeName(CoExecStageType T) {
 }
 
 /// Return a human-readable name for a mask holding a single instruction class,
-/// as produced by getCoExecMask().
+/// as produced by getCoExecMaskForMI().
 inline const char *getCoExecMaskName(CoExecMaskT Mask) {
   switch (Mask) {
   case CoExecMask::CTRL:
@@ -212,6 +187,8 @@ inline const char *getCoExecMaskName(CoExecMaskT Mask) {
     return "SMEM";
   case CoExecMask::WMMA:
     return "WMMA";
+  case CoExecMask::PK_F32:
+    return "PK_F32";
   default:
     llvm_unreachable("Not a single instruction class");
   }
@@ -272,6 +249,11 @@ struct CoExecInfo {
         return I;
     }
     return std::nullopt;
+  }
+
+  /// Get the first stage at which the instruction class can co-execute.
+  unsigned getFirstAllowedStage(CoExecMaskT InstMask) const {
+    return findNextAllowedStage(InstMask, 0).value_or(TotalWindow);
   }
 
   /// Return the number of cycles an instruction matching \p InstMask must wait
@@ -370,6 +352,9 @@ inline CoExecInfo CoExecInfo::build(unsigned UnitOccupancy,
 
 /// Get co-execution info for a gfx950 MFMA instruction.
 CoExecInfo getMFMACoExecInfo(unsigned Opcode);
+
+/// Return true if getMFMACoExecInfo() describes the MFMAs of \p ST.
+bool hasCoExecInfo(const GCNSubtarget &ST);
 
 /// Get co-execution info for a WMMA instruction, selecting the per-cycle slot
 /// pattern from the opcode (and operand formats for the F8F6F4 variants).
