@@ -12,9 +12,9 @@ void *memcpy(void *a, const void *b, size_t c) {
 void *foo(void *a, const void *b, size_t c) {
   return memcpy(a, b, c);
 }
-// CHECK: Function Attrs: alwaysinline nounwind
+// CHECK: Function Attrs: alwaysinline nobuiltin nounwind
 // CHECK-LABEL: define internal ptr @memcpy.inline(
-// CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], i64 noundef [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP0:%.*]], ptr align 1 [[TMP1:%.*]], i64 [[TMP2:%.*]], i1 false)
 //
 //

@@ -148,9 +148,8 @@ addOffset(const MachineInstrBuilder &MIB, const MachineOperand& Offset) {
 /// displacement. An example is: DWORD PTR [EAX + 4].
 ///
 static inline const MachineInstrBuilder &
-addRegOffset(const MachineInstrBuilder &MIB, Register Reg, bool isKill,
-             int Offset) {
-  return addOffset(MIB.addReg(Reg, getKillRegState(isKill)), Offset);
+addRegOffset(const MachineInstrBuilder &MIB, Register Reg, int Offset) {
+  return addOffset(MIB.addReg(Reg), Offset);
 }
 
 /// addRegReg - This function is used to add a memory reference of the form:

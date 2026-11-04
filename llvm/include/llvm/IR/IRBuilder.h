@@ -3023,8 +3023,8 @@ template <typename FolderTy>
 IRBuilder(BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
 IRBuilder(BasicBlock::iterator) -> IRBuilder<>;
 
-// Create wrappers for C Binding types (see CBindingWrapping.h).
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)
+/// Unwrap C API builder reference.
+LLVM_ABI IRBuilder<> *unwrap(LLVMBuilderRef Ref);
 
 } // end namespace llvm
 
