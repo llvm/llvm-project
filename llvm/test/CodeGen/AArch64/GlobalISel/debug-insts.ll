@@ -57,8 +57,8 @@ define void @debug_value(i32 %in) #0 !dbg !16 {
 ; CHECK: stack:
 ; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}},
 ; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
-; CHECK-NEXT: debug-info-variable: '', debug-info-expression: '',
-; CHECK: DBG_VALUE %{{[0-9]+}}(p1), 0, !{{[0-9]+}}, !DIExpression()
+; CHECK-NEXT: debug-info-variable: '!{{[0-9]+}}', debug-info-expression: '!DIExpression()',
+; CHECK-NOT: DBG_VALUE
 define void @debug_declare_addrspacecast(i32 %in) #0 !dbg !19 {
 entry:
   %in.addr = alloca i32, align 4
@@ -72,8 +72,8 @@ entry:
 ; CHECK: stack:
 ; CHECK:    - { id: {{.*}}, name: s, type: default, offset: 0, size: {{.*}}, alignment: {{.*}},
 ; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
-; CHECK-NEXT: debug-info-variable: '', debug-info-expression: '',
-; CHECK: DBG_VALUE %{{[0-9]+}}(p0), 0, !{{[0-9]+}}, !DIExpression()
+; CHECK-NEXT: debug-info-variable: '!{{[0-9]+}}', debug-info-expression: '!DIExpression()',
+; CHECK-NOT: DBG_VALUE
 define void @debug_declare_zero_gep(i32 %in) #0 !dbg !22 {
 entry:
   %s = alloca { i32, i32 }, align 4
@@ -87,8 +87,8 @@ entry:
 ; CHECK: stack:
 ; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}},
 ; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
-; CHECK-NEXT: debug-info-variable: '', debug-info-expression: '',
-; CHECK: DBG_VALUE %{{[0-9]+}}(p0), 0, !{{[0-9]+}}, !DIExpression()
+; CHECK-NEXT: debug-info-variable: '!{{[0-9]+}}', debug-info-expression: '!DIExpression()',
+; CHECK-NOT: DBG_VALUE
 define void @debug_declare_bitcast(i32 %in) #0 !dbg !25 {
 entry:
   %in.addr = alloca i32, align 4
