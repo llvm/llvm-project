@@ -23,6 +23,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/InitAllDialects.h"
 #include "clang/Driver/OffloadBundler.h"
@@ -36,6 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cctype>
+#include <optional>
 #include <string>
 
 namespace {
@@ -111,6 +113,38 @@ bool isValidTarget(llvm::StringRef target,
   return (offloadInfo.isOffloadKindValid() ||
           offloadInfo.OffloadKind == "cuda") &&
          offloadInfo.isTripleValid();
+}
+
+// Follows clang-offload-bundler's code object compatibility rules: the target
+// ID of `bundleID` may leave out features that `target` specifies.
+bool isCompatibleTarget(llvm::StringRef bundleID, llvm::StringRef target,
+                        const clang::OffloadBundlerConfig &bundlerConfig) {
+  clang::OffloadTargetInfo bundleInfo(bundleID, bundlerConfig);
+  clang::OffloadTargetInfo targetInfo(target, bundlerConfig);
+  if (bundleInfo == targetInfo)
+    return true;
+
+  if (!bundleInfo.isOffloadKindCompatible(targetInfo.OffloadKind) ||
+      !bundleInfo.Triple.isCompatibleWith(targetInfo.Triple))
+    return false;
+
+  llvm::StringMap<bool> bundleFeatureMap;
+  llvm::StringMap<bool> targetFeatureMap;
+  std::optional<llvm::StringRef> bundleProcessor = clang::parseTargetID(
+      bundleInfo.Triple, bundleInfo.TargetID, &bundleFeatureMap);
+  std::optional<llvm::StringRef> targetProcessor = clang::parseTargetID(
+      targetInfo.Triple, targetInfo.TargetID, &targetFeatureMap);
+  if (!bundleProcessor || !targetProcessor ||
+      *bundleProcessor != *targetProcessor)
+    return false;
+
+  for (const auto &bundleFeature : bundleFeatureMap) {
+    auto targetFeature = targetFeatureMap.find(bundleFeature.getKey());
+    if (targetFeature == targetFeatureMap.end() ||
+        targetFeature->getValue() != bundleFeature.getValue())
+      return false;
+  }
+  return true;
 }
 
 int validateCombineCommandLine(
@@ -271,11 +305,21 @@ int splitInput(llvm::StringRef inputFileName,
     if (!isValidTarget(bundleID, bundlerConfig))
       return reportError("invalid module bundle ID '" + bundleID + "'");
 
-    auto *match = llvm::find_if(targetOutputs, [&](const TargetOutput &output) {
-      return output.Target == bundleID;
-    });
-    if (match == targetOutputs.end())
+    TargetOutput *match = nullptr;
+    for (TargetOutput &targetOutput : targetOutputs) {
+      if (!isCompatibleTarget(bundleID, targetOutput.Target, bundlerConfig))
+        continue;
+      if (match)
+        return reportError("module bundle ID '" + bundleID +
+                           "' matches multiple requested targets");
+      match = &targetOutput;
+    }
+
+    if (!match)
       continue;
+    if (match->Written)
+      return reportError("multiple modules match target '" + match->Target +
+                         "'");
 
     module->remove();
     mlir::OwningOpRef<mlir::ModuleOp> detachedModule(module);
