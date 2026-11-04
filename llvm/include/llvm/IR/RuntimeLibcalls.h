@@ -185,7 +185,7 @@ public:
 
   /// Get size of a C-level int or unsigned int, in bits.
   // FIXME Could move into Triple class.
-  unsigned getIntSize(const Triple &TT) const {
+  static unsigned getIntSize(const Triple &TT) {
     return TT.isArch16Bit() ? 16 : 32;
   }
 

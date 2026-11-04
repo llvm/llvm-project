@@ -883,8 +883,11 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   // IR value to a vector here allows the rest of codegen to behave as normal.
   if (getLangOpts().HLSL &&
       !mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) {
-    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: HLSL");
-    return {};
+    auto dstTy = cir::VectorType::get(
+        vec.getType(), llvm::ElementCount::get(1, /*Scalable=*/false));
+    cir::ConstantOp poison =
+        builder.getConstant(loc, cir::PoisonAttr::get(dstTy));
+    vec = builder.createInsertElement(loc, poison, vec, /*idx=*/0);
   }
 
   assert((mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) &&
@@ -1848,11 +1851,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AtomicToNonAtomic:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat: {
-    cgm.errorNYI(e->getSourceRange(),
-                 std::string("emitCastLValue for unhandled cast kind: ") +
-                     e->getCastKindName());
-
-    return {};
+    return emitLValue(e->getSubExpr());
   }
 
   case CK_AddressSpaceConversion: {
