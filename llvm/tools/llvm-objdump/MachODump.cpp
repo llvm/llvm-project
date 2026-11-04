@@ -2889,6 +2889,7 @@ struct DisassembleInfo {
   uint64_t adrp_addr = 0;
   uint32_t adrp_inst = 0;
   std::unique_ptr<SymbolAddressMap> bindtable;
+  std::unique_ptr<DenseMap<uint64_t, uint64_t>> chainedfixups;
   uint32_t depth = 0;
 };
 } // namespace
@@ -3520,6 +3521,26 @@ static void method_reference(struct DisassembleInfo *info,
   }
 }
 
+// With chained fixups, the pointer at Address holds a fixup that dyld replaces
+// when it loads the image. Return the target of a rebase, or zero for a bind,
+// which is what a pointer that dyld binds holds without chained fixups. Return
+// Value, the pointer as read, if there is no fixup at Address.
+static uint64_t applyChainedFixup(uint64_t Address, uint64_t Value,
+                                  struct DisassembleInfo *info) {
+  if (info->chainedfixups == nullptr) {
+    info->chainedfixups = std::make_unique<DenseMap<uint64_t, uint64_t>>();
+    Error Err = Error::success();
+    for (const object::MachOChainedFixupEntry &Entry : info->O->fixupTable(Err))
+      (*info->chainedfixups)[Entry.address()] =
+          Entry.isRebase() ? Entry.pointerValue() : 0;
+    // Not every pointer format can be decoded; those pointers are read as is.
+    if (Err)
+      reportWarning(toString(std::move(Err)), info->O->getFileName());
+  }
+  auto It = info->chainedfixups->find(Address);
+  return It == info->chainedfixups->end() ? Value : It->second;
+}
+
 // GuessPointerPointer() is passed the address of what might be a pointer to
 // a reference to an Objective-C class, selector, message ref or cfstring.
 // If so the value of the pointer is returned and one of the booleans are set
@@ -3555,6 +3576,8 @@ static uint64_t GuessPointerPointer(uint64_t ReferenceValue,
                    sizeof(uint64_t));
             if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
               sys::swapByteOrder(pointer_value);
+            pointer_value =
+                applyChainedFixup(ReferenceValue, pointer_value, info);
             if (strncmp(Sec.sectname, "__objc_selrefs", 16) == 0)
               selref = true;
             else if (strncmp(Sec.sectname, "__objc_classrefs", 16) == 0 ||
@@ -3567,6 +3590,8 @@ static uint64_t GuessPointerPointer(uint64_t ReferenceValue,
                      sizeof(uint64_t));
               if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
                 sys::swapByteOrder(pointer_value);
+              pointer_value =
+                  applyChainedFixup(ReferenceValue + 8, pointer_value, info);
             } else if (strncmp(Sec.sectname, "__cfstring", 16) == 0)
               cfstring = true;
             return pointer_value;
@@ -10557,6 +10582,13 @@ static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
     }
     if (Err)
       reportError(std::move(Err), info->O->getFileName());
+    // With chained fixups, the binds are fixups instead. Not every pointer
+    // format can be decoded, which only means fewer names.
+    for (const object::MachOChainedFixupEntry &Entry : info->O->fixupTable(Err))
+      if (Entry.isBind() && !Entry.symbolName().empty())
+        (*info->bindtable)[Entry.address()] = Entry.symbolName();
+    if (Err)
+      reportWarning(toString(std::move(Err)), info->O->getFileName());
   }
   auto name = info->bindtable->lookup(ReferenceValue);
   return !name.empty() ? name.data() : nullptr;
