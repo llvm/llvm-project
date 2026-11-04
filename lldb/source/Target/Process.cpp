@@ -2901,10 +2901,14 @@ void Process::GetOrCreateHeaderBytesFromCache(DataFileCache &cache,
 llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
     const FileSpec &file_spec, UUID uuid, lldb::addr_t header_addr,
     size_t size_to_read) {
-  DataFileCache *cache = Module::GetIndexCache(/*memory_module=*/ true);
-  if (cache)
-    GetOrCreateHeaderBytesFromCache(*cache, file_spec, uuid, header_addr,
-                                    size_to_read);
+  // Don't cache the headerbytes when corefile debugging; reading
+  // from the corefile is just as fast.
+  if (IsLiveDebugSession()) {
+    DataFileCache *cache = Module::GetIndexCache(/*memory_module=*/true);
+    if (cache)
+      GetOrCreateHeaderBytesFromCache(*cache, file_spec, uuid, header_addr,
+                                      size_to_read);
+  }
   return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
 }
 
