@@ -1877,6 +1877,35 @@ struct OpWithBodyGenInfo {
   int collapseValue = 0;
 };
 
+static bool canAssumeBoundedRecipeEffects(const mlir::Value &variable) {
+  mlir::Type type = variable.getType();
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
+    if (mlir::isa<fir::BoxCharType, fir::BaseBoxType>(refType.getEleTy()))
+      return false;
+  return !fir::isAllocatableType(type) &&
+         !fir::isa_derived(fir::getFortranElementType(type)) &&
+         !fir::isPointerType(type);
+}
+
+static bool canAssumeBoundedRecipeEffects(lower::AbstractConverter &converter,
+                                          const semantics::Symbol &sym) {
+  mlir::Value variable = converter.getSymbolAddress(sym);
+  return variable && canAssumeBoundedRecipeEffects(variable);
+}
+
+static bool
+canAssumeBoundedRecipeEffectsForItem(lower::AbstractConverter &converter,
+                                     const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  if (const auto *common =
+          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
+    return llvm::all_of(common->objects(), [&converter](const auto &member) {
+      return canAssumeBoundedRecipeEffects(converter, *member);
+    });
+  }
+  return canAssumeBoundedRecipeEffects(converter, sym);
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]   op  - the operation the body belongs to.
@@ -1945,6 +1974,17 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
                     Fortran::lower::omp::isLastItemInQueue(item, queue),
                     /*useDelayedPrivatization=*/false, info.symTable);
     tempDsp->processStep1();
+
+    // TODO: omp.single still uses eager privatisation.
+    // Use clauseOps.privateVars inside genSingleOp once
+    // delayedPrivatization is turned on.
+    if (auto singleOp = llvm::dyn_cast<mlir::omp::SingleOp>(op)) {
+      const auto &privateSyms = tempDsp->getAllSymbolsToPrivatize();
+      if (llvm::all_of(privateSyms, [&info](const semantics::Symbol *sym) {
+            return canAssumeBoundedRecipeEffectsForItem(info.converter, *sym);
+          }))
+        singleOp.setPrivateAssumeBoundedRecipeEffects(true);
+    }
   }
 
   if (info.dir == llvm::omp::Directive::OMPD_parallel) {
@@ -3610,30 +3650,6 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
-static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  const auto *type = ultimate.GetType();
-  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate) &&
-         !semantics::IsPointer(ultimate);
-}
-
-static bool isNonDerivedNonPointer(const mlir::Value &variable) {
-  return !fir::isAllocatableType(variable.getType()) &&
-         !fir::isa_derived(fir::getFortranElementType(variable.getType())) &&
-         !fir::isPointerType(variable.getType());
-}
-
-static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  if (const auto *common =
-          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
-    return llvm::all_of(common->objects(), [](const auto &member) {
-      return isNonDerivedNonPointer(*member);
-    });
-  }
-  return isNonDerivedNonPointer(ultimate);
-}
-
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3734,8 +3750,8 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // once delayedPrivatization is turned on.
   const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
   if (!privateSyms.empty() &&
-      llvm::all_of(privateSyms, [](const semantics::Symbol *sym) {
-        return isNonDerivedNonPointerItem(*sym);
+      llvm::all_of(privateSyms, [&converter](const semantics::Symbol *sym) {
+        return canAssumeBoundedRecipeEffectsForItem(converter, *sym);
       }))
     sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
 
@@ -3744,7 +3760,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         // The generated conditional-lastprivate recipe only accesses the
         // intrinsic value and index fields of its accumulator, despite its
         // record type.
-        return variable == lpAlloca || isNonDerivedNonPointer(variable);
+        return variable == lpAlloca || canAssumeBoundedRecipeEffects(variable);
       }))
     sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
@@ -3994,11 +4010,18 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::SingleOperands clauseOps;
   genSingleClauses(converter, semaCtx, item->clauses, loc, clauseOps);
 
-  return genOpWithBody<mlir::omp::SingleOp>(
+  auto singleOp = genOpWithBody<mlir::omp::SingleOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_single)
           .setClauses(&item->clauses),
       queue, item, clauseOps);
+
+  if (llvm::all_of(clauseOps.copyprivateVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    singleOp.setCopyprivateAssumeBoundedRecipeEffects(true);
+
+  return singleOp;
 }
 
 static bool isDuplicateMappedSymbol(

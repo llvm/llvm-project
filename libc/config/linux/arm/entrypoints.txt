@@ -257,6 +257,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chown
     libc.src.unistd.chroot
     libc.src.unistd.close
+    libc.src.unistd.close_range
+    libc.src.unistd.copy_file_range
     libc.src.unistd.dup
     libc.src.unistd.dup2
     libc.src.unistd.dup3
@@ -655,10 +657,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderf128
+    libc.src.math.totalorderf80
     libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagf128
+    libc.src.math.totalordermagf80
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf

@@ -779,6 +779,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- `-Wno-unsafe-buffer-usage-in-libc-call` no longer turns off
+  `-Wunsafe-buffer-usage-in-format-attr-call`, and
+  `-Wunsafe-buffer-usage-in-format-attr-call` now works when it is the only
+  Safe Buffers warning enabled.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -1544,6 +1549,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `_BitInt` type wider than any standard integer type. (#GH140074)
 - Fixed a crash when a non-static data member appears in a `lastprivate` clause
   inside a member function template of a non-template class. (#GH144302)
+- Fixed a crash when a `linear` clause with the `uval` modifier names a
+  reference without an initializer, such as a reference parameter. (#GH108166)
 - Loop-transforming constructs such as `tile` and `unroll` are now allowed
   inside a `simd` region for OpenMP 6.0 or later, which classifies them as
   simdizable.

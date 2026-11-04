@@ -3608,13 +3608,15 @@ void SingleOp::build(OpBuilder &builder, OperationState &state,
                      const SingleOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
-  SingleOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                  makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
-                  makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
-                  clauses.copyprivateVars,
-                  makeArrayAttr(ctx, clauses.copyprivateSyms), clauses.nowait,
-                  /*private_vars=*/{}, /*private_syms=*/nullptr,
-                  /*private_needs_barrier=*/nullptr);
+  SingleOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+      clauses.copyprivateVars, makeArrayAttr(ctx, clauses.copyprivateSyms),
+      /*copyprivate_assume_bounded_recipe_effects=*/nullptr, clauses.nowait,
+      /*private_vars=*/{}, /*private_syms=*/nullptr,
+      /*private_needs_barrier=*/nullptr,
+      /*private_assume_bounded_recipe_effects=*/nullptr);
 }
 
 LogicalResult SingleOp::verify() {
@@ -3626,6 +3628,34 @@ LogicalResult SingleOp::verify() {
 
   return verifyCopyprivateVarList(*this, getCopyprivateVars(),
                                   getCopyprivateSyms());
+}
+
+void SingleOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // The presence of the nowait clause eliminates the implicit barrier at the
+  // end of a single construct.
+  if (!getNowait()) {
+    getBarrierEffects(effects);
+  }
+
+  bool hasUnknownRecipeEffects =
+      (!getPrivateVars().empty() && !getPrivateAssumeBoundedRecipeEffects()) ||
+      (!getCopyprivateVars().empty() &&
+       !getCopyprivateAssumeBoundedRecipeEffects());
+  if (hasUnknownRecipeEffects) {
+    addUnknownMemoryEffects(effects);
+  } else {
+    getPrivatisationEffects(*this, effects);
+    // The unknown executing thread supplies the value and the other threads
+    // receive it, so each copyprivate operand may be both read and written.
+    OperandRange copyprivateVars = getCopyprivateVars();
+    for (OpOperand &variable :
+         MutableArrayRef(copyprivateVars.getBase(), copyprivateVars.size())) {
+      effects.emplace_back(MemoryEffects::Read::get(), &variable);
+      effects.emplace_back(MemoryEffects::Write::get(), &variable);
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
