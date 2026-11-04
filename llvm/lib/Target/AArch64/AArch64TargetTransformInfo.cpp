@@ -5833,8 +5833,12 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
 
   InstructionCost MemOpCost = LT.first;
   if (MICA.getID() == Intrinsic::masked_expandload) {
-    if (!isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
+    if (!isLegalMaskedExpandLoad(Src, MICA.getAlignment())) {
+      // We can expand fixed-vector expandloads before ISEL.
+      if (isa<FixedVectorType>(Src))
+        return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
       return InstructionCost::getInvalid();
+    }
 
     // Operation will be split into expand of masked.load
     // Something like:
@@ -5846,8 +5850,12 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   }
 
   if (MICA.getID() == Intrinsic::masked_compressstore) {
-    if (!isLegalMaskedCompressStore(Src, MICA.getAlignment()))
+    if (!isLegalMaskedCompressStore(Src, MICA.getAlignment())) {
+      // We can expand fixed-vector compressstores before ISEL.
+      if (isa<FixedVectorType>(Src))
+        return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
       return InstructionCost::getInvalid();
+    }
 
     // A compress store lowers to something like:
     //  compact  z0.s, p0, z0.s
