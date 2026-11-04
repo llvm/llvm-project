@@ -73,6 +73,13 @@ struct is_abstract {
 template <typename T>
 constexpr bool is_abstract_v = __is_abstract(T);
 
+template <typename T>
+struct is_integral {
+    static constexpr bool value = __is_integral(T);
+};
+template <typename T>
+constexpr bool is_integral_v = __is_integral(T);
+
 #endif
 
 #ifdef STD2
@@ -167,6 +174,15 @@ using is_abstract = __details_is_abstract<T>;
 template <typename T>
 constexpr bool is_abstract_v = __is_abstract(T);
 
+template <typename T>
+struct __details_is_integral {
+    static constexpr bool value = __is_integral(T);
+};
+template <typename T>
+using is_integral = __details_is_integral<T>;
+template <typename T>
+constexpr bool is_integral_v = __is_integral(T);
+
 #endif
 
 
@@ -251,6 +267,13 @@ template <typename T>
 using is_abstract = __details_is_abstract<T>;
 template <typename T>
 constexpr bool is_abstract_v = is_abstract<T>::value;
+
+template <typename T>
+struct __details_is_integral : bool_constant<__is_integral(T)> {};
+template <typename T>
+using is_integral = __details_is_integral<T>;
+template <typename T>
+constexpr bool is_integral_v = is_integral<T>::value;
 
 #endif
 }
@@ -590,4 +613,28 @@ void test() {
     // expected-note@#concept10 {{'void' is not aggregate}} \
     // expected-note@#concept10 {{because it is a cv void type}}
 }
+    static_assert(std::is_integral<double>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_integral<double>::value'}} \
+    // expected-note@-1 {{'double' is not an integral type}} \
+    // expected-note@-1 {{because it is a floating-point type}}
+    static_assert(std::is_integral_v<double>);
+    // expected-error@-1 {{static assertion failed due to requirement 'std::is_integral_v<double>'}} \
+    // expected-note@-1 {{'double' is not an integral type}} \
+    // expected-note@-1 {{because it is a floating-point type}}
+
+    static_assert(std::is_integral_v<int*>);
+    // expected-error@-1 {{static assertion failed due to requirement 'std::is_integral_v<int *>'}} \
+    // expected-note@-1 {{'int *' is not an integral type}} \
+    // expected-note@-1 {{because it is a pointer type}}
+
+    static_assert(std::is_integral_v<int&>);
+    // expected-error@-1 {{static assertion failed due to requirement 'std::is_integral_v<int &>'}} \
+    // expected-note@-1 {{'int &' is not an integral type}} \
+    // expected-note@-1 {{because it is a reference type}}
+
+    enum E {};
+    static_assert(std::is_integral_v<E>);
+    // expected-error@-1 {{static assertion failed due to requirement 'std::is_integral_v<concepts::E>'}} \
+    // expected-note@-1 {{'concepts::E' is not an integral type}} \
+    // expected-note@-1 {{because it is an enum type}}
 }
