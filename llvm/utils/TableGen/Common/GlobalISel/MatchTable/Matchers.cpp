@@ -151,6 +151,8 @@ template <class Range> static bool matchersRecordOperand(Range &&R) {
 static void emitType(MatchTable &Table, const LLTCodeGenOrTempType &Ty) {
   if (Ty.isLLTCodeGen())
     Table << MatchTable::NamedValue(1, Ty.getLLTCodeGen().getCxxEnumValue());
+  else if (Ty.isLLTByHwMode())
+    Table << MatchTable::IntValue(1, getLLTByHwModeID(Ty.getLLTByHwMode()));
   else
     Table << MatchTable::IntValue(1, Ty.getTempTypeIdx());
 }
@@ -947,6 +949,7 @@ void SameOperandMatcher::emitPredicateOpcodes(MatchTable &Table) const {
 std::map<LLTCodeGen, unsigned> LLTOperandMatcher::TypeIDValues;
 
 RecordAndValue LLTOperandMatcher::getValue() const {
+  assert(!HwModeTy && "HwMode dependent types don't have a value");
   const auto VI = TypeIDValues.find(Ty);
   if (VI == TypeIDValues.end())
     return MatchTable::NamedValue(1, getTy().getCxxEnumValue());
@@ -954,12 +957,29 @@ RecordAndValue LLTOperandMatcher::getValue() const {
 }
 
 bool LLTOperandMatcher::hasValue() const {
+  // HwMode dependent types can't be used in a switch.
+  if (HwModeTy)
+    return false;
   if (TypeIDValues.size() != KnownTypes.size())
     initTypeIDValuesMap();
   return TypeIDValues.count(Ty);
 }
 
 void LLTOperandMatcher::emitPredicateOpcodes(MatchTable &Table) const {
+  if (HwModeTy) {
+    if (InsnVarID == 0) {
+      Table << MatchTable::Opcode("GIM_RootCheckTypeByHwMode");
+    } else {
+      Table << MatchTable::Opcode("GIM_CheckTypeByHwMode")
+            << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID);
+    }
+    Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
+          << MatchTable::Comment("TypeByHwMode")
+          << MatchTable::IntValue(1, getLLTByHwModeID(*HwModeTy))
+          << MatchTable::LineBreak;
+    return;
+  }
+
   if (InsnVarID == 0) {
     Table << MatchTable::Opcode("GIM_RootCheckType");
   } else {
@@ -974,6 +994,16 @@ void LLTOperandMatcher::emitPredicateOpcodes(MatchTable &Table) const {
 //===- PointerToAnyOperandMatcher -----------------------------------------===//
 
 void PointerToAnyOperandMatcher::emitPredicateOpcodes(MatchTable &Table) const {
+  if (HwModeTy) {
+    Table << MatchTable::Opcode("GIM_CheckPointerToAnyByHwMode")
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+          << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
+          << MatchTable::Comment("TypeByHwMode")
+          << MatchTable::IntValue(1, getLLTByHwModeID(*HwModeTy))
+          << MatchTable::LineBreak;
+    return;
+  }
+
   Table << MatchTable::Opcode("GIM_CheckPointerToAny")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
@@ -1189,8 +1219,24 @@ unsigned OperandMatcher::countRendererFns() {
 
 Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
                                             bool OperandIsAPointer) {
-  if (!VTy.isMachineValueType())
-    return failUnsupported("unsupported typeset");
+  if (!VTy.isMachineValueType()) {
+    // The type depends on the HwMode.
+    std::optional<LLTOrLLTByHwMode> Ty = getLLTOrLLTByHwMode(VTy);
+    if (!Ty)
+      return failUnsupported("unsupported typeset");
+
+    if (const auto *LLT = std::get_if<LLTCodeGen>(&*Ty)) {
+      if (OperandIsAPointer)
+        addPredicate<PointerToAnyOperandMatcher>(LLT->get().getSizeInBits());
+      else
+        addPredicate<LLTOperandMatcher>(*LLT);
+    } else if (OperandIsAPointer) {
+      addPredicate<PointerToAnyOperandMatcher>(std::get<LLTByHwMode>(*Ty));
+    } else {
+      addPredicate<LLTOperandMatcher>(std::get<LLTByHwMode>(*Ty));
+    }
+    return Error::success();
+  }
 
   if ((VTy.getMachineValueType() == MVT::iPTR ||
        VTy.getMachineValueType() == MVT::cPTR) &&
@@ -1633,8 +1679,9 @@ void InstructionMatcher::optimize() {
       // LLTOperandMatcher need to be kept as they may have a more specific type
       // than the parent instruction type.
       if (const auto *LLTPred = dyn_cast<LLTOperandMatcher>(&*OP)) {
-        if (!LLTPred->getTy().get().isAnyScalar() &&
-            !LLTPred->getTy().get().isAnyVector())
+        if (LLTPred->isHwModeDependent() ||
+            (!LLTPred->getTy().get().isAnyScalar() &&
+             !LLTPred->getTy().get().isAnyVector()))
           continue;
       }
       OP.reset();
@@ -2159,9 +2206,11 @@ void ConstrainOperandToRegClassAction::emitActionOpcodes(
 //===- MakeTempRegisterAction ---------------------------------------------===//
 
 void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table) const {
-  Table << MatchTable::Opcode("GIR_MakeTempReg")
+  Table << MatchTable::Opcode(Ty.isLLTByHwMode() ? "GIR_MakeTempRegByHwMode"
+                                                 : "GIR_MakeTempReg")
         << MatchTable::Comment("TempRegID")
-        << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("TypeID");
+        << MatchTable::ULEB128Value(TempRegID)
+        << MatchTable::Comment(Ty.isLLTByHwMode() ? "TypeByHwMode" : "TypeID");
   emitType(Table, Ty);
   Table << MatchTable::LineBreak;
 }

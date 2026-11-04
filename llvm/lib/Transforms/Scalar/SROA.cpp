@@ -3463,9 +3463,10 @@ private:
     // Strip any SROA suffixes as well.
     OldName = OldName.substr(0, OldName.find(".sroa_"));
 
-    return getAdjustedPtr(IRB, DL, &NewAI,
-                          APInt(DL.getIndexTypeSizeInBits(PointerTy), Offset),
-                          PointerTy, Twine(OldName) + ".");
+    return getAdjustedPtr(
+        IRB, DL, &NewAI,
+        APInt(DL.getIndexTypeSizeInBits(NewAI.getType()), Offset), PointerTy,
+        Twine(OldName) + ".");
   }
 
   /// Compute suitable alignment to access this slice of the *new*
@@ -5524,10 +5525,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         assert(OtherAI != &AI && "We can't re-split our own alloca!");
         ResplitPromotableAllocas.insert(OtherAI);
         Worklist.insert(OtherAI);
-      } else if (AllocaInst *OtherAI = dyn_cast<AllocaInst>(
+      } else if (AllocaInst *StrippedAI = dyn_cast<AllocaInst>(
                      LoadBasePtr->stripInBoundsOffsets())) {
-        assert(OtherAI != &AI && "We can't re-split our own alloca!");
-        Worklist.insert(OtherAI);
+        assert(StrippedAI != &AI && "We can't re-split our own alloca!");
+        Worklist.insert(StrippedAI);
       }
     }
 

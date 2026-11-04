@@ -255,6 +255,7 @@ static void copyMetadataForAtomic(Instruction &Dest,
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_mmra:
+    case LLVMContext::MD_atomic_ignore_denormal_mode:
       Dest.setMetadata(ID, N);
       break;
     default:
@@ -262,12 +263,8 @@ static void copyMetadataForAtomic(Instruction &Dest,
         Dest.setMetadata(ID, N);
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
         Dest.setMetadata(ID, N);
-
-      if (ID == Ctx.getMDKindID("amdgpu.cfs"))
+      else if (ID == Ctx.getMDKindID("amdgpu.cfs"))
         Dest.setMetadata(ID, N);
-
-      // Losing atomic.ignore.denormal.mode, but it doesn't matter for current
-      // uses.
       break;
     }
   }
@@ -2259,8 +2256,8 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
 
-  if (M->getTargetTriple().isOSWindows() && M->getTargetTriple().isX86_64() &&
-      Size == 16) {
+  if (M->getTargetTriple().isOSWindowsOrUEFI() &&
+      M->getTargetTriple().isX86_64() && Size == 16) {
     // x86_64 Windows passes i128 as an XMM vector; on return, it is in
     // XMM0, and as a parameter, it is passed indirectly. The generic lowering
     // rules handles this correctly if we pass it as a v2i64 rather than
@@ -2271,16 +2268,16 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 
-  // TODO: the "order" argument type is "int", not int32. So
-  // getInt32Ty may be wrong if the arch uses e.g. 16-bit ints.
+  // TODO: Take the signature from RuntimeLibcallsInfo
+  IntegerType *OrderingTy =
+      Type::getIntNTy(Ctx, LibcallLowering->getRuntimeLibcallsInfo().getIntSize(
+                               M->getTargetTriple()));
   assert(Ordering != AtomicOrdering::NotAtomic && "expect atomic MO");
-  Constant *OrderingVal =
-      ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering));
+  Constant *OrderingVal = ConstantInt::get(OrderingTy, (int)toCABI(Ordering));
   Constant *Ordering2Val = nullptr;
   if (CASExpected) {
     assert(Ordering2 != AtomicOrdering::NotAtomic && "expect atomic MO");
-    Ordering2Val =
-        ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering2));
+    Ordering2Val = ConstantInt::get(OrderingTy, (int)toCABI(Ordering2));
   }
   bool HasResult = I->getType() != Type::getVoidTy(Ctx);
 

@@ -296,6 +296,14 @@ LegalityAnalysis::canVectorizeLSV(BndlRef<Instruction *> Bndl) {
   if (!isAlignmentSupported(Bndl))
     return createLegalityResult<Pack>(ResultReason::AlignmentNotSupported);
 
+  // Check if the loads or stores access consecutive memory.
+  bool Consecutive =
+      isa<StoreInst>(Bndl[0])
+          ? VecUtils::areConsecutive<StoreInst, Instruction>(Bndl, SE, DL)
+          : VecUtils::areConsecutive<LoadInst, Instruction>(Bndl, SE, DL);
+  if (!Consecutive)
+    return createLegalityResult<Pack>(ResultReason::NotConsecutive);
+
   // Check scheduling.
   if (!Sched.trySchedule(Bndl))
     return createLegalityResult<Pack>(ResultReason::CantSchedule);
