@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -26,6 +27,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <cassert>
 #include <utility>
@@ -39,14 +41,15 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
                                const TTI::TargetCostKind CostKind,
                                ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args) {
+                               ArrayRef<const Value *> Args,
+                               TTI::VectorInstrContext VIC) {
   VectorType *DstTy = Tp;
   if (!Mask.empty())
     DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
 
   if (Kind != TTI::SK_PermuteTwoSrc)
     return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                              Args);
+                              Args, /*CtxI=*/nullptr, VIC);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -56,8 +59,8 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
       return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, CostKind,
                                 Mask, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                            Args);
+  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
+                            /*CtxI=*/nullptr, VIC);
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -122,15 +125,44 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             ? TTI::PointersChainInfo::getUnknownStride()
             : TTI::PointersChainInfo::getKnownStride();
 
+    const bool IsSameBase =
+        !all_of(Ptrs, IsaPred<GetElementPtrInst>) ||
+        all_equal(map_range(Ptrs, [](Value *V) {
+          return cast<GetElementPtrInst>(V)->getPointerOperand();
+        }));
+    // The GEPs of the masked gather loads are accessed with the loaded type
+    // and form a chain only if the lanes share the base.
+    Type *AccessTy = ScalarTy;
+    if (all_of(Ptrs, [](const Value *V) {
+          auto *Ptr = dyn_cast<GetElementPtrInst>(V);
+          return Ptr && Ptr->hasOneUse() && isa<LoadInst>(Ptr->user_back());
+        })) {
+      PtrsInfo.IsSameBaseAddress = IsSameBase;
+      AccessTy = Ptrs.front()->user_back()->getType();
+    }
     ScalarCost =
-        TTI.getPointersChainCost(Ptrs, BasePtr, PtrsInfo, ScalarTy, CostKind);
+        TTI.getPointersChainCost(Ptrs, BasePtr, PtrsInfo, AccessTy, CostKind);
     auto *BaseGEP = dyn_cast<GEPOperator>(BasePtr);
     if (!BaseGEP) {
       auto *It = find_if(Ptrs, IsaPred<GEPOperator>);
       if (It != Ptrs.end())
         BaseGEP = cast<GEPOperator>(*It);
     }
-    if (BaseGEP) {
+    if (!IsSameBase) {
+      // The different bases are not folded into the addressing of the vector
+      // access, the scaled indices are added to them.
+      const DataLayout &DL = cast<Instruction>(Ptrs.front())->getDataLayout();
+      Type *IdxTy = DL.getIndexType(VecTy);
+      VecCost = TTI.getArithmeticInstrCost(Instruction::Add, IdxTy, CostKind);
+      uint64_t Stride = DL.getTypeAllocSize(BaseGEP->getSourceElementType())
+                            .getKnownMinValue();
+      if (Stride != 1 && !all_of(Ptrs, [](Value *V) {
+            return isa<Constant>(cast<GetElementPtrInst>(V)->getOperand(1));
+          }))
+        VecCost += TTI.getArithmeticInstrCost(
+            isPowerOf2_64(Stride) ? Instruction::Shl : Instruction::Mul, IdxTy,
+            CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_None});
+    } else if (BaseGEP) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       VecCost = TTI.getGEPCost(BaseGEP->getSourceElementType(),
                                BaseGEP->getPointerOperand(), Indices, CostKind,
@@ -152,6 +184,31 @@ InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
          TTI.getArithmeticInstrCost(Instruction::Xor, CmpTy, CostKind) +
          TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy,
                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
+}
+
+InstructionCost getWidenedStridedCastCost(const TargetTransformInfo &TTI,
+                                          Type *SrcTy, Type *DstTy,
+                                          const DataLayout &DL,
+                                          TTI::CastContextHint CCH,
+                                          TTI::TargetCostKind CostKind) {
+  bool ToPtr = cast<VectorType>(DstTy)->getElementType()->isPointerTy();
+  if (ToPtr == cast<VectorType>(SrcTy)->getElementType()->isPointerTy())
+    return TTI.getCastInstrCost(Instruction::BitCast, DstTy, SrcTy, CCH,
+                                CostKind);
+  // The ptr/int conversion keeps the vector shape, the bitcast transforms the
+  // resulting integer vector.
+  if (ToPtr) {
+    Type *IntVecTy = DL.getIntPtrType(DstTy);
+    return TTI.getCastInstrCost(Instruction::IntToPtr, DstTy, IntVecTy, CCH,
+                                CostKind) +
+           TTI.getCastInstrCost(Instruction::BitCast, IntVecTy, SrcTy, CCH,
+                                CostKind);
+  }
+  Type *IntVecTy = DL.getIntPtrType(SrcTy);
+  return TTI.getCastInstrCost(Instruction::PtrToInt, IntVecTy, SrcTy, CCH,
+                              CostKind) +
+         TTI.getCastInstrCost(Instruction::BitCast, DstTy, IntVecTy, CCH,
+                              CostKind);
 }
 
 InstructionCost getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec,
@@ -215,8 +272,8 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, bool ReVec,
 InstructionCost getVectorInstrCost(
     const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy, unsigned Opcode,
     Type *Val, const TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+    Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+    TTI::VectorInstrContext VIC) {
   if (Opcode == Instruction::ExtractElement) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
       assert(ReVec && "Only supported by REVEC.");
@@ -227,7 +284,7 @@ InstructionCost getVectorInstrCost(
     }
   }
   return TTI.getVectorInstrCost(Opcode, Val, CostKind, Index, Scalar,
-                                ScalarUserAndIdx);
+                                ScalarUserAndIdx, VIC);
 }
 
 InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
@@ -375,7 +432,7 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
                                TTI::CastContextHint CCH,
                                TTI::TargetCostKind CostKind,
                                const TargetLibraryInfo *TLI,
-                               const Instruction *CxtI, unsigned &ShiftWidth) {
+                               const Instruction *CtxI, unsigned &ShiftWidth) {
   unsigned BitWidth = SrcTy->getScalarSizeInBits();
   unsigned NumElts = SrcTy->getNumElements();
   uint64_t MaxAmt = *max_element(Info.LShrAmts);
@@ -394,11 +451,15 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   Type *Int8Ty = Type::getInt8Ty(SrcTy->getContext());
   assert(BitWidth % 8 == 0 &&
          "The byte-multiple field width divides the result bit width.");
-  unsigned OutBytes = BitWidth / 8;
+  unsigned OutBytes = ResultTy->getScalarSizeInBits() / 8;
   auto *PackTy = FixedVectorType::get(Int8Ty, OutBytes);
   unsigned MinShiftWidth = 8;
   while (MinShiftWidth < MaxAmt + Info.FieldWidth)
     MinShiftWidth *= 2;
+  bool IsReversed = equal(Info.LaneOfField, reverse(seq<unsigned>(NumElts)));
+  bool IsTrunc = IsReversed || equal(Info.LaneOfField, seq<unsigned>(NumElts));
+  auto *FieldTy = FixedVectorType::get(
+      IntegerType::get(SrcTy->getContext(), Info.FieldWidth), NumElts);
   InstructionCost NewCost = InstructionCost::getInvalid();
   ShiftWidth = 0;
   for (unsigned W2 = MinShiftWidth; W2 <= BitWidth; W2 *= 2) {
@@ -410,17 +471,36 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
         getBitPackMask(Info, OutBytes, NumElts, BytesPerLane);
     InstructionCost C = TTI.getCastInstrCost(Instruction::BitCast, ResultTy,
                                              PackTy, CCH, CostKind);
-    // A plain byte reversal of the shifted lanes is a bswap, no shuffle.
-    if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
-      IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy, {ResultTy});
-      C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
-    } else if (!ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+    if (IsTrunc) {
+      // Fields in lane order, possibly reversed, are a truncation of the
+      // shifted lanes. A reversal of byte fields is a bswap.
+      if (Info.FieldWidth < W2)
+        C += TTI.getCastInstrCost(Instruction::Trunc, FieldTy, ShiftTy,
+                                  TTI::CastContextHint::None, CostKind);
+      if (IsReversed && Info.FieldWidth == 8) {
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy,
+                                          {ResultTy});
+        C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+      } else if (IsReversed) {
+        C += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, FieldTy,
+                                FieldTy, CostKind);
+      }
+    } else {
+      // A narrowing shuffle is a shuffle at the source width followed by an
+      // extract of the low elements.
+      auto *SrcByteTy = FixedVectorType::get(Int8Ty, InBytes);
+      SmallVector<int> WideMask(Mask);
+      WideMask.resize(std::max(InBytes, OutBytes), PoisonMaskElem);
       C += TTI.getShuffleCost(
           is_contained(Info.LaneOfField, BitPackInfo::NoLane)
               ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc,
-          PackTy, FixedVectorType::get(Int8Ty, InBytes), CostKind, Mask,
-          /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CxtI);
+          FixedVectorType::get(Int8Ty, WideMask.size()), SrcByteTy, CostKind,
+          WideMask, /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CtxI);
+      if (InBytes > OutBytes)
+        C += TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                PackTy, SrcByteTy, CostKind, /*Mask=*/{},
+                                /*Index=*/0, PackTy, /*Args=*/{}, CtxI);
     }
     if (W2 != BitWidth && W2 != ZExtSrcWidth)
       C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy, CCH,
@@ -428,7 +508,7 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
     if (Info.needsShift())
       C += TTI.getArithmeticInstrCost(Instruction::LShr, ShiftTy, CostKind,
                                       /*Opd1Info=*/{}, ShiftAmtInfo,
-                                      /*Args=*/{}, CxtI, TLI);
+                                      /*Args=*/{}, CtxI, TLI);
     if (C.isValid() && (!NewCost.isValid() || C < NewCost)) {
       NewCost = C;
       ShiftWidth = W2;
@@ -437,4 +517,58 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   return NewCost;
 }
 
+InstructionCost getBoolBitmaskCost(const TargetTransformInfo &TTI,
+                                   bool NeedMask, Type *NarrowScalarTy,
+                                   Type *WideTy, unsigned VF,
+                                   ArrayRef<int> PermMask, const Value *Root,
+                                   const TTI::TargetCostKind CostKind) {
+  auto *NarrowVecTy = cast<VectorType>(getWidenedType(NarrowScalarTy, VF));
+  Type *CmpTy = CmpInst::makeCmpResultType(NarrowVecTy);
+  auto *MaskTy = IntegerType::get(WideTy->getContext(), VF);
+  // The result cast inherits the uses of the reduction root.
+  TTI::CastContextHint CCH = getBoolReduxResultCCH(Root);
+  const auto *CtxI = cast<Instruction>(Root);
+  InstructionCost Cost = 0;
+  if (NeedMask)
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::And, NarrowVecTy, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
+  if (!ShuffleVectorInst::isIdentityMask(PermMask, VF))
+    Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, NarrowVecTy, CostKind,
+                           PermMask);
+  if (!NarrowScalarTy->isIntegerTy(1))
+    Cost += TTI.getCmpSelInstrCost(
+        Instruction::ICmp, NarrowVecTy, CmpTy, CmpInst::ICMP_NE, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_UniformConstantValue, TTI::OP_None});
+  // Only the final cast inherits the uses of the reduction root.
+  Cost += TTI.getCastInstrCost(
+      Instruction::BitCast, MaskTy, CmpTy,
+      MaskTy == WideTy ? CCH : TTI::CastContextHint::None, CostKind);
+  if (MaskTy != WideTy)
+    Cost +=
+        TTI.getCastInstrCost(Instruction::ZExt, WideTy, MaskTy, CCH, CostKind);
+  return Cost;
+}
+
+InstructionCost getNarrowedLeafOpsCost(
+    const TargetTransformInfo &TTI,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CtxI,
+    const TTI::TargetCostKind CostKind) {
+  InstructionCost Cost = 0;
+  if (any_of(NarrowedLeafShifts,
+             [](const auto &P) { return P.second.Shift != 0; }))
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::Shl, WideVecTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
+  if (any_of(NarrowedLeafShifts,
+             [](const auto &P) { return !P.second.Mask.isAllOnes(); }))
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::And, NarrowVecTy, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
+  return Cost;
+}
 } // namespace llvm::slpvectorizer

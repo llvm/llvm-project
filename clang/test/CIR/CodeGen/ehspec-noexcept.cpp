@@ -82,18 +82,30 @@ void permissive() noexcept {
 // CIR:         } catch all (%[[TOK:.*]]: !cir.eh_token
 // CIR:           cir.eh.terminate %[[TOK]] : !cir.eh_token
 
-// So it leaves no landing pad behind. It does leave the personality function
-// that CIRGen set for the wrapper, which classic codegen omits because it only
-// sets one where it emits a landing pad. The same difference shows up for a
-// try statement whose body cannot throw, so it is not specific to exception
-// specifications.
 // LLVM-LABEL: define{{.*}} void @_Z10permissivev()
-// LLVMCIR-SAME: personality ptr @__gxx_personality_v0
-// OGCG-NOT:   personality
+// LLVM-NOT:     personality
 // LLVM:         call void @_Z8harmlessv()
 // LLVM-NOT:     landingpad
 // LLVM-NOT:     __clang_call_terminate
 // LLVM:         ret void
+
+void tailToNothrow() noexcept {
+  [[clang::musttail]] return harmless();
+}
+
+// A musttail call replaces this function's frame, and with it the terminate
+// handler, which is why the callee has to be non-throwing. A throwing callee
+// is diagnosed, in attr-musttail-noexcept-mismatch.cpp.
+// CIR-LABEL: cir.func{{.*}} @_Z13tailToNothrowv()
+// CIR:         cir.try {
+// CIR:           cir.call @_Z8harmlessv() musttail nothrow : () -> ()
+// CIR-NEXT:      cir.return
+
+// LLVM-LABEL: define{{.*}} void @_Z13tailToNothrowv()
+// LLVM:         musttail call void @_Z8harmlessv()
+// LLVM-NEXT:    ret void
+// LLVM-NOT:     landingpad
+// LLVM-NOT:     __clang_call_terminate
 
 void outer() noexcept {
   try {

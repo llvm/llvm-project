@@ -415,9 +415,9 @@ bool foo18(int _Complex a, int _Complex b) {
 // LLVM-NEXT: %[[A_SLOT:.*]] = alloca i64, align 8
 // LLVM-NEXT: store i64 %0, ptr %[[A_SLOT]], align 8
 // LLVM-NEXT: %[[A_RELOAD:.*]] = load { i32, i32 }, ptr %[[A_SLOT]], align 4
+// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM-NEXT: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
-// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: store { i32, i32 } %[[A_RELOAD]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT: store { i32, i32 } %[[B_RELOAD]], ptr %[[B_ADDR]], align 4
 // LLVM-NEXT: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
@@ -455,30 +455,24 @@ bool foo19(double _Complex a, double _Complex b) {
 // CIR: %[[RESULT:.*]] = cir.cmp eq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
 
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo19CdS_(double %0, double %1, double %2, double %3)
-// LLVM: %[[B_ADDR:.*]] = alloca { double, double }, align 8
-// LLVM-NEXT: %[[B_SLOT:.*]] = alloca { double, double }, align 8
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo19CdS_(double noundef %0, double noundef %1, double noundef %2, double noundef %3)
+// LLVM: %[[B_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[B_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 0
 // LLVM-NEXT: store double %2, ptr %[[B_SLOT_REALP]], align 8
 // LLVM-NEXT: %[[B_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %3, ptr %[[B_SLOT_IMAGP]], align 8
-// LLVM-NEXT: %[[B_RELOAD1:.*]] = load { double, double }, ptr %[[B_SLOT]], align 8
-// LLVM-NEXT: store { double, double } %[[B_RELOAD1]], ptr %[[B_ADDR]], align 8
-// LLVM-NEXT: %[[B_RELOAD2:.*]] = load { double, double }, ptr %[[B_ADDR]], align 8
-// LLVM-NEXT: %[[A_ADDR:.*]] = alloca { double, double }, align 8
+// LLVM-NEXT: %[[B_RELOAD:.*]] = load { double, double }, ptr %[[B_SLOT]], align 8
 // LLVM-NEXT: %[[A_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[A_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 0
 // LLVM-NEXT: store double %0, ptr %[[A_SLOT_REALP]], align 8
 // LLVM-NEXT: %[[A_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %1, ptr %[[A_SLOT_IMAGP]], align 8
-// LLVM-NEXT: %[[A_RELOAD1:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
-// LLVM-NEXT: store { double, double } %[[A_RELOAD1]], ptr %[[A_ADDR]], align 8
-// LLVM-NEXT: %[[A_RELOAD2:.*]] = load { double, double }, ptr %[[A_ADDR]], align 8
+// LLVM-NEXT: %[[A_RELOAD:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
+// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: %[[REAL_A_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[REAL_B_ADDR:.*]] = alloca { double, double }, align 8
-// LLVM-NEXT: alloca i8, align 1
-// LLVM-NEXT: store { double, double } %[[A_RELOAD2]], ptr %[[REAL_A_ADDR]], align 8
-// LLVM-NEXT: store { double, double } %[[B_RELOAD2]], ptr %[[REAL_B_ADDR]], align 8
+// LLVM-NEXT: store { double, double } %[[A_RELOAD]], ptr %[[REAL_A_ADDR]], align 8
+// LLVM-NEXT: store { double, double } %[[B_RELOAD]], ptr %[[REAL_B_ADDR]], align 8
 // LLVM-NEXT: %[[COMPLEX_A:.*]] = load { double, double }, ptr %[[REAL_A_ADDR]], align 8
 // LLVM-NEXT: %[[COMPLEX_B:.*]] = load { double, double }, ptr %[[REAL_B_ADDR]], align 8
 // LLVM: %[[A_REAL:.*]] = extractvalue { double, double } %[[COMPLEX_A]], 0
@@ -529,9 +523,9 @@ bool foo20(int _Complex a, int _Complex b) {
 // LLVM-NEXT: %[[A_SLOT:.*]] = alloca i64, align 8
 // LLVM-NEXT: store i64 %0, ptr %[[A_SLOT]], align 8
 // LLVM-NEXT: %[[A_RELOAD:.*]] = load { i32, i32 }, ptr %[[A_SLOT]], align 4
+// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM-NEXT: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
-// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: store { i32, i32 } %[[A_RELOAD]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT: store { i32, i32 } %[[B_RELOAD]], ptr %[[B_ADDR]], align 4
 // LLVM-NEXT: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
@@ -568,30 +562,24 @@ bool foo21(double _Complex a, double _Complex b) {
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo21CdS_(double %0, double %1, double %2, double %3)
-// LLVM: %[[B_ADDR:.*]] = alloca { double, double }, align 8
-// LLVM-NEXT: %[[B_SLOT:.*]] = alloca { double, double }, align 8
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo21CdS_(double noundef %0, double noundef %1, double noundef %2, double noundef %3)
+// LLVM: %[[B_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[B_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 0
 // LLVM-NEXT: store double %2, ptr %[[B_SLOT_REALP]], align 8
 // LLVM-NEXT: %[[B_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %3, ptr %[[B_SLOT_IMAGP]], align 8
-// LLVM-NEXT: %[[B_RELOAD1:.*]] = load { double, double }, ptr %[[B_SLOT]], align 8
-// LLVM-NEXT: store { double, double } %[[B_RELOAD1]], ptr %[[B_ADDR]], align 8
-// LLVM-NEXT: %[[B_RELOAD2:.*]] = load { double, double }, ptr %[[B_ADDR]], align 8
-// LLVM-NEXT: %[[A_ADDR:.*]] = alloca { double, double }, align 8
+// LLVM-NEXT: %[[B_RELOAD:.*]] = load { double, double }, ptr %[[B_SLOT]], align 8
 // LLVM-NEXT: %[[A_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[A_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 0
 // LLVM-NEXT: store double %0, ptr %[[A_SLOT_REALP]], align 8
 // LLVM-NEXT: %[[A_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %1, ptr %[[A_SLOT_IMAGP]], align 8
-// LLVM-NEXT: %[[A_RELOAD1:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
-// LLVM-NEXT: store { double, double } %[[A_RELOAD1]], ptr %[[A_ADDR]], align 8
-// LLVM-NEXT: %[[A_RELOAD2:.*]] = load { double, double }, ptr %[[A_ADDR]], align 8
+// LLVM-NEXT: %[[A_RELOAD:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
+// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: %[[REAL_A_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[REAL_B_ADDR:.*]] = alloca { double, double }, align 8
-// LLVM-NEXT: alloca i8, align 1
-// LLVM-NEXT: store { double, double } %[[A_RELOAD2]], ptr %[[REAL_A_ADDR]], align 8
-// LLVM-NEXT: store { double, double } %[[B_RELOAD2]], ptr %[[REAL_B_ADDR]], align 8
+// LLVM-NEXT: store { double, double } %[[A_RELOAD]], ptr %[[REAL_A_ADDR]], align 8
+// LLVM-NEXT: store { double, double } %[[B_RELOAD]], ptr %[[REAL_B_ADDR]], align 8
 // LLVM-NEXT: %[[COMPLEX_A:.*]] = load { double, double }, ptr %[[REAL_A_ADDR]], align 8
 // LLVM-NEXT: %[[COMPLEX_B:.*]] = load { double, double }, ptr %[[REAL_B_ADDR]], align 8
 // LLVM: %[[A_REAL:.*]] = extractvalue { double, double } %[[COMPLEX_A]], 0
@@ -936,22 +924,48 @@ void foo33(__builtin_va_list a) {
   float _Complex b = __builtin_va_arg(a, float _Complex);
 }
 
+// `_Complex float` coerces to `<2 x float>`, one SSE eightbyte.
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.ptr<!rec___va_list_tag>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.ptr<!rec___va_list_tag>, !cir.ptr<!cir.ptr<!rec___va_list_tag>>
 // CIR: %[[VA_TAG:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.ptr<!rec___va_list_tag>>, !cir.ptr<!rec___va_list_tag>
-// CIR: %[[COMPLEX:.*]] = cir.va_arg %[[VA_TAG]] : (!cir.ptr<!rec___va_list_tag>) -> !cir.complex<!cir.float>
+// CIR: %[[FP_OFFSET_P:.*]] = cir.get_member %[[VA_TAG]][1] {name = "fp_offset"} : !cir.ptr<!rec___va_list_tag> -> !cir.ptr<!u32i>
+// CIR: %[[FP_OFFSET:.*]] = cir.load %[[FP_OFFSET_P]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[FP_LIMIT:.*]] = cir.const #cir.int<160> : !u32i
+// CIR: %[[FITS_FP:.*]] = cir.cmp le %[[FP_OFFSET]], %[[FP_LIMIT]] : !u32i
+// CIR: %[[COMPLEX_ADDR:.*]] = cir.ternary(%[[FITS_FP]], true {
+// CIR:   %[[REG_ADDR:.*]] = cir.ptr_stride %{{.*}}, %[[FP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
+// CIR:   %[[FP_BUMP:.*]] = cir.const #cir.int<16> : !u32i
+// CIR:   %[[FP_NEXT:.*]] = cir.add %[[FP_OFFSET]], %[[FP_BUMP]] : !u32i
+// CIR:   cir.store %[[FP_NEXT]], %[[FP_OFFSET_P]] : !u32i, !cir.ptr<!u32i>
+// CIR:   cir.yield %[[REG_ADDR]] : !cir.ptr<!u8i>
+// CIR: }, false {
+// CIR:   cir.yield %{{.*}} : !cir.ptr<!u8i>
+// CIR: }) : (!cir.bool) -> !cir.ptr<!u8i>
+// CIR: %[[COMPLEX_ADDR_B:.*]] = cir.cast bitcast %[[COMPLEX_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[COMPLEX:.*]] = cir.load align(4) %[[COMPLEX_ADDR_B]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca ptr, align 8
 // LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: store ptr %[[ARG_0:.*]], ptr %[[A_ADDR]], align 8
 // LLVM: %[[TMP_A:.*]] = load ptr, ptr %[[A_ADDR]], align 8
-// LLVM: %[[COMPLEX:.*]] = va_arg ptr %[[TMP_A]], { float, float }
-// LLVM: store { float, float } %[[COMPLEX]], ptr %[[B_ADDR]], align 4
-
-// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
-// Test will be updated when that is implemented
+// LLVM: %[[FP_OFFSET_P:.*]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[TMP_A]], i32 0, i32 1
+// LLVM: %[[FP_OFFSET:.*]] = load i32, ptr %[[FP_OFFSET_P]], align 4
+// LLVM: %[[FITS_FP:.*]] = icmp ule i32 %[[FP_OFFSET]], 160
+// LLVM: br i1 %[[FITS_FP]], label %[[REG_BB:.*]], label %[[MEM_BB:.*]]
+// LLVM: [[REG_BB]]:
+// LLVM: %[[REG_SAVE:.*]] = load ptr, ptr %{{.*}}, align 8
+// LLVM: %[[COMPLEX:.*]] = getelementptr i8, ptr %[[REG_SAVE]], i64 %{{.*}}
+// LLVM: %[[FP_NEXT:.*]] = add i32 %[[FP_OFFSET]], 16
+// LLVM: store i32 %[[FP_NEXT]], ptr %[[FP_OFFSET_P]], align 4
+// LLVM: br label %[[END_BB:.*]]
+// LLVM: [[MEM_BB]]:
+// LLVM: br label %[[END_BB]]
+// LLVM: [[END_BB]]:
+// LLVM: %[[COMPLEX_ADDR:.*]] = phi ptr [ %{{.*}}, %[[MEM_BB]] ], [ %[[COMPLEX]], %[[REG_BB]] ]
+// LLVM: %[[COMPLEX_V:.*]] = load { float, float }, ptr %[[COMPLEX_ADDR]], align 4
+// LLVM: store { float, float } %[[COMPLEX_V]], ptr %[[B_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca ptr, align 8
 // OGCG: %[[B_ADDR:.*]] = alloca { float, float }, align 4
@@ -1759,9 +1773,9 @@ bool eq_float_complex_and_float(float _Complex a, float b) {
   return a == b;
 }
 
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %[[ARG_1:.*]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
@@ -1771,9 +1785,9 @@ bool eq_float_complex_and_float(float _Complex a, float b) {
 // CIR: %[[RESULT:.*]] = cir.cmp eq %[[TMP_A]], %[[COMPLEX_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
+// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }
 // LLVM: %[[B_ADDR:.*]] = alloca float
-// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: store { float, float } %[[ARG_0:.*]], ptr %[[A_ADDR]], align 4
 // LLVM: store float %[[ARG_1:.*]], ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
@@ -1807,9 +1821,9 @@ bool eq_float_and_float_complex(float a, float _Complex b) {
   return a == b;
 }
 
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: cir.store %[[ARG_1:.*]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
@@ -1819,9 +1833,9 @@ bool eq_float_and_float_complex(float a, float _Complex b) {
 // CIR: %[[RESULT:.*]] = cir.cmp eq %[[COMPLEX_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
+// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: %[[A_ADDR:.*]] = alloca float
 // LLVM: %[[B_ADDR:.*]] = alloca { float, float }
-// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: store float %[[ARG_0:.*]], ptr %[[A_ADDR]], align 4
 // LLVM: store { float, float } %[[ARG_1:.*]], ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load float, ptr %[[A_ADDR]], align 4
@@ -1855,9 +1869,9 @@ bool ne_float_complex_and_float(float _Complex a, float b) {
   return a != b;
 }
 
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %[[ARG_1:.*]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
@@ -1867,9 +1881,9 @@ bool ne_float_complex_and_float(float _Complex a, float b) {
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[TMP_A]], %[[COMPLEX_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
+// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }
 // LLVM: %[[B_ADDR:.*]] = alloca float
-// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: store { float, float } %[[ARG_0:.*]], ptr %[[A_ADDR]], align 4
 // LLVM: store float %[[ARG_1:.*]], ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
@@ -1903,9 +1917,9 @@ bool ne_float_and_float_complex(float a, float _Complex b) {
   return a != b;
 }
 
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: cir.store %[[ARG_1:.*]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
@@ -1915,9 +1929,9 @@ bool ne_float_and_float_complex(float a, float _Complex b) {
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
+// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: %[[A_ADDR:.*]] = alloca float
 // LLVM: %[[B_ADDR:.*]] = alloca { float, float }
-// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: store float %[[ARG_0:.*]], ptr %[[A_ADDR]], align 4
 // LLVM: store { float, float } %[[ARG_1:.*]], ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load float, ptr %[[A_ADDR]], align 4
@@ -1958,10 +1972,10 @@ void compare_two_complex_bin_ops() {
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[COMPLEX_AB:.*]] = cir.complex.add %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.double>
+// CIR: %[[COMPLEX_AB:.*]] = cir.complex.fadd %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.double>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[COMPLEX_BA:.*]] = cir.complex.add %[[TMP_B]], %[[TMP_A]] : !cir.complex<!cir.double>
+// CIR: %[[COMPLEX_BA:.*]] = cir.complex.fadd %[[TMP_B]], %[[TMP_A]] : !cir.complex<!cir.double>
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_AB]], %[[COMPLEX_BA]] : !cir.complex<!cir.double>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 

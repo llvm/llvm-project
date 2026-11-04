@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -583,13 +584,26 @@ MCFixupKindInfo MipsAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 /// \return - True on success.
 bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                   const MCSubtargetInfo *STI) const {
-  // Check for a less than instruction size number of bytes
-  // FIXME: 16 bit instructions are not handled yet here.
-  // We shouldn't be using a hard coded number for instruction size.
+  // We mostly follow binutils' convention here: align to an even boundary with
+  // zero-fill padding, then emit up to one 2-byte NOP. Use move $zero, $zero
+  // for microMIPS, or zero-fill for standard MIPS. Pad the remainder with
+  // 4-byte NOPs.
 
-  // If the count is not 4-byte aligned, we must be writing data into the text
-  // section (otherwise we have unaligned instructions, and thus have far
-  // bigger problems), so just write zeros instead.
+  // An odd byte is data padding. Align to an instruction boundary first.
+  if (Count % 2) {
+    OS.write_zeros(1);
+    Count -= 1;
+  }
+
+  if (Count % 4 == 2) {
+    // Use move $zero, $zero for a microMIPS 16-bit NOP. For standard MIPS,
+    // this halfword is data padding.
+    uint16_t Nop = STI && STI->hasFeature(Mips::FeatureMicroMips) ? 0x0c00 : 0;
+    support::endian::write<uint16_t>(OS, Nop, Endian);
+    Count -= 2;
+  }
+
+  // Zero encodes a 32-bit NOP in both standard MIPS and microMIPS.
   OS.write_zeros(Count);
   return true;
 }

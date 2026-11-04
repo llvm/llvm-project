@@ -39,7 +39,7 @@ CFI checks for classes without visibility attributes. Most users will want
 to specify `-fvisibility=hidden`, which enables CFI checks for such classes.
 
 When using `-fsanitize=cfi*` with `-flto=thin`, it is recommended
-to reduce link times by passing [-funique-source-file-names](https://clang.llvm.org/docs/UsersManual.html#cmdoption-f-no-unique-source-file-names), provided
+to reduce link times by passing {option}`-funique-source-file-names <-f[no-]unique-source-file-names>`, provided
 that your program is compatible with it.
 
 Experimental support for {ref}`cross-DSO control flow integrity

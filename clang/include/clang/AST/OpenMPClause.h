@@ -49,6 +49,55 @@ namespace clang {
 
 class ASTContext;
 
+/// One item in an OpenMP 'adjust_args' parameter list.
+struct OMPAdjustArgsItem {
+  /// One bound of a parameter range.
+  struct Bound {
+    enum BoundKind : uint8_t { Omitted, Expression, NumArgs };
+
+    BoundKind Kind = Omitted;
+    /// The bound expression, or the logical offset for a NumArgs bound.
+    Expr *E = nullptr;
+    bool IsSubtraction = false;
+  };
+
+  enum ItemKind : uint8_t { Single, Range };
+
+  ItemKind Kind = Single;
+  /// A named parameter or positional expression for a Single item.
+  Expr *E = nullptr;
+  Bound Lower;
+  Bound Upper;
+};
+
+/// Describes the source-level contents of one OpenMP 'adjust_args' clause.
+class OMPAdjustArgsDescriptor final
+    : private llvm::TrailingObjects<OMPAdjustArgsDescriptor,
+                                    OMPAdjustArgsItem> {
+  friend TrailingObjects;
+
+  unsigned NumItems;
+
+  OMPAdjustArgsDescriptor(OpenMPAdjustArgsOpKind AdjustOp,
+                          OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                          unsigned NumItems)
+      : NumItems(NumItems), AdjustOp(AdjustOp),
+        NeedDevicePtrModifier(NeedDevicePtrModifier) {}
+
+public:
+  OpenMPAdjustArgsOpKind AdjustOp;
+  OpenMPNeedDevicePtrModifier NeedDevicePtrModifier;
+
+  static OMPAdjustArgsDescriptor *
+  Create(const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
+         OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+         ArrayRef<OMPAdjustArgsItem> Items);
+
+  ArrayRef<OMPAdjustArgsItem> items() const {
+    return {getTrailingObjects(), NumItems};
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // AST classes for clauses.
 //===----------------------------------------------------------------------===//
@@ -1464,6 +1513,70 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_partial;
+  }
+};
+
+/// This represents the 'depth' clause on the '#pragma omp flatten' (and
+/// '#pragma omp fuse') loop-transformation directives.
+///
+/// \code
+/// #pragma omp flatten depth(3)
+/// \endcode
+/// In this example the 'flatten' directive has a 'depth' clause whose argument
+/// '3' specifies how many perfectly nested loops are combined into one.
+/// The argument must be a positive integer constant expression that evaluates
+/// to at most the loop nest depth of the associated loop nest.
+class OMPDepthClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// The depth expression (e.g. number of loops to flatten or nest-levels to
+  /// fuse).
+  Stmt *Depth = nullptr;
+
+  /// Build an empty clause.
+  explicit OMPDepthClause() : OMPClause(llvm::omp::OMPC_depth, {}, {}) {}
+
+  /// Set the depth expression.
+  void setDepth(Expr *E) { Depth = E; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build an AST node for a 'depth' clause.
+  ///
+  /// \param StartLoc  Location of the 'depth' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Depth     The depth expression.
+  OMPDepthClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc, Expr *Depth)
+      : OMPClause(llvm::omp::OMPC_depth, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Depth(Depth) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the depth expression or nullptr if not set.
+  Expr *getDepth() const { return cast_or_null<Expr>(Depth); }
+
+  child_range children() { return child_range(&Depth, &Depth + 1); }
+  const_child_range children() const {
+    return const_child_range(&Depth, &Depth + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_depth;
   }
 };
 
@@ -9173,7 +9286,8 @@ public:
     unsigned N = getNumPrefs();
     Expr *const *E = getTrailingObjects<Expr *>();
     ArrayRef<unsigned> Ends = getAttrEnds();
-    return llvm::map_range(llvm::seq<unsigned>(0, N), [=](unsigned I) {
+    return llvm::map_range(llvm::seq<unsigned>(0, N), [this, E,
+                                                       Ends](unsigned I) {
       unsigned Start = (I == 0) ? 0 : Ends[I - 1];
       return PrefView{
           const_cast<Expr *>(E[1 + I]),
@@ -10619,6 +10733,28 @@ public:
   /// Build an empty clause.
   OMPXBareClause() = default;
 };
+
+/// Resolve one 'adjust_args' parameter-list item to the 1-based argument
+/// positions it identifies (OpenMP 6.0 [5.2.1]).
+///
+/// \param Item     A named item, positional item, or parameter range.
+/// \param FD       The base function the OMPDeclareVariantAttr is attached to.
+/// \param NumArgs  The value of 'omp_num_args' at the point of resolution:
+///                 \c max(FD->getNumParams(), Call->getNumArgs()) at a call
+///                 site, or \c FD->getNumParams() with no call site available
+///                 (OpenMP 6.0 [20.1]).
+/// \param Positions Resolved positions are appended here, ascending. Positions
+///                 outside [1, NumArgs] are silently dropped
+///                 (OpenMP 6.0 [9.6.2]).
+/// \returns false if \p Item is not a resolvable item shape, or if a bound is
+///          dependent or not a constant expression.
+///
+/// Emits no diagnostics; callers are responsible for diagnosing invalid items
+/// before calling this function.
+bool resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
+                              const FunctionDecl *FD, unsigned NumArgs,
+                              const ASTContext &Ctx,
+                              SmallVectorImpl<unsigned> &Positions);
 
 } // namespace clang
 

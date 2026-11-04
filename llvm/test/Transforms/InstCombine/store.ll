@@ -11,6 +11,17 @@ define void @store_of_undef(ptr %P) {
   ret void
 }
 
+; Wrong to fold for two reasons: possible poison overwrite, and can't guarantee
+; that the high bit of this byte in memory will be zero.
+define void @store_of_nonbyte_undef(ptr %P) {
+; CHECK-LABEL: @store_of_nonbyte_undef(
+; CHECK-NEXT:    store i7 undef, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i7 undef, ptr %P
+  ret void
+}
+
 define void @store_of_poison(ptr %P) {
 ; CHECK-LABEL: @store_of_poison(
 ; CHECK-NEXT:    ret void
@@ -513,5 +524,6 @@ define void @store_nonconst_b8(b8 %v, ptr %p) {
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
-!3 = !{!"float", !1}
+!3 = !{!5, !5, i64 0}
 !4 = !{!"int", !1}
+!5 = !{!"float", !1}

@@ -14,8 +14,8 @@
     "host_enabled.description": "Instrument non-GPU targets",
     "gpu_enabled": true,
     "gpu_enabled.description": "Instrument GPU targets",
-    "runtime_bitcode": "",
-    "runtime_bitcode.description": "Link runtime bitcode",
+    "runtime_bitcodes": [],
+    "runtime_bitcodes.description": "Link runtime bitcode files",
     "inline_runtime": true,
     "inline_runtime.description": "Inline runtime function calls eagerly"
   },

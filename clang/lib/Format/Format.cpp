@@ -478,6 +478,21 @@ struct ScalarEnumerationTraits<FormatStyle::EnumTrailingCommaStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::IndentAccessModifierStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::IndentAccessModifierStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::IAMS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::IAMS_Always);
+    IO.enumCase(Value, "AfterFirstAccessModifier",
+                FormatStyle::IAMS_AfterFirstAccessModifier);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::IAMS_Never);
+    IO.enumCase(Value, "true", FormatStyle::IAMS_Always);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
   static void enumeration(IO &IO, FormatStyle::IndentExternBlockStyle &Value) {
     IO.enumCase(Value, "AfterExternBlock", FormatStyle::IEBS_AfterExternBlock);
@@ -517,6 +532,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::JavaScriptQuoteStyle> {
 
 template <> struct MappingTraits<FormatStyle::KeepEmptyLinesStyle> {
   static void mapping(IO &IO, FormatStyle::KeepEmptyLinesStyle &Value) {
+    IO.mapOptional("AtEndOfBlock", Value.AtEndOfBlock);
     IO.mapOptional("AtEndOfFile", Value.AtEndOfFile);
     IO.mapOptional("AtStartOfBlock", Value.AtStartOfBlock);
     IO.mapOptional("AtStartOfFile", Value.AtStartOfFile);
@@ -1376,6 +1392,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakTemplateDeclarations);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
+    IO.mapOptional("CompactCaseLabels", Style.CompactCaseLabels);
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerIndentWidth",
                    Style.ConstructorInitializerIndentWidth);
@@ -1954,6 +1971,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
+  LLVMStyle.CompactCaseLabels = false;
   LLVMStyle.CompactNamespaces = false;
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;
@@ -1976,7 +1994,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       {".*", 1, 0, false}};
   LLVMStyle.IncludeStyle.IncludeIsMainRegex = "(Test)?$";
   LLVMStyle.IncludeStyle.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
-  LLVMStyle.IndentAccessModifiers = false;
+  LLVMStyle.IndentAccessModifiers = FormatStyle::IAMS_Never;
   LLVMStyle.IndentCaseBlocks = false;
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentExportBlock = true;
@@ -1993,6 +2011,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.KeepEmptyLines = {
+      /*AtEndOfBlock=*/false,
       /*AtEndOfFile=*/false,
       /*AtStartOfBlock=*/true,
       /*AtStartOfFile=*/true,
@@ -2732,10 +2751,15 @@ private:
         std::string Brace;
         if (BraceCount < 0) {
           assert(BraceCount == -1);
+          // Keep the marker so that the parser doesn't mark the token again in
+          // a later run.
+          if (Token->LBraceInserted)
+            continue;
           if (!Line->Affected)
             break;
           Brace = Token->is(tok::comment) ? "\n{" : "{";
           ++OpeningBraceSurplus;
+          Token->LBraceInserted = true;
         } else {
           if (OpeningBraceSurplus == 0)
             break;
@@ -2743,8 +2767,8 @@ private:
             BraceCount = OpeningBraceSurplus;
           Brace = '\n' + std::string(BraceCount, '}');
           OpeningBraceSurplus -= BraceCount;
+          Token->BraceCount = 0;
         }
-        Token->BraceCount = 0;
         const auto Start = Token->Tok.getEndLoc();
         cantFail(Result.add(tooling::Replacement(SourceMgr, Start, 0, Brace)));
       }
@@ -3013,7 +3037,7 @@ public:
     ContinuationIndenter Indenter(Style, Tokens.getKeywords(),
                                   Env.getSourceManager(), Whitespaces, Encoding,
                                   BinPackInconclusiveFunctions);
-    unsigned Penalty =
+    uint64_t Penalty =
         UnwrappedLineFormatter(&Indenter, &Whitespaces, Style,
                                Tokens.getKeywords(), Env.getSourceManager(),
                                Status)
@@ -3026,7 +3050,8 @@ public:
     for (const auto &R : Whitespaces.generateReplacements())
       if (Result.add(R))
         return std::make_pair(Result, 0);
-    return std::make_pair(Result, Penalty);
+    return std::make_pair(
+        Result, static_cast<unsigned>(std::min<uint64_t>(Penalty, UINT_MAX)));
   }
 
 private:

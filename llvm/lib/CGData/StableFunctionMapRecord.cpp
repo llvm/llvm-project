@@ -191,8 +191,6 @@ void StableFunctionMapRecord::deserializeEntry(const unsigned char *Ptr,
 
 void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
                                           bool Lazy) {
-  // Assert that Ptr is 4-byte aligned
-  assert(((uintptr_t)Ptr % 4) == 0);
   // Read Names.
   auto NumNames =
       endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
@@ -208,14 +206,13 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
       Ptr += Name.size() + 1;
       FunctionMap->getIdOrCreateForName(Name);
     }
-    // Align Ptr to 4 bytes.
-    Ptr = reinterpret_cast<const uint8_t *>(alignAddr(Ptr, Align(4)));
-    assert(reinterpret_cast<uintptr_t>(Ptr) - NamesOffset == NamesByteSize &&
+    [[maybe_unused]] const auto ReadSize =
+        reinterpret_cast<uintptr_t>(Ptr) - NamesOffset;
+    assert(ReadSize <= NamesByteSize && NamesByteSize - ReadSize < 4 &&
            "NamesByteSize does not match the actual size of names");
-  } else {
-    // skip reading Names by advancing the pointer.
-    Ptr = reinterpret_cast<const uint8_t *>(NamesOffset + NamesByteSize);
   }
+  // Skip the names and padding.
+  Ptr = reinterpret_cast<const uint8_t *>(NamesOffset + NamesByteSize);
 
   // Read StableFunctionEntries.
   auto NumFuncs =

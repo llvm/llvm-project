@@ -155,10 +155,43 @@ constexpr auto DecodeGPRNoX31RegisterClass =
 constexpr auto DecodeGPRX1X5RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredX1OrX5>;
 
+static DecodeStatus decodeTHMemIdxRs1Operand(MCInst &Inst, uint32_t RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  const DecodeStatus Result =
+      DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+  if (Result != MCDisassembler::Success)
+    return Result;
+  const MCRegister Rd = Inst.getOperand(0).getReg();
+  const MCRegister Rs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
+  if (Rd == Rs1)
+    return MCDisassembler::Fail;
+  return Result;
+}
+
+static DecodeStatus decodeTHMemPairRs1Operand(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  const DecodeStatus Result =
+      DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+  if (Result != MCDisassembler::Success)
+    return Result;
+  const MCRegister Rd1 = Inst.getOperand(0).getReg();
+  const MCRegister Rd2 = Inst.getOperand(1).getReg();
+  const MCRegister Rs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
+  if (Rs1 == Rd1 || Rs1 == Rd2 || Rd1 == Rd2)
+    return MCDisassembler::Fail;
+  return Result;
+}
+
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
   if (RegNo >= 32 || RegNo % 2)
+    return MCDisassembler::Fail;
+
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  if (IsRVE && RegNo >= 16)
     return MCDisassembler::Fail;
 
   const RISCVDisassembler *Dis =
@@ -185,8 +218,10 @@ static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
 
 static DecodeStatus DecodeGPRS07RegisterClass(MCInst &Inst, uint32_t RegNo,
                                               uint64_t Address,
-                                              const void *Decoder) {
-  if (RegNo >= 8)
+                                              const MCDisassembler *Decoder) {
+  // Only s0 and s1 exist on RVE, so sreg values above 1 are reserved.
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  if (RegNo >= 8 || (IsRVE && RegNo > 1))
     return MCDisassembler::Fail;
 
   MCRegister Reg = (RegNo < 2) ? (RegNo + RISCV::X8) : (RegNo - 2 + RISCV::X18);
@@ -313,20 +348,6 @@ static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeUImm7EqXLenOperand(MCInst &Inst, uint32_t Imm,
-                                             int64_t Address,
-                                             const MCDisassembler *Decoder) {
-  assert(isUInt<7>(Imm) && "Invalid immediate");
-
-  uint32_t ExpectedValue =
-      Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) ? 64 : 32;
-  if (Imm != ExpectedValue)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
 template <unsigned N>
 static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,
@@ -443,6 +464,15 @@ static DecodeStatus decodeFRMArg(MCInst &Inst, uint32_t Imm, int64_t Address,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeCVInsertIs2Operand(MCInst &Inst, uint32_t Imm,
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
+  const int64_t Is3 = Inst.getOperand(Inst.getNumOperands() - 1).getImm();
+  if (Is3 + Imm >= 32)
+    return MCDisassembler::Fail;
+  return decodeUImmOperand<5>(Inst, Imm, Address, Decoder);
+}
+
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
@@ -459,6 +489,18 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
   if (Imm < RISCVZC::RA_S0)
     return MCDisassembler::Fail;
   return decodeZcmpRlist(Inst, Imm, Address, Decoder);
+}
+
+static DecodeStatus decodeMvsa01Rs2Operand(MCInst &Inst, uint32_t RegNo,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  const DecodeStatus Result =
+      DecodeGPRS07RegisterClass(Inst, RegNo, Address, Decoder);
+  if (Result != MCDisassembler::Success)
+    return Result;
+  if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
+    return MCDisassembler::Fail;
+  return MCDisassembler::Success;
 }
 
 #include "RISCVGenDisassemblerTables.inc"
@@ -595,6 +637,9 @@ static constexpr DecoderListEntry DecoderList16[]{
     {DecoderTableXqccmp16,
      {RISCV::FeatureVendorXqccmp},
      "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)"},
+    {DecoderTableXqccmi16,
+     {RISCV::FeatureVendorXqccmi},
+     "Xqccmi (Qualcomm 16-bit Instruction Lookup Table)"},
     {DecoderTableXqccmt16,
      {RISCV::FeatureVendorXqccmt},
      "Xqccmt (Qualcomm 16-bit Table Jump Instructions)"},

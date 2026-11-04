@@ -17,6 +17,9 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -280,11 +283,15 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
     if (cases.empty())
       return mlir::failure();
 
+    auto resetMergeState = [&]() {
+      cascadingCases.clear();
+      cascadingCaseValues.clear();
+    };
+
     auto flushMergedOps = [&]() {
       for (CaseOp &c : cascadingCases)
         rewriter.eraseOp(c);
-      cascadingCases.clear();
-      cascadingCaseValues.clear();
+      resetMergeState();
     };
 
     auto mergeCascadingInto = [&](CaseOp &target) {
@@ -295,7 +302,34 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
       changed = mlir::success();
     };
 
+    // Merge all pending cascading cases into the last one collected, which
+    // survives as a distinct `cir.case`; the rest are erased since their
+    // values have been folded into it.
+    auto mergeLastCascadingAndFlush = [&]() {
+      assert(!cir::MissingFeatures::foldRangeCase());
+      CaseOp lastCascadingCase = cascadingCases.back();
+      mergeCascadingInto(lastCascadingCase);
+      cascadingCases.pop_back();
+      flushMergedOps();
+    };
+
     for (CaseOp c : cases) {
+      // Cascading cases must be textually adjacent to the previously
+      // collected cascading case. This is false when something is in the
+      // way (e.g. a goto) or when the previous cascading case was found
+      // nested inside a sibling case's body (e.g. a case label that falls
+      // through into a compound statement) rather than next to `c`.
+      bool isAdjacentToLastCascadingCase =
+          !cascadingCases.empty() &&
+          c->getPrevNode() == cascadingCases.back().getOperation();
+
+      if (!cascadingCases.empty() && !isAdjacentToLastCascadingCase) {
+        if (cascadingCases.size() > 1)
+          mergeLastCascadingAndFlush();
+        else
+          resetMergeState();
+      }
+
       cir::CaseOpKind kind = c.getKind();
       if (kind == cir::CaseOpKind::Equal &&
           isa<YieldOp>(c.getCaseRegion().front().front())) {
@@ -312,24 +346,15 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
         // cascading cases, merge all of them into the last cascading case.
         // We don't currently fold case range statements with other case
         // statements.
-        assert(!cir::MissingFeatures::foldRangeCase());
-        CaseOp lastCascadingCase = cascadingCases.back();
-        mergeCascadingInto(lastCascadingCase);
-        cascadingCases.pop_back();
-        flushMergedOps();
+        mergeLastCascadingAndFlush();
       } else {
-        cascadingCases.clear();
-        cascadingCaseValues.clear();
+        resetMergeState();
       }
     }
 
     // Edge case: all cases are simple cascading cases
-    if (cascadingCases.size() == cases.size()) {
-      CaseOp lastCascadingCase = cascadingCases.back();
-      mergeCascadingInto(lastCascadingCase);
-      cascadingCases.pop_back();
-      flushMergedOps();
-    }
+    if (cascadingCases.size() == cases.size())
+      mergeLastCascadingAndFlush();
 
     return changed;
   }
@@ -349,8 +374,13 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
         !mlir::isa_and_nonnull<cir::FPAttr>(value))
       return mlir::failure();
 
-    cir::VectorType resultType = op.getResult().getType();
-    SmallVector<mlir::Attribute, 16> elements(resultType.getSize(), value);
+    // FIXME(CIR): We should consider making a matrix constant attribute so that
+    // we can simplify it here too.
+    assert(!MissingFeatures::matrixType());
+    auto resultType = mlir::dyn_cast<cir::VectorType>(op.getResult().getType());
+    if (!resultType || resultType.isScalable())
+      return mlir::failure();
+    SmallVector<mlir::Attribute, 16> elements(resultType.getFixedSize(), value);
     auto constVecAttr = cir::ConstVectorAttr::get(
         resultType, mlir::ArrayAttr::get(getContext(), elements));
 
@@ -363,13 +393,21 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
 // CIRSimplifyPass
 //===----------------------------------------------------------------------===//
 
+// Phase 1 can erase loads the fused walk already collected: the greedy
+// driver folds plus drops trivially dead ops, so a load whose only user
+// folds away is gone before phase 2 runs. Track erasures to prune them.
+struct ErasedOpTracker : public RewriterBase::Listener {
+  void notifyOperationErased(Operation *op) override { erased.insert(op); }
+  DenseSet<Operation *> erased;
+};
+
 struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;
 
 private:
-  void runSimplifyConstantLoad();
+  void runSimplifyConstantLoad(llvm::ArrayRef<Operation *> loadOps);
 };
 
 void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
@@ -388,33 +426,48 @@ void CIRSimplifyPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateMergeCleanupPatterns(patterns);
 
-  // Collect operations to apply patterns.
+  // Collect operations to apply patterns. Both op lists come from one
+  // walk: the first-phase patterns create no LoadOps (Select/Not/
+  // Constant only), so every load phase 2 could see is collected here.
   llvm::SmallVector<Operation *, 16> ops;
+  llvm::SmallVector<Operation *, 16> loadOps;
   getOperation()->walk([&](Operation *op) {
     if (isa<TernaryOp, SelectOp, SwitchOp, VecSplatOp>(op))
       ops.push_back(op);
+    else if (isa<LoadOp>(op))
+      loadOps.push_back(op);
   });
 
-  // Apply patterns.
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
+  // Apply patterns. Scope the rewrite to the body region, which encloses
+  // the common ancestor the driver would otherwise search for.
+  ErasedOpTracker tracker;
+  GreedyRewriteConfig config;
+  config.setScope(&getOperation()->getRegion(0));
+  config.setListener(&tracker);
+  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
+
+  // Drop loads phase 1 erased (fold plus dead-op cleanup); the old
+  // second walk never saw them either.
+  llvm::erase_if(loadOps,
+                 [&](Operation *op) { return tracker.erased.contains(op); });
 
   // SimplifyConstantLoad needs to query dominance information, which could be
   // invalidated by other rewrite patterns. Thus we run it separately after
   // other patterns have been applied.
-  runSimplifyConstantLoad();
+  runSimplifyConstantLoad(loadOps);
 }
 
-void CIRSimplifyPass::runSimplifyConstantLoad() {
+void CIRSimplifyPass::runSimplifyConstantLoad(
+    llvm::ArrayRef<Operation *> loadOps) {
   RewritePatternSet patterns(&getContext());
   patterns.add<SimplifyConstantLoad>(patterns.getContext());
 
-  llvm::SmallVector<Operation *, 16> ops;
-  getOperation()->walk([&](Operation *op) {
-    if (isa<LoadOp>(op))
-      ops.push_back(op);
-  });
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
+  // Scope the rewrite to the body region, which encloses the common
+  // ancestor the driver would otherwise search for.
+  GreedyRewriteConfig config;
+  config.setScope(&getOperation()->getRegion(0));
+  if (applyOpPatternsGreedily(loadOps, std::move(patterns), config).failed())
     signalPassFailure();
 }
 

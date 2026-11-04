@@ -34,7 +34,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, [[COPY3]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, [[COPY3]], implicit-def dead $scc
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
@@ -44,9 +44,9 @@ body:             |
   ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 0", sideeffect attdialect, regdef:VGPR_32, def %8
   ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 0, %8, implicit $exec
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY [[COPY4]]
-  ; CHECK-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[V_CMP_NE_U32_e64_]], [[COPY5]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[V_CMP_NE_U32_e64_]], [[COPY5]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY [[S_OR_B64_]]
-  ; CHECK-NEXT:   $exec = S_ANDN2_B64_term $exec, [[S_OR_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_ANDN2_B64_term $exec, [[S_OR_B64_]], implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.3, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}

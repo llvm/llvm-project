@@ -8,6 +8,7 @@
 
 #include "flang/Lower/CallInterface.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Mangler.h"
@@ -16,11 +17,11 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
@@ -69,9 +70,9 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
 /// nullptr when \p proc is not such a base call, or when no variant matches the
 /// context, so the base procedure is used as usual.
 static const Fortran::semantics::Symbol *
-getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
+getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureRef &procRef,
                            Fortran::lower::AbstractConverter &converter) {
-  const Fortran::semantics::Symbol *symbol = proc.GetSymbol();
+  const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
   if (!symbol)
     return nullptr;
   const Fortran::semantics::Symbol &ultimate{symbol->GetUltimate()};
@@ -81,7 +82,9 @@ getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
       ultimate.detailsIf<Fortran::semantics::SubprogramDetails>();
   if (!details || details->ompDeclareVariants().empty())
     return nullptr;
-  return Fortran::lower::omp::resolveDeclareVariantCallee(ultimate, converter);
+  return Fortran::lower::omp::resolveDeclareVariantCallee(
+      ultimate, converter,
+      !Fortran::lower::omp::isDispatchTargetCall(procRef, converter));
 }
 
 /// Return the binding label (from BIND(C...)) or the mangled name of the
@@ -103,7 +106,7 @@ std::string Fortran::lower::CallerInterface::getMangledName() const {
   // actual argument or to associate it with a procedure pointer) go through
   // getProcMangledName and are intentionally not redirected to the variant.
   if (const Fortran::semantics::Symbol *variant =
-          getOmpDeclareVariantCallee(procRef.proc(), converter))
+          getOmpDeclareVariantCallee(procRef, converter))
     return converter.mangleName(*variant);
   return getProcMangledName(procRef.proc(), converter);
 }
@@ -112,7 +115,7 @@ const Fortran::semantics::Symbol *
 Fortran::lower::CallerInterface::getProcedureSymbol() const {
   // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
   if (const Fortran::semantics::Symbol *variant =
-          getOmpDeclareVariantCallee(procRef.proc(), converter))
+          getOmpDeclareVariantCallee(procRef, converter))
     return variant;
   return procRef.proc().GetSymbol();
 }
@@ -197,8 +200,15 @@ getProcedureDesignatorLoc(const Fortran::evaluate::ProcedureDesignator &proc,
   // To prevent this, it is up to the bridge to first declare all functions
   // defined in the translation unit before lowering any calls or procedure
   // designator references.
-  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol())
-    return converter.genLocation(symbol->name());
+  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol()) {
+    mlir::Location loc = converter.genLocation(symbol->name());
+    // Symbols created by semantics (e.g. the renaming USE added to access the
+    // specific procedure of a use-associated generic) have names that do not
+    // map to any source. Fall back to the ultimate symbol's location.
+    if (mlir::isa<mlir::UnknownLoc>(loc))
+      loc = converter.genLocation(symbol->GetUltimate().name());
+    return loc;
+  }
   // Use current location for intrinsics.
   return converter.getCurrentLocation();
 }
@@ -250,6 +260,36 @@ static bool dummyArgCanUseLLVMReadonly(
          !obj.attrs.test(Attrs::Value) &&
          !obj.attrs.test(Attrs::Asynchronous) &&
          !obj.attrs.test(Attrs::Volatile);
+}
+
+/// Intent of a dummy, recorded on the procedure signature. Both the definition
+/// and a caller-created declaration see this, so intent is available without
+/// the callee body. Other dummy flags stay on their existing attributes.
+static fir::FortranVariableFlagsEnum getDummyIntentFlags(
+    const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+  switch (obj.intent) {
+  case Fortran::common::Intent::In:
+    return fir::FortranVariableFlagsEnum::intent_in;
+  case Fortran::common::Intent::Out:
+    return fir::FortranVariableFlagsEnum::intent_out;
+  case Fortran::common::Intent::InOut:
+    return fir::FortranVariableFlagsEnum::intent_inout;
+  case Fortran::common::Intent::Default:
+    return fir::FortranVariableFlagsEnum::None;
+  }
+  llvm_unreachable("unhandled dummy intent");
+}
+
+static void addFortranVariableFlagsAttr(
+    llvm::SmallVectorImpl<mlir::NamedAttribute> &attrs,
+    mlir::MLIRContext &mlirContext,
+    const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+  fir::FortranVariableFlagsEnum flags = getDummyIntentFlags(obj);
+  if (flags == fir::FortranVariableFlagsEnum::None)
+    return;
+  attrs.emplace_back(
+      mlir::StringAttr::get(&mlirContext, fir::getFortranAttrsAttrName()),
+      fir::FortranVariableFlagsAttr::get(&mlirContext, flags));
 }
 
 static Fortran::evaluate::characteristics::DummyArgument
@@ -427,12 +467,12 @@ static Fortran::evaluate::ExtentExpr
 getExtentExpr(const Fortran::semantics::ShapeSpec &shapeSpec) {
   if (shapeSpec.ubound().isStar())
     // F'2023 18.5.3 point 5.
-    return Fortran::evaluate::ExtentExpr{-1};
+    return Fortran::evaluate::MakeExtentExpr(-1);
   const auto &ubound = shapeSpec.ubound().GetExplicit();
   const auto &lbound = shapeSpec.lbound().GetExplicit();
   assert(lbound && ubound && "shape must be explicit");
   return Fortran::common::Clone(*ubound) - Fortran::common::Clone(*lbound) +
-         Fortran::evaluate::ExtentExpr{1};
+         Fortran::evaluate::MakeExtentExpr(1);
 }
 
 static void
@@ -706,10 +746,7 @@ setCUDAAttributes(mlir::func::FuncOp func,
     cuf::ProcAttribute proc = procAttr.getValue();
     if (proc != cuf::ProcAttribute::Host &&
         proc != cuf::ProcAttribute::HostDevice) {
-      fir::AllocationPolicy policy =
-          fir::getAllocationPolicy(func.getOperation());
-      policy.stackArrays = false;
-      fir::setAllocationPolicy(func.getOperation(), policy);
+      cuf::setDeviceAllocationPolicy(func.getOperation());
     }
   }
 
@@ -1141,15 +1178,18 @@ private:
       if (entity) {
         if (entity->isPercentVal()) {
           mlir::Type type = translateDynamicType(dynamicType);
-          addFirOperand(type, nextPassedArgPosition(), Property::Value,
-                        dummyNameAttr(entity));
+          llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+          addFortranVariableFlagsAttr(attrs, mlirContext, obj);
+          addFirOperand(type, nextPassedArgPosition(), Property::Value, attrs);
           addPassedArg(PassEntityBy::Value, entity, characteristics);
           return;
         }
         if (entity->isPercentRef()) {
           mlir::Type refType = getRefType(dynamicType, obj);
+          llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+          addFortranVariableFlagsAttr(attrs, mlirContext, obj);
           addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
-                        dummyNameAttr(entity));
+                        attrs);
           addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
           return;
         }
@@ -1158,8 +1198,10 @@ private:
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
       mlir::Type boxCharTy =
           fir::BoxCharType::get(&mlirContext, dynamicType.kind());
+      llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+      addFortranVariableFlagsAttr(attrs, mlirContext, obj);
       addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
-                    dummyNameAttr(entity));
+                    attrs);
       addPassedArg(PassEntityBy::BoxChar, entity, characteristics);
     } else {
       // non-PDT derived type allowed in implicit interface.
@@ -1171,6 +1213,7 @@ private:
         attrs.emplace_back(
             mlir::StringAttr::get(&mlirContext, fir::getReadOnlyAttrName()),
             mlir::UnitAttr::get(&mlirContext));
+      addFortranVariableFlagsAttr(attrs, mlirContext, obj);
       addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
                     attrs);
       addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
@@ -1235,6 +1278,8 @@ private:
     // (see dummyArgCanUseLLVMReadonly).
     if (dummyArgCanUseLLVMReadonly(obj))
       addMLIRAttr(fir::getReadOnlyAttrName());
+    // Intent only. The unit attributes above stay as they are.
+    addFortranVariableFlagsAttr(attrs, mlirContext, obj);
 
     // TODO: intents that require special care (e.g finalization)
 

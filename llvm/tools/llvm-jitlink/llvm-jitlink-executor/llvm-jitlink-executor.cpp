@@ -51,7 +51,7 @@ void printErrorAndExit(Twine ErrMsg) {
   errs() << "error: " << ErrMsg.str() << "\n\n"
          << "Usage:\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "[test-jitloadergdb] fd=<sockfd> [args...]\n"
+         << "[test-jitloadergdb] socket:adopt=<sockfd> [args...]\n"
          << "  llvm-jitlink-executor " << DebugOption
          << "[test-jitloadergdb] tcp:connect=<host>:<port> [args...]\n"
          << "  llvm-jitlink-executor " << DebugOption
@@ -101,7 +101,13 @@ Expected<std::unique_ptr<SimpleRemoteEPCServer>> createServerWithFD(int FD) {
 }
 
 Expected<std::unique_ptr<SimpleRemoteEPCServer>>
-connectWithFD(const ConnectionSpec &CS) {
+connectWithSocket(const ConnectionSpec &CS) {
+  if (CS.getAction() != "adopt")
+    return make_error<StringError>(
+        "In " + CS.str() +
+            ", the socket transport supports only the \"adopt\" action",
+        inconvertibleErrorCode());
+
   int FD;
   if (CS.getDescriptor().getAsInteger(10, FD))
     return make_error<StringError>(
@@ -171,8 +177,8 @@ connectWithTCP(const ConnectionSpec &CS) {
 
 Expected<std::unique_ptr<SimpleRemoteEPCServer>>
 createServer(const ConnectionSpec &CS) {
-  if (CS.getTransport() == "fd")
-    return connectWithFD(CS);
+  if (CS.getTransport() == "socket")
+    return connectWithSocket(CS);
   if (CS.getTransport() == "tcp")
     return connectWithTCP(CS);
 

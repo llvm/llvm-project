@@ -222,6 +222,14 @@ static ParseResult parseRecordMembers(mlir::AsmParser &parser,
 // ConstRecordAttr definitions
 //===----------------------------------------------------------------------===//
 
+static bool isValidFlexibleArrayInit(mlir::Type memberType,
+                                     mlir::Type initType) {
+  auto memberArrayType = mlir::dyn_cast<cir::ArrayType>(memberType);
+  auto initArrayType = mlir::dyn_cast<cir::ArrayType>(initType);
+  return memberArrayType && memberArrayType.getSize() == 0 && initArrayType &&
+         memberArrayType.getElementType() == initArrayType.getElementType();
+}
+
 LogicalResult
 ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                         mlir::Type type, ArrayAttr members) {
@@ -238,7 +246,9 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     auto m = mlir::cast<mlir::TypedAttr>(members[0]);
     // A bit-field variant is initialized as the access unit it owns.
     if (!llvm::any_of(sTy.getMembers(), [&](mlir::Type memberTy) {
-          return cir::memberStorageType(memberTy) == m.getType();
+          mlir::Type storageType = cir::memberStorageType(memberTy);
+          return storageType == m.getType() ||
+                 isValidFlexibleArrayInit(storageType, m.getType());
         }))
       return emitError() << "union element type " << m.getType()
                          << " is not a member of " << sTy;
@@ -411,6 +421,93 @@ static ParseResult parseFloatLiteral(AsmParser &parser,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// MemoryEffectsAttr definitions
+//===----------------------------------------------------------------------===//
+
+MemoryEffectsAttr MemoryEffectsAttr::none(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::readOnly(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::Ref);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::writeOnly(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::Mod);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::argMemOnly(MLIRContext *ctx,
+                                                ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleMemOnly(MLIRContext *ctx,
+                                                         ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef, /*inaccessible_mem=*/mr,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::errnoMemOnly(MLIRContext *ctx,
+                                                  ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/mr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::otherMemOnly(MLIRContext *ctx,
+                                                  ModRefInfo mr) {
+  return get(ctx, /*other=*/mr, /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgMemOnly(MLIRContext *ctx,
+                                                              ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/mr, /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/inaccessibleMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleOrArgMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/inaccessibleOrArgMr,
+             /*inaccessible_mem=*/inaccessibleOrArgMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr
+MemoryEffectsAttr::argumentOrErrnoMemOnly(MLIRContext *ctx, ModRefInfo argMr,
+                                          ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/argMr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
 FPAttr FPAttr::getZero(Type type) {
   return get(type,
              APFloat::getZero(
@@ -519,6 +616,8 @@ void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
     p << ", constant";
   if (getIsManaged())
     p << ", managed";
+  if (getKind() == CUDADeviceVarKind::Surface)
+    p << ", surface_type = " << getSurfTexType();
   p << ">";
 }
 
@@ -553,6 +652,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   bool isExtern = false;
   bool isConstant = false;
   bool isManaged = false;
+  int32_t surfTexType = 0;
 
   while (parser.parseOptionalGreater().failed()) {
     if (parser.parseComma())
@@ -568,14 +668,17 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
       isConstant = true;
     else if (flag == "managed")
       isManaged = true;
-    else {
+    else if (flag == "surface_type") {
+      if (parser.parseEqual() || parser.parseInteger(surfTexType))
+        return {};
+    } else {
       parser.emitError(parser.getCurrentLocation(), "unknown flag: ") << flag;
       return {};
     }
   }
 
   return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
-             isManaged);
+             isManaged, surfTexType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -815,7 +918,10 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
   const auto vecType = mlir::cast<cir::VectorType>(type);
 
-  if (vecType.getSize() != elts.size())
+  if (vecType.isScalable())
+    return emitError() << "scalable vector constants are not supported";
+
+  if (vecType.getFixedSize() != elts.size())
     return emitError()
            << "number of constant elements should match vector size";
 
