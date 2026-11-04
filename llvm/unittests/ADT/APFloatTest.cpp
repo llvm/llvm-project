@@ -8052,7 +8052,7 @@ TEST(APFloatTest, x87Bits) {
   }
 
   // Test pseudoinfinity: exp=0x7fff, int_bit=0, significand=0
-  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  // Is treated as NaN in APFloat, see fltSemantics::hasExplicitIntegerBit
   {
     APFloat pseudoInf(S, APInt(80, {0x0000000000000000ull, 0x7fffull}));
     EXPECT_TRUE(pseudoInf.isNaN());
@@ -8061,7 +8061,7 @@ TEST(APFloatTest, x87Bits) {
   }
 
   // Test pseudoNaN: exp=0x7fff, int_bit=0, significand!=0
-  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  // Is treated as NaN in APFloat, see fltSemantics::hasExplicitIntegerBit
   {
     APFloat pseudoNan(S, APInt(80, {0x4000000000000000ull, 0x7fffull}));
     EXPECT_TRUE(pseudoNan.isNaN());
@@ -8069,7 +8069,7 @@ TEST(APFloatTest, x87Bits) {
   }
 
   // Test unnormal: exp!=0 and !=0x7fff, int_bit=0
-  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  // Is treated as NaN in APFloat, see fltSemantics::hasExplicitIntegerBit
   {
     APFloat unnormal(S, APInt(80, {0x4000000000000000ull, 0x4000ull}));
     EXPECT_TRUE(unnormal.isNaN());
