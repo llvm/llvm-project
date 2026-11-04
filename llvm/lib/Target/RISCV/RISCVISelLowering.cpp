@@ -9425,7 +9425,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       MVT VT = Op.getSimpleValueType();
       SDValue LHS = Op.getOperand(0);
       SDValue RHS = Op.getOperand(1);
-      ISD::CondCode CCVal = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+      ISD::CondCode CCVal = Op.getOperandCondCode(2);
       assert((CCVal == ISD::SETGT || CCVal == ISD::SETUGT) &&
              "Unexpected CondCode");
 
@@ -9465,7 +9465,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
 
     MVT VT = Op.getSimpleValueType();
     if (Subtarget.hasStdExtP() && VT.isFixedLengthVector()) {
-      ISD::CondCode CCVal = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+      ISD::CondCode CCVal = Op.getOperandCondCode(2);
       SDValue LHS = Op.getOperand(0);
       SDValue RHS = Op.getOperand(1);
       SDLoc DL(Op);
@@ -10439,7 +10439,7 @@ static std::optional<bool> matchSetCC(SDValue LHS, SDValue RHS,
   assert(Val->getOpcode() == ISD::SETCC);
   SDValue LHS2 = Val.getOperand(0);
   SDValue RHS2 = Val.getOperand(1);
-  ISD::CondCode CC2 = cast<CondCodeSDNode>(Val.getOperand(2))->get();
+  ISD::CondCode CC2 = Val.getOperandCondCode(2);
 
   if (LHS == LHS2 && RHS == RHS2) {
     if (CC == CC2)
@@ -10539,7 +10539,7 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       FalseV.getOpcode() == ISD::SETCC) {
     SDValue LHS = CondV.getOperand(0);
     SDValue RHS = CondV.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+    ISD::CondCode CC = CondV.getOperandCondCode(2);
 
     // (select x, x, y) -> x | y
     // (select !x, x, y) -> x & y
@@ -10771,7 +10771,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       //   (select (x > -1), z, y) -> x >> (XLEN - 1) & (y - z) + z
       if (CondV.getOpcode() == ISD::SETCC &&
           CondV.getOperand(0).getValueType() == VT && CondV.hasOneUse()) {
-        ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+        ISD::CondCode CCVal = CondV.getOperandCondCode(2);
         if ((CCVal == ISD::SETLT && isNullConstant(CondV.getOperand(1))) ||
             (CCVal == ISD::SETGT && isAllOnesConstant(CondV.getOperand(1)))) {
           int64_t TrueImm = TrueVal.getSExtValue();
@@ -10813,16 +10813,14 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       // allows us to fold part of the compare.
       if ((TrueVal - FalseVal).isPowerOf2() &&
           !(CondV.getOpcode() == ISD::SETCC &&
-            ISD::isIntEqualitySetCC(
-                cast<CondCodeSDNode>(CondV.getOperand(2))->get()))) {
+            ISD::isIntEqualitySetCC(CondV.getOperandCondCode(2)))) {
         SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
         SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
         return DAG.getNode(ISD::ADD, DL, VT, FalseV, BitDiff);
       }
       if ((FalseVal - TrueVal).isPowerOf2() && !FalseVal.isSignedIntN(12) &&
           !(CondV.getOpcode() == ISD::SETCC &&
-            ISD::isIntEqualitySetCC(
-                cast<CondCodeSDNode>(CondV.getOperand(2))->get()))) {
+            ISD::isIntEqualitySetCC(CondV.getOperandCondCode(2)))) {
         SDValue Log2 = DAG.getConstant((FalseVal - TrueVal).logBase2(), DL, VT);
         SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
         return DAG.getNode(ISD::SUB, DL, VT, FalseV, BitDiff);
@@ -10951,7 +10949,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // -> (riscvisd::select_cc lhs, rhs, cc, truev, falsev)
   SDValue LHS = CondV.getOperand(0);
   SDValue RHS = CondV.getOperand(1);
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+  ISD::CondCode CCVal = CondV.getOperandCondCode(2);
 
   // Special case for a select of 2 constants that have a difference of 1.
   // Normally this is done by DAGCombine, but if the select is introduced by
@@ -11010,7 +11008,7 @@ SDValue RISCVTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       CondV.getOperand(0).getValueType() == XLenVT) {
     SDValue LHS = CondV.getOperand(0);
     SDValue RHS = CondV.getOperand(1);
-    ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+    ISD::CondCode CCVal = CondV.getOperandCondCode(2);
 
     translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG, Subtarget);
 
@@ -19885,7 +19883,7 @@ static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
   if (N1.getOpcode() == ISD::SETCC && N1.hasOneUse()) {
     // (sub constant, (setcc x, y, eq/neq)) ->
     // (add (setcc x, y, neq/eq), constant - 1)
-    ISD::CondCode CCVal = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+    ISD::CondCode CCVal = N1.getOperandCondCode(2);
     EVT SetCCOpVT = N1.getOperand(0).getValueType();
     if (!isIntEqualitySetCC(CCVal) || !SetCCOpVT.isInteger())
       return SDValue();
@@ -19999,7 +19997,7 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
   if (isNullConstant(N0) && N1.getOpcode() == ISD::SETCC && N1.hasOneUse() &&
       isNullConstant(N1.getOperand(1)) &&
       N1.getValueType() == N1.getOperand(0).getValueType()) {
-    ISD::CondCode CCVal = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+    ISD::CondCode CCVal = N1.getOperandCondCode(2);
     if (CCVal == ISD::SETLT) {
       SDLoc DL(N);
       unsigned ShAmt = N0.getValueSizeInBits() - 1;
@@ -20660,7 +20658,7 @@ static SDValue combineVMNOTOfSetCC(SDNode *N, SelectionDAG &DAG) {
       !Cmp.getOperand(3).isUndef())
     return SDValue();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
+  ISD::CondCode CC = Cmp.getOperandCondCode(2);
   CC = ISD::getSetCCInverse(CC, Cmp.getOperand(0).getValueType());
   return DAG.getNode(RISCVISD::SETCC_VL, SDLoc(N), Cmp.getValueType(),
                      {Cmp.getOperand(0), Cmp.getOperand(1), DAG.getCondCode(CC),
@@ -20701,7 +20699,7 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   // Fold (xor (setcc constant, y, setlt), 1) -> (setcc y, constant + 1, setlt)
   if (N0.getOpcode() == ISD::SETCC && isOneConstant(N1) && N0.hasOneUse()) {
     auto *ConstN00 = dyn_cast<ConstantSDNode>(N0.getOperand(0));
-    ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+    ISD::CondCode CC = N0.getOperandCondCode(2);
     if (ConstN00 && CC == ISD::SETLT) {
       EVT VT = N0.getValueType();
       SDLoc DL(N0);
@@ -21417,7 +21415,7 @@ static SDValue performSETCCCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
 
-  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode Cond = N->getOperandCondCode(2);
   if (SDValue V =
           canonicalizeMaskForVLPredicate(VT, N0, N1, Cond, dl, DAG, DCI))
     return V;
@@ -23770,7 +23768,7 @@ static SDValue tryDemorganOfBooleanCondition(SDValue Cond, SelectionDAG &DAG) {
   if (!SetCCOpVT.isScalarInteger())
     return SDValue();
 
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(Setcc.getOperand(2))->get();
+  ISD::CondCode CCVal = Setcc.getOperandCondCode(2);
   if (ISD::isIntEqualitySetCC(CCVal)) {
     CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
     Setcc = DAG.getSetCC(SDLoc(Setcc), VT, Setcc.getOperand(0),
@@ -23816,7 +23814,7 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
     // If we're looking for eq 0 instead of ne 0, we need to invert the
     // condition.
     bool Invert = CCVal == ISD::SETEQ;
-    CCVal = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+    CCVal = LHS.getOperandCondCode(2);
     if (Invert)
       CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
 
@@ -23996,7 +23994,7 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
   if (!isNullConstant(Cond->getOperand(1)))
     return SDValue();
 
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
+  ISD::CondCode CCVal = Cond.getOperandCondCode(2);
   if (CCVal == ISD::CondCode::SETEQ) {
     CountZeroes = N->getOperand(2);
     ValOnZero = N->getOperand(1);
@@ -24062,7 +24060,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
       (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    ISD::CondCode CC = Cond.getOperandCondCode(2);
     if (CC == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
         isa<ConstantSDNode>(LHS.getOperand(1)) && isNullConstant(RHS)) {
       const APInt &MaskVal = LHS.getConstantOperandAPInt(1);
@@ -24087,7 +24085,7 @@ canonicalizeVSelectTrueToOneUse(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Only handles ISD::SETEQ and ISD::SETNE; no extra RVV introduced.
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(CC.getOperand(2))->get();
+  ISD::CondCode CCVal = CC.getOperandCondCode(2);
   if (!isIntEqualitySetCC(CCVal))
     return SDValue();
 
@@ -25842,7 +25840,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // czero_eqz x, (setcc y, 0, eq) -> czero_nez x, y
     // czero_nez x, (setcc y, 0, eq) -> czero_eqz x, y
     if (Cond.getOpcode() == ISD::SETCC && isNullConstant(Cond.getOperand(1))) {
-      ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+      ISD::CondCode CCVal = Cond.getOperandCondCode(2);
       if (ISD::isIntEqualitySetCC(CCVal))
         return DAG.getNode(CCVal == ISD::SETNE ? Opc : InvOpc, SDLoc(N), VT,
                            Val, Cond.getOperand(0));
@@ -25869,8 +25867,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // the setcc result is already 0. The eq operands can be in either order.
     if (Opc == RISCVISD::CZERO_NEZ && Val.getOpcode() == ISD::SETCC &&
         Cond.getOpcode() == ISD::SETCC &&
-        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETEQ) {
-      ISD::CondCode ValCC = cast<CondCodeSDNode>(Val.getOperand(2))->get();
+        Cond.getOperandCondCode(2) == ISD::SETEQ) {
+      ISD::CondCode ValCC = Val.getOperandCondCode(2);
       bool SameOperands = (Val.getOperand(0) == Cond.getOperand(0) &&
                            Val.getOperand(1) == Cond.getOperand(1)) ||
                           (Val.getOperand(0) == Cond.getOperand(1) &&
