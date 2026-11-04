@@ -411,6 +411,43 @@ public:
       ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs);
 };
 
+// @brief s390x ELF (SystemZ) support.
+//
+// SystemZ supports lazy JITing.
+class OrcSystemZ {
+public:
+  static constexpr unsigned PointerSize = 8;
+  static constexpr unsigned TrampolineSize = 16;
+  static constexpr unsigned StubSize = 16;
+  static constexpr unsigned StubToPointerMaxDisplacement = 1U << 31;
+  static constexpr unsigned ResolverCodeSize = 0x78;
+
+  /// Write the resolver code into the given memory. The caller allocates the
+  /// memory and sets its permissions.
+  ///
+  /// ReentryFnAddr is called as: ReentryFnAddr(ReentryCtxAddr, TrampolineAddr).
+  LLVM_ABI static void writeResolverCode(char *ResolverWorkingMem,
+                                         ExecutorAddr ResolverTargetAddress,
+                                         ExecutorAddr ReentryFnAddr,
+                                         ExecutorAddr ReentryCtxAddr);
+
+  /// Write the requested number of trampolines into the given memory,
+  /// which must be big enough to hold 1 pointer, plus NumTrampolines
+  /// trampolines.
+  LLVM_ABI static void
+  writeTrampolines(char *TrampolineBlockWorkingMem,
+                   ExecutorAddr TrampolineBlockTargetAddress,
+                   ExecutorAddr ResolverAddr, unsigned NumTrampolines);
+
+  /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
+  /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
+  /// Nth stub using the Nth pointer in memory starting at
+  /// PointersBlockTargetAddress.
+  LLVM_ABI static void writeIndirectStubsBlock(
+      char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+      ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs);
+};
+
 } // end namespace orc
 } // end namespace llvm
 
