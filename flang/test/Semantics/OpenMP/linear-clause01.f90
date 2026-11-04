@@ -72,6 +72,7 @@ end subroutine linear_clause_04
 ! Case 5
 subroutine linear_clause_05(x)
     integer :: x(:)
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !ERROR: The list item `x` specified with the REF 'linear-modifier' must not be a polymorphic variable, an assumed-shape array, or a variable with the `ALLOCATABLE` attribute
     !$omp declare simd linear(x : ref)
 end subroutine linear_clause_05
@@ -79,6 +80,7 @@ end subroutine linear_clause_05
 ! Case 6
 subroutine linear_clause_06(x)
     integer, allocatable :: x(:)
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !ERROR: The list item `x` specified with the REF 'linear-modifier' must not be a polymorphic variable, an assumed-shape array, or a variable with the `ALLOCATABLE` attribute
     !$omp declare simd linear(x : ref)
 end subroutine linear_clause_06
@@ -86,6 +88,7 @@ end subroutine linear_clause_06
 ! Case 7
 subroutine linear_clause_07(x)
     type(*) :: x(:)
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !ERROR: The list item `x` specified with the REF 'linear-modifier' must not be a polymorphic variable, an assumed-shape array, or a variable with the `ALLOCATABLE` attribute
     !$omp declare simd linear(x : ref)
 end subroutine linear_clause_07
