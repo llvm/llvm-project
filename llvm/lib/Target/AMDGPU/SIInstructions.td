@@ -1075,7 +1075,7 @@ let UseNamedOperandTable = 1, hasSideEffects = 0, Uses = [M0, EXEC] in
 foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
               VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
               VReg_512, VReg_1024] in {
-  let mayLoad = 1 in {
+  let mayLoad = 1, IsNeverUniform = 1 in {
     def V_LOAD_IDX_B#rc.Size
         : VPseudoInstSI<(outs rc:$data), (ins i32imm:$offset)>,
           VLdStIdxOpcodeInfo<rc.Size, 0, 0>;
@@ -1108,12 +1108,12 @@ let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
       : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
 }
 
-// The constant of an (add idx, imm) index becomes the base register the move
-// adds the index to. It folds only if that register stays within the VGPRs the
-// function can address and the addition cannot wrap, as the hardware's does
-// not.
+// The constant of an (add_like idx, imm) index becomes the base register the
+// move adds the index to. It folds only if that register stays within the
+// VGPRs the function can address and the addition cannot wrap, as the
+// hardware's does not.
 class VRegIdxFoldableAdd<int NumDwords> : PatFrag<
-  (ops node:$idx, node:$offset), (add node:$idx, node:$offset), [{
+  (ops node:$idx, node:$offset), (add_like node:$idx, node:$offset), [{
   return isVRegIdxFoldableAdd(N, }] # NumDwords # [{);
 }]>;
 

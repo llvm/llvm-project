@@ -2417,6 +2417,19 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
                                             Alignment, Flags, IsFast);
 }
 
+bool SITargetLowering::allowsMemoryAccess(LLVMContext &Context,
+                                          const DataLayout &DL, EVT VT,
+                                          unsigned AddrSpace, Align Alignment,
+                                          MachineMemOperand::Flags Flags,
+                                          unsigned *IsFast) const {
+  // Sub-dword accesses aren't lowered yet, so combines must not narrow an
+  // access to one.
+  if (AddrSpace == AMDGPUAS::VGPR && VT.getSizeInBits() < 32)
+    return false;
+  return TargetLowering::allowsMemoryAccess(Context, DL, VT, AddrSpace,
+                                            Alignment, Flags, IsFast);
+}
+
 EVT SITargetLowering::getOptimalMemOpType(
     LLVMContext &Context, const MemOp &Op,
     const AttributeList &FuncAttributes) const {
@@ -19544,16 +19557,15 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
       return Res;
     break;
   case ISD::LOAD:
-    // Done here rather than via operation legalization so it also fires at
-    // -O0, where a scalar load is Legal and never reaches LowerLOAD.
-    if (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR)
-      if (SDValue V = lowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
-        return V;
-    break;
   case ISD::STORE:
-    if (cast<StoreSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR)
+    // TODO: Move this to LowerLOAD and LowerSTORE once the action of a
+    // non-extending load or non-truncating store can depend on the address
+    // space. Until then one whose action is Legal, such as i32, never reaches
+    // them.
+    if (cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR) {
       if (SDValue V = lowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
         return V;
+    }
     break;
   default:
     break;

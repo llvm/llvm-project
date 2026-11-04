@@ -647,8 +647,6 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
 
     BaseOps.push_back(BaseOp);
     Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
-
-    // Get appropriate operand, and compute width accordingly.
     Width = LocationSize::precise(LdStIdx->getBitWidth() / 8);
     return true;
   }
@@ -8443,6 +8441,8 @@ void SIInstrInfo::handleCopyToPhysHelper(
   if (DstReg == AMDGPU::M0) {
     // A movrel access adds M0 to its base register, so a divergent index is
     // waterfalled into M0 for it. Every other reader takes the first lane.
+    // Selection copies the index into M0 in the block of each access that
+    // reads it, so only the rest of this block can hold one.
     MachineBasicBlock &MBB = *Inst.getParent();
     SmallVector<MachineInstr *, 2> Accesses, OtherReaders;
     bool Redefined = false;
@@ -8477,15 +8477,17 @@ void SIInstrInfo::handleCopyToPhysHelper(
         BuildMI(MBB, Inst, Inst.getDebugLoc(), get(AMDGPU::V_READFIRSTLANE_B32),
                 FirstLane)
             .addReg(Idx);
-        for (MachineInstr *Reader : OtherReaders)
+        for (MachineInstr *Reader : OtherReaders) {
           BuildMI(*Reader->getParent(), Reader, Reader->getDebugLoc(),
                   get(AMDGPU::COPY), AMDGPU::M0)
               .addReg(FirstLane);
+        }
         // Built before the loops, so splitting the block moves it after them.
-        if (LiveOut)
+        if (LiveOut) {
           BuildMI(MBB, MBB.getFirstTerminator(), Inst.getDebugLoc(),
                   get(AMDGPU::COPY), AMDGPU::M0)
               .addReg(FirstLane);
+        }
       }
       Register M0 = AMDGPU::M0;
       for (MachineInstr *Access : Accesses) {
@@ -11627,10 +11629,6 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
 
     return ValueUniformity::Default;
   }
-
-  // As above, after instruction selection.
-  if (isa<AMDGPUMI::VLoadIdxInst>(MI))
-    return ValueUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
