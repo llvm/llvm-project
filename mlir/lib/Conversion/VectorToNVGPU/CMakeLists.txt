@@ -4,9 +4,6 @@ add_mlir_conversion_library(MLIRVectorToNVGPU
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/VectorToNVGPU
 
-  LINK_COMPONENTS
-  Core
-
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAnalysisBase
