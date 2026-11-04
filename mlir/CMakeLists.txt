@@ -177,7 +177,9 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
 set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
 if(LLVM_LINK_LLVM_DYLIB AND NOT MSVC)
-  # We can't rely on default visibility with MSVC.
+  # We can't rely on default visibility with MSVC. libMLIR should have its own
+  # annotation (MLIR_ABI) and have its API properly annotated for exports on
+  # Windows too. See https://github.com/llvm/llvm-project/issues/238872
   set(MLIR_LINK_MLIR_DYLIB_DEFAULT 1)
 else()
   set(MLIR_LINK_MLIR_DYLIB_DEFAULT 0)
