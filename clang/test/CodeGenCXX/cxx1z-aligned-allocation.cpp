@@ -27,10 +27,10 @@ namespace std { enum class align_val_t : size_t {}; }
 struct OVERALIGNED A { A(); int n[128]; };
 
 // CHECK-LABEL: define {{.*}} @_Z2a0v()
-// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 noundef 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 allocalign noundef 32)
 // CHECK: call void @_ZdlPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 32)
 // CHECK-MS-LABEL: define {{.*}} @"?a0@@YAPEAXXZ"()
-// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef 512, i64 noundef 32)
+// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef 512, i64 allocalign noundef 32)
 // CHECK-MS: cleanuppad
 // CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(ptr allocptr noundef %[[ALLOC]], i64 noundef 32)
 void *a0() { return new A; }
@@ -39,13 +39,13 @@ void *a0() { return new A; }
 // The size is known.
 //
 // CHECK-LABEL: define {{.*}} @_Z2a1l(
-// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 noundef 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 allocalign noundef 32)
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1AC1Ev(
 // CHECK: call void @_ZdaPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 32)
 // CHECK-MS-LABEL: define {{.*}} @"?a1@@YAPEAXJ@Z"(
-// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef %{{.*}}, i64 noundef 32)
+// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef %{{.*}}, i64 allocalign noundef 32)
 // No array cookie.
 // CHECK-MS-NOT: store
 // CHECK-MS: invoke noundef ptr @"??0A@@QEAA@XZ"(
@@ -84,7 +84,7 @@ struct OVERALIGNED B {
 void *b0() { return new B; }
 
 // CHECK-LABEL: define {{.*}} @_Z2b1l(
-// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 noundef 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 allocalign noundef 32)
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1BC1Ev(
@@ -169,7 +169,7 @@ void *d0() { return new (q) D; }
 
 #ifndef UNALIGNED
 // CHECK-LABEL: define {{.*}} @_Z2e0v(
-// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 4 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 noundef 4)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 4 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 allocalign noundef 4)
 // CHECK: call void @_ZdlPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 4)
 void *e0() { return new (std::align_val_t(4)) A; }
 

@@ -26,9 +26,6 @@ int main(int argc, char* argv[]) {
   // CHECK: {{.*}}align-assume-{{.*}}.cpp:[[@LINE-11]]:3: runtime error: assumption of 32768 byte alignment for pointer of type 'char *' failed
   // CHECK: {{.*}}align-assume-{{.*}}.cpp:[[@LINE-14]]:22: note: alignment assumption was specified here
   // CHECK: 0x{{.*}}: note: address is {{.*}} aligned, misalignment offset is {{.*}} byte
-  // CHECK: {{.*}}align-assume-{{.*}}.cpp:[[@LINE-4]]:3: runtime error: assumption of 32768 byte alignment for pointer of type 'char *' failed
-  // CHECK: {{.*}}align-assume-{{.*}}.cpp:[[@LINE-17]]:22: note: alignment assumption was specified here
-  // CHECK: 0x{{.*}}: note: address is {{.*}} aligned, misalignment offset is {{.*}} byte
 
   free(ptr);
 
