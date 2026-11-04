@@ -293,14 +293,14 @@ func.func @hoist_vector_transfer_pairs_tensor(
 // CHECK: vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<1xf32>
 // CHECK: scf.for {{.*}} iter_args({{.*}}) ->
 // CHECK-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<1xf32>) {
-// CHECK:   vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<2xf32>
+// CHECK:   vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<2x2xf32>
 // CHECK:   scf.for {{.*}} iter_args({{.*}}) ->
-// CHECK-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2xf32>, vector<1xf32>) {
+// CHECK-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2x2xf32>, vector<1xf32>) {
 // CHECK:     vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<4xf32>
 // CHECK:     "test.some_crippling_use"(%{{.*}}) : (tensor<?x?xf32>) -> ()
 // CHECK:     vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<5xf32>
 // CHECK:     "test.some_use"(%{{.*}}) : (vector<1xf32>) -> vector<1xf32>
-// CHECK:     "test.some_use"(%{{.*}}) : (vector<2xf32>) -> vector<2xf32>
+// CHECK:     "test.some_use"(%{{.*}}) : (vector<2x2xf32>) -> vector<2x2xf32>
 // CHECK:     "test.some_use"(%{{.*}}) : (tensor<?x?xf32>) -> vector<3xf32>
 // CHECK:     "test.some_use"(%{{.*}}) : (vector<4xf32>) -> vector<4xf32>
 // CHECK:     "test.some_use"(%{{.*}}) : (vector<5xf32>) -> vector<5xf32>
@@ -309,9 +309,9 @@ func.func @hoist_vector_transfer_pairs_tensor(
 // CHECK:     vector.transfer_write %{{.*}} : vector<5xf32>, tensor<?x?xf32>
 // CHECK:     "test.some_crippling_use"(%{{.*}}) : (tensor<?x?xf32>) -> ()
 // CHECK:     scf.yield {{.*}} :
-// CHECK-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2xf32>, vector<1xf32>
+// CHECK-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2x2xf32>, vector<1xf32>
 // CHECK:   }
-// CHECK:   vector.transfer_write %{{.*}} : vector<2xf32>, tensor<?x?xf32>
+// CHECK:   vector.transfer_write %{{.*}} : vector<2x2xf32>, tensor<?x?xf32>
 // CHECK:   scf.yield {{.*}} :
 // CHECK-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<1xf32>
 // CHECK: }
@@ -327,20 +327,24 @@ func.func @hoist_vector_transfer_pairs_tensor(
     -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
        tensor<?x?xf32>, tensor<?x?xf32>)  {
       %r0 = vector.transfer_read %arg7[%c0, %c0], %cst: tensor<?x?xf32>, vector<1xf32>
-      %r1 = vector.transfer_read %arg6[%i, %i], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r1 = vector.transfer_read %arg6[%i, %i], %cst
+          {permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
+          : tensor<?x?xf32>, vector<2x2xf32>
       %r3 = vector.transfer_read %arg9[%c0, %c0], %cst: tensor<?x?xf32>, vector<4xf32>
       "test.some_crippling_use"(%arg10) : (tensor<?x?xf32>) -> ()
       %r4 = vector.transfer_read %arg10[%c0, %c0], %cst: tensor<?x?xf32>, vector<5xf32>
       %r5 = vector.transfer_read %arg11[%c0, %c0], %cst: tensor<?x?xf32>, vector<6xf32>
       "test.some_crippling_use"(%arg11) : (tensor<?x?xf32>) -> ()
       %u0 = "test.some_use"(%r0) : (vector<1xf32>) -> vector<1xf32>
-      %u1 = "test.some_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
+      %u1 = "test.some_use"(%r1) : (vector<2x2xf32>) -> vector<2x2xf32>
       %u2 = "test.some_use"(%arg8) : (tensor<?x?xf32>) -> vector<3xf32>
       %u3 = "test.some_use"(%r3) : (vector<4xf32>) -> vector<4xf32>
       %u4 = "test.some_use"(%r4) : (vector<5xf32>) -> vector<5xf32>
       %u5 = "test.some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
       %w1 = vector.transfer_write %u0, %arg7[%c0, %c0] : vector<1xf32>, tensor<?x?xf32>
-      %w0 = vector.transfer_write %u1, %arg6[%i, %i] : vector<2xf32>, tensor<?x?xf32>
+      %w0 = vector.transfer_write %u1, %arg6[%i, %i]
+          {permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
+          : vector<2x2xf32>, tensor<?x?xf32>
       %w2 = vector.transfer_write %u2, %arg8[%c0, %c0] : vector<3xf32>, tensor<?x?xf32>
       %w3 = vector.transfer_write %u3, %arg9[%c0, %c0] : vector<4xf32>, tensor<?x?xf32>
       %w4 = vector.transfer_write %u4, %arg10[%c0, %c0] : vector<5xf32>, tensor<?x?xf32>
@@ -665,237 +669,115 @@ func.func @hoist_buffer(%arg0: memref<7x7xf16>) {
 
 // -----
 
-// Only the read is masked, so hoisting is not safe. The second element must
-// be read as zero on every iteration, leaving its final value at 1.
+// The read supplies padding for masked-off elements on every iteration,
+// so the computed vector cannot replace the next read's result.
 
 // CHECK-LABEL: func.func @negative_masked_read_unmasked_write(
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
 // CHECK: scf.for
 // CHECK: vector.transfer_read
 // CHECK: vector.transfer_write
 // CHECK: scf.yield
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
-// CHECK: return
-func.func @negative_masked_read_unmasked_write() -> i32 {
+func.func @negative_masked_read_unmasked_write(
+    %input: tensor<2xi32>, %mask: vector<2xi1>, %n: index) -> tensor<2xi32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %c2 = arith.constant 2 : index
   %zero = arith.constant 0 : i32
-  %zeros = arith.constant dense<0> : tensor<2xi32>
   %ones = arith.constant dense<1> : vector<2xi32>
-  %mask = arith.constant dense<[true, false]> : vector<2xi1>
-  %result = scf.for %i = %c0 to %c2 step %c1 iter_args(%t = %zeros) -> tensor<2xi32> {
+  %result = scf.for %i = %c0 to %n step %c1
+      iter_args(%t = %input) -> tensor<2xi32> {
     %v = vector.transfer_read %t[%c0], %zero, %mask
-        : tensor<2xi32>, vector<2xi32>
+        {in_bounds = [true]} : tensor<2xi32>, vector<2xi32>
     %next = arith.addi %v, %ones : vector<2xi32>
     %out = vector.transfer_write %next, %t[%c0]
-        : vector<2xi32>, tensor<2xi32>
+        {in_bounds = [true]} : vector<2xi32>, tensor<2xi32>
     scf.yield %out : tensor<2xi32>
   }
-  %value = tensor.extract %result[%c1] : tensor<2xi32>
-  return %value : i32
+  return %result : tensor<2xi32>
 }
 
 // -----
 
-// Only the write is masked, so hoisting is not safe. The next read must see
-// the elements that the masked write leaves unchanged in the tensor.
+// The write leaves masked-off elements unchanged in the tensor, so the next
+// read must reload those values instead of using the computed vector.
 
 // CHECK-LABEL: func.func @negative_unmasked_read_masked_write(
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
 // CHECK: scf.for
 // CHECK: vector.transfer_read
 // CHECK: vector.transfer_write
 // CHECK: scf.yield
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
-// CHECK: return
-func.func @negative_unmasked_read_masked_write() -> i32 {
+func.func @negative_unmasked_read_masked_write(
+    %input: tensor<2xi32>, %mask: vector<2xi1>, %n: index) -> tensor<2xi32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %c2 = arith.constant 2 : index
   %zero = arith.constant 0 : i32
-  %zeros = arith.constant dense<0> : tensor<2xi32>
   %ones = arith.constant dense<1> : vector<2xi32>
-  %mask = arith.constant dense<[true, false]> : vector<2xi1>
-  %result = scf.for %i = %c0 to %c2 step %c1 iter_args(%t = %zeros) -> tensor<2xi32> {
+  %result = scf.for %i = %c0 to %n step %c1
+      iter_args(%t = %input) -> tensor<2xi32> {
     %v = vector.transfer_read %t[%c0], %zero
-        : tensor<2xi32>, vector<2xi32>
+        {in_bounds = [true]} : tensor<2xi32>, vector<2xi32>
     %swap = vector.shuffle %v, %v [1, 0] : vector<2xi32>, vector<2xi32>
     %next = arith.addi %swap, %ones : vector<2xi32>
     %out = vector.transfer_write %next, %t[%c0], %mask
-        : vector<2xi32>, tensor<2xi32>
+        {in_bounds = [true]} : vector<2xi32>, tensor<2xi32>
     scf.yield %out : tensor<2xi32>
   }
-  %value = tensor.extract %result[%c0] : tensor<2xi32>
-  return %value : i32
+  return %result : tensor<2xi32>
 }
 
 // -----
 
-// The read and write masks select different elements. Hoisting is not safe
-// because the next read replaces the written element with padding.
+// The shuffle can move masked-off elements into active positions, so those
+// elements must be reset to padding before each iteration's computation.
 
-// CHECK-LABEL: func.func @negative_distinct_transfer_masks(
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
+// CHECK-LABEL: func.func @negative_masked_transfer_shuffle(
 // CHECK: scf.for
 // CHECK: vector.transfer_read
 // CHECK: vector.transfer_write
 // CHECK: scf.yield
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
-// CHECK: return
-func.func @negative_distinct_transfer_masks() -> i32 {
+func.func @negative_masked_transfer_shuffle(
+    %input: tensor<2xi32>, %mask: vector<2xi1>, %n: index) -> tensor<2xi32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %c2 = arith.constant 2 : index
   %zero = arith.constant 0 : i32
-  %zeros = arith.constant dense<0> : tensor<2xi32>
   %ones = arith.constant dense<1> : vector<2xi32>
-  %mask = arith.constant dense<[true, false]> : vector<2xi1>
-  %other_mask = arith.constant dense<[false, true]> : vector<2xi1>
-  %result = scf.for %i = %c0 to %c2 step %c1 iter_args(%t = %zeros) -> tensor<2xi32> {
+  %result = scf.for %i = %c0 to %n step %c1
+      iter_args(%t = %input) -> tensor<2xi32> {
     %v = vector.transfer_read %t[%c0], %zero, %mask
-        : tensor<2xi32>, vector<2xi32>
-    %next = arith.addi %v, %ones : vector<2xi32>
-    %out = vector.transfer_write %next, %t[%c0], %other_mask
-        : vector<2xi32>, tensor<2xi32>
-    scf.yield %out : tensor<2xi32>
-  }
-  %value = tensor.extract %result[%c1] : tensor<2xi32>
-  return %value : i32
-}
-
-// -----
-
-// Hoisting is safe when both transfers use the same mask and the loop
-// updates each vector element independently.
-
-// CHECK-LABEL: func.func @same_mask_elementwise(
-// CHECK: vector.transfer_read
-// CHECK: scf.for
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
-// CHECK: scf.yield
-// CHECK: vector.transfer_write
-// CHECK: return
-func.func @same_mask_elementwise() -> i32 {
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %c2 = arith.constant 2 : index
-  %zero = arith.constant 0 : i32
-  %zeros = arith.constant dense<0> : tensor<2xi32>
-  %ones = arith.constant dense<1> : vector<2xi32>
-  %mask = arith.constant dense<[true, false]> : vector<2xi1>
-  %result = scf.for %i = %c0 to %c2 step %c1 iter_args(%t = %zeros) -> tensor<2xi32> {
-    %v = vector.transfer_read %t[%c0], %zero, %mask
-        : tensor<2xi32>, vector<2xi32>
-    %next = arith.addi %v, %ones : vector<2xi32>
+        {in_bounds = [true]} : tensor<2xi32>, vector<2xi32>
+    %swap = vector.shuffle %v, %v [1, 0] : vector<2xi32>, vector<2xi32>
+    %next = arith.addi %swap, %ones : vector<2xi32>
     %out = vector.transfer_write %next, %t[%c0], %mask
-        : vector<2xi32>, tensor<2xi32>
+        {in_bounds = [true]} : vector<2xi32>, tensor<2xi32>
     scf.yield %out : tensor<2xi32>
   }
-  %value = tensor.extract %result[%c0] : tensor<2xi32>
-  return %value : i32
+  return %result : tensor<2xi32>
 }
 
 // -----
 
-// The read and write use different permutation maps, so hoisting is not safe.
-// The write must transpose the vector on every iteration.
+// The write transposes the vector on every iteration, so its input cannot
+// replace the next read's result.
 
 // CHECK-LABEL: func.func @negative_mismatched_permutation(
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
 // CHECK: scf.for
 // CHECK: vector.transfer_read
 // CHECK: vector.transfer_write
 // CHECK: scf.yield
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
-// CHECK: return
-func.func @negative_mismatched_permutation() -> i32 {
+func.func @negative_mismatched_permutation(
+    %input: tensor<2x2xi32>, %delta: vector<2x2xi32>, %n: index) -> tensor<2x2xi32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %c2 = arith.constant 2 : index
   %zero = arith.constant 0 : i32
-  %zeros = arith.constant dense<0> : tensor<2x2xi32>
-  %delta = arith.constant dense<[[0, 1], [0, 0]]> : vector<2x2xi32>
-  %result = scf.for %i = %c0 to %c2 step %c1 iter_args(%t = %zeros) -> tensor<2x2xi32> {
+  %result = scf.for %i = %c0 to %n step %c1
+      iter_args(%t = %input) -> tensor<2x2xi32> {
     %v = vector.transfer_read %t[%c0, %c0], %zero
-        : tensor<2x2xi32>, vector<2x2xi32>
+        {in_bounds = [true, true]} : tensor<2x2xi32>, vector<2x2xi32>
     %next = arith.addi %v, %delta : vector<2x2xi32>
     %out = vector.transfer_write %next, %t[%c0, %c0]
-        {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<2x2xi32>, tensor<2x2xi32>
+        {in_bounds = [true, true],
+         permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
+        : vector<2x2xi32>, tensor<2x2xi32>
     scf.yield %out : tensor<2x2xi32>
   }
-  %value = tensor.extract %result[%c1, %c0] : tensor<2x2xi32>
-  return %value : i32
-}
-
-// -----
-
-// Hoisting is safe when both transfers use the same permutation map.
-// A transposed write followed by a transposed read preserves the vector.
-
-// CHECK-LABEL: func.func @same_transfer_permutation(
-// CHECK: vector.transfer_read
-// CHECK: scf.for
-// CHECK-NOT: vector.transfer_read
-// CHECK-NOT: vector.transfer_write
-// CHECK: scf.yield
-// CHECK: vector.transfer_write
-// CHECK: return
-func.func @same_transfer_permutation() -> i32 {
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %c2 = arith.constant 2 : index
-  %zero = arith.constant 0 : i32
-  %zeros = arith.constant dense<0> : tensor<2x2xi32>
-  %delta = arith.constant dense<[[0, 1], [0, 0]]> : vector<2x2xi32>
-  %result = scf.for %i = %c0 to %c2 step %c1 iter_args(%t = %zeros) -> tensor<2x2xi32> {
-    %v = vector.transfer_read %t[%c0, %c0], %zero
-        {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : tensor<2x2xi32>, vector<2x2xi32>
-    %next = arith.addi %v, %delta : vector<2x2xi32>
-    %out = vector.transfer_write %next, %t[%c0, %c0]
-        {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<2x2xi32>, tensor<2x2xi32>
-    scf.yield %out : tensor<2x2xi32>
-  }
-  %value = tensor.extract %result[%c1, %c0] : tensor<2x2xi32>
-  return %value : i32
-}
-
-// -----
-
-// The slice ops access the same subset, but the extracted and inserted values
-// have different types. They cannot be hoisted as a pair.
-
-// CHECK-LABEL: func.func @negative_mismatched_slice_types(
-// CHECK-NOT: tensor.extract_slice
-// CHECK-NOT: tensor.insert_slice
-// CHECK: scf.for
-// CHECK: tensor.extract_slice
-// CHECK: tensor.expand_shape
-// CHECK: tensor.insert_slice
-// CHECK: scf.yield
-// CHECK-NOT: tensor.extract_slice
-// CHECK-NOT: tensor.insert_slice
-// CHECK: return
-func.func @negative_mismatched_slice_types(%input: tensor<1x2xf32>, %n: index) -> tensor<1x2xf32> {
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %result = scf.for %i = %c0 to %n step %c1 iter_args(%t = %input) -> tensor<1x2xf32> {
-    %slice = tensor.extract_slice %t[0, 0][1, 2][1, 1]
-        : tensor<1x2xf32> to tensor<2xf32>
-    %expanded = tensor.expand_shape %slice [[0, 1]] output_shape [1, 2]
-        : tensor<2xf32> into tensor<1x2xf32>
-    %out = tensor.insert_slice %expanded into %t[0, 0][1, 2][1, 1]
-        : tensor<1x2xf32> into tensor<1x2xf32>
-    scf.yield %out : tensor<1x2xf32>
-  }
-  return %result : tensor<1x2xf32>
+  return %result : tensor<2x2xi32>
 }
