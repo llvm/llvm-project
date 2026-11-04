@@ -342,8 +342,8 @@ and there exists an operation `X` such that:
 Then `Y` makes `W` visible in `S` and every subscope instance of `S` that
 contains `Y`.
 
-[Informational note --- "{ref}`contains<amdgpu-subscopes>`" is a reflexive
-relation over scope instances.]
+[Informational note --- The "{ref}`contains<amdgpu-subscopes>`" relation is
+reflexive over scope instances.]
 
 ### Location Order
 
