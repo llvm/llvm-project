@@ -18,7 +18,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -30,7 +32,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_daz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -42,7 +46,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -54,7 +60,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #4 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -66,7 +74,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_daz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #5 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -78,7 +88,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #6 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -90,7 +102,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #7 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -102,7 +116,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #8 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -114,7 +130,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #9 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -126,7 +144,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_daz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #10 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR10:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -138,7 +158,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #11 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR11:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -335,7 +357,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -348,7 +371,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftz_daz(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftz_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -361,7 +385,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -374,7 +399,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #4 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -387,7 +413,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_daz(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #5 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -400,7 +427,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #6 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR6]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -413,7 +441,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #7 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR7]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -426,7 +455,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #8 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR8]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -439,7 +469,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #9 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR9]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -452,7 +483,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_daz(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #10 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR10]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -465,7 +497,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftz_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #11 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftz_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR11]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -589,7 +622,9 @@ define nofpclass(nan ninf pzero sub norm) bfloat @ret__pinf_nzero__select__fptru
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_dynamic_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #12 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_dynamic_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -601,7 +636,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_dynamic__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #13 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_dynamic__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR13:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -613,7 +650,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dynamic__f32_dynamic_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #14 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dynamic__f32_dynamic_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR14:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -625,7 +664,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_ieee__f32_ieee_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #15 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_ieee__f32_ieee_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR15:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -637,7 +678,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_ieee__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #16 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_ieee__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR16:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -649,7 +692,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dynamic__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #17 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dynamic__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR17:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -661,7 +706,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_dynamic_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #18 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_dynamic_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR18:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -673,7 +720,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ieee_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #19 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ieee_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR19:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -685,7 +734,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ftpz_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #20 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ftpz_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR20:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -697,7 +748,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_dapz__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #21 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_dapz__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR21:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -709,7 +762,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dapz__f32_ftpz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #22 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dapz__f32_ftpz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR22:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -721,7 +776,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_ieee__f32_ieee_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #23 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_ieee__f32_ieee_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR23:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -733,7 +790,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_ieee__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #24 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_ieee__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR24:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -745,7 +804,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dapz__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #25 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_dapz__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR25:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -757,7 +818,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ftpz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #26 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ftpz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR26:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -769,7 +832,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ieee_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #27 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ieee_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR27:[0-9]+]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -1009,7 +1074,9 @@ define nofpclass(nan ninf pzero sub norm) half @ret__pinf_nzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_dynamic_dynamic(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #12 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_dynamic_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR12]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1021,7 +1088,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__dynamic_dynamic__f32_ieee_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #13 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__dynamic_dynamic__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR13]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1033,7 +1102,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_dynamic__f32_dynamic_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #14 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_dynamic__f32_dynamic_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR14]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1045,7 +1116,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__dynamic_ieee__f32_ieee_dynamic(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #15 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__dynamic_ieee__f32_ieee_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR15]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1057,7 +1130,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__dynamic_ieee__f32_ieee_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #16 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__dynamic_ieee__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR16]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1069,7 +1144,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_dynamic__f32_ieee_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #17 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_dynamic__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR17]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1081,7 +1158,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_dynamic_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #18 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_dynamic_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR18]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1093,7 +1172,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_ieee_dynamic(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #19 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_ieee_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR19]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1105,7 +1186,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_ftpz_dapz(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #20 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_ftpz_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR20]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1117,7 +1200,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ftpz_dapz__f32_ieee_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #21 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ftpz_dapz__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR21]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1129,7 +1214,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_dapz__f32_ftpz_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #22 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_dapz__f32_ftpz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR22]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1141,7 +1228,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ftpz_ieee__f32_ieee_dapz(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #23 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ftpz_ieee__f32_ieee_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR23]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1153,7 +1242,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ftpz_ieee__f32_ieee_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #24 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ftpz_ieee__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR24]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1165,7 +1256,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_dapz__f32_ieee_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #25 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_dapz__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR25]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1177,7 +1270,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_ftpz_ieee(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #26 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_ftpz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR26]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1189,7 +1284,9 @@ define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrun
 define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_ieee_dapz(i1 %c0, i1 %c1, double nofpclass(nan inf zero sub pnorm) %arg0, double nofpclass(nan inf zero psub norm) %arg1, double %unknown) #27 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @ret__pinf_pzero__select__fptrunc_f64_f32__nnorm__nsub__unknown__ieee_ieee__f32_ieee_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], double nofpclass(nan inf zero psub norm) [[ARG1:%.*]], double [[UNKNOWN:%.*]]) #[[ATTR27]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], double [[ARG0]], double [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], double [[SELECT0]], double [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan double [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select0 = select i1 %c0, double %arg0, double %arg1
@@ -1429,7 +1526,8 @@ define nofpclass(nan ninf pzero sub norm) float @ret__pinf_nzero__select__fptrun
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_dynamic_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #12 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_dynamic_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR12]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1442,7 +1540,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_dynamic__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #13 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_dynamic__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR13]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1455,7 +1554,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dynamic__f32_dynamic_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #14 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dynamic__f32_dynamic_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR14]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1468,7 +1568,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_ieee__f32_ieee_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #15 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_ieee__f32_ieee_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR15]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1481,7 +1582,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_ieee__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #16 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_ieee__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR16]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1494,7 +1596,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dynamic__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #17 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dynamic__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR17]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1507,7 +1610,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_dynamic_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #18 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_dynamic_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR18]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1520,7 +1624,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_ieee_dynamic(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #19 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_ieee_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR19]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1533,7 +1638,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_ftpz_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #20 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_ftpz_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR20]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1546,7 +1652,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_dapz__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #21 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_dapz__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR21]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1559,7 +1666,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dapz__f32_ftpz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #22 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dapz__f32_ftpz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR22]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1572,7 +1680,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_ieee__f32_ieee_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #23 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_ieee__f32_ieee_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR23]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1585,7 +1694,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_ieee__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #24 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_ieee__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR24]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1598,7 +1708,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dapz__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #25 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_dapz__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR25]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1611,7 +1722,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_ftpz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #26 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_ftpz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR26]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1624,7 +1736,8 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_ieee_dapz(i1 %c0, i1 %c1, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #27 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ieee_ieee__f32_ieee_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR27]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[ARG0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
@@ -1642,7 +1755,9 @@ define nofpclass(nan nzero sub norm) bfloat @ret__inf_pzero__select__fptrunc_f32
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_ieee__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #32 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_ieee__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR32]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -1654,7 +1769,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_daz__f32_ieee_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #33 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_daz__f32_ieee_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR33]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -1666,7 +1783,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ftz_ieee(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #34 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ftz_ieee(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR34]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -1678,7 +1797,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ieee_daz(i1 %c0, i1 %c1, float nofpclass(nan inf zero sub pnorm) %arg0, float nofpclass(nan inf zero psub norm) %arg1, float %unknown) #35 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ieee_ieee__f32_ieee_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG1:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR35]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], float [[SELECT0]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %select0 = select i1 %c0, float %arg0, float %arg1
@@ -1694,7 +1815,9 @@ define nofpclass(nan ninf nzero sub norm) half @ret__pinf_pzero__select__fptrunc
 define nofpclass(nan ninf nzero sub norm) <2 x half> @vec__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_dynamic(i1 %c0, i1 %c1, <2 x float> nofpclass(nan inf zero sub pnorm) %arg0, <2 x float> nofpclass(nan inf zero psub norm) %arg1, <2 x float> %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) <2 x half> @vec__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__dynamic_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], <2 x float> nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], <2 x float> nofpclass(nan inf zero psub norm) [[ARG1:%.*]], <2 x float> [[UNKNOWN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[UNKNOWN]] to <2 x half>
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], <2 x float> [[ARG0]], <2 x float> [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[SELECT0]], <2 x float> [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[SELECT]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[RESULT]]
 ;
   %select0 = select i1 %c0, <2 x float> %arg0, <2 x float> %arg1
@@ -1706,7 +1829,9 @@ define nofpclass(nan ninf nzero sub norm) <2 x half> @vec__pinf_pzero__select__f
 define nofpclass(nan ninf nzero sub norm) <2 x half> @vec__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_daz(i1 %c0, i1 %c1, <2 x float> nofpclass(nan inf zero sub pnorm) %arg0, <2 x float> nofpclass(nan inf zero psub norm) %arg1, <2 x float> %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) <2 x half> @vec__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftz_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], <2 x float> nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], <2 x float> nofpclass(nan inf zero psub norm) [[ARG1:%.*]], <2 x float> [[UNKNOWN:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[UNKNOWN]] to <2 x half>
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], <2 x float> [[ARG0]], <2 x float> [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[SELECT0]], <2 x float> [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[SELECT]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[RESULT]]
 ;
   %select0 = select i1 %c0, <2 x float> %arg0, <2 x float> %arg1
@@ -1718,7 +1843,9 @@ define nofpclass(nan ninf nzero sub norm) <2 x half> @vec__pinf_pzero__select__f
 define nofpclass(nan ninf nzero sub norm) <2 x half> @vec__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_dapz(i1 %c0, i1 %c1, <2 x float> nofpclass(nan inf zero sub pnorm) %arg0, <2 x float> nofpclass(nan inf zero psub norm) %arg1, <2 x float> %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) <2 x half> @vec__pinf_pzero__select__fptrunc_f32_f16__nnorm__nsub__unknown__ftpz_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], <2 x float> nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]], <2 x float> nofpclass(nan inf zero psub norm) [[ARG1:%.*]], <2 x float> [[UNKNOWN:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[UNKNOWN]] to <2 x half>
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], <2 x float> [[ARG0]], <2 x float> [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[SELECT0]], <2 x float> [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[SELECT]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[RESULT]]
 ;
   %select0 = select i1 %c0, <2 x float> %arg0, <2 x float> %arg1
@@ -1776,7 +1903,8 @@ define nofpclass(nan ninf pzero sub norm) <2 x half> @vec__pinf_nzero__select__f
 define nofpclass(nan nzero sub norm) <2 x bfloat> @vec__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_dynamic(i1 %c0, i1 %c1, <2 x float> nofpclass(nan inf zero nsub norm) %arg0, <2 x float> nofpclass(nan inf zero psub norm) %arg1, <2 x float> %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) <2 x bfloat> @vec__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__dynamic_dynamic(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], <2 x float> nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], <2 x float> nofpclass(nan inf zero psub norm) [[ARG1:%.*]], <2 x float> [[UNKNOWN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[ARG0]], <2 x float> [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], <2 x float> [[ARG0]], <2 x float> [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[SELECT0]], <2 x float> [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[SELECT]] to <2 x bfloat>
 ; CHECK-NEXT:    ret <2 x bfloat> [[RESULT]]
 ;
@@ -1789,7 +1917,8 @@ define nofpclass(nan nzero sub norm) <2 x bfloat> @vec__inf_pzero__select__fptru
 define nofpclass(nan nzero sub norm) <2 x bfloat> @vec__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftz_daz(i1 %c0, i1 %c1, <2 x float> nofpclass(nan inf zero nsub norm) %arg0, <2 x float> nofpclass(nan inf zero psub norm) %arg1, <2 x float> %unknown) #2 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) <2 x bfloat> @vec__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftz_daz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], <2 x float> nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], <2 x float> nofpclass(nan inf zero psub norm) [[ARG1:%.*]], <2 x float> [[UNKNOWN:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[ARG0]], <2 x float> [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], <2 x float> [[ARG0]], <2 x float> [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[SELECT0]], <2 x float> [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[SELECT]] to <2 x bfloat>
 ; CHECK-NEXT:    ret <2 x bfloat> [[RESULT]]
 ;
@@ -1802,7 +1931,8 @@ define nofpclass(nan nzero sub norm) <2 x bfloat> @vec__inf_pzero__select__fptru
 define nofpclass(nan nzero sub norm) <2 x bfloat> @vec__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_dapz(i1 %c0, i1 %c1, <2 x float> nofpclass(nan inf zero nsub norm) %arg0, <2 x float> nofpclass(nan inf zero psub norm) %arg1, <2 x float> %unknown) #3 {
 ; CHECK-LABEL: define nofpclass(nan nzero sub norm) <2 x bfloat> @vec__inf_pzero__select__fptrunc_f32_bf16__psub__nsub__unknown__ftpz_dapz(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], <2 x float> nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], <2 x float> nofpclass(nan inf zero psub norm) [[ARG1:%.*]], <2 x float> [[UNKNOWN:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[ARG0]], <2 x float> [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C0]], <2 x float> [[ARG0]], <2 x float> [[ARG1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C1]], <2 x float> [[SELECT0]], <2 x float> [[UNKNOWN]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan <2 x float> [[SELECT]] to <2 x bfloat>
 ; CHECK-NEXT:    ret <2 x bfloat> [[RESULT]]
 ;

@@ -681,7 +681,8 @@ define nofpclass(nan pinf pzero sub norm) bfloat @ret__ninf_nzero__select__fptru
 define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_f32_bf16__nsub__pinf_nnorm(i1 %c0, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan ninf zero sub pnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_f32_bf16__nsub__pinf_nnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan ninf zero sub pnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[ARG1]] to bfloat
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -728,7 +729,8 @@ define nofpclass(nan pinf pzero sub norm) x86_fp80 @ret__ninf_nzero__select__fpt
 define nofpclass(nan ninf zero sub pnorm) x86_fp80 @ret__pinf_nnorm__select__fptrunc_f128_f80__nsub__pinf_nnorm(i1 %c0, fp128 nofpclass(nan inf zero psub norm) %arg0, fp128 nofpclass(nan ninf zero sub pnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub pnorm) x86_fp80 @ret__pinf_nnorm__select__fptrunc_f128_f80__nsub__pinf_nnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], fp128 nofpclass(nan inf zero psub norm) [[ARG0:%.*]], fp128 nofpclass(nan ninf zero sub pnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan fp128 [[ARG1]] to x86_fp80
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], fp128 [[ARG0]], fp128 [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan fp128 [[SELECT]] to x86_fp80
 ; CHECK-NEXT:    ret x86_fp80 [[RESULT]]
 ;
   %select = select i1 %c0, fp128 %arg0, fp128 %arg1
