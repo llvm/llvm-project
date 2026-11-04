@@ -1,0 +1,107 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s --check-prefix=DEFAULT
+
+! Under -gpu=unified, a plain allocatable function result is given the unified
+! allocator, so its storage may come from that allocator (allocate-on-assignment,
+! ALLOCATE, MOVE_ALLOC). The caller must release it through the runtime, which
+! frees it with the allocator recorded in its descriptor, and not move it into
+! an hlfir.expr whose buffer would be released with an inlined free.
+
+module m
+  type t
+    integer, allocatable :: a(:)
+  end type
+contains
+  function char_result(n) result(s)
+    integer, intent(in) :: n
+    character(:), allocatable :: s
+    s = repeat('a', n)
+  end function
+  function array_result(n) result(r)
+    integer, intent(in) :: n
+    integer, allocatable :: r(:)
+    integer, allocatable :: tmp(:)
+    allocate(tmp(n))
+    tmp = 1
+    call move_alloc(tmp, r)
+  end function
+  function derived_result(n) result(r)
+    integer, intent(in) :: n
+    type(t), allocatable :: r
+    r = t([n])
+  end function
+end module
+
+subroutine use_char(n)
+  use m
+  integer :: n
+  character(10) :: c
+  c = trim(char_result(n))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPuse_char(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPchar_result(
+! CHECK-NOT: hlfir.as_expr
+! CHECK: hlfir.char_trim %{{.*}} : (!fir.boxchar<1>)
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_char(
+! DEFAULT: fir.call @_QMmPchar_result(
+! DEFAULT: hlfir.as_expr %{{.*}} move %true
+! DEFAULT-NOT: _FortranAAllocatableDeallocate
+! DEFAULT: return
+
+subroutine use_array(n)
+  use m
+  integer :: n, s
+  s = sum(array_result(n))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPuse_array(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmParray_result(
+! CHECK-NOT: hlfir.as_expr
+! CHECK: hlfir.sum %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> i32
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_array(
+! DEFAULT: fir.call @_QMmParray_result(
+! DEFAULT: hlfir.as_expr %{{.*}} move %true
+! DEFAULT-NOT: _FortranAAllocatableDeallocate
+! DEFAULT: return
+
+subroutine use_derived(n)
+  use m
+  integer :: n
+  type(t) :: x
+  x = derived_result(n)
+end subroutine
+
+! The result is first destroyed, which also performs any finalization. The
+! top-level entity is then released without finalizing it again.
+! CHECK-LABEL: func.func @_QPuse_derived(
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPderived_result(
+! CHECK: fir.call @_FortranADestroy(
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : {{.*}} -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocateNoFinal(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
+
+! DEFAULT-LABEL: func.func @_QPuse_derived(
+! DEFAULT: fir.call @_QMmPderived_result(
+! DEFAULT: fir.call @_FortranADestroy(
+! DEFAULT: fir.if
+! DEFAULT: fir.freemem
+! DEFAULT-NOT: _FortranAAllocatableDeallocateNoFinal
+! DEFAULT: return
