@@ -5495,6 +5495,20 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           return replaceOperand(SI, 2,
                                 ConstantInt::get(SelType, Known.getConstant()));
       }
+
+      // select C, X, (and X, M): if C (or !C) implies that X has no bits
+      // outside M, the arms are equal there.
+      Value *X;
+      const APInt *Mask;
+      if (match(&SI,
+                m_c_Select(m_Value(X), m_And(m_Deferred(X), m_APInt(Mask)))) &&
+          hasAffectedValue(X, CC.AffectedValues, /*Depth=*/0)) {
+        for (bool Invert : {false, true}) {
+          CC.Invert = Invert;
+          if ((~*Mask).isSubsetOf(llvm::computeKnownBits(X, Q).Zero))
+            return replaceInstUsesWith(SI, Invert ? TrueVal : FalseVal);
+        }
+      }
     }
   }
 
