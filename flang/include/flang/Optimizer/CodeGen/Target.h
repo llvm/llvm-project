@@ -35,7 +35,7 @@ namespace details {
 /// LLVMContext.
 class Attributes {
 public:
-  enum class IntegerExtension { None, Zero, Sign };
+  enum class IntegerExtension { None, Zero, Sign, NoExt };
 
   Attributes(unsigned short alignment = 0, bool byval = false,
              bool sret = false, bool append = false,
@@ -59,6 +59,7 @@ public:
   bool isAppend() const { return append; }
   bool isZeroExt() const { return intExt == IntegerExtension::Zero; }
   bool isSignExt() const { return intExt == IntegerExtension::Sign; }
+  bool isNoExt() const { return intExt == IntegerExtension::NoExt; }
   llvm::StringRef getIntExtensionAttrName() const;
 
 private:
@@ -187,6 +188,9 @@ public:
 
   // Returns width in bits of C/C++ 'int' type size.
   virtual unsigned char getCIntTypeWidth() const = 0;
+
+  // Returns true if integer extension attributes are needed on all functions.
+  virtual bool needsIntExtensionOnAllFunctions() const { return false; }
 
   llvm::StringRef getTargetCPU() const { return targetCPU; }
   llvm::StringRef getTuneCPU() const { return tuneCPU; }

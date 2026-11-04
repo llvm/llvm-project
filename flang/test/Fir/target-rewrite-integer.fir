@@ -147,3 +147,54 @@ func.func @_QPtest_bindc32(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}) {
   return
 }
 func.func private @cfun32(i32) -> i32 attributes {fir.bindc_name = "cfun32"}
+
+// -----
+
+// Functions not interoperable with C also get extension attributes on SystemZ.
+
+// SYSTEMZ-LABEL: @_QPplain_int
+// SYSTEMZ-SAME: (%{{.*}}: i32 {llvm.signext}) -> (i32 {llvm.signext})
+func.func @_QPplain_int(%arg0: i32) -> i32 {
+  return %arg0 : i32
+}
+
+// SYSTEMZ-LABEL: @_QPplain_i64
+// SYSTEMZ-SAME: (%{{.*}}: i64) -> i64
+func.func @_QPplain_i64(%arg0: i64) -> i64 {
+  return %arg0 : i64
+}
+
+// SYSTEMZ-LABEL: @_QPplain_logical
+// SYSTEMZ-SAME: (%{{.*}}: !fir.logical<4> {llvm.signext}) -> (!fir.logical<4> {llvm.signext})
+func.func @_QPplain_logical(%arg0: !fir.logical<4>) -> !fir.logical<4> {
+  return %arg0 : !fir.logical<4>
+}
+
+// LOGICAL(1) is C _Bool.
+// SYSTEMZ-LABEL: @_QPplain_logical1
+// SYSTEMZ-SAME: (%{{.*}}: !fir.logical<1> {llvm.zeroext}) -> (!fir.logical<1> {llvm.zeroext})
+func.func @_QPplain_logical1(%arg0: !fir.logical<1>) -> !fir.logical<1> {
+  return %arg0 : !fir.logical<1>
+}
+
+// -----
+
+// CHARACTER(1) passed by value is an unsigned integer on SystemZ.
+
+// SYSTEMZ-LABEL: @_QPplain_char
+// SYSTEMZ-SAME: (%{{.*}}: i8 {llvm.zeroext}) -> (i8 {llvm.zeroext})
+// SYSTEMZ: fir.convert %{{.*}} : (!fir.ref<i8>) -> !fir.ref<!fir.char<1>>
+func.func @_QPplain_char(%arg0: !fir.char<1>) -> !fir.char<1> {
+  return %arg0 : !fir.char<1>
+}
+
+// -----
+
+// SYSTEMZ-LABEL: @_QPcall_char
+// SYSTEMZ: fir.call @cchar(%{{.*}}) : (i8) -> i8
+// SYSTEMZ: func.func private @cchar(i8 {llvm.zeroext}) -> (i8 {llvm.zeroext})
+func.func @_QPcall_char(%arg0: !fir.char<1>) -> !fir.char<1> {
+  %0 = fir.call @cchar(%arg0) : (!fir.char<1>) -> !fir.char<1>
+  return %0 : !fir.char<1>
+}
+func.func private @cchar(!fir.char<1>) -> !fir.char<1> attributes {fir.bindc_name = "cchar"}

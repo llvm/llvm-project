@@ -32,6 +32,8 @@ llvm::StringRef Attributes::getIntExtensionAttrName() const {
     return "llvm.zeroext";
   else if (isSignExt())
     return "llvm.signext";
+  else if (isNoExt())
+    return "llvm.noext";
   return {};
 }
 } // namespace fir::details
@@ -1974,6 +1976,8 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
     return GenericTarget::integerArgumentType(loc, argTy);
   }
 
+  bool needsIntExtensionOnAllFunctions() const override { return true; }
+
   // Check for a single floating-point member recursively.
   static mlir::Type getSingleFPMember(fir::RecordType recTy) {
     auto typeList = recTy.getTypeList();
@@ -2002,8 +2006,12 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
         fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
     uint64_t byteSize = sizeAndAlign.first;
     if (byteSize == 1 || byteSize == 2 || byteSize == 4 || byteSize == 8) {
+      AT::IntegerExtension intExt = byteSize < 8 ? AT::IntegerExtension::NoExt
+                                                 : AT::IntegerExtension::None;
       marshal.emplace_back(
-          mlir::IntegerType::get(ty.getContext(), byteSize * 8), AT{});
+          mlir::IntegerType::get(ty.getContext(), byteSize * 8),
+          AT{/*alignment=*/0, /*byval=*/false, /*sret=*/false,
+             /*append=*/false, /*intExt=*/intExt});
       return marshal;
     }
     // Larger structs passed via implicit reference (pointer in register/stack).

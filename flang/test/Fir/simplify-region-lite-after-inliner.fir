@@ -32,5 +32,5 @@ func.func @repro(%arg0: i8, %arg1: i8) {
 func.func private @foo() -> none
 
 
-// CHECK: define void @repro(i8 %0, i8 %1)
+// CHECK: define void @repro(i8{{( (sign|zero)ext)?}} %0, i8{{( (sign|zero)ext)?}} %1)
 // CHECK-NEXT: ret void

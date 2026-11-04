@@ -360,7 +360,8 @@ public:
       const fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs) {
     return llvm::any_of(newInTyAndAttrs, [](auto arg) {
       const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
-      return attr.isByVal() || attr.isSRet() || attr.isIndirect();
+      return attr.isByVal() || attr.isSRet() || attr.isIndirect() ||
+             !attr.getIntExtensionAttrName().empty();
     });
   }
 
@@ -400,6 +401,17 @@ public:
             wrap = rewriteCallStructResultType(loc, recTy, newResTys,
                                                newInTyAndAttrs, newOpers);
           })
+          .Case([&](fir::CharacterType charTy) {
+            if (mlir::Type intTy =
+                    getCharAsIntType(callOp.getOperation(), charTy)) {
+              fir::CodeGenSpecifics::Marshalling m;
+              m.push_back(fir::CodeGenSpecifics::getTypeAndAttr(intTy));
+              wrap = rewriteCallResultType(loc, charTy, newResTys,
+                                           newInTyAndAttrs, newOpers, m);
+            } else {
+              newResTys.push_back(charTy);
+            }
+          })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
     } else if (fnTy.getResults().size() > 1) {
       TODO(loc, "multiple results not supported yet");
@@ -412,6 +424,7 @@ public:
     // (original argument index, new operand index) of the arguments passed
     // unchanged, whose attributes carry over to the new call.
     llvm::SmallVector<std::pair<unsigned, unsigned>> keptArgs;
+    llvm::SmallVector<std::pair<unsigned, llvm::StringRef>> extArgs;
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>)
       operands = callOp.getKernelOperands();
     else
@@ -508,6 +521,18 @@ public:
                 passArgShift = newOpers.size() - *callOp.getPassArgPos();
             }
             keptArgs.emplace_back(index, newOpers.size());
+            llvm::StringRef extAttrName =
+                getCallArgExtensionAttrName(callOp, ty);
+            if (!extAttrName.empty())
+              extArgs.emplace_back(newOpers.size(), extAttrName);
+            if (mlir::Type intTy =
+                    getCharAsIntType(callOp.getOperation(), ty)) {
+              newInTyAndAttrs.push_back(
+                  fir::CodeGenSpecifics::getTypeAndAttr(intTy));
+              newOpers.push_back(convertValueInMemory(
+                  loc, oper, intTy, /*inputMayBeBigger=*/false));
+              return;
+            }
             newInTyAndAttrs.push_back(
                 fir::CodeGenSpecifics::getTypeAndAttr(ty));
             newOpers.push_back(oper);
@@ -568,6 +593,11 @@ public:
           keptArgAttrs[newOperIdx - dropFront].append(dict.getValue());
           hasKeptArgAttrs |= !dict.empty();
         }
+      for (auto [newOperIdx, extAttrName] : extArgs) {
+        keptArgAttrs[newOperIdx - dropFront].set(extAttrName,
+                                                 rewriter->getUnitAttr());
+        hasKeptArgAttrs = true;
+      }
       // Always set ABI argument attributes on call operations, even when
       // direct, as required by
       // https://llvm.org/docs/LangRef.html#parameter-attributes.
@@ -595,6 +625,9 @@ public:
                 mlir::LLVM::LLVMDialect::getAlignAttrName(),
                 rewriter->getIntegerAttr(rewriter->getIntegerType(32), align));
           }
+          if (llvm::StringRef extName = attr.getIntExtensionAttrName();
+              !extName.empty())
+            argAttrs.set(extName, rewriter->getUnitAttr());
           argAttrsArray.emplace_back(
               argAttrs.getDictionary(rewriter->getContext()));
         }
@@ -717,6 +750,12 @@ public:
           .Case([&](fir::RecordType ty) {
             lowerStructSignatureRes(loc, ty, newResTys, newInTyAndAttrs);
           })
+          .Case([&](fir::CharacterType ty) {
+            if (mlir::Type intTy = getCharAsIntType(addrOp, ty))
+              newResTys.push_back(intTy);
+            else
+              newResTys.push_back(ty);
+          })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
     }
     llvm::SmallVector<mlir::Type> trailingInTys;
@@ -752,6 +791,13 @@ public:
           })
           .Case([&](fir::RecordType recTy) {
             lowerStructSignatureArg(loc, recTy, newInTyAndAttrs);
+          })
+          .Case([&](fir::CharacterType charTy) {
+            mlir::Type newTy = charTy;
+            if (mlir::Type intTy = getCharAsIntType(addrOp, charTy))
+              newTy = intTy;
+            newInTyAndAttrs.push_back(
+                fir::CodeGenSpecifics::getTypeAndAttr(newTy));
           })
           .Default([&](mlir::Type ty) {
             newInTyAndAttrs.push_back(
@@ -815,6 +861,66 @@ public:
            op->hasAttrOfType<mlir::StringAttr>(fir::getSymbolAttrName());
   }
 
+  /// Returns true if \p op is a function that needs extension attributes
+  /// even if it is not interoperable with C.
+  bool needsIntExtensionOnAllFunctions(mlir::Operation *op) const {
+    return mlir::isa<mlir::func::FuncOp>(op) &&
+           specifics->needsIntExtensionOnAllFunctions();
+  }
+
+  bool needsIntExtension(mlir::Operation *op) const {
+    return isFuncWithCCallingConvention(op) ||
+           needsIntExtensionOnAllFunctions(op);
+  }
+
+  /// Integer type of a by-value CHARACTER(1) that needs extension, else null.
+  mlir::Type getCharAsIntType(mlir::Operation *op, mlir::Type ty) {
+    auto charTy = mlir::dyn_cast<fir::CharacterType>(ty);
+    if (!charTy || charTy.getLen() != 1 || charTy.getFKind() != 1 ||
+        !specifics->needsIntExtensionOnAllFunctions())
+      return {};
+    unsigned bits =
+        fir::getKindMapping(op).getCharacterBitsize(charTy.getFKind());
+    return rewriter->getIntegerType(bits);
+  }
+
+  /// Returns the extension attribute name for a value of integer, LOGICAL or
+  /// single CHARACTER type \p ty, or an empty string if none is needed.
+  llvm::StringRef getExtensionAttrName(mlir::Operation *op, mlir::Type ty) {
+    mlir::IntegerType intTy;
+    if (auto i = mlir::dyn_cast<mlir::IntegerType>(ty)) {
+      intTy = i;
+    } else if (auto logicalTy = mlir::dyn_cast<fir::LogicalType>(ty)) {
+      unsigned bits =
+          fir::getKindMapping(op).getLogicalBitsize(logicalTy.getFKind());
+      // LOGICAL(1) is C _Bool, which is zero extended.
+      intTy = rewriter->getIntegerType(bits, /*isSigned=*/bits > 8);
+    } else if (mlir::Type charIntTy = getCharAsIntType(op, ty)) {
+      // Plain char is unsigned on s390x.
+      intTy = rewriter->getIntegerType(charIntTy.getIntOrFloatBitWidth(),
+                                       /*isSigned=*/false);
+    } else {
+      return {};
+    }
+    auto m = specifics->integerArgumentType(op->getLoc(), intTy);
+    assert(m.size() == 1);
+    return std::get<fir::CodeGenSpecifics::Attributes>(m[0])
+        .getIntExtensionAttrName();
+  }
+
+  /// Returns the extension attribute name for an argument of an indirect call:
+  /// there is no callee declaration to inherit it from.
+  template <typename A>
+  llvm::StringRef getCallArgExtensionAttrName(A callOp, mlir::Type ty) {
+    if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
+      if (callOp.getCallee() || !specifics->needsIntExtensionOnAllFunctions())
+        return {};
+      return getExtensionAttrName(callOp.getOperation(), ty);
+    } else {
+      return {};
+    }
+  }
+
   /// If the signature does not need any special target-specific conversions,
   /// then it is considered portable for any target, and this function will
   /// return `true`. Otherwise, the signature is not portable and `false` is
@@ -822,11 +928,15 @@ public:
   bool hasPortableSignature(mlir::Type signature, mlir::Operation *op) {
     assert(mlir::isa<mlir::FunctionType>(signature));
     auto func = mlir::dyn_cast<mlir::FunctionType>(signature);
-    bool hasCCallingConv = isFuncWithCCallingConvention(op);
+    auto call = mlir::dyn_cast<fir::CallOp>(op);
+    bool needsIntExt = needsIntExtension(op);
+    bool extendAll = needsIntExtensionOnAllFunctions(op);
     for (auto ty : func.getResults())
       if ((mlir::isa<fir::BoxCharType>(ty) && !noCharacterConversion) ||
           (fir::isa_complex(ty) && !noComplexConversion) ||
-          (mlir::isa<mlir::IntegerType>(ty) && hasCCallingConv) ||
+          (mlir::isa<mlir::IntegerType>(ty) && needsIntExt) ||
+          (extendAll && !getExtensionAttrName(op, ty).empty()) ||
+          getCharAsIntType(op, ty) ||
           (mlir::isa<fir::RecordType>(ty) && !noStructConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
@@ -836,7 +946,10 @@ public:
             fir::isCharacterProcedureTuple(ty)) &&
            !noCharacterConversion) ||
           (fir::isa_complex(ty) && !noComplexConversion) ||
-          (mlir::isa<mlir::IntegerType>(ty) && hasCCallingConv) ||
+          (mlir::isa<mlir::IntegerType>(ty) && needsIntExt) ||
+          (extendAll && !getExtensionAttrName(op, ty).empty()) ||
+          (call && !getCallArgExtensionAttrName(call, ty).empty()) ||
+          getCharAsIntType(op, ty) ||
           (mlir::isa<fir::RecordType>(ty) && !noStructConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
@@ -905,12 +1018,35 @@ public:
             auto retTy = std::get<mlir::Type>(m[0]);
             std::size_t resId = newResTys.size();
             llvm::StringRef extensionAttrName = attr.getIntExtensionAttrName();
-            if (!extensionAttrName.empty() &&
-                isFuncWithCCallingConvention(func))
+            if (!extensionAttrName.empty() && needsIntExtension(func))
               resultAttrs.emplace_back(
                   resId, rewriter->getNamedAttr(extensionAttrName,
                                                 rewriter->getUnitAttr()));
             newResTys.push_back(retTy);
+          })
+          .Case([&](fir::LogicalType ty) {
+            llvm::StringRef extensionAttrName;
+            if (needsIntExtensionOnAllFunctions(func))
+              extensionAttrName = getExtensionAttrName(func, ty);
+            if (!extensionAttrName.empty())
+              resultAttrs.emplace_back(
+                  newResTys.size(),
+                  rewriter->getNamedAttr(extensionAttrName,
+                                         rewriter->getUnitAttr()));
+            newResTys.push_back(ty);
+          })
+          .Case([&](fir::CharacterType charTy) {
+            mlir::Type intTy = getCharAsIntType(func, charTy);
+            if (!intTy) {
+              newResTys.push_back(charTy);
+              return;
+            }
+            resultAttrs.emplace_back(
+                newResTys.size(),
+                rewriter->getNamedAttr(getExtensionAttrName(func, charTy),
+                                       rewriter->getUnitAttr()));
+            fixups.emplace_back(FixupTy::Codes::ReturnType, newResTys.size());
+            newResTys.push_back(intTy);
           })
           .Case([&](fir::RecordType recTy) {
             doStructReturn(func, recTy, newResTys, newInTyAndAttrs, fixups);
@@ -972,8 +1108,7 @@ public:
             auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
             auto argNo = newInTyAndAttrs.size();
             llvm::StringRef extensionAttrName = attr.getIntExtensionAttrName();
-            if (!extensionAttrName.empty() &&
-                isFuncWithCCallingConvention(func))
+            if (!extensionAttrName.empty() && needsIntExtension(func))
               fixups.emplace_back(FixupTy::Codes::ArgumentType, argNo,
                                   [=](FuncOpTy func) {
                                     func.setArgAttr(
@@ -982,6 +1117,39 @@ public:
                                   });
 
             newInTyAndAttrs.push_back(m[0]);
+          })
+          .Case([&](fir::LogicalType ty) {
+            auto argNo = newInTyAndAttrs.size();
+            llvm::StringRef extensionAttrName;
+            if (needsIntExtensionOnAllFunctions(func))
+              extensionAttrName = getExtensionAttrName(func, ty);
+            if (!extensionAttrName.empty())
+              fixups.emplace_back(
+                  FixupTy::Codes::ArgumentType, argNo, [=](FuncOpTy func) {
+                    func.setArgAttr(argNo, extensionAttrName,
+                                    mlir::UnitAttr::get(func.getContext()));
+                  });
+
+            newInTyAndAttrs.push_back(
+                fir::CodeGenSpecifics::getTypeAndAttr(ty));
+          })
+          .Case([&](fir::CharacterType charTy) {
+            mlir::Type intTy = getCharAsIntType(func, charTy);
+            if (!intTy) {
+              newInTyAndAttrs.push_back(
+                  fir::CodeGenSpecifics::getTypeAndAttr(charTy));
+              return;
+            }
+            auto argNo = newInTyAndAttrs.size();
+            llvm::StringRef extensionAttrName =
+                getExtensionAttrName(func, charTy);
+            fixups.emplace_back(
+                FixupTy::Codes::ArgumentType, argNo, [=](FuncOpTy func) {
+                  func.setArgAttr(argNo, extensionAttrName,
+                                  mlir::UnitAttr::get(func.getContext()));
+                });
+            newInTyAndAttrs.push_back(
+                fir::CodeGenSpecifics::getTypeAndAttr(intTy));
           })
           .Case([&](fir::RecordType recTy) {
             doStructArg(func, recTy, newInTyAndAttrs, fixups);
@@ -1320,13 +1488,18 @@ public:
                                         rewriter->getIntegerType(32), align));
                             });
       } else {
-        if (auto align = attr.getAlignment())
-          fixups.emplace_back(
-              fixupCode, argNo, index, [=](OpTy func) {
-                func.setArgAttr(argNo, "llvm.align",
-                                rewriter->getIntegerAttr(
-                                    rewriter->getIntegerType(32), align));
-              });
+        const unsigned align = attr.getAlignment();
+        const llvm::StringRef extName = attr.getIntExtensionAttrName();
+        if (align || !extName.empty())
+          fixups.emplace_back(fixupCode, argNo, index, [=](OpTy func) {
+            if (align)
+              func.setArgAttr(argNo, "llvm.align",
+                              rewriter->getIntegerAttr(
+                                  rewriter->getIntegerType(32), align));
+            if (!extName.empty())
+              func.setArgAttr(argNo, extName,
+                              mlir::UnitAttr::get(func.getContext()));
+          });
         else
           fixups.emplace_back(fixupCode, argNo, index);
       }

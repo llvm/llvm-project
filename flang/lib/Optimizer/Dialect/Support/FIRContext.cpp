@@ -15,6 +15,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/TargetParser/Host.h"
 
 void fir::setTargetTriple(mlir::ModuleOp mod, llvm::StringRef triple) {
@@ -28,6 +29,11 @@ llvm::Triple fir::getTargetTriple(mlir::ModuleOp mod) {
           mlir::LLVM::LLVMDialect::getTargetTripleAttrName()))
     return llvm::Triple(target.getValue());
   return llvm::Triple(llvm::sys::getDefaultTargetTriple());
+}
+
+bool fir::needsI32ParamSignExt(mlir::ModuleOp mod) {
+  return llvm::TargetLibraryInfo::getExtAttrForI32Param(getTargetTriple(mod)) ==
+         llvm::Attribute::SExt;
 }
 
 static constexpr const char *kindMapName = "fir.kindmap";

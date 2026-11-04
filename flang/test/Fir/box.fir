@@ -131,7 +131,7 @@ func.func @b5(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, %arg1 
 
 func.func private @callee6(!fir.box<none>) -> i32
 
-// CHECK-LABEL: define i32 @box6(
+// CHECK-LABEL: define{{( (sign|zero)ext)?}} i32 @box6(
 // CHECK-SAME: ptr {{[^%]*}}%[[ARG0:.*]], i64 %[[ARG1:.*]], i64 %[[ARG2:.*]])
 func.func @box6(%0 : !fir.ref<!fir.array<?x?x?x?xf32>>, %1 : index, %2 : index) -> i32 {
   %c100 = arith.constant 100 : index

@@ -1,6 +1,6 @@
 // RUN: fir-opt %s | tco | FileCheck %s
 
-// CHECK-LABEL: define i32 @f1(i32 %0, i32 %1)
+// CHECK-LABEL: define{{( (sign|zero)ext)?}} i32 @f1(i32{{( (sign|zero)ext)?}} %0, i32{{( (sign|zero)ext)?}} %1)
 func.func @f1(%a : i32, %b : i32) -> i32 {
 
   // CHECK: %[[reg3:.*]] = add i32 %0, %1
@@ -11,7 +11,7 @@ func.func @f1(%a : i32, %b : i32) -> i32 {
   return %3 : i32
 }
 
-// CHECK-LABEL: define i32 @f2(ptr {{[^%]*}}%0)
+// CHECK-LABEL: define{{( (sign|zero)ext)?}} i32 @f2(ptr {{[^%]*}}%0)
 func.func @f2(%a : !fir.ref<i32>) -> i32 {
   %1 = fir.load %a : !fir.ref<i32>
   // CHECK: %[[r2:.*]] = load

@@ -4567,13 +4567,23 @@ struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
     llvm::StringRef runtimeName =
         useArray ? RTNAME_STRING(ReportFatalUserErrorValueArray)
                  : RTNAME_STRING(ReportFatalUserErrorValues);
+    // The i32 line argument needs an extension if the host C ABI requires it.
+    // Device code in a GPU module does not follow the host ABI.
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    bool extendLine = !mlir::isa<mlir::gpu::GPUModuleOp>(scope) &&
+                      fir::needsI32ParamSignExt(mod);
     mlir::Operation *declaration =
         mlir::SymbolTable::lookupSymbolIn(scope, runtimeName);
     if (declaration) {
       if (auto function = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(declaration)) {
         if (function.getFunctionType() != functionType)
           return op.emitOpError("incompatible runtime function declaration");
-        rewriter.modifyOpInPlace(function, [&] { function.setNoreturn(true); });
+        rewriter.modifyOpInPlace(function, [&] {
+          function.setNoreturn(true);
+          if (extendLine)
+            function.setArgAttr(2, mlir::LLVM::LLVMDialect::getSExtAttrName(),
+                                rewriter.getUnitAttr());
+        });
       } else if (auto function =
                      mlir::dyn_cast<mlir::func::FuncOp>(declaration)) {
         if (function.getNumResults() != 0 ||
@@ -4585,6 +4595,9 @@ struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
             return op.emitOpError("incompatible runtime function declaration");
         rewriter.modifyOpInPlace(function, [&] {
           function->setAttr("llvm.noreturn", rewriter.getUnitAttr());
+          if (extendLine)
+            function.setArgAttr(2, mlir::LLVM::LLVMDialect::getSExtAttrName(),
+                                rewriter.getUnitAttr());
         });
       } else {
         return op.emitOpError("runtime function name conflicts with a symbol");
@@ -4595,6 +4608,9 @@ struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
       auto function = mlir::LLVM::LLVMFuncOp::create(rewriter, loc, runtimeName,
                                                      functionType);
       function.setNoreturn(true);
+      if (extendLine)
+        function.setArgAttr(2, mlir::LLVM::LLVMDialect::getSExtAttrName(),
+                            rewriter.getUnitAttr());
     }
 
     mlir::Block *before = op->getBlock();
@@ -5292,6 +5308,15 @@ public:
         mlir::createConvertMathToLLVMPass());
     if (mlir::failed(runPipeline(mathConversionPM, mod)))
       return signalPassFailure();
+
+    // Make the helpers internal so SystemZ's C-ABI extension check skips them.
+    if (fir::getTargetTriple(mod).isSystemZ())
+      mod.walk([&](mlir::func::FuncOp func) {
+        if (func.isPrivate() && func.getName().starts_with("__mlir_math_"))
+          func->setAttr("llvm.linkage",
+                        mlir::LLVM::LinkageAttr::get(
+                            func.getContext(), mlir::LLVM::Linkage::Internal));
+      });
 
     std::optional<mlir::DataLayout> dl =
         fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);

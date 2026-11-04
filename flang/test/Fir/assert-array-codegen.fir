@@ -2,6 +2,7 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="datalayout=e-p:64:64-p5:32:32-A5" %s | FileCheck %s --check-prefix=PRIVATE
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu datalayout=e-p:32:32" %s | FileCheck %s --check-prefix=COUNT32
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa datalayout=e-p:64:64-p1:64:64-p5:32:32-A5-G1" %s | FileCheck %s --check-prefix=GLOBAL
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=s390x-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SYSZ
 
 // Five values select the array entry. Conversion, allocation and stores must
 // stay on the failure path, and the guarded result survives on success.
@@ -9,7 +10,8 @@ func.func @array_values(%ok: i1, %a: i8, %b: i16, %c: i32, %d: index, %e: i64, %
   %g = fir.assert %ok, bounds, "dimension %lld, position %lld, index %lld, bounds %lld:%lld (100%%)" values(%a, %b, %c, %d, %e : i8, i16, i32, index, i64) guard(%base : !fir.ref<i32>) loc("bounds.f90":17:2)
   return %g : !fir.ref<i32>
 }
-// CHECK: llvm.func @_FortranAReportFatalUserErrorValueArray(!llvm.ptr, !llvm.ptr, i32, i64, !llvm.ptr) attributes {noreturn}
+// CHECK: llvm.func @_FortranAReportFatalUserErrorValueArray(!llvm.ptr, !llvm.ptr, i32{{( \{llvm.signext\})?}}, i64, !llvm.ptr) attributes {noreturn}
+// SYSZ: llvm.func @_FortranAReportFatalUserErrorValueArray(!llvm.ptr, !llvm.ptr, i32 {llvm.signext}, i64, !llvm.ptr) attributes {noreturn}
 // CHECK-LABEL: llvm.func @array_values(
 // CHECK-SAME: %[[OK:.*]]: i1, %[[A:.*]]: i8, %[[B:.*]]: i16, %[[C:.*]]: i32, %[[D:.*]]: i64, %[[E:.*]]: i64, %[[BASE:.*]]: !llvm.ptr)
 // CHECK-NEXT: llvm.cond_br %[[OK]] weights([2000, 1]), ^[[CONT:bb[0-9]+]], ^[[FAIL:bb[0-9]+]]
