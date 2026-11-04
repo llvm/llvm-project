@@ -1231,7 +1231,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         if (ValueData.empty() || TotalCount == 0) {
           Weights = MDB.createLikelyBranchWeights();
         } else {
-          uint64_t TargetGUID = cast<GlobalValue>(TheFn)->getGUIDOrFallback();
+          uint64_t TargetGUID = cast<GlobalValue>(TheFn)->getGUID();
           auto It = llvm::find_if(ValueData, [&](const InstrProfValueData &VD) {
             return VD.Value == TargetGUID;
           });
