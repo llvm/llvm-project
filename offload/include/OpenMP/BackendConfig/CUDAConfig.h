@@ -1,4 +1,4 @@
-//===-- OpenMP/BackendConfig/Host.h - Host constants --*- C++ -*-===//
+//===-- OpenMP/BackendConfig/CUDAConfig.h - CUDA constants ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OMPTARGET_BACKENDCONFIG_HOST_H
-#define OMPTARGET_BACKENDCONFIG_HOST_H
+#ifndef OMPTARGET_BACKENDCONFIG_CUDACONFIG_H
+#define OMPTARGET_BACKENDCONFIG_CUDACONFIG_H
 
 #include "OpenMP/BackendConfig.h"
 
 namespace llvm::omp::target {
 
-/// Constants of the host backend.
-struct HostConfig final : BackendConfig {
-  HostConfig() { RequiresLatestKernelArgVersion = true; }
-};
+/// Constants of the CUDA backend.
+struct CUDAConfig final : BackendConfig {};
 
 } // namespace llvm::omp::target
 
-#endif // OMPTARGET_BACKENDCONFIG_HOST_H
+#endif // OMPTARGET_BACKENDCONFIG_CUDACONFIG_H

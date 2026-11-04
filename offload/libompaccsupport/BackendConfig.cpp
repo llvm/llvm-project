@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpenMP/BackendConfig.h"
-#include "OpenMP/BackendConfig/AMDGPU.h"
-#include "OpenMP/BackendConfig/CUDA.h"
-#include "OpenMP/BackendConfig/Host.h"
-#include "OpenMP/BackendConfig/LevelZero.h"
+#include "OpenMP/BackendConfig/AMDGPUConfig.h"
+#include "OpenMP/BackendConfig/CUDAConfig.h"
+#include "OpenMP/BackendConfig/HostConfig.h"
+#include "OpenMP/BackendConfig/LevelZeroConfig.h"
+
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm::omp::target;
 
@@ -30,7 +32,11 @@ const BackendConfig &BackendConfig::get(ol_platform_backend_t Backend) {
     return Host;
   case OL_PLATFORM_BACKEND_CUDA:
     return CUDA;
-  default:
+  case OL_PLATFORM_BACKEND_UNKNOWN:
     return Default;
+  case OL_PLATFORM_BACKEND_LAST:
+  case OL_PLATFORM_BACKEND_FORCE_UINT32:
+    break;
   }
+  llvm_unreachable("Invalid platform backend");
 }

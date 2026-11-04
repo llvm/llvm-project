@@ -1,4 +1,4 @@
-//===-- OpenMP/BackendConfig/LevelZero.h - Level Zero ---------*- C++ -*-===//
+//===-- OpenMP/BackendConfig/AMDGPUConfig.h - AMDGPU constants --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OMPTARGET_BACKENDCONFIG_LEVELZERO_H
-#define OMPTARGET_BACKENDCONFIG_LEVELZERO_H
+#ifndef OMPTARGET_BACKENDCONFIG_AMDGPUCONFIG_H
+#define OMPTARGET_BACKENDCONFIG_AMDGPUCONFIG_H
 
 #include "OpenMP/BackendConfig.h"
 
 namespace llvm::omp::target {
 
-/// Constants of the Level Zero backend.
-struct LevelZeroConfig final : BackendConfig {};
+/// Constants of the AMDGPU backend.
+struct AMDGPUConfig final : BackendConfig {
+  AMDGPUConfig() { DefaultGenericSPMDTeamsPerCU = 6; }
+};
 
 } // namespace llvm::omp::target
 
-#endif // OMPTARGET_BACKENDCONFIG_LEVELZERO_H
+#endif // OMPTARGET_BACKENDCONFIG_AMDGPUCONFIG_H
