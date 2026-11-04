@@ -2305,6 +2305,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return I;
     }
 
+    const APInt *C1, *C2, *C3;
+    if (match(II, m_c_UMax(m_OneUse(m_Shl(
+                               m_OneUse(m_c_UMax(m_Value(X), m_APInt(C1))),
+                               m_APInt(C2))),
+                           m_APInt(C3)))) {
+      if (C2->ult(C1->getBitWidth())) {
+        bool overflow;
+        APInt shiftedC1 = C1->ushl_ov(*C2, overflow);
+
+        if (!overflow && C3->uge(shiftedC1)) {
+          Value *NewShl =
+              Builder.CreateShl(X, ConstantInt::get(II->getType(), *C2));
+          Value *NewMax = Builder.CreateBinaryIntrinsic(
+              Intrinsic::umax, NewShl, ConstantInt::get(II->getType(), *C3));
+          return replaceInstUsesWith(*II, NewMax);
+        }
+      }
+    }
+
     // If both operands of unsigned min/max are sign-extended, it is still ok
     // to narrow the operation.
     [[fallthrough]];
@@ -2525,6 +2544,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (Value *V = foldIntrinsicUsingDistributiveLaws(II, Builder))
       return replaceInstUsesWith(*II, V);
+
+    if (IID == Intrinsic::smax) {
+      const APInt *C1, *C2, *C3;
+
+      if (match(II, m_c_SMax(m_OneUse(m_Shl(
+                                 m_OneUse(m_c_SMax(m_Value(X), m_APInt(C1))),
+                                 m_APInt(C2))),
+                             m_APInt(C3)))) {
+        if (C2->ult(C1->getBitWidth())) {
+          bool Overflow = false;
+          APInt ShiftedC1 = C1->sshl_ov(*C2, Overflow);
+
+          if (!Overflow && C3->sge(ShiftedC1) &&
+              C2->ult(ComputeNumSignBits(X, II))) {
+            Value *NewShl =
+                Builder.CreateShl(X, ConstantInt::get(II->getType(), *C2));
+            Value *NewMax = Builder.CreateBinaryIntrinsic(
+                Intrinsic::smax, NewShl, ConstantInt::get(II->getType(), *C3));
+            return replaceInstUsesWith(*II, NewMax);
+          }
+        }
+      }
+    }
 
     break;
   }
