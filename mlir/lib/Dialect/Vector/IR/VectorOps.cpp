@@ -7180,30 +7180,38 @@ public:
       // `staticStride * (vscale ^ scalableDims)`, so we check both the static
       // stride product and the count of trailing scalable dimensions.
       VectorType broadcastVectorType = broadcastOp.getResultVectorType();
+      int64_t srcRank = srcVectorType.getRank();
+      int64_t bcastRank = broadcastVectorType.getRank();
+      int64_t dstRank = dstVectorType.getRank();
+      ArrayRef<int64_t> srcShape = srcVectorType.getShape();
+      ArrayRef<int64_t> bcastShape = broadcastVectorType.getShape();
+      ArrayRef<int64_t> dstShape = dstVectorType.getShape();
+      ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
+      ArrayRef<bool> bcastScalable = broadcastVectorType.getScalableDims();
+      ArrayRef<bool> dstScalable = dstVectorType.getScalableDims();
 
       // Iterate from the innermost (trailing) dimension outward, aligning each
       // `src` dimension with the corresponding trailing dimension of
       // `broadcast` and `dst`.
       int64_t bcastStride = 1, dstStride = 1;
       int64_t bcastScalableDims = 0, dstScalableDims = 0;
-      for (int64_t i = 0, e = srcVectorType.getRank(); i < e; ++i) {
-        int64_t srcDim = e - 1 - i;
-        int64_t bcastDim = broadcastVectorType.getRank() - 1 - i;
-        int64_t dstDim = dstVectorType.getRank() - 1 - i;
+      for (int64_t i = 0; i < srcRank; ++i) {
+        int64_t srcDim = srcRank - 1 - i;
+        int64_t bcastDim = bcastRank - 1 - i;
+        int64_t dstDim = dstRank - 1 - i;
 
         // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
         // not unit) always have index 0, so their stride is irrelevant.
-        bool isUnitDim = srcVectorType.getDimSize(srcDim) == 1 &&
-                         !srcVectorType.getScalableDims()[srcDim];
+        bool isUnitDim = srcShape[srcDim] == 1 && !srcScalable[srcDim];
         if (!isUnitDim && (bcastStride != dstStride ||
                            bcastScalableDims != dstScalableDims)) {
           return failure();
         }
 
-        bcastStride *= broadcastVectorType.getDimSize(bcastDim);
-        dstStride *= dstVectorType.getDimSize(dstDim);
-        bcastScalableDims += broadcastVectorType.getScalableDims()[bcastDim];
-        dstScalableDims += dstVectorType.getScalableDims()[dstDim];
+        bcastStride *= bcastShape[bcastDim];
+        dstStride *= dstShape[dstDim];
+        bcastScalableDims += bcastScalable[bcastDim];
+        dstScalableDims += dstScalable[dstDim];
       }
     }
 
