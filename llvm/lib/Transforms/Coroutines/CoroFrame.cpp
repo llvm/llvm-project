@@ -943,14 +943,13 @@ static Type *extractByvalIfArgument(Value *MaybeArgument) {
 static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
                                  Type *ByValTy, const coro::Shape &Shape,
                                  const FrameDataInfo &FrameData) {
-  LLVMContext &Ctx = Shape.CoroBegin->getContext();
   uint64_t Offset = FrameData.getOffset(Def);
 
   Value *G = Shape.FramePtr;
   if (Offset != 0) {
-    auto *OffsetVal = ConstantInt::get(Type::getInt64Ty(Ctx), Offset);
-    G = Builder.CreateInBoundsPtrAdd(G, OffsetVal,
-                                     Def->getName() + Twine(".spill.addr"));
+    G = Builder.CreatePtrAddWithUnsignedOffset(
+        G, Offset, Def->getName() + Twine(".spill.addr"),
+        GEPNoWrapFlags::inBounds());
   }
   auto SpillAlignment = Align(FrameData.getAlign(Def));
 
@@ -970,10 +969,9 @@ static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
 static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
                                       IRBuilder<> &Builder, coro::Shape &Shape,
                                       Value *Orig) {
-  LLVMContext &Ctx = Shape.CoroBegin->getContext();
   uint64_t Offset = FrameData.getOffset(Orig);
-  auto *OffsetVal = ConstantInt::get(Type::getInt64Ty(Ctx), Offset);
-  Value *Ptr = Builder.CreateInBoundsPtrAdd(Shape.FramePtr, OffsetVal);
+  Value *Ptr = Builder.CreatePtrAddWithUnsignedOffset(
+      Shape.FramePtr, Offset, "", GEPNoWrapFlags::inBounds());
 
   if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
     if (FrameData.getDynamicAlign(Orig) != 0) {
