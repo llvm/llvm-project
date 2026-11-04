@@ -2584,6 +2584,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);
 
+    KnownBits Known = computeKnownBits(IIOperand, II);
+    uint64_t LZ = alignDown(Known.countMinLeadingZeros(), 8);
+    uint64_t TZ = alignDown(Known.countMinTrailingZeros(), 8);
+    unsigned BW = Known.getBitWidth();
+
+    // bswap(x) -> shift(x) if x has exactly one "active byte"
+    if (BW - LZ - TZ == 8) {
+      assert(LZ != TZ && "active byte cannot be in the middle");
+      if (LZ > TZ) // -> shl(x) if the "active byte" is in the low part of x
+        return BinaryOperator::CreateNUWShl(
+            IIOperand, ConstantInt::get(IIOperand->getType(), LZ - TZ));
+      // -> lshr(x) if the "active byte" is in the high part of x
+      return BinaryOperator::CreateExactLShr(
+          IIOperand, ConstantInt::get(IIOperand->getType(), TZ - LZ));
+    }
+
     // Try to canonicalize bswap-of-logical-shift-by-8-bit-multiple as
     // inverse-shift-of-bswap:
     // bswap (shl X, Y) --> lshr (bswap X), Y
@@ -2599,22 +2615,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                 : Instruction::Shl;
         return BinaryOperator::Create(InverseShift, NewSwap, Y);
       }
-    }
-
-    KnownBits Known = computeKnownBits(IIOperand, II);
-    uint64_t LZ = alignDown(Known.countMinLeadingZeros(), 8);
-    uint64_t TZ = alignDown(Known.countMinTrailingZeros(), 8);
-    unsigned BW = Known.getBitWidth();
-
-    // bswap(x) -> shift(x) if x has exactly one "active byte"
-    if (BW - LZ - TZ == 8) {
-      assert(LZ != TZ && "active byte cannot be in the middle");
-      if (LZ > TZ)  // -> shl(x) if the "active byte" is in the low part of x
-        return BinaryOperator::CreateNUWShl(
-            IIOperand, ConstantInt::get(IIOperand->getType(), LZ - TZ));
-      // -> lshr(x) if the "active byte" is in the high part of x
-      return BinaryOperator::CreateExactLShr(
-            IIOperand, ConstantInt::get(IIOperand->getType(), TZ - LZ));
     }
 
     // bswap(trunc(bswap(x))) -> trunc(lshr(x, c))

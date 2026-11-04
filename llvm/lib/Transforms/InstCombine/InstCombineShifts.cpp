@@ -585,7 +585,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
 
   // We need constant scalar or constant splat shifts.
   const APInt *InnerShiftConst;
-  if (!match(InnerShift->getOperand(1), m_APInt(InnerShiftConst)))
+  if (!match(InnerShift->getOperand(1), m_APIntAllowPoison(InnerShiftConst)))
     return false;
 
   // Two logical shifts in the same direction:
@@ -735,12 +735,14 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
 
   // We only accept shifts-by-a-constant in canEvaluateShifted().
   const APInt *C1;
-  match(InnerShift->getOperand(1), m_APInt(C1));
+  match(InnerShift->getOperand(1), m_APIntAllowPoison(C1));
   unsigned InnerShAmt = C1->getZExtValue();
 
   // Change the shift amount and clear the appropriate IR flags.
   auto NewInnerShift = [&](unsigned ShAmt) {
-    InnerShift->setOperand(1, ConstantInt::get(ShType, ShAmt));
+    InnerShift->setOperand(1, Constant::mergeUndefsWith(
+                                  ConstantInt::get(ShType, ShAmt),
+                                  cast<Constant>(InnerShift->getOperand(1))));
     if (IsInnerShl) {
       InnerShift->setHasNoUnsignedWrap(false);
       InnerShift->setHasNoSignedWrap(false);
@@ -778,8 +780,10 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
     APInt Mask = IsInnerShl
                      ? APInt::getLowBitsSet(TypeWidth, TypeWidth - OuterShAmt)
                      : APInt::getHighBitsSet(TypeWidth, TypeWidth - OuterShAmt);
-    Value *And = Builder.CreateAnd(InnerShift->getOperand(0),
-                                   ConstantInt::get(ShType, Mask));
+    Constant *MaskC =
+        Constant::mergeUndefsWith(ConstantInt::get(ShType, Mask),
+                                  cast<Constant>(InnerShift->getOperand(1)));
+    Value *And = Builder.CreateAnd(InnerShift->getOperand(0), MaskC);
     if (auto *AndI = dyn_cast<Instruction>(And)) {
       AndI->moveBefore(InnerShift->getIterator());
       AndI->takeName(InnerShift);

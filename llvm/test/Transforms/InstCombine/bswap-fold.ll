@@ -869,11 +869,9 @@ define <2 x i64> @bs_active_high_different_negative(<2 x i64> %0) {
   ret <2 x i64> %3
 }
 
-; TODO: This should fold to 'and'.
 define <2 x i64> @bs_active_high_poison(<2 x i64> %0) {
 ; CHECK-LABEL: @bs_active_high_poison(
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[TMP0:%.*]])
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], <i64 56, i64 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP0:%.*]], <i64 255, i64 undef>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %2 = shl <2 x i64> %0, <i64 56, i64 poison>
@@ -962,6 +960,16 @@ define i16 @bs_active_low1(i16 %0) {
   %2 = lshr i16 %0, 15
   %3 = call i16 @llvm.bswap.i16(i16 %2)
   ret i16 %3
+}
+
+define <2 x i16> @bs_active_low8_poison(<2 x i16> %x) {
+; CHECK-LABEL: @bs_active_low8_poison(
+; CHECK-NEXT:    [[SH:%.*]] = and <2 x i16> [[X:%.*]], <i16 -256, i16 undef>
+; CHECK-NEXT:    ret <2 x i16> [[SH]]
+;
+  %sh = lshr <2 x i16> %x, <i16 8, i16 poison>
+  %bs = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %sh)
+  ret <2 x i16> %bs
 }
 
 define <2 x i32> @bs_active_low8(<2 x i32> %0) {

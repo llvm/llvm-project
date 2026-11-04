@@ -546,3 +546,59 @@ define <2 x i64> @lshr_sub_poison(<2 x i64> %x, <2 x i64> %py) {
   %sh1 = lshr <2 x i64> %r, <i64 7, i64 poison>
   ret <2 x i64> %sh1
 }
+
+define <2 x i8> @shl_shl_inner_poison(<2 x i8> %x) {
+; CHECK-LABEL: @shl_shl_inner_poison(
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 undef>
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %a = shl nuw nsw <2 x i8> %x, <i8 1, i8 poison>
+  %r = shl <2 x i8> %a, splat (i8 2)
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @shl_lshr_inner_poison(<2 x i8> %x) {
+; CHECK-LABEL: @shl_lshr_inner_poison(
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[X:%.*]], <i8 -2, i8 undef>
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %a = lshr <2 x i8> %x, <i8 1, i8 poison>
+  %r = shl <2 x i8> %a, splat (i8 1)
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_shl_inner_poison(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_shl_inner_poison(
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[X:%.*]], <i8 127, i8 undef>
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %a = shl <2 x i8> %x, <i8 1, i8 poison>
+  %r = lshr <2 x i8> %a, splat (i8 1)
+  ret <2 x i8> %r
+}
+
+; Known zero high bits permit reducing unequal shifts in opposite directions.
+define <2 x i8> @lshr_shl_inner_poison_unequal(<2 x i4> %x) {
+; CHECK-LABEL: @lshr_shl_inner_poison_unequal(
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i4> [[X:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[EXT]], <i8 1, i8 undef>
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %ext = zext <2 x i4> %x to <2 x i8>
+  %a = shl nuw nsw <2 x i8> %ext, <i8 3, i8 poison>
+  %r = lshr <2 x i8> %a, splat (i8 2)
+  ret <2 x i8> %r
+}
+
+; Known zero low bits permit reducing unequal shifts and dropping exact.
+define <2 x i8> @shl_lshr_inner_poison_unequal(<2 x i8> %x) {
+; CHECK-LABEL: @shl_lshr_inner_poison_unequal(
+; CHECK-NEXT:    [[V:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -4)
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[V]], <i8 1, i8 undef>
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %v = and <2 x i8> %x, splat (i8 -4)
+  %a = lshr exact <2 x i8> %v, <i8 2, i8 poison>
+  %r = shl <2 x i8> %a, splat (i8 1)
+  ret <2 x i8> %r
+}
