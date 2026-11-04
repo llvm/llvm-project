@@ -1359,6 +1359,12 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     return;
   }
 
+  // No support for PPCDoubleDouble.
+  if (DstTy.getScalarType().isPPCF128()) {
+    Known.resetAll();
+    return;
+  }
+
   if (auto Cst = GFConstant::getConstant(R, MRI)) {
     switch (Cst->getKind()) {
     case GFConstant::GFConstantKind::Scalar: {

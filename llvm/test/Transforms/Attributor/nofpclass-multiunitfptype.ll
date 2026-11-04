@@ -9,9 +9,9 @@ declare ppc_fp128 @llvm.log10.ppcf128(ppc_fp128)
 ; exact value of 1.0 +/- subnormal, and log(1.0 +/- subnormal) may be zero or
 ; subnormal.
 define ppc_fp128 @ret_log_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %arg) {
-; CHECK-LABEL: define nofpclass(nan inf) ppc_fp128 @ret_log_ppcf128(
+; CHECK-LABEL: define ppc_fp128 @ret_log_ppcf128(
 ; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.log.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.log.ppcf128(ppc_fp128 %arg)
@@ -23,9 +23,9 @@ define ppc_fp128 @ret_log_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %a
 ; out negative zero (although this is likely too risky to implement). This test
 ; watches for such a change.
 define ppc_fp128 @ret_log2_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %arg) {
-; CHECK-LABEL: define nofpclass(nan inf) ppc_fp128 @ret_log2_ppcf128(
+; CHECK-LABEL: define ppc_fp128 @ret_log2_ppcf128(
 ; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log2.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.log2.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.log2.ppcf128(ppc_fp128 %arg)
@@ -34,9 +34,9 @@ define ppc_fp128 @ret_log2_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %
 
 ; |log10(x)| < |log(x)|
 define ppc_fp128 @ret_log10_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %arg) {
-; CHECK-LABEL: define nofpclass(nan inf) ppc_fp128 @ret_log10_ppcf128(
+; CHECK-LABEL: define ppc_fp128 @ret_log10_ppcf128(
 ; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log10.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.log10.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.log10.ppcf128(ppc_fp128 %arg)
@@ -52,7 +52,7 @@ define ppc_fp128 @ret_poison_ppcf128() {
 }
 
 define ppc_fp128 @ret_zero_ppcf128() {
-; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) ppc_fp128 @ret_zero_ppcf128(
+; CHECK-LABEL: define noundef ppc_fp128 @ret_zero_ppcf128(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret ppc_fp128 0.000000e+00
 ;
@@ -60,7 +60,7 @@ define ppc_fp128 @ret_zero_ppcf128() {
 }
 
 define ppc_fp128 @ret_pos_one_ppcf128() {
-; CHECK-LABEL: define noundef nofpclass(nan inf zero sub nnorm) ppc_fp128 @ret_pos_one_ppcf128(
+; CHECK-LABEL: define noundef ppc_fp128 @ret_pos_one_ppcf128(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret ppc_fp128 1.000000e+00
 ;
@@ -76,7 +76,7 @@ define <2 x ppc_fp128> @ret_poison_v2ppcf128() {
 }
 
 define <2 x ppc_fp128> @ret_zero_v2ppcf128() {
-; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) <2 x ppc_fp128> @ret_zero_v2ppcf128(
+; CHECK-LABEL: define noundef <2 x ppc_fp128> @ret_zero_v2ppcf128(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret <2 x ppc_fp128> zeroinitializer
 ;
@@ -84,7 +84,7 @@ define <2 x ppc_fp128> @ret_zero_v2ppcf128() {
 }
 
 define <2 x ppc_fp128> @ret_pos_one_v2ppcf128() {
-; CHECK-LABEL: define noundef nofpclass(nan inf zero sub nnorm) <2 x ppc_fp128> @ret_pos_one_v2ppcf128(
+; CHECK-LABEL: define noundef <2 x ppc_fp128> @ret_pos_one_v2ppcf128(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret <2 x ppc_fp128> splat (ppc_fp128 1.000000e+00)
 ;
@@ -92,7 +92,7 @@ define <2 x ppc_fp128> @ret_pos_one_v2ppcf128() {
 }
 
 define <2 x ppc_fp128> @ret_pos_one_two_v2ppcf128() {
-; CHECK-LABEL: define noundef nofpclass(nan inf zero sub nnorm) <2 x ppc_fp128> @ret_pos_one_two_v2ppcf128(
+; CHECK-LABEL: define noundef <2 x ppc_fp128> @ret_pos_one_two_v2ppcf128(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    ret <2 x ppc_fp128> <ppc_fp128 1.000000e+00, ppc_fp128 2.000000e+00>
 ;

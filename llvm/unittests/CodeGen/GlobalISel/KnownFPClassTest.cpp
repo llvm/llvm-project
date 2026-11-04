@@ -103,7 +103,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFLogPPCF128) {
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegative | fcPositive, Known.getKnownFPClasses());
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
@@ -121,8 +121,8 @@ TEST_F(AArch64GISelMITest, TestFPClassPPCF128TruncNoInf) {
   auto Trunc = B.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC, {Ty}, {NoInf});
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(Trunc.getReg(0));
-  EXPECT_TRUE(Known.isKnownNeverPosInfinity());
-  EXPECT_TRUE(Known.isKnownNeverNegInfinity());
+  EXPECT_FALSE(Known.isKnownNeverPosInfinity());
+  EXPECT_FALSE(Known.isKnownNeverNegInfinity());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassPPCF128FloorNoInf) {
@@ -137,7 +137,7 @@ TEST_F(AArch64GISelMITest, TestFPClassPPCF128FloorNoInf) {
   auto Floor = B.buildInstr(TargetOpcode::G_FFLOOR, {Ty}, {NoInf});
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(Floor.getReg(0));
-  EXPECT_TRUE(Known.isKnownNeverPosInfinity());
+  EXPECT_FALSE(Known.isKnownNeverPosInfinity());
   EXPECT_FALSE(Known.isKnownNeverNegInfinity());
 }
 
@@ -154,5 +154,5 @@ TEST_F(AArch64GISelMITest, TestFPClassPPCF128CeilNoInf) {
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(Ceil.getReg(0));
   EXPECT_FALSE(Known.isKnownNeverPosInfinity());
-  EXPECT_TRUE(Known.isKnownNeverNegInfinity());
+  EXPECT_FALSE(Known.isKnownNeverNegInfinity());
 }

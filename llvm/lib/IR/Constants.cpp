@@ -1991,6 +1991,10 @@ ConstantRange Constant::toConstantRange() const {
 }
 
 ConstantFPRange Constant::toConstantFPRange() const {
+  // No support for PPCDoubleDouble.
+  assert(!getType()->getScalarType()->isMultiUnitFPType() &&
+         "Unsupported FP type");
+
   if (auto *CFP = dyn_cast<ConstantFP>(this))
     return ConstantFPRange(CFP->getValue());
 
