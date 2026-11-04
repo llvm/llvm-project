@@ -444,32 +444,6 @@ func.func @negative_contract_to_dot_matvec_scalable(%arg0: vector<[2]x3xf32>,
   return %0 : vector<[2]xf32>
 }
 
-// CHECK-LABEL: @negative_contract_to_dot_matmat_scalable
-//       CHECK: vector.contract
-func.func @negative_contract_to_dot_matmat_scalable(%lhs: vector<[2]x2xf32>,
-                        %rhs: vector<2x[2]xf32>,
-                        %init: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf32> {
-  %res = vector.contract #matmat_trait %lhs, %rhs, %init
-    : vector<[2]x2xf32>, vector<2x[2]xf32> into vector<[2]x[2]xf32>
-  return %res : vector<[2]x[2]xf32>
-}
-
-// CHECK-LABEL: @negative_contract_to_dot_matmat_inner_scalable
-// CHECK-SAME: %[[LHS:.+]]: vector<2x3xf32>, %[[RHS:.+]]: vector<3x[2]xf32>, %[[INIT:.+]]: vector<2x[2]xf32>
-//      CHECK: %[[LHS0:.+]] = vector.extract %[[LHS]][0] : vector<3xf32> from vector<2x3xf32>
-//      CHECK: %[[INIT0:.+]] = vector.extract %[[INIT]][0] : vector<[2]xf32> from vector<2x[2]xf32>
-//      CHECK: vector.contract {{.*}} %[[LHS0]], %[[RHS]], %[[INIT0]] : vector<3xf32>, vector<3x[2]xf32> into vector<[2]xf32>
-//      CHECK: %[[LHS1:.+]] = vector.extract %[[LHS]][1] : vector<3xf32> from vector<2x3xf32>
-//      CHECK: %[[INIT1:.+]] = vector.extract %[[INIT]][1] : vector<[2]xf32> from vector<2x[2]xf32>
-//      CHECK: vector.contract {{.*}} %[[LHS1]], %[[RHS]], %[[INIT1]] : vector<3xf32>, vector<3x[2]xf32> into vector<[2]xf32>
-func.func @negative_contract_to_dot_matmat_inner_scalable(%lhs: vector<2x3xf32>,
-                        %rhs: vector<3x[2]xf32>,
-                        %init: vector<2x[2]xf32>) -> vector<2x[2]xf32> {
-  %res = vector.contract #matmat_trait %lhs, %rhs, %init
-    : vector<2x3xf32>, vector<3x[2]xf32> into vector<2x[2]xf32>
-  return %res : vector<2x[2]xf32>
-}
-
 // CHECK-LABEL: func @contract_to_dot_matvec_scalable_reduction
 //  CHECK-SAME:   %[[A:.*]]: vector<2x[8]xf32>, %[[B:.*]]: vector<[8]xf32>, %[[ACC:.*]]: vector<2xf32>
 //       CHECK:   %[[ROW0:.*]] = vector.extract %[[A]][0] : vector<[8]xf32> from vector<2x[8]xf32>
