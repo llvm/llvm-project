@@ -70,14 +70,13 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                         ISD::ArgFlagsTy Flags = {}) override {
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-    bool isPhyRegSGPR = TRI->isSGPRReg(MRI, PhysReg);
 
     Register ExtReg = extendRegisterMin32(*this, ValVReg, VA, TRI);
 
     // If this is a scalar return, insert a readfirstlane just in case the value
     // ends up in a VGPR.
     // FIXME: Assert this is a shader return.
-    if (isPhyRegSGPR) {
+    if (TRI->isSGPRReg(MRI, PhysReg)) {
       LLT Ty = MRI.getType(ExtReg);
       LLT I32 = LLT::integer(32);
       if (Ty != I32 && Ty != LLT::float32()) {
