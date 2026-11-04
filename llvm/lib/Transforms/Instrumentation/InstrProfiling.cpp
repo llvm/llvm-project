@@ -188,6 +188,9 @@ private:
   /// If runtime relocation is enabled, this maps functions to the load
   /// instruction that produces the profile relocation bias.
   DenseMap<const Function *, LoadInst *> FunctionToProfileBiasMap;
+  /// If -instrprof-counter-scale-var is set, this maps functions to the load
+  /// of the counter increment scale.
+  DenseMap<const Function *, LoadInst *> FunctionToCounterScaleMap;
   std::vector<GlobalValue *> CompilerUsedVars;
   std::vector<GlobalValue *> UsedVars;
   std::vector<GlobalVariable *> ReferencedNames;
@@ -265,6 +268,9 @@ private:
   /// Compute the address of the counter value that this profiling instruction
   /// acts on.
   Value *getCounterAddress(InstrProfCntrInstBase *I);
+
+  /// Get the counter increment scale for \p F, loaded once in its entry block.
+  Value *getCounterScale(Function *F);
 
   /// Lower the incremental instructions under profile sampling predicates.
   void doSampling(Instruction *I);
@@ -1126,6 +1132,27 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   return Builder.CreateIntToPtr(Add, Addr->getType());
 }
 
+Value *InstrLowerer::getCounterScale(Function *F) {
+  LoadInst *&ScaleLI = FunctionToCounterScaleMap[F];
+  if (ScaleLI)
+    return ScaleLI;
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+  StringRef Name = Opts.instrprof_counter_scale_var;
+  GlobalVariable *Scale = M.getGlobalVariable(Name);
+  if (!Scale)
+    Scale = new GlobalVariable(M, Int64Ty, /*isConstant=*/false,
+                               GlobalValue::ExternalLinkage, nullptr, Name,
+                               nullptr, GlobalValue::GeneralDynamicTLSModel);
+  IRBuilder<> EntryBuilder(&F->getEntryBlock().front());
+  Value *Addr = Scale;
+  if (Scale->isThreadLocal())
+    Addr = EntryBuilder.CreateThreadLocalAddress(Scale);
+  // Read once per function: a thread is expected to set its scale before it
+  // runs the code whose counts it wants to weight.
+  ScaleLI = EntryBuilder.CreateLoad(Int64Ty, Addr, "pgocount.scale");
+  return ScaleLI;
+}
+
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
   if (!isRuntimeCounterRelocationEnabled())
@@ -1296,16 +1323,23 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   }
 
   auto *Addr = getCounterAddress(Inc);
+  Value *IncStep = Inc->getStep();
+  if (!Opts.instrprof_counter_scale_var.empty()) {
+    Value *Scale = getCounterScale(Inc->getFunction());
+    auto *One = dyn_cast<ConstantInt>(IncStep);
+    IncStep = One && One->isOne()
+                  ? Scale
+                  : Builder.CreateMul(IncStep, Scale, "pgocount.step");
+  }
   // If promotion is enabled then delay generating atomic updates until
   // after promotion is done.
   if ((!isCounterPromotionEnabled() && isAtomic()) ||
       (Inc->getIndex()->isNullValue() && Opts.atomic_first_counter)) {
-    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
-                            MaybeAlign(), AtomicOrdering::Monotonic);
+    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, IncStep, MaybeAlign(),
+                            AtomicOrdering::Monotonic);
   } else {
-    Value *IncStep = Inc->getStep();
     Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
-    auto *Count = Builder.CreateAdd(Load, Inc->getStep());
+    auto *Count = Builder.CreateAdd(Load, IncStep);
     auto *Store = Builder.CreateStore(Count, Addr);
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
