@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -20689,6 +20690,28 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       // Result is the data operand's value from some lane.
       VT.computeKnownBitsImpl(MI->getOperand(2).getReg(), Known, DemandedElts,
                               Depth + 1);
+      break;
+    }
+    case Intrinsic::amdgcn_mul_u24:
+    case Intrinsic::amdgcn_mul_i24: {
+      Register LHS = MI->getOperand(2).getReg();
+      Register RHS = MI->getOperand(3).getReg();
+
+      KnownBits RHSKnown;
+      VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
+      if (RHSKnown.isUnknown())
+        break;
+
+      KnownBits LHSKnown;
+      VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
+      if (LHSKnown.isUnknown())
+        break;
+
+      bool SelfMultiply =
+          LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+      Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
+                                       IID == Intrinsic::amdgcn_mul_i24,
+                                       SelfMultiply);
       break;
     }
     }
