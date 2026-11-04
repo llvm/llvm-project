@@ -309,6 +309,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to Vectorizers
 
+* Fixed unreachable block in switch statements without a default case preventing
+  vectorization.
+
 ### Changes to the AArch64 Backend
 
 * Added support for C2-Pro and C2-Ultra CPUs.

@@ -8916,6 +8916,12 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
           continue;
       }
 
+    // If the only exit-case successors of the block for a switch are
+    // unreachable, we can ignore this exit.
+    if (isa<SwitchInst>(ExitBB->getTerminator()) &&
+        onlyUnreachableSuccessors(ExitBB, L))
+      continue;
+
     ExitLimit EL = computeExitLimit(L, ExitBB, IsOnlyExit, AllowPredicates);
 
     assert((AllowPredicates || EL.Predicates.empty()) &&
@@ -14296,6 +14302,14 @@ ScalarEvolution::getLoopDisposition(const SCEV *S, const Loop *L) {
     }
   }
   return D;
+}
+
+bool llvm::onlyUnreachableSuccessors(const BasicBlock *BB, const Loop *L) {
+  for (const BasicBlock *Succ : successors(BB))
+    if (!L->contains(Succ) && (!isa<UnreachableInst>(Succ->getTerminator()) ||
+                               &Succ->front() != Succ->getTerminator()))
+      return false;
+  return true;
 }
 
 ScalarEvolution::LoopDisposition

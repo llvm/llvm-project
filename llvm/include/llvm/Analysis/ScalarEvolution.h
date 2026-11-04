@@ -199,6 +199,10 @@ template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
 
 using SCEVUse = SCEVUseT<const SCEV *>;
 
+/// Returns true if every successor of \p BB outside \p L only contains
+/// `unreachable`.
+LLVM_ABI bool onlyUnreachableSuccessors(const BasicBlock *BB, const Loop *L);
+
 /// The no-wrap flags to apply when creating a SCEV expression, to the
 /// expression and use respectively.
 struct SCEVFlagsPair {
