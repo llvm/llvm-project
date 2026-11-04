@@ -968,7 +968,7 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   bool NeedsDeallocframe = true;
   unsigned PrevOpc = 0;
   if (!MBB.empty() && InsertPt != MBB.begin()) {
-    MachineBasicBlock::iterator PrevIt = std::prev(InsertPt);
+    MachineBasicBlock::iterator PrevIt = prev_nodbg(InsertPt, MBB.begin());
     PrevOpc = PrevIt->getOpcode();
     if (PrevOpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4 ||
         PrevOpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC ||
