@@ -2025,8 +2025,17 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
     return nullptr;
   }
 
-  if (auto *NewCI = dyn_cast_or_null<Instruction>(NewCall))
+  if (auto *NewCI = dyn_cast_or_null<CallInst>(NewCall)) {
     NewCI->copyMetadata(*CI);
+    for (Attribute::AttrKind AK : {Attribute::AllocKind, Attribute::AllocSize})
+      if (Attribute A = CI->getFnAttr(AK); A.isValid())
+        NewCI->addFnAttr(A);
+    if (Attribute A = CI->getFnAttr("alloc-family"); A.isValid())
+      NewCI->addFnAttr(A);
+    for (unsigned I = 0; I < CI->arg_size(); ++I)
+      if (CI->paramHasAttr(I, Attribute::AllocAlign))
+        NewCI->addParamAttr(I, Attribute::AllocAlign);
+  }
 
   return NewCall;
 }
