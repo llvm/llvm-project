@@ -9,22 +9,24 @@
 ; END.
 
 ; Integer and floating-point values live in the same registers, so a bitcast
-; between legal types is a no-op. A bitcast that involves a legalized type, such
-; as a vector of i8, or i16 and <2 x i16> without 16-bit instructions, keeps its
-; cost.
+; between legal types, or between scalars legalized to types of the same size,
+; is a no-op. A bitcast that involves a legalized vector, such as a vector of i8,
+; or <2 x i16> without 16-bit instructions, keeps its cost.
 
 define void @scalar() {
 ;
 ;
 ; NO16BIT-LABEL: 'scalar'
-; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16toF16 = bitcast i16 poison to half
-; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16toI16 = bitcast half poison to i16
-; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16toBF16 = bitcast i16 poison to bfloat
-; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %BF16toI16 = bitcast bfloat poison to i16
+; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I16toF16 = bitcast i16 poison to half
+; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F16toI16 = bitcast half poison to i16
+; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I16toBF16 = bitcast i16 poison to bfloat
+; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %BF16toI16 = bitcast bfloat poison to i16
 ; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I32toF32 = bitcast i32 poison to float
 ; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F32toI32 = bitcast float poison to i32
 ; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toF64 = bitcast i64 poison to double
 ; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toI64 = bitcast double poison to i64
+; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I128toF128 = bitcast i128 poison to fp128
+; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F128toI128 = bitcast fp128 poison to i128
 ; NO16BIT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-LABEL: 'scalar'
@@ -36,6 +38,8 @@ define void @scalar() {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F32toI32 = bitcast float poison to i32
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toF64 = bitcast i64 poison to double
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toI64 = bitcast double poison to i64
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I128toF128 = bitcast i128 poison to fp128
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F128toI128 = bitcast fp128 poison to i128
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'scalar'
@@ -47,6 +51,8 @@ define void @scalar() {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F32toI32 = bitcast float poison to i32
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64toF64 = bitcast i64 poison to double
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F64toI64 = bitcast double poison to i64
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I128toF128 = bitcast i128 poison to fp128
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F128toI128 = bitcast fp128 poison to i128
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I16toF16 = bitcast i16 poison to half
@@ -57,6 +63,8 @@ define void @scalar() {
   %F32toI32 = bitcast float poison to i32
   %I64toF64 = bitcast i64 poison to double
   %F64toI64 = bitcast double poison to i64
+  %I128toF128 = bitcast i128 poison to fp128
+  %F128toI128 = bitcast fp128 poison to i128
   ret void
 }
 
