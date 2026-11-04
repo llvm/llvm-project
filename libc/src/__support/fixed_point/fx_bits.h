@@ -428,12 +428,17 @@ mulifx(IntType n, FXType m) {
                 2 * F <= cpp::numeric_limits<CalcType>::digits);
 
   CompType m_comp = static_cast<CompType>(FXBits(m).get_bits());
-  bool is_negative = (n < 0) != (m_comp < 0);
-
-  CalcType n_mag =
-      (n < 0) ? -static_cast<CalcType>(n) : static_cast<CalcType>(n);
-  CalcType m_mag = (m_comp < 0) ? -static_cast<CalcType>(m_comp)
-                                : static_cast<CalcType>(m_comp);
+  bool is_negative = false;
+  CalcType n_mag, m_mag;
+  if constexpr (FXRep::SIGN_LEN > 0) {
+    is_negative = (n < 0) != (m_comp < 0);
+    n_mag = (n < 0) ? -static_cast<CalcType>(n) : static_cast<CalcType>(n);
+    m_mag = (m_comp < 0) ? -static_cast<CalcType>(m_comp)
+                         : static_cast<CalcType>(m_comp);
+  } else {
+    n_mag = static_cast<CalcType>(n);
+    m_mag = static_cast<CalcType>(m_comp);
+  }
 
   constexpr CalcType LOW_MASK = mask_trailing_ones<CalcType, F>();
   CalcType n_hi = n_mag >> F;
@@ -442,7 +447,10 @@ mulifx(IntType n, FXType m) {
   CalcType m_lo = m_mag & LOW_MASK;
 
   CalcType result = m_hi * n_mag + n_hi * m_lo + ((n_lo * m_lo) >> F);
-  return static_cast<IntType>(is_negative ? -result : result);
+  if constexpr (FXRep::SIGN_LEN > 0)
+    result = is_negative ? -result : result;
+
+  return static_cast<IntType>(result);
 }
 
 } // namespace fixed_point
