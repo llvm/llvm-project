@@ -322,6 +322,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexpf80
     libc.src.math.scalblnf80
     libc.src.math.scalbnf80
+    libc.src.math.modff80
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.cbrtbf16

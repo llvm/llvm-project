@@ -2268,6 +2268,16 @@ add_header_library(
 )
 
 add_header_library(
+  modff80
+  HDRS
+    modff80.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
   modfl
   HDRS
     modfl.h

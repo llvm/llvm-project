@@ -86,6 +86,7 @@ else()
       libc.src.__support.math.logbf80
       libc.src.__support.math.ldexpf80
       libc.src.__support.math.scalbnf80
+      libc.src.__support.math.modff80
       libc.src.__support.math.scalblnf80
       libc.src.__support.math.canonicalizef16
       libc.src.__support.math.canonicalizel
@@ -580,6 +581,7 @@ else()
       libc.src.__support.math.logbf80
       libc.src.__support.math.ldexpf80
       libc.src.__support.math.scalbnf80
+      libc.src.__support.math.modff80
       libc.src.__support.math.scalblnf80
       libc.src.__support.math.canonicalizef16
       libc.src.__support.math.canonicalizel

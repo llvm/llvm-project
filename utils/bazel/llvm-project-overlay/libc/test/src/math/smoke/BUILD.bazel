@@ -1868,6 +1868,14 @@ math_test(
 )
 
 math_test(
+    name = "modff80",
+    hdrs = ["ModfTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "modff16",
     hdrs = ["ModfTest.h"],
 )

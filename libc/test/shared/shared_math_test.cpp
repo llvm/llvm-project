@@ -733,6 +733,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat80) {
                LIBC_NAMESPACE::shared::scalbnf80(Float80(0.0), 0));
   EXPECT_FP_EQ(Float80(0.0),
                LIBC_NAMESPACE::shared::scalblnf80(Float80(0.0), 0L));
+  Float80 modff80_iptr = Float80(0.0);
+  EXPECT_FP_EQ(Float80(0.0),
+               LIBC_NAMESPACE::shared::modff80(Float80(0.0), &modff80_iptr));
+  EXPECT_FP_EQ(Float80(0.0), modff80_iptr);
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
