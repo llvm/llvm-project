@@ -326,6 +326,28 @@ def fir_UseRenameAttr : fir_Attr<"UseRename"> {
   let assemblyFormat = "`<` $local_name `,` $symbol `>`";
 }
 
+// Debug information for a COMMON block member imported by a USE statement.
+def fir_UseCommonBlockMemberAttr : fir_Attr<"UseCommonBlockMember"> {
+  let mnemonic = "use_common_block_member";
+  let summary = "Describes a COMMON block member imported by USE";
+  let description = [{
+    This attribute carries the information needed to describe a use-associated
+    COMMON block member without materializing a fir.declare for it. `loc` is
+    the location of the declaration of the member.
+  }];
+
+  let parameters = (ins "mlir::StringAttr":$name,
+      "mlir::StringAttr":$linkage_name,
+      "mlir::FlatSymbolRefAttr":$common_block,
+      "mlir::Type":$fortran_type, "uint64_t":$offset,
+      "mlir::LocationAttr":$loc);
+
+  let assemblyFormat = [{
+    `<` $name `,` $linkage_name `,` $common_block `,` $fortran_type `,`
+        $offset `,` $loc `>`
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Allocation policy
 //===----------------------------------------------------------------------===//
