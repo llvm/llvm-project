@@ -10,6 +10,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Option/LibraryOptions.h"
 

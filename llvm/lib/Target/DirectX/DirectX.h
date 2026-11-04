@@ -55,7 +55,6 @@ public:
 /// Initializer for DXIL debug info lowering.
 void initializeDXILDebugInfoLegacyPass(PassRegistry &);
 
-/// Pass to downgrade debug information to forms supported by DXIL.
 ModulePass *createDXILDebugInfoLegacyPass();
 
 /// Pass to expand intrinsic operations that lack DXIL opCodes
@@ -68,10 +67,10 @@ public:
 /// Initializer for DXIL Intrinsic Expansion
 void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 
-/// Pass to expand intrinsic operations that lack DXIL opCodes
 ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
-/// Pass to translate loads in the cbuffer address space to intrinsics
+/// Pass to translate loads in the cbuffer address space to cbuffer
+/// load intrinsic.
 class DXILCBufferAccessPass
     : public OptionalPassInfoMixin<DXILCBufferAccessPass> {
 public:
@@ -81,10 +80,11 @@ public:
 /// Initializer for DXIL CBuffer Access Pass
 void initializeDXILCBufferAccessLegacyPass(PassRegistry &);
 
-/// Pass to translate loads in the cbuffer address space to intrinsics
 ModulePass *createDXILCBufferAccessLegacyPass();
 
-/// Pass to scalarize llvm global data into a DXIL legal form
+/// Pass to prepare vector data for DXIL by converting vector storage to
+/// scalar arrays and lowering dynamically indexed vector accesses to
+/// array accesses.
 class DXILDataScalarizationPass
     : public OptionalPassInfoMixin<DXILDataScalarizationPass> {
 public:
@@ -94,7 +94,6 @@ public:
 /// Initializer for DXIL Data Scalarization Pass
 void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
 
-/// Pass to scalarize llvm global data into a DXIL legal form
 ModulePass *createDXILDataScalarizationLegacyPass();
 
 /// Pass to flatten arrays into a one dimensional DXIL legal form
@@ -107,7 +106,6 @@ public:
 /// Initializer for DXIL Array Flatten Pass
 void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 
-/// Pass to flatten arrays into a one dimensional DXIL legal form
 ModulePass *createDXILFlattenArraysLegacyPass();
 
 /// Pass to eliminate redundant stores and loads from handle globals.
@@ -120,11 +118,10 @@ public:
 /// Initializer for DXIL Forward Handle Accesses Pass
 void initializeDXILForwardHandleAccessesLegacyPass(PassRegistry &);
 
-/// Pass to eliminate redundant stores and loads from handle globals.
 FunctionPass *createDXILForwardHandleAccessesLegacyPass();
 
-/// Pass to Legalize DXIL by remove i8 truncations and i64 insert/extract
-/// elements
+/// Pass to rewrite LLVM IR constructs unsupported by DXIL into
+/// compatible forms.
 class DXILLegalizePass : public OptionalPassInfoMixin<DXILLegalizePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
@@ -133,8 +130,6 @@ public:
 /// Initializer DXIL legalizationPass
 void initializeDXILLegalizeLegacyPass(PassRegistry &);
 
-/// Pass to Legalize DXIL by remove i8 truncations and i64 insert/extract
-/// elements
 FunctionPass *createDXILLegalizeLegacyPass();
 
 /// Pass to transform all llvm memory intrinsics to explicit loads and stores.
@@ -147,7 +142,6 @@ public:
 /// Initializer for DXIL Mem Intrinsics.
 void initializeDXILMemIntrinsicsLegacyPass(PassRegistry &);
 
-/// Pass to transform all llvm memory intrinsics to explicit loads and stores.
 ModulePass *createDXILMemIntrinsicsLegacyPass();
 
 /// Pass to lowering LLVM intrinsic call to DXIL op function call.
@@ -159,10 +153,10 @@ public:
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 
-/// Pass to lowering LLVM intrinsic call to DXIL op function call.
 ModulePass *createDXILOpLoweringLegacyPass();
 
-/// Pass to update remove unsused resources.
+/// Pass to remove unused DXIL resources and associated
+/// global variables.
 class DXILRemoveUnusedResourcesPass
     : public OptionalPassInfoMixin<DXILRemoveUnusedResourcesPass> {
 public:
@@ -172,10 +166,10 @@ public:
 /// Initializer for DXILRemoveUnusedResources
 void initializeDXILRemoveUnusedResourcesLegacyPass(PassRegistry &);
 
-/// Pass to update remove unsused resources.
 FunctionPass *createDXILRemoveUnusedResourcesLegacyPass();
 
-/// Pass to update resource accesses to use load/store directly.
+/// Pass to replace pointers to DXIL resources with load and store
+/// operations.
 class DXILResourceAccessPass
     : public OptionalPassInfoMixin<DXILResourceAccessPass> {
 public:
@@ -185,7 +179,6 @@ public:
 /// Initializer for DXILResourceAccess
 void initializeDXILResourceAccessLegacyPass(PassRegistry &);
 
-/// Pass to update resource accesses to use load/store directly.
 FunctionPass *createDXILResourceAccessLegacyPass();
 
 /// Pass to assign register slots to resources without binding.
@@ -198,10 +191,10 @@ public:
 /// Initializer for DXILResourceImplicitBindingLegacyPass
 void initializeDXILResourceImplicitBindingLegacyPass(PassRegistry &);
 
-/// Pass to assign register slots to resources without binding.
 ModulePass *createDXILResourceImplicitBindingLegacyPass();
 
-/// Pass to emit metadata for DXIL.
+/// Pass to emit metadata for DXIL, and to transforms existing LLVM
+/// metadata to its DXIL equivalent.
 class DXILTranslateMetadataPass
     : public OptionalPassInfoMixin<DXILTranslateMetadataPass> {
 public:
@@ -211,10 +204,10 @@ public:
 /// Initializer for DXILTranslateMetadata.
 void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 
-/// Pass to emit metadata for DXIL.
 ModulePass *createDXILTranslateMetadataLegacyPass();
 
-/// Pass to pretty print DXIL metadata.
+/// Pass to pretty print DXIL metadata into IR
+/// comments when printing assembly output.
 class DXILPrettyPrinterPass
     : public OptionalPassInfoMixin<DXILPrettyPrinterPass> {
   raw_ostream &OS;
@@ -225,7 +218,6 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
-/// Pass to pretty print DXIL metadata.
 ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 
 /// Initializer for DXILPrettyPrinter.
@@ -242,7 +234,6 @@ public:
 /// Initializer for DXILPostOptimizationValidation.
 void initializeDXILPostOptimizationValidationLegacyPass(PassRegistry &);
 
-/// Pass to lowering LLVM intrinsic call to DXIL op function call.
 ModulePass *createDXILPostOptimizationValidationLegacyPass();
 
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
@@ -266,7 +257,10 @@ void initializeDXContainerPDBPass(PassRegistry &);
 /// Pass for emitting DirectX PDB files.
 ModulePass *createDXContainerPDBPass();
 
-/// Pass to finalize linkage of functions.
+/// Pass to update the linkage of functions to make sure only
+/// shader entry points and exported functions are visible from
+/// the module (have program linkage). All other functions will
+/// be updated to have internal linkage.
 class DXILFinalizeLinkagePass
     : public RequiredPassInfoMixin<DXILFinalizeLinkagePass> {
 public:
@@ -276,7 +270,6 @@ public:
 /// Initializer for DXILFinalizeLinkage pass.
 void initializeDXILFinalizeLinkageLegacyPass(PassRegistry &);
 
-/// Pass to finalize linkage of functions.
 ModulePass *createDXILFinalizeLinkageLegacyPass();
 } // namespace llvm
 
