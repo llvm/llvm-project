@@ -16,6 +16,7 @@
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE2
 # RUN: llvm-readobj --sections --section-data %t.out2 \
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE2
+# RUN: llvm-readobj --macho-segment %t.out2 | FileCheck %s --check-prefix=ONESEG
 
 ## Case 3: Add a new section into an existing segment using /dev/null as an input.
 # RUN: llvm-objcopy --add-section __TEXT,__bar=/dev/null %t %t.out3
@@ -119,3 +120,9 @@ LoadCommands:
 
 # CASE3-NEXT:     SectionData (
 # CASE3-NEXT:     )
+
+# ONESEG:      Segment {
+# ONESEG-NEXT:   Cmd: LC_SEGMENT_64
+# ONESEG-NEXT:   Name: __TEXT
+# ONESEG:        nsects: 2
+# ONESEG-NOT:  Segment {
