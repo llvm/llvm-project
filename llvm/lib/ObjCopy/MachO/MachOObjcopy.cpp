@@ -347,7 +347,7 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
       Obj.NewSectionsContents.save(NewSection.SectionData->getBuffer());
   Sec.Size = Sec.Content.size();
 
-  // Add the a section into an existing segment.
+  // Add a section into an existing segment.
   const bool IsObject = Obj.Header.FileType == MachO::MH_OBJECT;
   for (LoadCommand &LC : Obj.LoadCommands) {
     std::optional<StringRef> SegName = LC.getSegmentName();
