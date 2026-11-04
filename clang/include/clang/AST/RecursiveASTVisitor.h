@@ -2931,7 +2931,10 @@ DEF_TRAVERSE_STMT(CXXUnresolvedConstructExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
 
-DEF_TRAVERSE_STMT(CXXReflectExpr, {/*TODO*/})
+DEF_TRAVERSE_STMT(CXXReflectExpr, {
+  if (S->getKind() == ReflectionKind::Type)
+    TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
+})
 
 // These expressions all might take explicit template arguments.
 // We traverse those if so.  FIXME: implement these.

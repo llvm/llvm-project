@@ -1329,11 +1329,13 @@ void CXXNameMangler::mangleReflection(ReflectionKind Kind,
     QualType QT = TSI->getType();
 
     if (isTypeAliasAsReflectionName(QT)) {
-      if (const auto *TDT = QT->getAs<TypedefType>()) {
-        Out << "ta";
+      Out << "ta";
+      if (const auto *TDT = dyn_cast<TypedefType>(QT.getTypePtr())) {
         mangleName(TDT->getDecl()->getCanonicalDecl());
-        break;
+      } else {
+        mangleType(cast<TemplateSpecializationType>(QT.getTypePtr()));
       }
+      break;
     }
 
     Out << "ty";
@@ -5133,9 +5135,17 @@ recurse:
   case Expr::CXXExpansionSelectExprClass:
     llvm_unreachable("unexpected statement kind");
 
-  case Expr::ConstantExprClass:
-    E = cast<ConstantExpr>(E)->getSubExpr();
+  case Expr::ConstantExprClass: {
+    const auto *CE = cast<ConstantExpr>(E);
+    if (CE->getResultAPValueKind() == APValue::Reflection) {
+      APValue Value = CE->getAPValueResult();
+      mangleReflection(Value.getReflectionOperandKind(),
+                       Value.getReflectionOpaqueOperand());
+      break;
+    }
+    E = CE->getSubExpr();
     goto recurse;
+  }
 
   case Expr::CXXReflectExprClass: {
     const CXXReflectExpr *RE = cast<CXXReflectExpr>(E);

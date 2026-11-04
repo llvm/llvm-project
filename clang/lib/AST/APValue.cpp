@@ -556,11 +556,20 @@ static void profileTypeReflection(llvm::FoldingSetNodeID &ID, QualType QT) {
   // TODO(Reflection)
 
   if (isTypeAliasAsReflectionName(QT)) {
-    if (const auto *TDT = QT->getAs<TypedefType>()) {
-      ID.AddBoolean(true);
+    ID.AddBoolean(true);
+    if (const auto *TDT = dyn_cast<TypedefType>(QT.getTypePtr())) {
       ID.AddPointer(TDT->getDecl()->getCanonicalDecl());
-      return;
+    } else {
+      const auto *TST = cast<TemplateSpecializationType>(QT.getTypePtr());
+      auto *TD = cast<TypeAliasTemplateDecl>(
+          TST->getTemplateName().getAsTemplateDecl()->getCanonicalDecl());
+      const ASTContext &Ctx = TD->getASTContext();
+      // Alias identity depends on the template and arguments.
+      TemplateSpecializationType::Profile(
+          ID, ElaboratedTypeKeyword::None, TemplateName(TD),
+          TST->template_arguments(), /*Underlying=*/QualType(), Ctx);
     }
+    return;
   }
 
   ID.AddBoolean(false);
