@@ -12525,6 +12525,16 @@ static TemplateDecl *getDescribedTemplate(Decl *Templated) {
                    " for bad deduction diagnosis");
 }
 
+static const TemplateParameterList *getTemplateParameters(Decl *Templated) {
+  if (auto *TD = dyn_cast<TemplateDecl>(Templated))
+    return TD->getTemplateParameters();
+  if (auto *CTPSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(Templated))
+    return CTPSD->getTemplateParameters();
+  if (auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl>(Templated))
+    return VTPSD->getTemplateParameters();
+  return getDescribedTemplate(Templated)->getTemplateParameters();
+}
+
 /// Diagnose a failed template-argument deduction.
 static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  DeductionFailureInfo &DeductionFailure,
@@ -12665,7 +12675,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     TemplateArgumentList *Args = DeductionFailure.getTemplateArgumentList();
     TemplateArgString = " ";
     TemplateArgString += S.getTemplateArgumentBindingsText(
-        getDescribedTemplate(Templated)->getTemplateParameters(), *Args);
+        getTemplateParameters(Templated), *Args);
     if (TemplateArgString.size() == 1)
       TemplateArgString.clear();
     S.Diag(Templated->getLocation(),
@@ -12694,7 +12704,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
             DeductionFailure.getTemplateArgumentList()) {
       TemplateArgString = " ";
       TemplateArgString += S.getTemplateArgumentBindingsText(
-          getDescribedTemplate(Templated)->getTemplateParameters(), *Args);
+          getTemplateParameters(Templated), *Args);
       if (TemplateArgString.size() == 1)
         TemplateArgString.clear();
     }
@@ -12745,7 +12755,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
             DeductionFailure.getTemplateArgumentList()) {
       TemplateArgString = " ";
       TemplateArgString += S.getTemplateArgumentBindingsText(
-          getDescribedTemplate(Templated)->getTemplateParameters(), *Args);
+          getTemplateParameters(Templated), *Args);
       if (TemplateArgString.size() == 1)
         TemplateArgString.clear();
     }

@@ -328,8 +328,8 @@ template <typename Itr> struct ItrTraits {
   template <typename PtrItr> struct Ptr {
   };
   template <typename PtrItr>
-    requires requires { typename PtrItr::pointer; }
-  struct Ptr<PtrItr> {
+    requires requires { typename PtrItr::pointer; } // expected-note {{because 'typename PtrItr::pointer' would be invalid: no type named 'pointer' in 'DeducedTemplateArgs::not_complete_itr'}}
+  struct Ptr<PtrItr> { // expected-note {{candidate template ignored: constraints not satisfied [with PtrItr = DeducedTemplateArgs::not_complete_itr]}}
     using type = typename Itr::pointer;
   };
   using pointer = typename Ptr<Itr>::type; // #TRAITS_PTR

@@ -3120,6 +3120,9 @@ ExprResult Sema::BuildQualifiedDeclarationNameExpr(
         return ExprError();
     Diag(NameInfo.getLoc(), diag::err_no_member)
       << NameInfo.getName() << DC << SS.getRange();
+    if (const auto *CTSD =
+            dyn_cast_or_null<ClassTemplateSpecializationDecl>(DC))
+      NoteUnsatisfiedPartialSpecializations(NameInfo.getLoc(), CTSD);
     return ExprError();
   }
 

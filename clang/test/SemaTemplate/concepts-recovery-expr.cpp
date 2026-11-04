@@ -198,11 +198,11 @@ template <class, class> struct basic_format_context {};
 
 template <typename CharType>
 concept has_format_function =
-    format(basic_format_context<CharType, CharType>());
+    format(basic_format_context<CharType, CharType>()); // expected-note {{because substituted constraint expression is ill-formed: use of undeclared identifier 'format'}}
 
 template <typename ValueType, typename CharType>
-  requires has_format_function<CharType>
-struct formatter<ValueType, CharType> {
+  requires has_format_function<CharType> // expected-note {{because 'int' does not satisfy 'has_format_function'}}
+struct formatter<ValueType, CharType> { // expected-note {{candidate template ignored: constraints not satisfied [with ValueType = int, CharType = int]}}
   template <typename OutputIt>
   CharType format(basic_format_context<OutputIt, CharType>);
 };

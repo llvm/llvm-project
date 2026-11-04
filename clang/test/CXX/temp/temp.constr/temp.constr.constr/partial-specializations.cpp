@@ -70,10 +70,10 @@ namespace variable_templates
 
   template<typename T> requires A<T>::type // expected-note{{in instantiation of template class 'variable_templates::A<int *>' requested here}}
                                            // expected-note@-1{{while substituting template arguments into constraint expression here}}
-  constexpr bool v1<T*> = true;
+  constexpr bool v1<T*> = true; // expected-note{{candidate template ignored: constraints not satisfied [with T = int *]}}
 
   template<typename T> requires (T{}) // expected-error{{atomic constraint must be of type 'bool' (found 'int')}}
-  constexpr bool v1<T**> = true;
+  constexpr bool v1<T**> = true; // expected-note{{candidate template ignored: constraints not satisfied [with T = int]}}
 
   static_assert(v1<int**>); // expected-note{{while checking constraint satisfaction for variable template partial specialization 'v1<int *>' required here}}
   // expected-note@-1{{while checking constraint satisfaction for variable template partial specialization 'v1<int>' required here}}
