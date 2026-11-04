@@ -6455,6 +6455,8 @@ static std::optional<TwoSlotGEP> analyzeTwoSlotGEP(GetElementPtrInst &GEP,
     return std::nullopt;
 
   auto [Idx, Scale] = Idxs.front();
+  if (Scale.isZero())
+    return std::nullopt;
 
   // The GEP must only be used by simple (non-atomic, non-volatile) loads and
   // stores.
