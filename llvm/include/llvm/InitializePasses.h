@@ -110,7 +110,7 @@ LLVM_ABI void initializeEarlyMachineLICMPass(PassRegistry &);
 LLVM_ABI void initializeEarlyTailDuplicateLegacyPass(PassRegistry &);
 LLVM_ABI void initializeEdgeBundlesWrapperLegacyPass(PassRegistry &);
 LLVM_ABI void initializeEHContGuardTargetsLegacyPass(PassRegistry &);
-LLVM_ABI void initializeExecutionDomainFixPass(PassRegistry &);
+LLVM_ABI void initializeExecutionDomainFixLegacyPass(PassRegistry &);
 LLVM_ABI void initializeExpandIRInstsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeExpandPostRALegacyPass(PassRegistry &);
 LLVM_ABI void initializeExpandReductionsPass(PassRegistry &);

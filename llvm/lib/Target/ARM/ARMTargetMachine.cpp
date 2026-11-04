@@ -492,7 +492,7 @@ void ARMPassConfig::addPreSched2() {
     if (EnableARMLoadStoreOpt)
       addPass(createARMLoadStoreOptLegacyPass());
 
-    addPass(createExecutionDomainFixPass());
+    addPass(createExecutionDomainFixLegacyPass());
     addPass(createBreakFalseDepsLegacyPass());
   }
 

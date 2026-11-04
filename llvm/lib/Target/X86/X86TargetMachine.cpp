@@ -540,7 +540,7 @@ void X86PassConfig::addPreSched2() {
 
 void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createExecutionDomainFixPass());
+    addPass(createExecutionDomainFixLegacyPass());
     addPass(createBreakFalseDepsLegacyPass());
   }
 

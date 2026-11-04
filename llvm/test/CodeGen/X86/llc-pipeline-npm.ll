@@ -192,6 +192,7 @@
 ; O2-NEXT:     fentry-insert
 ; O2-NEXT:     xray-instrumentation
 ; O2-NEXT:     patchable-function
+; O2-NEXT:     execution-domain-fix
 ; O2-NEXT:     break-false-deps
 ; O2-NEXT:     x86-indirect-branch-tracking
 ; O2-NEXT:     x86-insert-vzeroupper
@@ -409,6 +410,7 @@
 ; O3-WINDOWS-NEXT:     fentry-insert
 ; O3-WINDOWS-NEXT:     xray-instrumentation
 ; O3-WINDOWS-NEXT:     patchable-function
+; O3-WINDOWS-NEXT:     execution-domain-fix
 ; O3-WINDOWS-NEXT:     break-false-deps
 ; O3-WINDOWS-NEXT:     x86-indirect-branch-tracking
 ; O3-WINDOWS-NEXT:     x86-insert-vzeroupper

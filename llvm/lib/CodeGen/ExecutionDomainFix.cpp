@@ -7,23 +7,120 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExecutionDomainFix.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "execution-deps-fix"
 
+namespace {
+
+class ExecutionDomainFixImpl {
+  SpecificBumpPtrAllocator<DomainValue> Allocator;
+  SmallVector<DomainValue *, 16> Avail;
+
+  const TargetRegisterClass *RC;
+  MachineFunction *MF = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  std::vector<SmallVector<int, 1>> AliasMap;
+  /// Value currently in each register, or NULL when no value is being tracked.
+  /// This counts as a DomainValue reference.
+  using LiveRegsDVInfo = std::vector<DomainValue *>;
+  LiveRegsDVInfo LiveRegs;
+  /// Keeps domain information for all registers. Note that this
+  /// is different from the usual definition notion of liveness. The CPU
+  /// doesn't care whether or not we consider a register killed.
+  using OutRegsInfoMap = SmallVector<LiveRegsDVInfo, 4>;
+  OutRegsInfoMap MBBOutRegsInfos;
+
+  ReachingDefInfo *RDI = nullptr;
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<ReachingDefInfo *()> GetRDI);
+
+private:
+  /// Translate TRI register number to a list of indices into our smaller tables
+  /// of interesting registers.
+  iterator_range<SmallVectorImpl<int>::const_iterator>
+  regIndices(MCRegister Reg) const;
+
+  /// DomainValue allocation.
+  DomainValue *alloc(int domain = -1);
+
+  /// Add reference to DV.
+  DomainValue *retain(DomainValue *DV) {
+    if (DV)
+      ++DV->Refs;
+    return DV;
+  }
+
+  /// Release a reference to DV.  When the last reference is released,
+  /// collapse if needed.
+  void release(DomainValue *);
+
+  /// Follow the chain of dead DomainValues until a live DomainValue is reached.
+  /// Update the referenced pointer when necessary.
+  DomainValue *resolve(DomainValue *&);
+
+  /// Set LiveRegs[rx] = dv, updating reference counts.
+  void setLiveReg(int rx, DomainValue *DV);
+
+  /// Kill register rx, recycle or collapse any DomainValue.
+  void kill(int rx);
+
+  /// Force register rx into domain.
+  void force(int rx, unsigned domain);
+
+  /// Collapse open DomainValue into given domain. If there are multiple
+  /// registers using dv, they each get a unique collapsed DomainValue.
+  void collapse(DomainValue *dv, unsigned domain);
+
+  /// All instructions and registers in B are moved to A, and B is released.
+  bool merge(DomainValue *A, DomainValue *B);
+
+  /// Set up LiveRegs by merging predecessor live-out values.
+  void enterBasicBlock(const LoopTraversal::TraversedMBBInfo &TraversedMBB);
+
+  /// Update live-out values.
+  void leaveBasicBlock(const LoopTraversal::TraversedMBBInfo &TraversedMBB);
+
+  /// Process he given basic block.
+  void processBasicBlock(const LoopTraversal::TraversedMBBInfo &TraversedMBB);
+
+  /// Visit given insturcion.
+  bool visitInstr(MachineInstr *);
+
+  /// Update def-ages for registers defined by MI.
+  /// If Kill is set, also kill off DomainValues clobbered by the defs.
+  void processDefs(MachineInstr *, bool Kill);
+
+  /// A soft instruction can be changed to work in other domains given by mask.
+  void visitSoftInstr(MachineInstr *, unsigned mask);
+
+  /// A hard instruction only works in one domain. All input registers will be
+  /// forced into that domain.
+  void visitHardInstr(MachineInstr *, unsigned domain);
+};
+
+} // namespace
+
 iterator_range<SmallVectorImpl<int>::const_iterator>
-ExecutionDomainFix::regIndices(MCRegister Reg) const {
+ExecutionDomainFixImpl::regIndices(MCRegister Reg) const {
   assert(Reg < AliasMap.size() && "Invalid register");
   const auto &Entry = AliasMap[Reg.id()];
   return make_range(Entry.begin(), Entry.end());
 }
 
-DomainValue *ExecutionDomainFix::alloc(int domain) {
+DomainValue *ExecutionDomainFixImpl::alloc(int domain) {
   DomainValue *dv = Avail.empty() ? new (Allocator.Allocate()) DomainValue
                                   : Avail.pop_back_val();
   if (domain >= 0)
@@ -33,7 +130,7 @@ DomainValue *ExecutionDomainFix::alloc(int domain) {
   return dv;
 }
 
-void ExecutionDomainFix::release(DomainValue *DV) {
+void ExecutionDomainFixImpl::release(DomainValue *DV) {
   while (DV) {
     assert(DV->Refs && "Bad DomainValue");
     if (--DV->Refs)
@@ -51,7 +148,7 @@ void ExecutionDomainFix::release(DomainValue *DV) {
   }
 }
 
-DomainValue *ExecutionDomainFix::resolve(DomainValue *&DVRef) {
+DomainValue *ExecutionDomainFixImpl::resolve(DomainValue *&DVRef) {
   DomainValue *DV = DVRef;
   if (!DV || !DV->Next)
     return DV;
@@ -68,7 +165,7 @@ DomainValue *ExecutionDomainFix::resolve(DomainValue *&DVRef) {
   return DV;
 }
 
-void ExecutionDomainFix::setLiveReg(int rx, DomainValue *dv) {
+void ExecutionDomainFixImpl::setLiveReg(int rx, DomainValue *dv) {
   assert(unsigned(rx) < RC->getNumRegs() && "Invalid index");
   assert(!LiveRegs.empty() && "Must enter basic block first.");
 
@@ -79,7 +176,7 @@ void ExecutionDomainFix::setLiveReg(int rx, DomainValue *dv) {
   LiveRegs[rx] = retain(dv);
 }
 
-void ExecutionDomainFix::kill(int rx) {
+void ExecutionDomainFixImpl::kill(int rx) {
   assert(unsigned(rx) < RC->getNumRegs() && "Invalid index");
   assert(!LiveRegs.empty() && "Must enter basic block first.");
   if (!LiveRegs[rx])
@@ -89,7 +186,7 @@ void ExecutionDomainFix::kill(int rx) {
   LiveRegs[rx] = nullptr;
 }
 
-void ExecutionDomainFix::force(int rx, unsigned domain) {
+void ExecutionDomainFixImpl::force(int rx, unsigned domain) {
   assert(unsigned(rx) < RC->getNumRegs() && "Invalid index");
   assert(!LiveRegs.empty() && "Must enter basic block first.");
   if (DomainValue *dv = LiveRegs[rx]) {
@@ -110,7 +207,7 @@ void ExecutionDomainFix::force(int rx, unsigned domain) {
   }
 }
 
-void ExecutionDomainFix::collapse(DomainValue *dv, unsigned domain) {
+void ExecutionDomainFixImpl::collapse(DomainValue *dv, unsigned domain) {
   assert(dv->hasDomain(domain) && "Cannot collapse");
 
   // Collapse all the instructions.
@@ -125,7 +222,7 @@ void ExecutionDomainFix::collapse(DomainValue *dv, unsigned domain) {
         setLiveReg(rx, alloc(domain));
 }
 
-bool ExecutionDomainFix::merge(DomainValue *A, DomainValue *B) {
+bool ExecutionDomainFixImpl::merge(DomainValue *A, DomainValue *B) {
   assert(!A->isCollapsed() && "Cannot merge into collapsed");
   assert(!B->isCollapsed() && "Cannot merge from collapsed");
   if (A == B)
@@ -150,7 +247,7 @@ bool ExecutionDomainFix::merge(DomainValue *A, DomainValue *B) {
   return true;
 }
 
-void ExecutionDomainFix::enterBasicBlock(
+void ExecutionDomainFixImpl::enterBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
 
   MachineBasicBlock *MBB = TraversedMBB.MBB;
@@ -206,7 +303,7 @@ void ExecutionDomainFix::enterBasicBlock(
                                              : ": all preds known\n"));
 }
 
-void ExecutionDomainFix::leaveBasicBlock(
+void ExecutionDomainFixImpl::leaveBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
   assert(!LiveRegs.empty() && "Must enter basic block first.");
   unsigned MBBNumber = TraversedMBB.MBB->getNumber();
@@ -220,7 +317,7 @@ void ExecutionDomainFix::leaveBasicBlock(
   LiveRegs.clear();
 }
 
-bool ExecutionDomainFix::visitInstr(MachineInstr *MI) {
+bool ExecutionDomainFixImpl::visitInstr(MachineInstr *MI) {
   // Update instructions with explicit execution domains.
   std::pair<uint16_t, uint16_t> DomP = TII->getExecutionDomain(*MI);
   if (DomP.first) {
@@ -233,7 +330,7 @@ bool ExecutionDomainFix::visitInstr(MachineInstr *MI) {
   return !DomP.first;
 }
 
-void ExecutionDomainFix::processDefs(MachineInstr *MI, bool Kill) {
+void ExecutionDomainFixImpl::processDefs(MachineInstr *MI, bool Kill) {
   assert(!MI->isDebugInstr() && "Won't process debug values");
   const MCInstrDesc &MCID = MI->getDesc();
   for (unsigned i = 0,
@@ -255,7 +352,7 @@ void ExecutionDomainFix::processDefs(MachineInstr *MI, bool Kill) {
   }
 }
 
-void ExecutionDomainFix::visitHardInstr(MachineInstr *mi, unsigned domain) {
+void ExecutionDomainFixImpl::visitHardInstr(MachineInstr *mi, unsigned domain) {
   // Collapse all uses.
   for (unsigned i = mi->getDesc().getNumDefs(),
                 e = mi->getDesc().getNumOperands();
@@ -280,7 +377,7 @@ void ExecutionDomainFix::visitHardInstr(MachineInstr *mi, unsigned domain) {
   }
 }
 
-void ExecutionDomainFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
+void ExecutionDomainFixImpl::visitSoftInstr(MachineInstr *mi, unsigned mask) {
   // Bitmask of available domains for this instruction after taking collapsed
   // operands into account.
   unsigned available = mask;
@@ -393,7 +490,7 @@ void ExecutionDomainFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
   }
 }
 
-void ExecutionDomainFix::processBasicBlock(
+void ExecutionDomainFixImpl::processBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
   enterBasicBlock(TraversedMBB);
   // If this block is not done, it makes little sense to make any decisions
@@ -411,9 +508,8 @@ void ExecutionDomainFix::processBasicBlock(
   leaveBasicBlock(TraversedMBB);
 }
 
-bool ExecutionDomainFix::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
-    return false;
+bool ExecutionDomainFixImpl::runOnMachineFunction(
+    MachineFunction &mf, function_ref<ReachingDefInfo *()> GetRDI) {
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
@@ -439,7 +535,7 @@ bool ExecutionDomainFix::runOnMachineFunction(MachineFunction &mf) {
   if (!anyregs)
     return false;
 
-  RDI = &getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
+  RDI = GetRDI();
 
   // Initialize the AliasMap on the first use.
   if (AliasMap.empty()) {
@@ -473,13 +569,34 @@ bool ExecutionDomainFix::runOnMachineFunction(MachineFunction &mf) {
   return false;
 }
 
-char ExecutionDomainFix::ID = 0;
-INITIALIZE_PASS_BEGIN(ExecutionDomainFix, DEBUG_TYPE, "execution-domain-fix",
-                      false, false)
+char ExecutionDomainFixLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(ExecutionDomainFixLegacy, DEBUG_TYPE,
+                      "execution-domain-fix", false, false)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
-INITIALIZE_PASS_END(ExecutionDomainFix, DEBUG_TYPE, "execution-domain-fix",
-                    false, false)
+INITIALIZE_PASS_END(ExecutionDomainFixLegacy, DEBUG_TYPE,
+                    "execution-domain-fix", false, false)
 
-FunctionPass *llvm::createExecutionDomainFixPass() {
-  return new ExecutionDomainFix();
+FunctionPass *llvm::createExecutionDomainFixLegacyPass() {
+  return new ExecutionDomainFixLegacy();
+}
+
+bool ExecutionDomainFixLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  ExecutionDomainFixImpl Impl;
+  return Impl.runOnMachineFunction(MF, [&]() {
+    return &getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
+  });
+}
+
+PreservedAnalyses
+ExecutionDomainFixPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  ExecutionDomainFixImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(
+      MF, [&]() { return &MFAM.getResult<ReachingDefAnalysis>(MF); });
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

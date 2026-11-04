@@ -545,7 +545,7 @@ LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
 
 /// Minimizes execution domain crossings for specific register classes.
-LLVM_ABI FunctionPass *createExecutionDomainFixPass();
+LLVM_ABI FunctionPass *createExecutionDomainFixLegacyPass();
 
 // This pass expands indirectbr instructions.
 LLVM_ABI FunctionPass *createIndirectBrExpandPass(CodeGenOptLevel OptLevel);

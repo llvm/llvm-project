@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -250,8 +251,7 @@ void X86CodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
 
 void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add X86ExecutionDomainFixPass here once it has
-    // been ported.
+    addMachineFunctionPass(ExecutionDomainFixPass(), PMW);
     addMachineFunctionPass(BreakFalseDepsPass(), PMW);
   }
 
