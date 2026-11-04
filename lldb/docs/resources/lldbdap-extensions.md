@@ -256,6 +256,28 @@ interface ExceptionInfoResponse extends Response {
 
 ## Types with Additional Properties
 
+### FunctionBreakpoint
+
+```typescript
+interface FunctionBreakpoint {
+  /**
+   * The names of the modules to restrict the function lookup to. The lookup is
+   * restricted to all of them.
+   *
+   * A name is a file name or a path. A module that is loaded later and matches
+   * a name is picked up. If no module matches any of the names, the breakpoint
+   * is left unverified.
+   * @since LLDB 24
+   */
+  $__lldb_modules?: string[];
+}
+```
+
+If there are no modules, the lookup is not restricted. The modules cannot be
+updated: a function breakpoint is identified by its function name and its set of
+modules, in any order and ignoring duplicates. A request with a different set of
+modules refers to a different breakpoint.
+
 ### Module
 
 ```typescript
