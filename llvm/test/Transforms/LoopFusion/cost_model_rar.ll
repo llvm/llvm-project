@@ -1,13 +1,15 @@
-; RUN: opt -passes=loop-simplify,loop-fusion -cache-line-size=64 -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-max-reuse-distance=64 -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s
 
 ; CHECK: [exact_affine_rar]{{.*}}Loops fused
 ; CHECK: [shifted_start]{{.*}}Loops fused
-; CHECK: [constant_distance]{{.*}}found 0 cross-loop reused values
+; CHECK: [beyond_max_reuse_distance]{{.*}}found 0 cross-loop reused values
 ; CHECK: [different_stride]{{.*}}found 0 cross-loop reused values
 ; CHECK: [different_type]{{.*}}Loops fused
 ; CHECK: [non_affine]{{.*}}found 0 cross-loop reused values
 ; CHECK: [store_before_second_load]{{.*}}found 0 cross-loop reused values
 ; CHECK: [store_after_second_load]{{.*}}Loops fused
+; CHECK: [far_then_exact_rar]{{.*}}Loops fused
+; CHECK: [negative_offset]{{.*}}Loops fused
 
 ; Equal load types, starts, and strides form an exact affine RAR match.
 define void @exact_affine_rar(ptr noalias %src, ptr noalias %dst1,
@@ -76,8 +78,8 @@ exit:
   ret void
 }
 
-; A 512-element offset is farther than a cache line and is not reuse.
-define void @constant_distance(ptr noalias %src, ptr noalias %dst1,
+; A 512-element offset is farther than the maximum reuse distance and is not reuse.
+define void @beyond_max_reuse_distance(ptr noalias %src, ptr noalias %dst1,
                                ptr noalias %dst2, i64 %n) {
 entry:
   br label %loop1
@@ -274,6 +276,80 @@ loop2:
   %i2.next = add nuw nsw i64 %i2, 1
   %c2 = icmp ult i64 %i2.next, %n
   br i1 %c2, label %loop2, label %exit
+
+exit:
+  ret void
+}
+
+; A far load recorded first must not hide a later exact match on the same base.
+; Loop 1 reads A[i + 100] and then A[i]. Loop 2 reads A[i]. The exact pair is
+; reuse; the 400-byte pair is not.
+define void @far_then_exact_rar(ptr noalias %src, ptr noalias %far.dst,
+                                ptr noalias %dst1, ptr noalias %dst2, i64 %n) {
+entry:
+  br label %loop1
+
+loop1:
+  %i1 = phi i64 [ 0, %entry ], [ %i1.next, %loop1 ]
+  %far.idx = add nuw nsw i64 %i1, 100
+  %far.gep = getelementptr inbounds i32, ptr %src, i64 %far.idx
+  %far.val = load i32, ptr %far.gep, align 4
+  %far.dst.gep = getelementptr inbounds i32, ptr %far.dst, i64 %i1
+  store i32 %far.val, ptr %far.dst.gep, align 4
+  %src.gep1 = getelementptr inbounds i32, ptr %src, i64 %i1
+  %value1 = load i32, ptr %src.gep1, align 4
+  %dst.gep1 = getelementptr inbounds i32, ptr %dst1, i64 %i1
+  store i32 %value1, ptr %dst.gep1, align 4
+  %i1.next = add nuw nsw i64 %i1, 1
+  %cmp1 = icmp ult i64 %i1.next, %n
+  br i1 %cmp1, label %loop1, label %loop2.preheader
+
+loop2.preheader:
+  br label %loop2
+
+loop2:
+  %i2 = phi i64 [ 0, %loop2.preheader ], [ %i2.next, %loop2 ]
+  %src.gep2 = getelementptr inbounds i32, ptr %src, i64 %i2
+  %value2 = load i32, ptr %src.gep2, align 4
+  %dst.gep2 = getelementptr inbounds i32, ptr %dst2, i64 %i2
+  store i32 %value2, ptr %dst.gep2, align 4
+  %i2.next = add nuw nsw i64 %i2, 1
+  %cmp2 = icmp ult i64 %i2.next, %n
+  br i1 %cmp2, label %loop2, label %exit
+
+exit:
+  ret void
+}
+
+; A one-element negative offset is 4 bytes and counts as reuse.
+define void @negative_offset(ptr noalias %src, ptr noalias %dst1,
+                             ptr noalias %dst2, i64 %n) {
+entry:
+  br label %loop1
+
+loop1:
+  %i1 = phi i64 [ 0, %entry ], [ %i1.next, %loop1 ]
+  %src.gep1 = getelementptr inbounds i32, ptr %src, i64 %i1
+  %value1 = load i32, ptr %src.gep1, align 4
+  %dst.gep1 = getelementptr inbounds i32, ptr %dst1, i64 %i1
+  store i32 %value1, ptr %dst.gep1, align 4
+  %i1.next = add nuw nsw i64 %i1, 1
+  %cmp1 = icmp ult i64 %i1.next, %n
+  br i1 %cmp1, label %loop1, label %loop2.preheader
+
+loop2.preheader:
+  br label %loop2
+
+loop2:
+  %i2 = phi i64 [ 0, %loop2.preheader ], [ %i2.next, %loop2 ]
+  %shifted = add nsw i64 %i2, -1
+  %src.gep2 = getelementptr inbounds i32, ptr %src, i64 %shifted
+  %value2 = load i32, ptr %src.gep2, align 4
+  %dst.gep2 = getelementptr inbounds i32, ptr %dst2, i64 %i2
+  store i32 %value2, ptr %dst.gep2, align 4
+  %i2.next = add nuw nsw i64 %i2, 1
+  %cmp2 = icmp ult i64 %i2.next, %n
+  br i1 %cmp2, label %loop2, label %exit
 
 exit:
   ret void
