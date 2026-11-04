@@ -830,16 +830,132 @@ define i32 @extelt_select_const_operand_select_use(i1 %c) {
 
 define i32 @extelt_select_const_operand_vector_cond_index(i1 %c) {
 ; ANY-LABEL: @extelt_select_const_operand_vector_cond_index(
-; ANY-NEXT:    [[E:%.*]] = select i1 [[C:%.*]], i32 3, i32 4
-; ANY-NEXT:    [[S:%.*]] = select i1 [[C]], <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
-; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i32 [[E]]
-; ANY-NEXT:    ret i32 [[R]]
+; ANY-NEXT:    ret i32 poison
 ;
   %e = select i1 %c, i32 3, i32 4
   %s = select i1 %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
   %r = extractelement <3 x i32> %s, i32 %e
   ret i32 %r
 }
+
+; Both constant-index extractions fold to constants.
+define i32 @extelt_select_index_constants(i1 %c) {
+; ANY-LABEL: @extelt_select_index_constants(
+; ANY-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 7, i32 42
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %idx = select i1 %c, i32 0, i32 2
+  %r = extractelement <3 x i32> <i32 7, i32 11, i32 42>, i32 %idx
+  ret i32 %r
+}
+
+; Both extractions recover inserted scalars, even with an unknown base vector.
+define i32 @extelt_select_index_inserted(i1 %c, <3 x i32> %v, i32 %x, i32 %y) {
+; ANY-LABEL: @extelt_select_index_inserted(
+; ANY-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %v0 = insertelement <3 x i32> %v, i32 %x, i64 0
+  %v2 = insertelement <3 x i32> %v0, i32 %y, i64 2
+  %idx = select i1 %c, i32 0, i32 2
+  %r = extractelement <3 x i32> %v2, i32 %idx
+  ret i32 %r
+}
+
+; The out-of-range arm is poison; the other arm recovers the inserted scalar.
+define i32 @extelt_select_index_out_of_range(i1 %c, <3 x i32> %v, i32 %x) {
+; ANY-LABEL: @extelt_select_index_out_of_range(
+; ANY-NEXT:    ret i32 [[X:%.*]]
+;
+  %vec = insertelement <3 x i32> %v, i32 %x, i64 0
+  %idx = select i1 %c, i32 0, i32 3
+  %r = extractelement <3 x i32> %vec, i32 %idx
+  ret i32 %r
+}
+
+; Do not distribute when only one extraction simplifies.
+define i32 @extelt_select_index_one_arm(i1 %c, <3 x i32> %v, i32 %x) {
+; ANY-LABEL: @extelt_select_index_one_arm(
+; ANY-NEXT:    [[VEC:%.*]] = insertelement <3 x i32> [[V:%.*]], i32 [[X:%.*]], i64 0
+; ANY-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i32 0, i32 2
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[VEC]], i32 [[IDX]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %vec = insertelement <3 x i32> %v, i32 %x, i64 0
+  %idx = select i1 %c, i32 0, i32 2
+  %r = extractelement <3 x i32> %vec, i32 %idx
+  ret i32 %r
+}
+
+; Do not duplicate a select whose index has another user.
+define i32 @extelt_select_index_multiuse(i1 %c, ptr %p) {
+; ANY-LABEL: @extelt_select_index_multiuse(
+; ANY-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i32 0, i32 2
+; ANY-NEXT:    store i32 [[IDX]], ptr [[P:%.*]], align 4
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> <i32 7, i32 11, i32 42>, i32 [[IDX]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %idx = select i1 %c, i32 0, i32 2
+  store i32 %idx, ptr %p
+  %r = extractelement <3 x i32> <i32 7, i32 11, i32 42>, i32 %idx
+  ret i32 %r
+}
+
+; Simplifying the constant arm must not assert when the index exceeds 64 bits.
+define i32 @extelt_select_index_scalable_wide(i1 %c, <vscale x 2 x i32> %v, i128 %i) {
+; ANY-LABEL: @extelt_select_index_scalable_wide(
+; ANY-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i128 [[I:%.*]], i128 18446744073709551616
+; ANY-NEXT:    [[R:%.*]] = extractelement <vscale x 2 x i32> [[V:%.*]], i128 [[IDX]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %idx = select i1 %c, i128 %i, i128 18446744073709551616
+  %r = extractelement <vscale x 2 x i32> %v, i128 %idx
+  ret i32 %r
+}
+
+; The large index must not be truncated to the inserted lane's index.
+define i32 @extelt_select_index_scalable_no_trunc(i1 %c, <vscale x 2 x i32> %v, i32 %x) {
+; ANY-LABEL: @extelt_select_index_scalable_no_trunc(
+; ANY-NEXT:    [[VEC:%.*]] = insertelement <vscale x 2 x i32> [[V:%.*]], i32 [[X:%.*]], i64 0
+; ANY-NEXT:    [[IDX:%.*]] = select i1 [[C:%.*]], i64 0, i64 4294967296
+; ANY-NEXT:    [[R:%.*]] = extractelement <vscale x 2 x i32> [[VEC]], i64 [[IDX]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %vec = insertelement <vscale x 2 x i32> %v, i32 %x, i64 0
+  %idx = select i1 %c, i64 0, i64 4294967296
+  %r = extractelement <vscale x 2 x i32> %vec, i64 %idx
+  ret i32 %r
+}
+
+; Equal wide indices must fold before the index is narrowed to unsigned.
+define i32 @extelt_scalable_equal_wide(i32 %x) {
+; ANY-LABEL: @extelt_scalable_equal_wide(
+; ANY-NEXT:    ret i32 [[X:%.*]]
+;
+  %lo = insertelement <vscale x 2 x i32> zeroinitializer, i32 %x, i64 0
+  %hi = insertelement <vscale x 2 x i32> %lo, i32 %x, i64 4294967296
+  %r = extractelement <vscale x 2 x i32> %hi, i64 4294967296
+  ret i32 %r
+}
+
+define i32 @extelt_scalable_equal_wide_mixed_types(<vscale x 2 x i32> %v, i32 %x) {
+; ANY-LABEL: @extelt_scalable_equal_wide_mixed_types(
+; ANY-NEXT:    ret i32 [[X:%.*]]
+;
+  %vec = insertelement <vscale x 2 x i32> %v, i32 %x, i64 4294967296
+  %r = extractelement <vscale x 2 x i32> %vec, i128 4294967296
+  ret i32 %r
+}
+
+define i32 @extelt_scalable_equal_i128(<vscale x 2 x i32> %v, i32 %x) {
+; ANY-LABEL: @extelt_scalable_equal_i128(
+; ANY-NEXT:    ret i32 [[X:%.*]]
+;
+  %vec = insertelement <vscale x 2 x i32> %v, i32 %x, i128 18446744073709551616
+  %r = extractelement <vscale x 2 x i32> %vec, i128 18446744073709551616
+  ret i32 %r
+}
+
 
 define i32 @extelt_select_const_operand_vector_var_index(i1 %c, i32 %e) {
 ; ANY-LABEL: @extelt_select_const_operand_vector_var_index(

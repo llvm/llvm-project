@@ -487,6 +487,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       if (Instruction *R = FoldOpIntoSelect(EI, SI))
         return R;
 
+  // Fold an index select only if both resulting extractions simplify.
+  if (auto *SI = dyn_cast<SelectInst>(Index))
+    if (Instruction *R = FoldOpIntoSelect(EI, SI, /*FoldWithMultiUse=*/false,
+                                          /*SimplifyBothArms=*/true))
+      return R;
+
   // Fold a variable index into a table of pointers into one object into
   // address arithmetic
   if (!isa<ConstantInt>(Index))

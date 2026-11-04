@@ -5598,10 +5598,18 @@ static Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
     unsigned MinNumElts = VecVTy->getElementCount().getKnownMinValue();
     if (isa<FixedVectorType>(VecVTy) && IdxC->getValue().uge(MinNumElts))
       return PoisonValue::get(VecVTy->getElementType());
+    // Handle equal insert/extract indices before narrowing the index.
+    if (auto *IE = dyn_cast<InsertElementInst>(Vec))
+      if (match(IE->getOperand(2), m_SpecificInt(IdxC->getValue())))
+        return IE->getOperand(1);
     // Handle case where an element is extracted from a splat.
     if (IdxC->getValue().ult(MinNumElts))
       if (auto *Splat = getSplatValue(Vec))
         return Splat;
+    // findScalarElement takes an unsigned index. Do not truncate a large
+    // scalable-vector index.
+    if (!IdxC->getValue().isIntN(32))
+      return nullptr;
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
   } else {
