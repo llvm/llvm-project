@@ -19,7 +19,6 @@
 
 namespace mlir {
 namespace affine {
-
 /// An AffineValueMap is an affine map plus its ML value operands and
 /// results for analysis purposes. The structure is still a tree form that is
 /// same as that of an affine map or an AffineApplyOp. However, its operands,
@@ -49,24 +48,24 @@ public:
   /// operands, but the result count remains the same.
   void composeSimplifyAndCanonicalize();
 
-  /// Combine corresponding results of 'a' and 'b' using 'expr'. The expression
-  /// may refer only to d0 and d1, which stand for the corresponding results of
-  /// 'a' and 'b'. For example, difference() uses `d0 - d1`, and sum() uses
-  /// `d0 + d1`.
+  /// Combine results from 'a' and 'b' using 'expr'. By default, combine
+  /// corresponding results; the result counts must be equal. If 'pairwise' is
+  /// false, combine every pair of results, with results from 'a' as the outer
+  /// loop.
+  /// The expression may refer only to d0 and d1, which stand for the results
+  /// of 'a' and 'b', respectively. The output map and operands are composed,
+  /// canonicalized, and simplified.
   static void combine(const AffineValueMap &a, const AffineValueMap &b,
-                      AffineExpr expr, AffineValueMap *res);
+                      AffineExpr expr, AffineValueMap *res,
+                      bool pairwise = true);
 
-  /// Return the value map that is the difference of value maps 'a' and 'b',
-  /// represented as an affine map and its operands. The output map + operands
-  /// are canonicalized and simplified.
+  /// Subtract results of 'b' from 'a'. By default, subtract corresponding
+  /// results, which requires equal result counts. If 'pairwise' is false,
+  /// subtract every result of 'b' from every result of 'a', with results of
+  /// 'a' as the outer loop. The output map and operands are canonicalized and
+  /// simplified.
   static void difference(const AffineValueMap &a, const AffineValueMap &b,
-                         AffineValueMap *res);
-
-  /// Return the value map that is the sum of value maps 'a' and 'b',
-  /// represented as an affine map and its operands. The output map + operands
-  /// are canonicalized and simplified.
-  static void sum(const AffineValueMap &a, const AffineValueMap &b,
-                  AffineValueMap *res);
+                         AffineValueMap *res, bool pairwise = true);
 
   /// Return true if the idx^th result can be proved to be a multiple of
   /// 'factor', false otherwise.
@@ -114,7 +113,6 @@ private:
   /// The SSA results binding to the results of 'map'.
   SmallVector<Value, 4> results;
 };
-
 } // namespace affine
 } // namespace mlir
 

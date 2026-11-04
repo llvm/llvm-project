@@ -34,9 +34,10 @@ void AffineValueMap::composeSimplifyAndCanonicalize() {
 }
 
 void AffineValueMap::combine(const AffineValueMap &a, const AffineValueMap &b,
-                             AffineExpr expr, AffineValueMap *res) {
-  assert(a.getNumResults() == b.getNumResults() && "invalid inputs");
-
+                             AffineExpr expr, AffineValueMap *res,
+                             bool pairwise) {
+  assert((!pairwise || a.getNumResults() == b.getNumResults()) &&
+         "matching by position requires equal result counts");
   bool validExpr = true;
   expr.walk([&](AffineExpr subExpr) {
     if (auto dim = llvm::dyn_cast<AffineDimExpr>(subExpr))
@@ -62,13 +63,22 @@ void AffineValueMap::combine(const AffineValueMap &a, const AffineValueMap &b,
                   .shiftDims(a.getNumDims())
                   .shiftSymbols(a.getNumSymbols());
 
-  // Substitute the corresponding results into the combining expression.
+  // Substitute each pair of results into the combining expression.
   auto aMap = a.getAffineMap();
   SmallVector<AffineExpr, 4> resultExprs;
-  resultExprs.reserve(a.getNumResults());
-  for (unsigned i = 0, e = bMap.getNumResults(); i < e; ++i) {
-    AffineExpr replacements[] = {aMap.getResult(i), bMap.getResult(i)};
-    resultExprs.push_back(expr.replaceDims(replacements));
+  if (pairwise) {
+    resultExprs.reserve(a.getNumResults());
+    for (unsigned i = 0, e = a.getNumResults(); i < e; ++i) {
+      AffineExpr replacements[] = {aMap.getResult(i), bMap.getResult(i)};
+      resultExprs.push_back(expr.replaceDims(replacements));
+    }
+  } else {
+    resultExprs.reserve(a.getNumResults() * b.getNumResults());
+    for (AffineExpr aResult : aMap.getResults())
+      for (AffineExpr bResult : bMap.getResults()) {
+        AffineExpr replacements[] = {aResult, bResult};
+        resultExprs.push_back(expr.replaceDims(replacements));
+      }
   }
 
   auto resultMap = AffineMap::get(bMap.getNumDims(), bMap.getNumSymbols(),
@@ -80,19 +90,12 @@ void AffineValueMap::combine(const AffineValueMap &a, const AffineValueMap &b,
 }
 
 void AffineValueMap::difference(const AffineValueMap &a,
-                                const AffineValueMap &b, AffineValueMap *res) {
+                                const AffineValueMap &b, AffineValueMap *res,
+                                bool pairwise) {
   MLIRContext *context = a.getAffineMap().getContext();
   AffineExpr lhs = getAffineDimExpr(0, context);
   AffineExpr rhs = getAffineDimExpr(1, context);
-  combine(a, b, lhs - rhs, res);
-}
-
-void AffineValueMap::sum(const AffineValueMap &a, const AffineValueMap &b,
-                         AffineValueMap *res) {
-  MLIRContext *context = a.getAffineMap().getContext();
-  AffineExpr lhs = getAffineDimExpr(0, context);
-  AffineExpr rhs = getAffineDimExpr(1, context);
-  combine(a, b, lhs + rhs, res);
+  combine(a, b, lhs - rhs, res, pairwise);
 }
 
 // Returns true and sets 'indexOfMatch' if 'valueToMatch' is found in
@@ -137,10 +140,12 @@ ArrayRef<Value> AffineValueMap::getOperands() const {
 AffineMap AffineValueMap::getAffineMap() const { return map.getAffineMap(); }
 
 bool AffineValueMap::operator==(const AffineValueMap &other) const {
+  if (getNumResults() != other.getNumResults())
+    return false;
   AffineValueMap diff;
   AffineValueMap::difference(*this, other, &diff);
-  return llvm::all_of(diff.getAffineMap().getResults(), [](AffineExpr e) {
-    return e == getAffineConstantExpr(0, e.getContext());
+  return llvm::all_of(diff.getAffineMap().getResults(), [](AffineExpr expr) {
+    return expr == getAffineConstantExpr(0, expr.getContext());
   });
 }
 
