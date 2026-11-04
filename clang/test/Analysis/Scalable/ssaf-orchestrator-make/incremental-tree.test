@@ -1,0 +1,58 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# RUN: make -C %t CXX=%ssaf-orchestrator-make-clang
+# RUN: ls %t/build/a.o %t/build/b.o %t/build/prg
+
+# RUN: cd %t
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make \
+# RUN:   | FileCheck %s --check-prefix=STDOUT
+
+# STDOUT: summaries: 3
+# RUN: ls %t/out/ssaf-artifacts%t/build/a.o.summary.json %t/out/ssaf-artifacts%t/build/b.o.summary.json
+
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make other \
+# RUN:   | FileCheck %s --check-prefix=SECOND
+# SECOND: summaries: 2
+# SECOND: link-unit: {{[^ ]*}}/build/other
+
+# RUN: ls %t/out/build-graph%t/build/other.buildstep.json
+# RUN: not ls %t/out/build-graph%t/build/prg.buildstep.json
+# RUN: not ls %t/out/ssaf-artifacts%t/build/a.o.summary.json
+
+#--- Makefile
+CXX = clang++
+all: build/prg
+other: build/other
+build/%.o: src/%.cpp
+	$(CXX) -c -o $@ $<
+build/prg: build/a.o build/b.o
+	$(CXX) -o $@ build/a.o build/b.o
+build/other: build/c.o
+	$(CXX) -o $@ build/c.o
+
+#--- src/a.cpp
+int total(int *p, int n) {
+  int t = 0;
+  for (int i = 0; i < n; ++i)
+    t += p[i];
+  return t;
+}
+
+#--- src/b.cpp
+int total(int *p, int n);
+int main() {
+  int values[2] = {1, 2};
+  return total(values, 2);
+}
+
+#--- src/c.cpp
+int main() { return 0; }
