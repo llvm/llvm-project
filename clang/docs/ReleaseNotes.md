@@ -769,6 +769,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- In the `-Wfunction-effects` diagnosis, if a callee is unsafe for
+  `nonblocking`/`nonallocating` only because an exception can escape it,
+  a `noexcept` caller (where that exception would terminate) no longer gets
+  a violation for calling it.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
