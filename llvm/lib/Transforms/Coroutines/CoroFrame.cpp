@@ -40,6 +40,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
 #include <optional>
 
@@ -1090,9 +1091,86 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     Builder.SetInsertPoint(coro::getSpillInsertionPt(Shape, Def, DT));
     createStoreIntoFrame(Builder, Def, ByValTy, Shape, FrameData);
 
+    // On paths that unwind before coro.begin executes (e.g. from the frame
+    // allocation call or Windows -EHa fault edges) the
+    // frame does not exist yet. Such a use needs the original value when
+    // reached along a pre-coro.begin path, and the frame reload value when
+    // reached along a post-coro.begin path (note that the original value does
+    // not exist in the resume/destroy clones). We aim to merge the two with SSA
+    // construction.
+    SmallVector<Instruction *, 4> UsersNotDominatedByCoroBegin;
+    for (auto *U : E.second)
+      if (!DT.dominates(Shape.CoroBegin, U))
+        UsersNotDominatedByCoroBegin.push_back(U);
+
+    if (!UsersNotDominatedByCoroBegin.empty()) {
+      SSAUpdater Updater;
+      Updater.Initialize(Def->getType(),
+                         Def->getName().str() + ".pre.begin.merge");
+
+      // The original value reaches uses along paths that never executed
+      // coro.begin.
+      BasicBlock *DefBB = isa<Argument>(Def)
+                              ? &F->getEntryBlock()
+                              : cast<Instruction>(Def)->getParent();
+      Updater.AddAvailableValue(DefBB, Def);
+
+      // The frame reload value reaches uses along paths that passed coro.begin.
+      // We introduce a reload at each boundary block (node that is
+      // dominated by coro.begin, having a successor that is not): unlike a
+      // single reload next to the spill store, boundary blocks remain reachable
+      // in the resume/destroy clones, where the reload is the only valid value.
+      // Unused reloads will be cleaned up.
+      SmallPtrSet<BasicBlock *, 4> ReloadBlocks;
+      for (BasicBlock &BB : *F) {
+        if (!DT.dominates(Shape.CoroBegin, BB.getTerminator()))
+          continue;
+        if (llvm::none_of(successors(&BB), [&](BasicBlock *Succ) {
+              return !DT.dominates(Shape.CoroBegin, Succ);
+            }))
+          continue;
+        // A catchswitch must be the only non-PHI instruction in its block;
+        // put the reload into the nearest dominator that can hold it.
+        BasicBlock *InsertBB = &BB;
+        while (isa<CatchSwitchInst>(InsertBB->getTerminator()))
+          InsertBB = DT.getNode(InsertBB)->getIDom()->getBlock();
+
+        if (!ReloadBlocks.insert(InsertBB).second)
+          continue;
+        Builder.SetInsertPoint(InsertBB->getTerminator());
+        auto *ReloadGEP =
+            createGEPToFramePointer(FrameData, Builder, Shape, Def);
+        ReloadGEP->setName(Def->getName() + Twine(".reload.addr"));
+        Value *Reload = ReloadGEP;
+        if (!ByValTy) {
+          auto SpillAlignment = Align(FrameData.getAlign(Def));
+          auto *LI = Builder.CreateAlignedLoad(
+              Def->getType(), ReloadGEP, SpillAlignment,
+              Def->getName() + Twine(".reload"));
+          if (TBAATag)
+            LI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
+          Reload = LI;
+        }
+        Updater.AddAvailableValue(InsertBB, Reload);
+      }
+
+      for (Instruction *U : UsersNotDominatedByCoroBegin) {
+        // A non-PHI user in the def's own block is dominated by the def
+        // itself, skip it
+        if (!isa<PHINode>(U) && U->getParent() == DefBB)
+          continue;
+        for (Use &Op : U->operands())
+          if (Op.get() == Def)
+            Updater.RewriteUse(Op);
+      }
+    }
+
     BasicBlock *CurrentBlock = nullptr;
     Value *CurrentReload = nullptr;
     for (auto *U : E.second) {
+      // Handled above via SSA construction.
+      if (!DT.dominates(Shape.CoroBegin, U))
+        continue;
       // If we have not seen the use block, create a load instruction to reload
       // the spilled value from the coroutine frame. Populates the Value pointer
       // reference provided with the frame GEP.
