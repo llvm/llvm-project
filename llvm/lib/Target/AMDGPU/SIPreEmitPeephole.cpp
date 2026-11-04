@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUCoExecInfo.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -65,10 +66,10 @@ private:
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
   bool removeRedundantModeWrites(MachineBasicBlock &SrcMBB) const;
   // Creates a list of packed instructions following an MFMA that are suitable
-  // for unpacking.
+  // for unpacking, i.e. that would still stall within \p UnpackWindow cycles.
   void collectUnpackingCandidates(MachineInstr &BeginMI,
                                   SetVector<MachineInstr *> &InstrsToUnpack,
-                                  uint16_t NumMFMACycles);
+                                  int UnpackWindow);
   // v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[2:3] op_sel:[1,1,1]
   // op_sel_hi:[0,0,0]
   // ==>
@@ -711,7 +712,7 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder &NewMI,
 
 void SIPreEmitPeephole::collectUnpackingCandidates(
     MachineInstr &BeginMI, SetVector<MachineInstr *> &InstrsToUnpack,
-    uint16_t NumMFMACycles) {
+    int UnpackWindow) {
   auto *BB = BeginMI.getParent();
   auto E = BB->end();
   int TotalCyclesBetweenCandidates = 0;
@@ -733,11 +734,13 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 
     const MCSchedClassDesc *InstrSchedClassDesc =
         SchedModel.resolveSchedClass(&Instr);
-    uint16_t Latency =
-        SchedModel.getWriteProcResBegin(InstrSchedClassDesc)->ReleaseAtCycle;
+    // S_NOP occupies one cycle per wait state.
+    unsigned Latency = std::max<unsigned>(
+        SchedModel.getWriteProcResBegin(InstrSchedClassDesc)->ReleaseAtCycle,
+        SIInstrInfo::getNumWaitStates(Instr));
     TotalCyclesBetweenCandidates += Latency;
 
-    if (TotalCyclesBetweenCandidates >= NumMFMACycles - 1)
+    if (TotalCyclesBetweenCandidates >= UnpackWindow)
       return;
     // Identify register dependencies between those used by the MFMA
     // instruction and the following packed instructions. Also checks for
@@ -761,8 +764,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     TotalCyclesBetweenCandidates -= Latency;
     // TODO: improve latency handling based on instruction modeling.
     TotalCyclesBetweenCandidates += 2;
-    // Subtract 1 to account for MFMA issue latency.
-    if (TotalCyclesBetweenCandidates < NumMFMACycles - 1)
+    if (TotalCyclesBetweenCandidates < UnpackWindow)
       InstrsToUnpack.insert(&Instr);
   }
 }
@@ -923,7 +925,20 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
           SchedModel.resolveSchedClass(&MI);
       uint16_t NumMFMACycles =
           SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
-      collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
+      // Subtract 1 to account for MFMA issue latency.
+      int UnpackWindow = NumMFMACycles - 1;
+      // Where the co-execution table holds PK_F32 past other VALU, unpacking
+      // pays off from the first VALU issue up to the PK_F32 one.
+      if (AMDGPU::hasCoExecInfo(ST)) {
+        AMDGPU::CoExecInfo Info = AMDGPU::getMFMACoExecInfo(MI.getOpcode());
+        unsigned PackedStage =
+            Info.getFirstAllowedStage(AMDGPU::CoExecMask::PK_F32);
+        unsigned VALUStage =
+            Info.getFirstAllowedStage(AMDGPU::CoExecMask::VALU);
+        if (PackedStage > VALUStage)
+          UnpackWindow = PackedStage - VALUStage + 1;
+      }
+      collectUnpackingCandidates(MI, InstrsToUnpack, UnpackWindow);
     }
     for (MachineInstr *MI : InstrsToUnpack) {
       performF32Unpacking(*MI);
