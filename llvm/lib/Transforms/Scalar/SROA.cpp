@@ -2339,6 +2339,23 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
     CandidateTys.resize(1);
   }
 
+  // Vectors of sub-byte elements are rejected below. If such a vector is a
+  // whole number of bytes, try it as a b8 vector of the same size instead, so
+  // the slice checks below apply at byte granularity. The byte type tracks
+  // poison and pointer provenance per bit, so grouping lanes into bytes
+  // neither spreads poison to a neighbouring lane nor drops provenance.
+  for (VectorType *&VTy : CandidateTys) {
+    auto *FVTy = dyn_cast<FixedVectorType>(VTy);
+    if (!FVTy)
+      continue;
+    uint64_t EltBits =
+        DL.getTypeSizeInBits(FVTy->getElementType()).getFixedValue();
+    uint64_t Bits = DL.getTypeSizeInBits(FVTy).getFixedValue();
+    if (EltBits % 8 == 0 || Bits % 8 != 0)
+      continue;
+    VTy = FixedVectorType::get(ByteType::get(VTy->getContext(), 8), Bits / 8);
+  }
+
   // FIXME: hack. Do we have a named constant for this?
   // SDAG SDNode can't have more than 65535 operands.
   llvm::erase_if(CandidateTys, [](VectorType *VTy) {
