@@ -2093,13 +2093,12 @@ template <typename PointerOpTy, typename OffsetOpTy> struct PtrAdd_match {
 
   template <typename OpTy> bool match(OpTy *V) const {
     auto *GEP = dyn_cast<GEPOperator>(V);
-    return GEP && GEP->getSourceElementType()->isIntegerTy(8) &&
-           (*GEP->idx_begin())
-               ->getType()
-               ->isIntOrIntVectorTy(
-                   DL.getIndexTypeSizeInBits(GEP->getType())) &&
-           PointerOp.match(GEP->getPointerOperand()) &&
-           OffsetOp.match(GEP->idx_begin()->get());
+    if (!GEP || !GEP->getSourceElementType()->isIntegerTy(8))
+      return false;
+    Value *Idx = *GEP->idx_begin();
+    return Idx->getType()->isIntOrIntVectorTy(
+               DL.getIndexTypeSizeInBits(GEP->getType())) &&
+           PointerOp.match(GEP->getPointerOperand()) && OffsetOp.match(Idx);
   }
 };
 
