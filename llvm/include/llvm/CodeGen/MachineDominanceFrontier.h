@@ -38,6 +38,7 @@ class LLVM_ABI MachineDominanceFrontierWrapperPass
     : public MachineFunctionPass {
 private:
   MachineDominanceFrontier MDF;
+  MachineDominatorTree *PendingMDT = nullptr;
 
 public:
   MachineDominanceFrontierWrapperPass();
@@ -55,7 +56,7 @@ public:
 
   void releaseMemory() override;
 
-  MachineDominanceFrontier &getMDF() { return MDF; }
+  MachineDominanceFrontier &getMDF();
 };
 
 class MachineDominanceFrontierAnalysis
