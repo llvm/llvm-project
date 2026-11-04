@@ -17,12 +17,18 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace cir {
 
 namespace direct {
 
 struct LLVMBlockAddressInfo;
+
+/// Memory type of each lowered cir.global, keyed by symbol name. It is the type
+/// that global_view indices apply to, which differs from the type of the
+/// llvm.mlir.global when its initializer reshapes it.
+using GlobalSymbolTypes = llvm::StringMap<mlir::Type>;
 
 /// Convert a CIR attribute to an LLVM value, or return null on failure.
 /// May use the datalayout for lowering attributes to-be-stored in memory. When
@@ -34,6 +40,7 @@ mlir::Value lowerCirAttrAsValue(mlir::Location parentLoc,
                                 mlir::ConversionPatternRewriter &rewriter,
                                 mlir::SymbolTableCollection &symbolTables,
                                 const mlir::TypeConverter *converter,
+                                const GlobalSymbolTypes &globalTypes,
                                 LLVMBlockAddressInfo *blockInfoAddr = nullptr);
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);

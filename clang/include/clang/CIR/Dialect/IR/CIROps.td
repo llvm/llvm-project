@@ -689,7 +689,8 @@ def CIR_ConstantOp : CIR_Op<"const", [
   let hasCXXABILowering = true;
   let isLLVMLoweringRecursive = true;
   let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr,
+                          "GlobalSymbolTypes &":$globalTypes)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3612,7 +3613,8 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
   }];
 
   let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr,
+                          "GlobalSymbolTypes &":$globalTypes)>;
 }
 
 //===----------------------------------------------------------------------===//

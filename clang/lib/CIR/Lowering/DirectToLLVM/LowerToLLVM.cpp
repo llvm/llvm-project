@@ -497,10 +497,11 @@ public:
                  mlir::ConversionPatternRewriter &rewriter,
                  mlir::SymbolTableCollection &symbolTables,
                  const mlir::TypeConverter *converter,
+                 const GlobalSymbolTypes &globalTypes,
                  LLVMBlockAddressInfo *blockInfoAddr = nullptr)
       : parentLoc(parentLoc), parentModule(parentModule), rewriter(rewriter),
         symbolTables(symbolTables), converter(converter),
-        blockInfoAddr(blockInfoAddr) {}
+        globalTypes(globalTypes), blockInfoAddr(blockInfoAddr) {}
 
 #define GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS
 #include "clang/CIR/Dialect/IR/CIRLowering.inc"
@@ -523,6 +524,7 @@ private:
   mlir::ConversionPatternRewriter &rewriter;
   mlir::SymbolTableCollection &symbolTables;
   const mlir::TypeConverter *converter;
+  const GlobalSymbolTypes &globalTypes;
   // Only available when lowering global initializers that may contain block
   // address attributes. Used to resolve a BlockAddrInfoAttr to its block tag.
   LLVMBlockAddressInfo *blockInfoAddr;
@@ -535,9 +537,10 @@ mlir::Value lowerCirAttrAsValue(mlir::Location parentLoc,
                                 mlir::ConversionPatternRewriter &rewriter,
                                 mlir::SymbolTableCollection &symbolTables,
                                 const mlir::TypeConverter *converter,
+                                const GlobalSymbolTypes &globalTypes,
                                 LLVMBlockAddressInfo *blockInfoAddr) {
   CIRAttrToValue valueConverter(parentLoc, parentModule, rewriter, symbolTables,
-                                converter, blockInfoAddr);
+                                converter, globalTypes, blockInfoAddr);
   return valueConverter.visit(attr);
 }
 
@@ -1079,8 +1082,12 @@ CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
   mlir::Operation *sourceSymbol =
       symbolTables.lookupSymbolIn(parentModule, symbol);
   if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
-    sourceType = llvmSymbol.getType();
     symName = llvmSymbol.getSymName();
+    // The initializer may have reshaped the global, so use the type recorded
+    // before that. Globals not lowered from cir.global have none.
+    sourceType = globalTypes.lookup(symName);
+    if (!sourceType)
+      sourceType = llvmSymbol.getType();
     addrSpace = llvmSymbol.getAddrSpace();
   } else if (auto cirSymbol = dyn_cast<cir::GlobalOp>(sourceSymbol)) {
     originalType = cirSymbol.getSymType();
@@ -2851,9 +2858,9 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     // Lower GlobalViewAttr to llvm.mlir.addressof + llvm.mlir.ptrtoint and
     // BlockAddrDiffAttr to the difference of two llvm.blockaddress.
     if (mlir::isa<cir::GlobalViewAttr, cir::BlockAddrDiffAttr>(op.getValue())) {
-      auto newOp =
-          lowerCirAttrAsValue(op->getLoc(), moduleOp, op.getValue(), rewriter,
-                              symbolTables, getTypeConverter(), &blockInfoAddr);
+      auto newOp = lowerCirAttrAsValue(
+          op->getLoc(), moduleOp, op.getValue(), rewriter, symbolTables,
+          getTypeConverter(), globalTypes, &blockInfoAddr);
       rewriter.replaceOp(op, newOp);
       return mlir::success();
     }
@@ -2879,9 +2886,9 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     // llvm.blockaddress.
     if (mlir::isa<cir::GlobalViewAttr, cir::GlobalOffsetAttr, cir::ConstPtrAttr,
                   cir::BlockAddrInfoAttr>(op.getValue())) {
-      auto newOp =
-          lowerCirAttrAsValue(op->getLoc(), moduleOp, op.getValue(), rewriter,
-                              symbolTables, getTypeConverter(), &blockInfoAddr);
+      auto newOp = lowerCirAttrAsValue(
+          op->getLoc(), moduleOp, op.getValue(), rewriter, symbolTables,
+          getTypeConverter(), globalTypes, &blockInfoAddr);
       if (!newOp)
         return mlir::failure();
       rewriter.replaceOp(op, newOp);
@@ -2900,8 +2907,9 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
                                                      typeConverter))) {
       attr = denseAttr.value();
     } else {
-      const mlir::Value initVal = lowerCirAttrAsValue(
-          op->getLoc(), moduleOp, value, rewriter, symbolTables, typeConverter);
+      const mlir::Value initVal =
+          lowerCirAttrAsValue(op->getLoc(), moduleOp, value, rewriter,
+                              symbolTables, typeConverter, globalTypes);
       if (!initVal)
         return mlir::failure();
       rewriter.replaceOp(op, initVal);
@@ -2909,9 +2917,9 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     }
   } else if (const auto recordAttr =
                  mlir::dyn_cast<cir::ConstRecordAttr>(op.getValue())) {
-    auto initVal = lowerCirAttrAsValue(op->getLoc(), moduleOp,
-                                       spellOutSplitTrailingZeros(recordAttr),
-                                       rewriter, symbolTables, typeConverter);
+    auto initVal = lowerCirAttrAsValue(
+        op->getLoc(), moduleOp, spellOutSplitTrailingZeros(recordAttr),
+        rewriter, symbolTables, typeConverter, globalTypes);
     if (!initVal)
       return mlir::failure();
     rewriter.replaceOp(op, initVal);
@@ -2919,15 +2927,16 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   } else if (const auto vecTy = mlir::dyn_cast<cir::VectorType>(op.getType())) {
     mlir::Value initVal =
         lowerCirAttrAsValue(op->getLoc(), moduleOp, op.getValue(), rewriter,
-                            symbolTables, getTypeConverter());
+                            symbolTables, getTypeConverter(), globalTypes);
     if (!initVal)
       return mlir::failure();
     rewriter.replaceOp(op, initVal);
     return mlir::success();
   } else if (mlir::isa<cir::RecordType>(op.getType())) {
     if (mlir::isa<cir::ZeroAttr, cir::UndefAttr>(attr)) {
-      mlir::Value initVal = lowerCirAttrAsValue(
-          op->getLoc(), moduleOp, attr, rewriter, symbolTables, typeConverter);
+      mlir::Value initVal =
+          lowerCirAttrAsValue(op->getLoc(), moduleOp, attr, rewriter,
+                              symbolTables, typeConverter, globalTypes);
       if (!initVal)
         return mlir::failure();
       rewriter.replaceOp(op, initVal);
@@ -3427,7 +3436,7 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   // initializer or nested inside an aggregate) can be resolved by the
   // BlockAddrInfoAttr visitor.
   CIRAttrToValue valueConverter(loc, moduleOp, rewriter, symbolTables,
-                                typeConverter, &blockInfoAddr);
+                                typeConverter, globalTypes, &blockInfoAddr);
   mlir::Value value = valueConverter.visit(init);
   if (!value)
     return mlir::failure();
@@ -3459,6 +3468,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   if (!llvmType)
     return op.emitError()
            << "NYI: lowering global of a type with no memory representation";
+  globalTypes[op.getSymName()] = llvmType;
 
   // A flexible array member initializer makes the constant larger than the
   // record's declared type, so the global must use an oversized anonymous
@@ -4891,10 +4901,14 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   /// Cached symbol table collection used by call lowering patterns to avoid
   /// repeated O(M) module-wide symbol scans for every call site.
   mlir::SymbolTableCollection symbolTables;
+  /// Memory type of each cir.global before its initializer reshapes it.
+  GlobalSymbolTypes globalTypes;
   mlir::RewritePatternSet patterns(&getContext());
-  patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMConstantOpLowering,
-               CIRToLLVMGlobalOpLowering, CIRToLLVMLabelOpLowering>(
+  patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMLabelOpLowering>(
       converter, patterns.getContext(), dl, symbolTables, blockInfoAddr);
+  patterns.add<CIRToLLVMConstantOpLowering, CIRToLLVMGlobalOpLowering>(
+      converter, patterns.getContext(), dl, symbolTables, blockInfoAddr,
+      globalTypes);
 
   patterns.add<
 #define GET_LLVM_LOWERING_PATTERNS_LIST
