@@ -17,7 +17,13 @@
 ///      exact physical register,
 ///   3. propagates the hint through COPY / REG_SEQUENCE / INSERT_SUBREG /
 ///      SUBREG_TO_REG so it survives coalescing, and
-///   4. replaces the pseudo with a plain COPY.
+///   4. replaces the pseudo with a plain COPY, except for a strict AGPR pin.
+///
+/// A strict AGPR pseudo is left in place until expandPostRAPseudo. Replacing
+/// it with a COPY drops the AGPR operand constraint, and the coalescer then
+/// widens the vreg from AGPR_* to AV_*. vN and aN share a HW index, so the
+/// allocator can satisfy the hint with a VGPR. Keeping the pseudo holds the
+/// class at AGPR_* through coalescing.
 ///
 /// The hint is advisory unless strict: SIRegisterInfo::getRegAllocationHints
 /// only reorders the allocation candidates, so a non-strict hint falls back to
@@ -155,6 +161,13 @@ static bool runSchedGPR(MachineFunction &MF) {
       SmallDenseSet<unsigned, 32> Visited;
       if (DstReg.isVirtual())
         propagateHint(MRI, DstReg, RegNum, HintKind, Visited);
+
+      // A strict AGPR pin must keep its AGPR operand constraint until after
+      // RA. expandPostRAPseudo turns the pseudo into a physreg copy.
+      if (Kind == SGK_AGPR && Strict) {
+        Changed = true;
+        continue;
+      }
 
       // Replace the pseudo with a plain COPY.
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), DstReg)

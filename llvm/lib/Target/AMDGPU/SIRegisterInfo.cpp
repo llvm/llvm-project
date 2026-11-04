@@ -4335,19 +4335,50 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
   case AMDGPURI::StrictSGPRRegHint:
   case AMDGPURI::AGPRRegHint:
   case AMDGPURI::StrictAGPRRegHint: {
-    // Exact register preference from llvm.amdgcn.sched.{vgpr,sgpr,agpr}.
-    // The target HW register index is carried in Hint.second. Prefer the
-    // physreg whose HW index matches.
+    // Exact architectural register from llvm.amdgcn.sched.{vgpr,sgpr,agpr}.
+    // Hint.second is the HW index. vN and aN share that index, so the hint
+    // only admits physregs of the requested file. A hint that propagated onto
+    // a vreg whose class cannot hold that file (an AGPR pin copied into a
+    // VGPR, for example) is ignored.
+    const unsigned Kind = Hint.first;
+    const bool WantVGPR =
+        Kind == AMDGPURI::VGPRRegHint || Kind == AMDGPURI::StrictVGPRRegHint;
+    const bool WantSGPR =
+        Kind == AMDGPURI::SGPRRegHint || Kind == AMDGPURI::StrictSGPRRegHint;
+    const bool WantAGPR =
+        Kind == AMDGPURI::AGPRRegHint || Kind == AMDGPURI::StrictAGPRRegHint;
+    const bool Strict = Kind == AMDGPURI::StrictVGPRRegHint ||
+                        Kind == AMDGPURI::StrictSGPRRegHint ||
+                        Kind == AMDGPURI::StrictAGPRRegHint;
+    const TargetRegisterClass *VRC = MRI.getRegClass(VirtReg);
+    const bool ClassOK =
+        (WantAGPR && (isAGPRClass(VRC) || isVectorSuperClass(VRC))) ||
+        (WantVGPR && (isVGPRClass(VRC) || isVectorSuperClass(VRC))) ||
+        (WantSGPR && (isSGPRClass(VRC) || isVSSuperClass(VRC)));
+    if (!ClassOK)
+      return false;
+
     unsigned TargetIdx = Hint.second;
     for (MCPhysReg PhysReg : Order) {
       if (MRI.isReserved(PhysReg))
         continue;
-      if (getHWRegIndex(PhysReg) == TargetIdx)
-        Hints.insert(PhysReg);
+      if (getHWRegIndex(PhysReg) != TargetIdx)
+        continue;
+      const TargetRegisterClass *RC = getPhysRegBaseClass(PhysReg);
+      if (!RC)
+        continue;
+      if (WantAGPR && !isAGPRClass(RC))
+        continue;
+      if (WantVGPR && !isVGPRClass(RC))
+        continue;
+      if (WantSGPR && !isSGPRClass(RC))
+        continue;
+      Hints.insert(PhysReg);
     }
-    return Hint.first == AMDGPURI::StrictVGPRRegHint ||
-           Hint.first == AMDGPURI::StrictSGPRRegHint ||
-           Hint.first == AMDGPURI::StrictAGPRRegHint;
+    // Strict is a hard constraint: returning true makes the allocation order
+    // contain only these hints. If none matched, allocation fails instead of
+    // silently using the other file.
+    return Strict;
   }
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
