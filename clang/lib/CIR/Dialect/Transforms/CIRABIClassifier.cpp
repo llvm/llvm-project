@@ -27,11 +27,13 @@ using namespace mlir::abi;
 using namespace cir;
 
 //===----------------------------------------------------------------------===//
-// x86_64 System V classifier bridge
+// LLVM ABI Lowering Library classifier bridge
 //
-// Maps CIR types to llvm::abi::Type, runs the LLVM ABI Lowering Library's SysV
-// x86_64 classifier, and converts the result back into the dialect-agnostic
-// mlir::abi::FunctionClassification that CIRABIRewriteContext consumes.
+// Maps CIR types to llvm::abi::Type, runs the target's classifier from the
+// LLVM ABI Lowering Library, and converts the result back into the
+// dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
+// consumes.
+//
 // isSupportedType says which CIR types the bridge handles, and a signature
 // naming any other fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
@@ -111,13 +113,13 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
   return llvm::Align(layout.getRecordAlign());
 }
 
-/// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
+/// The CIR types the bridge handles.  Scalars: an integer up to 128
 /// bits (including `__int128`), a `_BitInt` of any width, pointer, vtable
 /// pointer, bool, void, or any floating-point type.  Aggregates: a complete
 /// struct or union whose members are all themselves supported, or an array
 /// of a supported element type.  Also a `_Complex`, or a fixed-width vector,
 /// of a supported element type.  Everything else is reported NYI at the
-/// reject() choke point in classifyX86_64Function.
+/// reject() choke point in classifySignature.
 static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
@@ -153,8 +155,8 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   if (auto complexTy = dyn_cast<cir::ComplexType>(ty))
     return isSupportedType(complexTy.getElementType(), dl);
   if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
-    // A scalable vector has no size the SysV eightbyte rules can read, and
-    // x86_64 has no calling convention for one.
+    // A scalable vector has no fixed size, and no target that classifies
+    // through the bridge passes one yet.
     if (vecTy.isScalable())
       return false;
     // mapCIRType maps a bool as a one-bit integer, so a bool vector is sized
@@ -243,7 +245,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   return false;
 }
 
-/// Convert an llvm::abi::Type coercion type back to a scalar CIR type.
+/// Convert an llvm::abi::Type coercion type back to a CIR type.
 static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
   if (!ty)
     return nullptr;
@@ -384,8 +386,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
 
         // Mapped with no fields, an empty record reaches Ignore on its own.
-        // The size still matters: past two eightbytes SysV says memory whatever
-        // the content.
+        // The size still matters, since a target may pass a large empty
+        // record in memory whatever its content.
         // TODO: AArch64 needs the unadjusted alignment. We'll need to add that
         // to RecordLayoutAttr.
         if (recTy.isEmptyForABI())
@@ -398,23 +400,23 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         fields.reserve(recTy.getMembers().size());
 
         // The classifier reads one entry per source bit-field, so a unit is
-        // spread back out into the fields it holds.  x86_64 is little-endian,
-        // so the unit's first byte holds the first of them, and the rest
-        // follow at the widths ahead of them.
+        // spread back out into the fields it holds.  The targets classified
+        // here are little-endian, so the unit's first byte holds the first of
+        // them, and the rest follow at the widths ahead of them.
         //
-        // A coercion for an eightbyte is built from the type at that
-        // eightbyte's first byte, where the unit's first field sits, so that
+        // A coercion for a register is built from the type at the first byte
+        // the register holds, where the unit's first field sits, so that
         // field's entry carries the unit rather than its own declared type.
         // The bits holding user data are a separate question, and the answer
         // is the extent of the type each field was declared with, which the
-        // eightbyte rules read through to decide whether a narrower coercion
+        // classifier reads through to decide whether a narrower coercion
         // would drop something.  One entry cannot answer both, so a unit
         // narrower than its first field's declaration takes an extra entry for
         // that declaration, holding no bits of its own.  A zero-width
         // bit-field has no unit and so contributes only the declaration.
         //
         // A width of zero is how the classifier recognizes the entries that
-        // take no part in assigning eightbyte classes, so the width goes
+        // take no part in assigning register classes, so the width goes
         // through as declared.
         auto addAccessUnit = [&](cir::BitFieldType bfTy,
                                  uint64_t unitOffsetBits) {
@@ -440,9 +442,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           }
         };
 
-        // The size passed here spans the tail padding, so an eightbyte covers
-        // the whole union rather than just the member the classifier reduces
-        // it to.
+        // The size passed here spans the tail padding, so the classifier
+        // covers the whole union rather than just the member it reduces the
+        // union to.
         if (recTy.isUnion()) {
           // Classify only the variants that supply data, judged by each
           // variant's own storage rather than by its mark.  One supplying
@@ -472,10 +474,10 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                  llvm::abi::StructPacking::Default, flags);
         }
 
-        // Padding is dropped, so the eightbyte rules see its bytes as holding
+        // Padding is dropped, so the classifier sees its bytes as holding
         // nothing, while the record's full size set above still spans them.  An
         // unnamed bit-field is flagged rather than dropped, since classic
-        // CodeGen ignores it when assigning eightbyte classes but counts it
+        // CodeGen ignores it when assigning register classes but counts it
         // when choosing the coerce type, and a member's presence alone cannot
         // say both.
         for (auto [idx, fieldTy, kind] :
@@ -520,9 +522,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// cases where the value has to be rebuilt on the wire: an aggregate unpacked
 /// into the register(s) holding it, a scalar too wide for one register split
 /// into a tuple of them, a scalar the classifier widens to fill its
-/// eightbyte, a pointer moved into another address space, and a value whose
-/// live bytes start partway into its storage because a leading eightbyte
-/// holds no field (getDirectOffset).  canFlatten
+/// register, a pointer moved into another address space, and a value whose
+/// live bytes start partway into its storage because its leading bytes hold
+/// no field (getDirectOffset).  canFlatten
 /// follows the classifier's CanBeFlattened, so the rewriter splits a
 /// multi-field coerced struct into individual wire arguments unless the
 /// classifier asked to keep it intact.  Any other scalar passes in its
@@ -533,10 +535,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// silently passing the value unchanged.
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
-/// The x86_64 classifier (llvm/lib/ABI/Targets/X86.cpp) only returns Extend
-/// for an integer or bool operand, or for a transparent union whose first
-/// member is one, so any other origTy is asserted rather than silently
-/// handled.
+/// The classifiers for the targets the bridge serves only return Extend for
+/// an integer or bool operand, or for a transparent union whose first member
+/// is one, so any other origTy is asserted rather than silently handled.
 ///
 /// Indirect: an aggregate that does not fit in registers, or a scalar too
 /// wide to fit (a `_BitInt` over 128 bits), is passed via a pointer (sret
@@ -633,8 +634,8 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     if (isa_and_present<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt());
     assert((!origTy || isa<cir::IntType, cir::RecordType>(origTy)) &&
-           "the x86_64 classifier only returns Extend for integers, bool, and "
-           "transparent unions");
+           "Extend is only expected for integers, bool, and transparent "
+           "unions");
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
@@ -648,18 +649,14 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   if (info.isIndirectAliased())
     return ArgClassification::getIndirectAliased(info.getIndirectAlign(),
                                                  info.getIndirectAddrSpace());
-  // AArch64 pure scalable aggregates use CoerceAndExpand. This bridge lowers
-  // x86_64 classifications only.
-  assert(!info.isCoerceAndExpand() &&
-         "CoerceAndExpand is not expected for x86_64");
+  // AArch64 pure scalable aggregates use CoerceAndExpand, but they aren't
+  // supported yet.
+  assert(!info.isCoerceAndExpand() && "CoerceAndExpand is not handled yet");
   assert(info.isIgnore() && "Unexpected classification");
   return ArgClassification::getIgnore();
 }
 
 /// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
-///
-/// The only x86_64 rule that reads this boundary sends an unnamed vector wider
-/// than 128 bits to memory.
 static llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy) {
   if (!fnTy.isVarArg())
     return llvm::abi::RequiredArgs::All;
@@ -826,7 +823,7 @@ CIRABIClassifierCommon::classifyIndirectCall(cir::CIRCallOpInterface call) {
       targetInfo, llvm::CallingConv::C, [&]() { return call->emitOpError(); });
 }
 
-/// Record on \p fc whether \p returnType is CIR's void.  The x86_64 classifier
+/// Record on \p fc whether \p returnType is CIR's void.  classifySignature
 /// answers this itself, but the other two drivers cannot: the test target is
 /// dialect-neutral and has no notion of CIR's void, and the
 /// classification-attr schema carries no return type at all.  Both route

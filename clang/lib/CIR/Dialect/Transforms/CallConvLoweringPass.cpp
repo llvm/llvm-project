@@ -59,7 +59,7 @@ namespace mlir {
 
 /// Whether \p ty, or an aggregate member/element reached by value (never
 /// through a pointer), is an incomplete record.  Such a record has no known
-/// layout, so no eightbyte classification can be built for it.
+/// layout, so no classification can be built for it.
 static bool hasIncompleteRecordByValue(mlir::Type ty) {
   if (auto recTy = dyn_cast<cir::RecordType>(ty))
     return !recTy.isComplete() ||
