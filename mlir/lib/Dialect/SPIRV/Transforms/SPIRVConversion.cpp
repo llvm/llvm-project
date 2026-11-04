@@ -1067,13 +1067,6 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
         }))
       return failure();
 
-    // Bail out early for argument types that getZeroAttr cannot handle, e.g.
-    // a tensor with a vector element type.
-    if (llvm::any_of(fnType.getInputs(), [&](Type argType) -> bool {
-          return !rewriter.getZeroAttr(argType);
-        }))
-      return failure();
-
     // Create a new func op with the original type and copy the function body.
     auto newFuncOp = func::FuncOp::create(rewriter, funcOp.getLoc(),
                                           funcOp.getName(), fnType);

@@ -279,7 +279,6 @@ func.func @dynamic_tensor_arg(%arg0: tensor<?x2xi8>) {
 
 // Regression test for https://github.com/llvm/llvm-project/issues/205060
 // Functions with tensor-of-vector args should not crash.
-// The pattern should bail out and leave such functions unchanged.
 
 // CHECK-LABEL: @tensor_of_vector_arg
 // CHECK-SAME: (%[[ARG0:.+]]: tensor<8x8xvector<4xi8>>)
