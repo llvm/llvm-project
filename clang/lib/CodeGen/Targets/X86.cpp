@@ -1995,8 +1995,8 @@ X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
     return Field;
   if (Accum == Integer || Field == Integer)
     return Integer;
-  if (Field == X87 || Field == X87Up || Field == ComplexX87 ||
-      Accum == X87 || Accum == X87Up || Accum == ComplexX87)
+  if (Field == X87 || Field == X87Up || Field == ComplexX87 || Accum == X87 ||
+      Accum == X87Up || Accum == ComplexX87)
     return Memory;
   return SSE;
 }
@@ -2582,7 +2582,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
   if (const ComplexType *CT = Ty->getAs<ComplexType>()) {
     ClassPair Classes = getComplexTypeClassification(CT);
     if (!useLegacy && Classes.Lo == ComplexX87) {
-      // A _Complex long double value occupies four eightbytes, all of which classify as COMPLEX_X87
+      // A _Complex long double value occupies four eightbytes, all of which
+      // classify as COMPLEX_X87
       llvm::fill(EightBytes, ComplexX87);
       return;
     }
