@@ -704,6 +704,15 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   /// A list of GUIDs defined by this module. Indexed by ValueID.
   std::vector<GlobalValue::GUID> GUIDList;
 
+  /// True if a MODULE_CODE_GUIDLIST record was seen. Bitcode produced before
+  /// GUIDs were assigned and recorded in metadata has no such record (it is
+  /// emitted unconditionally, even when empty, by newer writers). For such
+  /// legacy bitcode we assign GUIDs during upgrade (see upgradeGUIDs()).
+  bool SeenGUIDList = false;
+
+  /// True once legacy GUIDs have been computed for this module.
+  bool UpgradedGUIDs = false;
+
   /// Mirrors ParserCallbacks::SkipDebugIntrinsicUpgrade. When set, debug
   /// intrinsic calls (llvm.dbg.*) are not auto-upgraded to non-instruction
   /// debug records by globalCleanup(); the caller is expected to perform the
@@ -950,6 +959,8 @@ private:
   Error typeCheckLoadStoreInst(Type *ValType, Type *PtrType);
   Error parseFunctionBody(Function *F);
   Error globalCleanup();
+  void upgradeGUIDs();
+  void attachUpgradedGUIDMetadata(GlobalObject &GO);
   Error resolveGlobalAndIndirectSymbolInits();
   Error parseUseLists();
   Error findFunctionInStream(
@@ -4045,6 +4056,13 @@ Error BitcodeReader::materializeMetadata() {
 
   UpgradeCFIFunctionsMetadata(*TheModule);
 
+  // Attach !guid metadata to global variable definitions of legacy bitcode.
+  // Functions are handled when their bodies are materialized, as unmaterialized
+  // functions may not carry metadata.
+  if (UpgradedGUIDs)
+    for (GlobalVariable &GV : TheModule->globals())
+      attachUpgradedGUIDMetadata(GV);
+
   DeferredMetadataInfo.clear();
   return Error::success();
 }
@@ -4113,11 +4131,57 @@ Error BitcodeReader::globalCleanup() {
     TheModule->insertGUID(Value, GUID);
   }
 
+  // Legacy bitcode predating GUID assignment has no MODULE_CODE_GUIDLIST
+  // record. Compute GUIDs from the original names and linkages now, before
+  // any client (e.g. LTO) can mutate them. Names are only known once the
+  // string table or the value symbol table has been read, and globalCleanup()
+  // can be invoked before the VST is parsed for older bitcode, so wait until
+  // then.
+  if (!SeenGUIDList && !UpgradedGUIDs && (UseStrtab || SeenValueSymbolTable))
+    upgradeGUIDs();
+
   // Force deallocation of memory for these vectors to favor the client that
   // want lazy deserialization.
   std::vector<std::pair<GlobalVariable *, unsigned>>().swap(GlobalInits);
   std::vector<std::pair<GlobalValue *, unsigned>>().swap(IndirectSymbolInits);
   return Error::success();
+}
+
+/// Record the GUIDs of all definitions in a module that predates GUID
+/// assignment, mirroring what AssignGUIDPass would have computed at the time
+/// the module was produced. The GUIDs are stored in the module's value-to-GUID
+/// map, which serves unmaterialized (lazily loaded) values; the corresponding
+/// !guid metadata is attached once metadata and function bodies are
+/// materialized (see attachUpgradedGUIDMetadata()).
+void BitcodeReader::upgradeGUIDs() {
+  assert(!SeenGUIDList && !UpgradedGUIDs);
+  UpgradedGUIDs = true;
+  for (GlobalVariable &GV : TheModule->globals()) {
+    if (GV.isDeclaration())
+      continue;
+    TheModule->insertGUID(&GV, GV.getGUIDOrFallback());
+  }
+  for (Function &F : TheModule->functions()) {
+    if (F.isDeclaration())
+      continue;
+    TheModule->insertGUID(&F, F.getGUIDOrFallback());
+  }
+}
+
+/// Attach !guid metadata to \p GO from the GUID recorded by upgradeGUIDs(), so
+/// that the GUID survives operations that only transfer metadata (e.g. module
+/// linking and cloning). Must only be called once \p GO can legally carry
+/// metadata, i.e. after module metadata is loaded and, for functions, after
+/// the body is materialized.
+void BitcodeReader::attachUpgradedGUIDMetadata(GlobalObject &GO) {
+  assert(UpgradedGUIDs);
+  if (GO.isDeclaration() || GO.getMetadata(LLVMContext::MD_guid))
+    return;
+  if (auto GUID = TheModule->getGUID(&GO))
+    GO.setMetadata(
+        LLVMContext::MD_guid,
+        MDNode::get(Context, {ConstantAsMetadata::get(ConstantInt::get(
+                                 Type::getInt64Ty(Context), *GUID))}));
 }
 
 /// Support for lazy parsing of function bodies. This is required if we
@@ -4934,6 +4998,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     // MODULE_CODE_GUIDLIST: [i64 x N]
     case bitc::MODULE_CODE_GUIDLIST:
       assert(Record.size() % 2 == 0);
+      SeenGUIDList = true;
       GUIDList.reserve(GUIDList.size() + Record.size() / 2);
       for (size_t i = 0; i < Record.size(); i += 2)
         GUIDList.push_back(Record[i] << 32 | Record[i + 1]);
@@ -7261,6 +7326,11 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   // Finish fn->subprogram upgrade for materialized functions.
   if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
     F->setSubprogram(SP);
+
+  // Finish the GUID upgrade for legacy bitcode now that the function can
+  // carry metadata.
+  if (UpgradedGUIDs)
+    attachUpgradedGUIDMetadata(*F);
 
   // Check if the TBAA Metadata are valid, otherwise we will need to strip them.
   if (!MDLoader->isStrippingTBAA()) {
