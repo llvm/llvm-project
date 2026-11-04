@@ -2096,8 +2096,8 @@ template <typename PointerOpTy, typename OffsetOpTy> struct PtrAdd_match {
     if (!GEP || !GEP->getSourceElementType()->isIntegerTy(8))
       return false;
     Value *Idx = *GEP->idx_begin();
-    return Idx->getType()->isIntOrIntVectorTy(
-               DL.getIndexTypeSizeInBits(GEP->getType())) &&
+    unsigned IdxWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+    return Idx->getType()->isIntOrIntVectorTy(IdxWidth) &&
            PointerOp.match(GEP->getPointerOperand()) && OffsetOp.match(Idx);
   }
 };
