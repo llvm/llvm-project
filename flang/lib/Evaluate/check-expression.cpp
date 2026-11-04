@@ -1725,6 +1725,9 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // The actual argument is the consequent-arg chosen at run time (F2023
     // 15.5.2.3 p2), so apply the rules for a plain actual argument to each
     // one. IsVariable() of the whole argument would look at the condition.
+    // Keep the answer for the whole argument at least as conservative as the
+    // answer for each consequent-arg: CheckExplicitDataArg() asks about a
+    // consequent-arg only when the whole argument needs copy-out.
     bool anyVariable{false};
     bool anyOtherExpr{false};
     condArg->ForEachConsequent(

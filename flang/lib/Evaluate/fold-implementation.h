@@ -1463,12 +1463,11 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // time to avoid a combinatorial cross-product expansion.
     // This is not valid for non-elemental intrinsics such as RESHAPE or
     // TRANSFER, whose results depend on seeing all arguments together.
+    // IsContiguous() takes every consequent-arg into account.
+    const bool intrinsicIsIS_CONTIGUOUS{intrinsic->name == "is_contiguous"};
     std::optional<FunctionRef<T>> viaRepresentative;
     for (std::size_t j{0}; j < args.size(); ++j) {
-      if (args[j] && args[j]->isConditionalArg()) {
-        if (intrinsic->name == "is_contiguous") {
-          continue; // IsContiguous() takes every consequent-arg into account
-        }
+      if (args[j] && args[j]->isConditionalArg() && !intrinsicIsIS_CONTIGUOUS) {
         const ActualArgument::ConditionalArg &condArg{
             DEREF(args[j]->GetConditionalArg())};
         // C1540 rules out .NIL. here in conforming code: no type-only inquiry
