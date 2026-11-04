@@ -8,6 +8,7 @@ add_custom_target(LibsyclUnitTests)
 set_target_properties(LibsyclUnitTests PROPERTIES FOLDER "libsycl/Tests/Unit")
 
 add_subdirectory(mock)
+add_subdirectory(device)
 add_subdirectory(device_selector)
 add_subdirectory(event)
 add_subdirectory(exception)
