@@ -514,10 +514,10 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
               /*IsUnnamedBitField=*/isUnnamed));
         }
 
-        return tb.getRecordType(
-            fields, sizeBits, align, unadjustedAlign,
-            llvm::abi::StructPacking::Default,
-            /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
+        return tb.getRecordType(fields, sizeBits, align, unadjustedAlign,
+                                llvm::abi::StructPacking::Default,
+                                /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{},
+                                flags);
       })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
         llvm_unreachable(
