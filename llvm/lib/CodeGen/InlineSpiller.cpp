@@ -225,7 +225,7 @@ private:
   bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
   void eliminateRedundantRestores();
-  bool tryForwardRestore(MachineInstr &Restore, MachineInstr &Store);
+  bool tryForwardFromStoreToRestore(MachineInstr &Store, MachineInstr &Restore);
 
   void markValueUsed(LiveInterval *, VNInfo *);
   bool hasPhysRegAvailable(const MachineInstr &MI);
@@ -536,8 +536,8 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
 /// Replace \p Restore with a copy to forward the value if \p Store saved the
 /// same physical register to the same slot and that register still holds the
 /// value. Returns true if the forwarding was successful, false otherwise.
-bool InlineSpiller::tryForwardRestore(MachineInstr &Restore,
-                                      MachineInstr &Store) {
+bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
+                                                  MachineInstr &Restore) {
   // Establish that Restore and Store are both eligible for forwarding check
   // that physical register, store/load size and stack slot match.
   if (Restore.isBundled() || Store.isBundled())
@@ -572,6 +572,10 @@ bool InlineSpiller::tryForwardRestore(MachineInstr &Restore,
     return false;
 
   if (Restore.hasOrderedMemoryRef() || Store.hasOrderedMemoryRef())
+    return false;
+
+  // A predicated access may not execute, so the slot contents are unknown.
+  if (TII.isPredicated(Restore) || TII.isPredicated(Store))
     return false;
 
   auto GetAssignedReg = [&](Register Reg) -> Register {
@@ -669,21 +673,21 @@ bool InlineSpiller::tryForwardRestore(MachineInstr &Restore,
 void InlineSpiller::eliminateRedundantRestores() {
   for (MachineBasicBlock &MBB : MF) {
     // The last instruction in this block referencing each stack slot.
-    DenseMap<int, MachineInstr *> LastSlotAccess;
+    DenseMap<int, MachineInstr *> PreviousSlotAccess;
     for (MachineInstr &MI : make_early_inc_range(MBB.instrs())) {
       if (MI.isDebugInstr())
         continue;
       int FI;
       TypeSize Size = TypeSize::getZero();
       if (TII.isLoadFromStackSlot(MI, FI, Size))
-        if (MachineInstr *Store = LastSlotAccess.lookup(FI))
-          if (tryForwardRestore(MI, *Store))
+        if (MachineInstr *Store = PreviousSlotAccess.lookup(FI))
+          if (tryForwardFromStoreToRestore(*Store, MI))
             continue;
       // Before frame index elimination, every stack slot access has a frame
       // index operand.
       for (const MachineOperand &MO : MI.operands())
         if (MO.isFI())
-          LastSlotAccess[MO.getIndex()] = &MI;
+          PreviousSlotAccess[MO.getIndex()] = &MI;
     }
   }
 }
