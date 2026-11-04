@@ -49,6 +49,10 @@ private:
                         const LanguageRuntime::VTableInfo &vtable_info,
                         llvm::ArrayRef<llvm::StringRef> vtable_components);
 
+  std::pair<lldb::TypeSP, ConstString>
+  LookupTypeByMangled(Mangled &mangled, lldb::ModuleSP preferred_module,
+                      bool &any_found);
+
   using OffsetToTopCache = std::map<Address, int64_t>;
 
   OffsetToTopCache m_offset_to_top_map;

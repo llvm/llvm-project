@@ -301,11 +301,12 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
 
 
 class ValueCheck:
+
     def __init__(
         self,
         name: str = None,
         value: str = None,
-        type: str = None,
+        type: Union[str, re.Pattern, None] = None,
         summary: str = None,
         children: [ValueCheck] = None,
         dereference: bool = None,
@@ -377,9 +378,14 @@ class ValueCheck:
             else:
                 test_base.assertEqual(self.expect_value, val.GetValue(), this_error_msg)
         if self.expect_type:
-            test_base.assertEqual(
-                self.expect_type, val.GetDisplayTypeName(), this_error_msg
-            )
+            if isinstance(self.expect_type, re.Pattern):
+                test_base.assertRegex(
+                    val.GetDisplayTypeName(), self.expect_type, this_error_msg
+                )
+            else:
+                test_base.assertEqual(
+                    self.expect_type, val.GetDisplayTypeName(), this_error_msg
+                )
         if self.expect_summary:
             if isinstance(self.expect_summary, re.Pattern):
                 test_base.assertRegex(
