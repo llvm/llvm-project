@@ -3,15 +3,15 @@
 ; REQUIRES: x86-registered-target
 ; PR1201
 
-declare noalias ptr @"\01??2@YAPEAX_K@Z"(i64) nobuiltin
-declare void @"\01??3@YAXPEAX@Z"(ptr) nobuiltin
+declare noalias ptr @"\01??2@YAPEAX_K@Z"(i64) nobuiltin allocsize(0)
+declare void @"\01??3@YAXPEAX@Z"(ptr allocptr) nobuiltin
 
 define void @test9() {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    ret void
 ;
-  %new_long_long = call noalias ptr @"\01??2@YAPEAX_K@Z"(i64 32) builtin
-  call void @"\01??3@YAXPEAX@Z"(ptr %new_long_long) builtin
+  %new_long_long = call noalias ptr @"\01??2@YAPEAX_K@Z"(i64 32) builtin allockind("alloc,uninitialized") "alloc-family"="??2@YAPAXI@Z"
+  call void @"\01??3@YAXPEAX@Z"(ptr %new_long_long) builtin allockind("free") "alloc-family"="??2@YAPAXI@Z"
   ret void
 }
 

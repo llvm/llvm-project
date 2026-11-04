@@ -16,9 +16,9 @@ void *test_new() { return new int; }
 // LLVM: call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) [[ATTR:#[0-9]+]]
 // OGCG: call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) [[ATTR:#[0-9]+]]
 // LLVM: attributes [[ATTR]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) }
-// OGCG: attributes [[ATTR]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) }
+// OGCG: attributes [[ATTR]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znwm" }
 
 // NOSANE: call noundef nonnull ptr @_Znwm(i64 noundef 4) [[NOSANE_ATTR:#[0-9]+]]
 // NOSANE-NOT: call noalias
-// NOSANE: attributes [[NOSANE_ATTR]] = { builtin allocsize(0) }
+// NOSANE: attributes [[NOSANE_ATTR]] = { builtin {{(allockind\("alloc,uninitialized"\) )?}}allocsize(0){{( "alloc-family"="_Znwm")?}} }
 // NOSANE-NOT: inaccessiblemem
