@@ -2370,9 +2370,10 @@ bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
     return false;
 
   if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
-    bool AccessesSameLoc = LoadI->getPointerOperand() == Store->getOperand(1) ||
-                           BatchAA.isMustAlias(MemoryLocation::get(LoadI),
-                                               MemoryLocation::get(Store));
+    bool AccessesSameLoc =
+        LoadI->getPointerOperand() == Store->getPointerOperand() ||
+        BatchAA.isMustAlias(MemoryLocation::get(LoadI),
+                            MemoryLocation::get(Store));
     if (AccessesSameLoc) {
       // Get the defining access for the load.
       auto *LoadAccess = MSSA.getMemoryAccess(LoadI)->getDefiningAccess();
