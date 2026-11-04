@@ -3855,14 +3855,33 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants) {
-  assert(TraitInfos.size() == Variants.size() &&
+  // Without an 'otherwise' clause, the last variant is the implicit one.
+  bool HasImplicitOtherwise = Variants.size() == TraitInfos.size() + 1;
+  assert((HasImplicitOtherwise || Variants.size() == TraitInfos.size()) &&
          "Expected one variant per metadirective clause");
-  // TODO Phase 3: Build OMPMetaDirective AST node holding all variants.
-  // TODO Phase 4: Codegen - generate runtime if-else chain.
-  // Temporary stub: return the first variant until OMPMetaDirective exists.
-  if (Variants.empty())
-    return StmtError();
-  return Variants.front();
+  SmallVector<OMPTraitInfo *, 4> AllTraitInfos(TraitInfos);
+  if (HasImplicitOtherwise)
+    AllTraitInfos.push_back(&getASTContext().getNewOMPTraitInfo());
+  // The user condition of each variant; null for 'otherwise'.
+  SmallVector<Expr *, 4> Conditions;
+  for (OMPTraitInfo *TI : AllTraitInfos) {
+    Expr *Cond = nullptr;
+    TI->anyScoreOrCondition([&](Expr *&E, bool IsScore) {
+      if (!IsScore)
+        Cond = E;
+      return !IsScore;
+    });
+    if (Cond) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(Cond->getExprLoc(), Cond);
+      if (Val.isInvalid())
+        return StmtError();
+      Cond = SemaRef.MakeFullExpr(Val.get()).get();
+    }
+    Conditions.push_back(Cond);
+  }
+  return OMPMetaDirective::Create(getASTContext(), StartLoc, EndLoc, Variants,
+                                  Conditions, AllTraitInfos,
+                                  HasImplicitOtherwise);
 }
 
 OMPRequiresDecl *
@@ -4755,6 +4774,10 @@ public:
     // Loop transformation directives do not introduce data sharing
     VisitStmt(S);
   }
+
+  // A metadirective has no associated statement; visit its variants and
+  // conditions.
+  void VisitOMPMetaDirective(OMPMetaDirective *S) { VisitStmt(S); }
 
   void VisitCallExpr(CallExpr *S) {
     for (Stmt *C : S->arguments()) {
