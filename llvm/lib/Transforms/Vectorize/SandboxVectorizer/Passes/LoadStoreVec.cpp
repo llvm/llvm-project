@@ -120,6 +120,17 @@ Reinterpret::getCastChain(Type *SrcTy, Type *DestTy, const DataLayout &DL) {
   return Chain;
 }
 
+Value *Reinterpret::reinterpretValue(Value *V, Type *DestTy,
+                                     BasicBlock::iterator WhereIt, Context &Ctx,
+                                     const DataLayout &DL) {
+  if (!canReinterpret(V->getType(), DestTy, DL))
+    return nullptr;
+  Value *NewV = V;
+  for (auto [Opc, Ty] : getCastChain(V->getType(), DestTy, DL))
+    NewV = CastInst::create(Ty, Opc, NewV, WhereIt, Ctx, "VCast");
+  return NewV;
+}
+
 Constant *Reinterpret::reinterpretConstant(Constant *C, Type *DestTy,
                                            const DataLayout &DL) {
   if (!canReinterpret(C->getType(), DestTy, DL))
