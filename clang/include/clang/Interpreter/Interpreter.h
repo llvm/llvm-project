@@ -158,7 +158,8 @@ public:
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithDevice(std::unique_ptr<CompilerInstance> CI,
                    std::unique_ptr<CompilerInstance> DCI,
-                   OffloadType Type = OffloadType::Detect);
+                   OffloadType Type = OffloadType::Detect,
+                   llvm::ArrayRef<const char *> DriverArgs = {});
 
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
