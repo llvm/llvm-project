@@ -203,11 +203,11 @@ void llvm::IntelGPU::fillValidIGCATargetList(
     SmallVectorImpl<StringRef> &Values) {
   // fillValidIGCATargetList is currently only used for diagnostics, similar to
   // how other fillValid* functions are used. We can thus afford to generate
-  // this list when we actually need it:
+  // this list here:
   SmallVector<IGCATarget> Targets;
-#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
-  Targets.push_back(IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET));
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
+  for (const IGCATargetNameEntry &E : IGCATargetNames)
+    if (IGCATarget T(E.Target, E.FeatureSet); T.isValid())
+      Targets.push_back(T);
   llvm::sort(Targets,
              [](IGCATarget A, IGCATarget B) { return A.pack() < B.pack(); });
   Targets.erase(llvm::unique(Targets), Targets.end());
