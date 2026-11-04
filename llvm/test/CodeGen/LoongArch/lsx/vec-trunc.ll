@@ -23,6 +23,19 @@ define void @load_trunc_2i64_to_2i32(ptr %ptr, ptr %dst) nounwind {
 }
 
 define void @load_trunc_2i64_to_2i16(ptr %ptr, ptr %dst) nounwind {
+; LA32-LABEL: load_trunc_2i64_to_2i16:
+; LA32:       # %bb.0:
+; LA32-NEXT:    vld $vr0, $a0, 0
+; LA32-NEXT:    vextrins.h $vr0, $vr0, 20
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: load_trunc_2i64_to_2i16:
+; LA64:       # %bb.0:
+; LA64-NEXT:    vld $vr0, $a0, 0
+; LA64-NEXT:    vextrins.h $vr0, $vr0, 20
+; LA64-NEXT:    vstelm.w $vr0, $a1, 0, 0
+; LA64-NEXT:    ret
   %a = load <2 x i64>, ptr %ptr
   %trunc = trunc <2 x i64> %a to <2 x i16>
   store <2 x i16> %trunc, ptr %dst
