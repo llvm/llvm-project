@@ -9759,6 +9759,13 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
+    // List the Intel GPUs that a SYCL device compile for an IGCA target is
+    // compiled ahead of time for, one "code=" each. llvm-offload-binary joins
+    // repeated keys, so the image gets "code=xe-mtl-h,xe-mtl-u".
+    if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL)
+      for (StringRef Device : C.getSYCLIGCADevices(TC, Arch.ArchName))
+        Parts.emplace_back("code=" + Device.str());
+
     if (TC->isUsingLTO(TCArgs, OffloadAction->getOffloadingDeviceKind()))
       for (StringRef Feature : FeatureArgs)
         Parts.emplace_back("feature=" + Feature.str());
@@ -9953,8 +9960,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
         std::optional<std::string> TargetID =
             getCanonicalTargetID(TC->getTriple(), Arg);
-        CmdArgs.emplace_back(Args.MakeArgString(
-            "--should-extract=" + (TargetID ? StringRef(*TargetID) : Arg)));
+        StringRef Name = TargetID ? StringRef(*TargetID) : Arg;
+        // A SYCL device image for an Intel GPU is labeled with the GPU's IGCA
+        // target.
+        if (Kind == Action::OFK_SYCL)
+          if (OffloadArch ID = StringToOffloadArch(Arg); ID.isIntelGPU())
+            Name = OffloadArchToString(ID.intelGPUIGCATarget());
+        CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));
       }
 
       // If this is OpenMP the device linker will need `-lompdevice`.

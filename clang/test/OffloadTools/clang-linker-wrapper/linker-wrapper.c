@@ -65,6 +65,37 @@ __attribute__((visibility("protected"), used)) int x;
 
 // SPIRV-LINK: clang{{.*}} -o {{.*}}.img -dumpdir a.out.spirv64.foo.img. --target=spirv64-unknown-unknown -march=foo {{.*}}.o --sycl-link{{$}}
 
+// SYCL images with the same IGCA target and the same "code" list are linked
+// together and compiled ahead of time for the devices in the list. Images with
+// a different "code" list are linked separately.
+// RUN: llvm-offload-binary -o %t.sycl-u.out \
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u
+// RUN: llvm-offload-binary -o %t.sycl-uh.out \
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,code=xe-mtl-h
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sycl-u.o -fembed-offload-object=%t.sycl-u.out
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sycl-uh-a.o -fembed-offload-object=%t.sycl-uh.out
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sycl-uh-b.o -fembed-offload-object=%t.sycl-uh.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.sycl-uh-a.o %t.sycl-uh-b.o -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SYCL-SAME-CODE
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.sycl-u.o %t.sycl-uh-a.o -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SYCL-DIFFERENT-CODE
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --save-temps --linker-path=/usr/bin/ld %t.sycl-u.o %t.sycl-uh-a.o \
+// RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL-SAVE-TEMPS
+
+// SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
+// SYCL-SAME-CODE-NOT: --sycl-link
+
+// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
+// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
+
+// The devices are part of the output name, so the two images do not overwrite
+// each other with --save-temps.
+// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.img {{.*}}--device=xe-mtl-u{{$}}
+// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.xe-mtl-h.img {{.*}}--device=xe-mtl-h{{$}}
+
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu

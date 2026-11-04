@@ -504,6 +504,11 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // input filename already has the device and architecture.
   std::string OutputFileBase =
       "." + Triple.getArchName().str() + "." + Arch.str();
+  // Images with the same architecture but different devices are linked
+  // separately, so the devices are part of the name.
+  std::vector<std::string> Devices = Args.getAllArgValues(OPT_device_EQ);
+  for (const std::string &Device : Devices)
+    OutputFileBase += "." + Device;
   auto TempFileOrErr = createOutputFile(ExecutableName + OutputFileBase, "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
@@ -591,6 +596,10 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // clang-sycl-linker.
   if (ActiveOffloadKindMask & OFK_SYCL)
     CmdArgs.push_back("--sycl-link");
+
+  // Pass the devices to compile ahead of time for on to clang-sycl-linker.
+  for (const std::string &Device : Devices)
+    CmdArgs.append({"-Xlinker", Args.MakeArgString("--device=" + Device)});
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
@@ -1011,6 +1020,15 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
                    Arch == "generic" ? "" : Arch);
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
                    Args.MakeArgString(Input.front().getBinary()->getTriple()));
+
+  // Record the Intel GPUs that a SYCL image lists in "code", which
+  // clang-sycl-linker compiles the image ahead of time for.
+  const OffloadBinary &Binary = *Input.front().getBinary();
+  if (Binary.getOffloadKind() == OFK_SYCL)
+    for (StringRef Device : llvm::split(Binary.getString("code"), ','))
+      if (!Device.empty())
+        DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_EQ),
+                         Args.MakeArgString(Device));
 
   // If every input file is bitcode we have whole program visibility as we
   // do only support static linking with bitcode.
@@ -1444,16 +1462,25 @@ getDeviceInput(const ArgList &Args) {
                              B.getBinary()->getArch().count(':');
                     });
 
+  // A SYCL image can also list the Intel GPUs to compile it ahead of time for,
+  // e.g. "code=xe-mtl-u,xe-mtl-h". Images with different lists are linked
+  // separately, so the key of an image is its target and its "code" value.
+  using ImageID = std::pair<OffloadFile::TargetID, StringRef>;
+  auto GetImageID = [](const OffloadFile &Binary) -> ImageID {
+    return {Binary, Binary.getBinary()->getString("code")};
+  };
+
   // Link all standard input files and update the list of symbols.
-  MapVector<OffloadFile::TargetID, SmallVector<OffloadFile, 0>> InputFiles;
+  MapVector<ImageID, SmallVector<OffloadFile, 0>> InputFiles;
   for (OffloadFile &Binary : ObjectFilesToExtract) {
     if (!Binary.getBinary())
       continue;
 
-    OffloadFile::TargetID Target = Binary;
-    SmallVector<OffloadFile::TargetID> CompatibleTargets;
+    ImageID Target = GetImageID(Binary);
+    SmallVector<ImageID> CompatibleTargets;
     for (const auto &[ID, Input] : InputFiles)
-      if (object::areTargetsEquivalent(Target, ID))
+      if (Target.second == ID.second &&
+          object::areTargetsEquivalent(Target.first, ID.first))
         CompatibleTargets.emplace_back(ID);
 
     // Seed a new image when no existing target can provide for this input.
@@ -1480,16 +1507,17 @@ getDeviceInput(const ArgList &Args) {
     if (!Binary.getBinary())
       continue;
 
-    SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
+    ImageID Target = GetImageID(Binary);
+    SmallVector<ImageID> CompatibleTargets = {Target};
     for (const auto &[ID, Input] : InputFiles)
-      if (OffloadFile::TargetID(Binary) != ID &&
-          object::areTargetsCompatible(Binary, ID))
+      if (Target != ID && Target.second == ID.second &&
+          object::areTargetsCompatible(Target.first, ID.first))
         CompatibleTargets.emplace_back(ID);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
       // Only extract if we have an object matching this target or it
       // was specifically requested.
-      if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.second))
+      if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.first.second))
         continue;
 
       // If another target needs this binary it must be copied instead.
