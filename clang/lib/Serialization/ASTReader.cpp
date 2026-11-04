@@ -11831,6 +11831,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_severity:
     C = new (Context) OMPSeverityClause();
     break;
+  case llvm::omp::OMPC_memscope:
+    C = new (Context) OMPMemscopeClause();
+    break;
   case llvm::omp::OMPC_message:
     C = new (Context) OMPMessageClause();
     break;
@@ -12396,6 +12399,12 @@ void OMPClauseReader::VisitOMPSeverityClause(OMPSeverityClause *C) {
   C->setSeverityKind(static_cast<OpenMPSeverityClauseKind>(Record.readInt()));
   C->setLParenLoc(Record.readSourceLocation());
   C->setSeverityKindKwLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPMemscopeClause(OMPMemscopeClause *C) {
+  C->setMemscopeKind(static_cast<OpenMPMemscopeClauseKind>(Record.readInt()));
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setMemscopeKindKwLoc(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPMessageClause(OMPMessageClause *C) {

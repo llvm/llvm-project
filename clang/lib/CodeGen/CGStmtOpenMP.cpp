@@ -6261,6 +6261,27 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
   CGM.getOpenMPRuntime().emitTaskgroupRegion(*this, CodeGen, S.getBeginLoc());
 }
 
+/// Returns the memory scope given by the 'memscope' clause of \p S, or the
+/// device scope that applies when there is no such clause.
+static llvm::AtomicScope getOMPMemscope(const OMPExecutableDirective &S) {
+  const auto *C = S.getSingleClause<OMPMemscopeClause>();
+  if (!C)
+    return llvm::AtomicScope::Device;
+  switch (C->getMemscopeKind()) {
+  case OMPC_MEMSCOPE_all:
+    return llvm::AtomicScope::System;
+  case OMPC_MEMSCOPE_cgroup:
+    // A contention group is the threads of one team, and clang maps each
+    // team to one workgroup on a GPU.
+    return llvm::AtomicScope::Workgroup;
+  case OMPC_MEMSCOPE_device:
+    return llvm::AtomicScope::Device;
+  case OMPC_MEMSCOPE_unknown:
+    break;
+  }
+  llvm_unreachable("Unexpected memscope clause kind.");
+}
+
 void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::AcquireRelease;
   // OpenMP 5.0 (2.17.8): a flush with no list and no memory order clause
@@ -6290,11 +6311,15 @@ void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
     case OMPC_seq_cst:
       AO = llvm::AtomicOrdering::SequentiallyConsistent;
       break;
+    case OMPC_memscope:
+      // Handled by getOMPMemscope.
+      break;
     default:
       llvm_unreachable("unexpected clause on flush");
     }
   }
-  CGM.getOpenMPRuntime().emitFlush(*this, List, S.getBeginLoc(), AO);
+  CGM.getOpenMPRuntime().emitFlush(*this, List, S.getBeginLoc(), AO,
+                                   getOMPMemscope(S));
 }
 
 void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
@@ -6988,8 +7013,8 @@ void CodeGenFunction::emitOMPSimpleStore(LValue LVal, RValue RVal,
 // "17.8.5 atomic Construct").
 
 static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
-                                  const Expr *X, const Expr *V,
-                                  SourceLocation Loc) {
+                                  llvm::AtomicScope Scope, const Expr *X,
+                                  const Expr *V, SourceLocation Loc) {
   // v = x;
   assert(V->isLValue() && "V of 'omp atomic read' is not lvalue");
   assert(X->isLValue() && "X of 'omp atomic read' is not lvalue");
@@ -7010,7 +7035,7 @@ static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
     // is to maintain that behaviour now that emitFlush honours its atomic
     // ordering argument.
     CGF.CGM.getOpenMPRuntime().emitFlush(
-        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent);
+        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent, Scope);
     break;
   case llvm::AtomicOrdering::Monotonic:
   case llvm::AtomicOrdering::Release:
@@ -7024,7 +7049,8 @@ static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
 }
 
 static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
-                                   llvm::AtomicOrdering AO, const Expr *X,
+                                   llvm::AtomicOrdering AO,
+                                   llvm::AtomicScope Scope, const Expr *X,
                                    const Expr *E, SourceLocation Loc) {
   // x = expr;
   assert(X->isLValue() && "X of 'omp atomic write' is not lvalue");
@@ -7040,7 +7066,7 @@ static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
   case llvm::AtomicOrdering::SequentiallyConsistent:
     // NOTE: see note in emitOMPAtomicReadExpr above.
     CGF.CGM.getOpenMPRuntime().emitFlush(
-        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent);
+        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent, Scope);
     break;
   case llvm::AtomicOrdering::Acquire:
   case llvm::AtomicOrdering::Monotonic:
@@ -7194,7 +7220,8 @@ std::pair<bool, RValue> CodeGenFunction::EmitOMPAtomicSimpleUpdateExpr(
 }
 
 static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF,
-                                    llvm::AtomicOrdering AO, const Expr *X,
+                                    llvm::AtomicOrdering AO,
+                                    llvm::AtomicScope Scope, const Expr *X,
                                     const Expr *E, const Expr *UE,
                                     bool IsXLHSInRHSPart, SourceLocation Loc) {
   assert(isa<BinaryOperator>(UE->IgnoreImpCasts()) &&
@@ -7231,7 +7258,7 @@ static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF,
   case llvm::AtomicOrdering::SequentiallyConsistent:
     // NOTE: See note in emitOMPAtomicReadExpr above.
     CGF.CGM.getOpenMPRuntime().emitFlush(
-        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent);
+        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent, Scope);
     break;
   case llvm::AtomicOrdering::Acquire:
   case llvm::AtomicOrdering::Monotonic:
@@ -7259,12 +7286,10 @@ static RValue convertToType(CodeGenFunction &CGF, RValue Value,
   llvm_unreachable("Must be a scalar or complex.");
 }
 
-static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
-                                     llvm::AtomicOrdering AO,
-                                     bool IsPostfixUpdate, const Expr *V,
-                                     const Expr *X, const Expr *E,
-                                     const Expr *UE, bool IsXLHSInRHSPart,
-                                     SourceLocation Loc) {
+static void emitOMPAtomicCaptureExpr(
+    CodeGenFunction &CGF, llvm::AtomicOrdering AO, llvm::AtomicScope Scope,
+    bool IsPostfixUpdate, const Expr *V, const Expr *X, const Expr *E,
+    const Expr *UE, bool IsXLHSInRHSPart, SourceLocation Loc) {
   assert(X->isLValue() && "X of 'omp atomic capture' is not lvalue");
   assert(V->isLValue() && "V of 'omp atomic capture' is not lvalue");
   RValue NewVVal;
@@ -7350,7 +7375,7 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
     case llvm::AtomicOrdering::SequentiallyConsistent:
       // NOTE: See note in emitOMPAtomicReadExpr above.
       CGF.CGM.getOpenMPRuntime().emitFlush(
-          CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent);
+          CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent, Scope);
       break;
     case llvm::AtomicOrdering::Monotonic:
       break;
@@ -7363,9 +7388,9 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
 
 static void emitOMPAtomicCompareExpr(
     CodeGenFunction &CGF, llvm::AtomicOrdering AO, llvm::AtomicOrdering FailAO,
-    const Expr *X, const Expr *V, const Expr *R, const Expr *E, const Expr *D,
-    const Expr *CE, bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly,
-    SourceLocation Loc) {
+    llvm::AtomicScope Scope, const Expr *X, const Expr *V, const Expr *R,
+    const Expr *E, const Expr *D, const Expr *CE, bool IsXBinopExpr,
+    bool IsPostfixUpdate, bool IsFailOnly, SourceLocation Loc) {
   llvm::OpenMPIRBuilder &OMPBuilder =
       CGF.CGM.getOpenMPRuntime().getOMPBuilder();
 
@@ -7435,37 +7460,38 @@ static void emitOMPAtomicCompareExpr(
     // "#pragma omp atomic compare" construct.
     CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
         CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-        IsPostfixUpdate, IsFailOnly));
+        IsPostfixUpdate, IsFailOnly, /*IsWeak=*/false, Scope));
   } else
     CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
         CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-        IsPostfixUpdate, IsFailOnly, FailAO));
+        IsPostfixUpdate, IsFailOnly, FailAO, /*IsWeak=*/false, Scope));
 }
 
 static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
                               llvm::AtomicOrdering AO,
-                              llvm::AtomicOrdering FailAO, bool IsPostfixUpdate,
+                              llvm::AtomicOrdering FailAO,
+                              llvm::AtomicScope Scope, bool IsPostfixUpdate,
                               const Expr *X, const Expr *V, const Expr *R,
                               const Expr *E, const Expr *UE, const Expr *D,
                               const Expr *CE, bool IsXLHSInRHSPart,
                               bool IsFailOnly, SourceLocation Loc) {
   switch (Kind) {
   case OMPC_read:
-    emitOMPAtomicReadExpr(CGF, AO, X, V, Loc);
+    emitOMPAtomicReadExpr(CGF, AO, Scope, X, V, Loc);
     break;
   case OMPC_write:
-    emitOMPAtomicWriteExpr(CGF, AO, X, E, Loc);
+    emitOMPAtomicWriteExpr(CGF, AO, Scope, X, E, Loc);
     break;
   case OMPC_unknown:
   case OMPC_update:
-    emitOMPAtomicUpdateExpr(CGF, AO, X, E, UE, IsXLHSInRHSPart, Loc);
+    emitOMPAtomicUpdateExpr(CGF, AO, Scope, X, E, UE, IsXLHSInRHSPart, Loc);
     break;
   case OMPC_capture:
-    emitOMPAtomicCaptureExpr(CGF, AO, IsPostfixUpdate, V, X, E, UE,
+    emitOMPAtomicCaptureExpr(CGF, AO, Scope, IsPostfixUpdate, V, X, E, UE,
                              IsXLHSInRHSPart, Loc);
     break;
   case OMPC_compare: {
-    emitOMPAtomicCompareExpr(CGF, AO, FailAO, X, V, R, E, D, CE,
+    emitOMPAtomicCompareExpr(CGF, AO, FailAO, Scope, X, V, R, E, D, CE,
                              IsXLHSInRHSPart, IsPostfixUpdate, IsFailOnly, Loc);
     break;
   }
@@ -7505,7 +7531,8 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     if (K == OMPC_weak)
       return;
     if (K == OMPC_seq_cst || K == OMPC_acq_rel || K == OMPC_acquire ||
-        K == OMPC_release || K == OMPC_relaxed || K == OMPC_hint)
+        K == OMPC_release || K == OMPC_relaxed || K == OMPC_hint ||
+        K == OMPC_memscope)
       continue;
     Kind = K;
     KindsEncountered.insert(K);
@@ -7565,10 +7592,10 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
 
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(S.getAssociatedStmt());
-  emitOMPAtomicExpr(*this, Kind, AO, FailAO, S.isPostfixUpdate(), S.getX(),
-                    S.getV(), S.getR(), S.getExpr(), S.getUpdateExpr(),
-                    S.getD(), S.getCondExpr(), S.isXLHSInRHSPart(),
-                    S.isFailOnly(), S.getBeginLoc());
+  emitOMPAtomicExpr(*this, Kind, AO, FailAO, getOMPMemscope(S),
+                    S.isPostfixUpdate(), S.getX(), S.getV(), S.getR(),
+                    S.getExpr(), S.getUpdateExpr(), S.getD(), S.getCondExpr(),
+                    S.isXLHSInRHSPart(), S.isFailOnly(), S.getBeginLoc());
 }
 
 static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,

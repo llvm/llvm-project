@@ -2952,10 +2952,11 @@ void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
 }
 
 void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
-                                SourceLocation Loc, llvm::AtomicOrdering AO) {
+                                SourceLocation Loc, llvm::AtomicOrdering AO,
+                                llvm::AtomicScope Scope) {
   // The OpenMPIRBuilder emits a fence on a GPU, so GPUs always use it.
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder || isGPU()) {
-    OMPBuilder.createFlush(CGF.Builder, AO);
+    OMPBuilder.createFlush(CGF.Builder, AO, Scope);
     return;
   }
   if (!CGF.HaveInsertPoint())
@@ -2966,31 +2967,33 @@ void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
   // A flush with a list is a strong flush, which is treated as seq_cst.
   switch (AO) {
   case llvm::AtomicOrdering::NotAtomic:
-  case llvm::AtomicOrdering::SequentiallyConsistent: {
-    // Build call void __kmpc_flush(ident_t *loc)
-    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_flush),
-                        emitUpdateLocation(CGF, Loc));
+  case llvm::AtomicOrdering::SequentiallyConsistent:
+    AO = llvm::AtomicOrdering::SequentiallyConsistent;
+    if (Scope == llvm::AtomicScope::Device) {
+      // Build call void __kmpc_flush(ident_t *loc)
+      CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                              CGM.getModule(), OMPRTL___kmpc_flush),
+                          emitUpdateLocation(CGF, Loc));
+      return;
+    }
     break;
-  }
   case llvm::AtomicOrdering::Acquire:
   case llvm::AtomicOrdering::Release:
-  case llvm::AtomicOrdering::AcquireRelease: {
-    // Build call void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order,
-    // kmp_int32 scope), where order is an __ATOMIC_* value and scope is the
-    // __MEMORY_SCOPE_* value for device scope.
-    llvm::Value *Args[] = {
-        emitUpdateLocation(CGF, Loc),
-        CGF.Builder.getInt32(static_cast<unsigned>(llvm::toCABI(AO))),
-        CGF.Builder.getInt32(static_cast<unsigned>(llvm::AtomicScope::Device))};
-    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_flush_explicit),
-                        Args);
+  case llvm::AtomicOrdering::AcquireRelease:
     break;
-  }
   default:
     llvm_unreachable("Unexpected atomic ordering");
   }
+  // Build call void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order,
+  // kmp_int32 scope), where order is an __ATOMIC_* value and scope is a
+  // __MEMORY_SCOPE_* value.
+  llvm::Value *Args[] = {
+      emitUpdateLocation(CGF, Loc),
+      CGF.Builder.getInt32(static_cast<unsigned>(llvm::toCABI(AO))),
+      CGF.Builder.getInt32(static_cast<unsigned>(Scope))};
+  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                          CGM.getModule(), OMPRTL___kmpc_flush_explicit),
+                      Args);
 }
 
 namespace {
@@ -13669,8 +13672,8 @@ Address CGOpenMPSIMDRuntime::getAddrOfArtificialThreadPrivate(
 
 void CGOpenMPSIMDRuntime::emitFlush(CodeGenFunction &CGF,
                                     ArrayRef<const Expr *> Vars,
-                                    SourceLocation Loc,
-                                    llvm::AtomicOrdering AO) {
+                                    SourceLocation Loc, llvm::AtomicOrdering AO,
+                                    llvm::AtomicScope Scope) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

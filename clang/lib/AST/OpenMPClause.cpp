@@ -180,6 +180,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_self_maps:
   case OMPC_at:
   case OMPC_severity:
+  case OMPC_memscope:
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
@@ -285,6 +286,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_self_maps:
   case OMPC_at:
   case OMPC_severity:
+  case OMPC_memscope:
   case OMPC_message:
   case OMPC_device_type:
   case OMPC_match:
@@ -2170,6 +2172,12 @@ void OMPClausePrinter::VisitOMPAtClause(OMPAtClause *Node) {
 void OMPClausePrinter::VisitOMPSeverityClause(OMPSeverityClause *Node) {
   OS << "severity("
      << getOpenMPSimpleClauseTypeName(OMPC_severity, Node->getSeverityKind())
+     << ")";
+}
+
+void OMPClausePrinter::VisitOMPMemscopeClause(OMPMemscopeClause *Node) {
+  OS << "memscope("
+     << getOpenMPSimpleClauseTypeName(OMPC_memscope, Node->getMemscopeKind())
      << ")";
 }
 

@@ -149,6 +149,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_SEVERITY_KIND(Name) .Case(#Name, OMPC_SEVERITY_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_SEVERITY_unknown);
+  case OMPC_memscope:
+    return llvm::StringSwitch<OpenMPMemscopeClauseKind>(Str)
+#define OPENMP_MEMSCOPE_KIND(Name) .Case(#Name, OMPC_MEMSCOPE_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_MEMSCOPE_unknown);
   case OMPC_lastprivate:
     return llvm::StringSwitch<OpenMPLastprivateModifier>(Str)
 #define OPENMP_LASTPRIVATE_KIND(Name) .Case(#Name, OMPC_LASTPRIVATE_##Name)
@@ -493,6 +498,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'severity' clause type");
+  case OMPC_memscope:
+    switch (Type) {
+    case OMPC_MEMSCOPE_unknown:
+      return "unknown";
+#define OPENMP_MEMSCOPE_KIND(Name)                                             \
+  case OMPC_MEMSCOPE_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'memscope' clause type");
   case OMPC_lastprivate:
     switch (Type) {
     case OMPC_LASTPRIVATE_unknown:

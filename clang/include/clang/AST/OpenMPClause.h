@@ -2400,6 +2400,88 @@ public:
   }
 };
 
+/// This represents the 'memscope' clause in the '#pragma omp atomic' and
+/// '#pragma omp flush' directives.
+///
+/// \code
+/// #pragma omp flush release memscope(all)
+/// \endcode
+/// In this example directive '#pragma omp flush' has simple 'memscope' clause
+/// with scope specifier 'all'.
+class OMPMemscopeClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'memscope' clause.
+  OpenMPMemscopeClauseKind Kind = OMPC_MEMSCOPE_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindKwLoc;
+
+  /// Set kind of the clause.
+  ///
+  /// \param K Kind of clause.
+  void setMemscopeKind(OpenMPMemscopeClauseKind K) { Kind = K; }
+
+  /// Set clause kind location.
+  ///
+  /// \param KLoc Kind location.
+  void setMemscopeKindKwLoc(SourceLocation KLoc) { KindKwLoc = KLoc; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'memscope' clause with argument \a A ('all', 'cgroup' or
+  /// 'device').
+  ///
+  /// \param A Argument of the clause ('all', 'cgroup' or 'device').
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPMemscopeClause(OpenMPMemscopeClauseKind A, SourceLocation ALoc,
+                    SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_memscope, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPMemscopeClause()
+      : OMPClause(llvm::omp::OMPC_memscope, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPMemscopeClauseKind getMemscopeKind() const { return Kind; }
+
+  /// Returns location of clause kind.
+  SourceLocation getMemscopeKindKwLoc() const { return KindKwLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_memscope;
+  }
+};
+
 /// This represents the 'message' clause in the '#pragma omp error' and the
 /// '#pragma omp parallel' directives.
 ///

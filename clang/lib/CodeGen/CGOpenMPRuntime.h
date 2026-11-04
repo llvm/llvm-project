@@ -29,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 namespace llvm {
 class ArrayType;
@@ -1150,8 +1151,11 @@ public:
   /// \param Vars List of variables to flush.
   /// \param AO Memory ordering of the flush, or NotAtomic for a flush with a
   /// list (a strong flush).
+  /// \param Scope Memory scope of the flush, as given by the 'memscope'
+  /// clause.
   virtual void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
-                         SourceLocation Loc, llvm::AtomicOrdering AO);
+                         SourceLocation Loc, llvm::AtomicOrdering AO,
+                         llvm::AtomicScope Scope);
 
   /// Emit task region for the task directive. The task region is
   /// emitted in several steps:
@@ -2040,7 +2044,8 @@ public:
   /// Emit flush of the variables specified in 'omp flush' directive.
   /// \param Vars List of variables to flush.
   void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
-                 SourceLocation Loc, llvm::AtomicOrdering AO) override;
+                 SourceLocation Loc, llvm::AtomicOrdering AO,
+                 llvm::AtomicScope Scope) override;
 
   /// Emit task region for the task directive. The task region is
   /// emitted in several steps:
