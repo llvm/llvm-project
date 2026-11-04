@@ -3490,6 +3490,29 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   return mlir::success();
 }
 
+// Replace a CIR global with an LLVM global, maintaining the cached symbol
+// table and stashing the CIR type for later lookups. The table entry is
+// dropped before creation so the replacement reuses the name.
+static mlir::LLVM::GlobalOp
+replaceCirGlobal(mlir::SymbolTableCollection &symbolTables, cir::GlobalOp op,
+                 mlir::Type llvmType, bool isConst, mlir::LLVM::Linkage linkage,
+                 llvm::StringRef symbol, mlir::Attribute init,
+                 uint64_t alignment, unsigned addrSpace, bool isDsoLocal,
+                 mlir::LLVM::ThreadLocalMode threadLocalMode,
+                 mlir::SymbolRefAttr comdatAttr,
+                 llvm::ArrayRef<mlir::NamedAttribute> attributes,
+                 mlir::ConversionPatternRewriter &rewriter) {
+  mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
+  symbolTables.getSymbolTable(modOp).remove(op);
+  auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+      op, llvmType, isConst, linkage, symbol, init, alignment, addrSpace,
+      isDsoLocal, threadLocalMode, comdatAttr, attributes);
+  newGlobalOp->setAttr(kPreConversionSymType,
+                       mlir::TypeAttr::get(op.getSymType()));
+  symbolTables.getSymbolTable(modOp).insert(newGlobalOp);
+  return newGlobalOp;
+}
+
 mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     cir::GlobalOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -3593,17 +3616,9 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         if (std::optional<mlir::Attribute> bulkInit = lowerConstArrayAttr(
                 constArr, symbolTables, typeConverter, modOp)) {
           mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
-          // The driver does not invalidate the cached symbol table, so
-          // maintain it explicitly: drop the old entry before replacement
-          // and register the new op after.
-          symbolTables.getSymbolTable(modOp).remove(op);
-          auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-              op, llvmType, isConst, linkage, symbol, bulkInit.value(),
-              alignment, addrSpace, isDsoLocal, threadLocalMode, comdatAttr,
-              attributes);
-          newGlobalOp->setAttr(kPreConversionSymType,
-                               mlir::TypeAttr::get(cirSymType));
-          symbolTables.getSymbolTable(modOp).insert(newGlobalOp);
+          replaceCirGlobal(symbolTables, op, llvmType, isConst, linkage, symbol,
+                           bulkInit.value(), alignment, addrSpace, isDsoLocal,
+                           threadLocalMode, comdatAttr, attributes, rewriter);
           return mlir::success();
         }
       }
@@ -3619,16 +3634,9 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       if (std::optional<mlir::Attribute> bulkInit = lowerConstRecordAttr(
               constRecord, symbolTables, typeConverter, modOp)) {
         mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
-        // The driver does not invalidate the cached symbol table, so
-        // maintain it explicitly: drop the old entry before replacement
-        // and register the new op after.
-        symbolTables.getSymbolTable(modOp).remove(op);
-        auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-            op, llvmType, isConst, linkage, symbol, bulkInit.value(), alignment,
-            addrSpace, isDsoLocal, threadLocalMode, comdatAttr, attributes);
-        newGlobalOp->setAttr(kPreConversionSymType,
-                             mlir::TypeAttr::get(cirSymType));
-        symbolTables.getSymbolTable(modOp).insert(newGlobalOp);
+        replaceCirGlobal(symbolTables, op, llvmType, isConst, linkage, symbol,
+                         bulkInit.value(), alignment, addrSpace, isDsoLocal,
+                         threadLocalMode, comdatAttr, attributes, rewriter);
         return mlir::success();
       }
       return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
@@ -3651,17 +3659,10 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   }
 
   mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
-  // The driver does not invalidate the cached symbol table, so
-  // maintain it explicitly: drop the old entry before replacement
-  // and register the new op after.
-  mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
-  symbolTables.getSymbolTable(modOp).remove(op);
-  auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-      op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
-      alignment, addrSpace, isDsoLocal, threadLocalMode, comdatAttr,
-      attributes);
-  newGlobalOp->setAttr(kPreConversionSymType, mlir::TypeAttr::get(cirSymType));
-  symbolTables.getSymbolTable(modOp).insert(newGlobalOp);
+  replaceCirGlobal(symbolTables, op, llvmType, isConst, linkage, symbol,
+                   init.value_or(mlir::Attribute()), alignment, addrSpace,
+                   isDsoLocal, threadLocalMode, comdatAttr, attributes,
+                   rewriter);
 
   return mlir::success();
 }
