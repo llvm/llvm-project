@@ -264,6 +264,9 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_start_instance_location:
       CSF.ExtendedCommandInfo = true;
       break;
+    case Intrinsic::dx_view_id:
+      CSF.ViewID = true;
+      break;
     case Intrinsic::dx_resource_handlefrombinding: {
       dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
 
@@ -456,11 +459,13 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         CSF.Barycentrics |= llvm::any_of(Sig->Inputs, [](const auto &E) {
           return E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics;
         });
+        // Unallocated elements do not occupy signature registers. Their type
+        // requirements come from the instructions that access them.
         auto HasLowPrecision = [](const auto &Elements) {
           return llvm::any_of(Elements, [](const auto &E) {
-            return E.CompType == ElementType::F16 ||
-                   E.CompType == ElementType::I16 ||
-                   E.CompType == ElementType::U16;
+            return E.isAllocated() && (E.CompType == ElementType::F16 ||
+                                       E.CompType == ElementType::I16 ||
+                                       E.CompType == ElementType::U16);
           });
         };
         if (HasLowPrecision(Sig->Inputs) || HasLowPrecision(Sig->Outputs)) {
@@ -544,8 +549,8 @@ ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
   return MSFI;
 }
 
-PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
-                                                  ModuleAnalysisManager &AM) {
+PreservedAnalyses
+ShaderFlagsAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   const ModuleShaderFlags &FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
   // Print description of combined shader flags for all module functions
   OS << "; Combined Shader Flags for Module\n";

@@ -1064,23 +1064,23 @@ public:
   }
 };
 
-class InverseSqrtPattern
-    : public SPIRVToLLVMConversion<spirv::GLInverseSqrtOp> {
+template <typename SPIRVOp>
+class InverseSqrtPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLInverseSqrtOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLInverseSqrtOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = op.getType();
-    auto dstType = getTypeConverter()->convertType(srcType);
+    auto dstType = this->getTypeConverter()->convertType(srcType);
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     Location loc = op.getLoc();
     Value one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
     Value sqrt = LLVM::SqrtOp::create(rewriter, loc, dstType, op.getOperand());
-    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, dstType, one, sqrt);
+    rewriter.template replaceOpWithNewOp<LLVM::FDivOp>(op, dstType, one, sqrt);
     return success();
   }
 };
@@ -1134,8 +1134,8 @@ public:
   }
 };
 
-/// Converts the GLSL clamp ops (FClamp, SClamp, UClamp) into a nested
-/// min/max sequence, following the op semantics `min(max(x, minVal), maxVal)`.
+/// Converts the GL and CL clamp ops into a nested min/max sequence, following
+/// the op semantics `min(max(x, minVal), maxVal)`.
 template <typename SPIRVOp, typename LLVMMinOp, typename LLVMMaxOp>
 class ClampPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
@@ -1788,9 +1788,8 @@ public:
   }
 };
 
-/// Converts `spirv.mlir.selection` with `spirv.BranchConditional` in its header
-/// block. All blocks within selection should be reachable for conversion to
-/// succeed.
+/// Converts `spirv.mlir.selection`. All blocks within selection should be
+/// reachable for conversion to succeed.
 class SelectionPattern : public SPIRVToLLVMConversion<spirv::SelectionOp> {
 public:
   using SPIRVToLLVMConversion<spirv::SelectionOp>::SPIRVToLLVMConversion;
@@ -1804,16 +1803,18 @@ public:
     if (op.getSelectionControl() != spirv::SelectionControl::None)
       return failure();
 
-    // `spirv.mlir.selection` should have at least two blocks: one selection
-    // header block and one merge block. If no blocks are present, or control
-    // flow branches straight to merge block (two blocks are present), the op is
-    // redundant and it is erased.
-    if (op.getBody().getBlocks().size() <= 2) {
+    // `spirv.mlir.selection` with empty region is redundant and is erased.
+    if (op.getBody().empty()) {
       rewriter.eraseOp(op);
       return success();
     }
 
     Location loc = op.getLoc();
+
+    SmallVector<Type> resultTypes;
+    if (failed(
+            getTypeConverter()->convertTypes(op.getResultTypes(), resultTypes)))
+      return rewriter.notifyMatchFailure(op, "failed to convert type");
 
     // Split the current block after `spirv.mlir.selection`. The remaining ops
     // will be used in `continueBlock`.
@@ -1823,23 +1824,8 @@ public:
     auto *continueBlock = rewriter.splitBlock(currentBlock, position);
 
     // Add arguments to the continue block for selections that yield values.
-    for (auto ty : op.getResultTypes()) {
-      Type dstTy = getTypeConverter()->convertType(ty);
-      if (!dstTy)
-        return rewriter.notifyMatchFailure(op, "failed to convert type");
-      continueBlock->addArgument(dstTy, loc);
-    }
-
-    // Extract conditional branch information from the header block. By SPIR-V
-    // dialect spec, it should contain `spirv.BranchConditional` or
-    // `spirv.Switch` op. Note that `spirv.Switch op` is not supported at the
-    // moment in the SPIR-V dialect. Remove this block when finished.
-    auto *headerBlock = op.getHeaderBlock();
-    assert(headerBlock->getOperations().size() == 1);
-    auto condBrOp = dyn_cast<spirv::BranchConditionalOp>(
-        headerBlock->getOperations().front());
-    if (!condBrOp)
-      return failure();
+    for (Type ty : resultTypes)
+      continueBlock->addArgument(ty, loc);
 
     // Branch from merge block to continue block.
     auto *mergeBlock = op.getMergeBlock();
@@ -1848,16 +1834,11 @@ public:
     rewriter.setInsertionPointToEnd(mergeBlock);
     LLVM::BrOp::create(rewriter, loc, terminatorOperands, continueBlock);
 
-    // Link current block to `true` and `false` blocks within the selection.
-    Block *trueBlock = condBrOp.getTrueBlock();
-    Block *falseBlock = condBrOp.getFalseBlock();
-    rewriter.setInsertionPointToEnd(currentBlock);
-    LLVM::CondBrOp::create(rewriter, loc, condBrOp.getCondition(), trueBlock,
-                           condBrOp.getTrueTargetOperands(), falseBlock,
-                           condBrOp.getFalseTargetOperands());
-
-    rewriter.eraseBlock(headerBlock);
+    // Header ops, including the terminator, are converted by their own
+    // patterns.
+    Block *headerBlock = op.getHeaderBlock();
     rewriter.inlineRegionBefore(op.getBody(), continueBlock);
+    rewriter.mergeBlocks(headerBlock, currentBlock);
     rewriter.replaceOp(op, continueBlock->getArguments());
     return success();
   }
@@ -1921,21 +1902,43 @@ public:
 };
 
 // `llvm.intr.abs` requires an `is_int_min_poison` immarg that `spirv.GL.SAbs`
-// does not carry; default to `false` to preserve SPIR-V's well-defined
-// behavior on INT_MIN.
-class SAbsPattern : public SPIRVToLLVMConversion<spirv::GLSAbsOp> {
+// and `spirv.CL.s_abs` do not carry; default to `false` to preserve SPIR-V's
+// well-defined behavior on INT_MIN.
+template <typename SPIRVOp>
+class SAbsPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSAbsOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSAbsOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type dstType = getTypeConverter()->convertType(op.getType());
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    rewriter.replaceOpWithNewOp<LLVM::AbsOp>(op, dstType, adaptor.getOperand(),
-                                             /*is_int_min_poison=*/false);
+    rewriter.template replaceOpWithNewOp<LLVM::AbsOp>(
+        op, dstType, adaptor.getOperand(), /*is_int_min_poison=*/false);
+    return success();
+  }
+};
+
+/// Converts `spirv.CL.clz` and `spirv.CL.ctz` to `llvm.intr.ctlz` and
+/// `llvm.intr.cttz`.
+template <typename SPIRVOp, typename LLVMOp>
+class CountZerosPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    rewriter.template replaceOpWithNewOp<LLVMOp>(op, dstType,
+                                                 adaptor.getOperand(),
+                                                 /*is_zero_poison=*/false);
     return success();
   }
 };
@@ -2462,10 +2465,11 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAsinOp, LLVM::ASinOp>,
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
+      DirectConversionPattern<spirv::GLAtan2Op, LLVM::ATan2Op>,
       DirectConversionPattern<spirv::GLTanOp, LLVM::TanOp>,
       DirectConversionPattern<spirv::GLTanhOp, LLVM::TanhOp>,
-      InverseSqrtPattern, SAbsPattern, FractPattern,
-      SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
+      InverseSqrtPattern<spirv::GLInverseSqrtOp>, SAbsPattern<spirv::GLSAbsOp>,
+      FractPattern, SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
       SignPattern<spirv::GLSSignOp, /*isFloat=*/false>, GLFMixPattern,
 
       // OpenCL extended instruction set ops
@@ -2502,6 +2506,12 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
+      InverseSqrtPattern<spirv::CLRsqrtOp>, SAbsPattern<spirv::CLSAbsOp>,
+      ClampPattern<spirv::CLFClampOp, LLVM::MinNumOp, LLVM::MaxNumOp>,
+      ClampPattern<spirv::CLSClampOp, LLVM::SMinOp, LLVM::SMaxOp>,
+      ClampPattern<spirv::CLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
+      CountZerosPattern<spirv::CLClzOp, LLVM::CountLeadingZerosOp>,
+      CountZerosPattern<spirv::CLCtzOp, LLVM::CountTrailingZerosOp>,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,

@@ -119,11 +119,15 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-EMPTY:
 // CHECK-NEXT:enum FuncArgTypeID : char {
 // CHECK-NEXT:  NoFuncArgType = 0,
+// CHECK-NEXT:  BFloat,
 // CHECK-NEXT:  Bool,
+// CHECK-NEXT:  CmpResult,
 // CHECK-NEXT:  Dbl,
 // CHECK-NEXT:  Ellip,
+// CHECK-NEXT:  FP128,
 // CHECK-NEXT:  Floating,
 // CHECK-NEXT:  Flt,
+// CHECK-NEXT:  Half,
 // CHECK-NEXT:  Int,
 // CHECK-NEXT:  Int8,
 // CHECK-NEXT:  Int16,
@@ -141,15 +145,18 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  NXV4F32,
 // CHECK-NEXT:  NXV4I1,
 // CHECK-NEXT:  NXV4I32,
+// CHECK-NEXT:  PPCFP128,
 // CHECK-NEXT:  Ptr,
 // CHECK-NEXT:  SSizeT,
 // CHECK-NEXT:  Same,
 // CHECK-NEXT:  SizeT,
 // CHECK-NEXT:  Struct,
 // CHECK-NEXT:  UInt,
+// CHECK-NEXT:  UInt8,
 // CHECK-NEXT:  UInt16,
 // CHECK-NEXT:  UInt32,
 // CHECK-NEXT:  UInt64,
+// CHECK-NEXT:  UInt128,
 // CHECK-NEXT:  UIntPlus,
 // CHECK-NEXT:  UIntX,
 // CHECK-NEXT:  ULLong,
@@ -166,6 +173,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  V16F32,
 // CHECK-NEXT:  V16I32,
 // CHECK-NEXT:  Void,
+// CHECK-NEXT:  X86FP80,
 // CHECK-NEXT:};
 // CHECK-EMPTY:
 // CHECK-NEXT: enum class RuntimeLibrary : unsigned char {
@@ -349,8 +357,8 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:   if (TT.getArch() == Triple::buzz) {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl___ashlsi3, // __ashlsi3
-// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
 // CHECK-NEXT:         RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
 // CHECK-NEXT:     };
 // CHECK-EMPTY:
 // CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
@@ -382,10 +390,10 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:   }
 // CHECK-NEXT:   if (TT.getArch() == Triple::simple) {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:         RTLIB::impl_calloc, // calloc
 // CHECK-NEXT:         RTLIB::impl___ashlsi3, // __ashlsi3
-// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
 // CHECK-NEXT:         RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:         RTLIB::impl_calloc, // calloc
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
 // CHECK-NEXT:     };
 // CHECK-EMPTY:
 // CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
