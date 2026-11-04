@@ -2793,8 +2793,8 @@ The '`llvm.amdgcn.av`' intrinsics perform
 {ref}`load-visible<amdgpu-load-visible>` operations on flat or global memory
 with *scope* supplied as a metadata argument.
 
-The pointer argument can be a global pointer (`addrspace(1)`) or a flat
-pointer (`addrspace(0)`). Global pointers select `global_load`/
+The pointer argument must be a naturally-aligned global (`addrspace(1)`)
+or flat (`addrspace(0)`) pointer. Global pointers select `global_load`/
 `global_store` instructions; flat pointers select `flat_load`/
 `flat_store` instructions. The cache policy bits are the same in both cases.
 
