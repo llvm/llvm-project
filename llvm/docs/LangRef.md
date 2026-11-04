@@ -2975,7 +2975,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
     and code generation adds it to the frame size when reporting stack usage.
     It is ignored on functions without `safestack`. It takes one required
     integer value, which should be a non-negative integer, and less than
-    `UINT_MAX`.
+    `UINT_MAX`. This attribute is only used internally by LLVM and should not
+    be set by frontends.
 
 `vscale_range(<min>[, <max>])`
 :   This function attribute indicates `vscale` is a power-of-two within a
