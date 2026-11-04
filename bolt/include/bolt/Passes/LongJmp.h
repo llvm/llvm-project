@@ -77,9 +77,6 @@ class LongJmpPass : public BinaryFunctionPass {
   bool relaxLocalBranches(BinaryFunction &BF,
                           const BranchLivenessInfo *BLI = nullptr);
 
-  /// Relax calls and direct unconditional branches using one cluster layout.
-  void relaxWithClusters(BinaryContext &BC);
-
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions
   /// and MCInsts -- this is an estimation. To be correct for longjmp inserter
