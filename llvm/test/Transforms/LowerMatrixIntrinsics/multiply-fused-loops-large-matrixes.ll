@@ -973,8 +973,8 @@ define void @multiply_8x8x8(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], %[[INNER_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP912:%.*]] = phi <2 x double> [ zeroinitializer, %[[ROWS_BODY]] ], [ [[TMP921:%.*]], %[[INNER_LATCH]] ]
-; CHECK-NEXT:    [[TMP913:%.*]] = phi <2 x double> [ zeroinitializer, %[[ROWS_BODY]] ], [ [[TMP927:%.*]], %[[INNER_LATCH]] ]
+; CHECK-NEXT:    [[TMP912:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), %[[ROWS_BODY]] ], [ [[TMP921:%.*]], %[[INNER_LATCH]] ]
+; CHECK-NEXT:    [[TMP913:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), %[[ROWS_BODY]] ], [ [[TMP927:%.*]], %[[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
 ; CHECK:       [[INNER_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INNER_IV]], 8

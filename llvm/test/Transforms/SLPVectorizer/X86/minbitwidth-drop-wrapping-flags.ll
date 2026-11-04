@@ -167,7 +167,7 @@ define void @trunc_nuw_nsw_on_narrowed_source(ptr %p, ptr %r, ptr %q, ptr %e) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[TMP5]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc nuw nsw <4 x i32> [[TMP5]] to <4 x i16>
 ; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr [[Q]], align 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP5]], i64 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64

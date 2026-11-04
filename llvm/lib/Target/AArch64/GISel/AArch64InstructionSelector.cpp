@@ -877,38 +877,6 @@ static bool copySubReg(MachineInstr &I, MachineRegisterInfo &MRI,
   return true;
 }
 
-// FIXME: We need some sort of API in RBI/TRI to allow generic code to
-// constrain operands of simple instructions given a TargetRegisterClass
-// and LLT
-static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
-                             const RegisterBankInfo &RBI) {
-  for (MachineOperand &MO : I.operands()) {
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (!Reg)
-      continue;
-    if (Reg.isPhysical())
-      continue;
-    LLT Ty = MRI.getType(Reg);
-    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-    const TargetRegisterClass *RC =
-        dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
-    if (!RC) {
-      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-      RC = getRegClassForTypeOnBank(Ty, RB);
-      if (!RC) {
-        LLVM_DEBUG(
-            dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
-        break;
-      }
-    }
-    RBI.constrainGenericRegister(Reg, *RC, MRI);
-  }
-
-  return true;
-}
-
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
@@ -2455,8 +2423,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
       // We model scalar compares using 32-bit destinations right now.
       // If it's a 64-bit compare, it'll have 64-bit sources.
       Register ZExt;
-      if (!mi_match(Reg, MRI,
-                    m_OneNonDBGUse(m_GZExt(m_OneNonDBGUse(m_Reg(ZExt))))))
+      if (!mi_match(Reg, MRI, m_OneUse(m_GZExt(m_OneUse(m_Reg(ZExt))))))
         return nullptr;
       auto *Cmp = getOpcodeDef(TargetOpcode::G_ICMP, ZExt, MRI);
       if (!Cmp ||
@@ -2503,10 +2470,9 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     int64_t ShiftImm;
     Register MaskSrc;
     int64_t MaskImm;
-    if (!mi_match(
-            Dst, MRI,
-            m_GOr(m_OneNonDBGUse(m_GShl(m_Reg(ShiftSrc), m_ICst(ShiftImm))),
-                  m_OneNonDBGUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm))))))
+    if (!mi_match(Dst, MRI,
+                  m_GOr(m_OneUse(m_GShl(m_Reg(ShiftSrc), m_ICst(ShiftImm))),
+                        m_OneUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm))))))
       return false;
 
     if (ShiftImm > Size || ((1ULL << ShiftImm) - 1ULL) != uint64_t(MaskImm))
@@ -2605,9 +2571,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     if (I.isCopy())
       return selectCopy(I, TII, MRI, TRI, RBI);
-
-    if (I.isDebugInstr())
-      return selectDebugInstr(I, MRI, RBI);
 
     return true;
   }
