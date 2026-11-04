@@ -4240,7 +4240,7 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   // Skip operands that do not require extraction/scalarization and do not incur
   // any overhead.
   SmallVector<Type *> Tys;
-  SmallPtrSet<const Value *, 4> SeenOps;
+  SmallPtrSet<Value *, 4> SeenOps;
   for (const Use &U :
        make_filter_range(Ops, [&](Value *V) { return needsExtract(V, VF); })) {
     if (!SeenOps.insert(U).second)
