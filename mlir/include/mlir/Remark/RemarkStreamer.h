@@ -17,6 +17,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
 
+#include <mutex>
+
 namespace mlir::remark::detail {
 
 /// Concrete streamer that writes LLVM optimization remarks to a file
@@ -28,12 +30,14 @@ public:
   createToFile(llvm::StringRef path, llvm::remarks::Format fmt);
 
   void streamOptimizationRemark(const Remark &remark) override;
+  /// Finalize after all reporting threads have stopped.
   void finalize() override;
   ~LLVMRemarkStreamer() override;
 
 private:
   LLVMRemarkStreamer() = default;
 
+  std::mutex mutex;
   std::unique_ptr<class llvm::ToolOutputFile> file;
   // RemarkStreamer must be destructed before file is destroyed!
   std::unique_ptr<class llvm::remarks::RemarkStreamer> remarkStreamer;
