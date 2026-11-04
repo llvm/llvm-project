@@ -979,13 +979,6 @@ void ASTContext::cleanup() {
   }
   ASTRecordLayouts.clear();
 
-  for (llvm::DenseMap<const Decl*, AttrVec*>::iterator A = DeclAttrs.begin(),
-                                                    AEnd = DeclAttrs.end();
-       A != AEnd; ++A)
-    A->second->~AttrVec();
-  DeclAttrs.clear();
-  LastDeclAttrsDecl = nullptr;
-
   CtorClosureDefaultArgs.clear();
 
   for (const auto &Value : ModuleInitializers)
@@ -1535,33 +1528,8 @@ DiagnosticsEngine &ASTContext::getDiagnostics() const {
   return SourceMgr.getDiagnostics();
 }
 
-AttrVec& ASTContext::getDeclAttrs(const Decl *D) {
-  // 85% of lookups use the most recent D, so use a one-entry cache.
-  if (LastDeclAttrsDecl == D) {
-    assert(LastDeclAttrs != nullptr && LastDeclAttrs == DeclAttrs[D]);
-    return *LastDeclAttrs;
-  }
-
-  AttrVec *&Result = DeclAttrs[D];
-  if (!Result) {
-    void *Mem = Allocate(sizeof(AttrVec));
-    Result = new (Mem) AttrVec;
-  }
-
-  LastDeclAttrsDecl = D;
-  LastDeclAttrs = Result;
-  return *Result;
-}
-
-/// Erase the attributes corresponding to the given declaration.
-void ASTContext::eraseDeclAttrs(const Decl *D) {
-  llvm::DenseMap<const Decl*, AttrVec*>::iterator Pos = DeclAttrs.find(D);
-  if (Pos != DeclAttrs.end()) {
-    Pos->second->~AttrVec();
-    DeclAttrs.erase(Pos);
-  }
-  if (LastDeclAttrsDecl == D)
-    LastDeclAttrsDecl = nullptr;
+AttrVec *ASTContext::allocateAttrVec() {
+  return new (DeclAttrAllocator.Allocate()) AttrVec;
 }
 
 ArrayRef<CXXDefaultArgExpr *>
@@ -6329,15 +6297,17 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
     // of a real template argument.
     // FIXME: It would be more faithful to model this as something like an
     // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
-    ExprValueKind VK;
-    if (T->isRecordType()) {
+    ExprValueKind VK = VK_PRValue;
+    if (NTTP->getType()->isReferenceType()) {
+      // As in Sema::BuildDeclarationNameExpr, a parameter of reference
+      // type, even an rvalue reference, is an lvalue.
+      VK = VK_LValue;
+    } else if (T->isRecordType()) {
       // C++ [temp.param]p8: An id-expression naming a non-type
       // template-parameter of class type T denotes a static storage duration
       // object of type const T.
       T.addConst();
       VK = VK_LValue;
-    } else {
-      VK = Expr::getValueKindForType(NTTP->getType());
     }
     Expr *E = new (*this)
         DeclRefExpr(*this, NTTP, /*RefersToEnclosingVariableOrCapture=*/false,
@@ -7791,10 +7761,18 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     return false;
 
   // If either X or Y are local to the owning module, they are only possible to
-  // be the same entity if they are in the same module.
-  if (X->isModuleLocal() || Y->isModuleLocal())
-    if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()))
+  // be the same entity if they are in the same module, or if they are members
+  // of a lambda closure type. Closure types are merged by identity, and a class
+  // definition determines its members, so the members of a merged closure type
+  // are the same entity even if they are module-local to different modules.
+  // Two distinct closure types are still not merged, so their members are never
+  // compared.
+  if (X->isModuleLocal() || Y->isModuleLocal()) {
+    auto *RD = dyn_cast<CXXRecordDecl>(X->getDeclContext());
+    if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()) &&
+        !(RD && RD->isLambda()))
       return false;
+  }
 
   // Two typedefs refer to the same entity if they have the same underlying
   // type.
@@ -12687,6 +12665,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
   bool IsChar = false, IsShort = false;
+  bool IsLeast = false;
   RequiresICE = false;
 
   // Read the prefixed modifiers first.
@@ -12709,6 +12688,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       assert(!Signed && "Can't use both 'S' and 'U' modifiers!");
       assert(!Unsigned && "Can't use 'U' modifier multiple times!");
       Unsigned = true;
+      break;
+    case 'l':
+      // This modifier represents the least-width type (e.g. uint_least8_t).
+      assert(!IsLeast && "Can't use 'l' modifier multiple times!");
+      IsLeast = true;
       break;
     case 'B':
       // This modifier represents int8 type (byte-width).
@@ -12860,6 +12844,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Unsigned ? Context.UnsignedLongTy : Context.LongTy;
     else
       Type = Unsigned ? Context.UnsignedIntTy : Context.IntTy;
+    if (IsLeast)
+      Type = Context.getLeastIntTypeForBitwidth(Context.getIntWidth(Type),
+                                                /*Signed=*/!Unsigned);
     break;
   case 'c':
     assert(HowLong == 0 && "Bad modifiers used with 'c'!");
@@ -12893,6 +12880,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     break;
   case 'M':
     Type = Context.getObjCSuperType();
+    break;
+  case 'r':
+    Type = Context.MetaInfoTy;
     break;
   case 'a':
     Type = Context.getBuiltinVaListType();
@@ -13683,7 +13673,7 @@ size_t ASTContext::getSideTableAllocatedMemory() const {
          llvm::capacity_in_bytes(KeyFunctions) +
          llvm::capacity_in_bytes(ObjCImpls) +
          llvm::capacity_in_bytes(BlockVarCopyInits) +
-         llvm::capacity_in_bytes(DeclAttrs) +
+         DeclAttrAllocator.getTotalMemory() +
          llvm::capacity_in_bytes(TemplateOrInstantiation) +
          llvm::capacity_in_bytes(InstantiatedFromUsingDecl) +
          llvm::capacity_in_bytes(InstantiatedFromUsingShadowDecl) +

@@ -9,10 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_X86_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_X86_H
 
-#include "RegisterContext_x86.h"
-#include "RegisterInfoInterface.h"
-#include "RegisterInfos_x86_64_with_base_shared.h"
-#include "lldb-x86-register-enums.h"
+#include "Register/Arch/RegisterContext_x86.h"
+#include "Register/RegisterInfoInterface.h"
+#include "Register/Arch/RegisterInfos_x86_64_with_base_shared.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 

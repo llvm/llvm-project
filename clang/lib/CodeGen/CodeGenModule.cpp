@@ -153,7 +153,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
     if (Target.getABI() == "darwinpcs")
       Kind = AArch64ABIKind::DarwinPCS;
-    else if (Triple.isOSWindows())
+    else if (Triple.isOSWindowsOrUEFI())
       return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
     else if (Target.getABI() == "aapcs-soft")
       Kind = AArch64ABIKind::AAPCSSoft;
@@ -337,6 +337,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createLoongArchTargetCodeGenInfo(
         CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
   }
+  case llvm::Triple::xtensa:
+    return createXtensaTargetCodeGenInfo(CGM);
   }
 }
 
@@ -353,6 +355,11 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   const llvm::Triple &T = getTriple();
   if (T.isBPF())
     return true;
+
+  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
+  // promotion rules and resource types are not modeled yet.
+  if (T.isSPIRV())
+    return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
 
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
@@ -437,6 +444,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
     Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
+    Opts.IsBigEndian = !T.isLittleEndian();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
                                   getLangOpts().getClangABICompat());
@@ -444,6 +452,14 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
   }
+
+  case llvm::Triple::spirv:
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    TheLLVMABITargetInfo = llvm::abi::createSPIRVTargetInfo(
+        TB, getContext().getTargetAddressSpace(LangAS::Default),
+        /*KernelPassAggregatesIndirect=*/getLangOpts().isTargetDevice());
+    return *TheLLVMABITargetInfo;
 
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
@@ -1504,6 +1520,9 @@ void CodeGenModule::Release() {
         llvm::MDString::get(getLLVMContext(),
                             llvm::getExceptionModelName(ExceptionModel)));
   }
+
+  if (CodeGenOpts.getDebuggerTuning() != llvm::DebuggerKind::Default)
+    getModule().setDebuggerTuning(CodeGenOpts.getDebuggerTuning());
 
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
@@ -3322,6 +3341,21 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
 
+  // An inline function or template instantiation defined in the main source
+  // file is (ignoring unusual setups like #include-ing a .cpp file) not
+  // referenced or emitted by any other translation unit.
+  if (CodeGenOpts.ModuleLocalHints) {
+    const auto *FD = dyn_cast<FunctionDecl>(D);
+    const SourceManager &SM = getContext().getSourceManager();
+    // D->getLocation(), for a template instantiation, is the location of the
+    // template's definition, not instantiation.
+    // TODO: Also consider template instantiations where a template argument is
+    // a class declared in the main file.
+    bool InMainFile = SM.isInMainFile(D->getLocation());
+    if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
+      B.addAttribute(llvm::Attribute::LikelyModuleLocal);
+  }
+
   F->addFnAttrs(B);
 
   llvm::MaybeAlign ExplicitAlignment;
@@ -4577,6 +4611,12 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
+  // In an OpenMP compilation Sema may defer a function's diagnostics to the end
+  // of the TU (see Sema::emitDeferredDiags). Emitting it before then would let
+  // code with pending errors reach CodeGen.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && isa<FunctionDecl>(Global))
+    return false;
+
   // In OpenMP 5.0 variables and function may be marked as
   // device_type(host/nohost) and we should not emit them eagerly unless we sure
   // that they must be emitted on the host/device. To be sure we need to have

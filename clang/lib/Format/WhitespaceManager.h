@@ -58,7 +58,8 @@ public:
                          unsigned StartOfTokenColumn,
                          const FormatToken *AlignedTo = nullptr,
                          bool InPPDirective = false,
-                         unsigned IndentedFromColumn = 0);
+                         unsigned IndentedFromColumn = 0,
+                         bool CreateReplacement = true);
 
   /// Adds information about an unchangeable token's whitespace.
   ///

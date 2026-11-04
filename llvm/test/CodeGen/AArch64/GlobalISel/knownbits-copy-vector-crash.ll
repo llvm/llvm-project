@@ -10,27 +10,26 @@ define <4 x i32> @test(<8 x i16> %in, i1 %continue) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mov w11, wzr
+; CHECK-NEXT:    mov w10, wzr
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #2 // =0x2
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov w10, w11
-; CHECK-NEXT:    mov w11, w11
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    mov w10, w10
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    and x11, x11, #0x7
-; CHECK-NEXT:    umull x11, w11, w9
-; CHECK-NEXT:    ldrb w11, [x8, x11]
-; CHECK-NEXT:    cmp w11, #0
-; CHECK-NEXT:    cset w11, eq
-; CHECK-NEXT:    fmov s1, w11
+; CHECK-NEXT:    and x10, x10, #0x7
+; CHECK-NEXT:    lsl x10, x10, #1
+; CHECK-NEXT:    ldrb w10, [x8, x10]
+; CHECK-NEXT:    cmp w10, #0
+; CHECK-NEXT:    cset w10, eq
+; CHECK-NEXT:    fmov s1, w10
 ; CHECK-NEXT:    mov v1.b[1], wzr
 ; CHECK-NEXT:    mov v1.b[2], wzr
 ; CHECK-NEXT:    mov v1.b[3], wzr
-; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    fmov w10, s1
 ; CHECK-NEXT:    tbz w0, #0, .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
-; CHECK-NEXT:    fmov s0, w10
+; CHECK-NEXT:    fmov s0, w9
 ; CHECK-NEXT:    mov v0.s[1], wzr
 ; CHECK-NEXT:    mov v0.s[2], wzr
 ; CHECK-NEXT:    mov v0.s[3], wzr

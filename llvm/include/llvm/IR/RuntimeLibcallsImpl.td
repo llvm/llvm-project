@@ -33,10 +33,6 @@ class RuntimeLibcallAvailability<dag cond = (?)> {
   dag CondDag = cond;
 }
 
-// Predicate for whether a libcall should be used for the current
-// function/subtarget.
-class LibcallLoweringPredicate<code cond> { code Cond = cond; }
-
 def AlwaysAvailable : RuntimeLibcallAvailability;
 
 class LibcallCallingConv<code CC = [{}]> {
@@ -55,6 +51,7 @@ def AVR_BUILTIN : LibcallCallingConv<[{CallingConv::AVR_BUILTIN}]>;
 def SMEABI_PreserveMost_From_X0 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0}]>;
 def SMEABI_PreserveMost_From_X1 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1}]>;
 def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2}]>;
+def AARCH64_VECTORCALL : LibcallCallingConv<[{CallingConv::AArch64_VectorCall}]>;
 
 
 // Return type or argument type of library calls.
@@ -66,6 +63,7 @@ class FuncArgType {
 def NoneType : FuncArgType; // dummy
 def Void : FuncArgType;
 def Bool : FuncArgType;     // 8 bits on all targets
+def Int8 : FuncArgType;
 def Int16 : FuncArgType;
 def Int32 : FuncArgType;
 def Int : FuncArgType;
@@ -73,7 +71,9 @@ def IntPlus : FuncArgType;  // Int or bigger.
 def Long : FuncArgType;     // Either 32 or 64 bits.
 def IntX : FuncArgType;     // Any integer type.
 def Int64 : FuncArgType;
+def Int128 : FuncArgType;
 def LLong : FuncArgType;    // 64 bits on all targets.
+def UInt8 : FuncArgType;
 def UInt16 : FuncArgType;
 def UInt32 : FuncArgType;
 def UInt : FuncArgType;
@@ -82,11 +82,16 @@ def ULong : FuncArgType;
 def UIntX : FuncArgType;
 def UInt64 : FuncArgType;
 def ULLong : FuncArgType;
+def UInt128 : FuncArgType;
 def SizeT : FuncArgType;    // size_t.
 def SSizeT : FuncArgType;   // POSIX ssize_t.
+defvar AlignValT = SizeT;  // std::align_val_t.
 def Flt : FuncArgType;      // IEEE float.
 def Dbl : FuncArgType;      // IEEE double.
 def LDbl : FuncArgType;     // Any floating type (TODO: tighten this up).
+def X86FP80 : FuncArgType;
+def FP128 : FuncArgType;
+def PPCFP128 : FuncArgType;
 def Floating : FuncArgType; // Any floating type.
 def Ptr : FuncArgType;      // Any pointer type.
 def Struct : FuncArgType;   // Any struct type.
@@ -101,20 +106,26 @@ def V16I32 : FuncArgType;
 def NXV2I32 : FuncArgType;
 def NXV4I32 : FuncArgType;
 
-class VectorFuncArgType<FuncArgType intType> : FuncArgType {
-  FuncArgType IntType = intType;
-  FuncArgType MaskType = ?;
+class VectorFuncArgType<FuncArgType elementType, int numElements,
+                        bit scalable = false> : FuncArgType {
+  FuncArgType ElementType = elementType;
+  int NumElements = numElements;
+  bit Scalable = scalable;
+
+  defvar Prefix = !if(scalable, "NXV", "V") # numElements;
+  FuncArgType IntType = !cast<FuncArgType>(Prefix # "I32");
+  FuncArgType MaskType = !if(scalable, !cast<FuncArgType>(Prefix # "I1"), ?);
 }
 
-def V2F32 : VectorFuncArgType<V2I32>;
-def V4F32 : VectorFuncArgType<V4I32>;
-def V8F32 : VectorFuncArgType<V8I32>;
-def V16F32 : VectorFuncArgType<V16I32>;
-def NXV4F32 : VectorFuncArgType<NXV4I32> { let MaskType = NXV4I1; }
-def V2F64 : VectorFuncArgType<V2I32>;
-def V4F64 : VectorFuncArgType<V4I32>;
-def V8F64 : VectorFuncArgType<V8I32>;
-def NXV2F64 : VectorFuncArgType<NXV2I32> { let MaskType = NXV2I1; }
+def V2F32 : VectorFuncArgType<Flt, 2>;
+def V4F32 : VectorFuncArgType<Flt, 4>;
+def V8F32 : VectorFuncArgType<Flt, 8>;
+def V16F32 : VectorFuncArgType<Flt, 16>;
+def NXV4F32 : VectorFuncArgType<Flt, 4, scalable = true>;
+def V2F64 : VectorFuncArgType<Dbl, 2>;
+def V4F64 : VectorFuncArgType<Dbl, 4>;
+def V8F64 : VectorFuncArgType<Dbl, 8>;
+def NXV2F64 : VectorFuncArgType<Dbl, 2, scalable = true>;
 
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
@@ -157,6 +168,25 @@ multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
+  FuncArgType ReturnType = P.ReturnType;
+  list<FuncArgType> ArgumentTypes = P.ArgumentTypes;
+}
+
+// Implementation of a long double function, which provides the libcall
+// matching the module's long double format.
+class LongDoubleLibcallImpl<string libcall_basename, string Name = NAME>
+    : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
+                         Name> {
+  let Provides = ?;
+  RuntimeLibcall ProvidesF80 = !cast<RuntimeLibcall>(libcall_basename#"_F80");
+  RuntimeLibcall ProvidesF128 = !cast<RuntimeLibcall>(libcall_basename#"_F128");
+  RuntimeLibcall ProvidesPPCF128 =
+      !cast<RuntimeLibcall>(libcall_basename#"_PPCF128");
+
+  let ReturnType = !if(!eq(ProvidesF128.ReturnType, FP128), LDbl,
+                       ProvidesF128.ReturnType);
+  let ArgumentTypes = !foreach(Ty, ProvidesF128.ArgumentTypes,
+                               !if(!eq(Ty, FP128), LDbl, Ty));
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used
@@ -211,20 +241,21 @@ class LibcallLibrary<string name, dag impls,
   bit Isolated = false;
 }
 
-// Reference a shared LibcallLibrary from a SystemRuntimeLibrary, dropping the
-// impls in `exclude`, so a target can pull a provider (e.g. compiler-rt) but
-// keep its own versions of a few entries. A bare LibcallLibrary member is
-// equivalent to LibraryRef<Lib>.
-class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude = []> {
-  LibcallLibrary Library = lib;
+// Drop the impls in `exclude` from the library named `name` on triples matching
+// `pred`, so a target can use a provider (e.g. compiler-rt) but keep its own
+// versions of a few entries.
+class LibraryExclusion<string name, RuntimeLibcallAvailability pred,
+                       list<RuntimeLibcallImpl> exclude> {
+  string LibraryName = name;
+  RuntimeLibcallAvailability Pred = pred;
   list<RuntimeLibcallImpl> Exclude = exclude;
 }
 
-/// Define a complete top level set of runtime libcalls for a target. Every
-/// member of funcList must be a LibcallLibrary or LibraryRef.
-class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
+/// Define the default runtime libraries for a target, by LibraryName.
+class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred,
+                           list<string> libraries> {
   /// Set the default calling convention assumed for library members.
   LibcallCallingConv DefaultLibcallCallingConv = DefaultCC;
   RuntimeLibcallAvailability TriplePred = Pred;
-  LibcallImpls MemberList = LibcallImpls<funcList>;
+  list<string> DefaultLibraries = libraries;
 }
