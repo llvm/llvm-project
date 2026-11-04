@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CFG.h"
@@ -36,20 +37,6 @@ namespace llvm {
 cl::opt<std::string>
     UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
                   cl::desc("Use the specified contextual profile file"));
-
-static cl::opt<CtxProfAnalysisPrinterPass::PrintMode> PrintLevel(
-    "ctx-profile-printer-level",
-    cl::init(CtxProfAnalysisPrinterPass::PrintMode::YAML), cl::Hidden,
-    cl::values(clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::Everything,
-                          "everything", "print everything - most verbose"),
-               clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::YAML, "yaml",
-                          "just the yaml representation of the profile")),
-    cl::desc("Verbosity level of the contextual profile printer pass."));
-
-static cl::opt<bool> ForceIsInSpecializedModule(
-    "ctx-profile-force-is-specialized", cl::init(false),
-    cl::desc("Treat the given module as-if it were containing the "
-             "post-thinlink module containing the root"));
 
 class ProfileAnnotatorImpl final {
   friend class ProfileAnnotator;
@@ -467,13 +454,15 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   };
   const auto ProfileRootsInModule = DetermineRootsInModule();
   PGOContextualProfile Result;
+  Result.IsInSpecializedModule =
+      valueOr(getAnalysisOptions(M).ctx_profile_force_is_specialized,
+              !ProfileRootsInModule.empty());
 
   // the logic from here on allows for modules that contain - by design - more
   // than one root. We currently don't support that, because the determination
   // happens based on the module name matching the root guid, but the logic can
   // avoid assuming that.
   if (!ProfileRootsInModule.empty()) {
-    Result.IsInSpecializedModule = true;
     // Trim first the roots that aren't in this module.
     for (auto &[RootGuid, _] :
          llvm::make_early_inc_range(MaybeProfiles->Contexts))
@@ -521,7 +510,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
 }
 
 CtxProfAnalysisPrinterPass::CtxProfAnalysisPrinterPass(raw_ostream &OS)
-    : OS(OS), Mode(PrintLevel) {}
+    : OS(OS) {}
 
 PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
@@ -531,7 +520,8 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
     return PreservedAnalyses::all();
   }
 
-  if (Mode == PrintMode::Everything) {
+  const CtxProfPrintMode Mode = getAnalysisOptions(M).ctx_profile_printer_level;
+  if (Mode == CtxProfPrintMode::Everything) {
     OS << "Function Info:\n";
     for (const auto &[Guid, FuncInfo] : C.FuncInfo)
       OS << Guid << " : " << FuncInfo.Name
@@ -539,11 +529,11 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
          << ". MaxCallsiteID: " << FuncInfo.NextCallsiteIndex << "\n";
   }
 
-  if (Mode == PrintMode::Everything)
+  if (Mode == CtxProfPrintMode::Everything)
     OS << "\nCurrent Profile:\n";
   convertCtxProfToYaml(OS, C.profiles());
   OS << "\n";
-  if (Mode == PrintMode::YAML)
+  if (Mode == CtxProfPrintMode::YAML)
     return PreservedAnalyses::all();
 
   OS << "\nFlat Profile:\n";
@@ -628,9 +618,7 @@ void PGOContextualProfile::initIndex() {
 }
 
 bool PGOContextualProfile::isInSpecializedModule() const {
-  return ForceIsInSpecializedModule.getNumOccurrences() > 0
-             ? ForceIsInSpecializedModule
-             : IsInSpecializedModule;
+  return IsInSpecializedModule;
 }
 
 void PGOContextualProfile::update(Visitor V, const Function &F) {
