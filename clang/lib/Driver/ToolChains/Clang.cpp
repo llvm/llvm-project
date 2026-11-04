@@ -8611,6 +8611,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_keep_persistent_storage_variables);
   Args.addOptInFlag(CmdArgs, options::OPT_fkeep_inline_functions,
                     options::OPT_fno_keep_inline_functions);
+  Args.addOptInFlag(CmdArgs, options::OPT_fmodule_local_hints,
+                    options::OPT_fno_module_local_hints);
   Args.addOptInFlag(CmdArgs, options::OPT_fcomplete_member_pointers,
                     options::OPT_fno_complete_member_pointers);
   if (Arg *A = Args.getLastArg(options::OPT_cxx_static_destructors_EQ))
@@ -9869,6 +9871,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_sanitize_minimal_runtime,
       OPT_fsanitize_trap_EQ,
       OPT_fno_sanitize_trap_EQ,
+      OPT_fvectorize,
+      OPT_fno_vectorize,
       OPT_fslp_vectorize,
       OPT_fno_slp_vectorize,
       OPT_hipstdpar,
@@ -9883,7 +9887,15 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     return TC.getVFS().exists(
         TC.getCompilerRT(Args, Name, ToolChain::FT_Static));
   };
-  auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
+  auto ToolChainHasSanitizerRT = [&](const ToolChain &TC, const ArgList &TCArgs,
+                                     Action::OffloadKind Kind) {
+    if (TC.getSanitizerArgs(TCArgs, /*BA=*/{}, Kind).needsCsanRt())
+      return ToolChainHasRT(TC, "csan");
+    return ToolChainHasRT(TC, "ubsan_minimal") ||
+           ToolChainHasRT(TC, "ubsan_standalone");
+  };
+  auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC,
+                                       bool HasSanitizerRT) {
     unsigned ID = A->getOption().getID();
     // Don't forward profiling arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
@@ -9893,20 +9905,19 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       return false;
     // Don't forward sanitizer arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
-    if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal") &&
-        !ToolChainHasRT(TC, "ubsan_standalone"))
+    if (requiresUBSanRT(ID) && !HasSanitizerRT)
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;
   };
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
-                           const ToolChain &TC) {
+                           const ToolChain &TC, bool HasSanitizerRT) {
     if (A->getOption().matches(OPT_v) && SuppressHIPNoRDCVerbose)
       return false;
     return (Set.contains(A->getOption().getID()) ||
             (A->getOption().getGroup().isValid() &&
              Set.contains(A->getOption().getGroup().getID()))) &&
-           ShouldForwardForToolChain(A, TC);
+           ShouldForwardForToolChain(A, TC, HasSanitizerRT);
   };
 
   ArgStringList CmdArgs;
@@ -9922,13 +9933,15 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       ArgStringList LinkerArgs;
       const DerivedArgList &ToolChainArgs =
           C.getArgsForToolChain(TC, /*BA=*/{}, Kind);
+      const bool HasSanitizerRT =
+          ToolChainHasSanitizerRT(*TC, ToolChainArgs, Kind);
       for (Arg *A : ToolChainArgs) {
         if (A->getOption().matches(OPT_Zlinker_input))
           LinkerArgs.emplace_back(A->getValue());
-        else if (ShouldForward(CompilerOptions, A, *TC)) {
+        else if (ShouldForward(CompilerOptions, A, *TC, HasSanitizerRT)) {
           A->claim();
           A->render(Args, CompilerArgs);
-        } else if (ShouldForward(LinkerOptions, A, *TC)) {
+        } else if (ShouldForward(LinkerOptions, A, *TC, HasSanitizerRT)) {
           A->claim();
           A->render(Args, LinkerArgs);
         }
