@@ -1085,6 +1085,12 @@ struct __sanitizer_cookie_io_functions_t {
 #    define IOC_NONE 1U
 #    define IOC_WRITE 4U
 #    define IOC_READ 2U
+#  elif defined(__hppa__)
+#    define IOC_SIZEBITS 14
+#    define IOC_DIRBITS 2
+#    define IOC_NONE 0U
+#    define IOC_WRITE 2U
+#    define IOC_READ 1U
 #  else
 #    define IOC_SIZEBITS 14
 #    define IOC_DIRBITS 2
