@@ -1064,6 +1064,9 @@ Value *VPInstruction::generate(VPTransformState &State,
     assert(GenerateSingleScalar && "Can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), VPLane(0));
     Value *Addend = State.get(getOperand(1), VPLane(0));
+    // TODO: Require that offset matches index type in VPlan.
+    Addend = Builder.CreateSExtOrTrunc(
+        Addend, Builder.getDataLayout().getIndexType(Ptr->getType()));
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::WidePtrAdd: {
