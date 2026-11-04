@@ -447,7 +447,7 @@ define float @fmuladd_x_y_0_nsz(float %x, float %y) {
 
 define float @fma_x_x_0(float %x) {
 ; CHECK-LABEL: @fma_x_x_0(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[X]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %x, float 0.0)
@@ -456,7 +456,7 @@ define float @fma_x_x_0(float %x) {
 
 define float @fmuladd_x_x_0(float %x) {
 ; CHECK-LABEL: @fmuladd_x_x_0(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float [[X]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fmuladd.f32(float %x, float %x, float 0.0)
@@ -465,7 +465,7 @@ define float @fmuladd_x_x_0(float %x) {
 
 define <8 x half> @fma_x_x_0_v(<8 x half> %x) {
 ; CHECK-LABEL: @fma_x_x_0_v(
-; CHECK-NEXT:    [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[X:%.*]], <8 x half> [[X]], <8 x half> zeroinitializer)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul <8 x half> [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret <8 x half> [[FMA]]
 ;
   %fma = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %x, <8 x half> zeroinitializer)
@@ -486,7 +486,7 @@ define float @fma_x_x_0_dapz_out(float %x) denormal_fpenv(positivezero|ieee) {
 
 define float @fma_x_x_0_dapz_out_noundef(float noundef %x) denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: @fma_x_x_0_dapz_out_noundef(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[X]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %x, float 0.0)
@@ -504,7 +504,7 @@ define float @fma_x_x_0_dynamic_out(float %x) denormal_fpenv(dynamic|ieee) {
 
 define float @fma_x_x_0_daz(float %x) denormal_fpenv(preservesign) {
 ; CHECK-LABEL: @fma_x_x_0_daz(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[X]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %x, float 0.0)
@@ -513,7 +513,7 @@ define float @fma_x_x_0_daz(float %x) denormal_fpenv(preservesign) {
 
 define float @fma_x_x_0_dapz_in(float %x) denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @fma_x_x_0_dapz_in(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[X]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %x, float 0.0)
@@ -522,10 +522,9 @@ define float @fma_x_x_0_dapz_in(float %x) denormal_fpenv(ieee|positivezero) {
 
 define float @fma_fabs_x_fabs_y_0(float %x, float %y) {
 ; CHECK-LABEL: @fma_fabs_x_fabs_y_0(
-; CHECK-NEXT:    [[FMA1:%.*]] = call float @llvm.fabs.f32(float [[TMP1:%.*]])
-; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[FMA1]], float [[AY]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[FMA]]
+; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[Y]])
+; CHECK-NEXT:    ret float [[AY]]
 ;
   %ax = call float @llvm.fabs.f32(float %x)
   %ay = call float @llvm.fabs.f32(float %y)
@@ -535,10 +534,9 @@ define float @fma_fabs_x_fabs_y_0(float %x, float %y) {
 
 define float @fma_nabs_x_nabs_y_0(float %x, float %y) {
 ; CHECK-LABEL: @fma_nabs_x_nabs_y_0(
-; CHECK-NEXT:    [[FMA1:%.*]] = call float @llvm.fabs.f32(float [[TMP1:%.*]])
-; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[FMA1]], float [[AY]], float 0.000000e+00)
-; CHECK-NEXT:    ret float [[FMA]]
+; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[Y]])
+; CHECK-NEXT:    ret float [[AY]]
 ;
   %ax = call float @llvm.fabs.f32(float %x)
   %ay = call float @llvm.fabs.f32(float %y)
@@ -580,7 +578,7 @@ define float @fma_fabs_x_y_0(float %x, float %y) {
 ; sign of the exact product, so the fused addition of +0.0 is an identity.
 define float @fma_nonzero_x_nonzero_y_0(float nofpclass(zero) %x, float nofpclass(zero) %y) {
 ; CHECK-LABEL: @fma_nonzero_x_nonzero_y_0(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %y, float 0.0)
@@ -590,7 +588,7 @@ define float @fma_nonzero_x_nonzero_y_0(float nofpclass(zero) %x, float nofpclas
 ; fmuladd may be evaluated fused, like fma.
 define float @fmuladd_nonzero_x_nonzero_y_0(float nofpclass(zero) %x, float nofpclass(zero) %y) {
 ; CHECK-LABEL: @fmuladd_nonzero_x_nonzero_y_0(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fmuladd.f32(float %x, float %y, float 0.0)
@@ -609,7 +607,7 @@ define float @fma_nonzero_x_nonzero_y_0_daz(float nofpclass(zero) %x, float nofp
 
 define float @fma_nonzero_x_nonzero_y_0_daz_nosub(float nofpclass(zero sub) %x, float nofpclass(zero sub) %y) denormal_fpenv(preservesign) {
 ; CHECK-LABEL: @fma_nonzero_x_nonzero_y_0_daz_nosub(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %y, float 0.0)
@@ -658,7 +656,7 @@ define float @fma_nzero_or_neg_x_neg_y_0_dapz(float nofpclass(nan inf pnorm psub
 ; With preservesign, a negative subnormal is read as -0.0 and keeps its sign.
 define float @fma_neg_x_neg_y_0_daz(float nofpclass(nan inf pnorm psub zero) %x, float nofpclass(nan inf pnorm psub zero nsub) %y) denormal_fpenv(preservesign) {
 ; CHECK-LABEL: @fma_neg_x_neg_y_0_daz(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul nnan float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %y, float 0.0)
@@ -667,7 +665,7 @@ define float @fma_neg_x_neg_y_0_daz(float nofpclass(nan inf pnorm psub zero) %x,
 
 define float @fma_nonzero_x_nonzero_y_0_dapz_nosub(float nofpclass(zero sub) %x, float nofpclass(zero sub) %y) denormal_fpenv(positivezero) {
 ; CHECK-LABEL: @fma_nonzero_x_nonzero_y_0_dapz_nosub(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %y, float 0.0)
@@ -695,7 +693,7 @@ define float @fmuladd_neg_x_neg_y_0_dapz_in(float nofpclass(nan inf pnorm psub z
 
 define float @fma_nonzero_x_nonzero_y_0_dapz_in_nosub(float nofpclass(zero sub) %x, float nofpclass(zero sub) %y) denormal_fpenv(ieee|positivezero) {
 ; CHECK-LABEL: @fma_nonzero_x_nonzero_y_0_dapz_in_nosub(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %y, float 0.0)
@@ -706,7 +704,7 @@ define float @fma_nonzero_x_nonzero_y_0_dapz_in_nosub(float nofpclass(zero sub) 
 ; two negative operands is positive.
 define float @fma_neg_x_neg_y_0_dapz_out(float nofpclass(nan inf pnorm psub zero) %x, float nofpclass(nan inf pnorm psub zero nsub) %y) denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: @fma_neg_x_neg_y_0_dapz_out(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul nnan float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %y, float 0.0)
@@ -715,7 +713,7 @@ define float @fma_neg_x_neg_y_0_dapz_out(float nofpclass(nan inf pnorm psub zero
 
 define float @fmuladd_neg_x_neg_y_0_dapz_out(float nofpclass(nan inf pnorm psub zero) %x, float nofpclass(nan inf pnorm psub zero nsub) %y) denormal_fpenv(positivezero|ieee) {
 ; CHECK-LABEL: @fmuladd_neg_x_neg_y_0_dapz_out(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul nnan float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fmuladd.f32(float %x, float %y, float 0.0)
@@ -749,7 +747,7 @@ define float @fmuladd_sqrt_x_sqrt_y_0(float %x, float %y) {
 ; NaN signs and infinite operands do not matter.
 define float @fmuladd_pos_or_nan_x_pos_or_inf_y_0(float nofpclass(ninf nnorm nsub nzero) %x, float nofpclass(nan nnorm nsub nzero) %y) {
 ; CHECK-LABEL: @fmuladd_pos_or_nan_x_pos_or_inf_y_0(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fmuladd.f32(float %x, float %y, float 0.0)
@@ -758,7 +756,7 @@ define float @fmuladd_pos_or_nan_x_pos_or_inf_y_0(float nofpclass(ninf nnorm nsu
 
 define float @fmuladd_pos_x_pos_or_ninf_y_0(float nofpclass(nan ninf nnorm nsub nzero) %x, float nofpclass(nan pinf nnorm nsub nzero) %y) {
 ; CHECK-LABEL: @fmuladd_pos_x_pos_or_ninf_y_0(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fmuladd.f32(float %x, float %y, float 0.0)

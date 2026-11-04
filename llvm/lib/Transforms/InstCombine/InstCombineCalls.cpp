@@ -991,6 +991,39 @@ static bool inputDenormalIsDAZ(const Function &F, const Type *Ty) {
   return F.getDenormalMode(Ty->getFltSemantics()).inputsAreZero();
 }
 
+/// Return true if the product of \p X and \p Y in fma or fmuladd \p II cannot
+/// be -0.0, so that adding +0.0 to it is an identity. fma rounds once, and a
+/// nonzero exact product keeps its sign, so only an exact -0.0 product
+/// differs: a zero times a finite value of the other sign. fmuladd may be
+/// evaluated the same way.
+static bool productCannotBeNegZero(const IntrinsicInst *II, Value *X, Value *Y,
+                                   const SimplifyQuery &Q) {
+  DenormalMode Mode = II->getFunction()->getDenormalMode(
+      II->getType()->getScalarType()->getFltSemantics());
+
+  // x * x cannot be -0.0. If x is undef, its two uses may be zeros of opposite
+  // signs, but fma can return -0.0 too, when a tiny negative product rounds to
+  // it. Only if outputs may be flushed to +0.0 is that not guaranteed.
+  if (X == Y && (!Mode.outputsMayBePositiveZero() ||
+                 isGuaranteedNotToBeUndef(X, Q.AC, Q.CtxI, Q.DT)))
+    return true;
+
+  // A subnormal may be read as a zero.
+  KnownFPClass KY = KnownFPClass::applyInputDenormalMode(
+      computeKnownFPClass(Y, fcFinite, Q), Mode);
+  // If y may be either zero, x must not be finite.
+  if (!KY.isKnownNever(fcPosZero) && !KY.isKnownNever(fcNegZero))
+    return false;
+  KnownFPClass KX = KnownFPClass::applyInputDenormalMode(
+      computeKnownFPClass(X, fcFinite, Q), Mode);
+
+  auto NoNegZero = [](const KnownFPClass &A, const KnownFPClass &B) {
+    return (A.isKnownNever(fcPosZero) || B.isKnownNever(fcNegFinite)) &&
+           (A.isKnownNever(fcNegZero) || B.isKnownNever(fcPosFinite));
+  };
+  return NoNegZero(KX, KY) && NoNegZero(KY, KX);
+}
+
 /// Flushing a denormal to +0.0 breaks f(-x) = -f(x) for odd f.
 static bool mayFlushDenormalsToPositiveZero(const CallInst *CI) {
   DenormalMode Mode = CI->getFunction()->getDenormalMode(
@@ -3310,10 +3343,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return BinaryOperator::CreateFAddFMF(V, Src2, II->getFastMathFlags());
 
     // fma x, y, 0 -> fmul x, y
-    // This is always valid for -0.0, but requires nsz for +0.0 as
-    // -0.0 + 0.0 = 0.0, which would not be the same as the fmul on its own.
-    if (match(Src2, m_NegZeroFP()) ||
-        (match(Src2, m_PosZeroFP()) && II->getFastMathFlags().noSignedZeros()))
+    // This is always valid for -0.0. For +0.0 it needs nsz or a product that
+    // cannot be -0.0 (-0.0 + 0.0 = 0.0).
+    if (match(Src2, m_NegZeroFP()))
+      return BinaryOperator::CreateFMulFMF(Src0, Src1, II);
+    if (match(Src2, m_PosZeroFP()) &&
+        (II->getFastMathFlags().noSignedZeros() ||
+         productCannotBeNegZero(II, Src0, Src1, SQ.getWithInstruction(II))))
       return BinaryOperator::CreateFMulFMF(Src0, Src1, II);
 
     // fma x, -1.0, y -> fsub y, x
