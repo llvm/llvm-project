@@ -68,8 +68,7 @@ struct CGBitFieldInfo {
   /// a single "field" within the LLVM struct type. This offset is in bits.
   unsigned Offset : 16;
 
-  /// The total size of the bit-field, in bits, clamped to the width of its
-  /// type (the extra bits of an over-wide C++ bit-field are padding).
+  /// The total size of the bit-field, in bits, not including padding.
   unsigned Size : 15;
 
   /// Whether the bit-field is signed.

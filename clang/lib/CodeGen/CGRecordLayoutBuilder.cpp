@@ -218,8 +218,7 @@ void CGRecordLowering::setBitFieldInfo(
   uint64_t Offset = getFieldBitOffset(FD) - Context.toBits(StartOffset);
   uint64_t StorageSize =
       DataLayout.getTypeAllocSizeInBits(StorageType).getFixedValue();
-  // Clamp the declared width to the storage and type widths before it is
-  // narrowed into the packed Size member. MakeInfo does the same clamp.
+  // CGBitFieldInfo::MakeInfo does the same clamp
   llvm::Type *FieldType = Types.ConvertTypeForMem(FD->getType());
   uint64_t Size =
       std::min({uint64_t(FD->getBitWidthValue()), StorageSize,
