@@ -256,6 +256,22 @@ interface ExceptionInfoResponse extends Response {
 
 ## Types with Additional Properties
 
+### FunctionBreakpoint
+
+```typescript
+interface FunctionBreakpoint {
+  /**
+   * The name of the module to restrict the function lookup to, passed as the
+   * module name to `SBTarget::BreakpointCreateByName`. It cannot be updated:
+   * a function breakpoint is identified by its module name (if present) and
+   * its function name, so a request with a different module name refers to a
+   * different breakpoint.
+   * @since LLDB 24
+   */
+  $__lldb_moduleName?: string;
+}
+```
+
 ### Module
 
 ```typescript

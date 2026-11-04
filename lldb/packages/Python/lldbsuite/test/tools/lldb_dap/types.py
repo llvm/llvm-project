@@ -696,6 +696,9 @@ class FunctionBreakpoint:
     name: str
     condition: Optional[str] = None
     hitCondition: Optional[str] = None
+    moduleName: Optional[str] = field(
+        metadata={"alias": "$__lldb_moduleName"}, default=None
+    )
 
 
 @dataclass(frozen=True)

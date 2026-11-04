@@ -713,6 +713,15 @@ struct FunctionBreakpoint {
   /// The attribute is only honored by a debug adapter if the corresponding
   /// capability `supportsHitConditionalBreakpoints` is true.
   String hitCondition;
+
+  /// lldb-dap Extensions
+  /// @{
+
+  /// The name of the module to restrict the function lookup to. Empty means
+  /// the lookup is not restricted.
+  String moduleName;
+
+  /// @}
 };
 bool fromJSON(const llvm::json::Value &, FunctionBreakpoint &,
               llvm::json::Path);
