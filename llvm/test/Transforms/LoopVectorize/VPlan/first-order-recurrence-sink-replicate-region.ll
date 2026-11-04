@@ -51,6 +51,25 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:    loop.0:
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext vp<[[VP9]]> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = first-order splice ir<%0>, ir<%conv>
+; CHECK-NEXT:    Successor(s): pred.srem
+; CHECK-EMPTY:
+; CHECK-NEXT:    <xVFxUF> pred.srem: {
+; CHECK-NEXT:      pred.srem.entry:
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP7]]>
+; CHECK-NEXT:      Successor(s): pred.srem.if, pred.srem.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:      pred.srem.if:
+; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP10]]>, ir<%x> (S->V)
+; CHECK-NEXT:      Successor(s): pred.srem.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:      pred.srem.continue:
+; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP11:%[0-9]+]]> = ir<%rem>
+; CHECK-NEXT:      No successors
+; CHECK-NEXT:    }
+; CHECK-NEXT:    Successor(s): loop.1
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.1:
+; CHECK-NEXT:      WIDEN ir<%add> = add ir<%conv>, vp<[[VP11]]>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
@@ -59,9 +78,7 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP10]]>, ir<%x>
 ; CHECK-NEXT:        REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP8]]>
-; CHECK-NEXT:        REPLICATE ir<%add> = add ir<%conv>, ir<%rem>
 ; CHECK-NEXT:        REPLICATE store ir<%add>, ir<%gep.dst>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -154,14 +171,14 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr, i32 %z) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP9]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP9]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
 ; CHECK-NEXT:        REPLICATE ir<%rem> = srem vp<[[VP8]]>, ir<%x>
 ; CHECK-NEXT:        vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:        REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP10]]>
-; CHECK-NEXT:        REPLICATE ir<%add> = add ir<%rem>, ir<%recur.next>
+; CHECK-NEXT:        REPLICATE ir<%add> = add ir<%rem>, ir<%recur.next> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:        REPLICATE store ir<%add>, ir<%gep>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -232,9 +249,9 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<20001>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<1234>, ir<-1>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = reduction-start-vector ir<1234>, ir<-1>, ir<1>
 ; CHECK-NEXT:    WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -242,9 +259,9 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%and.red> = phi (and) vp<[[VP3]]>, ir<%and.red.next>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%and.red> = phi (and) vp<[[VP2]]>, ir<%and.red.next>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%recur>, ir<%recur.next>
 ; CHECK-NEXT:    Successor(s): pred.srem
 ; CHECK-EMPTY:

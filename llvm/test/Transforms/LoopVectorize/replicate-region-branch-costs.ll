@@ -5,18 +5,16 @@
 
 define void @predicated_store(ptr noalias %dst, i64 %x, i64 %n) {
 ; CHECK-LABEL: 'predicated_store'
-; CHECK:  Cost of 2 for VF 4: profitable to scalarize store i32 1, ptr %gep.dst, align 4
-; CHECK:  Precomputed costs for VF 4: 2
+; CHECK:  Precomputed costs for VF 4: 0
 ; CHECK:  Cost of 4 for VF 4: BRANCH-ON-MASK ir<%c> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 0 for VF 4: REPLICATE store ir<1>, ir<%gep.dst>
+; CHECK:  Cost of 2 for VF 4: REPLICATE store ir<1>, ir<%gep.dst>
 ; CHECK:  Cost of 2 for VF 4: unconditional branches from pred.store.if
 ; CHECK:  Cost for VF 4: 14.5 (Estimated cost per lane: 3.5)
 ;
 ; FOLD-LABEL: 'predicated_store'
-; FOLD:  Cost of 2 for VF 4: profitable to scalarize store i32 1, ptr %gep.dst, align 4
-; FOLD:  Precomputed costs for VF 4: 2
+; FOLD:  Precomputed costs for VF 4: 0
 ; FOLD:  Cost of 4 for VF 4: BRANCH-ON-MASK vp<[[VP8:%[0-9]+]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; FOLD:  Cost of 0 for VF 4: REPLICATE store ir<1>, ir<%gep.dst>
+; FOLD:  Cost of 2 for VF 4: REPLICATE store ir<1>, ir<%gep.dst>
 ; FOLD:  Cost of 2 for VF 4: unconditional branches from pred.store.if
 ; FOLD:  Cost for VF 4: 15.5 (Estimated cost per lane: 3.75)
 ;
@@ -44,26 +42,22 @@ exit:
 
 define void @two_predicated_stores(ptr noalias %dst.1, ptr noalias %dst.2, i64 %x, i64 %y, i64 %n) {
 ; CHECK-LABEL: 'two_predicated_stores'
-; CHECK:  Cost of 2 for VF 4: profitable to scalarize store i32 1, ptr %gep.dst.1, align 4
-; CHECK:  Cost of 2 for VF 4: profitable to scalarize store i32 2, ptr %gep.dst.2, align 4
-; CHECK:  Precomputed costs for VF 4: 4
+; CHECK:  Precomputed costs for VF 4: 0
 ; CHECK:  Cost of 4 for VF 4: BRANCH-ON-MASK ir<%c.1> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 0 for VF 4: REPLICATE store ir<1>, ir<%gep.dst.1>
+; CHECK:  Cost of 2 for VF 4: REPLICATE store ir<1>, ir<%gep.dst.1>
 ; CHECK:  Cost of 2 for VF 4: unconditional branches from pred.store.if
 ; CHECK:  Cost of 4 for VF 4: BRANCH-ON-MASK ir<%c.2> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 0 for VF 4: REPLICATE store ir<2>, ir<%gep.dst.2>
+; CHECK:  Cost of 2 for VF 4: REPLICATE store ir<2>, ir<%gep.dst.2>
 ; CHECK:  Cost of 2 for VF 4: unconditional branches from pred.store.if
 ; CHECK:  Cost for VF 4: 24 (Estimated cost per lane: 6)
 ;
 ; FOLD-LABEL: 'two_predicated_stores'
-; FOLD:  Cost of 2 for VF 4: profitable to scalarize store i32 1, ptr %gep.dst.1, align 4
-; FOLD:  Cost of 2 for VF 4: profitable to scalarize store i32 2, ptr %gep.dst.2, align 4
-; FOLD:  Precomputed costs for VF 4: 4
+; FOLD:  Precomputed costs for VF 4: 0
 ; FOLD:  Cost of 4 for VF 4: BRANCH-ON-MASK vp<[[VP9:%[0-9]+]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; FOLD:  Cost of 0 for VF 4: REPLICATE store ir<1>, ir<%gep.dst.1>
+; FOLD:  Cost of 2 for VF 4: REPLICATE store ir<1>, ir<%gep.dst.1>
 ; FOLD:  Cost of 2 for VF 4: unconditional branches from pred.store.if
 ; FOLD:  Cost of 4 for VF 4: BRANCH-ON-MASK vp<[[VP10:%[0-9]+]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; FOLD:  Cost of 0 for VF 4: REPLICATE store ir<2>, ir<%gep.dst.2>
+; FOLD:  Cost of 2 for VF 4: REPLICATE store ir<2>, ir<%gep.dst.2>
 ; FOLD:  Cost of 2 for VF 4: unconditional branches from pred.store.if
 ; FOLD:  Cost for VF 4: 25 (Estimated cost per lane: 6.25)
 ;
@@ -106,10 +100,9 @@ define void @header_mask_only(ptr noalias %dst, i64 %n) {
 ; CHECK:  Cost for VF 4: 4 (Estimated cost per lane: 1)
 ;
 ; FOLD-LABEL: 'header_mask_only'
-; FOLD:  Cost of 4 for VF 4: profitable to scalarize store i8 0, ptr %gep, align 1
-; FOLD:  Precomputed costs for VF 4: 4
+; FOLD:  Precomputed costs for VF 4: 0
 ; FOLD:  Cost of 4 for VF 4: BRANCH-ON-MASK vp<[[VP7:%[0-9]+]]>
-; FOLD:  Cost of 0 for VF 4: REPLICATE store ir<0>, ir<%gep>
+; FOLD:  Cost of 4 for VF 4: REPLICATE store ir<0>, ir<%gep>
 ; FOLD:  Cost of 4 for VF 4: unconditional branches from pred.store.if
 ; FOLD:  Cost for VF 4: 17 (Estimated cost per lane: 4.25)
 ;

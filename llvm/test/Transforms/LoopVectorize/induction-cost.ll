@@ -578,8 +578,8 @@ exit:
 ; yet.
 define void @fp_induction_predicated(ptr noalias %dst, ptr noalias %cond, i64 %n) {
 ; VF2-LABEL: 'fp_induction_predicated'
-; VF2:  Cost of 1 for VF 2: profitable to scalarize store float %fp.iv, ptr %gep, align 4
-; VF2:  Precomputed costs for VF 2: 1
+; VF2:  Cost of 2 for VF 2: profitable to scalarize store float %fp.iv, ptr %gep, align 4
+; VF2:  Precomputed costs for VF 2: 2
 ; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4]]> * ir<1.000000e+00>
@@ -588,11 +588,9 @@ define void @fp_induction_predicated(ptr noalias %dst, ptr noalias %cond, i64 %n
 ; VF2:  Cost of 1 for VF 2: unconditional branches from pred.store.if
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
 ; VF2:  Cost of 1 for VF 2: vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP2:%[0-9]+]]> * ir<1.000000e+00>
-; VF2:  Cost for VF 2: 13.5 (Estimated cost per lane: 6.5)
+; VF2:  Cost for VF 2: 14.5 (Estimated cost per lane: 7)
 ;
 ; VF4-LABEL: 'fp_induction_predicated'
-; VF4:  Cost of 2 for VF 4: profitable to scalarize store float %fp.iv, ptr %gep, align 4
-; VF4:  Precomputed costs for VF 4: 2
 ; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 0 for VF 4: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4]]> * ir<1.000000e+00>

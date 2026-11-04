@@ -1928,27 +1928,40 @@ define i32 @cast_incremented_iv_live_out(ptr %arr, i32 %n) {
 ; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
-; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
+; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE4:.*]] ]
 ; TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[TMP1]])
+; TAILFOLD-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 1
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[INDEX]]
+; TAILFOLD-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i64 0
 ; TAILFOLD-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; TAILFOLD:       [[PRED_STORE_IF]]:
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[INDEX]]
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
-; TAILFOLD-NEXT:    [[TMP5:%.*]] = add i8 [[TMP4]], 1
-; TAILFOLD-NEXT:    store i8 [[TMP5]], ptr [[TMP3]], align 1
+; TAILFOLD-NEXT:    [[TMP10:%.*]] = insertelement <2 x i8> poison, i8 [[TMP4]], i64 0
 ; TAILFOLD-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; TAILFOLD:       [[PRED_STORE_CONTINUE]]:
+; TAILFOLD-NEXT:    [[TMP17:%.*]] = phi <2 x i8> [ poison, %[[VECTOR_BODY]] ], [ [[TMP10]], %[[PRED_STORE_IF]] ]
 ; TAILFOLD-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i64 1
-; TAILFOLD-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
+; TAILFOLD-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
 ; TAILFOLD:       [[PRED_STORE_IF1]]:
-; TAILFOLD-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
-; TAILFOLD-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP7]]
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 1
-; TAILFOLD-NEXT:    [[TMP10:%.*]] = add i8 [[TMP9]], 1
-; TAILFOLD-NEXT:    store i8 [[TMP10]], ptr [[TMP8]], align 1
+; TAILFOLD-NEXT:    [[TMP18:%.*]] = insertelement <2 x i8> [[TMP17]], i8 [[TMP9]], i64 1
 ; TAILFOLD-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; TAILFOLD:       [[PRED_STORE_CONTINUE2]]:
+; TAILFOLD-NEXT:    [[TMP19:%.*]] = phi <2 x i8> [ [[TMP17]], %[[PRED_STORE_CONTINUE]] ], [ [[TMP18]], %[[PRED_STORE_IF1]] ]
+; TAILFOLD-NEXT:    [[TMP14:%.*]] = add <2 x i8> [[TMP19]], splat (i8 1)
+; TAILFOLD-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
+; TAILFOLD:       [[PRED_STORE_IF2]]:
+; TAILFOLD-NEXT:    [[TMP20:%.*]] = extractelement <2 x i8> [[TMP14]], i64 0
+; TAILFOLD-NEXT:    store i8 [[TMP20]], ptr [[TMP3]], align 1
+; TAILFOLD-NEXT:    br label %[[PRED_STORE_CONTINUE1]]
+; TAILFOLD:       [[PRED_STORE_CONTINUE1]]:
+; TAILFOLD-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4]]
+; TAILFOLD:       [[PRED_STORE_IF3]]:
+; TAILFOLD-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP14]], i64 1
+; TAILFOLD-NEXT:    store i8 [[TMP16]], ptr [[TMP8]], align 1
+; TAILFOLD-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; TAILFOLD:       [[PRED_STORE_CONTINUE4]]:
 ; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; TAILFOLD-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
