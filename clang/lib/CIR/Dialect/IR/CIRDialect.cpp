@@ -973,6 +973,23 @@ LogicalResult cir::CastOp::verify() {
     resType = resVTy.getElementType();
   }
 
+  auto srcMatTy = mlir::dyn_cast<cir::MatrixType>(srcType);
+  auto resMatTy = mlir::dyn_cast<cir::MatrixType>(resType);
+  if (srcMatTy && resMatTy) {
+    if ((kind == cir::CastKind::int_to_float ||
+         kind == cir::CastKind::float_to_int) &&
+        (srcMatTy.getNumRows() != resMatTy.getNumRows() ||
+         srcMatTy.getNumColumns() != resMatTy.getNumColumns())) {
+      return emitOpError()
+             << "matrix float-to-int and int-to-float casts require "
+                "source and destination matrices to have the same number of "
+                "rows and columns";
+    }
+
+    srcType = srcMatTy.getElementType();
+    resType = resMatTy.getElementType();
+  }
+
   switch (kind) {
   case cir::CastKind::int_to_bool: {
     if (!mlir::isa<cir::BoolType>(resType))
