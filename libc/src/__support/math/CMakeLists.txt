@@ -4603,6 +4603,16 @@ add_header_library(
 )
 
 add_header_library(
+  coshbf16
+  HDRS
+    coshbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
   exp2bf16
   HDRS
     exp2bf16.h
