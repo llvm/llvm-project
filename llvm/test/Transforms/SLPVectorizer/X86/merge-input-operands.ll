@@ -544,11 +544,10 @@ define void @merge_reorder_load(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_reorder_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

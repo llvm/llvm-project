@@ -12241,12 +12241,6 @@ bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
                                         ArrayRef<ValueList> Operands) const {
   const TTI::TargetCostKind CostKind = getCostKind();
   Type *ScalarTy = Pool.front()->getType();
-  // The costs below widen ScalarTy to a plain vector type, which rules out
-  // the aggregates and the revec vector elements that isValidElementType()
-  // otherwise accepts.
-  if (isa<StructType, FixedVectorType>(ScalarTy) ||
-      !isValidElementType(ScalarTy, Opts.slp_revec))
-    return false;
   const unsigned NumLanes = Pool.size();
   auto *WideTy = cast<VectorType>(getWidenedType(ScalarTy, NumLanes));
 
@@ -12284,13 +12278,13 @@ bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
     if (!ColumnCost.isValid())
       return false;
     NaturalCost += ColumnCost;
-    // Each column is widened back to the user width; the merged shape needs
-    // the same permute unless the column happens to be the pool itself.
+    // Both shapes end up permuting into the user width: the natural one
+    // widens its narrow column back, the merged one selects the column's
+    // lanes out of the pool.
     NaturalCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, WideTy,
                                     CostKind, NaturalMask);
-    if (!ShuffleVectorInst::isIdentityMask(MergedMask, NumLanes))
-      MergedCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, WideTy,
-                                     CostKind, MergedMask);
+    MergedCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, WideTy,
+                                   CostKind, MergedMask);
   }
 
   LLVM_DEBUG(dbgs() << "SLP: Merging input operands costs " << MergedCost
@@ -12320,16 +12314,10 @@ BoUpSLP::getMergedInputOperandsCost(const TreeEntry &E,
   const unsigned PoolVF = PoolTE->getVectorFactor();
   auto *PoolVecTy = cast<VectorType>(getWidenedType(PoolScalarTy, PoolVF));
   InstructionCost Cost = 0;
-  for (unsigned Idx : seq<unsigned>(2)) {
-    SmallVector<int> Mask = getMergedInputMask(E, Idx);
-    // Same condition as vectorizeMergedInputOperands(): a mask shorter than
-    // the pool still extracts a subvector, so it is not free.
-    if (PoolVF == Mask.size() &&
-        ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
-      continue;
+  // A column covers half of the pool, so both masks really do permute.
+  for (unsigned Idx : seq<unsigned>(2))
     Cost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, PoolVecTy,
-                             CostKind, Mask);
-  }
+                             CostKind, getMergedInputMask(E, Idx));
   return Cost;
 }
 
@@ -12338,7 +12326,16 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
                                       ArrayRef<ValueList> Operands,
                                       unsigned Depth) {
   if (!Opts.slp_merge_inputops || Operands.size() != 2 ||
+      !Instruction::isBinaryOp(S.getOpcode()) ||
       S.areInstructionsWithCopyableElements() || S.isAltShuffle())
+    return false;
+  // The lane-select masks index lanes, so the element type must be a scalar:
+  // under -slp-revec a lane is itself a vector and the masks would have to be
+  // expanded to elements. The costs below also widen the element type to a
+  // plain vector type, which rules out aggregates.
+  Type *ScalarTy = S.getMainOp()->getOperand(0)->getType();
+  if (isa<StructType, VectorType>(ScalarTy) ||
+      !isValidElementType(ScalarTy, Opts.slp_revec))
     return false;
   // Only plain same-opcode binary operators: alternate and interchangeable
   // lanes carry per-lane operand data a single shared edge cannot express.
@@ -12369,6 +12366,8 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
       if (Seen.insert(V).second)
         Pool.push_back(V);
   }
+  // Both columns stay within half the lanes and together cover all of them,
+  // so each contributes exactly half of the pool and the two are disjoint.
   if (Pool.size() != NumLanes)
     return false;
   // The pool must vectorize as a node on its own. Constants fail the opcode
@@ -12396,6 +12395,14 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
     if (LoadEntriesToVectorize.size() != NumPostponedLoads)
       LoadEntriesToVectorize.pop_back();
     return false;
+  }
+  // The lane-select masks absorb any pool order, so build the pool in its
+  // vectorized order instead of adding a reorder shuffle to the node.
+  if (!PoolOrder.empty()) {
+    fixupOrderingIndices(PoolOrder);
+    SmallVector<int> Mask;
+    inversePermutation(PoolOrder, Mask);
+    reorderScalars(Pool, Mask);
   }
   if (!isMergeInputOpsProfitable(PoolS, Pool, Operands))
     return false;
@@ -14469,8 +14476,9 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
          "Expected And or Shl node.");
   auto IsVectorizedOneUseNode = [&](const TreeEntry *N) {
     return N->State == TreeEntry::Vectorize && !N->isAltShuffle() &&
-           N->ReorderIndices.empty() && N->ReuseShuffleIndices.empty() &&
-           !MinBWs.contains(N) && all_of(N->Scalars, [&](Value *V) {
+           !N->hasMergedInputOperands() && N->ReorderIndices.empty() &&
+           N->ReuseShuffleIndices.empty() && !MinBWs.contains(N) &&
+           all_of(N->Scalars, [&](Value *V) {
              return (N->hasCopyableElements() && N->isCopyableElement(V)) ||
                     (N == &TE ? hasSingleReductionUse(V) : V->hasOneUse());
            });
@@ -24097,13 +24105,9 @@ static Instruction *propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
 std::pair<Value *, Value *>
 BoUpSLP::vectorizeMergedInputOperands(TreeEntry *E) {
   Value *Pool = vectorizeOperand(E, 0);
+  // A column covers half of the pool, so both masks really do permute.
   auto SelectLanes = [&](unsigned Idx) {
-    SmallVector<int> Mask = getMergedInputMask(*E, Idx);
-    if (cast<FixedVectorType>(Pool->getType())->getNumElements() ==
-            Mask.size() &&
-        ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
-      return Pool;
-    return Builder.CreateShuffleVector(Pool, Mask);
+    return Builder.CreateShuffleVector(Pool, getMergedInputMask(*E, Idx));
   };
   Value *LHS = SelectLanes(0);
   Value *RHS = SelectLanes(1);
