@@ -268,15 +268,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       CTLZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
 
     auto &CTTZActions = getActionDefinitionsBuilder(G_CTTZ);
-    if (ST.hasVendorXTHeadBb())
-      CTTZActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0).lower();
-    else
-      CTTZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
-
     if (ST.hasVendorXTHeadBb()) {
+      CTTZActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0).lower();
       CTLZPoisonActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0);
       CTTZPoisonActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0);
     } else {
+      CTTZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
       CTLZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
       CTTZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
     }
