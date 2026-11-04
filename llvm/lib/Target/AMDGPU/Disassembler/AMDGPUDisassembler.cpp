@@ -652,9 +652,8 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       continue;
 
     // Skip decoding a KImm operand
-    if (AMDGPU::isKImmOperand(Desc, OpNo)) {
+    if (AMDGPU::isKImmOperand(Desc, OpNo))
         continue;
-    }
 
     // TODO: Fix V_DUAL_FMAMK_F32_X_FMAAK_F32_gfx12 vsrc operands,
     // defined to take VGPR_32, but in reality allowing inline constants.
