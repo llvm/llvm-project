@@ -3503,12 +3503,13 @@ replaceCirGlobal(mlir::SymbolTableCollection &symbolTables, cir::GlobalOp op,
                  llvm::ArrayRef<mlir::NamedAttribute> attributes,
                  mlir::ConversionPatternRewriter &rewriter) {
   mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
+  // Read before the replace erases the root op.
+  mlir::Type cirSymType = op.getSymType();
   symbolTables.getSymbolTable(modOp).remove(op);
   auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init, alignment, addrSpace,
       isDsoLocal, threadLocalMode, comdatAttr, attributes);
-  newGlobalOp->setAttr(kPreConversionSymType,
-                       mlir::TypeAttr::get(op.getSymType()));
+  newGlobalOp->setAttr(kPreConversionSymType, mlir::TypeAttr::get(cirSymType));
   symbolTables.getSymbolTable(modOp).insert(newGlobalOp);
   return newGlobalOp;
 }
