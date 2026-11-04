@@ -4277,8 +4277,16 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_cvt_pk_bf8_f32:
   case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
     // Only the half kept in the result is read from vdst_in.
-    if (SimplifyDemandedBits(N->getOperand(CvtPkF8VDstInIdx),
-                             getCvtPkF8VDstInBits(N), DCI))
+    SDValue VDstIn = N->getOperand(CvtPkF8VDstInIdx);
+    APInt Demanded = getCvtPkF8VDstInBits(N);
+    if (SDValue NewVDstIn =
+            SimplifyMultipleUseDemandedBits(VDstIn, Demanded, DCI.DAG)) {
+      SmallVector<SDValue, 5> Ops(N->ops());
+      Ops[CvtPkF8VDstInIdx] = NewVDstIn;
+      return DCI.DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(),
+                             Ops, N->getFlags());
+    }
+    if (SimplifyDemandedBits(VDstIn, Demanded, DCI))
       return SDValue(N, 0);
     return SDValue();
   }
