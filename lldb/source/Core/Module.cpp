@@ -1671,7 +1671,7 @@ std::string Module::GetCacheKey() {
 DataFileCache *Module::GetIndexCache(LLDBIndexType type) {
   bool lldb_index_enabled = false;
   if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache() &&
-      (type == eLLDBIndexTypeSymtab || eLLDBIndexTypeDwarfIndex))
+      (type == eLLDBIndexTypeSymtab || type == eLLDBIndexTypeDwarfIndex))
     lldb_index_enabled = true;
   if (ModuleList::GetGlobalModuleListProperties()
           .GetEnableLLDBIndexCacheMemoryModules() &&
