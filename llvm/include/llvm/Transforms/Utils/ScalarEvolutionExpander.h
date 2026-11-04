@@ -74,8 +74,11 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   /// Indicates whether LCSSA phis should be created for inserted values.
   bool PreserveLCSSA;
 
-  // InsertedExpressions caches Values for reuse, so must track RAUW.
-  DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
+  // InsertedExpressions caches Values for reuse, so must track RAUW. The
+  // boolean indicates whether poison-generating annotations must be dropped
+  // before reuse.
+  DenseMap<std::pair<SCEVUse, Instruction *>,
+           std::pair<TrackingVH<Value>, bool>>
       InsertedExpressions;
 
   // InsertedOverflowChecks caches Values for reuse, so must track RAUW.
