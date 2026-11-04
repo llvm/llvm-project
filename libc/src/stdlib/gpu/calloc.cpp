@@ -13,6 +13,12 @@
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memset.h"
 
+// NVPTX malloc and free are provided by the CUDA device allocator rather than
+// by the GPU libc allocator. Use the same allocator as free on that target.
+#ifdef LIBC_TARGET_ARCH_IS_NVPTX
+extern "C" void *malloc(size_t);
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, calloc, (size_t num, size_t size)) {
@@ -20,7 +26,11 @@ LLVM_LIBC_FUNCTION(void *, calloc, (size_t num, size_t size)) {
   if (bytes == 0)
     return nullptr;
 
+#ifdef LIBC_TARGET_ARCH_IS_NVPTX
+  void *ptr = ::malloc(bytes);
+#else
   void *ptr = gpu::allocate(bytes);
+#endif
   if (!ptr)
     return nullptr;
 

@@ -1,5 +1,18 @@
 add_libc_testsuite(libc-stdlib-gpu-integration-tests PARENT libc-stdlib-integration-tests)
 
+add_integration_test(
+  calloc
+  SUITE
+    libc-stdlib-gpu-integration-tests
+  SRCS
+    calloc.cpp
+  DEPENDS
+    libc.src.stdlib.calloc
+    libc.src.stdlib.free
+  LOADER_ARGS
+    --threads 1 --blocks 1
+)
+
 # TODO: Test on NVPTX, requires CUDA VMEM API.
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_integration_test(
