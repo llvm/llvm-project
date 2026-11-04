@@ -32,6 +32,12 @@ int main(int argc, char **argv) {
   assert(__msan_test_shadow(dst + 8, 1) == 0);
   assert(strcmp(dst, "helloxy") == 0);
 
+  __msan_poison(dst, sizeof(dst));
+  assert(call_strlcpy(dst, "abcdef", 4) == 6);
+  assert(__msan_test_shadow(dst, 4) == -1);
+  assert(__msan_test_shadow(dst + 4, 1) == 0);
+  assert(strcmp(dst, "abc") == 0);
+
   char zero_dst[8] = "";
   __msan_poison(zero_dst + 1, 1);
 
