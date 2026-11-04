@@ -743,7 +743,8 @@ inline bool isSoftFP(ABI TargetABI) {
 
 // Returns true for the ABIs that use the reduced 16 register integer file.
 inline bool isRVE(ABI TargetABI) {
-  return TargetABI == ABI_ILP32E || TargetABI == ABI_LP64E;
+  return TargetABI == ABI_ILP32E || TargetABI == ABI_IL32PC64E ||
+         TargetABI == ABI_LP64E || TargetABI == ABI_CHERIOT;
 }
 
 // Returns the stack alignment required by the ABI.
