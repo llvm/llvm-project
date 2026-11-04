@@ -142,6 +142,9 @@ const unsigned struct_kernel_stat64_sz = 0;
 #    elif defined(__alpha__)
 const unsigned struct_kernel_stat_sz = 80;
 const unsigned struct_kernel_stat64_sz = 136;
+#    elif defined(__hppa__)
+const unsigned struct_kernel_stat_sz = 104;
+const unsigned struct_kernel_stat64_sz = 104;
 #    endif
 struct __sanitizer_perf_event_attr {
   unsigned type;
