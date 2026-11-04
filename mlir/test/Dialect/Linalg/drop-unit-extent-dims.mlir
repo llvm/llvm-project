@@ -1156,26 +1156,36 @@ module {
     return %1 : tensor<?x1x61x1xf32>
   }
 }
-// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (0, d0)>
-// CHECK: #[[$MAP2:.+]] = affine_map<(d0) -> ()>
+// Dropping the unit loops rewrites `d2 + d5` into a bare `d2`. That loop's
+// original trip count is the static output extent 61, but the first bare use
+// in the replacement is a dynamic input dimension. Keep the original generic.
+// CHECK: #[[$MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
+// CHECK: #[[$FILTER:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+// CHECK: #[[$OUTPUT:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
 
 // CHECK-LABEL: func @drop_unit_dim_corresponding_to_dynamic_dim
 // CHECK-SAME:                    %[[ARG0:.*]]: tensor<1x?x?x1xf32>,
 // CHECK-SAME:                    %[[ARG1:.*]]: index) -> tensor<?x1x61x1xf32> {
-// CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant dense<1.000000e+00> : tensor<f32>
-// CHECK:           %[[VAL_3:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1], [2, 3]] : tensor<1x?x?x1xf32> into tensor<?x?xf32>
-// CHECK:           %[[VAL_4:.*]] = tensor.empty(%[[ARG1]]) : tensor<?x61xf32>
-// CHECK:           %[[VAL_6:.*]] = tensor.empty(%[[ARG1]]) : tensor<?x61xf32>
-// CHECK:           %[[VAL_7:.*]] = linalg.generic {indexing_maps = [#[[$MAP1]], #[[$MAP2]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["parallel"]} ins(%[[VAL_3]], %[[VAL_2]], %[[VAL_4]] : tensor<?x?xf32>, tensor<f32>, tensor<?x61xf32>) outs(%[[VAL_6]] : tensor<?x61xf32>) {
-// CHECK:           ^bb0(%[[VAL_8:.*]]: f32, %[[VAL_9:.*]]: f32, %[[VAL_10:.*]]: f32, %[[VAL_11:.*]]: f32):
-// CHECK:             %[[VAL_12:.*]] = arith.mulf %[[VAL_8]], %[[VAL_9]] : f32
-// CHECK:             %[[VAL_13:.*]] = arith.addf %[[VAL_10]], %[[VAL_12]] : f32
-// CHECK:             linalg.yield %[[VAL_13]] : f32
-// CHECK:           } -> tensor<?x61xf32>
-// CHECK:           %[[VAL_14:.*]] = tensor.expand_shape %[[VAL_7]] {{\[\[}}0, 1], [2, 3]] output_shape {{\[}}%[[VAL_0]], 1, 61, 1] : tensor<?x61xf32> into tensor<?x1x61x1xf32>
-// CHECK:           return %[[VAL_14]] : tensor<?x1x61x1xf32>
-// CHECK:         }
+// CHECK-NOT:       tensor.collapse_shape
+// CHECK-NOT:       tensor.extract_slice
+// CHECK:           linalg.generic {indexing_maps = [#[[$MAP]], #[[$FILTER]], #[[$OUTPUT]]]
+// CHECK-SAME:        iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]
+// CHECK-SAME:        ins(%[[ARG0]], %{{.*}} : tensor<1x?x?x1xf32>, tensor<1x1x1x1xf32>)
+// CHECK-SAME:        outs(%{{.*}} : tensor<?x1x61x1xf32>)
+// CHECK:           } -> tensor<?x1x61x1xf32>
+// CHECK:           return %{{.*}} : tensor<?x1x61x1xf32>
+
+// CHECK-SLICES: #[[$DYN_IN:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
+// CHECK-SLICES: #[[$DYN_FILTER:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+// CHECK-SLICES: #[[$DYN_OUT:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+// CHECK-SLICES-LABEL: func @drop_unit_dim_corresponding_to_dynamic_dim
+// CHECK-SLICES-NOT: tensor.collapse_shape
+// CHECK-SLICES-NOT: tensor.extract_slice
+// CHECK-SLICES: linalg.generic
+// CHECK-SLICES-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]
+// CHECK-SLICES-SAME: tensor<1x?x?x1xf32>
+// CHECK-SLICES-SAME: tensor<1x1x1x1xf32>
+// CHECK-SLICES-SAME: tensor<?x1x61x1xf32>
 
 // -----
 
@@ -1254,3 +1264,54 @@ func.func @fold_empty_tensor_dim_op(%arg0: tensor<1x?x10xf32>) -> tensor<1x?xf32
 //       CHECK:   %[[VAL_2:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[VAL_1]] : tensor<1x?xf32>) -> tensor<1x?xf32>
 //       CHECK:   return %[[VAL_2]] : tensor<1x?xf32>
 //       CHECK: }
+
+// -----
+
+// Folding the unit output dimensions rewrites `h * 2 + kh` into a bare `kh`.
+// The input spatial extent is 4 while the filter extent, which defines the
+// original reduction trip count, is 3. Keep the original generic.
+#input = affine_map<(n, f, h, w, c, kh, kw) -> (n, c, h * 2 + kh, w * 2 + kw)>
+#filter = affine_map<(n, f, h, w, c, kh, kw) -> (f, c, kh, kw)>
+#output = affine_map<(n, f, h, w, c, kh, kw) -> (n, f, h, w)>
+func.func @do_not_fold_conv_unit_output_dims(
+    %input: tensor<2x4x4x4xf32>, %filter: tensor<8x4x3x3xf32>,
+    %init: tensor<2x8x1x1xf32>) -> tensor<2x8x1x1xf32> {
+  %result = linalg.generic {
+      indexing_maps = [#input, #filter, #output],
+      iterator_types = ["parallel", "parallel", "parallel", "parallel",
+                        "reduction", "reduction", "reduction"]
+    } ins(%input, %filter : tensor<2x4x4x4xf32>, tensor<8x4x3x3xf32>)
+      outs(%init : tensor<2x8x1x1xf32>) {
+    ^bb0(%in: f32, %weight: f32, %out: f32):
+      %mul = arith.mulf %in, %weight : f32
+      %add = arith.addf %out, %mul : f32
+      linalg.yield %add : f32
+    } -> tensor<2x8x1x1xf32>
+  return %result : tensor<2x8x1x1xf32>
+}
+
+// CHECK: #[[$CONV_IN:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 * 2 + d5, d3 * 2 + d6)>
+// CHECK: #[[$CONV_FILTER:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
+// CHECK: #[[$CONV_OUT:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+// CHECK-LABEL: func.func @do_not_fold_conv_unit_output_dims
+// CHECK-NOT: tensor.collapse_shape
+// CHECK-NOT: tensor.extract_slice
+// CHECK: linalg.generic {indexing_maps = [#[[$CONV_IN]], #[[$CONV_FILTER]], #[[$CONV_OUT]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]
+// CHECK-SAME: tensor<2x4x4x4xf32>
+// CHECK-SAME: tensor<8x4x3x3xf32>
+// CHECK-SAME: outs(%{{.*}} : tensor<2x8x1x1xf32>)
+// CHECK: } -> tensor<2x8x1x1xf32>
+
+// CHECK-SLICES: #[[$CONV_IN:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 * 2 + d5, d3 * 2 + d6)>
+// CHECK-SLICES: #[[$CONV_FILTER:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
+// CHECK-SLICES: #[[$CONV_OUT:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+// CHECK-SLICES-LABEL: func.func @do_not_fold_conv_unit_output_dims
+// CHECK-SLICES-NOT: tensor.collapse_shape
+// CHECK-SLICES-NOT: tensor.extract_slice
+// CHECK-SLICES: linalg.generic {indexing_maps = [#[[$CONV_IN]], #[[$CONV_FILTER]], #[[$CONV_OUT]]]
+// CHECK-SLICES-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]
+// CHECK-SLICES-SAME: tensor<2x4x4x4xf32>
+// CHECK-SLICES-SAME: tensor<8x4x3x3xf32>
+// CHECK-SLICES-SAME: outs(%{{.*}} : tensor<2x8x1x1xf32>)
+// CHECK-SLICES: } -> tensor<2x8x1x1xf32>
