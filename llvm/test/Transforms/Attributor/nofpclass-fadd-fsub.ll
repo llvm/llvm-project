@@ -705,7 +705,7 @@ define float @fadd_ninf(float noundef %arg) {
 }
 
 define ppc_fp128 @fadd_ppc_fp128_bailout(ppc_fp128 noundef %arg) {
-; CHECK-LABEL: define noundef nofpclass(nzero) ppc_fp128 @fadd_ppc_fp128_bailout(
+; CHECK-LABEL: define noundef ppc_fp128 @fadd_ppc_fp128_bailout(
 ; CHECK-SAME: ppc_fp128 noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd ppc_fp128 [[ARG]], 2.000000e+00
 ; CHECK-NEXT:    ret ppc_fp128 [[ADD]]
