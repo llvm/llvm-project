@@ -287,46 +287,6 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    store i32 [[INC27]], ptr [[DOTPERMUTED_0_IV_J]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
 // CHECK1:       for.end28:
-// CHECK1-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[TMP33:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK1-NEXT:    [[CMP29:%.*]] = icmp slt i32 [[TMP32]], [[TMP33]]
-// CHECK1-NEXT:    br i1 [[CMP29]], label [[IF_THEN:%.*]], label [[IF_END44:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP34:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[TMP35:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK1-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB30:%.*]] = sub i32 [[TMP35]], [[TMP36]]
-// CHECK1-NEXT:    [[SUB31:%.*]] = sub i32 [[SUB30]], 1
-// CHECK1-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK1-NEXT:    [[ADD32:%.*]] = add i32 [[SUB31]], [[TMP37]]
-// CHECK1-NEXT:    [[TMP38:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK1-NEXT:    [[DIV33:%.*]] = udiv i32 [[ADD32]], [[TMP38]]
-// CHECK1-NEXT:    [[TMP39:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK1-NEXT:    [[MUL34:%.*]] = mul i32 [[DIV33]], [[TMP39]]
-// CHECK1-NEXT:    [[ADD35:%.*]] = add i32 [[TMP34]], [[MUL34]]
-// CHECK1-NEXT:    store i32 [[ADD35]], ptr [[I]], align 4
-// CHECK1-NEXT:    [[TMP40:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
-// CHECK1-NEXT:    [[TMP41:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_6]], align 4
-// CHECK1-NEXT:    [[CMP36:%.*]] = icmp slt i32 [[TMP40]], [[TMP41]]
-// CHECK1-NEXT:    br i1 [[CMP36]], label [[IF_THEN37:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then37:
-// CHECK1-NEXT:    [[TMP42:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
-// CHECK1-NEXT:    [[TMP43:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_6]], align 4
-// CHECK1-NEXT:    [[TMP44:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
-// CHECK1-NEXT:    [[SUB38:%.*]] = sub i32 [[TMP43]], [[TMP44]]
-// CHECK1-NEXT:    [[SUB39:%.*]] = sub i32 [[SUB38]], 1
-// CHECK1-NEXT:    [[TMP45:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
-// CHECK1-NEXT:    [[ADD40:%.*]] = add i32 [[SUB39]], [[TMP45]]
-// CHECK1-NEXT:    [[TMP46:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
-// CHECK1-NEXT:    [[DIV41:%.*]] = udiv i32 [[ADD40]], [[TMP46]]
-// CHECK1-NEXT:    [[TMP47:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
-// CHECK1-NEXT:    [[MUL42:%.*]] = mul i32 [[DIV41]], [[TMP47]]
-// CHECK1-NEXT:    [[ADD43:%.*]] = add i32 [[TMP42]], [[MUL42]]
-// CHECK1-NEXT:    store i32 [[ADD43]], ptr [[J]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
-// CHECK1-NEXT:    br label [[IF_END44]]
-// CHECK1:       if.end44:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -833,10 +793,6 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    store i32 [[INC23]], ptr [[DOTPERMUTED_0_IV_J]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
 // CHECK1:       for.end24:
-// CHECK1-NEXT:    store i32 19, ptr [[I]], align 4
-// CHECK1-NEXT:    store i32 19, ptr [[J]], align 4
-// CHECK1-NEXT:    store i32 19, ptr [[K]], align 4
-// CHECK1-NEXT:    store i32 19, ptr [[L]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -2017,14 +1973,6 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    store i32 [[INC16]], ptr [[DOTPERMUTED_0_IV_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP15:![0-9]+]]
 // CHECK1:       for.end17:
-// CHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK1-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
-// CHECK1-NEXT:    [[CMP18:%.*]] = icmp ult ptr [[TMP22]], [[TMP23]]
-// CHECK1-NEXT:    br i1 [[CMP18]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    store i32 42, ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -3071,46 +3019,6 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    store i32 [[INC27]], ptr [[DOTPERMUTED_0_IV_J]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
 // CHECK2:       for.end28:
-// CHECK2-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[TMP33:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK2-NEXT:    [[CMP29:%.*]] = icmp slt i32 [[TMP32]], [[TMP33]]
-// CHECK2-NEXT:    br i1 [[CMP29]], label [[IF_THEN:%.*]], label [[IF_END44:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP34:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[TMP35:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK2-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB30:%.*]] = sub i32 [[TMP35]], [[TMP36]]
-// CHECK2-NEXT:    [[SUB31:%.*]] = sub i32 [[SUB30]], 1
-// CHECK2-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK2-NEXT:    [[ADD32:%.*]] = add i32 [[SUB31]], [[TMP37]]
-// CHECK2-NEXT:    [[TMP38:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK2-NEXT:    [[DIV33:%.*]] = udiv i32 [[ADD32]], [[TMP38]]
-// CHECK2-NEXT:    [[TMP39:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK2-NEXT:    [[MUL34:%.*]] = mul i32 [[DIV33]], [[TMP39]]
-// CHECK2-NEXT:    [[ADD35:%.*]] = add i32 [[TMP34]], [[MUL34]]
-// CHECK2-NEXT:    store i32 [[ADD35]], ptr [[I]], align 4
-// CHECK2-NEXT:    [[TMP40:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
-// CHECK2-NEXT:    [[TMP41:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_6]], align 4
-// CHECK2-NEXT:    [[CMP36:%.*]] = icmp slt i32 [[TMP40]], [[TMP41]]
-// CHECK2-NEXT:    br i1 [[CMP36]], label [[IF_THEN37:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then37:
-// CHECK2-NEXT:    [[TMP42:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
-// CHECK2-NEXT:    [[TMP43:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_6]], align 4
-// CHECK2-NEXT:    [[TMP44:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
-// CHECK2-NEXT:    [[SUB38:%.*]] = sub i32 [[TMP43]], [[TMP44]]
-// CHECK2-NEXT:    [[SUB39:%.*]] = sub i32 [[SUB38]], 1
-// CHECK2-NEXT:    [[TMP45:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
-// CHECK2-NEXT:    [[ADD40:%.*]] = add i32 [[SUB39]], [[TMP45]]
-// CHECK2-NEXT:    [[TMP46:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
-// CHECK2-NEXT:    [[DIV41:%.*]] = udiv i32 [[ADD40]], [[TMP46]]
-// CHECK2-NEXT:    [[TMP47:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
-// CHECK2-NEXT:    [[MUL42:%.*]] = mul i32 [[DIV41]], [[TMP47]]
-// CHECK2-NEXT:    [[ADD43:%.*]] = add i32 [[TMP42]], [[MUL42]]
-// CHECK2-NEXT:    store i32 [[ADD43]], ptr [[J]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
-// CHECK2-NEXT:    br label [[IF_END44]]
-// CHECK2:       if.end44:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -3617,10 +3525,6 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    store i32 [[INC23]], ptr [[DOTPERMUTED_0_IV_J]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 // CHECK2:       for.end24:
-// CHECK2-NEXT:    store i32 19, ptr [[I]], align 4
-// CHECK2-NEXT:    store i32 19, ptr [[J]], align 4
-// CHECK2-NEXT:    store i32 19, ptr [[K]], align 4
-// CHECK2-NEXT:    store i32 19, ptr [[L]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -3721,14 +3625,6 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    store i32 [[INC16]], ptr [[DOTPERMUTED_0_IV_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP15:![0-9]+]]
 // CHECK2:       for.end17:
-// CHECK2-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK2-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
-// CHECK2-NEXT:    [[CMP18:%.*]] = icmp ult ptr [[TMP22]], [[TMP23]]
-// CHECK2-NEXT:    br i1 [[CMP18]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    store i32 42, ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //

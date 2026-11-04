@@ -875,8 +875,6 @@ extern "C" void foo5() {
 // CHECK1-NEXT:    store i64 [[INC]], ptr [[DOTOMP_FUSE_INDEX52]], align 8
 // CHECK1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
 // CHECK1:       [[FOR_END]]:
-// CHECK1-NEXT:    store i32 128, ptr [[I]], align 4
-// CHECK1-NEXT:    store i32 256, ptr [[J]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -995,8 +993,6 @@ extern "C" void foo5() {
 // CHECK1-NEXT:    store i32 [[INC16]], ptr [[DOTOMP_FUSE_INDEX]], align 4
 // CHECK1-NEXT:    br label %[[FOR_COND2]], !llvm.loop [[LOOP9:![0-9]+]]
 // CHECK1:       [[FOR_END17]]:
-// CHECK1-NEXT:    store i32 256, ptr [[J]], align 4
-// CHECK1-NEXT:    store i32 64, ptr [[K]], align 4
 // CHECK1-NEXT:    store i32 42, ptr [[C]], align 4
 // CHECK1-NEXT:    store ptr [[ARR]], ptr [[__RANGE2]], align 8
 // CHECK1-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[__RANGE2]], align 8, !nonnull [[META5]], !align [[META6]]
@@ -1268,8 +1264,6 @@ extern "C" void foo5() {
 // CHECK1-NEXT:    store i64 [[INC62]], ptr [[DOTOMP_FUSE_INDEX29]], align 8
 // CHECK1-NEXT:    br label %[[FOR_COND30]], !llvm.loop [[LOOP11:![0-9]+]]
 // CHECK1:       [[FOR_END63]]:
-// CHECK1-NEXT:    store i32 256, ptr [[J]], align 4
-// CHECK1-NEXT:    store i32 512, ptr [[K]], align 4
 // CHECK1-NEXT:    store i32 37, ptr [[CC]], align 4
 // CHECK1-NEXT:    store ptr [[ARR]], ptr [[__RANGE264]], align 8
 // CHECK1-NEXT:    [[TMP57:%.*]] = load ptr, ptr [[__RANGE264]], align 8, !nonnull [[META5]], !align [[META6]]
@@ -1802,8 +1796,6 @@ extern "C" void foo5() {
 // CHECK2-NEXT:    store i64 [[INC]], ptr [[DOTOMP_FUSE_INDEX52]], align 8
 // CHECK2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK2:       [[FOR_END]]:
-// CHECK2-NEXT:    store i32 128, ptr [[I]], align 4
-// CHECK2-NEXT:    store i32 256, ptr [[J]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1922,8 +1914,6 @@ extern "C" void foo5() {
 // CHECK2-NEXT:    store i32 [[INC16]], ptr [[DOTOMP_FUSE_INDEX]], align 4
 // CHECK2-NEXT:    br label %[[FOR_COND2]], !llvm.loop [[LOOP8:![0-9]+]]
 // CHECK2:       [[FOR_END17]]:
-// CHECK2-NEXT:    store i32 256, ptr [[J]], align 4
-// CHECK2-NEXT:    store i32 64, ptr [[K]], align 4
 // CHECK2-NEXT:    store i32 42, ptr [[C]], align 4
 // CHECK2-NEXT:    store ptr [[ARR]], ptr [[__RANGE2]], align 8
 // CHECK2-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[__RANGE2]], align 8, !nonnull [[META4]], !align [[META5]]
@@ -2195,8 +2185,6 @@ extern "C" void foo5() {
 // CHECK2-NEXT:    store i64 [[INC62]], ptr [[DOTOMP_FUSE_INDEX29]], align 8
 // CHECK2-NEXT:    br label %[[FOR_COND30]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK2:       [[FOR_END63]]:
-// CHECK2-NEXT:    store i32 256, ptr [[J]], align 4
-// CHECK2-NEXT:    store i32 512, ptr [[K]], align 4
 // CHECK2-NEXT:    store i32 37, ptr [[CC]], align 4
 // CHECK2-NEXT:    store ptr [[ARR]], ptr [[__RANGE264]], align 8
 // CHECK2-NEXT:    [[TMP57:%.*]] = load ptr, ptr [[__RANGE264]], align 8, !nonnull [[META4]], !align [[META5]]

@@ -230,7 +230,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC7]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP8:![0-9]+]]
 // CHECK1:       for.end8:
-// CHECK1-NEXT:    store i32 10, ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -299,18 +298,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND3]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK1:       for.end11:
-// CHECK1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP12:%.*]] = icmp slt i32 0, [[TMP13]]
-// CHECK1-NEXT:    br i1 [[CMP12]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB13:%.*]] = sub nsw i32 [[TMP14]], 0
-// CHECK1-NEXT:    [[DIV14:%.*]] = sdiv i32 [[SUB13]], 1
-// CHECK1-NEXT:    [[MUL15:%.*]] = mul nsw i32 [[DIV14]], 1
-// CHECK1-NEXT:    [[ADD16:%.*]] = add nsw i32 0, [[MUL15]]
-// CHECK1-NEXT:    store i32 [[ADD16]], ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -408,18 +395,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC22]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND15]], !llvm.loop [[LOOP13:![0-9]+]]
 // CHECK1:       for.end23:
-// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP24:%.*]] = icmp slt i32 0, [[TMP20]]
-// CHECK1-NEXT:    br i1 [[CMP24]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB25:%.*]] = sub nsw i32 [[TMP21]], 0
-// CHECK1-NEXT:    [[DIV26:%.*]] = sdiv i32 [[SUB25]], 1
-// CHECK1-NEXT:    [[MUL27:%.*]] = mul nsw i32 [[DIV26]], 1
-// CHECK1-NEXT:    [[ADD28:%.*]] = add nsw i32 0, [[MUL27]]
-// CHECK1-NEXT:    store i32 [[ADD28]], ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -494,18 +469,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC14]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP15:![0-9]+]]
 // CHECK1:       for.end15:
-// CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP16:%.*]] = icmp slt i32 0, [[TMP15]]
-// CHECK1-NEXT:    br i1 [[CMP16]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB17:%.*]] = sub nsw i32 [[TMP16]], 0
-// CHECK1-NEXT:    [[DIV18:%.*]] = sdiv i32 [[SUB17]], 1
-// CHECK1-NEXT:    [[MUL19:%.*]] = mul nsw i32 [[DIV18]], 1
-// CHECK1-NEXT:    [[ADD20:%.*]] = add nsw i32 0, [[MUL19]]
-// CHECK1-NEXT:    store i32 [[ADD20]], ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -551,18 +514,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC]], ptr [[DOTSPLIT_IV_0_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 // CHECK1:       for.end:
-// CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP4:%.*]] = icmp slt i32 0, [[TMP8]]
-// CHECK1-NEXT:    br i1 [[CMP4]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB5:%.*]] = sub nsw i32 [[TMP9]], 0
-// CHECK1-NEXT:    [[DIV6:%.*]] = sdiv i32 [[SUB5]], 1
-// CHECK1-NEXT:    [[MUL7:%.*]] = mul nsw i32 [[DIV6]], 1
-// CHECK1-NEXT:    [[ADD8:%.*]] = add nsw i32 0, [[MUL7]]
-// CHECK1-NEXT:    store i32 [[ADD8]], ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -660,18 +611,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC22]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND15]], !llvm.loop [[LOOP19:![0-9]+]]
 // CHECK1:       for.end23:
-// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP24:%.*]] = icmp sle i32 -1, [[TMP20]]
-// CHECK1-NEXT:    br i1 [[CMP24]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB25:%.*]] = sub i32 [[TMP21]], -2
-// CHECK1-NEXT:    [[DIV26:%.*]] = udiv i32 [[SUB25]], 1
-// CHECK1-NEXT:    [[MUL27:%.*]] = mul i32 [[DIV26]], 1
-// CHECK1-NEXT:    [[ADD28:%.*]] = add i32 -1, [[MUL27]]
-// CHECK1-NEXT:    store i32 [[ADD28]], ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -727,7 +666,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC7]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP21:![0-9]+]]
 // CHECK1:       for.end8:
-// CHECK1-NEXT:    store i32 10, ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -819,18 +757,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC18]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND11]], !llvm.loop [[LOOP24:![0-9]+]]
 // CHECK1:       for.end19:
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP20:%.*]] = icmp slt i32 0, [[TMP18]]
-// CHECK1-NEXT:    br i1 [[CMP20]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB21:%.*]] = sub nsw i32 [[TMP19]], 0
-// CHECK1-NEXT:    [[DIV22:%.*]] = sdiv i32 [[SUB21]], 1
-// CHECK1-NEXT:    [[MUL23:%.*]] = mul nsw i32 [[DIV22]], 1
-// CHECK1-NEXT:    [[ADD24:%.*]] = add nsw i32 0, [[MUL23]]
-// CHECK1-NEXT:    store i32 [[ADD24]], ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -899,18 +825,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND3]], !llvm.loop [[LOOP26:![0-9]+]]
 // CHECK1:       for.end11:
-// CHECK1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP12:%.*]] = icmp slt i32 0, [[TMP13]]
-// CHECK1-NEXT:    br i1 [[CMP12]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB13:%.*]] = sub i32 [[TMP14]], -1
-// CHECK1-NEXT:    [[DIV14:%.*]] = udiv i32 [[SUB13]], 2
-// CHECK1-NEXT:    [[MUL15:%.*]] = mul i32 [[DIV14]], 2
-// CHECK1-NEXT:    [[ADD16:%.*]] = add i32 0, [[MUL15]]
-// CHECK1-NEXT:    store i32 [[ADD16]], ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -988,19 +902,6 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC14]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP28:![0-9]+]]
 // CHECK1:       for.end15:
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[TMP18]], 0
-// CHECK1-NEXT:    br i1 [[CMP16]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB17:%.*]] = sub nsw i32 [[TMP20]], 0
-// CHECK1-NEXT:    [[DIV18:%.*]] = sdiv i32 [[SUB17]], 1
-// CHECK1-NEXT:    [[MUL19:%.*]] = mul nsw i32 [[DIV18]], 1
-// CHECK1-NEXT:    [[SUB20:%.*]] = sub nsw i32 [[TMP19]], [[MUL19]]
-// CHECK1-NEXT:    store i32 [[SUB20]], ptr [[I]], align 4
-// CHECK1-NEXT:    br label [[IF_END]]
-// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1367,19 +1268,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC14]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK2:       for.end15:
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[TMP18]], 0
-// CHECK2-NEXT:    br i1 [[CMP16]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB17:%.*]] = sub nsw i32 [[TMP20]], 0
-// CHECK2-NEXT:    [[DIV18:%.*]] = sdiv i32 [[SUB17]], 1
-// CHECK2-NEXT:    [[MUL19:%.*]] = mul nsw i32 [[DIV18]], 1
-// CHECK2-NEXT:    [[SUB20:%.*]] = sub nsw i32 [[TMP19]], [[MUL19]]
-// CHECK2-NEXT:    store i32 [[SUB20]], ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1454,18 +1342,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC14]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP12:![0-9]+]]
 // CHECK2:       for.end15:
-// CHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP16:%.*]] = icmp slt i32 0, [[TMP15]]
-// CHECK2-NEXT:    br i1 [[CMP16]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB17:%.*]] = sub nsw i32 [[TMP16]], 0
-// CHECK2-NEXT:    [[DIV18:%.*]] = sdiv i32 [[SUB17]], 1
-// CHECK2-NEXT:    [[MUL19:%.*]] = mul nsw i32 [[DIV18]], 1
-// CHECK2-NEXT:    [[ADD20:%.*]] = add nsw i32 0, [[MUL19]]
-// CHECK2-NEXT:    store i32 [[ADD20]], ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1563,18 +1439,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC22]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND15]], !llvm.loop [[LOOP15:![0-9]+]]
 // CHECK2:       for.end23:
-// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP24:%.*]] = icmp slt i32 0, [[TMP20]]
-// CHECK2-NEXT:    br i1 [[CMP24]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB25:%.*]] = sub nsw i32 [[TMP21]], 0
-// CHECK2-NEXT:    [[DIV26:%.*]] = sdiv i32 [[SUB25]], 1
-// CHECK2-NEXT:    [[MUL27:%.*]] = mul nsw i32 [[DIV26]], 1
-// CHECK2-NEXT:    [[ADD28:%.*]] = add nsw i32 0, [[MUL27]]
-// CHECK2-NEXT:    store i32 [[ADD28]], ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1672,18 +1536,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC22]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND15]], !llvm.loop [[LOOP18:![0-9]+]]
 // CHECK2:       for.end23:
-// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP24:%.*]] = icmp sle i32 -1, [[TMP20]]
-// CHECK2-NEXT:    br i1 [[CMP24]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB25:%.*]] = sub i32 [[TMP21]], -2
-// CHECK2-NEXT:    [[DIV26:%.*]] = udiv i32 [[SUB25]], 1
-// CHECK2-NEXT:    [[MUL27:%.*]] = mul i32 [[DIV26]], 1
-// CHECK2-NEXT:    [[ADD28:%.*]] = add i32 -1, [[MUL27]]
-// CHECK2-NEXT:    store i32 [[ADD28]], ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1729,18 +1581,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC]], ptr [[DOTSPLIT_IV_0_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 // CHECK2:       for.end:
-// CHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP4:%.*]] = icmp slt i32 0, [[TMP8]]
-// CHECK2-NEXT:    br i1 [[CMP4]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB5:%.*]] = sub nsw i32 [[TMP9]], 0
-// CHECK2-NEXT:    [[DIV6:%.*]] = sdiv i32 [[SUB5]], 1
-// CHECK2-NEXT:    [[MUL7:%.*]] = mul nsw i32 [[DIV6]], 1
-// CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i32 0, [[MUL7]]
-// CHECK2-NEXT:    store i32 [[ADD8]], ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1809,18 +1649,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND3]], !llvm.loop [[LOOP21:![0-9]+]]
 // CHECK2:       for.end11:
-// CHECK2-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP12:%.*]] = icmp slt i32 0, [[TMP13]]
-// CHECK2-NEXT:    br i1 [[CMP12]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB13:%.*]] = sub i32 [[TMP14]], -1
-// CHECK2-NEXT:    [[DIV14:%.*]] = udiv i32 [[SUB13]], 2
-// CHECK2-NEXT:    [[MUL15:%.*]] = mul i32 [[DIV14]], 2
-// CHECK2-NEXT:    [[ADD16:%.*]] = add i32 0, [[MUL15]]
-// CHECK2-NEXT:    store i32 [[ADD16]], ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1912,18 +1740,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC18]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND11]], !llvm.loop [[LOOP24:![0-9]+]]
 // CHECK2:       for.end19:
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP20:%.*]] = icmp slt i32 0, [[TMP18]]
-// CHECK2-NEXT:    br i1 [[CMP20]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB21:%.*]] = sub nsw i32 [[TMP19]], 0
-// CHECK2-NEXT:    [[DIV22:%.*]] = sdiv i32 [[SUB21]], 1
-// CHECK2-NEXT:    [[MUL23:%.*]] = mul nsw i32 [[DIV22]], 1
-// CHECK2-NEXT:    [[ADD24:%.*]] = add nsw i32 0, [[MUL23]]
-// CHECK2-NEXT:    store i32 [[ADD24]], ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1979,7 +1795,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC7]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP26:![0-9]+]]
 // CHECK2:       for.end8:
-// CHECK2-NEXT:    store i32 10, ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2048,18 +1863,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND3]], !llvm.loop [[LOOP28:![0-9]+]]
 // CHECK2:       for.end11:
-// CHECK2-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP12:%.*]] = icmp slt i32 0, [[TMP13]]
-// CHECK2-NEXT:    br i1 [[CMP12]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB13:%.*]] = sub nsw i32 [[TMP14]], 0
-// CHECK2-NEXT:    [[DIV14:%.*]] = sdiv i32 [[SUB13]], 1
-// CHECK2-NEXT:    [[MUL15:%.*]] = mul nsw i32 [[DIV14]], 1
-// CHECK2-NEXT:    [[ADD16:%.*]] = add nsw i32 0, [[MUL15]]
-// CHECK2-NEXT:    store i32 [[ADD16]], ptr [[I]], align 4
-// CHECK2-NEXT:    br label [[IF_END]]
-// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2115,7 +1918,6 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC7]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP30:![0-9]+]]
 // CHECK2:       for.end8:
-// CHECK2-NEXT:    store i32 10, ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //

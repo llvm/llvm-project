@@ -400,16 +400,16 @@ void test_stripe_nest_zero_trip(int n) {
 void test_fuse_nested_generated_index(void) {
   // CHECK-LABEL: define {{.*}} @test_fuse_nested_generated_index
   // Declared outside the construct: a loop sequence may only contain loops.
-  int l, m;
+  int i, j, k, l, m;
   #pragma omp fuse looprange(2, 2)
   {
     #pragma omp fuse looprange(2, 2)
     {
-      for (int i = 0; i < 8; ++i)
+      for (i = 0; i < 8; ++i)
         ;
-      for (int j = 0; j < 16; ++j)
+      for (j = 0; j < 16; ++j)
         ;
-      for (int k = 0; k < 32; ++k)
+      for (k = 0; k < 32; ++k)
         ;
     }
     for (l = 0; l < 4; ++l)
