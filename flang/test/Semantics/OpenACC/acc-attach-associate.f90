@@ -1,52 +1,104 @@
-! RUN: not %flang_fc1 -fsyntax-only -fopenacc %s 2>&1 | FileCheck %s
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc
 
-! An associate name does not have the POINTER or ALLOCATABLE attribute of its
-! selector, so it cannot appear on an ATTACH or DETACH clause. Check that the
-! error explains why, and suggests the selector when the selector would be
-! accepted.
+! An ASSOCIATE or SELECT TYPE associate name does not have the POINTER or
+! ALLOCATABLE attribute of its selector, so it cannot appear on an ATTACH or
+! DETACH clause. When the selector itself would be accepted, the error explains
+! that association is the cause. Otherwise only the error is reported.
 
 module attach_associate_m
   type :: t
     real, pointer :: p(:) => null()
     real, allocatable :: a(:)
     real :: r(10)
+    complex, pointer :: z => null()
   end type
 end module
 
-subroutine test_attach_associate(self)
+subroutine test_attach_associate(self, other)
   use attach_associate_m
-  type(t) :: self
+  type(t) :: self, other
 
+  !BECAUSE: `ptr` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+  !BECAUSE: `ptr` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+  !BECAUSE: `alc` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
   associate (ptr => self%p, alc => self%a, arr => self%r)
-    ! CHECK: error: Argument `ptr` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
-    ! CHECK: `ptr` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector; use `self%p` in the ATTACH clause instead
+    !ERROR: Argument `ptr` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
     !$acc enter data attach(ptr)
-
-    ! CHECK: error: Argument `alc` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
-    ! CHECK: `alc` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector; use `self%a` in the ATTACH clause instead
+    !ERROR: Argument `alc` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
     !$acc enter data attach(alc)
-
-    ! CHECK: error: Argument `ptr` on the DETACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
-    ! CHECK: `ptr` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector; use `self%p` in the DETACH clause instead
+    !ERROR: Argument `ptr` on the DETACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
     !$acc exit data detach(ptr)
-
-    ! The selector is not a pointer either, so there is nothing to suggest.
-    ! CHECK: error: Argument `arr` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
-    ! CHECK: `arr` is an associate name and does not have the POINTER or ALLOCATABLE attribute{{$}}
+    ! The selector would be rejected too: no note.
+    !ERROR: Argument `arr` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
     !$acc enter data attach(arr)
   end associate
 
-  ! The selector is an expression, not a variable.
-  associate (e => self%p + 1.0)
-    ! CHECK: error: Argument `e` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
-    ! CHECK: `e` is an associate name and does not have the POINTER or ALLOCATABLE attribute{{$}}
+  ! The selector would be rejected too: no note.
+  associate (re => self%z%re, e => self%p + 1.0)
+    !ERROR: Argument `re` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+    !$acc enter data attach(re)
+    !ERROR: Argument `e` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
     !$acc enter data attach(e)
   end associate
 
-  ! Naming the pointer component directly is accepted.
-  ! CHECK-NOT: error:
-  !$acc enter data attach(self%p)
-  !$acc exit data detach(self%p)
+  ! A nested associate name's selector is itself an associate name, which
+  ! would be rejected too: no note.
+  !BECAUSE: `a1` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+  associate (a1 => self%p)
+    associate (a2 => a1)
+      !ERROR: Argument `a2` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+      !$acc enter data attach(a2)
+      !ERROR: Argument `a1` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+      !$acc enter data attach(a1)
+    end associate
+  end associate
+
+  ! The note does not name the selector, whose names can mean something else
+  ! at the clause: here `self%p` would name `other%p`.
+  !BECAUSE: `q` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+  associate (q => self%p)
+    associate (self => other)
+      !ERROR: Argument `q` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+      !$acc enter data attach(q)
+    end associate
+  end associate
+
+  ! Naming the pointer or allocatable directly is accepted.
+  !$acc enter data attach(self%p, self%a)
+  !$acc exit data detach(self%p, self%a)
+end subroutine
+
+subroutine test_attach_select_type(c, x)
+  class(*), pointer :: c, x(:)
+
+  !BECAUSE: `d` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+  select type (d => c)
+  type is (real)
+    !ERROR: Argument `d` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+    !$acc enter data attach(d)
+  end select
+
+  ! Without an associate-name, the note is at the clause, not at the
+  ! declaration of x.
+  select type (x)
+  type is (real)
+    !ERROR: Argument `x` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+    !BECAUSE: `x` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+    !$acc enter data attach(x)
+  end select
+end subroutine
+
+subroutine test_attach_select_type_host(x)
+  class(*), pointer :: x(:)
+contains
+  subroutine inner()
+    select type (x)
+    type is (real)
+      !ERROR: Argument `x` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+      !BECAUSE: `x` is an associate name and does not have the POINTER or ALLOCATABLE attribute of its selector
+      !$acc enter data attach(x)
+    end select
+  end subroutine
 end subroutine
 
 ! A SELECT RANK associate name keeps the POINTER attribute of its selector.
