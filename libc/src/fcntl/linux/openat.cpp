@@ -8,14 +8,13 @@
 
 #include "src/fcntl/openat.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/openat.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/mode_t.h"
 #include <stdarg.h>
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -30,13 +29,12 @@ LLVM_LIBC_FUNCTION(int, openat, (int dfd, const char *path, int flags, ...)) {
     va_end(varargs);
   }
 
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, dfd, path, flags,
-                                             mode_flags);
-  if (fd < 0) {
-    libc_errno = -fd;
+  auto result = linux_syscalls::openat(dfd, path, flags, mode_flags);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
-  return fd;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

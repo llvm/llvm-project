@@ -132,7 +132,8 @@ bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
 
 static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
                            llvm::opt::ArgList &args,
-                           clang::DiagnosticsEngine &diags) {
+                           clang::DiagnosticsEngine &diags,
+                           const llvm::Triple &triple) {
   using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
   if (llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_debug_info_kind_EQ)) {
@@ -177,6 +178,19 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.DebugInfoForProfiling =
       args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
+  using NameTableKind = Fortran::frontend::CodeGenOptions::DebugNameTableKind;
+  NameTableKind nameTable = NameTableKind::None;
+  if (args.hasArg(clang::options::OPT_ggnu_pubnames))
+    nameTable = NameTableKind::GNU;
+  else if (args.hasArg(clang::options::OPT_gpubnames))
+    nameTable = NameTableKind::Default;
+  // Match the target overrides in clang's CGDebugInfo::CreateCompileUnit.
+  if (triple.isNVPTX())
+    nameTable = NameTableKind::None;
+  else if (triple.getVendor() == llvm::Triple::Apple)
+    nameTable = NameTableKind::Apple;
+  opts.setDebugNameTable(nameTable);
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_compress_debug_sections_EQ)) {
@@ -392,6 +406,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.hasArg(clang::options::OPT_fno_optimize_sibling_calls))
     opts.DisableTailCalls = 1;
+
+  // -fplt / -fno-plt. The driver forwards only -fno-plt, and only for ELF
+  // x86 and AArch64. Last flag wins if both reach the frontend.
+  opts.NoPLT = args.hasFlag(clang::options::OPT_fno_plt,
+                            clang::options::OPT_fplt, /*Default=*/false);
 
   // -fno-integrated-as: emit GNU Assembler compatible assembly.
   if (!args.hasFlag(clang::options::OPT_fintegrated_as,
@@ -1891,7 +1910,8 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
   success &= parseDoConcurrentMapping(invoc.getCodeGenOpts(), args, diags);
-  success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags,
+                            llvm::Triple(invoc.getTargetOpts().triple));
 
   // Enable USE statement preservation for debug info if debug level is above
   // LineTablesOnly.

@@ -613,6 +613,26 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   return false;
 }
 
+/// Simplify the f32 scale operand of a V_CVT_SCALEF32_* conversion, of which
+/// only the exponent field is read.
+static bool simplifyExponentOnlyScaleArg(InstCombiner &IC, IntrinsicInst &II,
+                                         unsigned ScaleArgIdx) {
+  Value *Scale = II.getArgOperand(ScaleArgIdx);
+  Value *StrippedSign = InstCombiner::stripSignOnlyFPOps(Scale);
+  if (StrippedSign != Scale) {
+    IC.replaceOperand(II, ScaleArgIdx, StrippedSign);
+    return true;
+  }
+
+  auto *BC = dyn_cast<BitCastInst>(Scale);
+  if (!BC || !BC->hasOneUse() || !BC->getSrcTy()->isIntegerTy(32))
+    return false;
+
+  KnownBits Known(32);
+  return IC.SimplifyDemandedBits(
+      BC, 0, AMDGPU::getExponentOnlyScaleDemandedBits(), Known);
+}
+
 static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
                              Function &NewCallee, ArrayRef<Value *> Ops) {
   SmallVector<OperandBundleDef, 2> OpBundles;
@@ -639,7 +659,23 @@ static bool isThreadID(const GCNSubtarget &ST, Value *V) {
   if (ST.isWave64() && match(V, W64Pred))
     return true;
 
-  return false;
+  // Case 2:
+  //   workitem.id.x & (wavefront size - 1), or bare workitem.id.x when the
+  //   workgroup is one wave long or less.
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || !ST.isWaveSizeKnown())
+    return false;
+
+  const Function &F = *I->getFunction();
+  if (!ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true))
+    return false;
+
+  unsigned WaveSize = ST.getWavefrontSize();
+  auto TidX = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
+  if (match(V, m_c_And(TidX, m_SpecificInt(WaveSize - 1))))
+    return true;
+
+  return match(V, TidX) && ST.getMaxWorkitemID(F, 0) < WaveSize;
 }
 
 Instruction *
@@ -2322,6 +2358,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
     return simplifyAMDGCNImageIntrinsic(ST, ImageDimIntr, II, IC);
+  }
+  if (std::optional<unsigned> ScaleArgIdx =
+          AMDGPU::getExponentOnlyScaleArgIdx(IID)) {
+    if (simplifyExponentOnlyScaleArg(IC, II, *ScaleArgIdx))
+      return &II;
   }
   return std::nullopt;
 }
