@@ -12702,6 +12702,7 @@ td_library(
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":VectorInterfacesTdFiles",
     ],
 )
 
