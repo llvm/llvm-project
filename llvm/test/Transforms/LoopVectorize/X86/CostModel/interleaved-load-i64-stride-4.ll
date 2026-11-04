@@ -68,18 +68,18 @@ define void @test() {
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
 ; AVX512:    ir<%v3> = load from index 3
-; AVX512:  Cost of 20 for VF 16: WIDEN ir<%v0> = load ir<%in0>
-; AVX512:  Cost of 20 for VF 16: WIDEN ir<%v1> = load ir<%in1>
-; AVX512:  Cost of 20 for VF 16: WIDEN ir<%v2> = load ir<%in2>
-; AVX512:  Cost of 20 for VF 16: WIDEN ir<%v3> = load ir<%in3>
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v0> = load ir<%in0>
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v1> = load ir<%in1>
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v2> = load ir<%in2>
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v3> = load ir<%in3>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v0> = load ir<%in0>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v1> = load ir<%in1>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v2> = load ir<%in2>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v3> = load ir<%in3>
+; AVX512:  Cost of 20 for VF 16: WIDEN ir<%v0> = load ir<%in0>, align 8
+; AVX512:  Cost of 20 for VF 16: WIDEN ir<%v1> = load ir<%in1>, align 8
+; AVX512:  Cost of 20 for VF 16: WIDEN ir<%v2> = load ir<%in2>, align 8
+; AVX512:  Cost of 20 for VF 16: WIDEN ir<%v3> = load ir<%in3>, align 8
+; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v0> = load ir<%in0>, align 8
+; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v1> = load ir<%in1>, align 8
+; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v2> = load ir<%in2>, align 8
+; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v3> = load ir<%in3>, align 8
+; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v0> = load ir<%in0>, align 8
+; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v1> = load ir<%in1>, align 8
+; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v2> = load ir<%in2>, align 8
+; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v3> = load ir<%in3>, align 8
 ;
 entry:
   br label %for.body

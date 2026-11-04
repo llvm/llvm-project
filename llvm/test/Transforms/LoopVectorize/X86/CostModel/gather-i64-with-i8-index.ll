@@ -48,20 +48,20 @@ define void @test() {
 ;
 ; AVX2-FASTGATHER-LABEL: 'test'
 ; AVX2-FASTGATHER:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i64, ptr %inB, align 8
-; AVX2-FASTGATHER:  Cost of 4 for VF 2: WIDEN ir<%valB> = load ir<%inB>
-; AVX2-FASTGATHER:  Cost of 6 for VF 4: WIDEN ir<%valB> = load ir<%inB>
-; AVX2-FASTGATHER:  Cost of 12 for VF 8: WIDEN ir<%valB> = load ir<%inB>
-; AVX2-FASTGATHER:  Cost of 24 for VF 16: WIDEN ir<%valB> = load ir<%inB>
-; AVX2-FASTGATHER:  Cost of 48 for VF 32: WIDEN ir<%valB> = load ir<%inB>
+; AVX2-FASTGATHER:  Cost of 4 for VF 2: WIDEN ir<%valB> = load ir<%inB>, align 8
+; AVX2-FASTGATHER:  Cost of 6 for VF 4: WIDEN ir<%valB> = load ir<%inB>, align 8
+; AVX2-FASTGATHER:  Cost of 12 for VF 8: WIDEN ir<%valB> = load ir<%inB>, align 8
+; AVX2-FASTGATHER:  Cost of 24 for VF 16: WIDEN ir<%valB> = load ir<%inB>, align 8
+; AVX2-FASTGATHER:  Cost of 48 for VF 32: WIDEN ir<%valB> = load ir<%inB>, align 8
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i64, ptr %inB, align 8
 ; AVX512:  Cost of 6 for VF 2: REPLICATE ir<%valB> = load ir<%inB>
 ; AVX512:  Cost of 14 for VF 4: REPLICATE ir<%valB> = load ir<%inB>
-; AVX512:  Cost of 10 for VF 8: WIDEN ir<%valB> = load ir<%inB>
-; AVX512:  Cost of 20 for VF 16: WIDEN ir<%valB> = load ir<%inB>
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%valB> = load ir<%inB>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%valB> = load ir<%inB>
+; AVX512:  Cost of 10 for VF 8: WIDEN ir<%valB> = load ir<%inB>, align 8
+; AVX512:  Cost of 20 for VF 16: WIDEN ir<%valB> = load ir<%inB>, align 8
+; AVX512:  Cost of 40 for VF 32: WIDEN ir<%valB> = load ir<%inB>, align 8
+; AVX512:  Cost of 80 for VF 64: WIDEN ir<%valB> = load ir<%inB>, align 8
 ;
 entry:
   br label %for.body

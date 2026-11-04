@@ -101,7 +101,7 @@ define void @interleave_member_update() {
 ; FIXED:  LV: Memory widening: can be widened normally with cost 1
 ; FIXED:  LV: Setting widening decision to Widen for VF 4 and instruction: %addr.idx = load i32, ptr %addr.idx.ptr, align 4
 ; FIXED:  LV: Memory widening: calculating best strategy for store i32 %val, ptr %scatter.ptr, align 4
-; FIXED:  LV: Memory widening: InterleaveCost = Invalid, GatherScatterCost = Invalid, ScalarizationCost = 52
+; FIXED:  LV: Memory widening: InterleaveCost = Invalid, GatherScatterCost = Invalid, ScalarizationCost = 44
 ; FIXED:  LV: Setting widening decision to Scalarize for VF 4 and instruction: store i32 %val, ptr %scatter.ptr, align 4
 ; FIXED:  LV: Memory widening: updating decision for load %addr.idx = load i32, ptr %addr.idx.ptr, align 4
 ; FIXED:  LV: Setting widening decision to Scalarize for VF 4 and instruction: %addr.idx = load i32, ptr %addr.idx.ptr, align 4
@@ -153,7 +153,7 @@ define void @reverse_load_scatter(ptr noalias %src, ptr noalias %dst, i64 %n) {
 ; FIXED:  LV: Memory widening: can be widened normally with cost 4
 ; FIXED:  LV: Setting widening decision to Widen_Reverse for VF 4 and instruction: %val = load i64, ptr %src.ptr, align 8
 ; FIXED:  LV: Memory widening: calculating best strategy for store i64 %val, ptr %dst.ptr, align 8
-; FIXED:  LV: Memory widening: InterleaveCost = Invalid, GatherScatterCost = Invalid, ScalarizationCost = 60
+; FIXED:  LV: Memory widening: InterleaveCost = Invalid, GatherScatterCost = Invalid, ScalarizationCost = 52
 ; FIXED:  LV: Setting widening decision to Scalarize for VF 4 and instruction: store i64 %val, ptr %dst.ptr, align 8
 ; FIXED:  LV: Memory widening: updating decision for load %val = load i64, ptr %src.ptr, align 8
 ; FIXED:  LV: Setting widening decision to Scalarize for VF 4 and instruction: %val = load i64, ptr %src.ptr, align 8

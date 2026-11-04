@@ -18,15 +18,56 @@ define void @copy_bitcast_fusion(ptr noalias %foo, ptr noalias %bar) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[FOO]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP10]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP11]], i64 2
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[TMP10]], i64 3
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP16]], <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x float> [[TMP17]], <8 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <16 x float> [[TMP18]], <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison>, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <24 x float> [[TMP19]], <24 x float> poison, <24 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23>
-; CHECK-NEXT:    store <24 x float> [[INTERLEAVED_VEC]], ptr [[BAR]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 1, 24
+; CHECK-NEXT:    [[TMP34:%.*]] = mul i64 2, 24
+; CHECK-NEXT:    [[TMP35:%.*]] = mul i64 3, 24
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[BAR]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[BAR]], i64 [[TMP34]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[BAR]], i64 [[TMP35]]
+; CHECK-NEXT:    store float [[TMP9]], ptr [[BAR]], align 4
+; CHECK-NEXT:    store float [[TMP10]], ptr [[TMP36]], align 4
+; CHECK-NEXT:    store float [[TMP11]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    store float [[TMP10]], ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[BAR]], i64 4
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP36]], i64 4
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP12]], i64 4
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP13]], i64 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP14]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP15]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP16]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP17]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[BAR]], i64 8
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP36]], i64 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP12]], i64 8
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP13]], i64 8
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP18]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP19]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP20]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[BAR]], i64 12
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP36]], i64 12
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP12]], i64 12
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP13]], i64 12
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP22]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP23]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP24]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP25]], align 4
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[BAR]], i64 16
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP36]], i64 16
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP12]], i64 16
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP13]], i64 16
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP26]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP27]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP28]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP29]], align 4
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[BAR]], i64 20
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP36]], i64 20
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[TMP12]], i64 20
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP13]], i64 20
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP30]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP31]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP32]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP33]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]

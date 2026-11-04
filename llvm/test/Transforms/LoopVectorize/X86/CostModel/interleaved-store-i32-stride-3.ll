@@ -13,45 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test() {
 ; SSE2-LABEL: 'test'
-; SSE2:  Cost of 23 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; SSE2:    store ir<%v> to index 0
-; SSE2:    store ir<%v1> to index 1
-; SSE2:    store ir<%v2> to index 2
-; SSE2:  Cost of 48 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; SSE2:    store ir<%v> to index 0
-; SSE2:    store ir<%v1> to index 1
-; SSE2:    store ir<%v2> to index 2
-; SSE2:  Cost of 96 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; SSE2:    store ir<%v> to index 0
-; SSE2:    store ir<%v1> to index 1
-; SSE2:    store ir<%v2> to index 2
-; SSE2:  Cost of 192 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; SSE2:    store ir<%v> to index 0
-; SSE2:    store ir<%v1> to index 1
-; SSE2:    store ir<%v2> to index 2
-;
 ; AVX1-LABEL: 'test'
-; AVX1:  Cost of 17 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; AVX1:    store ir<%v> to index 0
-; AVX1:    store ir<%v1> to index 1
-; AVX1:    store ir<%v2> to index 2
-; AVX1:  Cost of 28 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; AVX1:    store ir<%v> to index 0
-; AVX1:    store ir<%v1> to index 1
-; AVX1:    store ir<%v2> to index 2
-; AVX1:  Cost of 57 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; AVX1:    store ir<%v> to index 0
-; AVX1:    store ir<%v1> to index 1
-; AVX1:    store ir<%v2> to index 2
-; AVX1:  Cost of 114 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; AVX1:    store ir<%v> to index 0
-; AVX1:    store ir<%v1> to index 1
-; AVX1:    store ir<%v2> to index 2
-; AVX1:  Cost of 228 for VF 32: INTERLEAVE-GROUP with factor 3, ir<%out0>
-; AVX1:    store ir<%v> to index 0
-; AVX1:    store ir<%v1> to index 1
-; AVX1:    store ir<%v2> to index 2
-;
 ; AVX2-LABEL: 'test'
 ; AVX2:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%out0>
 ; AVX2:    store ir<%v> to index 0

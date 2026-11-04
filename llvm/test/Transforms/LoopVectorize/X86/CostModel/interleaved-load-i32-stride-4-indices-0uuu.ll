@@ -50,8 +50,8 @@ define void @test() {
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:  Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v0> = load ir<%in0>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v0> = load ir<%in0>
+; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v0> = load ir<%in0>, align 4
+; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v0> = load ir<%in0>, align 4
 ;
 entry:
   br label %for.body

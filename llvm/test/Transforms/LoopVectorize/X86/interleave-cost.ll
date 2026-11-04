@@ -7,34 +7,36 @@ target triple = "x86_64-apple-macosx10.15.0"
 define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noalias %p.invar, ptr noalias %dst.1, ptr noalias %dst.2) {
 ; CHECK-LABEL: define void @test_free_instructions_feeding_geps_for_interleave_groups(
 ; CHECK-SAME: ptr noalias [[P_INVAR:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[DST_2:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[P_INVAR]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLAT]], <2 x float> [[BROADCAST_SPLAT]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x float> [[TMP5]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[P_INVAR]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT3]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[ADD_1:%.*]] = or disjoint i64 [[TMP1]], 1
+; CHECK-NEXT:    [[GEP_DST_119:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[ADD_1]]
+; CHECK-NEXT:    store float [[TMP6]], ptr [[GEP_DST_119]], align 4
+; CHECK-NEXT:    [[ADD_2:%.*]] = or disjoint i64 [[TMP1]], 2
+; CHECK-NEXT:    [[GEP_DST_129:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[ADD_2]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_129]], align 4
+; CHECK-NEXT:    [[ADD_3:%.*]] = or disjoint i64 [[TMP1]], 3
+; CHECK-NEXT:    [[GEP_DST_140:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[ADD_3]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_140]], align 4
+; CHECK-NEXT:    [[L_2:%.*]] = load float, ptr [[P_INVAR]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLAT4]], <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[INTERLEAVED_VEC5:%.*]] = shufflevector <8 x float> [[TMP9]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC5]], ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    store float [[L_2]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[GEP_DST_255:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[ADD_1]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_255]], align 4
+; CHECK-NEXT:    [[GEP_DST_265:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[ADD_2]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_265]], align 4
+; CHECK-NEXT:    [[GEP_DST_276:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[ADD_3]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_276]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -264,38 +266,38 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[TMP51:%.*]] = shl nuw i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP52:%.*]] = lshr exact i64 [[TMP51]], 1
 ; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr nusw i32, ptr [[B]], i64 [[TMP52]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP53]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP53]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[STRIDED_VEC41:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[WIDE_GEP42:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP54]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP42]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP42]], <4 x i1> splat (i1 true)), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP55:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[WIDE_GEP43:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP55]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC41]], <4 x ptr> align 4 [[WIDE_GEP43]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC41]], <4 x ptr> align 4 [[WIDE_GEP43]], <4 x i1> splat (i1 true)), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 3)
 ; CHECK-NEXT:    [[WIDE_GEP44:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP56]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP44]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP44]], <4 x i1> splat (i1 true)), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP57:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[WIDE_GEP45:%.*]] = getelementptr i32, ptr [[B]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP45]], <4 x i1> splat (i1 true), <4 x i32> poison), !alias.scope [[META8:![0-9]+]], !noalias [[META6]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP45]], <4 x i1> splat (i1 true), <4 x i32> poison), !alias.scope [[META5:![0-9]+]], !noalias [[META3]]
 ; CHECK-NEXT:    [[WIDE_GEP46:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP57]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[WIDE_MASKED_GATHER]], <4 x ptr> align 4 [[WIDE_GEP46]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[WIDE_MASKED_GATHER]], <4 x ptr> align 4 [[WIDE_GEP46]], <4 x i1> splat (i1 true)), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 5)
 ; CHECK-NEXT:    [[WIDE_GEP47:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP58]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP47]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP47]], <4 x i1> splat (i1 true)), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 6)
 ; CHECK-NEXT:    [[WIDE_GEP48:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP59]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP48]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP48]], <4 x i1> splat (i1 true)), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 7)
 ; CHECK-NEXT:    [[WIDE_GEP49:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP60]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP49]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP49]], <4 x i1> splat (i1 true)), !alias.scope [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP61:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP61]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP61]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -336,7 +338,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    store i32 0, ptr [[GEP_A_7]], align 4
 ; CHECK-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -524,16 +526,15 @@ attributes #0 = { "target-features"="+sse4.2" }
 attributes #1 = { "min-legal-vector-width"="0" "target-cpu"="cascadelake" }
 
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
+; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
-; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = distinct !{[[META5]], i1 false, !"LVerDomain"}
-; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
-; CHECK: [[META7]] = distinct !{[[META7]], [[META5]]}
-; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]], [[META5]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
+; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
+; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
+; CHECK: [[META6]] = distinct !{[[META6]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
+; CHECK: [[META8]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META9]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META8]]}
 ;.

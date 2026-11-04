@@ -63,10 +63,10 @@ define void @test() {
 ; AVX512:  Cost of 34 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v0> = load ir<%in0>
-; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v1> = load ir<%in1>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v0> = load ir<%in0>
-; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v1> = load ir<%in1>
+; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v0> = load ir<%in0>, align 8
+; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v1> = load ir<%in1>, align 8
+; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v0> = load ir<%in0>, align 8
+; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v1> = load ir<%in1>, align 8
 ;
 entry:
   br label %for.body
