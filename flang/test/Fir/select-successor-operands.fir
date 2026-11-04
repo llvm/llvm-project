@@ -15,6 +15,28 @@ func.func @select_remove_unused(%selector: i32, %a: i32, %b: i32) -> i32 {
   return %value : i32
 }
 
+// Successor operand groups of different sizes, [1, 2, 0, 2, 1]. Removing the
+// unused argument of ^second must shrink only the two groups that feed it and
+// keep every other group, including the empty one, at its position.
+// CHECK-LABEL: func.func @select_remove_uneven(
+// CHECK-SAME: %[[SEL:.*]]: i32, %[[A:.*]]: i32, %[[B:.*]]: i32, %[[C:.*]]: i32, %[[D:.*]]: i32)
+// CHECK: fir.select %[[SEL]] : i32 [1, ^[[FIRST:bb[0-9]+]](%[[A]] : i32), 2, ^[[SECOND:bb[0-9]+]](%[[B]] : i32), 3, ^[[THIRD:bb[0-9]+]], 4, ^[[SECOND]](%[[C]] : i32), unit, ^[[FIRST]](%[[D]] : i32)]
+func.func @select_remove_uneven(%selector: i32, %a: i32, %b: i32, %c: i32, %d: i32) -> i32 {
+  fir.select %selector : i32 [1, ^first(%a : i32),
+                             2, ^second(%b, %c : i32, i32),
+                             3, ^third,
+                             4, ^second(%c, %a : i32, i32),
+                             unit, ^first(%d : i32)]
+^first(%x: i32):
+  %r1 = arith.addi %x, %x : i32
+  return %r1 : i32
+^second(%y: i32, %unused: i32):
+  %r2 = arith.muli %y, %y : i32
+  return %r2 : i32
+^third:
+  return %selector : i32
+}
+
 // CHECK-LABEL: func.func @select_rank_remove_unused(
 // CHECK-SAME: %[[SEL:.*]]: i32, %[[A:.*]]: i32, %[[B:.*]]: i32)
 // CHECK: fir.select_rank %[[SEL]] : i32 [1, ^[[DEST:bb[0-9]+]](%[[A]] : i32), unit, ^[[DEST]](%[[B]] : i32)]
