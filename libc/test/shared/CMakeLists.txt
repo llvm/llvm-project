@@ -555,6 +555,7 @@ else()
     DEPENDS
       libc.src.__support.FPUtil.float128
       libc.src.__support.FPUtil.float80
+      libc.src.__support.math.acoshbf16
       libc.src.__support.math.asinbf16
       libc.src.__support.math.bf16subl
       libc.src.__support.math.canonicalize

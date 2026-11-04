@@ -3961,7 +3961,6 @@ add_entrypoint_object(
     ../acoshbf16.h
   DEPENDS
     libc.src.__support.math.acoshbf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(

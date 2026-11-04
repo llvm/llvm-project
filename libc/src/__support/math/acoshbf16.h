@@ -14,7 +14,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ACOSHBF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ACOSHBF16_H
 
-#include "acoshf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -24,6 +23,7 @@
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/acoshf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {

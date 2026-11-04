@@ -12999,10 +12999,7 @@ libc_math_function(
 
 libc_math_function(
     name = "acoshbf16",
-    additional_deps = [
-        ":__support_math_acoshbf16",
-        ":errno",
-    ],
+    additional_deps = [":__support_math_acoshbf16"],
 )
 
 libc_math_function(
