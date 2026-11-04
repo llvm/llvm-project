@@ -441,12 +441,11 @@ InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
   if ((Opcode == Instruction::InsertElement && VIC == VectorInstrContext::Load))
     return CostKind == TTI::TCK_CodeSize ? Cost : Cost + TTI::TCC_Basic;
 
-  if (Opcode == Instruction::ExtractElement &&
-      VIC == VectorInstrContext::Store)
+  if (Opcode == Instruction::ExtractElement && VIC == VectorInstrContext::Store)
     return CostKind == TTI::TCK_CodeSize ? Cost : Cost + TTI::TCC_Basic;
 
-  Cost += BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index,
-                                                 Op0, Op1, VIC);
+  Cost +=
+      BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1, VIC);
 
   return Cost;
 }
