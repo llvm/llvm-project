@@ -14,6 +14,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float80;
+
 LLVM_LIBC_FUNCTION(float80, modff80, (float80 x, float80 *iptr)) {
   Float80 iptr_f80 = cpp::bit_cast<Float80>(*iptr);
   Float80 res = math::modff80(cpp::bit_cast<Float80>(x), &iptr_f80);
