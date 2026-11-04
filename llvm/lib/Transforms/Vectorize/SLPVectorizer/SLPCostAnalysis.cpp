@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPCostAnalysis.h"
+#include "SLPCompatibilityAnalysis.h"
 #include "SLPTypeUtils.h"
 #include "SLPUtils.h"
 
