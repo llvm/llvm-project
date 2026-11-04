@@ -2848,36 +2848,39 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
 // DFC expiration policies to remove the previous versions.
 static std::string get_memory_binary_cache_key(const FileSpec &file_spec,
                                                UUID uuid) {
-  std::string key;
-  llvm::raw_string_ostream strm(key);
-  strm << file_spec.GetFilename().str() << '-';
-  strm << uuid.GetAsString();
-  strm << "-headerbytes";
-  return key;
+  return llvm::formatv("{0}-{1}-headerbytes", file_spec.GetFilename(),
+                       uuid.GetAsString());
 }
 
-bool Process::LoadHeaderBytesFromCache(const FileSpec &file_spec, UUID uuid,
-                                       lldb::addr_t header_addr,
-                                       size_t size_to_read,
-                                       DataFileCache *cache) {
+void Process::GetOrCreateHeaderBytesFromCache(DataFileCache &cache,
+                                              const FileSpec &file_spec,
+                                              const UUID &uuid,
+                                              lldb::addr_t header_addr,
+                                              size_t size_to_read) {
+  // Cache nothing when we're working with corefiles.
+  if (!IsLiveDebugSession())
+    return;
+
+  // If no UUID, the cache_key name may not be unique.  Don't cache.
+  if (!uuid.IsValid())
+    return;
+
+  // Read the memory bytes out of the DataFileCache, if it is there.
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
-      cache->GetCachedData(get_memory_binary_cache_key(file_spec, uuid));
-  if (!mem_buffer_up)
-    return false;
+      cache.GetCachedData(get_memory_binary_cache_key(file_spec, uuid));
+  if (mem_buffer_up && mem_buffer_up->getBufferSize() >= size_to_read) {
+    // Stuff the header bytes into the Process memory cache.
+    // The ObjectFile will read the bytes from there at this
+    // same stop.
+    WritableDataBufferSP databuf_sp = std::make_shared<DataBufferHeap>(
+        mem_buffer_up->getBufferStart(), mem_buffer_up->getBufferSize());
+    AddCacheData(header_addr, databuf_sp);
+    return;
+  }
 
-  // Stuff the header bytes into the Process memory cache.
-  // The ObjectFile will read the bytes from there at this
-  // same stop.
-  WritableDataBufferSP databuf_sp = std::make_shared<DataBufferHeap>(
-      mem_buffer_up->getBufferStart(), mem_buffer_up->getBufferSize());
-  AddCacheData(header_addr, databuf_sp);
-  return true;
-}
+  // The headerbytes are not yet in the DataFileCache.
+  // Read the bytes and cache them.
 
-void Process::SaveHeaderBytesToCache(const FileSpec &file_spec, UUID uuid,
-                                     lldb::addr_t header_addr,
-                                     size_t size_to_read,
-                                     DataFileCache *cache) {
   ProcessAddress header_address(header_addr);
   std::vector<uint8_t> data(size_to_read);
   Status error;
@@ -2891,25 +2894,18 @@ void Process::SaveHeaderBytesToCache(const FileSpec &file_spec, UUID uuid,
   llvm::ArrayRef<uint8_t> data_ref(data.data(), size_to_read);
   file.AppendData(data_ref);
 
-  cache->SetCachedData(get_memory_binary_cache_key(file_spec, uuid),
-                       file.GetData());
+  cache.SetCachedData(get_memory_binary_cache_key(file_spec, uuid),
+                      file.GetData());
 }
 
 llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
     const FileSpec &file_spec, UUID uuid, lldb::addr_t header_addr,
     size_t size_to_read) {
   DataFileCache *cache = Module::GetIndexCache(/* memory_module= */ true);
-  if (!cache)
-    return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
-
-  bool cache_was_used = LoadHeaderBytesFromCache(file_spec, uuid, header_addr,
-                                                 size_to_read, cache);
-  llvm::Expected<ModuleSP> module_sp_or_err =
-      ReadModuleFromMemory(file_spec, header_addr, size_to_read);
-  if (module_sp_or_err && *module_sp_or_err)
-    if (!cache_was_used)
-      SaveHeaderBytesToCache(file_spec, uuid, header_addr, size_to_read, cache);
-  return module_sp_or_err;
+  if (cache)
+    GetOrCreateHeaderBytesFromCache(*cache, file_spec, uuid, header_addr,
+                                    size_to_read);
+  return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
 }
 
 bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,

@@ -3788,17 +3788,13 @@ private:
   lldb::EventSP CreateEventFromProcessState(uint32_t event_type);
 
   /// Load the header bytes of an in-memory binary from the DataFileCache
-  /// 'headerbytes' file, if it exists, and put the bytes in the Process
-  /// memory cache.
-  bool LoadHeaderBytesFromCache(const FileSpec &file_spec, UUID uuid,
-                                lldb::addr_t header_addr, size_t size_to_read,
-                                lldb_private::DataFileCache *cache);
-
-  /// Save the header bytes of an in-memory binary into the DataFileCache
-  /// 'headerbytes' file.
-  void SaveHeaderBytesToCache(const FileSpec &file_spec, UUID uuid,
-                              lldb::addr_t header_addr, size_t size_to_read,
-                              lldb_private::DataFileCache *cache);
+  /// 'headerbytes' file, if it exists, else read it from memory and possibly
+  /// save it in the DataFileCache.
+  void GetOrCreateHeaderBytesFromCache(lldb_private::DataFileCache &cache,
+                                       const FileSpec &file_spec,
+                                       const UUID &uuid,
+                                       lldb::addr_t header_addr,
+                                       size_t size_to_read);
 
   Process(const Process &) = delete;
   const Process &operator=(const Process &) = delete;
