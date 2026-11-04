@@ -5866,18 +5866,23 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
       SDValue VDstIn = Op.getOperand(CvtPkF8VDstInIdx);
       APInt VDstInDemandedBits =
           OriginalDemandedBits & getCvtPkF8VDstInBits(Op.getNode());
-      if (!VDstInDemandedBits.isZero()) {
-        KnownBits KnownVDstIn;
-        return SimplifyDemandedBits(VDstIn, VDstInDemandedBits,
-                                    OriginalDemandedElts, KnownVDstIn, TLO,
-                                    Depth + 1);
+
+      // No demanded bit comes from vdst_in, so it is not needed.
+      if (VDstInDemandedBits.isZero()) {
+        if (VDstIn.isUndef())
+          return false;
+        SmallVector<SDValue, 5> Ops(Op->op_values());
+        Ops[CvtPkF8VDstInIdx] = TLO.DAG.getPOISON(MVT::i32);
+        return TLO.CombineTo(Op,
+                             TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op),
+                                             MVT::i32, Ops, Op->getFlags()));
       }
-      if (VDstIn.isUndef())
-        return false;
-      SmallVector<SDValue, 5> Ops(Op->op_values());
-      Ops[CvtPkF8VDstInIdx] = TLO.DAG.getPOISON(MVT::i32);
-      return TLO.CombineTo(Op, TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op),
-                                               MVT::i32, Ops, Op->getFlags()));
+
+      // Some demanded bits come from vdst_in: simplify vdst_in for those bits.
+      KnownBits KnownVDstIn;
+      return SimplifyDemandedBits(VDstIn, VDstInDemandedBits,
+                                  OriginalDemandedElts, KnownVDstIn, TLO,
+                                  Depth + 1);
     }
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:

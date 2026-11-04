@@ -897,7 +897,7 @@ define i32 @high_mask(float %a, float %b) {
   ret i32 %y
 }
 
-; A mask that reads the preserved half must keep its initialization.
+; A mask that reads the half kept from vdst_in must keep its initialization.
 define i32 @preserve_mask(float %a, float %b) {
 ; GFX950-LABEL: preserve_mask:
 ; GFX950:       ; %bb.0:
@@ -949,6 +949,103 @@ define i32 @preserve_mask(float %a, float %b) {
   %x = call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %a, float %b, i32 458752, i1 false)
   %y = and i32 %x, -65536
   ret i32 %y
+}
+
+; The mask only reads bits 0-7 of the half kept from vdst_in, which the or does
+; not change, so the conversion can read %x directly.
+define i32 @vdst_in_partially_demanded(float %a, float %b, i32 %x) {
+; GFX950-SDAG-LABEL: vdst_in_partially_demanded:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: vdst_in_partially_demanded:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_or_b32_e32 v2, 0xff00, v2
+; GFX950-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-FAKE16-SDAG-LABEL: vdst_in_partially_demanded:
+; GFX1170-FAKE16-SDAG:       ; %bb.0:
+; GFX1170-FAKE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-FAKE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX1170-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX1170-FAKE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-FAKE16-GISEL-LABEL: vdst_in_partially_demanded:
+; GFX1170-FAKE16-GISEL:       ; %bb.0:
+; GFX1170-FAKE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-FAKE16-GISEL-NEXT:    v_or_b32_e32 v2, 0xff00, v2
+; GFX1170-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX1170-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX1170-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-TRUE16-SDAG-LABEL: vdst_in_partially_demanded:
+; GFX1170-TRUE16-SDAG:       ; %bb.0:
+; GFX1170-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-TRUE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
+; GFX1170-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX1170-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-TRUE16-GISEL-LABEL: vdst_in_partially_demanded:
+; GFX1170-TRUE16-GISEL:       ; %bb.0:
+; GFX1170-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-TRUE16-GISEL-NEXT:    v_or_b32_e32 v2, 0xff00, v2
+; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-TRUE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
+; GFX1170-TRUE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX1170-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-FAKE16-SDAG-LABEL: vdst_in_partially_demanded:
+; GFX1250-FAKE16-SDAG:       ; %bb.0:
+; GFX1250-FAKE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX1250-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX1250-FAKE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-GISEL-LABEL: vdst_in_partially_demanded:
+; GFX1250-FAKE16-GISEL:       ; %bb.0:
+; GFX1250-FAKE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-GISEL-NEXT:    v_or_b32_e32 v2, 0xff00, v2
+; GFX1250-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX1250-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX1250-FAKE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-TRUE16-SDAG-LABEL: vdst_in_partially_demanded:
+; GFX1250-TRUE16-SDAG:       ; %bb.0:
+; GFX1250-TRUE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
+; GFX1250-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX1250-TRUE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-TRUE16-GISEL-LABEL: vdst_in_partially_demanded:
+; GFX1250-TRUE16-GISEL:       ; %bb.0:
+; GFX1250-TRUE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-GISEL-NEXT:    v_or_b32_e32 v2, 0xff00, v2
+; GFX1250-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
+; GFX1250-TRUE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v2
+; GFX1250-TRUE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %v = or i32 %x, 65280
+  %cvt = call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %a, float %b, i32 %v, i1 true)
+  %r = and i32 %cvt, 255
+  ret i32 %r
 }
 
 ; A variable mask may observe every bit of the intermediate.
@@ -1090,7 +1187,7 @@ define amdgpu_kernel void @divergent_use(float %a, float %b, float %c, float %d,
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX950-GISEL-NEXT:    s_cbranch_execz .LBB15_2
+; GFX950-GISEL-NEXT:    s_cbranch_execz .LBB16_2
 ; GFX950-GISEL-NEXT:  ; %bb.1: ; %convert
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX950-GISEL-NEXT:    v_cvt_pk_fp8_f32 v1, s2, v0 op_sel:[0,0,1]
@@ -1098,7 +1195,7 @@ define amdgpu_kernel void @divergent_use(float %a, float %b, float %c, float %d,
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX950-GISEL-NEXT:  .LBB15_2: ; %merge
+; GFX950-GISEL-NEXT:  .LBB16_2: ; %merge
 ; GFX950-GISEL-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX950-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x10
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, 0
@@ -1140,13 +1237,13 @@ define amdgpu_kernel void @divergent_use(float %a, float %b, float %c, float %d,
 ; GFX1170-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1170-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1170-FAKE16-GISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1170-FAKE16-GISEL-NEXT:    s_cbranch_execz .LBB15_2
+; GFX1170-FAKE16-GISEL-NEXT:    s_cbranch_execz .LBB16_2
 ; GFX1170-FAKE16-GISEL-NEXT:  ; %bb.1: ; %convert
 ; GFX1170-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v1, s2, s3 op_sel:[0,0,1]
 ; GFX1170-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1170-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX1170-FAKE16-GISEL-NEXT:  .LBB15_2: ; %merge
+; GFX1170-FAKE16-GISEL-NEXT:  .LBB16_2: ; %merge
 ; GFX1170-FAKE16-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1170-FAKE16-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10
 ; GFX1170-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v1, 0
@@ -1191,7 +1288,7 @@ define amdgpu_kernel void @divergent_use(float %a, float %b, float %c, float %d,
 ; GFX1170-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1170-TRUE16-GISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1170-TRUE16-GISEL-NEXT:    s_cbranch_execz .LBB15_2
+; GFX1170-TRUE16-GISEL-NEXT:    s_cbranch_execz .LBB16_2
 ; GFX1170-TRUE16-GISEL-NEXT:  ; %bb.1: ; %convert
 ; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v1.h, 7
 ; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1199,7 +1296,7 @@ define amdgpu_kernel void @divergent_use(float %a, float %b, float %c, float %d,
 ; GFX1170-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX1170-TRUE16-GISEL-NEXT:  .LBB15_2: ; %merge
+; GFX1170-TRUE16-GISEL-NEXT:  .LBB16_2: ; %merge
 ; GFX1170-TRUE16-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1170-TRUE16-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10
 ; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v1, 0
@@ -1249,13 +1346,13 @@ define amdgpu_kernel void @divergent_use(float %a, float %b, float %c, float %d,
 ; GFX1250-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1250-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-FAKE16-GISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1250-FAKE16-GISEL-NEXT:    s_cbranch_execz .LBB15_2
+; GFX1250-FAKE16-GISEL-NEXT:    s_cbranch_execz .LBB16_2
 ; GFX1250-FAKE16-GISEL-NEXT:  ; %bb.1: ; %convert
 ; GFX1250-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v1, s2, s3 op_sel:[0,0,1]
 ; GFX1250-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX1250-FAKE16-GISEL-NEXT:  .LBB15_2: ; %merge
+; GFX1250-FAKE16-GISEL-NEXT:  .LBB16_2: ; %merge
 ; GFX1250-FAKE16-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-FAKE16-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10 nv
 ; GFX1250-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v1, 0
@@ -1308,7 +1405,7 @@ define amdgpu_kernel void @divergent_use(float %a, float %b, float %c, float %d,
 ; GFX1250-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-TRUE16-GISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1250-TRUE16-GISEL-NEXT:    s_cbranch_execz .LBB15_2
+; GFX1250-TRUE16-GISEL-NEXT:    s_cbranch_execz .LBB16_2
 ; GFX1250-TRUE16-GISEL-NEXT:  ; %bb.1: ; %convert
 ; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v1.h, 7
 ; GFX1250-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1316,7 +1413,7 @@ define amdgpu_kernel void @divergent_use(float %a, float %b, float %c, float %d,
 ; GFX1250-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX1250-TRUE16-GISEL-NEXT:  .LBB15_2: ; %merge
+; GFX1250-TRUE16-GISEL-NEXT:  .LBB16_2: ; %merge
 ; GFX1250-TRUE16-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-TRUE16-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10 nv
 ; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v1, 0
