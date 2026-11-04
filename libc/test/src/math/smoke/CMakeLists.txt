@@ -2422,6 +2422,7 @@ add_fp_unittest(
     libc.src.math.ldexpf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -5432,6 +5433,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalblnf128
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -5523,6 +5525,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnf128
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -5664,6 +5667,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  totalorderf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderf80_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderf80
+    libc.src.__support.FPUtil.float80
+)
+
+add_fp_unittest(
   totalorderbf16_test
   SUITE
     libc-math-smoke-tests
@@ -5735,6 +5751,19 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.totalordermagf128
     libc.src.__support.FPUtil.float128
+)
+
+add_fp_unittest(
+  totalordermagf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalordermagf80_test.cpp
+  HDRS
+    TotalOrderMagTest.h
+  DEPENDS
+    libc.src.math.totalordermagf80
+    libc.src.__support.FPUtil.float80
 )
 
 add_fp_unittest(

@@ -535,12 +535,14 @@ else()
       libc.src.__support.math.totalorderbf16
       libc.src.__support.math.totalorderf
       libc.src.__support.math.totalorderf128
+      libc.src.__support.math.totalorderf80
       libc.src.__support.math.totalorderf16
       libc.src.__support.math.totalorderl
       libc.src.__support.math.totalordermag
       libc.src.__support.math.totalordermagbf16
       libc.src.__support.math.totalordermagf
       libc.src.__support.math.totalordermagf128
+      libc.src.__support.math.totalordermagf80
       libc.src.__support.math.totalordermagf16
       libc.src.__support.math.totalordermagl
   )
@@ -858,12 +860,14 @@ else()
       libc.src.__support.math.totalorderbf16
       libc.src.__support.math.totalorderf
       libc.src.__support.math.totalorderf128
+      libc.src.__support.math.totalorderf80
       libc.src.__support.math.totalorderf16
       libc.src.__support.math.totalorderl
       libc.src.__support.math.totalordermag
       libc.src.__support.math.totalordermagbf16
       libc.src.__support.math.totalordermagf
       libc.src.__support.math.totalordermagf128
+      libc.src.__support.math.totalordermagf80
       libc.src.__support.math.totalordermagf16
       libc.src.__support.math.totalordermagl
   )
