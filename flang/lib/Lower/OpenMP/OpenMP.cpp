@@ -1861,7 +1861,7 @@ struct OpWithBodyGenInfo {
 static bool canAssumeBoundedRecipeEffects(const mlir::Value &variable) {
   mlir::Type type = variable.getType();
   if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
-    if (mlir::isa<fir::BoxCharType, fir::BoxType>(refType.getEleTy()))
+    if (mlir::isa<fir::BoxCharType, fir::BaseBoxType>(refType.getEleTy()))
       return false;
   return !fir::isAllocatableType(type) &&
          !fir::isa_derived(fir::getFortranElementType(type)) &&
