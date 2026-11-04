@@ -413,6 +413,27 @@ def test_debug_names(self):
 
 This tells the test harness that unless we are running "linux" and clang version equal & above 8.0, the test should be skipped.
 
+**Avoid referencing paths outside the build, source or /tmp/ directory**
+
+Some tests need to include paths for testing purposes. For example, core files
+in tests include references to an executable or the environment in which the
+process was executed. Other tests might need a file path to a file that does not
+exist. Paths in tests should adhere to the following rules to minimize potential
+unexpected behavior:
+
+* Prefer relative paths that stay within the LLDB build directory where
+  possible. The build folder is controlled by LLDB, and this ensured that the
+  tests behave the same on all environments.
+
+* When absolute paths are required, prefer generating a path into build
+  directory at test execution time.
+
+* If it's not possible to generate an absolute path at runtime, the paths should
+  point to a folder in `/tmp/` which is unlikely to trigger unexpected
+  interactions with the host system. Note that tests should never *write* to a
+  fixed path outside the build folder. For example, avoid writing to
+  `/tmp/test.output` which would cause issues with concurrent test suite runs.
+
 **Class-wise cleanup after yourself.**
 
 TestBase.tearDownClass(cls) provides a mechanism to invoke the platform-specific cleanup after finishing with a test class. A test
