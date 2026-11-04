@@ -976,10 +976,11 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   }
   case ISD::SHL: {
     // All demanded bits may be shifted-in zeros.
-    auto *SA = isConstOrConstSplat(Op.getOperand(1), DemandedElts);
-    if (SA && SA->getAPIntValue().ult(BitWidth) &&
-        DemandedBits.lshr(SA->getZExtValue()).isZero())
-      return DAG.getConstant(0, SDLoc(Op), VT);
+    if (std::optional<unsigned> SA =
+            DAG.getValidShiftAmount(Op, DemandedElts, Depth + 1)) {
+      if (DemandedBits.lshr(*SA).isZero())
+        return DAG.getConstant(0, SDLoc(Op), VT);
+    }
 
     // If we are only demanding sign bits then we can use the shift source
     // directly.
