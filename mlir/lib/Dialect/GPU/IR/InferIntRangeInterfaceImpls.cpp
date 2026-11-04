@@ -10,6 +10,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include <optional>
 
 using namespace mlir;
@@ -298,9 +299,25 @@ void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
   if (auto clusterIds = getClusterIds()) {
     KernelDim3 clusterDims = *getClusterSize();
-    for (Value id : {clusterIds->x, clusterIds->y, clusterIds->z})
-      setResultRange(id, getIndexRange(0, kMaxDim - 1));
-    for (Value dim : {clusterDims.x, clusterDims.y, clusterDims.z})
-      setResultRange(dim, getIndexRange(1, kMaxDim));
+    auto setClusterRange = [&](unsigned dim, Value dimResult, Value idxResult) {
+      unsigned clusterOperandIndex = kNumConfigOperands + dim;
+      if (argRanges[dim].umin().getBitWidth() !=
+              IndexType::kInternalStorageBitWidth ||
+          argRanges[clusterOperandIndex].umin().getBitWidth() !=
+              IndexType::kInternalStorageBitWidth)
+        return;
+      // Cluster arguments count clusters per grid. The launch operands specify
+      // blocks per cluster, so the cluster count is grid size / cluster size.
+      ConstantIntRanges gridRange =
+          argRanges[dim].intersection(getIndexRange(1, kMaxDim));
+      ConstantIntRanges clusterRange =
+          argRanges[clusterOperandIndex].intersection(
+              getIndexRange(1, kMaxClusterDim));
+      setRange(intrange::inferDivU({gridRange, clusterRange}), dimResult,
+               idxResult);
+    };
+    setClusterRange(0, clusterDims.x, clusterIds->x);
+    setClusterRange(1, clusterDims.y, clusterIds->y);
+    setClusterRange(2, clusterDims.z, clusterIds->z);
   }
 }
