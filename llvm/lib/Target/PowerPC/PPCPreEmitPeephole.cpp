@@ -362,13 +362,17 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     // of a current candidate marks both the prime and de-prime for removal.
     // This way we ensure we only remove prime/de-prime *pairs* with no
     // intervening uses.
+    // Debug instructions are ignored so that debug information does not affect
+    // code generation.
     bool removeAccPrimeUnprime(MachineBasicBlock &MBB) {
       DenseSet<MachineInstr *> InstrsToErase;
       // Initially, none of the acc registers are candidates.
       SmallVector<MachineInstr *, 8> Candidates(
           PPC::UACCRCRegClass.getNumRegs(), nullptr);
 
-      for (MachineInstr &BBI : MBB.instrs()) {
+      for (MachineInstr &BBI :
+           instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end(),
+                                    /*SkipPseudoOp=*/false)) {
         unsigned Opc = BBI.getOpcode();
         // If we are visiting a xxmtacc instruction, we add it and its operand
         // register to the candidate set.
