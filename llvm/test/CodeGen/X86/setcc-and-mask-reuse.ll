@@ -8,12 +8,10 @@
 define i1 @ne_reuse_i64(i64 %x, ptr %p) {
 ; CHECK-LABEL: ne_reuse_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $63, %edi
 ; CHECK-NEXT:    movq %rdi, (%rsi)
-; CHECK-NEXT:    testb $62, %al
-; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    cmpq $62, %rdi
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %wide = and i64 %x, 63
   store i64 %wide, ptr %p
@@ -25,12 +23,10 @@ define i1 @ne_reuse_i64(i64 %x, ptr %p) {
 define i1 @eq_reuse_i64(i64 %x, ptr %p) {
 ; CHECK-LABEL: eq_reuse_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $63, %edi
 ; CHECK-NEXT:    movq %rdi, (%rsi)
-; CHECK-NEXT:    testb $62, %al
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    cmpq $62, %rdi
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
   %wide = and i64 %x, 63
   store i64 %wide, ptr %p
@@ -43,10 +39,9 @@ define i1 @ne_reuse_i32(i32 %x, ptr %p) {
 ; CHECK-LABEL: ne_reuse_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    movl %eax, (%rsi)
-; CHECK-NEXT:    testb $-16, %dil
-; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    cmpl $240, %eax
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %wide = and i32 %x, 255
   store i32 %wide, ptr %p
@@ -59,12 +54,10 @@ define i1 @ne_reuse_i32(i32 %x, ptr %p) {
 define i1 @eq_reuse_partial_low_mask(i32 %x, ptr %p) {
 ; CHECK-LABEL: eq_reuse_partial_low_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $61, %edi
 ; CHECK-NEXT:    movl %edi, (%rsi)
-; CHECK-NEXT:    testb $60, %al
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    cmpl $60, %edi
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
   %wide = and i32 %x, 61
   store i32 %wide, ptr %p
@@ -76,12 +69,10 @@ define i1 @eq_reuse_partial_low_mask(i32 %x, ptr %p) {
 define i1 @ne_reuse_commuted_compare(i64 %x, ptr %p) {
 ; CHECK-LABEL: ne_reuse_commuted_compare:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $63, %edi
 ; CHECK-NEXT:    movq %rdi, (%rsi)
-; CHECK-NEXT:    testb $62, %al
-; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    cmpq $62, %rdi
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %wide = and i64 %x, 63
   store i64 %wide, ptr %p
