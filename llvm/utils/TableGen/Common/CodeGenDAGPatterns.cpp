@@ -1570,7 +1570,7 @@ std::string PatternToMatch::getPredicateCheck() const {
   }
 
   if (!HwModeFeatures.empty())
-    OS << LS << HwModeFeatures;
+    OS << LS << '(' << HwModeFeatures << ')';
 
   return std::string(PredicateCheck);
 }
@@ -4587,6 +4587,16 @@ static void collectModes(std::set<unsigned> &Modes, const TreePatternNode &N) {
     collectModes(Modes, Child);
 }
 
+static bool hasSameTypesForHwModes(const TreePatternNode &N, unsigned M1,
+                                   unsigned M2) {
+  return llvm::all_of(
+             N.getExtTypes(),
+             [&](const TypeSetByHwMode &S) { return S.get(M1) == S.get(M2); }) &&
+         llvm::all_of(N.children(), [&](const TreePatternNode &C) {
+           return hasSameTypesForHwModes(C, M1, M2);
+         });
+}
+
 void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
   if (CGH.getNumModeIds() == 1)
@@ -4626,21 +4636,24 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
     if (DstP)
       collectModes(Modes, *DstP);
 
+    auto IsSameAsMode = [&](unsigned M1, unsigned M2) {
+      return (!SrcP || hasSameTypesForHwModes(*SrcP, M1, M2)) &&
+             (!DstP || hasSameTypesForHwModes(*DstP, M1, M2));
+    };
+    bool HasDefault = Modes.count(DefaultMode);
+
     // The predicate for the default mode needs to be constructed for each
     // pattern separately.
     // Since not all modes must be present in each pattern, if a mode m is
-    // absent, then there is no point in constructing a check for m. If such
-    // a check was created, it would be equivalent to checking the default
-    // mode, except not all modes' predicates would be a part of the checking
-    // code. The subsequently generated check for the default mode would then
-    // have the exact same patterns, but a different predicate code. To avoid
-    // duplicated patterns with different predicate checks, construct the
-    // default check as a negation of all predicates that are actually present
-    // in the source/destination patterns.
+    // absent (or produces the exact same pattern as the default mode), then
+    // there is no point in constructing a separate check for m. Construct the
+    // default check as a negation of all predicates for modes that are distinct
+    // from the default mode.
     SmallString<128> DefaultCheck;
+    SmallVector<std::pair<unsigned, SmallVector<std::string, 2>>, 4> Groups;
 
     for (unsigned M : Modes) {
-      if (M == DefaultMode)
+      if (M == DefaultMode || (HasDefault && IsSameAsMode(M, DefaultMode)))
         continue;
 
       // Fill the map entry for this mode.
@@ -4649,7 +4662,6 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
       SmallString<128> PredicateCheck;
       raw_svector_ostream PS(PredicateCheck);
       SubtargetFeatureInfo::emitPredicateCheck(PS, HM.Predicates);
-      AppendPattern(P, M, PredicateCheck);
 
       // Add negations of the HM's predicates to the default predicate.
       if (!DefaultCheck.empty())
@@ -4657,9 +4669,20 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
       DefaultCheck += "!(";
       DefaultCheck.append(PredicateCheck);
       DefaultCheck += ")";
+
+      auto It = llvm::find_if(
+          Groups, [&](const auto &G) { return IsSameAsMode(M, G.first); });
+      if (It != Groups.end())
+        It->second.push_back(std::string(PredicateCheck));
+      else
+        Groups.push_back({M, {std::string(PredicateCheck)}});
     }
 
-    bool HasDefault = Modes.count(DefaultMode);
+    for (const auto &[Mode, Preds] : Groups)
+      AppendPattern(P, Mode,
+                    Preds.size() == 1 ? Preds.front()
+                                      : "(" + llvm::join(Preds, ") || (") + ")");
+
     if (HasDefault)
       AppendPattern(P, DefaultMode, DefaultCheck);
   }
