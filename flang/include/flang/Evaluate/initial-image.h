@@ -117,8 +117,8 @@ public:
       }
     }
   }
-  Result Add(ConstantSubscript, std::size_t, const Constant<SomeDerived> &,
-      FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Derived>> &, FoldingContext &);
   template <typename T>
   Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x,
       FoldingContext &c) {

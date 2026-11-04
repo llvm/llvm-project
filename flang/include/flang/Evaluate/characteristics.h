@@ -103,7 +103,8 @@ public:
       TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
       result.corank_ = GetCorank(x);
       if (type->category() == TypeCategory::Character) {
-        if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
+        if (const auto *chExpr{
+                UnwrapExpr<Expr<Type<TypeCategory::Character>>>(x)}) {
           if (auto length{chExpr->LEN()}) {
             result.set_LEN(std::move(*length));
           }
