@@ -6101,7 +6101,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // nonan condition codes to be used. Those condition codes may be preserved
     // even if the nonan flag is dropped somewhere.
     unsigned CCOp = Opcode == ISD::SETCC ? 2 : 4;
-    ISD::CondCode CCCode = cast<CondCodeSDNode>(Op.getOperand(CCOp))->get();
+    ISD::CondCode CCCode = Op.getOperandCondCode(CCOp);
     return (unsigned)CCCode & 0x10U;
   }
 

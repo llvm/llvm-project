@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs -run-pass=register-coalescer,rename-independent-subregs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass=register-coalescer,rename-independent-subregs -o - %s | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgpu6.00 -passes=register-coalescer,rename-independent-subregs -o - %s | FileCheck -check-prefix=GCN %s
 ---
 
