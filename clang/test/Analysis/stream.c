@@ -563,7 +563,7 @@ void passConstPointer(const FILE * F);
 void testPassConstPointer(void) {
   FILE *F = fopen("myfile.txt", "w");
   passConstPointer(F);
-  return; // expected-warning {{Opened stream never closed. Potential resource leak}}
+  return; // expected-warning {{Opened stream never closed; potential resource leak}}
 }
 
 void testPassToSystemHeaderFunctionIndirectly(void) {
