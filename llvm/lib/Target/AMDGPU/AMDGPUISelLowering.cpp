@@ -6087,8 +6087,8 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
           Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
           Depth + 1);
 
-    Known = computeKnownBitsForMul24(LHSKnown, RHSKnown,
-                                     Op.getScalarValueSizeInBits(),
+    unsigned BitWidth = static_cast<unsigned>(Op.getScalarValueSizeInBits());
+    Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, BitWidth,
                                      Opc == AMDGPUISD::MUL_I24, SelfMultiply);
     break;
   }
