@@ -265,4 +265,19 @@ TEST(IntelGPUTargetParserTest, IGCATargetName) {
       IntelGPU::getIGCATargetName(IGCATarget(10, IGCAFeatureSet::Compute)), "");
 }
 
+TEST(IntelGPUTargetParserTest, KindIGCATargets) {
+  auto TargetName = [](IntelGPU::GPUKind Kind) {
+    return IntelGPU::getIGCATargetName(IntelGPU::getIGCATarget(Kind));
+  };
+  // Devices can share an IGCA target.
+  EXPECT_EQ(TargetName(IntelGPU::GK_XE_MTL_U), "igca_30r");
+  EXPECT_EQ(TargetName(IntelGPU::GK_XE_MTL_H), "igca_30r");
+  EXPECT_EQ(TargetName(IntelGPU::GK_XE_PVC), "igca_20ca");
+  EXPECT_EQ(TargetName(IntelGPU::GK_XE_CRI), "igca_60");
+  // A compatibility name and an alias have IGCA targets too.
+  EXPECT_EQ(TargetName(IntelGPU::GK_XE_DG2), "igca_15ra");
+  EXPECT_EQ(TargetName(IntelGPU::parseArch("xe-arl-u")), "igca_30r");
+  EXPECT_FALSE(IntelGPU::getIGCATarget(IntelGPU::GK_NONE).isValid());
+}
+
 } // namespace
