@@ -759,6 +759,9 @@ private:
       return "allocated object";
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
       return getDiagSubjectDescription(DRE->getDecl());
+    if (const auto *ME = dyn_cast<MemberExpr>(E))
+      if (const auto *VD = dyn_cast<VarDecl>(ME->getMemberDecl()))
+        return getDiagSubjectDescription(VD);
 
     if (const auto *CE = dyn_cast<CallExpr>(E)) {
       const auto *FD = CE->getDirectCallee();

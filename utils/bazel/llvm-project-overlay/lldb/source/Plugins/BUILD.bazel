@@ -95,6 +95,7 @@ cc_library(
     hdrs = glob(["Highlighter/Default/*.h"]),
     includes = [".."],
     deps = [
+        "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Utility",
     ],
@@ -108,6 +109,7 @@ cc_library(
     deps = [
         "//clang:basic",
         "//clang:lex",
+        "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Utility",
@@ -140,6 +142,7 @@ cc_library(
     srcs = glob(["Protocol/MCP/*.cpp"]),
     hdrs = glob(["Protocol/MCP/*.h"]),
     deps = [
+        "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:ProtocolMCP",
@@ -273,10 +276,39 @@ alias(
     actual = ":PluginsClang",
 )
 
+# Compiled by //lldb:CoreLibraries.
+exports_files([
+    "Process/Utility/FreeBSDSignals.cpp",
+    "Process/Utility/FreeBSDSignals.h",
+    "Process/Utility/LinuxSignals.cpp",
+    "Process/Utility/LinuxSignals.h",
+    "Process/Utility/NetBSDSignals.cpp",
+    "Process/Utility/NetBSDSignals.h",
+    "Process/Utility/OpenBSDSignals.cpp",
+    "Process/Utility/OpenBSDSignals.h",
+])
+
 cc_library(
     name = "PluginProcessUtility",
-    srcs = glob(["Process/Utility/*.cpp"]),
-    hdrs = glob(["Process/Utility/*.h"]),
+    srcs = glob(
+        ["Process/Utility/*.cpp"],
+        # Compiled by //lldb:CoreLibraries, which constructs them.
+        exclude = [
+            "Process/Utility/FreeBSDSignals.cpp",
+            "Process/Utility/LinuxSignals.cpp",
+            "Process/Utility/NetBSDSignals.cpp",
+            "Process/Utility/OpenBSDSignals.cpp",
+        ],
+    ),
+    hdrs = glob(
+        ["Process/Utility/*.h"],
+        exclude = [
+            "Process/Utility/FreeBSDSignals.h",
+            "Process/Utility/LinuxSignals.h",
+            "Process/Utility/NetBSDSignals.h",
+            "Process/Utility/OpenBSDSignals.h",
+        ],
+    ),
     includes = [".."],
     deps = [
         "//lldb:Core",

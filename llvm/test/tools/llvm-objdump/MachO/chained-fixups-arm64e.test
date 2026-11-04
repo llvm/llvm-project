@@ -87,14 +87,19 @@ xcrun ld -arch arm64e -syslibroot "$sdk" -platform_version macos 11.0 27.0 \
 xcrun ld -arch arm64e -syslibroot "$sdk" -platform_version macos 13.0 27.0 \
   -lSystem -segalign 0x1000 chained-fixups-arm64e.o libfoo.dylib \
   -o userland24
-# Zero LC_UUID and drop the trailing spaces that obj2yaml leaves.
+# Zero LC_UUID and drop the trailing spaces that obj2yaml leaves. obj2yaml also
+# leaves out the byte order when it is the host's, so pin it: on a big-endian
+# host, yaml2obj would put big-endian headers around the little-endian fixups.
 clean='s/\(uuid: *\).*/\100000000-0000-0000-0000-000000000000/; s/ *$//'
-obj2yaml arm64e | sed "$clean"
+obj2yaml arm64e | sed "$clean" | sed '1a\
+IsLittleEndian: true'
 echo '#--- userland24.yaml'
-obj2yaml userland24 | sed "$clean"
+obj2yaml userland24 | sed "$clean" | sed '1a\
+IsLittleEndian: true'
 
 #--- arm64e.yaml
 --- !mach-o
+IsLittleEndian: true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -347,6 +352,7 @@ LinkEditData:
 ...
 #--- userland24.yaml
 --- !mach-o
+IsLittleEndian: true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

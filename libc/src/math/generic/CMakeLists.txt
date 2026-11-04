@@ -1749,6 +1749,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.ldexpf128
 )
 
@@ -4293,6 +4294,7 @@ add_entrypoint_object(
   HDRS
     ../scalblnf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.scalblnf128
 )
 
@@ -4353,6 +4355,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.scalbnf128
 )
 

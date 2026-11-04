@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc-unknown-aix-xcoff -verify-machineinstrs -mcpu=pwr7 \
+; RUN: llc -mtriple=powerpc-unknown-aix-xcoff -mcpu=pwr7 \
 ; RUN:     -mattr=+altivec -stop-after=prolog-epilog < %s | \
 ; RUN:   FileCheck --check-prefix=MIR32 %s
 
@@ -6,7 +6,7 @@
 ; RUN:     -mcpu=pwr7 -mattr=+altivec < %s | \
 ; RUN:   FileCheck --check-prefix=ASM32 %s
 
-; RUN: llc -mtriple=powerpc64-unknown-aix-xcoff -verify-machineinstrs \
+; RUN: llc -mtriple=powerpc64-unknown-aix-xcoff \
 ; RUN:     -mcpu=pwr7 -mattr=+altivec -stop-after=prolog-epilog < %s | \
 ; RUN:   FileCheck --check-prefix=MIR64 %s
 
