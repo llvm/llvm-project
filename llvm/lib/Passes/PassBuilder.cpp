@@ -99,6 +99,7 @@
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
+#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
