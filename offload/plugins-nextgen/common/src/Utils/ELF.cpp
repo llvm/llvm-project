@@ -339,10 +339,9 @@ getSymbolAddressImpl(const ELFObjectFile<ELFT> &ELFObj,
   const auto &Section = *SecOrErr;
 
   // A section with SHT_NOBITS occupies no space in the file and has no
-  // offset.
+  // offset, so the symbol has no address in the file.
   if (Section->sh_type == ELF::SHT_NOBITS)
-    return createError(
-        "invalid sh_type for symbol lookup, cannot be SHT_NOBITS");
+    return nullptr;
 
   uint64_t Offset = Section->sh_offset - Section->sh_addr + Symbol.st_value;
   if (Offset > ELFFile.getBufSize())

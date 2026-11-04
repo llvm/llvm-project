@@ -283,6 +283,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
   bool CheckReads = SinkInfo.has_value();
+  ScopedNoAliasAAResult ScopedNoAlias(FirstBB->getPlan()->getContext());
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
     for (VPRecipeBase &R : *VPBB) {
@@ -299,7 +300,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
+      if (ScopedNoAlias.alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
   }
@@ -2364,6 +2365,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return hash_combine(Result, RFlags->getPredicate());
     if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
       return hash_combine(Result, SIVSteps->getInductionOpcode());
+    if (auto *DIV = dyn_cast<VPDerivedIVRecipe>(Def))
+      return hash_combine(Result, DIV->getInductionKind(), DIV->getFPBinOp());
     // Fold in the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
     if (auto *Load = dyn_cast<VPWidenMemoryRecipe>(Def))
@@ -2394,6 +2397,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LSIV->getInductionOpcode() !=
           cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
+    if (auto *LDIV = dyn_cast<VPDerivedIVRecipe>(L)) {
+      auto *RDIV = cast<VPDerivedIVRecipe>(R);
+      if (LDIV->getInductionKind() != RDIV->getInductionKind() ||
+          LDIV->getFPBinOp() != RDIV->getFPBinOp())
+        return false;
+    }
     // Compare the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
@@ -4570,13 +4579,6 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
         IG->getAlign(), *LoadGroup, LoadGroup->getDebugLoc());
     NarrowedOps.insert(L);
     return L;
-  }
-
-  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
-    assert(RepR->isSingleScalar() && RepR->getOpcode() == Instruction::Load &&
-           "must be a single scalar load");
-    NarrowedOps.insert(RepR);
-    return RepR;
   }
 
   auto *WideLoad = cast<VPWidenLoadRecipe>(R);

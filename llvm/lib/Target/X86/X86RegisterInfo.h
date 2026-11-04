@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -181,6 +182,11 @@ public:
   unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
   unsigned getCSRCostScale(const MachineFunction &MF) const override {
     return 30;
+  }
+
+  const TargetRegisterClass *
+  getRegClassToMinimizeDomainCrossings() const override {
+    return &X86::VR128XRegClass;
   }
 };
 
