@@ -183,6 +183,16 @@ void bad_default_argument(BadDefaultArgument b) {
   b++; // expected-note 2 {{in defaulted postfix increment operator for 'BadDefaultArgument' first required here}}
 }
 
+// tmp cannot have an abstract class type.
+struct Abstract {
+  virtual void f() = 0; // expected-note {{unimplemented pure virtual method 'f' in 'Abstract'}}
+  Abstract &operator++();
+  Abstract operator++(int) = default; // expected-error {{variable type 'Abstract' is an abstract class}}
+};
+void abstract(Abstract &a) {
+  a++; // expected-note {{in defaulted postfix increment operator for 'Abstract' first required here}}
+}
+
 struct Incomplete; // expected-note 2 {{forward declaration of 'Incomplete'}}
 struct IncompletePrefixResult {
   Incomplete operator++(); // expected-note {{'operator++' declared here}}

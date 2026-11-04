@@ -9969,56 +9969,48 @@ static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
   Sema::CompoundScopeRAII CompoundScope(S);
 
   // Build an expression denoting 'c'.
-  auto BuildObject = [&]() -> ExprResult {
+  auto BuildObject = [&]() -> Expr * {
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
         MD && MD->isImplicitObjectMemberFunction()) {
       ExprResult This = S.ActOnCXXThis(Loc);
-      if (This.isInvalid())
-        return ExprError();
-      return S.CreateBuiltinUnaryOp(Loc, UO_Deref, This.get());
+      assert(This.isUsable() && "no 'this' in an implicit object member");
+      return S.CreateBuiltinUnaryOp(Loc, UO_Deref, This.get()).get();
     }
+    // Diagnose the use of an unavailable or deprecated parameter. Nothing else
+    // can make the use of a parameter in its function's body invalid.
     ParmVarDecl *Param = FD->getParamDecl(0);
-    if (S.DiagnoseUseOfDecl(Param, Loc))
-      return ExprError();
+    [[maybe_unused]] bool Invalid = S.DiagnoseUseOfDecl(Param, Loc);
+    assert(!Invalid && "invalid use of a parameter in its function's body");
     return S.BuildDeclRefExpr(Param, Param->getType().getNonReferenceType(),
                               VK_LValue, Loc);
   };
 
   // C tmp(c);
-  ExprResult Init = BuildObject();
-  if (Init.isInvalid())
-    return StmtError();
   QualType C = FD->getReturnType();
   VarDecl *Tmp =
       VarDecl::Create(S.Context, S.CurContext, Loc, Loc, /*Id=*/nullptr, C,
                       S.Context.getTrivialTypeSourceInfo(C, Loc), SC_None);
-  Expr *InitArgs[] = {Init.get()};
+  Expr *InitArgs[] = {BuildObject()};
   S.AddInitializerToDecl(Tmp,
                          ParenListExpr::Create(S.Context, Loc, InitArgs, Loc),
                          /*DirectInit=*/true);
+  // A failed initialization doesn't invalidate the variable, but an abstract
+  // type C does.
   if (Tmp->isInvalidDecl())
     return StmtError();
   StmtResult TmpStmt = S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(Tmp), Loc, Loc);
-  if (TmpStmt.isInvalid())
-    return StmtError();
+  assert(TmpStmt.isUsable() && "failed to build a declaration statement");
 
   // ++c; or --c;
-  ExprResult Obj = BuildObject();
-  if (Obj.isInvalid())
-    return StmtError();
+  Expr *Obj = BuildObject();
   UnaryOperatorKind Opc =
       Kind == PostfixOperatorKind::Increment ? UO_PreInc : UO_PreDec;
-  ExprResult Prefix;
-  if (Obj.get()->getType()->isOverloadableType()) {
-    UnresolvedSet<2> Fns;
-    if (auto *DFI = FD->getDefaultedOrDeletedInfo())
-      Fns.assign(DFI->getUnqualifiedLookups().begin(),
-                 DFI->getUnqualifiedLookups().end());
-    Prefix = S.CreateOverloadedUnaryOp(Loc, Opc, Fns, Obj.get(),
-                                       /*RequiresADL=*/true);
-  } else {
-    Prefix = S.CreateBuiltinUnaryOp(Loc, Opc, Obj.get());
-  }
+  UnresolvedSet<2> Fns;
+  if (auto *DFI = FD->getDefaultedOrDeletedInfo())
+    Fns.assign(DFI->getUnqualifiedLookups().begin(),
+               DFI->getUnqualifiedLookups().end());
+  ExprResult Prefix =
+      S.CreateOverloadedUnaryOp(Loc, Opc, Fns, Obj, /*RequiresADL=*/true);
   if (Prefix.isInvalid())
     return StmtError();
   StmtResult PrefixStmt = S.ActOnExprStmt(Prefix, /*DiscardedValue=*/true);
