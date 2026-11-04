@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 using LIBC_NAMESPACE::fputil::Float80;
 
-LLVM_LIBC_FUNCTION(int, canonicalizef80, (float80 *cx, const float80 *x)) {
+LLVM_LIBC_FUNCTION(int, canonicalizef80, (float80 * cx, const float80 *x)) {
   Float80 cx_f80 = cpp::bit_cast<Float80>(*cx);
   Float80 x_f80 = cpp::bit_cast<Float80>(*x);
   int res = math::canonicalizef80(&cx_f80, &x_f80);
