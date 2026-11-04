@@ -4451,6 +4451,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  totalorderf80
+  SRCS
+    totalorderf80.cpp
+  HDRS
+    ../totalorderf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.totalorderf80
+)
+
+add_entrypoint_object(
   totalorderbf16
   SRCS
     totalorderbf16.cpp
@@ -4509,6 +4520,17 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.math.totalordermagf128
+)
+
+add_entrypoint_object(
+  totalordermagf80
+  SRCS
+    totalordermagf80.cpp
+  HDRS
+    ../totalordermagf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.totalordermagf80
 )
 
 add_entrypoint_object(
