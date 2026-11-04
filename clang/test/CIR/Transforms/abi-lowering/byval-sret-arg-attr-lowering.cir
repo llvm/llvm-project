@@ -5,6 +5,7 @@
 // RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
+!s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 !rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
 
@@ -21,6 +22,11 @@
 #non_byval_arg = {
   return = { kind = "direct" },
   args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#non_byval_vec_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
 }
 
 #passthrough = {
@@ -63,6 +69,15 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @takes_non_byval(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef{{.*}}})
   // LLVM: define void @takes_non_byval(ptr nofreeobj noundef align 8 dead_on_return dereferenceable(24) %{{.+}})
+
+  // A three-element vector holds 12 bytes, and its allocation is padded to 16.
+  cir.func @takes_vec3_non_byval(%arg0: !cir.vector<3 x !s32i>)
+      attributes { test_classify = #non_byval_vec_arg } {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_vec3_non_byval(%{{.*}}: !cir.ptr<!cir.vector<3 x !s32i>> {{{.*}}llvm.dereferenceable = 16 : i64{{.*}}})
+  // LLVM: define void @takes_vec3_non_byval(ptr nofreeobj noundef align 16 dead_on_return dereferenceable(16) %{{.+}})
 
   // The call site's byval operand attribute is converted too.
   cir.func @caller(%s: !rec_Big) attributes { test_classify = #passthrough } {
