@@ -922,11 +922,13 @@ define amdgpu_kernel void @loads_addrspace_4_kernarg(ptr addrspace(4) %p, ptr ad
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = load <16 x i32>, ptr addrspace(4) %p, align 2
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr inbounds i8, ptr addrspace(4) %p, i64 64
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <16 x i32>, ptr addrspace(4) %gep, align 64
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(6) %q, align 64
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(4) @g, align 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.raw = getelementptr i8, ptr addrspace(4) %p, i64 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(4) %gep.raw, align 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(6) %q, align 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <16 x i32>, ptr addrspace(4) @g, align 64
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %id = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep.id = getelementptr inbounds <16 x i32>, ptr addrspace(4) %p, i32 %id
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX90A-UNALIGNED-LABEL: 'loads_addrspace_4_kernarg'
@@ -938,11 +940,13 @@ define amdgpu_kernel void @loads_addrspace_4_kernarg(ptr addrspace(4) %p, ptr ad
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = load <16 x i32>, ptr addrspace(4) %p, align 2
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr inbounds i8, ptr addrspace(4) %p, i64 64
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <16 x i32>, ptr addrspace(4) %gep, align 64
-; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(6) %q, align 64
-; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(4) @g, align 64
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.raw = getelementptr i8, ptr addrspace(4) %p, i64 64
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(4) %gep.raw, align 64
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(6) %q, align 64
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <16 x i32>, ptr addrspace(4) @g, align 64
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %id = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep.id = getelementptr inbounds <16 x i32>, ptr addrspace(4) %p, i32 %id
-; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
+; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
 ; GFX90A-UNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX90A-NOUNALIGNED-LABEL: 'loads_addrspace_4_kernarg'
@@ -954,11 +958,13 @@ define amdgpu_kernel void @loads_addrspace_4_kernarg(ptr addrspace(4) %p, ptr ad
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = load <16 x i32>, ptr addrspace(4) %p, align 2
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr inbounds i8, ptr addrspace(4) %p, i64 64
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <16 x i32>, ptr addrspace(4) %gep, align 64
-; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(6) %q, align 64
-; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(4) @g, align 64
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.raw = getelementptr i8, ptr addrspace(4) %p, i64 64
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(4) %gep.raw, align 64
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(6) %q, align 64
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <16 x i32>, ptr addrspace(4) @g, align 64
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %id = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep.id = getelementptr inbounds <16 x i32>, ptr addrspace(4) %p, i32 %id
-; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
+; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
 ; GFX90A-NOUNALIGNED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_addrspace_4_kernarg'
@@ -970,11 +976,13 @@ define amdgpu_kernel void @loads_addrspace_4_kernarg(ptr addrspace(4) %p, ptr ad
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = load <16 x i32>, ptr addrspace(4) %p, align 2
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr inbounds i8, ptr addrspace(4) %p, i64 64
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <16 x i32>, ptr addrspace(4) %gep, align 64
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(6) %q, align 64
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(4) @g, align 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.raw = getelementptr i8, ptr addrspace(4) %p, i64 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i32>, ptr addrspace(4) %gep.raw, align 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <16 x i32>, ptr addrspace(6) %q, align 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <16 x i32>, ptr addrspace(4) @g, align 64
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %id = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep.id = getelementptr inbounds <16 x i32>, ptr addrspace(4) %p, i32 %id
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <16 x i32>, ptr addrspace(4) %gep.id, align 64
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
   load <3 x i16>, ptr addrspace(4) %p, align 8
@@ -985,6 +993,8 @@ define amdgpu_kernel void @loads_addrspace_4_kernarg(ptr addrspace(4) %p, ptr ad
   load <16 x i32>, ptr addrspace(4) %p, align 2
   %gep = getelementptr inbounds i8, ptr addrspace(4) %p, i64 64
   load <16 x i32>, ptr addrspace(4) %gep, align 64
+  %gep.raw = getelementptr i8, ptr addrspace(4) %p, i64 64
+  load <16 x i32>, ptr addrspace(4) %gep.raw, align 64
   load <16 x i32>, ptr addrspace(6) %q, align 64
   load <16 x i32>, ptr addrspace(4) @g, align 64
   %id = call i32 @llvm.amdgcn.workitem.id.x()
