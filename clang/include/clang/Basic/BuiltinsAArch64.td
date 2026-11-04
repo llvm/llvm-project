@@ -104,12 +104,14 @@ let Attributes = [NoThrow, Const] in {
 	def dmb : AArch64Builtin<"void (unsigned int)">;
 	def dsb : AArch64Builtin<"void (unsigned int)">;
 	def isb : AArch64Builtin<"void (unsigned int)">;
+	def sb : AArch64Builtin<"void ()">;
 }
 
 let Attributes = [NoThrow, Const, RequireDeclaration], Languages = "ALL_LANGUAGES", Header = "arm_acle.h" in {
 	def __dmb : AArch64NoPrefixTargetLibBuiltin<"void (unsigned int)">;
 	def __dsb : AArch64NoPrefixTargetLibBuiltin<"void (unsigned int)">;
 	def __isb : AArch64NoPrefixTargetLibBuiltin<"void (unsigned int)">;
+	def __sb : AArch64NoPrefixTargetLibBuiltin<"void ()">;
 }
 
 let Attributes = [NoThrow, Const], Features = "v8.3a" in {

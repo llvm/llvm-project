@@ -112,6 +112,8 @@ def int_aarch64_dsb : ClangBuiltin<"__builtin_arm_dsb">, MSBuiltin<"__dsb">,
                       Intrinsic<[], [llvm_i32_ty], [IntrNoFree, IntrWillReturn]>;
 def int_aarch64_isb : ClangBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
                       Intrinsic<[], [llvm_i32_ty], [IntrNoFree, IntrWillReturn]>;
+def int_aarch64_sb : ClangBuiltin<"__builtin_arm_sb">, MSBuiltin<"__sb">,
+                     Intrinsic<[], [], [IntrNoFree, IntrWillReturn]>;
 
 // A space-consuming intrinsic primarily for testing block and jump table
 // placements. The first argument is the number of bytes this "instruction"

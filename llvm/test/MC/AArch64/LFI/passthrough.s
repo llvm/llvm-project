@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64_lfi %s 2>&1 | FileCheck %s --implicit-check-not=warning
+// RUN: llvm-mc -triple aarch64_lfi -mattr=+sb %s 2>&1 | FileCheck %s --implicit-check-not=warning
 
 clrex
 // CHECK: clrex
@@ -18,6 +18,8 @@ dsb sy
 // CHECK: dsb sy
 isb
 // CHECK: isb
+sb
+// CHECK: sb
 yield
 // CHECK: yield
 wfe

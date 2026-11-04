@@ -3688,7 +3688,8 @@ def t2TSB : T2I<(outs), (ins tsb_opt:$opt), NoItinerary,
 }
 
 // Armv8.5-A speculation barrier
-def t2SB : Thumb2XI<(outs), (ins), AddrModeNone, 4, NoItinerary, "sb", "", []>,
+def t2SB : Thumb2XI<(outs), (ins), AddrModeNone, 4, NoItinerary, "sb", "",
+                    [(int_arm_sb)]>,
            Requires<[IsThumb2, HasSB]>, Sched<[]> {
   let Inst{31-0} = 0xf3bf8f70;
   let Unpredictable = 0x000f2f0f;
