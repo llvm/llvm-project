@@ -200,6 +200,7 @@ public:
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
   void setScheduled() {
+    assert(UnscheduledDeps == 0 && "Node not ready!");
     Scheduled = true;
     // UnscheduledDeps is meaningless from this point on, so prohibit its use.
     UnscheduledDeps = std::nullopt;

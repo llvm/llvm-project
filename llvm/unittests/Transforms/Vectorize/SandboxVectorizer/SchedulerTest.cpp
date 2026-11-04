@@ -967,7 +967,7 @@ define void @foo(i8 %v0) {
   EXPECT_FALSE(ReadyList.contains(DAG.getNode(Add0)));
 }
 
-// When erasing a non-mem instruction we must not touch the UnscheduledSuccs
+// When erasing a non-mem instruction we must not touch the UnscheduledDeps
 // of an already-scheduled predecessor, since that counter is set to
 // std::nullopt once a node is scheduled.
 TEST_F(SchedulerTest, NotifyEraseInst_NonMemWithScheduledPred) {
@@ -991,15 +991,18 @@ define void @foo(i8 %v0) {
   sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
                              sandboxir::SchedDirection::BottomUp);
   auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
-  DAG.extend({PredSched, N});
+  DAG.extend({PredSched});
   auto *PredSchedN = DAG.getNode(PredSched);
-  auto *PredUnschedN = DAG.getNode(PredUnsched);
-  EXPECT_EQ(PredSchedN->getNumUnscheduledDeps(), 1u);
-  EXPECT_EQ(PredUnschedN->getNumUnscheduledDeps(), 1u);
-
   // Mark one of N's predecessors as scheduled. Its UnscheduledSuccs becomes
   // std::nullopt.
   PredSchedN->setScheduled();
+#ifndef NDEBUG
+  EXPECT_FALSE(PredSchedN->validUnscheduledDeps());
+#endif
+
+  DAG.extend({N});
+  auto *PredUnschedN = DAG.getNode(PredUnsched);
+  EXPECT_EQ(PredUnschedN->getNumUnscheduledDeps(), 1u);
 
   // Erase N, which is *not* scheduled. This must not attempt to decrement
   // the (now invalid) UnscheduledSuccs of PredSchedN, but should still
