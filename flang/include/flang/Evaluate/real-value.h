@@ -250,6 +250,12 @@ private:
   RealValueImpl &impl();
   const RealValueImpl &impl() const;
 
+  // On AIX, -Waix-compat diagnoses passing by value a struct with a 16-byte
+  // aligned member as not binary compatible with IBM XL C/C++ for AIX 16.1.0
+  // or older. The alignment is required: it is that of RealValueImpl, which
+  // comes from Real<>::word_ (see real.h, which suppresses the same warning).
+  // Compatibility with those compilers is not a concern: they cannot compile
+  // this C++17 code.
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-warning-option"

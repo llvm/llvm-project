@@ -169,6 +169,15 @@ math_test(
 )
 
 math_test(
+    name = "canonicalizef80",
+    hdrs = ["CanonicalizeTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+        "//libc:__support_integer_literals",
+    ],
+)
+
+math_test(
     name = "canonicalizef16",
     hdrs = ["CanonicalizeTest.h"],
     deps = [
@@ -204,6 +213,14 @@ math_test(
     hdrs = ["IsCanonicalTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "iscanonicalf80",
+    hdrs = ["IsCanonicalTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 
@@ -1586,6 +1603,14 @@ math_test(
 )
 
 math_test(
+    name = "isnanf80",
+    hdrs = ["IsNanTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "isnanf16",
     hdrs = ["IsNanTest.h"],
 )
@@ -2412,6 +2437,14 @@ math_test(
 )
 
 math_test(
+    name = "totalorderf80",
+    hdrs = ["TotalOrderTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "totalorderf16",
     hdrs = ["TotalOrderTest.h"],
 )
@@ -2444,6 +2477,14 @@ math_test(
     hdrs = ["TotalOrderMagTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "totalordermagf80",
+    hdrs = ["TotalOrderMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 
@@ -2609,6 +2650,14 @@ math_test(
     hdrs = ["IsSignalingTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "issignalingf80",
+    hdrs = ["IsSignalingTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 

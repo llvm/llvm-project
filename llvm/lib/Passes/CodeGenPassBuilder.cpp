@@ -468,7 +468,7 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
   // pad is shared by multiple invokes and is also a target of a normal
   // edge from elsewhere.
   if (TM.supportsExceptionModel(ExceptionHandling::SjLj)) {
-    addFunctionPass(SjLjEHPreparePass(&TM), PMW);
+    addFunctionPass(SjLjEHPreparePass(), PMW);
     HasEHPrep = true;
   }
   // We support using both GCC-style and MSVC-style exceptions on Windows, so

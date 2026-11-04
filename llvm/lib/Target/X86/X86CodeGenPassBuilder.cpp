@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file contains X86 CodeGen pipeline builder.
-/// TODO: Port CodeGen passes to new pass manager.
+///
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"

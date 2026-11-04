@@ -314,6 +314,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
+    libc.src.math.canonicalizef80
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.cbrtbf16
@@ -449,11 +450,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogbf128
     libc.src.math.ilogbl
     libc.src.math.iscanonicalf128
+    libc.src.math.iscanonicalf80
     libc.src.math.isnan
     libc.src.math.isnanf
     libc.src.math.isnanf128
+    libc.src.math.isnanf80
     libc.src.math.isnanl
     libc.src.math.issignalingf128
+    libc.src.math.issignalingf80
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpf128
@@ -573,10 +577,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderf128
+    libc.src.math.totalorderf80
     libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagf128
+    libc.src.math.totalordermagf80
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
