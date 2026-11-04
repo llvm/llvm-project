@@ -1,7 +1,6 @@
-// REQUIRES: ubsan-hip
-// RUN: %clang_hip -fsanitize=builtin %s -o %t %hip_libs
+// RUN: %clang_hip_ubsan %s -o %t %hip_libs
 // RUN: %run %t 2>&1 | FileCheck %s
-// RUN: %clang_hip -O2 -fsanitize=builtin %s -o %t %hip_libs
+// RUN: %clang_hip_ubsan -O2 %s -o %t %hip_libs
 // RUN: %run %t 2>&1 | FileCheck %s
 
 #define TID __builtin_amdgcn_workitem_id_x()
