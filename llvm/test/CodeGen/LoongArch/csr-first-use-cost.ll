@@ -13,102 +13,80 @@ declare i1 @write_str(ptr, ptr, ptr, i64)
 define i1 @write_prefix(ptr %buf, ptr %vtable, i32 %sign, ptr %prefix, i64 %len) nounwind {
 ; LA32-LABEL: write_prefix:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $sp, $sp, -32
-; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $fp, $sp, 24 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s0, $sp, 20 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s1, $sp, 16 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s2, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s3, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    lu12i.w $a6, 272
-; LA32-NEXT:    move $fp, $a5
-; LA32-NEXT:    move $s0, $a4
-; LA32-NEXT:    move $s1, $a3
 ; LA32-NEXT:    beq $a2, $a6, .LBB0_2
 ; LA32-NEXT:  # %bb.1: # %write_sign
-; LA32-NEXT:    move $s2, $a0
-; LA32-NEXT:    move $s3, $a1
+; LA32-NEXT:    addi.w $sp, $sp, -32
+; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $a0, $sp, 24 # 4-byte Folded Spill
+; LA32-NEXT:    ld.w $a0, $sp, 24 # 4-byte Folded Reload
+; LA32-NEXT:    st.w $a1, $sp, 20 # 4-byte Folded Spill
+; LA32-NEXT:    ld.w $a1, $sp, 20 # 4-byte Folded Reload
+; LA32-NEXT:    st.w $a5, $sp, 16 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $a4, $sp, 8 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $a3, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    bl write_char
-; LA32-NEXT:    move $a1, $s3
+; LA32-NEXT:    ld.w $a1, $sp, 20 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $a3, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $a4, $sp, 8 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $a5, $sp, 16 # 4-byte Folded Reload
 ; LA32-NEXT:    move $a2, $a0
-; LA32-NEXT:    move $a0, $s2
-; LA32-NEXT:    andi $a3, $a2, 1
+; LA32-NEXT:    ld.w $a0, $sp, 24 # 4-byte Folded Reload
+; LA32-NEXT:    andi $a6, $a2, 1
 ; LA32-NEXT:    ori $a2, $zero, 1
-; LA32-NEXT:    bnez $a3, .LBB0_5
-; LA32-NEXT:  .LBB0_2: # %check_prefix
-; LA32-NEXT:    beqz $s1, .LBB0_4
-; LA32-NEXT:  # %bb.3: # %write_prefix_str
-; LA32-NEXT:    move $a2, $s1
-; LA32-NEXT:    move $a3, $s0
-; LA32-NEXT:    move $a4, $fp
-; LA32-NEXT:    ld.w $s3, $sp, 8 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $s2, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $s1, $sp, 16 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $s0, $sp, 20 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 32
+; LA32-NEXT:    bnez $a6, .LBB0_5
+; LA32-NEXT:  .LBB0_2: # %check_prefix
+; LA32-NEXT:    beqz $a3, .LBB0_4
+; LA32-NEXT:  # %bb.3: # %write_prefix_str
+; LA32-NEXT:    move $a2, $a3
+; LA32-NEXT:    move $a3, $a4
+; LA32-NEXT:    move $a4, $a5
 ; LA32-NEXT:    b write_str
 ; LA32-NEXT:  .LBB0_4:
 ; LA32-NEXT:    move $a2, $zero
 ; LA32-NEXT:  .LBB0_5: # %ret
 ; LA32-NEXT:    move $a0, $a2
-; LA32-NEXT:    ld.w $s3, $sp, 8 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $s2, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $s1, $sp, 16 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $s0, $sp, 20 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 32
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: write_prefix:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.d $sp, $sp, -48
-; LA64-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $fp, $sp, 32 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s0, $sp, 24 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s1, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s2, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    addi.w $a5, $a2, 0
 ; LA64-NEXT:    lu12i.w $a6, 272
-; LA64-NEXT:    move $fp, $a4
-; LA64-NEXT:    move $s0, $a3
 ; LA64-NEXT:    beq $a5, $a6, .LBB0_2
 ; LA64-NEXT:  # %bb.1: # %write_sign
-; LA64-NEXT:    move $s1, $a0
-; LA64-NEXT:    move $s2, $a1
+; LA64-NEXT:    addi.d $sp, $sp, -48
+; LA64-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $a0, $sp, 32 # 8-byte Folded Spill
+; LA64-NEXT:    ld.d $a0, $sp, 32 # 8-byte Folded Reload
+; LA64-NEXT:    st.d $a1, $sp, 24 # 8-byte Folded Spill
+; LA64-NEXT:    ld.d $a1, $sp, 24 # 8-byte Folded Reload
+; LA64-NEXT:    st.d $a4, $sp, 16 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $a3, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    pcaddu18i $ra, %call36(write_char)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    move $a1, $s2
+; LA64-NEXT:    ld.d $a1, $sp, 24 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $a3, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $a4, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    move $a2, $a0
-; LA64-NEXT:    move $a0, $s1
-; LA64-NEXT:    andi $a3, $a2, 1
+; LA64-NEXT:    ld.d $a0, $sp, 32 # 8-byte Folded Reload
+; LA64-NEXT:    andi $a5, $a2, 1
 ; LA64-NEXT:    ori $a2, $zero, 1
-; LA64-NEXT:    bnez $a3, .LBB0_5
-; LA64-NEXT:  .LBB0_2: # %check_prefix
-; LA64-NEXT:    beqz $s0, .LBB0_4
-; LA64-NEXT:  # %bb.3: # %write_prefix_str
-; LA64-NEXT:    move $a2, $s0
-; LA64-NEXT:    move $a3, $fp
-; LA64-NEXT:    ld.d $s2, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s1, $sp, 16 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s0, $sp, 24 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 48
+; LA64-NEXT:    bnez $a5, .LBB0_5
+; LA64-NEXT:  .LBB0_2: # %check_prefix
+; LA64-NEXT:    beqz $a3, .LBB0_4
+; LA64-NEXT:  # %bb.3: # %write_prefix_str
+; LA64-NEXT:    move $a2, $a3
+; LA64-NEXT:    move $a3, $a4
 ; LA64-NEXT:    pcaddu18i $t8, %call36(write_str)
 ; LA64-NEXT:    jr $t8
 ; LA64-NEXT:  .LBB0_4:
 ; LA64-NEXT:    move $a2, $zero
 ; LA64-NEXT:  .LBB0_5: # %ret
 ; LA64-NEXT:    move $a0, $a2
-; LA64-NEXT:    ld.d $s2, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s1, $sp, 16 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s0, $sp, 24 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 48
 ; LA64-NEXT:    ret
 entry:
   %has_sign = icmp ne i32 %sign, 1114112

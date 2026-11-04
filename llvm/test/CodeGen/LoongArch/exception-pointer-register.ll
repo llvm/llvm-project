@@ -19,35 +19,30 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA32-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s0, $sp, 4 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    .cfi_offset 22, -8
-; LA32-NEXT:    .cfi_offset 23, -12
-; LA32-NEXT:    move $fp, $a0
+; LA32-NEXT:    st.w $a0, $sp, 4 # 4-byte Folded Spill
 ; LA32-NEXT:    beqz $a0, .LBB0_2
 ; LA32-NEXT:  # %bb.1: # %bb2
-; LA32-NEXT:  .Ltmp0:
-; LA32-NEXT:    move $a0, $fp
+; LA32-NEXT:  .Ltmp0: # EH_LABEL
 ; LA32-NEXT:    bl bar
-; LA32-NEXT:  .Ltmp1:
+; LA32-NEXT:  .Ltmp1: # EH_LABEL
 ; LA32-NEXT:    b .LBB0_3
 ; LA32-NEXT:  .LBB0_2: # %bb1
-; LA32-NEXT:  .Ltmp2:
-; LA32-NEXT:    move $a0, $fp
+; LA32-NEXT:  .Ltmp2: # EH_LABEL
 ; LA32-NEXT:    bl foo
-; LA32-NEXT:  .Ltmp3:
+; LA32-NEXT:  .Ltmp3: # EH_LABEL
 ; LA32-NEXT:  .LBB0_3: # %end2
-; LA32-NEXT:    ld.w $s0, $sp, 4 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB0_4: # %lpad
-; LA32-NEXT:  .Ltmp4:
-; LA32-NEXT:    move $s0, $a0
-; LA32-NEXT:    move $a0, $fp
+; LA32-NEXT:  .Ltmp4: # EH_LABEL
+; LA32-NEXT:    move $fp, $a0
+; LA32-NEXT:    ld.w $a0, $sp, 4 # 4-byte Folded Reload
 ; LA32-NEXT:    bl callee
-; LA32-NEXT:    move $a0, $s0
+; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl _Unwind_Resume
 ;
 ; LA64-LABEL: caller:
@@ -56,38 +51,33 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA64-NEXT:    .cfi_def_cfa_offset 32
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    .cfi_offset 22, -16
-; LA64-NEXT:    .cfi_offset 23, -24
-; LA64-NEXT:    move $fp, $a0
+; LA64-NEXT:    st.d $a0, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    beqz $a0, .LBB0_2
 ; LA64-NEXT:  # %bb.1: # %bb2
-; LA64-NEXT:  .Ltmp0:
-; LA64-NEXT:    move $a0, $fp
+; LA64-NEXT:  .Ltmp0: # EH_LABEL
 ; LA64-NEXT:    pcaddu18i $ra, %call36(bar)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:  .Ltmp1:
+; LA64-NEXT:  .Ltmp1: # EH_LABEL
 ; LA64-NEXT:    b .LBB0_3
 ; LA64-NEXT:  .LBB0_2: # %bb1
-; LA64-NEXT:  .Ltmp2:
-; LA64-NEXT:    move $a0, $fp
+; LA64-NEXT:  .Ltmp2: # EH_LABEL
 ; LA64-NEXT:    pcaddu18i $ra, %call36(foo)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:  .Ltmp3:
+; LA64-NEXT:  .Ltmp3: # EH_LABEL
 ; LA64-NEXT:  .LBB0_3: # %end2
-; LA64-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 32
 ; LA64-NEXT:    ret
 ; LA64-NEXT:  .LBB0_4: # %lpad
-; LA64-NEXT:  .Ltmp4:
-; LA64-NEXT:    move $s0, $a0
-; LA64-NEXT:    move $a0, $fp
+; LA64-NEXT:  .Ltmp4: # EH_LABEL
+; LA64-NEXT:    move $fp, $a0
+; LA64-NEXT:    ld.d $a0, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    move $a0, $s0
+; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(_Unwind_Resume)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 entry:

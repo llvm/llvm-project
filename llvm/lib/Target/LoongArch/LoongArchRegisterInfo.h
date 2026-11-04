@@ -30,6 +30,15 @@ struct LoongArchRegisterInfo : public LoongArchGenRegisterInfo {
                                        CallingConv::ID) const override;
   const uint32_t *getNoPreservedMask() const override;
 
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override {
+    // A store in the prologue and a load in the epilogue.
+    return 2;
+  }
+
+  unsigned getCSRCostScale(const MachineFunction &MF) const override {
+    return 100;
+  }
+
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
