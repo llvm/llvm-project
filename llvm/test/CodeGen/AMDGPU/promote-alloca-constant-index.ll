@@ -2,10 +2,10 @@
 ; RUN: opt -S -mtriple=amdgpu7.00-amd-amdhsa -passes=amdgpu-promote-alloca-to-vector < %s | FileCheck %s --check-prefix=BEFORE-SROA
 ; RUN: opt -S -mtriple=amdgpu7.00-amd-amdhsa -passes=amdgpu-promote-alloca < %s | FileCheck %s --check-prefix=CODEGEN
 
-; Structs are flattened to vectors for the dynamic indices that SROA cannot
-; handle. The pass that runs before SROA leaves structs with only constant
-; indices to SROA. The pass in the codegen pipeline, which runs after SROA,
-; still promotes them.
+; The pass that runs before SROA only promotes allocas with dynamic indices,
+; which SROA cannot handle, and leaves allocas with only constant indices to
+; SROA. The pass in the codegen pipeline, which runs after SROA, still promotes
+; them.
 
 %complex = type { float, float }
 
@@ -65,37 +65,73 @@ join:
   ret void
 }
 
-define amdgpu_kernel void @constant_index_struct(ptr addrspace(1) %out, float %a, float %b) {
-; BEFORE-SROA-LABEL: define amdgpu_kernel void @constant_index_struct(
+define amdgpu_kernel void @constant_index_float_array(ptr addrspace(1) %out, float %a, float %b) {
+; BEFORE-SROA-LABEL: define amdgpu_kernel void @constant_index_float_array(
 ; BEFORE-SROA-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) {
 ; BEFORE-SROA-NEXT:  [[ENTRY:.*:]]
-; BEFORE-SROA-NEXT:    [[ALLOCA:%.*]] = alloca [[COMPLEX:%.*]], align 4, addrspace(5)
-; BEFORE-SROA-NEXT:    [[P1:%.*]] = getelementptr inbounds [[COMPLEX]], ptr addrspace(5) [[ALLOCA]], i32 0, i32 1
+; BEFORE-SROA-NEXT:    [[ALLOCA:%.*]] = alloca [4 x float], align 4, addrspace(5)
+; BEFORE-SROA-NEXT:    [[P3:%.*]] = getelementptr inbounds [4 x float], ptr addrspace(5) [[ALLOCA]], i32 0, i32 3
 ; BEFORE-SROA-NEXT:    store float [[A]], ptr addrspace(5) [[ALLOCA]], align 4
-; BEFORE-SROA-NEXT:    store float [[B]], ptr addrspace(5) [[P1]], align 4
+; BEFORE-SROA-NEXT:    store float [[B]], ptr addrspace(5) [[P3]], align 4
 ; BEFORE-SROA-NEXT:    [[X:%.*]] = load float, ptr addrspace(5) [[ALLOCA]], align 4
-; BEFORE-SROA-NEXT:    [[Y:%.*]] = load float, ptr addrspace(5) [[P1]], align 4
+; BEFORE-SROA-NEXT:    [[Y:%.*]] = load float, ptr addrspace(5) [[P3]], align 4
 ; BEFORE-SROA-NEXT:    [[SUM:%.*]] = fadd float [[X]], [[Y]]
 ; BEFORE-SROA-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
 ; BEFORE-SROA-NEXT:    ret void
 ;
-; CODEGEN-LABEL: define amdgpu_kernel void @constant_index_struct(
+; CODEGEN-LABEL: define amdgpu_kernel void @constant_index_float_array(
 ; CODEGEN-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) {
 ; CODEGEN-NEXT:  [[ENTRY:.*:]]
-; CODEGEN-NEXT:    [[ALLOCA:%.*]] = freeze <2 x float> poison
-; CODEGEN-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> [[ALLOCA]], float [[A]], i32 0
-; CODEGEN-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[B]], i32 1
+; CODEGEN-NEXT:    [[ALLOCA:%.*]] = freeze <4 x float> poison
+; CODEGEN-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> [[ALLOCA]], float [[A]], i32 0
+; CODEGEN-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[B]], i32 3
 ; CODEGEN-NEXT:    [[SUM:%.*]] = fadd float [[A]], [[B]]
 ; CODEGEN-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
 ; CODEGEN-NEXT:    ret void
 ;
 entry:
-  %alloca = alloca %complex, align 4, addrspace(5)
-  %p1 = getelementptr inbounds %complex, ptr addrspace(5) %alloca, i32 0, i32 1
+  %alloca = alloca [4 x float], align 4, addrspace(5)
+  %p3 = getelementptr inbounds [4 x float], ptr addrspace(5) %alloca, i32 0, i32 3
   store float %a, ptr addrspace(5) %alloca, align 4
-  store float %b, ptr addrspace(5) %p1, align 4
+  store float %b, ptr addrspace(5) %p3, align 4
   %x = load float, ptr addrspace(5) %alloca, align 4
-  %y = load float, ptr addrspace(5) %p1, align 4
+  %y = load float, ptr addrspace(5) %p3, align 4
+  %sum = fadd float %x, %y
+  store float %sum, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @constant_index_vector(ptr addrspace(1) %out, float %a, float %b) {
+; BEFORE-SROA-LABEL: define amdgpu_kernel void @constant_index_vector(
+; BEFORE-SROA-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; BEFORE-SROA-NEXT:  [[ENTRY:.*:]]
+; BEFORE-SROA-NEXT:    [[ALLOCA:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+; BEFORE-SROA-NEXT:    [[P3:%.*]] = getelementptr inbounds <4 x float>, ptr addrspace(5) [[ALLOCA]], i32 0, i32 3
+; BEFORE-SROA-NEXT:    store float [[A]], ptr addrspace(5) [[ALLOCA]], align 16
+; BEFORE-SROA-NEXT:    store float [[B]], ptr addrspace(5) [[P3]], align 4
+; BEFORE-SROA-NEXT:    [[X:%.*]] = load float, ptr addrspace(5) [[ALLOCA]], align 16
+; BEFORE-SROA-NEXT:    [[Y:%.*]] = load float, ptr addrspace(5) [[P3]], align 4
+; BEFORE-SROA-NEXT:    [[SUM:%.*]] = fadd float [[X]], [[Y]]
+; BEFORE-SROA-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
+; BEFORE-SROA-NEXT:    ret void
+;
+; CODEGEN-LABEL: define amdgpu_kernel void @constant_index_vector(
+; CODEGEN-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CODEGEN-NEXT:  [[ENTRY:.*:]]
+; CODEGEN-NEXT:    [[ALLOCA:%.*]] = freeze <4 x float> poison
+; CODEGEN-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> [[ALLOCA]], float [[A]], i32 0
+; CODEGEN-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[B]], i32 3
+; CODEGEN-NEXT:    [[SUM:%.*]] = fadd float [[A]], [[B]]
+; CODEGEN-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
+; CODEGEN-NEXT:    ret void
+;
+entry:
+  %alloca = alloca <4 x float>, align 16, addrspace(5)
+  %p3 = getelementptr inbounds <4 x float>, ptr addrspace(5) %alloca, i32 0, i32 3
+  store float %a, ptr addrspace(5) %alloca, align 16
+  store float %b, ptr addrspace(5) %p3, align 4
+  %x = load float, ptr addrspace(5) %alloca, align 16
+  %y = load float, ptr addrspace(5) %p3, align 4
   %sum = fadd float %x, %y
   store float %sum, ptr addrspace(1) %out, align 4
   ret void
@@ -134,38 +170,5 @@ entry:
   %p = getelementptr inbounds [2 x %complex], ptr addrspace(5) %alloca, i32 0, i32 %idx, i32 1
   %x = load float, ptr addrspace(5) %p, align 4
   store float %x, ptr addrspace(1) %out, align 4
-  ret void
-}
-
-define amdgpu_kernel void @constant_index_float_array(ptr addrspace(1) %out, float %a, float %b) {
-; BEFORE-SROA-LABEL: define amdgpu_kernel void @constant_index_float_array(
-; BEFORE-SROA-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) {
-; BEFORE-SROA-NEXT:  [[ENTRY:.*:]]
-; BEFORE-SROA-NEXT:    [[ALLOCA:%.*]] = freeze <4 x float> poison
-; BEFORE-SROA-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> [[ALLOCA]], float [[A]], i32 0
-; BEFORE-SROA-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[B]], i32 3
-; BEFORE-SROA-NEXT:    [[SUM:%.*]] = fadd float [[A]], [[B]]
-; BEFORE-SROA-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
-; BEFORE-SROA-NEXT:    ret void
-;
-; CODEGEN-LABEL: define amdgpu_kernel void @constant_index_float_array(
-; CODEGEN-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) {
-; CODEGEN-NEXT:  [[ENTRY:.*:]]
-; CODEGEN-NEXT:    [[ALLOCA:%.*]] = freeze <4 x float> poison
-; CODEGEN-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> [[ALLOCA]], float [[A]], i32 0
-; CODEGEN-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[B]], i32 3
-; CODEGEN-NEXT:    [[SUM:%.*]] = fadd float [[A]], [[B]]
-; CODEGEN-NEXT:    store float [[SUM]], ptr addrspace(1) [[OUT]], align 4
-; CODEGEN-NEXT:    ret void
-;
-entry:
-  %alloca = alloca [4 x float], align 4, addrspace(5)
-  %p3 = getelementptr inbounds [4 x float], ptr addrspace(5) %alloca, i32 0, i32 3
-  store float %a, ptr addrspace(5) %alloca, align 4
-  store float %b, ptr addrspace(5) %p3, align 4
-  %x = load float, ptr addrspace(5) %alloca, align 4
-  %y = load float, ptr addrspace(5) %p3, align 4
-  %sum = fadd float %x, %y
-  store float %sum, ptr addrspace(1) %out, align 4
   ret void
 }

@@ -145,7 +145,7 @@ private:
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
-  bool collectAllocaUses(AllocaAnalysis &AA) const;
+  bool collectAllocaUses(AllocaAnalysis &AA, bool BeforeSROA) const;
 
   /// Val is a derived pointer from Alloca. OpIdx0/OpIdx1 are the operand
   /// indices to an instruction with 2 pointer inputs (e.g. select, icmp).
@@ -159,7 +159,7 @@ private:
   bool hasSufficientLocalMem(const Function &F);
 
   FixedVectorType *getVectorTypeForAlloca(Type *AllocaTy) const;
-  void analyzePromoteToVector(AllocaAnalysis &AA, bool BeforeSROA) const;
+  void analyzePromoteToVector(AllocaAnalysis &AA) const;
   void promoteAllocaToVector(AllocaAnalysis &AA);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
   bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS,
@@ -277,13 +277,15 @@ FunctionPass *llvm::createAMDGPUPromoteAlloca() {
   return new AMDGPUPromoteAlloca();
 }
 
-bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
+bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA,
+                                                bool BeforeSROA) const {
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
     LLVM_DEBUG(dbgs() << "  Cannot promote alloca: " << Msg << "\n"
                       << "    " << *Inst << "\n");
     return false;
   };
 
+  bool HasDynamicIndex = false;
   SmallVector<Instruction *, 4> WorkList({AA.Alloca});
   while (!WorkList.empty()) {
     auto *Cur = WorkList.pop_back_val();
@@ -299,7 +301,8 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
       }
       AA.Uses.push_back(&U);
 
-      if (isa<GetElementPtrInst>(U.getUser())) {
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+        HasDynamicIndex |= !GEP->hasAllConstantIndices();
         WorkList.push_back(Inst);
       } else if (auto *SI = dyn_cast<SelectInst>(Inst)) {
         // Only promote a select if we know that the other select operand is
@@ -328,6 +331,13 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
         AA.HaveSelectOrPHI = true;
       }
     }
+  }
+
+  // SROA, which runs next, promotes allocas that are only accessed at constant
+  // offsets. This pass is for the dynamic indices that SROA cannot handle.
+  if (BeforeSROA && !HasDynamicIndex) {
+    LLVM_DEBUG(dbgs() << "  Leaving alloca with constant indices to SROA\n");
+    return false;
   }
   return true;
 }
@@ -391,8 +401,8 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       LLVM_DEBUG(dbgs() << "Analyzing: " << *AI << '\n');
 
       AllocaAnalysis AA{AI};
-      if (collectAllocaUses(AA)) {
-        analyzePromoteToVector(AA, /*BeforeSROA=*/!PromoteToLDS);
+      if (collectAllocaUses(AA, /*BeforeSROA=*/!PromoteToLDS)) {
+        analyzePromoteToVector(AA);
         if (PromoteToLDS)
           analyzePromoteToLDS(AA);
         if (AA.Vector.Ty || AA.LDS.Enable) {
@@ -916,13 +926,6 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
-/// Returns true if \p Ty is a struct or an array of structs.
-static bool hasStructLayer(Type *Ty) {
-  while (auto *ArrTy = dyn_cast<ArrayType>(Ty))
-    Ty = ArrTy->getElementType();
-  return isa<StructType>(Ty);
-}
-
 /// Peel nested aggregates down to a single uniform element type, multiplying
 /// NumElems by the element count of each layer peeled.
 static Type *peelAggregateToElementType(Type *Ty, uint64_t &NumElems) {
@@ -1004,8 +1007,7 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   return VectorTy;
 }
 
-void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA,
-                                                     bool BeforeSROA) const {
+void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   if (AA.HaveSelectOrPHI) {
     LLVM_DEBUG(dbgs() << "  Cannot convert to vector due to select or phi\n");
     return;
@@ -1143,16 +1145,6 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA,
     }
 
     return RejectUser(Inst, "unhandled alloca user");
-  }
-
-  // Structs are flattened for the dynamic indices that SROA cannot handle.
-  // Before SROA, leave structs with only constant indices to it.
-  if (BeforeSROA && hasStructLayer(AllocaTy) &&
-      none_of(AA.Vector.GEPVectorIdx,
-              [](const auto &Entry) { return Entry.second.VarIndex; })) {
-    LLVM_DEBUG(dbgs() << "  Leaving struct with constant indices to SROA\n");
-    AA.Vector.Ty = nullptr;
-    return;
   }
 
   // Follow-up check to ensure we've seen both sides of all transfer insts.
