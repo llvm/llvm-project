@@ -1,3 +1,4 @@
+; NOTE: Do not autogenerate. Check the ordered pass pipeline at each optimization level.
 ; UNSUPPORTED: expensive_checks
 ; RUN: llc -O0 -mtriple=amdgpu7.00--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
@@ -135,6 +136,7 @@
 ; GCN-O0-NEXT:        Insert fentry calls
 ; GCN-O0-NEXT:        Insert XRay ops
 ; GCN-O0-NEXT:        SI Memory Legalizer
+; GCN-O0-NEXT:        SI insert async barrier arrival workaround
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        Machine Natural Loop Construction
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
@@ -425,6 +427,7 @@
 ; GCN-O1-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-NEXT:        SI Memory Legalizer
 ; GCN-O1-NEXT:        SI post-RA 16bit Mov Folding
+; GCN-O1-NEXT:        SI insert async barrier arrival workaround
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
@@ -747,6 +750,7 @@
 ; GCN-O1-OPTS-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-OPTS-NEXT:        SI Memory Legalizer
 ; GCN-O1-OPTS-NEXT:        SI post-RA 16bit Mov Folding
+; GCN-O1-OPTS-NEXT:        SI insert async barrier arrival workaround
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
@@ -1074,6 +1078,7 @@
 ; GCN-O2-NEXT:        GCN Create VOPD Instructions
 ; GCN-O2-NEXT:        SI Memory Legalizer
 ; GCN-O2-NEXT:        SI post-RA 16bit Mov Folding
+; GCN-O2-NEXT:        SI insert async barrier arrival workaround
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
@@ -1416,6 +1421,7 @@
 ; GCN-O3-NEXT:        GCN Create VOPD Instructions
 ; GCN-O3-NEXT:        SI Memory Legalizer
 ; GCN-O3-NEXT:        SI post-RA 16bit Mov Folding
+; GCN-O3-NEXT:        SI insert async barrier arrival workaround
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
