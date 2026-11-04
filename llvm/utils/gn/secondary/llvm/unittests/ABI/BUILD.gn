@@ -11,6 +11,7 @@ unittest("ABITests") {
     "AMDGPUTargetInfoTest.cpp",
     "FunctionInfoTest.cpp",
     "IRTypeMapperTest.cpp",
+    "SPIRVTargetInfoTest.cpp",
     "TargetInfoTest.cpp",
     "TypesTest.cpp",
     "X86TargetInfoTest.cpp",

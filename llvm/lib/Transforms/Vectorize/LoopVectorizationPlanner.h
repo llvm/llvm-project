@@ -45,10 +45,8 @@ class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 class LoopVectorizeHints;
 class RecurrenceDescriptor;
-class LoopVersioning;
 class OptimizationRemarkEmitter;
 class TargetLibraryInfo;
-class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
 struct VectorizeOptions;
@@ -99,11 +97,10 @@ void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
 
 } // namespace LoopVectorizationUtils
 
-/// Default inserter for VPBuilderBase, inserting \p R at \p It in \p VPBB.
+/// Default inserter for VPBuilderBase, inserting \p R before \p It.
 struct VPBuilderDefaultInserter {
-  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
-                    VPBasicBlock::iterator It) {
-    VPBB->insert(R, It);
+  void insertHelper(VPRecipeBase *R, VPBasicBlock::iterator It) {
+    R->insertBefore(It);
   }
 };
 
@@ -112,42 +109,41 @@ struct VPBuilderDefaultInserter {
 template <typename InserterTy> class VPBuilderBase : public InserterTy {
 private:
   class VPInsertPoint {
-    VPBasicBlock *Block = nullptr;
     VPBasicBlock::iterator Iterator;
 
   public:
     /// Creates a new insertion point which doesn't point to anything.
     VPInsertPoint() = default;
 
-    /// Creates a new insertion point to insert at \p Iterator in \p Block.
-    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Iterator)
-        : Block(Block), Iterator(Iterator) {}
+    /// Creates a new insertion point to insert before \p Iterator.
+    VPInsertPoint(VPBasicBlock::iterator Iterator) : Iterator(Iterator) {}
 
     /// Creates a new insertion point to insert before \p R.
-    VPInsertPoint(VPRecipeBase *R)
-        : Block(R->getParent()), Iterator(R->getIterator()) {}
+    VPInsertPoint(VPRecipeBase *R) : Iterator(R->getIterator()) {}
 
     /// Creates a new insertion point to insert at the end of \p Block.
-    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Iterator(Block->end()) {}
+    VPInsertPoint(VPBasicBlock *Block) : Iterator(Block->end()) {}
 
     /// Returns true if this insert point is set.
-    operator bool() const { return Block; }
+    operator bool() const { return Iterator.isValid(); }
 
-    VPBasicBlock *getBlock() const { return Block; }
+    VPBasicBlock *getBlock() const {
+      return Iterator.isValid() ? Iterator.getNodeParent() : nullptr;
+    }
     VPBasicBlock::iterator getIterator() const { return Iterator; }
 
     operator VPRecipeBase *() const {
-      return Iterator == Block->end() ? nullptr : &*Iterator;
+      return Iterator == getBlock()->end() ? nullptr : &*Iterator;
     }
   };
 
   VPInsertPoint InsertPt;
 
 protected:
-  /// Insert \p VPI in BB at InsertPt if BB is set.
+  /// Insert \p R at InsertPt if InsertPt is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (InsertPt)
-      InserterTy::insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
+      InserterTy::insertHelper(R, InsertPt.getIterator());
     return R;
   }
 
@@ -168,8 +164,6 @@ public:
   VPBuilderBase() = default;
   VPBuilderBase(const VPInsertPoint &IP) : InsertPt(IP) {}
   VPBuilderBase(InserterTy Inserter) : InserterTy(Inserter) {}
-  VPBuilderBase(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
-      : InsertPt(TheBB, IP) {}
 
   /// Get the recipe at the current insert point or nullptr if the insert point
   /// is the end of the block.
@@ -179,7 +173,7 @@ public:
 
   /// Create a builder to insert after \p R.
   static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
-    return {R->getParent(), std::next(R->getIterator())};
+    return VPBuilderBase(std::next(R->getIterator()));
   }
 
   /// Sets the current insert point to a previously-saved location.
@@ -190,14 +184,10 @@ public:
     assert(IP && "Attempting to set a null insert point");
     InsertPt = IP;
   }
-  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    assert(TheBB && "Attempting to set a null insert point");
-    InsertPt = VPInsertPoint(TheBB, IP);
-  }
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    InserterTy::insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
+    InserterTy::insertHelper(R, InsertPt.getIterator());
     return R;
   }
 
@@ -576,21 +566,22 @@ public:
   /// be null).
   VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
                                      VPValue *Mask, bool Consecutive,
+                                     Align Alignment,
                                      const VPIRMetadata &Metadata,
                                      DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+    return tryInsertInstruction(new VPWidenLoadRecipe(
+        Load, Addr, Mask, Consecutive, Alignment, Metadata, DL));
   }
 
   /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with
   /// \p Mask (may be null).
   VPWidenStoreRecipe *createWidenStore(StoreInst &Store, VPValue *Addr,
                                        VPValue *StoredVal, VPValue *Mask,
-                                       bool Consecutive,
+                                       bool Consecutive, Align Alignment,
                                        const VPIRMetadata &Metadata,
                                        DebugLoc DL) {
     return tryInsertInstruction(new VPWidenStoreRecipe(
-        Store, Addr, StoredVal, Mask, Consecutive, Metadata, DL));
+        Store, Addr, StoredVal, Mask, Consecutive, Alignment, Metadata, DL));
   }
 
   //===--------------------------------------------------------------------===//
@@ -1120,16 +1111,6 @@ private:
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
   bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;
 };
-
-/// A helper function that returns true if the given type is irregular. The
-/// type is irregular if its allocated size doesn't equal the store size of an
-/// element of the corresponding vector type.
-inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
-  // Determine if an array of N elements of type Ty is "bitcast compatible"
-  // with a <N x Ty> vector.
-  // This is only true if there is no padding between the array elements.
-  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
-}
 
 } // namespace llvm
 

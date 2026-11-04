@@ -2256,8 +2256,8 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
 
-  if (M->getTargetTriple().isOSWindows() && M->getTargetTriple().isX86_64() &&
-      Size == 16) {
+  if (M->getTargetTriple().isOSWindowsOrUEFI() &&
+      M->getTargetTriple().isX86_64() && Size == 16) {
     // x86_64 Windows passes i128 as an XMM vector; on return, it is in
     // XMM0, and as a parameter, it is passed indirectly. The generic lowering
     // rules handles this correctly if we pass it as a v2i64 rather than
