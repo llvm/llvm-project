@@ -170,8 +170,7 @@ define i32 @odd_minus_one_div_by_two(i32 noundef %n) {
 ; CHECK-LABEL: @odd_minus_one_div_by_two(
 ; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[N:%.*]] to i1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[MINUS_ONE:%.*]] = add nsw i32 [[N]], -1
-; CHECK-NEXT:    [[DIV_BY_TWO:%.*]] = lshr exact i32 [[MINUS_ONE]], 1
+; CHECK-NEXT:    [[DIV_BY_TWO:%.*]] = lshr i32 [[N]], 1
 ; CHECK-NEXT:    ret i32 [[DIV_BY_TWO]]
 ;
   %a = and i32 %n, 1
