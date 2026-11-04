@@ -1869,9 +1869,7 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
       continue;
     auto *RetType = cast<IntegerType>(Call.CB.getType());
     IRBuilder<> B(&Call.CB);
-    Value *Addr = B.CreatePtrAdd(
-        Call.VTable, B.CreateSExtOrTrunc(Byte, B.getDataLayout().getIndexType(
-                                                   Call.VTable->getType())));
+    Value *Addr = B.CreatePtrAddWithSExtOrTrunc(Call.VTable, Byte);
     if (RetType->getBitWidth() == 1) {
       Value *Bits = B.CreateLoad(Int8Ty, Addr);
       Value *BitsAndBit = B.CreateAnd(Bits, Bit);
@@ -2229,7 +2227,6 @@ void DevirtModule::scanTypeTestUsers(
 void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
   Function *TypeTestFunc =
       Intrinsic::getOrInsertDeclaration(&M, Intrinsic::type_test);
-  const DataLayout &DL = M.getDataLayout();
 
   for (Use &U : llvm::make_early_inc_range(TypeCheckedLoadFunc->uses())) {
     auto *CI = dyn_cast<CallInst>(U.getUser());
@@ -2265,9 +2262,7 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
           &M, Intrinsic::load_relative, {Int32Ty});
       LoadedValue = LoadB.CreateCall(LoadRelFunc, {Ptr, Offset});
     } else {
-      Value *GEP = LoadB.CreatePtrAdd(
-          Ptr,
-          LoadB.CreateSExtOrTrunc(Offset, DL.getIndexType(Ptr->getType())));
+      Value *GEP = LoadB.CreatePtrAddWithSExtOrTrunc(Ptr, Offset);
       LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEP);
     }
 

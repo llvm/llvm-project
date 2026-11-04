@@ -2438,9 +2438,7 @@ bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
           Intrinsic::load_relative, {Offset->getType()}, {Ptr, Offset},
           /*FMFSource=*/nullptr, "rel_load");
     } else {
-      Value *PtrAdd = IRB.CreatePtrAdd(
-          Ptr, IRB.CreateSExtOrTrunc(
-                   Offset, M.getDataLayout().getIndexType(Ptr->getType())));
+      Value *PtrAdd = IRB.CreatePtrAddWithSExtOrTrunc(Ptr, Offset);
       Load = IRB.CreateLoad(PtrTy, PtrAdd, "vfunc");
     }
 
