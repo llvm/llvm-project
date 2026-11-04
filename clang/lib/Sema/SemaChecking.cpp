@@ -1670,12 +1670,16 @@ void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
   // umask(mode_t): warn when the constant-evaluated argument has bits set
   // outside the file-permission mask (0777). Those bits are ignored.
   Expr *Arg = TheCall->getArg(0);
+  if (!Arg->getType()->isIntegerType())
+    return;
   Expr::EvalResult R;
   if (!Arg->EvaluateAsInt(R, getASTContext()))
     return;
   // Operate on the raw two's-complement bit pattern so that negative literals
   // (which convert to large unsigned mode_t values) are caught.
   llvm::APInt RawValue = R.Val.getInt();
+  if (RawValue.getBitWidth() <= 9)
+    return;
   llvm::APInt Mask(RawValue.getBitWidth(), 0777);
   llvm::APInt Extra = RawValue & ~Mask;
   if (Extra == 0)
