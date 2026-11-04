@@ -193,6 +193,7 @@ def StaticMemoryPlannerAnalysisPass
     For each `memref.alloc` the pass checks a conservative eligibility
     envelope:
     - Static memref shape.
+    - Integer or floating-point element type.
     - The allocation lives directly in the function's entry block
       (allocations nested in a region are skipped for now).
     - Every `memref.dealloc` that may free the buffer is anchored in the entry
@@ -259,16 +260,8 @@ def StaticMemoryPlannerAnalysisPass
   let statistics =
       [Statistic<"numEligible", "num-eligible",
                  "Number of alloc/dealloc pairs eligible for static planning">,
-       Statistic<"numSkipDynamic", "num-skipped-dynamic",
-                 "Number of allocations skipped: dynamic shape">,
-       Statistic<
-           "numSkipNested", "num-skipped-nested",
-           "Number of allocations skipped: nested in loop or conditional">,
-       Statistic<"numSkipNoDealloc", "num-skipped-no-dealloc",
-                 "Number of allocations skipped: no unique same-block dealloc">,
-       Statistic<
-           "numSkipEscaping", "num-skipped-escaping",
-           "Number of allocations skipped: cross-block alias or escaping use">,
+       Statistic<"numSkipped", "num-skipped",
+                 "Number of allocations skipped">,
   ];
 }
 
@@ -306,13 +299,15 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
     This pass implements an approach to aggressively move allocations upwards
     out of loop nests. It does not move allocations into common dominators.
 
-    `memref.alloc` operations directly in the `before` region of `scf.while`
-    may also be hoisted when their buffers are forwarded through loop results.
+    Allocations directly in the `before` region of `scf.while` may also be
+    hoisted when their buffers are forwarded through loop results. They must
+    advertise `HoistingKind::Loop` through `AllocationOpInterface`.
     This extension requires a loop strictly inside the transformation target.
     Its parent must stop further loop hoisting: it must either be a non-loop
     operation or have the `HasParallelRegion` trait. No alias may be carried
     back to `before`, and all alias uses, including uses of loop results, must
-    permit reusing the allocation across iterations.
+    permit reusing the allocation across iterations. Stack allocations remain
+    within their original automatic allocation scope.
   }];
 }
 

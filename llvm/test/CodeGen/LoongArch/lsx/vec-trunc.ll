@@ -6,10 +6,8 @@ define void @load_trunc_2i64_to_2i32(ptr %ptr, ptr %dst) nounwind {
 ; LA32-LABEL: load_trunc_2i64_to_2i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    st.w $a0, $a1, 4
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 4, 2
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_2i64_to_2i32:
@@ -29,8 +27,7 @@ define void @load_trunc_2i64_to_2i16(ptr %ptr, ptr %dst) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vextrins.h $vr0, $vr0, 20
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_2i64_to_2i16:
@@ -70,10 +67,8 @@ define void @load_trunc_4i32_to_4i16(ptr %ptr, ptr %dst) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vpickev.h $vr0, $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA32-NEXT:    st.w $a0, $a1, 4
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_4i32_to_4i16:
@@ -95,8 +90,7 @@ define void @load_trunc_4i32_to_4i8(ptr %ptr, ptr %dst) nounwind {
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
 ; LA32-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI4_0)
 ; LA32-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_4i32_to_4i8:
@@ -118,10 +112,8 @@ define void @load_trunc_8i16_to_8i8(ptr %ptr, ptr %dst) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
 ; LA32-NEXT:    vpickev.b $vr0, $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA32-NEXT:    st.w $a0, $a1, 4
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_8i16_to_8i8:
@@ -144,8 +136,7 @@ define void @load_trunc_2i32_to_2i16(ptr %ptr, ptr %dst) nounwind {
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vshuf4i.h $vr0, $vr0, 8
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_2i32_to_2i16:
@@ -193,8 +184,7 @@ define void @load_trunc_4i16_to_4i8(ptr %ptr, ptr %dst) nounwind {
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vpickev.b $vr0, $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_4i16_to_4i8:
