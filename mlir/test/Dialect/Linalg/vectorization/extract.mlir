@@ -558,18 +558,9 @@ func.func @masked_gather_inactive_lane_out_of_bounds(
 // CHECK-SAME: %[[SRC:.*]]: tensor<3x2xf32>,
 // CHECK-DAG: %[[THREE:.*]] = arith.constant 3 : index
 // CHECK: %[[MASK:.*]] = vector.create_mask %[[THREE]] : vector<4xi1>
-// CHECK: %[[STEP:.*]] = vector.step : vector<4xindex>
-// CHECK-DAG: %[[ALL_TRUE:.*]] = arith.constant dense<true> : vector<4xi1>
-// CHECK-DAG: %[[PASS_THRU:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
-// CHECK-DAG: %[[ZERO:.*]] = arith.constant 0 : index
-// CHECK: %[[INNER_DIM:.*]] = arith.constant 1 : index
-// CHECK: %[[DIM:.*]] = tensor.dim %[[SRC]], %[[INNER_DIM]] : tensor<3x2xf32>
-// CHECK: %[[STRIDE:.*]] = vector.broadcast %[[DIM]] : index to vector<4xindex>
-// CHECK: %[[ROW:.*]] = arith.muli %[[STEP]], %[[STRIDE]] : vector<4xindex>
-// CHECK: %[[COL:.*]] = arith.constant dense<1> : vector<4xindex>
-// CHECK: %[[OFFSETS:.*]] = arith.addi %[[COL]], %[[ROW]] : vector<4xindex>
+// CHECK: %[[ZERO:.*]] = arith.constant 0 : index
 // CHECK: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[SRC]] {{\[\[}}0, 1]] : tensor<3x2xf32> into tensor<6xf32>
-// CHECK: %[[GATHER:.*]] = vector.gather %[[COLLAPSED]][%[[ZERO]]] [%[[OFFSETS]]], %[[MASK]], %[[PASS_THRU]] : tensor<6xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+// CHECK: %[[GATHER:.*]] = vector.gather %[[COLLAPSED]][%[[ZERO]]] [%{{.*}}], %[[MASK]], %{{.*}} : tensor<6xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
 // CHECK: vector.mask %[[MASK]] { vector.transfer_write %[[GATHER]],
 
 module attributes {transform.with_named_sequence} {
@@ -585,7 +576,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // Each source dimension fits in int64, but the flattened extent does not.
-func.func @gather_source_element_count_overflow(
+func.func @negative_gather_from_overflowing_source(
     %src: tensor<3037000500x3037000500xf32>, %out: tensor<2xf32>) -> tensor<2xf32> {
   %c0 = arith.constant 0 : index
   %result = linalg.generic {
@@ -600,15 +591,20 @@ func.func @gather_source_element_count_overflow(
   return %result : tensor<2xf32>
 }
 
-// CHECK-LABEL: func.func @gather_source_element_count_overflow(
-// CHECK-NOT: vector.
-// CHECK: linalg.generic
-// CHECK: tensor.extract
-// CHECK-NOT: vector.
-// CHECK: return
+// CHECK-LABEL: func.func @negative_gather_from_overflowing_source(
+// CHECK-SAME: %[[SRC:.*]]: tensor<3037000500x3037000500xf32>, %[[OUT:.*]]: tensor<2xf32>
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %[[RESULT:.*]] = linalg.generic
+// CHECK-NEXT: ^bb0(%{{.*}}: f32):
+// CHECK-NEXT: %[[I:.*]] = linalg.index 0 : index
+// CHECK-NEXT: %[[VALUE:.*]] = tensor.extract %[[SRC]][%[[I]], %[[ZERO]]]
+// CHECK-NEXT: linalg.yield %[[VALUE]] : f32
+// CHECK-NEXT: } -> tensor<2xf32>
+// CHECK-NEXT: return %[[RESULT]] : tensor<2xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    // Suppress the expected vectorization failure to check unchanged payload IR.
     transform.sequence %root : !transform.any_op failures(suppress) {
     ^bb0(%scope: !transform.any_op):
       %target = transform.structured.match ops{["linalg.generic"]} in %scope
@@ -623,7 +619,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // Contiguous reads do not require a flattened source.
-func.func @contiguous_source_element_count_overflow(
+func.func @contiguous_extract_from_overflowing_source(
     %src: tensor<3037000500x3037000500xf32>, %out: tensor<2xf32>) -> tensor<2xf32> {
   %c0 = arith.constant 0 : index
   %result = linalg.generic {
@@ -638,7 +634,7 @@ func.func @contiguous_source_element_count_overflow(
   return %result : tensor<2xf32>
 }
 
-// CHECK-LABEL: func.func @contiguous_source_element_count_overflow(
+// CHECK-LABEL: func.func @contiguous_extract_from_overflowing_source(
 // CHECK-SAME: %[[SRC:.*]]: tensor<3037000500x3037000500xf32>,
 // CHECK-NOT: tensor.collapse_shape
 // CHECK: vector.transfer_read %[[SRC]]{{.*}} : tensor<3037000500x3037000500xf32>, vector<2xf32>
@@ -650,6 +646,103 @@ module attributes {transform.with_named_sequence} {
     %target = transform.structured.match ops{["linalg.generic"]} in %root
       : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %target vectorize_nd_extract : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Reject the unsupported reduction before classifying the extract. The enlarged
+// vector size must not make access analysis assume a non-unit loop dimension.
+func.func @negative_unsupported_reduction_with_overflowing_extract_source(
+    %src: tensor<3037000500x3037000500xf32>, %indices: tensor<1xindex>,
+    %out: tensor<f32>) -> tensor<f32> {
+  %c0 = arith.constant 0 : index
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(i) -> (i)>, affine_map<(i) -> ()>],
+    iterator_types = ["reduction"]
+  } ins(%indices : tensor<1xindex>) outs(%out : tensor<f32>) {
+  ^bb0(%index: index, %unused: f32):
+    %i = linalg.index 0 : index
+    %col = arith.addi %index, %i : index
+    %value = tensor.extract %src[%c0, %col]
+      : tensor<3037000500x3037000500xf32>
+    linalg.yield %value : f32
+  } -> tensor<f32>
+  return %result : tensor<f32>
+}
+
+// CHECK-LABEL: func.func @negative_unsupported_reduction_with_overflowing_extract_source(
+// CHECK-SAME: %[[SRC:.*]]: tensor<3037000500x3037000500xf32>,
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %[[RESULT:.*]] = linalg.generic
+// CHECK-NEXT: ^bb0(%[[INDEX:.*]]: index, %{{.*}}: f32):
+// CHECK-NEXT: %[[I:.*]] = linalg.index 0 : index
+// CHECK-NEXT: %[[COL:.*]] = arith.addi %[[INDEX]], %[[I]] : index
+// CHECK-NEXT: %[[VALUE:.*]] = tensor.extract %[[SRC]][%[[ZERO]], %[[COL]]]
+// CHECK-NEXT: linalg.yield %[[VALUE]] : f32
+// CHECK-NEXT: } -> tensor<f32>
+// CHECK-NEXT: return %[[RESULT]] : tensor<f32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    // Suppress the expected vectorization failure to check unchanged payload IR.
+    transform.sequence %root : !transform.any_op failures(suppress) {
+    ^bb0(%scope: !transform.any_op):
+      %target = transform.structured.match ops{["linalg.generic"]} in %scope
+        : (!transform.any_op) -> !transform.any_op
+      transform.structured.vectorize %target vector_sizes [2] vectorize_nd_extract
+        : !transform.any_op
+      transform.yield
+    }
+    transform.yield
+  }
+}
+
+// -----
+
+// Reject the op without inits before classifying the extract. The enlarged
+// vector size must not make access analysis assume a non-unit loop dimension.
+func.func @negative_no_inits_with_overflowing_extract_source(
+    %src: tensor<3037000500x3037000500xf32>, %indices: tensor<1xindex>) {
+  %c0 = arith.constant 0 : index
+  linalg.generic {
+    indexing_maps = [affine_map<(i) -> (i)>],
+    iterator_types = ["parallel"]
+  } ins(%indices : tensor<1xindex>) {
+  ^bb0(%index: index):
+    %i = linalg.index 0 : index
+    %col = arith.addi %index, %i : index
+    %value = tensor.extract %src[%c0, %col]
+      : tensor<3037000500x3037000500xf32>
+    linalg.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @negative_no_inits_with_overflowing_extract_source(
+// CHECK-SAME: %[[SRC:.*]]: tensor<3037000500x3037000500xf32>,
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: ^bb0(%[[INDEX:.*]]: index):
+// CHECK-NEXT: %[[I:.*]] = linalg.index 0 : index
+// CHECK-NEXT: %[[COL:.*]] = arith.addi %[[INDEX]], %[[I]] : index
+// CHECK-NEXT: tensor.extract %[[SRC]][%[[ZERO]], %[[COL]]]
+// CHECK-NEXT: linalg.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    // Suppress the expected vectorization failure to check unchanged payload IR.
+    transform.sequence %root : !transform.any_op failures(suppress) {
+    ^bb0(%scope: !transform.any_op):
+      %target = transform.structured.match ops{["linalg.generic"]} in %scope
+        : (!transform.any_op) -> !transform.any_op
+      transform.structured.vectorize %target vector_sizes [2] vectorize_nd_extract
+        : !transform.any_op
+      transform.yield
+    }
     transform.yield
   }
 }

@@ -2,6 +2,7 @@
 // DEFINE: %{lower} = mlir-opt -test-transform-dialect-erase-schedule \
 // DEFINE:   -one-shot-bufferize=bufferize-function-boundaries \
 // DEFINE:   -buffer-deallocation-pipeline -test-lower-to-llvm
+// The non-contiguous source requires memrefCopy when bufferizing the collapse.
 // DEFINE: %{run} = mlir-runner -e main -entry-point-result=f32 -O0 \
 // DEFINE:   -shared-libs=%mlir_c_runner_utils
 

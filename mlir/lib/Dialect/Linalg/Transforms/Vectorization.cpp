@@ -31,6 +31,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
@@ -1188,32 +1189,28 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   auto passThruConstantOp = arith::ConstantOp::create(
       rewriter, loc, rewriter.getZeroAttr(resultType));
 
-  // Base indices are currently set to 0. We will need to re-visit if more
-  // generic scenarios are to be supported.
-  SmallVector<Value> baseIndices(
-      extractOp.getIndices().size(),
-      arith::ConstantIndexOp::create(rewriter, loc, 0));
-
   VectorMemoryAccessKind memAccessKind =
       getTensorExtractMemoryAccessPattern(extractOp, linalgOp, resultType);
 
   // 1. Handle gather access
   if (memAccessKind == VectorMemoryAccessKind::Gather) {
+    // Gather offsets are linearized, so the base has a single zero index.
+    Value baseIndex = arith::ConstantIndexOp::create(rewriter, loc, 0);
     Value offset = calculateGatherOffset(rewriter, state, extractOp, bvm);
 
     // vector.gather adds each element of its index vector to the innermost
     // base coordinate. Flatten the source to match the linearized indices.
     Value source = extractOp.getTensor();
-    auto sourceType = cast<RankedTensorType>(source.getType());
+    auto sourceType = extractOp.getTensor().getType();
     if (sourceType.getRank() > 1) {
-      SmallVector<ReassociationIndices> reassociation{
-          llvm::to_vector<2>(llvm::seq<int64_t>(0, sourceType.getRank()))};
+      ReassociationIndices reassociation =
+          llvm::to_vector<2>(llvm::seq<int64_t>(0, sourceType.getRank()));
       // Infer the type without an encoding that may depend on the source rank.
       auto collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
-          sourceType, reassociation);
-      source = tensor::CollapseShapeOp::create(rewriter, loc, collapsedType,
-                                               source, reassociation);
-      baseIndices.resize(1);
+          sourceType, {reassociation});
+      source = tensor::CollapseShapeOp::create(
+          rewriter, loc, collapsedType, source,
+          ArrayRef<ReassociationIndices>{reassociation});
     }
 
     // vector.gather is not maskable, so the iteration space mask (if any) is
@@ -1222,10 +1219,9 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     if (!mask)
       mask = maskConstantOp;
 
-    // Generate the gather load
-    Operation *gatherOp =
-        vector::GatherOp::create(rewriter, loc, resultType, source, baseIndices,
-                                 offset, mask, passThruConstantOp);
+    Operation *gatherOp = vector::GatherOp::create(
+        rewriter, loc, resultType, source, ValueRange{baseIndex}, offset,
+        mask, passThruConstantOp);
 
     LDBG() << "Vectorised as gather load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp, gatherOp};
@@ -1507,21 +1503,6 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   SetVector<Value> valuesSet;
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
-
-  if (linalgOp.getNumDpsInits() == 0)
-    return failure();
-
-  // A static gather source needs a flattened extent that fits in int64.
-  for (auto extractOp : block->getOps<tensor::ExtractOp>()) {
-    auto sourceType = extractOp.getTensor().getType();
-    if (sourceType.hasStaticShape() &&
-        !ShapedType::tryGetNumElements(sourceType.getShape()) &&
-        getTensorExtractMemoryAccessPattern(
-            extractOp, linalgOp,
-            state.getCanonicalVecType(extractOp.getType())) ==
-            VectorMemoryAccessKind::Gather)
-      return failure();
-  }
 
   // 3. Turn all BBArgs into vector.transfer_read / load.
   Location loc = linalgOp.getLoc();
@@ -2297,6 +2278,64 @@ static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
   return success();
 }
 
+/// Converts affine.apply Ops to arithmetic operations.
+static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
+  OpBuilder::InsertionGuard g(rewriter);
+  auto toReplace = linalgOp.getBlock()->getOps<affine::AffineApplyOp>();
+
+  for (auto op : make_early_inc_range(toReplace)) {
+    rewriter.setInsertionPoint(op);
+    auto expanded = affine::expandAffineExpr(
+        rewriter, op->getLoc(), op.getAffineMap().getResult(0),
+        op.getOperands().take_front(op.getAffineMap().getNumDims()),
+        op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
+    rewriter.replaceOp(op, expanded);
+  }
+}
+
+/// Rejects gathers from static sources whose element count overflows int64:
+/// the gather path flattens its source.
+static LogicalResult
+vectorizeGatherSourcePrecondition(LinalgOp linalgOp,
+                                  ArrayRef<int64_t> inputVectorSizes) {
+  auto hasOverflowingSource = [](tensor::ExtractOp extractOp) {
+    auto sourceType = extractOp.getTensor().getType();
+    return sourceType.hasStaticShape() &&
+           !ShapedType::tryGetNumElements(sourceType.getShape());
+  };
+  if (!llvm::any_of(linalgOp.getBlock()->getOps<tensor::ExtractOp>(),
+                    hasOverflowingSource))
+    return success();
+
+  SmallVector<int64_t> vectorShape(inputVectorSizes);
+  if (vectorShape.empty())
+    vectorShape = linalgOp.getStaticLoopRanges();
+  if (ShapedType::isDynamicShape(vectorShape))
+    return failure();
+  auto vectorType =
+      VectorType::get(vectorShape, IndexType::get(linalgOp.getContext()));
+
+  // Reject before initializing vectorization state or expanding affine.apply
+  // in the original IR: a failed rewrite must leave it unchanged. Classify
+  // accesses on a normalized copy only when a source extent overflows.
+  OwningOpRef<Operation *> normalizedOp(linalgOp->clone());
+  auto normalizedLinalgOp = cast<LinalgOp>(normalizedOp.get());
+  IRRewriter rewriter(linalgOp.getContext());
+  convertAffineApply(rewriter, normalizedLinalgOp);
+  for (auto extractOp :
+       normalizedLinalgOp.getBlock()->getOps<tensor::ExtractOp>()) {
+    // Only gathers need a flattened source extent that fits in int64.
+    if (hasOverflowingSource(extractOp) &&
+        getTensorExtractMemoryAccessPattern(extractOp, normalizedLinalgOp,
+                                            vectorType) ==
+            VectorMemoryAccessKind::Gather) {
+      LDBG() << "Gather source element count overflows int64: " << extractOp;
+      return failure();
+    }
+  }
+  return success();
+}
+
 static LogicalResult vectorizeLinalgOpPrecondition(
     LinalgOp linalgOp, ArrayRef<int64_t> inputVectorSizes,
     bool vectorizeNDExtract, bool flatten1DDepthwiseConv) {
@@ -2305,6 +2344,11 @@ static LogicalResult vectorizeLinalgOpPrecondition(
         return llvm::is_contained(linalgOp.getShape(&operand), 0);
       }))
     return failure();
+  // Vectorized results are written to the inits.
+  if (linalgOp.getNumDpsInits() == 0) {
+    LDBG() << "precondition failed: no inits";
+    return failure();
+  }
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty() &&
       failed(vector::isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
@@ -2599,21 +2643,6 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
       .Default(failure());
 }
 
-/// Converts affine.apply Ops to arithmetic operations.
-static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
-  OpBuilder::InsertionGuard g(rewriter);
-  auto toReplace = linalgOp.getBlock()->getOps<affine::AffineApplyOp>();
-
-  for (auto op : make_early_inc_range(toReplace)) {
-    rewriter.setInsertionPoint(op);
-    auto expanded = affine::expandAffineExpr(
-        rewriter, op->getLoc(), op.getAffineMap().getResult(0),
-        op.getOperands().take_front(op.getAffineMap().getNumDims()),
-        op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
-    rewriter.replaceOp(op, expanded);
-  }
-}
-
 bool mlir::linalg::hasVectorizationImpl(Operation *op) {
   return isa<linalg::LinalgOp, tensor::PadOp, linalg::PackOp, linalg::UnPackOp,
              tensor::InsertSliceOp>(op);
@@ -2639,6 +2668,13 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
   // Initialize vectorization state.
   VectorizationState state(rewriter);
   if (auto linalgOp = dyn_cast<linalg::LinalgOp>(op)) {
+    // Only the generic path lowers tensor.extract to gathers.
+    bool vectorizeAsGeneric =
+        !isaConvolutionOpInterface(linalgOp) &&
+        !(createNamedContraction && isa<ContractionOpInterface>(op));
+    if (vectorizeAsGeneric &&
+        failed(vectorizeGatherSourcePrecondition(linalgOp, inputVectorSizes)))
+      return failure();
     if (failed(state.initState(rewriter, linalgOp, inputVectorSizes,
                                inputScalableVecDims,
                                assumeDynamicDimsMatchVecSizes))) {
