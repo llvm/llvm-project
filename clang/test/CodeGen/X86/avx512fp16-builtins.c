@@ -12,6 +12,42 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
+// Only the low half-precision lane participates in scalar comparisons.
+#define CMP_PH(X) ((__m128h){X, 0.0f16, 0.0f16, 0.0f16,               \
+                               0.0f16, 0.0f16, 0.0f16, 0.0f16})
+
+#define TEST_FP16_COMI_PRED(PRED, A, B, EXPECTED)                           \
+  TEST_CONSTEXPR(_mm_comi_sh(CMP_PH(A), CMP_PH(B), PRED) == EXPECTED)
+
+TEST_FP16_COMI_PRED(_CMP_EQ_OQ, 1.0f16, 1.0f16, 1);
+TEST_FP16_COMI_PRED(_CMP_LT_OQ, 1.0f16, 2.0f16, 1);
+TEST_FP16_COMI_PRED(_CMP_LE_OQ, 1.0f16, 1.0f16, 1);
+TEST_FP16_COMI_PRED(_CMP_GT_OQ, 2.0f16, 1.0f16, 1);
+TEST_FP16_COMI_PRED(_CMP_GE_OQ, 1.0f16, 1.0f16, 1);
+TEST_FP16_COMI_PRED(_CMP_NEQ_UQ, 1.0f16, 2.0f16, 1);
+TEST_FP16_COMI_PRED(_CMP_EQ_OQ, (_Float16)__builtin_nanf(""), 1.0f16, 0);
+TEST_FP16_COMI_PRED(_CMP_NEQ_UQ, (_Float16)__builtin_nanf(""), 1.0f16, 1);
+
+TEST_CONSTEXPR(_mm_comi_round_sh(CMP_PH(1.0f16), CMP_PH(1.0f16),
+                                 _CMP_EQ_OQ, _MM_FROUND_NO_EXC) == 1);
+
+#define TEST_FP16_COMI(NAME, A, B, EXPECTED)                                \
+  TEST_CONSTEXPR(_mm_comi##NAME##_sh(CMP_PH(A), CMP_PH(B)) == EXPECTED);    \
+  TEST_CONSTEXPR(_mm_ucomi##NAME##_sh(CMP_PH(A), CMP_PH(B)) == EXPECTED)
+
+TEST_FP16_COMI(eq, 1.0f16, 1.0f16, 1);
+TEST_FP16_COMI(lt, 1.0f16, 2.0f16, 1);
+TEST_FP16_COMI(le, 1.0f16, 1.0f16, 1);
+TEST_FP16_COMI(gt, 2.0f16, 1.0f16, 1);
+TEST_FP16_COMI(ge, 1.0f16, 1.0f16, 1);
+TEST_FP16_COMI(neq, 1.0f16, 2.0f16, 1);
+TEST_FP16_COMI(eq, (_Float16)__builtin_nanf(""), 1.0f16, 0);
+TEST_FP16_COMI(neq, (_Float16)__builtin_nanf(""), 1.0f16, 1);
+
+#undef TEST_FP16_COMI
+#undef TEST_FP16_COMI_PRED
+#undef CMP_PH
+
 _Float16 test_mm512_cvtsh_h(__m512h __A) {
   // CHECK-LABEL: test_mm512_cvtsh_h
   // CHECK: extractelement <32 x half> %{{.*}}, i32 0
