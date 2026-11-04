@@ -2521,11 +2521,16 @@ bool llvm::collectCompressedPtrs(
         SCEVParameterRewriter::rewrite(SE.getSCEV(Ptr), SE, PhiMap);
 
     // Check the pointer is described by an add recurrence with a step matching
-    // the access type size.
-    unsigned AccessSize = DL.getTypeAllocSize(AccessTy).getFixedValue();
+    // the access type size. Scalable vector types have no fixed allocation
+    // size, so bail out on them; the caller reports the conditional induction
+    // as unsupported.
+    TypeSize AccessSize = DL.getTypeAllocSize(AccessTy);
+    if (AccessSize.isScalable())
+      return nullptr;
     if (!match(PtrSCEV,
-               m_scev_AffineAddRec(m_SCEV(), m_scev_SpecificInt(AccessSize),
-                                   m_SpecificLoop(&L))))
+               m_scev_AffineAddRec(
+                   m_SCEV(), m_scev_SpecificInt(AccessSize.getFixedValue()),
+                   m_SpecificLoop(&L))))
       return nullptr;
 
     return cast<SCEVAddRecExpr>(PtrSCEV);
