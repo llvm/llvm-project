@@ -142,9 +142,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -217,9 +217,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count decremented. The object now has a +1 retain count</string>
+     <string>Reference count decremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count decremented. The object now has a +1 retain count</string>
+     <string>Reference count decremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -561,9 +561,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -636,9 +636,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count decremented. The object now has a +1 retain count</string>
+     <string>Reference count decremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count decremented. The object now has a +1 retain count</string>
+     <string>Reference count decremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1234,9 +1234,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1431,9 +1431,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1786,9 +1786,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -11097,9 +11097,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -11348,9 +11348,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -15108,9 +15108,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -17206,9 +17206,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -19481,9 +19481,9 @@
      </array>
      <key>depth</key><integer>1</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>event</string>
@@ -21406,9 +21406,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -22334,9 +22334,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -22588,9 +22588,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -22838,9 +22838,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -23104,9 +23104,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +1 retain count</string>
+     <string>Reference count incremented; the object now has a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -25457,9 +25457,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -25744,9 +25744,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
      <key>message</key>
-     <string>Reference count incremented. The object now has a +2 retain count</string>
+     <string>Reference count incremented; the object now has a +2 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>

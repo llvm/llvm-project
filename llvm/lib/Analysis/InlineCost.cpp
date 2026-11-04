@@ -1158,10 +1158,16 @@ public:
 };
 
 // Return true if CB is the sole call to local function Callee.
+//
+// A linkonce_odr function marked likely_module_local counts as local too: no
+// other module is expected to reference it, so we expect inlining the sole call
+// to turn the original dead.
 static bool isSoleCallToLocalFunction(const CallBase &CB,
                                       const Function &Callee) {
-  return Callee.hasLocalLinkage() && Callee.hasOneLiveUse() &&
-         &Callee == CB.getCalledFunction();
+  bool Local = Callee.hasLocalLinkage() ||
+               (Callee.hasLinkOnceODRLinkage() &&
+                Callee.hasFnAttribute(Attribute::LikelyModuleLocal));
+  return Local && Callee.hasOneLiveUse() && &Callee == CB.getCalledFunction();
 }
 
 class InlineCostFeaturesAnalyzer final : public CallAnalyzer {
@@ -2231,7 +2237,15 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
       !match(&I, m_FNegOrFSubNegZero(m_Value())))
     onCallPenalty();
 
-  return false;
+  // Free binary operators are, in practice, often fused vector idioms and logic
+  // on i1 conditions. Skip the TTI query, which is comparatively expensive, for
+  // the scalar operations that dominate most code.
+  Type *Ty = I.getType();
+  if (!Ty->isVectorTy() && !Ty->isIntegerTy(1))
+    return false;
+
+  return TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+         TargetTransformInfo::TCC_Free;
 }
 
 bool CallAnalyzer::visitFNeg(UnaryOperator &I) {

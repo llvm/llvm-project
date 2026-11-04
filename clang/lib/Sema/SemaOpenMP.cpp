@@ -3855,14 +3855,33 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants) {
-  assert(TraitInfos.size() == Variants.size() &&
+  // Without an 'otherwise' clause, the last variant is the implicit one.
+  bool HasImplicitOtherwise = Variants.size() == TraitInfos.size() + 1;
+  assert((HasImplicitOtherwise || Variants.size() == TraitInfos.size()) &&
          "Expected one variant per metadirective clause");
-  // TODO Phase 3: Build OMPMetaDirective AST node holding all variants.
-  // TODO Phase 4: Codegen - generate runtime if-else chain.
-  // Temporary stub: return the first variant until OMPMetaDirective exists.
-  if (Variants.empty())
-    return StmtError();
-  return Variants.front();
+  SmallVector<OMPTraitInfo *, 4> AllTraitInfos(TraitInfos);
+  if (HasImplicitOtherwise)
+    AllTraitInfos.push_back(&getASTContext().getNewOMPTraitInfo());
+  // The user condition of each variant; null for 'otherwise'.
+  SmallVector<Expr *, 4> Conditions;
+  for (OMPTraitInfo *TI : AllTraitInfos) {
+    Expr *Cond = nullptr;
+    TI->anyScoreOrCondition([&](Expr *&E, bool IsScore) {
+      if (!IsScore)
+        Cond = E;
+      return !IsScore;
+    });
+    if (Cond) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(Cond->getExprLoc(), Cond);
+      if (Val.isInvalid())
+        return StmtError();
+      Cond = SemaRef.MakeFullExpr(Val.get()).get();
+    }
+    Conditions.push_back(Cond);
+  }
+  return OMPMetaDirective::Create(getASTContext(), StartLoc, EndLoc, Variants,
+                                  Conditions, AllTraitInfos,
+                                  HasImplicitOtherwise);
 }
 
 OMPRequiresDecl *
@@ -4755,6 +4774,10 @@ public:
     // Loop transformation directives do not introduce data sharing
     VisitStmt(S);
   }
+
+  // A metadirective has no associated statement; visit its variants and
+  // conditions.
+  void VisitOMPMetaDirective(OMPMetaDirective *S) { VisitStmt(S); }
 
   void VisitCallExpr(CallExpr *S) {
     for (Stmt *C : S->arguments()) {
@@ -9637,6 +9660,26 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
   // 1]).
   if (NeedToReorganize) {
     Diff = Lower;
+
+    // (Lower - Step [+ 1]) may be negative. Compute it in at least Upper's
+    // width: in a narrower unsigned type it would wrap around and then be
+    // zero-extended in the subtraction from Upper, giving a wrong number of
+    // iterations, e.g. for
+    //   for (unsigned i = 0; i < (size_t)N; i += 2)
+    QualType LowerTy = Lower->getType();
+    QualType UpperTy = Upper->getType();
+    if (!LowerTy->isDependentType() && !UpperTy->isDependentType() &&
+        LowerTy->isIntegerType() && UpperTy->isIntegerType() &&
+        SemaRef.Context.getTypeSize(LowerTy) <
+            SemaRef.Context.getTypeSize(UpperTy)) {
+      QualType WideTy = getIntTypeForBitwidthOrBitInt(
+          SemaRef.Context, SemaRef.Context.getTypeSize(UpperTy),
+          UpperTy->hasSignedIntegerRepresentation());
+      Diff = SemaRef.PerformImplicitConversion(Lower, WideTy,
+                                               AssignmentAction::Converting);
+      if (!Diff.isUsable())
+        return nullptr;
+    }
 
     if (RoundToStep) {
       // Lower - Step
@@ -23168,7 +23211,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     DeclRefExpr *PrivateRef = buildDeclRefExpr(SemaRef, Private, Type, ELoc);
     // Build var to save initial value.
     VarDecl *Init = buildVarDecl(SemaRef, ELoc, Type, ".linear.start");
-    Expr *InitExpr;
     DeclRefExpr *Ref = nullptr;
     bool IsBindingDecl = isa<BindingDecl>(D);
     if (!VD && !IsBindingDecl && !SemaRef.CurContext->isDependentContext()) {
@@ -23189,10 +23231,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
         }
       }
     }
-    if (LinKind == OMPC_LINEAR_uval)
-      InitExpr = VD ? VD->getInit() : SimpleRefExpr;
-    else
-      InitExpr = (VD || IsBindingDecl) ? SimpleRefExpr : Ref;
+    // Read the initial value through the list item itself for every modifier;
+    // a 'uval' item is a reference whose referenced value is linear, exactly as
+    // for 'val', and need not have an initializer (e.g. a reference parameter).
+    Expr *InitExpr = Ref ? Ref : SimpleRefExpr;
     SemaRef.AddInitializerToDecl(
         Init, SemaRef.DefaultLvalueConversion(InitExpr).get(),
         /*DirectInit=*/false);
@@ -23270,7 +23312,6 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
   bool HasErrors = false;
   auto CurInit = Clause.inits().begin();
   auto CurPrivate = Clause.privates().begin();
-  OpenMPLinearClauseKind LinKind = Clause.getModifier();
   for (Expr *RefExpr : Clause.varlist()) {
     SourceLocation ELoc;
     SourceRange ERange;
@@ -23298,13 +23339,12 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     }
     Expr *InitExpr = *CurInit;
 
-    // Build privatized reference to the current linear var.
+    // Build privatized reference to the current linear var. The final value is
+    // written back through the variable itself, also for 'uval' references.
     auto *DE = cast<DeclRefExpr>(SimpleRefExpr);
     Expr *CapturedRef;
     if (isa<BindingDecl>(DE->getDecl())) {
       CapturedRef = SimpleRefExpr;
-    } else if (LinKind == OMPC_LINEAR_uval) {
-      CapturedRef = cast<VarDecl>(DE->getDecl())->getInit();
     } else {
       CapturedRef =
           buildDeclRefExpr(SemaRef, cast<VarDecl>(DE->getDecl()),
@@ -24589,24 +24629,24 @@ public:
     return RelevantExpr || Visit(UO->getSubExpr()->IgnoreParenImpCasts());
   }
   bool VisitBinaryOperator(BinaryOperator *BO) {
-    if (SemaRef.getLangOpts().OpenMP < 50 || !BO->getType()->isPointerType()) {
+    // Since OpenMP 5.0 only pointer arithmetic (pointer +/- integer offset)
+    // may lead to the base, which is in the pointer operand.
+    Expr *PtrE = nullptr;
+    if (SemaRef.getLangOpts().OpenMP >= 50 && BO->isAdditiveOp() &&
+        BO->getType()->isPointerType()) {
+      Expr *LE = BO->getLHS()->IgnoreParenImpCasts();
+      Expr *RE = BO->getRHS()->IgnoreParenImpCasts();
+      if (LE->getType()->isPointerType())
+        PtrE = LE;
+      else if (BO->getOpcode() == BO_Add && RE->getType()->isPointerType())
+        PtrE = RE;
+    }
+    if (!PtrE) {
       emitErrorMsg();
       return false;
     }
-
-    // Pointer arithmetic is the only thing we expect to happen here so after we
-    // make sure the binary operator is a pointer type, the only thing we need
-    // to do is to visit the subtree that has the same type as root (so that we
-    // know the other subtree is just an offset)
-    Expr *LE = BO->getLHS()->IgnoreParenImpCasts();
-    Expr *RE = BO->getRHS()->IgnoreParenImpCasts();
-    Components.emplace_back(BO, nullptr, false);
-    assert((LE->getType().getTypePtr() == BO->getType().getTypePtr() ||
-            RE->getType().getTypePtr() == BO->getType().getTypePtr()) &&
-           "Either LHS or RHS have base decl inside");
-    if (BO->getType().getTypePtr() == LE->getType().getTypePtr())
-      return RelevantExpr || Visit(LE);
-    return RelevantExpr || Visit(RE);
+    Components.emplace_back(BO, nullptr, /*IsNonContiguous=*/false);
+    return RelevantExpr || Visit(PtrE);
   }
   bool VisitCXXThisExpr(CXXThisExpr *CTE) {
     assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
