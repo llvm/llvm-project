@@ -11,12 +11,12 @@ typedef int int128_t __attribute__((mode(TI)));
 
 int128_t foo(void) { return 0; }
 
-// X64: define dso_local <2 x i64> @foo()
+// X64: define dso_local void @foo(ptr dead_on_unwind noalias writable sret(i128) align 16 %agg.result)
 // ARM: define dso_local i128 @foo()
 
 int128_t bar(int128_t a, int128_t b) { return a * b; }
 
-// X64: define dso_local <2 x i64> @bar(ptr nofreeobj noundef align 16 dead_on_return dereferenceable(16) %0, ptr nofreeobj noundef align 16 dead_on_return dereferenceable(16) %1)
+// X64: define dso_local void @bar(ptr dead_on_unwind noalias writable sret(i128) align 16 %agg.result, ptr nofreeobj noundef align 16 dead_on_return dereferenceable(16) %0, ptr nofreeobj noundef align 16 dead_on_return dereferenceable(16) %1)
 // ARM: define dso_local i128 @bar(i128 noundef %a, i128 noundef %b)
 
 void vararg(int a, ...) {

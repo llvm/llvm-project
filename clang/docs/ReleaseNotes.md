@@ -157,6 +157,12 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- When using Microsoft x64 calling convention, `__int128` is now returned in
+  memory instead of XMM0, to match the behavior change since GCC 17. The
+  `__vectorcall` and `__regcall` calling conventions, which GCC does not support
+  yet, still return it in registers, but now in integer registers rather than
+  XMM0.
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes

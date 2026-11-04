@@ -3682,31 +3682,14 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
             Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
 
-      // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
-      // Clang matches them for compatibility.
-      if (BT->getKind() == BuiltinType::Int128 ||
-          BT->getKind() == BuiltinType::UInt128)
-        return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
-            llvm::Type::getInt64Ty(getVMContext()), 2));
-
-      // Mingw64 GCC returns f128 via sret, and Clang matches that for
-      // compatibility. This mirrors the X86 backend's CanLowerReturn logic.
-      if (BT->getKind() == BuiltinType::Float128) {
-        auto IsWin64F128StackCC = [this](unsigned CC) -> bool {
-          switch (CC) {
-          case llvm::CallingConv::Win64:
-            return true;
-          case llvm::CallingConv::C:
-            return getTarget().getTriple().isOSWindowsOrUEFI();
-          default:
-            return false;
-          }
-        };
-
-        if (IsWin64F128StackCC(CC))
-          return getNaturalAlignIndirect(
-              Ty, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/false);
-      }
+      // As with mingw64 GCC, these are returned via sret. This mirrors the X86
+      // backend's CanLowerReturn logic. The behavior of GCC has changed since
+      // GCC 17: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78799
+      if (CC == llvm::CallingConv::Win64 ||
+          (CC == llvm::CallingConv::C &&
+           getTarget().getTriple().isOSWindowsOrUEFI()))
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
       break;
 
     default:
