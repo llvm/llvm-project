@@ -2662,7 +2662,8 @@ class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstT
                  Optional<I32>:$random_bits,
                  DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
                  DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
-                 DefaultValuedAttr<BoolAttr, "false">:$relu)> {
+                 DefaultValuedAttr<BoolAttr, "false">:$relu,
+                 DefaultValuedAttr<BoolAttr, "false">:$pzo)> {
   let summary = "Convert two F32 values to packed " # !tolower(dstFormat) # ".";
   let description = [{
     Converts two F32 values to packed }] # !tolower(dstFormat) # [{ format with 
@@ -2679,14 +2680,17 @@ class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstT
     The `relu` attribute clamps negative results to 0.
 
     The `sat` attribute determines saturation behavior.
-    
+
+    The `pzo` attribute, when set, lowers to the '.pzo' variant of the cvt
+    instruction. `pzo` is not supported with the RS rounding mode.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   
   let assemblyFormat = [{
     $src_hi `,` $src_lo oilist(
       `random_bits` `=` $random_bits | `rnd` `=` $rnd
-      | `sat` `=` $sat | `relu` `=` $relu
+      | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
     )
     attr-dict `:` type($dst)
   }];
