@@ -4137,8 +4137,7 @@ Error BitcodeReader::globalCleanup() {
   // string table or the value symbol table has been read, and globalCleanup()
   // can be invoked before the VST is parsed for older bitcode, so wait until
   // then.
-  if (!SeenGUIDList && !UpgradedGUIDs &&
-      (UseStrtab || SeenValueSymbolTable))
+  if (!SeenGUIDList && !UpgradedGUIDs && (UseStrtab || SeenValueSymbolTable))
     upgradeGUIDs();
 
   // Force deallocation of memory for these vectors to favor the client that
@@ -4178,12 +4177,11 @@ void BitcodeReader::attachUpgradedGUIDMetadata(GlobalObject &GO) {
   assert(UpgradedGUIDs);
   if (GO.isDeclaration() || GO.getMetadata(LLVMContext::MD_guid))
     return;
-  std::optional<GlobalValue::GUID> GUID = TheModule->getGUID(&GO);
-  if (!GUID)
-    return;
-  GO.setMetadata(LLVMContext::MD_guid,
-                 MDNode::get(Context, {ConstantAsMetadata::get(ConstantInt::get(
-                                          Type::getInt64Ty(Context), *GUID))}));
+  if (auto GUID = TheModule->getGUID(&GO))
+    GO.setMetadata(
+        LLVMContext::MD_guid,
+        MDNode::get(Context, {ConstantAsMetadata::get(ConstantInt::get(
+                                 Type::getInt64Ty(Context), *GUID))}));
 }
 
 /// Support for lazy parsing of function bodies. This is required if we
