@@ -77,7 +77,7 @@ body:             |
     %2:gpr32 = COPY $w0
     %4:gpr64all = IMPLICIT_DEF
     %3:gpr64 = INSERT_SUBREG %4, %2, %subreg.sub_32
-    %5:gpr64 = SBFMXri killed %3, 0, 31
+    %5:gpr64 = SBFMXri %3, 0, 31
     %0:gpr64all = COPY %5
     %6:gpr64all = COPY %0
     %7:gpr32 = COPY %6.sub_32
