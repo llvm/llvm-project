@@ -1227,6 +1227,12 @@ public:
     return false;
   }
 
+  virtual bool isProfitableToSinkOperands(Instruction *I,
+                                          SmallVectorImpl<Use *> &Ops,
+                                          const LoopInfo *) const {
+    return isProfitableToSinkOperands(I, Ops);
+  }
+
   virtual bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
 
   virtual TargetTransformInfo::VPLegalization

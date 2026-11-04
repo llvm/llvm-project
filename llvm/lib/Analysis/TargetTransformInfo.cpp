@@ -1619,8 +1619,9 @@ bool TargetTransformInfo::hasActiveVectorLength() const {
 }
 
 bool TargetTransformInfo::isProfitableToSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
-  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
+    Instruction *I, SmallVectorImpl<Use *> &OpsToSink,
+    const LoopInfo *LI) const {
+  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink, LI);
 }
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
