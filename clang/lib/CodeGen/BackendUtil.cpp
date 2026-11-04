@@ -680,10 +680,8 @@ static void addSanitizers(const Triple &TargetTriple,
         int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
         bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
 
-        MemorySanitizerOptions options(
-            TrackOrigins, Recover, CompileKernel,
-            CodeGenOpts.SanitizeMemoryParamRetval,
-            CodeGenOpts.SanitizeMergeHandlers.has(Mask));
+        MemorySanitizerOptions options(TrackOrigins, Recover, CompileKernel,
+                                       CodeGenOpts.SanitizeMemoryParamRetval);
         MPM.addPass(MemorySanitizerPass(options));
         if (Level != OptimizationLevel::O0) {
           // MemorySanitizer inserts complex instrumentation that mostly follows
