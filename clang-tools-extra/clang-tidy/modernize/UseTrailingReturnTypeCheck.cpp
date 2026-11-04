@@ -405,6 +405,27 @@ static SourceLocation findLambdaTrailingReturnInsertLoc(
   return {};
 }
 
+// Returns where a parameter clause can be added to a lambda without one, or an
+// invalid location if specifiers or a requires clause come before the body.
+static SourceLocation
+findLambdaParameterClauseInsertLoc(const LambdaExpr *Lambda,
+                                   const SourceManager &SM,
+                                   const LangOptions &LangOpts) {
+  const TemplateParameterList *TemplateParams =
+      Lambda->getTemplateParameterList();
+  const SourceLocation LastTokenLoc =
+      TemplateParams ? TemplateParams->getRAngleLoc()
+                     : Lambda->getIntroducerRange().getEnd();
+
+  const std::optional<Token> NextToken =
+      Lexer::findNextToken(LastTokenLoc, SM, LangOpts);
+  if (!NextToken ||
+      NextToken->getLocation() != Lambda->getBody()->getBeginLoc())
+    return {};
+
+  return Lexer::getLocForEndOfToken(LastTokenLoc, 0, SM, LangOpts);
+}
+
 static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
                            SourceRange ReturnTypeCVRange, const FunctionDecl &F,
                            const FriendDecl *Fr, const ASTContext &Ctx,
@@ -626,6 +647,23 @@ void UseTrailingReturnTypeCheck::diagOnLambda(
   if (ReturnType->isUndeducedAutoType() &&
       TransformLambdas == TransformLambda::AllExceptAuto)
     return;
+
+  // Omitting the parameter clause before a trailing return type is only valid
+  // since C++23.
+  if (!Lambda->hasExplicitParameters() && !getLangOpts().CPlusPlus23) {
+    const SourceLocation ParameterClauseInsertLoc =
+        findLambdaParameterClauseInsertLoc(Lambda, *Result.SourceManager,
+                                           getLangOpts());
+    if (ParameterClauseInsertLoc.isValid())
+      diag(Lambda->getBeginLoc(), "use a trailing return type for this lambda")
+          << FixItHint::CreateInsertion(
+                 ParameterClauseInsertLoc,
+                 "() -> " + ReturnType.getAsString(
+                                Result.Context->getPrintingPolicy()));
+    else
+      diag(Lambda->getBeginLoc(), ErrorMessageOnLambda);
+    return;
+  }
 
   const SourceLocation TrailingReturnInsertLoc =
       findLambdaTrailingReturnInsertLoc(Method, *Result.SourceManager,
