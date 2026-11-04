@@ -492,9 +492,7 @@ define i1 @and_mask3(i32 %conv) {
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[CONV]], 7
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 0
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %and = and i32 %conv, 3

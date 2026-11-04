@@ -10035,6 +10035,16 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   if (!LHSIsTrue)
     LPred = ICmpInst::getInverseCmpPredicate(LPred);
 
+  // A nonzero masked value stays nonzero when more bits are included.
+  const Value *X;
+  const APInt *LMask, *RMask;
+  if (ICmpInst::isEquality(RPred) && match(R1, m_Zero()) &&
+      cmpExcludesZero(LPred, L1) &&
+      match(L0, m_c_And(m_Value(X), m_APInt(LMask))) &&
+      match(R0, m_c_And(m_Specific(X), m_APInt(RMask))) &&
+      (*LMask & *RMask) == *LMask)
+    return RPred == ICmpInst::ICMP_NE;
+
   // We can have non-canonical operands, so try to normalize any common operand
   // to L0/R0.
   if (L0 == R1) {
