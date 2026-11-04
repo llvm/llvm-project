@@ -422,14 +422,13 @@ static Expected<bool> validateOutOfProcess(const CommandOptions &Opts,
   for (const auto &[Name, Value] : Opts.CASPluginOpts)
     PluginOpts.push_back(Name + "=" + Value);
 
-  SmallVector<StringRef> Args{Exec, "validate-if-needed", "--cas",
-                              Opts.CASPath};
+  SmallVector<StringRef> Args{Exec, "validate-if-needed", "--in-process",
+                              "--cas", Opts.CASPath};
   if (!Opts.CASPluginPath.empty()) {
     Args.append({"--fcas-plugin-path", Opts.CASPluginPath});
     for (StringRef PluginOpt : PluginOpts)
       Args.append({"--fcas-plugin-option", PluginOpt});
   }
-  Args.push_back("--in-process");
   if (Opts.CheckHash)
     Args.push_back("--check-hash");
   if (Opts.Force)
