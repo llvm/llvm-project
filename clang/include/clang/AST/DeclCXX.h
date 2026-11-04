@@ -2022,14 +2022,16 @@ private:
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, false, ConstexprSpecKind::Unspecified,
                      TrailingRequiresClause),
-        Ctor(Ctor), ExplicitSpec(ES),
+        CtorAndKind(Ctor, Kind), ExplicitSpec(ES),
         SourceDeductionGuide(GeneratedFrom, SourceKind) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
-    setDeductionCandidateKind(Kind);
   }
 
-  CXXConstructorDecl *Ctor;
+  /// The constructor from which this guide was generated, if any, and the kind
+  /// of the guide that is implicitly generated (used during overload
+  /// resolution).
+  llvm::PointerIntPair<CXXConstructorDecl *, 2, DeductionCandidate> CtorAndKind;
   ExplicitSpecifier ExplicitSpec;
   // The deduction guide, if any, that this deduction guide was generated from,
   // in the case of alias template deduction. The SourceDeductionGuideKind
@@ -2068,7 +2070,9 @@ public:
 
   /// Get the constructor from which this deduction guide was generated, if
   /// this is an implicit deduction guide.
-  CXXConstructorDecl *getCorrespondingConstructor() const { return Ctor; }
+  CXXConstructorDecl *getCorrespondingConstructor() const {
+    return CtorAndKind.getPointer();
+  }
 
   /// Get the deduction guide from which this deduction guide was generated,
   /// if it was generated as part of alias template deduction or from an
@@ -2090,12 +2094,11 @@ public:
   }
 
   void setDeductionCandidateKind(DeductionCandidate K) {
-    FunctionDeclBits.DeductionCandidateKind = static_cast<unsigned char>(K);
+    CtorAndKind.setInt(K);
   }
 
   DeductionCandidate getDeductionCandidateKind() const {
-    return static_cast<DeductionCandidate>(
-        FunctionDeclBits.DeductionCandidateKind);
+    return CtorAndKind.getInt();
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -2767,6 +2770,12 @@ public:
   }
   init_const_reverse_iterator init_rend() const {
     return init_const_reverse_iterator(init_begin());
+  }
+
+  /// The maximum number of base and member initializers a constructor can
+  /// have; this is limited by the width of the NumCtorInitializers bitfield.
+  static constexpr unsigned getMaxNumCtorInitializers() {
+    return DeclContext::CXXConstructorDeclBitfields::MaxNumCtorInitializers;
   }
 
   /// Determine the number of arguments used to initialize the member

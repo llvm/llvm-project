@@ -10244,6 +10244,10 @@ def err_multiple_mem_union_initialization : Error <
 def err_multiple_base_initialization : Error <
   "multiple initializations given for base %0">;
 
+def err_ctor_too_many_initializers : Error<
+  "constructor has too many base and member initializers (%0); the maximum "
+  "is %1">;
+
 def err_mem_init_not_member_or_class : Error<
   "member initializer %0 does not name a non-static data member or base "
   "class">;
