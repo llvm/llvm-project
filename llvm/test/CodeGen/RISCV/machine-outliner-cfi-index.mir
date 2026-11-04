@@ -5,35 +5,26 @@
 # RUN:   -enable-machine-outliner=always -verify-machineinstrs %s -o - \
 # RUN:   | FileCheck %s
 
-# Record how MachineOutliner handles tails whose CFI indices match but whose
-# CFI rules differ. CFI indices are local to each function: index 0 describes
-# CFA offset 16 in f, but CFA offset 32 in g.
+# Check that MachineOutliner keeps tails with different CFI rules separate,
+# even when their CFI indices match. Indices are local to each function:
+# index 0 describes CFA offset 16 in f, but CFA offset 32 in g.
 #
 # f allocates 16 bytes on the stack and g allocates 32. The instructions after
 # the allocation are otherwise identical. Each tail contains all of its
 # function's CFI instructions and ends in a return, so both tails pass the
 # target's existing CFI checks.
 #
-# FIXME: MachineOutliner compares the CFI indices without checking the rules
-# they refer to. It therefore maps these different rules to the same integer
-# and moves both tails into one helper. The helper copies f's CFA offset 16,
-# which is wrong when reached from g, until the stack pointer is restored.
-# MachineOutliner should keep these incompatible tails separate.
+# Comparing only the indices would merge these tails into one helper. That
+# helper would use f's CFA offset 16, which is wrong when reached from g, until
+# the stack pointer is restored. Each function must keep its own CFI rules.
 #
 # CHECK-LABEL: name: f
-# CHECK-NOT: CFI_INSTRUCTION
-# CHECK: PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0
-# CHECK-NOT: CFI_INSTRUCTION
-# CHECK-LABEL: name: g
-# CHECK-NOT: CFI_INSTRUCTION
-# CHECK: PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0
-# CHECK-NOT: CFI_INSTRUCTION
-# CHECK-LABEL: name: OUTLINED_FUNCTION_0
-# CHECK-NOT: CFI_INSTRUCTION def_cfa_offset 32
 # CHECK: CFI_INSTRUCTION def_cfa_offset 16
-# CHECK-NOT: CFI_INSTRUCTION def_cfa_offset 32
 # CHECK: CFI_INSTRUCTION def_cfa_offset 0
-# CHECK-NOT: CFI_INSTRUCTION
+# CHECK-LABEL: name: g
+# CHECK: CFI_INSTRUCTION def_cfa_offset 32
+# CHECK: CFI_INSTRUCTION def_cfa_offset 0
+# CHECK-NOT: name: OUTLINED_FUNCTION_
 
 --- |
   define void @f() #0 { ret void }
