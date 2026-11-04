@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 < %s | FileCheck %s -check-prefix=GFX12
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 < %s | FileCheck %s -check-prefix=GFX12
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=-bvh-ray-tracing-insts < %s | FileCheck %s -check-prefix=GFX12
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=-bvh-ray-tracing-insts < %s | FileCheck %s -check-prefix=GFX12
 
 define amdgpu_ps void @test_bvhcnt() {
 ; GFX12-LABEL: test_bvhcnt:
