@@ -76,7 +76,6 @@ enum class IRMemLocation {
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  LastMem = TargetMem1,
   Last = FPStatus,
 };
 
@@ -335,18 +334,15 @@ public:
 
   /// Whether location represents floating-point environment.
   static bool isFPEnvMemLoc(IRMemLocation Loc) {
-    for (auto L : fpenvLocations())
-      if (Loc == L)
-        return true;
-    return false;
+    return llvm::any_of(fpenvLocations(),
+                        [=](IRMemLocation L) { return L == Loc; });
   }
 
   /// Whether all floating-point locations are not accessed.
   bool doesNotAccessFPEnv() const {
-    for (auto L : fpenvLocations())
-      if (getModRef(L) != ModRefInfo::NoModRef)
-        return false;
-    return true;
+    return llvm::all_of(fpenvLocations(), [=](IRMemLocation L) {
+      return getModRef(L) == ModRefInfo::NoModRef;
+    });
   }
 
   /// Whether this function only (at most) accesses errno memory.
