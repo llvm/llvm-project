@@ -537,7 +537,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
 /// same physical register to the same slot and that register still holds the
 /// value. Returns true if the forwarding was successful, false otherwise.
 bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
-                                                  MachineInstr &Restore) {
+                                                 MachineInstr &Restore) {
   // Establish that Restore and Store are both eligible for forwarding check
   // that physical register, store/load size and stack slot match.
   if (Restore.isBundled() || Store.isBundled())
