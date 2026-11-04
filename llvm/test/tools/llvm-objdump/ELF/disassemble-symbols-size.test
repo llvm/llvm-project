@@ -1,0 +1,91 @@
+## Selected ELF symbols with a nonzero size include code past internal labels
+## but not padding after the symbol. This also applies to dynamic symbols.
+# REQUIRES: x86-registered-target
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --disassemble-symbols=foo %t | FileCheck %s --check-prefix=FOO
+# RUN: llvm-objdump --disassemble=foo %t | FileCheck %s --check-prefix=FOO
+# RUN: yaml2obj -DSYMBOLS=DynamicSymbols %s -o %t.dyn
+# RUN: llvm-objdump --disassemble=foo %t.dyn | FileCheck %s --check-prefix=FOO
+
+# FOO:      <foo>:
+# FOO-NEXT: 1000: 90 nop
+# FOO-NEXT: 1001: 90 nop
+# FOO-NEXT: 1002: c3 retq
+# FOO-NOT:  {{.}}
+
+## Only the selected alias determines the range.
+# RUN: llvm-objdump --disassemble=alias %t | FileCheck %s --check-prefix=ALIAS
+# ALIAS:      <alias>:
+# ALIAS-NEXT: 1000: 90 nop
+# ALIAS-NOT:  {{.}}
+
+## Overlapping selections do not duplicate instructions or lose labels.
+# RUN: llvm-objdump --disassemble-symbols=foo,inner %t | FileCheck %s --check-prefix=OVERLAP
+# OVERLAP:      <foo>:
+# OVERLAP-NEXT: 1000: 90 nop
+# OVERLAP-EMPTY:
+# OVERLAP-NEXT: 0000000000001001 <inner>:
+# OVERLAP-NEXT: 1001: 90 nop
+# OVERLAP-NEXT: 1002: c3 retq
+# OVERLAP-NOT:  {{.}}
+
+## A zero size still ends at the next symbol.
+# RUN: yaml2obj -DSIZE=0 %s -o %t.zero
+# RUN: llvm-objdump --disassemble=foo %t.zero | FileCheck %s --check-prefix=ZERO
+# ZERO:      <foo>:
+# ZERO-NEXT: 1000: 90 nop
+# ZERO-NOT:  {{.}}
+
+## Explicit address limits still apply within the selected range.
+# RUN: llvm-objdump --disassemble=foo --start-address=0x1001 --stop-address=0x1002 %t \
+# RUN:   | FileCheck %s --check-prefix=LIMIT
+# LIMIT:      <foo>:
+# LIMIT-NEXT: 1001: 90 nop
+# LIMIT-NOT:  {{.}}
+
+## An oversized symbol is bounded by the section, without address overflow.
+# RUN: yaml2obj -DSIZE=0xffffffffffffffff %s -o %t.large
+# RUN: llvm-objdump --disassemble=foo %t.large | FileCheck %s --check-prefix=LARGE
+# LARGE:      <foo>:
+# LARGE-NEXT: 1000: 90 nop
+# LARGE-NEXT: 1001: 90 nop
+# LARGE-NEXT: 1002: c3 retq
+# LARGE-NEXT: 1003: cc int3
+# LARGE-NEXT: 1004: cc int3
+# LARGE-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Content: '9090C3CCCC'
+[[SYMBOLS=Symbols]]:
+  - Name:    foo
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value:   0x1000
+    Size:    [[SIZE=3]]
+  - Name:    alias
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value:   0x1000
+    Size:    1
+  - Name:    inner
+    Section: .text
+    Value:   0x1001
+    Size:    1
+  - Name:    next
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value:   0x1004
+    Size:    1
