@@ -22,6 +22,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
@@ -848,6 +849,24 @@ getSectionsConstructStackTop(lower::AbstractConverter &converter) {
   SectionsConstructStackFrame *frame =
       converter.getStateStack().getStackTop<SectionsConstructStackFrame>();
   return frame ? &frame->sectionsConstruct : nullptr;
+}
+
+class DispatchTargetStackFrame
+    : public mlir::StateStackFrameBase<DispatchTargetStackFrame> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DispatchTargetStackFrame)
+
+  explicit DispatchTargetStackFrame(const evaluate::ProcedureRef *target)
+      : target{target} {}
+
+  const evaluate::ProcedureRef *target;
+};
+
+bool Fortran::lower::omp::isDispatchTargetCall(
+    const evaluate::ProcedureRef &proc, lower::AbstractConverter &converter) {
+  auto *frame =
+      converter.getStateStack().getStackTop<DispatchTargetStackFrame>();
+  return frame && frame->target == &proc;
 }
 
 /// Bind objects to their corresponding entry block arguments.
@@ -1858,6 +1877,35 @@ struct OpWithBodyGenInfo {
   int collapseValue = 0;
 };
 
+static bool canAssumeBoundedRecipeEffects(const mlir::Value &variable) {
+  mlir::Type type = variable.getType();
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
+    if (mlir::isa<fir::BoxCharType, fir::BaseBoxType>(refType.getEleTy()))
+      return false;
+  return !fir::isAllocatableType(type) &&
+         !fir::isa_derived(fir::getFortranElementType(type)) &&
+         !fir::isPointerType(type);
+}
+
+static bool canAssumeBoundedRecipeEffects(lower::AbstractConverter &converter,
+                                          const semantics::Symbol &sym) {
+  mlir::Value variable = converter.getSymbolAddress(sym);
+  return variable && canAssumeBoundedRecipeEffects(variable);
+}
+
+static bool
+canAssumeBoundedRecipeEffectsForItem(lower::AbstractConverter &converter,
+                                     const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  if (const auto *common =
+          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
+    return llvm::all_of(common->objects(), [&converter](const auto &member) {
+      return canAssumeBoundedRecipeEffects(converter, *member);
+    });
+  }
+  return canAssumeBoundedRecipeEffects(converter, sym);
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]   op  - the operation the body belongs to.
@@ -1926,6 +1974,17 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
                     Fortran::lower::omp::isLastItemInQueue(item, queue),
                     /*useDelayedPrivatization=*/false, info.symTable);
     tempDsp->processStep1();
+
+    // TODO: omp.single still uses eager privatisation.
+    // Use clauseOps.privateVars inside genSingleOp once
+    // delayedPrivatization is turned on.
+    if (auto singleOp = llvm::dyn_cast<mlir::omp::SingleOp>(op)) {
+      const auto &privateSyms = tempDsp->getAllSymbolsToPrivatize();
+      if (llvm::all_of(privateSyms, [&info](const semantics::Symbol *sym) {
+            return canAssumeBoundedRecipeEffectsForItem(info.converter, *sym);
+          }))
+        singleOp.setPrivateAssumeBoundedRecipeEffects(true);
+    }
   }
 
   if (info.dir == llvm::omp::Directive::OMPD_parallel) {
@@ -2300,9 +2359,10 @@ static void genDispatchClauses(lower::AbstractConverter &converter,
                                const List<Clause> &clauses, mlir::Location loc,
                                mlir::omp::DispatchOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processNocontext(stmtCtx, clauseOps);
+  cp.processNovariants(stmtCtx, clauseOps);
   cp.processNowait(clauseOps);
-  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
-                 clause::Novariants, clause::Nocontext>(
+  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr>(
       loc, llvm::omp::Directive::OMPD_dispatch);
 }
 
@@ -2900,6 +2960,21 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, nameAttr);
 }
 
+class DispatchTargetFinder
+    : public evaluate::AnyTraverse<DispatchTargetFinder,
+                                   const evaluate::ProcedureRef *> {
+public:
+  using Base = evaluate::AnyTraverse<DispatchTargetFinder,
+                                     const evaluate::ProcedureRef *>;
+  DispatchTargetFinder() : Base{*this} {}
+  using Base::operator();
+
+  const evaluate::ProcedureRef *
+  operator()(const evaluate::ProcedureRef &proc) const {
+    return &proc;
+  }
+};
+
 static mlir::omp::DispatchOp genDispatchOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
@@ -2908,6 +2983,17 @@ static mlir::omp::DispatchOp genDispatchOp(
   mlir::omp::DispatchOperands clauseOps;
   genDispatchClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                      clauseOps);
+
+  const evaluate::ProcedureRef *target = nullptr;
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
+    nested.visit(common::visitors{
+        [&](const parser::CallStmt &stmt) { target = &*stmt.typedCall; },
+        [&](const parser::AssignmentStmt &stmt) {
+          target = DispatchTargetFinder{}(stmt.typedAssignment->v->rhs);
+        },
+        [](const auto &) {}});
+  mlir::SaveStateStack<DispatchTargetStackFrame> saveStateStack{
+      converter.getStateStack(), target};
 
   return genOpWithBody<mlir::omp::DispatchOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
@@ -3564,30 +3650,6 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
-static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  const auto *type = ultimate.GetType();
-  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate) &&
-         !semantics::IsPointer(ultimate);
-}
-
-static bool isNonDerivedNonPointer(const mlir::Value &variable) {
-  return !fir::isAllocatableType(variable.getType()) &&
-         !fir::isa_derived(fir::getFortranElementType(variable.getType())) &&
-         !fir::isPointerType(variable.getType());
-}
-
-static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  if (const auto *common =
-          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
-    return llvm::all_of(common->objects(), [](const auto &member) {
-      return isNonDerivedNonPointer(*member);
-    });
-  }
-  return isNonDerivedNonPointer(ultimate);
-}
-
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3657,6 +3719,9 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     clauseOps.reductionByref.push_back(true);
     clauseOps.reductionSyms.push_back(
         mlir::SymbolRefAttr::get(builder.getContext(), declRedOp.getSymName()));
+    if (!clauseOps.reductionMods.empty())
+      clauseOps.reductionMods.push_back(mlir::omp::ReductionModifierAttr::get(
+          builder.getContext(), mlir::omp::ReductionModifier::defaultmod));
     reductionObjects.push_back(Object{{nullptr, std::nullopt}});
   }
 
@@ -3685,8 +3750,8 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // once delayedPrivatization is turned on.
   const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
   if (!privateSyms.empty() &&
-      llvm::all_of(privateSyms, [](const semantics::Symbol *sym) {
-        return isNonDerivedNonPointerItem(*sym);
+      llvm::all_of(privateSyms, [&converter](const semantics::Symbol *sym) {
+        return canAssumeBoundedRecipeEffectsForItem(converter, *sym);
       }))
     sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
 
@@ -3695,7 +3760,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         // The generated conditional-lastprivate recipe only accesses the
         // intrinsic value and index fields of its accumulator, despite its
         // record type.
-        return variable == lpAlloca || isNonDerivedNonPointer(variable);
+        return variable == lpAlloca || canAssumeBoundedRecipeEffects(variable);
       }))
     sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
@@ -3945,11 +4010,18 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::SingleOperands clauseOps;
   genSingleClauses(converter, semaCtx, item->clauses, loc, clauseOps);
 
-  return genOpWithBody<mlir::omp::SingleOp>(
+  auto singleOp = genOpWithBody<mlir::omp::SingleOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_single)
           .setClauses(&item->clauses),
       queue, item, clauseOps);
+
+  if (llvm::all_of(clauseOps.copyprivateVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    singleOp.setCopyprivateAssumeBoundedRecipeEffects(true);
+
+  return singleOp;
 }
 
 static bool isDuplicateMappedSymbol(
@@ -5050,6 +5122,10 @@ static mlir::omp::WsloopOp genStandaloneDo(
     wsloopClauseOps.reductionByref.push_back(true);
     wsloopClauseOps.reductionSyms.push_back(
         mlir::SymbolRefAttr::get(builder.getContext(), declRedOp.getSymName()));
+    if (!wsloopClauseOps.reductionMods.empty())
+      wsloopClauseOps.reductionMods.push_back(
+          mlir::omp::ReductionModifierAttr::get(
+              builder.getContext(), mlir::omp::ReductionModifier::defaultmod));
 
     // Use a null-symbol Object as a sentinel — bindPrivateLike will skip it.
     wsloopReductionObjects.push_back(Object{{nullptr, std::nullopt}});
@@ -6780,8 +6856,7 @@ static void genOpenMPDeclareReductionImpl(
                           parser::CharBlock mangledOpName =
                               semantics::MakeNameFromOperator(
                                   ReductionProcessor::toParserIntrinsicOperator(
-                                      intrOp),
-                                  semaCtx);
+                                      intrOp));
                           redSymPtr = semantics::omp::FindUserReductionSymbol(
                               converter.getCurrentScope(), mangledOpName);
                         }
@@ -8090,11 +8165,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
             prefValues.push_back(*constVal);
           } else if (auto str =
                          evaluate::GetScalarConstantValue<evaluate::Ascii>(
-                             pref)) {
+                             evaluate::AsciiKind, pref)) {
             // Map standard OpenMP foreign-runtime identifier strings to
             // their well-known integer values (OpenMP 5.1, Table 22.2).
             auto frId = llvm::StringSwitch<std::optional<int64_t>>(
-                            llvm::StringRef(*str).lower())
+                            str->AsStringRef()->lower())
                             .Case("cuda", 1)
                             .Case("cuda_driver", 2)
                             .Case("opencl", 3)
@@ -8384,8 +8459,9 @@ static void genErrorDirective(lower::AbstractConverter &converter,
   MaybeExpr messageExpr;
   if (args.message) {
     if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
-      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
-        message = *val;
+      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *expr))
+        message = val->AsStdString();
       else
         messageExpr = expr;
     }

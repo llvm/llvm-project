@@ -5378,19 +5378,21 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
             CanSimplify())
           return P;
 
-        // getelementptr V, (ashr (sub P, V), C) -> P if P points to a type of
-        // size 1 << C.
-        if (match(Indices[0], m_AShr(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
-                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
-                                     m_ConstantInt(C))) &&
+        // getelementptr V, (ashr exact (sub P, V), C) -> P if P points to a
+        // type of size 1 << C.
+        if (match(Indices[0],
+                  m_Exact(m_AShr(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                       m_PtrToIntOrAddr(m_Specific(Ptr))),
+                                 m_ConstantInt(C)))) &&
             TyAllocSize == 1ULL << C && CanSimplify())
           return P;
 
-        // getelementptr V, (sdiv (sub P, V), C) -> P if P points to a type of
-        // size C.
-        if (match(Indices[0], m_SDiv(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
-                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
-                                     m_SpecificInt(TyAllocSize))) &&
+        // getelementptr V, (sdiv exact (sub P, V), C) -> P if P points to a
+        // type of size C.
+        if (match(Indices[0],
+                  m_Exact(m_SDiv(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                       m_PtrToIntOrAddr(m_Specific(Ptr))),
+                                 m_SpecificInt(TyAllocSize)))) &&
             CanSimplify())
           return P;
       }
@@ -5786,10 +5788,8 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
   // provenance.
   Value *Ptr, *X;
   if (CastOpc == Instruction::PtrToAddr &&
-      match(Op,
-            m_PtrAdd(m_Value(Ptr),
-                     m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
-      X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
+      match(Op, m_PtrAdd(Q.DL, m_Value(Ptr),
+                         m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))))
     return X;
 
   // Fold a value-preserving zext/sext of a trunc back to the original value.
