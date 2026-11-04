@@ -109,18 +109,20 @@ static constexpr auto skipFileScopeDirectives{
         (globalDirective >> ok || misplacedOpenACCDeclare))};
 
 // At file scope, DECLARE may start an unnamed main program. Complete
-// specification statements and assignments take precedence over procedure
-// headers, including CUDA ATTRIBUTES statements with keyword-shaped object
-// names. After fixed-form blank removal, REAL FUNCTION F can be a scalar
-// declaration and REAL FUNCTION F(N) can be an array declaration. A CUDA header
-// without arguments can be an ATTRIBUTES statement; these cases retain normal
-// parser diagnostics. In fixed form, MODULE SUBROUTINE S can also start module
-// SUBROUTINES. The lookahead recognizes a prefixed header, but program-unit
-// parsing gives the module interpretation priority.
+// specification statements, assignments, and construct names take precedence
+// over procedure headers, including CUDA ATTRIBUTES statements with
+// keyword-shaped object names. After fixed-form blank removal, REAL FUNCTION F
+// can be a scalar declaration and REAL FUNCTION F(N) can be an array
+// declaration. A CUDA header without arguments can be an ATTRIBUTES statement;
+// these cases retain normal parser diagnostics. In fixed form, MODULE
+// SUBROUTINE S can also start module SUBROUTINES. The lookahead recognizes a
+// prefixed header, but program-unit parsing gives the module interpretation
+// priority.
 static constexpr auto externalSubprogramStmt{skipStuffBeforeStatement >>
     !statement(Parser<OtherSpecificationStmt>{}) >>
     !statement(typeDeclarationStmt) >> !statement(assignmentStmt) >>
-    maybe(label) >> (validFunctionStmt >> ok || subroutineStmt >> ok)};
+    maybe(label) >> !(name / ":") >>
+    (validFunctionStmt >> ok || subroutineStmt >> ok)};
 
 // Recognize procedure headers using the ordinary SUBROUTINE parser, including
 // its recovery, so a malformed header still gets a DECLARE placement error.
