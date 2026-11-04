@@ -55,6 +55,11 @@ static MachineBasicBlock::iterator
 getPHIIncomingInsertPoint(MachineBasicBlock &MBB, Register Reg,
                           const MachineRegisterInfo &MRI) {
   auto InsertPt = MBB.getFirstTerminatorForward();
+  // Only invoke regions need the extra definition-order check.
+  if (InsertPt == MBB.end() ||
+      InsertPt->getOpcode() != TargetOpcode::G_INVOKE_REGION_START)
+    return InsertPt;
+
   MachineInstr *Def = MRI.getVRegDef(Reg);
   if (Def->getParent() == &MBB)
     for (auto I = InsertPt, E = MBB.end(); I != E; ++I)
