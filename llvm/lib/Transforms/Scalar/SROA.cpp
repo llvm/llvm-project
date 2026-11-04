@@ -6477,7 +6477,13 @@ static std::optional<TwoSlotGEP> analyzeTwoSlotGEP(GetElementPtrInst &GEP,
     if (AccessSize.isScalable())
       return std::nullopt;
 
-    LoadStoreSize = std::max(LoadStoreSize, AccessSize.getFixedValue());
+    if (!LoadStoreSize)
+      LoadStoreSize = AccessSize.getFixedValue();
+
+    // With differently sized accesses we could duplicate the GEPs for each size
+    // class, but for now we keep it simple.
+    if (LoadStoreSize != AccessSize.getFixedValue())
+      return std::nullopt;
   }
 
   if (!LoadStoreSize)
