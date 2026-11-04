@@ -89,6 +89,11 @@ class GICombineRule<dag defs, dag a0, dag a1 = (empty_action)> : GICombine {
   // Maximum number of permutations of this rule that can be emitted.
   // Set to -1 to disable the limit.
   int MaxPermutations = 16;
+
+  // If set, the rule only applies when every instruction built by its 'apply'
+  // MIR patterns is legal (or we are before the legalizer), using the types of
+  // that instruction's operands. Those operands must be defined by the 'match'.
+  bit CheckApplyLegality = false;
 }
 
 def gi_mo;
