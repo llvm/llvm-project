@@ -1,4 +1,5 @@
 add_clang_library(MLIRCIRInterfaces
+  ASTAttrInterfaces.cpp
   CIROpInterfaces.cpp
   CIRLoopOpInterface.cpp
   CIRTypeInterfaces.cpp
@@ -8,12 +9,10 @@ add_clang_library(MLIRCIRInterfaces
 
   DEPENDS
   MLIRCIREnumsGen
-  MLIRCIRTypeInterfacesIncGen
-  MLIRCIRLoopOpInterfaceIncGen
-  MLIRCIROpInterfacesIncGen
+  mlir-headers
 
   LINK_LIBS
-  ${dialect_libs}
   MLIRIR
+  MLIRPtrMemorySpaceInterfaces
   MLIRSupport
  )

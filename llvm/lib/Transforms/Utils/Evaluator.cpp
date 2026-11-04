@@ -296,7 +296,13 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           DL, Offset, /* AllowNonInbounds */ true));
       Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()));
       auto *GV = dyn_cast<GlobalVariable>(Ptr);
-      if (!GV || !GV->hasUniqueInitializer()) {
+      if (!GV || !GV->hasUniqueInitializer() || GV->hasSection()) {
+        // hasUniqueInitializer() ensures that if we modify the initializer,
+        // the modified initializer will be used.
+        //
+        // We can't modify global variables with an explicit section because
+        // it might not be legal to emit the resulting initializer (for
+        // example, emitting a non-zero value into a BSS section).
         LLVM_DEBUG(dbgs() << "Store is not to global with unique initializer: "
                           << *Ptr << "\n");
         return false;
@@ -431,10 +437,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           Value *PtrArg = getVal(II->getArgOperand(1));
           Value *Ptr = PtrArg->stripPointerCasts();
           if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr)) {
-            Type *ElemTy = GV->getValueType();
+            uint64_t MinGVSize = GV->getGlobalSize(DL);
             if (!Size->isMinusOne() &&
-                Size->getValue().getLimitedValue() >=
-                    DL.getTypeStoreSize(ElemTy)) {
+                Size->getValue().getLimitedValue() >= MinGVSize) {
               Invariants.insert(GV);
               LLVM_DEBUG(dbgs() << "Found a global var that is an invariant: "
                                 << *GV << "\n");
@@ -527,16 +532,13 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     } else if (CurInst->isTerminator()) {
       LLVM_DEBUG(dbgs() << "Found a terminator instruction.\n");
 
-      if (BranchInst *BI = dyn_cast<BranchInst>(CurInst)) {
-        if (BI->isUnconditional()) {
-          NextBB = BI->getSuccessor(0);
-        } else {
-          ConstantInt *Cond =
-            dyn_cast<ConstantInt>(getVal(BI->getCondition()));
-          if (!Cond) return false;  // Cannot determine.
-
-          NextBB = BI->getSuccessor(!Cond->getZExtValue());
-        }
+      if (UncondBrInst *BI = dyn_cast<UncondBrInst>(CurInst)) {
+        NextBB = BI->getSuccessor(0);
+      } else if (CondBrInst *BI = dyn_cast<CondBrInst>(CurInst)) {
+        ConstantInt *Cond = dyn_cast<ConstantInt>(getVal(BI->getCondition()));
+        if (!Cond)
+          return false; // Cannot determine.
+        NextBB = BI->getSuccessor(!Cond->getZExtValue());
       } else if (SwitchInst *SI = dyn_cast<SwitchInst>(CurInst)) {
         ConstantInt *Val =
           dyn_cast<ConstantInt>(getVal(SI->getCondition()));

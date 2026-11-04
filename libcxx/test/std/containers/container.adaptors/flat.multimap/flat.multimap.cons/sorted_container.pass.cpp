@@ -39,18 +39,18 @@ template <template <class...> class KeyContainer, template <class...> class Valu
 constexpr void test() {
   {
     // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type)
-    using M                 = std::flat_multimap<int, char, std::less<int>, KeyContainer<int>, ValueContainer<char>>;
+    using M                 = std::flat_multimap<int, long, std::less<int>, KeyContainer<int>, ValueContainer<long>>;
     KeyContainer<int> ks    = {1, 4, 4, 10};
-    ValueContainer<char> vs = {4, 3, 2, 1};
+    ValueContainer<long> vs = {4, 3, 2, 1};
     auto ks2                = ks;
     auto vs2                = vs;
 
     auto m = M(std::sorted_equivalent, ks, vs);
-    assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, long>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
     m = M(std::sorted_equivalent, std::move(ks), std::move(vs));
     assert(ks.empty()); // it was moved-from
     assert(vs.empty()); // it was moved-from
-    assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, long>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
 
     // explicit(false)
     M m2 = {std::sorted_equivalent, std::move(ks2), std::move(vs2)};
@@ -60,16 +60,16 @@ constexpr void test() {
     // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type)
     // non-default container, comparator and allocator type
     using Ks = KeyContainer<int, min_allocator<int>>;
-    using Vs = ValueContainer<char, min_allocator<char>>;
-    using M  = std::flat_multimap<int, char, std::greater<int>, Ks, Vs>;
+    using Vs = ValueContainer<long, min_allocator<long>>;
+    using M  = std::flat_multimap<int, long, std::greater<int>, Ks, Vs>;
     Ks ks    = {10, 4, 4, 1};
     Vs vs    = {1, 2, 3, 4};
     auto m   = M(std::sorted_equivalent, ks, vs);
-    assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{10, 1}, {4, 2}, {4, 3}, {1, 4}}));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, long>>{{10, 1}, {4, 2}, {4, 3}, {1, 4}}));
     m = M(std::sorted_equivalent, std::move(ks), std::move(vs));
     assert(ks.empty()); // it was moved-from
     assert(vs.empty()); // it was moved-from
-    assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{10, 1}, {4, 2}, {4, 3}, {1, 4}}));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, long>>{{10, 1}, {4, 2}, {4, 3}, {1, 4}}));
   }
   {
     // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type)
@@ -81,19 +81,19 @@ constexpr void test() {
     auto m  = M(std::sorted_equivalent, std::move(ks), std::move(vs));
     assert(ks.empty()); // it was moved-from
     assert(vs.empty()); // it was moved-from
-    assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, long>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
     assert(m.keys().get_allocator() == A(4));
     assert(m.values().get_allocator() == A(5));
   }
   {
     // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type, key_compare)
     using C                 = test_less<int>;
-    using M                 = std::flat_multimap<int, char, C, KeyContainer<int>, ValueContainer<char>>;
+    using M                 = std::flat_multimap<int, long, C, KeyContainer<int>, ValueContainer<long>>;
     KeyContainer<int> ks    = {1, 4, 4, 10};
-    ValueContainer<char> vs = {4, 3, 2, 1};
+    ValueContainer<long> vs = {4, 3, 2, 1};
 
     auto m = M(std::sorted_equivalent, ks, vs, C(4));
-    assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, long>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
     assert(m.key_comp() == C(4));
 
     // explicit(false)
@@ -109,7 +109,7 @@ constexpr void test() {
     KeyContainer<int, A> ks   = {1, 4, 4, 10};
     ValueContainer<int, A> vs = {4, 3, 2, 1};
     auto m                    = M(std::sorted_equivalent, ks, vs, C(4), A(5));
-    assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, long>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
     assert(m.key_comp() == C(4));
     assert(m.keys().get_allocator() == A(5));
     assert(m.values().get_allocator() == A(5));
@@ -130,7 +130,7 @@ constexpr void test() {
     auto m  = M(std::sorted_equivalent, ks, vs, A(6)); // replaces the allocators
     assert(!ks.empty());                               // it was an lvalue above
     assert(!vs.empty());                               // it was an lvalue above
-    assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
+    assert(std::ranges::equal(m, std::vector<std::pair<int, long>>{{1, 4}, {4, 3}, {4, 2}, {10, 1}}));
     assert(m.keys().get_allocator() == A(6));
     assert(m.values().get_allocator() == A(6));
 

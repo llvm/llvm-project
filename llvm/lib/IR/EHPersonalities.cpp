@@ -47,10 +47,12 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
       .Case("__C_specific_handler", EHPersonality::MSVC_TableSEH)
       .Case("__CxxFrameHandler3", EHPersonality::MSVC_CXX)
       .Case("ProcessCLRException", EHPersonality::CoreCLR)
-      .Case("rust_eh_personality", EHPersonality::Rust)
+      // Rust mangles its personality function, so we can't test exact equality.
+      .EndsWith("rust_eh_personality", EHPersonality::Rust)
       .Case("__gxx_wasm_personality_v0", EHPersonality::Wasm_CXX)
       .Case("__xlcxx_personality_v1", EHPersonality::XL_CXX)
       .Case("__zos_cxx_personality_v2", EHPersonality::ZOS_CXX)
+      .Case("_d_eh_personality_wasm", EHPersonality::Wasm_D)
       .Default(EHPersonality::Unknown);
 }
 
@@ -77,13 +79,16 @@ StringRef llvm::getEHPersonalityName(EHPersonality Pers) {
   case EHPersonality::CoreCLR:
     return "ProcessCLRException";
   case EHPersonality::Rust:
-    return "rust_eh_personality";
+    llvm_unreachable(
+        "Cannot get personality name of Rust personality, since it is mangled");
   case EHPersonality::Wasm_CXX:
     return "__gxx_wasm_personality_v0";
   case EHPersonality::XL_CXX:
     return "__xlcxx_personality_v1";
   case EHPersonality::ZOS_CXX:
     return "__zos_cxx_personality_v2";
+  case EHPersonality::Wasm_D:
+    return "_d_eh_personality_wasm";
   case EHPersonality::Unknown:
     llvm_unreachable("Unknown EHPersonality!");
   }

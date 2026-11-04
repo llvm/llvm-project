@@ -17,18 +17,35 @@ namespace mlir {
 namespace scf {
 namespace {
 
+static AffineExpr getTripCountExpr(OpFoldResult lb, OpFoldResult ub,
+                                   OpFoldResult step,
+                                   ValueBoundsConstraintSet &cstr) {
+  AffineExpr lbExpr = cstr.getExpr(lb);
+  AffineExpr ubExpr = cstr.getExpr(ub);
+  AffineExpr stepExpr = cstr.getExpr(step);
+  AffineExpr tripCountExpr =
+      AffineExpr(ubExpr - lbExpr).ceilDiv(stepExpr); // (ub - lb) / step
+  return tripCountExpr;
+}
+
+static void populateIVBounds(OpFoldResult lb, OpFoldResult ub,
+                             OpFoldResult step, Value iv,
+                             ValueBoundsConstraintSet &cstr) {
+  cstr.bound(iv) >= cstr.getExpr(lb);
+  cstr.bound(iv) < cstr.getExpr(ub);
+  // iv <= lb + ((ub-lb)/step - 1) * step
+  // This bound does not replace the `iv < ub` constraint mentioned above,
+  // since constraints involving the multiplication of two constraint set
+  // dimensions are not supported.
+  AffineExpr tripCountMinusOne =
+      getTripCountExpr(lb, ub, step, cstr) - cstr.getExpr(1);
+  AffineExpr computedUpperBound =
+      cstr.getExpr(lb) + AffineExpr(tripCountMinusOne * cstr.getExpr(step));
+  cstr.bound(iv) <= computedUpperBound;
+}
+
 struct ForOpInterface
     : public ValueBoundsOpInterface::ExternalModel<ForOpInterface, ForOp> {
-
-  static AffineExpr getTripCountExpr(scf::ForOp forOp,
-                                     ValueBoundsConstraintSet &cstr) {
-    AffineExpr lbExpr = cstr.getExpr(forOp.getLowerBound());
-    AffineExpr ubExpr = cstr.getExpr(forOp.getUpperBound());
-    AffineExpr stepExpr = cstr.getExpr(forOp.getStep());
-    AffineExpr tripCountExpr =
-        AffineExpr(ubExpr - lbExpr).ceilDiv(stepExpr); // (ub - lb) / step
-    return tripCountExpr;
-  }
 
   /// Populate bounds of values/dimensions for iter_args/OpResults. If the
   /// value/dimension size does not change in an iteration, we can deduce that
@@ -84,10 +101,21 @@ struct ForOpInterface
     if (dim.has_value() || isa<BlockArgument>(value))
       return;
 
+    // The closed form below holds only if the loop runs at least once (the
+    // trip count is not clamped at 0) and the bounds are compared as signed
+    // integers.
+    if (forOp.getUnsignedCmp() ||
+        !cstr.populateAndCompare(
+            forOp.getUpperBound(),
+            ValueBoundsConstraintSet::ComparisonOperator::GT,
+            forOp.getLowerBound()))
+      return;
+
     // `value` is result of `forOp`, we can prove that:
     // %result == %init_arg + trip_count * (%yielded_value - %iter_arg).
     // Where trip_count is (ub - lb) / step.
-    AffineExpr tripCountExpr = getTripCountExpr(forOp, cstr);
+    AffineExpr tripCountExpr = getTripCountExpr(
+        forOp.getLowerBound(), forOp.getUpperBound(), forOp.getStep(), cstr);
     AffineExpr oneIterAdvanceExpr =
         cstr.getExpr(yieldedValue) - cstr.getExpr(iterArg);
     cstr.bound(value) ==
@@ -99,19 +127,11 @@ struct ForOpInterface
     auto forOp = cast<ForOp>(op);
 
     if (value == forOp.getInductionVar()) {
-      cstr.bound(value) >= forOp.getLowerBound();
-      cstr.bound(value) < forOp.getUpperBound();
-      // iv <= lb + ((ub-lb)/step - 1) * step
-      // This bound does not replace the `iv < ub` constraint mentioned above,
-      // since constraints involving the multiplication of two constraint set
-      // dimensions are not supported.
-      AffineExpr tripCountMinusOne =
-          getTripCountExpr(forOp, cstr) - cstr.getExpr(1);
-      AffineExpr computedUpperBound =
-          cstr.getExpr(forOp.getLowerBound()) +
-          AffineExpr(tripCountMinusOne * cstr.getExpr(forOp.getStep()));
-      cstr.bound(value) <= computedUpperBound;
-      return;
+      // The IV bounds are signed; unsigned loops are not modeled.
+      if (forOp.getUnsignedCmp())
+        return;
+      return populateIVBounds(forOp.getLowerBound(), forOp.getUpperBound(),
+                              forOp.getStep(), value, cstr);
     }
 
     // Handle iter_args and OpResults.
@@ -141,11 +161,9 @@ struct ForallOpInterface
     assert(blockArg.getArgNumber() < forallOp.getInductionVars().size() &&
            "expected index value to be an induction var");
     int64_t idx = blockArg.getArgNumber();
-    // TODO: Take into account step size.
-    AffineExpr lb = cstr.getExpr(forallOp.getMixedLowerBound()[idx]);
-    AffineExpr ub = cstr.getExpr(forallOp.getMixedUpperBound()[idx]);
-    cstr.bound(value) >= lb;
-    cstr.bound(value) < ub;
+    return populateIVBounds(forallOp.getMixedLowerBound()[idx],
+                            forallOp.getMixedUpperBound()[idx],
+                            forallOp.getMixedStep()[idx], value, cstr);
   }
 
   void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,

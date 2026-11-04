@@ -10,6 +10,7 @@ program test_notify_wait
   implicit none
 
   ! notify_type variables must be coarrays
+  !ERROR: Variable 'non_coarray' with NOTIFY_TYPE must be a coarray
   type(notify_type) :: non_coarray
 
   type(notify_type) :: notify_var[*], notify_array(2)[*]

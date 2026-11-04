@@ -90,10 +90,8 @@ void BrainF::header(LLVMContext& C) {
   ConstantInt *val_mem = ConstantInt::get(C, APInt(32, memtotal));
   Type* IntPtrTy = IntegerType::getInt32Ty(C);
   Type* Int8Ty = IntegerType::getInt8Ty(C);
-  Constant* allocsize = ConstantExpr::getSizeOf(Int8Ty);
-  allocsize = ConstantExpr::getTruncOrBitCast(allocsize, IntPtrTy);
-  ptr_arr = builder->CreateMalloc(IntPtrTy, Int8Ty, allocsize, val_mem, nullptr,
-                                  "arr");
+  Constant* allocsize = ConstantInt::get(IntPtrTy, 1);
+  ptr_arr = builder->CreateMalloc(IntPtrTy, allocsize, val_mem, nullptr, "arr");
 
   //call void @llvm.memset.p0i8.i32(i8 *%arr, i8 0, i32 %d, i1 0)
   {
@@ -154,31 +152,13 @@ void BrainF::header(LLVMContext& C) {
     //brainf.aberror:
     aberrorbb = BasicBlock::Create(C, label, brainf_func);
 
-    //call i32 @puts(i8 *getelementptr([%d x i8] *@aberrormsg, i32 0, i32 0))
-    {
-      Constant *zero_32 = Constant::getNullValue(IntegerType::getInt32Ty(C));
-
-      Constant *gep_params[] = {
-        zero_32,
-        zero_32
-      };
-
-      Constant *msgptr = ConstantExpr::
-        getGetElementPtr(aberrormsg->getValueType(), aberrormsg, gep_params);
-
-      Value *puts_params[] = {
-        msgptr
-      };
-
-      CallInst *puts_call =
-        CallInst::Create(puts_func,
-                         puts_params,
-                         "", aberrorbb);
-      puts_call->setTailCall(false);
-    }
+    // call i32 @puts(ptr @aberrormsg)
+    CallInst *puts_call =
+        CallInst::Create(puts_func, {aberrormsg}, "", aberrorbb);
+    puts_call->setTailCall(false);
 
     //br label %brainf.end
-    BranchInst::Create(endbb, aberrorbb);
+    UncondBrInst::Create(endbb, aberrorbb);
   }
 }
 
@@ -443,7 +423,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
 
       //br i1 %test.%d, label %main.%d, label %main.%d
       BasicBlock *bb_0 = BasicBlock::Create(C, label, brainf_func);
-      BranchInst::Create(bb_0, oldbb, test_0, testbb);
+      CondBrInst::Create(test_0, bb_0, oldbb, testbb);
 
       //main.%d:
       builder->SetInsertPoint(bb_0);

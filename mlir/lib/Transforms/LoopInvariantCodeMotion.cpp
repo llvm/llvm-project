@@ -17,8 +17,8 @@
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LOOPINVARIANTCODEMOTION
-#define GEN_PASS_DEF_LOOPINVARIANTSUBSETHOISTING
+#define GEN_PASS_DEF_LOOPINVARIANTCODEMOTIONPASS
+#define GEN_PASS_DEF_LOOPINVARIANTSUBSETHOISTINGPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -27,12 +27,12 @@ using namespace mlir;
 namespace {
 /// Loop invariant code motion (LICM) pass.
 struct LoopInvariantCodeMotion
-    : public impl::LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
+    : public impl::LoopInvariantCodeMotionPassBase<LoopInvariantCodeMotion> {
   void runOnOperation() override;
 };
 
 struct LoopInvariantSubsetHoisting
-    : public impl::LoopInvariantSubsetHoistingBase<
+    : public impl::LoopInvariantSubsetHoistingPassBase<
           LoopInvariantSubsetHoisting> {
   void runOnOperation() override;
 };
@@ -54,12 +54,4 @@ void LoopInvariantSubsetHoisting::runOnOperation() {
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
     (void)hoistLoopInvariantSubsets(rewriter, loopLike);
   });
-}
-
-std::unique_ptr<Pass> mlir::createLoopInvariantCodeMotionPass() {
-  return std::make_unique<LoopInvariantCodeMotion>();
-}
-
-std::unique_ptr<Pass> mlir::createLoopInvariantSubsetHoistingPass() {
-  return std::make_unique<LoopInvariantSubsetHoisting>();
 }

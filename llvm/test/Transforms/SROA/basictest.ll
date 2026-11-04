@@ -110,7 +110,7 @@ define i64 @test2_addrspacecast_gep_offset(i64 %X) {
 ; CHECK-LABEL: @test2_addrspacecast_gep_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [10 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i16 2
+; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 2
 ; CHECK-NEXT:    [[A_SROA_0_2_GEPB_SROA_CAST:%.*]] = addrspacecast ptr [[A_SROA_0_2_GEPB_SROA_IDX]] to ptr addrspace(1)
 ; CHECK-NEXT:    store i64 [[X:%.*]], ptr addrspace(1) [[A_SROA_0_2_GEPB_SROA_CAST]], align 1
 ; CHECK-NEXT:    br label [[L2:%.*]]
@@ -529,7 +529,6 @@ entry:
 define ptr @test10() {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr null to i64
 ; CHECK-NEXT:    ret ptr null
 ;
 entry:
@@ -1083,20 +1082,19 @@ define void @PR14059.1(ptr %d) {
 ; CHECK-NEXT:    [[X_SROA_0_I_2_INSERT_MASK:%.*]] = and i64 [[TMP2]], -281474976645121
 ; CHECK-NEXT:    [[X_SROA_0_I_2_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_2_INSERT_MASK]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[X_SROA_0_I_2_INSERT_INSERT]] to double
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_COPYLOAD:%.*]] = load i32, ptr [[D:%.*]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double 0.000000e+00 to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double 0.000000e+00 to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_EXT:%.*]] = zext i32 [[X_SROA_0_I_4_COPYLOAD]] to i64
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_SHIFT:%.*]] = shl i64 [[X_SROA_0_I_4_INSERT_EXT]], 32
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK3:%.*]] = and i64 [[TMP5]], 4294967295
+; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK3:%.*]] = and i64 [[TMP4]], 4294967295
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT4:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK3]], [[X_SROA_0_I_4_INSERT_SHIFT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT4]] to double
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double [[TMP6]] to i64
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK:%.*]] = and i64 [[TMP7]], 4294967295
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT4]] to double
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double [[TMP5]] to i64
+; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK:%.*]] = and i64 [[TMP6]], 4294967295
 ; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK]], 4607182418800017408
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT]] to double
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT]] to double
 ; CHECK-NEXT:    [[ACCUM_REAL_I:%.*]] = load double, ptr [[D]], align 8
-; CHECK-NEXT:    [[ADD_R_I:%.*]] = fadd double [[ACCUM_REAL_I]], [[TMP8]]
+; CHECK-NEXT:    [[ADD_R_I:%.*]] = fadd double [[ACCUM_REAL_I]], [[TMP7]]
 ; CHECK-NEXT:    store double [[ADD_R_I]], ptr [[D]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -1332,10 +1330,10 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    switch i32 [[SIZE:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[SRC_GEP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i32 3
@@ -1520,7 +1518,7 @@ define void @PR16651.2(<2 x float> %val, i1 %c1) {
 ;
 ; CHECK-MODIFY-CFG-LABEL: @PR16651.2(
 ; CHECK-MODIFY-CFG-NEXT:  entry:
-; CHECK-MODIFY-CFG-NEXT:    [[TV1_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VAL:%.*]], i32 0
+; CHECK-MODIFY-CFG-NEXT:    [[TV1_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
 ; CHECK-MODIFY-CFG-NEXT:    br i1 [[C1:%.*]], label [[ENTRY_THEN:%.*]], label [[ENTRY_CONT:%.*]]
 ; CHECK-MODIFY-CFG:       entry.then:
 ; CHECK-MODIFY-CFG-NEXT:    [[COND105_I_I_THEN_VAL:%.*]] = load float, ptr null, align 8

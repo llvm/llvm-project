@@ -26,6 +26,7 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
 public:
@@ -44,15 +45,16 @@ public:
     __create_what(2);
   }
 
-  _LIBCPP_HIDE_FROM_ABI const path& path1() const noexcept { return __storage_->__p1_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const path& path1() const noexcept { return __storage_->__p1_; }
 
-  _LIBCPP_HIDE_FROM_ABI const path& path2() const noexcept { return __storage_->__p2_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const path& path2() const noexcept { return __storage_->__p2_; }
 
-  _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
   ~filesystem_error() override; // key function
 
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL
-  const char* what() const noexcept override { return __storage_->__what_.c_str(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override {
+    return __storage_->__what_.c_str();
+  }
 
   void __create_what(int __num_paths);
 
@@ -79,6 +81,7 @@ template <class... _Args>
 }
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17

@@ -12,6 +12,7 @@
 
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "Xtensa.h"
+#include "XtensaSelectionDAGInfo.h"
 #include "XtensaTargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"

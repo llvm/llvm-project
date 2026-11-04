@@ -1,14 +1,9 @@
-; RUN: opt %loadNPMPolly -disable-output -polly-invariant-load-hoisting \
-; RUN: -polly-allow-dereference-of-all-function-parameters \
-; RUN: '-passes=print<polly-function-scops>' < %s 2>&1 | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadNPMPolly -disable-output -plugin-arg=Polly,-polly-invariant-load-hoisting -plugin-arg=Polly,-polly-allow-dereference-of-all-function-parameters '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops < %s 2>&1 | FileCheck %s --check-prefix=SCOP
 
-; RUN: opt %loadNPMPolly -S -polly-invariant-load-hoisting \
-; RUN: -passes=polly-codegen < %s 2>&1 | FileCheck %s --check-prefix=CODE-RTC
+; RUN: opt %loadNPMPolly -S -plugin-arg=Polly,-polly-invariant-load-hoisting '-passes=polly<no-default-opts>' < %s 2>&1 | FileCheck %s --check-prefix=CODE-RTC
 
 
-; RUN: opt %loadNPMPolly -S -polly-invariant-load-hoisting \
-; RUN: -polly-allow-dereference-of-all-function-parameters \
-; RUN: -passes=polly-codegen < %s 2>&1 | FileCheck %s --check-prefix=CODE
+; RUN: opt %loadNPMPolly -S -plugin-arg=Polly,-polly-invariant-load-hoisting -plugin-arg=Polly,-polly-allow-dereference-of-all-function-parameters '-passes=polly<no-default-opts>' < %s 2>&1 | FileCheck %s --check-prefix=CODE
 
 ; SCOP:      Function: hoge
 ; SCOP-NEXT: Region: %bb15---%bb37

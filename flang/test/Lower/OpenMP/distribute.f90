@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPdistribute_simple
 subroutine distribute_simple()
@@ -104,7 +104,7 @@ subroutine distribute_allocate()
   ! CHECK-NEXT: omp.loop_nest
   do i = 1, 10
     x = i
-    ! CHECK: omp.yield 
+    ! CHECK: omp.yield
   end do
 
   !$omp end distribute

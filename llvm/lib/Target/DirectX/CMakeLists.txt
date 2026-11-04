@@ -2,12 +2,12 @@ add_llvm_component_group(DirectX)
 
 set(LLVM_TARGET_DEFINITIONS DirectX.td)
 
-tablegen(LLVM DirectXGenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM DirectXGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM DirectXGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(DirectXGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(DirectXGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(DirectXGenRegisterInfo.inc -gen-register-info)
 
 set(LLVM_TARGET_DEFINITIONS DXIL.td)
-tablegen(LLVM DXILOperation.inc -gen-dxil-operation)
+llvm_tablegen(DXILOperation.inc -gen-dxil-operation)
 
 add_public_tablegen_target(DirectXCommonTableGen)
 
@@ -19,25 +19,29 @@ add_llvm_target(DirectXCodeGen
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
   DirectXTargetTransformInfo.cpp
-  DXContainerGlobals.cpp
   DXILCBufferAccess.cpp
+  DXILContainerGlobals.cpp
+  DXILContainerPDB.cpp
   DXILDataScalarization.cpp
   DXILFinalizeLinkage.cpp
   DXILForwardHandleAccesses.cpp
   DXILFlattenArrays.cpp
   DXILIntrinsicExpansion.cpp
+  DXILMemIntrinsics.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
   DXILPostOptimizationValidation.cpp
   DXILPrepare.cpp
   DXILPrettyPrinter.cpp
+  DXILRemoveUnusedResources.cpp
   DXILResourceAccess.cpp
   DXILResourceImplicitBinding.cpp
   DXILShaderFlags.cpp
+  DXILSignatureAnalysis.cpp
   DXILTranslateMetadata.cpp
   DXILRootSignature.cpp
   DXILLegalizePass.cpp
-  
+
   LINK_COMPONENTS
   Analysis
   AsmPrinter
@@ -45,10 +49,12 @@ add_llvm_target(DirectXCodeGen
   CodeGen
   CodeGenTypes
   Core
+  DebugInfoMSF
+  DebugInfoPDB
   DXILBitWriter
   DirectXDesc
   DirectXInfo
-  DirectXPointerTypeAnalysis
+  DirectXIRPasses
   FrontendHLSL
   IPO
   MC

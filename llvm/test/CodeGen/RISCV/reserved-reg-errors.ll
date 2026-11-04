@@ -7,7 +7,7 @@
 ; RUN: not llc -mtriple=riscv32 -mattr=+reserve-x10 < %s 2>&1 | FileCheck %s -check-prefix=X10
 ; RUN: not llc -mtriple=riscv64 -mattr=+reserve-x10 < %s 2>&1 | FileCheck %s -check-prefix=X10
 ; RUN: llc -mtriple=riscv32 -mattr=+reserve-x11 < %s 2>&1 | FileCheck %s -check-prefix=X11
-; RUN: llc -mtriple=riscv32 -mattr=+reserve-x11 < %s 2>&1 | FileCheck %s -check-prefix=X11
+; RUN: llc -mtriple=riscv64 -mattr=+reserve-x11 < %s 2>&1 | FileCheck %s -check-prefix=X11
 ; RUN: llc -mtriple=riscv32 <%s
 ; RUN: llc -mtriple=riscv64 <%s
 

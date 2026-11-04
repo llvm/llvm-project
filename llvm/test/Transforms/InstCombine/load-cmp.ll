@@ -4,6 +4,10 @@
 @G16 = internal constant [10 x i16] [i16 35, i16 82, i16 69, i16 81, i16 85,
   i16 73, i16 82, i16 69, i16 68, i16 0]
 
+@G16_vec = internal constant [10 x <2 x i16>] [<2 x i16> <i16 35, i16 35>,<2 x i16> <i16 82, i16 82>,
+  <2 x i16> <i16 69, i16 69>, <2 x i16> <i16 81, i16 81>, <2 x i16> <i16 85, i16 85>,<2 x i16> <i16 73, i16 73>,
+  <2 x i16> <i16 82, i16 82>,<2 x i16> <i16 69, i16 69>,<2 x i16> <i16 68, i16 68>, <2 x i16> <i16 0, i16 0>]
+
 @G16_as1 = internal addrspace(1) constant [10 x i16] [i16 35, i16 82, i16 69, i16 81, i16 85,
   i16 73, i16 82, i16 69, i16 68, i16 0]
 
@@ -128,9 +132,8 @@ define i1 @test3_noarrayty(i32 %X) {
 
 define i1 @test4(i32 %X) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 933
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 933, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %X
@@ -142,9 +145,8 @@ define i1 @test4(i32 %X) {
 define i1 @test4_i16(i16 %X) {
 ; CHECK-LABEL: @test4_i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 933
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 933, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i16 %X
@@ -361,7 +363,7 @@ define i1 @test10_struct_arr_noarrayty(i32 %x) {
 define i1 @pr93017(i64 %idx) {
 ; CHECK-LABEL: @pr93017(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[IDX:%.*]] to i32
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds ptr, ptr @table, i32 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i8], ptr @table, i32 [[TMP1]]
 ; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[V]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -377,9 +379,8 @@ define i1 @pr93017(i64 %idx) {
 ; Mask is 0b10101010
 define i1 @load_vs_array_type_mismatch1(i32 %idx) {
 ; CHECK-LABEL: @load_vs_array_type_mismatch1(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 170
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 170, [[IDX:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds i16, ptr @g_i32_lo, i32 %idx
@@ -393,9 +394,8 @@ define i1 @load_vs_array_type_mismatch1(i32 %idx) {
 ; Mask is 0b01010101
 define i1 @load_vs_array_type_mismatch2(i32 %idx) {
 ; CHECK-LABEL: @load_vs_array_type_mismatch2(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 85
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 85, [[IDX:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds i16, ptr @g_i32_hi, i32 %idx
@@ -462,7 +462,7 @@ define i1 @load_vs_array_type_mismatch_offset2(i32 %idx) {
 
 define i1 @offset_larger_than_stride(i32 %idx) {
 ; CHECK-LABEL: @offset_larger_than_stride(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr getelementptr inbounds nuw (i8, ptr @g_i16_1, i32 4), i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i8], ptr getelementptr inbounds nuw (i8, ptr @g_i16_1, i32 4), i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -492,9 +492,8 @@ define i1 @cmp_load_constant_array_messy(i32 %x){
 ; CHECK-LABEL: @cmp_load_constant_array_messy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0:%.*]], 1073741823
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 373
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 373, [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
 
@@ -508,9 +507,8 @@ entry:
 define i1 @cmp_diff_load_constant_array_messy0(i32 %x){
 ; CHECK-LABEL: @cmp_diff_load_constant_array_messy0(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1:%.*]], 1073741823
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 1, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 373
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 373, [[TMP2]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[TMP3]] to i1
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %isOK_ptr = getelementptr i32, ptr @CG_MESSY, i32 %x
@@ -522,7 +520,7 @@ define i1 @cmp_diff_load_constant_array_messy0(i32 %x){
 ; Load size larger than store size currently not supported.
 define i1 @cmp_diff_load_constant_array_messy1(i32 %x){
 ; CHECK-LABEL: @cmp_diff_load_constant_array_messy1(
-; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr i6, ptr @CG_MESSY, i32 [[TMP1:%.*]]
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr i8, ptr @CG_MESSY, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[ISOK:%.*]] = load i16, ptr [[ISOK_PTR]], align 2
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i16 [[ISOK]], 5
 ; CHECK-NEXT:    ret i1 [[COND]]
@@ -536,7 +534,7 @@ define i1 @cmp_diff_load_constant_array_messy1(i32 %x){
 define i1 @cmp_load_constant_array_variable_icmp(i32 %x, i32 %y) {
 ; CHECK-LABEL: @cmp_load_constant_array_variable_icmp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds i32, ptr @CG_MESSY, i32 [[X:%.*]]
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr @CG_MESSY, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[ISOK:%.*]] = load i32, ptr [[ISOK_PTR]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ISOK]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[COND]]
@@ -554,7 +552,7 @@ entry:
 define i1 @cmp_load_constant_additional_positive_offset(i32 %x) {
 ; CHECK-LABEL: @cmp_load_constant_additional_positive_offset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds i32, ptr getelementptr inbounds nuw (i8, ptr @CG_CLEAR, i32 20), i32 [[X:%.*]]
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr getelementptr inbounds nuw (i8, ptr @CG_CLEAR, i32 20), i32 [[X:%.*]]
 ; CHECK-NEXT:    [[ISOK:%.*]] = load i32, ptr [[ISOK_PTR]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ISOK]], 5
 ; CHECK-NEXT:    ret i1 [[COND]]
@@ -569,7 +567,7 @@ entry:
 define i1 @cmp_load_constant_additional_negative_offset(i32 %x) {
 ; CHECK-LABEL: @cmp_load_constant_additional_negative_offset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ISOK_PTR_SPLIT:%.*]] = getelementptr inbounds [1 x i32], ptr @CG_CLEAR, i32 [[X:%.*]]
+; CHECK-NEXT:    [[ISOK_PTR_SPLIT:%.*]] = getelementptr inbounds [4 x i8], ptr @CG_CLEAR, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds i8, ptr [[ISOK_PTR_SPLIT]], i32 -20
 ; CHECK-NEXT:    [[ISOK:%.*]] = load i32, ptr [[ISOK_PTR]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ISOK]], 5
@@ -584,8 +582,8 @@ entry:
 
 define i1 @cmp_load_multiple_indices(i32 %idx, i32 %idx2) {
 ; CHECK-LABEL: @cmp_load_multiple_indices(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, ptr @g_i16_1, i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i16, ptr [[GEP1]], i32 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i8], ptr @g_i16_1, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i8], ptr [[GEP1]], i32 [[IDX2:%.*]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP2]], i32 2
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP3]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
@@ -601,8 +599,8 @@ define i1 @cmp_load_multiple_indices(i32 %idx, i32 %idx2) {
 
 define i1 @cmp_load_multiple_indices2(i32 %idx, i32 %idx2) {
 ; CHECK-LABEL: @cmp_load_multiple_indices2(
-; CHECK-NEXT:    [[GEP1_SPLIT:%.*]] = getelementptr inbounds [1 x i16], ptr @g_i16_1, i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, ptr [[GEP1_SPLIT]], i32 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP1_SPLIT:%.*]] = getelementptr inbounds [2 x i8], ptr @g_i16_1, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i8], ptr [[GEP1_SPLIT]], i32 [[IDX2:%.*]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP1]], i32 2
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP2]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
@@ -612,5 +610,125 @@ define i1 @cmp_load_multiple_indices2(i32 %idx, i32 %idx2) {
   %gep2 = getelementptr inbounds i8, ptr %gep1, i32 2
   %load = load i16, ptr %gep2
   %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_multiplied_index(i32 %X) {
+; CHECK-LABEL: @cmp_load_multiplied_index(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw nsw i32 %X, 3
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %mul
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 81
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_shifted_index(i32 %X) {
+; CHECK-LABEL: @cmp_load_shifted_index(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw nsw i32 %X, 3
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %shl
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 68
+  ret i1 %cmp
+}
+
+define i1 @trunc_load_from_indexed_global(i32 %idx) {
+; CHECK-LABEL: @trunc_load_from_indexed_global(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 189, [[IDX:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %gep = getelementptr inbounds i16, ptr @G16, i32 %idx
+  %v = load i16, ptr %gep
+  %r = trunc i16 %v to i1
+  ret i1 %r
+}
+
+define <2 x i1> @trunc_load_from_indexed_global_vec(i32 %idx) {
+; CHECK-LABEL: @trunc_load_from_indexed_global_vec(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i8], ptr @G16_vec, i32 [[TMP1:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load <2 x i16>, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i16> [[V]] to <2 x i1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %gep = getelementptr inbounds <2 x i16>, ptr @G16_vec, i32 %idx
+  %v = load <2 x i16>, ptr %gep
+  %r = trunc <2 x i16> %v to <2 x i1>
+  ret <2 x i1> %r
+}
+
+define i1 @cmp_load_multiplied_index_noflags(i32 %X) {
+; CHECK-LABEL: @cmp_load_multiplied_index_noflags(
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @G16, i32 [[GEP_IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 82
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i32 %X, 3
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %mul
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 82
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_multiplied_index_negative_inbounds(i32 %X) {
+; CHECK-LABEL: @cmp_load_multiplied_index_negative_inbounds(
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul nsw i32 [[X:%.*]], -6
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @G16, i32 [[GEP_IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 82
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nsw i32 %X, -3
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %mul
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 82
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_multiplied_index_negative(i32 %X) {
+; CHECK-LABEL: @cmp_load_multiplied_index_negative(
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul i32 [[X:%.*]], -6
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @G16, i32 [[GEP_IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 82
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nsw i32 %X, -3
+  %gep = getelementptr [10 x i16], ptr @G16, i32 0, i32 %mul
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 82
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_multiplied_index_non_const(i32 %X, i32 %fac) {
+; CHECK-LABEL: @cmp_load_multiplied_index_non_const(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X:%.*]], [[FAC:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MUL]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw nsw i32 %X, %fac
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %mul
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 81
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_shifted_index_non_const(i32 %X, i32 %sh) {
+; CHECK-LABEL: @cmp_load_shifted_index_non_const(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[X:%.*]], [[SH:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHL]], 8
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw nsw i32 %X, %sh
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %shl
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 68
   ret i1 %cmp
 }

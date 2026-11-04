@@ -146,7 +146,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
 
     // We've computed IDF, now insert new phi-nodes there.
     for (BasicBlock *FrontierBB : IDFBlocks) {
-      IRBuilder<> B(FrontierBB, FrontierBB->begin());
+      IRBuilder<> B(FrontierBB->begin());
       PHINode *PN = B.CreatePHI(R.Ty, 0, R.Name);
       BBInfos[FrontierBB].LiveInValue = PN;
       if (InsertedPHIs)
@@ -267,6 +267,8 @@ static bool replaceIfIdentical(PHINode &PHI, PHINode &ReplPHI) {
   return true;
 }
 
+namespace llvm {
+
 bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
                                    BasicBlock::phi_iterator FirstExistingPN) {
   assert(!PHIAreRefEachOther(make_range(BB->phis().begin(), FirstExistingPN)));
@@ -292,6 +294,8 @@ bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
   }
   return Changed;
 }
+
+} // end namespace llvm
 
 static void deduplicatePass(ArrayRef<PHINode *> Worklist) {
   SmallDenseMap<BasicBlock *, unsigned> BBs;

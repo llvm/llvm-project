@@ -18,10 +18,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Compiler.h"
@@ -91,6 +93,11 @@ enum {
   ///        failed match.
   GIM_Try,
 
+  /// GIM_Try only if the feature bits match.
+  /// - OnFail(4) - The MatchTable entry at which to resume if the match fails.
+  /// - Feature(2) - Expected features
+  GIM_Try_CheckFeatures,
+
   /// Switch over the opcode on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID
   /// - LowerBound(2) - numerically minimum opcode supported
@@ -108,6 +115,15 @@ enum {
   /// - JumpTable(4)... - (UpperBound - LowerBound) (at least 2) jump targets
   GIM_SwitchType,
 
+  /// Switch over the shape of an LLT on the specified instruction operand
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - LowerBound(2) - numerically minimum Type ID supported
+  /// - UpperBound(2) - numerically maximum + 1 Type ID supported
+  /// - Default(4) - failure jump target
+  /// - JumpTable(4)... - (UpperBound - LowerBound) (at least 2) jump targets
+  GIM_SwitchTypeShape,
+
   /// Record the specified instruction.
   /// The IgnoreCopies variant ignores COPY instructions.
   /// - NewInsnID(ULEB128) - Instruction ID to define
@@ -115,10 +131,6 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   GIM_RecordInsn,
   GIM_RecordInsnIgnoreCopies,
-
-  /// Check the feature bits
-  ///   Feature(2) - Expected features
-  GIM_CheckFeatures,
 
   /// Check the opcode on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID
@@ -240,11 +252,28 @@ enum {
   /// GIM_CheckType but InsnID is omitted and defaults to zero.
   GIM_RootCheckType,
 
+  /// Check the type for the specified operand where the type depends on the
+  /// HwMode.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Idx(1) - Index passed to getLLTForHwMode
+  GIM_CheckTypeByHwMode,
+  /// GIM_CheckTypeByHwMode but InsnID is omitted and defaults to zero.
+  GIM_RootCheckTypeByHwMode,
+
   /// Check the type of a pointer to any address space.
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index
   /// - SizeInBits(ULEB128) - The size of the pointer value in bits.
   GIM_CheckPointerToAny,
+
+  /// Check the type of a pointer to any address space where the size of the
+  /// pointer depends on the HwMode.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Idx(1) - Index passed to getLLTForHwMode. The size of the returned type
+  ///            is the size of the pointer value in bits.
+  GIM_CheckPointerToAnyByHwMode,
 
   /// Check the register bank for the specified operand
   /// - InsnID(ULEB128) - Instruction ID
@@ -478,6 +507,14 @@ enum {
   /// - Imm(8) - The immediate to add
   GIR_AddCImm,
 
+  /// Add a floating-point immediate to the specified instruction.
+  /// Imm is the IEEE bit pattern of a value with Ty's scalar semantics; it is
+  /// not converted from an integer or a double.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - Ty(1) - Type of the constant immediate.
+  /// - Imm(8) - Bit pattern of the floating-point immediate
+  GIR_AddCFPImm,
+
   /// Render complex operands to the specified instruction
   /// - InsnID(ULEB128) - Instruction ID to modify
   /// - RendererID(2) - The renderer to call
@@ -504,6 +541,8 @@ enum {
   /// Calls a C++ function that concludes the current match.
   /// The C++ function is free to return false and reject the match, or
   /// return true and mutate the instruction(s) (or do nothing, even).
+  /// Poison-generating flags left on OutMIs by the custom action are treated as
+  /// explicitly preserved.
   /// - FnID(2) - The function to call.
   GIR_DoneWithCustomAction,
 
@@ -562,6 +601,12 @@ enum {
   /// - Ty(1) - Expected type
   GIR_MakeTempReg,
 
+  /// Create a new temporary register that's not constrained where the type
+  /// depends on the HwMode.
+  /// - TempRegID(ULEB128) - The temporary register ID to initialize.
+  /// - Idx(1) - Index passed to getLLTForHwMode
+  GIR_MakeTempRegByHwMode,
+
   /// Replaces all references to a register from an instruction
   /// with another register from another instruction.
   /// - OldInsnID(ULEB128)
@@ -602,6 +647,9 @@ public:
   // For some predicates, we need to track the current MBB.
   MachineBasicBlock *CurMBB = nullptr;
 
+  // HwMode of the current subtarget. Used by getLLTForHwMode.
+  unsigned HwMode = 0;
+
   virtual void setupGeneratedPerFunctionState(MachineFunction &MF) = 0;
 
   /// Setup per-MF executor state.
@@ -615,6 +663,7 @@ public:
     PSI = psi;
     BFI = bfi;
     CurMBB = nullptr;
+    HwMode = mf.getSubtarget().getHwMode();
     setupGeneratedPerFunctionState(mf);
   }
 
@@ -664,14 +713,14 @@ public:
           CustomRenderers(CustomRenderers) {
 
       for (size_t I = 0; I < NumTypeObjects; ++I)
-        TypeIDMap[TypeObjects[I]] = I;
+        TypeIDMap[TypeObjects[I].getUniqueRAWLLTData()] = I;
     }
     const LLT *TypeObjects;
     const PredicateBitset *FeatureBitsets;
     const ComplexMatcherMemFn *ComplexPredicates;
     const CustomRendererFn *CustomRenderers;
 
-    SmallDenseMap<LLT, unsigned, 64> TypeIDMap;
+    SmallDenseMap<uint64_t, unsigned, 64> TypeIDMap;
   };
 
 protected:
@@ -692,6 +741,10 @@ protected:
                          CodeGenCoverage *CoverageInfo) const;
 
   virtual const uint8_t *getMatchTable() const {
+    llvm_unreachable("Should have been overridden by tablegen if used");
+  }
+
+  virtual LLT getLLTForHwMode(unsigned Index) const {
     llvm_unreachable("Should have been overridden by tablegen if used");
   }
 
@@ -727,6 +780,8 @@ protected:
                                NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
+
+  virtual uint32_t getRootFlagsToDrop() const { return 0; }
 
   LLVM_ABI bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                                   const MachineRegisterInfo &MRI,

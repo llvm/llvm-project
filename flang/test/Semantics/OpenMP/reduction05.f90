@@ -35,4 +35,12 @@ program omp_reduction
     k = k + 1
   end do
   !$omp end parallel do
+
+  !ERROR: 'a' in REDUCTION clause must have a positive stride
+  !ERROR: Stride of triplet must not be zero
+  !$omp parallel do reduction(+:a(1:10:0))
+  do i = 1, 10
+    k = k + 1
+  end do
+  !$omp end parallel do
 end program omp_reduction

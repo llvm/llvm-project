@@ -5,7 +5,6 @@
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <iterator>
 #include <random>
 #include <string>
 #include <utility>

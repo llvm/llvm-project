@@ -37,3 +37,15 @@ func.func @slice_constant_3x4_offsets(%arg0 : tensor<3x4xf32>) -> tensor<2x2xf32
   return %slice : tensor<2x2xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @slice_constant_dense_element_type
+//   CHECK-NOT:   tensor.extract_slice
+//       CHECK:   %[[CONST:.+]] = arith.constant dense<tensor<2x!test.dense_element> : [9 : i32, 8 : i32]>
+//       CHECK:   return %[[CONST]]
+func.func @slice_constant_dense_element_type() -> tensor<2x!test.dense_element>
+{
+  %cst = arith.constant dense<tensor<4x!test.dense_element> : [10 : i32, 9 : i32, 8 : i32, 7 : i32]>
+  %slice = tensor.extract_slice %cst[1] [2] [1] : tensor<4x!test.dense_element> to tensor<2x!test.dense_element>
+  return %slice : tensor<2x!test.dense_element>
+}

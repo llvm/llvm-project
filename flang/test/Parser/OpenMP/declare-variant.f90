@@ -13,7 +13,7 @@ subroutine sub0
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = parallel
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
   !$omp declare variant (sub:vsub) match (construct={parallel})
 contains
@@ -38,12 +38,12 @@ contains
 
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = dispatch
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
     !$omp declare variant(vsub), match(construct={dispatch})
     integer, value :: v1
@@ -68,14 +68,14 @@ contains
 
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | OmpClause -> AppendArgs -> OmpAppendArgsClause -> OmpAppendOp -> OmpInteropType -> Value = Target
 !PARSE-TREE: | OmpAppendOp -> OmpInteropType -> Value = Target
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
     !$omp declare variant(vsub), match(construct={dispatch}), append_args (interop(target), interop(target))
     integer, value :: v1
@@ -91,23 +91,23 @@ subroutine sb3 (x1, x2)
 contains
   subroutine sub (v1, v2)
     type(c_ptr), value :: v1, v2
-!CHECK: !$OMP DECLARE VARIANT(vsub) MATCH(CONSTRUCT={DISPATCH}) ADJUST_ARGS(NOTHING:v1&
-!CHECK: !$OMP&) ADJUST_ARGS(NEED_DEVICE_PTR:v2)
+!CHECK: !$OMP DECLARE VARIANT(vsub) MATCH(CONSTRUCT={DISPATCH}) ADJUST_ARGS(NOTHING: v&
+!CHECK: !$OMP&1) ADJUST_ARGS(NEED_DEVICE_PTR: v2)
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | OmpClause -> AdjustArgs -> OmpAdjustArgsClause
-!PARSE-TREE: | | OmpAdjustOp -> Value = Nothing
+!PARSE-TREE: | | Modifier -> OmpAdjustOp -> Value = Nothing
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'v1'
 !PARSE-TREE: | OmpClause -> AdjustArgs -> OmpAdjustArgsClause
-!PARSE-TREE: | | OmpAdjustOp -> Value = Need_Device_Ptr
+!PARSE-TREE: | | Modifier -> OmpAdjustOp -> Value = Need_Device_Ptr
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'v2'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
     !$omp declare variant(vsub) match ( construct = { dispatch } ) adjust_args(nothing : v1 ) adjust_args(need_device_ptr : v2)
   end
@@ -121,7 +121,7 @@ subroutine f
   y = 2
   !omp simd
   call f2(x, y)
-  !omp end simd 
+  !omp end simd
 contains
   subroutine f1 (x, y)
     real :: x, y
@@ -136,11 +136,11 @@ end subroutine
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f1'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'f1'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> Value = Simd
 !PARSE-TREE: | | | Properties
 !PARSE-TREE: | | | | OmpTraitProperty -> OmpClause -> Uniform -> Name = 'y'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

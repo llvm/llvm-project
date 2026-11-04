@@ -60,9 +60,8 @@ _mm_lddqu_si128(__m128i_u const *__p)
 ///    A 128-bit vector of [4 x float] containing the right source operand.
 /// \returns A 128-bit vector of [4 x float] containing the alternating sums and
 ///    differences of both operands.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_addsub_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_addsub_ps(__m128 __a, __m128 __b) {
   return __builtin_ia32_addsubps((__v4sf)__a, (__v4sf)__b);
 }
 

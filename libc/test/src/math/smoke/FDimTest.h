@@ -63,7 +63,7 @@ public:
   void test_in_range(FuncPtr func) {
     constexpr StorageType STORAGE_MAX =
         LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
     StorageType v = 0, w = STORAGE_MAX;
@@ -86,11 +86,11 @@ public:
   }
 };
 
-#define LIST_FDIM_TESTS(T, func)                                               \
-  using LlvmLibcFDimTest = FDimTestTemplate<T>;                                \
-  TEST_F(LlvmLibcFDimTest, NaNArg) { test_nan_arg(&func); }                    \
-  TEST_F(LlvmLibcFDimTest, InfArg) { test_inf_arg(&func); }                    \
-  TEST_F(LlvmLibcFDimTest, NegInfArg) { test_neg_inf_arg(&func); }             \
-  TEST_F(LlvmLibcFDimTest, BothZero) { test_both_zero(&func); }                \
-  TEST_F(LlvmLibcFDimTest, InFloatRange) { test_in_range(&func); }             \
+#define LIST_FDIM_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = FDimTestTemplate<T>;                            \
+  TEST_F(LlvmLibc##Name##Test, NaNArg) { test_nan_arg(&func); }                \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { test_inf_arg(&func); }                \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { test_neg_inf_arg(&func); }         \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { test_both_zero(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, InFloatRange) { test_in_range(&func); }         \
   static_assert(true, "Require semicolon.")

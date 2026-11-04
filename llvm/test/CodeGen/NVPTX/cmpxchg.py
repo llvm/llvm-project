@@ -22,7 +22,8 @@ cmpxchg_func_no_scope = Template(
 
 run_statement = Template(
     """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
+; NOTE: Please do not modify this file manually- instead modify cmpxchg.py
 """
 )
 
@@ -54,7 +55,7 @@ ADDRSPACE_NUM_TO_ADDRSPACE = {0: "generic", 1: "global", 3: "shared"}
 if __name__ == "__main__":
     for sm, ptx in TESTS:
         with open("cmpxchg-sm{}.ll".format(str(sm)), "w") as fp:
-            print(run_statement.substitute(sm=sm, ptx=ptx), file=fp)
+            print(run_statement.substitute(sm=sm, ptx=ptx, ptxfp=ptx / 10.0), file=fp)
 
             # Our test space is: SIZES X SUCCESS_ORDERINGS X FAILURE_ORDERINGS X ADDRSPACES X LLVM_SCOPES
             # This is very large, so we instead test 3 slices.

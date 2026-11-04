@@ -15,5 +15,5 @@ arith.constant 0
 
 // -----
 
-// expected-error@below {{trying to schedule a pass on an unsupported operation}}
+// expected-error-re@below {{trying to schedule pass '{{.*}}TestFunctionPass' on an unsupported operation}}
 module {}

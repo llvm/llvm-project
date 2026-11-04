@@ -26,10 +26,10 @@
 // MSVC warning C4244: 'argument': conversion from 'wchar_t' to 'const _Ty', possible loss of data
 // MSVC warning C4389: '==': signed/unsigned mismatch
 // ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244 /wd4389
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <functional>
 #include <vector>
 

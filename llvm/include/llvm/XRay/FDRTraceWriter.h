@@ -30,7 +30,7 @@ class LLVM_ABI FDRTraceWriter : public RecordVisitor {
 public:
   // Construct an FDRTraceWriter associated with an output stream.
   explicit FDRTraceWriter(raw_ostream &O, const XRayFileHeader &H);
-  ~FDRTraceWriter();
+  ~FDRTraceWriter() override;
 
   Error visit(BufferExtents &) override;
   Error visit(WallclockRecord &) override;

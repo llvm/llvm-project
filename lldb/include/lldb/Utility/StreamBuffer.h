@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_STREAMBUFFER_H
-#define LLDB_CORE_STREAMBUFFER_H
+#ifndef LLDB_UTILITY_STREAMBUFFER_H
+#define LLDB_UTILITY_STREAMBUFFER_H
 
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/SmallVector.h"
@@ -18,10 +18,10 @@ namespace lldb_private {
 
 template <unsigned N> class StreamBuffer : public Stream {
 public:
-  StreamBuffer() : Stream(0, 4, lldb::eByteOrderBig), m_packet() {}
+  StreamBuffer() : Stream(0, lldb::eByteOrderBig), m_packet() {}
 
-  StreamBuffer(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order)
-      : Stream(flags, addr_size, byte_order), m_packet() {}
+  StreamBuffer(uint32_t flags, lldb::ByteOrder byte_order)
+      : Stream(flags, byte_order), m_packet() {}
 
   ~StreamBuffer() override = default;
 
@@ -31,7 +31,7 @@ public:
 
   void Clear() { m_packet.clear(); }
 
-  // Beware, this might not be NULL terminated as you can expect from
+  // Beware, this might not be null-terminated as you can expect from
   // StringString as there may be random bits in the llvm::SmallVector. If you
   // are using this class to create a C string, be sure the call PutChar ('\0')
   // after you have created your string, or use StreamString.
@@ -51,4 +51,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_STREAMBUFFER_H
+#endif // LLDB_UTILITY_STREAMBUFFER_H

@@ -17,7 +17,6 @@
 #include <optional>
 #include <tuple>
 
-#include "TestTraits.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"

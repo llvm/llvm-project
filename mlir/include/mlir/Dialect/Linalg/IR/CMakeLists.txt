@@ -69,7 +69,7 @@ mlir_tablegen(LinalgOpsAttrDefs.h.inc -gen-attrdef-decls)
 mlir_tablegen(LinalgOpsAttrDefs.cpp.inc -gen-attrdef-defs)
 add_mlir_dialect_tablegen_target(MLIRLinalgOpsAttributesIncGen)
 
-add_mlir_doc(LinalgDoc LinalgOps Dialects/ -gen-op-doc)
+add_mlir_doc(LinalgDoc LinalgOps Dialects/ -gen-op-doc -dialect=linalg)
 add_dependencies(LinalgOpsDocGen LinalgOdsGen)
 
 set(LLVM_TARGET_DEFINITIONS LinalgStructuredOps.td)

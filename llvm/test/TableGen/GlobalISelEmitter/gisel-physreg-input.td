@@ -47,7 +47,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // GISEL-NEXT: GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // GISEL-NEXT: // (st GPR32:{ *:[i32] }:$src0, (mul:{ *:[i32] } GPR32:{ *:[i32] }:$src1, SPECIAL:{ *:[i32] }))  =>  (MULM_PHYS GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(RegState::Define),
+// GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MULM_PHYS),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // src0
@@ -86,10 +86,10 @@ def MULM_PHYS : I<(outs), (ins GPR32:$src0, GPR32:$src1),
 // GISEL-NEXT: GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // GISEL-NEXT: // (st GPR32:{ *:[i32] }:$src0, (mul:{ *:[i32] } R0:{ *:[i32] }, SPECIAL:{ *:[i32] }))  =>  (MULMR0_PHYS GPR32:{ *:[i32] }:$src0)
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/2, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// GISEL-NEXT: GIR_AddRegister, /*InsnID*/2, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(RegState::Define),
+// GISEL-NEXT: GIR_AddRegister, /*InsnID*/2, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/2, /*OldInsnID*/1, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::R0), /*AddRegisterRegFlags*/GIMT_Encode2(RegState::Define),
+// GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::R0), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // R0
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MULMR0_PHYS),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // src0
@@ -118,7 +118,7 @@ def MULMR0_PHYS : I<(outs), (ins GPR32:$src0),
 // GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::Special32RegClassID),
 // GISEL-NEXT: // (add:{ *:[i32] } GPR32:{ *:[i32] }:$src0, SPECIAL:{ *:[i32] })  =>  (ADD_PHYS:{ *:[i32] } GPR32:{ *:[i32] }:$src0)
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(RegState::Define),
+// GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ADD_PHYS),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
@@ -147,7 +147,7 @@ def ADD_PHYS : I<(outs GPR32:$dst), (ins GPR32:$src0),
 // GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::Special32RegClassID),
 // GISEL-NEXT: // (mul:{ *:[i32] } GPR32:{ *:[i32] }:$SPECIAL, SPECIAL:{ *:[i32] })  =>  (MUL_PHYS:{ *:[i32] } GPR32:{ *:[i32] }:$SPECIAL)
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(RegState::Define),
+// GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MUL_PHYS),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]

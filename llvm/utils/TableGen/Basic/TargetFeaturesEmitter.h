@@ -43,7 +43,7 @@ public:
   void printFeatureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
   void printCPUKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
   virtual void run(raw_ostream &O);
-  virtual ~TargetFeaturesEmitter() {};
+  virtual ~TargetFeaturesEmitter() = default;
 };
 } // namespace llvm
 #endif

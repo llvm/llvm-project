@@ -94,7 +94,7 @@ bool PatternParser::parsePatternList(
 static const CodeGenInstruction &
 getInstrForIntrinsic(const CodeGenTarget &CGT, const CodeGenIntrinsic *I) {
   StringRef Opc;
-  if (I->isConvergent) {
+  if (I->isConvergent()) {
     Opc = I->hasSideEffects ? "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS"
                             : "G_INTRINSIC_CONVERGENT";
   } else {
@@ -113,7 +113,8 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
 
   std::unique_ptr<InstructionPattern> Pat;
   if (const DagInit *IP = getDagWithOperatorOfSubClass(Arg, "Instruction")) {
-    auto &Instr = CGT.getInstruction(IP->getOperatorAsDef(DiagLoc));
+    const CodeGenInstruction &Instr =
+        CGT.getInstruction(IP->getOperatorAsDef(DiagLoc));
     Pat =
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
   } else if (const DagInit *IP =

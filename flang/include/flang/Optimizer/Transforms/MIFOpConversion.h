@@ -11,7 +11,6 @@
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 
 namespace fir {
 class LLVMTypeConverter;
@@ -20,7 +19,9 @@ class LLVMTypeConverter;
 namespace mif {
 
 /// Patterns that convert MIF operations to runtime calls.
-void populateMIFOpConversionPatterns(mlir::RewritePatternSet &patterns);
+void populateMIFOpConversionPatterns(const fir::LLVMTypeConverter &converter,
+                                     mlir::DataLayout &dl,
+                                     mlir::RewritePatternSet &patterns);
 
 } // namespace mif
 

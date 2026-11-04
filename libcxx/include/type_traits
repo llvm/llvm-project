@@ -454,6 +454,10 @@ namespace std
       template<class B> inline constexpr bool negation_v
         = negation<B>::value;                                   // since C++17
 
+      // [meta.const.eval], constant evaluation context
+      constexpr bool is_constant_evaluated() noexcept;                   // C++20
+      template<class T>
+        consteval bool is_within_lifetime(const T*) noexcept;            // C++26
 }
 
 */
@@ -546,9 +550,7 @@ namespace std
 
 #  if _LIBCPP_STD_VER >= 20
 #    include <__type_traits/common_reference.h>
-#    include <__type_traits/is_bounded_array.h>
 #    include <__type_traits/is_constant_evaluated.h>
-#    include <__type_traits/is_unbounded_array.h>
 #    include <__type_traits/type_identity.h>
 #    include <__type_traits/unwrap_ref.h>
 #  endif
@@ -557,6 +559,10 @@ namespace std
 #    include <__type_traits/is_implicit_lifetime.h>
 #    include <__type_traits/reference_constructs_from_temporary.h>
 #    include <__type_traits/reference_converts_from_temporary.h>
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+#    include <__type_traits/is_within_lifetime.h>
 #  endif
 
 #  include <version>

@@ -155,10 +155,9 @@ define void @sabd_v64i8_v64i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1b { z3.b }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sabd z0.b, p0/m, z0.b, z1.b
-; VBITS_GE_256-NEXT:    movprfx z1, z2
-; VBITS_GE_256-NEXT:    sabd z1.b, p0/m, z1.b, z3.b
+; VBITS_GE_256-NEXT:    sabd z2.b, p0/m, z2.b, z3.b
 ; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0, x8]
-; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x0]
+; VBITS_GE_256-NEXT:    st1b { z2.b }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: sabd_v64i8_v64i64:

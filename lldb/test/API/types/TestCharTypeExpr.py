@@ -12,7 +12,7 @@ class CharTypeExprTestCase(AbstractBase.GenericTester):
         """Test that char-type variable expressions are evaluated correctly."""
         self.build_and_run_expr("char.cpp", ["char"], qd=True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_char_type_from_block(self):
         """Test that char-type variables are displayed correctly from a block."""
         self.build_and_run_expr("char.cpp", ["char"], bc=True, qd=True)
@@ -21,7 +21,7 @@ class CharTypeExprTestCase(AbstractBase.GenericTester):
         """Test that 'unsigned_char'-type variable expressions are evaluated correctly."""
         self.build_and_run_expr("unsigned_char.cpp", ["unsigned", "char"], qd=True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_unsigned_char_type_from_block(self):
         """Test that 'unsigned char'-type variables are displayed correctly from a block."""
         self.build_and_run_expr(

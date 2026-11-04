@@ -6,7 +6,7 @@ declare void @fakeresume1(ptr align 8)
 
 define void @g() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @g, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %alloc.var = alloca i8
   call void @llvm.lifetime.start.p0(ptr %alloc.var)
@@ -38,7 +38,7 @@ exit:
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
-; CHECK:          musttail call fastcc void
+; CHECK:          musttail call void
 ; CHECK-NEXT:     ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1

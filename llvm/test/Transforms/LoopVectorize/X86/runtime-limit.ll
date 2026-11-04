@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize -S 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -17,7 +17,7 @@ define void @func1x6(ptr nocapture %out, ptr nocapture %A, ptr nocapture %B, ptr
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.016 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.016
   %0 = load i32, ptr %arrayidx, align 4
@@ -39,7 +39,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %inc, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -51,7 +51,7 @@ define void @func2x6(ptr nocapture %out, ptr nocapture %out2, ptr nocapture %A, 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.037 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.037
   %0 = load i32, ptr %arrayidx, align 4
@@ -84,6 +84,6 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %inc, 256
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }

@@ -29,7 +29,7 @@ namespace rt_bootstrap {
 class LLVM_ABI ExecutorSharedMemoryMapperService final
     : public ExecutorBootstrapService {
 public:
-  ~ExecutorSharedMemoryMapperService() override {};
+  ~ExecutorSharedMemoryMapperService() override = default;
 
   Expected<std::pair<ExecutorAddr, std::string>> reserve(uint64_t Size);
   Expected<ExecutorAddr> initialize(ExecutorAddr Reservation,
@@ -56,16 +56,16 @@ private:
   };
   using ReservationMap = DenseMap<void *, Reservation>;
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   reserveWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   initializeWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   deinitializeWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   releaseWrapper(const char *ArgData, size_t ArgSize);
 
 #if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)

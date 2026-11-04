@@ -62,15 +62,13 @@ public:
 
 /// Printer pass for the \c PostDominatorTree.
 class PostDominatorTreePrinterPass
-    : public PassInfoMixin<PostDominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<PostDominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit PostDominatorTreePrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 struct LLVM_ABI PostDominatorTreeWrapperPass : public FunctionPass {

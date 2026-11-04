@@ -174,19 +174,19 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
     // We don't know how to emit non-scalar varargs.
     if (!A.getRValue(*this).isScalar()) {
       CGM.ErrorUnsupported(E, "non-scalar arg to printf");
-      return RValue::get(llvm::ConstantInt::get(IntTy, -1));
+      return RValue::get(llvm::ConstantInt::getAllOnesValue(IntTy));
     }
 
     llvm::Value *Arg = A.getRValue(*this).getScalarVal();
     Args.push_back(Arg);
   }
 
-  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
+  llvm::IRBuilder<> IRB(Builder.GetInsertPoint());
   IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
 
   bool isBuffered = (CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal ==
                      clang::TargetOptions::AMDGPUPrintfKind::Buffered);
   auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, isBuffered);
-  Builder.SetInsertPoint(IRB.GetInsertBlock(), IRB.GetInsertPoint());
+  Builder.SetInsertPoint(IRB.GetInsertPoint());
   return RValue::get(Printf);
 }

@@ -1,8 +1,8 @@
-; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck %s
 
 ; FIXME: This should be handled
 
-; CHECK: LLVM ERROR: Do not know how to widen this operator's operand!
+; CHECK: LLVM ERROR: do not know how to widen this operator's operand!
 
 
 define void @buffer_store_v6bf16(ptr addrspace(8) inreg %rsrc, <6 x bfloat> %data, i32 %offset) {

@@ -1,12 +1,13 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgpu10.10 -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -mtriple=amdgpu11.00 -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN %s
 
 # GCN-LABEL: name: vmem_write_sgpr
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -17,10 +18,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_exec
 # GCN:        BUFFER_STORE_DWORD_OFFEN_exact
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_exec
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -36,10 +38,11 @@ body:             |
 # GCN-NEXT:   S_MOV_B32
 # GCN-NEXT:   S_MOV_B32
 # GCN-NEXT:   S_MOV_B32
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_chain
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors:
@@ -55,10 +58,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_smem_write_sgpr
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_LOAD_DWORD_IMM
 ---
 name:            vmem_smem_write_sgpr
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -70,10 +74,11 @@ body:             |
 # GCN-LABEL: name: vmem_snop_write_sgpr
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT:   S_NOP
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_snop_write_sgpr
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -89,6 +94,7 @@ body:             |
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_valu_write_sgpr
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -104,6 +110,7 @@ body:             |
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_swait0_write_sgpr
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -116,10 +123,11 @@ body:             |
 # GCN-LABEL: name: vmem_swait_any_write_sgpr
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT:   S_WAITCNT
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_swait_any_write_sgpr
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -131,10 +139,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_exec_impread
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B64
 ---
 name:            vmem_write_exec_impread
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -145,10 +154,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_exec_expread
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B64
 ---
 name:            vmem_write_exec_expread
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -158,10 +168,11 @@ body:             |
 ...
 # GCN-LABEL: name: ds_write_m0
 # GCN:        DS_READ_B32
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            ds_write_m0
+tracksRegLiveness: false
 body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
@@ -173,10 +184,11 @@ body:             |
 # GCN-LABEL: name: vmem_write_sgpr_fall_through
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
 # GCN:        bb.1:
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_fall_through
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -192,10 +204,11 @@ body:             |
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT:   S_BRANCH
 # GCN:        bb.1:
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -212,10 +225,11 @@ body:             |
 # GCN:        BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT:   S_BRANCH
 # GCN:        bb.2:
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch_around
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.2
@@ -240,10 +254,11 @@ body:             |
 # GCN:        S_WAITCNT
 # GCN:        V_ADD_CO_U32
 # GCN:        bb.2:
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_cbranch_around
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -265,10 +280,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_sgpr_branch_backedge
 # GCN:        $vgpr0 = IMPLICIT_DEF
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch_backedge
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -283,10 +299,11 @@ body:             |
 ...
 # GCN-LABEL: name: ds_write_exec
 # GCN:        DS_WRITE_B32_gfx9
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            ds_write_exec
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -296,10 +313,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_scratch_exec
 # GCN:        SCRATCH_LOAD_DWORD
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_scratch_exec
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -308,10 +326,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_flat_exec
 # GCN:        FLAT_LOAD_DWORD
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_flat_exec
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -321,10 +340,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_global_exec
 # GCN:        GLOBAL_LOAD_DWORD
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_global_exec
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -334,10 +354,11 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_global_atomic_exec
 # GCN:        GLOBAL_ATOMIC_ADD_RTN
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GFX10-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
 # GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_global_atomic_exec
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF

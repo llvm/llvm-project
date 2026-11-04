@@ -60,10 +60,10 @@ define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINX-LABEL: fsd:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    mv a5, a4
-; RV32IZFINXZDINX-NEXT:    mv a7, a2
 ; RV32IZFINXZDINX-NEXT:    mv a4, a3
-; RV32IZFINXZDINX-NEXT:    mv a6, a1
-; RV32IZFINXZDINX-NEXT:    fadd.d a2, a6, a4
+; RV32IZFINXZDINX-NEXT:    mv a3, a2
+; RV32IZFINXZDINX-NEXT:    mv a2, a1
+; RV32IZFINXZDINX-NEXT:    fadd.d a2, a2, a4
 ; RV32IZFINXZDINX-NEXT:    sw a2, 0(a0)
 ; RV32IZFINXZDINX-NEXT:    sw a3, 4(a0)
 ; RV32IZFINXZDINX-NEXT:    sw a2, 64(a0)
@@ -80,10 +80,10 @@ define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINXZILSD-LABEL: fsd:
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
 ; RV32IZFINXZDINXZILSD-NEXT:    mv a5, a4
-; RV32IZFINXZDINXZILSD-NEXT:    mv a7, a2
 ; RV32IZFINXZDINXZILSD-NEXT:    mv a4, a3
-; RV32IZFINXZDINXZILSD-NEXT:    mv a6, a1
-; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a2, a6, a4
+; RV32IZFINXZDINXZILSD-NEXT:    mv a3, a2
+; RV32IZFINXZDINXZILSD-NEXT:    mv a2, a1
+; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a2, a2, a4
 ; RV32IZFINXZDINXZILSD-NEXT:    sd a2, 0(a0)
 ; RV32IZFINXZDINXZILSD-NEXT:    sd a2, 64(a0)
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
@@ -113,17 +113,17 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fld_fsd_global:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    lui a4, %hi(G)
-; RV32IZFINXZDINX-NEXT:    addi a4, a4, %lo(G)
 ; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    lw zero, 0(a4)
-; RV32IZFINXZDINX-NEXT:    lw zero, 4(a4)
-; RV32IZFINXZDINX-NEXT:    sw a0, 0(a4)
-; RV32IZFINXZDINX-NEXT:    sw a1, 4(a4)
-; RV32IZFINXZDINX-NEXT:    lw zero, 72(a4)
-; RV32IZFINXZDINX-NEXT:    lw zero, 76(a4)
-; RV32IZFINXZDINX-NEXT:    sw a0, 72(a4)
-; RV32IZFINXZDINX-NEXT:    sw a1, 76(a4)
+; RV32IZFINXZDINX-NEXT:    lui a2, %hi(G)
+; RV32IZFINXZDINX-NEXT:    addi a2, a2, %lo(G)
+; RV32IZFINXZDINX-NEXT:    lw zero, 0(a2)
+; RV32IZFINXZDINX-NEXT:    lw zero, 4(a2)
+; RV32IZFINXZDINX-NEXT:    sw a0, 0(a2)
+; RV32IZFINXZDINX-NEXT:    sw a1, 4(a2)
+; RV32IZFINXZDINX-NEXT:    lw zero, 72(a2)
+; RV32IZFINXZDINX-NEXT:    lw zero, 76(a2)
+; RV32IZFINXZDINX-NEXT:    sw a0, 72(a2)
+; RV32IZFINXZDINX-NEXT:    sw a1, 76(a2)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fld_fsd_global:
@@ -139,13 +139,13 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ;
 ; RV32IZFINXZDINXZILSD-LABEL: fld_fsd_global:
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
-; RV32IZFINXZDINXZILSD-NEXT:    lui a4, %hi(G)
-; RV32IZFINXZDINXZILSD-NEXT:    addi a4, a4, %lo(G)
 ; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINXZILSD-NEXT:    ld zero, 0(a4)
-; RV32IZFINXZDINXZILSD-NEXT:    sd a0, 0(a4)
-; RV32IZFINXZDINXZILSD-NEXT:    ld zero, 72(a4)
-; RV32IZFINXZDINXZILSD-NEXT:    sd a0, 72(a4)
+; RV32IZFINXZDINXZILSD-NEXT:    lui a2, %hi(G)
+; RV32IZFINXZDINXZILSD-NEXT:    addi a2, a2, %lo(G)
+; RV32IZFINXZDINXZILSD-NEXT:    ld zero, 0(a2)
+; RV32IZFINXZDINXZILSD-NEXT:    sd a0, 0(a2)
+; RV32IZFINXZDINXZILSD-NEXT:    ld zero, 72(a2)
+; RV32IZFINXZDINXZILSD-NEXT:    sd a0, 72(a2)
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
 ; Use %a and %b in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI
@@ -249,8 +249,7 @@ define dso_local double @fld_stack(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    mv s1, a1
-; RV32IZFINXZDINX-NEXT:    mv s0, a0
+; RV32IZFINXZDINX-NEXT:    fmv.d s0, a0
 ; RV32IZFINXZDINX-NEXT:    addi a0, sp, 8
 ; RV32IZFINXZDINX-NEXT:    call notdead
 ; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
@@ -281,17 +280,14 @@ define dso_local double @fld_stack(double %a) nounwind {
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
 ; RV32IZFINXZDINXZILSD-NEXT:    addi sp, sp, -32
 ; RV32IZFINXZDINXZILSD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINXZILSD-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINXZILSD-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINXZILSD-NEXT:    mv s1, a1
-; RV32IZFINXZDINXZILSD-NEXT:    mv s0, a0
+; RV32IZFINXZDINXZILSD-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV32IZFINXZDINXZILSD-NEXT:    fmv.d s0, a0
 ; RV32IZFINXZDINXZILSD-NEXT:    addi a0, sp, 8
 ; RV32IZFINXZDINXZILSD-NEXT:    call notdead
 ; RV32IZFINXZDINXZILSD-NEXT:    ld a0, 8(sp)
 ; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a0, a0, s0
 ; RV32IZFINXZDINXZILSD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINXZILSD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINXZILSD-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINXZILSD-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV32IZFINXZDINXZILSD-NEXT:    addi sp, sp, 32
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
   %1 = alloca double, align 8

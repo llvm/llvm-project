@@ -10,6 +10,11 @@
 ; CHECK-SPIRV-DAG:  %[[#Bool:]] = OpTypeBool
 ; CHECK-SPIRV-DAG:  %[[#Struct:]] = OpTypeStruct %[[#Int]] %[[#Bool]]
 ; CHECK-SPIRV-DAG:  %[[#UndefStruct:]] = OpUndef %[[#Struct]]
+; CHECK-SPIRV-DAG:  %[[#Int8:]] = OpTypeInt 8 0
+; CHECK-SPIRV-DAG:  %[[#Constant_45:]] = OpConstant %[[#Int8]] 45{{$}}
+; CHECK-SPIRV-DAG:  %[[#Constant_12:]] = OpConstant %[[#Int8]] 12{{$}}
+; CHECK-SPIRV-DAG:  %[[#Struct8:]] = OpTypeStruct %[[#Int8]] %[[#Bool]]
+; CHECK-SPIRV-DAG:  %[[#UndefStruct8:]] = OpUndef %[[#Struct8]]
 
 ; CHECK-SPIRV:      %[[#Value:]] = OpLoad %[[#Int]] %[[#Value_ptr:]]
 ; CHECK-SPIRV:      %[[#Res:]] = OpAtomicCompareExchange %[[#Int]] %[[#Pointer:]] %[[#MemScope_CrossDevice]]
@@ -46,5 +51,19 @@ define dso_local spir_func void @test2(ptr %ptr, ptr %store_ptr) local_unnamed_a
 entry:
   %0 = cmpxchg ptr %ptr, i32 128, i32 456 seq_cst acquire
   store { i32, i1 } %0, ptr %store_ptr, align 4
+  ret void
+}
+
+; CHECK-SPIRV:      %[[#Res_2:]] = OpAtomicCompareExchange %[[#Int8]] %[[#Ptr:]] %[[#MemScope_CrossDevice]]
+; CHECK-SPIRV-SAME: %[[#MemSemEqual_SeqCst]] %[[#MemSemUnequal_Acquire]] %[[#Constant_45]] %[[#Constant_12]]
+; CHECK-SPIRV:      %[[#Success_2:]] = OpIEqual %[[#]] %[[#Res_2]] %[[#Constant_12]]
+; CHECK-SPIRV:      %[[#Composite_2:]] = OpCompositeInsert %[[#Struct8]] %[[#Res_2]] %[[#UndefStruct8]] 0
+; CHECK-SPIRV:      %[[#Composite_3:]] = OpCompositeInsert %[[#Struct8]] %[[#Success_2]] %[[#Composite_2]] 1
+; CHECK-SPIRV:      OpStore %[[#Store_ptr:]] %[[#Composite_3]]
+
+define dso_local spir_func void @test3(ptr %ptr, ptr %store_ptr) local_unnamed_addr {
+entry:
+  %0 = cmpxchg ptr %ptr, i8 12, i8 45 seq_cst acquire
+  store { i8, i1 } %0, ptr %store_ptr, align 1
   ret void
 }

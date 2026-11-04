@@ -1,6 +1,7 @@
 ; The test checks if the backend won't crash
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpControlBarrier
 ; CHECK-NOT: MemoryAccessAliasingINTEL
@@ -15,4 +16,4 @@ declare dso_local spir_func void @_Z22__spirv_ControlBarrierjjj(i32, i32, i32)
 
 !1 = !{!2}
 !2 = distinct !{!2, !3}
-!3 = distinct !{!3}
+!3 = distinct !{!3, i1 false}

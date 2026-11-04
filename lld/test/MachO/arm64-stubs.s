@@ -1,4 +1,6 @@
 # REQUIRES: aarch64
+
+## Test arm64 stubs
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/bar.s -o %t/bar.o
@@ -6,8 +8,16 @@
 # RUN: %lld -arch arm64 -dylib -install_name @executable_path/libfoo.dylib %t/foo.o -o %t/libfoo.dylib
 # RUN: %lld -arch arm64 -dylib -install_name @executable_path/libbar.dylib %t/bar.o -o %t/libbar.dylib
 # RUN: %lld -arch arm64 -lSystem %t/libfoo.dylib %t/libbar.dylib %t/test.o -o %t/test -no_fixup_chains
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test | FileCheck %s -DREG=x16
 
-# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test | FileCheck %s
+## Test arm64_32 stubs
+# RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/foo.s -o %t/foo32.o
+# RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/bar.s -o %t/bar32.o
+# RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/test.s -o %t/test32.o
+# RUN: %lld-watchos -dylib -install_name @executable_path/libfoo.dylib %t/foo32.o -o %t/libfoo32.dylib
+# RUN: %lld-watchos -dylib -install_name @executable_path/libbar.dylib %t/bar32.o -o %t/libbar32.dylib
+# RUN: %lld-watchos -lSystem %t/libfoo32.dylib %t/libbar32.dylib %t/test32.o -o %t/test32 -no_fixup_chains
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test32 | FileCheck %s -DREG=w16
 
 # CHECK:       _main:
 # CHECK-NEXT:  bl 0x[[#%x,FOO:]] ; symbol stub for: _foo
@@ -16,10 +26,10 @@
 
 # CHECK-LABEL: Contents of (__TEXT,__stubs) section
 # CHECK-NEXT:  [[#BAR]]: adrp x16
-# CHECK-NEXT:            ldr x16, [x16{{.*}}] ; literal pool symbol address: _bar
+# CHECK-NEXT:            ldr [[REG]], [x16{{.*}}] ; literal pool symbol address: _bar
 # CHECK-NEXT:            br x16
 # CHECK-NEXT:  [[#FOO]]: adrp x16
-# CHECK-NEXT:            ldr x16, [x16{{.*}}] ; literal pool symbol address: _foo
+# CHECK-NEXT:            ldr [[REG]], [x16{{.*}}] ; literal pool symbol address: _foo
 # CHECK-NEXT:            br x16
 
 # CHECK-LABEL: Contents of (__TEXT,__stub_helper) section
@@ -27,7 +37,7 @@
 # CHECK-NEXT:                          add x17, x17
 # CHECK-NEXT:                          stp x16, x17, [sp, #-16]!
 # CHECK-NEXT:                          adrp x16
-# CHECK-NEXT:                          ldr x16, [x16] ; literal pool symbol address: dyld_stub_binder
+# CHECK-NEXT:                          ldr [[REG]], [x16] ; literal pool symbol address: dyld_stub_binder
 # CHECK-NEXT:                          br x16
 # CHECK-NEXT:                          ldr w16, 0x[[#%x,BAR_BIND_OFF_ADDR:]]
 # CHECK-NEXT:                          b 0x[[#HELPER_HEADER]]

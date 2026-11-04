@@ -13,6 +13,7 @@ class TestWasHit(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @requireExpressionEvaluation  # (was_hit evaluates change_him())
     def test_was_hit_resolver(self):
         """Use facade breakpoints to emulate hitting some locations"""
         self.build()
@@ -65,6 +66,15 @@ class TestWasHit(TestBase):
         )
         self.assertEqual(thread.stop_reason_data[1], 1, "First location hit is 1")
 
+        # Check that we did increment our global:
+        values = target.FindGlobalVariables("g_change_me", 2, lldb.eSymbolTypeCode)
+        self.assertEqual(values.GetSize(), 1, "Got the change me global")
+        change_me = values.GetValueAtIndex(0)
+        change_me_value = 1
+        self.assertEqual(
+            change_me.signed, change_me_value, "g_change_me had the right value"
+        )
+
         for loc in [3, 4]:
             process.Continue()
             self.assertEqual(
@@ -75,6 +85,10 @@ class TestWasHit(TestBase):
             )
             self.assertEqual(
                 thread.stop_reason_data[1], loc, f"Hit the right location: {loc}"
+            )
+            change_me_value += 1
+            self.assertEqual(
+                change_me.signed, change_me_value, "g_change_me was updated correctly"
             )
 
         # At this point we should have hit three of the four locations, and not location 1.2.

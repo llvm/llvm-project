@@ -16,13 +16,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 static void NotifyChange(const BreakpointSP &bp, BreakpointEventType event) {
-  Target &target = bp->GetTarget();
-  if (target.EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged)) {
-    auto event_data_sp =
-        std::make_shared<Breakpoint::BreakpointEventData>(event, bp);
-    target.BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                          event_data_sp);
-  }
+  bp->GetTarget().NotifyBreakpointChanged(*bp, event);
 }
 
 BreakpointList::BreakpointList(bool is_internal)
@@ -131,13 +125,13 @@ BreakpointSP BreakpointList::FindBreakpointByID(break_id_t break_id) const {
 }
 
 llvm::Expected<std::vector<lldb::BreakpointSP>>
-BreakpointList::FindBreakpointsByName(const char *name) {
-  if (!name)
+BreakpointList::FindBreakpointsByName(llvm::StringRef name) {
+  if (name.empty())
     return llvm::createStringError(llvm::errc::invalid_argument,
                                    "FindBreakpointsByName requires a name");
 
   Status error;
-  if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(name), error))
+  if (!BreakpointID::StringIsBreakpointName(name, error))
     return error.ToError();
 
   std::vector<lldb::BreakpointSP> matching_bps;

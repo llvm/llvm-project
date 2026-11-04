@@ -13,10 +13,6 @@ from lldbsuite.test import lldbutil
 class TestStopOnCoreLoad(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    # This was originally marked as expected failure on Windows, but it has
-    # started timing out instead, so the expectedFailure attribute no longer
-    # correctly tracks it: llvm.org/pr37371
-    @skipIfWindows
     def test_hook_runs_no_threads(self):
         # Create core form YAML.
         core_path = self.getBuildArtifact("test.core")
@@ -50,6 +46,12 @@ class TestStopOnCoreLoad(TestBase):
         result = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand("report_command", result)
         print(f"Command Output: '{result.GetOutput}'")
-        self.assertIn(
-            f"Stop Threads: {stop_thread}", result.GetOutput(), "Ran the stop hook"
-        )
+
+        thread = target.process.GetThreadAtIndex(0)
+        # ELF Cores used to report stop reason 0 for all threads, but now that they're
+        # filtered we only want to check if the stop_hook was run on threads with
+        # stop reasons.
+        if thread.is_stopped:
+            self.assertIn(
+                f"Stop Threads: {stop_thread}", result.GetOutput(), "Ran the stop hook"
+            )

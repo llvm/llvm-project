@@ -121,9 +121,8 @@ LogicalResult transform::smt::ConstrainParamsOp::verify() {
   for (auto [idx, termOperandType, resultType] : llvm::enumerate(
            yieldTerminator->getOperands().getType(), getResultTypes())) {
     InFlightDiagnostic typeCheckResult =
-        checkTypes(idx, termOperandType, "terminator operand",
-                   cast<transform::ParamType>(resultType), "result",
-                   /*atOp=*/&yieldTerminator);
+        checkTypes(idx, termOperandType, "terminator operand", resultType,
+                   "result", /*atOp=*/&yieldTerminator);
     if (LogicalResult(typeCheckResult).failed())
       return typeCheckResult;
   }

@@ -26,8 +26,8 @@ namespace fputil {
 //    (iii) -inf != +inf
 // 3. Any comparison with NaN returns false
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> equals(T x,
-                                                                       T y) {
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+equals(T x, T y) {
   using FPBits = FPBits<T>;
   FPBits x_bits(x);
   FPBits y_bits(y);
@@ -52,8 +52,8 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> equals(T x,
 // 2. x < +inf (x != +inf)
 // 3. Any comparison with NaN return false
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
-                                                                          T y) {
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+less_than(T x, T y) {
   using FPBits = FPBits<T>;
   FPBits x_bits(x);
   FPBits y_bits(y);
@@ -87,7 +87,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
 // Implements compareSignalingGreater predicate
 // x < y => y > x
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 greater_than(T x, T y) {
   return less_than(y, x);
 }
@@ -95,7 +95,7 @@ greater_than(T x, T y) {
 // Implements compareSignalingLessEqual predicate
 // x <= y => (x < y) || (x == y)
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 less_than_or_equals(T x, T y) {
   return less_than(x, y) || equals(x, y);
 }
@@ -103,7 +103,7 @@ less_than_or_equals(T x, T y) {
 // Implements compareSignalingGreaterEqual predicate
 // x >= y => (x > y) || (x == y) => (y < x) || (x == y)
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 greater_than_or_equals(T x, T y) {
   return less_than(y, x) || equals(x, y);
 }

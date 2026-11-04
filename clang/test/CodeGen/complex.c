@@ -134,25 +134,25 @@ double D;
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[GR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    [[G1_REAL:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G2_REAL:%.*]] = load double, ptr @g2, align 8
-// CHECK-NEXT:    [[G2_IMAG:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g2, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G2_IMAG:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g2, i64 8), align 8
 // CHECK-NEXT:    [[ADD_R:%.*]] = fadd double [[G1_REAL]], [[G2_REAL]]
 // CHECK-NEXT:    [[ADD_I:%.*]] = fadd double [[G1_IMAG]], [[G2_IMAG]]
 // CHECK-NEXT:    store double [[ADD_R]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[ADD_I]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[ADD_I]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G1_REAL1:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG2:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG2:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G2_REAL3:%.*]] = load double, ptr @g2, align 8
-// CHECK-NEXT:    [[G2_IMAG4:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g2, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G2_IMAG4:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g2, i64 8), align 8
 // CHECK-NEXT:    [[SUB_R:%.*]] = fsub double [[G1_REAL1]], [[G2_REAL3]]
 // CHECK-NEXT:    [[SUB_I:%.*]] = fsub double [[G1_IMAG2]], [[G2_IMAG4]]
 // CHECK-NEXT:    store double [[SUB_R]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[SUB_I]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[SUB_I]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G1_REAL5:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG6:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG6:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G2_REAL7:%.*]] = load double, ptr @g2, align 8
-// CHECK-NEXT:    [[G2_IMAG8:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g2, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G2_IMAG8:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g2, i64 8), align 8
 // CHECK-NEXT:    [[MUL_AC:%.*]] = fmul double [[G1_REAL5]], [[G2_REAL7]]
 // CHECK-NEXT:    [[MUL_BD:%.*]] = fmul double [[G1_IMAG6]], [[G2_IMAG8]]
 // CHECK-NEXT:    [[MUL_AD:%.*]] = fmul double [[G1_REAL5]], [[G2_IMAG8]]
@@ -173,37 +173,37 @@ double D;
 // CHECK-NEXT:    [[REAL_MUL_PHI:%.*]] = phi double [ [[MUL_R]], %[[ENTRY]] ], [ [[MUL_R]], %[[COMPLEX_MUL_IMAG_NAN]] ], [ [[TMP0]], %[[COMPLEX_MUL_LIBCALL]] ]
 // CHECK-NEXT:    [[IMAG_MUL_PHI:%.*]] = phi double [ [[MUL_I]], %[[ENTRY]] ], [ [[MUL_I]], %[[COMPLEX_MUL_IMAG_NAN]] ], [ [[TMP1]], %[[COMPLEX_MUL_LIBCALL]] ]
 // CHECK-NEXT:    store double [[REAL_MUL_PHI]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[IMAG_MUL_PHI]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[IMAG_MUL_PHI]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G1_REAL10:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG11:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG11:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[CONJ_I:%.*]] = fneg double [[G1_IMAG11]]
 // CHECK-NEXT:    [[NEG_R:%.*]] = fneg double [[G1_REAL10]]
 // CHECK-NEXT:    [[NEG_I:%.*]] = fneg double [[CONJ_I]]
 // CHECK-NEXT:    store double [[NEG_R]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[NEG_I]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[NEG_I]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @g1, align 8
 // CHECK-NEXT:    store double [[TMP2]], ptr [[GR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr @D, align 8
 // CHECK-NEXT:    [[CF_REAL:%.*]] = load float, ptr @cf, align 4
-// CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @cf, i64 4), align 4
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[CF_REAL]] to double
 // CHECK-NEXT:    [[CONV12:%.*]] = fpext float [[CF_IMAG]] to double
 // CHECK-NEXT:    [[ADD_R13:%.*]] = fadd double [[CONV]], [[TMP3]]
 // CHECK-NEXT:    [[CONV14:%.*]] = fptrunc double [[ADD_R13]] to float
 // CHECK-NEXT:    [[CONV15:%.*]] = fptrunc double [[CONV12]] to float
 // CHECK-NEXT:    store float [[CONV14]], ptr @cf, align 4
-// CHECK-NEXT:    store float [[CONV15]], ptr getelementptr inbounds nuw ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    store float [[CONV15]], ptr getelementptr inbounds nuw (i8, ptr @cf, i64 4), align 4
 // CHECK-NEXT:    [[CF_REAL16:%.*]] = load float, ptr @cf, align 4
-// CHECK-NEXT:    [[CF_IMAG17:%.*]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CF_IMAG17:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @cf, i64 4), align 4
 // CHECK-NEXT:    [[CONV18:%.*]] = fpext float [[CF_REAL16]] to double
 // CHECK-NEXT:    [[CONV19:%.*]] = fpext float [[CF_IMAG17]] to double
 // CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr @D, align 8
 // CHECK-NEXT:    [[ADD_R20:%.*]] = fadd double [[TMP4]], [[CONV18]]
 // CHECK-NEXT:    store double [[ADD_R20]], ptr @D, align 8
 // CHECK-NEXT:    [[G1_REAL21:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG22:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG22:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[CF_REAL23:%.*]] = load float, ptr @cf, align 4
-// CHECK-NEXT:    [[CF_IMAG24:%.*]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CF_IMAG24:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @cf, i64 4), align 4
 // CHECK-NEXT:    [[CONV25:%.*]] = fpext float [[CF_REAL23]] to double
 // CHECK-NEXT:    [[CONV26:%.*]] = fpext float [[CF_IMAG24]] to double
 // CHECK-NEXT:    [[CALL27:%.*]] = call { double, double } @__divdc3(double noundef [[CONV25]], double noundef [[CONV26]], double noundef [[G1_REAL21]], double noundef [[G1_IMAG22]]) #[[ATTR4]]
@@ -212,19 +212,19 @@ double D;
 // CHECK-NEXT:    [[CONV28:%.*]] = fptrunc double [[TMP5]] to float
 // CHECK-NEXT:    [[CONV29:%.*]] = fptrunc double [[TMP6]] to float
 // CHECK-NEXT:    store float [[CONV28]], ptr @cf, align 4
-// CHECK-NEXT:    store float [[CONV29]], ptr getelementptr inbounds nuw ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    store float [[CONV29]], ptr getelementptr inbounds nuw (i8, ptr @cf, i64 4), align 4
 // CHECK-NEXT:    [[G1_REAL30:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG31:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG31:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr @D, align 8
 // CHECK-NEXT:    [[ADD_R32:%.*]] = fadd double [[G1_REAL30]], [[TMP7]]
 // CHECK-NEXT:    store double [[ADD_R32]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[G1_IMAG31]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[G1_IMAG31]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr @D, align 8
 // CHECK-NEXT:    [[G1_REAL33:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG34:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG34:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[ADD_R35:%.*]] = fadd double [[TMP8]], [[G1_REAL33]]
 // CHECK-NEXT:    store double [[ADD_R35]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[G1_IMAG34]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[G1_IMAG34]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    ret void
 //
 void test3(void) {
@@ -249,25 +249,25 @@ int i;
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CI1_REAL:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI2_REAL:%.*]] = load i32, ptr @ci2, align 4
-// CHECK-NEXT:    [[CI2_IMAG:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci2, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI2_IMAG:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci2, i64 4), align 4
 // CHECK-NEXT:    [[ADD_R:%.*]] = add i32 [[CI1_REAL]], [[CI2_REAL]]
 // CHECK-NEXT:    [[ADD_I:%.*]] = add i32 [[CI1_IMAG]], [[CI2_IMAG]]
 // CHECK-NEXT:    store i32 [[ADD_R]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[ADD_I]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[ADD_I]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI1_REAL1:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG2:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG2:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI2_REAL3:%.*]] = load i32, ptr @ci2, align 4
-// CHECK-NEXT:    [[CI2_IMAG4:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci2, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI2_IMAG4:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci2, i64 4), align 4
 // CHECK-NEXT:    [[SUB_R:%.*]] = sub i32 [[CI1_REAL1]], [[CI2_REAL3]]
 // CHECK-NEXT:    [[SUB_I:%.*]] = sub i32 [[CI1_IMAG2]], [[CI2_IMAG4]]
 // CHECK-NEXT:    store i32 [[SUB_R]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[SUB_I]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[SUB_I]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI1_REAL5:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG6:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG6:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI2_REAL7:%.*]] = load i32, ptr @ci2, align 4
-// CHECK-NEXT:    [[CI2_IMAG8:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci2, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI2_IMAG8:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci2, i64 4), align 4
 // CHECK-NEXT:    [[MUL_RL:%.*]] = mul i32 [[CI1_REAL5]], [[CI2_REAL7]]
 // CHECK-NEXT:    [[MUL_RR:%.*]] = mul i32 [[CI1_IMAG6]], [[CI2_IMAG8]]
 // CHECK-NEXT:    [[MUL_R:%.*]] = sub i32 [[MUL_RL]], [[MUL_RR]]
@@ -275,19 +275,19 @@ int i;
 // CHECK-NEXT:    [[MUL_IR:%.*]] = mul i32 [[CI1_REAL5]], [[CI2_IMAG8]]
 // CHECK-NEXT:    [[MUL_I:%.*]] = add i32 [[MUL_IL]], [[MUL_IR]]
 // CHECK-NEXT:    store i32 [[MUL_R]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[MUL_I]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[MUL_I]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI1_REAL9:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG10:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG10:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CONJ_I:%.*]] = sub i32 0, [[CI1_IMAG10]]
 // CHECK-NEXT:    [[NEG_R:%.*]] = sub i32 0, [[CI1_REAL9]]
 // CHECK-NEXT:    [[NEG_I:%.*]] = sub i32 0, [[CONJ_I]]
 // CHECK-NEXT:    store i32 [[NEG_R]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[NEG_I]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[NEG_I]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @ci1, align 4
 // CHECK-NEXT:    store i32 [[TMP0]], ptr @i, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @i, align 4
 // CHECK-NEXT:    [[CS_REAL:%.*]] = load i16, ptr @cs, align 2
-// CHECK-NEXT:    [[CS_IMAG:%.*]] = load i16, ptr getelementptr inbounds nuw ({ i16, i16 }, ptr @cs, i32 0, i32 1), align 2
+// CHECK-NEXT:    [[CS_IMAG:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 2), align 2
 // CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[CS_REAL]] to i32
 // CHECK-NEXT:    [[CONV11:%.*]] = sext i16 [[CS_IMAG]] to i32
 // CHECK-NEXT:    [[ADD_R12:%.*]] = add i32 [[CONV]], [[TMP1]]
@@ -295,18 +295,18 @@ int i;
 // CHECK-NEXT:    [[CONV14:%.*]] = trunc i32 [[ADD_R12]] to i16
 // CHECK-NEXT:    [[CONV15:%.*]] = trunc i32 [[ADD_I13]] to i16
 // CHECK-NEXT:    store i16 [[CONV14]], ptr @cs, align 2
-// CHECK-NEXT:    store i16 [[CONV15]], ptr getelementptr inbounds nuw ({ i16, i16 }, ptr @cs, i32 0, i32 1), align 2
+// CHECK-NEXT:    store i16 [[CONV15]], ptr getelementptr inbounds nuw (i8, ptr @cs, i64 2), align 2
 // CHECK-NEXT:    [[CF_REAL:%.*]] = load float, ptr @cf, align 4
-// CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @cf, i64 4), align 4
 // CHECK-NEXT:    [[CONV16:%.*]] = fpext float [[CF_REAL]] to double
 // CHECK-NEXT:    [[CONV17:%.*]] = fpext float [[CF_IMAG]] to double
 // CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @D, align 8
 // CHECK-NEXT:    [[ADD_R18:%.*]] = fadd double [[TMP2]], [[CONV16]]
 // CHECK-NEXT:    store double [[ADD_R18]], ptr @D, align 8
 // CHECK-NEXT:    [[CI1_REAL19:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG20:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG20:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CS_REAL21:%.*]] = load i16, ptr @cs, align 2
-// CHECK-NEXT:    [[CS_IMAG22:%.*]] = load i16, ptr getelementptr inbounds nuw ({ i16, i16 }, ptr @cs, i32 0, i32 1), align 2
+// CHECK-NEXT:    [[CS_IMAG22:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 2), align 2
 // CHECK-NEXT:    [[CONV23:%.*]] = sext i16 [[CS_REAL21]] to i32
 // CHECK-NEXT:    [[CONV24:%.*]] = sext i16 [[CS_IMAG22]] to i32
 // CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[CONV23]], [[CI1_REAL19]]
@@ -323,21 +323,21 @@ int i;
 // CHECK-NEXT:    [[CONV25:%.*]] = trunc i32 [[TMP12]] to i16
 // CHECK-NEXT:    [[CONV26:%.*]] = trunc i32 [[TMP13]] to i16
 // CHECK-NEXT:    store i16 [[CONV25]], ptr @cs, align 2
-// CHECK-NEXT:    store i16 [[CONV26]], ptr getelementptr inbounds nuw ({ i16, i16 }, ptr @cs, i32 0, i32 1), align 2
+// CHECK-NEXT:    store i16 [[CONV26]], ptr getelementptr inbounds nuw (i8, ptr @cs, i64 2), align 2
 // CHECK-NEXT:    [[CI1_REAL27:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG28:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG28:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr @i, align 4
 // CHECK-NEXT:    [[ADD_R29:%.*]] = add i32 [[CI1_REAL27]], [[TMP14]]
 // CHECK-NEXT:    [[ADD_I30:%.*]] = add i32 [[CI1_IMAG28]], 0
 // CHECK-NEXT:    store i32 [[ADD_R29]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[ADD_I30]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[ADD_I30]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr @i, align 4
 // CHECK-NEXT:    [[CI1_REAL31:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG32:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG32:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[ADD_R33:%.*]] = add i32 [[TMP15]], [[CI1_REAL31]]
 // CHECK-NEXT:    [[ADD_I34:%.*]] = add i32 0, [[CI1_IMAG32]]
 // CHECK-NEXT:    store i32 [[ADD_R33]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[ADD_I34]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[ADD_I34]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    ret void
 //
 void test3int(void) {
@@ -368,7 +368,7 @@ void t1(void) {
 // CHECK-LABEL: define dso_local void @t2(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store float 4.000000e+00, ptr getelementptr inbounds nuw ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    store float 4.000000e+00, ptr getelementptr inbounds nuw (i8, ptr @cf, i64 4), align 4
 // CHECK-NEXT:    ret void
 //
 void t2(void) {
@@ -418,45 +418,45 @@ void t5(void) {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[G1_REAL:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[INC:%.*]] = fadd double [[G1_REAL]], 1.000000e+00
 // CHECK-NEXT:    store double [[INC]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[G1_IMAG]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[G1_IMAG]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G1_REAL1:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG2:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG2:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[DEC:%.*]] = fadd double [[G1_REAL1]], -1.000000e+00
 // CHECK-NEXT:    store double [[DEC]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[G1_IMAG2]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[G1_IMAG2]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G1_REAL3:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG4:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG4:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[INC5:%.*]] = fadd double [[G1_REAL3]], 1.000000e+00
 // CHECK-NEXT:    store double [[INC5]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[G1_IMAG4]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[G1_IMAG4]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[G1_REAL6:%.*]] = load double, ptr @g1, align 8
-// CHECK-NEXT:    [[G1_IMAG7:%.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[G1_IMAG7:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[DEC8:%.*]] = fadd double [[G1_REAL6]], -1.000000e+00
 // CHECK-NEXT:    store double [[DEC8]], ptr @g1, align 8
-// CHECK-NEXT:    store double [[G1_IMAG7]], ptr getelementptr inbounds nuw ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    store double [[G1_IMAG7]], ptr getelementptr inbounds nuw (i8, ptr @g1, i64 8), align 8
 // CHECK-NEXT:    [[CI1_REAL:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[INC9:%.*]] = add i32 [[CI1_REAL]], 1
 // CHECK-NEXT:    store i32 [[INC9]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[CI1_IMAG]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[CI1_IMAG]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI1_REAL10:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG11:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG11:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[DEC12:%.*]] = add i32 [[CI1_REAL10]], -1
 // CHECK-NEXT:    store i32 [[DEC12]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[CI1_IMAG11]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[CI1_IMAG11]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI1_REAL13:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG14:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG14:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[INC15:%.*]] = add i32 [[CI1_REAL13]], 1
 // CHECK-NEXT:    store i32 [[INC15]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[CI1_IMAG14]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[CI1_IMAG14]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[CI1_REAL16:%.*]] = load i32, ptr @ci1, align 4
-// CHECK-NEXT:    [[CI1_IMAG17:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    [[CI1_IMAG17:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    [[DEC18:%.*]] = add i32 [[CI1_REAL16]], -1
 // CHECK-NEXT:    store i32 [[DEC18]], ptr @ci1, align 4
-// CHECK-NEXT:    store i32 [[CI1_IMAG17]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci1, i32 0, i32 1), align 4
+// CHECK-NEXT:    store i32 [[CI1_IMAG17]], ptr getelementptr inbounds nuw (i8, ptr @ci1, i64 4), align 4
 // CHECK-NEXT:    ret void
 //
 void t6(void) {
@@ -593,3 +593,105 @@ void imag_on_scalar_with_type_promotion() {
   _Float16 _Complex a;
   _Float16 b = __real__(__imag__ a);
 }
+
+// CHECK-LABEL: define dso_local void @explicit_cast_atomic_complex_to_atomic_complex(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[B:%.*]] = alloca { i32, i32 }, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store float 2.000000e+00, ptr [[A_REALP]], align 8
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[A_IMAGP]], align 4
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[A]] seq_cst, align 8
+// CHECK-NEXT:    store i64 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[ATOMIC_TEMP]], i32 0, i32 0
+// CHECK-NEXT:    [[ATOMIC_TEMP_REAL:%.*]] = load float, ptr [[ATOMIC_TEMP_REALP]], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[ATOMIC_TEMP]], i32 0, i32 1
+// CHECK-NEXT:    [[ATOMIC_TEMP_IMAG:%.*]] = load float, ptr [[ATOMIC_TEMP_IMAGP]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[ATOMIC_TEMP_REAL]] to i32
+// CHECK-NEXT:    [[CONV1:%.*]] = fptosi float [[ATOMIC_TEMP_IMAG]] to i32
+// CHECK-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 0
+// CHECK-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 1
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[B_REALP]], align 8
+// CHECK-NEXT:    store i32 [[CONV1]], ptr [[B_IMAGP]], align 4
+// CHECK-NEXT:    ret void
+//
+void explicit_cast_atomic_complex_to_atomic_complex() {
+  _Atomic _Complex float a = 2.0f;
+  _Atomic _Complex int b = (_Atomic _Complex int)a;
+}
+
+// CHECK-LABEL: define dso_local void @explicit_cast_atomic_complex_to_complex(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[B:%.*]] = alloca { i32, i32 }, align 4
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store float 2.000000e+00, ptr [[A_REALP]], align 8
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[A_IMAGP]], align 4
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[A]] seq_cst, align 8
+// CHECK-NEXT:    store i64 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[ATOMIC_TEMP]], i32 0, i32 0
+// CHECK-NEXT:    [[ATOMIC_TEMP_REAL:%.*]] = load float, ptr [[ATOMIC_TEMP_REALP]], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[ATOMIC_TEMP]], i32 0, i32 1
+// CHECK-NEXT:    [[ATOMIC_TEMP_IMAG:%.*]] = load float, ptr [[ATOMIC_TEMP_IMAGP]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[ATOMIC_TEMP_REAL]] to i32
+// CHECK-NEXT:    [[CONV1:%.*]] = fptosi float [[ATOMIC_TEMP_IMAG]] to i32
+// CHECK-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 0
+// CHECK-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 1
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[B_REALP]], align 4
+// CHECK-NEXT:    store i32 [[CONV1]], ptr [[B_IMAGP]], align 4
+// CHECK-NEXT:    ret void
+//
+void explicit_cast_atomic_complex_to_complex() {
+  _Atomic _Complex float a = 2.0f;
+  _Complex int b = (_Complex int)a;
+}
+
+// CHECK-LABEL: define dso_local void @explicit_cast_complex_to_atomic_complex(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
+// CHECK-NEXT:    [[B:%.*]] = alloca { i32, i32 }, align 8
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store float 2.000000e+00, ptr [[A_REALP]], align 4
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[A_IMAGP]], align 4
+// CHECK-NEXT:    [[A_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP1]], align 4
+// CHECK-NEXT:    [[A_IMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP2]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[A_REAL]] to i32
+// CHECK-NEXT:    [[CONV3:%.*]] = fptosi float [[A_IMAG]] to i32
+// CHECK-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 0
+// CHECK-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[B]], i32 0, i32 1
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[B_REALP]], align 8
+// CHECK-NEXT:    store i32 [[CONV3]], ptr [[B_IMAGP]], align 4
+// CHECK-NEXT:    ret void
+//
+void explicit_cast_complex_to_atomic_complex() {
+  _Complex float a = 2.0f;
+  _Atomic _Complex int b = (_Atomic _Complex int)a;
+}
+
+// CHECK-LABEL: define dso_local void @explicit_cast_scalar_to_atomic_complex(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A:%.*]] = alloca { float, float }, align 8
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    store float 2.000000e+00, ptr [[A_REALP]], align 8
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[A_IMAGP]], align 4
+// CHECK-NEXT:    ret void
+//
+void explicit_cast_scalar_to_atomic_complex() {
+  _Atomic _Complex float a = (_Atomic _Complex float)2.0f;
+}
+
+//.
+// CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+//.

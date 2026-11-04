@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -fopenmp-version=52 -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -fopenmp-version=52 -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -22,7 +22,9 @@ int main(int argc, char **argv) {
   #pragma omp target exit data map(from: i) device (argc + argc)
   #pragma omp target exit data map(from: i) device (argc), device (argc+1) // expected-error {{directive '#pragma omp target exit data' cannot contain more than one 'device' clause}}
   #pragma omp target exit data map(from: i) device (S1) // expected-error {{'S1' does not refer to a value}}
-  #pragma omp target exit data map(from: i) device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
+  #pragma omp target exit data map(from: i) device (-3) // expected-error {{argument to 'device' clause must be a non-negative integer value, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)}}
+  #pragma omp target exit data map(from: i) device (-2) // OK: omp_invalid_device
+  #pragma omp target exit data map(from: i) device (-1) // OK: omp_initial_device
   #pragma omp target exit data map(from: i) device (-10u + z)
   #pragma omp target exit data map(from: i) device (ancestor: -10u + z) // expected-error {{use of undeclared identifier 'ancestor'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp target exit data map(from: i) device (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}

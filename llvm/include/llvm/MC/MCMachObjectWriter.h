@@ -48,7 +48,7 @@ protected:
   }
 
 public:
-  virtual ~MCMachObjectTargetWriter();
+  ~MCMachObjectTargetWriter() override;
 
   Triple::ObjectFormatType getFormat() const override { return Triple::MachO; }
   static bool classof(const MCObjectTargetWriter *W) {
@@ -166,6 +166,8 @@ private:
   VersionInfoType VersionInfo{};
   VersionInfoType TargetVariantVersionInfo{};
 
+  std::optional<std::string> TargetTriple;
+
   // The list of linker options for LC_LINKER_OPTION.
   std::vector<std::vector<std::string>> LinkerOptions;
 
@@ -246,6 +248,8 @@ public:
     TargetVariantVersionInfo.Update = Update;
     TargetVariantVersionInfo.SDKVersion = SDKVersion;
   }
+
+  void setTargetTriple(StringRef Triple) { TargetTriple = Triple; }
 
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;

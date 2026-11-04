@@ -25,10 +25,12 @@ module m2
   end
   subroutine test2
     !PORTABILITY: Name 'rf' from host scope should have a type declaration before its local statement function definition [-Wstatement-function-extensions]
+    !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope [-Wstatement-function-extensions]
     rf(x) = 1.
   end
   subroutine test2b
     !PORTABILITY: Name 'rf2' from host scope should have a type declaration before its local statement function definition [-Wstatement-function-extensions]
+    !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope [-Wstatement-function-extensions]
     rf2(x) = 1.
   end
   subroutine test3

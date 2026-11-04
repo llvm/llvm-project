@@ -10,9 +10,9 @@ target triple = "powerpc64le-unknown-linux"
 define void @leaf_function() #0 {
 ; CHECK-LABEL: define void @leaf_function() {
 ; CHECK-NEXT:    call void @mcount()
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__cyg_profile_func_enter(ptr @leaf_function, ptr [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__cyg_profile_func_exit(ptr @leaf_function, ptr [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -23,13 +23,13 @@ define void @leaf_function() #0 {
 define void @root_function() #0 {
 ; CHECK-LABEL: define void @root_function() {
 ; CHECK-NEXT:    call void @mcount()
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__cyg_profile_func_enter(ptr @root_function, ptr [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__cyg_profile_func_enter(ptr @leaf_function, ptr [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__cyg_profile_func_exit(ptr @leaf_function, ptr [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__cyg_profile_func_exit(ptr @root_function, ptr [[TMP4]])
 ; CHECK-NEXT:    ret void
 ;
@@ -100,7 +100,7 @@ define void @f7() #7 {
 declare ptr @tailcallee()
 define ptr @tailcaller() #8 {
 ; CHECK-LABEL: define ptr @tailcaller() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__cyg_profile_func_exit(ptr @tailcaller, ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = musttail call ptr @tailcallee()
 ; CHECK-NEXT:    ret ptr [[TMP2]]
@@ -110,7 +110,7 @@ define ptr @tailcaller() #8 {
 }
 define ptr @tailcaller2() #8 {
 ; CHECK-LABEL: define ptr @tailcaller2() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__cyg_profile_func_exit(ptr @tailcaller2, ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = musttail call ptr @tailcallee()
 ; CHECK-NEXT:    ret ptr [[TMP2]]

@@ -408,14 +408,14 @@ void ARMFixCortexA57AES1742098::insertAESFixup(
   // The def and the uses are still marked as Renamable if the original register
   // was, to avoid having to rummage through all the other uses and defs and
   // unset their renamable bits.
-  unsigned Renamable = OperandToFixup->isRenamable() ? RegState::Renamable : 0;
+  RegState Renamable = getRenamableRegState(OperandToFixup->isRenamable());
   BuildMI(*FixupLoc.Block, FixupLoc.InsertionPt, DebugLoc(),
           TII->get(ARM::VORRq))
       .addReg(RegToFixup, RegState::Define | Renamable)
       .addReg(RegToFixup, RegState::Kill | Renamable)
       .addReg(RegToFixup, RegState::Kill | Renamable)
       .addImm((uint64_t)ARMCC::AL)
-      .addReg(ARM::NoRegister);
+      .addReg(Register());
 }
 
 // Factory function used by AArch64TargetMachine to add the pass to

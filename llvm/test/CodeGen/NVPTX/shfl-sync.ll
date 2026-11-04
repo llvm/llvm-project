@@ -2,13 +2,9 @@
 ; RUN: %if ptxas-isa-6.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | %ptxas-verify %}
 
 declare i32 @llvm.nvvm.shfl.sync.down.i32(i32, i32, i32, i32)
-declare float @llvm.nvvm.shfl.sync.down.f32(float, i32, i32, i32)
 declare i32 @llvm.nvvm.shfl.sync.up.i32(i32, i32, i32, i32)
-declare float @llvm.nvvm.shfl.sync.up.f32(float, i32, i32, i32)
 declare i32 @llvm.nvvm.shfl.sync.bfly.i32(i32, i32, i32, i32)
-declare float @llvm.nvvm.shfl.sync.bfly.f32(float, i32, i32, i32)
 declare i32 @llvm.nvvm.shfl.sync.idx.i32(i32, i32, i32, i32)
-declare float @llvm.nvvm.shfl.sync.idx.f32(float, i32, i32, i32)
 
 ; CHECK-LABEL: .func{{.*}}shfl_sync_rrr
 define i32 @shfl_sync_rrr(i32 %mask, i32 %a, i32 %b, i32 %c) {

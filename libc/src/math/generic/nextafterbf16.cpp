@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/nextafterbf16.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/nextafterbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(bfloat16, nextafterbf16, (bfloat16 x, bfloat16 y)) {
-  return fputil::nextafter(x, y);
+  return math::nextafterbf16(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

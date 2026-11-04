@@ -6,7 +6,7 @@ define void @vec3_vectorize_call(ptr %Colour, float %0) {
 ; NON-POW2-LABEL: @vec3_vectorize_call(
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[COLOUR:%.*]], align 4
-; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP0:%.*]], i32 2
+; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP0:%.*]], i64 2
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> [[TMP3]], <3 x i32> <i32 3, i32 4, i32 2>
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP4]], <3 x float> zeroinitializer, <3 x float> zeroinitializer)
@@ -41,7 +41,7 @@ define void @vec3_fmuladd_64(ptr %Colour, double %0) {
 ; CHECK-LABEL: @vec3_fmuladd_64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX80:%.*]] = getelementptr float, ptr [[COLOUR:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP2]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fptrunc <2 x double> [[TMP3]] to <2 x float>

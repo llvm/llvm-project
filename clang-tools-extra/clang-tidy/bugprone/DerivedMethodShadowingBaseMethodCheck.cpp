@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DerivedMethodShadowingBaseMethodCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::bugprone {
 
@@ -43,14 +45,13 @@ namespace {
 AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
   const CXXRecordDecl *DerivedClass = Node.getParent();
   for (const auto &Base : DerivedClass->bases()) {
-    llvm::SmallVector<const CXXBaseSpecifier *, 8> Stack;
+    SmallVector<const CXXBaseSpecifier *, 8> Stack;
     Stack.push_back(&Base);
     while (!Stack.empty()) {
       const CXXBaseSpecifier *CurrentBaseSpec = Stack.back();
       Stack.pop_back();
 
-      if (CurrentBaseSpec->getAccessSpecifier() ==
-          clang::AccessSpecifier::AS_private)
+      if (CurrentBaseSpec->getAccessSpecifier() == AccessSpecifier::AS_private)
         continue;
 
       const CXXRecordDecl *CurrentRecord =
@@ -65,9 +66,8 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
 
       for (const auto &BaseMethod : CurrentRecord->methods()) {
         if (namesCollide(*BaseMethod, Node)) {
-          ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
-          Builder->setBinding("base_method",
-                              clang::DynTypedNode::create(*BaseMethod));
+          const ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
+          Builder->setBinding("base_method", DynTypedNode::create(*BaseMethod));
           return true;
         }
       }
@@ -79,9 +79,9 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
   return false;
 }
 
-// Same as clang-tools-extra/clang-tidy/modernize/UseEqualsDefaultCheck.cpp,
-// similar matchers are used elsewhere in LLVM
-AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
+AST_MATCHER(CXXMethodDecl, isTemplate) {
+  return Node.getDescribedFunctionTemplate() != nullptr;
+}
 
 } // namespace
 
@@ -96,8 +96,8 @@ void DerivedMethodShadowingBaseMethodCheck::registerMatchers(
           unless(anyOf(isOutOfLine(), isStaticStorageClass(), isImplicit(),
                        cxxConstructorDecl(), isOverride(), isPrivate(),
                        // isFinal(), //included with isOverride,
-                       // Templates are not handled yet
-                       ast_matchers::isTemplateInstantiation(),
+                       // TODO: Templates are not handled yet
+                       isTemplate(), ast_matchers::isTemplateInstantiation(),
                        ast_matchers::isExplicitTemplateSpecialization())),
           ofClass(cxxRecordDecl(isDerivedFrom(cxxRecordDecl()))
                       .bind("derived_class")),

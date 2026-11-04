@@ -118,7 +118,7 @@ struct GlobalStoreOpInterface
 
   bool bufferizesToMemoryRead(Operation *, OpOperand &,
                               const AnalysisState &) const {
-    return false;
+    return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *, OpOperand &,
@@ -146,7 +146,7 @@ struct GlobalStoreOpInterface
     }
 
     auto memcpy =
-        options.createMemCpy(rewriter, loc, sourceMemref.value(), targetMemref);
+        options.memCpyFn(rewriter, loc, sourceMemref.value(), targetMemref);
     if (failed(memcpy)) {
       return failure();
     }

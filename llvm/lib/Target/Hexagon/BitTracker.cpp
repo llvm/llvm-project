@@ -744,7 +744,7 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
       assert(WD >= WS);
       RegisterCell Src = getCell(RS, Inputs);
       RegisterCell Res(WD);
-      Res.insert(Src, BitMask(0, WS-1));
+      Res.insert(Src, BitMask(0, WS - 1));
       Res.fill(WS, WD, BitValue::Zero);
       putCell(RD, Res, Outputs);
       break;

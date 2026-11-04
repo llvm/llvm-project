@@ -110,9 +110,9 @@ define i32 @Test_pdep_32(i32 %a, i32 %b) sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.x86.bmi.pdep.32(i32 [[TMP1]], i32 [[B]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.pdep.i32(i32 [[TMP1]], i32 [[B]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[C:%.*]] = tail call i32 @llvm.x86.bmi.pdep.32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.pdep.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -131,9 +131,9 @@ define i64 @Test_pdep_64(i64 %a, i64 %b) sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.x86.bmi.pdep.64(i64 [[TMP1]], i64 [[B]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.pdep.i64(i64 [[TMP1]], i64 [[B]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[C:%.*]] = tail call i64 @llvm.x86.bmi.pdep.64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[C:%.*]] = call i64 @llvm.pdep.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[C]]
 ;
@@ -152,9 +152,9 @@ define i32 @Test_pext_32(i32 %a, i32 %b) sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.x86.bmi.pext.32(i32 [[TMP1]], i32 [[B]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.pext.i32(i32 [[TMP1]], i32 [[B]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[C:%.*]] = tail call i32 @llvm.x86.bmi.pext.32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.pext.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -173,9 +173,9 @@ define i64 @Test_pext_64(i64 %a, i64 %b) sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.x86.bmi.pext.64(i64 [[TMP1]], i64 [[B]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.pext.i64(i64 [[TMP1]], i64 [[B]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[C:%.*]] = tail call i64 @llvm.x86.bmi.pext.64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[C:%.*]] = call i64 @llvm.pext.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[C]]
 ;

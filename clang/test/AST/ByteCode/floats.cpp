@@ -1,13 +1,12 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1                                         -verify=ref,both %s
 
 
 constexpr void assert(bool C) {
   if (C)
     return;
   // Invalid in constexpr.
-  (void)(1 / 0); // expected-warning {{undefined}} \
-                 // ref-warning {{undefined}}
+  (void)(1 / 0); // both-warning {{undefined}}
 }
 
 constexpr int i = 2;
@@ -31,17 +30,13 @@ static_assert(10.0f * false == 0, "");
 
 constexpr float floats[] = {1.0f, 2.0f, 3.0f, 4.0f};
 
-constexpr float m = 5.0f / 0.0f; // ref-error {{must be initialized by a constant expression}} \
-                                 // ref-note {{division by zero}} \
-                                 // expected-error {{must be initialized by a constant expression}} \
-                                 // expected-note {{division by zero}}
+constexpr float m = 5.0f / 0.0f; // both-error {{must be initialized by a constant expression}} \
+                                 // both-note {{division by zero}}
 
-static_assert(~2.0f == 3, ""); // ref-error {{invalid argument type 'float' to unary expression}} \
-                               // expected-error {{invalid argument type 'float' to unary expression}}
+static_assert(~2.0f == 3, ""); // both-error {{invalid argument type 'float' to unary expression}}
 
 
-typedef int tdb[(long long)4e20]; //expected-error {{variable length}} \
-                                  //ref-error {{variable length}}
+typedef int tdb[(long long)4e20]; //both-error {{variable length}}
 
 /// Initialized by a double.
 constexpr float df = 0.0;
@@ -63,10 +58,8 @@ constexpr float fa[] = {1.0f, 2.0, 1, false};
 constexpr double da[] = {1.0f, 2.0, 1, false};
 
 constexpr float fm = __FLT_MAX__;
-constexpr int someInt = fm; // ref-error {{must be initialized by a constant expression}} \
-                            // ref-note {{is outside the range of representable values}} \
-                            // expected-error {{must be initialized by a constant expression}} \
-                            // expected-note {{is outside the range of representable values}}
+constexpr int someInt = fm; // both-error {{must be initialized by a constant expression}} \
+                            // both-note {{is outside the range of representable values}}
 
 namespace compound {
   constexpr float f1() {
@@ -99,8 +92,7 @@ namespace compound {
     // write to a[1];
     a[i++] += ++i;
 #if __cplusplus <= 201402L
-                  // expected-warning@-2 {{multiple unsequenced modifications}} \
-                  // ref-warning@-2 {{multiple unsequenced modifications}}
+                  // both-warning@-2 {{multiple unsequenced modifications}}
 #endif
 
     return a[1];
@@ -214,13 +206,20 @@ namespace nan {
   constexpr double nan = __builtin_nan("");
   static_assert(nan);
 
-  constexpr double D1 = 1 + nan; // ref-error {{must be initialized by a constant expression}} \
-                                 // ref-note {{produces a NaN}} \
-                                 // expected-error {{must be initialized by a constant expression}} \
-                                 // expected-note {{produces a NaN}}
+  constexpr double D1 = 1 + nan; // both-error {{must be initialized by a constant expression}} \
+                                 // both-note {{produces a NaN}}
 
-  constexpr double D2 = __builtin_inf() / __builtin_inf(); // ref-error {{must be initialized by a constant expression}} \
-                                                           // ref-note {{produces a NaN}} \
-                                                           // expected-error {{must be initialized by a constant expression}} \
-                                                           // expected-note {{produces a NaN}}
+  constexpr double D2 = __builtin_inf() / __builtin_inf(); // both-error {{must be initialized by a constant expression}} \
+                                                           // both-note {{produces a NaN}}
 }
+
+#ifdef __SIZEOF_INT128__
+namespace ConvertToIntOverflow {
+  // should not crash
+  enum { E = (__uint128_t)-1. }; // both-error {{expression is not an integral constant expression}} \
+                                 // both-note {{outside the range of representable values of type}}
+
+  enum { F = (__int128)(3.0e38) }; // both-error {{expression is not an integral constant expression}} \
+                                   // both-note {{outside the range of representable values of type}}
+}
+#endif

@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+c,+f,+d \
 ; RUN:     -M no-aliases < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IFDC %s
+; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+zca,+f,+d \
+; RUN:     -M no-aliases < %s \
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=-c,+f,+d \
 ; RUN:     -M no-aliases < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IFD %s

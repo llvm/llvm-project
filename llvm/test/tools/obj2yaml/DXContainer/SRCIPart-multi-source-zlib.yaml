@@ -1,0 +1,134 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+# REQUIRES: zlib
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+Parts:
+  - Name:            SRCI
+    Size:            252
+    SourceInfo:
+      Header:
+        Flags:           0
+        SectionCount:    3
+      Names:
+        SectionHeader:
+          AlignedSizeInBytes: 76
+          Flags:           0
+          Type:            SourceNames
+        Header:
+          Flags:           0
+          Count:           2
+          EntriesSizeInBytes: 56
+        Entries:
+          - AlignedSizeInBytes: 28
+            Flags:           0
+            NameSizeInBytes: 11
+            ContentSizeInBytes: 61
+            FileName:        fd_zs.hlsl
+          - AlignedSizeInBytes: 28
+            Flags:           0
+            NameSizeInBytes: 10
+            ContentSizeInBytes: 28
+            FileName:        util.hlsl
+      Contents:
+        SectionHeader:
+          Flags:           0
+          Type:            SourceContents
+        Header:
+          Flags:           0
+          Type:            Zlib
+          UncompressedEntriesSizeInBytes: 116
+          Count:           2
+        Entries:
+          - AlignedSizeInBytes: 76
+            Flags:           0
+            ContentSizeInBytes: 61
+            FileContent:     "#include \"util.hlsl\"\nfloat4 main() : SV_Target { return 0; }"
+          - AlignedSizeInBytes: 40
+            Flags:           0
+            ContentSizeInBytes: 28
+            FileContent:     'float4 util() { return 0; }'
+      Args:
+        SectionHeader:
+          AlignedSizeInBytes: 40
+          Flags:           0
+          Type:            Args
+        Header:
+          Flags:           0
+          SizeInBytes:     18
+          Count:           2
+        Args:
+          - Arg:             '-T'
+            Value:           ps_6_0
+          - Arg:             '-E'
+            Value:           main
+...
+
+# CHECK:      - Name:            SRCI
+# CHECK-NEXT:   Size:
+# CHECK-NEXT:   SourceInfo:
+# CHECK-NEXT:     Header:
+# CHECK-NEXT:       AlignedSizeInBytes:
+# CHECK-NEXT:       Flags:           0
+# CHECK-NEXT:       SectionCount:    3
+# CHECK-NEXT:     Names:
+# CHECK-NEXT:       SectionHeader:
+# CHECK-NEXT:         AlignedSizeInBytes: 76
+# CHECK-NEXT:         Flags:           0
+# CHECK-NEXT:         Type:            SourceNames
+# CHECK-NEXT:       Header:
+# CHECK-NEXT:         Flags:           0
+# CHECK-NEXT:         Count:           2
+# CHECK-NEXT:         EntriesSizeInBytes: 56
+# CHECK-NEXT:       Entries:
+# CHECK-NEXT:         - AlignedSizeInBytes: 28
+# CHECK-NEXT:           Flags:           0
+# CHECK-NEXT:           NameSizeInBytes: 11
+# CHECK-NEXT:           ContentSizeInBytes: 61
+# CHECK-NEXT:           FileName:        fd_zs.hlsl
+# CHECK-NEXT:         - AlignedSizeInBytes: 28
+# CHECK-NEXT:           Flags:           0
+# CHECK-NEXT:           NameSizeInBytes: 10
+# CHECK-NEXT:           ContentSizeInBytes: 28
+# CHECK-NEXT:           FileName:        util.hlsl
+# CHECK-NEXT:     Contents:
+# CHECK-NEXT:       SectionHeader:
+# CHECK-NEXT:         AlignedSizeInBytes:
+# CHECK-NEXT:         Flags:           0
+# CHECK-NEXT:         Type:            SourceContents
+# CHECK-NEXT:       Header:
+# CHECK-NEXT:         AlignedSizeInBytes:
+# CHECK-NEXT:         Flags:           0
+# CHECK-NEXT:         Type:            Zlib
+# CHECK-NEXT:         EntriesSizeInBytes:
+# CHECK-NEXT:         UncompressedEntriesSizeInBytes: 116
+# CHECK-NEXT:         Count:           2
+# CHECK-NEXT:       Entries:
+# CHECK-NEXT:         - AlignedSizeInBytes: 76
+# CHECK-NEXT:           Flags:           0
+# CHECK-NEXT:           ContentSizeInBytes: 61
+# CHECK-NEXT:           FileContent:     "#include \"util.hlsl\"\nfloat4 main() : SV_Target { return 0; }"
+# CHECK-NEXT:         - AlignedSizeInBytes: 40
+# CHECK-NEXT:           Flags:           0
+# CHECK-NEXT:           ContentSizeInBytes: 28
+# CHECK-NEXT:           FileContent:     'float4 util() { return 0; }'
+# CHECK-NEXT:     Args:
+# CHECK-NEXT:       SectionHeader:
+# CHECK-NEXT:         AlignedSizeInBytes: 40
+# CHECK-NEXT:         Flags:           0
+# CHECK-NEXT:         Type:            Args
+# CHECK-NEXT:       Header:
+# CHECK-NEXT:         Flags:           0
+# CHECK-NEXT:         SizeInBytes:     18
+# CHECK-NEXT:         Count:           2
+# CHECK-NEXT:       Args:
+# CHECK-NEXT:         - Arg:             '-T'
+# CHECK-NEXT:           Value:           ps_6_0
+# CHECK-NEXT:         - Arg:             '-E'
+# CHECK-NEXT:           Value:           main

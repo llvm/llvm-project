@@ -112,3 +112,17 @@ void main() {
   (void)Buff.__handle; // expected-error {{'__handle' is a private member of 'hlsl::RWBuffer<vector<float, 3>>'}}
   // expected-note@* {{implicitly declared private here}}
 }
+
+// expected-error@+2 {{class template 'RWBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer {}}}
+void f1(RWBuffer B) {}
+
+// expected-error@+2 {{class template 'RWBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer {}}}
+RWBuffer f2();
+
+struct S {
+  // expected-error@+2 {{class template 'RWBuffer' requires template arguments}}
+  // expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer {}}}
+  RWBuffer B;
+};

@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdIteratorDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -74,4 +76,9 @@ class StdIteratorDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
         self.do_test()

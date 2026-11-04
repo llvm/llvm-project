@@ -25,7 +25,8 @@ class UncheckedOptionalAccessCheck : public ClangTidyCheck {
 public:
   UncheckedOptionalAccessCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        ModelOptions{Options.get("IgnoreSmartPointerDereference", false)} {}
+        ModelOptions{Options.get("IgnoreSmartPointerDereference", false),
+                     Options.get("IgnoreValueCalls", false)} {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -34,6 +35,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
     Options.store(Opts, "IgnoreSmartPointerDereference",
                   ModelOptions.IgnoreSmartPointerDereference);
+    Options.store(Opts, "IgnoreValueCalls", ModelOptions.IgnoreValueCalls);
   }
 
 private:

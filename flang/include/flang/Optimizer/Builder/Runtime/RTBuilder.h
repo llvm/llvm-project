@@ -19,7 +19,6 @@
 
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/reduce.h"
@@ -28,8 +27,9 @@
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cstddef>
 #include <cstdint>
-#include <functional>
+#include <utility>
 
 #ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
@@ -244,7 +244,46 @@ constexpr TypeBuilderFunc getModel<void *>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<const void *>() {
+  return getModel<void *>();
+}
+template <>
 constexpr TypeBuilderFunc getModel<void (*)(int)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::LLVMPointerType::get(
+        context,
+        mlir::FunctionType::get(context, /*inputs=*/{}, /*results*/ {}));
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<void *(*)(void *, const void *, unsigned long)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto voidPtrTy =
+        fir::LLVMPointerType::get(context, mlir::IntegerType::get(context, 8));
+    auto unsignedLongTy =
+        mlir::IntegerType::get(context, 8 * sizeof(unsigned long));
+    auto funcTy = mlir::FunctionType::get(
+        context, {voidPtrTy, voidPtrTy, unsignedLongTy}, {voidPtrTy});
+    return fir::LLVMPointerType::get(context, funcTy);
+  };
+}
+#ifdef _MSC_VER
+template <>
+constexpr TypeBuilderFunc
+getModel<void *(*)(void *, const void *, unsigned __int64)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto voidPtrTy =
+        fir::LLVMPointerType::get(context, mlir::IntegerType::get(context, 8));
+    auto uint64Ty = mlir::IntegerType::get(context, 64);
+    auto funcTy = mlir::FunctionType::get(
+        context, {voidPtrTy, voidPtrTy, uint64Ty}, {voidPtrTy});
+    return fir::LLVMPointerType::get(context, funcTy);
+  };
+}
+#endif
+template <>
+constexpr TypeBuilderFunc getModel<void (*)(void)>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return fir::LLVMPointerType::get(
         context,
@@ -725,32 +764,34 @@ template <char... Cs>
 using RuntimeIdentifier = std::integer_sequence<char, Cs...>;
 
 namespace details {
-template <typename T, T... As, T... Bs>
-static constexpr std::integer_sequence<T, As..., Bs...>
-concat(std::integer_sequence<T, As...>, std::integer_sequence<T, Bs...>) {
-  return {};
+template <typename T, std::size_t N>
+static constexpr std::size_t leadingNonZero(const T (&arr)[N]) {
+  std::size_t i = 0;
+  while (i < N && arr[i] != 0)
+    ++i;
+  return i;
 }
-template <typename T, T... As, T... Bs, typename... Cs>
-static constexpr auto concat(std::integer_sequence<T, As...>,
-                             std::integer_sequence<T, Bs...>, Cs...) {
-  return concat(std::integer_sequence<T, As..., Bs...>{}, Cs{}...);
+template <typename T, T... b>
+struct LeadingNonZero {
+  static constexpr T arr[] = {b...};
+  static constexpr std::size_t value = leadingNonZero(arr);
+};
+template <typename T, T... b, std::size_t... I>
+static constexpr auto take(std::integer_sequence<T, b...>,
+                           std::index_sequence<I...>) {
+  return std::integer_sequence<T, LeadingNonZero<T, b...>::arr[I]...>{};
 }
-template <typename T>
-static constexpr std::integer_sequence<T> concat(std::integer_sequence<T>) {
-  return {};
-}
-template <typename T, T a>
-static constexpr auto filterZero(std::integer_sequence<T, a>) {
-  if constexpr (a != 0) {
-    return std::integer_sequence<T, a>{};
-  } else {
-    return std::integer_sequence<T>{};
-  }
-}
+
+/// This is a helper for the mkRTKey macro; FirMacroExpandKey encodes runtime
+/// function names fixed-width template sequences of exactly 50 characters. This
+/// filter function removes the trailing '\0' characters. This is deliberately
+/// non-recursive because 50 nested template expansions might hit compiler
+/// limits, such as msvc's C1202.
 template <typename T, T... b>
 static constexpr auto filter(std::integer_sequence<T, b...>) {
   if constexpr (sizeof...(b) > 0) {
-    return details::concat(filterZero(std::integer_sequence<T, b>{})...);
+    return take(std::integer_sequence<T, b...>{},
+                std::make_index_sequence<LeadingNonZero<T, b...>::value>{});
   } else {
     return std::integer_sequence<T>{};
   }
@@ -806,9 +847,9 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 /// Get (or generate) the MLIR FuncOp for a given runtime function. Its template
 /// argument is intended to be of the form: <mkRTKey(runtime function name)>.
 template <typename RuntimeEntry>
-static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         bool isIO = false) {
+mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
+                                  fir::FirOpBuilder &builder,
+                                  bool isIO = false) {
   using namespace Fortran::runtime;
   auto name = RuntimeEntry::name;
   auto func = builder.getNamedFunction(name);
@@ -820,8 +861,8 @@ static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
 
 /// Get (or generate) the MLIR FuncOp for a given IO runtime function.
 template <typename E>
-static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
-                                           fir::FirOpBuilder &builder) {
+mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
+                                    fir::FirOpBuilder &builder) {
   return getRuntimeFunc<E>(loc, builder, /*isIO=*/true);
 }
 

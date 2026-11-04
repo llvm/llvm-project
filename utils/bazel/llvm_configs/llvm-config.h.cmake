@@ -98,6 +98,9 @@
 /* Define if zstd compression is available */
 #cmakedefine01 LLVM_ENABLE_ZSTD
 
+/* Define if xz (lzma) decompression is available */
+#cmakedefine01 LLVM_ENABLE_LZMA
+
 /* Define if LLVM is using tflite */
 #cmakedefine LLVM_HAVE_TFLITE
 
@@ -125,6 +128,9 @@
 /* Define if llvm_unreachable should be optimized with undefined behavior
  * in non assert builds */
 #cmakedefine01 LLVM_UNREACHABLE_OPTIMIZE
+
+/* Define if building LLVM with LLVM_ENABLE_IO_SANDBOX */
+#cmakedefine01 LLVM_ENABLE_IO_SANDBOX
 
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #cmakedefine01 LLVM_ENABLE_DIA_SDK

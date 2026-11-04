@@ -12,8 +12,8 @@
 # RUN:        --skip-funcs=helper1Func,main -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECKNOCFG %s
 
 # ICFCHECK:      ICF iteration 1
-# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
 # ICFCHECK-NEXT: folding barSubFunc into fooSubFunc
+# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
 
 # SAFEICFCHECK: skipping function with reference taken barAddFunc
 # SAFEICFCHECK-NEXT: ICF iteration 1

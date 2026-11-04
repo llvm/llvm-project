@@ -102,6 +102,8 @@ __isl_give isl_aff *isl_aff_normalize(__isl_take isl_aff *aff);
 __isl_give isl_aff *isl_aff_expand_divs( __isl_take isl_aff *aff,
 	__isl_take isl_mat *div, int *exp);
 
+__isl_give isl_multi_aff *isl_aff_as_domain_extension(__isl_take isl_aff *aff);
+
 __isl_give isl_aff *isl_stream_read_aff(__isl_keep isl_stream *s);
 
 __isl_give isl_pw_aff *isl_pw_aff_alloc_size(__isl_take isl_space *space,

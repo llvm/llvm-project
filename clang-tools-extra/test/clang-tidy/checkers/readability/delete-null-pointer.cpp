@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-delete-null-pointer %t -- -- -fno-delayed-template-parsing
 
-#define NULL 0
+#include <cstddef>
 
 template <typename T>
 struct Templ {
@@ -155,4 +155,24 @@ void g() {
     int x = 5;
     delete p6;
   }
+}
+
+struct X {};
+X *makeX();
+struct Y {};
+Y *makeY();
+
+void conditionVariable() {
+  if (X *x = makeX())
+    delete x;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect
+
+  if (X *x = makeX(); x)
+    delete x;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect
+
+  X *x = makeX();
+  if (Y *y = makeY(); x)
+    delete x;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect
 }

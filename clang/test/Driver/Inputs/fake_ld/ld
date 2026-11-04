@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "Unexpectedly running fake ld" 1>&2
+
+exit 1

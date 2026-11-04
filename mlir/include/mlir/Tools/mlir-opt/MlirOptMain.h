@@ -15,6 +15,7 @@
 
 #include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Support/ToolUtilities.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstdlib>
@@ -126,6 +127,28 @@ public:
   }
   std::optional<int64_t> bytecodeVersionToEmit() const {
     return emitBytecodeVersion;
+  }
+
+  /// Set target dialect versions as strings of the form "dialect=version".
+  /// The dialect defines the syntax of its version string.
+  MlirOptMainConfig &
+  setEmitBytecodeDialectVersions(ArrayRef<std::string> versions) {
+    emitBytecodeDialectVersions.assign(versions.begin(), versions.end());
+    return *this;
+  }
+  ArrayRef<std::string> bytecodeDialectVersionsToEmit() const {
+    return emitBytecodeDialectVersions;
+  }
+
+  /// Set the bytecode producer to use.
+  MlirOptMainConfig &emitBytecodeProducer(StringRef producer) {
+    emitBytecodeProducerFlag = producer.str();
+    return *this;
+  }
+  std::optional<StringRef> bytecodeProducerToEmit() const {
+    if (emitBytecodeProducerFlag.empty())
+      return std::nullopt;
+    return emitBytecodeProducerFlag;
   }
 
   /// Set the callback to populate the pass manager.
@@ -309,6 +332,12 @@ protected:
   /// Emit bytecode at given version.
   std::optional<int64_t> emitBytecodeVersion = std::nullopt;
 
+  /// Target dialect versions for bytecode emission, as "dialect=version".
+  std::vector<std::string> emitBytecodeDialectVersions;
+
+  /// Emit bytecode with given producer.
+  std::string emitBytecodeProducerFlag = "";
+
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;
 
@@ -358,6 +387,20 @@ protected:
 /// used to pass in a callback to setup a default pass pipeline to be applied on
 /// the loaded IR.
 using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
+
+/// Register basic command line options.
+/// - toolName is used for the header displayed by `--help`.
+/// - registry should contain all the dialects that can be parsed in the source.
+/// - return std::string for help header.
+std::string registerCLIOptions(llvm::StringRef toolName,
+                               DialectRegistry &registry);
+
+/// Parse command line options.
+/// - helpHeader is used for the header displayed by `--help`.
+/// - return std::pair<std::string, std::string> for
+///   inputFilename and outputFilename command line option values.
+std::pair<std::string, std::string> parseCLIOptions(int argc, char **argv,
+                                                    llvm::StringRef helpHeader);
 
 /// Register and parse command line options.
 /// - toolName is used for the header displayed by `--help`.

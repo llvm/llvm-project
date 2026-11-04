@@ -22,6 +22,9 @@
 #include "llvm/MCA/Stages/Stage.h"
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "llvm-mca"
 
 namespace llvm {
 namespace mca {
@@ -35,6 +38,7 @@ public:
   InstructionTables(const MCSchedModel &Model)
       : SM(Model), Masks(Model.getNumProcResourceKinds()) {
     computeProcResourceMasks(Model, Masks);
+    LLVM_DEBUG(dumpProcResourceMasks(Model, Masks));
   }
 
   bool hasWorkToComplete() const override { return false; }

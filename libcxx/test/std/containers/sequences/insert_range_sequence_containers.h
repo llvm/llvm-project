@@ -643,6 +643,61 @@ constexpr void test_sequence_assign_range_move_only() {
   c.assign_range(in);
 }
 
+struct InPlaceOnly {
+  constexpr InPlaceOnly() {}
+  InPlaceOnly(const InPlaceOnly&)            = delete;
+  InPlaceOnly(InPlaceOnly&&)                 = delete;
+  InPlaceOnly& operator=(const InPlaceOnly&) = delete;
+  InPlaceOnly& operator=(InPlaceOnly&&)      = delete;
+};
+
+struct EmplaceConstructible {
+  EmplaceConstructible(const EmplaceConstructible&)            = delete;
+  EmplaceConstructible& operator=(const EmplaceConstructible&) = delete;
+  EmplaceConstructible& operator=(EmplaceConstructible&&)      = delete;
+  EmplaceConstructible(EmplaceConstructible&&)                 = delete;
+  constexpr EmplaceConstructible(const InPlaceOnly&) {}
+};
+
+template <template <class...> class Container>
+constexpr void test_sequence_append_range_emplace_constructible() {
+  InPlaceOnly input[5];
+  types::for_each(types::cpp20_input_iterator_list<InPlaceOnly*>{}, [&]<class Iter> {
+    std::ranges::subrange in(Iter(input), sentinel_wrapper<Iter>(Iter(input + 5)));
+    Container<EmplaceConstructible> c;
+    c.append_range(in);
+  });
+}
+
+template <template <class...> class Container>
+constexpr void test_sequence_prepend_range_emplace_constructible() {
+  InPlaceOnly input[5];
+  types::for_each(types::cpp20_input_iterator_list<InPlaceOnly*>{}, [&]<class Iter> {
+    std::ranges::subrange in(Iter(input), sentinel_wrapper<Iter>(Iter(input + 5)));
+    Container<EmplaceConstructible> c;
+    c.prepend_range(in);
+  });
+}
+
+// vector has a special requirement that the type also has to be Cpp17MoveInsertable
+struct EmplaceConstructibleAndMoveInsertable {
+  EmplaceConstructibleAndMoveInsertable(const EmplaceConstructibleAndMoveInsertable&)            = delete;
+  EmplaceConstructibleAndMoveInsertable& operator=(const EmplaceConstructibleAndMoveInsertable&) = delete;
+  EmplaceConstructibleAndMoveInsertable& operator=(EmplaceConstructibleAndMoveInsertable&&)      = delete;
+  constexpr EmplaceConstructibleAndMoveInsertable(EmplaceConstructibleAndMoveInsertable&&) {}
+  constexpr EmplaceConstructibleAndMoveInsertable(const InPlaceOnly&) {}
+};
+
+template <template <class...> class Container>
+constexpr void test_sequence_append_range_emplace_constructible_and_move_insertable() {
+  InPlaceOnly input[5];
+  types::for_each(types::cpp20_input_iterator_list<InPlaceOnly*>{}, [&]<class Iter> {
+    std::ranges::subrange in(Iter(input), sentinel_wrapper<Iter>(Iter(input + 5)));
+    Container<EmplaceConstructibleAndMoveInsertable> c;
+    c.append_range(in);
+  });
+}
+
 // Exception safety.
 
 template <template <class...> class Container>

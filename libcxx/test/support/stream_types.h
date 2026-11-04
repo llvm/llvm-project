@@ -41,4 +41,30 @@ private:
   size_t index_;
 };
 
+template <class CharT>
+class failing_streambuf : public std::basic_streambuf<CharT> {
+  using char_type   = CharT;
+  using traits_type = std::char_traits<CharT>;
+  using int_type    = typename traits_type::int_type;
+
+public:
+  failing_streambuf(size_t fail_at) : fail_at_(fail_at) {}
+
+  std::basic_string<char_type> str() const { return underlying_data_; }
+
+protected:
+  int_type overflow(int_type c) override {
+    if (underlying_data_.size() == fail_at_)
+      return traits_type::eof();
+    if (traits_type::eq_int_type(c, traits_type::eof()))
+      return traits_type::not_eof(c);
+    underlying_data_.push_back(traits_type::to_char_type(c));
+    return c;
+  }
+
+private:
+  std::basic_string<char_type> underlying_data_;
+  size_t fail_at_;
+};
+
 #endif // TEST_SUPPORT_STREAM_TYPES_H

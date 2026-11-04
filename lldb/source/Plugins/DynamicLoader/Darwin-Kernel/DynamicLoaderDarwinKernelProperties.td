@@ -1,6 +1,6 @@
 include "../../../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "dynamicloaderdarwinkernel" in {
+let Definition = "dynamicloaderdarwinkernel", Path = "plugin.dynamic-loader.darwin-kernel" in {
   def LoadKexts: Property<"load-kexts", "Boolean">,
     Global,
     DefaultTrue,

@@ -524,4 +524,4 @@ jr a0
 # CHECK-NEXT: 88.    1     59.0   0.0    0.0       lwu	a0, 0(a0)
 # CHECK-NEXT: 89.    1     62.0   0.0    0.0       addw	a0, a0, a0
 # CHECK-NEXT: 90.    1     63.0   0.0    0.0       jr	a0
-# CHECK-NEXT:        1     22.7   0.0    0.0       <total>
+# CHECK-NEXT:        91    22.7   0.0    0.0       <total>

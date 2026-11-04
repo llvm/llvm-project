@@ -72,6 +72,42 @@ TEST(ScudoStringsTest, Precision) {
   EXPECT_STREQ("12345   ", Str.data());
 }
 
+TEST(ScudoStringTest, AppendSigned32Int) {
+  scudo::ScopedString Str;
+  Str.append(-12345);
+  EXPECT_STREQ("-12345", Str.data());
+}
+
+TEST(ScudoStringTest, AppendSigned64Int) {
+  scudo::ScopedString Str;
+  Str.append(static_cast<scudo::s64>(-3000000000LL));
+  EXPECT_STREQ("-3000000000", Str.data());
+}
+
+TEST(ScudoStringTest, AppendUnsigned32Int) {
+  scudo::ScopedString Str;
+  Str.append(12345u);
+  EXPECT_STREQ("12345", Str.data());
+}
+
+TEST(ScudoStringTest, AppendUnsigned64Int) {
+  scudo::ScopedString Str;
+  Str.append(static_cast<scudo::u64>(5000000000ULL));
+  EXPECT_STREQ("5000000000", Str.data());
+}
+
+TEST(ScudoStringTest, AppendBoolTrue) {
+  scudo::ScopedString Str;
+  Str.append(true);
+  EXPECT_STREQ("true", Str.data());
+}
+
+TEST(ScudoStringTest, AppendBoolFalse) {
+  scudo::ScopedString Str;
+  Str.append(false);
+  EXPECT_STREQ("false", Str.data());
+}
+
 static void fillString(scudo::ScopedString &Str, scudo::uptr Size) {
   for (scudo::uptr I = 0; I < Size; I++)
     Str.append("A");

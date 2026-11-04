@@ -94,9 +94,8 @@ define <4 x i32> @v4i32_neg_immediates() #0 {
 define <4 x i32> @v4i32_out_range_start() #0 {
 ; CHECK-LABEL: v4i32_out_range_start:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    index z0.s, w8, #1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    adrp x8, .LCPI9_0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI9_0]
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 16, i32 17, i32 18, i32 19>
 }
@@ -105,9 +104,8 @@ define <4 x i32> @v4i32_out_range_start() #0 {
 define <4 x i32> @v4i32_out_range_step() #0 {
 ; CHECK-LABEL: v4i32_out_range_step:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    index z0.s, #0, w8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    adrp x8, .LCPI10_0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 0, i32 16, i32 32, i32 48>
 }
@@ -116,10 +114,8 @@ define <4 x i32> @v4i32_out_range_step() #0 {
 define <4 x i32> @v4i32_out_range_start_step() #0 {
 ; CHECK-LABEL: v4i32_out_range_start_step:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    index z0.s, #0, w8
-; CHECK-NEXT:    add z0.s, z0.s, #16 // =0x10
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    adrp x8, .LCPI11_0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI11_0]
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 16, i32 32, i32 48, i32 64>
 }

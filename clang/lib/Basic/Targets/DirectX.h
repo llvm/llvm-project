@@ -20,35 +20,11 @@
 namespace clang {
 namespace targets {
 
-static const unsigned DirectXAddrSpaceMap[] = {
-    0, // Default
-    1, // opencl_global
-    3, // opencl_local
-    2, // opencl_constant
-    0, // opencl_private
-    4, // opencl_generic
-    5, // opencl_global_device
-    6, // opencl_global_host
-    0, // cuda_device
-    0, // cuda_constant
-    0, // cuda_shared
-    // SYCL address space values for this map are dummy
-    0, // sycl_global
-    0, // sycl_global_device
-    0, // sycl_global_host
-    0, // sycl_local
-    0, // sycl_private
-    0, // ptr32_sptr
-    0, // ptr32_uptr
-    0, // ptr64
-    3, // hlsl_groupshared
-    2, // hlsl_constant
-    0, // hlsl_private
-    0, // hlsl_device
-    0, // hlsl_input
-    // Wasm address space values for this target are dummy values,
-    // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+static constexpr LangASMap DirectXAddrSpaceMap = {
+    {LangAS::opencl_global, 1},        {LangAS::opencl_local, 3},
+    {LangAS::opencl_constant, 2},      {LangAS::opencl_generic, 4},
+    {LangAS::opencl_global_device, 5}, {LangAS::opencl_global_host, 6},
+    {LangAS::hlsl_groupshared, 3},     {LangAS::hlsl_constant, 2},
 };
 
 class LLVM_LIBRARY_VISIBILITY DirectXTargetInfo : public TargetInfo {
@@ -62,16 +38,12 @@ public:
     HasFastHalfType = true;
     HasFloat16 = true;
     NoAsmVariants = true;
+    VectorsAreElementAligned = true;
     PlatformMinVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
-    // TODO: We need to align vectors on the element size generally, but for now
-    // we hard code this for 3-element 32- and 64-bit vectors as a workaround.
-    // See https://github.com/llvm/llvm-project/issues/123968
-    resetDataLayout("e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:"
-                    "32-f64:64-n8:16:32:64-v48:16:16-v96:32:32-v192:64:64");
+    resetDataLayout();
     TheCXXABI.set(TargetCXXABI::GenericItanium);
   }
-  bool useFP16ConversionIntrinsics() const override { return false; }
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 

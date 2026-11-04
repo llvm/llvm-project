@@ -1232,11 +1232,11 @@ define fp128 @libcall1_fabsl() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @fabsl(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.fabs.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
 
-declare fp128 @fabsl(fp128) #1
+declare fp128 @llvm.fabs.f128(fp128) #1
 
 define fp128 @libcall1_ceill() {
 ; C_CC_FMT-LABEL: libcall1_ceill:
@@ -1288,11 +1288,9 @@ define fp128 @libcall1_ceill() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @ceill(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.ceil.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
-
-declare fp128 @ceill(fp128) #1
 
 define fp128 @libcall1_sinl() {
 ; C_CC_FMT-LABEL: libcall1_sinl:
@@ -1736,11 +1734,9 @@ define fp128 @libcall1_nearbyintl() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @nearbyintl(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.nearbyint.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
-
-declare fp128 @nearbyintl(fp128) #1
 
 define fp128 @libcall1_floorl() {
 ; C_CC_FMT-LABEL: libcall1_floorl:
@@ -1792,11 +1788,9 @@ define fp128 @libcall1_floorl() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @floorl(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.floor.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
-
-declare fp128 @floorl(fp128) #1
 
 define fp128 @libcall1_sqrtl() {
 ; C_CC_FMT-LABEL: libcall1_sqrtl:
@@ -1904,11 +1898,9 @@ define fp128 @libcall1_rintl() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @rintl(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.rint.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
-
-declare fp128 @rintl(fp128) #1
 
 define fp128 @libcall_powil(fp128 %a, i32 %b) {
 ; C_CC_FMT-LABEL: libcall_powil:
@@ -2788,22 +2780,21 @@ entry:
 define fp128 @select_LD(i32 signext %a, i64, fp128 %b, fp128 %c) {
 ; C_CC_FMT-LABEL: select_LD:
 ; C_CC_FMT:       # %bb.0: # %entry
-; C_CC_FMT-NEXT:    movn $8, $6, $4
-; C_CC_FMT-NEXT:    movn $9, $7, $4
 ; C_CC_FMT-NEXT:    move $2, $8
+; C_CC_FMT-NEXT:    movn $2, $6, $4
+; C_CC_FMT-NEXT:    movn $9, $7, $4
 ; C_CC_FMT-NEXT:    move $4, $9
 ; C_CC_FMT-NEXT:    jr $ra
 ; C_CC_FMT-NEXT:    nop
 ;
 ; CMP_CC_FMT-LABEL: select_LD:
 ; CMP_CC_FMT:       # %bb.0: # %entry
-; CMP_CC_FMT-NEXT:    sll $1, $4, 0
-; CMP_CC_FMT-NEXT:    seleqz $2, $8, $1
-; CMP_CC_FMT-NEXT:    selnez $3, $6, $1
-; CMP_CC_FMT-NEXT:    or $2, $3, $2
-; CMP_CC_FMT-NEXT:    seleqz $3, $9, $1
-; CMP_CC_FMT-NEXT:    selnez $1, $7, $1
-; CMP_CC_FMT-NEXT:    or $4, $1, $3
+; CMP_CC_FMT-NEXT:    seleqz $1, $8, $4
+; CMP_CC_FMT-NEXT:    selnez $2, $6, $4
+; CMP_CC_FMT-NEXT:    or $2, $2, $1
+; CMP_CC_FMT-NEXT:    seleqz $1, $9, $4
+; CMP_CC_FMT-NEXT:    selnez $3, $7, $4
+; CMP_CC_FMT-NEXT:    or $4, $3, $1
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %tobool = icmp ne i32 %a, 0

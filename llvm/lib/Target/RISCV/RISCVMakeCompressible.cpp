@@ -67,9 +67,14 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -79,19 +84,24 @@ using namespace llvm;
 
 namespace {
 
-struct RISCVMakeCompressibleOpt : public MachineFunctionPass {
+struct RISCVMakeCompressibleLegacy : public MachineFunctionPass {
   static char ID;
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  RISCVMakeCompressibleOpt() : MachineFunctionPass(ID) {}
+  RISCVMakeCompressibleLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return RISCV_COMPRESS_INSTRS_NAME; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 } // namespace
 
-char RISCVMakeCompressibleOpt::ID = 0;
-INITIALIZE_PASS(RISCVMakeCompressibleOpt, "riscv-make-compressible",
+char RISCVMakeCompressibleLegacy::ID = 0;
+INITIALIZE_PASS(RISCVMakeCompressibleLegacy, "riscv-make-compressible",
                 RISCV_COMPRESS_INSTRS_NAME, false, false)
 
 // Return log2(widthInBytes) of load/store done by Opcode.
@@ -101,12 +111,17 @@ static unsigned log2LdstWidth(unsigned Opcode) {
     llvm_unreachable("Unexpected opcode");
   case RISCV::LBU:
   case RISCV::SB:
+  case RISCV::QC_E_LBU:
+  case RISCV::QC_E_SB:
     return 0;
   case RISCV::LH:
   case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::SH:
   case RISCV::SH_INX:
+  case RISCV::QC_E_LH:
+  case RISCV::QC_E_LHU:
+  case RISCV::QC_E_SH:
     return 1;
   case RISCV::LW:
   case RISCV::LW_INX:
@@ -114,6 +129,8 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   case RISCV::SW_INX:
   case RISCV::FLW:
   case RISCV::FSW:
+  case RISCV::QC_E_LW:
+  case RISCV::QC_E_SW:
     return 2;
   case RISCV::LD:
   case RISCV::LD_RV32:
@@ -132,12 +149,17 @@ static unsigned offsetMask(unsigned Opcode) {
     llvm_unreachable("Unexpected opcode");
   case RISCV::LBU:
   case RISCV::SB:
+  case RISCV::QC_E_LBU:
+  case RISCV::QC_E_SB:
     return maskTrailingOnes<unsigned>(2U);
   case RISCV::LH:
   case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::SH:
   case RISCV::SH_INX:
+  case RISCV::QC_E_LH:
+  case RISCV::QC_E_LHU:
+  case RISCV::QC_E_SH:
     return maskTrailingOnes<unsigned>(1U);
   case RISCV::LW:
   case RISCV::LW_INX:
@@ -151,6 +173,8 @@ static unsigned offsetMask(unsigned Opcode) {
   case RISCV::SD_RV32:
   case RISCV::FLD:
   case RISCV::FSD:
+  case RISCV::QC_E_LW:
+  case RISCV::QC_E_SW:
     return maskTrailingOnes<unsigned>(5U);
   }
 }
@@ -211,9 +235,18 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
   case RISCV::LD_RV32:
     return STI.hasStdExtZclsd();
   case RISCV::FLW:
-    return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
+    return !STI.is64Bit() && STI.hasStdExtZcf();
   case RISCV::FLD:
-    return STI.hasStdExtCOrZcd();
+    return STI.hasStdExtZcd();
+  // For the Xqcilo loads we mark it as compressible only if Xqcilia is also
+  // enabled so that QC_E_ADDI can be used to create the new base.
+  case RISCV::QC_E_LBU:
+  case RISCV::QC_E_LH:
+  case RISCV::QC_E_LHU:
+    return !STI.is64Bit() && STI.hasVendorXqcilo() && STI.hasVendorXqcilia() &&
+           STI.hasStdExtZcb();
+  case RISCV::QC_E_LW:
+    return !STI.is64Bit() && STI.hasVendorXqcilo() && STI.hasVendorXqcilia();
   }
 }
 
@@ -235,9 +268,17 @@ static bool isCompressibleStore(const MachineInstr &MI) {
   case RISCV::SD_RV32:
     return STI.hasStdExtZclsd();
   case RISCV::FSW:
-    return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
+    return !STI.is64Bit() && STI.hasStdExtZcf();
   case RISCV::FSD:
-    return STI.hasStdExtCOrZcd();
+    return STI.hasStdExtZcd();
+  // For the Xqcilo stores we mark it as compressible only if Xqcilia is also
+  // enabled so that QC_E_ADDI can be used to create the new base.
+  case RISCV::QC_E_SB:
+  case RISCV::QC_E_SH:
+    return !STI.is64Bit() && STI.hasVendorXqcilo() && STI.hasVendorXqcilia() &&
+           STI.hasStdExtZcb();
+  case RISCV::QC_E_SW:
+    return !STI.is64Bit() && STI.hasVendorXqcilo() && STI.hasVendorXqcilia();
   }
 }
 
@@ -295,6 +336,21 @@ static RegImmPair getRegImmPairPreventingCompression(const MachineInstr &MI) {
   return RegImmPair(Register(), 0);
 }
 
+static bool isXqciloLdSt(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case RISCV::QC_E_SB:
+  case RISCV::QC_E_SH:
+  case RISCV::QC_E_SW:
+  case RISCV::QC_E_LBU:
+  case RISCV::QC_E_LH:
+  case RISCV::QC_E_LHU:
+  case RISCV::QC_E_LW:
+    return true;
+  }
+}
+
 // Check all uses after FirstMI of the given register, keeping a vector of
 // instructions that would be compressible if the given register (and offset if
 // applicable) were compressible.
@@ -307,6 +363,7 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
   MachineBasicBlock &MBB = *FirstMI.getParent();
   const TargetRegisterInfo *TRI =
       MBB.getParent()->getSubtarget().getRegisterInfo();
+  bool XqciloLdSt = false;
 
   for (MachineBasicBlock::instr_iterator I = FirstMI.getIterator(),
                                          E = MBB.instr_end();
@@ -316,8 +373,11 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
     // Determine if this is an instruction which would benefit from using the
     // new register.
     RegImmPair CandidateRegImm = getRegImmPairPreventingCompression(MI);
-    if (CandidateRegImm.Reg == RegImm.Reg && CandidateRegImm.Imm == RegImm.Imm)
+    if (CandidateRegImm.Reg == RegImm.Reg &&
+        CandidateRegImm.Imm == RegImm.Imm) {
+      XqciloLdSt |= isXqciloLdSt(MI);
       MIs.push_back(&MI);
+    }
 
     // If RegImm.Reg is modified by this instruction, then we cannot optimize
     // past this instruction. If the register is already compressed, then it may
@@ -328,14 +388,26 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
       break;
   }
 
-  // Adjusting the base costs one new uncompressed addi and therefore three uses
-  // are required for a code size reduction. If no base adjustment is required,
-  // then copying the register costs one new c.mv (or c.li Rd, 0 for "copying"
-  // the zero register) and therefore two uses are required for a code size
-  // reduction. For GPR pairs, we need 2 ADDIs to copy so we need three users.
+  // Adjusting the base costs:
+  // a.                  --> addi (uncompressed 4 bytes)
+  //     lw/sw (4 bytes) --> compressed to 2 bytes
+  //     lw/sw (4 bytes) --> compressed to 2 bytes
+  //     lw/sw (4 bytes) --> compressed to 2 bytes
+  // at least three lw/sw instructions for code size reduction.
+  //
+  // b.                       --> qc.e.addi (uncompressed 6 bytes)
+  //     qc.e.lw/sw (6 bytes) --> compressed to 2 bytes
+  //     qc.e.lw/sw (6 bytes) --> compressed to 2 bytes
+  // at least two qc.e.lw/sw instructions for code size reduction.
+  //
+  // If no base adjustment is required, then copying the register costs one new
+  // c.mv (or c.li Rd, 0 for "copying" the zero register) and therefore two uses
+  // are required for a code size reduction. For GPR pairs, we need 2 ADDIs to
+  // copy so we need three users.
+  unsigned BaseCost = XqciloLdSt ? 2 : 3;
   unsigned CopyCost = RISCV::GPRPairRegClass.contains(RegImm.Reg) ? 2 : 1;
   assert((RegImm.Imm == 0 || CopyCost == 1) && "GPRPair should have zero imm");
-  if (MIs.size() <= CopyCost || (RegImm.Imm != 0 && MIs.size() <= 2))
+  if (MIs.size() <= CopyCost || (RegImm.Imm != 0 && MIs.size() < BaseCost))
     return Register();
 
   // Find a compressible register which will be available from the first
@@ -406,9 +478,9 @@ static void updateOperands(MachineInstr &MI, RegImmPair OldRegImm,
   MOImm.setImm(NewOffset);
 }
 
-bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
+static bool runMakeCompressibleOpt(MachineFunction &Fn) {
   // This is a size optimization.
-  if (skipFunction(Fn.getFunction()) || !Fn.getFunction().hasMinSize())
+  if (!Fn.getFunction().hasOptSize())
     return false;
 
   const RISCVSubtarget &STI = Fn.getSubtarget<RISCVSubtarget>();
@@ -437,10 +509,16 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
 
       // Create the appropriate copy and/or offset.
       if (RISCV::GPRRegClass.contains(RegImm.Reg)) {
-        assert(isInt<12>(RegImm.Imm));
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI), NewReg)
-            .addReg(RegImm.Reg)
-            .addImm(RegImm.Imm);
+        if (isInt<12>(RegImm.Imm)) {
+          BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI), NewReg)
+              .addReg(RegImm.Reg)
+              .addImm(RegImm.Imm);
+        } else {
+          assert(STI.hasVendorXqcilia() && isInt<26>(RegImm.Imm));
+          BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::QC_E_ADDI), NewReg)
+              .addReg(RegImm.Reg)
+              .addImm(RegImm.Imm);
+        }
       } else {
         assert(RegImm.Imm == 0);
         TII.copyPhysReg(MBB, MI, MI.getDebugLoc(), NewReg, RegImm.Reg,
@@ -460,6 +538,20 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
 }
 
 /// Returns an instance of the Make Compressible Optimization pass.
-FunctionPass *llvm::createRISCVMakeCompressibleOptPass() {
-  return new RISCVMakeCompressibleOpt();
+FunctionPass *llvm::createRISCVMakeCompressibleLegacyPass() {
+  return new RISCVMakeCompressibleLegacy();
+}
+
+bool RISCVMakeCompressibleLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runMakeCompressibleOpt(MF);
+}
+
+PreservedAnalyses
+RISCVMakeCompressiblePass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  return runMakeCompressibleOpt(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                          .preserveSet<CFGAnalyses>()
+                                    : PreservedAnalyses::all();
 }

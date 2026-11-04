@@ -200,12 +200,10 @@ define <vscale x 4 x double> @mul_add_rot_mull(<vscale x 4 x double> %a, <vscale
 ; CHECK-NEXT:    fmul z3.d, z2.d, z25.d
 ; CHECK-NEXT:    fmul z25.d, z24.d, z25.d
 ; CHECK-NEXT:    fmla z3.d, p0/m, z24.d, z0.d
-; CHECK-NEXT:    movprfx z24, z25
-; CHECK-NEXT:    fmla z24.d, p0/m, z26.d, z1.d
-; CHECK-NEXT:    movprfx z6, z24
-; CHECK-NEXT:    fmla z6.d, p0/m, z5.d, z4.d
+; CHECK-NEXT:    fmla z25.d, p0/m, z26.d, z1.d
+; CHECK-NEXT:    fmla z25.d, p0/m, z5.d, z4.d
 ; CHECK-NEXT:    fmla z3.d, p0/m, z26.d, z4.d
-; CHECK-NEXT:    fnmsb z2.d, p0/m, z0.d, z6.d
+; CHECK-NEXT:    fnmsb z2.d, p0/m, z0.d, z25.d
 ; CHECK-NEXT:    fmsb z1.d, p0/m, z5.d, z3.d
 ; CHECK-NEXT:    zip1 z0.d, z2.d, z1.d
 ; CHECK-NEXT:    zip2 z1.d, z2.d, z1.d

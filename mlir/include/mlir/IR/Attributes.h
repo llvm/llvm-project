@@ -63,7 +63,9 @@ public:
   /// without a trailing colon type if it has one.
   void print(raw_ostream &os, bool elideType = false) const;
   void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Print the attribute without dialect wrapping.
   void printStripped(raw_ostream &os) const;
@@ -302,14 +304,6 @@ namespace llvm {
 // Attribute hash just like pointers.
 template <>
 struct DenseMapInfo<mlir::Attribute> {
-  static mlir::Attribute getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
-  }
-  static mlir::Attribute getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::Attribute val) {
     return mlir::hash_value(val);
   }
@@ -322,14 +316,6 @@ struct DenseMapInfo<
     T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value &&
                         !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Attribute> {
-  static T getEmptyKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static T getTombstoneKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
-    return T::getFromOpaquePointer(pointer);
-  }
 };
 
 /// Allow LLVM to steal the low bits of Attributes.
@@ -347,14 +333,6 @@ struct PointerLikeTypeTraits<mlir::Attribute> {
 
 template <>
 struct DenseMapInfo<mlir::NamedAttribute> {
-  static mlir::NamedAttribute getEmptyKey() {
-    auto emptyAttr = llvm::DenseMapInfo<mlir::Attribute>::getEmptyKey();
-    return mlir::NamedAttribute(emptyAttr, emptyAttr);
-  }
-  static mlir::NamedAttribute getTombstoneKey() {
-    auto tombAttr = llvm::DenseMapInfo<mlir::Attribute>::getTombstoneKey();
-    return mlir::NamedAttribute(tombAttr, tombAttr);
-  }
   static unsigned getHashValue(mlir::NamedAttribute val) {
     return mlir::hash_value(val);
   }

@@ -377,9 +377,9 @@ void write_high_constantA(S_A *s) {
 void write_high_constantB(S_B *s) {
   s->field1 = ENUM_CLASS_REF(B, B_d);
   // cpp-warning@-1 {{implicit truncation from 'B' to bit-field changes value from 3 to 1}}
-  // c-warning@-2 {{implicit truncation from 'int' to bit-field changes value from 3 to -1}}
+  // c-warning@-2 {{implicit truncation from 'enum B' to bit-field changes value from 3 to -1}}
   s->field2 = ENUM_CLASS_REF(B, B_d);
-  // c-warning@-1 {{implicit truncation from 'int' to bit-field changes value from 3 to -1}}
+  // c-warning@-1 {{implicit truncation from 'enum B' to bit-field changes value from 3 to -1}}
   s->field3 = ENUM_CLASS_REF(B, B_d);
   s->field4 = (unsigned)ENUM_CLASS_REF(B, B_d);
   // expected-warning@-1 {{implicit truncation from 'unsigned int' to bit-field changes value from 3 to 1}}
@@ -396,7 +396,7 @@ void write_high_constantB(S_B *s) {
 void write_high_constantC(S_C *s) {
   s->field1 = ENUM_CLASS_REF(C, C_d);
   // cpp-warning@-1 {{implicit truncation from 'C' to bit-field changes value from 3 to 1}}
-  // c-warning@-2 {{implicit truncation from 'unsigned int' to bit-field changes value from 3 to 1}}
+  // c-warning@-2 {{implicit truncation from 'enum C' to bit-field changes value from 3 to 1}}
   s->field2 = ENUM_CLASS_REF(C, C_d);
   s->field3 = ENUM_CLASS_REF(C, C_d);
   s->field4 = (unsigned)ENUM_CLASS_REF(C, C_d);

@@ -64,20 +64,16 @@ __mfp8 func1n(__mfp8 mfp8) {
 // CHECK-C-LABEL: define dso_local <1 x i8> @test_extract_element(
 // CHECK-C-SAME: <16 x i8> [[X:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-C-NEXT:  [[ENTRY:.*:]]
-// CHECK-C-NEXT:    [[RETVAL:%.*]] = alloca <1 x i8>, align 1
 // CHECK-C-NEXT:    [[VECEXT:%.*]] = extractelement <16 x i8> [[X]], i32 [[I]]
-// CHECK-C-NEXT:    store i8 [[VECEXT]], ptr [[RETVAL]], align 1
-// CHECK-C-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[RETVAL]], align 1
-// CHECK-C-NEXT:    ret <1 x i8> [[TMP0]]
+// CHECK-C-NEXT:    [[MFP8CAST:%.*]] = insertelement <1 x i8> poison, i8 [[VECEXT]], i64 0
+// CHECK-C-NEXT:    ret <1 x i8> [[MFP8CAST]]
 //
 // CHECK-CXX-LABEL: define dso_local <1 x i8> @_Z20test_extract_element14__Mfloat8x16_ti(
 // CHECK-CXX-SAME: <16 x i8> [[X:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
-// CHECK-CXX-NEXT:    [[RETVAL:%.*]] = alloca <1 x i8>, align 1
 // CHECK-CXX-NEXT:    [[VECEXT:%.*]] = extractelement <16 x i8> [[X]], i32 [[I]]
-// CHECK-CXX-NEXT:    store i8 [[VECEXT]], ptr [[RETVAL]], align 1
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[RETVAL]], align 1
-// CHECK-CXX-NEXT:    ret <1 x i8> [[TMP0]]
+// CHECK-CXX-NEXT:    [[MFP8CAST:%.*]] = insertelement <1 x i8> poison, i8 [[VECEXT]], i64 0
+// CHECK-CXX-NEXT:    ret <1 x i8> [[MFP8CAST]]
 //
 mfloat8_t test_extract_element(mfloat8x16_t x, int i) {
   return x[i];

@@ -21,11 +21,10 @@ define void @pr58722_load_interleave_group(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP3]]
@@ -39,13 +38,13 @@ define void @pr58722_load_interleave_group(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i24, ptr [[TMP10]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i24, ptr [[TMP11]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i24, ptr [[TMP12]], align 4, !alias.scope [[META0]]
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i24> poison, i24 [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i24> [[TMP17]], i24 [[TMP14]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i24> [[TMP18]], i24 [[TMP15]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i24> [[TMP19]], i24 [[TMP16]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i24> poison, i24 [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i24> [[TMP17]], i24 [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i24> [[TMP18]], i24 [[TMP15]], i64 2
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i24> [[TMP19]], i24 [[TMP16]], i64 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext <4 x i24> [[TMP20]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP22:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP22]], ptr [[TMP23]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000

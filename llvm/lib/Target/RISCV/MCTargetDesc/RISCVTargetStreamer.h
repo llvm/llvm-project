@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVTARGETSTREAMER_H
 
 #include "RISCV.h"
+#include "RISCVMCOptions.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -32,6 +33,7 @@ struct RISCVOptionArchArg {
 };
 
 class RISCVTargetStreamer : public MCTargetStreamer {
+  const RISCVMCOptions &CLOpts;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
   bool HasRVC = false;
   bool HasTSO = false;
@@ -52,18 +54,19 @@ public:
   virtual void emitDirectiveOptionNoRelax();
   virtual void emitDirectiveOptionRVC();
   virtual void emitDirectiveOptionNoRVC();
+  virtual void setArchString(StringRef Arch) {}
   virtual void emitDirectiveVariantCC(MCSymbol &Symbol);
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
   virtual void emitTextAttribute(unsigned Attribute, StringRef String);
   virtual void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
                                     StringRef StringValue);
-  void emitNoteGnuPropertySection(const uint32_t Feature1And);
 
   void emitTargetAttributes(const MCSubtargetInfo &STI, bool EmitStackAlign);
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
-  void setFlagsFromFeatures(const MCSubtargetInfo &STI);
+  bool hasTargetABI() const { return TargetABI != RISCVABI::ABI_Unknown; }
+  virtual void setFlagsFromFeatures(const MCSubtargetInfo &STI);
   bool hasRVC() const { return HasRVC; }
   bool hasTSO() const { return HasTSO; }
 };

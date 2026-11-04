@@ -34,8 +34,8 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[I11_NOT1:%.*]] = icmp eq ptr [[START:%.*]], [[END:%.*]]
 ; AVX2-NEXT:    br i1 [[I11_NOT1]], label [[EXIT:%.*]], label [[BB12_PREHEADER:%.*]]
 ; AVX2:       iter.check:
-; AVX2-NEXT:    [[END3:%.*]] = ptrtoint ptr [[END]] to i64
-; AVX2-NEXT:    [[START4:%.*]] = ptrtoint ptr [[START]] to i64
+; AVX2-NEXT:    [[END3:%.*]] = ptrtoaddr ptr [[END]] to i64
+; AVX2-NEXT:    [[START4:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; AVX2-NEXT:    [[TMP0:%.*]] = add i64 [[END3]], -4
 ; AVX2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START4]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
@@ -48,6 +48,8 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP3]], 24
 ; AVX2-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], 9223372036854775776
+; AVX2-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
+; AVX2-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
 ; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -83,8 +85,6 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; AVX2-NEXT:    br i1 [[CMP_N]], label [[EXIT]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; AVX2:       vec.epilog.iter.check:
-; AVX2-NEXT:    [[TMP26:%.*]] = shl i64 [[N_VEC]], 2
-; AVX2-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP26]]
 ; AVX2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; AVX2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[BB12_PREHEADER1]], label [[BB12_PREHEADER11]], !prof [[PROF3:![0-9]+]]
 ; AVX2:       vec.epilog.ph:

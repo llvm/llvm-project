@@ -4,9 +4,9 @@
 # when interoperating multiple languages.
 
 # RUN: split-file %s %t
-# RUN: %clangxx_host -x c -c -g %t/lib.c -o %t.clib.o
+# RUN: %clang_host -x c -c -g %t/lib.c -o %t.clib.o
 # RUN: %clangxx_host -c -g %t/lib.cpp -o %t.cxxlib.o
-# RUN: %clangxx_host %t/main.m %t.cxxlib.o %t.clib.o -o %t.out
+# RUN: %clang_host %t/main.m %t.cxxlib.o %t.clib.o -o %t.out
 # RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 | FileCheck %s
 
 #--- lib.c
@@ -47,7 +47,7 @@ break set -n method
 run
 bt
 
-# CHECK: custom-frame 'this affects C++ only' 
-# CHECK: custom-frame 'this affects C++ only' 
-# CHECK: custom-frame 'func' 
-# CHECK: custom-frame 'main' 
+# CHECK: custom-frame 'this affects C++ only'
+# CHECK: custom-frame 'this affects C++ only'
+# CHECK: custom-frame 'func'
+# CHECK: custom-frame 'main'

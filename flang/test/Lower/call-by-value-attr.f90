@@ -45,7 +45,7 @@ end subroutine subri
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32
 ! CHECK:           fir.store %[[VAL_0]] to %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFsubriEval"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QFsubriEval") fortran_attrs<value> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           fir.call @_QPtest_numeric_scalar_value(%[[VAL_3]]#0) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -61,7 +61,7 @@ subroutine test_litteral_copies_1
   end interface
   integer, parameter :: p(100) = 42
   call takes_array_value(p)
-  ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}"_QQro.100xi4.2"
+  ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}"_QFtest_litteral_copies_1ECp"
   ! CHECK:           %[[VAL_8:.*]] = hlfir.as_expr %[[VAL_7]]#0 : (!fir.ref<!fir.array<100xi32>>) -> !hlfir.expr<100xi32>
   ! CHECK:           %[[VAL_9:.*]]:3 = hlfir.associate %[[VAL_8]](%{{.*}}) {adapt.valuebyref} : (!hlfir.expr<100xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>, i1)
   ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<4xi32>>

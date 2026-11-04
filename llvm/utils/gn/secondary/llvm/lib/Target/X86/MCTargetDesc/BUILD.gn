@@ -30,6 +30,12 @@ tablegen("X86GenMnemonicTables") {
   td_file = "../X86.td"
 }
 
+tablegen("X86MCOptions") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "X86MCOptions.td"
+}
+
 tablegen("X86GenRegisterInfo") {
   visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-register-info" ]
@@ -53,6 +59,7 @@ static_library("MCTargetDesc") {
     ":X86GenMnemonicTables",
     ":X86GenRegisterInfo",
     ":X86GenSubtargetInfo",
+    ":X86MCOptions",
   ]
   deps = [
     ":X86GenAsmWriter",
@@ -61,6 +68,7 @@ static_library("MCTargetDesc") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target/X86/TargetInfo",
     "//llvm/lib/TargetParser",
@@ -76,6 +84,7 @@ static_library("MCTargetDesc") {
     "X86IntelInstPrinter.cpp",
     "X86MCAsmInfo.cpp",
     "X86MCCodeEmitter.cpp",
+    "X86MCLFIRewriter.cpp",
     "X86MCTargetDesc.cpp",
     "X86MachObjectWriter.cpp",
     "X86MnemonicTables.cpp",

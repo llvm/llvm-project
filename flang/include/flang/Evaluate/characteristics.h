@@ -118,9 +118,8 @@ public:
   }
 
   // Specialization for character designators
-  template <int KIND>
   static std::optional<TypeAndShape> Characterize(
-      const Designator<Type<TypeCategory::Character, KIND>> &x,
+      const Designator<Type<TypeCategory::Character>> &x,
       FoldingContext &context, bool invariantOnly = true) {
     const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)};
     if (symbol && !symbol->owner().IsDerivedType()) { // Whole variable
@@ -365,8 +364,8 @@ struct FunctionResult {
 
 // 15.3.1
 struct Procedure {
-  ENUM_CLASS(Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer,
-      NullAllocatable, Subroutine)
+  ENUM_CLASS(Attr, Pure, Simple, Elemental, BindC, ImplicitInterface,
+      NullPointer, NullAllocatable, Subroutine)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   Procedure(){};
   Procedure(FunctionResult &&, DummyArguments &&, Attrs);
@@ -398,6 +397,7 @@ struct Procedure {
   bool IsSubroutine() const { return attrs.test(Attr::Subroutine); }
 
   bool IsPure() const { return attrs.test(Attr::Pure); }
+  bool IsSimple() const { return attrs.test(Attr::Simple); }
   bool IsElemental() const { return attrs.test(Attr::Elemental); }
   bool IsBindC() const { return attrs.test(Attr::BindC); }
   bool HasExplicitInterface() const {
@@ -417,6 +417,11 @@ struct Procedure {
   DummyArguments dummyArguments;
   Attrs attrs;
   std::optional<common::CUDASubprogramAttrs> cudaSubprogramAttrs;
+  // Used only by CUDA semantic checks; this is not a CUDA procedure attribute.
+  bool hasOpenACCRoutine{false};
+  // Statement functions are inlined; CUDA data-attribute matching does not
+  // apply to their dummy arguments.
+  bool isStmtFunction{false};
 };
 
 } // namespace Fortran::evaluate::characteristics

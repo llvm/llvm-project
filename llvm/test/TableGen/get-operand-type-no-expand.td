@@ -46,3 +46,5 @@ def InstA : Instruction {
 // CHECK-NOEXPAND:        /* InstA */
 // CHECK-NOEXPAND-NEXT:   i512complex, i8complex, i32imm,
 // CHECK-NOEXPAND: #endif // GET_INSTRINFO_OPERAND_TYPE
+
+defm : RemapAllTargetPseudoPointerOperands<RegClass>;

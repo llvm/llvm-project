@@ -121,3 +121,64 @@ entry:
   store <4 x i64> %v1, ptr %res
   ret void
 }
+
+define <32 x i8> @add_v32i8_n1(<32 x i8> %a) nounwind {
+; CHECK-LABEL: add_v32i8_n1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvsubi.bu $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = add <32 x i8> %a, splat (i8 -1)
+  ret <32 x i8> %0
+}
+
+define <32 x i8> @add_v32i8_n31(<32 x i8> %a) nounwind {
+; CHECK-LABEL: add_v32i8_n31:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvsubi.bu $xr0, $xr0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = add <32 x i8> %a, splat (i8 -31)
+  ret <32 x i8> %0
+}
+
+define <32 x i8> @add_v32i8_n32(<32 x i8> %a) nounwind {
+; CHECK-LABEL: add_v32i8_n32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvrepli.b $xr1, -32
+; CHECK-NEXT:    xvadd.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    ret
+entry:
+  %0 = add <32 x i8> %a, splat (i8 -32)
+  ret <32 x i8> %0
+}
+
+define <16 x i16> @add_v16i16_n31(<16 x i16> %a) nounwind {
+; CHECK-LABEL: add_v16i16_n31:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvsubi.hu $xr0, $xr0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = add <16 x i16> %a, splat (i16 -31)
+  ret <16 x i16> %0
+}
+
+define <8 x i32> @add_v8i32_n31(<8 x i32> %a) nounwind {
+; CHECK-LABEL: add_v8i32_n31:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvsubi.wu $xr0, $xr0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = add <8 x i32> %a, splat (i32 -31)
+  ret <8 x i32> %0
+}
+
+define <4 x i64> @add_v4i64_n31(<4 x i64> %a) nounwind {
+; CHECK-LABEL: add_v4i64_n31:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvsubi.du $xr0, $xr0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = add <4 x i64> %a, splat (i64 -31)
+  ret <4 x i64> %0
+}

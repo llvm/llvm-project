@@ -182,13 +182,13 @@ static void setFlag(ProgramStateRef state, SVal val, CheckerContext &C) {
 }
 
 static QualType parameterTypeFromSVal(SVal val, CheckerContext &C) {
-  const StackFrameContext * SFC = C.getStackFrame();
+  const StackFrame *SF = C.getStackFrame();
   if (std::optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>()) {
     const MemRegion* R = X->getRegion();
     if (const VarRegion *VR = R->getAs<VarRegion>())
       if (const auto *StackSpace =
               VR->getMemorySpaceAs<StackArgumentsSpaceRegion>(C.getState()))
-        if (StackSpace->getStackFrame() == SFC)
+        if (StackSpace->getStackFrame() == SF)
           return VR->getValueType();
   }
 
@@ -252,7 +252,7 @@ void NSOrCFErrorDerefChecker::checkEvent(ImplicitNullDerefEvent event) const {
   SmallString<128> Buf;
   llvm::raw_svector_ostream os(Buf);
 
-  os << "Potential null dereference. According to coding standards ";
+  os << "Potential null dereference; according to coding standards ";
   os << (isNSError
          ? "in 'Creating and Returning NSError Objects' the parameter"
          : "documented in CoreFoundation/CFError.h the parameter");
@@ -313,3 +313,5 @@ static bool IsCFError(QualType T, IdentifierInfo *II) {
 
 REGISTER_CHECKER(NSError, NSErrorMethodChecker)
 REGISTER_CHECKER(CFError, CFErrorFunctionChecker)
+
+#undef REGISTER_CHECKER

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 -check-suffixes=,RANGES %s modernize-loop-convert %t
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,RANGES %s modernize-loop-convert %t
 
 // RUN: %check_clang_tidy -check-suffixes=,CUSTOM,CUSTOM-NO-SYS %s modernize-loop-convert %t -- \
 // RUN:   -config="{CheckOptions: { \
@@ -95,7 +95,7 @@ void constContainer(const Reversable<int> &Numbers) {
     observe(*I);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES-RANGES: for (int Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-RANGES: for (int Number : std::views::reverse(Numbers)) {
   // CHECK-FIXES-CUSTOM: for (int Number : llvm::reverse(Numbers)) {
   //   CHECK-FIXES-NEXT:   observe(Number);
   //   CHECK-FIXES-NEXT: }
@@ -104,7 +104,7 @@ void constContainer(const Reversable<int> &Numbers) {
     observe(*I);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES-RANGES: for (int Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-RANGES: for (int Number : std::views::reverse(Numbers)) {
   // CHECK-FIXES-CUSTOM: for (int Number : llvm::reverse(Numbers)) {
   //   CHECK-FIXES-NEXT:   observe(Number);
   //   CHECK-FIXES-NEXT: }
@@ -113,7 +113,7 @@ void constContainer(const Reversable<int> &Numbers) {
     observe(*I);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES-RANGES: for (int Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-RANGES: for (int Number : std::views::reverse(Numbers)) {
   // CHECK-FIXES-CUSTOM: for (int Number : llvm::reverse(Numbers)) {
   //   CHECK-FIXES-NEXT:   observe(Number);
   //   CHECK-FIXES-NEXT: }
@@ -122,7 +122,7 @@ void constContainer(const Reversable<int> &Numbers) {
     observe(*I);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES-RANGES: for (int Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-RANGES: for (int Number : std::views::reverse(Numbers)) {
   // CHECK-FIXES-CUSTOM: for (int Number : llvm::reverse(Numbers)) {
   //   CHECK-FIXES-NEXT:   observe(Number);
   //   CHECK-FIXES-NEXT: }
@@ -141,7 +141,7 @@ void nonConstContainer(Reversable<int> &Numbers) {
     mutate(*I);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES-RANGES: for (int & Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-RANGES: for (int & Number : std::views::reverse(Numbers)) {
   // CHECK-FIXES-CUSTOM: for (int & Number : llvm::reverse(Numbers)) {
   //   CHECK-FIXES-NEXT:   mutate(Number);
   //   CHECK-FIXES-NEXT: }
@@ -150,7 +150,7 @@ void nonConstContainer(Reversable<int> &Numbers) {
     observe(*I);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES-RANGES: for (int Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-RANGES: for (int Number : std::views::reverse(Numbers)) {
   // CHECK-FIXES-CUSTOM: for (int Number : llvm::reverse(Numbers)) {
   //   CHECK-FIXES-NEXT:   observe(Number);
   //   CHECK-FIXES-NEXT: }
@@ -159,7 +159,7 @@ void nonConstContainer(Reversable<int> &Numbers) {
     mutate(*I);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES-RANGES: for (int & Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-RANGES: for (int & Number : std::views::reverse(Numbers)) {
   // CHECK-FIXES-CUSTOM: for (int & Number : llvm::reverse(Numbers)) {
   //   CHECK-FIXES-NEXT:   mutate(Number);
   //   CHECK-FIXES-NEXT: }

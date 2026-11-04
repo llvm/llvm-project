@@ -95,6 +95,8 @@ include "GISel/M68kRegisterBanks.td"
 
 include "M68kInstrInfo.td"
 
+defm : RemapAllTargetPseudoPointerOperands<AR16>;
+
 def M68kInstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//

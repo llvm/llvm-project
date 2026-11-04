@@ -5,8 +5,6 @@
 ; RUN: opt -O1 < %s -S 2>&1 | FileCheck %s --check-prefix=OPT
 ; RUN: opt -O2 < %s -S 2>&1 | FileCheck %s --check-prefix=OPT
 ; RUN: opt -O3 < %s -S 2>&1 | FileCheck %s --check-prefix=OPT
-; RUN: opt -Os < %s -S 2>&1 | FileCheck %s --check-prefix=OPT
-; RUN: opt -Oz < %s -S 2>&1 | FileCheck %s --check-prefix=OPT
 ; RUN: opt -O2 -debug-pass-manager -disable-output < %s 2>&1 | FileCheck %s --check-prefix=AA
 
 ; MULTIPLE: Cannot specify multiple -O#

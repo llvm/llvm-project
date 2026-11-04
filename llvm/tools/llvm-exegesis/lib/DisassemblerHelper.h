@@ -20,6 +20,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCTargetOptions.h"
 
 #include <memory>
 
@@ -42,6 +43,7 @@ public:
 
 private:
   const LLVMState &State_;
+  MCTargetOptions MCOptions_;
   std::unique_ptr<MCContext> Context_;
   std::unique_ptr<MCAsmInfo> AsmInfo_;
   std::unique_ptr<MCInstPrinter> InstPrinter_;

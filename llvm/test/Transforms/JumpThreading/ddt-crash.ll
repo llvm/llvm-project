@@ -140,7 +140,7 @@ define void @spam(ptr %arg, i1 %arg2) {
 ; CHECK-NEXT:    [[TMP40:%.*]] = load ptr, ptr @global, align 8
 ; CHECK-NEXT:    br label [[BB41_THREAD]]
 ; CHECK:       bb41.thread11:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ undef, [[BB41]] ], [ undef, [[BB25]] ], [ undef, [[BB31]] ], [ undef, [[BB27]] ], [ undef, [[BB37]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ undef, [[BB27]] ], [ undef, [[BB41]] ], [ undef, [[BB25]] ], [ undef, [[BB31]] ], [ undef, [[BB37]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

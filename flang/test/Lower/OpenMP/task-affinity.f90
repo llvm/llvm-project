@@ -1,0 +1,654 @@
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %s | FileCheck %s
+
+! Non-iterator tests
+
+subroutine omp_task_affinity_elem()
+  implicit none
+  integer, parameter :: n = 100
+  integer :: a(n)
+
+  !$omp parallel
+  !$omp task affinity(a(1))
+    a(1) = 1
+  !$omp end task
+  !$omp end parallel
+end subroutine omp_task_affinity_elem
+
+! CHECK-LABEL: func.func @_QPomp_task_affinity_elem()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFomp_task_affinity_elemEa") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: omp.parallel {
+! CHECK:   %[[C1:.*]] = arith.constant 1 : index
+! CHECK:   %[[ELEM:.*]] = hlfir.designate %[[A]]#0 (%[[C1]]) : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
+! CHECK:   %[[LEN:.*]] = arith.constant 4 : i64
+! CHECK:   %[[ADDRI8:.*]] = fir.convert %[[ELEM]] : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:   omp.task affinity(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>) {
+
+subroutine omp_task_affinity_array_section()
+  implicit none
+  integer, parameter :: n = 100
+  integer :: a(n)
+  integer :: i
+
+  !$omp parallel
+  !$omp task affinity(a(2:50)) private(i)
+    do i = 2, 50
+      a(i) = i
+    end do
+  !$omp end task
+  !$omp end parallel
+end subroutine omp_task_affinity_array_section
+
+! CHECK-LABEL: func.func @_QPomp_task_affinity_array_section()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFomp_task_affinity_array_sectionEa") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFomp_task_affinity_array_sectionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: omp.parallel {
+! CHECK:   %[[C2:.*]] = arith.constant 2 : index
+! CHECK:   %[[C50:.*]] = arith.constant 50 : index
+! CHECK:   %[[C1:.*]] = arith.constant 1 : index
+! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK:   %[[SLICE:.*]] = hlfir.designate %[[A]]#0 (%[[C2]]:%[[C50]]:%[[C1]])  shape %[[SHAPE]] : (!fir.ref<!fir.array<100xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<49xi32>>
+! CHECK:   %[[C4:.*]] = arith.constant 4 : i64
+! CHECK:   %[[SPAN_I64:.*]] = fir.convert {{.*}} : (index) -> i64
+! CHECK:   %[[LEN:.*]] = arith.muli %[[SPAN_I64]], %[[C4]] : i64
+! CHECK:   %[[ADDRI8:.*]] = fir.convert %[[SLICE]] : (!fir.ref<!fir.array<49xi32>>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:   omp.task affinity(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>) private(@_QFomp_task_affinity_array_sectionEi_private_i32 %[[I]]#0 -> %{{.*}} : !fir.ref<i32>) {
+
+subroutine omp_task_affinity_scalar()
+  implicit none
+  integer :: s
+  s = 7
+
+  !$omp parallel
+  !$omp task affinity(s)
+    s = s + 1
+  !$omp end task
+  !$omp end parallel
+end subroutine omp_task_affinity_scalar
+
+! CHECK-LABEL: func.func @_QPomp_task_affinity_scalar()
+! CHECK: %[[S:.*]] = fir.alloca i32 <{bindc_name = "s", uniq_name = "_QFomp_task_affinity_scalarEs"}>
+! CHECK: %[[SDECL:.*]]:2 = hlfir.declare %[[S]] uniq_name("_QFomp_task_affinity_scalarEs") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: hlfir.assign %{{.*}} to %[[SDECL]]#0 : i32, !fir.ref<i32>
+! CHECK: omp.parallel {
+! CHECK:     %[[LEN:.*]] = arith.constant 4 : i64
+! CHECK:     %[[ADDRI8:.*]] = fir.convert %[[SDECL]]#0 : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:     %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:     omp.task affinity(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>) {
+
+subroutine omp_task_affinity_multi()
+  implicit none
+  integer, parameter :: n = 100
+  integer :: a(n), b(n)
+
+  !$omp parallel
+  !$omp task affinity(a(1), b(1))
+    a(2) = 2
+    b(2) = 2
+  !$omp end task
+  !$omp end parallel
+end subroutine omp_task_affinity_multi
+
+! CHECK-LABEL: func.func @_QPomp_task_affinity_multi()
+! CHECK: omp.parallel {
+! CHECK:     %[[AADDR:.*]] = fir.convert %{{.*}} : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:     %[[AENT:.*]] = omp.affinity_entry %[[AADDR]], %{{.*}} : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:     %[[BADDR:.*]] = fir.convert %{{.*}} : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:     %[[BENT:.*]] = omp.affinity_entry %[[BADDR]], %{{.*}} : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:     omp.task affinity(%[[AENT]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>, %[[BENT]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>) {
+
+subroutine whole_array_affinity()
+  implicit none
+  integer :: a(10)
+
+  !$omp task affinity(a)
+    a(1) = 1
+  !$omp end task
+end subroutine whole_array_affinity
+
+! CHECK-LABEL: func.func @_QPwhole_array_affinity()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFwhole_array_affinityEa") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[C4:.*]] = arith.constant 4 : i64
+! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[C4]] : i64
+! CHECK: %[[ADDRI8:.*]] = fir.convert %[[A]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<i8>
+! CHECK: %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+
+subroutine task_affinity_slice_2d
+  integer, parameter :: n = 5
+  integer, parameter :: m = 7
+  integer :: a(n, m)
+  integer :: i, j
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(a(2:4, 3:5))
+    do i = 1, n
+      do j = 1, m
+        a(i, j) = i + j
+      end do
+    end do
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_slice_2d()
+! CHECK: omp.parallel {
+! CHECK:   omp.single {
+! CHECK:     %[[BOX:.*]] = hlfir.designate {{.*}} : (!fir.ref<!fir.array<5x7xi32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<3x3xi32>>
+! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.array<3x3xi32>>) -> !fir.ref<!fir.array<3x3xi32>>
+! CHECK:     %[[C4:.*]] = arith.constant 4 : i64
+! CHECK:     %[[SPANI64:.*]] = fir.convert {{.*}} : (index) -> i64
+! CHECK:     %[[LEN:.*]] = arith.muli %[[SPANI64]], %[[C4]] : i64
+! CHECK:     %[[ADDRI8:.*]] = fir.convert %[[BASE]] : (!fir.ref<!fir.array<3x3xi32>>) -> !fir.ref<i8>
+! CHECK:     %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:     omp.task affinity(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>){{.*}} {
+
+subroutine assumed_shape_affinity(a)
+  integer, intent(inout) :: a(:)
+
+  !$omp task affinity(a)
+    a(1) = 1
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPassumed_shape_affinity(
+! CHECK: %[[A:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{.*}} arg 1 uniq_name("_QFassumed_shape_affinityEa") fortran_attrs<intent_inout>
+! CHECK: %[[ELEM:.*]] = fir.box_elesize %[[A]]#0 : (!fir.box<!fir.array<?xi32>>) -> index
+! CHECK: %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
+! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[ELEM_I64]] : i64
+! CHECK: %[[ENTRY:.*]] = omp.affinity_entry %{{.*}}, %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+
+subroutine allocatable_affinity(n)
+  integer, intent(in) :: n
+  integer, allocatable :: a(:)
+
+  allocate(a(n))
+  !$omp task affinity(a)
+    a(1) = 1
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPallocatable_affinity(
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFallocatable_affinityEa") fortran_attrs<allocatable>
+! CHECK: %[[ABOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[ELEM:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> index
+! CHECK: %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
+! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[ELEM_I64]] : i64
+! CHECK: %[[ENTRY:.*]] = omp.affinity_entry %{{.*}}, %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+
+subroutine pointer_affinity(n)
+  integer, intent(in) :: n
+  integer, target :: tgt(n)
+  integer, pointer :: p(:)
+
+  p => tgt
+  !$omp task affinity(p)
+    p(1) = 1
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPpointer_affinity(
+! CHECK: %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFpointer_affinityEp") fortran_attrs<pointer>
+! CHECK: %[[PBOX:.*]] = fir.load %[[P]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK: %[[ELEM:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> index
+! CHECK: %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
+! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[ELEM_I64]] : i64
+! CHECK: %[[ENTRY:.*]] = omp.affinity_entry %{{.*}}, %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+
+subroutine char_const_len_affinity()
+  character(len=7) :: a(8)
+
+  !$omp task affinity(a)
+    a(1) = "abcdefg"
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPchar_const_len_affinity()
+! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %c7 uniq_name("_QFchar_const_len_affinityEa")
+! CHECK: %[[CHARLEN_I64:.*]] = fir.convert %c7 : (index) -> i64
+! CHECK: %[[ELEMSIZE:.*]] = arith.muli %[[CHARLEN_I64]], %{{.*}} : i64
+! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[ELEMSIZE]] : i64
+! CHECK: %[[ENTRY:.*]] = omp.affinity_entry %{{.*}}, %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+
+subroutine char_runtime_len_affinity(n, l)
+  integer, intent(in) :: n, l
+  character(len=l) :: a(n)
+
+  !$omp task affinity(a)
+    a(1) = repeat("x", l)
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPchar_runtime_len_affinity(
+! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %{{.*}} uniq_name("_QFchar_runtime_len_affinityEa")
+! CHECK: %[[ELEM:.*]] = fir.box_elesize %[[DECLARE]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+! CHECK: %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
+! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[ELEM_I64]] : i64
+! CHECK: %[[ENTRY:.*]] = omp.affinity_entry %{{.*}}, %[[LEN]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+
+module task_affinity_polymorphic_mod
+  type :: t
+    integer :: x
+  end type
+contains
+  subroutine task_affinity_poly()
+    class(t), allocatable :: a
+
+    allocate(a)
+    !$omp task affinity(a) shared(a)
+      select type (a)
+      type is (t)
+        a%x = 1
+      end select
+    !$omp end task
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMtask_affinity_polymorphic_modPtask_affinity_poly()
+! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMtask_affinity_polymorphic_modFtask_affinity_polyEa") fortran_attrs<allocatable>
+! CHECK: %[[ALOAD:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>>>
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[ALOAD]] : (!fir.class<!fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>>) -> !fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>
+! CHECK: %[[SIZELOAD:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>>>
+! CHECK: %[[SIZE:.*]] = fir.box_elesize %[[SIZELOAD]] : (!fir.class<!fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>>) -> index
+! CHECK: %[[SIZE_I64:.*]] = fir.convert %[[SIZE]] : (index) -> i64
+! CHECK: %[[ADDR_I8:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>) -> !fir.ref<i8>
+! CHECK: %[[ENTRY:.*]] = omp.affinity_entry %[[ADDR_I8]], %[[SIZE_I64]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK: omp.task affinity(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>) {
+
+! Iterator tests
+
+! Each locator uses its own iterator subset; c remains non-iterated.
+subroutine affinity_per_locator(m)
+  integer :: m
+  integer :: a(4), b(4), c
+
+  !$omp task affinity(iterator(i = 1:2, j = 3:m) : a(i), b(j), c)
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPaffinity_per_locator(
+! CHECK: %[[A:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFaffinity_per_locatorEa")
+! CHECK: %[[B:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFaffinity_per_locatorEb")
+! CHECK: %[[C:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFaffinity_per_locatorEc")
+! CHECK: %[[M:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFaffinity_per_locatorEm")
+! CHECK: %[[I_LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[I_UB:.*]] = arith.constant 2 : i32
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[J_LB:.*]] = arith.constant 3 : i32
+! CHECK: %[[J_UB:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
+! CHECK: %[[J_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: i32) =
+! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
+! CHECK: fir.store %[[IV_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
+! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
+! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
+! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
+! CHECK: %[[COOR_I:.*]] = hlfir.designate %[[A]]#0 (%[[IDX_I]])
+! CHECK: %[[SIZE_I:.*]] = arith.constant 4 : i64
+! CHECK: %[[PTR_I:.*]] = fir.convert %[[COOR_I]]
+! CHECK-SAME: (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK: %[[ENTRY_I:.*]] = omp.affinity_entry %[[PTR_I]], %[[SIZE_I]]
+! CHECK: omp.yield(%[[ENTRY_I]] :
+! CHECK-SAME: !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
+! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: i32) =
+! CHECK-SAME: (%[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
+! CHECK: fir.store %[[IV_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
+! CHECK: %[[DECL_J:.*]]:2 = hlfir.declare %[[MEM_J]]
+! CHECK: %[[LD_J:.*]] = fir.load %[[DECL_J]]#0 : !fir.ref<i32>
+! CHECK: %[[IDX_J:.*]] = fir.convert %[[LD_J]] : (i32) -> i64
+! CHECK: %[[COOR_J:.*]] = hlfir.designate %[[B]]#0 (%[[IDX_J]])
+! CHECK: %[[SIZE_J:.*]] = arith.constant 4 : i64
+! CHECK: %[[PTR_J:.*]] = fir.convert %[[COOR_J]]
+! CHECK-SAME: (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK: %[[ENTRY_J:.*]] = omp.affinity_entry %[[PTR_J]], %[[SIZE_J]]
+! CHECK: omp.yield(%[[ENTRY_J]] :
+! CHECK-SAME: !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
+! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: %[[C_PTR:.*]] = fir.convert %[[C]]#0
+! CHECK-SAME: (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK: %[[C_ENTRY:.*]] = omp.affinity_entry %[[C_PTR]],
+! CHECK-NOT: omp.iterator
+! CHECK: omp.task affinity(%[[IT_I]] :
+! CHECK-SAME: !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>,
+! CHECK-SAME: %[[IT_J]] :
+! CHECK-SAME: !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>,
+! CHECK-SAME: %[[C_ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>) {
+
+subroutine task_affinity_iterator_simple()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 1:n) : a(i))
+    a(i) = i
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_simple()
+! CHECK: %[[ITERATED:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! Iterator IV temp must be named in the compiler-generated namespace ("_QQ"
+! prefix) so it is not emitted as a bogus user local in DWARF under -g.
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]] uniq_name("_QQ{{.*}}.omp.iter")
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate {{.*}} (%[[IV_I64]])
+! CHECK:   %[[C4:.*]] = arith.constant 4 : i64
+! CHECK:   %[[ADDRI8:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[C4]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:   omp.yield(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
+! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: omp.task affinity(%{{.*}} : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
+
+subroutine task_affinity_iterator_nondefault_lb()
+  implicit none
+  integer, parameter :: n = 8
+  integer :: a(0:n)
+  integer :: i
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 0:n) : a(i))
+    a(0) = 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_nondefault_lb()
+! CHECK: %[[ITERATED_NDLB:.*]] = omp.iterator(%[[IV_NDLB:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV_NDLB]] to %[[IV_NDLB_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_NDLB_DECL:.*]]:2 = hlfir.declare %[[IV_NDLB_MEM]]
+! CHECK:   %[[IV_NDLB_LD:.*]] = fir.load %[[IV_NDLB_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_NDLB_I64:.*]] = fir.convert %[[IV_NDLB_LD]] : (i32) -> i64
+! CHECK:   %[[COOR_NDLB:.*]] = hlfir.designate {{.*}} (%[[IV_NDLB_I64]])
+! CHECK:   %[[ELEM_NDLB:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<9xi32>>) -> index
+! CHECK:   %[[ELEM_NDLB_I64:.*]] = fir.convert %[[ELEM_NDLB]] : (index) -> i64
+! CHECK:   %[[ADDRI8_NDLB:.*]] = fir.convert %[[COOR_NDLB]] : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY_NDLB:.*]] = omp.affinity_entry %[[ADDRI8_NDLB]], %[[ELEM_NDLB_I64]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:   omp.yield(%[[ENTRY_NDLB]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
+! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: omp.task affinity(%[[ITERATED_NDLB]] : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
+
+subroutine task_affinity_iterator_nondefault_lb_2d()
+  implicit none
+  integer, parameter :: n = 4, m = 6
+  integer :: a(0:n, -1:m)
+  integer :: i, j
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 0:n, j = -1:m) : a(i, j))
+    a(0, -1) = 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_nondefault_lb_2d()
+! CHECK: %[[ITERATED_NDLB2:.*]] = omp.iterator(%[[IV0_NDLB2:.*]]: i32, %[[IV1_NDLB2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0_NDLB2]] to %[[IV0_NDLB2_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV0_NDLB2_DECL:.*]]:2 = hlfir.declare %[[IV0_NDLB2_MEM]]
+! CHECK:   fir.store %[[IV1_NDLB2]] to %[[IV1_NDLB2_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV1_NDLB2_DECL:.*]]:2 = hlfir.declare %[[IV1_NDLB2_MEM]]
+! CHECK:   %[[IV0_NDLB2_LD:.*]] = fir.load %[[IV0_NDLB2_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV0_NDLB2_I64:.*]] = fir.convert %[[IV0_NDLB2_LD]] : (i32) -> i64
+! CHECK:   %[[IV1_NDLB2_LD:.*]] = fir.load %[[IV1_NDLB2_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV1_NDLB2_I64:.*]] = fir.convert %[[IV1_NDLB2_LD]] : (i32) -> i64
+! CHECK:   %[[COOR_NDLB2:.*]] = hlfir.designate
+! CHECK-SAME: {{.*}} (%[[IV0_NDLB2_I64]], %[[IV1_NDLB2_I64]])
+! CHECK:   %[[ELEM_NDLB2:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<5x8xi32>>) -> index
+! CHECK:   %[[ELEM_NDLB2_I64:.*]] = fir.convert %[[ELEM_NDLB2]] : (index) -> i64
+! CHECK:   %[[ADDRI8_NDLB2:.*]] = fir.convert %[[COOR_NDLB2]] : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY_NDLB2:.*]] = omp.affinity_entry %[[ADDRI8_NDLB2]], %[[ELEM_NDLB2_I64]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:   omp.yield(%[[ENTRY_NDLB2]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
+! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: omp.task affinity(%[[ITERATED_NDLB2]] : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
+
+subroutine task_affinity_iterator_multi_dimension()
+  integer, parameter :: n = 4, m = 6
+  integer :: a(n, m)
+  integer :: i, j
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 3:n, j = 1:m) : a(i, j)) shared(a)
+    do i = 1, n
+      do j = 1, m
+        a(i, j) = 100*i + j
+      end do
+    end do
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_multi_dimension()
+! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
+! CHECK:   fir.store %[[IV1]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
+! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV0_I64:.*]] = fir.convert %[[IV0_LD]] : (i32) -> i64
+! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV1_I64:.*]] = fir.convert %[[IV1_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate {{.*}} (%[[IV0_I64]], %[[IV1_I64]])
+! CHECK:   %[[C4:.*]] = arith.constant 4 : i64
+! CHECK:   %[[ADDRI8:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[C4]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:   omp.yield(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
+! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: omp.task affinity(%[[ITER]] : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>)
+
+subroutine task_affinity_iterator_reordered()
+  integer, parameter :: n = 4, m = 6
+  integer :: a(n, m)
+  integer :: i, j
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 1:n, j = 1:m) : a(j, i)) shared(a)
+    a(1, 1) = 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_reordered()
+! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[RO_IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[RO_IV0_DECL:.*]]:2 = hlfir.declare %[[RO_IV0_MEM]]
+! CHECK:   fir.store %[[IV1]] to %[[RO_IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[RO_IV1_DECL:.*]]:2 = hlfir.declare %[[RO_IV1_MEM]]
+! CHECK:   %[[RO_IV1_LD:.*]] = fir.load %[[RO_IV1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[RO_IV1_I64:.*]] = fir.convert %[[RO_IV1_LD]] : (i32) -> i64
+! CHECK:   %[[RO_IV0_LD:.*]] = fir.load %[[RO_IV0_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[RO_IV0_I64:.*]] = fir.convert %[[RO_IV0_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate
+! CHECK-SAME: {{.*}} (%[[RO_IV1_I64]], %[[RO_IV0_I64]])
+
+subroutine task_affinity_iterator_expr_subscript()
+  integer, parameter :: n = 5, m = 6
+  integer :: a(n, m)
+  integer :: i, j
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 1:n-1, j = 1:m) : a(i+1, j)) shared(a)
+    a(1, 1) = 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_expr_subscript()
+! CHECK: %[[ITER2:.*]] = omp.iterator(%[[IVA:.*]]: i32, %[[IVB:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVA]] to %[[IVA_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IVA_DECL:.*]]:2 = hlfir.declare %[[IVA_MEM]]
+! CHECK:   fir.store %[[IVB]] to %[[IVB_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IVB_DECL:.*]]:2 = hlfir.declare %[[IVB_MEM]]
+! CHECK:   %[[IVA_LD:.*]] = fir.load %[[IVA_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
+! CHECK:   %[[IP1_I32:.*]] = arith.addi %[[IVA_LD]], %[[C1_I32]]
+! CHECK-SAME: overflow<nsw> : i32
+! CHECK:   %[[IP1_I64:.*]] = fir.convert %[[IP1_I32]] : (i32) -> i64
+! CHECK:   %[[IVB_LD:.*]] = fir.load %[[IVB_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IVB_I64:.*]] = fir.convert %[[IVB_LD]] : (i32) -> i64
+! CHECK:   %[[COOR2:.*]] = hlfir.designate {{.*}} (%[[IP1_I64]], %[[IVB_I64]])
+
+subroutine task_affinity_iterator_section_subscript()
+  integer, parameter :: n = 5, m = 6
+  integer :: a(n, m)
+  integer :: i, j
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 1:n, j = 1:m) : a(i:i+1, j+2)) shared(a)
+    a(1, 1) = 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_section_subscript()
+! CHECK: %[[ITER3:.*]] = omp.iterator(%[[IVS0:.*]]: i32, %[[IVS1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVS0]] to %[[IVS0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IVS0_DECL:.*]]:2 = hlfir.declare %[[IVS0_MEM]]
+! CHECK:   fir.store %[[IVS1]] to %[[IVS1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IVS1_DECL:.*]]:2 = hlfir.declare %[[IVS1_MEM]]
+! CHECK:   %[[IVS0_LD:.*]] = fir.load %[[IVS0_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IVS0_I64:.*]] = fir.convert %[[IVS0_LD]] : (i32) -> i64
+! CHECK:   %[[LOWER:.*]] = fir.convert %[[IVS0_I64]] : (i64) -> index
+! CHECK:   %[[IVS1_LD:.*]] = fir.load %[[IVS1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[C2_I32:.*]] = arith.constant 2 : i32
+! CHECK:   %[[JP2_I32:.*]] = arith.addi %[[IVS1_LD]], %[[C2_I32]]
+! CHECK-SAME: overflow<nsw> : i32
+! CHECK:   %[[JP2_I64:.*]] = fir.convert %[[JP2_I32]] : (i32) -> i64
+! CHECK:   %[[COOR3:.*]] = hlfir.designate
+! CHECK-SAME: (%[[LOWER]]:{{.*}}, %[[JP2_I64]])
+! CHECK:   %[[ADDR3:.*]] = fir.box_addr %[[COOR3]]
+! CHECK:   %[[ELEMS3:.*]] = fir.convert %{{.*}} : (index) -> i64
+! CHECK:   %[[LEN3:.*]] = arith.muli %[[ELEMS3]], %{{.*}} : i64
+! CHECK:   %[[PTR3:.*]] = fir.convert %[[ADDR3]]
+! CHECK:   omp.affinity_entry %[[PTR3]], %[[LEN3]]
+
+subroutine task_affinity_iterator_section_implicit_lower()
+  integer, parameter :: n = 5, m = 6
+  integer :: a(n, m)
+  integer :: i, j
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 1:n, j = 1:m) : a(:i+1, j+2)) shared(a)
+    a(1, 1) = 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_section_implicit_lower()
+! CHECK: %[[ITER4:.*]] = omp.iterator(%[[IVT0:.*]]: i32, %[[IVT1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVT1]] to %[[IVT1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IVT1_DECL:.*]]:2 = hlfir.declare %[[IVT1_MEM]]
+! CHECK:   %[[C1_IDX:.*]] = arith.constant 1 : index
+! CHECK:   %[[IVT1_LD:.*]] = fir.load %[[IVT1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[C2_I32_2:.*]] = arith.constant 2 : i32
+! CHECK:   %[[JP2_I32_2:.*]] = arith.addi %[[IVT1_LD]], %[[C2_I32_2]]
+! CHECK-SAME: overflow<nsw> : i32
+! CHECK:   %[[JP2_I64_2:.*]] = fir.convert %[[JP2_I32_2]] : (i32) -> i64
+! CHECK:   %[[COOR4:.*]] = hlfir.designate
+! CHECK-SAME: (%[[C1_IDX]]:{{.*}}, %[[JP2_I64_2]])
+
+subroutine task_affinity_iterator_char_simple()
+  integer, parameter :: n = 8
+  character(len=7) :: a(n)
+  integer :: i
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 1:n) : a(i))
+    a(1) = "abcdefg"
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_char_simple()
+! CHECK: %[[ITER5:.*]] = omp.iterator(%[[IVC:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVC]] to %[[IVC_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IVC_DECL:.*]]:2 = hlfir.declare %[[IVC_MEM]]
+! CHECK:   %[[IVC_LD:.*]] = fir.load %[[IVC_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IVC_I64:.*]] = fir.convert %[[IVC_LD]] : (i32) -> i64
+! CHECK:   %[[COOR5:.*]] = hlfir.designate {{.*}} (%[[IVC_I64]])
+! CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
+! CHECK:   %[[C7_I64:.*]] = fir.convert %c7 : (index) -> i64
+! CHECK:   %[[ELEM5:.*]] = arith.muli %[[C7_I64]], %[[C1_I64]] : i64
+! CHECK:   %[[ADDR5:.*]] = fir.convert %[[COOR5]] : (!fir.ref<!fir.char<1,7>>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY5:.*]] = omp.affinity_entry %[[ADDR5]], %[[ELEM5]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+
+subroutine task_affinity_iterator_char_expr_subscript()
+  integer, parameter :: n = 8
+  character(len=7) :: a(n)
+  integer :: i
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 1:n-1) : a(i+1))
+    a(1) = "abcdefg"
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_char_expr_subscript()
+! CHECK: %[[ITER6:.*]] = omp.iterator(%[[IVC2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVC2]] to %[[IVC2_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IVC2_DECL:.*]]:2 = hlfir.declare %[[IVC2_MEM]]
+! CHECK:   %[[IVC2_LD:.*]] = fir.load %[[IVC2_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[C1_I32_6:.*]] = arith.constant 1 : i32
+! CHECK:   %[[IP1C_I32:.*]] = arith.addi %[[IVC2_LD]], %[[C1_I32_6]]
+! CHECK-SAME: overflow<nsw> : i32
+! CHECK:   %[[IP1C_I64:.*]] = fir.convert %[[IP1C_I32]] : (i32) -> i64
+! CHECK:   %[[COOR6:.*]] = hlfir.designate {{.*}} (%[[IP1C_I64]])
+! CHECK:   %[[C1_I64_2:.*]] = arith.constant 1 : i64
+! CHECK:   %[[C7_I64_2:.*]] = fir.convert %c7 : (index) -> i64
+! CHECK:   %[[ELEM6:.*]] = arith.muli %[[C7_I64_2]], %[[C1_I64_2]] : i64
+! CHECK:   %[[ADDR6:.*]] = fir.convert %[[COOR6]] : (!fir.ref<!fir.char<1,7>>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY6:.*]] = omp.affinity_entry %[[ADDR6]], %[[ELEM6]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+
+subroutine task_affinity_iterator_char_runtime(n, l)
+  integer, intent(in) :: n, l
+  character(len=l) :: a(n)
+  integer :: i
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 1:n) : a(i))
+    a(1) = repeat("x", l)
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_char_runtime(
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %{{.*}} uniq_name("_QFtask_affinity_iterator_char_runtimeEa")
+! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 ({{.*}})
+! CHECK:   %[[RAW:.*]]:2 = fir.unboxchar %[[COOR]]
+! CHECK:   %[[ELEM:.*]] = fir.box_elesize %[[A]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+! CHECK:   %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
+! CHECK:   %[[ADDR:.*]] = fir.convert %[[RAW]]#0
+! CHECK-SAME: : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDR]], %[[ELEM_I64]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>

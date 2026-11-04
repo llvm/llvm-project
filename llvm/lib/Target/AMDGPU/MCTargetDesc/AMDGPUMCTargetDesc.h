@@ -60,7 +60,8 @@ public:
 
   void resetState() override { VgprMSBs = 0; }
 
-  void updateState(const MCInst &Inst, uint64_t Addr) override;
+  void updateState(const MCInst &Inst, const MCSubtargetInfo *STI,
+                   uint64_t Addr) override;
 
   unsigned getVgprMSBs() const { return VgprMSBs; }
 };

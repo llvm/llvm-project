@@ -1,5 +1,11 @@
+add_header_library(
+  file_io_result
+  HDRS
+    file_io_result.h
+)
+
 if(NOT (TARGET libc.src.__support.threads.mutex)
-   OR LIBC_TARGET_OS_IS_GPU)
+  OR LIBC_TARGET_OS_IS_GPU)
   # Not all platforms have a mutex implementation. If mutex is unvailable,
   # we just skip everything about files.
   return()
@@ -12,14 +18,40 @@ add_object_library(
   HDRS
     file.h
   DEPENDS
-    libc.hdr.stdio_macros
-    libc.hdr.stdint_proxy
+    .file_io_result
+    libc.hdr.errno_macros
     libc.hdr.func.realloc
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
+    libc.hdr.types.char32_t
+    libc.hdr.types.char8_t
     libc.hdr.types.off_t
+    libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
+    libc.src.__support.alloc_checker
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
-    libc.src.__support.threads.mutex
     libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.threads.mutex
+    libc.src.__support.wchar.character_converter
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcrtomb
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_header_library(
+  dir_scan_impl
+  HDRS
+    dir_scan_impl.h
+  DEPENDS
+    libc.src.__support.error_or
+    libc.src.__support.CPP.limits
+    libc.src.stdlib.qsort_util
+    libc.src.string.memory_utils.inline_memcpy
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_dirent
 )
 
 add_object_library(
@@ -29,10 +61,15 @@ add_object_library(
   HDRS
     dir.h
   DEPENDS
+    .dir_scan_impl
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
+    libc.src.__support.error_or
+    libc.src.__support.alloc_checker
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_dirent
 )
 
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
@@ -42,24 +79,14 @@ endif()
 add_subdirectory(${LIBC_TARGET_OS})
 
 set(target_file libc.src.__support.File.${LIBC_TARGET_OS}.file)
-set(target_stdout libc.src.__support.File.${LIBC_TARGET_OS}.stdout)
-set(target_stderr libc.src.__support.File.${LIBC_TARGET_OS}.stderr)
-set(target_stdin libc.src.__support.File.${LIBC_TARGET_OS}.stdin)
 
-set(file_targets "${target_file};${target_stdout};${target_stdin};${target_stderr}")
-set(file_aliases "platform_file;platform_stdout;platform_stdin;platform_stderr")
-
-foreach(alias target IN ZIP_LISTS file_aliases file_targets)
-  if(TARGET ${target})
-    add_object_library(
-      ${alias}
-      ALIAS
-        ${target}
-      DEPENDS
-        ${target}
-    )
-  endif()
-endforeach()
+add_object_library(
+  platform_file
+  ALIAS
+    ${target_file}
+  DEPENDS
+    ${target_file}
+)
 
 set(target_dir libc.src.__support.File.${LIBC_TARGET_OS}.${LIBC_TARGET_OS}_dir)
 if(NOT TARGET ${target_dir})

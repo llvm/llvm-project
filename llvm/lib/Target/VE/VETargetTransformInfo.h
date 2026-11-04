@@ -134,12 +134,14 @@ public:
   }
 
   // Load & Store {
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned /*AddressSpace*/) const override {
+  bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned /*AddressSpace*/,
+                    TargetTransformInfo::MaskKind /*MaskKind*/) const override {
     return isVectorLaneType(*getLaneType(DataType));
   }
-  bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) const override {
+  bool isLegalMaskedStore(
+      Type *DataType, Align Alignment, unsigned /*AddressSpace*/,
+      TargetTransformInfo::MaskKind /*MaskKind*/) const override {
     return isVectorLaneType(*getLaneType(DataType));
   }
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const override {
@@ -154,6 +156,17 @@ public:
     if (!enableVPU())
       return true;
     return !isSupportedReduction(II->getIntrinsicID());
+  }
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF,
+      TargetTransformInfo::PartialReductionExtendKind OpAExtend,
+      TargetTransformInfo::PartialReductionExtendKind OpBExtend,
+      std::optional<unsigned> BinOp,
+      TargetTransformInfo::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
   }
 };
 

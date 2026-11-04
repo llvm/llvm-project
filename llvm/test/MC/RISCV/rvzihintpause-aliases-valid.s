@@ -18,6 +18,20 @@
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zihintpause < %s \
 # RUN:     | llvm-objdump --mattr=+zihintpause -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
+#
+# pause is always available even without Zihintpause
+# (riscv-non-isa/riscv-elf-psabi-doc#474).
+#
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases \
+# RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
+# RUN: llvm-mc %s -triple=riscv32 \
+# RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
+# RUN:     | llvm-objdump -d -r -M no-aliases - \
+# RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
+# RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
+# RUN:     | llvm-objdump -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
 
 # CHECK-S-OBJ-NOALIAS: fence w, 0
 # CHECK-S-OBJ: pause

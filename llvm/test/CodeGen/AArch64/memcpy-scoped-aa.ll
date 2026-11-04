@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -stop-after=finalize-isel -o - %s | FileCheck --check-prefix=MIR %s
 
-; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"bax"}
+; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"bax"}
 ; MIR-DAG: ![[SCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %p"}
 ; MIR-DAG: ![[SCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %q"}
 ; MIR-DAG: ![[SET0:[0-9]+]] = !{![[SCOPE0]]}
@@ -10,7 +10,7 @@
 
 ; MIR-LABEL: name: test_memcpy
 ; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memcpy(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_memcpy:
 ; CHECK:       // %bb.0:
@@ -33,7 +33,7 @@ define i32 @test_memcpy(ptr nocapture %p, ptr nocapture readonly %q) {
 
 ; MIR-LABEL: name: test_memcpy_inline
 ; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memcpy_inline(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_memcpy_inline:
 ; CHECK:       // %bb.0:
@@ -56,7 +56,7 @@ define i32 @test_memcpy_inline(ptr nocapture %p, ptr nocapture readonly %q) {
 
 ; MIR-LABEL: name: test_memmove
 ; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memmove(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_memmove:
 ; CHECK:       // %bb.0:
@@ -78,17 +78,16 @@ define i32 @test_memmove(ptr nocapture %p, ptr nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_memset
-; MIR:      %2:gpr64 = MOVi64imm -6148914691236517206
-; MIR-NEXT: STRXui %2, %0, 1 :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRXui %2, %0, 0 :: (store (s64) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:fpr128 = MOVIv16b_ns 170
+; MIR-NEXT: STRQui %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memset(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_memset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w10, w11, [x1]
+; CHECK-NEXT:    movi v0.16b, #170
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov x9, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
-; CHECK-NEXT:    stp x9, x9, [x8]
-; CHECK-NEXT:    add w0, w10, w11
+; CHECK-NEXT:    ldp w9, w10, [x1]
+; CHECK-NEXT:    add w0, w9, w10
+; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   %p0 = bitcast ptr %p to ptr
   tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) %p0, i8 170, i64 16, i1 false), !alias.scope !2, !noalias !4
@@ -101,7 +100,7 @@ define i32 @test_memset(ptr nocapture %p, ptr nocapture readonly %q) {
 
 ; MIR-LABEL: name: test_mempcpy
 ; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui %2, %0, 0 :: (store (s128) into %ir.p0, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_mempcpy(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_mempcpy:
 ; CHECK:       // %bb.0:
@@ -129,7 +128,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 declare ptr @mempcpy(ptr, ptr, i64)
 
-!0 = distinct !{!0, !"bax"}
+!0 = distinct !{!0, i1 false, !"bax"}
 !1 = distinct !{!1, !0, !"bax: %p"}
 !2 = !{!1}
 !3 = distinct !{!3, !0, !"bax: %q"}

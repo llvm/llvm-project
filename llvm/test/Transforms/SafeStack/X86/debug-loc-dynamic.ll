@@ -1,5 +1,5 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 
 ; Test llvm.dbg.value for dynamic allocas moved onto the unsafe stack.
 ; In the dynamic alloca case, the dbg.value does not change with the exception

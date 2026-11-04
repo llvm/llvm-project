@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "abort_message.h"
 #include "cxxabi.h"
+
+#if !defined(_LIBCXXABI_HAS_NO_THREADS) && _LIBCXXABI_DEFINE_THREAD_ATEXIT
+
 #include <__thread/support.h>
-#ifndef _LIBCXXABI_HAS_NO_THREADS
+#include <stdlib.h>
+
+#include "abort_message.h"
+
 #if defined(__ELF__) && defined(_LIBCXXABI_LINK_PTHREAD_LIB)
 #pragma comment(lib, "pthread")
 #endif
-#endif
-
-#include <stdlib.h>
 
 namespace __cxxabiv1 {
 
@@ -73,7 +75,9 @@ namespace {
   // Used to trigger destructors on thread exit; value is ignored
   std::__libcpp_tls_key dtors_key;
 
-  void run_dtors(void*) {
+  // The calling convention of TLS destructors is dictated by the underlying
+  // threading API.
+  void _LIBCPP_TLS_DESTRUCTOR_CC run_dtors(void*) {
     while (auto head = dtors) {
       dtors = head->next;
       head->dtor(head->obj);
@@ -142,4 +146,7 @@ extern "C" {
   }
 
 } // extern "C"
+
 } // namespace __cxxabiv1
+
+#endif // !defined(_LIBCXXABI_HAS_NO_THREADS) && _LIBCXXABI_DEFINE_THREAD_ATEXIT

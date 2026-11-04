@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/integer/clc_add_sat.h>
-#include <clc/integer/clc_mad24.h>
-#include <clc/integer/clc_mul_hi.h>
-#include <clc/integer/clc_upsample.h>
-#include <clc/integer/definitions.h>
-#include <clc/internal/clc.h>
-#include <clc/relational/clc_select.h>
-#include <clc/shared/clc_clamp.h>
+#include "clc/clc_convert.h"
+#include "clc/integer/clc_add_sat.h"
+#include "clc/integer/clc_mad24.h"
+#include "clc/integer/clc_mul_hi.h"
+#include "clc/integer/clc_upsample.h"
+#include "clc/integer/definitions.h"
+#include "clc/internal/clc.h"
+#include "clc/relational/clc_select.h"
+#include "clc/shared/clc_clamp.h"
 
 #define __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE, UP_TYPE, LIT_PREFIX)                 \
   _CLC_OVERLOAD _CLC_DEF TYPE __clc_mad_sat(TYPE x, TYPE y, TYPE z) {          \

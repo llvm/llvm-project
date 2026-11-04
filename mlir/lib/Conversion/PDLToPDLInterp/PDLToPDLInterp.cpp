@@ -639,9 +639,12 @@ void PatternLowering::generate(SuccessNode *successNode, Block *&currentBlock) {
 SymbolRefAttr PatternLowering::generateRewriter(
     pdl::PatternOp pattern, SmallVectorImpl<Position *> &usedMatchValues) {
   builder.setInsertionPointToEnd(rewriterModule.getBody());
+  // Get the pattern name if available, otherwise use default
+  StringRef rewriterName = "pdl_generated_rewriter";
+  if (auto symName = pattern.getSymName())
+    rewriterName = symName.value();
   auto rewriterFunc = pdl_interp::FuncOp::create(
-      builder, pattern.getLoc(), "pdl_generated_rewriter",
-      builder.getFunctionType({}, {}));
+      builder, pattern.getLoc(), rewriterName, builder.getFunctionType({}, {}));
   rewriterSymbolTable.insert(rewriterFunc);
 
   // Generate the rewriter function body.
@@ -692,7 +695,7 @@ SymbolRefAttr PatternLowering::generateRewriter(
         llvm::map_range(rewriter.getExternalArgs(), mapRewriteValue);
     args.append(mappedArgs.begin(), mappedArgs.end());
     pdl_interp::ApplyRewriteOp::create(builder, rewriter.getLoc(),
-                                       /*resultTypes=*/TypeRange(), rewriteName,
+                                       /*results=*/TypeRange(), rewriteName,
                                        args);
   } else {
     // Otherwise this is a dag rewriter defined using PDL operations.

@@ -187,6 +187,58 @@ uptr *test_uintptr_isptr2() {
   return new uptr;
 }
 
+struct StructWithAtomic {
+  _Atomic(int *) val;
+};
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z23test_struct_with_atomicv(
+// CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 8){{.*}} !alloc_token [[META_STRUCTWITHATOMIC:![0-9]+]]
+StructWithAtomic *test_struct_with_atomic() {
+  return new StructWithAtomic;
+}
+
+struct StructWithAtomicNonPtr {
+  _Atomic(int) val;
+};
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z30test_struct_with_atomic_nonptrv(
+// CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 4){{.*}} !alloc_token [[META_STRUCTWITHATOMICNONPTR:![0-9]+]]
+StructWithAtomicNonPtr *test_struct_with_atomic_nonptr() {
+  return new StructWithAtomicNonPtr;
+}
+
+struct Dummy { void foo(); int data; };
+
+struct StructWithRef {
+  int &r;
+};
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z20test_struct_with_refPi(
+// CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 8){{.*}} !alloc_token [[META_STRUCTWITHREF:![0-9]+]]
+StructWithRef *test_struct_with_ref(int *p) {
+  return new StructWithRef{*p};
+}
+
+struct StructWithPMF {
+  void (Dummy::*pmf)();
+};
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z20test_struct_with_pmfv(
+// CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 16){{.*}} !alloc_token [[META_STRUCTWITHPMF:![0-9]+]]
+StructWithPMF *test_struct_with_pmf() {
+  return new StructWithPMF;
+}
+
+struct StructWithPMD {
+  int Dummy::*pmd;
+};
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z20test_struct_with_pmdv(
+// CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 8){{.*}} !alloc_token [[META_STRUCTWITHPMD:![0-9]+]]
+StructWithPMD *test_struct_with_pmd() {
+  return new StructWithPMD;
+}
+
 // CHECK: [[META_INT]] = !{!"int", i1 false}
 // CHECK: [[META_INTPTR]] = !{!"int *", i1 true}
 // CHECK: [[META_ULONG]] = !{!"unsigned long", i1 false}
@@ -195,3 +247,8 @@ uptr *test_uintptr_isptr2() {
 // CHECK: [[META_VIRTUALTESTCLASS]] = !{!"VirtualTestClass", i1 true}
 // CHECK: [[META_MYSTRUCTUINTPTR]] = !{!"MyStructUintptr", i1 true}
 // CHECK: [[META_UINTPTR]] = !{!"unsigned long", i1 true}
+// CHECK: [[META_STRUCTWITHATOMIC]] = !{!"StructWithAtomic", i1 true}
+// CHECK: [[META_STRUCTWITHATOMICNONPTR]] = !{!"StructWithAtomicNonPtr", i1 false}
+// CHECK: [[META_STRUCTWITHREF]] = !{!"StructWithRef", i1 true}
+// CHECK: [[META_STRUCTWITHPMF]] = !{!"StructWithPMF", i1 true}
+// CHECK: [[META_STRUCTWITHPMD]] = !{!"StructWithPMD", i1 false}

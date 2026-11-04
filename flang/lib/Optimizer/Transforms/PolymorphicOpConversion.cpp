@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/BuiltinModules.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -15,7 +14,6 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InternalNames.h"
-#include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/derived-api.h"
 #include "flang/Semantics/runtime-type-info.h"
@@ -246,7 +244,9 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
     rewriter.replaceOpWithNewOp<fir::CallOp>(
         dispatch, resTypes, nullptr, args, dispatch.getArgAttrsAttr(),
-        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr());
+        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr(),
+        /*inline_attr*/ fir::FortranInlineEnumAttr{},
+        /*accessGroups*/ mlir::ArrayAttr{});
     return mlir::success();
   }
 

@@ -33,22 +33,14 @@ namespace linalg {
 //===----------------------------------------------------------------------===//
 // Utilities for inferring various semantics properties of Linalg ops.
 //===----------------------------------------------------------------------===//
-/// Shell function to compute the Destination Permutation of PackOp
-/// This function uses the helper function `computePackUnPackPerm` to get
-/// the permutation vector. Only major difference between UnPack and Pack is
-/// that packOp uses destination rank whereas unpack Uses source rank.
-SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp);
 
-/// Shell function to compute the Source Permutation of unPackOp.
-/// This function, like the getPackInverseDestPerm uses the helper function
-/// computePackUnPackPerm` to get the permutation vector.
-/// Only major difference between UnPack and Pack is that packOp uses
-/// destination rank whereas unpack Uses source rank.
-SmallVector<int64_t> getUnPackInverseSrcPerm(linalg::UnPackOp unpackOp);
+/// Compute inverse permutation for the destination tensor (i.e. in the packed
+/// domain).
+SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp,
+                                            PackingMetadata &metadata);
 
-/// Shell function to compute the Source rank permutation for unpackOp
-/// Unpack requires some packing metadata data information, so created
-/// another function where this value is passed by reference.
+/// Compute inverse permutation for the source tensor (i.e. in the packed
+/// domain).
 SmallVector<int64_t> getUnPackInverseSrcPerm(linalg::UnPackOp,
                                              PackingMetadata &metadata);
 
@@ -109,6 +101,31 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
 /// point (and potentially cannot be handled).
 std::optional<SmallVector<ReassociationIndices>>
 getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
+
+//===----------------------------------------------------------------------===//
+// Convolution matcher utility
+//===----------------------------------------------------------------------===//
+
+/// A struct containing dilations and strides inferred from convolution ops.
+struct DilationsAndStrides {
+  SmallVector<int64_t> dilations;
+  SmallVector<int64_t> strides;
+};
+
+/// Given a linalg `op` this function returns DilationsAndStrides if it is a
+/// convolution op of type `ConvOpTy`, otherwise returns std::nullopt. The
+/// dilations and strides are inferred from the indexing maps. For ops like
+/// Conv1DOp, Conv2DOp and Conv3DOp that have no strides/dilations attributes,
+/// defaults of [1, ...] are returned for both.
+template <typename ConvOpTy>
+std::optional<DilationsAndStrides> matchConvolutionOpOfType(LinalgOp op);
+
+/// Returns true if the linalg `op` is a convolution op of type `ConvOpTy`.
+/// This is a convenience wrapper around matchConvolutionOpOfType.
+template <typename ConvOpTy>
+bool isaConvolutionOpOfType(LinalgOp op) {
+  return matchConvolutionOpOfType<ConvOpTy>(op).has_value();
+}
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities

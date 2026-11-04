@@ -45,14 +45,16 @@ define double @f64_negative_zero() nounwind {
 define double @f64_constant_ins1() nounwind {
 ; LA32-0-LABEL: f64_constant_ins1:
 ; LA32-0:       # %bb.0:
-; LA32-0-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32-0-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI2_0)
+; LA32-0-NEXT:  .Lpcadd_hi0:
+; LA32-0-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI2_0)
+; LA32-0-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-0-NEXT:    ret
 ;
 ; LA32-2-LABEL: f64_constant_ins1:
 ; LA32-2:       # %bb.0:
-; LA32-2-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32-2-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI2_0)
+; LA32-2-NEXT:  .Lpcadd_hi0:
+; LA32-2-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI2_0)
+; LA32-2-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-2-NEXT:    ret
 ;
 ; LA32-3-LABEL: f64_constant_ins1:
@@ -118,20 +120,23 @@ define double @f64_constant_ins1() nounwind {
 define double @f64_constant_ins2() nounwind {
 ; LA32-0-LABEL: f64_constant_ins2:
 ; LA32-0:       # %bb.0:
-; LA32-0-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32-0-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI3_0)
+; LA32-0-NEXT:  .Lpcadd_hi1:
+; LA32-0-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; LA32-0-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32-0-NEXT:    ret
 ;
 ; LA32-2-LABEL: f64_constant_ins2:
 ; LA32-2:       # %bb.0:
-; LA32-2-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32-2-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI3_0)
+; LA32-2-NEXT:  .Lpcadd_hi1:
+; LA32-2-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; LA32-2-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32-2-NEXT:    ret
 ;
 ; LA32-3-LABEL: f64_constant_ins2:
 ; LA32-3:       # %bb.0:
-; LA32-3-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32-3-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI3_0)
+; LA32-3-NEXT:  .Lpcadd_hi0:
+; LA32-3-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; LA32-3-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-3-NEXT:    ret
 ;
 ; LA32-4-LABEL: f64_constant_ins2:
@@ -196,26 +201,30 @@ define double @f64_constant_ins2() nounwind {
 define double @f64_constant_ins3() nounwind {
 ; LA32-0-LABEL: f64_constant_ins3:
 ; LA32-0:       # %bb.0:
-; LA32-0-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA32-0-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI4_0)
+; LA32-0-NEXT:  .Lpcadd_hi2:
+; LA32-0-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI4_0)
+; LA32-0-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi2)
 ; LA32-0-NEXT:    ret
 ;
 ; LA32-2-LABEL: f64_constant_ins3:
 ; LA32-2:       # %bb.0:
-; LA32-2-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA32-2-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI4_0)
+; LA32-2-NEXT:  .Lpcadd_hi2:
+; LA32-2-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI4_0)
+; LA32-2-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi2)
 ; LA32-2-NEXT:    ret
 ;
 ; LA32-3-LABEL: f64_constant_ins3:
 ; LA32-3:       # %bb.0:
-; LA32-3-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA32-3-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI4_0)
+; LA32-3-NEXT:  .Lpcadd_hi1:
+; LA32-3-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI4_0)
+; LA32-3-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32-3-NEXT:    ret
 ;
 ; LA32-4-LABEL: f64_constant_ins3:
 ; LA32-4:       # %bb.0:
-; LA32-4-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA32-4-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI4_0)
+; LA32-4-NEXT:  .Lpcadd_hi0:
+; LA32-4-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI4_0)
+; LA32-4-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-4-NEXT:    ret
 ;
 ; LA32-5-LABEL: f64_constant_ins3:
@@ -275,32 +284,37 @@ define double @f64_constant_ins3() nounwind {
 define double @f64_constant_pi() nounwind {
 ; LA32-0-LABEL: f64_constant_pi:
 ; LA32-0:       # %bb.0:
-; LA32-0-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32-0-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI5_0)
+; LA32-0-NEXT:  .Lpcadd_hi3:
+; LA32-0-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32-0-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi3)
 ; LA32-0-NEXT:    ret
 ;
 ; LA32-2-LABEL: f64_constant_pi:
 ; LA32-2:       # %bb.0:
-; LA32-2-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32-2-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI5_0)
+; LA32-2-NEXT:  .Lpcadd_hi3:
+; LA32-2-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32-2-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi3)
 ; LA32-2-NEXT:    ret
 ;
 ; LA32-3-LABEL: f64_constant_pi:
 ; LA32-3:       # %bb.0:
-; LA32-3-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32-3-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI5_0)
+; LA32-3-NEXT:  .Lpcadd_hi2:
+; LA32-3-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32-3-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi2)
 ; LA32-3-NEXT:    ret
 ;
 ; LA32-4-LABEL: f64_constant_pi:
 ; LA32-4:       # %bb.0:
-; LA32-4-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32-4-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI5_0)
+; LA32-4-NEXT:  .Lpcadd_hi1:
+; LA32-4-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32-4-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32-4-NEXT:    ret
 ;
 ; LA32-5-LABEL: f64_constant_pi:
 ; LA32-5:       # %bb.0:
-; LA32-5-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32-5-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI5_0)
+; LA32-5-NEXT:  .Lpcadd_hi0:
+; LA32-5-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32-5-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-5-NEXT:    ret
 ;
 ; LA32-6-LABEL: f64_constant_pi:

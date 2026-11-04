@@ -10,6 +10,7 @@
 #include <thread>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class __barrier_algorithm_base {
 public:
@@ -69,4 +70,5 @@ __destroy_barrier_algorithm_base(_LIBCPP_NOESCAPE __barrier_algorithm_base* __ba
   delete __barrier;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -57,7 +57,7 @@ static void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS,
   // First we translate the sleds into the YAMLXRaySledEntry objects in a deque.
   std::vector<YAMLXRaySledEntry> YAMLSleds;
   auto Sleds = Map.sleds();
-  YAMLSleds.reserve(std::distance(Sleds.begin(), Sleds.end()));
+  YAMLSleds.reserve(llvm::size(Sleds));
   for (const auto &Sled : Sleds) {
     auto FuncId = Map.getFunctionId(Sled.Function);
     if (!FuncId)

@@ -33,7 +33,7 @@ void ProTypeStaticCastDowncastCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedCast = Result.Nodes.getNodeAs<CXXStaticCastExpr>("cast");
 
-  QualType SourceType = MatchedCast->getSubExpr()->getType();
+  const QualType SourceType = MatchedCast->getSubExpr()->getType();
   const auto *SourceDecl = SourceType->getPointeeCXXRecordDecl();
   if (!SourceDecl) // The cast is from object to reference
     SourceDecl = SourceType->getAsCXXRecordDecl();

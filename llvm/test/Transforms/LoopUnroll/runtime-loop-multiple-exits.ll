@@ -1521,7 +1521,7 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-NEXT:    %exitcond.7 = icmp eq i64 %indvars.iv.next.7, %n
 ; PROLOG-NEXT:    br i1 %exitcond.7, label %latchExit.unr-lcssa.loopexit, label %header
 ; PROLOG:       latchExit.unr-lcssa.loopexit:
-; PROLOG-NEXT:    %result.ph.ph = phi i32 [ 0, %header ], [ 0, %latch ], [ 0, %latch.1 ], [ 0, %latch.2 ], [ 0, %latch.3 ], [ 0, %latch.4 ], [ 0, %latch.5 ], [ 0, %latch.6 ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    %result.ph.ph = phi i32 [ 0, %header ], [ %add.7, %latch.7 ], [ 0, %latch ], [ 0, %latch.6 ], [ 0, %latch.1 ], [ 0, %latch.4 ], [ 0, %latch.2 ], [ 0, %latch.5 ], [ 0, %latch.3 ]
 ; PROLOG-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG:       latchExit.unr-lcssa.loopexit1:
 ; PROLOG-NEXT:    %result.ph.ph2 = phi i32 [ 0, %header.prol ]
@@ -1588,7 +1588,7 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-BLOCK-NEXT:    %exitcond.1 = icmp eq i64 %indvars.iv.next.1, %n
 ; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !4
 ; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ 0, %header ], [ 0, %latch ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ 0, %header ], [ %add.1, %latch.1 ], [ 0, %latch ]
 ; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG-BLOCK:       latchExit.unr-lcssa:
 ; PROLOG-BLOCK-NEXT:    %result.ph = phi i32 [ 0, %header.prol ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
@@ -1959,7 +1959,7 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-NEXT:    %exitcond.7 = icmp eq i64 %indvars.iv.next.7, %n
 ; PROLOG-NEXT:    br i1 %exitcond.7, label %latchExit.unr-lcssa.loopexit, label %header
 ; PROLOG:       latchExit.unr-lcssa.loopexit:
-; PROLOG-NEXT:    %result.ph.ph = phi i32 [ 2, %for.exiting_block ], [ 2, %for.exiting_block.1 ], [ 2, %for.exiting_block.2 ], [ 2, %for.exiting_block.3 ], [ 2, %for.exiting_block.4 ], [ 2, %for.exiting_block.5 ], [ 2, %for.exiting_block.6 ], [ 2, %for.exiting_block.7 ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    %result.ph.ph = phi i32 [ 2, %for.exiting_block ], [ %add.7, %latch.7 ], [ 2, %for.exiting_block.1 ], [ 2, %for.exiting_block.7 ], [ 2, %for.exiting_block.2 ], [ 2, %for.exiting_block.5 ], [ 2, %for.exiting_block.3 ], [ 2, %for.exiting_block.6 ], [ 2, %for.exiting_block.4 ]
 ; PROLOG-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG:       latchExit.unr-lcssa.loopexit2:
 ; PROLOG-NEXT:    %result.ph.ph3 = phi i32 [ 2, %for.exiting_block.prol ]
@@ -2026,7 +2026,7 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-BLOCK-NEXT:    %exitcond.1 = icmp eq i64 %indvars.iv.next.1, %n
 ; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !5
 ; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ 2, %for.exiting_block ], [ 2, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ 2, %for.exiting_block ], [ %add.1, %latch.1 ], [ 2, %for.exiting_block.1 ]
 ; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG-BLOCK:       latchExit.unr-lcssa:
 ; PROLOG-BLOCK-NEXT:    %result.ph = phi i32 [ 2, %for.exiting_block.prol ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
@@ -2398,7 +2398,7 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-NEXT:    %exitcond.7 = icmp eq i64 %indvars.iv.next.7, %n
 ; PROLOG-NEXT:    br i1 %exitcond.7, label %latchExit.unr-lcssa.loopexit, label %header
 ; PROLOG:       latchExit.unr-lcssa.loopexit:
-; PROLOG-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %for.exiting_block.2 ], [ %add.2, %for.exiting_block.3 ], [ %add.3, %for.exiting_block.4 ], [ %add.4, %for.exiting_block.5 ], [ %add.5, %for.exiting_block.6 ], [ %add.6, %for.exiting_block.7 ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add.7, %latch.7 ], [ %add, %for.exiting_block.1 ], [ %add.6, %for.exiting_block.7 ], [ %add.1, %for.exiting_block.2 ], [ %add.4, %for.exiting_block.5 ], [ %add.2, %for.exiting_block.3 ], [ %add.5, %for.exiting_block.6 ], [ %add.3, %for.exiting_block.4 ]
 ; PROLOG-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG:       latchExit.unr-lcssa.loopexit2:
 ; PROLOG-NEXT:    %result.ph.ph3 = phi i32 [ %sum.02.prol, %for.exiting_block.prol ]
@@ -2465,7 +2465,7 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-BLOCK-NEXT:    %exitcond.1 = icmp eq i64 %indvars.iv.next.1, %n
 ; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !6
 ; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add.1, %latch.1 ], [ %add, %for.exiting_block.1 ]
 ; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG-BLOCK:       latchExit.unr-lcssa:
 ; PROLOG-BLOCK-NEXT:    %result.ph = phi i32 [ 0, %for.exiting_block.prol ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
@@ -2838,7 +2838,7 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-NEXT:    %exitcond.7 = icmp eq i64 %indvars.iv.next.7, %n
 ; PROLOG-NEXT:    br i1 %exitcond.7, label %latchExit.unr-lcssa.loopexit, label %header
 ; PROLOG:       latchExit.unr-lcssa.loopexit:
-; PROLOG-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %for.exiting_block.2 ], [ %add.2, %for.exiting_block.3 ], [ %add.3, %for.exiting_block.4 ], [ %add.4, %for.exiting_block.5 ], [ %add.5, %for.exiting_block.6 ], [ %add.6, %for.exiting_block.7 ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add.7, %latch.7 ], [ %add, %for.exiting_block.1 ], [ %add.6, %for.exiting_block.7 ], [ %add.1, %for.exiting_block.2 ], [ %add.4, %for.exiting_block.5 ], [ %add.2, %for.exiting_block.3 ], [ %add.5, %for.exiting_block.6 ], [ %add.3, %for.exiting_block.4 ]
 ; PROLOG-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG:       latchExit.unr-lcssa.loopexit2:
 ; PROLOG-NEXT:    %result.ph.ph3 = phi i32 [ %sum.02.prol, %for.exiting_block.prol ]
@@ -2905,7 +2905,7 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-BLOCK-NEXT:    %exitcond.1 = icmp eq i64 %indvars.iv.next.1, %n
 ; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !7
 ; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add.1, %latch.1 ], [ %add, %for.exiting_block.1 ]
 ; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG-BLOCK:       latchExit.unr-lcssa:
 ; PROLOG-BLOCK-NEXT:    %result.ph = phi i32 [ 0, %for.exiting_block.prol ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
@@ -3201,7 +3201,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; PROLOG-NEXT:    %cmp.7 = icmp ult i32 %inc.7, %M.shifted
 ; PROLOG-NEXT:    br i1 %cmp.7, label %header, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latchExit.unr-lcssa.loopexit:
-; PROLOG-NEXT:    %i2.ph.ph.ph = phi i32 [ %i4, %header ], [ %inc, %latch ], [ %inc.1, %latch.1 ], [ %inc.2, %latch.2 ], [ %inc.3, %latch.3 ], [ %inc.4, %latch.4 ], [ %inc.5, %latch.5 ], [ %inc.6, %latch.6 ], [ -1, %latch.7 ]
+; PROLOG-NEXT:    %i2.ph.ph.ph = phi i32 [ %i4, %header ], [ -1, %latch.7 ], [ %inc, %latch ], [ %inc.6, %latch.6 ], [ %inc.1, %latch.1 ], [ %inc.4, %latch.4 ], [ %inc.2, %latch.2 ], [ %inc.5, %latch.5 ], [ %inc.3, %latch.3 ]
 ; PROLOG-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG:       latchExit.unr-lcssa.loopexit1:
 ; PROLOG-NEXT:    %i2.ph.ph.ph2 = phi i32 [ %i4.prol, %header.prol ]
@@ -3249,7 +3249,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; PROLOG-BLOCK-NEXT:    %cmp.1 = icmp ult i32 %inc.1, %M.shifted
 ; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %header, label %latchExit.unr-lcssa.loopexit, !llvm.loop !8
 ; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
-; PROLOG-BLOCK-NEXT:    %i2.ph.ph.ph = phi i32 [ %i4, %header ], [ %inc, %latch ], [ -1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %i2.ph.ph.ph = phi i32 [ %i4, %header ], [ -1, %latch.1 ], [ %inc, %latch ]
 ; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
 ; PROLOG-BLOCK:       latchExit.unr-lcssa:
 ; PROLOG-BLOCK-NEXT:    %i2.ph.ph = phi i32 [ 0, %header.prol ], [ %i2.ph.ph.ph, %latchExit.unr-lcssa.loopexit ]
@@ -4561,10 +4561,8 @@ define void @test8() {
 ; EPILOG-BLOCK:       outerloop:
 ; EPILOG-BLOCK-NEXT:    %i = phi i64 [ 3, %bb ], [ 0, %outerloop.loopexit.1 ]
 ; EPILOG-BLOCK-NEXT:    %0 = sub i64 100, %i
-; EPILOG-BLOCK-NEXT:    %1 = sub i64 99, %i
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
-; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %innerH.epil.preheader, label %outerloop.new
+; EPILOG-BLOCK-NEXT:    br i1 false, label %innerH.epil.preheader, label %outerloop.new
 ; EPILOG-BLOCK:       outerloop.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %innerH
@@ -4651,7 +4649,7 @@ define void @test8() {
 ; PROLOG-NEXT:    %i4.7 = add nuw nsw i64 %i3, 8
 ; PROLOG-NEXT:    br i1 false, label %outerloop.loopexit.loopexit, label %latch.7
 ; PROLOG:       latch.7:
-; PROLOG-NEXT:    %i6.7 = icmp ult i64 %i4.7, 100
+; PROLOG-NEXT:    %i6.7 = icmp samesign ult i64 %i4.7, 100
 ; PROLOG-NEXT:    br i1 %i6.7, label %innerH, label %exit.unr-lcssa
 ; PROLOG:       exit.unr-lcssa:
 ; PROLOG-NEXT:    br label %exit
@@ -4685,7 +4683,7 @@ define void @test8() {
 ; PROLOG-BLOCK-NEXT:    %i4.1.1 = add nuw nsw i64 %i3.1, 2
 ; PROLOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit.loopexit.1, label %latch.1.1
 ; PROLOG-BLOCK:       latch.1.1:
-; PROLOG-BLOCK-NEXT:    %i6.1.1 = icmp ult i64 %i4.1.1, 100
+; PROLOG-BLOCK-NEXT:    %i6.1.1 = icmp samesign ult i64 %i4.1.1, 100
 ; PROLOG-BLOCK-NEXT:    br i1 %i6.1.1, label %innerH.1, label %exit.unr-lcssa.loopexit2, !llvm.loop !12
 ; PROLOG-BLOCK:       outerloop.loopexit.loopexit.1:
 ; PROLOG-BLOCK-NEXT:    br label %outerloop.loopexit.1
@@ -4694,7 +4692,6 @@ define void @test8() {
 ; PROLOG-BLOCK:       outerloop:
 ; PROLOG-BLOCK-NEXT:    %i = phi i64 [ 3, %bb ], [ 0, %outerloop.loopexit.1 ]
 ; PROLOG-BLOCK-NEXT:    %0 = sub i64 100, %i
-; PROLOG-BLOCK-NEXT:    %1 = sub i64 99, %i
 ; PROLOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; PROLOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %innerH.prol.preheader, label %innerH.prol.loopexit
@@ -4707,8 +4704,7 @@ define void @test8() {
 ; PROLOG-BLOCK-NEXT:    br label %innerH.prol.loopexit
 ; PROLOG-BLOCK:       innerH.prol.loopexit:
 ; PROLOG-BLOCK-NEXT:    %i3.unr = phi i64 [ %i, %outerloop ], [ %i4.prol, %latch.prol ]
-; PROLOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; PROLOG-BLOCK-NEXT:    br i1 %2, label %exit.loopexit, label %outerloop.new
+; PROLOG-BLOCK-NEXT:    br i1 false, label %exit.loopexit, label %outerloop.new
 ; PROLOG-BLOCK:       outerloop.new:
 ; PROLOG-BLOCK-NEXT:    br label %innerH
 ; PROLOG-BLOCK:       innerH:
@@ -4718,7 +4714,7 @@ define void @test8() {
 ; PROLOG-BLOCK-NEXT:    %i4.1 = add nuw nsw i64 %i3, 2
 ; PROLOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit.loopexit, label %latch.1
 ; PROLOG-BLOCK:       latch.1:
-; PROLOG-BLOCK-NEXT:    %i6.1 = icmp ult i64 %i4.1, 100
+; PROLOG-BLOCK-NEXT:    %i6.1 = icmp samesign ult i64 %i4.1, 100
 ; PROLOG-BLOCK-NEXT:    br i1 %i6.1, label %innerH, label %exit.unr-lcssa.loopexit, !llvm.loop !12
 ; PROLOG-BLOCK:       exit.unr-lcssa.loopexit:
 ; PROLOG-BLOCK-NEXT:    br label %exit.unr-lcssa
@@ -4759,7 +4755,6 @@ declare ptr addrspace(1) @foo(i32)
 define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-LABEL: @test9(
 ; EPILOG-NEXT:  bb:
-; EPILOG-NEXT:    %0 = add i32 %n, -1
 ; EPILOG-NEXT:    br label %outerloopHdr
 ; EPILOG:       outerloopHdr:
 ; EPILOG-NEXT:    %trip = add i32 %n, -1
@@ -4767,13 +4762,13 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-NEXT:    br i1 %outercnd, label %preheader, label %outerLatch
 ; EPILOG:       preheader:
 ; EPILOG-NEXT:    %i4 = zext i32 0 to i64
-; EPILOG-NEXT:    %1 = freeze i32 %0
-; EPILOG-NEXT:    %2 = add i32 %1, -1
-; EPILOG-NEXT:    %xtraiter = and i32 %1, 7
-; EPILOG-NEXT:    %3 = icmp ult i32 %2, 7
-; EPILOG-NEXT:    br i1 %3, label %header.epil.preheader, label %preheader.new
+; EPILOG-NEXT:    %0 = freeze i32 %trip
+; EPILOG-NEXT:    %1 = add i32 %0, -1
+; EPILOG-NEXT:    %xtraiter = and i32 %0, 7
+; EPILOG-NEXT:    %2 = icmp ult i32 %1, 7
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %preheader.new
 ; EPILOG:       preheader.new:
-; EPILOG-NEXT:    %unroll_iter = sub i32 %1, %xtraiter
+; EPILOG-NEXT:    %unroll_iter = sub i32 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
 ; EPILOG:       header:
 ; EPILOG-NEXT:    %phi = phi i64 [ %i4, %preheader.new ], [ %iv.next.7, %latch.7 ]
@@ -4838,20 +4833,19 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ;
 ; EPILOG-BLOCK-LABEL: @test9(
 ; EPILOG-BLOCK-NEXT:  bb:
-; EPILOG-BLOCK-NEXT:    %0 = add i32 %n, -1
 ; EPILOG-BLOCK-NEXT:    br label %outerloopHdr
 ; EPILOG-BLOCK:       outerloopHdr:
 ; EPILOG-BLOCK-NEXT:    %trip = add i32 %n, -1
 ; EPILOG-BLOCK-NEXT:    %outercnd = icmp slt i32 0, %trip
 ; EPILOG-BLOCK-NEXT:    br i1 %outercnd, label %preheader, label %outerLatch
 ; EPILOG-BLOCK:       preheader:
-; EPILOG-BLOCK-NEXT:    %1 = freeze i32 %0
-; EPILOG-BLOCK-NEXT:    %2 = add i32 %1, -1
-; EPILOG-BLOCK-NEXT:    %xtraiter = and i32 %1, 1
-; EPILOG-BLOCK-NEXT:    %3 = icmp ult i32 %2, 1
-; EPILOG-BLOCK-NEXT:    br i1 %3, label %header.epil.preheader, label %preheader.new
+; EPILOG-BLOCK-NEXT:    %0 = freeze i32 %trip
+; EPILOG-BLOCK-NEXT:    %1 = add i32 %0, -1
+; EPILOG-BLOCK-NEXT:    %xtraiter = and i32 %0, 1
+; EPILOG-BLOCK-NEXT:    %2 = icmp ult i32 %1, 1
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %preheader.new
 ; EPILOG-BLOCK:       preheader.new:
-; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i32 %1, %xtraiter
+; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i32 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
 ; EPILOG-BLOCK:       header:
 ; EPILOG-BLOCK-NEXT:    %phi = phi i64 [ 0, %preheader.new ], [ %iv.next.1, %latch.1 ]
@@ -4898,13 +4892,13 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-BLOCK-NEXT:    %outercnd.1 = icmp slt i32 0, %trip.1
 ; EPILOG-BLOCK-NEXT:    br i1 %outercnd.1, label %preheader.1, label %outerLatch.1
 ; EPILOG-BLOCK:       preheader.1:
-; EPILOG-BLOCK-NEXT:    %4 = freeze i32 %0
-; EPILOG-BLOCK-NEXT:    %5 = add i32 %4, -1
-; EPILOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %4, 1
-; EPILOG-BLOCK-NEXT:    %6 = icmp ult i32 %5, 1
-; EPILOG-BLOCK-NEXT:    br i1 %6, label %header.epil.preheader.1, label %preheader.new.1
+; EPILOG-BLOCK-NEXT:    %3 = freeze i32 %trip.1
+; EPILOG-BLOCK-NEXT:    %4 = add i32 %3, -1
+; EPILOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %3, 1
+; EPILOG-BLOCK-NEXT:    %5 = icmp ult i32 %4, 1
+; EPILOG-BLOCK-NEXT:    br i1 %5, label %header.epil.preheader.1, label %preheader.new.1
 ; EPILOG-BLOCK:       preheader.new.1:
-; EPILOG-BLOCK-NEXT:    %unroll_iter.1 = sub i32 %4, %xtraiter.1
+; EPILOG-BLOCK-NEXT:    %unroll_iter.1 = sub i32 %3, %xtraiter.1
 ; EPILOG-BLOCK-NEXT:    br label %header.1
 ; EPILOG-BLOCK:       header.1:
 ; EPILOG-BLOCK-NEXT:    %phi.1 = phi i64 [ 0, %preheader.new.1 ], [ %iv.next.1.1, %latch.1.1 ]
@@ -4935,7 +4929,6 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ;
 ; PROLOG-LABEL: @test9(
 ; PROLOG-NEXT:  bb:
-; PROLOG-NEXT:    %0 = add i32 %n, -1
 ; PROLOG-NEXT:    br label %outerloopHdr
 ; PROLOG:       outerloopHdr:
 ; PROLOG-NEXT:    %trip = add i32 %n, -1
@@ -4943,9 +4936,9 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-NEXT:    br i1 %outercnd, label %preheader, label %outerLatch
 ; PROLOG:       preheader:
 ; PROLOG-NEXT:    %i4 = zext i32 0 to i64
-; PROLOG-NEXT:    %1 = freeze i32 %0
-; PROLOG-NEXT:    %2 = add i32 %1, -1
-; PROLOG-NEXT:    %xtraiter = and i32 %1, 7
+; PROLOG-NEXT:    %0 = freeze i32 %trip
+; PROLOG-NEXT:    %1 = add i32 %0, -1
+; PROLOG-NEXT:    %xtraiter = and i32 %0, 7
 ; PROLOG-NEXT:    %lcmp.mod = icmp ne i32 %xtraiter, 0
 ; PROLOG-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
 ; PROLOG:       header.prol.preheader:
@@ -4967,8 +4960,8 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
 ; PROLOG-NEXT:    %phi.unr = phi i64 [ %i4, %preheader ], [ %phi.unr.ph, %header.prol.loopexit.unr-lcssa ]
-; PROLOG-NEXT:    %3 = icmp ult i32 %2, 7
-; PROLOG-NEXT:    br i1 %3, label %outerLatch.loopexit, label %preheader.new
+; PROLOG-NEXT:    %2 = icmp ult i32 %1, 7
+; PROLOG-NEXT:    br i1 %2, label %outerLatch.loopexit, label %preheader.new
 ; PROLOG:       preheader.new:
 ; PROLOG-NEXT:    br label %header
 ; PROLOG:       header:
@@ -5014,16 +5007,15 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ;
 ; PROLOG-BLOCK-LABEL: @test9(
 ; PROLOG-BLOCK-NEXT:  bb:
-; PROLOG-BLOCK-NEXT:    %0 = add i32 %n, -1
 ; PROLOG-BLOCK-NEXT:    br label %outerloopHdr
 ; PROLOG-BLOCK:       outerloopHdr:
 ; PROLOG-BLOCK-NEXT:    %trip = add i32 %n, -1
 ; PROLOG-BLOCK-NEXT:    %outercnd = icmp slt i32 0, %trip
 ; PROLOG-BLOCK-NEXT:    br i1 %outercnd, label %preheader, label %outerLatch
 ; PROLOG-BLOCK:       preheader:
-; PROLOG-BLOCK-NEXT:    %1 = freeze i32 %0
-; PROLOG-BLOCK-NEXT:    %2 = add i32 %1, -1
-; PROLOG-BLOCK-NEXT:    %xtraiter = and i32 %1, 1
+; PROLOG-BLOCK-NEXT:    %0 = freeze i32 %trip
+; PROLOG-BLOCK-NEXT:    %1 = add i32 %0, -1
+; PROLOG-BLOCK-NEXT:    %xtraiter = and i32 %0, 1
 ; PROLOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i32 %xtraiter, 0
 ; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.preheader:
@@ -5034,8 +5026,8 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
 ; PROLOG-BLOCK-NEXT:    %phi.unr = phi i64 [ 0, %preheader ], [ 1, %latch.prol ]
-; PROLOG-BLOCK-NEXT:    %3 = icmp ult i32 %2, 1
-; PROLOG-BLOCK-NEXT:    br i1 %3, label %outerLatch.loopexit, label %preheader.new
+; PROLOG-BLOCK-NEXT:    %2 = icmp ult i32 %1, 1
+; PROLOG-BLOCK-NEXT:    br i1 %2, label %outerLatch.loopexit, label %preheader.new
 ; PROLOG-BLOCK:       preheader.new:
 ; PROLOG-BLOCK-NEXT:    br label %header
 ; PROLOG-BLOCK:       header:
@@ -5075,9 +5067,9 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-BLOCK-NEXT:    %outercnd.1 = icmp slt i32 0, %trip.1
 ; PROLOG-BLOCK-NEXT:    br i1 %outercnd.1, label %preheader.1, label %outerLatch.1
 ; PROLOG-BLOCK:       preheader.1:
-; PROLOG-BLOCK-NEXT:    %4 = freeze i32 %0
-; PROLOG-BLOCK-NEXT:    %5 = add i32 %4, -1
-; PROLOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %4, 1
+; PROLOG-BLOCK-NEXT:    %3 = freeze i32 %trip.1
+; PROLOG-BLOCK-NEXT:    %4 = add i32 %3, -1
+; PROLOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %3, 1
 ; PROLOG-BLOCK-NEXT:    %lcmp.mod.1 = icmp ne i32 %xtraiter.1, 0
 ; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod.1, label %header.prol.preheader.1, label %header.prol.loopexit.1
 ; PROLOG-BLOCK:       header.prol.preheader.1:
@@ -5088,8 +5080,8 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit.1
 ; PROLOG-BLOCK:       header.prol.loopexit.1:
 ; PROLOG-BLOCK-NEXT:    %phi.unr.1 = phi i64 [ 0, %preheader.1 ], [ 1, %latch.prol.1 ]
-; PROLOG-BLOCK-NEXT:    %6 = icmp ult i32 %5, 1
-; PROLOG-BLOCK-NEXT:    br i1 %6, label %outerLatch.loopexit.1, label %preheader.new.1
+; PROLOG-BLOCK-NEXT:    %5 = icmp ult i32 %4, 1
+; PROLOG-BLOCK-NEXT:    br i1 %5, label %outerLatch.loopexit.1, label %preheader.new.1
 ; PROLOG-BLOCK:       preheader.new.1:
 ; PROLOG-BLOCK-NEXT:    br label %header.1
 ; PROLOG-BLOCK:       header.1:

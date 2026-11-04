@@ -44,8 +44,8 @@ import x [[noreturn]]; // expected-error {{'noreturn' attribute cannot be applie
 import x [[blarg::noreturn]]; // expected-warning-re {{unknown attribute 'blarg::noreturn' ignored{{.*}}}}
 
 import x.y;
-import x.; // expected-error {{expected a module name after 'import'}}
-import .x; // expected-error {{expected a module name after 'import'}}
+import x.; // expected-error {{expected identifier after '.' in module name}}
+import .x; // expected-error {{unknown type name 'import'}} expected-error {{cannot use dot operator on a type}}
 
 import blarg; // expected-error {{module 'blarg' not found}}
 
@@ -62,8 +62,8 @@ import x [[noreturn]]; // expected-error {{'noreturn' attribute cannot be applie
 import x [[blarg::noreturn]]; // expected-warning-re {{unknown attribute 'blarg::noreturn' ignored{{.*}}}}
 
 import x.y;
-import x.; // expected-error {{expected a module name after 'import'}}
-import .x; // expected-error {{expected a module name after 'import'}}
+import x.; // expected-error {{expected identifier after '.' in module name}}
+import .x; // expected-error {{unknown type name 'import'}} expected-error {{cannot use dot operator on a type}}
 
 import blarg; // expected-error {{module 'blarg' not found}}
 

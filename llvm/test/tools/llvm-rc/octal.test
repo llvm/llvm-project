@@ -1,0 +1,38 @@
+; RUN: llvm-rc -no-preprocess /FO %t.in-range-rc.res -- %p/Inputs/octal-in-range.rc
+; RUN: llvm-readobj %t.in-range-rc.res | FileCheck %s --check-prefix=IN-RANGE-RC
+; RUN: llvm-windres --no-preprocess %p/Inputs/octal-in-range.rc %t.in-range-windres.res
+; RUN: llvm-readobj %t.in-range-windres.res | FileCheck %s --check-prefix=IN-RANGE-WINDRES
+
+; IN-RANGE-RC:      Data: (
+; IN-RANGE-RC-NEXT:   0000: 5C003400 00005600 53005F00 56004500  |\.4...V.S._.V.E.|
+; IN-RANGE-RC-NEXT:   0010: 52005300 49004F00 4E005F00 49004E00  |R.S.I.O.N._.I.N.|
+; IN-RANGE-RC-NEXT:   0020: 46004F00 00000000 BD04EFFE 00000100  |F.O.............|
+; IN-RANGE-RC-NEXT:   0030: 0A000A00 0A000A00 00000000 00000000  |................|
+; IN-RANGE-RC-NEXT:   0040: 00000000 00000000 00000000 00000000  |................|
+; IN-RANGE-RC-NEXT:   0050: 00000000 00000000 00000000           |............|
+; IN-RANGE-RC-NEXT: )
+
+; IN-RANGE-WINDRES:      Data: (
+; IN-RANGE-WINDRES-NEXT:   0000: 5C003400 00005600 53005F00 56004500  |\.4...V.S._.V.E.|
+; IN-RANGE-WINDRES-NEXT:   0010: 52005300 49004F00 4E005F00 49004E00  |R.S.I.O.N._.I.N.|
+; IN-RANGE-WINDRES-NEXT:   0020: 46004F00 00000000 BD04EFFE 00000100  |F.O.............|
+; IN-RANGE-WINDRES-NEXT:   0030: 08000800 08000800 00000000 00000000  |................|
+; IN-RANGE-WINDRES-NEXT:   0040: 00000000 00000000 00000000 00000000  |................|
+; IN-RANGE-WINDRES-NEXT:   0050: 00000000 00000000 00000000           |............|
+; IN-RANGE-WINDRES-NEXT: )
+
+; RUN: llvm-rc -no-preprocess /FO %t.out-of-range-rc.res -- %p/Inputs/octal-out-of-range.rc
+; RUN: llvm-readobj %t.out-of-range-rc.res | FileCheck %s --check-prefix=OUT-OF-RANGE-RC
+; RUN: not llvm-windres --no-preprocess %p/Inputs/octal-out-of-range.rc %t.out-of-range-windres.res 2>&1 | FileCheck %s --check-prefix OUT-OF-RANGE-WINDRES
+
+; OUT-OF-RANGE-RC:      Data: (
+; OUT-OF-RANGE-RC-NEXT:   0000: 5C003400 00005600 53005F00 56004500  |\.4...V.S._.V.E.|
+; OUT-OF-RANGE-RC-NEXT:   0010: 52005300 49004F00 4E005F00 49004E00  |R.S.I.O.N._.I.N.|
+; OUT-OF-RANGE-RC-NEXT:   0020: 46004F00 00000000 BD04EFFE 00000100  |F.O.............|
+; OUT-OF-RANGE-RC-NEXT:   0030: 08000900 01000900 00000000 00000000  |................|
+; OUT-OF-RANGE-RC-NEXT:   0040: 00000000 00000000 00000000 00000000  |................|
+; OUT-OF-RANGE-RC-NEXT:   0050: 00000000 00000000 00000000           |............|
+; OUT-OF-RANGE-RC-NEXT: )
+
+
+; OUT-OF-RANGE-WINDRES: llvm-rc: Error parsing file: Integer invalid or too large: 08

@@ -13,13 +13,18 @@
 
 %struct = type { [3 x float] }
 
+@G = global float 0.0
+
 define spir_kernel void @bar(i1 %sw) {
 entry:
   %var1 = alloca %struct
+  store %struct zeroinitializer, ptr %var1
   %var2 = alloca %struct
+  store %struct zeroinitializer, ptr %var2
   %elem1 = getelementptr inbounds [3 x float], ptr %var1, i64 0, i64 0
   %elem2 = getelementptr inbounds [3 x float], ptr %var2, i64 0, i64 1
   %elem = select i1 %sw, ptr %elem1, ptr %elem2
   %res = load float, ptr %elem
+  store float %res, ptr @G
   ret void
 }

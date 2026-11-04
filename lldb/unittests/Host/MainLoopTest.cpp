@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/MainLoop.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
@@ -20,6 +21,11 @@
 #include <future>
 #include <thread>
 
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 using namespace lldb_private;
 
 namespace {
@@ -28,6 +34,9 @@ public:
   SubsystemRAII<FileSystem, Socket> subsystems;
 
   void SetUp() override {
+    if (!HostSupportsIPv4() && !HostSupportsIPv6())
+      GTEST_SKIP() << "TCP sockets unavailable";
+
     Status error;
     auto listen_socket_up = std::make_unique<TCPSocket>(true);
     ASSERT_TRUE(error.Success());
@@ -146,6 +155,44 @@ TEST_F(MainLoopTest, MultipleReadsPipeObject) {
 }
 #endif
 
+// Registers read_fd, optionally lets the loop poll it once, and drops the
+// handle while the write end of the pipe is still open.
+static void UnregisterWithOpenWriter(int read_fd, bool poll) {
+  MainLoop loop;
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      std::make_shared<NativeFile>(read_fd, File::eOpenOptionReadOnly, false),
+      [](MainLoopBase &) {}, error);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  if (poll) {
+    loop.AddPendingCallback(
+        [](MainLoopBase &loop) { loop.RequestTermination(); });
+    ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
+  }
+}
+
+TEST_F(MainLoopTest, UnregisterPipeWithOpenWriter) {
+  for (int i = 0; i < 100; ++i) {
+    Pipe pipe;
+    ASSERT_THAT_ERROR(pipe.CreateNew().ToError(), llvm::Succeeded());
+    ASSERT_NO_FATAL_FAILURE(
+        UnregisterWithOpenWriter(pipe.GetReadFileDescriptor(), i % 2));
+  }
+}
+
+#ifdef _WIN32
+// The CRT's pipes, unlike lldb's, are not opened for overlapped I/O.
+TEST_F(MainLoopTest, UnregisterSynchronousPipeWithOpenWriter) {
+  for (int i = 0; i < 100; ++i) {
+    int fds[2];
+    ASSERT_EQ(_pipe(fds, 4096, _O_BINARY), 0);
+    ASSERT_NO_FATAL_FAILURE(UnregisterWithOpenWriter(fds[0], i % 2));
+    _close(fds[0]);
+    _close(fds[1]);
+  }
+}
+#endif
+
 TEST_F(MainLoopTest, PipeDelayBetweenRegisterAndRun) {
   Pipe pipe;
 
@@ -179,9 +226,13 @@ TEST_F(MainLoopTest, PipeDelayBetweenRegisterAndRun) {
     ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
   };
   // Add a write that triggers a read events.
-  loop.AddCallback(cb, std::chrono::milliseconds(500));
-  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
-                   std::chrono::milliseconds(1000));
+  bool addition_succeeded =
+      loop.AddCallback(cb, std::chrono::milliseconds(500));
+  ASSERT_TRUE(addition_succeeded);
+  addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       std::chrono::milliseconds(1000));
+  ASSERT_TRUE(addition_succeeded);
   ASSERT_TRUE(error.Success());
   ASSERT_TRUE(handle);
 
@@ -310,8 +361,10 @@ TEST_F(MainLoopTest, NoSpuriousSocketReads) {
       error);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   // Terminate the loop after one second.
-  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
-                   std::chrono::seconds(1));
+  bool addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       std::chrono::seconds(1));
+  ASSERT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
 
   // Make sure the callback was called only once.
@@ -388,10 +441,11 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
   MainLoop loop;
   std::promise<void> add_callback2;
   bool callback1_called = false;
-  loop.AddPendingCallback([&](MainLoopBase &loop) {
+  bool addition_succeeded = loop.AddPendingCallback([&](MainLoopBase &loop) {
     callback1_called = true;
     add_callback2.set_value();
   });
+  EXPECT_TRUE(addition_succeeded);
   Status error;
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   bool callback2_called = false;
@@ -416,9 +470,11 @@ TEST_F(MainLoopTest, ManyPendingCallbacks) {
   // caused a deadlock when the pipe filled up (either because the main loop was
   // not running, because it was slow, or because it was busy/blocked doing
   // something else).
-  for (int i = 0; i < 65536; ++i)
-    loop.AddPendingCallback(
+  for (int i = 0; i < 65536; ++i) {
+    bool addition_succeeded = loop.AddPendingCallback(
         [&](MainLoopBase &loop) { loop.RequestTermination(); });
+    EXPECT_TRUE(addition_succeeded);
+  }
   ASSERT_TRUE(loop.Run().Success());
 }
 
@@ -444,8 +500,10 @@ TEST_F(MainLoopTest, TimedCallbacksRunInOrder) {
   add_cb(2);
   add_cb(4);
   add_cb(1);
-  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
-                   start + 5 * epsilon);
+  bool addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       start + 5 * epsilon);
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
   EXPECT_GE(std::chrono::steady_clock::now() - start, 5 * epsilon);
   ASSERT_THAT(order, testing::ElementsAre(1, 2, 3, 4));
@@ -455,22 +513,24 @@ TEST_F(MainLoopTest, TimedCallbackShortensSleep) {
   MainLoop loop;
   auto start = std::chrono::steady_clock::now();
   bool long_callback_called = false;
-  loop.AddCallback(
+  bool addition_succeeded = loop.AddCallback(
       [&](MainLoopBase &loop) {
         long_callback_called = true;
         loop.RequestTermination();
       },
       std::chrono::seconds(30));
+  EXPECT_TRUE(addition_succeeded);
   std::future<Status> async_run =
       std::async(std::launch::async, &MainLoop::Run, std::ref(loop));
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   bool short_callback_called = false;
-  loop.AddCallback(
+  addition_succeeded = loop.AddCallback(
       [&](MainLoopBase &loop) {
         short_callback_called = true;
         loop.RequestTermination();
       },
       std::chrono::seconds(1));
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(async_run.get().takeError(), llvm::Succeeded());
   EXPECT_LT(std::chrono::steady_clock::now() - start, std::chrono::seconds(10));
   EXPECT_TRUE(short_callback_called);

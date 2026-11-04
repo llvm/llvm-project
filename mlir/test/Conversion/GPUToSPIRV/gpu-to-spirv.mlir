@@ -128,3 +128,41 @@ module attributes {gpu.container_module} {
     return
   }
 }
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.1, [Kernel, Addresses, NamedBarrier], []>, #spirv.resource_limits<>>
+} {
+  gpu.module @kernels {
+    // CHECK-LABEL: spirv.func @barrier_subgroup_scope
+    gpu.func @barrier_subgroup_scope() kernel
+      attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>} {
+      // CHECK: spirv.ControlBarrier <Subgroup>, <Workgroup>, <AcquireRelease|WorkgroupMemory>
+      gpu.barrier scope <subgroup>
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.1, [Kernel, Addresses, NamedBarrier], []>, #spirv.resource_limits<>>
+} {
+  gpu.module @kernels {
+    // CHECK-LABEL: spirv.func @named_barrier
+    gpu.func @named_barrier(%member_count : i32) kernel
+      attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>} {
+      // CHECK: %[[NB:.*]] = spirv.NamedBarrierInitialize %[[MEMBER_COUNT:.*]] : i32 -> !spirv.named_barrier
+      %nb = gpu.initialize_named_barrier %member_count : i32 -> !gpu.named_barrier
+      // CHECK: spirv.MemoryNamedBarrier %[[NB]], <Workgroup>, <AcquireRelease|WorkgroupMemory> : !spirv.named_barrier
+      gpu.barrier named(%nb : !gpu.named_barrier)
+      gpu.return
+    }
+  }
+}

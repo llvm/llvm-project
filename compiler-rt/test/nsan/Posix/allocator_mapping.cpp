@@ -2,7 +2,8 @@
 /// Test that a module constructor can not map memory over the NSan heap
 /// (without MAP_FIXED, of course).
 // RUN: %clangxx_nsan -O0 %s -o %t_1
-// RUN: %clangxx_nsan -O0 -DHEAP_ADDRESS=$(%run %t_1) %s -o %t_2 && %run %t_2
+// RUN: %run %t_1 > %t.heap_address
+// RUN: %clangxx_nsan -O0 -DHEAP_ADDRESS=%{readfile:%t.heap_address} %s -o %t_2 && %run %t_2
 
 #include <assert.h>
 #include <stdio.h>

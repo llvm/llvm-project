@@ -3,6 +3,8 @@
 # RUN: | FileCheck %s --check-prefix=RV64I
 # RUN: llc -mattr=+m -mtriple=riscv64 -mattr=+zbb -run-pass=legalizer %s -o - \
 # RUN: | FileCheck %s --check-prefix=RV64ZBB
+# RUN: llc -mattr=+m -mtriple=riscv64 -mattr=+xtheadbb -run-pass=legalizer %s -o - \
+# RUN: | FileCheck %s --check-prefix=RV64XTHEADBB
 
 ---
 name:            cttz_i8
@@ -52,6 +54,23 @@ body:             |
     ; RV64ZBB-NEXT: [[CTZW:%[0-9]+]]:_(s64) = G_CTZW [[OR]]
     ; RV64ZBB-NEXT: $x10 = COPY [[CTZW]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64XTHEADBB-LABEL: name: cttz_i8
+    ; RV64XTHEADBB: liveins: $x10
+    ; RV64XTHEADBB-NEXT: {{  $}}
+    ; RV64XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
+    ; RV64XTHEADBB-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; RV64XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[OR]], [[C1]]
+    ; RV64XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[OR]], [[C1]]
+    ; RV64XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[ADD]]
+    ; RV64XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; RV64XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
+    ; RV64XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C2]], [[CTLZ]]
+    ; RV64XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
+    ; RV64XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s64)
+    ; RV64XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %0:_(s8) = G_TRUNC %1(s64)
     %2:_(s8) = G_CTTZ %0(s8)
@@ -93,12 +112,12 @@ body:             |
     ; RV64I-NEXT: [[ADD2:%[0-9]+]]:_(s64) = G_ADD [[LSHR2]], [[ADD1]]
     ; RV64I-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 3855
     ; RV64I-NEXT: [[AND6:%[0-9]+]]:_(s64) = G_AND [[ADD2]], [[C7]]
-    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 257
-    ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; RV64I-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND6]], [[C8]]
-    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[MUL]], [[C2]]
-    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND7]], [[C9]](s64)
-    ; RV64I-NEXT: $x10 = COPY [[LSHR3]](s64)
+    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND6]], [[C8]](s64)
+    ; RV64I-NEXT: [[ADD3:%[0-9]+]]:_(s64) = G_ADD [[AND6]], [[LSHR3]]
+    ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[ADD3]], [[C9]]
+    ; RV64I-NEXT: $x10 = COPY [[AND7]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: cttz_i16
@@ -110,6 +129,23 @@ body:             |
     ; RV64ZBB-NEXT: [[CTZW:%[0-9]+]]:_(s64) = G_CTZW [[OR]]
     ; RV64ZBB-NEXT: $x10 = COPY [[CTZW]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64XTHEADBB-LABEL: name: cttz_i16
+    ; RV64XTHEADBB: liveins: $x10
+    ; RV64XTHEADBB-NEXT: {{  $}}
+    ; RV64XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65536
+    ; RV64XTHEADBB-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; RV64XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[OR]], [[C1]]
+    ; RV64XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[OR]], [[C1]]
+    ; RV64XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[ADD]]
+    ; RV64XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; RV64XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
+    ; RV64XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C2]], [[CTLZ]]
+    ; RV64XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
+    ; RV64XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s64)
+    ; RV64XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %0:_(s16) = G_TRUNC %1(s64)
     %2:_(s16) = G_CTTZ %0(s16)
@@ -170,6 +206,23 @@ body:             |
     ; RV64ZBB-NEXT: [[CTZW:%[0-9]+]]:_(s64) = G_CTZW [[COPY]]
     ; RV64ZBB-NEXT: $x10 = COPY [[CTZW]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64XTHEADBB-LABEL: name: cttz_i32
+    ; RV64XTHEADBB: liveins: $x10
+    ; RV64XTHEADBB-NEXT: {{  $}}
+    ; RV64XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967296
+    ; RV64XTHEADBB-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; RV64XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[OR]], [[C1]]
+    ; RV64XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[OR]], [[C1]]
+    ; RV64XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[ADD]]
+    ; RV64XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; RV64XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
+    ; RV64XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C2]], [[CTLZ]]
+    ; RV64XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
+    ; RV64XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s64)
+    ; RV64XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %0:_(s32) = G_TRUNC %1(s64)
     %2:_(s32) = G_CTTZ %0(s32)
@@ -222,6 +275,20 @@ body:             |
     ; RV64ZBB-NEXT: [[CTTZ:%[0-9]+]]:_(s64) = G_CTTZ [[COPY]](s64)
     ; RV64ZBB-NEXT: $x10 = COPY [[CTTZ]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64XTHEADBB-LABEL: name: cttz_i64
+    ; RV64XTHEADBB: liveins: $x10
+    ; RV64XTHEADBB-NEXT: {{  $}}
+    ; RV64XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; RV64XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[ADD]]
+    ; RV64XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; RV64XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
+    ; RV64XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C1]], [[CTLZ]]
+    ; RV64XTHEADBB-NEXT: $x10 = COPY [[SUB]](s64)
+    ; RV64XTHEADBB-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = G_CTTZ %0(s64)
     $x10 = COPY %1(s64)
@@ -229,12 +296,12 @@ body:             |
 
 ...
 ---
-name:            cttz_zero_undef_i8
+name:            cttz_zero_poison_i8
 body:             |
   bb.1:
     liveins: $x10
 
-    ; RV64I-LABEL: name: cttz_zero_undef_i8
+    ; RV64I-LABEL: name: cttz_zero_poison_i8
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
@@ -267,7 +334,7 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[LSHR3]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: cttz_zero_undef_i8
+    ; RV64ZBB-LABEL: name: cttz_zero_poison_i8
     ; RV64ZBB: liveins: $x10
     ; RV64ZBB-NEXT: {{  $}}
     ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
@@ -276,21 +343,36 @@ body:             |
     ; RV64ZBB-NEXT: [[CTZW:%[0-9]+]]:_(s64) = G_CTZW [[OR]]
     ; RV64ZBB-NEXT: $x10 = COPY [[CTZW]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64XTHEADBB-LABEL: name: cttz_zero_poison_i8
+    ; RV64XTHEADBB: liveins: $x10
+    ; RV64XTHEADBB-NEXT: {{  $}}
+    ; RV64XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; RV64XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[ADD]]
+    ; RV64XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; RV64XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
+    ; RV64XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C1]], [[CTLZ]]
+    ; RV64XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
+    ; RV64XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s64)
+    ; RV64XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %0:_(s8) = G_TRUNC %1(s64)
-    %2:_(s8) = G_CTTZ_ZERO_UNDEF %0(s8)
+    %2:_(s8) = G_CTTZ_ZERO_POISON %0(s8)
     %3:_(s64) = G_ANYEXT %2(s8)
     $x10 = COPY %3(s64)
     PseudoRET implicit $x10
 
 ...
 ---
-name:            cttz_zero_undef_i16
+name:            cttz_zero_poison_i16
 body:             |
   bb.1:
     liveins: $x10
 
-    ; RV64I-LABEL: name: cttz_zero_undef_i16
+    ; RV64I-LABEL: name: cttz_zero_poison_i16
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
@@ -317,15 +399,15 @@ body:             |
     ; RV64I-NEXT: [[ADD2:%[0-9]+]]:_(s64) = G_ADD [[LSHR2]], [[ADD1]]
     ; RV64I-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 3855
     ; RV64I-NEXT: [[AND6:%[0-9]+]]:_(s64) = G_AND [[ADD2]], [[C7]]
-    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 257
-    ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; RV64I-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND6]], [[C8]]
-    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[MUL]], [[C2]]
-    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND7]], [[C9]](s64)
-    ; RV64I-NEXT: $x10 = COPY [[LSHR3]](s64)
+    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND6]], [[C8]](s64)
+    ; RV64I-NEXT: [[ADD3:%[0-9]+]]:_(s64) = G_ADD [[AND6]], [[LSHR3]]
+    ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[ADD3]], [[C9]]
+    ; RV64I-NEXT: $x10 = COPY [[AND7]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: cttz_zero_undef_i16
+    ; RV64ZBB-LABEL: name: cttz_zero_poison_i16
     ; RV64ZBB: liveins: $x10
     ; RV64ZBB-NEXT: {{  $}}
     ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
@@ -334,21 +416,36 @@ body:             |
     ; RV64ZBB-NEXT: [[CTZW:%[0-9]+]]:_(s64) = G_CTZW [[OR]]
     ; RV64ZBB-NEXT: $x10 = COPY [[CTZW]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64XTHEADBB-LABEL: name: cttz_zero_poison_i16
+    ; RV64XTHEADBB: liveins: $x10
+    ; RV64XTHEADBB-NEXT: {{  $}}
+    ; RV64XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; RV64XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[ADD]]
+    ; RV64XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; RV64XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
+    ; RV64XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C1]], [[CTLZ]]
+    ; RV64XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
+    ; RV64XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s64)
+    ; RV64XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %0:_(s16) = G_TRUNC %1(s64)
-    %2:_(s16) = G_CTTZ_ZERO_UNDEF %0(s16)
+    %2:_(s16) = G_CTTZ_ZERO_POISON %0(s16)
     %3:_(s64) = G_ANYEXT %2(s16)
     $x10 = COPY %3(s64)
     PseudoRET implicit $x10
 
 ...
 ---
-name:            cttz_zero_undef_i32
+name:            cttz_zero_poison_i32
 body:             |
   bb.1:
     liveins: $x10
 
-    ; RV64I-LABEL: name: cttz_zero_undef_i32
+    ; RV64I-LABEL: name: cttz_zero_poison_i32
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
@@ -387,28 +484,43 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[LSHR3]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: cttz_zero_undef_i32
+    ; RV64ZBB-LABEL: name: cttz_zero_poison_i32
     ; RV64ZBB: liveins: $x10
     ; RV64ZBB-NEXT: {{  $}}
     ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[CTZW:%[0-9]+]]:_(s64) = G_CTZW [[COPY]]
     ; RV64ZBB-NEXT: $x10 = COPY [[CTZW]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64XTHEADBB-LABEL: name: cttz_zero_poison_i32
+    ; RV64XTHEADBB: liveins: $x10
+    ; RV64XTHEADBB-NEXT: {{  $}}
+    ; RV64XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; RV64XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[ADD]]
+    ; RV64XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; RV64XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
+    ; RV64XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C1]], [[CTLZ]]
+    ; RV64XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
+    ; RV64XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s64)
+    ; RV64XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %0:_(s32) = G_TRUNC %1(s64)
-    %2:_(s32) = G_CTTZ_ZERO_UNDEF %0(s32)
+    %2:_(s32) = G_CTTZ_ZERO_POISON %0(s32)
     %3:_(s64) = G_ANYEXT %2(s32)
     $x10 = COPY %3(s64)
     PseudoRET implicit $x10
 
 ...
 ---
-name:            cttz_zero_undef_i64
+name:            cttz_zero_poison_i64
 body:             |
   bb.1:
     liveins: $x10
 
-    ; RV64I-LABEL: name: cttz_zero_undef_i64
+    ; RV64I-LABEL: name: cttz_zero_poison_i64
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
@@ -439,15 +551,29 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[LSHR3]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: cttz_zero_undef_i64
+    ; RV64ZBB-LABEL: name: cttz_zero_poison_i64
     ; RV64ZBB: liveins: $x10
     ; RV64ZBB-NEXT: {{  $}}
     ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[CTTZ:%[0-9]+]]:_(s64) = G_CTTZ [[COPY]](s64)
     ; RV64ZBB-NEXT: $x10 = COPY [[CTTZ]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV64XTHEADBB-LABEL: name: cttz_zero_poison_i64
+    ; RV64XTHEADBB: liveins: $x10
+    ; RV64XTHEADBB-NEXT: {{  $}}
+    ; RV64XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; RV64XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; RV64XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[ADD]]
+    ; RV64XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; RV64XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
+    ; RV64XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C1]], [[CTLZ]]
+    ; RV64XTHEADBB-NEXT: $x10 = COPY [[SUB]](s64)
+    ; RV64XTHEADBB-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
-    %1:_(s64) = G_CTTZ_ZERO_UNDEF %0(s64)
+    %1:_(s64) = G_CTTZ_ZERO_POISON %0(s64)
     $x10 = COPY %1(s64)
     PseudoRET implicit $x10
 

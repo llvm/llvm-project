@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm --std=c++17 %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux-gnu -emit-llvm --std=c++17 %s -o - | FileCheck %s %}
 
 struct stream {
   friend const stream &operator<<(const stream &, const float &);
@@ -17,11 +18,11 @@ void foo() {
 
 // CHECK: define{{.*}} void @_Z3foov
 // CHECK:      getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 1
-// CHECK-NEXT: store float 0.000
+// CHECK-NEXT: store float 0.000000e+00
 // CHECK-NEXT: getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
-// CHECK-NEXT: store float 1.000
+// CHECK-NEXT: store float 1.000000e+00
 // CHECK-NEXT: getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 3
-// CHECK-NEXT: store float 2.000
+// CHECK-NEXT: store float 2.000000e+00
 
 // The lambda body.  Reverse iteration when the captures aren't deterministic
 // causes these to be laid out differently in the lambda.

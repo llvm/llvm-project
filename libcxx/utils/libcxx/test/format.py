@@ -31,12 +31,12 @@ def _getTempPaths(test):
 
 def _checkBaseSubstitutions(substitutions):
     substitutions = [s for (s, _) in substitutions]
-    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{benchmark_flags}", "%{flags}", "%{exec}"]:
+    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{flags}", "%{exec}"]:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
 
 def _executeScriptInternal(test, litConfig, commands):
     """
-    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands), or an appropriate lit.Test.Result
+    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands, testUpdateOutput), or an appropriate lit.Test.Result
     in case of an error while parsing the script.
 
     TODO: This really should be easier to access from Lit itself
@@ -53,9 +53,9 @@ def _executeScriptInternal(test, litConfig, commands):
         )
     except lit.TestRunner.ScriptFatal as e:
         res = ("", str(e), 127, None)
-    (out, err, exitCode, timeoutInfo) = res
+    (out, err, exitCode, timeoutInfo, testUpdateOutput) = res
 
-    return (out, err, exitCode, timeoutInfo, parsedCommands)
+    return (out, err, exitCode, timeoutInfo, parsedCommands, testUpdateOutput)
 
 
 def _validateModuleDependencies(modules):
@@ -99,7 +99,7 @@ def parseScript(test, preamble):
     substitutions.append(
         (
             "%{verify}",
-            "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+            "%{cxx} %s %{flags} %{compile_flags} -U_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
         )
     )
     substitutions.append(("%{run}", "%{exec} %t.exe"))
@@ -167,7 +167,7 @@ def parseScript(test, preamble):
         # The moduleCompileFlags are added to the %{compile_flags}, but
         # the modules need to be built without these flags. So expand the
         # %{compile_flags} eagerly and hardcode them in the build script.
-        compileFlags = config._getSubstitution("%{compile_flags}", test.config)
+        compileFlags = config._getSubstitution("%{compile_flags}", substitutions)
 
         # Building the modules needs to happen before the other script
         # commands are executed. Therefore the commands are added to the
@@ -205,8 +205,12 @@ def parseScript(test, preamble):
         )
 
     # Perform substitutions in the script itself.
+    conditions = {feature: True for feature in test.config.available_features}
     script = lit.TestRunner.applySubstitutions(
-        script, substitutions, recursion_limit=test.config.recursiveExpansionLimit
+        script,
+        substitutions,
+        conditions,
+        recursion_limit=test.config.recursiveExpansionLimit,
     )
 
     return script
@@ -231,10 +235,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         %{compile_flags}   - Flags to use when compiling a test case
         %{link_flags}      - Flags to use when linking a test case
         %{flags}           - Flags to use either when compiling or linking a test case
-        %{benchmark_flags} - Flags to use when compiling benchmarks. These flags should provide access to
-                             GoogleBenchmark but shouldn't hardcode any optimization level or other settings,
-                             since the benchmarks should be run under the same configuration as the rest of
-                             the test suite.
         %{exec}            - A command to prefix the execution of executables
 
     Note that when building an executable (as opposed to only compiling a source
@@ -355,11 +355,18 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                         test.getFullName()
                     ),
                 )
+            substitutions = [s for (s, _) in test.config.substitutions]
+            if "%{benchmark_flags}" not in substitutions:
+                return lit.Test.Result(
+                    lit.Test.UNRESOLVED,
+                    "Test {} is a benchmark, but the %{{benchmark_flags}} substitution "
+                    "isn't provided by the configuration.".format(test.getFullName()),
+                )
             steps = [
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
             ]
             if "enable-benchmarks=run" in test.config.available_features:
-                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
+                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_min_time=%{benchmark_min_time} --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
                 parse_results = os.path.join(LIBCXX_UTILS, 'parse-google-benchmark-results')
                 steps += [f"{parse_results} %{{temp}}/benchmark-result.json --output-format=lnt > %{{temp}}/results.lnt"]
             return self._executeShTest(test, litConfig, steps)
@@ -406,7 +413,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             yield generator
             return
 
-        (out, err, exitCode, _, _) = result
+        (out, err, exitCode, _, _, _) = result
         if exitCode != 0:
             raise RuntimeError(f"Error while trying to generate gen test {'/'.join(pathInSuite)}\nstdout:\n{out}\n\nstderr:\n{err}")
 

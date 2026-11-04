@@ -57,13 +57,13 @@ private:
   // same names are added to llvm.compiler.used to prevent them from being
   // deleted by optimizations.
   void initializeLibCalls(const Module &TheModule) {
-    TargetLibraryInfoImpl TLII(TM.getTargetTriple());
+    TargetLibraryInfoImpl TLII(TM.getTargetTriple(), TM.Options.VecLib);
     TargetLibraryInfo TLI(TLII);
 
     // TargetLibraryInfo has info on C runtime library calls on the current
     // target.
-    for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs);
-         I != E; ++I) {
+    for (unsigned I = LibFunc::Begin_LibFunc, E = LibFunc::End_LibFunc; I != E;
+         ++I) {
       LibFunc F = static_cast<LibFunc>(I);
       if (TLI.has(F))
         Libcalls.insert(TLI.getName(F));

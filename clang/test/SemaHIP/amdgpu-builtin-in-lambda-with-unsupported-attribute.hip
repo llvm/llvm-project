@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -std=c++20 -triple amdgcn -target-cpu tahiti -emit-llvm -fcuda-is-device -verify=no-memrealtime -o - %s
-// RUN: %clang_cc1 -std=c++20 -triple amdgcn -target-cpu gfx950 -emit-llvm -fcuda-is-device -o - %s
+// RUN: %clang_cc1 -std=c++20 -triple amdgpu6.00 -emit-llvm -fcuda-is-device -verify=no-memrealtime -o - %s
+// RUN: %clang_cc1 -std=c++20 -triple amdgpu9.50 -emit-llvm -fcuda-is-device -o - %s
 
 #define __device__ __attribute__((device))
 #define __shared__ __attribute__((shared))

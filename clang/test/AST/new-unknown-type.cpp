@@ -23,7 +23,7 @@ namespace b {
 // CHECK-NEXT: |   | `-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'foo'
 // CHECK-NEXT: |   `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
 // CHECK-NEXT: |    `-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'foo'
-// CHECK-NEXT: |-NamespaceDecl 0x{{[^ ]*}} <line:13:1, line:15:1> line:13:11 b
+// CHECK-NEXT: |-NamespaceDecl 0x{{[^ ]*}} <line:13:1, line:15:1> line:13:11 referenced b
 // CHECK-NEXT: | `-CXXRecordDecl 0x{{[^ ]*}} <line:14:3, col:14> col:10 referenced struct Bar definition
 
 static b::Bar bar;

@@ -35,20 +35,17 @@ namespace llvm {
         const CCState &CCInfo, unsigned NextStackOffset,
         const MipsFunctionInfo &FI) const override;
 
-    void setMips16HardFloatLibCalls();
-
     unsigned int
       getMips16HelperFunctionStubNumber(ArgListTy &Args) const;
 
     const char *getMips16HelperFunction
       (Type* RetTy, ArgListTy &Args, bool &needHelper) const;
 
-    void
-    getOpndList(SmallVectorImpl<SDValue> &Ops,
-                std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
-                bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
-                bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
-                SDValue Chain) const override;
+    void getOpndList(SmallVectorImpl<SDValue> &Ops,
+                     std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
+                     bool IsPICCall, bool GlobalOrExternal, bool LocalLinkage,
+                     bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
+                     SDValue Chain) const override;
 
     MachineBasicBlock *emitSel16(unsigned Opc, MachineInstr &MI,
                                  MachineBasicBlock *BB) const;

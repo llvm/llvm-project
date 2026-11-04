@@ -5,8 +5,8 @@ static_library("ExtractAPI") {
     "//clang/lib/AST",
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
-    "//clang/lib/Index",
     "//clang/lib/InstallAPI",
+    "//clang/lib/UnifiedSymbolResolution",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]

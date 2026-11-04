@@ -20,13 +20,16 @@ namespace clang::tidy::bugprone {
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/throwing-static-initialization.html
 class ThrowingStaticInitializationCheck : public ClangTidyCheck {
 public:
-  ThrowingStaticInitializationCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  ThrowingStaticInitializationCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return getLangOpts().CPlusPlus && getLangOpts().CXXExceptions;
+    return LangOpts.CPlusPlus && LangOpts.CXXExceptions;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace clang::tidy::bugprone

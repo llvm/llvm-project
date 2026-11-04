@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestTU.h"
+#include "ClangTidyFeatureModule.h"
 #include "CompileCommands.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
@@ -73,8 +74,6 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
     FS.OverlayRealFileSystemForModules = true;
   Inputs.TFS = &FS;
   Inputs.Opts = ParseOptions();
-  if (ClangTidyProvider)
-    Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.Index = ExternalIndex;
   return Inputs;
 }
@@ -106,22 +105,34 @@ TestTU::preamble(PreambleParsedCallback PreambleCallback) const {
   assert(CI && "Failed to build compilation invocation.");
   if (OverlayRealFileSystemForModules)
     initializeModuleCache(*CI);
-  auto ModuleCacheDeleter = llvm::make_scope_exit(
+  llvm::scope_exit ModuleCacheDeleter(
       std::bind(deleteModuleCache, CI->getHeaderSearchOpts().ModuleCachePath));
   return clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
                                       /*StoreInMemory=*/true, PreambleCallback);
 }
 
 ParsedAST TestTU::build() const {
+  if (ClangTidyProvider && FeatureModules) {
+    llvm::errs() << "Use either ClangTidyProvider or FeatureModules\n";
+    std::abort();
+  }
   MockFS FS;
   auto Inputs = inputs(FS);
   Inputs.Opts = ParseOpts;
+  FeatureModuleSet TidyModules;
+  if (ClangTidyProvider) {
+    TidyModules.add(std::make_unique<ClangTidyFeatureModule>(
+        [this](tidy::ClangTidyOptions &Opts, llvm::StringRef Filename) {
+          ClangTidyProvider(Opts, Filename);
+        }));
+    Inputs.FeatureModules = &TidyModules;
+  }
   StoreDiags Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   assert(CI && "Failed to build compilation invocation.");
   if (OverlayRealFileSystemForModules)
     initializeModuleCache(*CI);
-  auto ModuleCacheDeleter = llvm::make_scope_exit(
+  llvm::scope_exit ModuleCacheDeleter(
       std::bind(deleteModuleCache, CI->getHeaderSearchOpts().ModuleCachePath));
 
   auto Preamble = clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,

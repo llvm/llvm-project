@@ -53,7 +53,7 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
 
 #if LLVM_THREADING_USE_STD_CALL_ONCE
 
-  typedef std::once_flag once_flag;
+using once_flag = std::once_flag;
 
 #else
 

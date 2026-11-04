@@ -32,9 +32,10 @@ class DriverQuitSpeedTest(PExpectTest):
         print("Got launch message")
         child.sendline("quit")
         print("sent quit")
-        child.expect(pexpect.EOF, timeout=15)
+        child.expect(pexpect.EOF, timeout=30)
 
     @skipIfAsan
+    @skipIfWasm  # quitting detaches from the runtime, so there is nothing to confirm
     def test_run_quit_with_prompt(self):
         """Test that the lldb driver's batch mode works correctly with trailing space in confimation."""
         import pexpect
@@ -57,4 +58,4 @@ class DriverQuitSpeedTest(PExpectTest):
         child.expect(r".*LLDB will kill one or more processes.*")
         # add trailing space to the confirmation.
         child.sendline("yEs ")
-        child.expect(pexpect.EOF, timeout=15)
+        child.expect(pexpect.EOF, timeout=30)

@@ -14,7 +14,7 @@ define void @test(ptr %data) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr getelementptr inbounds nuw (i8, ptr @postscale, i64 4), align 4, !tbaa [[FLOAT_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i64> @llvm.lrint.v8i64.v8f32(<8 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i64> [[TMP2]] to <8 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i16> [[TMP3]], i32 7
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i16> [[TMP3]], i64 7
 ; CHECK-NEXT:    store i16 [[TMP4]], ptr [[DATA]], align 2, !tbaa [[SHORT_TBAA4:![0-9]+]]
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -25,7 +25,7 @@ define void @test(ptr %data) {
 entry:
   br label %loop
 
-loop:                                             ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %or.iv.1 = or disjoint i64 %iv, 1
   %gep.postscale = getelementptr [64 x float], ptr @postscale, i64 0, i64 %or.iv.1
@@ -37,7 +37,7 @@ loop:                                             ; preds = %loop, %entry
   %exit.cond = icmp eq i64 %iv.next, 8
   br i1 %exit.cond, label %end, label %loop
 
-end:                                              ; preds = %loop
+end:
   ret void
 }
 

@@ -149,7 +149,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
         ConstString const_func_name(FunctionName());
         FileSpec jit_file;
         jit_file.SetFilename(const_func_name);
-        jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
+        jit_module_sp->SetFileSpecAndObjectName(jit_file, std::string());
         m_jit_module_wp = jit_module_sp;
         target->GetImages().Append(jit_module_sp);
       }
@@ -187,5 +187,5 @@ void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
   }
   m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
       keep_result_in_memory, nullptr, exe_ctx.GetTargetSP(), ast_importer,
-      nullptr);
+      nullptr, /*ignore_context_qualifiers=*/false);
 }

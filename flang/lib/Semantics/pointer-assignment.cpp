@@ -23,9 +23,7 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <set>
 #include <string>
-#include <type_traits>
 
 // Semantic checks for pointer assignment.
 
@@ -60,6 +58,7 @@ public:
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
   PointerAssignmentChecker &set_isRHSPointerActualArgument(bool);
+  PointerAssignmentChecker &set_ignoreTKR(common::IgnoreTKRSet);
   bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
 
@@ -96,6 +95,7 @@ private:
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
   bool isRHSPointerActualArgument_{false};
+  common::IgnoreTKRSet ignoreTKR_;
   const Symbol *pointerComponentLHS_{nullptr};
 };
 
@@ -138,6 +138,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_pointerComponentLHS(
 PointerAssignmentChecker &
 PointerAssignmentChecker::set_isRHSPointerActualArgument(bool isPointerActual) {
   isRHSPointerActualArgument_ = isPointerActual;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_ignoreTKR(
+    common::IgnoreTKRSet ignoreTKR) {
+  ignoreTKR_ = ignoreTKR;
   return *this;
 }
 
@@ -354,6 +360,9 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
         msg = "Pointer type must be unlimited polymorphic or non-extensible"
               " derived type when target is unlimited polymorphic"_err_en_US;
       }
+    } else if (ignoreTKR_.test(common::IgnoreTKR::Type) &&
+        ignoreTKR_.test(common::IgnoreTKR::Contiguous)) {
+      // Don't check for target type mismatch error if we have ignore_tkr(tc)
     } else if (!lhsType_->type().IsTkLenCompatibleWith(rhsType->type())) {
       msg = MessageFormattedText{
           "Target type %s is not compatible with pointer type %s"_err_en_US,
@@ -457,7 +466,10 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
   } else if (type.IsUnlimitedPolymorphic()) {
     return true;
   } else {
-    return !IsExtensibleType(&type.GetDerivedTypeSpec());
+    // F2023 C1017 does not permit enumeration types here.
+    const DerivedTypeSpec &derived{type.GetDerivedTypeSpec()};
+    return !IsExtensibleType(&derived) &&
+        !IsEnumerationType(derived.typeSymbol());
   }
 }
 
@@ -467,7 +479,10 @@ std::optional<MessageFormattedText> PointerAssignmentChecker::CheckRanks(
       !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
     int lhsRank{lhsType_->Rank()};
     int rhsRank{rhs.Rank()};
-    if (lhsRank != rhsRank) {
+    // Turn off rank mismatch error if we have ignore_tkr(rc)
+    if (lhsRank != rhsRank &&
+        !(ignoreTKR_.test(common::IgnoreTKR::Rank) &&
+            ignoreTKR_.test(common::IgnoreTKR::Contiguous))) {
       return MessageFormattedText{
           "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
           rhsRank};
@@ -521,11 +536,11 @@ static bool CheckPointerBounds(
           },
           [&](const evaluate::Assignment::BoundsRemapping &bounds) {
             isBoundsRemapping = true;
-            evaluate::ExtentExpr lhsSizeExpr{1};
+            evaluate::ExtentExpr lhsSizeExpr{evaluate::MakeExtentConstant(1)};
             for (const auto &bound : bounds) {
               lhsSizeExpr = std::move(lhsSizeExpr) *
                   (common::Clone(bound.second) - common::Clone(bound.first) +
-                      evaluate::ExtentExpr{1});
+                      evaluate::MakeExtentExpr(1));
             }
             if (std::optional<std::int64_t> lhsSize{evaluate::ToInt64(
                     evaluate::Fold(context, std::move(lhsSizeExpr)))}) {
@@ -609,13 +624,14 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
       .set_isAssumedRank(isAssumedRank)
       .set_isRHSPointerActualArgument(isPointerActualArgument)
+      .set_ignoreTKR(lhs.ignoreTKR)
       .Check(rhs);
 }
 
 bool CheckInitialDataPointerTarget(SemanticsContext &context,
     const SomeExpr &pointer, const SomeExpr &init, const Scope &scope) {
-  return evaluate::IsInitialDataTarget(
-             init, &context.foldingContext().messages()) &&
+  return evaluate::IsInitialDataTarget(init,
+             &context.foldingContext().messages(), &context.foldingContext()) &&
       CheckPointerAssignment(context, pointer, init, scope,
           /*isBoundsRemapping=*/false,
           /*isAssumedRank=*/false);

@@ -1,7 +1,7 @@
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s | FileCheck %s
 
 // CHECK: |-EnumDecl
-// CHECK-SAME: Inputs/S.cpp:1:1, line:4:1> line:1:6 E
+// CHECK-SAME: Inputs/S.cpp:1:1, line:4:1> line:1:6 referenced E
 // CHECK: OpaqueWithType 'long'
 
 void expr() {

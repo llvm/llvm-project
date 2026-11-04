@@ -80,7 +80,7 @@ program omp_do
   end do
   !$omp end distribute parallel do simd
 
-  !$omp target parallel do 
+  !$omp target parallel do
   do i=1,10
     !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
     !$omp single

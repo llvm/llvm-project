@@ -1,6 +1,6 @@
 
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
-// REQUIRES: system-linux
+// REQUIRES: system-linux || system-aix
 
 // Test that there are no changes to a function with existed fused loc debug
 module {

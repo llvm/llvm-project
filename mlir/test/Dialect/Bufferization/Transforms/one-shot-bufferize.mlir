@@ -165,10 +165,25 @@ func.func @alloc_tensor_with_copy(%t: tensor<5xf32>) -> tensor<5xf32> {
 
 // -----
 
+// CHECK-LABEL: func @alloc_tensor_with_copy_and_size_hint(
+//  CHECK-SAME:     %[[t:.*]]: tensor<5xf32>)
+func.func @alloc_tensor_with_copy_and_size_hint(%t: tensor<5xf32>) -> tensor<5xf32> {
+  %sz = arith.constant 5 : index
+  // CHECK: %[[m:.*]] = bufferization.to_buffer %[[t]]
+  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
+  // CHECK: memref.copy %[[m]], %[[alloc]]
+  %0 = bufferization.alloc_tensor() copy(%t) size_hint=%sz : tensor<5xf32>
+  // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
+  // CHECK: return %[[r]]
+  return %0 : tensor<5xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @alloc_tensor_with_memory_space()
 func.func @alloc_tensor_with_memory_space() -> tensor<5xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
+  %0 = bufferization.alloc_tensor() <{memory_space = 1 : i64}> : tensor<5xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
   // CHECK: return %[[r]]
   return %0 : tensor<5xf32>
@@ -272,38 +287,24 @@ func.func @materialize_in_dest_raw(%f: f32, %f2: f32, %idx: index) -> (tensor<5x
 
 // -----
 
-// CHECK:       func.func @custom_op(
-// CHECK-SAME:    %[[ARG:.*]]: !test.test_tensor<[32, 64], f64>
-// CHECK-SAME:  ) -> !test.test_tensor<[32, 128], f64> {
-func.func @custom_op(%arg: !test.test_tensor<[32, 64], f64>)
-    -> !test.test_tensor<[32, 128], f64> {
-  // CHECK: %[[MEMREF:.*]] = bufferization.to_buffer %[[ARG]]
-  // CHECK: %[[DUMMY:.*]] = "test.dummy_memref_op"(%[[MEMREF]])
-  // CHECK-SAME: : (!test.test_memref<[32, 64], f64>)
-  // CHECK-SAME: -> !test.test_memref<[32, 128], f64>
-  // CHECK: %[[OUT:.*]] = bufferization.to_tensor %[[DUMMY]]
-  %out = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[32, 64], f64>)
-    -> !test.test_tensor<[32, 128], f64>
-
-  // CHECK: return %[[OUT]]
-  return %out : !test.test_tensor<[32, 128], f64>
-}
-
-// -----
-
-// CHECK:       func.func @custom_origin_op()
-// CHECK-SAME:  -> !test.test_tensor<[42], f64> {
-func.func @custom_origin_op() -> !test.test_tensor<[42], f64> {
-  // CHECK: %[[MEMREF:.*]] = "test.create_memref_op"() : ()
-  // CHECK-SAME: -> !test.test_memref<[21], f64>
-  // CHECK: %[[DUMMY:.*]] = "test.dummy_memref_op"(%[[MEMREF]])
-  // CHECK-SAME: : (!test.test_memref<[21], f64>)
-  // CHECK-SAME: -> !test.test_memref<[42], f64>
-  %in = "test.create_tensor_op"() : () -> !test.test_tensor<[21], f64>
-  %out = "test.dummy_tensor_op"(%in) : (!test.test_tensor<[21], f64>)
-    -> !test.test_tensor<[42], f64>
-
-  // CHECK: %[[OUT:.*]] = bufferization.to_tensor %[[DUMMY]]
-  // CHECK: return %[[OUT]]
-  return %out : !test.test_tensor<[42], f64>
+// Writing through a value yielded by `scf.index_switch` must not modify a
+// non-writable input in place: the write goes to a fresh buffer.
+// CHECK-LABEL: func @index_switch_non_writable
+func.func @index_switch_non_writable(%t: tensor<4xf32> {bufferization.writable = false},
+                                     %v: vector<4xf32>, %i: index) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: scf.index_switch
+  %0 = scf.index_switch %i -> tensor<4xf32>
+  case 1 {
+    %e = tensor.empty() : tensor<4xf32>
+    scf.yield %e : tensor<4xf32>
+  }
+  // CHECK: default
+  default {
+    scf.yield %t : tensor<4xf32>
+  }
+  // CHECK: %[[ALLOC:.*]] = memref.alloc
+  // CHECK-NEXT: vector.transfer_write {{.*}}, %[[ALLOC]]
+  %1 = vector.transfer_write %v, %0[%c0] {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
+  return %1 : tensor<4xf32>
 }

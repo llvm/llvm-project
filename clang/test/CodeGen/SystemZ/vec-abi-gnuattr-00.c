@@ -22,7 +22,7 @@ void foo() {
   bar(Var);
 }
 
-//MODFLAG: !llvm.module.flags = !{!0, !1}
+//MODFLAG: !llvm.module.flags = !{!0}
 //MODFLAG: !0 = !{i32 2, !"s390x-visible-vector-ABI", i32 1}
 
 //ARCH10-ASM: .gnu_attribute 8, 1

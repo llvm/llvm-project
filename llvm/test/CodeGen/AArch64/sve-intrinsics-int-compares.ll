@@ -1039,8 +1039,8 @@ define <vscale x 1 x i1> @cmpne_ir_q(<vscale x 1 x i64> %a, <vscale x 1 x i64> %
 ; CHECK-LABEL: cmpne_ir_q:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    ret
   %out = icmp ne <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i1> %out
@@ -1078,8 +1078,8 @@ define <vscale x 4 x i1> @predicated_icmp(<vscale x 4 x i32> %a, <vscale x 4 x i
 ; CHECK-LABEL: predicated_icmp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpgt p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cmpge p0.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    cmpgt p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cmpge p0.s, p1/z, z2.s, z1.s
 ; CHECK-NEXT:    ret
   %icmp1 = icmp sgt <vscale x 4 x i32> %a, %b
   %icmp2 = icmp sle <vscale x 4 x i32> %b, %c

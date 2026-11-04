@@ -41,6 +41,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ErrnoModeling.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -304,11 +305,7 @@ class StdLibraryFunctionsChecker
 
   protected:
     bool checkSpecificValidity(const FunctionDecl *FD) const override {
-      const bool ValidArg =
-          getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
-      assert(ValidArg &&
-             "This constraint should be applied on an integral type");
-      return ValidArg;
+      return getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
     }
 
   private:
@@ -851,7 +848,7 @@ private:
   std::optional<Summary> findFunctionSummary(const CallEvent &Call,
                                              CheckerContext &C) const;
 
-  void initFunctionSummaries(CheckerContext &C) const;
+  LLVM_ATTRIBUTE_MINSIZE void initFunctionSummaries(CheckerContext &C) const;
 
   void reportBug(const CallEvent &Call, ExplodedNode *N,
                  const ValueConstraint *VC, const ValueConstraint *NegatedVC,
@@ -869,7 +866,7 @@ private:
     if (ValuesPrinted)
       MsgOs << " but ";
     else
-      MsgOs << "is out of the accepted range; It ";
+      MsgOs << "is out of the accepted range; it ";
     VC->describe(ValueConstraint::Violation, Call, C.getState(), Summary,
                  MsgOs);
     Msg[0] = toupper(Msg[0]);
@@ -1326,7 +1323,7 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
         NegatedConstraint->apply(NewState, Call, Summary, C);
     // The argument constraint is not satisfied.
     if (FailureSt && !SuccessSt) {
-      if (ExplodedNode *N = C.generateErrorNode(State, NewNode))
+      if (ExplodedNode *N = C.addSink(State, NewNode))
         reportBug(Call, N, Constraint.get(), NegatedConstraint.get(), Summary,
                   C);
       break;
@@ -1477,10 +1474,9 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
   switch (Summary.getInvalidationKd()) {
   case EvalCallAsPure: {
     ProgramStateRef State = C.getState();
-    const LocationContext *LC = C.getLocationContext();
     const auto *CE = cast<CallExpr>(Call.getOriginExpr());
     SVal V = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
-    State = State->BindExpr(CE, LC, V);
+    State = State->BindExpr(CE, C.getStackFrame(), V);
 
     C.addTransition(State);
 
@@ -1494,6 +1490,23 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
   llvm_unreachable("Unknown invalidation kind!");
 }
 
+/// Returns whether the signatures should match based on the restrict
+/// qualifier.
+/// The "restrict" keyword is illegal in C++, however, many libc
+/// implementations use the "__restrict" compiler intrinsic in functions
+/// prototypes. The "__restrict" keyword qualifies a type as a restricted type
+/// even in C++.
+/// In case of any non-C99 languages, we don't want to match based on the
+/// restrict qualifier because we cannot know if the given libc implementation
+/// qualifies the paramter type or not.
+/// The Microsoft C runtime (e.g. UCRT) omits the restrict qualifiers of the
+/// standard prototypes even in C99 and later, so we don't match based on the
+/// restrict qualifier when targeting the MSVC environment either.
+static bool isRestrictSignificant(const ASTContext &ACtx) {
+  return ACtx.getLangOpts().C99 &&
+         !ACtx.getTargetInfo().getTriple().isWindowsMSVCEnvironment();
+}
+
 bool StdLibraryFunctionsChecker::Signature::matches(
     const FunctionDecl *FD) const {
   assert(!isInvalid());
@@ -1501,15 +1514,8 @@ bool StdLibraryFunctionsChecker::Signature::matches(
   if (FD->param_size() != ArgTys.size())
     return false;
 
-  // The "restrict" keyword is illegal in C++, however, many libc
-  // implementations use the "__restrict" compiler intrinsic in functions
-  // prototypes. The "__restrict" keyword qualifies a type as a restricted type
-  // even in C++.
-  // In case of any non-C99 languages, we don't want to match based on the
-  // restrict qualifier because we cannot know if the given libc implementation
-  // qualifies the paramter type or not.
   auto RemoveRestrict = [&FD](QualType T) {
-    if (!FD->getASTContext().getLangOpts().C99)
+    if (!isRestrictSignificant(FD->getASTContext()))
       T.removeLocalRestrict();
     return T;
   };
@@ -1610,7 +1616,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   public:
     GetRestrictTy(const ASTContext &ACtx) : ACtx(ACtx) {}
     QualType operator()(QualType Ty) {
-      return ACtx.getLangOpts().C99 ? ACtx.getRestrictType(Ty) : Ty;
+      return isRestrictSignificant(ACtx) ? ACtx.getRestrictType(Ty) : Ty;
     }
     std::optional<QualType> operator()(std::optional<QualType> Ty) {
       if (Ty)
@@ -2150,8 +2156,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   ErrnoIrrelevant)
             .ArgConstraint(NotNull(ArgNo(0))));
   } else {
-    const auto ReturnsZeroOrMinusOne =
-        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, 0))};
     const auto ReturnsZero =
         ConstraintSet{ReturnValueCondition(WithinRange, SingleValue(0))};
     const auto ReturnsMinusOne =
@@ -2162,8 +2166,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         ConstraintSet{ReturnValueCondition(WithinRange, Range(0, IntMax))};
     const auto ReturnsNonZero =
         ConstraintSet{ReturnValueCondition(OutOfRange, SingleValue(0))};
-    const auto ReturnsFileDescriptor =
-        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, IntMax))};
     const auto &ReturnsValidFileDescriptor = ReturnsNonnegative;
 
     auto ValidFileDescriptorOrAtFdcwd = [&](ArgNo ArgN) {
@@ -2277,7 +2279,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{CharPtrRestrictTy, IntTy, FilePtrRestrictTy},
                   RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+            .Case({NotNull(Ret), ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({IsNull(Ret)}, ErrnoIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
@@ -2645,7 +2647,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "mkdtemp", Signature(ArgTypes{CharPtrTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+            .Case({NotNull(Ret), ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
@@ -2657,7 +2659,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case({NotNull(0),
                    ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
-                   ReturnValueCondition(BO_EQ, ArgNo(0))},
+                   ReturnValueCondition(BO_EQ, ArgNo(0)), NotNull(Ret)},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({NotNull(0),
                    ArgumentCondition(1, WithinRange, SingleValue(0)),
@@ -2959,15 +2961,28 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // void *mmap(void *addr, size_t length, int prot, int flags, int fd,
     // off_t offset);
     // FIXME: Improve for errno modeling.
-    addToFunctionSummaryMap(
-        "mmap",
-        Signature(
-            ArgTypes{VoidPtrTy, SizeTyCanonTy, IntTy, IntTy, IntTy, Off_tTy},
-            RetType{VoidPtrTy}),
+    auto MmapSignature = Signature(
+        ArgTypes{VoidPtrTy, SizeTyCanonTy, IntTy, IntTy, IntTy, Off_tTy},
+        RetType{VoidPtrTy});
+    auto MmapSummaryWithLengthConstraint =
         Summary(NoEvalCall)
-            .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
-                ArgumentCondition(4, WithinRange, Range(-1, IntMax))));
+                ArgumentCondition(1, WithinRange, Range(1, SizeMax)));
+
+    if (ACtx.getTargetInfo().getTriple().isOSDarwin()) {
+      // On Darwin, MAP_ANON + VM_MAKE_TAG(tag) uses argument 4 (len) for
+      // the tag, which looks like a large negative signed integer.
+      // The valid range for fd is not expressible as a simple union of
+      // ranges so we only constrain the length parameter.
+      addToFunctionSummaryMap("mmap", MmapSignature,
+                              MmapSummaryWithLengthConstraint);
+    } else {
+      // On other platforms, we also constrain the fd parameter (-1 <= fd).
+      addToFunctionSummaryMap(
+          "mmap", MmapSignature,
+          MmapSummaryWithLengthConstraint.ArgConstraint(
+              ArgumentCondition(4, WithinRange, Range(-1, IntMax))));
+    }
 
     std::optional<QualType> Off64_tTy = lookupTy("off64_t");
     // void *mmap64(void *addr, size_t length, int prot, int flags, int fd,

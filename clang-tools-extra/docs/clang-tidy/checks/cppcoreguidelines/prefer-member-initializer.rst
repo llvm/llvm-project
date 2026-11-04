@@ -16,7 +16,8 @@ from the C++ Core Guidelines.
 Please note, that this check does not enforce rule `C.48
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_
 from the C++ Core Guidelines. For that purpose
-see check :doc:`modernize-use-default-member-init <../modernize/use-default-member-init>`.
+see check :doc:`modernize-use-default-member-init
+<../modernize/use-default-member-init>`.
 
 Example 1
 ---------

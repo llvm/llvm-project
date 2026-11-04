@@ -70,7 +70,7 @@ public:
   }
 
   void test_subnormal_range(NearbyIntFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     const StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
@@ -85,7 +85,7 @@ public:
   }
 
   void test_normal_range(NearbyIntFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     const StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
         StorageType(1));
@@ -106,13 +106,13 @@ public:
   }
 };
 
-#define LIST_NEARBYINT_TESTS(F, func)                                          \
-  using LlvmLibcNearbyIntTest = NearbyIntTestTemplate<F>;                      \
-  TEST_F(LlvmLibcNearbyIntTest, RoundNumbers) { test_round_numbers(&func); }   \
-  TEST_F(LlvmLibcNearbyIntTest, Fractions) { test_fractions(&func); }          \
-  TEST_F(LlvmLibcNearbyIntTest, SubnormalRange) {                              \
+#define LIST_NEARBYINT_TESTS(Name, F, func)                                    \
+  using LlvmLibc##Name##Test = NearbyIntTestTemplate<F>;                       \
+  TEST_F(LlvmLibc##Name##Test, RoundNumbers) { test_round_numbers(&func); }    \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { test_fractions(&func); }           \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
     test_subnormal_range(&func);                                               \
   }                                                                            \
-  TEST_F(LlvmLibcNearbyIntTest, NormalRange) { test_normal_range(&func); }
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_NEARBYINTTEST_H

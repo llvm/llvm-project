@@ -1,13 +1,13 @@
 // REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-// RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+// RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
 // CHECK:      error: incompatible section flags for .foo
-// CHECK-NEXT: >>> {{.*}}incompatible-section-flags.s.tmp.o:(.foo): 0x3
+// CHECK-NEXT: >>> {{.*}}.o:(.foo): 0x3
 // CHECK-NEXT: >>> output section .foo: 0x403
 
 // CHECK:      error: incompatible section flags for .bar
-// CHECK-NEXT: >>> {{.*}}incompatible-section-flags.s.tmp.o:(.bar): 0x403
+// CHECK-NEXT: >>> {{.*}}.o:(.bar): 0x403
 // CHECK-NEXT: >>> output section .bar: 0x3
 
 .section .foo, "awT", @progbits, unique, 1

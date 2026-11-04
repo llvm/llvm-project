@@ -24,7 +24,7 @@ BreakpointLocationCollection::BreakpointLocationCollection(bool preserving)
 BreakpointLocationCollection::~BreakpointLocationCollection() = default;
 
 void BreakpointLocationCollection::Add(const BreakpointLocationSP &bp_loc) {
-  std::lock_guard<std::mutex> guard(m_collection_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_collection_mutex);
   BreakpointLocationSP old_bp_loc =
       FindByIDPair(bp_loc->GetBreakpoint().GetID(), bp_loc->GetID());
   if (!old_bp_loc.get()) {
@@ -44,7 +44,7 @@ void BreakpointLocationCollection::Add(const BreakpointLocationSP &bp_loc) {
 
 bool BreakpointLocationCollection::Remove(lldb::break_id_t bp_id,
                                           lldb::break_id_t bp_loc_id) {
-  std::lock_guard<std::mutex> guard(m_collection_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_collection_mutex);
   collection::iterator pos = GetIDPairIterator(bp_id, bp_loc_id); // Predicate
   if (pos != m_break_loc_collection.end()) {
     if (m_preserving_bkpts) {
@@ -117,7 +117,7 @@ const BreakpointLocationSP BreakpointLocationCollection::FindByIDPair(
 }
 
 BreakpointLocationSP BreakpointLocationCollection::GetByIndex(size_t i) {
-  std::lock_guard<std::mutex> guard(m_collection_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_collection_mutex);
   BreakpointLocationSP stop_sp;
   if (i < m_break_loc_collection.size())
     stop_sp = m_break_loc_collection[i];
@@ -127,7 +127,7 @@ BreakpointLocationSP BreakpointLocationCollection::GetByIndex(size_t i) {
 
 const BreakpointLocationSP
 BreakpointLocationCollection::GetByIndex(size_t i) const {
-  std::lock_guard<std::mutex> guard(m_collection_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_collection_mutex);
   BreakpointLocationSP stop_sp;
   if (i < m_break_loc_collection.size())
     stop_sp = m_break_loc_collection[i];
@@ -168,7 +168,7 @@ bool BreakpointLocationCollection::ShouldStop(
 }
 
 bool BreakpointLocationCollection::ValidForThisThread(Thread &thread) {
-  std::lock_guard<std::mutex> guard(m_collection_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_collection_mutex);
   collection::iterator pos, begin = m_break_loc_collection.begin(),
                             end = m_break_loc_collection.end();
 
@@ -180,7 +180,7 @@ bool BreakpointLocationCollection::ValidForThisThread(Thread &thread) {
 }
 
 bool BreakpointLocationCollection::IsInternal() const {
-  std::lock_guard<std::mutex> guard(m_collection_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_collection_mutex);
   collection::const_iterator pos, begin = m_break_loc_collection.begin(),
                                   end = m_break_loc_collection.end();
 
@@ -197,7 +197,7 @@ bool BreakpointLocationCollection::IsInternal() const {
 
 void BreakpointLocationCollection::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {
-  std::lock_guard<std::mutex> guard(m_collection_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_collection_mutex);
   collection::iterator pos, begin = m_break_loc_collection.begin(),
                             end = m_break_loc_collection.end();
 
@@ -212,8 +212,10 @@ BreakpointLocationCollection &BreakpointLocationCollection::operator=(
     const BreakpointLocationCollection &rhs) {
   if (this != &rhs) {
       std::lock(m_collection_mutex, rhs.m_collection_mutex);
-      std::lock_guard<std::mutex> lhs_guard(m_collection_mutex, std::adopt_lock);
-      std::lock_guard<std::mutex> rhs_guard(rhs.m_collection_mutex, std::adopt_lock);
+      std::lock_guard<std::recursive_mutex> lhs_guard(m_collection_mutex,
+                                                      std::adopt_lock);
+      std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_collection_mutex,
+                                                      std::adopt_lock);
       m_break_loc_collection = rhs.m_break_loc_collection;
   }
   return *this;

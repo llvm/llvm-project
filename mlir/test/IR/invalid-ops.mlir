@@ -126,6 +126,11 @@ test.variadic_args_types_split "hello_world" : i32
 
 // -----
 
+// expected-error@+1 {{number of operands and types do not match: got 0 operands and 1 types}}
+test.format_optional_operand_type : i64
+
+// -----
+
 // Test multiple verifier errors in the same split to ensure all are reported.
 
 func.func @verify_fail_1() {
@@ -144,4 +149,12 @@ func.func @verify_fail_3() {
   // expected-error@+1 {{'arith.constant' op integer return type must be signless}}
   %r = "arith.constant"() {value = -3 : si32} : () -> si32
   return
+}
+
+// -----
+
+// Verify that symbols with results are rejected
+module {
+  // expected-error@+1 {{'test.symbol_with_result' op symbols must not have results}}
+  %0 = "test.symbol_with_result"() <{sym_name = "test_symbol"}> : () -> i32
 }

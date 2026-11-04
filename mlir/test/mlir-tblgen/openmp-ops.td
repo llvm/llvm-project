@@ -10,7 +10,7 @@
 // RUN:   -I %S/../../../llvm/include > %t/mlir/Dialect/OpenMP/OmpCommon.td
 
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include -I %t %s | FileCheck %s --check-prefix=DECL
-// RUN: mlir-tblgen -gen-op-doc -I %S/../../include -I %t %s | FileCheck %s --check-prefix=DOC
+// RUN: mlir-tblgen -gen-op-doc -I %S/../../include -I %t %s -keep-op-source-order | FileCheck %s --check-prefix=DOC
 
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 

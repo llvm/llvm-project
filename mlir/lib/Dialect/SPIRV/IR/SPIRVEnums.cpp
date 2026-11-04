@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/IR/OpImplementation.h"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -100,4 +101,8 @@ spirv::getRecursiveImpliedCapabilities(spirv::Capability cap) {
     allCaps.insert_range(getDirectImpliedCapabilities(allCaps[i]));
 
   return allCaps.takeVector();
+}
+
+std::string spirv::getDecorationString(spirv::Decoration decoration) {
+  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration));
 }

@@ -1,6 +1,6 @@
 include "../../../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "platformqemuuser" in {
+let Definition = "platformqemuuser", Path = "platform.plugin.qemu-user" in {
   def Architecture: Property<"architecture", "String">,
     Global,
     DefaultStringValue<"">,

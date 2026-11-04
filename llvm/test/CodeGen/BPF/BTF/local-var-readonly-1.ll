@@ -21,16 +21,16 @@
 @__const.test.val = private unnamed_addr constant %struct.anon { [4 x i32] [i32 2, i32 3, i32 4, i32 5] }, align 4
 
 ; Function Attrs: nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test() local_unnamed_addr !dbg !7 {
 entry:
   %val = alloca %struct.anon, align 4
   call void @llvm.dbg.value(metadata ptr @.str, metadata !12, metadata !DIExpression()), !dbg !25
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %val) #4, !dbg !26
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %val), !dbg !26
   call void @llvm.dbg.declare(metadata ptr %val, metadata !16, metadata !DIExpression()), !dbg !27
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 dereferenceable(16) %val, ptr nonnull align 4 dereferenceable(16) @__const.test.val, i64 16, i1 false), !dbg !27
-  tail call void @foo(ptr @.str) #4, !dbg !28
-  call void @foo(ptr nonnull %val) #4, !dbg !29
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %val) #4, !dbg !30
+  tail call void @foo(ptr @.str), !dbg !28
+  call void @foo(ptr nonnull %val), !dbg !29
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %val), !dbg !30
   ret i32 0, !dbg !31
 }
 
@@ -39,27 +39,21 @@ entry:
 ; CHECK-NOT:   BTF_KIND_DATASEC
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
-declare !dbg !32 dso_local void @foo(ptr) local_unnamed_addr #3
+declare !dbg !32 dso_local void @foo(ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind willreturn }
-attributes #2 = { nounwind readnone speculatable willreturn }
-attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

@@ -15,6 +15,7 @@
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb {
 
@@ -31,6 +32,10 @@ public:
   bool IsInlined() const;
 
   explicit operator bool() const;
+
+  bool operator==(const lldb::SBBlock &rhs) const;
+
+  bool operator!=(const lldb::SBBlock &rhs) const;
 
   bool IsValid() const;
 

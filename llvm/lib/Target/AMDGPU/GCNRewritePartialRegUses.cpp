@@ -175,7 +175,7 @@ const uint32_t *GCNRewritePartialRegUsesImpl::getSuperRegClassMask(
   const auto [I, Inserted] =
       SuperRegMasks.try_emplace({RC, SubRegIdx}, nullptr);
   if (Inserted) {
-    for (SuperRegClassIterator RCI(RC, TRI); RCI.isValid(); ++RCI) {
+    for (SuperRegClassIterator RCI(RC); RCI.isValid(); ++RCI) {
       if (RCI.getSubReg() == SubRegIdx) {
         I->second = RCI.getMask();
         break;
@@ -268,7 +268,7 @@ GCNRewritePartialRegUsesImpl::getRegClassWithShiftedSubregs(
     assert(MinRC->isAllocatable() && TRI->isRegClassAligned(MinRC, RCAlign));
     for (auto [OldSubReg, NewSubReg] : SubRegs)
       // Check that all registers in MinRC support NewSubReg subregister.
-      assert(MinRC == TRI->getSubClassWithSubReg(MinRC, NewSubReg));
+      assert(TRI->isSubRegValidForRegClass(MinRC, NewSubReg));
   }
 #endif
   // There might be zero RShift - in this case we just trying to find smaller

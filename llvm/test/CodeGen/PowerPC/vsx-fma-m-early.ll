@@ -1,14 +1,14 @@
-;; Tests that the ppc-vsx-fma-mutate pass with the schedule-ppc-vsx-fma-mutation-early pass does not hoist xxspltiw out of loops.
-; RUN: llc -verify-machineinstrs -mcpu=pwr10 -disable-ppc-vsx-fma-mutation=false \
-; RUN:   -ppc-asm-full-reg-names -schedule-ppc-vsx-fma-mutation-early \
+;; Tests that the ppc-vsx-fma-mutate pass with -ppc-schedule-vsx-fma-mutation-early does not hoist xxspltiw out of loops.
+; RUN: llc -verify-machineinstrs -mcpu=pwr10 -ppc-vsx-fma-mutation \
+; RUN:   -ppc-asm-full-reg-names -ppc-schedule-vsx-fma-mutation-early \
 ; RUN:    -mtriple powerpc64-ibm-aix < %s | FileCheck --check-prefixes=CHECK64,AIX64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr10 -disable-ppc-vsx-fma-mutation=false \
-; RUN:   -ppc-asm-full-reg-names -schedule-ppc-vsx-fma-mutation-early \
+; RUN: llc -verify-machineinstrs -mcpu=pwr10 -ppc-vsx-fma-mutation \
+; RUN:   -ppc-asm-full-reg-names -ppc-schedule-vsx-fma-mutation-early \
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK64,LINUX64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr10 -disable-ppc-vsx-fma-mutation=false \
-; RUN:   -ppc-asm-full-reg-names -schedule-ppc-vsx-fma-mutation-early \
+; RUN: llc -verify-machineinstrs -mcpu=pwr10 -ppc-vsx-fma-mutation \
+; RUN:   -ppc-asm-full-reg-names -ppc-schedule-vsx-fma-mutation-early \
 ; RUN:    -mtriple powerpc-ibm-aix < %s | FileCheck --check-prefix=CHECK32 %s
 
 define void @bar(ptr noalias nocapture noundef writeonly %__output_a, ptr noalias nocapture noundef readonly %var1321In_a, ptr noalias nocapture noundef readonly %n) {
@@ -145,14 +145,14 @@ declare <4 x i32> @llvm.ppc.vsx.xvcmpgtsp(<4 x float>, <4 x float>)
 ; CHECK32-NEXT:       .align  4
 ; CHECK32-NEXT: [[L2_foo:.*]]:                               # %for.body
 ; CHECK32-NEXT:                                         # =>This Inner Loop Header: Depth=1
-; CHECK32-NEXT:       slwi r8, r7, 4
-; CHECK32-NEXT:       addic r7, r7, 1
-; CHECK32-NEXT:       addze r6, r6
+; CHECK32-NEXT:       slwi r8, r6, 4
+; CHECK32-NEXT:       addic r6, r6, 1
+; CHECK32-NEXT:       addze r7, r7
 ; CHECK32-NEXT:       lxvx vs2, r4, r8
 ; CHECK32-NEXT:       xvmaddmsp vs2, vs0, vs1
 ; CHECK32-NEXT:       stxvx vs2, r3, r8
-; CHECK32-NEXT:       xor r8, r7, r5
-; CHECK32-NEXT:       or. r8, r8, r6
+; CHECK32-NEXT:       xor r8, r6, r5
+; CHECK32-NEXT:       or. r8, r8, r7
 ; CHECK32-NEXT:       bne     cr0, [[L2_foo]]
 
 ; CHECK32:      .foo:

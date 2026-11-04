@@ -42,7 +42,7 @@ entry:
 ; CHECK: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref)
   call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !18, metadata ptr %nums, metadata !DIExpression()), !dbg !19
   store i64 8589934593, ptr %nums, align 8, !dbg !21, !DIAssignID !22
-; CHECK: MOV64mr %stack.0.nums, 1, $noreg, 0, $noreg, killed %0
+; CHECK: MOV64mr %stack.0.nums, 1, $noreg, 0, $noreg, %0
   call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !22, metadata ptr %nums, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !22, metadata ptr undef, metadata !DIExpression()), !dbg !19
 ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[nums]], !DIExpression(DW_OP_LLVM_fragment, 64, 32)
@@ -65,6 +65,8 @@ entry:
 ; CHECK-NEXT: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 80)
   tail call void @_Z4stepv(), !dbg !32
   call void @_Z3escP4Nums(ptr noundef nonnull %nums), !dbg !33
+; CHECK: CALL64pcrel32 @_Z3escP4Nums
+; CHECK: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref)
   ret i32 0, !dbg !35
 }
 

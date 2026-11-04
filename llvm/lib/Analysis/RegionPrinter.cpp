@@ -9,11 +9,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/RegionPrinter.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/DOTGraphTraitsPass.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #ifndef NDEBUG
 #include "llvm/IR/LegacyPassManager.h"
@@ -21,18 +21,9 @@
 
 using namespace llvm;
 
-//===----------------------------------------------------------------------===//
-/// onlySimpleRegion - Show only the simple regions in the RegionViewer.
-static cl::opt<bool>
-onlySimpleRegions("only-simple-regions",
-                  cl::desc("Show only simple regions in the graphviz viewer"),
-                  cl::Hidden,
-                  cl::init(false));
-
-namespace llvm {
-
-std::string DOTGraphTraits<RegionNode *>::getNodeLabel(RegionNode *Node,
-                                                       RegionNode *Graph) {
+std::string
+llvm::DOTGraphTraits<RegionNode *>::getNodeLabel(RegionNode *Node,
+                                                 RegionNode *Graph) {
   if (!Node->isSubRegion()) {
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
 
@@ -46,7 +37,8 @@ std::string DOTGraphTraits<RegionNode *>::getNodeLabel(RegionNode *Node,
 }
 
 template <>
-struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
+struct llvm::DOTGraphTraits<RegionInfo *>
+    : public llvm::DOTGraphTraits<RegionNode *> {
 
   DOTGraphTraits (bool isSimple = false)
     : DOTGraphTraits<RegionNode*>(isSimple) {}
@@ -86,14 +78,15 @@ struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
 
   // Print the cluster of the subregions. This groups the single basic blocks
   // and adds a different background color for each group.
-  static void printRegionCluster(const Region &R, GraphWriter<RegionInfo *> &GW,
+  static void printRegionCluster(const AnalysisOptions &Opts, const Region &R,
+                                 GraphWriter<RegionInfo *> &GW,
                                  unsigned depth = 0) {
     raw_ostream &O = GW.getOStream();
     O.indent(2 * depth) << "subgraph cluster_" << static_cast<const void*>(&R)
       << " {\n";
     O.indent(2 * (depth + 1)) << "label = \"\";\n";
 
-    if (!onlySimpleRegions || R.isSimple()) {
+    if (!Opts.only_simple_regions || R.isSimple()) {
       O.indent(2 * (depth + 1)) << "style = filled;\n";
       O.indent(2 * (depth + 1)) << "color = "
         << ((R.getDepth() * 2 % 12) + 1) << "\n";
@@ -105,7 +98,7 @@ struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
     }
 
     for (const auto &RI : R)
-      printRegionCluster(*RI, GW, depth + 1);
+      printRegionCluster(Opts, *RI, GW, depth + 1);
 
     const RegionInfo &RI = *static_cast<const RegionInfo*>(R.getRegionInfo());
 
@@ -122,10 +115,11 @@ struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
                                      GraphWriter<RegionInfo *> &GW) {
     raw_ostream &O = GW.getOStream();
     O << "\tcolorscheme = \"paired12\"\n";
-    printRegionCluster(*G->getTopLevelRegion(), GW, 4);
+    const Region *TopLevel = G->getTopLevelRegion();
+    printRegionCluster(getAnalysisOptions(*TopLevel->getEntry()->getParent()),
+                       *TopLevel, GW, 4);
   }
 };
-} // end namespace llvm
 
 namespace {
 

@@ -1,0 +1,46 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x1040
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x40
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .text
+    LastSec:         .fini
+    Align:           0x1000
+    Offset:          0x0
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1040
+    AddressAlign:    0x10
+    Content:         BEC0FFEEEEFF0CEB
+  - Name:            .fini
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1140
+    AddressAlign:    0x4
+    Content:         DEADBEEF
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x3140
+    AddressAlign:    0x4
+    Content:         BAADF00D
+Symbols:
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1130
+    Size:            0xF
+...

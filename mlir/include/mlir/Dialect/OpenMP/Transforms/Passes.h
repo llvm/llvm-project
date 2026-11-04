@@ -13,6 +13,10 @@
 
 namespace mlir {
 
+namespace LLVM {
+class LLVMFuncOp;
+} // namespace LLVM
+
 namespace omp {
 
 /// Generate the code for registering conversion passes.
@@ -23,4 +27,4 @@ namespace omp {
 } // namespace omp
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES_H
+#endif // MLIR_DIALECT_OPENMP_TRANSFORMS_PASSES_H

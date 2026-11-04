@@ -16,19 +16,20 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
+#include <optional>
 
 namespace llvm {
 /// The gcov-style instrumentation pass
-class GCOVProfilerPass : public PassInfoMixin<GCOVProfilerPass> {
+class GCOVProfilerPass : public OptionalPassInfoMixin<GCOVProfilerPass> {
 public:
   GCOVProfilerPass(
-      const GCOVOptions &Options = GCOVOptions::getDefault(),
+      std::optional<GCOVOptions> Options = std::nullopt,
       IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem())
       : GCOVOpts(Options), VFS(std::move(VFS)) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
-  GCOVOptions GCOVOpts;
+  std::optional<GCOVOptions> GCOVOpts;
   IntrusiveRefCntPtr<vfs::FileSystem> VFS;
 };
 

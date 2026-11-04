@@ -34,7 +34,8 @@ TEST(ModuleSpecTest, InvalidInMemoryBuffer) {
   uint8_t Invalid[] = "This is not a binary file.";
   DataBufferSP InvalidBufferSP =
       std::make_shared<DataBufferUnowned>(Invalid, sizeof(Invalid));
-  ModuleSpec Spec(FileSpec(), UUID(), InvalidBufferSP);
+  ModuleSpec Spec(FileSpec(), UUID(),
+                  std::make_shared<DataExtractor>(InvalidBufferSP));
 
   auto InvalidModuleSP = std::make_shared<Module>(Spec);
   ASSERT_EQ(InvalidModuleSP->GetObjectFile(), nullptr);
@@ -44,7 +45,8 @@ TEST(ModuleSpecTest, InvalidInMemoryBufferValidFile) {
   uint8_t Invalid[] = "This is not a binary file.";
   DataBufferSP InvalidBufferSP =
       std::make_shared<DataBufferUnowned>(Invalid, sizeof(Invalid));
-  ModuleSpec Spec(FileSpec(TestMainArgv0), UUID(), InvalidBufferSP);
+  ModuleSpec Spec(FileSpec(TestMainArgv0), UUID(),
+                  std::make_shared<DataExtractor>(InvalidBufferSP));
 
   auto InvalidModuleSP = std::make_shared<Module>(Spec);
   ASSERT_EQ(InvalidModuleSP->GetObjectFile(), nullptr);
@@ -121,6 +123,7 @@ TEST(ModuleSpecTest, TestMachOFile) {
 
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x0100000C

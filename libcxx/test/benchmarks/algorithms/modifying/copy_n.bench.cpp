@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
   // {std,ranges}::copy_n(normal container)
   {
     auto bm = []<class Container>(std::string name, auto copy_n) {
-      benchmark::RegisterBenchmark(name, [copy_n](auto& st) {
+      benchmark::RegisterBenchmark(name, [copy_n](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const n = st.range(0);
         using ValueType     = typename Container::value_type;
         Container c;
@@ -45,15 +45,12 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::copy_n(vector<int>)", std_copy_n);
     bm.operator()<std::deque<int>>("std::copy_n(deque<int>)", std_copy_n);
     bm.operator()<std::list<int>>("std::copy_n(list<int>)", std_copy_n);
-    bm.operator()<std::vector<int>>("rng::copy_n(vector<int>)", std::ranges::copy_n);
-    bm.operator()<std::deque<int>>("rng::copy_n(deque<int>)", std::ranges::copy_n);
-    bm.operator()<std::list<int>>("rng::copy_n(list<int>)", std::ranges::copy_n);
   }
 
   // {std,ranges}::copy_n(vector<bool>)
   {
     auto bm = []<bool Aligned>(std::string name, auto copy_n) {
-      benchmark::RegisterBenchmark(name, [copy_n](auto& st) {
+      benchmark::RegisterBenchmark(name, [copy_n](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const n = st.range(0);
         std::vector<bool> in(n, true);
         std::vector<bool> out(Aligned ? n : n + 8);
@@ -69,10 +66,6 @@ int main(int argc, char** argv) {
     };
     bm.operator()<true>("std::copy_n(vector<bool>) (aligned)", std_copy_n);
     bm.operator()<false>("std::copy_n(vector<bool>) (unaligned)", std_copy_n);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-    bm.operator()<true>("rng::copy_n(vector<bool>) (aligned)", std::ranges::copy_n);
-    bm.operator()<false>("rng::copy_n(vector<bool>) (unaligned)", std::ranges::copy_n);
-#endif
   }
 
   benchmark::Initialize(&argc, argv);

@@ -52,10 +52,12 @@ bool WebAssemblyTargetInfo::setABI(const std::string &Name) {
 
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
+      .Case("acquire-release-atomics", HasAcquireReleaseAtomics)
       .Case("atomics", HasAtomics)
       .Case("bulk-memory", HasBulkMemory)
       .Case("bulk-memory-opt", HasBulkMemoryOpt)
       .Case("call-indirect-overlong", HasCallIndirectOverlong)
+      .Case("compact-imports", HasCompactImports)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
       .Case("fp16", HasFP16)
@@ -85,6 +87,8 @@ void WebAssemblyTargetInfo::fillValidCPUList(
 void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
                                              MacroBuilder &Builder) const {
   defineCPUMacros(Builder, "wasm", /*Tuning=*/false);
+  if (HasAcquireReleaseAtomics)
+    Builder.defineMacro("__wasm_acquire_release_atomics__");
   if (HasAtomics)
     Builder.defineMacro("__wasm_atomics__");
   if (HasBulkMemory)
@@ -119,6 +123,10 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
+  if (HasLibcallThreadContext)
+    Builder.defineMacro("__wasm_libcall_thread_context__");
+  // Note that not all wasm features appear here.   For example,
+  // HasCompatctImports
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -190,7 +198,9 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
+    Features["acquire-release-atomics"] = true;
     Features["atomics"] = true;
+    Features["compact-imports"] = true;
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
     Features["fp16"] = true;
@@ -213,7 +223,16 @@ bool WebAssemblyTargetInfo::initFeatureMap(
 
 bool WebAssemblyTargetInfo::handleTargetFeatures(
     std::vector<std::string> &Features, DiagnosticsEngine &Diags) {
+  HasMustTail = false;
   for (const auto &Feature : Features) {
+    if (Feature == "+acquire-release-atomics") {
+      HasAcquireReleaseAtomics = true;
+      continue;
+    }
+    if (Feature == "-acquire-release-atomics") {
+      HasAcquireReleaseAtomics = false;
+      continue;
+    }
     if (Feature == "+atomics") {
       HasAtomics = true;
       continue;
@@ -244,6 +263,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-call-indirect-overlong") {
       HasCallIndirectOverlong = false;
+      continue;
+    }
+    if (Feature == "+compact-imports") {
+      HasCompactImports = true;
+      continue;
+    }
+    if (Feature == "-compact-imports") {
+      HasCompactImports = false;
       continue;
     }
     if (Feature == "+exception-handling") {
@@ -345,10 +372,12 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "+tail-call") {
       HasTailCall = true;
+      HasMustTail = true;
       continue;
     }
     if (Feature == "-tail-call") {
       HasTailCall = false;
+      HasMustTail = false;
       continue;
     }
     if (Feature == "+wide-arithmetic") {
@@ -387,19 +416,6 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
 llvm::SmallVector<Builtin::InfosShard>
 WebAssemblyTargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos}};
-}
-
-void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
-                                   const TargetInfo *Aux) {
-  TargetInfo::adjust(Diags, Opts, Aux);
-  // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
-  // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
-  // because they are unsupported.
-  if (!HasAtomics || !HasBulkMemory) {
-    Opts.POSIXThreads = false;
-    Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
-    Opts.ThreadsafeStatics = false;
-  }
 }
 
 void WebAssembly32TargetInfo::getTargetDefines(const LangOptions &Opts,

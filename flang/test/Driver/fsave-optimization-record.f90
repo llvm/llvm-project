@@ -41,7 +41,7 @@
 ! YAML: "-opt-record-format" "yaml"
 
 ! CHECK: --- !Analysis
-! CHECK: Pass:            prologepilog
+! CHECK: Pass:            prolog-epilog
 ! CHECK: Name:            StackSize
 ! CHECK: Function:        _QQmain
 ! CHECK: Pass:            asm-printer

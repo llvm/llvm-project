@@ -5,3 +5,5 @@ CheckOptions:
     value:           '1'
   - key:             modernize-use-default-member-init.UseAssignment
     value:           '1'
+  - key:             llvm-formatv-string.AdditionalFunctions
+    value:           '::lldb_private::Log::Format;::lldb_private::Status::FromErrorStringWithFormatv;::lldb_private::CommandReturnObject::AppendMessageWithFormatv;::lldb_private::CommandReturnObject::AppendNoteWithFormatv;::lldb_private::CommandReturnObject::AppendWarningWithFormatv;::lldb_private::CommandReturnObject::AppendErrorWithFormatv'

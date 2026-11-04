@@ -35,10 +35,16 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -46,7 +52,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/IPO.h"
@@ -79,10 +84,6 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
-namespace llvm {
-  void initializeARMExecutionDomainFixPass(PassRegistry&);
-}
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
@@ -93,15 +94,15 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
   initializeARMAsmPrinterPass(Registry);
-  initializeARMLoadStoreOptPass(Registry);
-  initializeARMPreAllocLoadStoreOptPass(Registry);
+  initializeARMLoadStoreOptLegacyPass(Registry);
+  initializeARMPreAllocLoadStoreOptLegacyPass(Registry);
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
-  initializeARMExecutionDomainFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
+  initializeThumb2ITBlockPass(Registry);
   initializeMVETPAndVPTOptimisationsPass(Registry);
   initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
@@ -111,7 +112,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
   initializeARMDAGToDAGISelLegacyPass(Registry);
-  initializeKCFIPass(Registry);
+  initializeMachineKCFILegacyPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -147,37 +148,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(Options.MCOptions.ABIName), TT, CPU, FS,
-          Options, getEffectiveRelocModel(TT, RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
-
-  // Default to triple-appropriate float ABI
-  if (Options.FloatABIType == FloatABI::Default) {
-    if (isTargetHardFloat())
-      this->Options.FloatABIType = FloatABI::Hard;
-    else
-      this->Options.FloatABIType = FloatABI::Soft;
-  }
-
-  // Default to triple-appropriate EABI
-  if (Options.EABIVersion == EABI::Default ||
-      Options.EABIVersion == EABI::Unknown) {
-    // musl is compatible with glibc with regard to EABI version
-    if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-         TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-        !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
-      this->Options.EABIVersion = EABI::GNU;
-    else
-      this->Options.EABIVersion = EABI::EABI5;
-  }
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
@@ -199,8 +173,56 @@ ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
 MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
-  return ARMFunctionInfo::create<ARMFunctionInfo>(
-      Allocator, F, static_cast<const ARMSubtarget *>(STI));
+  const auto *ARMSTI = static_cast<const ARMSubtarget *>(STI);
+  if (!ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only() ||
+      ARMSTI->useSoftFloat()) {
+    const StringRef FPRegsUnavailableMsg =
+        ", but floating-point registers are unavailable";
+    const ARMTargetLowering *TLI = ARMSTI->getTargetLowering();
+
+    if (TLI->getEffectiveCallingConv(F.getCallingConv(), F.isVarArg()) ==
+        CallingConv::ARM_AAPCS_VFP) {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, Twine("calling convention is hard-float") + FPRegsUnavailableMsg,
+          DiagnosticLocation(F.getSubprogram())));
+    } else {
+      for (const Instruction &I : instructions(F)) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB || CB->isInlineAsm() ||
+            (CB->getCalledFunction() && CB->getCalledFunction()->isIntrinsic()))
+          continue;
+        if (TLI->getEffectiveCallingConv(CB->getCallingConv(),
+                                         CB->getFunctionType()->isVarArg()) ==
+            CallingConv::ARM_AAPCS_VFP) {
+          const Function *Callee = CB->getCalledFunction();
+          F.getContext().diagnose(DiagnosticInfoUnsupported(
+              F,
+              (Callee ? Twine("'") + F.getName() + "' calls '" +
+                            Callee->getName() + "', which"
+                      : Twine("'") + F.getName() +
+                            "' makes an indirect call that") +
+                  " expects a hard-float calling convention" +
+                  FPRegsUnavailableMsg,
+              CB->getDebugLoc()));
+        }
+      }
+    }
+  }
+  return ARMFunctionInfo::create<ARMFunctionInfo>(Allocator, F, ARMSTI);
+}
+
+FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
+  // An explicit "float-abi" module flag always wins, even for AAPCS16.
+  if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi")))
+    return *FloatABI::parseABIType(Val->getString());
+  return M.getTargetTriple().getDefaultFloatABI(getTargetABIName(M));
+}
+
+ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
+  // Consistency of "target-abi" and -target-abi is validated elsewhere.
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return ARM::computeTargetABI(TargetTriple, MD->getString());
+  return ARM::computeTargetABI(TargetTriple, Options.MCOptions.getABIName());
 }
 
 const ARMSubtarget *
@@ -230,18 +252,22 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (F.hasMinSize())
     Key += "+minsize";
 
-  DenormalMode DM = F.getDenormalModeRaw();
+  DenormalMode DM = F.getDenormalFPEnv().DefaultMode;
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
+  FloatABI::ABIType FloatABI = getFloatABI(*F.getParent());
+  // It is legal to have FloatABI::Hard for targets with SIMD registers
+  // but no floating-point hardware (mve+nofp).
+  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
+
+  ARM::ARMABI ABI = getEffectiveABI(*F.getParent());
+  Key += "+abi=" + std::to_string((int)ABI);
+
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                       F.hasMinSize(), DM);
+                                       FloatABI, ABI, F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -315,6 +341,9 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() == CodeGenOptLevel::Aggressive;
+  }
   void addPreSched2() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -322,23 +351,12 @@ public:
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 
-class ARMExecutionDomainFix : public ExecutionDomainFix {
-public:
-  static char ID;
-  ARMExecutionDomainFix() : ExecutionDomainFix(ID, ARM::DPRRegClass) {}
-  StringRef getPassName() const override {
-    return "ARM Execution Domain Fix";
-  }
-};
-char ARMExecutionDomainFix::ID;
-
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
-INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "ARMPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+}
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(*this, PM);
@@ -349,10 +367,7 @@ std::unique_ptr<CSEConfigBase> ARMPassConfig::getCSEConfig() const {
 }
 
 void ARMPassConfig::addIRPasses() {
-  if (TM->Options.ThreadModel == ThreadModel::Single)
-    addPass(createLowerAtomicPass());
-  else
-    addPass(createAtomicExpandLegacyPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
@@ -384,7 +399,7 @@ void ARMPassConfig::addIRPasses() {
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
-    addPass(createCFGuardCheckPass());
+    addPass(createCFGuardPass());
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
@@ -398,8 +413,8 @@ void ARMPassConfig::addCodeGenPrepare() {
 
 bool ARMPassConfig::addPreISel() {
   if ((TM->getOptLevel() != CodeGenOptLevel::None &&
-       EnableGlobalMerge == cl::BOU_UNSET) ||
-      EnableGlobalMerge == cl::BOU_TRUE) {
+       EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET) ||
+      EnableGlobalMerge == cl::boolOrDefault::BOU_TRUE) {
     // FIXME: This is using the thumb1 only constant value for
     // maximal global offset for merging globals. We may want
     // to look into using the old value for non-thumb1 code of
@@ -407,7 +422,7 @@ bool ARMPassConfig::addPreISel() {
     // tricky when doing code gen per function.
     bool OnlyOptimizeForSize =
         (TM->getOptLevel() < CodeGenOptLevel::Aggressive) &&
-        (EnableGlobalMerge == cl::BOU_UNSET);
+        (EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET);
     // Merging of extern globals is enabled by default on non-Mach-O as we
     // expect it to be generally either beneficial or harmless. On Mach-O it
     // is disabled as we emit the .subsections_via_symbols directive which
@@ -439,36 +454,33 @@ bool ARMPassConfig::addInstSelector() {
 }
 
 bool ARMPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
 bool ARMPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool ARMPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool ARMPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (getOptLevel() == CodeGenOptLevel::Aggressive)
-      addPass(&MachinePipelinerID);
-
     addPass(createMVETPAndVPTOptimisationsPass());
 
     addPass(createMLxExpansionPass());
 
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass(/* pre-register alloc */ true));
+      addPass(createARMLoadStoreOptLegacyPass(/* pre-register alloc */ true));
 
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
@@ -478,10 +490,10 @@ void ARMPassConfig::addPreRegAlloc() {
 void ARMPassConfig::addPreSched2() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass());
+      addPass(createARMLoadStoreOptLegacyPass());
 
-    addPass(new ARMExecutionDomainFix());
-    addPass(createBreakFalseDeps());
+    addPass(createExecutionDomainFixLegacyPass());
+    addPass(createBreakFalseDepsLegacyPass());
   }
 
   // Expand some pseudo instructions into multiple instructions to allow
@@ -524,7 +536,7 @@ void ARMPassConfig::addPreEmitPass() {
   // Unpack bundles for:
   // - Thumb2: Constant island pass requires unbundled instructions
   // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
-  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
+  addPass(createUnpackMachineBundlesLegacy([](const MachineFunction &MF) {
     return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
            MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
@@ -556,9 +568,9 @@ void ARMPassConfig::addPreEmitPass2() {
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
 }
 

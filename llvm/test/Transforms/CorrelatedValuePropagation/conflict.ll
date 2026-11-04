@@ -58,7 +58,8 @@ define i8 @test3(i8 %a) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A:%.*]], 5
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[DEAD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       dead:
-; CHECK-NEXT:    call void @llvm.assume(i1 false)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[A]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
 ; CHECK-NEXT:    ret i8 5
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0

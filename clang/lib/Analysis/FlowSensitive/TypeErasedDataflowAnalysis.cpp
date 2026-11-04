@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstddef>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -19,18 +20,24 @@
 #include "clang/AST/ASTDumper.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CFGBackEdges.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -62,16 +69,6 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
         return Succ && Succ->getBlockID() == Block.getBlockID();
       });
   return BlockPos - Pred.succ_begin();
-}
-
-// A "backedge" node is a block introduced in the CFG exclusively to indicate a
-// loop backedge. They are exactly identified by the presence of a non-null
-// pointer to the entry block of the loop condition. Note that this is not
-// necessarily the block with the loop statement as terminator, because
-// short-circuit operators will result in multiple blocks encoding the loop
-// condition, only one of which will contain the loop statement as terminator.
-static bool isBackedgeNode(const CFGBlock &B) {
-  return B.getLoopTarget() != nullptr;
 }
 
 namespace {
@@ -484,6 +481,27 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   return State;
 }
 
+// Returns the number of reachable blocks (would be visited if we only visit
+// each reachable block once). This is a light version of the main fixpoint loop
+// (keep in sync).
+size_t NumReachableBlocks(const CFG &CFG) {
+  PostOrderCFGView POV(&CFG);
+  ForwardDataflowWorklist Worklist(CFG, &POV);
+  llvm::BitVector VisitedBlocks(CFG.size());
+  const CFGBlock &Entry = CFG.getEntry();
+  Worklist.enqueueSuccessors(&Entry);
+  while (const CFGBlock *Block = Worklist.dequeue()) {
+    if (VisitedBlocks[Block->getBlockID()])
+      continue;
+    VisitedBlocks[Block->getBlockID()] = true;
+    // Do not add unreachable successor blocks to `Worklist`.
+    if (Block->hasNoReturnElement())
+      continue;
+    Worklist.enqueueSuccessors(Block);
+  }
+  return VisitedBlocks.count();
+}
+
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
@@ -501,8 +519,23 @@ runTypeErasedDataflowAnalysis(
       MaybeStartingEnv ? *MaybeStartingEnv : InitEnv;
 
   const clang::CFG &CFG = ACFG.getCFG();
+
+  // Bail out if the number of reachable blocks is already beyond the maximum
+  // number of block visits to save time and avoid running out of memory for
+  // massive CFGs. Note: CFG.size() could have unreachable blocks,
+  // but it is a faster to compare that to MaxBlockVisits first before doing the
+  // reachable block count.
+  if (CFG.size() > static_cast<size_t>(MaxBlockVisits) &&
+      NumReachableBlocks(CFG) > static_cast<size_t>(MaxBlockVisits)) {
+    return llvm::createStringError(std::errc::timed_out,
+                                   "number of blocks in cfg will lead to "
+                                   "exceeding maximum number of block visits");
+  }
+
   PostOrderCFGView POV(&CFG);
   ForwardDataflowWorklist Worklist(CFG, &POV);
+  llvm::SmallDenseSet<const CFGBlock *> NonStructLoopBackedgeNodes =
+      findNonStructuredLoopBackedgeNodes(CFG);
 
   std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
       CFG.size());
@@ -537,7 +570,7 @@ runTypeErasedDataflowAnalysis(
         llvm::errs() << "Old Env:\n";
         OldBlockState->Env.dump();
       });
-      if (isBackedgeNode(*Block)) {
+      if (isBackedgeCFGNode(*Block, NonStructLoopBackedgeNodes)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
             NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =

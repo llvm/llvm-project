@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S -o - %s | FileCheck %s
 
 ; Check position of the inserted vector load/store.  Vectorized loads should be
 ; inserted at the position of the first load in the chain, and stores should be
@@ -28,7 +28,7 @@ entry:
 
   %add = fadd float %ld.c, %ld.c.idx.1
   store float %add, ptr addrspace(1) %b, align 4
-  store i32 %foo, ptr addrspace(3) null, align 4
+  store i32 %foo, ptr addrspace(3) zeroinitializer, align 4
   ret void
 }
 
@@ -55,7 +55,7 @@ entry:
 
   %add = fadd float %ld.c, %ld.c.idx.1
   store float %add, ptr addrspace(1) %b, align 4
-  store i32 %foo, ptr addrspace(3) null, align 4
+  store i32 %foo, ptr addrspace(3) zeroinitializer, align 4
   ret void
 }
 

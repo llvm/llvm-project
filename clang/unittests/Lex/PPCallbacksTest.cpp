@@ -6,7 +6,6 @@
 //
 //===--------------------------------------------------------------===//
 
-#include "clang/Lex/Preprocessor.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/Diagnostic.h"
@@ -19,11 +18,13 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -437,6 +438,7 @@ TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
   PreprocessorOptions PPOpts;
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
 
+  unsigned int NumCalls = 0;
   DiagnosticConsumer *DiagConsumer = new DiagnosticConsumer;
   DiagnosticsEngine FileNotFoundDiags(DiagID, DiagOpts, DiagConsumer);
   Preprocessor PP(PPOpts, FileNotFoundDiags, LangOpts, SourceMgr, HeaderInfo,
@@ -445,21 +447,68 @@ TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
 
   class FileNotFoundCallbacks : public PPCallbacks {
   public:
-    unsigned int NumCalls = 0;
+    unsigned int &NumCalls;
+
+    FileNotFoundCallbacks(unsigned int &NumCalls) : NumCalls(NumCalls) {}
+
     bool FileNotFound(StringRef FileName) override {
       NumCalls++;
       return FileName == "skipped.h";
     }
   };
 
-  auto *Callbacks = new FileNotFoundCallbacks;
-  PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(Callbacks));
+  PP.addPPCallbacks(std::make_unique<FileNotFoundCallbacks>(NumCalls));
 
   // Lex source text.
   PP.EnterMainSourceFile();
   PP.LexTokensUntilEOF();
 
-  ASSERT_EQ(1u, Callbacks->NumCalls);
+  ASSERT_EQ(1u, NumCalls);
+  ASSERT_EQ(0u, DiagConsumer->getNumErrors());
+}
+
+TEST_F(PPCallbacksTest, EmbedFileNotFoundChained) {
+  const char *SourceText = "#embed \"notfound.h\"\n";
+
+  std::unique_ptr<llvm::MemoryBuffer> SourceBuf =
+      llvm::MemoryBuffer::getMemBuffer(SourceText);
+  SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
+
+  unsigned int NumCalls = 0;
+  HeaderSearchOptions HSOpts;
+  TrivialModuleLoader ModLoader;
+  PreprocessorOptions PPOpts;
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+
+  DiagnosticConsumer *DiagConsumer = new DiagnosticConsumer;
+  DiagnosticsEngine EmbedFileNotFoundDiags(DiagID, DiagOpts, DiagConsumer);
+  Preprocessor PP(PPOpts, EmbedFileNotFoundDiags, LangOpts, SourceMgr,
+                  HeaderInfo, ModLoader, /*IILookup=*/nullptr,
+                  /*OwnsHeaderSearch=*/false);
+  PP.Initialize(*Target);
+
+  class EmbedFileNotFoundCallbacks : public PPCallbacks {
+  public:
+    unsigned int &NumCalls;
+
+    EmbedFileNotFoundCallbacks(unsigned int &NumCalls) : NumCalls(NumCalls) {}
+
+    bool EmbedFileNotFound(StringRef FileName) override {
+      NumCalls++;
+      return true;
+    }
+  };
+
+  // Add two instances of `EmbedFileNotFoundCallbacks` to ensure the
+  // preprocessor is using an instance of `PPChainedCallbaks`.
+  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>(NumCalls));
+  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>(NumCalls));
+
+  // Lex source text.
+  PP.EnterMainSourceFile();
+  PP.LexTokensUntilEOF();
+
+  ASSERT_EQ(2u, NumCalls);
   ASSERT_EQ(0u, DiagConsumer->getNumErrors());
 }
 

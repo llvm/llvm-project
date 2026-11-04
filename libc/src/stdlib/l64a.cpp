@@ -32,15 +32,13 @@ constexpr static char b64_int_to_char(uint32_t num) {
   if (num == 1)
     return '/';
   if (num < 38)
-    return static_cast<char>(
-        internal::toupper(internal::int_to_b36_char(num - 2)));
+    return internal::toupper(internal::int_to_b36_char(num - 2));
 
   // this tolower is technically unnecessary, but it provides safety if we
   // change the default behavior of int_to_b36_char. Also the compiler
   // completely elides it so there's no performance penalty, see:
   // https://godbolt.org/z/o5ennv7fc
-  return static_cast<char>(
-      internal::tolower(internal::int_to_b36_char(num - 2 - 26)));
+  return internal::tolower(internal::int_to_b36_char(num - 2 - 26));
 }
 
 // This function takes a long and converts the low 32 bits of it into at most 6

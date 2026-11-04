@@ -14,7 +14,7 @@
 #ifndef LLVM_ANALYSIS_CODEMETRICS_H
 #define LLVM_ANALYSIS_CODEMETRICS_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -32,10 +32,6 @@ enum struct ConvergenceKind { None, Controlled, ExtendedLoop, Uncontrolled };
 /// Utility to calculate the size and a few similar metrics for a set
 /// of basic blocks.
 struct CodeMetrics {
-  /// True if this function contains a call to setjmp or other functions
-  /// with attribute "returns twice" without having the attribute itself.
-  bool exposesReturnsTwice = false;
-
   /// True if this function calls itself.
   bool isRecursive = false;
 
@@ -45,23 +41,17 @@ struct CodeMetrics {
   /// one or more 'noduplicate' instructions.
   bool notDuplicatable = false;
 
-  /// The kind of convergence specified in this function.
-  ConvergenceKind Convergence = ConvergenceKind::None;
-
   /// True if this function calls alloca (in the C sense).
   bool usesDynamicAlloca = false;
+
+  /// The kind of convergence specified in this function.
+  ConvergenceKind Convergence = ConvergenceKind::None;
 
   /// Code size cost of the analyzed blocks.
   InstructionCost NumInsts = 0;
 
-  /// Number of analyzed blocks.
-  unsigned NumBlocks = false;
-
-  /// Keeps track of basic block code size estimates.
-  DenseMap<const BasicBlock *, InstructionCost> NumBBInsts;
-
-  /// Keep track of the number of calls to 'big' functions.
-  unsigned NumCalls = false;
+  /// Keeps track of basic block code size estimates. Indexed by block number.
+  SmallVector<InstructionCost, 0> NumBBInsts;
 
   /// The number of calls to internal functions with a single caller.
   ///
@@ -95,7 +85,6 @@ struct CodeMetrics {
   collectEphemeralValues(const Function *L, AssumptionCache *AC,
                          SmallPtrSetImpl<const Value *> &EphValues);
 };
-
 }
 
 #endif

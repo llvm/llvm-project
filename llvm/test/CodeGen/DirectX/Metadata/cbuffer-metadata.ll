@@ -1,6 +1,6 @@
 ; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 ; RUN: opt -S --passes="dxil-pretty-printer" < %s 2>&1 | FileCheck %s --check-prefix=PRINT
-; RUN: llc %s --filetype=asm -o - < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
+; RUN: llc %s -o - -disable-dxil-remove-unused-resources -stop-before=dxil-op-lower 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
@@ -22,7 +22,12 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 @MyConstants.cb = global target("dx.CBuffer", %__cblayout_MyConstants) poison
 @MyConstants.str = private unnamed_addr constant [12 x i8] c"MyConstants\00", align 1
 
+%__cblayout_HeapCB = type <{
+  <2 x i16>
+}>
+
 ; PRINT:; Resource Bindings:
+; PRINT-NOT: ; HeapCB
 ; PRINT-NEXT:;
 ; PRINT-NEXT:; Name            Type  Format  Dim   ID    HLSL Bind  Count
 ; PRINT-NEXT:; ----
@@ -67,10 +72,23 @@ define void @test() #0 {
   %CB3.cb_h = call target("dx.CBuffer", %__cblayout_MyConstants)
             @llvm.dx.resource.handlefrombinding(i32 15, i32 5, i32 1, i32 0, ptr @MyConstants.str)
 
+  ; Resource from heap should not appear anywhere in the resource list
+  ; since it does not have a binding.
+  ;
+  ; struct HeapCB {
+  ;   int16_t2 v;
+  ; };
+  ; ConstantBuffer CB4<HeapCB> = ResourceDescriptorHeap[10];
+  %CB4.cb_h = call target("dx.CBuffer", %__cblayout_HeapCB)
+            @llvm.dx.resource.handlefromheap(i32 10)
+
   ret void
 }
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
+
+; Constant buffer from heap is the only one using { <2 x i16> } and it should not appear in list.
+; CHECK-NOT: = type { <2 x i16> }
 
 ; CHECK: %CBuffer.CB1 = type { { float, i32, double, <2 x i32> } }
 ; CHECK: %CBuffer.CB2 = type { { float, double, float, half, i16, i64, i32 } }

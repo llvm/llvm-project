@@ -83,6 +83,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv79") {
     Builder.defineMacro("__HEXAGON_V79__");
     Builder.defineMacro("__HEXAGON_ARCH__", "79");
+  } else if (CPU == "hexagonv81") {
+    Builder.defineMacro("__HEXAGON_V81__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "81");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -99,6 +102,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__HVXDBL__");
   }
 
+  if (HasHVXIeeeFp)
+    Builder.defineMacro("__HVX_IEEE_FP__");
+
   if (hasFeature("audio")) {
     Builder.defineMacro("__HEXAGON_AUDIO__");
   }
@@ -110,6 +116,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+
+  if (Opts.CPlusPlus && getTriple().getOS() == llvm::Triple::UnknownOS)
+    Builder.defineMacro("_GNU_SOURCE");
 }
 
 bool HexagonTargetInfo::initFeatureMap(
@@ -145,6 +154,8 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       UseLongCalls = true;
     else if (F == "-long-calls")
       UseLongCalls = false;
+    else if (F == "+hvx-ieee-fp")
+      HasHVXIeeeFp = true;
     else if (F == "+audio")
       HasAudio = true;
   }
@@ -152,8 +163,13 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     HasFastHalfType = true;
     HasFloat16 = true;
   }
+  if (CPU.compare("hexagonv81") >= 0)
+    HasBFloat16 = true;
+
   return true;
 }
+
+bool HexagonTargetInfo::hasBFloat16Type() const { return HasBFloat16; }
 
 const char *const HexagonTargetInfo::GCCRegNames[] = {
     // Scalar registers:
@@ -234,6 +250,7 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
       .Case("hvx", HasHVX)
       .Case("hvx-length64b", HasHVX64B)
       .Case("hvx-length128b", HasHVX128B)
+      .Case("hvx-ieee-fp", HasHVXIeeeFp)
       .Case("long-calls", UseLongCalls)
       .Case("audio", HasAudio)
       .Default(false);
@@ -252,8 +269,7 @@ static constexpr CPUSuffix Suffixes[] = {
     {{"hexagonv68"}, {"68"}}, {{"hexagonv69"}, {"69"}},
     {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"}, {"71t"}},
     {{"hexagonv73"}, {"73"}}, {{"hexagonv75"}, {"75"}},
-    {{"hexagonv79"}, {"79"}},
-};
+    {{"hexagonv79"}, {"79"}}, {{"hexagonv81"}, {"81"}}};
 
 std::optional<unsigned> HexagonTargetInfo::getHexagonCPURev(StringRef Name) {
   StringRef Arch = Name;

@@ -59,10 +59,11 @@ public:
 
 private:
   // Private constructor.
-  IterationGraphSorter(SmallVector<Value> &&ins,
-                       SmallVector<AffineMap> &&loop2InsLvl, Value out,
+  IterationGraphSorter(SmallVector<Value> &&insArg,
+                       SmallVector<AffineMap> &&loop2InsLvlArg, Value out,
                        AffineMap loop2OutLvl,
-                       SmallVector<utils::IteratorType> &&iterTypes,
+                       SmallVector<utils::IteratorType> &&iterTypesArg,
+                       linalg::GenericOp genericOp,
                        sparse_tensor::LoopOrderingStrategy strategy =
                            sparse_tensor::LoopOrderingStrategy::kDefault);
 
@@ -93,6 +94,9 @@ private:
 
   // Loop ordering strategy.
   sparse_tensor::LoopOrderingStrategy strategy;
+
+  // Prepared once in the constructor for the loop-use strategies.
+  SmallVector<unsigned> loopUseCounts;
 };
 
 } // namespace sparse_tensor

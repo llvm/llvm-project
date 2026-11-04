@@ -27,18 +27,11 @@ define void @extract_8xi16(ptr %src, ptr %dst) nounwind {
 }
 
 define void @extract_4xi32(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: extract_4xi32:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: extract_4xi32:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vstelm.w $vr0, $a1, 0, 1
-; LA64-NEXT:    ret
+; CHECK-LABEL: extract_4xi32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 1
+; CHECK-NEXT:    ret
   %v = load volatile <4 x i32>, ptr %src
   %e = extractelement <4 x i32> %v, i32 1
   store i32 %e, ptr %dst
@@ -49,10 +42,8 @@ define void @extract_2xi64(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: extract_2xi64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 3
-; LA32-NEXT:    st.w $a2, $a1, 4
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 4, 3
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: extract_2xi64:
@@ -167,7 +158,7 @@ define void @extract_2xi64_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA32-LABEL: extract_2xi64_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    add.w $a0, $a2, $a2
+; LA32-NEXT:    slli.w $a0, $a2, 1
 ; LA32-NEXT:    addi.w $a2, $a0, 1
 ; LA32-NEXT:    vreplve.w $vr1, $vr0, $a2
 ; LA32-NEXT:    vreplve.w $vr0, $vr0, $a0
@@ -233,12 +224,64 @@ define void @extract_2xdouble_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
   ret void
 }
 
+define void @extract_16xi8_zext(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: extract_16xi8_zext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vpickve2gr.bu $a0, $vr0, 0
+; CHECK-NEXT:    st.w $a0, $a1, 0
+; CHECK-NEXT:    ret
+entry:
+  %0 = load volatile <16 x i8>, ptr %src
+  %1 = extractelement <16 x i8> %0, i64 0
+  %2 = zext i8 %1 to i32
+  store i32 %2, ptr %dst
+  ret void
+}
+
+define void @extract_8xi16_zext(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: extract_8xi16_zext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    st.w $a0, $a1, 0
+; CHECK-NEXT:    ret
+entry:
+  %0 = load volatile <8 x i16>, ptr %src
+  %1 = extractelement <8 x i16> %0, i64 0
+  %2 = zext i16 %1 to i32
+  store i32 %2, ptr %dst
+  ret void
+}
+
+define void @extract_4xi32_zext(ptr %src, ptr %dst) nounwind {
+; LA32-LABEL: extract_4xi32_zext:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    vld $vr0, $a0, 0
+; LA32-NEXT:    st.w $zero, $a1, 4
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: extract_4xi32_zext:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    vld $vr0, $a0, 0
+; LA64-NEXT:    vpickve2gr.wu $a0, $vr0, 0
+; LA64-NEXT:    st.d $a0, $a1, 0
+; LA64-NEXT:    ret
+entry:
+  %0 = load volatile <4 x i32>, ptr %src
+  %1 = extractelement <4 x i32> %0, i64 0
+  %2 = zext i32 %1 to i64
+  store i64 %2, ptr %dst
+  ret void
+}
+
 define void @eliminate_frame_index(<4 x i32> %a) nounwind {
 ; LA32-LABEL: eliminate_frame_index:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -1040
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA32-NEXT:    st.w $a0, $sp, 524
+; LA32-NEXT:    addi.w $a0, $sp, 524
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 1
 ; LA32-NEXT:    addi.w $sp, $sp, 1040
 ; LA32-NEXT:    ret
 ;

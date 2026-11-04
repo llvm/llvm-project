@@ -2,12 +2,8 @@
 // RUN: env HSA_XNACK=1 \
 // RUN: %libomptarget-run-generic | %fcheck-generic
 
-// REQUIRES: unified_shared_memory
+// REQUIRES: unified_shared_memory, amdgpu
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
-
-// Fails on nvptx with error: an illegal memory access was encountered
-// XFAIL: nvptx64-nvidia-cuda
-// XFAIL: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 #include <stdio.h>

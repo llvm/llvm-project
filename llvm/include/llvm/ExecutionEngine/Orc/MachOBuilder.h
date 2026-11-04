@@ -36,7 +36,7 @@ size_t writeMachOStruct(MutableArrayRef<char> Buf, size_t Offset, MachOStruct S,
 
 /// Base type for MachOBuilder load command wrappers.
 struct MachOBuilderLoadCommandBase {
-  virtual ~MachOBuilderLoadCommandBase() {}
+  virtual ~MachOBuilderLoadCommandBase() = default;
   virtual size_t size() const = 0;
   virtual size_t write(MutableArrayRef<char> Buf, size_t Offset,
                        bool SwapStruct) = 0;
@@ -79,6 +79,20 @@ public:
   template <typename... ArgTs>
   MachOBuilderLoadCommand(ArgTs &&...Args)
       : MachOBuilderLoadCommandImplBase<LCType>(std::forward<ArgTs>(Args)...) {}
+};
+
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_UUID>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_UUID> {
+  MachOBuilderLoadCommand(const uint8_t (&UUID)[16])
+      : MachOBuilderLoadCommandImplBase<MachO::LC_UUID>() {
+    memcpy(uuid, UUID, sizeof(uuid));
+  }
+
+  MachOBuilderLoadCommand(const std::array<uint8_t, 16> &UUID)
+      : MachOBuilderLoadCommandImplBase<MachO::LC_UUID>() {
+    memcpy(uuid, UUID.data(), sizeof(uuid));
+  }
 };
 
 template <MachO::LoadCommandType LCType>
@@ -138,6 +152,25 @@ struct MachOBuilderLoadCommand<MachO::LC_RPATH>
   }
 
   std::string Path;
+};
+
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_TARGET_TRIPLE>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_TARGET_TRIPLE> {
+  MachOBuilderLoadCommand(std::string TargetTriple)
+      : MachOBuilderLoadCommandImplBase(12u),
+        TargetTriple(std::move(TargetTriple)) {
+    cmdsize += (this->TargetTriple.size() + 1 + 3) & ~0x3;
+  }
+
+  size_t write(MutableArrayRef<char> Buf, size_t Offset,
+               bool SwapStruct) override {
+    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    strcpy(Buf.data() + Offset, TargetTriple.data());
+    return Offset + ((TargetTriple.size() + 1 + 3) & ~0x3);
+  }
+
+  std::string TargetTriple;
 };
 
 // Builds MachO objects.

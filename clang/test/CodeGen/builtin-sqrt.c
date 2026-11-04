@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fmath-errno -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s --check-prefix=HAS_ERRNO
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fmath-errno -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s --check-prefix=HAS_ERRNO %}
 // RUN: %clang_cc1              -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s --check-prefix=NO_ERRNO
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir              -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s --check-prefix=NO_ERRNO %}
 
 float foo(float X) {
   // HAS_ERRNO: call float @sqrtf(float
@@ -11,5 +13,5 @@ float foo(float X) {
 // HAS_ERRNO-NOT: attributes [[ATTR]] = {{{.*}} memory(none)
 
 // NO_ERRNO: declare float @llvm.sqrt.f32(float) [[ATTR:#[0-9]+]]
-// NO_ERRNO: attributes [[ATTR]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// NO_ERRNO: attributes [[ATTR]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 

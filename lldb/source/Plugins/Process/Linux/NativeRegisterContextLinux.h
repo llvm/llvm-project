@@ -9,7 +9,7 @@
 #ifndef lldb_NativeRegisterContextLinux_h
 #define lldb_NativeRegisterContextLinux_h
 
-#include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
+#include "Plugins/Register/Native/NativeRegisterContextRegisterInfo.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "llvm/Support/Error.h"
@@ -36,9 +36,6 @@ public:
 
   // Determine the architecture of the thread given by its ID.
   static llvm::Expected<ArchSpec> DetermineArchitecture(lldb::tid_t tid);
-
-  // Invalidates cached values in register context data structures
-  virtual void InvalidateAllRegisters(){}
 
   struct SyscallData {
     /// The syscall instruction. If the architecture uses software

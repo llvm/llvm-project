@@ -10,6 +10,7 @@
 // funclets being contiguous.
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/CodeGen/FuncletLayout.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -19,27 +20,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "funclet-layout"
 
-namespace {
-class FuncletLayout : public MachineFunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  FuncletLayout() : MachineFunctionPass(ID) {
-    initializeFuncletLayoutPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnMachineFunction(MachineFunction &F) override;
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-};
-}
-
-char FuncletLayout::ID = 0;
-char &llvm::FuncletLayoutID = FuncletLayout::ID;
-INITIALIZE_PASS(FuncletLayout, DEBUG_TYPE,
-                "Contiguously Lay Out Funclets", false, false)
-
-bool FuncletLayout::runOnMachineFunction(MachineFunction &F) {
+static bool runFuncletLayout(MachineFunction &F) {
   // Even though this gets information from getEHScopeMembership(), this pass is
   // only necessary for funclet-based EH personalities, in which these EH scopes
   // are outlined at the end.
@@ -58,4 +39,33 @@ bool FuncletLayout::runOnMachineFunction(MachineFunction &F) {
 
   // Conservatively assume we changed something.
   return true;
+}
+
+namespace {
+class FuncletLayoutLegacy : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+  FuncletLayoutLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &F) override {
+    return runFuncletLayout(F);
+  }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+} // namespace
+
+char FuncletLayoutLegacy::ID = 0;
+char &llvm::FuncletLayoutID = FuncletLayoutLegacy::ID;
+INITIALIZE_PASS(FuncletLayoutLegacy, DEBUG_TYPE,
+                "Contiguously Lay Out Funclets", false, false)
+
+PreservedAnalyses FuncletLayoutPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  if (!runFuncletLayout(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
 }

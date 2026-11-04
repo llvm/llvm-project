@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <istream>
 
 // basic_istream& ignore(streamsize n, char_type delim);

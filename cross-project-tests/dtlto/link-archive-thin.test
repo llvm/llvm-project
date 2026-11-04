@@ -36,19 +36,19 @@ RUN:   /lldsavetemps
 RUN: ls | FileCheck %s --check-prefix=OUTPUTS --implicit-check-not=cat
 
 ## JSON jobs description.
-OUTPUTS-DAG: my.[[PID:[a-zA-Z0-9_]+]].dist-file.json
+OUTPUTS-DAG: my.[[#PID:]].dist-file.json
 
 ## Individual summary index files.
-OUTPUTS-DAG: start.1.[[PID]].native.o.thinlto.bc{{$}}
-OUTPUTS-DAG:   dog.2.[[PID]].native.o.thinlto.bc{{$}}
-OUTPUTS-DAG:   foo.3.[[PID]].native.o.thinlto.bc{{$}}
-OUTPUTS-DAG:   bar.4.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: start.1.[[#PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG:   dog.2.[[#PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG:   foo.3.[[#PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG:   bar.4.[[#PID]].native.o.thinlto.bc{{$}}
 
 ## Native output object files.
-OUTPUTS-DAG: start.1.[[PID]].native.o{{$}}
-OUTPUTS-DAG:   dog.2.[[PID]].native.o{{$}}
-OUTPUTS-DAG:   foo.3.[[PID]].native.o{{$}}
-OUTPUTS-DAG:   bar.4.[[PID]].native.o{{$}}
+OUTPUTS-DAG: start.1.[[#PID]].native.o{{$}}
+OUTPUTS-DAG:   dog.2.[[#PID]].native.o{{$}}
+OUTPUTS-DAG:   foo.3.[[#PID]].native.o{{$}}
+OUTPUTS-DAG:   bar.4.[[#PID]].native.o{{$}}
 
 
 ## It is important that cross-module inlining occurs for this test to show that Clang can

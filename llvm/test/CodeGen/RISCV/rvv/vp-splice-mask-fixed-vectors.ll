@@ -4,19 +4,14 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+vl-dependent-latency -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s --check-prefix=VLDEP
 
-declare <2 x i1> @llvm.experimental.vp.splice.v2i1(<2 x i1>, <2 x i1>, i32, <2 x i1>, i32, i32)
-declare <4 x i1> @llvm.experimental.vp.splice.v4i1(<4 x i1>, <4 x i1>, i32, <4 x i1>, i32, i32)
-declare <8 x i1> @llvm.experimental.vp.splice.v8i1(<8 x i1>, <8 x i1>, i32, <8 x i1>, i32, i32)
-declare <16 x i1> @llvm.experimental.vp.splice.v16i1(<16 x i1>, <16 x i1>, i32, <16 x i1>, i32, i32)
-
 define <2 x i1> @test_vp_splice_v2i1(<2 x i1> %va, <2 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) {
 ; NOVLDEP-LABEL: test_vp_splice_v2i1:
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -32,9 +27,9 @@ define <2 x i1> @test_vp_splice_v2i1(<2 x i1> %va, <2 x i1> %vb, i32 zeroext %ev
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -56,9 +51,9 @@ define <2 x i1> @test_vp_splice_v2i1_negative_offset(<2 x i1> %va, <2 x i1> %vb,
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -74,9 +69,9 @@ define <2 x i1> @test_vp_splice_v2i1_negative_offset(<2 x i1> %va, <2 x i1> %vb,
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -98,17 +93,17 @@ define <2 x i1> @test_vp_splice_v2i1_masked(<2 x i1> %va, <2 x i1> %vb, <2 x i1>
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v10, v0
+; NOVLDEP-NEXT:    vmv.v.i v11, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v11, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v11, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v10
 ; NOVLDEP-NEXT:    vmerge.vim v10, v11, 1, v0
-; NOVLDEP-NEXT:    addi a0, a0, -1
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; NOVLDEP-NEXT:    vslidedown.vi v10, v10, 1, v0.t
+; NOVLDEP-NEXT:    addi a0, a0, -1
 ; NOVLDEP-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; NOVLDEP-NEXT:    vslideup.vx v10, v8, a0, v0.t
 ; NOVLDEP-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
@@ -119,15 +114,15 @@ define <2 x i1> @test_vp_splice_v2i1_masked(<2 x i1> %va, <2 x i1> %vb, <2 x i1>
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v10, v0
+; VLDEP-NEXT:    vmv.v.i v11, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v11, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v11, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v10
 ; VLDEP-NEXT:    vmerge.vim v10, v11, 1, v0
-; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v10, v10, 1, v0.t
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
@@ -144,9 +139,9 @@ define <4 x i1> @test_vp_splice_v4i1(<4 x i1> %va, <4 x i1> %vb, i32 zeroext %ev
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -162,9 +157,9 @@ define <4 x i1> @test_vp_splice_v4i1(<4 x i1> %va, <4 x i1> %vb, i32 zeroext %ev
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -186,9 +181,9 @@ define <4 x i1> @test_vp_splice_v4i1_negative_offset(<4 x i1> %va, <4 x i1> %vb,
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -204,9 +199,9 @@ define <4 x i1> @test_vp_splice_v4i1_negative_offset(<4 x i1> %va, <4 x i1> %vb,
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -228,17 +223,17 @@ define <4 x i1> @test_vp_splice_v4i1_masked(<4 x i1> %va, <4 x i1> %vb, <4 x i1>
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v10, v0
+; NOVLDEP-NEXT:    vmv.v.i v11, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v11, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v11, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v10
 ; NOVLDEP-NEXT:    vmerge.vim v10, v11, 1, v0
-; NOVLDEP-NEXT:    addi a0, a0, -3
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; NOVLDEP-NEXT:    vslidedown.vi v10, v10, 3, v0.t
+; NOVLDEP-NEXT:    addi a0, a0, -3
 ; NOVLDEP-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
 ; NOVLDEP-NEXT:    vslideup.vx v10, v8, a0, v0.t
 ; NOVLDEP-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
@@ -249,15 +244,15 @@ define <4 x i1> @test_vp_splice_v4i1_masked(<4 x i1> %va, <4 x i1> %vb, <4 x i1>
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v10, v0
+; VLDEP-NEXT:    vmv.v.i v11, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v11, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v11, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v10
 ; VLDEP-NEXT:    vmerge.vim v10, v11, 1, v0
-; VLDEP-NEXT:    addi a0, a0, -3
 ; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    addi a0, a0, -3
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v10, v10, 3, v0.t
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
@@ -274,9 +269,9 @@ define <8 x i1> @test_vp_splice_v8i1(<8 x i1> %va, <8 x i1> %vb, i32 zeroext %ev
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -292,9 +287,9 @@ define <8 x i1> @test_vp_splice_v8i1(<8 x i1> %va, <8 x i1> %vb, i32 zeroext %ev
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -316,9 +311,9 @@ define <8 x i1> @test_vp_splice_v8i1_negative_offset(<8 x i1> %va, <8 x i1> %vb,
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -334,9 +329,9 @@ define <8 x i1> @test_vp_splice_v8i1_negative_offset(<8 x i1> %va, <8 x i1> %vb,
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -358,17 +353,17 @@ define <8 x i1> @test_vp_splice_v8i1_masked(<8 x i1> %va, <8 x i1> %vb, <8 x i1>
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v10, v0
+; NOVLDEP-NEXT:    vmv.v.i v11, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v11, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v11, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v10
 ; NOVLDEP-NEXT:    vmerge.vim v10, v11, 1, v0
-; NOVLDEP-NEXT:    addi a0, a0, -5
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; NOVLDEP-NEXT:    vslidedown.vi v10, v10, 5, v0.t
+; NOVLDEP-NEXT:    addi a0, a0, -5
 ; NOVLDEP-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
 ; NOVLDEP-NEXT:    vslideup.vx v10, v8, a0, v0.t
 ; NOVLDEP-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
@@ -379,15 +374,15 @@ define <8 x i1> @test_vp_splice_v8i1_masked(<8 x i1> %va, <8 x i1> %vb, <8 x i1>
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v10, v0
+; VLDEP-NEXT:    vmv.v.i v11, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v11, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v11, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v10
 ; VLDEP-NEXT:    vmerge.vim v10, v11, 1, v0
-; VLDEP-NEXT:    addi a0, a0, -5
 ; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    addi a0, a0, -5
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
@@ -404,9 +399,9 @@ define <16 x i1> @test_vp_splice_v16i1(<16 x i1> %va, <16 x i1> %vb, i32 zeroext
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -422,9 +417,9 @@ define <16 x i1> @test_vp_splice_v16i1(<16 x i1> %va, <16 x i1> %vb, i32 zeroext
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -446,9 +441,9 @@ define <16 x i1> @test_vp_splice_v16i1_negative_offset(<16 x i1> %va, <16 x i1> 
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v9, v0
+; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v10, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
@@ -464,9 +459,9 @@ define <16 x i1> @test_vp_splice_v16i1_negative_offset(<16 x i1> %va, <16 x i1> 
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v9, v0
+; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v9
@@ -488,17 +483,17 @@ define <16 x i1> @test_vp_splice_v16i1_masked(<16 x i1> %va, <16 x i1> %vb, <16 
 ; NOVLDEP:       # %bb.0:
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; NOVLDEP-NEXT:    vmv1r.v v10, v0
+; NOVLDEP-NEXT:    vmv.v.i v11, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v8
-; NOVLDEP-NEXT:    vmv.v.i v8, 0
-; NOVLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; NOVLDEP-NEXT:    vmerge.vim v8, v11, 1, v0
 ; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; NOVLDEP-NEXT:    vmv.v.i v11, 0
 ; NOVLDEP-NEXT:    vmv1r.v v0, v10
 ; NOVLDEP-NEXT:    vmerge.vim v10, v11, 1, v0
-; NOVLDEP-NEXT:    addi a0, a0, -5
 ; NOVLDEP-NEXT:    vmv1r.v v0, v9
 ; NOVLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; NOVLDEP-NEXT:    vslidedown.vi v10, v10, 5, v0.t
+; NOVLDEP-NEXT:    addi a0, a0, -5
 ; NOVLDEP-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
 ; NOVLDEP-NEXT:    vslideup.vx v10, v8, a0, v0.t
 ; NOVLDEP-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
@@ -509,15 +504,15 @@ define <16 x i1> @test_vp_splice_v16i1_masked(<16 x i1> %va, <16 x i1> %vb, <16 
 ; VLDEP:       # %bb.0:
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; VLDEP-NEXT:    vmv1r.v v10, v0
+; VLDEP-NEXT:    vmv.v.i v11, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v8
-; VLDEP-NEXT:    vmv.v.i v8, 0
-; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLDEP-NEXT:    vmerge.vim v8, v11, 1, v0
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; VLDEP-NEXT:    vmv.v.i v11, 0
 ; VLDEP-NEXT:    vmv1r.v v0, v10
 ; VLDEP-NEXT:    vmerge.vim v10, v11, 1, v0
-; VLDEP-NEXT:    addi a0, a0, -5
 ; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    addi a0, a0, -5
 ; VLDEP-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; VLDEP-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; VLDEP-NEXT:    vsetvli zero, a1, e8, m1, ta, mu

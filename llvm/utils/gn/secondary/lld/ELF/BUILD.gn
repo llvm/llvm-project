@@ -12,6 +12,7 @@ static_library("ELF") {
     ":Options",
     "//lld/Common",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/DTLTO",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/IR",
     "//llvm/lib/LTO",

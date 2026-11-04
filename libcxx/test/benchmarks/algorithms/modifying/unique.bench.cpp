@@ -17,23 +17,13 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   auto std_unique      = [](auto first, auto last) { return std::unique(first, last); };
   auto std_unique_pred = [](auto first, auto last) {
-    return std::unique(first, last, [](auto a, auto b) {
-      benchmark::DoNotOptimize(a);
-      benchmark::DoNotOptimize(b);
-      return a == b;
-    });
-  };
-  auto ranges_unique_pred = [](auto first, auto last) {
-    return std::ranges::unique(first, last, [](auto a, auto b) {
-      benchmark::DoNotOptimize(a);
-      benchmark::DoNotOptimize(b);
-      return a == b;
-    });
+    return std::unique(first, last, [](auto a, auto b) { return a == b; });
   };
 
   // Create a sequence of the form xxxxxxxxxxyyyyyyyyyy and unique the
@@ -45,7 +35,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto unique) {
       benchmark::RegisterBenchmark(
           name,
-          [unique](auto& st) {
+          [unique](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 10;
             using ValueType                 = typename Container::value_type;
@@ -84,17 +74,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::unique(vector<int>) (contiguous)", std_unique);
     bm.operator()<std::deque<int>>("std::unique(deque<int>) (contiguous)", std_unique);
     bm.operator()<std::list<int>>("std::unique(list<int>) (contiguous)", std_unique);
-    bm.operator()<std::vector<int>>("rng::unique(vector<int>) (contiguous)", std::ranges::unique);
-    bm.operator()<std::deque<int>>("rng::unique(deque<int>) (contiguous)", std::ranges::unique);
-    bm.operator()<std::list<int>>("rng::unique(list<int>) (contiguous)", std::ranges::unique);
 
     // {std,ranges}::unique(it, it, pred)
     bm.operator()<std::vector<int>>("std::unique(vector<int>, pred) (contiguous)", std_unique_pred);
     bm.operator()<std::deque<int>>("std::unique(deque<int>, pred) (contiguous)", std_unique_pred);
     bm.operator()<std::list<int>>("std::unique(list<int>, pred) (contiguous)", std_unique_pred);
-    bm.operator()<std::vector<int>>("rng::unique(vector<int>, pred) (contiguous)", ranges_unique_pred);
-    bm.operator()<std::deque<int>>("rng::unique(deque<int>, pred) (contiguous)", ranges_unique_pred);
-    bm.operator()<std::list<int>>("rng::unique(list<int>, pred) (contiguous)", ranges_unique_pred);
   }
 
   // Create a sequence of the form xxyyxxyyxxyyxxyyxxyy and unique
@@ -106,7 +90,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto unique) {
       benchmark::RegisterBenchmark(
           name,
-          [unique](auto& st) {
+          [unique](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 10;
             using ValueType                 = typename Container::value_type;
@@ -151,17 +135,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::unique(vector<int>) (sprinkled)", std_unique);
     bm.operator()<std::deque<int>>("std::unique(deque<int>) (sprinkled)", std_unique);
     bm.operator()<std::list<int>>("std::unique(list<int>) (sprinkled)", std_unique);
-    bm.operator()<std::vector<int>>("rng::unique(vector<int>) (sprinkled)", std::ranges::unique);
-    bm.operator()<std::deque<int>>("rng::unique(deque<int>) (sprinkled)", std::ranges::unique);
-    bm.operator()<std::list<int>>("rng::unique(list<int>) (sprinkled)", std::ranges::unique);
 
     // {std,ranges}::unique(it, it, pred)
     bm.operator()<std::vector<int>>("std::unique(vector<int>, pred) (sprinkled)", std_unique_pred);
     bm.operator()<std::deque<int>>("std::unique(deque<int>, pred) (sprinkled)", std_unique_pred);
     bm.operator()<std::list<int>>("std::unique(list<int>, pred) (sprinkled)", std_unique_pred);
-    bm.operator()<std::vector<int>>("rng::unique(vector<int>, pred) (sprinkled)", ranges_unique_pred);
-    bm.operator()<std::deque<int>>("rng::unique(deque<int>, pred) (sprinkled)", ranges_unique_pred);
-    bm.operator()<std::list<int>>("rng::unique(list<int>, pred) (sprinkled)", ranges_unique_pred);
   }
 
   benchmark::Initialize(&argc, argv);

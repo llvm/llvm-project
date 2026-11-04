@@ -12,6 +12,18 @@ func.func @test_drop_rank_expansion(%src: tensor<128x480xf32>, %dest: tensor<1x1
 
 // -----
 
+// CHECK-LABEL: func @test_drop_rank_expansion(
+//  CHECK-SAME:     %[[src:.*]]: tensor<128x480xf32>,
+//       CHECK:   %[[extract:.*]] = tensor.extract_slice %[[src]][0, 0] [123, 1] [1, 1] : tensor<128x480xf32> to tensor<123xf32>
+//       CHECK:   return %[[extract]]
+func.func @test_drop_rank_expansion(%src: tensor<128x480xf32>, %dest: tensor<1x1x128x480xf32>) -> tensor<123xf32> {
+  %inserted_slice = tensor.insert_slice %src into %dest[0, 0, 0, 0] [1, 1, 128, 480] [1, 1, 1, 1] : tensor<128x480xf32> into tensor<1x1x128x480xf32>
+  %extracted_slice = tensor.extract_slice %inserted_slice[0, 0, 0, 0] [1, 1, 123, 1] [1, 1, 1, 1] : tensor<1x1x128x480xf32> to tensor<123xf32>
+  return %extracted_slice : tensor<123xf32>
+}
+
+// -----
+
 func.func @fold_casting_insert_slice_of_extract_slice(%in : tensor<?x8x2x8xf32>, %dest : tensor<8x1x8xf32>) -> tensor<8x1x8xf32> {
   %extracted_slice = tensor.extract_slice %in[0, 0, 0, 0] [1, 8, 1, 8] [1, 1, 1, 1] : tensor<?x8x2x8xf32> to tensor<8x8xf32>
   %inserted_slice = tensor.insert_slice %extracted_slice into %dest[0, 0, 0] [8, 1, 8] [1, 1, 1] : tensor<8x8xf32> into tensor<8x1x8xf32>

@@ -116,7 +116,7 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
     writeRegister(&context->r15, result_base, reg_info[lldb_r15_x86_64]);
   }
 
-  // See comment on base regsiter
+  // See comment on base register
   if ((context_flags & LLDBSpecificFlag) == LLDBSpecificFlag) {
     writeBaseRegister(&context->fs_base, result_base,
                       reg_info[x86_64_with_base::lldb_fs_base]);

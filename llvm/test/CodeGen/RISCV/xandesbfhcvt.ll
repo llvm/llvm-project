@@ -52,13 +52,13 @@ define void @loadstorebf16(ptr %bf, ptr %sf) nounwind {
 ; ZFH-NEXT:    fsh fa5, 0(a0)
 ; ZFH-NEXT:    ret
 entry:
-  %0 = load bfloat, bfloat* %bf, align 2
+  %0 = load bfloat, ptr %bf, align 2
   %1 = fpext bfloat %0 to float
-  store volatile float %1, float* %sf, align 4
+  store volatile float %1, ptr %sf, align 4
 
-  %2 = load float, float* %sf, align 4
+  %2 = load float, ptr %sf, align 4
   %3 = fptrunc float %2 to bfloat
-  store volatile bfloat %3, bfloat* %bf, align 2
+  store volatile bfloat %3, ptr %bf, align 2
 
   ret void
 }

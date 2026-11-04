@@ -1,6 +1,6 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+e,+experimental-xqccmp < %s 2>&1 | FileCheck %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-xqccmp < %s \
-# RUN:     | llvm-objdump --mattr=+e,+experimental-xqccmp -M no-aliases -d -r - \
+# RUN: not llvm-mc -triple riscv32 -mattr=+e,+xqccmp < %s 2>&1 | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+xqccmp < %s \
+# RUN:     | llvm-objdump --mattr=+e,+xqccmp -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefix=CHECK-DIS %s
 
 # Perform a simple check that registers x16-x31 (and the equivalent ABI names)

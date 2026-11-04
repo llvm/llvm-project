@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -fp-contract=fast -O2 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O2 < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-grtev4-linux-gnu"
 
@@ -33,4 +33,4 @@ define float @f(float %xf) #0 {
   ret float %25
 }
 
-attributes #0 = { norecurse nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr8" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr8" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+vsx" "use-soft-float"="false" }

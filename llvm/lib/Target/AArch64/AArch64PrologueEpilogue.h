@@ -22,15 +22,21 @@
 
 namespace llvm {
 
-class TargetLowering;
-class AArch64Subtarget;
 class AArch64FunctionInfo;
 class AArch64FrameLowering;
+class AArch64InstrInfo;
+class AArch64Subtarget;
+class TargetLowering;
 
 struct SVEFrameSizes {
   struct {
     StackOffset CalleeSavesSize, LocalsSize;
   } PPR, ZPR;
+};
+
+struct SVEStackAllocations {
+  StackOffset BeforePPRs, AfterPPRs, AfterZPRs;
+  StackOffset totalSize() const { return BeforePPRs + AfterPPRs + AfterZPRs; }
 };
 
 class AArch64PrologueEpilogueCommon {
@@ -66,6 +72,7 @@ protected:
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
 
   SVEFrameSizes getSVEStackFrameSizes() const;
+  SVEStackAllocations getSVEStackAllocations(SVEFrameSizes const &);
 
   MachineFunction &MF;
   MachineBasicBlock &MBB;
@@ -87,7 +94,7 @@ protected:
   // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
   mutable bool HasWinCFI = false;
 
-  const TargetInstrInfo *TII = nullptr;
+  const AArch64InstrInfo *TII = nullptr;
   AArch64FunctionInfo *AFI = nullptr;
 };
 
@@ -174,11 +181,22 @@ public:
 private:
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
 
+  /// A helper for moving the SP to a negative offset from the FP, without
+  /// deallocating any stack in the range FP to FP + Offset.
+  void moveSPBelowFP(MachineBasicBlock::iterator MBBI, StackOffset Offset);
+
   void emitSwiftAsyncContextFramePointer(MachineBasicBlock::iterator MBBI,
                                          const DebugLoc &DL) const;
 
   void emitShadowCallStackEpilogue(MachineBasicBlock::iterator MBBI,
                                    const DebugLoc &DL) const;
+
+  /// Authenticate the return address before the epilogue starts. Used on
+  /// Windows when the epilogue leaves SP at a different value from the one the
+  /// return address was signed with.
+  void emitEarlyReturnAddressAuthentication(MachineBasicBlock::iterator MBBI,
+                                            int64_t StackSize,
+                                            int64_t PrologueSaveSize);
 
   void emitCalleeSavedRestores(MachineBasicBlock::iterator MBBI,
                                bool SVE) const;
@@ -193,8 +211,15 @@ private:
 
   void finalizeEpilogue() const;
 
+  /// Returns true if the epilogue has unwind ops describing real instructions.
+  bool hasEpilogueUnwindOps() const;
+
   MachineBasicBlock::iterator SEHEpilogueStartI;
   DebugLoc DL;
+
+  /// Whether emitEarlyReturnAddressAuthentication took care of authenticating
+  /// the return address.
+  bool AuthenticatedReturnAddressEarly = false;
 };
 
 } // namespace llvm

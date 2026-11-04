@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NAMESPACEALIASER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NAMESPACEALIASER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_NAMESPACEALIASER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_NAMESPACEALIASER_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
@@ -28,14 +28,13 @@ public:
   // Statement. Picks the first available name from \p Abbreviations.
   // Returns ``std::nullopt`` if an alias already exists or there is an error.
   std::optional<FixItHint>
-  createAlias(ASTContext &Context, const Stmt &Statement,
-              llvm::StringRef Namespace,
+  createAlias(ASTContext &Context, const Stmt &Statement, StringRef Namespace,
               const std::vector<std::string> &Abbreviations);
 
   // Get an alias name for \p Namespace valid at \p Statement. Returns \p
   // Namespace if there is no alias.
   std::string getNamespaceName(ASTContext &Context, const Stmt &Statement,
-                               llvm::StringRef Namespace) const;
+                               StringRef Namespace) const;
 
 private:
   const SourceManager &SourceMgr;
@@ -45,4 +44,4 @@ private:
 
 } // namespace clang::tidy::utils
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NAMESPACEALIASER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_NAMESPACEALIASER_H

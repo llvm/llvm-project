@@ -82,7 +82,6 @@ private:
     bool FiniteOnly;
     bool UnsafeMathOpt;
     bool FastRelaxedMath;
-    bool CorrectSqrt;
     bool GPUSan;
   };
 
@@ -146,8 +145,6 @@ private:
   ConditionalLibrary WavefrontSize64;
   ConditionalLibrary FiniteOnly;
   ConditionalLibrary UnsafeMath;
-  ConditionalLibrary DenormalsAreZero;
-  ConditionalLibrary CorrectlyRoundedSqrt;
 
   // Maps ABI version to library path. The version number is in the format of
   // three digits as used in the ABI version library name.
@@ -160,27 +157,17 @@ private:
 
   bool allGenericLibsValid() const {
     return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() &&
-           WavefrontSize64.isValid() && FiniteOnly.isValid() &&
-           UnsafeMath.isValid() && DenormalsAreZero.isValid() &&
-           CorrectlyRoundedSqrt.isValid();
+           WavefrontSize64.isValid();
   }
 
   void scanLibDevicePath(llvm::StringRef Path);
   bool parseHIPVersionFile(llvm::StringRef V);
   const SmallVectorImpl<Candidate> &getInstallationPathCandidates();
 
-  /// Find the path to a SPACK package under the ROCm candidate installation
-  /// directory if the candidate is a SPACK ROCm candidate. \returns empty
-  /// string if the candidate is not SPACK ROCm candidate or the requested
-  /// package is not found.
-  llvm::SmallString<0> findSPACKPackage(const Candidate &Cand,
-                                        StringRef PackageName);
-
 public:
   RocmInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
                            const llvm::opt::ArgList &Args,
-                           bool DetectHIPRuntime = true,
-                           bool DetectDeviceLib = false);
+                           bool DetectHIPRuntime = true);
 
   /// Get file paths of default bitcode libraries common to AMDGPU based
   /// toolchains.
@@ -247,19 +234,11 @@ public:
   }
 
   StringRef getFiniteOnlyPath(bool Enabled) const {
-    return FiniteOnly.get(Enabled);
+    return FiniteOnly.isValid() ? FiniteOnly.get(Enabled) : "";
   }
 
   StringRef getUnsafeMathPath(bool Enabled) const {
-    return UnsafeMath.get(Enabled);
-  }
-
-  StringRef getDenormalsAreZeroPath(bool Enabled) const {
-    return DenormalsAreZero.get(Enabled);
-  }
-
-  StringRef getCorrectlyRoundedSqrtPath(bool Enabled) const {
-    return CorrectlyRoundedSqrt.get(Enabled);
+    return UnsafeMath.isValid() ? UnsafeMath.get(Enabled) : "";
   }
 
   StringRef getABIVersionPath(DeviceLibABIVersion ABIVer) const {
@@ -281,7 +260,7 @@ public:
                          llvm::opt::ArgStringList &CC1Args) const;
 
   void detectDeviceLibrary();
-  void detectHIPRuntime();
+  void detectHIPRuntime(const llvm::Triple &HostTriple);
 
   /// Get the values for --rocm-device-lib-path arguments
   ArrayRef<std::string> getRocmDeviceLibPathArg() const {

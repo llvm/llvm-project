@@ -20,11 +20,16 @@ namespace clang::tidy::fuchsia {
 namespace {
 
 AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
-  std::string QualifiedName = Node.getQualifiedNameAsString();
+  const std::string QualifiedName = Node.getQualifiedNameAsString();
   return llvm::is_contained(Names, QualifiedName);
 }
 
 } // namespace
+
+TemporaryObjectsCheck::TemporaryObjectsCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      Names(utils::options::parseStringList(Options.get("Names", ""))) {}
 
 void TemporaryObjectsCheck::registerMatchers(MatchFinder *Finder) {
   // Matcher for default constructors.

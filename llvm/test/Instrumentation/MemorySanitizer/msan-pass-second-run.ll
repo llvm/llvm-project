@@ -37,7 +37,7 @@ entry:
 ; CHECK: attributes #[[ATTR0]] = { sanitize_memory }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 4, !"nosanitize_memory", i32 1}
 ;.

@@ -88,8 +88,9 @@ attributes #1 = { nounwind readnone }
 !35 = !DILocation(line: 13, column: 3, scope: !26)
 
 ; CHECK:      .debug_info contents:
+; CHECK:      DW_TAG_subprogram
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT: DW_AT_specification {{.*}} "a"
+; CHECK:      DW_AT_specification {{.*}} "a"
 ; CHECK:      DW_TAG_structure_type
 ; CHECK:      DW_AT_name {{.*}} "C"
 ; CHECK:      DW_TAG_variable
@@ -106,7 +107,7 @@ attributes #1 = { nounwind readnone }
 ; CHECK:      DW_AT_declaration
 ; CHECK:      NULL
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT: DW_AT_specification {{.*}} "b"
-; CHECK-NEXT: DW_AT_const_value
+; CHECK:      DW_AT_specification {{.*}} "b"
+; CHECK:      DW_AT_const_value
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT: DW_AT_specification {{.*}} "c"
+; CHECK:      DW_AT_specification {{.*}} "c"

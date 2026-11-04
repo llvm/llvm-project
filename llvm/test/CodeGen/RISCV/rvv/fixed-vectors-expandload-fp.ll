@@ -4,119 +4,111 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+f,+d,+zvfh -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-RV32
 
-declare <1 x half> @llvm.masked.expandload.v1f16(ptr, <1 x i1>, <1 x half>)
 define <1 x half> @expandload_v1f16(ptr %base, <1 x half> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <1 x half> @llvm.masked.expandload.v1f16(ptr align 2 %base, <1 x i1> %mask, <1 x half> %src0)
   ret <1 x half>%res
 }
 
-declare <2 x half> @llvm.masked.expandload.v2f16(ptr, <2 x i1>, <2 x half>)
 define <2 x half> @expandload_v2f16(ptr %base, <2 x half> %src0, <2 x i1> %mask) {
 ; CHECK-LABEL: expandload_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <2 x half> @llvm.masked.expandload.v2f16(ptr align 2 %base, <2 x i1> %mask, <2 x half> %src0)
   ret <2 x half>%res
 }
 
-declare <4 x half> @llvm.masked.expandload.v4f16(ptr, <4 x i1>, <4 x half>)
 define <4 x half> @expandload_v4f16(ptr %base, <4 x half> %src0, <4 x i1> %mask) {
 ; CHECK-LABEL: expandload_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <4 x half> @llvm.masked.expandload.v4f16(ptr align 2 %base, <4 x i1> %mask, <4 x half> %src0)
   ret <4 x half>%res
 }
 
-declare <8 x half> @llvm.masked.expandload.v8f16(ptr, <8 x i1>, <8 x half>)
 define <8 x half> @expandload_v8f16(ptr %base, <8 x half> %src0, <8 x i1> %mask) {
 ; CHECK-LABEL: expandload_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <8 x half> @llvm.masked.expandload.v8f16(ptr align 2 %base, <8 x i1> %mask, <8 x half> %src0)
   ret <8 x half>%res
 }
 
-declare <1 x float> @llvm.masked.expandload.v1f32(ptr, <1 x i1>, <1 x float>)
 define <1 x float> @expandload_v1f32(ptr %base, <1 x float> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <1 x float> @llvm.masked.expandload.v1f32(ptr align 4 %base, <1 x i1> %mask, <1 x float> %src0)
   ret <1 x float>%res
 }
 
-declare <2 x float> @llvm.masked.expandload.v2f32(ptr, <2 x i1>, <2 x float>)
 define <2 x float> @expandload_v2f32(ptr %base, <2 x float> %src0, <2 x i1> %mask) {
 ; CHECK-LABEL: expandload_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <2 x float> @llvm.masked.expandload.v2f32(ptr align 4 %base, <2 x i1> %mask, <2 x float> %src0)
   ret <2 x float>%res
 }
 
-declare <4 x float> @llvm.masked.expandload.v4f32(ptr, <4 x i1>, <4 x float>)
 define <4 x float> @expandload_v4f32(ptr %base, <4 x float> %src0, <4 x i1> %mask) {
 ; CHECK-LABEL: expandload_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <4 x float> @llvm.masked.expandload.v4f32(ptr align 4 %base, <4 x i1> %mask, <4 x float> %src0)
   ret <4 x float>%res
 }
 
-declare <8 x float> @llvm.masked.expandload.v8f32(ptr, <8 x i1>, <8 x float>)
 define <8 x float> @expandload_v8f32(ptr %base, <8 x float> %src0, <8 x i1> %mask) {
 ; CHECK-LABEL: expandload_v8f32:
 ; CHECK:       # %bb.0:
@@ -132,39 +124,36 @@ define <8 x float> @expandload_v8f32(ptr %base, <8 x float> %src0, <8 x i1> %mas
   ret <8 x float>%res
 }
 
-declare <1 x double> @llvm.masked.expandload.v1f64(ptr, <1 x i1>, <1 x double>)
 define <1 x double> @expandload_v1f64(ptr %base, <1 x double> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vle64.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.masked.expandload.v1f64(ptr align 8 %base, <1 x i1> %mask, <1 x double> %src0)
   ret <1 x double>%res
 }
 
-declare <2 x double> @llvm.masked.expandload.v2f64(ptr, <2 x i1>, <2 x double>)
 define <2 x double> @expandload_v2f64(ptr %base, <2 x double> %src0, <2 x i1> %mask) {
 ; CHECK-LABEL: expandload_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vle64.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <2 x double> @llvm.masked.expandload.v2f64(ptr align 8 %base, <2 x i1> %mask, <2 x double> %src0)
   ret <2 x double>%res
 }
 
-declare <4 x double> @llvm.masked.expandload.v4f64(ptr, <4 x i1>, <4 x double>)
 define <4 x double> @expandload_v4f64(ptr %base, <4 x double> %src0, <4 x i1> %mask) {
 ; CHECK-LABEL: expandload_v4f64:
 ; CHECK:       # %bb.0:
@@ -180,7 +169,6 @@ define <4 x double> @expandload_v4f64(ptr %base, <4 x double> %src0, <4 x i1> %m
   ret <4 x double>%res
 }
 
-declare <8 x double> @llvm.masked.expandload.v8f64(ptr, <8 x i1>, <8 x double>)
 define <8 x double> @expandload_v8f64(ptr %base, <8 x double> %src0, <8 x i1> %mask) {
 ; CHECK-LABEL: expandload_v8f64:
 ; CHECK:       # %bb.0:

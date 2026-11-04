@@ -1,5 +1,6 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX1200-ERR %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgpu12.00 -filetype=null %s 2>&1 | FileCheck --check-prefixes=GFX1200-ERR %s
+// RUN: not llvm-mc -triple=amdgpu12.50 -filetype=null %s 2>&1 | FileCheck --check-prefixes=GFX1250-ERR %s
+// RUN: not llvm-mc -triple=amdgpu12.50 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
 
 s_mov_b32 s0, src_flat_scratch_base_lo
 // GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_flat_scratch_base_lo register not available on this GPU
@@ -24,6 +25,18 @@ s_mov_b64 s[0:1], shared_limit
 
 s_mov_b64 s[0:1], src_shared_limit
 // GFX1250: encoding: [0xec,0x01,0x80,0xbe]
+
+s_mov_b32 s0, src_private_base
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
+
+s_mov_b32 s0, src_private_limit
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_private_limit register not available on this GPU
+
+s_mov_b64 s[0:1], src_private_base
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
+
+s_mov_b64 s[0:1], src_private_limit
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_private_limit register not available on this GPU
 
 s_getreg_b32 s1, hwreg(33)
 // GFX1250: encoding: [0x21,0xf8,0x81,0xb8]

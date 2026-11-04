@@ -9,6 +9,7 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 
 // template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
 //          class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
@@ -23,10 +24,13 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <chrono>
 #include <ranges>
+
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 using namespace std::chrono;
 

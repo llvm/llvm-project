@@ -1,12 +1,16 @@
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL1.2
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_generic_address_space
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_generic_address_space
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL1.2 -cl-ext=+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_generic_address_space,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.1 -cl-ext=-all,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.1 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.1 -cl-ext=-all,+__opencl_c_generic_address_space,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.1 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_generic_address_space,+__cl_clang_function_scope_local_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space,+__cl_clang_function_scope_local_variables
 static constant int G1 = 0;
 constant int G2 = 0;
 
@@ -50,10 +54,10 @@ static generic float g_generic_static_var = 0;
 #if (defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 300)
 // expected-error@-2 {{OpenCL C version 1.2 does not support the 'generic' type qualifier}}
 // expected-error@-3 {{program scope variable must reside in constant address space}}
-#elif (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+#elif (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ >= 300)
 #if !defined(__opencl_c_generic_address_space)
-#if (__OPENCL_C_VERSION__ == 300)
-// expected-error@-7 {{OpenCL C version 3.0 does not support the 'generic' type qualifier}}
+#if (__OPENCL_C_VERSION__ >= 300)
+// expected-error-re@-7 {{OpenCL C version {{3.0|3.1}} does not support the 'generic' type qualifier}}
 #elif (__OPENCL_CPP_VERSION__ == 202100)
 // expected-error@-9 {{C++ for OpenCL version 2021 does not support the 'generic' type qualifier}}
 #endif
@@ -96,10 +100,10 @@ extern generic float g_generic_extern_var;
 #if (defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 300)
 // expected-error@-2 {{OpenCL C version 1.2 does not support the 'generic' type qualifier}}
 // expected-error@-3 {{extern variable must reside in constant address space}}
-#elif (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+#elif (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ >= 300)
 #if !defined(__opencl_c_generic_address_space)
-#if (__OPENCL_C_VERSION__ == 300)
-// expected-error@-7 {{OpenCL C version 3.0 does not support the 'generic' type qualifier}}
+#if (__OPENCL_C_VERSION__ >= 300)
+// expected-error-re@-7 {{OpenCL C version {{3.0|3.1}} does not support the 'generic' type qualifier}}
 #elif (__OPENCL_CPP_VERSION__ == 202100)
 // expected-error@-9 {{C++ for OpenCL version 2021 does not support the 'generic' type qualifier}}
 #endif
@@ -138,7 +142,7 @@ void kernel foo(int x) {
 #if (__OPENCL_CPP_VERSION__ == 202100)
 // expected-error@-2{{C++ for OpenCL version 2021 does not support the 'auto' storage class specifier}}
 #else
-// expected-error-re@-4{{OpenCL C version {{1.2|3.0}} does not support the 'auto' storage class specifier}}
+// expected-error-re@-4{{OpenCL C version {{1.2|3.0|3.1}} does not support the 'auto' storage class specifier}}
 #endif
   global int L4;                              // expected-error{{function scope variable cannot be declared in global address space}}
   __attribute__((address_space(100))) int L5; // expected-error{{automatic variable qualified with an invalid address space}}
@@ -208,10 +212,10 @@ void f(void) {
 #if (defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 300)
 // expected-error@-2 {{OpenCL C version 1.2 does not support the 'generic' type qualifier}}
 // expected-error@-3 {{variables in function scope cannot be declared static}}
-#elif (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+#elif (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ >= 300)
 #if !defined(__opencl_c_generic_address_space)
-#if (__OPENCL_C_VERSION__ == 300)
-// expected-error@-7 {{OpenCL C version 3.0 does not support the 'generic' type qualifier}}
+#if (__OPENCL_C_VERSION__ >= 300)
+// expected-error-re@-7 {{OpenCL C version {{3.0|3.1}} does not support the 'generic' type qualifier}}
 #elif (__OPENCL_CPP_VERSION__ == 202100)
 // expected-error@-9 {{C++ for OpenCL version 2021 does not support the 'generic' type qualifier}}
 #endif
@@ -262,10 +266,10 @@ void f(void) {
 #if (defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 300)
 // expected-error@-2 {{OpenCL C version 1.2 does not support the 'generic' type qualifier}}
 // expected-error@-3 {{extern variable must reside in constant address space}}
-#elif (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+#elif (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ >= 300)
 #if !defined(__opencl_c_generic_address_space)
-#if (__OPENCL_C_VERSION__ == 300)
-// expected-error@-7 {{OpenCL C version 3.0 does not support the 'generic' type qualifier}}
+#if (__OPENCL_C_VERSION__ >= 300)
+// expected-error-re@-7 {{OpenCL C version {{3.0|3.1}} does not support the 'generic' type qualifier}}
 #elif (__OPENCL_CPP_VERSION__ == 202100 && !defined(__opencl_c_generic_address_space))
 // expected-error@-9 {{C++ for OpenCL version 2021 does not support the 'generic' type qualifier}}
 #endif
@@ -277,4 +281,17 @@ void f(void) {
 // expected-error@-16 {{extern variable must reside in global or constant address space}}
 #endif
 #endif
+}
+
+void f_local(void) {
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+  local int L2;
+  {
+    local int L2;
+  }
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : disable
+  local int L2;                               // expected-error{{non-kernel function variable cannot be declared in local address space}}
+  {
+    local int L2;                             // expected-error{{non-kernel function variable cannot be declared in local address space}}
+  }
 }

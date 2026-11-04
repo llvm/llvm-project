@@ -120,7 +120,7 @@ using SectionHandlerTy =
 
 class DWARFLinker : public DWARFLinkerBase {
 public:
-  virtual ~DWARFLinker() = default;
+  ~DWARFLinker() override = default;
 
   /// Creates dwarf linker instance.
   LLVM_ABI static std::unique_ptr<DWARFLinker>

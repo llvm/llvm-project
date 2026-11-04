@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -verify=supported %s
 // RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.32 -std=c++20 -verify=unsupported %s
+
+// RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -verify=supported %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.32 -std=c++20 -verify=unsupported %s -fexperimental-new-constant-interpreter
+
 // supported-no-diagnostics
 
 [[nodiscard]]

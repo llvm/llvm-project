@@ -7,21 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/roundf16.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/FPUtil/cast.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/roundf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float16, roundf16, (float16 x)) {
-#if defined(__LIBC_USE_BUILTIN_ROUND) &&                                       \
-    defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS)
-  return fputil::cast<float16>(__builtin_roundf(x));
-#else
-  return fputil::round(x);
-#endif
-}
+LLVM_LIBC_FUNCTION(float16, roundf16, (float16 x)) { return math::roundf16(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

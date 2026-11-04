@@ -7,3 +7,5 @@ pexpect>=4.9.0; sys_platform != 'win32'
 packaging
 # Required for python tests
 swig>=4.0.0
+# Required for SymStore HTTPS API tests
+cryptography>=43.0.0

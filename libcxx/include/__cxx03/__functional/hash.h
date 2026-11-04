@@ -504,6 +504,11 @@ struct _LIBCPP_TEMPLATE_VIS __enum_hash<_Tp, false> {
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS hash : public __enum_hash<_Tp> {};
 
+template <>
+struct hash<nullptr_t> : public __unary_function<nullptr_t, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(nullptr_t) const _NOEXCEPT { return 662607004ull; }
+};
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___FUNCTIONAL_HASH_H

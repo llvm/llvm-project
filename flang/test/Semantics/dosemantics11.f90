@@ -1,11 +1,11 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! C1135 A cycle-stmt shall not appear within a CHANGE TEAM, CRITICAL, or DO 
+! C1135 A cycle-stmt shall not appear within a CHANGE TEAM, CRITICAL, or DO
 ! CONCURRENT construct if it belongs to an outer construct.
 !
-! C1167 -- An exit-stmt shall not appear within a DO CONCURRENT construct if 
+! C1167 -- An exit-stmt shall not appear within a DO CONCURRENT construct if
 ! it belongs to that construct or an outer construct.
 !
-! C1168 -- An exit-stmt shall not appear within a CHANGE TEAM or CRITICAL 
+! C1168 -- An exit-stmt shall not appear within a CHANGE TEAM or CRITICAL
 ! construct if it belongs to an outer construct.
 
 subroutine s1()

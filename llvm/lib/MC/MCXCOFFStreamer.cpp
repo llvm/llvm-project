@@ -45,8 +45,12 @@ void MCXCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // sections because we don't have other cases that hit this problem yet.
   // if (IsDwarfSec || CsectProp->MappingClass == XCOFF::XMC_PR)
   //   QualName->setFragment(F);
-  if (Sec->isDwarfSect() || Sec->getMappingClass() == XCOFF::XMC_PR)
-    Sec->getQualNameSymbol()->setFragment(CurFrag);
+  if (Sec->isDwarfSect() || Sec->getMappingClass() == XCOFF::XMC_PR) {
+    MCSymbol *QualNameSymbol = Sec->getQualNameSymbol();
+    // Only set the fragment the first time we're switching to the section.
+    if (!QualNameSymbol->isInSection())
+      QualNameSymbol->setFragment(CurFrag);
+  }
 }
 
 bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
@@ -57,6 +61,10 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   switch (Attribute) {
   // XCOFF doesn't support the cold feature.
   case MCSA_Cold:
+    return false;
+
+  // XCOFF doesn't support the .weak_definition attribute; reject it like ELF.
+  case MCSA_WeakDefinition:
     return false;
 
   case MCSA_Global:

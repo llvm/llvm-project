@@ -74,6 +74,11 @@ public:
       std::chrono::seconds interrupt_timeout,
       llvm::function_ref<void(llvm::StringRef)> output_callback);
 
+  /// Wrapper around SendPacketAndWaitForResponse that returns an `Expected`.
+  llvm::Expected<StringExtractorGDBRemote> SendPacketAndExpectResponse(
+      llvm::StringRef payload,
+      std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));
+
   class Lock {
   public:
     // If interrupt_timeout == 0 seconds, only take the lock if the target is

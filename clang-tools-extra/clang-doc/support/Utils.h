@@ -5,8 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
+///
+/// \file
+/// This file contains general utility functions and helpers used across the
+/// clang-doc tool, including string manipulation and path handling. It
+/// provides lightweight utilities that do not depend on the core clang-doc
+/// data model.
+///
+//===----------------------------------------------------------------------===//
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_UTILS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_UTILS_H
 
 #include "../Representation.h"
 #include "llvm/ADT/SmallString.h"
@@ -20,7 +28,9 @@ llvm::SmallString<128> appendPathNative(llvm::StringRef Base,
 llvm::SmallString<128> appendPathPosix(llvm::StringRef Base,
                                        llvm::StringRef Path);
 
-void getMustacheHtmlFiles(llvm::StringRef AssetsPath,
-                          clang::doc::ClangDocContext &CDCtx);
+void getHtmlFiles(llvm::StringRef AssetsPath,
+                  clang::doc::ClangDocContext &CDCtx);
 
-#endif
+void getMdFiles(llvm::StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx);
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_UTILS_H

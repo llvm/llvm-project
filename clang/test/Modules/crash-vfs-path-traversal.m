@@ -2,10 +2,6 @@
 // UNSUPPORTED: ms-sdk, target={{.*-(ps4|ps5)}}
 // Some assertions in this test use Linux style (/) file paths.
 // UNSUPPORTED: system-windows
-// env -u is not supported on AIX.
-// TODO(boomanaiden154): Remove this once we have switched over to lit's
-// internal shell which does support env -u.
-// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 
 // FIXME: Canonicalizing paths to remove relative traversal components
 // currenty fails a unittest on windows and is disable by default.
@@ -28,7 +24,7 @@
 
 #include "usr/././//////include/../include/./././../include/stdio.h"
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 

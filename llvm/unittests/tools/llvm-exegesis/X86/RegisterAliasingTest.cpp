@@ -10,7 +10,6 @@
 #include "RegisterAliasing.h"
 
 #include <cassert>
-#include <memory>
 
 #include "TestBase.h"
 #include "X86InstrInfo.h"

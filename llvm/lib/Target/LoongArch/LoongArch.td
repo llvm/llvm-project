@@ -35,7 +35,7 @@ def IsLA64
                          "LA64 Basic Integer and Privilege Instruction Set">;
 def IsLA32
     : Predicate<"!Subtarget->is64Bit()">,
-      AssemblerPredicate<(all_of(not Feature64Bit)),
+      AssemblerPredicate<(none_of Feature64Bit),
                          "LA32 Basic Integer and Privilege Instruction Set">;
 
 defvar LA32 = DefaultMode;
@@ -154,13 +154,29 @@ def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
 
+def TuneSlowMOVCF2GR
+    : SubtargetFeature<"slow-movcf2gr", "HasSlowMOVCF2GR", "true",
+                       "MOVCF2GR instruction is slow (compared to MOVCF2FR+MOVFR2GR.{S/D})">;
+def HasSlowMOVCF2GR
+    : Predicate<"Subtarget->hasSlowMOVCF2GR()">;
+def HasFastMOVCF2GR
+    : Predicate<"!Subtarget->hasSlowMOVCF2GR()">;
+
 //===----------------------------------------------------------------------===//
-// Registers, instruction descriptions ...
+// Schedule, Registers, instruction descriptions ...
 //===----------------------------------------------------------------------===//
 
+include "LoongArchSchedule.td"
 include "LoongArchRegisterInfo.td"
 include "LoongArchCallingConv.td"
 include "LoongArchInstrInfo.td"
+
+//===----------------------------------------------------------------------===//
+// LoongArch Scheduling Models.
+//===----------------------------------------------------------------------===//
+
+include "LoongArchSchedLA464.td"
+include "LoongArchSchedLA664.td"
 
 //===----------------------------------------------------------------------===//
 // LoongArch processors supported.
@@ -171,6 +187,9 @@ def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit,
                                                     FeatureUAL,
                                                     FeatureExtLSX]>;
 
+// Generic 32-bit processor.
+def : ProcessorModel<"loongarch32", NoSchedModel, [Feature32Bit]>;
+
 // Generic 64-bit processor with double-precision floating-point support.
 def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
                                                    FeatureUAL,
@@ -180,13 +199,14 @@ def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
 // to change to the appropriate la32/la64 version.
 def : ProcessorModel<"generic", NoSchedModel, []>;
 
-def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
+def : ProcessorModel<"la464", LA464Model, [Feature64Bit,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
-                                             FeatureExtLBT]>;
+                                             FeatureExtLBT],
+                                          [TuneSlowMOVCF2GR]>;
 
-def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
+def : ProcessorModel<"la664", LA664Model, [Feature64Bit,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
@@ -201,6 +221,8 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.
 //===----------------------------------------------------------------------===//
+
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
 
 def LoongArchInstrInfo : InstrInfo {
   let guessInstructionProperties = 0;

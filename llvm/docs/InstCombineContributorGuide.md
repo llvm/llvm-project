@@ -1,8 +1,5 @@
 # InstCombine contributor guide
 
-```{contents}
-:depth: 4
-```
 
 This guide lays out a series of rules that contributions to InstCombine should
 follow. **Following these rules will results in much faster PR approvals.**
@@ -272,12 +269,12 @@ call void @llvm.assume(i1 %nonneg)
 
 ; %x is a power of two:
 %ctpop = call i8 @llvm.ctpop.i8(i8 %x)
-%pow2 = icmp eq i8 %x, 1
+%pow2 = icmp eq i8 %ctpop, 1
 call void @llvm.assume(i1 %pow2)
 
 ; %x is a power of two or zero:
 %ctpop = call i8 @llvm.ctpop.i8(i8 %x)
-%pow2orzero = icmp ult i8 %x, 2
+%pow2orzero = icmp ult i8 %ctpop, 2
 call void @llvm.assume(i1 %pow2orzero)
 
 ; Adding %x and %y does not overflow in a signed sense:
@@ -338,7 +335,7 @@ complexity and increasing compile-time overhead.
 
 We do not require explicit proof of real-world usefulness for every transform
 -- in most cases the usefulness is fairly "obvious". However, the question may
-come up for complex or unusual folds. Keep this in mind when chosing what you
+come up for complex or unusual folds. Keep this in mind when choosing what you
 work on.
 
 In particular, fixes for fuzzer-generated missed optimization reports will

@@ -138,4 +138,22 @@ TEST(LlvmLibcUtilsTest, LoadStoreAligned) {
   }
 }
 
+TEST(LlvmLibcUtilsTest, LoadStoreAlignedOddAddress) {
+  const uint8_t inbuf[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
+  uint8_t outbuf[8];
+
+  const uint32_t loaded = load_aligned<uint32_t, uint8_t, uint16_t, uint8_t>(
+      reinterpret_cast<CPtr>(inbuf + 1));
+  if constexpr (Endian::IS_LITTLE) {
+    EXPECT_EQ(loaded, uint32_t(0x89674523));
+  } else if constexpr (Endian::IS_BIG) {
+    EXPECT_EQ(loaded, uint32_t(0x23456789));
+  }
+  store_aligned<uint32_t, uint8_t, uint16_t, uint8_t>(
+      loaded, reinterpret_cast<Ptr>(outbuf + 1));
+
+  for (size_t i = 1; i < 5; ++i)
+    EXPECT_EQ(outbuf[i], inbuf[i]);
+}
+
 } // namespace LIBC_NAMESPACE_DECL

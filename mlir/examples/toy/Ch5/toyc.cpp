@@ -20,7 +20,7 @@
 #include "toy/Parser.h"
 #include "toy/Passes.h"
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -168,7 +168,7 @@ static int dumpMLIR() {
   if (mlir::failed(pm.run(*module)))
     return 4;
 
-  module->dump();
+  module->print(llvm::errs());
   return 0;
 }
 

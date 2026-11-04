@@ -37,6 +37,8 @@
 #include <A/A.h>
 #include <B/B.h> // expected-warning {{conflicts with imported file}} \
                  // expected-note {{imported by module 'B'}} \
+                 // expected-note {{size changed}} \
+                 // expected-note {{earlier input file validation was disabled for this kind of precompiled file}} \
                  // expected-error {{out of date and needs to be rebuilt}}
 
 //--- Sysroot/usr/include/A/module.modulemap

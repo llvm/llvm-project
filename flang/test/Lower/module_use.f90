@@ -6,9 +6,9 @@
 ! The modules are defined in module_definition.f90
 ! The first runs ensures the module file is generated.
 
-! CHECK: fir.global common @__BLNK__(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
-! CHECK-NEXT: fir.global common @named1_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
-! CHECK-NEXT: fir.global common @named2_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
+! CHECK: fir.global common @__BLNK__(dense<0> : vector<4xi8>) <{alignment = 4 : i64}> : !fir.array<4xi8>
+! CHECK-NEXT: fir.global common @named1_(dense<0> : vector<4xi8>) <{alignment = 4 : i64}> : !fir.array<4xi8>
+! CHECK-NEXT: fir.global common @named2_(dense<0> : vector<4xi8>) <{alignment = 4 : i64}> : !fir.array<4xi8>
 
 ! CHECK-LABEL: func @_QPm1use()
 real function m1use()
@@ -36,9 +36,9 @@ real function modCommon1Use()
   ! CHECK-DAG: fir.address_of(@named2_) : !fir.ref<!fir.array<4xi8>>
   ! CHECK-DAG: fir.address_of(@__BLNK__) : !fir.ref<!fir.array<4xi8>>
   ! CHECK-DAG: fir.address_of(@named1_) : !fir.ref<!fir.array<4xi8>>
-  modCommon1Use = x_blank + x_named1 + i_named2 
+  modCommon1Use = x_blank + x_named1 + i_named2
 end function
 
 
 ! CHECK-DAG: fir.global @_QMm1Ex : f32
-! CHECK-DAG: fir.global @_QMm1Ey : !fir.array<100xi32>
+! CHECK-DAG: fir.global @_QMm1Ey <{alignment = 64 : i64}> : !fir.array<100xi32>

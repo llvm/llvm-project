@@ -4,6 +4,12 @@ if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   remove_module_flags()
 endif()
 
+if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  set(python_plugin_lib lldbStaticScriptInterpreterPython)
+else()
+  set(python_plugin_lib lldbPluginScriptInterpreterPython)
+endif()
+
 add_lldb_unittest(ScriptInterpreterPythonTests
   PythonDataObjectsTests.cpp
   PythonTestSuite.cpp
@@ -12,7 +18,7 @@ add_lldb_unittest(ScriptInterpreterPythonTests
     Support
   LINK_LIBS
     lldbHost
-    lldbPluginScriptInterpreterPython
+    ${python_plugin_lib}
     LLVMTestingSupport
   )
 

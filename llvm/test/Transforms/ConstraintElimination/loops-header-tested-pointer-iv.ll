@@ -12,8 +12,7 @@ define void @loop_pointer_iv(ptr %start, ptr %end, ptr %upper) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule ptr [[IV]], [[END]]
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp uge ptr [[IV]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule ptr [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:

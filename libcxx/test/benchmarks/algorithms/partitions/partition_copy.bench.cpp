@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 auto compute_median(auto first, auto last) {
@@ -34,7 +35,7 @@ int main(int argc, char** argv) {
   auto bm = []<class Container>(std::string name, auto partition_copy) {
     benchmark::RegisterBenchmark(
         name,
-        [partition_copy](auto& st) {
+        [partition_copy](auto& st) TEST_ALIGN_BENCHMARK {
           std::size_t const size = st.range(0);
           using ValueType        = typename Container::value_type;
           Container c;
@@ -63,11 +64,6 @@ int main(int argc, char** argv) {
   bm.operator()<std::vector<int>>("std::partition_copy(vector<int>)", std_partition_copy);
   bm.operator()<std::deque<int>>("std::partition_copy(deque<int>)", std_partition_copy);
   bm.operator()<std::list<int>>("std::partition_copy(list<int>)", std_partition_copy);
-
-  // ranges::partition_copy
-  bm.operator()<std::vector<int>>("rng::partition_copy(vector<int>)", std::ranges::partition_copy);
-  bm.operator()<std::deque<int>>("rng::partition_copy(deque<int>)", std::ranges::partition_copy);
-  bm.operator()<std::list<int>>("rng::partition_copy(list<int>)", std::ranges::partition_copy);
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

@@ -22,6 +22,7 @@
 namespace llvm {
 
 class SparcTargetMachine : public CodeGenTargetMachineImpl {
+  const SparcOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<SparcSubtarget>> SubtargetMap;
 
@@ -33,6 +34,8 @@ public:
                      bool JIT);
   ~SparcTargetMachine() override;
 
+  const SparcOptions &getCLOpts() const { return CLOpts; }
+
   const SparcSubtarget *getSubtargetImpl(const Function &F) const override;
 
   // Pass Pipeline Configuration
@@ -40,10 +43,19 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 };
 
 /// Sparc 32-bit target machine

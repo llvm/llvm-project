@@ -11,11 +11,12 @@ add_mlir_conversion_library(MLIRAMDGPUToROCDL
   Core
 
   LINK_LIBS PUBLIC
-  MLIRLLVMCommonConversion
-  MLIRLLVMDialect
-  MLIRROCDLDialect
   MLIRAMDGPUDialect
   MLIRAMDGPUUtils
+  MLIRGPUToGPURuntimeTransforms
+  MLIRLLVMCommonConversion
+  MLIRLLVMDialect
   MLIRPass
+  MLIRROCDLDialect
   MLIRTransforms
   )

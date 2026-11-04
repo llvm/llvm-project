@@ -7,7 +7,7 @@
 ; RUN: llvm-objdump -r %t.o | FileCheck --check-prefix=DIS_REL %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -mattr=-altivec \
-; RUN:     -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t64.o < %s
+; RUN:     -xcoff-traceback-table=false --code-model=small -data-sections=false -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t64.o | FileCheck -D#NFA=2 --check-prefixes=OBJ,OBJ64 %s
 ; RUN: llvm-readobj --relocs --expand-relocs %t64.o | FileCheck -D#NFA=2 --check-prefixes=RELOC,RELOC64 %s
 ; RUN: llvm-readobj --syms %t64.o | FileCheck -D#NFA=2 --check-prefixes=SYM,SYM64 %s

@@ -1,0 +1,23 @@
+// Test clang-ssaf-analyzer help option
+
+// RUN: clang-ssaf-analyzer --help-list-hidden \
+// RUN:           | FileCheck %s --match-full-lines
+
+// CHECK:      OVERVIEW: SSAF Analyzer
+// CHECK-EMPTY:
+// CHECK-NEXT: USAGE: clang-ssaf-analyzer{{(\.exe)?}} [options] <input file>
+// CHECK-EMPTY:
+// CHECK-NEXT: OPTIONS:
+// CHECK-NEXT:   -a <name>           - Analysis name to run
+// CHECK-NEXT:   --analysis          - Alias for -a
+// CHECK-NEXT:   -h                  - Alias for --help
+// CHECK-NEXT:   --help              - Display available options (--help-hidden for more)
+// CHECK-NEXT:   --help-hidden       - Display all available options
+// CHECK-NEXT:   --help-list         - Display list of available options (--help-list-hidden for more)
+// CHECK-NEXT:   --help-list-hidden  - Display list of all available options
+// CHECK-NEXT:   -l                  - Alias for --load
+// CHECK-NEXT:   --load=<path>       - Load a plugin shared library
+// CHECK-NEXT:   -o <path>           - Output file path
+// CHECK-NEXT:   --print-all-options - Print all option values after command line parsing
+// CHECK-NEXT:   --print-options     - Print non-default options after command line parsing
+// CHECK-NEXT:   --version           - Display the version of this program

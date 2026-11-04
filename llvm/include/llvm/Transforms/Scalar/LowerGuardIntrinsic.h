@@ -18,10 +18,10 @@
 
 namespace llvm {
 
-struct LowerGuardIntrinsicPass : PassInfoMixin<LowerGuardIntrinsicPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+struct LowerGuardIntrinsicPass
+    : OptionalPassInfoMixin<LowerGuardIntrinsicPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
-
 }
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOWERGUARDINTRINSIC_H

@@ -193,6 +193,51 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   default:
     break;
+  case ISD::POISON:
+  case ISD::UNDEF: {
+    // IMPLICIT_DEF leaves the register as it is. The verifier rejects a read
+    // of a register that was not written, no matter what is done with the
+    // value.
+    EVT VT = Node->getValueType(0);
+    if (VT != MVT::i64 && VT != MVT::i32)
+      break;
+    CurDAG->SelectNodeTo(Node, VT == MVT::i64 ? BPF::MOV_ri : BPF::MOV_ri_32,
+                         VT, CurDAG->getTargetConstant(0, SDLoc(Node), VT));
+    return;
+  }
+
+  case BPFISD::LOAD_STACK_ARG: {
+    SDValue Chain = Node->getOperand(0);
+    auto *CN = cast<ConstantSDNode>(Node->getOperand(1));
+    SDValue Off =
+        CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Node), MVT::i64);
+    EVT ValVT = Node->getValueType(0);
+    CurDAG->SelectNodeTo(Node, BPF::LOAD_STACK_ARG_PSEUDO, ValVT, MVT::Other,
+                         Off, Chain);
+    return;
+  }
+
+  case BPFISD::STORE_STACK_ARG: {
+    SDValue Chain = Node->getOperand(0);
+    auto *CN = cast<ConstantSDNode>(Node->getOperand(1));
+    SDValue Off =
+        CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Node), MVT::i64);
+    SDValue Val = Node->getOperand(2);
+
+    // Use store-immediate when the value is a constant that fits in 32 bits.
+    if (auto *ValCN = dyn_cast<ConstantSDNode>(Val);
+        ValCN && Subtarget->hasStoreImm() && isInt<32>(ValCN->getSExtValue())) {
+      SDValue Imm = CurDAG->getTargetConstant(ValCN->getSExtValue(),
+                                              SDLoc(Node), MVT::i64);
+      CurDAG->SelectNodeTo(Node, BPF::STORE_STACK_ARG_IMM_PSEUDO, MVT::Other,
+                           Off, Imm, Chain);
+    } else {
+      CurDAG->SelectNodeTo(Node, BPF::STORE_STACK_ARG_PSEUDO, MVT::Other, Off,
+                           Val, Chain);
+    }
+    return;
+  }
+
   case ISD::FrameIndex: {
     int FI = cast<FrameIndexSDNode>(Node)->getIndex();
     EVT VT = Node->getValueType(0);
@@ -276,7 +321,12 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
 
   LLVM_DEBUG(dbgs() << "Replacing load of size " << size << " with constant "
                     << val << '\n');
-  SDValue NVal = CurDAG->getConstant(val, DL, LD->getValueType(0));
+  EVT VT = LD->getValueType(0);
+  APInt MemVal(size * 8, val);
+  SDValue NVal = CurDAG->getConstant(LD->getExtensionType() == ISD::SEXTLOAD
+                                         ? MemVal.sext(VT.getSizeInBits())
+                                         : MemVal.zext(VT.getSizeInBits()),
+                                     DL, VT);
 
   // After replacement, the current node is dead, we need to
   // go backward one step to make iterator still work
@@ -471,3 +521,6 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
 FunctionPass *llvm::createBPFISelDag(BPFTargetMachine &TM) {
   return new BPFDAGToDAGISelLegacy(TM);
 }
+
+BPFISelDAGToDAGPass::BPFISelDAGToDAGPass(BPFTargetMachine &TM)
+    : SelectionDAGISelPass(std::make_unique<BPFDAGToDAGISel>(TM)) {}

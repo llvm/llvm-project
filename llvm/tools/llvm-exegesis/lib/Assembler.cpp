@@ -44,8 +44,8 @@
 namespace llvm {
 namespace exegesis {
 
-static constexpr const char ModuleID[] = "ExegesisInfoTest";
-static constexpr const char FunctionID[] = "foo";
+static constexpr char ModuleID[] = "ExegesisInfoTest";
+static constexpr char FunctionID[] = "foo";
 static const Align kFunctionAlignment(4096);
 
 // Fills the given basic block with register setup code, and returns true if
@@ -162,7 +162,7 @@ void BasicBlockFiller::addInstruction(const MCInst &Inst, const DebugLoc &DL) {
     const MCOperand &Op = Inst.getOperand(OpIndex);
     if (Op.isReg()) {
       const bool IsDef = OpIndex < MCID.getNumDefs();
-      unsigned Flags = 0;
+      RegState Flags = {};
       const MCOperandInfo &OpInfo = MCID.operands().begin()[OpIndex];
       if (IsDef && !OpInfo.isOptionalDef())
         Flags |= RegState::Define;
@@ -225,15 +225,24 @@ ArrayRef<MCRegister> FunctionFiller::getRegistersSetUp() const {
 }
 
 static std::unique_ptr<Module>
-createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) {
+createModule(const std::unique_ptr<LLVMContext> &Context,
+             const TargetMachine &TM) {
   auto Mod = std::make_unique<Module>(ModuleID, *Context);
-  Mod->setDataLayout(DL);
+  const Triple &TT = TM.getTargetTriple();
+  Mod->setTargetTriple(TT);
+  StringRef ABIName = TM.Options.MCOptions.getABIName();
+  if (!ABIName.empty()) {
+    Mod->addModuleFlag(Module::Error, "target-abi",
+                       MDString::get(*Context, ABIName));
+  }
+
+  Mod->setDataLayout(DataLayout(TT.computeDataLayout(ABIName)));
   return Mod;
 }
 
 BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
-  std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
+  std::unique_ptr<Module> Module = createModule(Context, TM);
   auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&TM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP->getMMI());
@@ -247,8 +256,7 @@ Error assembleToStream(const ExegesisTarget &ET,
                        raw_pwrite_stream &AsmStream, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions) {
   auto Context = std::make_unique<LLVMContext>();
-  std::unique_ptr<Module> Module =
-      createModule(Context, TM->createDataLayout());
+  std::unique_ptr<Module> Module = createModule(Context, *TM);
   auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(TM.get());
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP.get()->getMMI());
@@ -292,7 +300,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   }
 
   const bool IsSnippetSetupComplete = generateSnippetSetupCode(
-      ET, TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
+      ET, &TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.
@@ -321,9 +329,9 @@ Error assembleToStream(const ExegesisTarget &ET,
   ET.addTargetSpecificPasses(PM);
   TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
   // Adding the following passes:
-  // - postrapseudos: expands pseudo return instructions used on some targets.
+  // - post-ra-pseudos: expands pseudo return instructions used on some targets.
   // - prologepilog: saves and restore callee saved registers.
-  for (const char *PassName : {"postrapseudos", "prologepilog"})
+  for (const char *PassName : {"post-ra-pseudos", "prolog-epilog"})
     if (addPass(PM, PassName, *TPC))
       return make_error<Failure>("Unable to add a mandatory pass");
   TPC->setInitialized();
@@ -381,7 +389,11 @@ Expected<ExecutableFunction> ExecutableFunction::create(
          "Cannot find the symbol for FunctionID");
   uintptr_t CodeSize = SymbolIt->second;
 
-  auto EJITOrErr = orc::LLJITBuilder().create();
+  auto EJITOrErr =
+      orc::LLJITBuilder()
+          .setDataLayout(DataLayout(TM->getTargetTriple().computeDataLayout(
+              TM->Options.MCOptions.getABIName())))
+          .create();
   if (!EJITOrErr)
     return EJITOrErr.takeError();
 

@@ -149,8 +149,8 @@ define void @f13() {
 ; CHECK-LABEL: f13:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK: mvc 200(256,%r15), 3826(%r15)
-; CHECK: mvc 456(256,%r15), 4082(%r15)
-; CHECK: lay [[NEWSRC:%r[1-5]]], 4338(%r15)
+; CHECK-DAG: mvc 456(256,%r15), 4082(%r15)
+; CHECK-DAG: lay [[NEWSRC:%r[1-5]]], 4338(%r15)
 ; CHECK: mvc 712(256,%r15), 0([[NEWSRC]])
 ; CHECK: mvc 968(256,%r15), 256([[NEWSRC]])
 ; CHECK: mvc 1224(255,%r15), 512([[NEWSRC]])

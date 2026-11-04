@@ -23,7 +23,8 @@ class LlvmLibcStrToFTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest,
                            ForceRoundingModeTest<RoundingMode::Nearest> {
 public:
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
-                const uint32_t expectedRawData, const int expectedErrno = 0) {
+                const uint32_t expectedRawData,
+                [[maybe_unused]] const int expectedErrno = 0) {
     // expectedRawData is the expected float result as a uint32_t, organized
     // according to IEEE754:
     //

@@ -1,15 +1,27 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
 
 #define DEBUG_TYPE "static-data-profile-info"
 
 using namespace llvm;
+
+bool StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+    const LLVMContext &C) {
+  return getAnalysisOptions(C).preserve_hot_data_section_prefix;
+}
+
+bool llvm::memprof::shouldAnnotateStringLiteralSectionPrefix(
+    const LLVMContext &C) {
+  return getAnalysisOptions(C).memprof_annotate_string_literal_section_prefix;
+}
 
 namespace llvm {
 namespace memprof {
@@ -99,7 +111,7 @@ StringRef StaticDataProfileInfo::hotnessToStr(StaticDataHotness Hotness) const {
   case StaticDataHotness::Cold:
     return "unlikely";
   case StaticDataHotness::Hot:
-    return "hot";
+    return Opts.preserve_hot_data_section_prefix ? "hot" : "";
   default:
     return "";
   }
@@ -124,11 +136,23 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
 #endif
 
   if (EnableDataAccessProf) {
-    // Module flag `HasDataAccessProf` is 1 -> empty section prefix means
-    // unknown hotness except for string literals.
+    // Both data access profiles and PGO counters are available. Use the
+    // hotter one to be conservative.  Basically, we want the non-unlikely
+    // sections to have max coverage of accessed symbols and meanwhile can
+    // tolerant some cold symbols in it, and the unlikely section variant to not
+    // have potentially hot symbols if possible, to avoid the penalty of access
+    // cold pages.
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
         GV && llvm::memprof::IsAnnotationOK(*GV) &&
-        !GV->getName().starts_with(".str")) {
+        (Opts.memprof_annotate_string_literal_section_prefix ||
+         !GV->getName().starts_with(".str"))) {
+      // Note a global var is covered by data access profiles iff the
+      // symbol name is preserved in the symbol table; most notably, a string
+      // literal with private linkage (e.g., those not externalized by ThinLTO
+      // and with insignificant address) won't have an entry in the symbol
+      // table (unless there is another string with identical content that
+      // gets a symbol table entry). For the private-linkage string literals,
+      // their hotness will be at least lukewarm (i.e., empty prefix).
       auto HotnessFromDataAccessProf =
           getSectionHotnessUsingDataAccessProfile(GV->getSectionPrefix());
 
@@ -140,8 +164,6 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
         return Prefix;
       }
 
-      // Both data access profiles and PGO counters are available. Use the
-      // hotter one.
       auto HotnessFromPGO = getConstantHotnessUsingProfileCount(C, PSI, *Count);
       StaticDataHotness GlobalVarHotness = StaticDataHotness::LukewarmOrUnknown;
       if (HotnessFromDataAccessProf == StaticDataHotness::Hot ||
@@ -170,12 +192,18 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
   return hotnessToStr(getConstantHotnessUsingProfileCount(C, PSI, *Count));
 }
 
-bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {
+static std::unique_ptr<StaticDataProfileInfo>
+computeStaticDataProfileInfo(Module &M) {
   bool EnableDataAccessProf = false;
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("EnableDataAccessProf")))
     EnableDataAccessProf = MD->getZExtValue();
-  Info.reset(new StaticDataProfileInfo(EnableDataAccessProf));
+  return std::make_unique<StaticDataProfileInfo>(getAnalysisOptions(M),
+                                                 EnableDataAccessProf);
+}
+
+bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {
+  Info = computeStaticDataProfileInfo(M);
   return false;
 }
 
@@ -191,3 +219,10 @@ StaticDataProfileInfoWrapperPass::StaticDataProfileInfoWrapperPass()
     : ImmutablePass(ID) {}
 
 char StaticDataProfileInfoWrapperPass::ID = 0;
+
+StaticDataProfileInfoAnalysis::Result
+StaticDataProfileInfoAnalysis::run(Module &M, ModuleAnalysisManager &) {
+  return StaticDataProfileInfoAnalysis::Result(computeStaticDataProfileInfo(M));
+}
+
+AnalysisKey llvm::StaticDataProfileInfoAnalysis::Key;

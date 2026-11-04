@@ -1463,8 +1463,7 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
                                          Error &Err, bool Is64Bit)
     : TBPtr(Ptr), Is64BitObj(Is64Bit) {
   ErrorAsOutParameter EAO(Err);
-  DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false,
-                   /*AddressSize=*/0);
+  DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false);
   DataExtractor::Cursor Cur(/*Offset=*/0);
 
   // Skip 8 bytes of mandatory fields.
@@ -1526,7 +1525,7 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
   // indicates the presence of vector parameters.
   if (Cur && (FixedParmsNum + FloatingParmsNum) > 0) {
     Expected<SmallString<32>> ParmsTypeOrError =
-        hasVectorInfo()
+        VectorParmsNum > 0
             ? parseParmsTypeWithVecInfo(ParamsTypeValue, FixedParmsNum,
                                         FloatingParmsNum, VectorParmsNum)
             : parseParmsType(ParamsTypeValue, FixedParmsNum, FloatingParmsNum);

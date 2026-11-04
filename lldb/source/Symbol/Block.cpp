@@ -367,16 +367,6 @@ void Block::AddRange(const Range &range) {
   m_ranges.Append(range);
 }
 
-// Return the current number of bytes that this object occupies in memory
-size_t Block::MemorySize() const {
-  size_t mem_size = sizeof(Block) + m_ranges.GetSize() * sizeof(Range);
-  if (m_inlineInfoSP.get())
-    mem_size += m_inlineInfoSP->MemorySize();
-  if (m_variable_list_sp.get())
-    mem_size += m_variable_list_sp->MemorySize();
-  return mem_size;
-}
-
 BlockSP Block::CreateChild(user_id_t uid) {
   m_children.push_back(std::shared_ptr<Block>(new Block(uid, *this)));
   return m_children.back();

@@ -4,8 +4,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
+@requireDarwin
 class AddDsymDownload(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
 
     def get_uuid(self):
@@ -80,21 +82,7 @@ class AddDsymDownload(TestBase):
         )
 
     def do_test(self, command):
-        self.target = self.dbg.CreateTarget(self.exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
-        main_bp = self.target.BreakpointCreateByName("main", "a.out")
-        self.assertTrue(main_bp, VALID_BREAKPOINT)
-
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.assertState(
-            self.process.GetState(), lldb.eStateStopped, STOPPED_DUE_TO_BREAKPOINT
-        )
+        lldbutil.run_to_name_breakpoint(self, "main", bkpt_module="a.out")
 
         self.runCmd(command)
         self.expect("frame select", substrs=["a.out`main at main.c"])

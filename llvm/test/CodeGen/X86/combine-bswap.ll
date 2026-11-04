@@ -236,6 +236,26 @@ define i64 @test_bswap64_shift48(i64 %a0) {
   ret i64 %b
 }
 
+define i64 @test_bswap64_shift40(i64 %a0) {
+; X86-LABEL: test_bswap64_shift40:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_bswap64_shift40:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    shrl $8, %eax
+; X64-NEXT:    retq
+  %s = shl i64 %a0, 40
+  %b = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %b
+}
+
 define i32 @test_bswap32_shift17(i32 %a0) {
 ; X86-LABEL: test_bswap32_shift17:
 ; X86:       # %bb.0:

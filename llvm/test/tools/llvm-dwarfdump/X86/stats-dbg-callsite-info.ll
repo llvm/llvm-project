@@ -52,8 +52,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !1 = !DIFile(filename: "test.c", directory: "/dir")
 !2 = !{}
 !3 = !{!4, !5}
-!4 = !DISubprogram(name: "getVal", scope: !1, file: !1, line: 2, spFlags: DISPFlagOptimized, retainedNodes: !2)
-!5 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+!4 = !DISubprogram(name: "getVal", scope: !1, file: !1, line: 2, type: !11, spFlags: DISPFlagOptimized, retainedNodes: !2)
+!5 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !11, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = !{i32 1, !"wchar_size", i32 4}

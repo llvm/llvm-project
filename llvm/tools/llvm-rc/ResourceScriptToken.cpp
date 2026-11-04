@@ -26,11 +26,11 @@ using namespace llvm;
 using Kind = RCToken::Kind;
 
 // Checks if Representation is a correct description of an RC integer.
-// It should be a 32-bit unsigned integer, either decimal, octal (0[0-7]+),
-// or hexadecimal (0x[0-9a-f]+). It might be followed by a single 'L'
-// character (that is the difference between our representation and
-// StringRef's one). If Representation is correct, 'true' is returned and
-// the return value is put back in Num.
+// It should be a 32-bit unsigned integer, either decimal or hexadecimal
+// (0x[0-9a-f]+). For Windres mode, it can also be octal (0[0-7]+).
+// It might be followed by a single 'L' character (that is the difference
+// between our representation and StringRef's one). If Representation is
+// correct, 'true' is returned and the return value is put back in Num.
 static bool rcGetAsInteger(StringRef Representation, uint32_t &Num) {
   size_t Length = Representation.size();
   if (Length == 0)
@@ -95,7 +95,8 @@ namespace {
 
 class Tokenizer {
 public:
-  Tokenizer(StringRef Input) : Data(Input), DataLength(Input.size()), Pos(0) {}
+  Tokenizer(StringRef Input, bool IsWindres)
+      : Data(Input), DataLength(Input.size()), Pos(0), IsWindres(IsWindres) {}
 
   Expected<std::vector<RCToken>> run();
 
@@ -128,6 +129,7 @@ private:
   // character.
   bool canStartInt() const;
   bool canContinueInt() const;
+  void trimIntString(StringRef &Str) const;
 
   bool canStartString() const;
 
@@ -153,6 +155,7 @@ private:
 
   StringRef Data;
   size_t DataLength, Pos;
+  bool IsWindres;
 };
 
 void Tokenizer::skipCurrentLine() {
@@ -187,7 +190,12 @@ Expected<std::vector<RCToken>> Tokenizer::run() {
     if (TokenKind == Kind::LineComment || TokenKind == Kind::StartComment)
       continue;
 
-    RCToken Token(TokenKind, Data.take_front(Pos).drop_front(TokenStart));
+    StringRef Contents = Data.take_front(Pos).drop_front(TokenStart);
+
+    if (TokenKind == Kind::Int)
+      trimIntString(Contents);
+
+    RCToken Token(TokenKind, Contents);
     if (TokenKind == Kind::Identifier) {
       processIdentifier(Token);
     } else if (TokenKind == Kind::Int) {
@@ -366,12 +374,30 @@ void Tokenizer::processIdentifier(RCToken &Token) const {
     Token = RCToken(Kind::BlockEnd, Name);
 }
 
+void Tokenizer::trimIntString(StringRef &Str) const {
+  if (!IsWindres) {
+    // For compatibility with rc.exe, strip leading zeros that make the
+    // integer literal interpreted as octal.
+    //
+    // We do rely on Stringref::getAsInteger for autodetecting between
+    // decimal and hexadecimal literals, but we want to avoid interpreting
+    // literals as octal.
+    //
+    // This omits the leading zeros from the RCToken's value string entirely,
+    // which also has a visible effect when dumping the tokenizer output.
+    // Alternatively, we could store the IsWindres flag in RCToken and defer
+    // the trimming to RCToken::intValue.
+    while (Str.size() >= 2 && Str[0] == '0' && std::isdigit(Str[1]))
+      Str = Str.drop_front(1);
+  }
+}
+
 } // anonymous namespace
 
 namespace llvm {
 
-Expected<std::vector<RCToken>> tokenizeRC(StringRef Input) {
-  return Tokenizer(Input).run();
+Expected<std::vector<RCToken>> tokenizeRC(StringRef Input, bool IsWindres) {
+  return Tokenizer(Input, IsWindres).run();
 }
 
 } // namespace llvm

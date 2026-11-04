@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/f16add.h"
-#include "src/__support/FPUtil/generic/add_sub.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/f16add.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, f16add, (double x, double y)) {
-  return fputil::generic::add<float16>(x, y);
+  return math::f16add(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

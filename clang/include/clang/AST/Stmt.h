@@ -18,8 +18,8 @@
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtIterator.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/CapturedStmt.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
@@ -27,11 +27,11 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -317,12 +317,21 @@ protected:
     SourceLocation KeywordLoc;
   };
 
+  class DeferStmtBitfields {
+    friend class DeferStmt;
+
+    LLVM_PREFERRED_TYPE(StmtBitfields)
+    unsigned : NumStmtBits;
+
+    /// The location of the "defer".
+    SourceLocation DeferLoc;
+  };
+
   //===--- Expression bitfields classes ---===//
 
   class ExprBitfields {
     friend class ASTStmtReader; // deserialization
-    friend class AtomicExpr; // ctor
-    friend class BlockDeclRefExpr; // ctor
+    friend class AtomicExpr;    // ctor
     friend class CallExpr; // ctor
     friend class CXXConstructExpr; // ctor
     friend class CXXDependentScopeMemberExpr; // ctor
@@ -530,6 +539,7 @@ protected:
   class ArrayOrMatrixSubscriptExprBitfields {
     friend class ArraySubscriptExpr;
     friend class MatrixSubscriptExpr;
+    friend class MatrixSingleSubscriptExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
@@ -658,6 +668,7 @@ protected:
   };
 
   class InitListExprBitfields {
+    friend class ASTStmtReader;
     friend class InitListExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
@@ -667,6 +678,9 @@ protected:
     /// designator in it. This is a temporary marker used by CodeGen.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HadArrayRangeDesignator : 1;
+    // Whether this list is explicitly written in the source (with braces).
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsExplicit : 1;
   };
 
   class ParenListExprBitfields {
@@ -773,6 +787,11 @@ protected:
     /// value of OverloadedOperatorKind.
     LLVM_PREFERRED_TYPE(OverloadedOperatorKind)
     unsigned OperatorKind : 6;
+
+    /// Whether this is a C++20 rewritten reversed operator, where the
+    /// arguments are in reversed source order.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsReversed : 1;
   };
 
   class CXXRewrittenBinaryOperatorBitfields {
@@ -975,6 +994,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsBooleanTypeTrait : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsComparisonResult : 1;
 
     /// If this expression is a non value-dependent boolean trait,
     /// this indicates whether the trait evaluated true or false.
@@ -1260,6 +1282,14 @@ protected:
 
   //===--- Obj-C Expression bitfields classes ---===//
 
+  class ObjCObjectLiteralBitfields {
+    friend class ObjCObjectLiteral;
+
+    unsigned : NumExprBits;
+
+    unsigned IsExpressibleAsConstantInitializer : 1;
+  };
+
   class ObjCIndirectCopyRestoreExprBitfields {
     friend class ObjCIndirectCopyRestoreExpr;
 
@@ -1318,6 +1348,7 @@ protected:
     LoopControlStmtBitfields LoopControlStmtBits;
     ReturnStmtBitfields ReturnStmtBits;
     SwitchCaseBitfields SwitchCaseBits;
+    DeferStmtBitfields DeferStmtBits;
 
     // Expressions
     ExprBitfields ExprBits;
@@ -1380,6 +1411,7 @@ protected:
     CoawaitExprBitfields CoawaitBits;
 
     // Obj-C Expressions
+    ObjCObjectLiteralBitfields ObjCObjectLiteralBits;
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
 
     // Clang Extensions
@@ -1564,8 +1596,7 @@ public:
   child_range children();
 
   const_child_range children() const {
-    auto Children = const_cast<Stmt *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<Stmt *>(this)->children();
   }
 
   child_iterator child_begin() { return children().begin(); }
@@ -1829,26 +1860,6 @@ public:
 
   const_reverse_body_iterator body_rend() const {
     return const_reverse_body_iterator(body_begin());
-  }
-
-  // Get the Stmt that StmtExpr would consider to be the result of this
-  // compound statement. This is used by StmtExpr to properly emulate the GCC
-  // compound expression extension, which ignores trailing NullStmts when
-  // getting the result of the expression.
-  // i.e. ({ 5;;; })
-  //           ^^ ignored
-  // If we don't find something that isn't a NullStmt, just return the last
-  // Stmt.
-  Stmt *getStmtExprResult() {
-    for (auto *B : llvm::reverse(body())) {
-      if (!isa<NullStmt>(B))
-        return B;
-    }
-    return body_back();
-  }
-
-  const Stmt *getStmtExprResult() const {
-    return const_cast<CompoundStmt *>(this)->getStmtExprResult();
   }
 
   SourceLocation getBeginLoc() const { return LBraceLoc; }
@@ -3084,10 +3095,10 @@ public:
 
   SourceLocation getBeginLoc() const { return getKwLoc(); }
   SourceLocation getEndLoc() const {
-    return hasLabelTarget() ? getLabelLoc() : getKwLoc();
+    return isNamed() ? getLabelLoc() : getKwLoc();
   }
 
-  bool hasLabelTarget() const { return TargetLabel != nullptr; }
+  bool isNamed() const { return TargetLabel != nullptr; }
 
   SourceLocation getLabelLoc() const { return LabelLoc; }
   void setLabelLoc(SourceLocation L) { LabelLoc = L; }
@@ -3097,7 +3108,9 @@ public:
   void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
 
   /// If this is a named break/continue, get the loop or switch statement
-  /// that this targets.
+  /// that this targets. May return null if the target LabelStmt has not
+  /// yet been created. Asserts if this is an unnamed break/continue.
+  /// \pre `isNamed()`
   const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators
@@ -3232,6 +3245,47 @@ public:
   }
 };
 
+/// DeferStmt - This represents a deferred statement.
+class DeferStmt : public Stmt {
+  friend class ASTStmtReader;
+
+  /// The deferred statement.
+  Stmt *Body;
+
+  DeferStmt(EmptyShell Empty);
+  DeferStmt(SourceLocation DeferLoc, Stmt *Body);
+
+public:
+  static DeferStmt *CreateEmpty(ASTContext &Context, EmptyShell Empty);
+  static DeferStmt *Create(ASTContext &Context, SourceLocation DeferLoc,
+                           Stmt *Body);
+
+  SourceLocation getDeferLoc() const { return DeferStmtBits.DeferLoc; }
+  void setDeferLoc(SourceLocation DeferLoc) {
+    DeferStmtBits.DeferLoc = DeferLoc;
+  }
+
+  Stmt *getBody() { return Body; }
+  const Stmt *getBody() const { return Body; }
+  void setBody(Stmt *S) {
+    assert(S && "defer body must not be null");
+    Body = S;
+  }
+
+  SourceLocation getBeginLoc() const { return getDeferLoc(); }
+  SourceLocation getEndLoc() const { return Body->getEndLoc(); }
+
+  child_range children() { return child_range(&Body, &Body + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Body, &Body + 1);
+  }
+
+  static bool classof(const Stmt *S) {
+    return S->getStmtClass() == DeferStmtClass;
+  }
+};
+
 /// AsmStmt is the base class for GCCAsmStmt and MSAsmStmt.
 class AsmStmt : public Stmt {
 protected:
@@ -3279,6 +3333,16 @@ public:
 
   /// Assemble final IR asm string.
   std::string generateAsmString(const ASTContext &C) const;
+
+  using UnsupportedConstraintCallbackTy =
+      llvm::function_ref<void(const Stmt *, StringRef)>;
+  /// Look at AsmExpr and if it is a variable declared as using a particular
+  /// register add that as a constraint that will be used in this asm stmt.
+  std::string
+  addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
+                         const TargetInfo &Target, bool EarlyClobber,
+                         UnsupportedConstraintCallbackTy UnsupportedCB,
+                         std::string *GCCReg = nullptr) const;
 
   //===--- Output operands ---===//
 

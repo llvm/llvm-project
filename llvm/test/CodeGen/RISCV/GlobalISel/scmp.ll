@@ -134,14 +134,14 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind {
 ; RV32I-NEXT:    beq a1, a3, .LBB6_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    slt a4, a3, a1
-; RV32I-NEXT:    slt a1, a1, a3
+; RV32I-NEXT:    slt a0, a1, a3
 ; RV32I-NEXT:    j .LBB6_3
 ; RV32I-NEXT:  .LBB6_2:
 ; RV32I-NEXT:    sltu a4, a2, a0
-; RV32I-NEXT:    sltu a1, a0, a2
+; RV32I-NEXT:    sltu a0, a0, a2
 ; RV32I-NEXT:  .LBB6_3:
-; RV32I-NEXT:    sub a0, a4, a1
-; RV32I-NEXT:    sltu a1, a4, a1
+; RV32I-NEXT:    sltu a1, a4, a0
+; RV32I-NEXT:    sub a0, a4, a0
 ; RV32I-NEXT:    neg a1, a1
 ; RV32I-NEXT:    ret
 ;

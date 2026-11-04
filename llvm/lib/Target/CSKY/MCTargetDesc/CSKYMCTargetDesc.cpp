@@ -15,6 +15,7 @@
 #include "CSKYELFStreamer.h"
 #include "CSKYInstPrinter.h"
 #include "CSKYMCAsmInfo.h"
+#include "CSKYMCOptions.h"
 #include "CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -23,6 +24,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
@@ -34,12 +36,15 @@
 #define GET_SUBTARGETINFO_MC_DESC
 #include "CSKYGenSubtargetInfo.inc"
 
+#define OPTIONS_STRUCT_DEFS
+#include "CSKYMCOptions.inc"
+
 using namespace llvm;
 
 static MCAsmInfo *createCSKYMCAsmInfo(const MCRegisterInfo &MRI,
                                       const Triple &TT,
                                       const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new CSKYMCAsmInfo(TT);
+  MCAsmInfo *MAI = new CSKYMCAsmInfo(TT, Options);
 
   // Initial state of the frame pointer is SP.
   unsigned Reg = MRI.getDwarfRegNum(CSKY::R14, true);
@@ -148,6 +153,7 @@ static MCInstrAnalysis *createCSKYInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTargetMC() {
+  static opt::RegisterLibraryOptions<CSKYMCOptions> O;
   auto &CSKYTarget = getTheCSKYTarget();
   TargetRegistry::RegisterMCAsmBackend(CSKYTarget, createCSKYAsmBackend);
   TargetRegistry::RegisterMCAsmInfo(CSKYTarget, createCSKYMCAsmInfo);

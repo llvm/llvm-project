@@ -23,7 +23,7 @@ sf.vfnrclip.xu.f.qf v4, v8, fa2
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA:1
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
 # CHECK-NEXT: [4]   - VLEN512SiFive7PipeB:1
-# CHECK-NEXT: [5]   - VLEN512SiFive7VA:1
+# CHECK-NEXT: [5]   - VLEN512SiFive7VA1:1
 # CHECK-NEXT: [6]   - VLEN512SiFive7VCQ:1
 # CHECK-NEXT: [7]   - VLEN512SiFive7VL:1
 # CHECK-NEXT: [8]   - VLEN512SiFive7VS:1
@@ -41,22 +41,22 @@ sf.vfnrclip.xu.f.qf v4, v8, fa2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	a0, zero, e8, mf8, ta, ma
-# CHECK-NEXT:  1      7     1.00                         7     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
+# CHECK-NEXT:  1      7     1.00                         7     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	a0, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  1      8     2.00                         8     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
+# CHECK-NEXT:  1      8     2.00                         8     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	a0, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  1      10    4.00                         10    VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
+# CHECK-NEXT:  1      10    4.00                         10    VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	a0, zero, e8, m1, ta, ma
-# CHECK-NEXT:  1      13    8.00                         13    VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
+# CHECK-NEXT:  1      13    8.00                         13    VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	a0, zero, e8, m2, ta, ma
-# CHECK-NEXT:  1      19    16.00                        19    VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
+# CHECK-NEXT:  1      19    16.00                        19    VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  SF_VFNRCLIP_XU_F_QF        sf.vfnrclip.xu.f.qf	v4, v8, fa2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - VLEN512SiFive7FDiv
 # CHECK-NEXT: [1]   - VLEN512SiFive7IDiv
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeB
-# CHECK-NEXT: [4]   - VLEN512SiFive7VA
+# CHECK-NEXT: [4]   - VLEN512SiFive7VA1
 # CHECK-NEXT: [5]   - VLEN512SiFive7VCQ
 # CHECK-NEXT: [6]   - VLEN512SiFive7VL
 # CHECK-NEXT: [7]   - VLEN512SiFive7VS

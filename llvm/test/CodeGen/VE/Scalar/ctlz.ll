@@ -212,7 +212,7 @@ define signext i16 @func16sx(i16 signext %p) {
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, -32(, %s0)
 ; CHECK-NEXT:    adds.w.sx %s0, -16, %s0
-; CHECK-NEXT:    and %s0, %s0, (48)0
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.ctlz.i16(i16 %p, i1 false)
   ret i16 %r
@@ -224,7 +224,7 @@ define zeroext i16 @func16zx(i16 zeroext %p) {
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, -32(, %s0)
 ; CHECK-NEXT:    adds.w.sx %s0, -16, %s0
-; CHECK-NEXT:    and %s0, %s0, (48)0
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.ctlz.i16(i16 %p, i1 false)
   ret i16 %r
@@ -237,7 +237,7 @@ define signext i8 @func8sx(i8 signext %p) {
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, -32(, %s0)
 ; CHECK-NEXT:    adds.w.sx %s0, -24, %s0
-; CHECK-NEXT:    and %s0, %s0, (56)0
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.ctlz.i8(i8 %p, i1 false)
   ret i8 %r
@@ -249,7 +249,7 @@ define zeroext i8 @func8zx(i8 zeroext %p) {
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, -32(, %s0)
 ; CHECK-NEXT:    adds.w.sx %s0, -24, %s0
-; CHECK-NEXT:    and %s0, %s0, (56)0
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.ctlz.i8(i8 %p, i1 false)
   ret i8 %r

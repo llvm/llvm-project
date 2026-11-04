@@ -65,6 +65,7 @@ program openacc_loop_validity
 
   !$acc parallel
   !ERROR: At most one VECTOR clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
+  !ERROR: 'VECTOR(value)' not allowed in PARALLEL LOOP directive
   !$acc loop vector vector(128)
   do i = 1, N
     a(i) = 3.14d0
@@ -79,6 +80,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'VECTOR(value)' not allowed in PARALLEL LOOP directive
   !$acc loop vector(10)
   do i = 1, N
     a(i) = 3.14d0
@@ -86,6 +88,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'VECTOR(value)' not allowed in PARALLEL LOOP directive
   !$acc loop vector(vector_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -93,6 +96,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'VECTOR(value)' not allowed in PARALLEL LOOP directive
   !$acc loop vector(length: vector_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -101,6 +105,7 @@ program openacc_loop_validity
 
   !$acc parallel
   !ERROR: At most one WORKER clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
+  !ERROR: 'WORKER(value)' not allowed in PARALLEL LOOP directive
   !$acc loop worker worker(10)
   do i = 1, N
     a(i) = 3.14d0
@@ -115,6 +120,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'WORKER(value)' not allowed in PARALLEL LOOP directive
   !$acc loop worker(10)
   do i = 1, N
     a(i) = 3.14d0
@@ -122,6 +128,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'WORKER(value)' not allowed in PARALLEL LOOP directive
   !$acc loop worker(worker_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -129,7 +136,8 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !$acc loop worker(num: worker_size)
+  !ERROR: 'WORKER(value)' not allowed in PARALLEL LOOP directive
+  !$acc loop worker(num : worker_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
@@ -137,29 +145,34 @@ program openacc_loop_validity
 
   !$acc parallel
   !ERROR: At most one GANG clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
   !$acc end parallel
 
+  !ERROR: 'GANG(value)' not allowed in LOOP directive
   !$acc loop gang device_type(default) gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
 
   !ERROR: At most one GANG clause can appear on the PARALLEL LOOP directive or in group separated by the DEVICE_TYPE clause
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc parallel loop gang gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
 
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc parallel loop gang device_type(default) gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
 
   !$acc parallel
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -167,6 +180,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(num: gang_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -174,6 +188,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(gang_size, static:*)
   do i = 1, N
     a(i) = 3.14d0
@@ -181,6 +196,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(num: gang_size, static:*)
   do i = 1, N
     a(i) = 3.14d0
@@ -188,6 +204,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(num: gang_size, static: gang_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -368,6 +385,7 @@ program openacc_loop_validity
   end do
 
   !ERROR: The num argument is not allowed when dim is specified
+  !ERROR: 'GANG(value)' not allowed in LOOP directive
   !$acc loop gang(1, dim: 2)
   do i = 1, N
   end do
@@ -392,14 +410,17 @@ program openacc_loop_validity
   end do
   !$acc end parallel
 
+  !ERROR: 'GANG(value)' not allowed in LOOP directive
   !$acc loop gang device_type(nvidia) gang(num: 8)
   DO i = 1, n
   END DO
 
+  !ERROR: 'VECTOR(value)' not allowed in LOOP directive
   !$acc loop vector device_type(default) vector(16)
   DO i = 1, n
   END DO
 
+  !ERROR: 'WORKER(value)' not allowed in LOOP directive
   !$acc loop worker device_type(*) worker(8)
   DO i = 1, n
   END DO
@@ -445,6 +466,97 @@ program openacc_loop_validity
       DO k = 1, i
       END DO
     END DO
+  END DO
+
+  ! do concurrent: each index variable counts as one collapse level.
+
+  ! Valid: collapse(2) covers both indices of a 2-index do concurrent.
+  !$acc loop collapse(2)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    aa(i, j) = 3.14d0
+  END DO
+
+  ! Valid: collapse(3) covers both concurrent indices then one nested do.
+  !$acc loop collapse(3)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    DO k = 1, n
+      aa(i, j) = aa(i, j) + a(k)
+    END DO
+  END DO
+
+  ! Valid: collapse(2) with single-index do concurrent followed by a nested do.
+  !$acc loop collapse(2)
+  DO CONCURRENT (i = 1:n)
+    DO j = 1, n
+      aa(i, j) = 3.14d0
+    END DO
+  END DO
+
+  ! Valid: combined directive, collapse(2) with do concurrent.
+  !$acc parallel loop collapse(2)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    aa(i, j) = 3.14d0
+  END DO
+
+  ! Valid: outer regular do followed by inner do concurrent covering the
+  ! remaining collapse levels.
+  !$acc loop collapse(3)
+  DO i = 1, n
+    DO CONCURRENT (j = 1:n, k = 1:n)
+      aa(i, j) = aa(i, j) + a(k)
+    END DO
+  END DO
+
+  ! Valid (more concurrent indices than collapse levels): collapse(2) consumes
+  ! only the first two indices of a 3-index do concurrent; the third is outside
+  ! the collapsed nest.
+  !$acc loop collapse(2)
+  DO CONCURRENT (i = 1:n, j = 1:n, k = 1:n)
+    aa(i, j) = aa(i, j) + a(k)
+  END DO
+
+  ! Valid (more loops than collapse levels): collapse(1) consumes only the
+  ! first index of a 2-index do concurrent; the second index is outside the
+  ! collapsed nest.
+  !$acc loop collapse(1)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    aa(i, j) = 3.14d0
+  END DO
+
+  ! Invalid: nested do's upper bound depends on a collapsed concurrent index.
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(3)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    DO k = 1, i
+      aa(i, j) = aa(i, j) + a(k)
+    END DO
+  END DO
+
+  ! Invalid: nested do's upper bound depends on a collapsed concurrent index.
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(2)
+  DO CONCURRENT (i = 1:n)
+    DO j = 1, i
+      aa(i, j) = 3.14d0
+    END DO
+  END DO
+
+  ! Invalid: inner concurrent index bound depends on the outer collapsed regular
+  ! do index.
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(3)
+  DO i = 1, n
+    DO CONCURRENT (j = 1:n, k = 1:i)
+      aa(i, j) = aa(i, j) + a(k)
+    END DO
+  END DO
+
+  ! Fewer loops than collapse(n): collapse(3) but only 2 levels exist.
+  ! This exercises the loop-nest depth check.
+  !ERROR: Not enough perfectly nested loops for COLLAPSE(3) clause, found 2, expected 1 more
+  !$acc loop collapse(3)
+  DO CONCURRENT (i = 1:n, j = 1:n)
+    aa(i, j) = 3.14d0
   END DO
 
 contains

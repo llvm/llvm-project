@@ -133,7 +133,7 @@ using namespace LiveDebugValues;
 
 // SSAUpdaterImple sets DEBUG_TYPE, change it.
 #undef DEBUG_TYPE
-#define DEBUG_TYPE "livedebugvalues"
+#define DEBUG_TYPE "live-debug-values"
 
 // Act more like the VarLoc implementation, by propagating some locations too
 // far and ignoring some transfers.
@@ -154,6 +154,15 @@ static cl::opt<unsigned>
     StackWorkingSetLimit("livedebugvalues-max-stack-slots", cl::Hidden,
                          cl::desc("livedebugvalues-stack-ws-limit"),
                          cl::init(250));
+
+// Limit for the maximum number of stack slot indexes, past which we stop
+// tracking spills altogether. MLocTracker reserves a location per subregister
+// index per tracked slot, so this cost grows sharply on targets with many
+// subregister indexes.
+static cl::opt<unsigned>
+    StackSlotIdxesLimit("livedebugvalues-max-stack-slot-idxes", cl::Hidden,
+                        cl::desc("livedebugvalues-max-stack-slot-idxes"),
+                        cl::init(128));
 
 DbgOpID DbgOpID::UndefID = DbgOpID(0xffffffff);
 
@@ -444,9 +453,7 @@ public:
       if (!Op.IsConst)
         ActiveMLocs[Op.Loc].insert(VarID);
     auto NewValue = ResolvedDbgValue{ResolvedDbgOps, Value.Properties};
-    auto Result = ActiveVLocs.insert(std::make_pair(VarID, NewValue));
-    if (!Result.second)
-      Result.first->second = NewValue;
+    ActiveVLocs.insert_or_assign(VarID, std::move(NewValue));
   }
 
   /// Load object with live-in variable values. \p mlocs contains the live-in
@@ -985,7 +992,6 @@ public:
 //===----------------------------------------------------------------------===//
 
 ValueIDNum ValueIDNum::EmptyValue = {UINT_MAX, UINT_MAX, UINT_MAX};
-ValueIDNum ValueIDNum::TombstoneValue = {UINT_MAX, UINT_MAX, UINT_MAX - 1};
 
 #ifndef NDEBUG
 void ResolvedDbgOp::dump(const MLocTracker *MTrack) const {
@@ -1081,8 +1087,8 @@ MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
   }
 
   // There may also be strange register class sizes (think x86 fp80s).
-  for (const TargetRegisterClass *RC : TRI.regclasses()) {
-    unsigned Size = TRI.getRegSizeInBits(*RC);
+  for (const TargetRegisterClass &RC : TRI.regclasses()) {
+    unsigned Size = TRI.getRegSizeInBits(RC);
 
     // We might see special reserved values as sizes, and classes for other
     // stuff the machine tries to model. If it's more than 512 bits, then it
@@ -1137,6 +1143,10 @@ void MLocTracker::writeRegMask(const MachineOperand *MO, unsigned CurBB,
 }
 
 std::optional<SpillLocationNo> MLocTracker::getOrTrackSpillLoc(SpillLoc L) {
+  // Don't track spills at all on targets with a large number of slot indexes.
+  if (NumSlotIdxes >= StackSlotIdxesLimit)
+    return std::nullopt;
+
   SpillLocationNo SpillID(SpillLocs.idFor(L));
 
   if (SpillID.id() == 0) {
@@ -1323,7 +1333,7 @@ MLocTracker::emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
         // manifests as too-little or too-much memory being read from the stack.
         // However we can't solve that without putting more type information in
         // debug-info.
-        if (ValueSizeInBits > MF.getTarget().getPointerSizeInBits(0))
+        if (ValueSizeInBits > MF.getDataLayout().getPointerSizeInBits(0))
           UseDerefSize = false;
 
         SmallVector<uint64_t, 5> OffsetOps;
@@ -1469,7 +1479,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         // debug values.
         if (MO.isReg()) {
           DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
-        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
+        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm() || MO.isGlobal()) {
           DebugOps.push_back(DbgOpStore.insert(MO));
         } else {
           llvm_unreachable("Unexpected debug operand type.");
@@ -1593,9 +1603,9 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
       // FIXME: no index for this?
       Register Reg = MTracker->LocIdxToLocID[L];
       const TargetRegisterClass *TRC = nullptr;
-      for (const auto *TRCI : TRI->regclasses())
-        if (TRCI->contains(Reg))
-          TRC = TRCI;
+      for (const auto &TRCI : TRI->regclasses())
+        if (TRCI.contains(Reg))
+          TRC = &TRCI;
       assert(TRC && "Couldn't find target register class?");
 
       // If the register we have isn't the right size or in the right place,
@@ -1603,8 +1613,8 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
       unsigned MainRegSize = TRI->getRegSizeInBits(*TRC);
       if (Size != MainRegSize || Offset) {
         // Enumerate all subregisters, searching.
-        Register NewReg = 0;
-        for (MCPhysReg SR : TRI->subregs(Reg)) {
+        Register NewReg = Register();
+        for (MCRegister SR : TRI->subregs(Reg)) {
           unsigned Subreg = TRI->getSubRegIndex(Reg, SR);
           unsigned SubregSize = TRI->getSubRegIdxSize(Subreg);
           unsigned SubregOffset = TRI->getSubRegIdxOffset(Subreg);
@@ -1620,7 +1630,8 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
         } else {
           // Re-state the value as being defined within the subregister
           // that we found.
-          LocIdx NewLoc = MTracker->lookupOrTrackRegister(NewReg);
+          LocIdx NewLoc =
+              MTracker->lookupOrTrackRegister(MTracker->getLocID(NewReg));
           NewID = ValueIDNum(NewID->getBlock(), NewID->getInst(), NewLoc);
         }
       }
@@ -1818,12 +1829,13 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     Register Reg = MO.getReg();
     ValueIDNum Num = MTracker->readReg(Reg);
     auto PHIRec = DebugPHIRecord(
-        {InstrNum, MI.getParent(), Num, MTracker->lookupOrTrackRegister(Reg)});
+        {InstrNum, MI.getParent(), Num,
+         MTracker->lookupOrTrackRegister(MTracker->getLocID(Reg))});
     DebugPHINumToValue.push_back(PHIRec);
 
     // Ensure this register is tracked.
     for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
-      MTracker->lookupOrTrackRegister(*RAI);
+      MTracker->lookupOrTrackRegister(MTracker->getLocID(*RAI));
   } else if (MO.isFI()) {
     // The value is whatever's in this stack slot.
     unsigned FI = MO.getIndex();
@@ -1949,8 +1961,8 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
   // different location.
 
   // Inform TTracker about any direct clobbers.
-  for (uint32_t DeadReg : DeadRegs) {
-    LocIdx Loc = MTracker->lookupOrTrackRegister(DeadReg);
+  for (MCRegister DeadReg : DeadRegs) {
+    LocIdx Loc = MTracker->lookupOrTrackRegister(MTracker->getLocID(DeadReg));
     TTracker->clobberMloc(Loc, MI.getIterator(), false);
   }
 
@@ -1995,9 +2007,9 @@ void InstrRefBasedLDV::performCopy(Register SrcRegNum, Register DstRegNum) {
 
   // Copy subregisters from one location to another.
   for (MCSubRegIndexIterator SRI(SrcRegNum, TRI); SRI.isValid(); ++SRI) {
-    unsigned SrcSubReg = SRI.getSubReg();
+    MCRegister SrcSubReg = SRI.getSubReg();
     unsigned SubRegIdx = SRI.getSubRegIndex();
-    unsigned DstSubReg = TRI->getSubReg(DstRegNum, SubRegIdx);
+    MCRegister DstSubReg = TRI->getSubReg(DstRegNum, SubRegIdx);
     if (!DstSubReg)
       continue;
 
@@ -2006,8 +2018,10 @@ void InstrRefBasedLDV::performCopy(Register SrcRegNum, Register DstRegNum) {
     // yet.
     // This will force SrcSubReg to be tracked, if it isn't yet. Will read
     // mphi values if it wasn't tracked.
-    LocIdx SrcL = MTracker->lookupOrTrackRegister(SrcSubReg);
-    LocIdx DstL = MTracker->lookupOrTrackRegister(DstSubReg);
+    LocIdx SrcL =
+        MTracker->lookupOrTrackRegister(MTracker->getLocID(SrcSubReg));
+    LocIdx DstL =
+        MTracker->lookupOrTrackRegister(MTracker->getLocID(DstSubReg));
     (void)SrcL;
     (void)DstL;
     ValueIDNum CpyValue = MTracker->readReg(SrcSubReg);
@@ -2130,7 +2144,7 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     // Then, transfer subreg bits.
     for (MCPhysReg SR : TRI->subregs(Reg)) {
       // Ensure this reg is tracked,
-      (void)MTracker->lookupOrTrackRegister(SR);
+      (void)MTracker->lookupOrTrackRegister(MTracker->getLocID(SR));
       unsigned SubregIdx = TRI->getSubRegIndex(Reg, SR);
       unsigned SpillID = MTracker->getLocID(Loc, SubregIdx);
       DoTransfer(SR, SpillID);
@@ -2662,7 +2676,7 @@ void InstrRefBasedLDV::placeMLocPHIs(
 
   // For reg units, place PHIs, and then place them for any aliasing registers.
   for (Register R : RegUnitsToPHIUp) {
-    LocIdx L = MTracker->lookupOrTrackRegister(R);
+    LocIdx L = MTracker->lookupOrTrackRegister(MTracker->getLocID(R));
     CollectPHIsForLoc(L);
 
     // Install those PHI values into the live-in value array.
@@ -2675,7 +2689,8 @@ void InstrRefBasedLDV::placeMLocPHIs(
       if (!MTracker->isRegisterTracked(*RAI))
         continue;
 
-      LocIdx AliasLoc = MTracker->lookupOrTrackRegister(*RAI);
+      LocIdx AliasLoc =
+          MTracker->lookupOrTrackRegister(MTracker->getLocID(*RAI));
       InstallPHIsAtLoc(AliasLoc);
     }
   }
@@ -3733,6 +3748,13 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
       new MLocTracker(MF, *TII, *TRI, *MF.getSubtarget().getTargetLowering());
   VTracker = nullptr;
   TTracker = nullptr;
+
+  LLVM_DEBUG(if (MTracker->NumSlotIdxes >= StackSlotIdxesLimit) {
+    dbgs() << "Disabling InstrRefBasedLDV spill tracking for " << MF.getName()
+           << " since target has too many potential stack slot indexes ("
+           << MTracker->NumSlotIdxes << ", limit is " << StackSlotIdxesLimit
+           << ")\n";
+  });
 
   SmallVector<MLocTransferMap, 32> MLocTransfer;
   SmallVector<VLocTracker, 8> vlocs;

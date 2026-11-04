@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; asserts are required for -debug-only=<pass-name>
+; asserts are required for -debug-only=<pass-name> and -stats
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
@@ -10,11 +10,11 @@
 ;; Run optimizer pass on an IR module without IR functions, and test that global
 ;; variables in the module could be annotated (i.e., no early return),
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR,STAT
+; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IR,STAT
 
 ;; Run optimizer pass on the IR, and check the section prefix.
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR,STAT
+; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IR,STAT
 
 ;; Run memprof without providing memprof data. Test that IR has module flag
 ;; `EnableDataAccessProf` as 0.
@@ -26,19 +26,24 @@
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' \
 ; RUN: -debug-only=memprof -stats -S input.ll -o - | FileCheck %s --check-prefix=FLAGLESS --implicit-check-not="section_prefix"
 
-; LOG: Skip annotating string literal .str
-; LOG: Global variable var1 is annotated as hot
-; LOG: Global variable var2.llvm.125 is annotated as hot
-; LOG: Global variable bar is not annotated
-; LOG: Global variable foo is annotated as unlikely
-; LOG: Skip annotation for var3 due to explicit section name.
-; LOG: Skip annotation for var4 due to explicit section name.
-; LOG: Skip annotation for llvm.fake_var due to name starts with `llvm.`.
-; LOG: Skip annotation for qux due to linker declaration.
+; LOGSTR: Global variable .str is annotated as hot
 
-;; String literals are not annotated.
-; IR: @.str = unnamed_addr constant [5 x i8] c"abcde"
-; IR-NOT: section_prefix
+;; Common log lines
+; LOGCOMMON: Global variable var1 is annotated as hot
+; LOGCOMMON: Global variable var2.llvm.125 is annotated as hot
+; LOGCOMMON: Global variable bar is not annotated
+; LOGCOMMON: Global variable foo is annotated as unlikely
+; LOGCOMMON: Skip annotation for var3 due to explicit section name.
+; LOGCOMMON: Skip annotation for var4 due to explicit section name.
+; LOGCOMMON: Skip annotation for llvm.fake_var due to name starts with `llvm.`.
+; LOGCOMMON: Skip annotation for qux due to linker declaration.
+
+; LOGSTR: Global variable .str.llvm.98765 is annotated as unlikely
+; LOGSTR: Global variable .str.2 is not annotated
+
+;; .str is hot
+; IR: @.str = unnamed_addr constant [5 x i8] c"abcde", !section_prefix !0
+
 ; IR: @var1 = global i32 123, !section_prefix !0
 
 ;; @var.llvm.125 will be canonicalized to @var2 for profile look-up.
@@ -49,6 +54,7 @@
 ;; @foo.
 ; IR-NEXT: @bar = global i16 3
 ; IR-NOT: !section_prefix
+; IR-SAME: {{$}}
 
 ;; @foo is unlikely.
 ; IR-NEXT: @foo = global i8 2, !section_prefix !1
@@ -58,8 +64,16 @@
 
 ; IR: @llvm.fake_var = global i32 123
 ; IR-NOT: !section_prefix
+; IR-SAME: {{$}}
 ; IR: @qux = external global i64
 ; IR-NOT: !section_prefix
+; IR-SAME: {{$}}
+
+;; @.str.llvm.98765 is unlikely and @.str.2 has no section prefix.
+; IR: @.str.llvm.98765 = constant [5 x i8] c"Joins", align 1, !section_prefix !1
+; IR: @.str.2 = constant [15 x i8] c"*ptr == nullptr", align 1
+; IR-NOT: section_prefix
+; IR-SAME: {{$}}
 
 ; IR: attributes #0 = { "rodata-section"="sec2" }
 
@@ -70,10 +84,10 @@
 ; FLAG: !{i32 2, !"EnableDataAccessProf", i32 0}
 ; FLAGLESS-NOT: EnableDataAccessProf
 
-; STAT: 1 memprof - Number of global vars annotated with 'unlikely' section prefix.
+; STAT: 2 memprof - Number of global vars annotated with 'unlikely' section prefix.
 ; STAT: 2 memprof - Number of global vars with user-specified section (not annotated).
-; STAT: 2 memprof - Number of global vars annotated with 'hot' section prefix.
-; STAT: 1 memprof - Number of global vars with unknown hotness (no section prefix).
+; STAT: 3 memprof - Number of global vars annotated with 'hot' section prefix.
+; STAT: 2 memprof - Number of global vars with unknown hotness (no section prefix).
 
 ;--- memprof.yaml
 ---
@@ -83,11 +97,14 @@ DataAccessProfiles:
       AccessCount:     1000
     - Symbol:          var2
       AccessCount:     5
-    - Hash:            101010
+      # 4211217683648370347 is the hash for 'abcde'
+    - Hash:            4211217683648370347
       AccessCount:     145
   KnownColdSymbols:
     - foo
-  KnownColdStrHashes: [ 999, 1001 ]
+  # 1698928196410683810 is the hash for 'Joins'
+  # 9184168289490324740 is the hash for 'ptr = nullptr'. This string doesn't exist in the IR.
+  KnownColdStrHashes: [ 1698928196410683810, 9184168289490324740 ]
 ...
 ;--- memprof-no-dap.yaml
 ---
@@ -114,13 +131,15 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @.str = unnamed_addr constant [5 x i8] c"abcde"
 @var1 = global i32 123
-@var2.llvm.125 = global i64 0 
+@var2.llvm.125 = global i64 0
 @bar = global i16 3
 @foo = global i8 2
 @var3 = constant [2 x i32][i32 12345, i32 6789], section "sec1"
 @var4 = constant [1 x i64][i64 98765] #0
 @llvm.fake_var = global i32 123
 @qux = external global i64
+@.str.llvm.98765 = constant [5 x i8] c"Joins", align 1
+@.str.2 = constant [15 x i8] c"*ptr == nullptr", align 1
 
 define i32 @func() {
   %a = load i32, ptr @var1
@@ -148,6 +167,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @var4 = constant [1 x i64][i64 98765] #0
 @llvm.fake_var = global i32 123
 @qux = external global i64
+@.str.llvm.98765 = constant [5 x i8] c"Joins", align 1
+@.str.2 = constant [15 x i8] c"*ptr == nullptr", align 1
 
 
 attributes #0 = { "rodata-section"="sec2" }

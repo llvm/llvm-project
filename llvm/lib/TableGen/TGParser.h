@@ -17,22 +17,39 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
+#include <optional>
 
 namespace llvm {
 class SourceMgr;
 class Twine;
 struct ForeachLoop;
 struct MultiClass;
-struct SubClassReference;
-struct SubMultiClassReference;
+struct ClassReference;
+struct MultiClassReference;
+
+/// Specifies how a 'let' assignment interacts with the existing field value.
+/// - Replace: overwrite the field (default behavior).
+/// - Append: concatenate the new value after the existing value.
+/// - Prepend: concatenate the new value before the existing value.
+enum class LetMode { Replace, Append, Prepend };
+
+/// Parsed let mode keyword and field name (e.g. `let append x` yields
+/// Mode=Append, Name="x"; plain `let x` yields Mode=Replace, Name="x").
+struct LetModeAndName {
+  LetMode Mode;
+  SMLoc Loc;        // Source location of the field name.
+  std::string Name; // The field name being assigned.
+};
 
 struct LetRecord {
   const StringInit *Name;
   std::vector<unsigned> Bits;
   const Init *Value;
   SMLoc Loc;
-  LetRecord(const StringInit *N, ArrayRef<unsigned> B, const Init *V, SMLoc L)
-      : Name(N), Bits(B), Value(V), Loc(L) {}
+  LetMode Mode;
+  LetRecord(const StringInit *N, ArrayRef<unsigned> B, const Init *V, SMLoc L,
+            LetMode M = LetMode::Replace)
+      : Name(N), Bits(B), Value(V), Loc(L), Mode(M) {}
 };
 
 /// RecordsEntry - Holds exactly one of a Record, ForeachLoop, or
@@ -220,17 +237,17 @@ public:
   }
 
 private: // Semantic analysis methods.
-  bool AddValue(Record *TheRec, SMLoc Loc, const RecordVal &RV);
+  bool AddValue(Record *TheRec, SMLoc Loc, const RecordVal &RV,
+                const Record *FromRec = nullptr);
   /// Set the value of a RecordVal within the given record. If `OverrideDefLoc`
   /// is set, the provided location overrides any existing location of the
-  /// RecordVal.
+  /// RecordVal. An optional `Mode` specifies append/prepend concatenation.
   bool SetValue(Record *TheRec, SMLoc Loc, const Init *ValName,
                 ArrayRef<unsigned> BitList, const Init *V,
-                bool AllowSelfAssignment = false, bool OverrideDefLoc = true);
-  bool AddSubClass(Record *Rec, SubClassReference &SubClass);
-  bool AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass);
-  bool AddSubMultiClass(MultiClass *CurMC,
-                        SubMultiClassReference &SubMultiClass);
+                bool OverrideDefLoc = true, LetMode Mode = LetMode::Replace);
+  bool AddParentClass(Record *Rec, ClassReference &ParentClass);
+  bool AddParentClass(RecordsEntry &Entry, ClassReference &ParentClass);
+  bool AddParentMultiClass(MultiClassReference &ParentMultiClass);
 
   using SubstStack = SmallVector<std::pair<const Init *, const Init *>, 8>;
 
@@ -255,21 +272,22 @@ private: // Semantic analysis methods.
 
 private: // Parser methods.
   bool consume(tgtok::TokKind K);
-  bool ParseObjectList(MultiClass *MC = nullptr);
-  bool ParseObject(MultiClass *MC);
+  bool ParseObjectList();
+  bool ParseObject();
   bool ParseClass();
   bool ParseMultiClass();
-  bool ParseDefm(MultiClass *CurMultiClass);
-  bool ParseDef(MultiClass *CurMultiClass);
+  bool ParseDefm();
+  bool ParseDef();
   bool ParseDefset();
   bool ParseDeftype();
   bool ParseDefvar(Record *CurRec = nullptr);
-  bool ParseDump(MultiClass *CurMultiClass, Record *CurRec = nullptr);
-  bool ParseForeach(MultiClass *CurMultiClass);
-  bool ParseIf(MultiClass *CurMultiClass);
-  bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
-  bool ParseAssert(MultiClass *CurMultiClass, Record *CurRec = nullptr);
-  bool ParseTopLevelLet(MultiClass *CurMultiClass);
+  bool ParseDump(Record *CurRec = nullptr);
+  bool ParseForeach();
+  bool ParseIf();
+  bool ParseIfBody(StringRef Kind);
+  bool ParseAssert(Record *CurRec = nullptr);
+  bool ParseTopLevelLet();
+  LetModeAndName ParseLetModeAndName();
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 
   bool ParseObjectBody(Record *CurRec);
@@ -277,11 +295,11 @@ private: // Parser methods.
   bool ParseBodyItem(Record *CurRec);
 
   bool ParseTemplateArgList(Record *CurRec);
-  const Init *ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs);
+  bool ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs);
   const VarInit *ParseForeachDeclaration(const Init *&ForeachListValue);
 
-  SubClassReference ParseSubClassReference(Record *CurRec, bool isDefm);
-  SubMultiClassReference ParseSubMultiClassReference(MultiClass *CurMC);
+  ClassReference ParseClassReference(Record *CurRec, bool isDefm);
+  MultiClassReference ParseMultiClassReference();
 
   const Init *ParseIDValue(Record *CurRec, const StringInit *Name,
                            SMRange NameLoc, IDParseMode Mode = ParseValueMode);
@@ -298,7 +316,6 @@ private: // Parser methods.
       SmallVectorImpl<std::pair<const Init *, const StringInit *>> &Result,
       Record *CurRec);
   bool ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges);
-  bool ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges);
   const TypedInit *ParseSliceElement(Record *CurRec);
   const TypedInit *ParseSliceElements(Record *CurRec, bool Single = false);
   void ParseRangeList(SmallVectorImpl<unsigned> &Result);
@@ -308,11 +325,14 @@ private: // Parser methods.
   const Init *ParseOperation(Record *CurRec, const RecTy *ItemType);
   const Init *ParseOperationSubstr(Record *CurRec, const RecTy *ItemType);
   const Init *ParseOperationFind(Record *CurRec, const RecTy *ItemType);
-  const Init *ParseOperationForEachFilter(Record *CurRec,
-                                          const RecTy *ItemType);
+  const Init *ParseOperationListComprehension(Record *CurRec,
+                                              const RecTy *ItemType);
   const Init *ParseOperationCond(Record *CurRec, const RecTy *ItemType);
+  const Init *ParseOperationSwitch(Record *CurRec, const RecTy *ItemType);
+  std::optional<const RecTy *> resolveInitTypes(ArrayRef<const Init *> Inits,
+                                                const Twine &ErrCtx);
   const RecTy *ParseOperatorType();
-  const Init *ParseObjectName(MultiClass *CurMultiClass);
+  const Init *ParseObjectName();
   const Record *ParseClassID();
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);

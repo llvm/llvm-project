@@ -29,6 +29,7 @@ unittest("DebugInfoDWARFTests") {
     "DWARFFormValueTest.cpp",
     "DWARFListTableTest.cpp",
     "DWARFLocationExpressionTest.cpp",
+    "DWARFVerifierTest.cpp",
     "DwarfGenerator.cpp",
     "DwarfUtils.cpp",
   ]

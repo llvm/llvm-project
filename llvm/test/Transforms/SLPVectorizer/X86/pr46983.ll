@@ -9,7 +9,7 @@ define void @store_i32(ptr nocapture %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: define void @store_i32(
 ; CHECK-SAME: ptr captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr <4 x i32> [[TMP7]], splat (i32 15)
@@ -53,7 +53,7 @@ define void @store_i8(ptr nocapture %0, i32 %1, i32 %2) {
 ; CHECK-SAME: ptr captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1, !tbaa [[CHAR_TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], splat (i32 15)
@@ -106,7 +106,7 @@ define void @store_i64(ptr nocapture %0, i32 %1, i32 %2) {
 ; CHECK-SAME: ptr captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8, !tbaa [[LONG_TBAA5:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i64> poison, i64 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i64> poison, i64 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP6]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i64> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i64> [[TMP8]], splat (i64 15)
@@ -163,12 +163,3 @@ define void @store_i64(ptr nocapture %0, i32 %1, i32 %2) {
 !6 = !{!4, !4, i64 0}
 !7 = !{!8, !8, i64 0}
 !8 = !{!"long", !4, i64 0}
-;.
-; CHECK: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
-; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
-; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
-; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
-; CHECK: [[CHAR_TBAA4]] = !{[[META2]], [[META2]], i64 0}
-; CHECK: [[LONG_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-; CHECK: [[META6]] = !{!"long", [[META2]], i64 0}
-;.

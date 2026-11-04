@@ -17,6 +17,6 @@
 
 #include <sys/resource.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_TYPES_STRUCT_RLIMIT_H

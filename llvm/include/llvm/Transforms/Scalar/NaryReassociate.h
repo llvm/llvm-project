@@ -80,6 +80,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 
@@ -92,21 +93,20 @@ class DominatorTree;
 class Function;
 class GetElementPtrInst;
 class Instruction;
-class ScalarEvolution;
-class SCEV;
+class IntrinsicInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
 class Value;
 
-class NaryReassociatePass : public PassInfoMixin<NaryReassociatePass> {
+class NaryReassociatePass : public OptionalPassInfoMixin<NaryReassociatePass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, AssumptionCache *AC_, DominatorTree *DT_,
-               ScalarEvolution *SE_, TargetLibraryInfo *TLI_,
-               TargetTransformInfo *TTI_);
+  LLVM_ABI bool runImpl(Function &F, AssumptionCache *AC_, DominatorTree *DT_,
+                        ScalarEvolution *SE_, TargetLibraryInfo *TLI_,
+                        TargetTransformInfo *TTI_);
 
 private:
   // Runs only one iteration of the dominator-based algorithm. See the header
@@ -114,7 +114,7 @@ private:
   bool doOneIteration(Function &F);
 
   // Reassociates I for better CSE.
-  Instruction *tryReassociate(Instruction *I, const SCEV *&OrigSCEV);
+  Instruction *tryReassociate(Instruction *I, SCEVUse &OrigSCEV);
 
   // Reassociate GEP for better CSE.
   Instruction *tryReassociateGEP(GetElementPtrInst *GEP);
@@ -143,33 +143,22 @@ private:
   Instruction *tryReassociateBinaryOp(Value *LHS, Value *RHS,
                                       BinaryOperator *I);
   // Rewrites I to (LHS op RHS) if LHS is computed already.
-  Instruction *tryReassociatedBinaryOp(const SCEV *LHS, Value *RHS,
+  Instruction *tryReassociatedBinaryOp(SCEVUse LHS, Value *RHS,
                                        BinaryOperator *I);
 
   // Tries to match Op1 and Op2 by using V.
   bool matchTernaryOp(BinaryOperator *I, Value *V, Value *&Op1, Value *&Op2);
 
   // Gets SCEV for (LHS op RHS).
-  const SCEV *getBinarySCEV(BinaryOperator *I, const SCEV *LHS,
-                            const SCEV *RHS);
+  SCEVUse getBinarySCEV(BinaryOperator *I, SCEVUse LHS, SCEVUse RHS);
 
   // Returns the closest dominator of \c Dominatee that computes
   // \c CandidateExpr. Returns null if not found.
-  Instruction *findClosestMatchingDominator(const SCEV *CandidateExpr,
+  Instruction *findClosestMatchingDominator(SCEVUse CandidateExpr,
                                             Instruction *Dominatee);
 
-  // Try to match \p I as signed/unsigned Min/Max and reassociate it. \p
-  // OrigSCEV is set if \I matches Min/Max regardless whether resassociation is
-  // done or not. If reassociation was successful newly generated instruction is
-  // returned, otherwise nullptr.
-  template <typename PredT>
-  Instruction *matchAndReassociateMinOrMax(Instruction *I,
-                                           const SCEV *&OrigSCEV);
-
   // Reassociate Min/Max.
-  template <typename MaxMinT>
-  Value *tryReassociateMinOrMax(Instruction *I, MaxMinT MaxMinMatch, Value *LHS,
-                                Value *RHS);
+  Value *tryReassociateMinOrMax(IntrinsicInst *I);
 
   // GetElementPtrInst implicitly sign-extends an index if the index is shorter
   // than the pointer size. This function returns whether Index is shorter than

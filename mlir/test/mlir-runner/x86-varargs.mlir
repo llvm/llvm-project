@@ -2,6 +2,8 @@
 // Varaidic argument list (va_list) and the extraction logics are ABI-specific.
 // REQUIRES: x86-native-target
 // UNSUPPORTED: system-windows
+// https://github.com/llvm/llvm-project/issues/124541
+// XFAIL: target-x86
 
 // Check if variadic functions can be called and the correct variadic argument
 // can be extracted.

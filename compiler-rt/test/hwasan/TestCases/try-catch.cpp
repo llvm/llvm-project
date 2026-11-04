@@ -16,6 +16,7 @@
 #include <pthread.h>
 #include <sanitizer/hwasan_interface.h>
 #include <stdexcept>
+#include <stdlib.h>
 #include <string.h>
 
 static void optimization_barrier(void* arg) {

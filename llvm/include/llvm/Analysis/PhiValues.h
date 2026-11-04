@@ -127,13 +127,13 @@ public:
 /// This pass doesn't print whatever information the PhiValues happens to hold,
 /// but instead first uses the PhiValues to analyze all the phis in the function
 /// so the complete information is printed.
-class PhiValuesPrinterPass : public PassInfoMixin<PhiValuesPrinterPass> {
+class PhiValuesPrinterPass
+    : public RequiredPassInfoMixin<PhiValuesPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit PhiValuesPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Wrapper pass for the legacy pass manager

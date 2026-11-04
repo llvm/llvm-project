@@ -80,18 +80,6 @@ public:
   explicit DGNode(EdgeType &E) : Edges() { Edges.insert(&E); }
   DGNode() = default;
 
-  explicit DGNode(const DGNode<NodeType, EdgeType> &N) : Edges(N.Edges) {}
-  DGNode(DGNode<NodeType, EdgeType> &&N) : Edges(std::move(N.Edges)) {}
-
-  DGNode<NodeType, EdgeType> &operator=(const DGNode<NodeType, EdgeType> &N) {
-    Edges = N.Edges;
-    return *this;
-  }
-  DGNode<NodeType, EdgeType> &operator=(const DGNode<NodeType, EdgeType> &&N) {
-    Edges = std::move(N.Edges);
-    return *this;
-  }
-
   /// Static polymorphism: delegate implementation (via isEqualTo) to the
   /// derived class.
   friend bool operator==(const NodeType &M, const NodeType &N) {

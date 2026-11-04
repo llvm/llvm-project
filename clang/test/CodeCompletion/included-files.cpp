@@ -1,6 +1,6 @@
-// RUN: rm -rf %t && mkdir %t && cp %s %t/main.cc && mkdir %t/a && mkdir %t/QtCore && mkdir %t/Headers %t/Some.framework %t/Some.framework/Headers
+// RUN: rm -rf %t && mkdir %t && cp %s %t/main.cc && mkdir %t/a && mkdir %t/QtCore && mkdir %t/Headers %t/Some.framework %t/Some.framework/Headers %t/include %t/include/Headers
 // RUN: touch %t/foo.h %t/foo.hxx %t/foo.cc %t/a/foosys %t/a/foosys.h %t/QtCore/foosys %t/QtCore/foo.h
-// RUN: touch %t/Headers/foosys %t/Headers/foo.h %t/Some.framework/Headers/foosys %t/Some.framework/Headers/foo.h
+// RUN: touch %t/Headers/foosys %t/Headers/foo.h %t/Some.framework/Headers/foosys %t/Some.framework/Headers/foo.h %t/include/Headers/foosys
 
 // Quoted string shows header-ish files from CWD, and all from system.
 #include "foo.h"
@@ -56,3 +56,8 @@
 // CHECK-8-NOT: foo.cc>
 // CHECK-8: foo.h>
 // CHECK-8-NOT: foosys>
+
+// But simply naming a directory "include" is enough to allow extension-less headers.
+#include <Headers/foosys>
+// RUN: %clang -fsyntax-only -isystem %t/a -I %t/include -Xclang -code-completion-at=%t/main.cc:61:21 %t/main.cc -fms-compatibility | FileCheck -check-prefix=CHECK-9 %s
+// CHECK-9: foosys>

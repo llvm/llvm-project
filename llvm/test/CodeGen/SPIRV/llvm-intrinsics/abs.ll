@@ -13,9 +13,9 @@
 define dso_local spir_kernel void @test(i32 %a, <4 x i32> %b) local_unnamed_addr {
 entry:
   %0 = tail call i32 @llvm.abs.i32(i32 %a, i1 0)
-  store i32 %0, i32 addrspace(1)* @ga, align 4
+  store i32 %0, ptr addrspace(1) @ga, align 4
   %1 = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> %b, i1 0)
-  store <4 x i32> %1, <4 x i32> addrspace(1)* @gb, align 4
+  store <4 x i32> %1, ptr addrspace(1) @gb, align 4
 
   ret void
 }

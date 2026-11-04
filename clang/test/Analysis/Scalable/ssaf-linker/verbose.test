@@ -1,0 +1,61 @@
+// Test the --verbose/-v flag of clang-ssaf-linker.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// RUN: clang-ssaf-linker --verbose %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
+// RUN:           | FileCheck %s --match-full-lines
+// CHECK:      note: - Linking started.
+// CHECK-NEXT: note:   - Validating input.
+// CHECK-NEXT: note:     - Validated output path '{{.*}}lu-1+2.json'.
+// CHECK-NEXT: note:     - Validated 2 input artifact path(s).
+// CHECK-NEXT: note:   - Creating link unit.
+// CHECK-NEXT: note:     - Linking artifacts.
+// CHECK-NEXT: note:       - [1/2] Reading '{{.*}}tu-1.json'.
+// CHECK-NEXT: note:       - Target triple: 'arm64-apple-macosx' (inferred from '{{.*}}tu-1.json').
+// CHECK-NEXT: note:       - [1/2] Linking '{{.*}}tu-1.json'.
+// CHECK-NEXT: note:       - [2/2] Reading '{{.*}}tu-2.json'.
+// CHECK-NEXT: note:       - [2/2] Linking '{{.*}}tu-2.json'.
+// CHECK-NEXT: note:     - Linked 2 translation unit(s).
+// CHECK-NEXT: note:     - Target namespace: 'NestedBuildNamespace([BuildNamespace(LinkUnit, lu-1+2)])'.
+// CHECK-NEXT: note:   - Writing link unit summary to '{{.*}}lu-1+2.json'.
+// CHECK-NEXT: note: - Linking finished.
+
+// A library input reports how many members it contributes, and the closing
+// count is of translation units folded in, not of inputs on the command line.
+// Only the lines that differ from the run above are checked.
+
+// RUN: clang-ssaf-linker static-library create %S/Inputs/tu-1.json %S/Inputs/tu-2.json --namespace libtwo -o %t/libtwo.json
+// RUN: clang-ssaf-linker --verbose %t/libtwo.json %S/Inputs/lib-arm64.json -o %t/lu-libs.json 2>&1 \
+// RUN:           | FileCheck %s --match-full-lines --check-prefix=LIBS
+// LIBS:      note:       - [1/2] Linking '{{.*}}libtwo.json' (static library, 2 member(s)).
+// LIBS-NEXT: note:       - [2/2] Reading '{{.*}}lib-arm64.json'.
+// LIBS-NEXT: note:       - [2/2] Linking '{{.*}}lib-arm64.json' (static library, 0 member(s)).
+// LIBS-NEXT: note:     - Linked 2 translation unit(s).
+
+// A multi-arch input reports how many members it carries.
+
+// RUN: clang-ssaf-linker multi-arch create %t/libtwo.json -o %t/libtwo-1arch.json
+// RUN: clang-ssaf-linker --verbose %t/libtwo-1arch.json -o %t/lu-member.json 2>&1 \
+// RUN:           | FileCheck %s --match-full-lines --check-prefix=MEMBER
+// MEMBER:      note:       - [1/1] Reading '{{.*}}libtwo-1arch.json'.
+// MEMBER-NEXT: note:       - Target triple: 'arm64-apple-macosx' (inferred from '{{.*}}libtwo-1arch.json').
+// MEMBER-NEXT: note:       - [1/1] Linking '{{.*}}libtwo-1arch.json' (multi-arch static library, 1 member(s)).
+// MEMBER-NEXT: note:     - Linked 2 translation unit(s).
+
+// An explicit --target-triple is reported as such rather than as inferred.
+// Which member it selects is asserted by content in linking.test, not here; the
+// selected member of Inputs/libtwo-2arch.json is empty, hence no linked units.
+
+// RUN: clang-ssaf-linker --verbose --target-triple arm64-apple-macosx %S/Inputs/libtwo-2arch.json -o %t/lu-explicit.json 2>&1 \
+// RUN:           | FileCheck %s --check-prefix=EXPLICIT
+// EXPLICIT:      note:       - Target triple: 'arm64-apple-macosx' (from --target-triple).
+// EXPLICIT-NEXT: note:       - [1/1] Linking '{{.*}}libtwo-2arch.json' (multi-arch static library, 2 member(s)).
+// EXPLICIT-NEXT: note:     - Linked 0 translation unit(s).
+
+// A run that cannot fix a target triple reports no triple and links nothing.
+
+// RUN: not clang-ssaf-linker --verbose %S/Inputs/libtwo-2arch.json -o %t/lu-none.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-TRIPLE --implicit-check-not="Target triple"
+// NO-TRIPLE:      note:       - [1/1] Reading '{{.*}}libtwo-2arch.json'.
+// NO-TRIPLE-NEXT: error: cannot infer target triple from '{{.*}}libtwo-2arch.json': multi-arch static library has 2 members; pass --target-triple to select one

@@ -35,7 +35,7 @@ MEMORY
 
 SECTIONS
 {
-    _abss ALIGN(REGION1__PRE_ALIGNMENT) :
+    _abss : ALIGN(REGION1__PRE_ALIGNMENT)
     {
         REGION1__BEGIN = .; REGION1__ALIGNED_BEGIN = .; REGION1_ALIGNED_BEGIN = .;
         *(.a.bss)
@@ -58,7 +58,7 @@ MEMORY
 
 SECTIONS
 {
-    _abss ALIGN(REGION1__PRE_ALIGNMENT) :
+    _abss : ALIGN(REGION1__PRE_ALIGNMENT) 
     {
         REGION1__BEGIN = .; REGION1__ALIGNED_BEGIN = .; REGION1_ALIGNED_BEGIN = .;
         *(.a.bss)

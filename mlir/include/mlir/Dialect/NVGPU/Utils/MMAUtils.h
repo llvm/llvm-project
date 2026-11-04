@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H
 #define MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H
 
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
@@ -37,7 +37,7 @@ struct WarpMatrixInfo {
 };
 
 /// If `op` is a `vector.transfer_write`, return the `WarpMatrixInfo` for the
-/// vector operand. If op is a `vector.transfer_read`, `vector.contraction`, or
+/// vector operand. If op is a `vector.transfer_read`, `vector.contract`, or
 /// `arith.constant`, return the `WarpMatrixInfo` corresponding to the result.
 /// Otherwise, return failure.
 FailureOr<WarpMatrixInfo> getWarpMatrixInfo(Operation *op);

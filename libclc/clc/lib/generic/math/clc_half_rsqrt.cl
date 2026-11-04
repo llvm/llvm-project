@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_rsqrt.h>
+#include "clc/math/clc_rsqrt.h"
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_half_rsqrt
 #define __CLC_IMPL_FUNCTION(x) __clc_rsqrt
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

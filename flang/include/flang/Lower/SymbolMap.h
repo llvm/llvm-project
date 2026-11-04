@@ -13,7 +13,7 @@
 #ifndef FORTRAN_LOWER_SYMBOLMAP_H
 #define FORTRAN_LOWER_SYMBOLMAP_H
 
-#include "flang/Common/reference.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
@@ -134,6 +134,41 @@ private:
   VT box;
 };
 
+/// Helper class to map `Fortran::evaluate::Component` references to IR values.
+/// This is used when the evaluation of a component reference must be
+/// overridden with a pre-computed address.
+class ComponentMap {
+public:
+  void insert(const Fortran::evaluate::Component &component,
+              fir::FortranVariableOpInterface definingOp) {
+    auto iter = componentMap.find(&component);
+    if (iter != componentMap.end()) {
+      iter->second = definingOp;
+      return;
+    }
+    componentStorage.push_back(
+        std::make_unique<Fortran::evaluate::Component>(component));
+    componentMap.insert({componentStorage.back().get(), definingOp});
+  }
+
+  std::optional<fir::FortranVariableOpInterface>
+  lookup(const Fortran::evaluate::Component *component) const {
+    auto iter = componentMap.find(component);
+    if (iter != componentMap.end())
+      return iter->second;
+    return std::nullopt;
+  }
+
+  LLVM_DUMP_METHOD void dump() const;
+
+private:
+  llvm::DenseMap<const Fortran::evaluate::Component *,
+                 fir::FortranVariableOpInterface>
+      componentMap;
+  llvm::SmallVector<std::unique_ptr<Fortran::evaluate::Component>>
+      componentStorage;
+};
+
 //===----------------------------------------------------------------------===//
 // Map of symbol information
 //===----------------------------------------------------------------------===//
@@ -155,13 +190,19 @@ public:
 
   void pushScope() {
     symbolMapStack.emplace_back();
+    deviceSymbolMapStack.emplace_back();
     storageMapStack.emplace_back();
+    componentMapStack.emplace_back();
   }
   void popScope() {
     symbolMapStack.pop_back();
     assert(symbolMapStack.size() >= 1);
+    deviceSymbolMapStack.pop_back();
+    assert(deviceSymbolMapStack.size() >= 1);
     storageMapStack.pop_back();
     assert(storageMapStack.size() >= 1);
+    componentMapStack.pop_back();
+    assert(componentMapStack.size() >= 1);
   }
 
   /// Add an extended value to the symbol table.
@@ -260,6 +301,23 @@ public:
     return lookupSymbol(*sym);
   }
 
+  /// Add and look up an alternate device-address binding for an object mapped
+  /// by a structured OpenACC data construct. Ordinary symbol lookup continues
+  /// to return the host binding.
+  void addDeviceVariableDefinition(semantics::SymbolRef symRef,
+                                   fir::FortranVariableOpInterface definingOp,
+                                   bool force = false) {
+    makeDeviceSym(symRef, SymbolBox(definingOp), force);
+  }
+  SymbolBox lookupDeviceSymbol(semantics::SymbolRef);
+  bool copyDeviceBindingToCurrentScope(semantics::SymbolRef symRef) {
+    if (SymbolBox box{lookupDeviceSymbol(symRef)}) {
+      makeSym(symRef, box, /*force=*/true);
+      return true;
+    }
+    return false;
+  }
+
   /// Find a symbol by name and return its value if it appears in the current
   /// mappings. This lookup is more expensive as it iterates over the map.
   const semantics::Symbol *lookupSymbolByName(llvm::StringRef symName);
@@ -297,10 +355,14 @@ public:
   void clear() {
     symbolMapStack.clear();
     symbolMapStack.emplace_back();
+    deviceSymbolMapStack.clear();
+    deviceSymbolMapStack.emplace_back();
     assert(symbolMapStack.size() == 1);
     impliedDoStack.clear();
     storageMapStack.clear();
     storageMapStack.emplace_back();
+    componentMapStack.clear();
+    componentMapStack.emplace_back();
   }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
@@ -329,6 +391,33 @@ public:
     return std::nullopt;
   }
 
+  /// Register a mapping from a front-end component reference to the FIR
+  /// variable that should be used to implement it. This is used to override
+  /// the default lowering of component references in specific contexts.
+  void addComponentOverride(const Fortran::evaluate::Component &component,
+                            fir::FortranVariableOpInterface definingOp) {
+    assert(!componentMapStack.empty() && "component map stack is empty");
+    if (!componentMapStack.back())
+      componentMapStack.back() = std::make_unique<ComponentMap>();
+    componentMapStack.back().value()->insert(component, definingOp);
+  }
+
+  /// Lookup an overridden FIR variable definition for a given component
+  /// reference, if any.
+  std::optional<fir::FortranVariableOpInterface>
+  lookupComponentOverride(const Fortran::evaluate::Component &component) const {
+    for (auto jmap = componentMapStack.rbegin(),
+              jend = componentMapStack.rend();
+         jmap != jend; ++jmap) {
+      if (*jmap) {
+        auto iter = (**jmap)->lookup(&component);
+        if (iter != std::nullopt)
+          return iter;
+      }
+    }
+    return std::nullopt;
+  }
+
   /// Register the symbol's storage at the innermost level
   /// of the symbol table. If the storage is already registered,
   /// it will be replaced.
@@ -350,8 +439,19 @@ private:
     symbolMapStack.back().try_emplace(sym, box);
   }
 
+  void makeDeviceSym(semantics::SymbolRef symRef, const SymbolBox &box,
+                     bool force = false) {
+    auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+    if (force)
+      deviceSymbolMapStack.back().erase(sym);
+    assert(box && "cannot add an undefined device symbol box");
+    deviceSymbolMapStack.back().try_emplace(sym, box);
+  }
+
   llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>>
       symbolMapStack;
+  llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>>
+      deviceSymbolMapStack;
 
   // Implied DO induction variables are not represented as Se::Symbol in
   // Ev::Expr. Keep the variable markers in their own stack.
@@ -360,6 +460,12 @@ private:
   // A stack of maps between the symbols and their storage descriptors.
   llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, StorageDesc>>
       storageMapStack;
+
+  // A stack of maps from front-end component references to the FIR variables
+  // that should be used to implement them. This allows overriding component
+  // references in specific lowering contexts.
+  llvm::SmallVector<std::optional<std::unique_ptr<ComponentMap>>>
+      componentMapStack;
 };
 
 /// RAII wrapper for SymMap.

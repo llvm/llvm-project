@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s 2>&1 | \
 ; RUN: FileCheck %s --check-prefix=32BIT
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s 2>&1 -mattr=-altivec | \
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s 2>&1 -mattr=-altivec | \
 ; RUN: FileCheck %s --check-prefix=64BIT
 
 define void @create_trampoline(ptr %buffer, ptr %nval) nounwind {

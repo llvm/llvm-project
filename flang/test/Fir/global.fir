@@ -50,7 +50,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
-// CHECK: @_QEmasklogical = internal global [32768 x i32] [i32 -1, i32 -1,
+// CHECK: @_QEmasklogical = internal global [32768 x i32] [i32 1, i32 1,
 fir.global internal @_QEmasklogical : !fir.array<32768x!fir.logical<4>> {
   %true = arith.constant true
   %0 = fir.undefined !fir.array<32768x!fir.logical<4>>

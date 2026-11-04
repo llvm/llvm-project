@@ -22,9 +22,20 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 
+  # LLVM_DEFINITIONS is a space-separated string of command-line flags (e.g.
+  # "-D_GNU_SOURCE -D__STDC_CONSTANT_MACROS"), so split it into a CMake list
+  # before passing it to add_definitions(). Do this before including
+  # HandleLLVMOptions, which overwrites LLVM_DEFINITIONS in the current scope.
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+
   include(TableGen)
   include(AddLLVM)
   include(AddMLIR)
+  # Configure C/C++ compiler and linker flags matching the LLVM/MLIR build.
+  # Note: If your project builds third-party C++ dependencies from source that
+  # do not depend on LLVM/MLIR, add them before including HandleLLVMOptions so
+  # they are not affected by LLVM-specific warning, assertion, or linker flags.
   include(HandleLLVMOptions)
 else()
   set(EXTERNAL_PROJECT_BUILD TRUE)
@@ -54,7 +65,6 @@ include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${STANDALONE_SOURCE_DIR}/include)
 include_directories(${STANDALONE_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
-add_definitions(${LLVM_DEFINITIONS})
 
 add_subdirectory(include)
 add_subdirectory(lib)
@@ -66,12 +76,17 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
   if(NOT MLIR_PYTHON_PACKAGE_PREFIX)
     set(MLIR_PYTHON_PACKAGE_PREFIX "mlir_standalone" CACHE STRING "" FORCE)
   endif()
+  if(NOT MLIR_BINDINGS_PYTHON_NB_DOMAIN)
+    set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir_standalone" CACHE STRING "" FORCE)
+  endif()
   if(NOT MLIR_BINDINGS_PYTHON_INSTALL_PREFIX)
     set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/standalone/${MLIR_PYTHON_PACKAGE_PREFIX}" CACHE STRING "" FORCE)
   endif()
   add_subdirectory(python)
 endif()
-add_subdirectory(test)
+if(MLIR_INCLUDE_TESTS)
+  add_subdirectory(test)
+endif()
 add_subdirectory(standalone-opt)
 if(NOT WIN32)
   add_subdirectory(standalone-plugin)

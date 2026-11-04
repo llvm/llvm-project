@@ -33,8 +33,13 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     ShapedType weightType = cast<ShapedType>(weight.getType());
     ShapedType resultType = cast<ShapedType>(op.getOutput().getType());
 
-    if (!(inputType.hasStaticShape() && weightType.hasStaticShape() &&
-          resultType.hasStaticShape())) {
+    // Any dimensions other than batchSize cannot be dynamic for input/output
+    for (unsigned int i = 1; i < 4; ++i) {
+      if (inputType.isDynamicDim(i) || resultType.isDynamicDim(i))
+        return failure();
+    }
+
+    if (!weightType.hasStaticShape()) {
       return failure();
     }
 
@@ -86,15 +91,16 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                 .getResult();
 
     Type resultETy = resultType.getElementType();
-
     if (inputETy != resultETy) {
       inputType = inputType.clone(resultETy);
-      input = tosa::CastOp::create(rewriter, op.getLoc(), inputType, input);
+      input = tosa::CastOp::create(rewriter, op.getLoc(), inputType, input,
+                                   /*input_unsigned*/ false);
     }
 
     if (weightETy != resultETy) {
       weightType = weightType.clone(resultETy);
-      weight = tosa::CastOp::create(rewriter, op.getLoc(), weightType, weight);
+      weight = tosa::CastOp::create(rewriter, op.getLoc(), weightType, weight,
+                                    /*input_unsigned*/ false);
     }
 
     if (iZp != 0 || wZp != 0) {

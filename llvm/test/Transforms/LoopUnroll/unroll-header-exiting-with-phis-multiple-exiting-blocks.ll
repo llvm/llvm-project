@@ -53,7 +53,7 @@ define i16 @full_unroll_multiple_exiting_blocks(ptr %A, i16 %x, i16 %y) {
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i16 [ 0, [[EXITING_1]] ], [ 1, [[EXITING_2]] ], [ 0, [[EXITING_1_1]] ], [ 1, [[EXITING_2_1]] ], [ 0, [[EXITING_1_2]] ], [ 1, [[EXITING_2_2]] ], [ [[RES_NEXT_3]], [[LATCH_2]] ], [ 0, [[EXITING_1_3]] ], [ 1, [[EXITING_2_3]] ]
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i16 [ 1, [[EXITING_2_3]] ], [ 0, [[EXITING_1]] ], [ 1, [[EXITING_2]] ], [ 0, [[EXITING_1_3]] ], [ 0, [[EXITING_1_1]] ], [ 1, [[EXITING_2_1]] ], [ [[RES_NEXT_3]], [[LATCH_2]] ], [ 0, [[EXITING_1_2]] ], [ 1, [[EXITING_2_2]] ]
 ; CHECK-NEXT:    ret i16 [[RES_LCSSA]]
 ;
 entry:

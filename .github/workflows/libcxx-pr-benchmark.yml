@@ -1,0 +1,255 @@
+# This file defines a workflow that runs the libc++ benchmarks when a comment is added to the PR.
+#
+# The comment is of the form:
+#
+#   /libcxx-bot benchmark <path-to-benchmarks-to-run>
+#
+# That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
+# their results to be compared. Only machines defined in machines.json that opt into the PR
+# benchmarking are triggered.
+
+name: "[libc++] Benchmark PR"
+
+permissions:
+  contents: read
+
+on:
+  issue_comment:
+    types:
+      - created
+      - edited
+
+jobs:
+  permission-check:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/libcxx-bot benchmark')
+    runs-on: ubuntu-26.04
+    environment:
+      name: main-branch-only
+      deployment: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
+
+      - name: Check Permissions
+        uses: ./.github/workflows/require-team-membership
+        with:
+          team-slug: llvm-committers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+  extract-info:
+    runs-on: ubuntu-26.04
+    needs:
+      - permission-check
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout the LNT configurations
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Disabling cone mode allows checking out exactly the single file we need.
+          sparse-checkout: libcxx/utils/ci/lnt/machines.json
+          sparse-checkout-cone-mode: false
+
+      - name: Extract information from the PR
+        id: vars
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            // Compare the PR against the commit where it diverged from its target branch.
+            const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              basehead: `${pr.data.base.sha}...${pr.data.head.sha}`,
+              per_page: 1,
+            });
+            core.setOutput('baseline', comparison.merge_base_commit.sha);
+            core.setOutput('candidate', pr.data.head.sha);
+
+            const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
+            core.setOutput('benchmarks', match ? match[1] : '');
+
+            // Benchmark the configurations defined in machines.json that opt into PR benchmarking.
+            const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
+            const selected = config.filter(cfg => cfg['pr-benchmarks']);
+            core.setOutput('matrix', JSON.stringify(selected.map(cfg => ({'lnt-machine': cfg['lnt-machine'], setup: cfg.setup}))));
+
+      - name: Update comment with link to the run
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+            });
+            const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const note = `> _Running benchmarks in ${run_url}_`;
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              body: [comment.body, note].join('\n\n'),
+            });
+    outputs:
+      baseline: ${{ steps.vars.outputs.baseline }}
+      candidate: ${{ steps.vars.outputs.candidate }}
+      benchmarks: ${{ steps.vars.outputs.benchmarks }}
+      matrix: ${{ steps.vars.outputs.matrix }}
+
+  run-benchmarks:
+    name: Benchmark ${{ matrix.lnt-machine }}
+    needs:
+      - extract-info
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.extract-info.outputs.matrix) }}
+      fail-fast: false
+    uses: $/.github/workflows/libcxx-run-ab-benchmarks.yml
+    with:
+      baseline: ${{ needs.extract-info.outputs.baseline }}
+      candidate: ${{ needs.extract-info.outputs.candidate }}
+      # Use the benchmark suite from the PR, which allows benchmarking newly-introduced benchmarks.
+      benchmark-suite-version: ${{ needs.extract-info.outputs.candidate }}
+      lnt-machine: ${{ matrix.lnt-machine }}
+      setup: ${{ toJSON(matrix.setup) }}
+      benchmarks: ${{ needs.extract-info.outputs.benchmarks }}
+      artifact-name: ab-results-${{ matrix.lnt-machine }}
+      lnt-artifact-name: lnt-reports-${{ matrix.lnt-machine }}
+
+  # Submit the results of all machines to LNT, which allows linking to LNT's comparison page in the report.
+  # Nothing is submitted for machines whose benchmarks didn't complete (since they have no report).
+  submit:
+    needs:
+      - extract-info
+      - run-benchmarks
+    # Submit the results of the machines that succeeded even if others failed.
+    if: ${{ !cancelled() && needs.extract-info.result == 'success' }}
+    permissions:
+      contents: read
+    uses: $/.github/workflows/lnt-submit.yml
+    with:
+      artifacts: lnt-reports-*
+      test-suite: libcxx
+    secrets:
+      LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
+
+  report:
+    needs:
+      - extract-info
+      - run-benchmarks
+      - submit
+    # Report results even if some of the benchmark runs failed.
+    if: ${{ always() && needs.extract-info.result == 'success' }}
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download the results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: ab-results-*
+          path: ${{ runner.temp }}/results
+          merge-multiple: true
+
+      # Each artifact is downloaded in its own directory, since the reports of all machines have the same names.
+      - name: Download the LNT reports
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: lnt-reports-*
+          path: ${{ runner.temp }}/lnt-reports
+
+      - name: Update comment with results
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          MATRIX: ${{ needs.extract-info.outputs.matrix }}
+          RESULTS_DIR: ${{ runner.temp }}/results
+          LNT_REPORTS_DIR: ${{ runner.temp }}/lnt-reports
+          LNT_URL: https://lnt.llvm.org
+          LNT_TEST_SUITE: libcxx
+          BASELINE: ${{ needs.extract-info.outputs.baseline }}
+          CANDIDATE: ${{ needs.extract-info.outputs.candidate }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Return a link to the comparison of the baseline and the candidate on LNT, or nothing if there are no
+            // results for that machine.
+            function lnt_comparison(machine) {
+              const suite = process.env.LNT_TEST_SUITE;
+              const dir = path.join(process.env.LNT_REPORTS_DIR, `lnt-reports-${machine}`);
+              if (!fs.existsSync(dir)) {
+                return '';
+              }
+              const reports = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
+                                .map(f => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
+              if (reports.length === 0) {
+                return '';
+              }
+
+              // Select the runs of this job explicitly, since other runs may exist for the same commits (e.g.
+              // when several pull requests have the same baseline).
+              const url = new URL('/compare', process.env.LNT_URL);
+              for (const [side, commit] of [['a', process.env.BASELINE], ['b', process.env.CANDIDATE]]) {
+                const runs = reports.filter(r => r.commit.value === commit);
+                url.searchParams.append(`suite_${side}`, suite);
+                url.searchParams.append(`machine_${side}`, reports[0].machine.name);
+                url.searchParams.append(`commit_${side}`, commit);
+                for (const run of runs) {
+                  url.searchParams.append(`runs_${side}`, run.uuid);
+                }
+              }
+              url.searchParams.append('metric', 'execution_time');
+              // This ends up in an HTML block of the comment, where Markdown links aren't rendered.
+              return ` (<a href="${url.href.replaceAll('&', '&amp;')}">view on LNT</a>)`;
+            }
+
+            // Report the results of every machine we benchmarked on. Machines without results are those where
+            // the comparison failed.
+            const machines = JSON.parse(process.env.MATRIX).map(cfg => cfg['lnt-machine']);
+            const sections = machines.map(machine => {
+              const results = path.join(process.env.RESULTS_DIR, `ab-results-${machine}`, 'results.txt');
+              if (!fs.existsSync(results)) {
+                return `> _:x: Benchmarks for ${machine} failed. See ${run_url} for details._`;
+              }
+              return [
+                '<details>',
+                '<summary>',
+                `Benchmark results for ${machine}${lnt_comparison(machine)}:`,
+                '</summary>',
+                '',
+                '```',
+                fs.readFileSync(results, 'utf8'),
+                '```',
+                '',
+                '</details>',
+              ].join('\n');
+            });
+
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+            });
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              body: [comment.body, ...sections].join('\n\n'),
+            });

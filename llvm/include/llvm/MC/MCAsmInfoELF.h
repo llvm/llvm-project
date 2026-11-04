@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class MCAsmInfoELF : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoELF : public MCAsmInfo {
   virtual void anchor();
   MCSection *getStackSection(MCContext &Ctx, bool Exec) const override;
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
@@ -21,7 +21,7 @@ class MCAsmInfoELF : public MCAsmInfo {
   bool useCodeAlign(const MCSection &Sec) const final;
 
 protected:
-  MCAsmInfoELF();
+  MCAsmInfoELF(const MCTargetOptions &Options);
 };
 
 } // end namespace llvm

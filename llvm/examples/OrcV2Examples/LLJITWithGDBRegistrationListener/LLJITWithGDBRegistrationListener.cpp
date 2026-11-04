@@ -59,27 +59,29 @@ int main(int argc, char *argv[]) {
 
   // Create an LLJIT instance and use a custom object linking layer creator to
   // register the GDBRegistrationListener with our RTDyldObjectLinkingLayer.
-  auto J =
-      ExitOnErr(LLJITBuilder()
-                    .setJITTargetMachineBuilder(std::move(JTMB))
-                    .setObjectLinkingLayerCreator([&](ExecutionSession &ES) {
-                      auto GetMemMgr = [](const MemoryBuffer &) {
-                        return std::make_unique<SectionMemoryManager>();
-                      };
-                      auto ObjLinkingLayer =
-                          std::make_unique<RTDyldObjectLinkingLayer>(
-                              ES, std::move(GetMemMgr));
+  auto J = ExitOnErr(
+      LLJITBuilder()
+          .setJITTargetMachineBuilder(std::move(JTMB))
+          .setObjectLinkingLayerCreator(
+              [&](ExecutionSession &ES,
+                  jitlink::JITLinkMemoryManager &IgnoredMemMgr) {
+                auto GetMemMgr = [](const MemoryBuffer &) {
+                  return std::make_unique<SectionMemoryManager>();
+                };
+                auto ObjLinkingLayer =
+                    std::make_unique<RTDyldObjectLinkingLayer>(
+                        ES, std::move(GetMemMgr));
 
-                      // Register the event listener.
-                      ObjLinkingLayer->registerJITEventListener(
-                          *JITEventListener::createGDBRegistrationListener());
+                // Register the event listener.
+                ObjLinkingLayer->registerJITEventListener(
+                    *JITEventListener::createGDBRegistrationListener());
 
-                      // Make sure the debug info sections aren't stripped.
-                      ObjLinkingLayer->setProcessAllSections(true);
+                // Make sure the debug info sections aren't stripped.
+                ObjLinkingLayer->setProcessAllSections(true);
 
-                      return ObjLinkingLayer;
-                    })
-                    .create());
+                return ObjLinkingLayer;
+              })
+          .create());
 
   // Load the input modules.
   for (auto &InputFile : InputFiles) {

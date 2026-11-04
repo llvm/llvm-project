@@ -87,14 +87,14 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
    ...
    ```
 
-```{note}
+:::{note}
   Even when you only want compile-time results you still need to run the test
   with the above `llvm-lit` command. In this case, the `results.json` file will
   contain compile time metrics only (code size, llvm stats and so on).
 
-  This mode is enabled by settting `-DTEST_SUITE_RUN_BENCHMARKS=OFF`,
+  This mode is enabled by setting `-DTEST_SUITE_RUN_BENCHMARKS=OFF`,
   more details [here](common_configuration_options).
-```
+:::
 
 6. Show and compare result files (optional):
 
@@ -485,13 +485,3 @@ The LNT tool can run the test-suite. Use this when submitting test results to
 an LNT instance.  See
 [https://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite](https://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite)
 for details.
-
-Running the test-suite via Makefiles (deprecated)
--------------------------------------------------
-
-**Note**: The test-suite comes with a set of Makefiles that are considered
-deprecated.  They do not support newer testing modes like `Bitcode` or
-`Microbenchmarks` and are harder to use.
-
-Old documentation is available in the
-[test-suite Makefile Guide](TestSuiteMakefileGuide).

@@ -13,12 +13,12 @@ define i32 @main() local_unnamed_addr #1 {
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0: // %for.body.lr.ph.i.i.i.i.i.i63
 ; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl _Z5setupv
 ; CHECK-NEXT:    movi v0.4s, #1
-; CHECK-NEXT:    mov w9, #1
+; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    add x0, sp, #48
 ; CHECK-NEXT:    mov x1, sp
 ; CHECK-NEXT:    str xzr, [sp, #80]
@@ -33,7 +33,7 @@ define i32 @main() local_unnamed_addr #1 {
 ; CHECK-NEXT:  .LBB0_2: // %if.then
 ; CHECK-NEXT:    bl f2
 ; CHECK-NEXT:  .LBB0_3: // %common.ret
-; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Reload
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    add sp, sp, #112
 ; CHECK-NEXT:    ret

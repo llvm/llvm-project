@@ -19,7 +19,7 @@ foo:
 # CHECK-CUSTOM:      - Type:            MEMORY
 # CHECK-CUSTOM-NEXT:   Memories:
 # CHECK-CUSTOM-NEXT:   - Flags:           [ HAS_PAGE_SIZE ]
-# CHECK-CUSTOM-NEXT:     Minimum:         0x10410
+# CHECK-CUSTOM-NEXT:     Minimum:         0x10004
 # CHECK-CUSTOM-NEXT:     PageSize:        0x1
 
 # RUN: llvm-objdump --disassemble-symbols=_start %t.custom.wasm | FileCheck %s --check-prefix=CHECK-CUSTOM-DIS
@@ -51,7 +51,7 @@ foo:
 # CHECK-CUSTOM-IMPORT-NEXT:     Kind:            MEMORY
 # CHECK-CUSTOM-IMPORT-NEXT:     Memory:
 # CHECK-CUSTOM-IMPORT-NEXT:       Flags:           [ HAS_PAGE_SIZE ]
-# CHECK-CUSTOM-IMPORT-NEXT:       Minimum:         0x10410
+# CHECK-CUSTOM-IMPORT-NEXT:       Minimum:         0x10004
 # CHECK-CUSTOM-IMPORT-NEXT:       PageSize:        0x1
 
 # RUN: llvm-objdump --disassemble-symbols=_start %t.custom-import.wasm | FileCheck %s --check-prefix=CHECK-CUSTOM-IMPORT-DIS

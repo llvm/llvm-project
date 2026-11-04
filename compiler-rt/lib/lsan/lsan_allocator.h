@@ -93,6 +93,10 @@ using LSanSizeClassMap = DefaultSizeClassMap;
 const uptr kAllocatorSpace = 0x600000000000ULL;
 const uptr kAllocatorSize  = 0x40000000000ULL;  // 4T.
 using LSanSizeClassMap = DefaultSizeClassMap;
+#  elif SANITIZER_ANDROID && defined(__aarch64__)
+const uptr kAllocatorSpace = 0x3000000000ULL;
+const uptr kAllocatorSize = 0x2000000000ULL;
+using LSanSizeClassMap = VeryCompactSizeClassMap;
 #  else
 const uptr kAllocatorSpace = 0x500000000000ULL;
 const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.

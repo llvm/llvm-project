@@ -7,9 +7,11 @@ struct ABC {
 
 
 int f1(int n,              ABC v1,   ABC v2); // line 9
+// CHECK-FIXES: int f1(int n,              const ABC& v1,   const ABC& v2); // line 9
 
 int f1(int n, ABC v1); // line 11
 
 
 
 void f2(        int n,       ABC v2); // line 15
+// CHECK-FIXES: void f2(        int n,       const ABC& v2); // line 15

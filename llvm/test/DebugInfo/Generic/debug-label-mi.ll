@@ -1,10 +1,14 @@
 ; Test DBG_LABEL MachineInstr for label debugging.
 ; REQUIRES: asserts
+
+; AArch64 uses GlobalISel for optnone functions meaning the output from 'isel' will be empty as it will not be run.
+; UNSUPPORTED: target=aarch64{{.*}}, target=arm64{{.*}}
+
 ; RUN: llc -debug-only=isel %s -o /dev/null 2> %t.debug
 ; RUN: cat %t.debug | FileCheck %s --check-prefix=CHECKMI
 ;
-; CHECKMI: DBG_LABEL "top", debug-location !9
-; CHECKMI: DBG_LABEL "done", debug-location !11
+; CHECKMI: DBG_LABEL "top", debug-location !{{[0-9]+}}
+; CHECKMI: DBG_LABEL "done", debug-location !{{[0-9]+}}
 ;
 ; RUN: llc %s -o - | FileCheck %s --check-prefix=CHECKASM
 ;

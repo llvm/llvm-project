@@ -8,7 +8,7 @@
 // deadlock (self-lock)
 // RUN: env DYLD_INSERT_LIBRARIES=%t.dylib TSAN_OPTIONS=verbosity=2:lock_during_write=disable_for_current_process %run %t 2>&1 | FileCheck %s
 //
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 
 #include <stdio.h>
 
@@ -32,7 +32,10 @@ struct interpose_substitution {
 static ssize_t my_write(int fd, const void *buf, size_t count) {
   struct os_unfair_lock_s lock = OS_UNFAIR_LOCK_INIT;
   os_unfair_lock_lock(&lock);
-  printf("Interposed write called: fd=%d, count=%zu\n", fd, count);
+  char logbuf[80];
+  int len = snprintf(logbuf, sizeof(logbuf),
+                     "Interposed write called: fd=%d, count=%zu\n", fd, count);
+  write(1, logbuf, len);
   ssize_t res = write(fd, buf, count);
   os_unfair_lock_unlock(&lock);
   return res;

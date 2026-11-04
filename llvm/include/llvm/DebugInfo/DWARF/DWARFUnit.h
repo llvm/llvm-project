@@ -28,7 +28,6 @@
 #include <cstdint>
 #include <map>
 #include <memory>
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -136,14 +135,18 @@ class DWARFUnitVector final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> 
 
 public:
   using UnitVector = SmallVectorImpl<std::unique_ptr<DWARFUnit>>;
-  using iterator = typename UnitVector::iterator;
-  using iterator_range = llvm::iterator_range<typename UnitVector::iterator>;
+  using iterator = UnitVector::iterator;
+  using iterator_range = llvm::iterator_range<UnitVector::iterator>;
 
   using compile_unit_range =
       decltype(make_filter_range(std::declval<iterator_range>(), isCompileUnit));
 
   LLVM_ABI DWARFUnit *getUnitForOffset(uint64_t Offset) const;
-  LLVM_ABI DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
+  /// Returns the Unit from the .debug_info or .debug_types section by the index
+  /// entry.
+  LLVM_ABI DWARFUnit *
+  getUnitForIndexEntry(const DWARFUnitIndex::Entry &E, DWARFSectionKind Sec,
+                       const DWARFSection *Section = nullptr);
 
   /// Read units from a .debug_info or .debug_types section.  Calls made
   /// before finishedInfoUnits() are assumed to be for .debug_info sections,
@@ -392,7 +395,7 @@ public:
   DWARFDataExtractor getDebugInfoExtractor() const;
 
   DataExtractor getStringExtractor() const {
-    return DataExtractor(StringSection, false, 0);
+    return DataExtractor(StringSection, false);
   }
 
   const DWARFLocationTable &getLocationTable() { return *LocTable; }
@@ -457,6 +460,16 @@ public:
     return DWO ? DWO->getUnitDIE(ExtractUnitDIEOnly)
                : getUnitDIE(ExtractUnitDIEOnly);
   }
+
+  /// Return the split unit this skeleton unit currently owns, or null if its
+  /// DWO context is not open.
+  DWARFUnit *getDWO() const { return DWO.get(); }
+
+  /// Release the DWO context owned by this skeleton unit, freeing the memory
+  /// held by its DWARFContext and parsed unit vector. This is safe to call once
+  /// the split-unit debug info has been fully processed; a subsequent
+  /// parseDWO() will transparently re-open it on demand.
+  void clearDWO() { DWO.reset(); }
 
   const char *getCompilationDir();
   std::optional<uint64_t> getDWOId() {
@@ -563,7 +576,7 @@ public:
 
   die_iterator_range dies() {
     extractDIEsIfNeeded(false);
-    return die_iterator_range(DieArray.begin(), DieArray.end());
+    return DieArray;
   }
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;

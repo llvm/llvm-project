@@ -87,7 +87,9 @@ public:
   AffineExprKind getKind() const;
 
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Returns true if this expression is made out of only symbols and
   /// constants, i.e., it does not involve dimensional identifiers.
@@ -354,14 +356,6 @@ namespace llvm {
 // AffineExpr hash just like pointers
 template <>
 struct DenseMapInfo<mlir::AffineExpr> {
-  static mlir::AffineExpr getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));
-  }
-  static mlir::AffineExpr getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::AffineExpr val) {
     return mlir::hash_value(val);
   }

@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBSTDCPP_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBSTDCPP_H
 
+#include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/Stream.h"
@@ -20,10 +21,20 @@ bool LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libstdc++ std::string
 
-bool LibStdcppSmartPointerSummaryProvider(
+template <StringPrinter::StringElementType element_type>
+bool LibStdcppStringViewSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions
-        &options); // libstdc++ std::shared_ptr<> and std::weak_ptr<>
+        &options); // libstdc++ std::{u8,u16,u32}?string_view
+
+bool LibStdcppWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libstdc++ std::wstring_view
+
+bool LibStdcppSmartPointerSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options,
+    bool is_atomic_child =
+        false); // libstdc++ std::shared_ptr<> and std::weak_ptr<>
 
 bool LibStdcppUniquePointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
@@ -33,9 +44,36 @@ bool LibStdcppVariantSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libstdc++ std::variant<>
 
+bool LibStdcppAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+
+bool LibStdcppPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libstdc++ std::partial_ordering
+
+bool LibStdcppWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libstdc++ std::weak_ordering
+
+bool LibStdcppStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libstdc++ std::strong_ordering
+
+bool LibStdcppSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libstdc++ std::source_location
+
+SyntheticChildrenFrontEnd *
+LibStdcppAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        const lldb::ValueObjectSP &);
+
 SyntheticChildrenFrontEnd *
 LibstdcppMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                              lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibStdcppSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibStdcppTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,

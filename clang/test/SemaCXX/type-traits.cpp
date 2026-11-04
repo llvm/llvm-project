@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fenable-matrix  %s
 
 
 struct NonPOD { NonPOD(int); };
@@ -45,6 +45,8 @@ struct HasAnonymousUnion {
 typedef int Vector __attribute__((vector_size(16)));
 typedef int VectorExt __attribute__((ext_vector_type(4)));
 
+typedef float __attribute__((matrix_type(2, 3))) fm2x3;
+typedef int   __attribute__((matrix_type(4, 4))) im4x4;
 using ComplexFloat = _Complex float;
 using ComplexInt = _Complex int;
 
@@ -1359,6 +1361,8 @@ void is_trivially_copyable2()
   static_assert(__is_trivially_copyable(NonTrivialStruct));
   static_assert(__is_trivially_copyable(AllDefaulted));
   static_assert(__is_trivially_copyable(AllDeleted));
+  static_assert(__is_trivially_copyable(fm2x3));
+  static_assert(__is_trivially_copyable(im4x4));
 
   static_assert(!__is_trivially_copyable(void));
   static_assert(!__is_trivially_copyable(SuperNonTrivialStruct));
@@ -1812,6 +1816,11 @@ union Union {};
 union UnionIncomplete;
 struct StructIncomplete; // #StructIncomplete
 
+#if __cplusplus >= 201402L
+template<class _Base, class _Derived>
+inline constexpr bool IsPointerInterconvertibleBaseOfV = __is_pointer_interconvertible_base_of(_Base, _Derived);
+#endif
+
 void is_pointer_interconvertible_base_of(int n)
 {
   static_assert(__is_pointer_interconvertible_base_of(Base, Derived));
@@ -1880,6 +1889,11 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(char)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
+
+#if __cplusplus >= 201402L
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Base>);
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Derived>);
+#endif
 }
 }
 
@@ -3189,6 +3203,8 @@ class ConvertsToRefPrivate {
   mutable T obj = 42;
 };
 
+struct NoConv {};
+struct Bad { template<class T> Bad(T v) noexcept(noexcept(member_ = v)) {} int member_; };
 
 void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int &, int &)));
@@ -3229,6 +3245,10 @@ void reference_binds_to_temporary_checks() {
   // Test that function references are never considered bound to temporaries.
   static_assert(!__reference_binds_to_temporary(void(&)(), void()));
   static_assert(!__reference_binds_to_temporary(void(&&)(), void()));
+
+  // Make sure we don't emit "assigning to 'int' from incompatible type 'NoConv'" in SFINAE context.
+  static_assert(!__reference_binds_to_temporary(Bad, NoConv&&));
+
 }
 
 
@@ -3311,7 +3331,8 @@ void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(const int&, ExplicitConversionRef));
   static_assert(!__reference_constructs_from_temporary(int&&, ExplicitConversionRvalueRef));
 
-
+  // Make sure we don't emit "assigning to 'int' from incompatible type 'NoConv'" in SFINAE context.
+  static_assert(!__reference_constructs_from_temporary(Bad, NoConv&&));
 }
 
 template<typename A, typename B, bool result = __reference_converts_from_temporary(A, B)>
@@ -3380,6 +3401,9 @@ void reference_converts_from_temporary_checks() {
   static_assert(!__reference_converts_from_temporary(AllPrivate, AllPrivate));
   // Make sure we don't emit "calling a private constructor" in SFINAE context.
   static_assert(!reference_converts_from_temporary_sfinae<AllPrivate, AllPrivate>());
+
+  // Make sure we don't emit "assigning to 'int' from incompatible type 'NoConv'" in SFINAE context.
+  static_assert(!__reference_converts_from_temporary(Bad, NoConv&&));
 }
 
 void array_rank() {
@@ -3479,6 +3503,24 @@ static_assert(__has_unique_object_representations(int *), "as are pointers");
 static_assert(__has_unique_object_representations(const int *), "as are pointers");
 static_assert(__has_unique_object_representations(volatile int *), "as are pointers");
 static_assert(__has_unique_object_representations(const volatile int *), "as are pointers");
+
+static_assert(__has_unique_object_representations(_Atomic(int)), "layout-identical atomics are");
+static_assert(!__has_unique_object_representations(_Atomic(float)), "value type is not unique");
+// Sema rejects _Atomic directly on a _BitInt (Sema::BuildAtomicType), so go
+// through a trivially copyable wrapper to reach the _BitInt padding-bit check.
+struct AtomicReprBitIntPadded { _BitInt(12) x; };
+static_assert(!__has_unique_object_representations(_Atomic(AtomicReprBitIntPadded)),
+              "_BitInt(12) has padding bits");
+struct AtomicReprBitIntExact { _BitInt(32) x; };
+static_assert(__has_unique_object_representations(_Atomic(AtomicReprBitIntExact)),
+              "_BitInt(32) has no padding bits");
+struct AtomicReprThreeChars { char a, b, c; };
+static_assert(!__has_unique_object_representations(_Atomic(AtomicReprThreeChars)),
+              "atomic size rounded up to a power of two adds padding");
+struct AtomicReprMember { _Atomic(int) x; };
+static_assert(__has_unique_object_representations(AtomicReprMember), "atomic member, no padding");
+struct AtomicReprPadded { char c; _Atomic(int) x; };
+static_assert(!__has_unique_object_representations(AtomicReprPadded), "padding before atomic member");
 
 class C {};
 using FP = int (*)(int);
@@ -3993,6 +4035,14 @@ namespace is_trivially_equality_comparable {
 struct ForwardDeclared; // expected-note {{forward declaration of 'is_trivially_equality_comparable::ForwardDeclared'}}
 static_assert(!__is_trivially_equality_comparable(ForwardDeclared)); // expected-error {{incomplete type 'ForwardDeclared' used in type trait expression}}
 
+enum Byte : unsigned char {};
+enum ByteWithOpEq : unsigned char {};
+bool operator==(ByteWithOpEq, ByteWithOpEq);
+
+enum Enum {};
+enum EnumWithOpEq {};
+bool operator==(EnumWithOpEq, EnumWithOpEq);
+
 static_assert(!__is_trivially_equality_comparable(void));
 static_assert(__is_trivially_equality_comparable(int));
 static_assert(!__is_trivially_equality_comparable(int[]));
@@ -4000,6 +4050,10 @@ static_assert(!__is_trivially_equality_comparable(int[3]));
 static_assert(!__is_trivially_equality_comparable(float));
 static_assert(!__is_trivially_equality_comparable(double));
 static_assert(!__is_trivially_equality_comparable(long double));
+static_assert(__is_trivially_equality_comparable(Byte));
+static_assert(!__is_trivially_equality_comparable(ByteWithOpEq));
+static_assert(__is_trivially_equality_comparable(Enum));
+static_assert(!__is_trivially_equality_comparable(EnumWithOpEq));
 
 struct NonTriviallyEqualityComparableNoComparator {
   int i;
@@ -4033,19 +4087,26 @@ struct TriviallyEqualityComparable {
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable));
 
-struct TriviallyEqualityComparableContainsArray {
-  int a[4];
+template <class T>
+struct TriviallyEqualityComparableContains {
+  T t;
 
-  bool operator==(const TriviallyEqualityComparableContainsArray&) const = default;
+  bool operator==(const TriviallyEqualityComparableContains&) const = default;
 };
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsArray));
 
-struct TriviallyEqualityComparableContainsMultiDimensionArray {
-  int a[4][4];
-
-  bool operator==(const TriviallyEqualityComparableContainsMultiDimensionArray&) const = default;
-};
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsMultiDimensionArray));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int&>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<float>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<double>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<long double>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4][4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum[2]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum[2][2]>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq[2]>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq[2][2]>));
 
 auto GetNonCapturingLambda() { return [](){ return 42; }; }
 
@@ -4174,13 +4235,6 @@ struct NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct {
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct));
 
-struct NotTriviallyEqualityComparableHasReferenceMember {
-  int& i;
-
-  bool operator==(const NotTriviallyEqualityComparableHasReferenceMember&) const = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasReferenceMember));
-
 struct NotTriviallyEqualityComparableNonTriviallyComparableBaseBase {
   int i;
 
@@ -4195,34 +4249,6 @@ struct NotTriviallyEqualityComparableNonTriviallyComparableBase : NotTriviallyEq
   bool operator==(const NotTriviallyEqualityComparableNonTriviallyComparableBase&) const = default;
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyComparableBase));
-
-enum E {
-  a,
-  b
-};
-bool operator==(E, E) { return false; }
-static_assert(!__is_trivially_equality_comparable(E));
-
-struct NotTriviallyEqualityComparableHasEnum {
-  E e;
-  bool operator==(const NotTriviallyEqualityComparableHasEnum&) const = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasEnum));
-
-struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs {
-  E e[1];
-
-  bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs&) const = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs));
-
-struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
-  E e[1][1];
-
-  bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2&) const = default;
-};
-
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
 
 struct NotTriviallyEqualityComparablePrivateComparison {
   int i;
@@ -4310,6 +4336,27 @@ struct TriviallyEqualityComparable {
   friend bool operator==(const TriviallyEqualityComparable&, const TriviallyEqualityComparable&) = default;
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable));
+
+template <class T>
+struct TriviallyEqualityComparableContains {
+  T t;
+
+  friend bool operator==(const TriviallyEqualityComparableContains&, const TriviallyEqualityComparableContains&) = default;
+};
+
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int&>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<float>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<double>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<long double>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<int[4][4]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum[2]>));
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContains<Enum[2][2]>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq[2]>));
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableContains<EnumWithOpEq[2][2]>));
 
 struct TriviallyEqualityComparableNonTriviallyCopyable {
   TriviallyEqualityComparableNonTriviallyCopyable(const TriviallyEqualityComparableNonTriviallyCopyable&);
@@ -4427,26 +4474,6 @@ struct NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct {
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableImplicitlyDeletedOperatorByStruct));
 
-struct NotTriviallyEqualityComparableHasReferenceMember {
-  int& i;
-
-  friend bool operator==(const NotTriviallyEqualityComparableHasReferenceMember&, const NotTriviallyEqualityComparableHasReferenceMember&) = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasReferenceMember));
-
-enum E {
-  a,
-  b
-};
-bool operator==(E, E) { return false; }
-static_assert(!__is_trivially_equality_comparable(E));
-
-struct NotTriviallyEqualityComparableHasEnum {
-  E e;
-  friend bool operator==(const NotTriviallyEqualityComparableHasEnum&, const NotTriviallyEqualityComparableHasEnum&) = default;
-};
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasEnum));
-
 struct NonTriviallyEqualityComparableValueComparisonNonTriviallyCopyable {
   int i;
   NonTriviallyEqualityComparableValueComparisonNonTriviallyCopyable(const NonTriviallyEqualityComparableValueComparisonNonTriviallyCopyable&);
@@ -4465,7 +4492,7 @@ static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableRefC
 }
 
 #endif // __cplusplus >= 202002L
-};
+}
 
 namespace can_pass_in_regs {
 
@@ -5176,4 +5203,21 @@ struct S;
 bool b = C<T, S>;
 // expected-note@-1 {{while checking the satisfaction of concept 'C<T, S>' requested here}}
 #endif
+}
+
+namespace GH214128{
+i < 0;
+#if __cplusplus <= 201703L
+// expected-error@-2 {{no template named 'i'}}
+#endif
+// expected-error@-4 {{expected '>'}}
+// expected-note@-5 {{to match this '<'}}
+#if __cplusplus > 201703L
+// expected-warning@-7 {{declaration does not declare anything}}
+#endif
+
+void f() {
+  struct __is_pod; // expected-warning {{keyword '__is_pod' will be made available as an identifier for the remainder of the translation unit}}
+  struct __is_pod;
+}
 }

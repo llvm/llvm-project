@@ -22,7 +22,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <memory>
 
 namespace llvm {
 class Module;
@@ -31,6 +30,8 @@ class DXILResourceTypeMap;
 class DXILResourceMap;
 
 namespace dxil {
+
+class ModuleSignatureInfo;
 
 struct ComputedShaderFlags {
 #define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
@@ -86,7 +87,8 @@ struct ComputedShaderFlags {
 
 struct ModuleShaderFlags {
   void initialize(Module &, DXILResourceTypeMap &DRTM,
-                  const DXILResourceMap &DRM, const ModuleMetadataInfo &MMDI);
+                  const DXILResourceMap &DRM, const ModuleMetadataInfo &MMDI,
+                  const ModuleSignatureInfo &Signatures);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
@@ -121,12 +123,12 @@ public:
 };
 
 /// Printer pass for ShaderFlagsAnalysis results.
-class ShaderFlagsAnalysisPrinter
-    : public PassInfoMixin<ShaderFlagsAnalysisPrinter> {
+class ShaderFlagsAnalysisPrinterPass
+    : public OptionalPassInfoMixin<ShaderFlagsAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit ShaderFlagsAnalysisPrinter(raw_ostream &OS) : OS(OS) {}
+  explicit ShaderFlagsAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

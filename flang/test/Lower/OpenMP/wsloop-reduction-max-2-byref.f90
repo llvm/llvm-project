@@ -2,8 +2,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 
 ! CHECK: omp.wsloop private({{.*}}) reduction(byref @max_byref_i32
-! CHECK: arith.cmpi sgt
-! CHECK: arith.select
+! CHECK: arith.maxsi
 
 module m1
   intrinsic max

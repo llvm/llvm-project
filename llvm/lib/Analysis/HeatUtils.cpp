@@ -64,10 +64,7 @@ std::string llvm::getHeatColor(uint64_t Freq, uint64_t MaxFreq) {
 }
 
 std::string llvm::getHeatColor(double Percent) {
-  if (Percent > 1.0)
-    Percent = 1.0;
-  if (Percent < 0.0)
-    Percent = 0.0;
+  Percent = std::clamp(Percent, 0.0, 1.0);
   unsigned ColorID = unsigned(round(Percent * (HeatSize - 1.0)));
   return HeatPalette[ColorID];
 }

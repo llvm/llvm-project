@@ -1,13 +1,13 @@
 // RUN: %check_clang_tidy -check-suffixes=,STRICT \
 // RUN:   -std=c++23-or-later %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: true}}" \
-// RUN:   -- -isystem %clang_tidy_headers -fexceptions \
+// RUN:   -- -fexceptions \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
 // RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT \
 // RUN:   -std=c++23-or-later %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-print.StrictMode: false}}" \
-// RUN:   -- -isystem %clang_tidy_headers -fexceptions \
+// RUN:   -- -fexceptions \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
 #include <cstddef>
@@ -52,6 +52,12 @@ void printf_deceptive_newline() {
   printf("Hello\x0a");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
   // CHECK-FIXES: std::println("Hello");
+}
+
+void printf_utf8_text() {
+  printf("你好世界\n");
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("你好世界");
 }
 
 void printf_crlf_newline() {
@@ -301,6 +307,12 @@ void fprintf_simple() {
   fprintf(stderr, "Hello");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'fprintf' [modernize-use-std-print]
   // CHECK-FIXES: std::print(stderr, "Hello");
+}
+
+void fprintf_utf8_text() {
+  fprintf(stderr, "你好世界\n");
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println(stderr, "你好世界");
 }
 
 void std_printf_simple() {

@@ -4,13 +4,13 @@ define <9 x double> @strided_load_3x3_volatile(ptr %in, i64 %stride) {
 ; CHECK-LABEL: @strided_load_3x3_volatile(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START]]
 ; CHECK-NEXT:    load volatile <3 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[VEC_START1:%.*]] = mul i64 1, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START1]]
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START1]]
 ; CHECK-NEXT:    load volatile <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    [[VEC_START5:%.*]] = mul i64 2, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START5]]
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START5]]
 ; CHECK-NEXT:    load volatile <3 x double>, ptr [[VEC_GEP6]], align 8
 ; CHECK-NOT:     = load
 ;
@@ -24,7 +24,7 @@ declare <9 x double> @llvm.matrix.column.major.load.v9f64(ptr, i64, i1, i32, i32
 define <4 x double> @load_volatile_multiply(ptr %in) {
 ; CHECK-LABEL: @load_volatile_multiply(
 ; CHECK-NEXT:    load volatile <2 x double>, ptr [[IN:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 2
 ; CHECK-NEXT:    load volatile <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NOT:     = load
 ;
@@ -40,13 +40,13 @@ define <9 x double> @strided_load_3x3_align32(ptr %in, i64 %stride) {
 ; CHECK-LABEL: @strided_load_3x3_align32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START]]
 ; CHECK-NEXT:    load <3 x double>, ptr [[VEC_GEP]], align 32
 ; CHECK-NEXT:    [[VEC_START1:%.*]] = mul i64 1, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START1]]
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START1]]
 ; CHECK-NEXT:    load <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    [[VEC_START5:%.*]] = mul i64 2, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START5]]
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START5]]
 ; CHECK-NEXT:    load <3 x double>, ptr [[VEC_GEP6]], align 8
 ; CHECK-NOT:     = load
 ;
@@ -59,13 +59,13 @@ define <9 x double> @strided_load_3x3_align2(ptr %in, i64 %stride) {
 ; CHECK-LABEL: @strided_load_3x3_align2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START]]
 ; CHECK-NEXT:    load <3 x double>, ptr [[VEC_GEP]], align 2
 ; CHECK-NEXT:    [[VEC_START1:%.*]] = mul i64 1, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START1]]
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START1]]
 ; CHECK-NEXT:    load <3 x double>, ptr [[VEC_GEP2]], align 2
 ; CHECK-NEXT:    [[VEC_START5:%.*]] = mul i64 2, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, ptr %in, i64 [[VEC_START5]]
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr inbounds double, ptr %in, i64 [[VEC_START5]]
 ; CHECK-NEXT:    load <3 x double>, ptr [[VEC_GEP6]], align 2
 ; CHECK-NOT:     = load
 ;
@@ -78,7 +78,7 @@ entry:
 define <4 x double> @load_align2_multiply(ptr %in) {
 ; CHECK-LABEL: @load_align2_multiply(
 ; CHECK-NEXT:    load <2 x double>, ptr [[IN:%.*]], align 2
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 2
 ; CHECK-NEXT:    load <2 x double>, ptr [[VEC_GEP]], align 2
 ; CHECK-NOT:     = load
 ;
@@ -91,9 +91,9 @@ define <6 x float> @strided_load_2x3_align16_stride2(ptr %in) {
 ; CHECK-LABEL: @strided_load_2x3_align16_stride2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr %in, align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr %in, i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr %in, i64 2
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr float, ptr %in, i64 4
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds float, ptr %in, i64 4
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x float>, ptr [[VEC_GEP3]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[COL_LOAD]], <2 x float> [[COL_LOAD2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[COL_LOAD5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

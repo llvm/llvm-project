@@ -43,8 +43,9 @@ class Handle(ir.Value):
         self.parent = parent
         self.children = children if children is not None else []
 
-@ir.register_value_caster(AnyOpType.get_static_typeid())
-@ir.register_value_caster(OperationType.get_static_typeid())
+
+@ir.register_value_caster(AnyOpType.static_typeid)
+@ir.register_value_caster(OperationType.static_typeid)
 class OpHandle(Handle):
     """
     Wrapper around a transform operation handle with methods to chain further
@@ -132,8 +133,8 @@ class OpHandle(Handle):
         return self
 
 
-@ir.register_value_caster(AnyParamType.get_static_typeid())
-@ir.register_value_caster(ParamType.get_static_typeid())
+@ir.register_value_caster(AnyParamType.static_typeid)
+@ir.register_value_caster(ParamType.static_typeid)
 class ParamHandle(Handle):
     """Wrapper around a transform param handle."""
 
@@ -147,7 +148,7 @@ class ParamHandle(Handle):
         super().__init__(v, parent=parent, children=children)
 
 
-@ir.register_value_caster(AnyValueType.get_static_typeid())
+@ir.register_value_caster(AnyValueType.static_typeid)
 class ValueHandle(Handle):
     """
     Wrapper around a transform value handle with methods to chain further

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Value.h"
-#include "../../test/lib/Dialect/Test/TestDialect.h"
-#include "../../test/lib/Dialect/Test/TestOps.h"
+#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OperationSupport.h"
@@ -20,9 +20,9 @@ static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
                            ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
-  return Operation::create(UnknownLoc::get(context),
-                           OperationName("foo.bar", context), resultTypes,
-                           operands, NamedAttrList(), nullptr, {}, numRegions);
+  return Operation::create(
+      UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
+      operands, NamedAttrList(), PropertyRef(), {}, numRegions);
 }
 
 namespace {

@@ -1,7 +1,7 @@
 ; This test checks that Module splitting can properly perform device code split by tracking
 ; all uses of functions (not only direct calls).
 
-; RUN: llvm-split -split-by-category=module-id -S < %s -o %t
+; RUN: llvm-split -split-by-category=attribute --category-attribute=module-id -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefix=CHECK-IR0
 ; RUN: FileCheck %s -input-file=%t_1.ll --check-prefix=CHECK-IR1
 

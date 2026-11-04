@@ -54,7 +54,7 @@ class __OP_CPP_NAME__GenericAdaptor
   using Base = detail::__OP_CPP_NAME__GenericAdaptorBase;
 public:
   __OP_CPP_NAME__GenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs,
-                                ::mlir::OpaqueProperties properties,
+                                ::mlir::PropertyRef properties,
                                 ::mlir::RegionRange regions = {})
     : __OP_CPP_NAME__GenericAdaptor(values, attrs,
       (properties ? *properties.as<::mlir::EmptyProperties *>()

@@ -16,7 +16,7 @@
 #include <array>
 #include <cassert>
 
-void f() {
+void test() {
   typedef double T;
   typedef std::array<T, 3> C;
   C c            = {1, 2, 3.5};

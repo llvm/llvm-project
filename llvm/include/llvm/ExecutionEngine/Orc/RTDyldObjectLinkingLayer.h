@@ -26,7 +26,6 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
-#include <list>
 #include <memory>
 #include <utility>
 #include <vector>

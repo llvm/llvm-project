@@ -32,6 +32,25 @@ Error splitCompactUnwindBlocks(LinkGraph &G, Section &CompactUnwindSection,
 /// CRTP base for compact unwind traits classes. Automatically provides derived
 /// constants.
 ///
+/// Derived classes should implement the following properties and methods:
+///
+///   Endianness:
+///
+///     constexpr static endianness Endianness = ...;
+///
+///   Encoding mask for offset to DWARF section for records that need DWARF:
+///
+///     constexpr static uint32_t DWARFSectionOffsetMask = ...;
+///
+///   Predicate for checking whether encoding needs DWARF:
+///
+///     static bool encodingSpecifiesDWARF(uint32_t Encoding) { ... }
+///
+///   Predicate for checking whether record can be merged with a previous
+///   record with the same encoding:
+///
+///     static bool encodingCanBeMerged(uint32_t Encoding) { ... }
+///
 /// FIXME: Passing PtrSize as a template parameter is a hack to work around a
 ///        bug in older MSVC compilers (until at least MSVC 15) where constexpr
 ///        fields in the CRTP impl class were not visible to the base class.
@@ -459,15 +478,16 @@ private:
     SmallVector<CompactUnwindRecord> NonUniqued = std::move(Records);
     Records.reserve(NonUniqued.size());
 
+    // Retain the final raw record: merging may remove it.
+    LastFunction = NonUniqued.back().Fn;
     Records.push_back(NonUniqued.front());
     for (size_t I = 1; I != NonUniqued.size(); ++I) {
       auto &Next = NonUniqued[I];
       auto &Last = Records.back();
 
-      bool NextNeedsDWARF = CURecTraits::encodingSpecifiesDWARF(Next.Encoding);
-      bool CannotBeMerged = CURecTraits::encodingCannotBeMerged(Next.Encoding);
-      if (NextNeedsDWARF || (Next.Encoding != Last.Encoding) ||
-          CannotBeMerged || Next.LSDA || Last.LSDA)
+      bool CanBeMerged = CURecTraits::encodingCanBeMerged(Next.Encoding);
+      if (!CanBeMerged || (Next.Encoding != Last.Encoding) || Next.LSDA ||
+          Last.LSDA)
         Records.push_back(Next);
     }
 
@@ -539,13 +559,13 @@ private:
     // Write the index array terminator.
     {
       auto FnEndDelta =
-          Records.back().Fn->getRange().End - CompactUnwindBase->getAddress();
+          LastFunction->getRange().End - CompactUnwindBase->getAddress();
 
       if (LLVM_UNLIKELY(!isUInt<32>(FnEndDelta)))
         return make_error<JITLinkError>(
             "In " + G.getName() + " " + UnwindInfoSectionName +
             ", delta to end of functions  " +
-            formatv("{0:x}", Records.back().Fn->getRange().End) +
+            formatv("{0:x}", LastFunction->getRange().End) +
             " exceeds 32 bits");
 
       cantFail(W.writeInteger<uint32_t>(FnEndDelta));
@@ -670,6 +690,7 @@ private:
 
   size_t NumLSDAs = 0;
   size_t NumSecondLevelPages = 0;
+  Symbol *LastFunction = nullptr;
   SmallVector<Symbol *, MaxPersonalities> Personalities;
   SmallVector<CompactUnwindRecord> Records;
 };

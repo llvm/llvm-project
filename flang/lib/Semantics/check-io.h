@@ -91,8 +91,11 @@ private:
       const auto foldExpr{
           evaluate::Fold(context_.foldingContext(), common::Clone(*expr))};
       if constexpr (std::is_same_v<R, std::string>) {
-        return evaluate::GetScalarConstantValue<DefaultCharConstantType>(
-            foldExpr);
+        if (auto charVal{
+                evaluate::GetScalarConstantValue<DefaultCharConstantType>(
+                    evaluate::AsciiKind, foldExpr)}) {
+          return charVal->AsStdString();
+        }
       } else {
         static_assert(std::is_same_v<R, std::int64_t>, "unexpected type");
         return evaluate::ToInt64(foldExpr);
@@ -133,6 +136,7 @@ private:
       const SomeExpr &, common::DefinedIo, parser::CharBlock) const;
   parser::Message *CheckForBadIoType(
       const Symbol &, common::DefinedIo, parser::CharBlock) const;
+  void CheckForAssumedRank(const Symbol *, parser::CharBlock) const;
 
   void CheckNamelist(
       const Symbol &, common::DefinedIo, parser::CharBlock) const;

@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_erfc.h>
-#include <clc/opencl/math/erfc.h>
+#include "clc/math/clc_erfc.h"
 
 #define __CLC_FUNCTION erfc
-#define __CLC_BODY <clc/shared/unary_def.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
+#include "clc/math/gentype.inc"

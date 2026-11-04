@@ -2,7 +2,7 @@
 ! Character procedure gets their own tests because they are tracked differently
 ! in FIR because of the length of the function result.
 
-! RUN: bbc -hlfir -o /dev/null -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" \
+! RUN: bbc -o /dev/null -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" \
 ! RUN: --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only -I nw %s 2>&1 | FileCheck %s
 ! REQUIRES: asserts
 
@@ -44,7 +44,7 @@ contains
 
   integer pure function decode(c)
     character(2), intent(in) :: c
-    decode = modulo(iachar(c(2:2))-49,10)+1 
+    decode = modulo(iachar(c(2:2))-49,10)+1
   end function
 
   subroutine test_no_conflict(x)

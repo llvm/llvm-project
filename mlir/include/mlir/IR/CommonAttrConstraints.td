@@ -188,7 +188,20 @@ class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
 }
 
 def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
-                        "location attribute">;
+                        "location attribute"> {
+  let storageType = [{ ::mlir::LocationAttr }];
+  let returnType = [{ ::mlir::Location }];
+  let convertFromStorage = "::mlir::Location($_self)";
+  let constBuilderCall = "(::mlir::LocationAttr)$0";
+}
+
+// Any distinct attribute.
+def AnyDistinctAttr : Attr<CPred<"::llvm::isa<::mlir::DistinctAttr>($_self)">,
+                           "distinct attribute"> {
+  let storageType = "::mlir::DistinctAttr";
+  let returnType = "::mlir::DistinctAttr";
+  let convertFromStorage = "$_self";
+}
 
 def BoolAttr : Attr<CPred<"::llvm::isa<::mlir::BoolAttr>($_self)">, "bool attribute"> {
   let storageType = [{ ::mlir::BoolAttr }];
@@ -329,8 +342,16 @@ class FloatAttrBase<F attrValType, string descr> :
   let returnType = [{ ::llvm::APFloat }];
 }
 
+def F16Attr : FloatAttrBase<F16, "16-bit float attribute">;
 def F32Attr : FloatAttrBase<F32, "32-bit float attribute">;
 def F64Attr : FloatAttrBase<F64, "64-bit float attribute">;
+
+def BF16Attr : TypedAttrBase<BF16, "FloatAttr",
+              And<[CPred<"::llvm::isa<::mlir::FloatAttr>($_self)">,
+                     CPred<"::llvm::cast<::mlir::FloatAttr>($_self).getType().isBF16()">]>,
+              "16-bit bfloat attribute"> {
+  let returnType = [{ ::llvm::APFloat }];
+}
 
 // An attribute backed by a string type.
 class StringBasedAttr<Pred condition, string descr> : Attr<condition, descr> {
@@ -803,6 +824,11 @@ def IntPowerOf2 : AttrConstraint<
 def IntPositivePowerOf2 : AllAttrOf<[IntPositive, IntPowerOf2]>;
 
 class IntValidAlignment<Attr attr>: ConfinedAttr<attr, [IntPositivePowerOf2]>;
+
+class IntIsOneOf<list<int> values> : AttrConstraint<
+    CPred<"::llvm::is_contained({" # !interleave(!foreach(val, values, val), ", ") #
+                                "}, ::llvm::cast<::mlir::IntegerAttr>($_self).getInt())">,
+    "whose value is one of {" # !interleave(!foreach(val, values, val), ", ") # "}">;
 
 class ArrayMaxCount<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() <= " # n>,

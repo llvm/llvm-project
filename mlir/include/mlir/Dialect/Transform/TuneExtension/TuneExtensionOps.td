@@ -63,8 +63,9 @@ def KnobOp : Op<Transform_Dialect, "tune.knob", [
 
 def AlternativesOp : Op<Transform_Dialect, "tune.alternatives", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorRegions",
-         "getRegionInvocationBounds"]>,
+        ["getEntrySuccessorOperands",
+         "getRegionInvocationBounds",
+         "getSuccessorInputs"]>,
   DeclareOpInterfaceMethods<TransformOpInterface>,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">,
@@ -96,8 +97,7 @@ def AlternativesOp : Op<Transform_Dialect, "tune.alternatives", [
   let assemblyFormat = [{
     `<` $name `>`
     (`selected_region` `=` custom<AlternativesOpSelectedRegion>(
-        $selected_region_attr, $selected_region_param)^)?
-    attr-dict-with-keyword
+        $selected_region_attr, $selected_region_param)^)? attr-dict-with-keyword
     (`:` type($selected_region_param)^)?
     (`->` type($results)^)?
     regions

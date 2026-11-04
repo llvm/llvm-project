@@ -1,1 +1,1 @@
-int __attribute__ ((visibility("hidden"))) conflicting_symbol = 22222;
+void *__attribute__((visibility("hidden"))) conflicting_symbol = (void *)0x2222;

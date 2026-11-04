@@ -10,6 +10,7 @@
 
 // iterator_type, value_type, difference_type, iterator_concept, iterator_category
 
+#include <cstddef>
 #include <iterator>
 
 #include "test_macros.h"

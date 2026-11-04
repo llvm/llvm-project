@@ -10,7 +10,7 @@ define void @test() personality ptr null {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND109:.*]]
 ; CHECK:       [[FOR_COND109]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x ptr> [ zeroinitializer, %[[ENTRY]] ], [ zeroinitializer, %[[IF_END153:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x ptr> [ splat (ptr null), %[[ENTRY]] ], [ splat (ptr null), %[[IF_END153:.*]] ]
 ; CHECK-NEXT:    br label %[[INIT_ATTEMPT_I664:.*]]
 ; CHECK:       [[INIT_ATTEMPT_I664]]:
 ; CHECK-NEXT:    [[CALL_I666:%.*]] = invoke ptr null(ptr null)
@@ -18,8 +18,8 @@ define void @test() personality ptr null {
 ; CHECK:       [[INVOKE_CONT_I668]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[CATCH_DISPATCH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = catchswitch within none [label %catch] unwind to caller
-; CHECK:       [[CATCH:.*]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = catchswitch within none [label %[[CATCH:.*]]] unwind to caller
+; CHECK:       [[CATCH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = catchpad within [[TMP1]] [ptr null, i32 0, ptr null]
 ; CHECK-NEXT:    br i1 false, label %[[IF_END153]], label %[[INVOKE_CONT149:.*]]
 ; CHECK:       [[INVOKE_CONT149]]:

@@ -14,12 +14,9 @@ compound=true
       "vector.body"
     ]
   }
-  N2 -> N4 [ label="" ltail=cluster_N3]
-  N4 [label =
-    "middle.split"
-  ]
-  N4 -> N5 [ label=""]
-  N4 -> N7 [ label=""]
+  N2 -> N5 [ label="" ltail=cluster_N3]
+  N2 -> N7 [ label="" ltail=cluster_N3]
+  N2 -> N2 [style=dotted, dir=back, constraint=false, splines=true, weight=10]
   N5 [label =
     "vector.early.exit"
   ]

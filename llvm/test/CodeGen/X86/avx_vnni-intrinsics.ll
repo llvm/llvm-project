@@ -68,9 +68,9 @@ define <4 x i32>@test_int_x86_avx_vpdpbusds_128(<4 x i32> %x0, <16 x i8> %x1, <1
   ret <4 x i32> %res
 }
 
-declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <16 x i16>, <16 x i16>)
 
-define <8 x i32>@test_int_x86_avx_vpdpwssd_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
+define <8 x i32>@test_int_x86_avx_vpdpwssd_256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2) {
 ; AVXVNNI-LABEL: test_int_x86_avx_vpdpwssd_256:
 ; AVXVNNI:       # %bb.0:
 ; AVXVNNI-NEXT:    {vex} vpdpwssd %ymm2, %ymm1, %ymm0 # encoding: [0xc4,0xe2,0x75,0x52,0xc2]
@@ -80,13 +80,13 @@ define <8 x i32>@test_int_x86_avx_vpdpwssd_256(<8 x i32> %x0, <8 x i32> %x1, <8 
 ; AVX512VNNI:       # %bb.0:
 ; AVX512VNNI-NEXT:    {vex} vpdpwssd %ymm2, %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x75,0x52,0xc2]
 ; AVX512VNNI-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %res = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2)
   ret <8 x i32> %res
 }
 
-declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <8 x i16>, <8 x i16>)
 
-define <4 x i32>@test_int_x86_avx_vpdpwssd_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2) {
+define <4 x i32>@test_int_x86_avx_vpdpwssd_128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2) {
 ; AVXVNNI-LABEL: test_int_x86_avx_vpdpwssd_128:
 ; AVXVNNI:       # %bb.0:
 ; AVXVNNI-NEXT:    {vex} vpdpwssd %xmm2, %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x52,0xc2]
@@ -96,13 +96,13 @@ define <4 x i32>@test_int_x86_avx_vpdpwssd_128(<4 x i32> %x0, <4 x i32> %x1, <4 
 ; AVX512VNNI:       # %bb.0:
 ; AVX512VNNI-NEXT:    {vex} vpdpwssd %xmm2, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x52,0xc2]
 ; AVX512VNNI-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %res = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2)
   ret <4 x i32> %res
 }
 
-declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <16 x i16>, <16 x i16>)
 
-define <8 x i32>@test_int_x86_avx_vpdpwssds_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
+define <8 x i32>@test_int_x86_avx_vpdpwssds_256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2) {
 ; AVXVNNI-LABEL: test_int_x86_avx_vpdpwssds_256:
 ; AVXVNNI:       # %bb.0:
 ; AVXVNNI-NEXT:    {vex} vpdpwssds %ymm2, %ymm1, %ymm0 # encoding: [0xc4,0xe2,0x75,0x53,0xc2]
@@ -112,13 +112,13 @@ define <8 x i32>@test_int_x86_avx_vpdpwssds_256(<8 x i32> %x0, <8 x i32> %x1, <8
 ; AVX512VNNI:       # %bb.0:
 ; AVX512VNNI-NEXT:    {vex} vpdpwssds %ymm2, %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x75,0x53,0xc2]
 ; AVX512VNNI-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %res = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2)
   ret <8 x i32> %res
 }
 
-declare <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <8 x i16>, <8 x i16>)
 
-define <4 x i32>@test_int_x86_avx_vpdpwssds_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2) {
+define <4 x i32>@test_int_x86_avx_vpdpwssds_128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2) {
 ; AVXVNNI-LABEL: test_int_x86_avx_vpdpwssds_128:
 ; AVXVNNI:       # %bb.0:
 ; AVXVNNI-NEXT:    {vex} vpdpwssds %xmm2, %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x53,0xc2]
@@ -128,6 +128,6 @@ define <4 x i32>@test_int_x86_avx_vpdpwssds_128(<4 x i32> %x0, <4 x i32> %x1, <4
 ; AVX512VNNI:       # %bb.0:
 ; AVX512VNNI-NEXT:    {vex} vpdpwssds %xmm2, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x53,0xc2]
 ; AVX512VNNI-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %res = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2)
   ret <4 x i32> %res
 }

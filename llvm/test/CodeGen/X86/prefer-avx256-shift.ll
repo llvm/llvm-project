@@ -13,8 +13,8 @@ define <32 x i8> @var_shl_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX256-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX256-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
 ; AVX256-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; AVX256-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX256-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
+; AVX256-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; AVX256-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; AVX256-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX256-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX256-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
@@ -36,8 +36,8 @@ define <32 x i8> @var_shl_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; AVX512VL-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
@@ -117,8 +117,8 @@ define <16 x i8> @var_shl_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX256VL-NEXT:    vpsllw $4, %xmm0, %xmm2
 ; AVX256VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm2, %xmm2
 ; AVX256VL-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
-; AVX256VL-NEXT:    vpsllw $2, %xmm0, %xmm2
-; AVX256VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm2, %xmm2
+; AVX256VL-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
+; AVX256VL-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
 ; AVX256VL-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; AVX256VL-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX256VL-NEXT:    vpaddb %xmm0, %xmm0, %xmm2

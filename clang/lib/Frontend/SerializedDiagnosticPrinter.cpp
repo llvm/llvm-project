@@ -8,10 +8,10 @@
 
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/SerializedDiagnosticReader.h"
 #include "clang/Frontend/SerializedDiagnostics.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -113,17 +113,6 @@ protected:
   std::error_code
   visitSourceRangeRecord(const serialized_diags::Location &Start,
                          const serialized_diags::Location &End) override;
-
-private:
-  std::error_code adjustSourceLocFilename(RecordData &Record,
-                                          unsigned int offset);
-
-  void adjustAbbrevID(RecordData &Record, AbbrevLookup &Lookup,
-                      unsigned NewAbbrev);
-
-  void writeRecordWithAbbrev(unsigned ID, RecordData &Record);
-
-  void writeRecordWithBlob(unsigned ID, RecordData &Record, StringRef Blob);
 };
 
 class SDiagsWriter : public DiagnosticConsumer {
@@ -146,7 +135,7 @@ public:
     EmitPreamble();
   }
 
-  ~SDiagsWriter() override {}
+  ~SDiagsWriter() override;
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;
@@ -154,8 +143,6 @@ public:
   void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {
     LangOpts = &LO;
   }
-
-  void finish() override;
 
 private:
   /// Build a DiagnosticsEngine to emit diagnostics about the diagnostics
@@ -502,7 +489,7 @@ void SDiagsWriter::EmitBlockInfoBlock() {
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(RECORD_FIXIT));
   AddRangeLocationAbbrev(*Abbrev);
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 16)); // Text size.
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16));   // Text size.
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // FixIt text.
   Abbrevs.set(RECORD_FIXIT, Stream.EmitBlockInfoAbbrev(BLOCK_DIAG,
                                                        Abbrev));
@@ -770,7 +757,7 @@ void SDiagsWriter::RemoveOldDiagnostics() {
   MergeChildRecords = false;
 }
 
-void SDiagsWriter::finish() {
+SDiagsWriter::~SDiagsWriter() {
   assert(!IsFinishing);
   IsFinishing = true;
 

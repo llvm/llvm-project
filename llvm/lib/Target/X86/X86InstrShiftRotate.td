@@ -280,23 +280,23 @@ def : Pat<(store (rotr (loadi64 addr:$dst), (i8 63)), addr:$dst),
           (ROL64m1 addr:$dst)>, Requires<[In64BitMode]>;
 
 let Predicates = [HasNDD] in {
-def : Pat<(rotl (loadi8 addr:$src), (i8 7)),
-          (ROR8m1_ND addr:$src)>;
-def : Pat<(rotl (loadi16 addr:$src), (i8 15)),
-          (ROR16m1_ND addr:$src)>;
-def : Pat<(rotl (loadi32 addr:$src), (i8 31)),
-          (ROR32m1_ND addr:$src)>;
-def : Pat<(rotl (loadi64 addr:$src), (i8 63)),
-          (ROR64m1_ND addr:$src)>;
+def : Pat<(rotl (loadi8 ndd_addr:$src), (i8 7)),
+          (ROR8m1_ND ndd_addr:$src)>;
+def : Pat<(rotl (loadi16 ndd_addr:$src), (i8 15)),
+          (ROR16m1_ND ndd_addr:$src)>;
+def : Pat<(rotl (loadi32 ndd_addr:$src), (i8 31)),
+          (ROR32m1_ND ndd_addr:$src)>;
+def : Pat<(rotl (loadi64 ndd_addr:$src), (i8 63)),
+          (ROR64m1_ND ndd_addr:$src)>;
 
-def : Pat<(rotr (loadi8 addr:$src), (i8 7)),
-          (ROL8m1_ND addr:$src)>;
-def : Pat<(rotr (loadi16 addr:$src), (i8 15)),
-          (ROL16m1_ND addr:$src)>;
-def : Pat<(rotr (loadi32 addr:$src), (i8 31)),
-          (ROL32m1_ND addr:$src)>;
-def : Pat<(rotr (loadi64 addr:$src), (i8 63)),
-          (ROL64m1_ND addr:$src)>;
+def : Pat<(rotr (loadi8 ndd_addr:$src), (i8 7)),
+          (ROL8m1_ND ndd_addr:$src)>;
+def : Pat<(rotr (loadi16 ndd_addr:$src), (i8 15)),
+          (ROL16m1_ND ndd_addr:$src)>;
+def : Pat<(rotr (loadi32 ndd_addr:$src), (i8 31)),
+          (ROL32m1_ND ndd_addr:$src)>;
+def : Pat<(rotr (loadi64 ndd_addr:$src), (i8 63)),
+          (ROL64m1_ND ndd_addr:$src)>;
 }
 
 // Patterns for rotate with relocImm for the immediate field.
@@ -393,8 +393,8 @@ class ShlrdOpMRI8U_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node 
   let SchedRW = [WriteSHDmri];
   let mayLoad = 1;
   let Pattern = !if(!eq(m, "shld"),
-                    [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1), t.RegClass:$src2, (i8 imm:$src3)))],
-                    [(set t.RegClass:$dst, (node t.RegClass:$src2, (t.LoadNode addr:$src1), (i8 imm:$src3)))]);
+                    [(set t.RegClass:$dst, (node (t.LoadNode ndd_addr:$src1), t.RegClass:$src2, (i8 imm:$src3)))],
+                    [(set t.RegClass:$dst, (node t.RegClass:$src2, (t.LoadNode ndd_addr:$src1), (i8 imm:$src3)))]);
 }
 
 class ShlrdOpMRC_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag>
@@ -402,8 +402,8 @@ class ShlrdOpMRC_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = 
   let Uses = [CL];
   let SchedRW = [WriteSHDmrcl];
   let Pattern = !if(!eq(m, "shld"),
-                    [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1), t.RegClass:$src2, CL))],
-                    [(set t.RegClass:$dst, (node t.RegClass:$src2, (t.LoadNode addr:$src1), CL))]);
+                    [(set t.RegClass:$dst, (node (t.LoadNode ndd_addr:$src1), t.RegClass:$src2, CL))],
+                    [(set t.RegClass:$dst, (node t.RegClass:$src2, (t.LoadNode ndd_addr:$src1), CL))]);
 }
 
 multiclass Shlrd<bits<8> o1, bits<8> o2, bits<8> o3, string m, SDPatternOperator node, SDPatternOperator t_node> {

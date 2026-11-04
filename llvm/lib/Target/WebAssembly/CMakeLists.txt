@@ -2,25 +2,42 @@ add_llvm_component_group(WebAssembly)
 
 set(LLVM_TARGET_DEFINITIONS WebAssembly.td)
 
-tablegen(LLVM WebAssemblyGenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM WebAssemblyGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM WebAssemblyGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM WebAssemblyGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM WebAssemblyGenFastISel.inc -gen-fast-isel)
-tablegen(LLVM WebAssemblyGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM WebAssemblyGenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM WebAssemblyGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(WebAssemblyGenAsmMatcher.inc -gen-asm-matcher)
+llvm_tablegen(WebAssemblyGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(WebAssemblyGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(WebAssemblyGenDisassemblerTables.inc -gen-disassembler)
+llvm_tablegen(WebAssemblyGenFastISel.inc -gen-fast-isel)
+llvm_tablegen(WebAssemblyGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(WebAssemblyGenMCCodeEmitter.inc -gen-emitter)
+llvm_tablegen(WebAssemblyGenRegisterBank.inc -gen-register-bank)
+llvm_tablegen(WebAssemblyGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(WebAssemblyGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
+
+set(LLVM_TARGET_DEFINITIONS WebAssemblyGISel.td)
+llvm_tablegen(WebAssemblyGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
+llvm_tablegen(WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="WebAssemblyPreLegalizerCombiner")
+llvm_tablegen(WebAssemblyGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="WebAssemblyPostLegalizerCombiner")
 
 add_public_tablegen_target(WebAssemblyCommonTableGen)
 
 add_llvm_target(WebAssemblyCodeGen
+  GISel/WebAssemblyCallLowering.cpp
+  GISel/WebAssemblyInstructionSelector.cpp
+  GISel/WebAssemblyPostLegalizerCombiner.cpp
+  GISel/WebAssemblyPreLegalizerCombiner.cpp
+  GISel/WebAssemblyLegalizerInfo.cpp
+  GISel/WebAssemblyRegisterBankInfo.cpp
   WebAssemblyAddMissingPrototypes.cpp
   WebAssemblyArgumentMove.cpp
   WebAssemblyAsmPrinter.cpp
   WebAssemblyCFGStackify.cpp
   WebAssemblyCleanCodeAfterTrap.cpp
   WebAssemblyCFGSort.cpp
+  WebAssemblyCoalesceFeaturesAndStripAtomics.cpp
+  WebAssemblyCodeGenPassBuilder.cpp
   WebAssemblyDebugFixup.cpp
   WebAssemblyDebugValueManager.cpp
   WebAssemblyLateEHPrepare.cpp
@@ -36,7 +53,6 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyInstrInfo.cpp
   WebAssemblyLowerBrUnless.cpp
   WebAssemblyLowerEmscriptenEHSjLj.cpp
-  WebAssemblyLowerRefTypesIntPtrConv.cpp
   WebAssemblyMachineFunctionInfo.cpp
   WebAssemblyMCInstLower.cpp
   WebAssemblyMCLowerPrePass.cpp
@@ -44,6 +60,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp
+  WebAssemblyReduceToAnyAllTrue.cpp
   WebAssemblyRefTypeMem2Local.cpp
   WebAssemblyRegisterInfo.cpp
   WebAssemblyRegColoring.cpp
@@ -71,7 +88,9 @@ add_llvm_target(WebAssemblyCodeGen
   CodeGen
   CodeGenTypes
   Core
+  GlobalISel
   MC
+  Passes
   Scalar
   SelectionDAG
   Support

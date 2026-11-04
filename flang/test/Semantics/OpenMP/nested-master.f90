@@ -15,7 +15,7 @@ program omp_nest_master
     !$omp end master
   end do
 
-  !$omp sections 
+  !$omp sections
   !ERROR: `MASTER` region may not be closely nested inside of `WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`, or `ATOMIC` region.
     !$omp master
     do i = 1, 10
@@ -24,7 +24,7 @@ program omp_nest_master
     !$omp end master
   !$omp end sections
 
-  !$omp single 
+  !$omp single
   !ERROR: `MASTER` region may not be closely nested inside of `WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`, or `ATOMIC` region.
     !$omp master
     do i = 1, 10

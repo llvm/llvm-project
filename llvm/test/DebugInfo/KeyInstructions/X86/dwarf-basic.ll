@@ -21,16 +21,16 @@
 ; OBJ: 0000000000000000 <_Z1fi>:
 ; OBJ-NEXT: 0: leal    0x1(%rdi), %eax
 ; OBJ-NEXT: 3: retq
-; OBJ: 0000000000000010 <_Z1gi>:
-; OBJ-NEXT: 10: leal    0x1(%rdi), %eax
-; OBJ-NEXT: 13: retq
+; OBJ: 0000000000000004 <_Z1gi>:
+; OBJ-NEXT: 4: leal    0x1(%rdi), %eax
+; OBJ-NEXT: 7: retq
 
 ; DBG:      Address            Line   Column File   ISA Discriminator OpIndex Flags
 ; DBG-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
 ; DBG-NEXT: 0x0000000000000000      2      0      0   0             0       0  is_stmt prologue_end
 ; DBG-NEXT: 0x0000000000000003      3      0      0   0             0       0  is_stmt
-; DBG-NEXT: 0x0000000000000010      2      0      0   0             0       0  is_stmt prologue_end
-; DBG-NEXT: 0x0000000000000013      6      0      0   0             0       0  is_stmt
+; DBG-NEXT: 0x0000000000000004      2      0      0   0             0       0  is_stmt prologue_end
+; DBG-NEXT: 0x0000000000000007      6      0      0   0             0       0  is_stmt
 
 target triple = "x86_64-unknown-linux-gnu"
 

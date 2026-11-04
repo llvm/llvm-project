@@ -486,7 +486,7 @@ EngineBuilder &EngineBuilder::setMCJITMemoryManager(
                                    std::unique_ptr<RTDyldMemoryManager> mcjmm) {
   auto SharedMM = std::shared_ptr<RTDyldMemoryManager>(std::move(mcjmm));
   MemMgr = SharedMM;
-  Resolver = SharedMM;
+  Resolver = std::move(SharedMM);
   return *this;
 }
 
@@ -664,79 +664,6 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       GV.IntVal = GV.IntVal.trunc(BitWidth);
       return GV;
     }
-    case Instruction::ZExt: {
-      GenericValue GV = getConstantValue(Op0);
-      uint32_t BitWidth = cast<IntegerType>(CE->getType())->getBitWidth();
-      GV.IntVal = GV.IntVal.zext(BitWidth);
-      return GV;
-    }
-    case Instruction::SExt: {
-      GenericValue GV = getConstantValue(Op0);
-      uint32_t BitWidth = cast<IntegerType>(CE->getType())->getBitWidth();
-      GV.IntVal = GV.IntVal.sext(BitWidth);
-      return GV;
-    }
-    case Instruction::FPTrunc: {
-      // FIXME long double
-      GenericValue GV = getConstantValue(Op0);
-      GV.FloatVal = float(GV.DoubleVal);
-      return GV;
-    }
-    case Instruction::FPExt:{
-      // FIXME long double
-      GenericValue GV = getConstantValue(Op0);
-      GV.DoubleVal = double(GV.FloatVal);
-      return GV;
-    }
-    case Instruction::UIToFP: {
-      GenericValue GV = getConstantValue(Op0);
-      if (CE->getType()->isFloatTy())
-        GV.FloatVal = float(GV.IntVal.roundToDouble());
-      else if (CE->getType()->isDoubleTy())
-        GV.DoubleVal = GV.IntVal.roundToDouble();
-      else if (CE->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat::getZero(APFloat::x87DoubleExtended());
-        (void)apf.convertFromAPInt(GV.IntVal,
-                                   false,
-                                   APFloat::rmNearestTiesToEven);
-        GV.IntVal = apf.bitcastToAPInt();
-      }
-      return GV;
-    }
-    case Instruction::SIToFP: {
-      GenericValue GV = getConstantValue(Op0);
-      if (CE->getType()->isFloatTy())
-        GV.FloatVal = float(GV.IntVal.signedRoundToDouble());
-      else if (CE->getType()->isDoubleTy())
-        GV.DoubleVal = GV.IntVal.signedRoundToDouble();
-      else if (CE->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat::getZero(APFloat::x87DoubleExtended());
-        (void)apf.convertFromAPInt(GV.IntVal,
-                                   true,
-                                   APFloat::rmNearestTiesToEven);
-        GV.IntVal = apf.bitcastToAPInt();
-      }
-      return GV;
-    }
-    case Instruction::FPToUI: // double->APInt conversion handles sign
-    case Instruction::FPToSI: {
-      GenericValue GV = getConstantValue(Op0);
-      uint32_t BitWidth = cast<IntegerType>(CE->getType())->getBitWidth();
-      if (Op0->getType()->isFloatTy())
-        GV.IntVal = APIntOps::RoundFloatToAPInt(GV.FloatVal, BitWidth);
-      else if (Op0->getType()->isDoubleTy())
-        GV.IntVal = APIntOps::RoundDoubleToAPInt(GV.DoubleVal, BitWidth);
-      else if (Op0->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat(APFloat::x87DoubleExtended(), GV.IntVal);
-        uint64_t v;
-        bool ignored;
-        (void)apf.convertToInteger(MutableArrayRef(v), BitWidth,
-                                   CE->getOpcode()==Instruction::FPToSI,
-                                   APFloat::rmTowardZero, &ignored);
-        GV.IntVal = v; // endian?
-      }
-      return GV;
-    }
     case Instruction::PtrToInt: {
       GenericValue GV = getConstantValue(Op0);
       uint32_t PtrWidth = DL.getTypeSizeInBits(Op0->getType());
@@ -781,101 +708,17 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       return GV;
     }
     case Instruction::Add:
-    case Instruction::FAdd:
     case Instruction::Sub:
-    case Instruction::FSub:
-    case Instruction::Mul:
-    case Instruction::FMul:
-    case Instruction::UDiv:
-    case Instruction::SDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-    case Instruction::And:
-    case Instruction::Or:
     case Instruction::Xor: {
+      assert(Op0->getType()->isIntegerTy() && "Bad binop type!");
       GenericValue LHS = getConstantValue(Op0);
       GenericValue RHS = getConstantValue(CE->getOperand(1));
       GenericValue GV;
-      switch (CE->getOperand(0)->getType()->getTypeID()) {
-      default: llvm_unreachable("Bad add type!");
-      case Type::IntegerTyID:
-        switch (CE->getOpcode()) {
-          default: llvm_unreachable("Invalid integer opcode");
-          case Instruction::Add: GV.IntVal = LHS.IntVal + RHS.IntVal; break;
-          case Instruction::Sub: GV.IntVal = LHS.IntVal - RHS.IntVal; break;
-          case Instruction::Mul: GV.IntVal = LHS.IntVal * RHS.IntVal; break;
-          case Instruction::UDiv:GV.IntVal = LHS.IntVal.udiv(RHS.IntVal); break;
-          case Instruction::SDiv:GV.IntVal = LHS.IntVal.sdiv(RHS.IntVal); break;
-          case Instruction::URem:GV.IntVal = LHS.IntVal.urem(RHS.IntVal); break;
-          case Instruction::SRem:GV.IntVal = LHS.IntVal.srem(RHS.IntVal); break;
-          case Instruction::And: GV.IntVal = LHS.IntVal & RHS.IntVal; break;
-          case Instruction::Or:  GV.IntVal = LHS.IntVal | RHS.IntVal; break;
-          case Instruction::Xor: GV.IntVal = LHS.IntVal ^ RHS.IntVal; break;
-        }
-        break;
-      case Type::FloatTyID:
-        switch (CE->getOpcode()) {
-          default: llvm_unreachable("Invalid float opcode");
-          case Instruction::FAdd:
-            GV.FloatVal = LHS.FloatVal + RHS.FloatVal; break;
-          case Instruction::FSub:
-            GV.FloatVal = LHS.FloatVal - RHS.FloatVal; break;
-          case Instruction::FMul:
-            GV.FloatVal = LHS.FloatVal * RHS.FloatVal; break;
-          case Instruction::FDiv:
-            GV.FloatVal = LHS.FloatVal / RHS.FloatVal; break;
-          case Instruction::FRem:
-            GV.FloatVal = std::fmod(LHS.FloatVal,RHS.FloatVal); break;
-        }
-        break;
-      case Type::DoubleTyID:
-        switch (CE->getOpcode()) {
-          default: llvm_unreachable("Invalid double opcode");
-          case Instruction::FAdd:
-            GV.DoubleVal = LHS.DoubleVal + RHS.DoubleVal; break;
-          case Instruction::FSub:
-            GV.DoubleVal = LHS.DoubleVal - RHS.DoubleVal; break;
-          case Instruction::FMul:
-            GV.DoubleVal = LHS.DoubleVal * RHS.DoubleVal; break;
-          case Instruction::FDiv:
-            GV.DoubleVal = LHS.DoubleVal / RHS.DoubleVal; break;
-          case Instruction::FRem:
-            GV.DoubleVal = std::fmod(LHS.DoubleVal,RHS.DoubleVal); break;
-        }
-        break;
-      case Type::X86_FP80TyID:
-      case Type::PPC_FP128TyID:
-      case Type::FP128TyID: {
-        const fltSemantics &Sem = CE->getOperand(0)->getType()->getFltSemantics();
-        APFloat apfLHS = APFloat(Sem, LHS.IntVal);
-        switch (CE->getOpcode()) {
-          default: llvm_unreachable("Invalid long double opcode");
-          case Instruction::FAdd:
-            apfLHS.add(APFloat(Sem, RHS.IntVal), APFloat::rmNearestTiesToEven);
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          case Instruction::FSub:
-            apfLHS.subtract(APFloat(Sem, RHS.IntVal),
-                            APFloat::rmNearestTiesToEven);
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          case Instruction::FMul:
-            apfLHS.multiply(APFloat(Sem, RHS.IntVal),
-                            APFloat::rmNearestTiesToEven);
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          case Instruction::FDiv:
-            apfLHS.divide(APFloat(Sem, RHS.IntVal),
-                          APFloat::rmNearestTiesToEven);
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          case Instruction::FRem:
-            apfLHS.mod(APFloat(Sem, RHS.IntVal));
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          }
-        }
-        break;
+      switch (CE->getOpcode()) {
+        default: llvm_unreachable("Invalid integer opcode");
+        case Instruction::Add: GV.IntVal = LHS.IntVal + RHS.IntVal; break;
+        case Instruction::Sub: GV.IntVal = LHS.IntVal - RHS.IntVal; break;
+        case Instruction::Xor: GV.IntVal = LHS.IntVal ^ RHS.IntVal; break;
       }
       return GV;
     }
@@ -929,94 +772,32 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     report_fatal_error(
         "Scalable vector support not yet implemented in ExecutionEngine");
   case Type::FixedVectorTyID: {
-    unsigned elemNum;
-    Type* ElemTy;
-    const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(C);
-    const ConstantVector *CV = dyn_cast<ConstantVector>(C);
-    const ConstantAggregateZero *CAZ = dyn_cast<ConstantAggregateZero>(C);
+    Type *ElemTy = cast<FixedVectorType>(C->getType())->getElementType();
+    if (!ElemTy->isIntegerTy() && !ElemTy->isFloatTy() && !ElemTy->isDoubleTy())
+      llvm_unreachable("Unknown constant pointer type!");
 
-    if (CDV) {
-        elemNum = CDV->getNumElements();
-        ElemTy = CDV->getElementType();
-    } else if (CV || CAZ) {
-      auto *VTy = cast<FixedVectorType>(C->getType());
-      elemNum = VTy->getNumElements();
-      ElemTy = VTy->getElementType();
-    } else {
-        llvm_unreachable("Unknown constant vector type!");
+    unsigned ElemNum = cast<FixedVectorType>(C->getType())->getNumElements();
+    Result.AggregateVal.resize(ElemNum);
+    for (unsigned I = 0; I < ElemNum; ++I) {
+      Constant *Elt = C->getAggregateElement(I);
+      if (!Elt)
+        llvm_unreachable("Failed to extract element from constant vector!");
+
+      if (auto *CI = dyn_cast<ConstantInt>(Elt))
+        Result.AggregateVal[I].IntVal = CI->getValue();
+      else if (auto *CFP = dyn_cast<ConstantFP>(Elt)) {
+        APFloat Val = CFP->getValueAPF();
+        if (ElemTy->isFloatTy())
+          Result.AggregateVal[I].FloatVal = Val.convertToFloat();
+        else
+          Result.AggregateVal[I].DoubleVal = Val.convertToDouble();
+      } else if (isa<UndefValue>(Elt)) {
+        if (ElemTy->isIntegerTy())
+          Result.AggregateVal[I].IntVal =
+              APInt(ElemTy->getScalarSizeInBits(), 0ull);
+      } else
+        llvm_unreachable("Unknown constant pointer type!");
     }
-
-    Result.AggregateVal.resize(elemNum);
-    // Check if vector holds floats.
-    if(ElemTy->isFloatTy()) {
-      if (CAZ) {
-        GenericValue floatZero;
-        floatZero.FloatVal = 0.f;
-        llvm::fill(Result.AggregateVal, floatZero);
-        break;
-      }
-      if(CV) {
-        for (unsigned i = 0; i < elemNum; ++i)
-          if (!isa<UndefValue>(CV->getOperand(i)))
-            Result.AggregateVal[i].FloatVal = cast<ConstantFP>(
-              CV->getOperand(i))->getValueAPF().convertToFloat();
-        break;
-      }
-      if(CDV)
-        for (unsigned i = 0; i < elemNum; ++i)
-          Result.AggregateVal[i].FloatVal = CDV->getElementAsFloat(i);
-
-      break;
-    }
-    // Check if vector holds doubles.
-    if (ElemTy->isDoubleTy()) {
-      if (CAZ) {
-        GenericValue doubleZero;
-        doubleZero.DoubleVal = 0.0;
-        llvm::fill(Result.AggregateVal, doubleZero);
-        break;
-      }
-      if(CV) {
-        for (unsigned i = 0; i < elemNum; ++i)
-          if (!isa<UndefValue>(CV->getOperand(i)))
-            Result.AggregateVal[i].DoubleVal = cast<ConstantFP>(
-              CV->getOperand(i))->getValueAPF().convertToDouble();
-        break;
-      }
-      if(CDV)
-        for (unsigned i = 0; i < elemNum; ++i)
-          Result.AggregateVal[i].DoubleVal = CDV->getElementAsDouble(i);
-
-      break;
-    }
-    // Check if vector holds integers.
-    if (ElemTy->isIntegerTy()) {
-      if (CAZ) {
-        GenericValue intZero;
-        intZero.IntVal = APInt(ElemTy->getScalarSizeInBits(), 0ull);
-        llvm::fill(Result.AggregateVal, intZero);
-        break;
-      }
-      if(CV) {
-        for (unsigned i = 0; i < elemNum; ++i)
-          if (!isa<UndefValue>(CV->getOperand(i)))
-            Result.AggregateVal[i].IntVal = cast<ConstantInt>(
-                                            CV->getOperand(i))->getValue();
-          else {
-            Result.AggregateVal[i].IntVal =
-              APInt(CV->getOperand(i)->getType()->getPrimitiveSizeInBits(), 0);
-          }
-        break;
-      }
-      if(CDV)
-        for (unsigned i = 0; i < elemNum; ++i)
-          Result.AggregateVal[i].IntVal = APInt(
-            CDV->getElementType()->getPrimitiveSizeInBits(),
-            CDV->getElementAsInteger(i));
-
-      break;
-    }
-    llvm_unreachable("Unknown constant pointer type!");
   } break;
 
   default:

@@ -112,3 +112,19 @@ func.func @affine_output_dep(%in: memref<512xf32>) {
  return
 }
 
+// -----
+
+// Verify that matchReduction does not crash when the terminator has fewer
+// operands than the number of iteration-carried block arguments (issue #131437).
+// expected-remark@below {{Testing function}}
+func.func @pooling_nhwc_sum_no_crash(%arg0: tensor<1x1x1x1xf32>,
+                                     %arg1: tensor<1x3x3x1xf32>) {
+  %0 = tensor.empty() : tensor<1x1xf32>
+  // expected-remark@below {{Reduction NOT found in output #0!}}
+  // expected-remark@below {{Reduction NOT found in output #1!}}
+  %1 = linalg.pooling_nhwc_sum
+         {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>}
+         ins(%arg1, %0 : tensor<1x3x3x1xf32>, tensor<1x1xf32>)
+         outs(%arg0 : tensor<1x1x1x1xf32>) -> tensor<1x1x1x1xf32>
+  return
+}

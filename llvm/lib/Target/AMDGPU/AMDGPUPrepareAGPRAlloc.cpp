@@ -21,7 +21,6 @@
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -46,10 +45,7 @@ class AMDGPUPrepareAGPRAllocLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUPrepareAGPRAllocLegacy() : MachineFunctionPass(ID) {
-    initializeAMDGPUPrepareAGPRAllocLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUPrepareAGPRAllocLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -62,10 +58,8 @@ public:
 };
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(AMDGPUPrepareAGPRAllocLegacy, DEBUG_TYPE,
-                      "AMDGPU Prepare AGPR Alloc", false, false)
-INITIALIZE_PASS_END(AMDGPUPrepareAGPRAllocLegacy, DEBUG_TYPE,
-                    "AMDGPU Prepare AGPR Alloc", false, false)
+INITIALIZE_PASS(AMDGPUPrepareAGPRAllocLegacy, DEBUG_TYPE,
+                "AMDGPU Prepare AGPR Alloc", false, false)
 
 char AMDGPUPrepareAGPRAllocLegacy::ID = 0;
 

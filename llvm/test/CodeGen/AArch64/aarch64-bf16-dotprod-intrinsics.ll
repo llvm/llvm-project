@@ -151,6 +151,37 @@ entry:
   ret <4 x float> %vbfmlaltq_v3.i
 }
 
+define <4 x float> @test_vbfdotq_laneq_f32_v4i32_shufflevector(<8 x bfloat> %a, <8 x bfloat> %b)  {
+; CHECK-LABEL: test_vbfdotq_laneq_f32_v4i32_shufflevector:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    bfdot v2.4s, v0.8h, v1.2h[0]
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <8 x bfloat> %b to <4 x i32>
+  %1 = shufflevector <4 x i32> %0, <4 x i32> poison, <4 x i32> zeroinitializer
+  %2 = bitcast <4 x i32> %1 to <8 x bfloat>
+  %vbfdotq = call <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16(<4 x float> zeroinitializer, <8 x bfloat> %a, <8 x bfloat> %2)
+  ret <4 x float> %vbfdotq
+}
+
+define <2 x float> @test_vbfdotq_laneq_f32_v2i32_shufflevector(<4 x bfloat> %a, <4 x bfloat> %b)  {
+; CHECK-LABEL: test_vbfdotq_laneq_f32_v2i32_shufflevector:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    bfdot v2.2s, v0.4h, v1.2h[0]
+; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <4 x bfloat> %b to <2 x i32>
+  %1 = shufflevector <2 x i32> %0, <2 x i32> poison, <2 x i32> zeroinitializer
+  %2 = bitcast <2 x i32> %1 to <4 x bfloat>
+  %vbfdotq = call <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16(<2 x float> zeroinitializer, <4 x bfloat> %a, <4 x bfloat> %2)
+  ret <2 x float> %vbfdotq
+}
+
 declare <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16(<2 x float>, <4 x bfloat>, <4 x bfloat>)
 declare <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16(<4 x float>, <8 x bfloat>, <8 x bfloat>)
 declare <4 x float> @llvm.aarch64.neon.bfmmla(<4 x float>, <8 x bfloat>, <8 x bfloat>)

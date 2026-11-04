@@ -100,8 +100,8 @@ template <typename Bitfield, typename StorageType> struct Impl {
   using IntegerType = typename Bitfield::IntegerType;
 
   static constexpr size_t StorageBits = sizeof(StorageType) * CHAR_BIT;
-  static_assert(Bitfield::FirstBit <= StorageBits, "Data must fit in mask");
-  static_assert(Bitfield::LastBit <= StorageBits, "Data must fit in mask");
+  static_assert(Bitfield::FirstBit < StorageBits, "Data must fit in mask");
+  static_assert(Bitfield::LastBit < StorageBits, "Data must fit in mask");
   static constexpr StorageType LowMask =
       maskTrailingOnes<StorageType>(Bitfield::Bits);
   static constexpr StorageType Mask = LowMask << Bitfield::Shift;

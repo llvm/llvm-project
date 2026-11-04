@@ -162,6 +162,7 @@ llvm::Expected<AdornedCFG> AdornedCFG::build(const Decl &D, Stmt &S,
   Options.AddInitializers = true;
   Options.AddCXXDefaultInitExprInCtors = true;
   Options.AddLifetime = true;
+  Options.AddParameterLifetimes = true;
 
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();

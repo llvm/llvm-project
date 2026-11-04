@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -debug-info-kind=standalone \
 // RUN:     -dwarf-ext-refs -fmodules \
 // RUN:     -fmodule-format=obj -fimplicit-module-maps \
-// RUN:     -triple %itanium_abi_triple -fmodules-cache-path=%t \
+// RUN:     -triple %itanium_abi_triple -fmodules-cache-path=%t/cache \
 // RUN:     %s -I %S/Inputs/DebugInfoNamespace -I %t -emit-llvm -o - \
 // RUN:     |  FileCheck %s
 

@@ -27,6 +27,6 @@
 int main(int, char**) {
   std::signal(SIGABRT, [](int) { std::_Exit(EXIT_SUCCESS); });
   std::unordered_map<int, int> map;
-  map.at(1);
+  (void)map.at(1);
   return EXIT_FAILURE;
 }

@@ -6,11 +6,8 @@
 // clang-format on
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
 #include <omp.h>
 
@@ -23,13 +20,13 @@ int main(void) {
 
 // clang-format off
 // CHECK: OFFLOAD ERROR: deallocation requires device memory but allocation was pinned host memory: 0x
-// CHECK:  dataDelete
+// CHECK:  deleteData
 // CHECK:  omp_target_free
 // NDEBG: main
-// DEBUG:  main {{.*}}free_wrong_ptr_kind.c:22
+// DEBUG:  main {{.*}}free_wrong_ptr_kind.c:[[@LINE-7]]
 //
 // CHECK: Last allocation of size 8 -> device pointer
-// CHECK:  dataAlloc
+// CHECK:  allocData
 // CHECK:  llvm_omp_target_alloc_host
 // NDEBG:  main
-// DEBUG:  main {{.*}}free_wrong_ptr_kind.c:21
+// DEBUG:  main {{.*}}free_wrong_ptr_kind.c:[[@LINE-14]]

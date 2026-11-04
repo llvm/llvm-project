@@ -29,12 +29,12 @@ namespace math {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
-static constexpr size_t N_EXP10F16_EXCEPTS = 5;
+LIBC_INLINE_VAR constexpr size_t N_EXP10F16_EXCEPTS = 5;
 #else
-static constexpr size_t N_EXP10F16_EXCEPTS = 8;
+LIBC_INLINE_VAR constexpr size_t N_EXP10F16_EXCEPTS = 8;
 #endif
 
-static constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
     EXP10F16_EXCEPTS = {{
         // x = 0x1.8f4p-2, exp10f16(x) = 0x1.3ap+1 (RZ)
         {0x363dU, 0x40e8U, 1U, 0U, 1U},
@@ -57,7 +57,7 @@ static constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
     }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_INLINE static constexpr float16 exp10f16(float16 x) {
+LIBC_INLINE constexpr float16 exp10f16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 
@@ -82,6 +82,11 @@ LIBC_INLINE static constexpr float16 exp10f16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_OVERFLOW);
+      return FPBits::inf().get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_UPWARD:
@@ -91,6 +96,7 @@ LIBC_INLINE static constexpr float16 exp10f16(float16 x) {
       default:
         return FPBits::max_normal().get_val();
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // When x <= -8.
@@ -102,8 +108,10 @@ LIBC_INLINE static constexpr float16 exp10f16(float16 x) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       if (fputil::fenv_is_round_up())
         return FPBits::min_subnormal().get_val();
+#endif
       return FPBits::zero().get_val();
     }
   }

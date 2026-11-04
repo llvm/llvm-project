@@ -21,7 +21,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include <tuple> // for std::pair
+
+#include <utility>
 
 namespace llvm {
 
@@ -81,6 +82,10 @@ public:
 
   /// \returns true if \p MD is a well-formed MMRA tag.
   LLVM_ABI static bool isTagMD(const Metadata *MD);
+
+  /// Appends \p Tags to the !mmra metadata on \p I,
+  /// merging with any existing MMRA metadata.
+  LLVM_ABI static void appendTags(Instruction &I, ArrayRef<TagT> Tags);
 
   /// @}
 

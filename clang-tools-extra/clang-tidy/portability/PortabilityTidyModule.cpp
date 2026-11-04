@@ -8,8 +8,9 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
+#include "AvoidPragmaCommentCheck.h"
 #include "AvoidPragmaOnceCheck.h"
+#include "NoAssemblerCheck.h"
 #include "RestrictSystemIncludesCheck.h"
 #include "SIMDIntrinsicsCheck.h"
 #include "StdAllocatorConstCheck.h"
@@ -17,12 +18,16 @@
 
 namespace clang::tidy {
 namespace portability {
+namespace {
 
 class PortabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidPragmaCommentCheck>(
+        "portability-avoid-pragma-comment");
     CheckFactories.registerCheck<AvoidPragmaOnceCheck>(
         "portability-avoid-pragma-once");
+    CheckFactories.registerCheck<NoAssemblerCheck>("portability-no-assembler");
     CheckFactories.registerCheck<RestrictSystemIncludesCheck>(
         "portability-restrict-system-includes");
     CheckFactories.registerCheck<SIMDIntrinsicsCheck>(
@@ -33,6 +38,8 @@ public:
         "portability-template-virtual-member-function");
   }
 };
+
+} // namespace
 
 // Register the PortabilityModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<PortabilityModule>

@@ -1,4 +1,4 @@
-// RUN: clang-tidy %s -checks='-*,readability-simplify-boolean-expr' -- -std=c++2b | count 0
+// RUN: clang-tidy %s -checks='-*,readability-simplify-boolean-expr' -- -std=c++23 | count 0
 template <bool Cond>
 constexpr int testIf() {
   if consteval {

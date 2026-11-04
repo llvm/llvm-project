@@ -6,6 +6,7 @@ import re
 import shlex
 
 import lit.formats
+from lit.llvm import llvm_config
 
 
 def get_required_attr(config, attr_name):
@@ -40,6 +41,9 @@ if default_asan_opts_str:
     default_asan_opts_str += ":"
 config.substitutions.append(
     ("%env_asan_opts=", "env ASAN_OPTIONS=" + default_asan_opts_str)
+)
+config.substitutions.append(
+    ("%export_asan_opts=", "export ASAN_OPTIONS=" + default_asan_opts_str)
 )
 
 # Setup source root.
@@ -105,6 +109,7 @@ if platform.system() == "Windows":
         win_runtime_feature = "win32-static-asan"
     config.available_features.add(win_runtime_feature)
 
+llvm_config.feature_config([("--assertion-mode", {"ON": "asserts"})])
 
 def build_invocation(compile_flags, with_lto=False):
     lto_flags = []

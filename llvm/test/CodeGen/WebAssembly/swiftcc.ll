@@ -18,21 +18,21 @@ define swiftcc void @bar() {
 ; REG: call    foo, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
   call swiftcc void @foo(i32 1, i32 2)
 
-; REG: call_indirect   $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
+; REG: call_indirect  __indirect_function_table, (i32, i32, i32, i32) -> (), $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
 ; CHECK: call_indirect __indirect_function_table, (i32, i32, i32, i32) -> ()
   call swiftcc void %1(i32 1, i32 2)
 
-; REG: call_indirect   $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
+; REG: call_indirect  __indirect_function_table, (i32, i32, i32, i32) -> (), $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
 ; CHECK: call_indirect __indirect_function_table, (i32, i32, i32, i32) -> ()
   call swiftcc void %1(i32 1, i32 2, i32 swiftself 3)
 
   %err = alloca swifterror ptr, align 4
 
-; REG: call_indirect   $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
+; REG: call_indirect  __indirect_function_table, (i32, i32, i32, i32) -> (), $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
 ; CHECK: call_indirect __indirect_function_table, (i32, i32, i32, i32) -> ()
   call swiftcc void %1(i32 1, i32 2, ptr swifterror %err)
 
-; REG: call_indirect   $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
+; REG: call_indirect  __indirect_function_table, (i32, i32, i32, i32) -> (), $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
 ; CHECK: call_indirect __indirect_function_table, (i32, i32, i32, i32) -> ()
   call swiftcc void %1(i32 1, i32 2, i32 swiftself 3, ptr swifterror %err)
 

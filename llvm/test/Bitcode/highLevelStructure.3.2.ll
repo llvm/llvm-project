@@ -9,7 +9,8 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-a0:0:64-f80:32:32-n8:16:32-S32"
 
 ; Module-Level Inline Assembly Test
-; CHECK: module asm "some assembly"
+; CHECK: module asm
+; CHECK-NEXT: "some assembly"
 module asm "some assembly"
 
 ; Named Types Test
@@ -73,13 +74,13 @@ entry:
 }
 
 ; Named metadata Test
-; CHECK: !name = !{!0, !1, !2}
+; CHECK: !name = !{!1, !2, !3}
 !name = !{!0, !1, !2}
-; CHECK: !0 = !{!"zero"}
+; CHECK: !1 = !{!"zero"}
 !0 = metadata !{metadata !"zero"}
-; CHECK: !1 = !{!"one"}
+; CHECK: !2 = !{!"one"}
 !1 = metadata !{metadata !"one"}
-; CHECK: !2 = !{!"two"}
+; CHECK: !3 = !{!"two"}
 !2 = metadata !{metadata !"two"}
 
 

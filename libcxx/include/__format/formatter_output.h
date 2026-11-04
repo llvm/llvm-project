@@ -19,7 +19,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__cstddef/size_t.h>
 #include <__format/buffer.h>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/formatter.h>
 #include <__format/parser_std_format_spec.h>
 #include <__format/unicode.h>
@@ -50,8 +50,7 @@ struct __padding_size_result {
   size_t __after_;
 };
 
-_LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result
-__padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
+constexpr __padding_size_result __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
   _LIBCPP_ASSERT_INTERNAL(__width > __size, "don't call this function when no padding is required");
   _LIBCPP_ASSERT_INTERNAL(
       __align != __format_spec::__alignment::__zero_padding, "the caller should have handled the zero-padding");
@@ -83,8 +82,7 @@ __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+auto __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__copy(__str);
     return __out_it;
@@ -99,16 +97,15 @@ __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto _
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+auto __copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it)
+    -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __last}, std::move(__out_it));
 }
 
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+auto __copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{std::to_address(__first), __n}, std::move(__out_it));
 }
 
@@ -119,11 +116,9 @@ template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto
-__transform(_Iterator __first,
-            _Iterator __last,
-            output_iterator<const _OutCharT&> auto __out_it,
-            _UnaryOperation __operation) -> decltype(__out_it) {
+auto __transform(
+    _Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it, _UnaryOperation __operation)
+    -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__transform(__first, __last, std::move(__operation));
     return __out_it;
@@ -139,7 +134,7 @@ __transform(_Iterator __first,
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
+_OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_CharT>>>) {
     __out_it.__get_container()->__fill(__n, __value);
     return __out_it;
@@ -151,45 +146,41 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value)
   }
 }
 
+template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
+_OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
 #  if _LIBCPP_HAS_UNICODE
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, char>)
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));
-  if (__bytes == 0)
-    return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+  if constexpr (same_as<_CharT, char>) {
+    std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));
+    if (__bytes == 0)
+      return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
 
-  for (size_t __i = 0; __i < __n; ++__i)
-    __out_it = __formatter::__copy(
-        std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + __bytes, std::move(__out_it));
-  return __out_it;
-}
-
+    for (size_t __i = 0; __i < __n; ++__i)
+      __out_it = __formatter::__copy(
+          std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + __bytes, std::move(__out_it));
+    return __out_it;
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  if (!__unicode::__is_high_surrogate(__value.__data[0]))
-    return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+  } else if constexpr (same_as<_CharT, wchar_t>) {
+    if constexpr (sizeof(wchar_t) == 2) {
+      if (!__unicode::__is_high_surrogate(__value.__data[0]))
+        return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
 
-  for (size_t __i = 0; __i < __n; ++__i)
-    __out_it = __formatter::__copy(
-        std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + 2, std::move(__out_it));
-  return __out_it;
-}
-
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
-}
+      for (size_t __i = 0; __i < __n; ++__i)
+        __out_it = __formatter::__copy(
+            std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + 2, std::move(__out_it));
+      return __out_it;
+    } else if constexpr (sizeof(wchar_t) == 4) {
+      return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+    } else {
+      static_assert(false, "expected sizeof(wchar_t) to be 2 or 4");
+    }
 #    endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#  else    // _LIBCPP_HAS_UNICODE
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+  } else {
+    static_assert(false, "Unexpected CharT");
+  }
+#  else  // _LIBCPP_HAS_UNICODE
   return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+#  endif // _LIBCPP_HAS_UNICODE
 }
-#  endif   // _LIBCPP_HAS_UNICODE
 
 /// Writes the input to the output with the required padding.
 ///
@@ -213,11 +204,10 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::
 /// conversion, which means the [\a __first, \a __last) always contains elements
 /// of the type \c char.
 template <class _CharT, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__write(basic_string_view<_CharT> __str,
-        output_iterator<const _CharT&> auto __out_it,
-        __format_spec::__parsed_specifications<_ParserCharT> __specs,
-        ptrdiff_t __size) -> decltype(__out_it) {
+auto __write(basic_string_view<_CharT> __str,
+             output_iterator<const _CharT&> auto __out_it,
+             __format_spec::__parsed_specifications<_ParserCharT> __specs,
+             ptrdiff_t __size) -> decltype(__out_it) {
   if (__size >= __specs.__width_)
     return __formatter::__copy(__str, std::move(__out_it));
 
@@ -228,12 +218,11 @@ __write(basic_string_view<_CharT> __str,
 }
 
 template <contiguous_iterator _Iterator, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__write(_Iterator __first,
-        _Iterator __last,
-        output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
-        __format_spec::__parsed_specifications<_ParserCharT> __specs,
-        ptrdiff_t __size) -> decltype(__out_it) {
+auto __write(_Iterator __first,
+             _Iterator __last,
+             output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
+             __format_spec::__parsed_specifications<_ParserCharT> __specs,
+             ptrdiff_t __size) -> decltype(__out_it) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "Not a valid range");
   return __formatter::__write(basic_string_view{__first, __last}, std::move(__out_it), __specs, __size);
 }
@@ -242,11 +231,10 @@ __write(_Iterator __first,
 ///
 /// Calls the function above where \a __size = \a __last - \a __first.
 template <contiguous_iterator _Iterator, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__write(_Iterator __first,
-        _Iterator __last,
-        output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
-        __format_spec::__parsed_specifications<_ParserCharT> __specs) -> decltype(__out_it) {
+auto __write(_Iterator __first,
+             _Iterator __last,
+             output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
+             __format_spec::__parsed_specifications<_ParserCharT> __specs) -> decltype(__out_it) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "Not a valid range");
   return __formatter::__write(__first, __last, std::move(__out_it), __specs, __last - __first);
 }
@@ -255,7 +243,7 @@ template <contiguous_iterator _Iterator,
           class _CharT = typename iterator_traits<_Iterator>::value_type,
           class _ParserCharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto __write_transformed(
+auto __write_transformed(
     _Iterator __first,
     _Iterator __last,
     output_iterator<const _CharT&> auto __out_it,
@@ -279,10 +267,9 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(
 ///
 /// \note When \c _LIBCPP_HAS_UNICODE is false the function assumes the input is ASCII.
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
-    basic_string_view<_CharT> __str,
-    output_iterator<const _CharT&> auto __out_it,
-    __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+auto __write_string_no_precision(basic_string_view<_CharT> __str,
+                                 output_iterator<const _CharT&> auto __out_it,
+                                 __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   _LIBCPP_ASSERT_INTERNAL(!__specs.__has_precision(), "use __write_string");
 
   // No padding -> copy the string
@@ -299,7 +286,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __precision) {
+int __truncate(basic_string_view<_CharT>& __str, int __precision) {
   __format_spec::__column_width_result __result =
       __format_spec::__estimate_column_width(__str, __precision, __format_spec::__column_width_rounding::__down);
   __str = basic_string_view<_CharT>{__str.begin(), __result.__last_};

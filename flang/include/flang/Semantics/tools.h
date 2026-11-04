@@ -23,7 +23,12 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <functional>
+
+namespace Fortran::evaluate::characteristics {
+struct DummyDataObject;
+}
 
 namespace Fortran::semantics {
 
@@ -46,6 +51,8 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+bool IsOpenACCMapped(const Symbol &, const Scope &);
+bool HasOpenACCRoutineDirective(const Scope *);
 
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
@@ -107,6 +114,7 @@ bool IsBindCProcedure(const Scope &);
 // Returns a pointer to the function's symbol when true, else null
 const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
+bool IsOrContainsNotifyComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol &);
 // Does a non-PARAMETER symbol have explicit initialization with =value or
 // =>target in its declaration (but not in a DATA statement)? (Being
@@ -123,6 +131,9 @@ bool HasIntrinsicTypeName(const Symbol &);
 bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool HasAlternateReturns(const Symbol &);
 bool IsAutomaticallyDestroyed(const Symbol &);
+
+// Follow association until the first symbol without HostAssocDetails.
+const Symbol &FollowHostAssoc(const Symbol &);
 
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
@@ -185,6 +196,8 @@ const Symbol *HasImpureFinal(
 bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have a pointer direct component?
+bool HasPointerDirectComponent(const DerivedTypeSpec &);
 // Does this type have any defined assignment at any level (or any polymorphic
 // allocatable)?
 bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
@@ -195,6 +208,8 @@ bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
+bool IsEnumerationType(const Symbol &);
+bool IsEnumerationType(const DerivedTypeSpec &);
 bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
@@ -224,6 +239,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
 }
 
 bool HasCUDAComponent(const Symbol &sym);
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &);
 
 inline bool IsCUDADevice(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
@@ -292,6 +309,14 @@ SymbolVector OrderParameterNames(const Symbol &);
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,
     DeclTypeSpec::Category = DeclTypeSpec::TypeDerived);
 
+// Clone a derived type's component scope for OpenACC use_device with CUDA
+// Fortran: each component named in `path` (e.g. a%b%c -> {b,c}) gets a
+// distinct component symbol with cudaDataAttr Device in a new DerivedTypeSpec.
+// Returns nullptr if `path` is empty or `origType` is not derived.
+const DeclTypeSpec *CloneDerivedTypeForUseDevice(Scope &containingScope,
+    SemanticsContext &, const DeclTypeSpec &origType,
+    llvm::ArrayRef<SourceName> path);
+
 // When a subprogram defined in a submodule defines a separate module
 // procedure whose interface is defined in an ancestor (sub)module,
 // returns a pointer to that interface, else null.
@@ -332,9 +357,6 @@ const Symbol *FindExternallyVisibleObject(
 // Applies GetUltimate(), then if the symbol is a generic procedure shadowing a
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
-
-// Given a cray pointee symbol, returns the related cray pointer symbol.
-const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 
@@ -652,6 +674,8 @@ using PotentialAndPointerComponentIterator =
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindNotifyPotentialComponent(
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
 PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
     const DerivedTypeSpec &);
 PotentialAndPointerComponentIterator::const_iterator
@@ -700,8 +724,8 @@ public:
 private:
   SemanticsContext &context_;
   std::set<parser::Label> labels_;
-  parser::CharBlock currentStatementSourcePosition_{nullptr};
-  parser::CharBlock constructSourcePosition_{nullptr};
+  parser::CharBlock currentStatementSourcePosition_;
+  parser::CharBlock constructSourcePosition_;
   const char *construct_{nullptr};
 
   parser::MessageFormattedText GetEnclosingConstructMsg();
@@ -741,20 +765,6 @@ void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
 
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
-template <typename R, typename T>
-std::optional<R> GetConstExpr(SemanticsContext &semanticsContext, const T &x) {
-  using DefaultCharConstantType = evaluate::Ascii;
-  if (const auto *expr{GetExpr(semanticsContext, x)}) {
-    const auto foldExpr{evaluate::Fold(
-        semanticsContext.foldingContext(), common::Clone(*expr))};
-    if constexpr (std::is_same_v<R, std::string>) {
-      return evaluate::GetScalarConstantValue<DefaultCharConstantType>(
-          foldExpr);
-    }
-  }
-  return std::nullopt;
-}
-
 // Returns "m" for a module, "m:sm" for a submodule.
 std::string GetModuleOrSubmoduleName(const Symbol &);
 
@@ -765,6 +775,17 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
 bool AreSameModuleSymbol(const Symbol &, const Symbol &);
+
+parser::CharBlock MakeNameFromOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op);
+parser::CharBlock MangleSpecialFunctions(parser::CharBlock name);
+std::string MangleDefinedOperator(parser::CharBlock name);
+
+// Map a mangled declare reduction name (e.g., "op.+", "op.combine.",
+// "op.max") back to the Fortran identifier used as the scope key for the
+// corresponding operator or procedure (e.g., "operator(+)", ".combine.",
+// "max"). Non-mangled names (procedure designators) are returned as-is.
+std::string GetReductionFortranId(parser::CharBlock mangledName);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

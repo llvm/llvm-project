@@ -8,6 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
+// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
+
 // <optional>
 
 // constexpr iterator optional::end() noexcept;
@@ -17,6 +19,7 @@
 #include <iterator>
 #include <optional>
 #include <ranges>
+#include <type_traits>
 #include <utility>
 
 template <typename T>
@@ -41,7 +44,8 @@ constexpr bool test() {
     assert(it2 == std::as_const(disengaged).end());
   }
 
-  std::optional<T> engaged{T{}};
+  std::remove_reference_t<T> t = std::remove_reference_t<T>{};
+  std::optional<T> engaged{t};
 
   { // end() != begin() if the optional is engaged
     auto it  = engaged.end();
@@ -60,15 +64,23 @@ constexpr bool test() {
 constexpr bool tests() {
   assert(test<int>());
   assert(test<char>());
+  assert(test<short>());
   assert(test<const int>());
   assert(test<const char>());
-
+  assert(test<int&>());
+  assert(test<char&>());
+  assert(test<short&>());
+  assert(test<const int&>());
+  assert(test<const char&>());
+  assert(test<const short&>());
   return true;
 }
 
 int main(int, char**) {
   assert(tests());
-  static_assert(tests());
+
+  // TODO: blocked on constexpr pointer tagging
+  // static_assert(tests());
 
   return 0;
 }

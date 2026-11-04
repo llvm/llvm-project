@@ -36,7 +36,8 @@ class SPIRV_GraphARMOp<string mnemonic, list<Trait> traits = []> :
 
 def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     AutomaticAllocationScope, DeclareOpInterfaceMethods<CallableOpInterface>,
-    FunctionOpInterface, InModuleScope, IsolatedFromAbove
+    SymbolName, SymbolVisibility, FunctionOpInterface, InModuleScope,
+    IsolatedFromAbove
   ]> {
 
   let summary = "Declare or define a SPIR-V graph";
@@ -77,7 +78,8 @@ def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<BoolAttr>:$entry_point,
-    StrAttr:$sym_name
+    StrAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let results = (outs);
@@ -116,7 +118,7 @@ def InGraphScope : PredOpTrait<
 
 // -----
 
-def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, Pure, ConstantLike]> {
+def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, Pure]> {
   let summary = "Declare a graph constant.";
 
   let description = [{
@@ -127,7 +129,7 @@ def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, 
     #### Example:
 
     ```mlir
-    %0 = spirv.ARM.GraphConstant { graph_constant_id = 42 : i32 } : !spirv.arm.tensor<2x3xi16>
+    %0 = spirv.ARM.GraphConstant id = 42 : !spirv.arm.tensor<2x3xi16>
     ```
 
     GraphConstantID is a unique identifier which is use to map the contants
@@ -151,7 +153,7 @@ def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, 
   let autogenSerialization = 0;
 
   let assemblyFormat = [{
-    attr-dict `:` type($output)
+    `id` `=` $graph_constant_id attr-dict `:` type($output)
   }];
 }
 
@@ -163,7 +165,7 @@ def SPIRV_GraphEntryPointARMOp : SPIRV_GraphARMOp<"GraphEntryPoint", [InModuleSc
   }];
 
   let description = [{
-    Graph Entry Point must be the Result <id> of an OpGraphARM instruction.
+    Graph Entry Point must be the Result `<id>` of an OpGraphARM instruction.
 
     Name is a name string for the graphentry point. A module cannot have two
     OpGraphEntryPointARM instructions with the same Name string.

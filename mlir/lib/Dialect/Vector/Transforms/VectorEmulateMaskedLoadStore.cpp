@@ -55,7 +55,10 @@ struct VectorMaskedLoadOpConverter final
     VectorType maskVType = maskedLoadOp.getMaskVectorType();
     if (maskVType.getShape().size() != 1)
       return rewriter.notifyMatchFailure(
-          maskedLoadOp, "expected vector.maskedstore with 1-D mask");
+          maskedLoadOp, "expected vector.maskedload with 1-D mask");
+    if (maskVType.isScalable())
+      return rewriter.notifyMatchFailure(maskedLoadOp,
+                                         "cannot scalarize a scalable mask");
 
     Location loc = maskedLoadOp.getLoc();
     int64_t maskLength = maskVType.getShape()[0];
@@ -84,9 +87,9 @@ struct VectorMaskedLoadOpConverter final
             scf::YieldOp::create(builder, loc, iValue);
           });
       iValue = ifOp.getResult(0);
-
-      indices.back() =
-          arith::AddIOp::create(rewriter, loc, indices.back(), one);
+      if (!indices.empty())
+        indices.back() =
+            arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.replaceOp(maskedLoadOp, iValue);
@@ -125,6 +128,9 @@ struct VectorMaskedStoreOpConverter final
     if (maskVType.getShape().size() != 1)
       return rewriter.notifyMatchFailure(
           maskedStoreOp, "expected vector.maskedstore with 1-D mask");
+    if (maskVType.isScalable())
+      return rewriter.notifyMatchFailure(maskedStoreOp,
+                                         "cannot scalarize a scalable mask");
 
     Location loc = maskedStoreOp.getLoc();
     int64_t maskLength = maskVType.getShape()[0];
@@ -148,8 +154,9 @@ struct VectorMaskedStoreOpConverter final
           llvm::MaybeAlign(maskedStoreOp.getAlignment().value_or(0)));
 
       rewriter.setInsertionPointAfter(ifOp);
-      indices.back() =
-          arith::AddIOp::create(rewriter, loc, indices.back(), one);
+      if (!indices.empty())
+        indices.back() =
+            arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.eraseOp(maskedStoreOp);

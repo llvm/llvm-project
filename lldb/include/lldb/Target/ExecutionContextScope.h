@@ -15,8 +15,7 @@ namespace lldb_private {
 
 /// @class ExecutionContextScope ExecutionContextScope.h
 /// "lldb/Target/ExecutionContextScope.h" Inherit from this if your object can
-/// reconstruct its
-///        execution context.
+/// reconstruct its execution context.
 ///
 /// Many objects that have pointers back to parent execution context objects
 /// can inherit from this pure virtual class can reconstruct their execution

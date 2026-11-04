@@ -24,7 +24,7 @@ OptionValue::OptionValue(const OptionValue &other) {
 
 }
 
-OptionValue& OptionValue::operator=(const OptionValue &other) {
+OptionValue &OptionValue::operator=(const OptionValue &other) {
   std::scoped_lock<std::mutex, std::mutex> lock(m_mutex, other.m_mutex);
 
   m_parent_wp = other.m_parent_wp;
@@ -466,7 +466,7 @@ std::optional<ArchSpec> OptionValue::GetArchSpecValue() const {
 }
 
 bool OptionValue::SetArchSpecValue(ArchSpec arch_spec) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::mutex> lock(m_mutex);
   if (OptionValueArch *option_value = GetAsArch()) {
     option_value->SetCurrentValue(arch_spec, false);
     return true;
@@ -579,11 +579,12 @@ lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
   return value_sp;
 }
 
-bool OptionValue::DumpQualifiedName(Stream &strm) const {
+bool OptionValue::DumpQualifiedName(
+    Stream &strm, std::optional<Stream::HighlightSettings> highlight) const {
   bool dumped_something = false;
   lldb::OptionValueSP m_parent_sp(m_parent_wp.lock());
   if (m_parent_sp) {
-    if (m_parent_sp->DumpQualifiedName(strm))
+    if (m_parent_sp->DumpQualifiedName(strm, highlight))
       dumped_something = true;
   }
   llvm::StringRef name(GetName());
@@ -592,7 +593,7 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
       strm.PutChar('.');
     else
       dumped_something = true;
-    strm << name;
+    strm.PutCStringColorHighlighted(name, highlight);
   }
   return dumped_something;
 }

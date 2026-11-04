@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s bugprone-exception-escape %t -- \
+// RUN: %check_clang_tidy -std=c++20-or-later %s bugprone-exception-escape %t -- \
 // RUN:     -- -fexceptions -Wno-everything
 
 namespace GH104457 {

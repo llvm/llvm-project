@@ -8,7 +8,7 @@ contains
         dosomething = res + 1
     end function
 end module
-    
+
 program main
     use mm_acc_rout_function
     implicit none

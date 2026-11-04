@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -std=c++11 | FileCheck %s %}
 // PR13424
 
 namespace Test1 {
@@ -10,7 +11,7 @@ struct X {
 X::~X() = default;
 
 // Verify that the vtable is emitted.
-// CHECK-DAG: @_ZTVN5Test11XE ={{.*}} unnamed_addr constant
+// CHECK-DAG: @_ZTVN5Test11XE ={{.*}}constant
 }
 
 namespace Test2 {
@@ -22,7 +23,7 @@ struct X {
 void X::f() {}
 
 // Verify that the vtable is emitted.
-// CHECK-DAG: @_ZTVN5Test21XE ={{.*}} unnamed_addr constant
+// CHECK-DAG: @_ZTVN5Test21XE ={{.*}}constant
 }
 
 namespace Test3 {
@@ -34,5 +35,5 @@ struct X {
 void X::f() {}
 
 // Verify that the vtable is emitted.
-// CHECK-DAG: @_ZTVN5Test31XE ={{.*}} unnamed_addr constant
+// CHECK-DAG: @_ZTVN5Test31XE ={{.*}}constant
 }

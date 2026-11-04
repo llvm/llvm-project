@@ -13,9 +13,8 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/SetVector.h"
+#include "SIMachineFunctionInfo.h"
 
 using namespace llvm;
 
@@ -34,27 +33,26 @@ public:
   // Return true if MI waits for all outstanding VALU instructions to complete.
   static bool instructionWaitsForVALU(const MachineInstr &MI) {
     // These instruction types wait for VA_VDST==0 before issuing.
-    const uint64_t VA_VDST_0 = SIInstrFlags::DS | SIInstrFlags::EXP |
-                               SIInstrFlags::FLAT | SIInstrFlags::MIMG |
-                               SIInstrFlags::MTBUF | SIInstrFlags::MUBUF;
-    if (MI.getDesc().TSFlags & VA_VDST_0)
+    if (SIInstrFlags::isDS(MI) || SIInstrFlags::isEXP(MI) ||
+        SIInstrFlags::isFLAT(MI) || SIInstrFlags::isMIMG(MI) ||
+        SIInstrFlags::isBuffer(MI))
       return true;
     if (MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B32 ||
         MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64)
       return true;
     if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-        AMDGPU::DepCtr::decodeFieldVaVdst(MI.getOperand(0).getImm()) == 0)
+        AMDGPU::DepCtr::decodeFieldVaVdst(
+            static_cast<unsigned>(MI.getOperand(0).getImm())) == 0)
       return true;
     return false;
   }
 
   static bool instructionWaitsForSGPRWrites(const MachineInstr &MI) {
     // These instruction types wait for VA_SDST==0 before issuing.
-    uint64_t MIFlags = MI.getDesc().TSFlags;
-    if (MIFlags & SIInstrFlags::SMRD)
+    if (SIInstrFlags::isSMRD(MI))
       return true;
 
-    if (MIFlags & SIInstrFlags::SALU) {
+    if (SIInstrFlags::isSALU(MI)) {
       for (auto &Op : MI.operands()) {
         if (Op.isReg())
           return true;
@@ -67,13 +65,15 @@ public:
   enum DelayType { VALU, TRANS, SALU, OTHER };
 
   // Get the delay type for a MachineInstr.
-  DelayType getDelayType(const MachineInstr &MI) {
-    if (SIInstrInfo::isTRANS(MI))
+  DelayType getDelayType(const MachineInstr &MI, bool AllowLDSDMA) {
+    // Non-F64 TRANS instructions use a separate delay type.
+    if (SIInstrInfo::isTRANS(MI) &&
+        !AMDGPU::isDPMACCInstruction(MI.getOpcode()))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if (AMDGPU::isGFX1250(*ST) && SII->isXDLWMMA(MI))
+    if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
-    if (SIInstrInfo::isVALU(MI))
+    if (SIInstrInfo::isVALU(MI, AllowLDSDMA))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
       return SALU;
@@ -125,18 +125,18 @@ public:
       default:
         llvm_unreachable("unexpected type");
       case VALU:
-        VALUCycles = Cycles;
+        VALUCycles = static_cast<uint8_t>(Cycles);
         VALUNum = 0;
         break;
       case TRANS:
-        TRANSCycles = Cycles;
+        TRANSCycles = static_cast<uint8_t>(Cycles);
         TRANSNum = 0;
         TRANSNumVALU = 0;
         break;
       case SALU:
         // Guard against pseudo-instructions like SI_CALL which are marked as
         // SALU but with a very high latency.
-        SALUCycles = std::min(Cycles, SALU_CYCLES_MAX);
+        SALUCycles = static_cast<uint8_t>(std::min(Cycles, SALU_CYCLES_MAX));
         break;
       }
     }
@@ -173,7 +173,7 @@ public:
         VALUNum = VALU_MAX;
         VALUCycles = 0;
       } else {
-        VALUCycles -= Cycles;
+        VALUCycles -= static_cast<uint8_t>(Cycles);
         Erase = false;
       }
 
@@ -186,7 +186,7 @@ public:
         TRANSNumVALU = VALU_MAX;
         TRANSCycles = 0;
       } else {
-        TRANSCycles -= Cycles;
+        TRANSCycles -= static_cast<uint8_t>(Cycles);
         Erase = false;
       }
 
@@ -195,7 +195,7 @@ public:
         // now.
         SALUCycles = 0;
       } else {
-        SALUCycles -= Cycles;
+        SALUCycles -= static_cast<uint8_t>(Cycles);
         Erase = false;
       }
 
@@ -221,7 +221,7 @@ public:
   };
 
   // A map from regunits to the delay info for that regunit.
-  struct DelayState : DenseMap<unsigned, DelayInfo> {
+  struct DelayState : DenseMap<MCRegUnit, DelayInfo> {
     // Merge another DelayState into this one by merging the delay info for each
     // regunit.
     void merge(const DelayState &RHS) {
@@ -237,22 +237,13 @@ public:
     // Advance the delay info for each regunit, erasing any that are no longer
     // useful.
     void advance(DelayType Type, unsigned Cycles) {
-      iterator Next;
-      for (auto I = begin(), E = end(); I != E; I = Next) {
-        Next = std::next(I);
-        if (I->second.advance(Type, Cycles))
-          erase(I);
-      }
+      remove_if([&](auto &P) { return P.second.advance(Type, Cycles); });
     }
 
     void advanceByVALUNum(unsigned VALUNum) {
-      iterator Next;
-      for (auto I = begin(), E = end(); I != E; I = Next) {
-        Next = std::next(I);
-        if (I->second.VALUNum >= VALUNum && I->second.VALUCycles > 0) {
-          erase(I);
-        }
-      }
+      remove_if([&](auto &P) {
+        return P.second.VALUNum >= VALUNum && P.second.VALUCycles > 0;
+      });
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -325,12 +316,19 @@ public:
       for (auto I = MachineBasicBlock::instr_iterator(LastDelayAlu),
                 E = MachineBasicBlock::instr_iterator(MI);
            ++I != E;) {
+        if (I->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+          // It is not deterministic whether the skip count counts
+          // S_SET_VGPR_MSB instructions or not, so do not include them in a
+          // skip region.
+          Skip = 6;
+          break;
+        }
         if (!I->isBundle() && !I->isMetaInstruction())
           ++Skip;
       }
       if (Skip < 6) {
         MachineOperand &Op = LastDelayAlu->getOperand(0);
-        unsigned LastImm = Op.getImm();
+        unsigned LastImm = static_cast<unsigned>(Op.getImm());
         assert((LastImm & ~0xf) == 0 &&
                "Remembered an s_delay_alu with no room for another delay!");
         LastImm |= Imm << 7 | Skip << 4;
@@ -359,7 +357,12 @@ public:
     bool Changed = false;
     MachineInstr *LastDelayAlu = nullptr;
 
-    MCRegUnit LastSGPRFromVALU = 0;
+    // FIXME: 0 is a valid register unit.
+    MCRegUnit LastSGPRFromVALU = static_cast<MCRegUnit>(0);
+
+    // Destination of the preceding WMMA, for C-reuse detection.
+    Register PrevWMMAVDst;
+
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -372,14 +375,19 @@ public:
         continue;
       }
 
-      DelayType Type = getDelayType(MI);
+      // LDSDMA is VALU-tagged but only behaves like VALU for operand-use delay
+      // checks (e.g. v_readfirstlane -> tensor_load_to_lds). It must not
+      // publish or advance VALU delay state on its defs.
+      DelayType ProducerType = getDelayType(MI, /*AllowLDSDMA=*/false);
+      DelayType ConsumerType = getDelayType(MI, /*AllowLDSDMA=*/true);
 
       if (instructionWaitsForSGPRWrites(MI)) {
         auto It = State.find(LastSGPRFromVALU);
         if (It != State.end()) {
           DelayInfo Info = It->getSecond();
           State.advanceByVALUNum(Info.VALUNum);
-          LastSGPRFromVALU = 0;
+          // FIXME: 0 is a valid register unit.
+          LastSGPRFromVALU = static_cast<MCRegUnit>(0);
         }
       }
 
@@ -387,8 +395,13 @@ public:
         // Forget about all outstanding VALU delays.
         // TODO: This is overkill since it also forgets about SALU delays.
         State = DelayState();
-      } else if (Type != OTHER) {
+      } else if (ConsumerType != OTHER) {
         DelayInfo Delay;
+        // C-reuse: back-to-back WMMAs into the same C register forward the
+        // accumulator in place, so the tied srcC read has no dependency. WMMA
+        // implies GFX11+, so no explicit subtarget check is needed.
+        bool IsWMMACReuse =
+            PrevWMMAVDst.isValid() && (SII->isWMMA(MI) || SII->isSWMMAC(MI));
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
@@ -396,6 +409,9 @@ public:
             // This creates the insertion of redundant delays. Hence, we have to
             // ignore this operand.
             if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied())
+              continue;
+            // Skip the tied srcC of a C-reuse edge.
+            if (IsWMMACReuse && Op.isTied() && Op.getReg() == PrevWMMAVDst)
               continue;
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
@@ -407,7 +423,7 @@ public:
           }
         }
 
-        if (SII->isVALU(MI.getOpcode())) {
+        if (ProducerType == VALU) {
           for (const auto &Op : MI.defs()) {
             Register Reg = Op.getReg();
             if (AMDGPU::isSGPR(Reg, TRI)) {
@@ -424,13 +440,13 @@ public:
         }
       }
 
-      if (Type != OTHER) {
+      if (ProducerType != OTHER) {
         // TODO: Scan implicit defs too?
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel->computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
           for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
-            State[Unit] = DelayInfo(Type, Latency);
+            State[Unit] = DelayInfo(ProducerType, Latency);
         }
       }
 
@@ -441,7 +457,16 @@ public:
       // TODO: In wave64 mode, double the number of cycles for VALU and VMEM
       // instructions on the assumption that they will usually have to be issued
       // twice?
-      State.advance(Type, Cycles);
+      State.advance(ProducerType, Cycles);
+
+      // Track the preceding WMMA's dst for C-reuse; reset on anything else.
+      if (SII->isWMMA(MI) || SII->isSWMMAC(MI)) {
+        const MachineOperand *VDst =
+            SII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+        PrevWMMAVDst = VDst ? VDst->getReg() : Register();
+      } else {
+        PrevWMMAVDst = Register();
+      }
 
       LLVM_DEBUG(dbgs() << "  State after " << MI; State.dump(TRI););
     }
@@ -462,6 +487,11 @@ public:
 
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasDelayAlu())
+      return false;
+
+    SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+
+    if (MFI.getMaxWavesPerEU() == 1)
       return false;
 
     SII = ST->getInstrInfo();

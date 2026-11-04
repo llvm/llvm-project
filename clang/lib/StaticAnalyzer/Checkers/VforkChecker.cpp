@@ -123,7 +123,7 @@ bool VforkChecker::isCallExplicitelyAllowed(const IdentifierInfo *II,
 
 void VforkChecker::reportBug(const char *What, CheckerContext &C,
                              const char *Details) const {
-  if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
+  if (ExplodedNode *N = C.addSink(C.getState())) {
     SmallString<256> buf;
     llvm::raw_svector_ostream os(buf);
 
@@ -158,17 +158,16 @@ void VforkChecker::checkPostCall(const CallEvent &Call,
     return;
 
   // Get assigned variable.
-  const ParentMap &PM = C.getLocationContext()->getParentMap();
+  const ParentMap &PM = C.getStackFrame()->getParentMap();
   const Stmt *P = PM.getParentIgnoreParenCasts(Call.getOriginExpr());
   const VarDecl *LhsDecl;
   std::tie(LhsDecl, std::ignore) = parseAssignment(P);
 
   // Get assigned memory region.
   MemRegionManager &M = C.getStoreManager().getRegionManager();
-  const MemRegion *LhsDeclReg =
-    LhsDecl
-      ? M.getVarRegion(LhsDecl, C.getLocationContext())
-      : (const MemRegion *)VFORK_RESULT_NONE;
+  const MemRegion *LhsDeclReg = LhsDecl
+                                    ? M.getVarRegion(LhsDecl, C.getStackFrame())
+                                    : (const MemRegion *)VFORK_RESULT_NONE;
 
   // Parent branch gets nonzero return value (according to manpage).
   ProgramStateRef ParentState, ChildState;

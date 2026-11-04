@@ -51,7 +51,6 @@ define i32 @fcvt_w_s(float %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata)
 
 define i32 @fcvt_wu_s(float %a) nounwind strictfp {
 ; CHECKIF-LABEL: fcvt_wu_s:
@@ -84,7 +83,6 @@ define i32 @fcvt_wu_s(float %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptoui.i32.f32(float, metadata)
 
 ; Test where the fptoui has multiple uses, one of which causes a sext to be
 ; inserted on RV64.
@@ -162,7 +160,6 @@ define float @fcvt_s_w(i32 %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
 
 define float @fcvt_s_w_load(ptr %p) nounwind strictfp {
 ; CHECKIF-LABEL: fcvt_s_w_load:
@@ -233,7 +230,6 @@ define float @fcvt_s_wu(i32 %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata, metadata)
 
 define float @fcvt_s_wu_load(ptr %p) nounwind strictfp {
 ; CHECKIF-LABEL: fcvt_s_wu_load:
@@ -321,7 +317,6 @@ define i64 @fcvt_l_s(float %a) nounwind strictfp {
   %1 = call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %a, metadata !"fpexcept.strict")
   ret i64 %1
 }
-declare i64 @llvm.experimental.constrained.fptosi.i64.f32(float, metadata)
 
 define i64 @fcvt_lu_s(float %a) nounwind strictfp {
 ; RV32IF-LABEL: fcvt_lu_s:
@@ -372,7 +367,6 @@ define i64 @fcvt_lu_s(float %a) nounwind strictfp {
   %1 = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %a, metadata !"fpexcept.strict")
   ret i64 %1
 }
-declare i64 @llvm.experimental.constrained.fptoui.i64.f32(float, metadata)
 
 define float @fcvt_s_l(i64 %a) nounwind strictfp {
 ; RV32IF-LABEL: fcvt_s_l:
@@ -423,7 +417,6 @@ define float @fcvt_s_l(i64 %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.sitofp.f32.i64(i64, metadata, metadata)
 
 define float @fcvt_s_lu(i64 %a) nounwind strictfp {
 ; RV32IF-LABEL: fcvt_s_lu:
@@ -474,7 +467,6 @@ define float @fcvt_s_lu(i64 %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.uitofp.f32.i64(i64, metadata, metadata)
 
 define float @fcvt_s_w_i8(i8 signext %a) nounwind strictfp {
 ; CHECKIF-LABEL: fcvt_s_w_i8:
@@ -507,7 +499,6 @@ define float @fcvt_s_w_i8(i8 signext %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.sitofp.f32.i8(i8 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.sitofp.f32.i8(i8, metadata, metadata)
 
 define float @fcvt_s_wu_i8(i8 zeroext %a) nounwind strictfp {
 ; CHECKIF-LABEL: fcvt_s_wu_i8:
@@ -540,7 +531,6 @@ define float @fcvt_s_wu_i8(i8 zeroext %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.uitofp.f32.i8(i8 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.uitofp.f32.i8(i8, metadata, metadata)
 
 define float @fcvt_s_w_i16(i16 signext %a) nounwind strictfp {
 ; CHECKIF-LABEL: fcvt_s_w_i16:
@@ -573,7 +563,6 @@ define float @fcvt_s_w_i16(i16 signext %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.sitofp.f32.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.sitofp.f32.i16(i16, metadata, metadata)
 
 define float @fcvt_s_wu_i16(i16 zeroext %a) nounwind strictfp {
 ; CHECKIF-LABEL: fcvt_s_wu_i16:
@@ -606,7 +595,6 @@ define float @fcvt_s_wu_i16(i16 zeroext %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.uitofp.f32.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.uitofp.f32.i16(i16, metadata, metadata)
 
 ; Make sure we select W version of addi on RV64.
 define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind strictfp {
@@ -648,8 +636,9 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind stri
 ; RV32I-NEXT:    addi s1, a0, 1
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __floatsisf
-; RV32I-NEXT:    sw a0, 0(s0)
+; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    sw a1, 0(s0)
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -666,8 +655,9 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind stri
 ; RV64I-NEXT:    addiw s1, a0, 1
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __floatsisf
-; RV64I-NEXT:    sw a0, 0(s0)
+; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    sw a1, 0(s0)
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -719,8 +709,9 @@ define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, ptr %1) nounwind str
 ; RV32I-NEXT:    addi s1, a0, 1
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __floatunsisf
-; RV32I-NEXT:    sw a0, 0(s0)
+; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    sw a1, 0(s0)
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -737,8 +728,9 @@ define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, ptr %1) nounwind str
 ; RV64I-NEXT:    addiw s1, a0, 1
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __floatunsisf
-; RV64I-NEXT:    sw a0, 0(s0)
+; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    sw a1, 0(s0)
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

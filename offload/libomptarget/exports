@@ -5,6 +5,7 @@ VERS1.0 {
     __tgt_register_requires;
     __tgt_register_lib;
     __tgt_unregister_lib;
+    __tgt_get_mapped_ptr;
     __tgt_init_all_rtls;
     __tgt_target_data_begin;
     __tgt_target_data_end;
@@ -40,7 +41,10 @@ VERS1.0 {
     omp_get_mapped_ptr;
     omp_get_num_devices;
     omp_get_device_num;
+    omp_get_device_from_uid;
+    omp_get_uid_from_device;
     omp_get_initial_device;
+    omp_get_gprivate_limit;
     omp_target_alloc;
     omp_target_free;
     omp_target_is_accessible;
@@ -76,6 +80,7 @@ VERS1.0 {
     __tgt_interop_use60;
     __tgt_interop_release;
     __tgt_target_sync;
+    __tgt_register_rpc_callback;
     __llvmPushCallConfiguration;
     __llvmPopCallConfiguration;
     llvmLaunchKernel;

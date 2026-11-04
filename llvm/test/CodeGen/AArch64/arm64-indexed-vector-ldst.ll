@@ -13348,24 +13348,23 @@ define <16 x i8> @test_v16i8_post_reg_ld1lane_zero(ptr %bar, ptr %ptr, i64 %inc)
 ; CHECK-GI-LABEL: test_v16i8_post_reg_ld1lane_zero:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    ldr b0, [x0]
-; CHECK-GI-NEXT:    mov w8, #0 ; =0x0
-; CHECK-GI-NEXT:    mov.b v0[1], w8
-; CHECK-GI-NEXT:    mov.b v0[2], w8
-; CHECK-GI-NEXT:    mov.b v0[3], w8
-; CHECK-GI-NEXT:    mov.b v0[4], w8
-; CHECK-GI-NEXT:    mov.b v0[5], w8
-; CHECK-GI-NEXT:    mov.b v0[6], w8
-; CHECK-GI-NEXT:    mov.b v0[7], w8
-; CHECK-GI-NEXT:    mov.b v0[8], w8
-; CHECK-GI-NEXT:    mov.b v0[9], w8
-; CHECK-GI-NEXT:    mov.b v0[10], w8
-; CHECK-GI-NEXT:    mov.b v0[11], w8
-; CHECK-GI-NEXT:    mov.b v0[12], w8
-; CHECK-GI-NEXT:    mov.b v0[13], w8
-; CHECK-GI-NEXT:    mov.b v0[14], w8
-; CHECK-GI-NEXT:    mov.b v0[15], w8
 ; CHECK-GI-NEXT:    add x8, x0, x2
 ; CHECK-GI-NEXT:    str x8, [x1]
+; CHECK-GI-NEXT:    mov.b v0[1], wzr
+; CHECK-GI-NEXT:    mov.b v0[2], wzr
+; CHECK-GI-NEXT:    mov.b v0[3], wzr
+; CHECK-GI-NEXT:    mov.b v0[4], wzr
+; CHECK-GI-NEXT:    mov.b v0[5], wzr
+; CHECK-GI-NEXT:    mov.b v0[6], wzr
+; CHECK-GI-NEXT:    mov.b v0[7], wzr
+; CHECK-GI-NEXT:    mov.b v0[8], wzr
+; CHECK-GI-NEXT:    mov.b v0[9], wzr
+; CHECK-GI-NEXT:    mov.b v0[10], wzr
+; CHECK-GI-NEXT:    mov.b v0[11], wzr
+; CHECK-GI-NEXT:    mov.b v0[12], wzr
+; CHECK-GI-NEXT:    mov.b v0[13], wzr
+; CHECK-GI-NEXT:    mov.b v0[14], wzr
+; CHECK-GI-NEXT:    mov.b v0[15], wzr
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <16 x i8> zeroinitializer, i8 %tmp1, i32 0
@@ -14192,4 +14191,66 @@ entry:
   %shuffle.i.1 = shufflevector <8 x i16> %sub.i.1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x i16> %shuffle.i.1, ptr %add.ptr8, align 2
   ret void
+}
+
+define ptr @ld1r_huge_inc(ptr %p, ptr %sink) {
+; CHECK-LABEL: ld1r_huge_inc:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ld1r.16b { v0 }, [x0]
+; CHECK-NEXT:    mov x8, #4294967297 ; =0x100000001
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %b = load i8, ptr %p, align 1
+  %v0 = insertelement <16 x i8> poison, i8 %b, i32 0
+  %v = shufflevector <16 x i8> %v0, <16 x i8> poison, <16 x i32> zeroinitializer
+  store <16 x i8> %v, ptr %sink, align 16
+  %p2 = getelementptr i8, ptr %p, i64 4294967297
+  ret ptr %p2
+}
+
+define ptr @ld2_huge_inc(ptr %p, ptr %sink) {
+; CHECK-LABEL: ld2_huge_inc:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ld2.16b { v0, v1 }, [x0]
+; CHECK-NEXT:    mov x8, #32 ; =0x20
+; CHECK-NEXT:    movk x8, #1, lsl #32
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %ld = call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0(ptr %p)
+  %v0 = extractvalue { <16 x i8>, <16 x i8> } %ld, 0
+  store <16 x i8> %v0, ptr %sink, align 16
+  %p2 = getelementptr i8, ptr %p, i64 4294967328
+  ret ptr %p2
+}
+
+define ptr @st2_huge_inc(ptr %p, <16 x i8> %a, <16 x i8> %b) {
+; CHECK-SD-LABEL: st2_huge_inc:
+; CHECK-SD:       ; %bb.0: ; %entry
+; CHECK-SD-NEXT:    mov x9, #32 ; =0x20
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    mov x8, x0
+; CHECK-SD-NEXT:    movk x9, #1, lsl #32
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    st2.16b { v0, v1 }, [x8]
+; CHECK-SD-NEXT:    add x0, x0, x9
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: st2_huge_inc:
+; CHECK-GI:       ; %bb.0: ; %entry
+; CHECK-GI-NEXT:    mov x9, #32 ; =0x20
+; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    movk x9, #1, lsl #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    st2.16b { v0, v1 }, [x8]
+; CHECK-GI-NEXT:    add x0, x0, x9
+; CHECK-GI-NEXT:    ret
+entry:
+  call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> %a, <16 x i8> %b, ptr %p)
+  %p2 = getelementptr i8, ptr %p, i64 4294967328
+  ret ptr %p2
 }

@@ -9,6 +9,7 @@
 #include "GDBRemoteClientBase.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -32,7 +33,7 @@ static const seconds kWakeupInterval(5);
 GDBRemoteClientBase::ContinueDelegate::~ContinueDelegate() = default;
 
 GDBRemoteClientBase::GDBRemoteClientBase(const char *comm_name)
-    : GDBRemoteCommunication(), Broadcaster(nullptr, comm_name),
+    : GDBRemoteCommunication(comm_name), Broadcaster(nullptr, comm_name),
       m_async_count(0), m_is_running(false), m_should_stop(false) {}
 
 StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
@@ -192,6 +193,22 @@ GDBRemoteClientBase::SendPacketAndWaitForResponse(
   }
 
   return SendPacketAndWaitForResponseNoLock(payload, response, sync_on_timeout);
+}
+
+llvm::Expected<StringExtractorGDBRemote>
+GDBRemoteClientBase::SendPacketAndExpectResponse(
+    llvm::StringRef payload, std::chrono::seconds interrupt_timeout) {
+  StringExtractorGDBRemote response;
+  GDBRemoteCommunication::PacketResult packet_result =
+      SendPacketAndWaitForResponse(payload, response, interrupt_timeout);
+  if (packet_result != GDBRemoteCommunication::PacketResult::Success)
+    return llvm::createStringErrorV("failed to send packet: '{0}'", payload);
+
+  if (response.IsUnsupportedResponse())
+    return llvm::createStringErrorV("unsupported response: '{0}'",
+                                    response.GetStringRef());
+
+  return std::move(response);
 }
 
 GDBRemoteCommunication::PacketResult

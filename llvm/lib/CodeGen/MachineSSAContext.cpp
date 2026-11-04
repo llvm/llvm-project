@@ -51,13 +51,15 @@ template <>
 const MachineBasicBlock *MachineSSAContext::getDefBlock(Register value) const {
   if (!value)
     return nullptr;
-  return F->getRegInfo().getVRegDef(value)->getParent();
+  return F->getRegInfo().getDefBlock(value);
 }
 
 static bool isUndef(const MachineInstr &MI) {
   return MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
          MI.getOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
+
+template <> bool MachineSSAContext::isAlwaysUniform(Register) { return false; }
 
 /// MachineInstr equivalent of PHINode::hasConstantOrUndefValue() for G_PHI.
 template <>

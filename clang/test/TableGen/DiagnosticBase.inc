@@ -81,6 +81,8 @@ class Diagnostic<string summary, DiagClass DC, Severity defaultmapping> {
   Severity       DefaultSeverity = defaultmapping;
   DiagGroup      Group;
   string         CategoryName = "";
+  string         StableId = "";
+  list<string>   LegacyStableIds = [];
 }
 
 class SFINAEFailure {

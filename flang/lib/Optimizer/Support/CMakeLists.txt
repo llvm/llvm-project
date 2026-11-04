@@ -1,4 +1,5 @@
 add_flang_library(FIRSupport
+  AllocationPolicy.cpp
   DataLayout.cpp
   InitFIR.cpp
   InternalNames.cpp
@@ -7,9 +8,12 @@ add_flang_library(FIRSupport
   DEPENDS
   FIROpsIncGen
   HLFIROpsIncGen
+  MIFOpsIncGen
 
   LINK_LIBS
   FIRDialect
+  FIRDialectSupport
+  MIFDialect
 
   LINK_COMPONENTS
   TargetParser
@@ -22,7 +26,6 @@ add_flang_library(FIRSupport
   MLIR_LIBS
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
   MLIRRegisterAllDialects
   MLIRRegisterAllExtensions

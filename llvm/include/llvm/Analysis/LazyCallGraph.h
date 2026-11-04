@@ -34,7 +34,6 @@
 #ifndef LLVM_ANALYSIS_LAZYCALLGRAPH_H
 #define LLVM_ANALYSIS_LAZYCALLGRAPH_H
 
-#include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -44,6 +43,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -511,9 +511,7 @@ public:
     /// while still making the use of this in debugging and logging useful.
     std::string getName() const {
       std::string Name;
-      raw_string_ostream OS(Name);
-      OS << *this;
-      OS.flush();
+      raw_string_ostream(Name) << *this;
       return Name;
     }
   };
@@ -652,9 +650,7 @@ public:
     /// while still making the use of this in debugging and logging useful.
     std::string getName() const {
       std::string Name;
-      raw_string_ostream OS(Name);
-      OS << *this;
-      OS.flush();
+      raw_string_ostream(Name) << *this;
       return Name;
     }
 
@@ -1259,6 +1255,10 @@ template <> struct GraphTraits<LazyCallGraph *> {
   static ChildIteratorType child_end(NodeRef N) { return (*N)->end(); }
 };
 
+template <> struct IRUnitKindTraits<LazyCallGraph::SCC> {
+  static constexpr IRUnitKind Kind = IRUnitKind::LazyCallGraphSCC;
+};
+
 /// An analysis pass which computes the call graph for a module.
 class LazyCallGraphAnalysis : public AnalysisInfoMixin<LazyCallGraphAnalysis> {
   friend AnalysisInfoMixin<LazyCallGraphAnalysis>;
@@ -1287,34 +1287,27 @@ public:
 ///
 /// This is primarily useful for testing the analysis.
 class LazyCallGraphPrinterPass
-    : public PassInfoMixin<LazyCallGraphPrinterPass> {
+    : public RequiredPassInfoMixin<LazyCallGraphPrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit LazyCallGraphPrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// A pass which prints the call graph as a DOT file to a \c raw_ostream.
 ///
 /// This is primarily useful for visualization purposes.
 class LazyCallGraphDOTPrinterPass
-    : public PassInfoMixin<LazyCallGraphDOTPrinterPass> {
+    : public RequiredPassInfoMixin<LazyCallGraphDOTPrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit LazyCallGraphDOTPrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
-
-extern template struct LLVM_TEMPLATE_ABI
-    Any::TypeId<const LazyCallGraph::SCC *>;
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_LAZYCALLGRAPH_H

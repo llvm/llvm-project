@@ -3,15 +3,6 @@
 
 ; Checks SME ABI routines can be implemented as stubs without +sme.
 
-define i1 @__aarch64_sme_accessible() {
-; CHECK-LABEL: __aarch64_sme_accessible:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w0, #1 // =0x1
-; CHECK-NEXT:    ret
-entry:
-  ret i1 true
-}
-
 define [2 x i64] @__arm_sme_state() {
 ; CHECK-LABEL: __arm_sme_state:
 ; CHECK:       // %bb.0: // %entry

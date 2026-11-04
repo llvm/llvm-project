@@ -16,13 +16,13 @@
 #define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
 #include "flang/Optimizer/OpenMP/Utils.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -72,6 +72,11 @@ public:
 
   /// The string containing the commandline for the llvm.commandline metadata.
   std::optional<std::string> RecordCommandLine;
+
+  /// The value from -dwarf-debug-flags to append to DW_AT_producer.
+  /// This is typically a reconstructed user command line (e.g. from
+  /// -grecord-command-line) and may contain multiple space-separated flags.
+  std::string DwarfDebugFlags;
 
   /// The name of the file to which the backend should save YAML optimization
   /// records.
@@ -175,6 +180,9 @@ public:
   /// Output filename for the split debug info, not used in the skeleton CU.
   std::string SplitDwarfOutput;
 
+  /// Name of the profile file to use with -fprofile-sample-use.
+  std::string SampleProfileFile;
+
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
     return getProfileInstr() == llvm::driver::ProfileClangInstr;
@@ -223,6 +231,9 @@ public:
     /// TODO: Implemention of other values as needed. In Clang, "CX_Promoted"
     /// is implemented. (See clang/Basic/LangOptions.h)
   };
+
+  /// The kind of name table (accelerator table) the debug info asks for.
+  enum class DebugNameTableKind { None, Default, GNU, Apple };
 
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

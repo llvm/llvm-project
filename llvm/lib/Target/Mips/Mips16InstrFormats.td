@@ -32,8 +32,8 @@
 // Base class for Mips 16 Format
 // This class does not depend on the instruction size
 //
-class MipsInst16_Base<dag outs, dag ins, string asmstr, list<dag> pattern,
-                      InstrItinClass itin>: Instruction
+class MipsInst16_Base<dag outs, dag ins, string asmstr,
+                      list<dag> pattern>: Instruction
 {
 
   let Namespace = "Mips";
@@ -43,7 +43,6 @@ class MipsInst16_Base<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   let AsmString   = asmstr;
   let Pattern     = pattern;
-  let Itinerary   = itin;
 
   let Predicates = [InMips16Mode];
 }
@@ -51,9 +50,9 @@ class MipsInst16_Base<dag outs, dag ins, string asmstr, list<dag> pattern,
 //
 // Generic Mips 16 Format
 //
-class MipsInst16<dag outs, dag ins, string asmstr, list<dag> pattern,
-                 InstrItinClass itin>:
-  MipsInst16_Base<outs, ins, asmstr, pattern, itin>
+class MipsInst16<dag outs, dag ins, string asmstr,
+                 list<dag> pattern>:
+  MipsInst16_Base<outs, ins, asmstr, pattern>
 {
   field bits<16> Inst;
   bits<5> Opcode = 0;
@@ -67,18 +66,18 @@ class MipsInst16<dag outs, dag ins, string asmstr, list<dag> pattern,
 //
 // For 32 bit extended instruction forms.
 //
-class MipsInst16_32<dag outs, dag ins, string asmstr, list<dag> pattern,
-                    InstrItinClass itin>:
-  MipsInst16_Base<outs, ins, asmstr, pattern, itin>
+class MipsInst16_32<dag outs, dag ins, string asmstr,
+                    list<dag> pattern>:
+  MipsInst16_Base<outs, ins, asmstr, pattern>
 {
   field bits<32> Inst;
 
   let Size=4;
 }
 
-class MipsInst16_EXTEND<dag outs, dag ins, string asmstr, list<dag> pattern,
-                        InstrItinClass itin>:
-  MipsInst16_32<outs, ins, asmstr, pattern, itin>
+class MipsInst16_EXTEND<dag outs, dag ins, string asmstr,
+                        list<dag> pattern>:
+  MipsInst16_32<outs, ins, asmstr, pattern>
 {
   let Inst{31-27} = 0b11110;
 }
@@ -87,7 +86,7 @@ class MipsInst16_EXTEND<dag outs, dag ins, string asmstr, list<dag> pattern,
 
 // Mips Pseudo Instructions Format
 class MipsPseudo16<dag outs, dag ins, string asmstr, list<dag> pattern>:
-  MipsInst16<outs, ins, asmstr, pattern, IIPseudo> {
+  MipsInst16<outs, ins, asmstr, pattern> {
   let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
@@ -97,9 +96,9 @@ class MipsPseudo16<dag outs, dag ins, string asmstr, list<dag> pattern>:
 // Format I instruction class in Mips : <|opcode|imm11|>
 //===----------------------------------------------------------------------===//
 
-class FI16<bits<5> op, dag outs, dag ins, string asmstr, list<dag> pattern,
-           InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+class FI16<bits<5> op, dag outs, dag ins, string asmstr,
+           list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<11> imm11;
 
@@ -113,8 +112,8 @@ class FI16<bits<5> op, dag outs, dag ins, string asmstr, list<dag> pattern,
 //===----------------------------------------------------------------------===//
 
 class FRI16<bits<5> op, dag outs, dag ins, string asmstr,
-            list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+            list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  rx;
   bits<8>   imm8;
@@ -130,8 +129,8 @@ class FRI16<bits<5> op, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FRR16<bits<5> _funct, dag outs, dag ins, string asmstr,
-            list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+            list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  rx;
   bits<3>  ry;
@@ -146,8 +145,8 @@ class FRR16<bits<5> _funct, dag outs, dag ins, string asmstr,
 }
 
 class FRRBreak16<dag outs, dag ins, string asmstr,
-                 list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+                 list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<6>  Code;
   bits<5>  funct;
@@ -163,8 +162,8 @@ class FRRBreak16<dag outs, dag ins, string asmstr,
 // For conversion functions.
 //
 class FRR_SF16<bits<5> _funct, bits<3> _subfunct, dag outs, dag ins,
-               string asmstr, list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+               string asmstr, list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  rx;
   bits<3>  subfunct;
@@ -183,8 +182,8 @@ class FRR_SF16<bits<5> _funct, bits<3> _subfunct, dag outs, dag ins,
 // just used for breakpoint (hardware and software) instructions.
 //
 class FC16<bits<5> _funct, dag outs, dag ins, string asmstr,
-           list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+           list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<6>  _code;  // code is a keyword in tablegen
   bits<5>  funct;
@@ -201,8 +200,8 @@ class FC16<bits<5> _funct, dag outs, dag ins, string asmstr,
 //
 class FRR16_JALRC<bits<1> _nd, bits<1> _l, bits<1> r_a,
                   dag outs, dag ins, string asmstr,
-                  list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+                  list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  rx;
   bits<1>  nd;
@@ -227,8 +226,8 @@ class FRR16_JALRC<bits<1> _nd, bits<1> _l, bits<1> r_a,
 //===----------------------------------------------------------------------===//
 
 class FRRI16<bits<5> op, dag outs, dag ins, string asmstr,
-             list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+             list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  rx;
   bits<3>  ry;
@@ -247,8 +246,8 @@ class FRRI16<bits<5> op, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FRRR16<bits<2> _f, dag outs, dag ins, string asmstr,
-             list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+             list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  rx;
   bits<3>  ry;
@@ -269,8 +268,8 @@ class FRRR16<bits<2> _f, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FRRI_A16<bits<1> _f, dag outs, dag ins, string asmstr,
-               list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+               list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  rx;
   bits<3>  ry;
@@ -291,8 +290,8 @@ class FRRI_A16<bits<1> _f, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FSHIFT16<bits<2> _f, dag outs, dag ins, string asmstr,
-               list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+               list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  rx;
   bits<3>  ry;
@@ -313,8 +312,8 @@ class FSHIFT16<bits<2> _f, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FI816<bits<3> _func, dag outs, dag ins, string asmstr,
-            list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+            list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<3>  func;
   bits<8>   imm8;
@@ -331,8 +330,8 @@ class FI816<bits<3> _func, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FI8_MOVR3216<dag outs, dag ins, string asmstr,
-                   list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+                   list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   // FIXME: this seems wrong? 'ry' should be 3 bits, and 'r32' 5?
   bits<4> ry;
@@ -353,8 +352,8 @@ class FI8_MOVR3216<dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FI8_MOV32R16<dag outs, dag ins, string asmstr,
-                   list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+                   list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
 
   bits<3>  func;
@@ -377,8 +376,8 @@ class FI8_MOV32R16<dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FI8_SVRS16<bits<1> _s, dag outs, dag ins, string asmstr,
-                 list<dag> pattern, InstrItinClass itin>:
-  MipsInst16<outs, ins, asmstr, pattern, itin>
+                 list<dag> pattern>:
+  MipsInst16<outs, ins, asmstr, pattern>
 {
   bits<1> s;
   bits<1> ra = 0;
@@ -404,8 +403,8 @@ class FI8_SVRS16<bits<1> _s, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FJAL16<bits<1> _X, dag outs, dag ins, string asmstr,
-             list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_32<outs, ins, asmstr, pattern, itin>
+             list<dag> pattern>:
+  MipsInst16_32<outs, ins, asmstr, pattern>
 {
   bits<1> X;
   bits<26> imm26;
@@ -427,8 +426,8 @@ class FJAL16<bits<1> _X, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FEXT_I16<bits<5> _eop, dag outs, dag ins, string asmstr,
-               list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
+               list<dag> pattern>:
+  MipsInst16_EXTEND<outs, ins, asmstr, pattern>
 {
   bits<16> imm16;
   bits<5> eop;
@@ -449,8 +448,8 @@ class FEXT_I16<bits<5> _eop, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FASMACRO16<dag outs, dag ins, string asmstr,
-                 list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
+                 list<dag> pattern>:
+  MipsInst16_EXTEND<outs, ins, asmstr, pattern>
 {
   bits<3> select;
   bits<3> p4;
@@ -478,8 +477,8 @@ class FASMACRO16<dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FEXT_RI16<bits<5> _op, dag outs, dag ins, string asmstr,
-                list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
+                list<dag> pattern>:
+  MipsInst16_EXTEND<outs, ins, asmstr, pattern>
 {
   bits<16> imm16;
   bits<5> op;
@@ -502,8 +501,8 @@ class FEXT_RI16<bits<5> _op, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FEXT_RRI16<bits<5> _op, dag outs, dag ins, string asmstr,
-                 list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
+                 list<dag> pattern>:
+  MipsInst16_EXTEND<outs, ins, asmstr, pattern>
 {
   bits<5> op;
   bits<16> imm16;
@@ -527,8 +526,8 @@ class FEXT_RRI16<bits<5> _op, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FEXT_RRI_A16<bits<1> _f, dag outs, dag ins, string asmstr,
-                   list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
+                   list<dag> pattern>:
+  MipsInst16_EXTEND<outs, ins, asmstr, pattern>
 {
   bits<15> imm15;
   bits<3> rx;
@@ -553,8 +552,8 @@ class FEXT_RRI_A16<bits<1> _f, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FEXT_SHIFT16<bits<2> _f, dag outs, dag ins, string asmstr,
-                   list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
+                   list<dag> pattern>:
+  MipsInst16_EXTEND<outs, ins, asmstr, pattern>
 {
   bits<6> sa6;
   bits<3> rx;
@@ -580,8 +579,8 @@ class FEXT_SHIFT16<bits<2> _f, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FEXT_I816<bits<3> _funct, dag outs, dag ins, string asmstr,
-                list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
+                list<dag> pattern>:
+  MipsInst16_EXTEND<outs, ins, asmstr, pattern>
 {
   bits<16> imm16;
   bits<5> I8;
@@ -605,8 +604,8 @@ class FEXT_I816<bits<3> _funct, dag outs, dag ins, string asmstr,
 //===----------------------------------------------------------------------===//
 
 class FEXT_I8_SVRS16<bits<1> s_, dag outs, dag ins, string asmstr,
-                     list<dag> pattern, InstrItinClass itin>:
-  MipsInst16_EXTEND<outs, ins, asmstr, pattern, itin>
+                     list<dag> pattern>:
+  MipsInst16_EXTEND<outs, ins, asmstr, pattern>
 {
   bits<3> xsregs =0;
   bits<8> framesize =0;

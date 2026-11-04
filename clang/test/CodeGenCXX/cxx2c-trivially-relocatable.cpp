@@ -2,9 +2,7 @@
 
 typedef __SIZE_TYPE__ size_t;
 
-struct S trivially_relocatable_if_eligible {
-    S(const S&);
-    ~S();
+struct S {
     int a;
     int b;
 };

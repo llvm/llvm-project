@@ -46,13 +46,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
 
 namespace {
 
-Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                    std::optional<Reloc::Model> RM) {
+Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   // If not defined we default to static
-  if (!RM.has_value())
-    return Reloc::Static;
-
-  return *RM;
+  return RM.value_or(Reloc::Static);
 }
 
 CodeModel::Model getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
@@ -72,8 +68,8 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
-                               getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
                                ::getEffectiveCodeModel(CM, JIT), OL),
       TLOF(std::make_unique<M68kELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {
@@ -91,13 +87,8 @@ M68kTargetMachine::getSubtargetImpl(const Function &F) const {
   auto FS = FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
   auto &I = SubtargetMap[CPU + FS];
-  if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
+  if (!I)
     I = std::make_unique<M68kSubtarget>(TargetTriple, CPU, FS, *this);
-  }
   return I.get();
 }
 
@@ -153,22 +144,22 @@ bool M68kPassConfig::addInstSelector() {
 }
 
 bool M68kPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslatorLegacy());
   return false;
 }
 
 bool M68kPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool M68kPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool M68kPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect());
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 

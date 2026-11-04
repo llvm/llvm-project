@@ -10,6 +10,7 @@
 */
 
 	.file	"seed_reg_const_undef.c"
+	.att_syntax
 	.text
 	.globl	main                            # -- Begin function main
 	.p2align	4

@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -debug-only=static-data-profile-info \
 ; RUN:     -data-sections=true  -unique-section-names=false \
-; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR
+; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IR
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
@@ -18,17 +18,42 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -data-sections=true  -unique-section-names=false \
 ; RUN:     input-with-data-access-prof-off.ll -o - 2>&1 | FileCheck %s --check-prefixes=OFF
 
-; LOG: hot_bss has section prefix hot, the max from data access profiles as hot and PGO counters as hot
-; LOG: data_unknown_hotness has section prefix <empty>, the max from data access profiles as <empty> and PGO counters as unlikely
-; LOG: external_relro_array has section prefix unlikely, solely from data access profiles
+; LOGCOMMON: hot_bss has section prefix hot, the max from data access profiles as hot and PGO counters as hot
+; LOGCOMMON: data_unknown_hotness has section prefix <empty>, the max from data access profiles as <empty> and PGO counters as unlikely
+
+; LOGSTR: .str has section prefix <empty>, the max from data access profiles as <empty> and PGO counters as unlikely
+; LOGSTR: .str.1 has section prefix hot, the max from data access profiles as unlikely and PGO counters as hot
+
+; LOGCOMMON: external_relro_array has section prefix unlikely, solely from data access profiles
+
+; LOGSTR: .str.llvm.98765 has section prefix <empty>, solely from data access profiles
+; LOGSTR: .str.2 has section prefix hot, solely from data access profiles
 
 ; IR:          .type   hot_bss,@object
 ; IR-NEXT:     .section .bss.hot.,"aw"
 ; IR:          .type   data_unknown_hotness,@object
 ; IR-NEXT:    .section .data,"aw"
+
+; IR:         .section        .rodata,"a",@progbits
+; IR-NEXT:    .L.str:
+; IR-NEXT:    .ascii  "abcde"
+
+; IR:         .section        .rodata.hot.,"a"
+; IR-NEXT:    .str.1:
+; IR-NEXT:    .ascii  "obj.a"
+
 ; IR:          .type   external_relro_array,@object
 ; IR-NEXT:     .section        .data.rel.ro.unlikely.,"aw"
 
+; IR:         .section        .rodata,"a",@progbits
+; IR-NEXT:    .globl  .str.llvm.98765
+; IR-NEXT:    .str.llvm.98765:
+; IR-NEXT:    .ascii  "Joins"
+
+; IR:         .section        .rodata.hot.,"a",@progbits
+; IR-NEXT:    .globl  .str.2
+; IR-NEXT:    .str.2:
+; IR-NEXT:    .ascii  "*ptr != nullptr"
 
 ; OFF:        .type   hot_bss,@object
 ; OFF-NEXT:   .section        .bss.hot.,"aw"
@@ -36,7 +61,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; OFF-NEXT:   .section        .data.unlikely.,"aw"
 ;; Global variable section prefix metadata is not used when
 ;; module flag `EnableDataAccessProf` is 0, and @external_relro_array has
-;; external linkage, so analysis based on PGO counters doesn't apply. 
+;; external linkage, so analysis based on PGO counters doesn't apply.
 ; OFF:        .type   external_relro_array,@object    # @external_relro_array
 ; OFF-NEXT:   .section        .data.rel.ro,"aw"
 
@@ -44,18 +69,25 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Internal vars
 @hot_bss = internal global i32 0, !section_prefix !17
 @data_unknown_hotness = internal global i32 1
+@.str = private constant [5 x i8] c"abcde"
+@.str.1 = internal constant [5 x i8] c"obj.a", !section_prefix !18
 ; External vars
 @external_relro_array = constant [2 x ptr] [ptr @hot_bss, ptr @data_unknown_hotness], !section_prefix !18
 
+;; <empty> -> <empty>
+@.str.llvm.98765 = constant [5 x i8] c"Joins"
+
+@.str.2 = constant [15 x i8] c"*ptr != nullptr", !section_prefix !17
+
 define void @cold_func() !prof !15 {
   %9 = load i32, ptr @data_unknown_hotness
-  %11 = call i32 (...) @func_taking_arbitrary_param(i32 %9)
+  %11 = call i32 (...) @func_taking_arbitrary_param(i32 %9, ptr @.str)
   ret void
 }
 
 define void @hot_func() !prof !14 {
   %9 = load i32, ptr @hot_bss
-  %11 = call i32 (...) @func_taking_arbitrary_param(i32 %9)
+  %11 = call i32 (...) @func_taking_arbitrary_param(i32 %9, ptr @.str.1)
   ret void
 }
 

@@ -1,14 +1,21 @@
-//===-- Tests for pthread_equal -------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Tests for pthread_equal.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/stdint_proxy.h" // uintptr_t
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_equal.h"
+#include "src/pthread/pthread_getthreadid_np.h"
+#include "src/pthread/pthread_getunique_np.h"
 #include "src/pthread/pthread_join.h"
 #include "src/pthread/pthread_mutex_destroy.h"
 #include "src/pthread/pthread_mutex_init.h"
@@ -20,6 +27,7 @@
 #include <pthread.h>
 
 pthread_t child_thread;
+pthread_id_np_t child_self_thread_id;
 pthread_mutex_t mutex;
 
 static void *child_func(void *arg) {
@@ -27,6 +35,7 @@ static void *child_func(void *arg) {
   int *ret = reinterpret_cast<int *>(arg);
   auto self = LIBC_NAMESPACE::pthread_self();
   *ret = LIBC_NAMESPACE::pthread_equal(child_thread, self);
+  child_self_thread_id = LIBC_NAMESPACE::pthread_getthreadid_np();
   LIBC_NAMESPACE::pthread_mutex_unlock(&mutex);
   return nullptr;
 }
@@ -38,6 +47,13 @@ TEST_MAIN() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&mutex), 0);
 
   auto main_thread = LIBC_NAMESPACE::pthread_self();
+  pthread_id_np_t main_thread_id = LIBC_NAMESPACE::pthread_getthreadid_np();
+
+  pthread_t null_thread = PTHREAD_NULL;
+  ASSERT_NE(LIBC_NAMESPACE::pthread_equal(null_thread, null_thread), 0);
+  ASSERT_NE(LIBC_NAMESPACE::pthread_equal(main_thread, main_thread), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(main_thread, null_thread), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(null_thread, main_thread), 0);
 
   // The idea here is that, we start a child thread which will immediately
   // wait on |mutex|. The main thread will update the global |child_thread| var
@@ -46,10 +62,15 @@ TEST_MAIN() {
   // comparison is returned in the thread arg.
   int result = 0;
   pthread_t th;
+  pthread_id_np_t th_id;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&th, nullptr, child_func, &result),
             0);
-  // This new thread should of course not be equal to the main thread.
+  // This new thread should of course not be equal to the main thread or null.
   ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(th, main_thread), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(th, null_thread), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(null_thread, th), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_getunique_np(&th, &th_id), 0);
+  ASSERT_NE(th_id, main_thread_id);
 
   // Set the |child_thread| global var and unlock to allow the child to perform
   // the comparison.
@@ -62,6 +83,7 @@ TEST_MAIN() {
   // The child thread should see that pthread_self return value is the same as
   // |child_thread|.
   ASSERT_NE(result, 0);
+  ASSERT_EQ(th_id, child_self_thread_id);
 
   LIBC_NAMESPACE::pthread_mutex_destroy(&mutex);
   return 0;

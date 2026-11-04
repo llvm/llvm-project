@@ -45,7 +45,7 @@ void dependent(T t, T* pt, T U::* mpt, T(&ft)(), T(&at)[4]) {
   *ft;
   +ft;
   -ft; // expected-error {{invalid argument type 'T (*)()' to unary expression}}
-  !ft;
+  !ft; // expected-warning {{address of function 'ft' will always evaluate to 'true'}}
   ~ft; // expected-error {{invalid argument type 'T (*)()' to unary expression}}
   &ft;
   ++ft; // expected-error {{cannot increment value of type 'T ()'}}
@@ -62,4 +62,4 @@ void dependent(T t, T* pt, T U::* mpt, T(&ft)(), T(&at)[4]) {
 }
 
 // Make sure we only emit diagnostics once.
-template void dependent(A t, A* pt, A B::* mpt, A(&ft)(), A(&at)[4]);
+template void dependent(A t, A* pt, A B::* mpt, A(&ft)(), A(&at)[4]); // expected-note {{in instantiation of function template specialization 'dependent<A, B>' requested here}}

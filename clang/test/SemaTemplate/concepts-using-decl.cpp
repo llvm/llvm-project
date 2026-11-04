@@ -165,7 +165,7 @@ struct base {
 
 struct bar : public base {
   using base::foo;
-  template <int N> 
+  template <int N>
   int foo() { return 2; }; // expected-note {{candidate template ignored: substitution failure: too many template arguments for function template 'foo'}}
 };
 
@@ -195,5 +195,103 @@ struct child : base<int> {
       requires (false)
   {}
 };
+
+}
+
+namespace GH198663 {
+
+template <class T>
+concept HasIsTransparent = requires { typename T::is_transparent; };
+
+template <class K, class V, class Compare>
+struct FlatMapBase {
+    using key_compare = Compare;
+};
+
+template <class K, class V, class Compare>
+struct FlatMap : FlatMapBase<K, V, Compare> {
+    using Base = FlatMapBase<K, V, Compare>;
+
+    using typename Base::key_compare;
+
+    void at(const K&) {}
+    void at(const K&) const {}
+    template <class Other>
+    void at(const Other&)
+        requires HasIsTransparent<key_compare>
+    {}
+    template <class Other>
+    void at(const Other&) const
+        requires HasIsTransparent<key_compare>
+    {}
+};
+
+template <class T>
+struct Transparent {
+    T t;
+};
+
+struct TransparentComparator {
+    using is_transparent = void;
+
+    template <class T>
+    bool operator()(const T&, const Transparent<T>&) const;
+
+    template <class T>
+    bool operator()(const Transparent<T>&, const T& t) const;
+
+    template <class T>
+    bool operator()(const T&, const T&) const;
+};
+
+struct NonTransparentComparator {
+    template <class T>
+    bool operator()(const T&, const Transparent<T>&) const;
+
+    template <class T>
+    bool operator()(const Transparent<T>&, const T&) const;
+
+    template <class T>
+    bool operator()(const T&, const T&) const;
+};
+
+template <class M>
+concept CanAt = requires(M m, Transparent<int> k) { m.at(k); };
+
+using TransparentMap = FlatMap<int, double, TransparentComparator>;
+using NonTransparentMap = FlatMap<int, double, NonTransparentComparator>;
+
+static_assert(CanAt<TransparentMap>);
+
+static_assert(!CanAt<NonTransparentMap>);
+
+}
+
+namespace GH198663_2 {
+
+template<typename T>
+auto mv(T& t) -> T&&;
+
+template<typename S, typename T>
+concept does_foo = requires(S s) {
+	s.template foo<T>();
+};
+
+template<typename S>
+struct type {
+	S member;
+	template<typename T>
+	auto foo() -> T requires does_foo<decltype(mv(member)), T>;
+};
+
+struct returns_int {
+	template<typename T>
+	auto foo() -> T;
+};
+
+struct nothing {};
+
+static_assert(does_foo<type<returns_int>&, int>);
+static_assert(not does_foo<type<nothing>&, int>);
 
 }

@@ -105,3 +105,12 @@ ref_block_test:
   end_block
   drop
   end_function
+
+# CHECK-LABEL: ref_func_test:
+# CHECK-NEXT:  .functype ref_func_test () -> (funcref)
+# CHECK-NEXT:  ref.func ref_func_test # encoding: [0xd2,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK-NEXT:  # fixup A - offset: 1, value: ref_func_test, kind: fixup_uleb128_i32
+ref_func_test:
+  .functype ref_func_test () -> (funcref)
+  ref.func ref_func_test
+  end_function

@@ -40,8 +40,6 @@ public:
   bool IsDisplayed = false;
 };
 
-constexpr size_t BufferedNoPwriteSmallVectorStream::PreferredBufferSize;
-
 TEST(raw_ostream_proxyTest, write) {
   // Besides confirming that "write" works, this test confirms that the proxy
   // takes on the buffer from the stream it's proxying, such that writes to the

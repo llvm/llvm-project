@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <array>
+#include <atomic>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -49,7 +51,7 @@ llvm::StringRef LanguageProperties::GetSettingName() {
 
 LanguageProperties::LanguageProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-  m_collection_sp->Initialize(g_language_properties);
+  m_collection_sp->Initialize(g_language_properties_def);
 }
 
 bool LanguageProperties::GetEnableFilterForLineBreakpoints() const {
@@ -89,12 +91,8 @@ Language *Language::FindPlugin(lldb::LanguageType language) {
     return iter->second.get();
 
   Language *language_ptr = nullptr;
-  LanguageCreateInstance create_callback;
 
-  for (uint32_t idx = 0;
-       (create_callback =
-            PluginManager::GetLanguageCreateCallbackAtIndex(idx)) != nullptr;
-       ++idx) {
+  for (auto create_callback : PluginManager::GetLanguageCreateCallbacks()) {
     language_ptr = create_callback(language);
 
     if (language_ptr) {
@@ -128,6 +126,28 @@ Language *Language::FindPlugin(LanguageType language,
   return result;
 }
 
+Language *
+Language::FindPluginForManglingScheme(Mangled::ManglingScheme scheme) {
+  // Mangled calls this for every name it demangles, so avoid the lock in
+  // FindPlugin(). Language instances are never destroyed, and the language of
+  // a scheme never changes, so the plugin can be cached once it's found.
+  static std::array<std::atomic<Language *>, Mangled::g_num_mangling_schemes>
+      g_plugins;
+  if (scheme >= g_plugins.size())
+    return nullptr;
+  if (Language *language = g_plugins[scheme].load(std::memory_order_acquire))
+    return language;
+
+  lldb::LanguageType language_type =
+      Mangled::GetLanguageForManglingScheme(scheme);
+  if (language_type == eLanguageTypeUnknown)
+    return nullptr;
+  Language *language = FindPlugin(language_type);
+  if (language)
+    g_plugins[scheme].store(language, std::memory_order_release);
+  return language;
+}
+
 void Language::ForEach(
     llvm::function_ref<IterationAction(Language *)> callback) {
   // If we want to iterate over all languages, we first have to complete the
@@ -157,6 +177,48 @@ void Language::ForEach(
     if (callback(lang) == IterationAction::Stop)
       break;
   }
+}
+
+llvm::Expected<LanguageType>
+Language::GetExceptionLanguageForLanguage(llvm::StringRef lang_name) {
+  LanguageType language = Language::GetLanguageTypeFromString(lang_name);
+  LanguageType exception_language = eLanguageTypeUnknown;
+
+  llvm::StringRef error_context;
+  switch (language) {
+  case eLanguageTypeC89:
+  case eLanguageTypeC:
+  case eLanguageTypeC99:
+  case eLanguageTypeC11:
+    exception_language = eLanguageTypeC;
+    break;
+  case eLanguageTypeC_plus_plus:
+  case eLanguageTypeC_plus_plus_03:
+  case eLanguageTypeC_plus_plus_11:
+  case eLanguageTypeC_plus_plus_14:
+    exception_language = eLanguageTypeC_plus_plus;
+    break;
+  case eLanguageTypeObjC_plus_plus:
+    error_context =
+        "Set exception breakpoints separately for c++ and objective-c";
+    break;
+  case eLanguageTypeUnknown:
+    error_context = "Unknown language type for exception breakpoint";
+    break;
+  default:
+    if (Language *languagePlugin = Language::FindPlugin(language)) {
+      if (languagePlugin->SupportsExceptionBreakpointsOnThrow() ||
+          languagePlugin->SupportsExceptionBreakpointsOnCatch()) {
+        exception_language = language;
+        break;
+      }
+    }
+    error_context = "Unsupported language type for exception breakpoint";
+  }
+  if (!error_context.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   error_context);
+  return exception_language;
 }
 
 bool Language::IsTopLevelFunction(Function &function) { return false; }
@@ -352,6 +414,20 @@ bool Language::LanguageIsCFamily(LanguageType language) {
   case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
   case eLanguageTypeObjC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool Language::LanguageIsFortran(LanguageType language) {
+  switch (language) {
+  case eLanguageTypeFortran77:
+  case eLanguageTypeFortran90:
+  case eLanguageTypeFortran95:
+  case eLanguageTypeFortran03:
+  case eLanguageTypeFortran08:
+  case eLanguageTypeFortran18:
     return true;
   default:
     return false;
@@ -592,4 +668,10 @@ bool SourceLanguage::IsObjC() const {
 
 bool SourceLanguage::IsCPlusPlus() const {
   return name == llvm::dwarf::DW_LNAME_C_plus_plus;
+}
+
+void llvm::format_provider<lldb::LanguageType>::format(
+    const lldb::LanguageType &language, llvm::raw_ostream &OS,
+    llvm::StringRef Options) {
+  OS << Language::GetNameForLanguageType(language);
 }

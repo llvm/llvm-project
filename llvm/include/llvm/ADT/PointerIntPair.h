@@ -140,7 +140,9 @@ public:
   // Allow PointerIntPairs to be created from const void * if and only if the
   // pointer type could be created from a const void *.
   static PointerIntPair getFromOpaqueValue(const void *V) {
-    (void)PtrTraits::getFromVoidPointer(V);
+    static_assert(
+        std::is_convertible_v<decltype(PtrTraits::getFromVoidPointer(V)),
+                              PointerTy>);
     return getFromOpaqueValue(const_cast<void *>(V));
   }
 
@@ -216,18 +218,6 @@ struct PointerIntPairInfo {
 template <typename PointerTy, unsigned IntBits, typename IntType>
 struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>, void> {
   using Ty = PointerIntPair<PointerTy, IntBits, IntType>;
-
-  static Ty getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<Ty>::NumLowBitsAvailable;
-    return Ty::getFromOpaqueValue(reinterpret_cast<void *>(Val));
-  }
-
-  static Ty getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<PointerTy>::NumLowBitsAvailable;
-    return Ty::getFromOpaqueValue(reinterpret_cast<void *>(Val));
-  }
 
   static unsigned getHashValue(Ty V) {
     uintptr_t IV = reinterpret_cast<uintptr_t>(V.getOpaqueValue());

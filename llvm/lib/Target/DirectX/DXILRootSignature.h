@@ -21,7 +21,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
-#include <optional>
 
 namespace llvm {
 namespace dxil {
@@ -42,6 +41,8 @@ public:
   iterator find(const Function *F) { return FuncToRsMap.find(F); }
 
   iterator end() { return FuncToRsMap.end(); }
+
+  bool empty() const { return FuncToRsMap.empty(); }
 
   mcdxbc::RootSignatureDesc *getDescForFunction(const Function *F) {
     const auto FuncRs = find(F);
@@ -83,12 +84,12 @@ public:
 };
 
 /// Printer pass for RootSignatureAnalysis results.
-class RootSignatureAnalysisPrinter
-    : public PassInfoMixin<RootSignatureAnalysisPrinter> {
+class RootSignatureAnalysisPrinterPass
+    : public OptionalPassInfoMixin<RootSignatureAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit RootSignatureAnalysisPrinter(raw_ostream &OS) : OS(OS) {}
+  explicit RootSignatureAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

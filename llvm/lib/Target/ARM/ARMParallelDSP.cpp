@@ -239,7 +239,6 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       FunctionPass::getAnalysisUsage(AU);
-      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<ScalarEvolutionWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
@@ -424,7 +423,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
 // Search recursively back through the operands to find a tree of values that
 // form a multiply-accumulate chain. The search records the Add and Mul
 // instructions that form the reduction and allows us to find a single value
-// to be used as the initial input to the accumlator.
+// to be used as the initial input to the accumulator.
 bool ARMParallelDSP::Search(Value *V, BasicBlock *BB, Reduction &R) {
   // If we find a non-instruction, try to use it as the initial accumulator
   // value. This may have already been found during the search in which case
@@ -639,8 +638,7 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
                   ? Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlad)
                   : Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlald);
 
-    IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
-                                BasicBlock::iterator(InsertAfter));
+    IRBuilder<NoFolder> Builder(InsertAfter->getIterator());
     Instruction *Call = Builder.CreateCall(SMLAD, Args);
     NumSMLAD++;
     return Call;
@@ -764,8 +762,7 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
 
   // Insert the load at the point of the original dominating load.
   LoadInst *DomLoad = DT->dominates(Base, Offset) ? Base : Offset;
-  IRBuilder<NoFolder> IRB(DomLoad->getParent(),
-                          ++BasicBlock::iterator(DomLoad));
+  IRBuilder<NoFolder> IRB(++BasicBlock::iterator(DomLoad));
 
   // Create the wide load, while making sure to maintain the original alignment
   // as this prevents ldrd from being generated when it could be illegal due to

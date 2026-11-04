@@ -1,0 +1,35 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+cir.func private @division(%a: !s32i, %b: !s32i) -> !s32i
+
+cir.func @flatten_structure_with_try_call_op() {
+   %a = cir.const #cir.int<1> : !s32i
+   %b = cir.const #cir.int<2> : !s32i
+   %3 = cir.try_call @division(%a, %b) ^normal, ^unwind : (!s32i, !s32i) -> !s32i
+ ^normal:
+   cir.br ^end
+ ^unwind:
+   cir.br ^end
+ ^end:
+   cir.return
+}
+
+// CHECK: cir.func private @division(!s32i, !s32i) -> !s32i
+
+// CHECK: cir.func @flatten_structure_with_try_call_op() {
+// CHECK-NEXT:   %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:   %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK-NEXT:   %[[CALL:.*]] = cir.try_call @division(%[[CONST_1]], %[[CONST_2]]) ^[[NORMAL:.*]], ^[[UNWIND:.*]] : (!s32i, !s32i) -> !s32i
+// CHECK-NEXT: ^[[NORMAL]]:
+// CHECK-NEXT:   cir.br ^[[END:.*]]
+// CHECK-NEXT: ^[[UNWIND]]:
+// CHECK-NEXT:   cir.br ^[[END:.*]]
+// CHECK-NEXT: ^[[END]]:
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
+
+}

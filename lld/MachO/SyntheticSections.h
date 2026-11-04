@@ -18,14 +18,13 @@
 #include "Writer.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <unordered_map>
+#include <optional>
 
 namespace llvm {
 class DWARFUnit;
@@ -109,13 +108,11 @@ public:
   void writeTo(uint8_t *buf) const override {}
 };
 
-// This is the base class for the GOT and TLVPointer sections, which are nearly
-// functionally identical -- they will both be populated by dyld with addresses
-// to non-lazily-loaded dylib symbols. The main difference is that the
-// TLVPointerSection stores references to thread-local variables.
-class NonLazyPointerSectionBase : public SyntheticSection {
+// The __got section, populated by dyld with addresses to non-lazily-loaded
+// dylib symbols, including TLV descriptors.
+class GotSection final : public SyntheticSection {
 public:
-  NonLazyPointerSectionBase(const char *segname, const char *name);
+  GotSection();
   const llvm::SetVector<const Symbol *> &getEntries() const { return entries; }
   bool isNeeded() const override { return !entries.empty(); }
   uint64_t getSize() const override {
@@ -131,14 +128,27 @@ private:
   llvm::SetVector<const Symbol *> entries;
 };
 
-class GotSection final : public NonLazyPointerSectionBase {
+// The arm64e __auth_got section, whose pointers dyld signs with the IA key
+// and address diversity.
+class AuthGotSection final : public SyntheticSection {
 public:
-  GotSection();
-};
+  AuthGotSection();
+  ArrayRef<const Symbol *> getEntries() const { return entries; }
+  bool isNeeded() const override { return !entries.empty(); }
+  uint64_t getSize() const override {
+    return entries.size() * target->wordSize;
+  }
+  void writeTo(uint8_t *buf) const override;
+  void addEntry(Symbol *sym);
+  bool contains(const Symbol *sym) const { return indices.contains(sym); }
+  uint64_t getVA(const Symbol *sym) const {
+    return addr + indices.at(sym) * target->wordSize;
+  }
 
-class TlvPointerSection final : public NonLazyPointerSectionBase {
-public:
-  TlvPointerSection();
+private:
+  // Kept here rather than in Symbol, so that other targets don't pay for it.
+  llvm::DenseMap<const Symbol *, uint32_t> indices;
+  std::vector<const Symbol *> entries;
 };
 
 struct Location {
@@ -345,12 +355,38 @@ public:
   void writeTo(uint8_t *buf) const override;
   void setUp();
 
-  static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+  static constexpr llvm::StringLiteral objcMsgSendStubPrefix = "_objc_msgSend$";
+  static constexpr llvm::StringLiteral objcMsgSendClassStubPrefix =
+      "_objc_msgSendClass$";
+  static constexpr llvm::StringLiteral objcClassSymbolPrefix = "_OBJC_CLASS_$_";
+  // Plain selector stub: _objc_msgSend$<selector>.
+  static bool isObjCMsgSendStubSymbol(Symbol *sym);
+  // Class-message stub: _objc_msgSendClass$<selector>$_OBJC_CLASS_$_<class>.
+  static bool isObjCClassStubSymbol(Symbol *sym);
+  // Any symbol handled by ObjCStubsSection.
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
+  ArrayRef<Defined *> getSymbols() const { return symbols; }
+  struct ObjCClassStubNames {
+    StringRef selectorName;
+    StringRef classSymbolName;
+  };
+  static std::optional<ObjCClassStubNames>
+  parseObjCClassStubSymbol(Symbol *sym);
+  void recordClassSymbol(Symbol *stubSym, Symbol *classSym);
+  Symbol *lookupClassSymbol(Symbol *stubSym) const;
+
+  /// Stably sort the stubs by \p priorities and reassign their offsets. Must
+  /// run before addresses are assigned.
+  void sortSymbols(const llvm::DenseMap<const Symbol *, int> &priorities);
 
 private:
+  size_t getStubSize(Symbol *sym) const;
+
   std::vector<Defined *> symbols;
+  llvm::DenseMap<Symbol *, Symbol *> classSymbols;
+  // Total byte size of all stubs added so far.
+  size_t stubsSectionSize = 0;
   Symbol *objcMsgSend = nullptr;
 };
 
@@ -621,15 +657,10 @@ public:
 private:
   std::vector<WordLiteralInputSection *> inputs;
 
-  template <class T> struct Hasher {
-    llvm::hash_code operator()(T v) const { return llvm::hash_value(v); }
-  };
-  // We're using unordered_map instead of DenseMap here because we need to
-  // support all possible integer values -- there are no suitable tombstone
-  // values for DenseMap.
-  std::unordered_map<UInt128, uint64_t, Hasher<UInt128>> literal16Map;
-  std::unordered_map<uint64_t, uint64_t> literal8Map;
-  std::unordered_map<uint32_t, uint64_t> literal4Map;
+  // Literal values can be any bit pattern.
+  llvm::DenseMap<UInt128, uint64_t> literal16Map;
+  llvm::DenseMap<uint64_t, uint64_t> literal8Map;
+  llvm::DenseMap<uint32_t, uint64_t> literal4Map;
 };
 
 class ObjCImageInfoSection final : public SyntheticSection {
@@ -787,15 +818,21 @@ public:
     locations.emplace_back(isec, offset);
   }
   void addBinding(const Symbol *dysym, const InputSection *isec,
-                  uint64_t offset, int64_t addend = 0);
+                  uint64_t offset, int64_t addend = 0,
+                  bool forceOutline = false);
 
   void setHasNonWeakDefinition() { hasNonWeakDef = true; }
 
-  // Returns an (ordinal, inline addend) tuple used by dyld_chained_ptr_64_bind.
-  std::pair<uint32_t, uint8_t> getBinding(const Symbol *sym,
-                                          int64_t addend) const;
+  // Returns the import ordinal and the addend for the bind's own addend field,
+  // which is 0 when the import holds the addend.
+  std::pair<uint32_t, int32_t> getBinding(const Symbol *sym, int64_t addend,
+                                          bool forceOutline = false) const;
 
   const std::vector<Location> &getLocations() const { return locations; }
+
+  // Each fixup's "next" field holds the distance to the next fixup on its page
+  // in units of this stride, so every fixup must be aligned to it.
+  static uint32_t chainStride();
 
   bool hasWeakBinding() const { return hasWeakBind; }
   bool hasNonWeakDefinition() const { return hasNonWeakDef; }
@@ -829,8 +866,14 @@ private:
   llvm::MachO::ChainedImportFormat importFormat;
 };
 
-void writeChainedRebase(uint8_t *buf, uint64_t targetVA);
-void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend);
+void writeChainedRebase(uint8_t *buf, uint64_t targetVA,
+                        const AuthInfo *auth = nullptr);
+void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
+                       const AuthInfo *auth = nullptr);
+
+// Whether -no_fixup_chains can avoid a fixup that chained fixups can't encode.
+// It can't on arm64e, which always uses chained fixups.
+bool canDisableChainedFixups();
 
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
@@ -847,7 +890,7 @@ struct InStruct {
   LazyBindingSection *lazyBinding = nullptr;
   ExportSection *exports = nullptr;
   GotSection *got = nullptr;
-  TlvPointerSection *tlvPointers = nullptr;
+  AuthGotSection *authGot = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;

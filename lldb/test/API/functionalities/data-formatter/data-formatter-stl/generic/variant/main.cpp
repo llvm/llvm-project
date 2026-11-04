@@ -49,6 +49,8 @@ int main() {
       S>
       v_300_types_valueless;
 
+  std::variant<int, bool, std::string> v4 = 4;
+
   v_valueless = 5;
   v_300_types_valueless.emplace<0>(10);
 
@@ -70,6 +72,9 @@ int main() {
   // state when we change its value.
   v1 = 2.0;
   d = std::get<double>(v1);
+
+  v4 = "a string";
+
   printf("%f\n", d); // break here
 
   try {

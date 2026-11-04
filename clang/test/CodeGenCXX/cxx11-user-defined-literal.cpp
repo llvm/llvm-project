@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s %}
 
 struct S { S(); ~S(); S(const S &); void operator()(int); };
 using size_t = decltype(sizeof(int));
@@ -20,7 +21,7 @@ void f() {
   // CHECK: call void @_Zli2_xPKcm({{.*}}, ptr noundef @[[s_bar]], i64 noundef 3)
   // CHECK: call void @_Zli2_yw({{.*}} 97)
   // CHECK: call void @_Zli2_zy({{.*}} 42)
-  // CHECK: call void @_Zli2_fe({{.*}} x86_fp80 noundef 0xK3FFF8000000000000000)
+  // CHECK: call void @_Zli2_fe({{.*}} x86_fp80 noundef 1.000000e+00)
   // CHECK: call void @_ZN1SD1Ev({{.*}})
   // CHECK: call void @_ZN1SD1Ev({{.*}})
   // CHECK: call void @_ZN1SD1Ev({{.*}})

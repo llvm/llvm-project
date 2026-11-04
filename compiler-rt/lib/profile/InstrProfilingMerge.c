@@ -11,7 +11,6 @@
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
-#include "InstrProfilingUtil.h"
 
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "profile/InstrProfData.inc"
@@ -50,15 +49,15 @@ uint64_t lprofGetLoadModuleSignature(void) {
 COMPILER_RT_VISIBILITY
 int __llvm_profile_check_compatibility(const char *ProfileData,
                                        uint64_t ProfileSize) {
+  if (ProfileSize < sizeof(__llvm_profile_header))
+    return 1;
+
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
                               Header->BinaryIdsSize);
   SrcDataEnd = SrcDataStart + Header->NumData;
-
-  if (ProfileSize < sizeof(__llvm_profile_header))
-    return 1;
 
   /* Check the header first.  */
   if (Header->Magic != __llvm_profile_get_magic() ||

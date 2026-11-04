@@ -15,18 +15,27 @@
 
 #include "filesystem/error.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <io.h>
 #  include <windows.h>
 #elif __has_include(<unistd.h>)
 #  include <unistd.h>
+#  if defined(_NEWLIB_VERSION)
+#    if defined(_POSIX_C_SOURCE) && __has_include(<stdio.h>)
+#      include <stdio.h>
+#      define HAS_FILENO_AND_ISATTY
+#    endif
+#  else
+#    define HAS_FILENO_AND_ISATTY
+#  endif
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 
 _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
   // Note the Standard does this in one call, but it's unclear whether
@@ -56,9 +65,13 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#elif __has_include(<unistd.h>) // !_LIBCPP_WIN32API
+#elif defined(HAS_FILENO_AND_ISATTY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 23
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
 _LIBCPP_EXPORTED_FROM_ABI bool __is_posix_terminal(FILE* __stream) { return isatty(fileno(__stream)); }
-#endif
+_LIBCPP_DIAGNOSTIC_POP
+#endif // _WIN32
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

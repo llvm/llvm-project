@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-11,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-11,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-11,cxx98
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-11,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx11
 
 namespace std {
 struct type_info;
@@ -94,26 +94,26 @@ namespace cwg1909 { // cwg1909: 3.7
   };
 } // namespace cwg1909
 
-namespace cwg1918 { // cwg1918: no
+namespace cwg1918 { // cwg1918: 24
 template<typename T> struct A {
   class B {
     class C {};
   };
 };
 class X {
-  static int x;
-  // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
+  static int x; // #cwg1918-X-x
   template <typename T>
   friend class A<T>::B::C;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B' for friend class declaration is not supported; turning off access control for 'X'}}
+  // expected-error@-1 {{'A<T>::B' does not name a class template}}
 };
 template<> struct A<int> {
   typedef struct Q B;
 };
 struct Q {
   class C {
-    // FIXME: 'f' is not a friend, so 'X::x' is not accessible
     int f() { return X::x; }
+    // expected-error@-1 {{'x' is a private member of 'cwg1918::X'}}
+    //   expected-note@#cwg1918-X-x {{implicitly declared private here}}
   };
 };
 } // namespace cwg1918
@@ -123,7 +123,7 @@ namespace cwg1940 { // cwg1940: 3.5
 static union {
   static_assert(true, "");  // ok
   static_assert(false, "");
-  // since-cxx11-error@-1 {{static assertion failed}}
+  // since-cxx11-error@-1 {{static assertion failed:}}
   int not_empty;
 };
 #endif
@@ -159,7 +159,7 @@ derived d2(42, 9);
 #endif
 } // namespace cwg1941
 
-namespace cwg1945 { // cwg1945: no
+namespace cwg1945 { // cwg1945: 24
 template<typename T> struct A {
   class B {
     class C {};
@@ -167,10 +167,9 @@ template<typename T> struct A {
 };
 class X {
   static int x;
-  // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
   template <typename T>
   friend class A<T>::B::C;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B' for friend class declaration is not supported; turning off access control for 'X'}}
+  // expected-error@-1 {{'A<T>::B' does not name a class template}}
 };
 } // namespace cwg1945
 

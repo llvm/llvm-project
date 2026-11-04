@@ -21,7 +21,6 @@
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <cstddef>
-#include <iterator>
 
 // Two booleans are used to define orders in graphs:
 // InverseGraph defines when we need to reverse the whole graph and is as such
@@ -136,9 +135,6 @@ public:
         std::conditional_t<InverseEdge, Inverse<NodePtr>, NodePtr>;
     auto R = children<DirectedNodeT>(N);
     VectRet Res = VectRet(detail::reverse_if<!InverseEdge>(R));
-
-    // Remove nullptr children for clang.
-    llvm::erase(Res, nullptr);
 
     auto &Children = (InverseEdge != InverseGraph) ? Pred : Succ;
     auto It = Children.find(N);

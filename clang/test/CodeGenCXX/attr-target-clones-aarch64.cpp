@@ -106,7 +106,8 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 4
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z7foo_ovli.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z7foo_ovli.resolver(
+// CHECK-SAME: ) #[[ATTR5:[0-9]+]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -121,7 +122,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Mfrintts(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR5:[0-9]+]] comdat {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR6:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -130,7 +131,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR6:[0-9]+]] comdat {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR7:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -147,7 +148,8 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_ZN7MyClassIssE7foo_tmlEv.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_ZN7MyClassIssE7foo_tmlEv.resolver(
+// CHECK-SAME: ) #[[ATTR5]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -170,7 +172,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Mfrintts(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR5]] comdat {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR6]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -179,7 +181,7 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR6]] comdat {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR7]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -187,6 +189,5 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 2
 //
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

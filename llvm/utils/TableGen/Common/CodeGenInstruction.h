@@ -158,8 +158,8 @@ public:
   OperandInfo &back() { return OperandList.back(); }
   const OperandInfo &back() const { return OperandList.back(); }
 
-  typedef std::vector<OperandInfo>::iterator iterator;
-  typedef std::vector<OperandInfo>::const_iterator const_iterator;
+  using iterator = std::vector<OperandInfo>::iterator;
+  using const_iterator = std::vector<OperandInfo>::const_iterator;
   iterator begin() { return OperandList.begin(); }
   const_iterator begin() const { return OperandList.begin(); }
   iterator end() { return OperandList.end(); }
@@ -289,8 +289,7 @@ public:
   /// HasOneImplicitDefWithKnownVT - If the instruction has at least one
   /// implicit def and it has a known VT, return the VT, otherwise return
   /// MVT::Other.
-  MVT::SimpleValueType
-  HasOneImplicitDefWithKnownVT(const CodeGenTarget &TargetInfo) const;
+  MVT HasOneImplicitDefWithKnownVT(const CodeGenTarget &TargetInfo) const;
 
   /// FlattenAsmStringVariants - Flatten the specified AsmString to only
   /// include text from the specified variant, returning the new string.
@@ -298,7 +297,7 @@ public:
                                               unsigned Variant);
 
   // Is the specified operand in a generic instruction implicitly a pointer.
-  // This can be used on intructions that use typeN or ptypeN to identify
+  // This can be used on instructions that use typeN or ptypeN to identify
   // operands that should be considered as pointers even though SelectionDAG
   // didn't make a distinction between integer and pointers.
   bool isInOperandAPointer(unsigned i) const {

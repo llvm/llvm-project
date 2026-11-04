@@ -1,8 +1,8 @@
 set(LLVM_OPTIONAL_SOURCES
   PythonTestCAPI.cpp
   PythonTestDialect.cpp
-  PythonTestModulePybind11.cpp
   PythonTestModuleNanobind.cpp
+  TestConcurrencyPasses.cpp
 )
 
 add_mlir_library(MLIRPythonTestDialect
@@ -21,6 +21,7 @@ mlir_target_link_libraries(MLIRPythonTestDialect PUBLIC
 
 add_mlir_public_c_api_library(MLIRCAPIPythonTestDialect
   PythonTestCAPI.cpp
+  TestConcurrencyPasses.cpp
 
   DEPENDS
   MLIRPythonTestIncGen
@@ -28,6 +29,7 @@ add_mlir_public_c_api_library(MLIRCAPIPythonTestDialect
   LINK_LIBS PUBLIC
   MLIRCAPIInterfaces
   MLIRCAPIIR
+  MLIRPass
   MLIRPythonTestDialect
 )
 

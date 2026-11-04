@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgpu9.00-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS-COUNT-15: V_MOV_B32
@@ -13,6 +13,7 @@
 # RESULT-NEXT: maxAlignment:    64
 # RESULT-NEXT: adjustsStack:    true
 # RESULT-NEXT: hasCalls:        true
+# RESULT-NEXT: framePointerPolicy: none
 # RESULT-NEXT: stackProtector: '%stack.9.guard'
 # RESULT-NEXT: maxCallFrameSize: 420
 # RESULT-NEXT: cvBytesOfCalleeSavedRegisters: 48
@@ -110,6 +111,7 @@ frameInfo:
   maxAlignment:    1
   adjustsStack:    true
   hasCalls:        true
+  framePointerPolicy: none
   stackProtector:  '%stack.9'
   maxCallFrameSize: 420
   cvBytesOfCalleeSavedRegisters: 48

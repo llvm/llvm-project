@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
 #include "src/sys/mman/mmap.h"
 #include "test/IntegrationTest/test.h"
 

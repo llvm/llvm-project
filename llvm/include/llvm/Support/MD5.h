@@ -90,7 +90,7 @@ public:
 
 private:
   // Any 32-bit or wider unsigned integer data type will do.
-  typedef uint32_t MD5_u32plus;
+  using MD5_u32plus = uint32_t;
 
   // Internal State
   struct {

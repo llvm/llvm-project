@@ -34,62 +34,69 @@
 namespace llvm {
 class StringRef;
 class AAManager;
+class LLVMContext;
 class TargetMachine;
 class ModuleSummaryIndex;
+struct PassesOptions;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
-/// Tunable parameters for passes in the default pipelines.
+/// Tunable parameters for passes in the default pipelines. An unset optional
+/// member takes the value of its library option in the PassBuilder's
+/// LLVMContext.
 class PipelineTuningOptions {
 public:
-  /// Constructor sets pipeline tuning defaults based on cl::opts. Each option
-  /// can be set in the PassBuilder when using a LLVM as a library.
-  LLVM_ABI PipelineTuningOptions();
+  /// Return a copy whose unset members are set from \p LibraryOptions.
+  [[nodiscard]] LLVM_ABI PipelineTuningOptions
+  resolve(const cl::LibraryOptionsContext &LibraryOptions) const;
 
   /// Tuning option to set loop interleaving on/off, set based on opt level.
-  bool LoopInterleaving;
+  bool LoopInterleaving = true;
 
   /// Tuning option to enable/disable loop vectorization, set based on opt
   /// level.
-  bool LoopVectorization;
+  bool LoopVectorization = true;
 
   /// Tuning option to enable/disable slp loop vectorization, set based on opt
   /// level.
-  bool SLPVectorization;
+  bool SLPVectorization = false;
 
-  /// Tuning option to enable/disable loop unrolling. Its default value is true.
-  bool LoopUnrolling;
+  /// Tuning option to enable/disable loop unrolling.
+  bool LoopUnrolling = true;
 
-  /// Tuning option to enable/disable loop interchange. Its default value is
-  /// false.
-  bool LoopInterchange;
+  /// Tuning option to enable/disable loop interchange.
+  std::optional<bool> LoopInterchange;
 
-  /// Tuning option to enable/disable loop fusion. Its default value is false.
-  bool LoopFusion;
+  /// Tuning option to enable/disable loop fusion.
+  bool LoopFusion = false;
 
-  /// Tuning option to forget all SCEV loops in LoopUnroll. Its default value
-  /// is that of the flag: `-forget-scev-loop-unroll`.
-  bool ForgetAllSCEVInLoopUnroll;
+  /// Tuning option to forget all SCEV loops in LoopUnroll.
+  std::optional<bool> ForgetAllSCEVInLoopUnroll;
 
   /// Tuning option to cap the number of calls to retrive clobbering accesses in
   /// MemorySSA, in LICM.
-  unsigned LicmMssaOptCap;
+  std::optional<unsigned> LicmMssaOptCap;
 
   /// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
   /// the number of access is too large.
-  unsigned LicmMssaNoAccForPromotionCap;
+  std::optional<unsigned> LicmMssaNoAccForPromotionCap;
 
-  /// Tuning option to enable/disable call graph profile. Its default value is
-  /// that of the flag: `-enable-npm-call-graph-profile`.
-  bool CallGraphProfile;
+  /// Tuning option to enable/disable call graph profile.
+  bool CallGraphProfile = true;
 
   // Add LTO pipeline tuning option to enable the unified LTO pipeline.
-  bool UnifiedLTO;
+  bool UnifiedLTO = false;
 
-  /// Tuning option to enable/disable function merging. Its default value is
-  /// false.
-  bool MergeFunctions;
+  /// Tuning option to enable/disable function merging.
+  std::optional<bool> MergeFunctions;
 
   /// Tuning option to override the default inliner threshold.
-  int InlinerThreshold;
+  int InlinerThreshold = -1;
+
+  /// Tuning option to cap how many times the inliner pipeline reruns on an SCC
+  /// after devirtualizing a call.
+  std::optional<unsigned> MaxDevirtIterations;
 
   // Experimental option to eagerly invalidate more analyses. This has the
   // potential to decrease max memory usage in exchange for more compile time.
@@ -98,7 +105,15 @@ public:
   // stale/imprecise but still valid. Currently this invalidates all function
   // analyses after various module->function or cgscc->function adaptors in the
   // default pipelines.
-  bool EagerlyInvalidateAnalyses;
+  std::optional<bool> EagerlyInvalidateAnalyses;
+
+  // Tuning option to enable/disable speculative devirtualization.
+  std::optional<bool> DevirtualizeSpeculatively;
+};
+
+enum class PrintPipelinePassesFormat {
+  Text,
+  Tree,
 };
 
 /// This class provides access to building LLVM's passes.
@@ -108,6 +123,8 @@ public:
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
+  LLVMContext &Context;
+  const PassesOptions &Opts;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
@@ -128,9 +145,12 @@ public:
     std::vector<PipelineElement> InnerPipeline;
   };
 
+  /// The pipelines read the library options of \p Context, which must outlive
+  /// the PassBuilder. Unset members of \p PTO, or all of them if \p PTO is not
+  /// given, are set from \p Context.
   LLVM_ABI explicit PassBuilder(
-      TargetMachine *TM = nullptr,
-      PipelineTuningOptions PTO = PipelineTuningOptions(),
+      LLVMContext &Context, TargetMachine *TM = nullptr,
+      std::optional<PipelineTuningOptions> PTO = std::nullopt,
       std::optional<PGOOptions> PGOOpt = std::nullopt,
       PassInstrumentationCallbacks *PIC = nullptr,
       IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem());
@@ -262,7 +282,8 @@ public:
   /// generated in non-LTO compilation.
   LLVM_ABI ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level,
                                                         bool ThinLTO,
-                                                        bool EmitSummary);
+                                                        bool EmitSummary,
+                                                        bool Verify = true);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.
@@ -410,6 +431,11 @@ public:
   /// Print pass names.
   LLVM_ABI void printPassNames(raw_ostream &OS);
 
+  /// The format -print-pipeline-passes requests, or std::nullopt if it is not
+  /// given.
+  LLVM_ABI std::optional<PrintPipelinePassesFormat>
+  getPrintPipelinePasses() const;
+
   /// Register a callback for a default optimizer pipeline extension
   /// point
   ///
@@ -546,6 +572,24 @@ public:
     FullLinkTimeOptimizationLastEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for ThinLTO default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the start of the
+  /// thin LTO pipeline.
+  void registerThinLinkTimeOptimizationEarlyEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    ThinLinkTimeOptimizationEarlyEPCallbacks.push_back(C);
+  }
+
+  /// Register a callback for ThinLTO default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the end of the thin
+  /// LTO pipeline.
+  void registerThinLinkTimeOptimizationLastEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    ThinLinkTimeOptimizationLastEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -633,6 +677,8 @@ public:
                                        std::string ProfileFile,
                                        std::string ProfileRemappingFile);
 
+  LLVMContext &getContext() const { return Context; }
+
   /// Returns PIC. External libraries can use this to register pass
   /// instrumentation callbacks.
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
@@ -672,6 +718,12 @@ public:
                                                  OptimizationLevel Level);
   LLVM_ABI void
   invokeFullLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
+                                                OptimizationLevel Level);
+  LLVM_ABI void
+  invokeThinLinkTimeOptimizationEarlyEPCallbacks(ModulePassManager &MPM,
+                                                 OptimizationLevel Level);
+  LLVM_ABI void
+  invokeThinLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
                                                 OptimizationLevel Level);
   LLVM_ABI void invokePipelineStartEPCallbacks(ModulePassManager &MPM,
                                                OptimizationLevel Level);
@@ -742,7 +794,7 @@ private:
   void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
 
   void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
-                       bool IsFullLTO);
+                       ThinOrFullLTOPhase LTOPhase);
 
   static std::optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
@@ -770,7 +822,8 @@ private:
   // profile instrumentation/matching (to enable better context sensitivity),
   // and for memprof to enable better matching with missing debug frames.
   void addPreInlinerPasses(ModulePassManager &MPM, OptimizationLevel Level,
-                           ThinOrFullLTOPhase LTOPhase);
+                           ThinOrFullLTOPhase LTOPhase,
+                           bool IgnoreProfile = false);
 
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
@@ -808,6 +861,10 @@ private:
       FullLinkTimeOptimizationEarlyEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       FullLinkTimeOptimizationLastEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      ThinLinkTimeOptimizationEarlyEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      ThinLinkTimeOptimizationLastEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
@@ -906,7 +963,7 @@ bool parseAnalysisUtilityPasses(
 // These are special since they are only for testing purposes.
 
 /// No-op module pass which does nothing.
-struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
+struct NoOpModulePass : OptionalPassInfoMixin<NoOpModulePass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -923,7 +980,7 @@ public:
 };
 
 /// No-op CGSCC pass which does nothing.
-struct NoOpCGSCCPass : PassInfoMixin<NoOpCGSCCPass> {
+struct NoOpCGSCCPass : OptionalPassInfoMixin<NoOpCGSCCPass> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
                         LazyCallGraph &, CGSCCUpdateResult &UR) {
     return PreservedAnalyses::all();
@@ -943,7 +1000,7 @@ public:
 };
 
 /// No-op function pass which does nothing.
-struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
+struct NoOpFunctionPass : OptionalPassInfoMixin<NoOpFunctionPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -960,7 +1017,7 @@ public:
 };
 
 /// No-op loop nest pass which does nothing.
-struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
+struct NoOpLoopNestPass : OptionalPassInfoMixin<NoOpLoopNestPass> {
   PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -968,7 +1025,7 @@ struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
 };
 
 /// No-op loop pass which does nothing.
-struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
+struct NoOpLoopPass : OptionalPassInfoMixin<NoOpLoopPass> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -976,7 +1033,8 @@ struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
 };
 
 /// No-op machine function pass which does nothing.
-struct NoOpMachineFunctionPass : public PassInfoMixin<NoOpMachineFunctionPass> {
+struct NoOpMachineFunctionPass
+    : public OptionalPassInfoMixin<NoOpMachineFunctionPass> {
   PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -994,8 +1052,9 @@ public:
   }
 };
 
-/// Common option used by multiple tools to print pipeline passes
-LLVM_ABI extern cl::opt<bool> PrintPipelinePasses;
+LLVM_ABI void printFormattedPipelinePasses(
+    raw_ostream &OS, StringRef Pipeline,
+    PrintPipelinePassesFormat Format = PrintPipelinePassesFormat::Text);
 }
 
 #endif

@@ -396,3 +396,40 @@ func.func @rank_reduced_extract_slice(
 //       CHECK:   %[[CONS_SLICE:.*]] = tensor.insert_slice %[[MMUL_CONS]] into %[[ARG_ITER]][0, %[[I]]] [4, 2] [1, 1] : tensor<4x2xf32> into tensor<4x6xf32>
 //       CHECK:   scf.yield %[[CONS_SLICE]] : tensor<4x6xf32>
 //       CHECK: return %[[FOR]] : tensor<4x6xf32>
+
+// -----
+
+// Regression test: greedy fusion should not crash when the same producer is
+// fused into multiple consumers, which previously caused an out-of-bounds write
+// to the ops vector when the original op was no longer present.
+
+// CHECK-LABEL: func @fuse_same_producer_multiple_consumers
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @fuse_same_producer_multiple_consumers(%init: tensor<5x4xi32>) -> (tensor<5x4xi32>, tensor<5x4xi1>) {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %src = tensor.empty() : tensor<30x8xi32>
+  %producer = linalg.generic {indexing_maps = [#map], iterator_types = ["parallel", "parallel"]}
+      outs(%src : tensor<30x8xi32>) {
+    ^bb0(%out: i32):
+      linalg.yield %c1 : i32
+  } -> tensor<30x8xi32>
+  %slice = tensor.extract_slice %producer[7, 4] [5, 4] [1, 1] : tensor<30x8xi32> to tensor<5x4xi32>
+  %bool_init = tensor.empty() : tensor<5x4xi1>
+  %consumer0 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel"]}
+      ins(%slice : tensor<5x4xi32>) outs(%bool_init : tensor<5x4xi1>) {
+    ^bb0(%in: i32, %out: i1):
+      %cmp = arith.cmpi eq, %in, %c0 : i32
+      linalg.yield %cmp : i1
+  } -> tensor<5x4xi1>
+  %consumer1 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel"]}
+      ins(%slice : tensor<5x4xi32>) outs(%init : tensor<5x4xi32>) {
+    ^bb0(%in: i32, %out: i32):
+      %add = arith.addi %in, %c1 : i32
+      linalg.yield %add : i32
+  } -> tensor<5x4xi32>
+  return %consumer1, %consumer0 : tensor<5x4xi32>, tensor<5x4xi1>
+}
+// CHECK: linalg.generic
+// CHECK: linalg.generic
+// CHECK: linalg.generic

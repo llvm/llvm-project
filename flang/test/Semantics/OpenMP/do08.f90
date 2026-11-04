@@ -7,7 +7,6 @@ program omp
   logical cond(10,10,10)
   cond = .false.
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(3)
   do i = 0, 10
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
@@ -20,7 +19,6 @@ program omp
   end do
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10
@@ -33,7 +31,6 @@ program omp
   end do
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(2)
   do i = 0, 10
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
@@ -47,7 +44,6 @@ program omp
   !$omp end do
 
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(2)
   foo: do i = 0, 10
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
@@ -61,14 +57,13 @@ program omp
   !$omp end do
 
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do collapse(3)
   do 60 i=2,200,2
     do j=1,10
       !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
-      if(i==100) cycle
-      do k=1,10
-        print *,i
+      if (i == 100) cycle
+      do k = 1, 10
+        print *, i
       end do
     end do
   60 continue
@@ -124,16 +119,18 @@ program omp
   end do foo
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !BECAUSE: ORDERED clause was specified with argument 3
   !$omp do  collapse(2) ordered(3)
   foo: do i = 0, 10
     foo1: do j = 0, 10
-             !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
-             if (k .lt. 1) cycle foo
-         foo2:  do k  = 0, 10
-             print *, i, j, k
-           end do foo2
-         end do foo1
+      !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
+      !BECAUSE: This code prevents perfect nesting
+      if (k .lt. 1) cycle foo
+      foo2:  do k  = 0, 10
+        print *, i, j, k
+      end do foo2
+    end do foo1
   end do foo
   !$omp end do
 

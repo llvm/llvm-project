@@ -27,7 +27,7 @@ module mod_tu_extra { header "mod_tu_extra.h" }
 
 // Clean: scan the PCH.
 // RUN: clang-scan-deps -format experimental-full -o %t/deps_pch_clean.json -- \
-// RUN:     %clang -x c-header %t/prefix.h -o %t/prefix.h.pch \
+// RUN:     %clang -nostdinc -x c-header %t/prefix.h -o %t/prefix.h.pch \
 // RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache
 
 // Clean: build the PCH.
@@ -38,9 +38,11 @@ module mod_tu_extra { header "mod_tu_extra.h" }
 
 // Clean: scan the TU.
 // RUN: clang-scan-deps -format experimental-full -o %t/deps_tu_clean.json -- \
-// RUN:     %clang -c %t/tu.c -o %t/tu.o -include %t/prefix.h \
+// RUN:     %clang -nostdinc -c %t/tu.c -o %t/tu.o -include %t/prefix.h \
 // RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache
-// RUN: cat %t/deps_tu_clean.json | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-TU-CLEAN -DPREFIX=%/t
+// RUN: cat %t/deps_tu_clean.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,executable,input-file \
+// RUN:   | FileCheck %s --check-prefix=CHECK-TU-CLEAN -DPREFIX=%/t
 // CHECK-TU-CLEAN:      {
 // CHECK-TU-CLEAN-NEXT:   "modules": [
 // CHECK-TU-CLEAN-NEXT:     {
@@ -94,7 +96,7 @@ module mod_tu_extra { header "mod_tu_extra.h" }
 
 // Incremental: scan the PCH.
 // RUN: clang-scan-deps -format experimental-full -o %t/deps_pch_incremental.json -- \
-// RUN:     %clang -x c-header %t/prefix.h -o %t/prefix.h.pch \
+// RUN:     %clang -nostdinc -x c-header %t/prefix.h -o %t/prefix.h.pch \
 // RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache
 
 // Incremental: build the PCH.
@@ -107,9 +109,11 @@ module mod_tu_extra { header "mod_tu_extra.h" }
 //              TU that depend on modules imported from the PCH and discover the
 //              new dependency on 'mod_tu_extra'.
 // RUN: clang-scan-deps -format experimental-full -o %t/deps_tu_incremental.json -- \
-// RUN:     %clang -c %t/tu.c -o %t/tu.o -include %t/prefix.h \
+// RUN:     %clang -nostdinc -c %t/tu.c -o %t/tu.o -include %t/prefix.h \
 // RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache
-// RUN: cat %t/deps_tu_incremental.json | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-TU-INCREMENTAL -DPREFIX=%/t
+// RUN: cat %t/deps_tu_incremental.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,executable,input-file \
+// RUN:   | FileCheck %s --check-prefix=CHECK-TU-INCREMENTAL -DPREFIX=%/t
 // CHECK-TU-INCREMENTAL:      {
 // CHECK-TU-INCREMENTAL-NEXT:   "modules": [
 // CHECK-TU-INCREMENTAL-NEXT:     {

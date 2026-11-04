@@ -12,6 +12,7 @@
 #include "LinkUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -322,9 +323,10 @@ static void transferSegmentAndSections(
 }
 
 // Write the __DWARF segment load command to the output file.
-static bool createDwarfSegment(const MCAssembler& Asm,uint64_t VMAddr, uint64_t FileOffset,
-                               uint64_t FileSize, unsigned NumSections,
-                                MachObjectWriter &Writer) {
+static bool createDwarfSegment(const MCAssembler &Asm, uint64_t VMAddr,
+                               uint64_t FileOffset, uint64_t FileSize,
+                               unsigned NumSections, MachObjectWriter &Writer,
+                               bool AllowSectionHeaderOffsetOverflow) {
   Writer.writeSegmentLoadCommand("__DWARF", NumSections, VMAddr,
                                  alignTo(FileSize, 0x1000), FileOffset,
                                  FileSize, /* MaxProt */ 7,
@@ -339,11 +341,18 @@ static bool createDwarfSegment(const MCAssembler& Asm,uint64_t VMAddr, uint64_t 
     if (Alignment > 1) {
       VMAddr = alignTo(VMAddr, Alignment);
       FileOffset = alignTo(FileOffset, Alignment);
-      if (FileOffset > UINT32_MAX)
-        return error("section " + Sec->getName() +
-                     "'s file offset exceeds 4GB."
-                     " Refusing to produce an invalid Mach-O file.");
     }
+    // Mach-O section headers store the file offset in a 32-bit field
+    // (section.offset). For large dSYM files, a section can start beyond 4GB
+    // (UINT32_MAX), so the on-disk offset value may wrap/truncate. Within a
+    // single slice, sections are emitted in file order. If we allow emitting
+    // such non-standard Mach-O, compatible readers can reconstruct the true
+    // 64-bit offsets by walking sections in order and accumulating the sizes of
+    // preceding sections.
+    if (FileOffset > UINT32_MAX && !AllowSectionHeaderOffsetOverflow)
+      return error("section " + Sec->getName() +
+                   "'s file offset exceeds 4GB."
+                   " Refusing to produce an invalid Mach-O file.");
     Writer.writeSection(Asm, *Sec, VMAddr, FileOffset, 0, 0, 0);
 
     FileOffset += Asm.getSectionAddressSize(*Sec);
@@ -374,7 +383,8 @@ bool generateDsymCompanion(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
     MCStreamer &MS, raw_fd_ostream &OutFile,
     const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
-        &RelocationsToApply) {
+        &RelocationsToApply,
+    bool AllowSectionHeaderOffsetOverflow) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
@@ -412,10 +422,13 @@ bool generateDsymCompanion(
 
   bool HasSymtab = false;
 
-  // Check LC_SYMTAB and get LC_UUID and LC_BUILD_VERSION.
+  // Check LC_SYMTAB and get LC_UUID, LC_BUILD_VERSION, LC_TARGET_TRIPLE.
   MachO::uuid_command UUIDCmd;
   SmallVector<MachO::build_version_command, 2> BuildVersionCmd;
+  MachO::target_triple_command TargetTripleCmd;
+  const char *TargetTriple = nullptr;
   memset(&UUIDCmd, 0, sizeof(UUIDCmd));
+  memset(&TargetTripleCmd, 0, sizeof(TargetTripleCmd));
   for (auto &LCI : InputBinary.load_commands()) {
     switch (LCI.C.cmd) {
     case MachO::LC_UUID:
@@ -430,12 +443,21 @@ bool generateDsymCompanion(
       memset(&Cmd, 0, sizeof(Cmd));
       Cmd = InputBinary.getBuildVersionLoadCommand(LCI);
       ++NumLoadCommands;
-      LoadCommandSize += sizeof(Cmd);
-      // LLDB doesn't care about the build tools for now.
-      Cmd.ntools = 0;
+      // Replace the input's build tools with dsymutil, the dSYM's producer.
+      Cmd.ntools = 1;
+      Cmd.cmdsize = sizeof(Cmd) + sizeof(MachO::build_tool_version);
+      LoadCommandSize += Cmd.cmdsize;
       BuildVersionCmd.push_back(Cmd);
       break;
     }
+    case MachO::LC_TARGET_TRIPLE:
+      if (TargetTripleCmd.cmd)
+        return error("Binary contains more than one Target Triple");
+      TargetTripleCmd = InputBinary.getTargetTripleLoadCommand(LCI);
+      TargetTriple = LCI.Ptr + TargetTripleCmd.triple;
+      ++NumLoadCommands;
+      LoadCommandSize += TargetTripleCmd.cmdsize;
+      break;
     case MachO::LC_SYMTAB:
       HasSymtab = true;
       break;
@@ -536,11 +558,21 @@ bool generateDsymCompanion(
   }
   for (auto Cmd : BuildVersionCmd) {
     Writer.W.write<uint32_t>(Cmd.cmd);
-    Writer.W.write<uint32_t>(sizeof(Cmd));
+    Writer.W.write<uint32_t>(Cmd.cmdsize);
     Writer.W.write<uint32_t>(Cmd.platform);
     Writer.W.write<uint32_t>(Cmd.minos);
     Writer.W.write<uint32_t>(Cmd.sdk);
     Writer.W.write<uint32_t>(Cmd.ntools);
+    Writer.W.write<uint32_t>(MachO::TOOL_DSYMUTIL);
+    Writer.W.write<uint32_t>((LLVM_VERSION_MAJOR << 16) |
+                             (LLVM_VERSION_MINOR << 8) | LLVM_VERSION_PATCH);
+  }
+  if (TargetTripleCmd.cmd != 0) {
+    Writer.W.write<uint32_t>(TargetTripleCmd.cmd);
+    Writer.W.write<uint32_t>(TargetTripleCmd.cmdsize);
+    Writer.W.write<uint32_t>(TargetTripleCmd.triple);
+    OutFile.write(TargetTriple,
+                  TargetTripleCmd.cmdsize - TargetTripleCmd.triple);
   }
 
   assert(SymtabCmd.cmd && "No symbol table.");
@@ -585,8 +617,9 @@ bool generateDsymCompanion(
   }
 
   // Write the load command for the __DWARF segment.
-  if (!createDwarfSegment(MCAsm, DwarfVMAddr, DwarfSegmentStart, DwarfSegmentSize,
-                          NumDwarfSections, Writer))
+  if (!createDwarfSegment(MCAsm, DwarfVMAddr, DwarfSegmentStart,
+                          DwarfSegmentSize, NumDwarfSections, Writer,
+                          AllowSectionHeaderOffsetOverflow))
     return false;
 
   assert(OutFile.tell() == LoadCommandSize + HeaderSize);

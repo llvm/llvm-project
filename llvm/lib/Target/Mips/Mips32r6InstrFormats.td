@@ -29,7 +29,7 @@ class MipsR6Arch<string opstr> {
   string BaseOpcode = opstr;
 }
 
-class MipsR6Inst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther> {
+class MipsR6Inst : MipsInst<(outs), (ins), "", [], FrmOther> {
   let DecoderNamespace = "Mips32r6_64r6";
   let EncodingPredicates = [HasStdEnc];
 }
@@ -331,10 +331,9 @@ class SPECIAL3_2R_FM<OPCODE6 Operation> : MipsR6Inst {
 }
 
 class SPECIAL3_MEM_FM<OPCODE6 Operation> : MipsR6Inst {
-  bits<21> addr;
   bits<5> hint;
-  bits<5> base = addr{20-16};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
 
   bits<32> Inst;
 
@@ -497,9 +496,8 @@ class SPECIAL3_DALIGN_FM<OPCODE6 Operation> : MipsR6Inst {
 
 class SPECIAL3_LL_SC_FM<OPCODE6 Operation> : MipsR6Inst {
   bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
 
   bits<32> Inst;
 
@@ -508,8 +506,6 @@ class SPECIAL3_LL_SC_FM<OPCODE6 Operation> : MipsR6Inst {
   let Inst{20-16} = rt;
   let Inst{15-7} = offset;
   let Inst{5-0} = Operation.Value;
-
-  string DecoderMethod = "DecodeSpecial3LlSc";
 }
 
 class SPECIAL_LSA_FM<OPCODE6 Operation> : MipsR6Inst {
@@ -574,9 +570,8 @@ class JR_HB_R6_FM<OPCODE6 Operation> : MipsR6Inst {
 
 class COP2LDST_FM<OPCODE5 Operation> : MipsR6Inst {
   bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<11> offset = addr{10-0};
+  bits<5> base;
+  bits<11> offset;
 
   bits<32> Inst;
 

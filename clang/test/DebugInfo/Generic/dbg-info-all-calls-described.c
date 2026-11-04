@@ -59,6 +59,13 @@
 // RUN:   -debug-info-kind=standalone -dwarf-version=4 \
 // RUN: | FileCheck %s -check-prefix=NO-ATTR
 
+// Disabled by feature flag (enabled by default)
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple %s -o - \
+// RUN:   -O1 -disable-llvm-passes \
+// RUN:   -debug-info-kind=standalone -dwarf-version=5 \
+// RUN:   -gno-call-site-info \
+// RUN: | FileCheck %s -check-prefix=NO-ATTR
+
 // NO-ATTR-NOT: FlagAllCallsDescribed
 
 // HAS-ATTR-DAG: DISubprogram(name: "declaration1", {{.*}}, spFlags: DISPFlagOptimized)

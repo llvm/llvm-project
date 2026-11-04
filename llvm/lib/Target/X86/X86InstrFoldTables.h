@@ -44,6 +44,10 @@ const X86FoldTableEntry *lookupTwoAddrFoldTable(unsigned RegOp);
 // operand OpNum.
 const X86FoldTableEntry *lookupFoldTable(unsigned RegOp, unsigned OpNum);
 
+// Check if an instruction is unsafe for masked-load folding when the load
+// and instruction have the same mask.
+bool isNonFoldableWithSameMask(unsigned RegOp);
+
 // Look up the broadcast folding table entry for folding a broadcast with
 // operand OpNum.
 const X86FoldTableEntry *lookupBroadcastFoldTable(unsigned RegOp,

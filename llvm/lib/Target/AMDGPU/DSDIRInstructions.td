@@ -177,22 +177,26 @@ defm LDS_PARAM_LOAD : DSDIR_Real_gfx11<0x0>;
 defm LDS_DIRECT_LOAD : DSDIR_Real_gfx11<0x1>;
 
 //===----------------------------------------------------------------------===//
-// GFX12+
+// GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx12<bits<2> op> {
+multiclass DSDIR_Real<GFXGen Gen, bits<2> op> {
   defvar lds = !cast<DSDIR_Pseudo>(NAME);
-  def _gfx12 : DSDIR_Real<lds, lds.InOperandList,
-                          VDSDIR_getAsm<lds.is_direct>.ret,
-                          SIEncodingFamily.GFX12>,
-               VDSDIRe<op, lds.is_direct> {
-    let AssemblerPredicate = isGFX12Plus;
-    let DecoderNamespace = "GFX12";
+  def Gen.Suffix : DSDIR_Real<lds, lds.InOperandList,
+                              VDSDIR_getAsm<lds.is_direct>.ret,
+                              Gen.Subtarget>,
+                   VDSDIRe<op, lds.is_direct> {
+    let AssemblerPredicate = Gen.AssemblerPredicate;
+    let DecoderNamespace = Gen.DecoderNamespace;
   }
 }
 
-defm DS_PARAM_LOAD : DSDIR_Real_gfx12<0x0>;
-defm DS_DIRECT_LOAD : DSDIR_Real_gfx12<0x1>;
+multiclass DSDIR_Real_gfx12_gfx13<bits<2> op> :
+  DSDIR_Real<GFX12Gen, op>,
+  DSDIR_Real<GFX13Gen, op>;
+
+defm DS_PARAM_LOAD  : DSDIR_Real_gfx12_gfx13<0x0>;
+defm DS_DIRECT_LOAD : DSDIR_Real_gfx12_gfx13<0x1>;
 
 let SubtargetPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"lds_param_load", "ds_param_load">;

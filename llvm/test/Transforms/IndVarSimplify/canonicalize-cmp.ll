@@ -21,7 +21,7 @@ define i32 @test_01(i32 %a, i32 %b, ptr %p) {
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[B3:%.*]], label [[B4:%.*]]
 ; CHECK:       b3:
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[P]], align 4
@@ -89,7 +89,7 @@ define i32 @test_02(i32 %a, i32 %b, ptr %p) {
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 100, [[IV]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 100, [[IV]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[B3:%.*]], label [[B4:%.*]]
 ; CHECK:       b3:
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[P]], align 4
@@ -343,14 +343,13 @@ define void @slt_no_smax_needed(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i32 [[ADD_1]], 8
 ; CHECK-NEXT:    br i1 [[PRE]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SHR]], i32 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i32 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[SMAX]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[SHR]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -385,14 +384,13 @@ define void @ult_no_umax_needed(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i32 [[ADD_1]], 8
 ; CHECK-NEXT:    br i1 [[PRE]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SHR]], i32 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i32 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[UMAX]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[SHR]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]

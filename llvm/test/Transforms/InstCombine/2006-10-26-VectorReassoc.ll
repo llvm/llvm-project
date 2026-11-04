@@ -35,12 +35,10 @@ define <4 x float> @test_fmul_reassoc_nsz(<4 x float> %V) {
 }
 
 ; (V * C1) * C2 => V * (C1 * C2)
-; TODO: This doesn't require 'nsz'.  It should fold to V * { 1.0, 4.0e+05, -9.0, 16.0 }
 define <4 x float> @test_fmul_reassoc(<4 x float> %V) {
 ; CHECK-LABEL: @test_fmul_reassoc(
-; CHECK-NEXT:     [[TMP1:%.*]] = fmul reassoc <4 x float> [[V:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>
-; CHECK-NEXT:     [[TMP2:%.*]] = fmul reassoc <4 x float> [[TMP1]], <float 1.000000e+00, float 2.000000e+05, float -3.000000e+00, float 4.000000e+00>
-; CHECK-NEXT:     ret <4 x float> [[TMP2]]
+; CHECK: [[TMP1:%.*]] = fmul reassoc <4 x float> %V, <float 1.000000e+00, float 4.000000e+05, float -9.000000e+00, float 1.600000e+01>
+; CHECK-NEXT:     ret <4 x float> [[TMP1]]
         %Y = fmul reassoc <4 x float> %V, < float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00 >
         %Z = fmul reassoc <4 x float> %Y, < float 1.000000e+00, float 2.000000e+05, float -3.000000e+00, float 4.000000e+00 >
         ret <4 x float> %Z

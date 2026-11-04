@@ -312,23 +312,114 @@ define float @repeated_div_recip_allowed_sel(i1 %pred, float %a, float %b, float
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b8 %rs1, [repeated_div_recip_allowed_sel_param_0];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_recip_allowed_sel_param_1];
-; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_recip_allowed_sel_param_2];
-; CHECK-NEXT:    selp.f32 %r3, %r1, %r2, %p1;
-; CHECK-NEXT:    ld.param.b32 %r4, [repeated_div_recip_allowed_sel_param_3];
-; CHECK-NEXT:    div.rn.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    mov.b64 %rd1, repeated_div_recip_allowed_sel_param_2;
+; CHECK-NEXT:    mov.b64 %rd2, repeated_div_recip_allowed_sel_param_1;
+; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
+; CHECK-NEXT:    ld.param.b32 %r1, [%rd3];
+; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_recip_allowed_sel_param_3];
+; CHECK-NEXT:    div.rn.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %x = fdiv arcp float %a, %divisor
   %y = fdiv arcp float %b, %divisor
   %w = select i1 %pred, float %x, float %y
   ret float %w
+}
+
+define void @repeated_div_mixed_contract(
+; CHECK-LABEL: repeated_div_mixed_contract(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [repeated_div_mixed_contract_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_mixed_contract_param_4];
+; CHECK-NEXT:    rcp.rn.f32 %r2, %r1;
+; CHECK-NEXT:    ld.param.b32 %r3, [repeated_div_mixed_contract_param_2];
+; CHECK-NEXT:    mul.f32 %r4, %r3, %r2;
+; CHECK-NEXT:    ld.param.b64 %rd2, [repeated_div_mixed_contract_param_1];
+; CHECK-NEXT:    ld.param.b32 %r5, [repeated_div_mixed_contract_param_3];
+; CHECK-NEXT:    mul.rn.f32 %r6, %r5, %r2;
+; CHECK-NEXT:    ld.param.b32 %r7, [repeated_div_mixed_contract_param_5];
+; CHECK-NEXT:    add.f32 %r8, %r6, %r7;
+; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
+; CHECK-NEXT:    st.global.b32 [%rd2], %r8;
+; CHECK-NEXT:    ret;
+    ptr addrspace(1) %out, ptr addrspace(1) %sum_out,
+    float %a, float %b, float %divisor, float %c) {
+  %x = fdiv arcp contract float %a, %divisor
+  %y = fdiv arcp float %b, %divisor
+  %sum = fadd contract float %y, %c
+  store float %x, ptr addrspace(1) %out
+  store float %sum, ptr addrspace(1) %sum_out
+  ret void
+}
+
+define void @repeated_div_mixed_contract_reversed(
+; CHECK-LABEL: repeated_div_mixed_contract_reversed(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [repeated_div_mixed_contract_reversed_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_mixed_contract_reversed_param_4];
+; CHECK-NEXT:    rcp.rn.f32 %r2, %r1;
+; CHECK-NEXT:    ld.param.b32 %r3, [repeated_div_mixed_contract_reversed_param_3];
+; CHECK-NEXT:    mul.rn.f32 %r4, %r3, %r2;
+; CHECK-NEXT:    ld.param.b64 %rd2, [repeated_div_mixed_contract_reversed_param_1];
+; CHECK-NEXT:    ld.param.b32 %r5, [repeated_div_mixed_contract_reversed_param_2];
+; CHECK-NEXT:    mul.f32 %r6, %r5, %r2;
+; CHECK-NEXT:    ld.param.b32 %r7, [repeated_div_mixed_contract_reversed_param_5];
+; CHECK-NEXT:    add.f32 %r8, %r4, %r7;
+; CHECK-NEXT:    st.global.b32 [%rd1], %r6;
+; CHECK-NEXT:    st.global.b32 [%rd2], %r8;
+; CHECK-NEXT:    ret;
+    ptr addrspace(1) %out, ptr addrspace(1) %sum_out,
+    float %a, float %b, float %divisor, float %c) {
+  %y = fdiv arcp float %b, %divisor
+  %x = fdiv arcp contract float %a, %divisor
+  %sum = fadd contract float %y, %c
+  store float %x, ptr addrspace(1) %out
+  store float %sum, ptr addrspace(1) %sum_out
+  ret void
+}
+
+define void @repeated_div_contract(
+; CHECK-LABEL: repeated_div_contract(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [repeated_div_contract_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_contract_param_4];
+; CHECK-NEXT:    rcp.rn.f32 %r2, %r1;
+; CHECK-NEXT:    ld.param.b32 %r3, [repeated_div_contract_param_2];
+; CHECK-NEXT:    mul.f32 %r4, %r3, %r2;
+; CHECK-NEXT:    ld.param.b64 %rd2, [repeated_div_contract_param_1];
+; CHECK-NEXT:    ld.param.b32 %r5, [repeated_div_contract_param_3];
+; CHECK-NEXT:    ld.param.b32 %r6, [repeated_div_contract_param_5];
+; CHECK-NEXT:    fma.rn.f32 %r7, %r5, %r2, %r6;
+; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
+; CHECK-NEXT:    st.global.b32 [%rd2], %r7;
+; CHECK-NEXT:    ret;
+    ptr addrspace(1) %out, ptr addrspace(1) %sum_out,
+    float %a, float %b, float %divisor, float %c) {
+  %x = fdiv arcp contract float %a, %divisor
+  %y = fdiv arcp contract float %b, %divisor
+  %sum = fadd contract float %y, %c
+  store float %x, ptr addrspace(1) %out
+  store float %sum, ptr addrspace(1) %sum_out
+  ret void
 }
 
 define float @repeated_div_recip_allowed_ftz(i1 %pred, float %a, float %b, float %divisor) #1 {
@@ -364,18 +455,20 @@ define float @repeated_div_recip_allowed_ftz_sel(i1 %pred, float %a, float %b, f
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b8 %rs1, [repeated_div_recip_allowed_ftz_sel_param_0];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_recip_allowed_ftz_sel_param_1];
-; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_recip_allowed_ftz_sel_param_2];
-; CHECK-NEXT:    selp.f32 %r3, %r1, %r2, %p1;
-; CHECK-NEXT:    ld.param.b32 %r4, [repeated_div_recip_allowed_ftz_sel_param_3];
-; CHECK-NEXT:    div.rn.ftz.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    mov.b64 %rd1, repeated_div_recip_allowed_ftz_sel_param_2;
+; CHECK-NEXT:    mov.b64 %rd2, repeated_div_recip_allowed_ftz_sel_param_1;
+; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
+; CHECK-NEXT:    ld.param.b32 %r1, [%rd3];
+; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_recip_allowed_ftz_sel_param_3];
+; CHECK-NEXT:    div.rn.ftz.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %x = fdiv arcp float %a, %divisor
   %y = fdiv arcp float %b, %divisor
@@ -397,7 +490,7 @@ define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) {
 ; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_fast_param_1];
 ; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_fast_param_3];
 ; CHECK-NEXT:    rcp.approx.f32 %r3, %r2;
-; CHECK-NEXT:    mul.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    mul.rn.f32 %r4, %r1, %r3;
 ; CHECK-NEXT:    ld.param.b32 %r5, [repeated_div_fast_param_2];
 ; CHECK-NEXT:    mul.f32 %r6, %r5, %r3;
 ; CHECK-NEXT:    mul.f32 %r7, %r4, %r6;
@@ -416,18 +509,20 @@ define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b8 %rs1, [repeated_div_fast_sel_param_0];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_fast_sel_param_1];
-; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_fast_sel_param_2];
-; CHECK-NEXT:    selp.f32 %r3, %r1, %r2, %p1;
-; CHECK-NEXT:    ld.param.b32 %r4, [repeated_div_fast_sel_param_3];
-; CHECK-NEXT:    div.approx.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    mov.b64 %rd1, repeated_div_fast_sel_param_2;
+; CHECK-NEXT:    mov.b64 %rd2, repeated_div_fast_sel_param_1;
+; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
+; CHECK-NEXT:    ld.param.b32 %r1, [%rd3];
+; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_fast_sel_param_3];
+; CHECK-NEXT:    div.approx.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %x = fdiv afn float %a, %divisor
   %y = fdiv afn float %b, %divisor
@@ -449,7 +544,7 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
 ; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_fast_ftz_param_1];
 ; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_fast_ftz_param_3];
 ; CHECK-NEXT:    rcp.approx.ftz.f32 %r3, %r2;
-; CHECK-NEXT:    mul.ftz.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    mul.rn.ftz.f32 %r4, %r1, %r3;
 ; CHECK-NEXT:    ld.param.b32 %r5, [repeated_div_fast_ftz_param_2];
 ; CHECK-NEXT:    mul.ftz.f32 %r6, %r5, %r3;
 ; CHECK-NEXT:    mul.ftz.f32 %r7, %r4, %r6;
@@ -468,18 +563,20 @@ define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %div
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b8 %rs1, [repeated_div_fast_ftz_sel_param_0];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [repeated_div_fast_ftz_sel_param_1];
-; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_fast_ftz_sel_param_2];
-; CHECK-NEXT:    selp.f32 %r3, %r1, %r2, %p1;
-; CHECK-NEXT:    ld.param.b32 %r4, [repeated_div_fast_ftz_sel_param_3];
-; CHECK-NEXT:    div.approx.ftz.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    mov.b64 %rd1, repeated_div_fast_ftz_sel_param_2;
+; CHECK-NEXT:    mov.b64 %rd2, repeated_div_fast_ftz_sel_param_1;
+; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
+; CHECK-NEXT:    ld.param.b32 %r1, [%rd3];
+; CHECK-NEXT:    ld.param.b32 %r2, [repeated_div_fast_ftz_sel_param_3];
+; CHECK-NEXT:    div.approx.ftz.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %x = fdiv afn float %a, %divisor
   %y = fdiv afn float %b, %divisor
@@ -495,7 +592,7 @@ define float @frem(float %a, float %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [frem_param_1];
-; CHECK-NEXT:    div.approx.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    div.rn.f32 %r3, %r1, %r2;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
@@ -513,7 +610,7 @@ define float @frem_ftz(float %a, float %b) #1 {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_ftz_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [frem_ftz_param_1];
-; CHECK-NEXT:    div.approx.ftz.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    div.rn.ftz.f32 %r3, %r1, %r2;
 ; CHECK-NEXT:    cvt.rzi.ftz.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.ftz.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.ftz.f32 %r6, %r5, %r2, %r1;
@@ -537,8 +634,8 @@ define double @frem_f64(double %a, double %b) {
 ; CHECK-NEXT:    fma.rn.f64 %rd6, %rd5, %rd2, %rd1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
-  %rem = frem ninf double %a, %b
+  %rem = frem afn ninf double %a, %b
   ret double %rem
 }
 
-attributes #1 = { "denormal-fp-math-f32" = "preserve-sign" }
+attributes #1 = { denormal_fpenv(float: preservesign) }

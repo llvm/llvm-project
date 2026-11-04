@@ -1,0 +1,67 @@
+# RUN: yaml2obj %s 2>&1 | obj2yaml 2>&1 | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        2100
+  PartCount:       9
+  PartOffsets:     [68, 84, 100, 116, 244, 1940, 1968, 2020, 2064]
+Parts:
+  - Name:            FKE0
+    Size:            8
+  - Name:            FKE1
+    Size:            8
+  - Name:            FKE2
+    Size:            8
+  - Name:            FKE3
+    Size:            120
+  - Name:            FKE4
+    Size:            1688
+  - Name:            FKE5
+    Size:            20
+  - Name:            ILDN
+    Size:            44
+    DebugName:
+      Flags:           0
+      NameLength:      36
+      DebugName:       0b40fc8650d90fa2e9fd5cadc8eaaace.pdb
+  - Name:            VERS
+    Size:            36
+    CompilerVersion:
+      Major:           1
+      Minor:           10
+      IsDebugBuild:    true
+      IsValidated:     false
+      CommitCount:     5267
+      ContentSizeInBytes: 20
+
+      CommitSha:       21f060b7
+      CustomVersionString: 1.9.0.1526
+  - Name:            ILDB
+    Size:            28
+    Program:
+      MajorVersion:    6
+      MinorVersion:    5
+      ShaderKind:      5
+      Size:            7
+      DXILMajorVersion: 1
+      DXILMinorVersion: 5
+      DXILSize:        4
+      DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+...
+
+# CHECK:        - Name:            VERS
+# CHECK-NEXT:     Size:            36
+# CHECK-NEXT:     CompilerVersion:
+# CHECK-NEXT:       Major:           1
+# CHECK-NEXT:       Minor:           10
+# CHECK-NEXT:       IsDebugBuild:    true
+# CHECK-NEXT:       IsValidated:     false
+# CHECK-NEXT:       CommitCount:     5267
+# CHECK-NEXT:       ContentSizeInBytes: 20
+# CHECK-NEXT:       CommitSha:       21f060b7
+# CHECK-NEXT:       CustomVersionString: 1.9.0.1526

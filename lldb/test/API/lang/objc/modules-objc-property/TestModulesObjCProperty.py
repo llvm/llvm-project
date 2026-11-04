@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @no_debug_info_test
+    @skipIf(compiler="clang", compiler_version=["<", "19.0"])
     def test_conflicting_properties(self):
         """Tests receiving two properties with the same name from modules."""
         self.build()

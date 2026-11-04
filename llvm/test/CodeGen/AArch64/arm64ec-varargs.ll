@@ -49,7 +49,7 @@ define void @varargs_caller() nounwind {
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_callee"
 ; CHECK-NEXT:  "#varargs_callee" = varargs_callee
 ; CHECK-NEXT:    bl "#varargs_callee"
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   call void (double, ...) @varargs_callee(double 1.0, i32 2, double 3.0, i32 4, double 5.0, <2 x double> <double 0.0, double 0.0>)
@@ -82,7 +82,7 @@ define void @varargs_many_argscalleer() nounwind {
 ; CHECK-NEXT:    mov x2, #4613937818241073152 // =0x4008000000000000
 ; CHECK-NEXT:    mov x4, sp
 ; CHECK-NEXT:    mov w5, #16 // =0x10
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    stp x9, x8, [sp]
 ; CHECK-NEXT:    stp q0, q0, [sp, #16]
 ; CHECK-NEXT:    .weak_anti_dep varargs_many_argscallee
@@ -90,7 +90,7 @@ define void @varargs_many_argscalleer() nounwind {
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_many_argscallee"
 ; CHECK-NEXT:  "#varargs_many_argscallee" = varargs_many_argscallee
 ; CHECK-NEXT:    bl "#varargs_many_argscallee"
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   call <2 x double> (double, double, double, <2 x double>, <2 x double>, ...)
@@ -120,7 +120,7 @@ define void @varargs_caller_tail() nounwind {
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_callee"
 ; CHECK-NEXT:  "#varargs_callee" = varargs_callee
 ; CHECK-NEXT:    bl "#varargs_callee"
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    add x4, sp, #48
 ; CHECK-NEXT:    mov x0, #4607182418800017408 // =0x3ff0000000000000
 ; CHECK-NEXT:    mov w1, #4 // =0x4
@@ -155,5 +155,36 @@ define void @varargs_thunk(ptr noundef %0, ...) "thunk" {
   %vtable = load ptr, ptr %0, align 8
   %vtablefn = load ptr, ptr %vtable, align 8
   musttail call void (ptr, ...) %vtablefn(ptr noundef %0, ...)
+  ret void
+}
+
+declare tailcc void @callee_9_variadic(i64, i64, i64, i64, i64, i64, i64, i64, i64, ...)
+
+define tailcc void @caller_8_args(i64, i64, i64, i64, i64, i64, i64, i64) {
+; CHECK-LABEL: caller_8_args:
+; CHECK:       .seh_proc caller_8_args
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    .seh_endprologue
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    mov x4, sp
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    mov w1, #2 // =0x2
+; CHECK-NEXT:    mov w2, #3 // =0x3
+; CHECK-NEXT:    mov w3, #4 // =0x4
+; CHECK-NEXT:    mov w6, #7 // =0x7
+; CHECK-NEXT:    mov w7, #8 // =0x8
+; CHECK-NEXT:    mov w5, #16 // =0x10
+; CHECK-NEXT:    str x8, [sp]
+; CHECK-NEXT:    .weak_anti_dep callee_9_variadic
+; CHECK-NEXT:  callee_9_variadic = "#callee_9_variadic"
+; CHECK-NEXT:    .weak_anti_dep "#callee_9_variadic"
+; CHECK-NEXT:  "#callee_9_variadic" = callee_9_variadic
+; CHECK-NEXT:    b "#callee_9_variadic"
+; CHECK-NEXT:    .seh_endfunclet
+; CHECK-NEXT:    .seh_endproc
+entry:
+  tail call tailcc void (i64, i64, i64, i64, i64, i64, i64, i64, i64, ...) @callee_9_variadic(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
 }

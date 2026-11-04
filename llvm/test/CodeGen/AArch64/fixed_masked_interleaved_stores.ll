@@ -15,14 +15,14 @@ define void @foo_st2_v16i8(<16 x i1> %mask, <16 x i8> %val1, <16 x i8> %val2, pt
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v3.16b, v3.16b, v4.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    ext v4.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v5.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v3.16b, v3.16b, v4.16b
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v5.16b
-; CHECK-NEXT:    addv h3, v3.8h
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    addp v3.16b, v3.16b, v3.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v3.16b, v3.16b, v3.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v3.16b, v3.16b, v3.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    umov w9, v3.h[0]
+; CHECK-NEXT:    umov w8, v0.h[0]
 ; CHECK-NEXT:    zip1 v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    bfi w8, w9, #16, #16
 ; CHECK-NEXT:    tbnz w8, #0, .LBB0_33
@@ -234,11 +234,11 @@ define void @foo_st2_v8i16(<8 x i1> %mask, <8 x i16> %val1, <8 x i16> %val2, ptr
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    addv h3, v0.8h
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    umov w8, v0.h[0]
 ; CHECK-NEXT:    zip1 v0.8h, v1.8h, v2.8h
-; CHECK-NEXT:    fmov w8, s3
 ; CHECK-NEXT:    tbnz w8, #0, .LBB1_17
 ; CHECK-NEXT:  // %bb.1: // %else
 ; CHECK-NEXT:    tbnz w8, #1, .LBB1_18
@@ -345,10 +345,11 @@ define void @foo_st2_v8i16(<8 x i1> %mask, <8 x i16> %val1, <8 x i16> %val2, ptr
 define void @foo_st2_v4i32(<4 x i1> %mask, <4 x i32> %val1, <4 x i32> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    zip1 v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v3.8b
@@ -413,10 +414,12 @@ define void @foo_st2_v4i32(<4 x i1> %mask, <4 x i32> %val1, <4 x i32> %val2, ptr
 define void @foo_st2_v2i64(<2 x i1> %mask, <2 x i64> %val1, <2 x i64> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v3.2s, v0.s[1]
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v3.4h
 ; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v3.8b

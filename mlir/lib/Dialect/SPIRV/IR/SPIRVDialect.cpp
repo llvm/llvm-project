@@ -29,6 +29,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include <optional>
+
 using namespace mlir;
 using namespace mlir::spirv;
 
@@ -127,11 +129,7 @@ void SPIRVDialect::initialize() {
   registerAttributes();
   registerTypes();
 
-  // Add SPIR-V ops.
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.cpp.inc"
-      >();
+  registerSPIRVDialectOperations(this);
 
   addInterfaces<SPIRVInlinerInterface>();
 
@@ -141,7 +139,7 @@ void SPIRVDialect::initialize() {
 }
 
 std::string SPIRVDialect::getAttributeName(Decoration decoration) {
-  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration));
+  return getDecorationString(decoration);
 }
 
 //===----------------------------------------------------------------------===//
@@ -167,29 +165,45 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  // Allow SPIR-V dialect types
+  // Allow SPIR-V dialect types.
   if (&type.getDialect() == &dialect)
     return type;
 
-  // Check other allowed types
-  if (auto t = llvm::dyn_cast<FloatType>(type)) {
-    // TODO: All float types are allowed for now, but this should be fixed.
-  } else if (auto t = llvm::dyn_cast<IntegerType>(type)) {
+  // Check other allowed types.
+  if (auto t = dyn_cast<FloatType>(type)) {
+    if (!ScalarType::isValid(t)) {
+      parser.emitError(typeLoc,
+                       "only 8/16/32/64-bit float type allowed but found ")
+          << type;
+      return Type();
+    }
+  } else if (auto t = dyn_cast<IntegerType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
                        "only 1/8/16/32/64-bit integer type allowed but found ")
           << type;
       return Type();
     }
-  } else if (auto t = llvm::dyn_cast<VectorType>(type)) {
+  } else if (auto t = dyn_cast<VectorType>(type)) {
     if (t.getRank() != 1) {
       parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
+      return Type();
+    }
+    if (t.getNumElements() < 2) {
+      parser.emitError(typeLoc, "SPIR-V does not allow one-element vectors");
       return Type();
     }
     if (t.getNumElements() > 4) {
       parser.emitError(
           typeLoc, "vector length has to be less than or equal to 4 but found ")
           << t.getNumElements();
+      return Type();
+    }
+    if (!isa<ScalarType>(t.getElementType())) {
+      parser.emitError(
+          typeLoc,
+          "vector element type must be a SPIR-V scalar type but found ")
+          << t.getElementType();
       return Type();
     }
   } else if (auto t = dyn_cast<TensorArmType>(type)) {
@@ -215,7 +229,7 @@ static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  if (auto t = llvm::dyn_cast<VectorType>(type)) {
+  if (auto t = dyn_cast<VectorType>(type)) {
     if (t.getRank() != 1) {
       parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
       return Type();
@@ -228,7 +242,7 @@ static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
       return Type();
     }
 
-    if (!llvm::isa<FloatType>(t.getElementType())) {
+    if (!isa<FloatType>(t.getElementType())) {
       parser.emitError(typeLoc, "matrix columns' elements must be of "
                                 "Float type, got ")
           << t.getElementType();
@@ -763,6 +777,11 @@ static Type parseStructType(SPIRVDialect const &dialect,
     Type memberType;
     if (parser.parseType(memberType))
       return Type();
+    if (!isa<SPIRVType>(memberType)) {
+      parser.emitError(parser.getNameLoc(),
+                       "member type must be a valid SPIR-V type");
+      return Type();
+    }
     memberTypes.push_back(memberType);
 
     if (succeeded(parser.parseOptionalLSquare()))
@@ -845,6 +864,10 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseRuntimeArrayType(*this, parser);
   if (keyword == "sampled_image")
     return parseSampledImageType(*this, parser);
+  if (keyword == "sampler")
+    return SamplerType::get(getContext());
+  if (keyword == "named_barrier")
+    return NamedBarrierType::get(getContext());
   if (keyword == "struct")
     return parseStructType(*this, parser);
   if (keyword == "matrix")
@@ -889,6 +912,12 @@ static void print(ImageType type, DialectAsmPrinter &os) {
 
 static void print(SampledImageType type, DialectAsmPrinter &os) {
   os << "sampled_image<" << type.getImageType() << ">";
+}
+
+static void print(SamplerType type, DialectAsmPrinter &os) { os << "sampler"; }
+
+static void print(NamedBarrierType type, DialectAsmPrinter &os) {
+  os << "named_barrier";
 }
 
 static void print(StructType type, DialectAsmPrinter &os) {
@@ -985,7 +1014,8 @@ static void print(TensorArmType type, DialectAsmPrinter &os) {
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
-            ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
+            ImageType, SampledImageType, SamplerType, NamedBarrierType,
+            StructType, MatrixType, TensorArmType>(
           [&](auto type) { print(type, os); })
       .DefaultUnreachable("Unhandled SPIR-V type");
 }
@@ -1016,13 +1046,21 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   Attribute attr = attribute.getValue();
 
   if (symbol == spirv::getEntryPointABIAttrName()) {
-    if (!llvm::isa<spirv::EntryPointABIAttr>(attr)) {
+    if (!isa<spirv::EntryPointABIAttr>(attr)) {
       return op->emitError("'")
              << symbol << "' attribute must be an entry point ABI attribute";
     }
   } else if (symbol == spirv::getTargetEnvAttrName()) {
-    if (!llvm::isa<spirv::TargetEnvAttr>(attr))
+    if (!isa<spirv::TargetEnvAttr>(attr))
       return op->emitError("'") << symbol << "' must be a spirv::TargetEnvAttr";
+  } else if (symbol == spirv::getLoopControlAttrName()) {
+    if (!isa<spirv::LoopControlAttr>(attr))
+      return op->emitError("'")
+             << symbol << "' must be a spirv::LoopControlAttr";
+  } else if (symbol == spirv::getSelectionControlAttrName()) {
+    if (!isa<spirv::SelectionControlAttr>(attr))
+      return op->emitError("'")
+             << symbol << "' must be a spirv::SelectionControlAttr";
   } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";
@@ -1039,7 +1077,7 @@ static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
   Attribute attr = attribute.getValue();
 
   if (symbol == spirv::getInterfaceVarABIAttrName()) {
-    auto varABIAttr = llvm::dyn_cast<spirv::InterfaceVarABIAttr>(attr);
+    auto varABIAttr = dyn_cast<spirv::InterfaceVarABIAttr>(attr);
     if (!varABIAttr)
       return emitError(loc, "'")
              << symbol << "' must be a spirv::InterfaceVarABIAttr";
@@ -1061,6 +1099,61 @@ static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
          << symbol << "' attribute on region argument";
 }
 
+/// Verifies FuncParamAttr decorations. A missing index denotes a function
+/// result.
+static LogicalResult verifyFunctionParameterAttributes(
+    Location loc, Type type, Attribute attr,
+    std::optional<unsigned> index = std::nullopt) {
+  auto attrs = dyn_cast<ArrayAttr>(attr);
+  if (!attrs || attrs.empty() ||
+      !llvm::all_of(attrs,
+                    llvm::IsaPred<spirv::FunctionParameterAttributeAttr>))
+    return emitError(loc, "'") << spirv::getFuncParamAttrName()
+                               << "' must be a non-empty array of "
+                                  "spirv::FunctionParameterAttributeAttr";
+
+  SmallVector<spirv::FunctionParameterAttribute, 8> seen;
+  bool hasZext = false, hasSext = false;
+  for (Attribute element : attrs) {
+    auto value =
+        cast<spirv::FunctionParameterAttributeAttr>(element).getValue();
+    if (llvm::is_contained(seen, value))
+      return emitError(loc, "duplicate function parameter attribute '")
+             << spirv::stringifyFunctionParameterAttribute(value) << "'";
+    seen.push_back(value);
+
+    switch (value) {
+    case spirv::FunctionParameterAttribute::Zext:
+    case spirv::FunctionParameterAttribute::Sext:
+      if (!isa<IntegerType>(type))
+        return emitError(loc, "function parameter attribute '")
+               << spirv::stringifyFunctionParameterAttribute(value)
+               << "' requires an integer " << (index ? "parameter" : "result");
+      hasZext |= value == spirv::FunctionParameterAttribute::Zext;
+      hasSext |= value == spirv::FunctionParameterAttribute::Sext;
+      break;
+    default:
+      if (!index)
+        return emitError(loc, "function parameter attribute '")
+               << spirv::stringifyFunctionParameterAttribute(value)
+               << "' is not valid on function results";
+      if (!isa<spirv::PointerType>(type))
+        return emitError(loc, "function parameter attribute '")
+               << spirv::stringifyFunctionParameterAttribute(value)
+               << "' requires a pointer parameter";
+      if (value == spirv::FunctionParameterAttribute::Sret && *index != 0)
+        return emitError(loc,
+                         "function parameter attribute 'Sret' requires the "
+                         "first parameter");
+      break;
+    }
+  }
+  if (hasZext && hasSext)
+    return emitError(loc, "function parameter attributes 'Zext' and 'Sext' are "
+                          "mutually exclusive");
+  return success();
+}
+
 LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
                                                      unsigned regionIndex,
                                                      unsigned argIndex,
@@ -1070,12 +1163,35 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
     return success();
   Type argType = funcOp.getArgumentTypes()[argIndex];
 
+  if (attribute.getName() == spirv::getFuncParamAlignmentAttrName()) {
+    auto alignment = dyn_cast<IntegerAttr>(attribute.getValue());
+    if (!alignment || !alignment.getType().isSignlessInteger(32))
+      return op->emitError("'")
+             << spirv::getFuncParamAlignmentAttrName()
+             << "' must be a 32-bit signless integer attribute";
+    if (!isa<spirv::PointerType>(argType))
+      return op->emitError("'") << spirv::getFuncParamAlignmentAttrName()
+                                << "' requires a pointer parameter";
+    return success();
+  }
+  if (attribute.getName() == spirv::getFuncParamAttrName())
+    return verifyFunctionParameterAttributes(op->getLoc(), argType,
+                                             attribute.getValue(), argIndex);
+
   return verifyRegionAttribute(op->getLoc(), argType, attribute);
 }
 
 LogicalResult SPIRVDialect::verifyRegionResultAttribute(
     Operation *op, unsigned /*regionIndex*/, unsigned resultIndex,
     NamedAttribute attribute) {
+  if (auto funcOp = dyn_cast<spirv::FuncOp>(op)) {
+    if (attribute.getName() == spirv::getFuncParamAttrName())
+      return verifyFunctionParameterAttributes(
+          op->getLoc(), funcOp.getResultTypes()[resultIndex],
+          attribute.getValue());
+    return op->emitError("found unsupported '")
+           << attribute.getName().strref() << "' attribute on function result";
+  }
   if (auto graphOp = dyn_cast<spirv::GraphARMOp>(op))
     return verifyRegionAttribute(
         op->getLoc(), graphOp.getResultTypes()[resultIndex], attribute);

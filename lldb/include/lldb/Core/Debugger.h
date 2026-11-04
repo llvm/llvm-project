@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_DEBUGGER_H
 #define LLDB_CORE_DEBUGGER_H
 
+#include <atomic>
 #include <cstdint>
 
 #include <memory>
@@ -16,6 +17,7 @@
 #include <vector>
 
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
@@ -28,12 +30,13 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
@@ -70,11 +73,31 @@ class Stream;
 class SymbolContext;
 class Target;
 
-/// \class Debugger Debugger.h "lldb/Core/Debugger.h"
+#ifndef NDEBUG
+/// Global properties used in the LLDB testsuite.
+struct TestingProperties : public Properties {
+  TestingProperties();
+  bool GetInjectVarLocListError() const;
+  static TestingProperties &GetGlobalTestingProperties();
+
+  /// Overwrites the testing.safe-auto-load-paths settings.
+  void SetSafeAutoLoadPaths(FileSpecList paths);
+
+  /// Appends a path to the testing.safe-auto-load-paths setting.
+  void AppendSafeAutoLoadPaths(FileSpec path);
+
+private:
+  friend Target;
+
+  /// Callers should use Debugger::GetSafeAutoLoadPaths since it
+  /// accounts for default paths configured via CMake.
+  FileSpecList GetSafeAutoLoadPaths() const;
+};
+#endif
+
 /// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
-
 class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
@@ -93,10 +116,6 @@ public:
   CreateInstance(lldb::LogOutputCallback log_callback = nullptr,
                  void *baton = nullptr);
 
-  static lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid);
-
-  static lldb::TargetSP FindTargetWithProcess(Process *process);
-
   static void Initialize(LoadPluginCallbackType load_plugin_callback);
 
   static void Terminate();
@@ -106,6 +125,9 @@ public:
   static void SettingsTerminate();
 
   static void Destroy(lldb::DebuggerSP &debugger_sp);
+
+  /// Get the build configuration as structured data.
+  static StructuredData::DictionarySP GetBuildConfiguration();
 
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
@@ -177,18 +199,18 @@ public:
   // GetSourceManager on the target instead.
   SourceManager &GetSourceManager();
 
-  lldb::TargetSP GetSelectedTarget() {
-    return m_target_list.GetSelectedTarget();
-  }
-
   /// Get the execution context representing the selected entities in the
-  /// selected target.
-  ExecutionContext GetSelectedExecutionContext();
+  /// selected target. If no target is selected, the execution context will
+  /// contain the dummy target if adopt_dummy_target is true.
+  ///
+  // Ideally, adopt_dummy_target would be the default. However, there are a
+  // bunch of operations that don't make sense on the dummy target but we lack
+  // a mechanism to enforce that. The explicit argument forces the caller to
+  // consider the dummy target.
+  ExecutionContext GetSelectedExecutionContext(bool adopt_dummy_target);
 
-  /// Similar to GetSelectedExecutionContext but returns a
-  /// ExecutionContextRef, and will hold the dummy target if no target is
-  /// currently selected.
-  ExecutionContextRef GetSelectedExecutionContextRef();
+  /// Like GetSelectedExecutionContext but returns an ExecutionContextRef.
+  ExecutionContextRef GetSelectedExecutionContextRef(bool adopt_dummy_target);
 
   /// Get accessor for the target list.
   ///
@@ -199,6 +221,8 @@ public:
   /// \return
   ///     A global shared target list.
   TargetList &GetTargetList() { return m_target_list; }
+
+  TargetGroupList &GetTargetGroupList() { return m_target_group_list; }
 
   PlatformList &GetPlatformList() { return m_platform_list; }
 
@@ -239,13 +263,17 @@ public:
 
   void ClearIOHandlers();
 
-  bool EnableLog(llvm::StringRef channel,
-                 llvm::ArrayRef<const char *> categories,
-                 llvm::StringRef log_file, uint32_t log_options,
-                 size_t buffer_size, LogHandlerKind log_handler_kind,
-                 llvm::raw_ostream &error_stream);
+  llvm::Error EnableLog(llvm::StringRef channel,
+                        llvm::ArrayRef<const char *> categories,
+                        llvm::StringRef log_file, uint32_t log_options,
+                        size_t buffer_size, LogHandlerKind log_handler_kind);
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
+
+  /// Copy this debugger's file-backed log files into the given directory, for
+  /// inclusion in a diagnostics bundle. Returns the names of the files that
+  /// were copied. Best-effort: files that cannot be copied are skipped.
+  std::vector<std::string> CopyLogFilesToDirectory(const FileSpec &dir);
 
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
@@ -280,6 +308,10 @@ public:
   uint64_t GetTerminalHeight() const;
 
   bool SetTerminalHeight(uint64_t term_height);
+
+  /// Set the terminal width and height together, so observers are notified
+  /// once with both dimensions current.
+  bool SetTerminalDimensions(uint64_t term_width, uint64_t term_height);
 
   llvm::StringRef GetPrompt() const;
 
@@ -317,11 +349,23 @@ public:
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
 
+  llvm::StringRef GetLabelAnsiPrefix() const;
+
+  llvm::StringRef GetLabelAnsiSuffix() const;
+
+  llvm::StringRef GetTitleAnsiPrefix() const;
+
+  llvm::StringRef GetTitleAnsiSuffix() const;
+
+  llvm::StringRef GetDividerAnsiPrefix() const;
+
+  llvm::StringRef GetDividerAnsiSuffix() const;
+
   llvm::StringRef GetDisabledAnsiPrefix() const;
 
   llvm::StringRef GetDisabledAnsiSuffix() const;
 
-  bool GetUseAutosuggestion() const;
+  AutosuggestionMode GetAutosuggestionMode() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;
 
@@ -336,6 +380,8 @@ public:
   bool GetUseSourceCache() const;
 
   bool SetUseSourceCache(bool use_source_cache);
+
+  bool GetMarkHiddenFrames() const;
 
   bool GetHighlightSource() const;
 
@@ -376,6 +422,10 @@ public:
   bool GetNotifyVoid() const;
 
   const std::string &GetInstanceName() const { return m_instance_name; }
+
+  /// The pool for strings handed out through the SB API that belong to this
+  /// debugger.
+  StringPoolRef GetStringPool() const { return m_string_pool; }
 
   bool GetShowInlineDiagnostics() const;
 
@@ -428,6 +478,15 @@ public:
 
   /// Redraw the statusline if enabled.
   void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
+
+  /// Whether the statusline can be drawn: show-statusline is enabled and the
+  /// output is an escape-code-capable terminal.
+  bool StatuslineSupported();
+
+  /// Discard the statusline's cached frame at its next redraw. This function
+  /// is thread-safe and takes no lock, so callers may hold the target API
+  /// mutex.
+  void FlushStatusLine();
 
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the
@@ -624,6 +683,8 @@ public:
   };
   std::optional<ProgressReport> GetCurrentProgressReport() const;
 
+  static const FileSpecList &GetDefaultSafeAutoLoadPaths();
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
@@ -683,7 +744,6 @@ protected:
   /// @}
 
   bool IsEscapeCodeCapableTTY();
-  bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);
@@ -737,6 +797,7 @@ protected:
 
   TerminalState m_terminal_state;
   TargetList m_target_list;
+  TargetGroupList m_target_group_list;
 
   PlatformList m_platform_list;
   lldb::ListenerSP m_listener_sp;
@@ -761,10 +822,13 @@ protected:
   /// Mutex protecting the m_statusline member.
   std::mutex m_statusline_mutex;
   std::optional<Statusline> m_statusline;
+  /// Raised by FlushStatusLine to request a flush at the next redraw.
+  std::atomic<bool> m_flush_statusline = false;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;
   const std::string m_instance_name;
+  StringPoolRef m_string_pool;
   static LoadPluginCallbackType g_load_plugin_callback;
   typedef std::vector<llvm::sys::DynamicLibrary> LoadedPluginsList;
   LoadedPluginsList m_loaded_plugins;
@@ -775,7 +839,6 @@ protected:
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
-  Diagnostics::CallbackID m_diagnostics_callback_id;
 
   /// Bookkeeping for command line progress events.
   /// @{

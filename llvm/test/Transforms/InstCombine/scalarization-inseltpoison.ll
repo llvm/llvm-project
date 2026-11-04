@@ -77,7 +77,7 @@ define void @scalarize_phi(ptr %n, ptr %inout) {
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    store volatile float [[TMP0]], ptr [[INOUT]], align 4
-; CHECK-NEXT:    [[TMP1]] = fmul float [[TMP0]], 0x4002A3D700000000
+; CHECK-NEXT:    [[TMP1]] = fmul float [[TMP0]], 2.330000e+00
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
@@ -112,7 +112,7 @@ define float @extract_element_binop_splat_constant_index(<4 x float> %x) {
 ;
 ; CHECK-LABEL: @extract_element_binop_splat_constant_index(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], 0x4002A3D700000000
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], 2.330000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %b = fadd <4 x float> %x, <float 0x4002A3D700000000, float 0x4002A3D700000000, float 0x4002A3D700000000, float 0x4002A3D700000000>

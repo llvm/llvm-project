@@ -10,10 +10,13 @@
 ; CHECK-SPIRV: OpName %[[#Func2:]] "_Z21convert_float_rtzfunc"
 ; CHECK-SPIRV-DAG: %[[#VoidTy:]] = OpTypeVoid
 ; CHECK-SPIRV-DAG: %[[#CharTy:]] = OpTypeInt 8
+; CHECK-SPIRV-DAG: %[[#LongTy:]] = OpTypeInt 64
 ; CHECK-SPIRV-DAG: %[[#FloatTy:]] = OpTypeFloat 32
 
 ; CHECK-SPIRV: %[[#Func]] = OpFunction %[[#VoidTy]] None %[[#]]
-; CHECK-SPIRV: %[[#ConvertId1:]] = OpUConvert %[[#CharTy]] %[[#]]
+; CHECK-SPIRV: %[[#ConvertId1:]] = OpSConvert %[[#CharTy]] %[[#]]
+; CHECK-SPIRV: %[[#]] = OpSConvert %[[#LongTy]] %[[#]]
+; CHECK-SPIRV: %[[#]] = OpUConvert %[[#LongTy]] %[[#]]
 ; CHECK-SPIRV: %[[#ConvertId2:]] = OpConvertSToF %[[#FloatTy]] %[[#]]
 ; CHECK-SPIRV: %[[#]] = OpFunctionCall %[[#VoidTy]] %[[#Func]] %[[#ConvertId2]]
 ; CHECK-SPIRV: %[[#]] = OpFunctionCall %[[#VoidTy]] %[[#Func1]] %[[#]]
@@ -44,6 +47,8 @@ entry:
   store i32 %x, ptr %x.addr, align 4
   %0 = load i32, ptr %x.addr, align 4
   call spir_func signext i8 @_Z16convert_char_rtei(i32 noundef %0)
+  call spir_func i64 @_Z12convert_longi(i32 noundef %0)
+  call spir_func i64 @_Z13convert_ulongj(i32 noundef %0)
   %call = call spir_func float @_Z13convert_floati(i32 noundef %0)
   call spir_func void @_Z18convert_float_func(float noundef %call)
   call spir_func void @_Z20convert_uint_satfunc(i32 noundef %0)
@@ -52,5 +57,9 @@ entry:
 }
 
 declare spir_func signext i8 @_Z16convert_char_rtei(i32 noundef)
+
+declare spir_func i64 @_Z12convert_longi(i32 noundef)
+
+declare spir_func i64 @_Z13convert_ulongj(i32 noundef)
 
 declare spir_func float @_Z13convert_floati(i32 noundef)

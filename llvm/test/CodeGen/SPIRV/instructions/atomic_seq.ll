@@ -25,8 +25,8 @@
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicIAdd [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_add(i32* %ptr, i32 %val) {
-  %r = atomicrmw add i32* %ptr, i32 %val seq_cst
+define i32 @test_add(ptr %ptr, i32 %val) {
+  %r = atomicrmw add ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }
 
@@ -37,8 +37,8 @@ define i32 @test_add(i32* %ptr, i32 %val) {
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicISub [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_sub(i32* %ptr, i32 %val) {
-  %r = atomicrmw sub i32* %ptr, i32 %val seq_cst
+define i32 @test_sub(ptr %ptr, i32 %val) {
+  %r = atomicrmw sub ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }
 
@@ -49,8 +49,8 @@ define i32 @test_sub(i32* %ptr, i32 %val) {
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicSMin [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_min(i32* %ptr, i32 %val) {
-  %r = atomicrmw min i32* %ptr, i32 %val seq_cst
+define i32 @test_min(ptr %ptr, i32 %val) {
+  %r = atomicrmw min ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }
 
@@ -61,8 +61,8 @@ define i32 @test_min(i32* %ptr, i32 %val) {
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicSMax [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_max(i32* %ptr, i32 %val) {
-  %r = atomicrmw max i32* %ptr, i32 %val seq_cst
+define i32 @test_max(ptr %ptr, i32 %val) {
+  %r = atomicrmw max ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }
 
@@ -73,8 +73,8 @@ define i32 @test_max(i32* %ptr, i32 %val) {
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicUMin [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_umin(i32* %ptr, i32 %val) {
-  %r = atomicrmw umin i32* %ptr, i32 %val seq_cst
+define i32 @test_umin(ptr %ptr, i32 %val) {
+  %r = atomicrmw umin ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }
 
@@ -85,8 +85,8 @@ define i32 @test_umin(i32* %ptr, i32 %val) {
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicUMax [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_umax(i32* %ptr, i32 %val) {
-  %r = atomicrmw umax i32* %ptr, i32 %val seq_cst
+define i32 @test_umax(ptr %ptr, i32 %val) {
+  %r = atomicrmw umax ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }
 
@@ -97,8 +97,8 @@ define i32 @test_umax(i32* %ptr, i32 %val) {
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicAnd [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_and(i32* %ptr, i32 %val) {
-  %r = atomicrmw and i32* %ptr, i32 %val seq_cst
+define i32 @test_and(ptr %ptr, i32 %val) {
+  %r = atomicrmw and ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }
 
@@ -109,8 +109,8 @@ define i32 @test_and(i32* %ptr, i32 %val) {
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicOr [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_or(i32* %ptr, i32 %val) {
-  %r = atomicrmw or i32* %ptr, i32 %val seq_cst
+define i32 @test_or(ptr %ptr, i32 %val) {
+  %r = atomicrmw or ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }
 
@@ -121,7 +121,7 @@ define i32 @test_or(i32* %ptr, i32 %val) {
 ; CHECK-NEXT: [[R:%.*]] = OpAtomicXor [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-define i32 @test_xor(i32* %ptr, i32 %val) {
-  %r = atomicrmw xor i32* %ptr, i32 %val seq_cst
+define i32 @test_xor(ptr %ptr, i32 %val) {
+  %r = atomicrmw xor ptr %ptr, i32 %val seq_cst
   ret i32 %r
 }

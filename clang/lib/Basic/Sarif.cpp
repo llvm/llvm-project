@@ -283,6 +283,9 @@ void SarifDocumentWriter::endRun() {
         {"defaultConfiguration", std::move(Config)}};
     if (!R.HelpURI.empty())
       Rule["helpUri"] = R.HelpURI;
+    if (!R.DeprecatedIds.empty())
+      Rule["deprecatedIds"] = json::Array(R.DeprecatedIds);
+
     Rules.emplace_back(std::move(Rule));
   }
   json::Object &Driver = *Tool.getObject("driver");
@@ -402,6 +405,14 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
       Locs.emplace_back(createLocation(createPhysicalLocation(Range)));
     }
     Ret["locations"] = std::move(Locs);
+  }
+
+  if (!Result.RelatedLocations.empty()) {
+    json::Array ReLocs;
+    for (auto &Range : Result.RelatedLocations) {
+      ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
+    }
+    Ret["relatedLocations"] = std::move(ReLocs);
   }
 
   if (!Result.PartialFingerprints.empty()) {

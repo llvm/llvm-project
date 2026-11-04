@@ -34,17 +34,8 @@ static std::optional<OptimizationLevel> mapToLevel(unsigned optLevel,
     return OptimizationLevel::O1;
 
   case 2:
-    switch (sizeLevel) {
-    case 0:
-      return OptimizationLevel::O2;
+    return OptimizationLevel::O2;
 
-    case 1:
-      return OptimizationLevel::Os;
-
-    case 2:
-      return OptimizationLevel::Oz;
-    }
-    break;
   case 3:
     return OptimizationLevel::O3;
   }
@@ -75,7 +66,7 @@ mlir::makeOptimizingTransformer(unsigned optLevel, unsigned sizeLevel,
     tuningOptions.LoopVectorization = true;
     tuningOptions.SLPVectorization = true;
 
-    PassBuilder pb(targetMachine, tuningOptions);
+    PassBuilder pb(m->getContext(), targetMachine, tuningOptions);
 
     pb.registerModuleAnalyses(mam);
     pb.registerCGSCCAnalyses(cgam);

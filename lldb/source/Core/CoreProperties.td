@@ -1,6 +1,6 @@
 include "../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "modulelist" in {
+let Definition = "modulelist", Path = "symbols" in {
   def EnableExternalLookup: Property<"enable-external-lookup", "Boolean">,
     Global,
     DefaultTrue,
@@ -14,6 +14,11 @@ let Definition = "modulelist" in {
     DefaultEnumValue<"eSymbolDownloadOff">,
     EnumValues<"OptionEnumValues(g_auto_download_enum_values)">,
     Desc<"On macOS, automatically download symbols with dsymForUUID (or an equivalent script/binary) for relevant images in the debug session.">;
+  def SharedCacheBinaryLoading: Property<"shared-cache-binary-loading", "Enum">,
+    Global,
+    DefaultEnumValue<"eSymbolSharedCacheUseHostAndInferiorSharedCache">,
+    EnumValues<"OptionEnumValues(g_shared_cache_use_enum_values)">,
+    Desc<"On macOS, lldb can use its own in-memory shared cache, or operate on shared cache binaries directly, this setting controls which are used.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -25,7 +30,11 @@ let Definition = "modulelist" in {
   def EnableLLDBIndexCache: Property<"enable-lldb-index-cache", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.">;
+    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.  Modules read out of memory are cached (enabled by default) via the symbols.enable-lldb-index-cache-memory-modules setting.">;
+  def EnableLLDBIndexCacheMemoryModules: Property<"enable-lldb-index-cache-memory-modules", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Enable symbol table caching for memory-read binaries. LLDB can cache the symbol table memory-read binaries, for improved performance in subsequent debug sessions.">;
   def LLDBIndexCachePath: Property<"lldb-index-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -46,9 +55,34 @@ let Definition = "modulelist" in {
     Global,
     DefaultFalse,
     Desc<"Enable on demand symbol loading in LLDB. LLDB will load debug info on demand for each module based on various conditions (e.g. matched breakpoint, resolved stack frame addresses and matched global variables/function symbols in symbol table) to improve performance. Please refer to docs/use/ondemand.rst for details.">;
+  def DemangledNameInfoCacheSize: Property<"demangled-name-info-cache-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<4096>,
+    Desc<"The maximum number of formatted function names to cache. A value of 0 disables the cache.">;
 }
 
-let Definition = "debugger" in {
+let Definition = "diagnostics", Path = "diagnostics" in {
+  def CollectBinaries: Property<"collect-binaries", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"When enabled, a diagnostics bundle also collects the main executable, its symbol file, and the core file (when debugging one) to help reproduce the bug. These files can be large and may contain sensitive data (a core file captures process memory), so this is off by default.">;
+}
+
+#ifndef NDEBUG
+let Definition = "testing", Path = "testing" in {
+  def InjectVarLocListError
+      : Property<"inject-variable-location-error", "Boolean">,
+        Global,
+        DefaultFalse,
+        Desc<"Used for testing LLDB only. Hide locations of local variables.">;
+  def SafeAutoloadPaths : Property<"safe-auto-load-paths", "FileSpecList">,
+                          DefaultStringValue<"">,
+                          Desc<"List of paths that LLDB will automatically "
+                               "load scripting resources from.">;
+}
+#endif
+
+let Definition = "debugger", Path = "" in {
   def AutoConfirm: Property<"auto-confirm", "Boolean">,
     Global,
     DefaultFalse,
@@ -59,7 +93,7 @@ let Definition = "debugger" in {
     Desc<"The default disassembly format string to use when disassembling instruction sequences.">;
   def FrameFormat: Property<"frame-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.cyan}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}${frame.kind}{${function.is-optimized} [opt]}{${function.is-inlined} [inlined]}{${frame.is-artificial} [artificial]}\\\\n">,
+    DefaultStringValue<"frame #${frame.index}: {${ansi.fg.cyan}${frame.pc}${ansi.normal} }{${module.file.basename}{`}}{${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}${frame.kind}{${function.is-optimized} [opt]}{${function.is-inlined} [inlined]}{${frame.is-artificial} [artificial]}\\\\n">,
     Desc<"The default frame format string to use when displaying stack frame information for threads.">;
   def NotiftVoid: Property<"notify-void", "Boolean">,
     Global,
@@ -114,6 +148,10 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will highlight the displayed source code.">;
+  def MarkHiddenFrames: Property<"mark-hidden-frames", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, LLDB will add a marker to delimit hidden frames in backtraces.">;
   def StopShowColumn: Property<"stop-show-column", "Enum">,
     DefaultEnumValue<"eStopShowColumnAnsiOrCaret">,
     EnumValues<"OptionEnumValues(s_stop_show_column_values)">,
@@ -121,7 +159,7 @@ let Definition = "debugger" in {
   def StopShowColumnAnsiPrefix: Property<"stop-show-column-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.underline}">,
-    Desc<"When displaying the column marker in a color-enabled terminal, use the ANSI terminal code specified in this format at the immediately before the column to be marked.">;
+    Desc<"When displaying the column marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the column to be marked.">;
   def StopShowColumnAnsiSuffix: Property<"stop-show-column-ansi-suffix", "String">,
     Global,
     DefaultStringValue<"${ansi.normal}">,
@@ -129,7 +167,7 @@ let Definition = "debugger" in {
   def StopShowLineMarkerAnsiPrefix: Property<"stop-show-line-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.fg.yellow}">,
-    Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format at the immediately before the line to be marked.">;
+    Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the line to be marked.">;
   def StopShowLineMarkerAnsiSuffix: Property<"stop-show-line-ansi-suffix", "String">,
     Global,
     DefaultStringValue<"${ansi.normal}">,
@@ -165,7 +203,7 @@ let Definition = "debugger" in {
   def ShowProgress
       : Property<"show-progress", "Boolean">,
         Global,
-        DefaultFalse,
+        DefaultTrue,
         Desc<"Whether to show progress using Operating System Command (OSC) "
              "Sequences in supporting terminal emulators.">;
   def ShowProgressAnsiPrefix: Property<"show-progress-ansi-prefix", "String">,
@@ -176,6 +214,30 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the progress message.">;
+  def LabelAnsiPrefix: Property<"label-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.green}${ansi.bold}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the label.">;
+  def LabelAnsiSuffix: Property<"label-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the label.">;
+  def TitleAnsiPrefix: Property<"title-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.cyan}${ansi.bold}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the title.">;
+  def TitleAnsiSuffix: Property<"title-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the title.">;
+  def DividerAnsiPrefix: Property<"divider-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the divider.">;
+  def DividerAnsiSuffix: Property<"divider-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the divider.">;
   def ShowStatusline: Property<"show-statusline", "Boolean">,
     Global,
     DefaultTrue,
@@ -205,7 +267,7 @@ let Definition = "debugger" in {
       : Property<"disable-ansi-suffix", "String">,
         Global,
         DefaultStringValue<"${ansi.normal}">,
-        Desc<"When somehing has been disabled in a color-enabled terminal, use "
+        Desc<"When something has been disabled in a color-enabled terminal, use "
              "the ANSI terminal code specified immediately after whatever has "
              "been disabled.">;
 
@@ -235,12 +297,13 @@ let Definition = "debugger" in {
     Desc<"If true, LLDB will automatically escape non-printable and escape characters when formatting strings.">;
   def FrameFormatUnique: Property<"frame-format-unique", "FormatEntity">,
     Global,
-    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.cyan}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}${frame.kind}{${function.is-optimized} [opt]}{${function.is-inlined} [inlined]}{${frame.is-artificial} [artificial]}\\\\n">,
+    DefaultStringValue<"frame #${frame.index}: {${ansi.fg.cyan}${frame.pc}${ansi.normal} }{${module.file.basename}{`}}{${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}${frame.kind}{${function.is-optimized} [opt]}{${function.is-inlined} [inlined]}{${frame.is-artificial} [artificial]}\\\\n">,
     Desc<"The default frame format string to use when displaying stack frame information for threads from thread backtrace unique.">;
-  def ShowAutosuggestion: Property<"show-autosuggestion", "Boolean">,
+  def ShowAutosuggestion: Property<"show-autosuggestion", "Enum">,
     Global,
-    DefaultFalse,
-    Desc<"If true, LLDB will show suggestions to complete the command the user typed. Suggestions may be accepted using Ctrl-F.">;
+    DefaultEnumValue<"eAutosuggestionOff">,
+    EnumValues<"OptionEnumValues(g_show_autosuggestion_enum_values)">,
+    Desc<"Controls whether LLDB shows suggestions to complete the command the user typed. Suggestions may be accepted using Ctrl-F. Use 'true' to suggest from previously entered commands, 'tab-mode' to suggest the prefix that would be inserted by tab completion, or 'false' to disable suggestions.">;
   def ShowAutosuggestionAnsiPrefix: Property<"show-autosuggestion-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.faint}">,

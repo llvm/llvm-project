@@ -1,0 +1,25 @@
+# This test verifies that LLDB can read a .dwp file that has a DWARF32 compile
+# unit that has a DWARF64 .debug_str_offsets table. This will be needed for
+# llvm-dwp changes that will start emitting 64 bit line tables for compile units
+# that have strings in the .debug_str section whose string offsets exceed 4GB.
+# By having a 64 bit .debug_str_offsets table, we can emit .debug_str sections
+# with no size limits.
+
+# RUN: yaml2obj %S/Inputs/dwp-str-offsets-dwarf64-exe.yaml > %t
+# RUN: yaml2obj %S/Inputs/dwp-str-offsets-dwarf64-dwp.yaml > %t.dwp
+# RUN: %lldb %t -b \
+# RUN:      -o 'image lookup --verbose --address 0x0000000000201172' | \
+# RUN:      FileCheck %s
+
+# CHECK:      (lldb) image lookup --verbose --address 0x0000000000201172
+# CHECK-NEXT:      Address: dwp-str-offsets-dwarf64.test.tmp[0x0000000000201172] (dwp-str-offsets-dwarf64.test.tmp.PT_LOAD[1]..text + 18)
+# CHECK-NEXT:      Summary: dwp-str-offsets-dwarf64.test.tmp`main + 18 at main.minimal.cpp:2:3
+# CHECK-NEXT:       Module: file = "{{.*[\\/]}}dwp-str-offsets-dwarf64.test.tmp", arch = "x86_64"
+# CHECK-NEXT:  CompileUnit: id = {0x00000000}, file = "main.minimal.cpp", language = "<not loaded>"
+# CHECK-NEXT:     Function: id = {0x7fffff000000001a}, name = "main", range = [0x0000000000201160-0x0000000000201176)
+# CHECK-NEXT:     FuncType: id = {0x7fffff000000001a}, byte-size = 0, decl = main.minimal.cpp:1, compiler_type = "int (int, const char **)"
+# CHECK-NEXT:       Blocks: id = {0x7fffff000000001a}, range = [0x00201160-0x00201176)
+# CHECK-NEXT:    LineEntry: [0x0000000000201172-0x0000000000201174): main.minimal.cpp:2:3
+# CHECK-NEXT:       Symbol: id = {0x00000002}, range = [0x0000000000201160-0x0000000000201176), name="main"
+# CHECK-NEXT:     Variable: id = {0x7fffff0000000029}, name = "argc", type = "int", valid ranges = <block>, location = DW_OP_fbreg -8, decl = main.minimal.cpp:1
+# CHECK-NEXT:     Variable: id = {0x7fffff0000000034}, name = "argv", type = "const char **", valid ranges = <block>, location = DW_OP_fbreg -16, decl = main.minimal.cpp:1

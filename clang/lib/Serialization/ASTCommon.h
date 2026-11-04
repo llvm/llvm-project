@@ -39,10 +39,13 @@ enum class DeclUpdateKind {
   StaticLocalNumber,
   DeclMarkedOpenMPThreadPrivate,
   DeclMarkedOpenMPAllocate,
+  DeclMarkedOpenMPIndirectCall,
   DeclMarkedOpenMPDeclareTarget,
   DeclExported,
   AddedAttrToRecord,
-  CXXResolvedDtorGlobDelete
+  CXXResolvedDtorGlobDelete,
+  CXXResolvedDtorArrayDelete,
+  CXXResolvedDtorGlobArrayDelete
 };
 
 TypeIdx TypeIdxFromBuiltin(const BuiltinType *BT);

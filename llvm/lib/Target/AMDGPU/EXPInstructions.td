@@ -38,7 +38,7 @@ class EXP_Pseudo<bit row, bit done>
 
 // Real instruction with optional asm operands "compr" and "vm".
 class EXP_Real_ComprVM<EXP_Pseudo ps, int subtarget>
-  : EXPCommon<0, ps.done, "exp$tgt $src0, $src1, $src2, $src3"
+  : EXPCommon<0, ps.done, "exp$tgt, $src0, $src1, $src2, $src3"
                        #!if(ps.done, " done", "")#"$compr$vm">,
     SIMCInstr<ps.PseudoInstr, subtarget> {
   let AsmMatchConverter = "cvtExp";
@@ -46,7 +46,7 @@ class EXP_Real_ComprVM<EXP_Pseudo ps, int subtarget>
 
 // Real instruction with optional asm operand "row_en".
 class EXP_Real_Row<EXP_Pseudo ps, int subtarget, string name = "exp">
-  : EXPCommon<ps.row, ps.done, name#"$tgt $src0, $src1, $src2, $src3"
+  : EXPCommon<ps.row, ps.done, name#"$tgt, $src0, $src1, $src2, $src3"
                          #!if(ps.done, " done", "")#!if(ps.row, " row_en", "")>,
     SIMCInstr<ps.PseudoInstr, subtarget> {
   let AsmMatchConverter = "cvtExp";
@@ -101,7 +101,7 @@ defm EXP      : EXP_Real_si, EXP_Real_vi, EXP_Real_gfx10;
 defm EXP_DONE : EXP_Real_si, EXP_Real_vi, EXP_Real_gfx10;
 
 //===----------------------------------------------------------------------===//
-// GFX11, GFX12.
+// GFX11, GFX12, GFX13.
 //===----------------------------------------------------------------------===//
 
 multiclass EXP_Real_gfx11 {
@@ -114,25 +114,22 @@ multiclass EXP_Real_gfx11 {
   }
 }
 
-multiclass VEXPORT_Real_gfx12 {
+multiclass VEXPORT_Real<GFXGen Gen> {
   defvar ps = !cast<EXP_Pseudo>(NAME);
-  def _gfx12 : EXP_Real_Row<ps, SIEncodingFamily.GFX12, "export">,
-    EXPe_Row {
-    let AssemblerPredicate = isGFX12Only;
+  def Gen.Suffix : EXP_Real_Row<ps, Gen.Subtarget, "export">,
+    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[Gen.AssemblerPredicate]> {
+    let AssemblerPredicate = Gen.AssemblerPredicate;
     let OtherPredicates = [HasExportInsts];
-    let DecoderNamespace = "GFX12";
+    let DecoderNamespace = Gen.DecoderNamespace;
     let row = ps.row;
     let done = ps.done;
   }
-  def : AMDGPUMnemonicAlias<"exp", "export"> {
-    let AssemblerPredicate = isGFX12Plus;
-  }
 }
 
-defm EXP          : EXP_Real_gfx11, VEXPORT_Real_gfx12;
-defm EXP_DONE     : EXP_Real_gfx11, VEXPORT_Real_gfx12;
-defm EXP_ROW      : EXP_Real_gfx11, VEXPORT_Real_gfx12;
-defm EXP_ROW_DONE : EXP_Real_gfx11, VEXPORT_Real_gfx12;
+defm EXP          : EXP_Real_gfx11, VEXPORT_Real<GFX12Not12_50Gen>, VEXPORT_Real<GFX13Gen>;
+defm EXP_DONE     : EXP_Real_gfx11, VEXPORT_Real<GFX12Not12_50Gen>, VEXPORT_Real<GFX13Gen>;
+defm EXP_ROW      : EXP_Real_gfx11, VEXPORT_Real<GFX12Not12_50Gen>, VEXPORT_Real<GFX13Gen>;
+defm EXP_ROW_DONE : EXP_Real_gfx11, VEXPORT_Real<GFX12Not12_50Gen>, VEXPORT_Real<GFX13Gen>;
 
 //===----------------------------------------------------------------------===//
 // EXP Patterns

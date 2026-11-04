@@ -29,5 +29,5 @@ mlir_tablegen(ArmSMEIntrinsicConversions.inc -gen-llvmir-conversions)
 add_mlir_dialect_tablegen_target(MLIRArmSMEIntrinsicOpsIncGen)
 
 # Generate the docs
-add_mlir_doc(ArmSMEOps ArmSMEOps Dialects/ -gen-op-doc)
-add_mlir_doc(ArmSMEIntrinsicOps ArmSMEIntrinsicOps Dialects/ -gen-op-doc)
+add_mlir_doc(ArmSMEOps ArmSMEOps Dialects/ -gen-op-doc -dialect=arm_sme)
+add_mlir_doc(ArmSMEIntrinsicOps ArmSMEIntrinsicOps Dialects/ -gen-op-doc -dialect=arm_sme)

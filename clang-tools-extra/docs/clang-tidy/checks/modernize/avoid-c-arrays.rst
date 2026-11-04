@@ -5,8 +5,6 @@ modernize-avoid-c-arrays
 
 `cppcoreguidelines-avoid-c-arrays` redirects here as an alias for this check.
 
-`hicpp-avoid-c-arrays` redirects here as an alias for this check.
-
 Finds C-style array types and recommend to use ``std::array<>`` /
 ``std::vector<>``. All types of C arrays are diagnosed.
 

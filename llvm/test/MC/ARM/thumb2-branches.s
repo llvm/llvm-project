@@ -127,7 +127,7 @@
 @ CHECK: bgt.w	#1048574                @ encoding: [0x3f,0xf3,0xff,0xaf]
 
 @------------------------------------------------------------------------------
-@ same branch insturction encoding to conditional or unconditional depending
+@ same branch instruction encoding to conditional or unconditional depending
 @ on whether it is in an IT block or not
 @------------------------------------------------------------------------------
 
@@ -146,8 +146,6 @@
 @ CHECK: ite	eq                      @ encoding: [0x0c,0xbf]
 @ CHECK: addeq	r0, r1                  @ encoding: [0x08,0x44]
 @ CHECK: bne	#128                    @ encoding: [0x40,0xe0]
-
-@ RUN: llvm-mc -triple=thumbv7-apple-darwin -mcpu=cortex-a8 -show-encoding < %s | FileCheck %s
 
 @------------------------------------------------------------------------------
 @ unconditional branches accept narrow suffix and encode to short encodings
@@ -270,7 +268,7 @@
 @ CHECK: bgt.w	#1048574                @ encoding: [0x3f,0xf3,0xff,0xaf]
 
 @------------------------------------------------------------------------------
-@ same branch insturction encoding to conditional or unconditional depending
+@ same branch instruction encoding to conditional or unconditional depending
 @ on whether it is in an IT block or not
 @------------------------------------------------------------------------------
 

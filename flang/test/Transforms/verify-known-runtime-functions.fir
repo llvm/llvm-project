@@ -90,6 +90,7 @@
 // CHECK-NEXT: func.func private @_FortranAioSetEncoding(!fir.ref<i8>, !fir.ref<i8>, i64) -> i1 attributes {fir.io, fir.runtime}
 // CHECK-NEXT: func.func private @_FortranAioSetFile(!fir.ref<i8>, !fir.ref<i8>, i64) -> i1 attributes {fir.io, fir.runtime}
 // CHECK-NEXT: func.func private @_FortranAioSetForm(!fir.ref<i8>, !fir.ref<i8>, i64) -> i1 attributes {fir.io, fir.runtime}
+// CHECK-NEXT: func.func private @_FortranAioSetLeadingZero(!fir.ref<i8>, !fir.ref<i8>, i64) -> i1 attributes {fir.io, fir.runtime}
 // CHECK-NEXT: func.func private @_FortranAioSetPad(!fir.ref<i8>, !fir.ref<i8>, i64) -> i1 attributes {fir.io, fir.runtime}
 // CHECK-NEXT: func.func private @_FortranAioSetPos(!fir.ref<i8>, i64) -> i1 attributes {fir.io, fir.runtime}
 // CHECK-NEXT: func.func private @_FortranAioSetPosition(!fir.ref<i8>, !fir.ref<i8>, i64) -> i1 attributes {fir.io, fir.runtime}

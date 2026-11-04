@@ -96,3 +96,34 @@ void lambdaNonConstAutoValue() {
   };
   fn(ExpensiveToCopyType());
 }
+
+template <typename... Args>
+void ParameterPack(Args... args) {
+  // CHECK-MESSAGES: [[@LINE-1]]:28: warning: the parameter 'args' of type 'ExpensiveToCopyType'
+  // CHECK-FIXES: void ParameterPack(const Args&... args) {
+}
+
+template <typename... Args>
+void ParameterPackConst(Args const... args) {
+  // CHECK-MESSAGES: [[@LINE-1]]:39: warning: the const qualified parameter 'args' of type 'const ExpensiveToCopyType'
+  // CHECK-FIXES: void ParameterPackConst(Args const&... args) {
+}
+
+template <typename... Args>
+void ParameterPackWithParams(const ExpensiveToCopyType E1, ExpensiveToCopyType E2, Args... args) {
+  // CHECK-MESSAGES: [[@LINE-1]]:56: warning: the const qualified parameter 'E1'
+  // CHECK-MESSAGES: [[@LINE-2]]:80: warning: the parameter 'E2'
+  // CHECK-MESSAGES: [[@LINE-3]]:92: warning: the parameter 'args'
+  // CHECK-FIXES: void ParameterPackWithParams(const ExpensiveToCopyType& E1, const ExpensiveToCopyType& E2, const Args&... args) {
+}
+
+template <typename... Args>
+void PackWithNonExpensive(int x, Args... args) {}
+
+void instantiatedParameterPack() {
+  ExpensiveToCopyType E;
+  ParameterPack(E);
+  ParameterPackConst(E);
+  ParameterPackWithParams(E, E, E);
+  PackWithNonExpensive(5, 5);
+}

@@ -86,5 +86,112 @@ exit2:
   ret i32 0
 }
 
+; Make sure the SCEV for the LCSSA phi in the exit block is invalidated when
+; the epilogue adds a new incoming value to it, so it is not used for loop2.
+define void @epilog_lcssa_phi_used_by_later_loop(i64 %n, ptr %src) {
+; CHECK-LABEL: define void @epilog_lcssa_phi_used_by_later_loop
+; CHECK-SAME: (i64 [[N:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[N]], 7
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP1_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK:       entry.new:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[IV_1_NEXT_7:%.*]], [[LOOP1]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_7:%.*]], [[LOOP1]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[ADD_7:%.*]] = add i64 [[L]], 1
+; CHECK-NEXT:    [[IV_1_NEXT_7]] = add i64 [[IV_1]], 8
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[LOOP2_PH_UNR_LCSSA:%.*]], label [[LOOP1]]
+; CHECK:       loop2.ph.unr-lcssa:
+; CHECK-NEXT:    [[ADD_LCSSA_PH:%.*]] = phi i64 [ [[ADD_7]], [[LOOP1]] ]
+; CHECK-NEXT:    [[IV_1_UNR:%.*]] = phi i64 [ [[IV_1_NEXT_7]], [[LOOP1]] ]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP1_EPIL_PREHEADER]], label [[LOOP2_PH:%.*]]
+; CHECK:       loop1.epil.preheader:
+; CHECK-NEXT:    [[IV_1_EPIL_INIT:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_1_UNR]], [[LOOP2_PH_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
+; CHECK-NEXT:    br label [[LOOP1_EPIL:%.*]]
+; CHECK:       loop1.epil:
+; CHECK-NEXT:    [[IV_1_EPIL:%.*]] = phi i64 [ [[IV_1_EPIL_INIT]], [[LOOP1_EPIL_PREHEADER]] ], [ [[IV_1_NEXT_EPIL:%.*]], [[LOOP1_EPIL]] ]
+; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, [[LOOP1_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], [[LOOP1_EPIL]] ]
+; CHECK-NEXT:    [[L_EPIL:%.*]] = load i64, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[ADD_EPIL:%.*]] = add i64 [[L_EPIL]], 1
+; CHECK-NEXT:    [[IV_1_NEXT_EPIL]] = add i64 [[IV_1_EPIL]], 1
+; CHECK-NEXT:    [[EC_1_EPIL:%.*]] = icmp eq i64 [[IV_1_EPIL]], [[N]]
+; CHECK-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
+; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
+; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[LOOP1_EPIL]], label [[LOOP2_PH_EPILOG_LCSSA:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       loop2.ph.epilog-lcssa:
+; CHECK-NEXT:    [[ADD_LCSSA_PH1:%.*]] = phi i64 [ [[ADD_EPIL]], [[LOOP1_EPIL]] ]
+; CHECK-NEXT:    br label [[LOOP2_PH]]
+; CHECK:       loop2.ph:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i64 [ [[ADD_LCSSA_PH]], [[LOOP2_PH_UNR_LCSSA]] ], [ [[ADD_LCSSA_PH1]], [[LOOP2_PH_EPILOG_LCSSA]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 1, [[ADD_LCSSA]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 0, [[ADD_LCSSA]]
+; CHECK-NEXT:    [[XTRAITER3:%.*]] = and i64 [[TMP2]], 7
+; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = icmp ne i64 [[XTRAITER3]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD4]], label [[LOOP2_PROL_PREHEADER:%.*]], label [[LOOP2_PROL_LOOPEXIT:%.*]]
+; CHECK:       loop2.prol.preheader:
+; CHECK-NEXT:    br label [[LOOP2_PROL:%.*]]
+; CHECK:       loop2.prol:
+; CHECK-NEXT:    [[IV_2_PROL:%.*]] = phi i64 [ [[ADD_LCSSA]], [[LOOP2_PROL_PREHEADER]] ], [ [[IV_2_NEXT_PROL:%.*]], [[LOOP2_PROL]] ]
+; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ 0, [[LOOP2_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], [[LOOP2_PROL]] ]
+; CHECK-NEXT:    [[IV_2_NEXT_PROL]] = add i64 [[IV_2_PROL]], 1
+; CHECK-NEXT:    [[EC_2_PROL:%.*]] = icmp eq i64 [[IV_2_PROL]], 0
+; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
+; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER3]]
+; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[LOOP2_PROL]], label [[LOOP2_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       loop2.prol.loopexit.unr-lcssa:
+; CHECK-NEXT:    [[IV_2_UNR_PH:%.*]] = phi i64 [ [[IV_2_NEXT_PROL]], [[LOOP2_PROL]] ]
+; CHECK-NEXT:    br label [[LOOP2_PROL_LOOPEXIT]]
+; CHECK:       loop2.prol.loopexit:
+; CHECK-NEXT:    [[IV_2_UNR:%.*]] = phi i64 [ [[ADD_LCSSA]], [[LOOP2_PH]] ], [ [[IV_2_UNR_PH]], [[LOOP2_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 7
+; CHECK-NEXT:    br i1 [[TMP4]], label [[EXIT:%.*]], label [[LOOP2_PH_NEW:%.*]]
+; CHECK:       loop2.ph.new:
+; CHECK-NEXT:    br label [[LOOP2:%.*]]
+; CHECK:       loop2:
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[IV_2_UNR]], [[LOOP2_PH_NEW]] ], [ [[IV_2_NEXT_7:%.*]], [[LOOP2]] ]
+; CHECK-NEXT:    [[IV_2_NEXT_6:%.*]] = add i64 [[IV_2]], 7
+; CHECK-NEXT:    [[IV_2_NEXT_7]] = add i64 [[IV_2]], 8
+; CHECK-NEXT:    [[EC_2_7:%.*]] = icmp eq i64 [[IV_2_NEXT_6]], 0
+; CHECK-NEXT:    br i1 [[EC_2_7]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP2]]
+; CHECK:       exit.unr-lcssa:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop1
+
+loop1:
+  %iv.1 = phi i64 [ 0, %entry ], [ %iv.1.next, %loop1 ]
+  %l = load i64, ptr %src, align 8
+  %add = add i64 %l, 1
+  %iv.1.next = add i64 %iv.1, 1
+  %ec.1 = icmp eq i64 %iv.1, %n
+  br i1 %ec.1, label %loop2.ph, label %loop1
+
+loop2.ph:
+  %add.lcssa = phi i64 [ %add, %loop1 ]
+  br label %loop2
+
+loop2:
+  %iv.2 = phi i64 [ %add.lcssa, %loop2.ph ], [ %iv.2.next, %loop2 ]
+  %iv.2.next = add i64 %iv.2, 1
+  %ec.2 = icmp eq i64 %iv.2, 0
+  br i1 %ec.2, label %exit, label %loop2
+
+exit:
+  ret void
+}
+
 !0 = !{!"function_entry_count", i64 1}
 !1 = !{!"branch_weights", i32 123, i32 472}

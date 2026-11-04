@@ -58,8 +58,9 @@ const static uint32_t g_default_packet_timeout_sec = 0; // not specified
 #endif
 
 // GDBRemoteCommunicationServerCommon constructor
-GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon()
-    : GDBRemoteCommunicationServer(), m_process_launch_info(),
+GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
+    llvm::StringRef name)
+    : GDBRemoteCommunicationServer(name), m_process_launch_info(),
       m_process_launch_error(), m_proc_infos(), m_proc_infos_index(0) {
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_A,
                                 &GDBRemoteCommunicationServerCommon::Handle_A);
@@ -117,6 +118,9 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon()
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QSetSTDOUT,
       &GDBRemoteCommunicationServerCommon::Handle_QSetSTDOUT);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_QSetSTDIOWindowSize,
+      &GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qSpeedTest,
       &GDBRemoteCommunicationServerCommon::Handle_qSpeedTest);
@@ -234,7 +238,7 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
       host_arch.GetMachine() == llvm::Triple::aarch64_be ||
       host_arch.GetMachine() == llvm::Triple::arm ||
       host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS() ||
-      host_arch.GetTriple().isLoongArch())
+      host_arch.GetTriple().isPPC64() || host_arch.GetTriple().isLoongArch())
     response.Printf("watchpoint_exceptions_received:before;");
   else
     response.Printf("watchpoint_exceptions_received:after;");
@@ -362,32 +366,32 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
           return SendErrorResponse(2);
       } else if (key == "pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        if (value.getAsInteger(0, pid))
+        if (value.getAsInteger(BASE_10, pid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetProcessID(pid);
       } else if (key == "parent_pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        if (value.getAsInteger(0, pid))
+        if (value.getAsInteger(BASE_10, pid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetParentProcessID(pid);
       } else if (key == "uid") {
         uint32_t uid = UINT32_MAX;
-        if (value.getAsInteger(0, uid))
+        if (value.getAsInteger(BASE_10, uid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetUserID(uid);
       } else if (key == "gid") {
         uint32_t gid = UINT32_MAX;
-        if (value.getAsInteger(0, gid))
+        if (value.getAsInteger(BASE_10, gid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetGroupID(gid);
       } else if (key == "euid") {
         uint32_t uid = UINT32_MAX;
-        if (value.getAsInteger(0, uid))
+        if (value.getAsInteger(BASE_10, uid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetEffectiveUserID(uid);
       } else if (key == "egid") {
         uint32_t gid = UINT32_MAX;
-        if (value.getAsInteger(0, gid))
+        if (value.getAsInteger(BASE_10, gid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetEffectiveGroupID(gid);
       } else if (key == "all_users") {
@@ -477,7 +481,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSpeedTest(
   bool success = packet.GetNameColonValue(key, value);
   if (success && key == "response_size") {
     uint32_t response_size = 0;
-    if (!value.getAsInteger(0, response_size)) {
+    if (!value.getAsInteger(BASE_16, response_size)) {
       if (response_size == 0)
         return SendOKResponse();
       StreamString response;
@@ -620,8 +624,13 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite(
       if (packet.GetEscapedBinaryData(buffer)) {
         NativeFile file(fd, File::eOpenOptionWriteOnly, false);
         size_t count = buffer.size();
-        Status error =
-            file.Write(static_cast<const void *>(&buffer[0]), count, offset);
+        Status error = file.Write(buffer.data(), count, offset);
+        // A pipe cannot seek, so pwrite fails on it with ESPIPE. The offset
+        // means nothing there, so write at the pipe's end instead.
+        if (error.Fail() && error.GetError() == ESPIPE) {
+          count = buffer.size();
+          error = file.Write(buffer.data(), count);
+        }
         const int save_errno = error.GetError();
         if (error.Success())
           response.Printf("%zx", count);
@@ -752,7 +761,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
       FileSystem::Instance().Resolve(working_spec);
       Status err =
           Host::RunShellCommand(path.c_str(), working_spec, &status, &signo,
-                                &output, std::chrono::seconds(10));
+                                &output, nullptr, std::chrono::seconds(10));
       StreamGDBRemote response;
       if (err.Fail()) {
         response.PutCString("F,");
@@ -961,6 +970,42 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDERR(
     return SendOKResponse();
   }
   return SendErrorResponse(17);
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize(
+    StringExtractorGDBRemote &packet) {
+  // Format: "QSetSTDIOWindowSize:cols=N;rows=N"
+  packet.SetFilePos(::strlen("QSetSTDIOWindowSize:"));
+  llvm::StringRef body = packet.GetStringRef().substr(packet.GetFilePos());
+
+  uint16_t cols = 0;
+  uint16_t rows = 0;
+  llvm::SmallVector<llvm::StringRef, 2> fields;
+  body.split(fields, ';');
+  for (llvm::StringRef field : fields) {
+    auto [key, value] = field.split('=');
+    uint16_t *dest;
+    if (key == "cols")
+      dest = &cols;
+    else if (key == "rows")
+      dest = &rows;
+    else
+      continue;
+    unsigned parsed = 0;
+    if (value.empty() || value.getAsInteger(BASE_10, parsed) ||
+        parsed > UINT16_MAX)
+      continue;
+    *dest = static_cast<uint16_t>(parsed);
+  }
+  // 0x0 is a valid request: it signals "no terminal" and a redirection
+  // backend that supports an alternative path (anonymous pipes on Windows
+  // ConPTY) can switch on it. Reject only the malformed cases.
+  if ((cols == 0) != (rows == 0))
+    return SendErrorResponse(28);
+
+  m_process_launch_info.SetSTDIOWindowSize(cols, rows);
+  return SendOKResponse();
 }
 
 GDBRemoteCommunication::PacketResult
@@ -1353,9 +1398,9 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
 
   const ModuleSpec module_spec(actual_module_path_spec, arch);
 
-  ModuleSpecList module_specs;
-  if (!ObjectFile::GetModuleSpecifications(actual_module_path_spec, file_offset,
-                                           file_size, module_specs))
+  ModuleSpecList module_specs = ObjectFile::GetModuleSpecifications(
+      actual_module_path_spec, file_offset, file_size);
+  if (module_specs.GetSize() == 0)
     return ModuleSpec();
 
   ModuleSpec matched_module_spec;

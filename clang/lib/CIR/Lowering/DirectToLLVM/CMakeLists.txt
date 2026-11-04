@@ -1,24 +1,41 @@
 set(LLVM_LINK_COMPONENTS
   Core
   Support
+  TransformUtils
   )
-
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
   LowerToLLVMIR.cpp
+  LowerToLLVMOffloadPrintf.cpp
+  LowerToLLVMOffloadPrintfAMDGPU.cpp
+  LowerToLLVMOffloadPrintfNVPTX.cpp
+  LowerToLLVMOpenCLMetadata.cpp
 
   DEPENDS
+  CIRLowering
   MLIRCIREnumsGen
-  MLIRCIROpsIncGen
-  MLIRCIROpInterfacesIncGen
+  MLIRCIRPassIncGen
+  mlir-headers
 
   LINK_LIBS
   clangCIRLoweringCommon
-  ${dialect_libs}
   MLIRCIR
+  MLIRCIRTargetLowering
+  MLIRCIRTransforms
   MLIRBuiltinToLLVMIRTranslation
+  MLIRDLTIDialect
+  MLIRFuncDialect
+  MLIRLLVMCommonConversion
+  MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
+  MLIROpenMPDialect
+  MLIROpenMPToLLVMConversion
+  MLIROpenMPToLLVMIRTranslation
+  MLIROpenMPTransforms
   MLIRIR
+  )
+
+target_include_directories(clangCIRLoweringDirectToLLVM PRIVATE
+  ${CLANG_SOURCE_DIR}/lib/CIR/Dialect/Transforms/TargetLowering
   )

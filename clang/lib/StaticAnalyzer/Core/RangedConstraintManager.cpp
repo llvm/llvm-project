@@ -20,10 +20,29 @@ namespace ento {
 
 RangedConstraintManager::~RangedConstraintManager() {}
 
+/// Is \p Assumption (i.e. "the condition is non-zero") inconsistent with a
+/// symbol that simplified to the concrete integer \p V?
+static bool isConcreteInfeasible(const llvm::APSInt &V, bool Assumption) {
+  return (V != 0) ? !Assumption : Assumption;
+}
+
 ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
                                                    SymbolRef Sym,
                                                    bool Assumption) {
-  Sym = simplify(State, Sym);
+  SVal SimplifiedVal = simplifyToSVal(State, Sym);
+  if (const auto *CI = SimplifiedVal.getAsInteger()) {
+    // The assumption might be incompatible with the concrete integer after the
+    // simplification.
+    if (isConcreteInfeasible(*CI, Assumption))
+      return nullptr;
+    // When the fold is feasible we deliberately do NOT return early: we fall
+    // through and record the constraint on the *original* symbol. That is not a
+    // no-op -- it is how the symbol-simplification fixpoint migrates a
+    // constraint onto a just-simplified symbol. See an example in
+    // symbol-simplification-fixpoint-two-iterations.cpp.
+  } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
+    Sym = SimplifiedSym;
+  }
 
   // Handle SymbolData.
   if (isa<SymbolData>(Sym))
@@ -102,7 +121,20 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
     ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
 
-  Sym = simplify(State, Sym);
+  SVal SimplifiedVal = simplifyToSVal(State, Sym);
+  if (const auto *CI = SimplifiedVal.getAsInteger()) {
+    // The symbol folds to a concrete integer. Prune the path only when the
+    // concrete value proves it infeasible (mirroring
+    // SimpleConstraintManager::assumeInclusiveRangeInternal). If it is
+    // consistent, fall through so the existing machinery still runs it might
+    // trigger further simplification even if this assumption is trivial.
+    bool IsInRange = llvm::APSInt::compareValues(*CI, From) >= 0 &&
+                     llvm::APSInt::compareValues(*CI, To) <= 0;
+    if (IsInRange != InRange)
+      return nullptr;
+  } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
+    Sym = SimplifiedSym;
+  }
 
   // Get the type used for calculating wraparound.
   BasicValueFactory &BVF = getBasicVals();
@@ -132,7 +164,17 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
 ProgramStateRef
 RangedConstraintManager::assumeSymUnsupported(ProgramStateRef State,
                                               SymbolRef Sym, bool Assumption) {
-  Sym = simplify(State, Sym);
+  SVal SimplifiedVal = simplifyToSVal(State, Sym);
+  if (const auto *CI = SimplifiedVal.getAsInteger()) {
+    // Prune only when the concrete fold contradicts the assumption. When it is
+    // consistent we fall through and record the constraint on the original
+    // symbol (assumeSymNE/EQ below) rather than returning early to continue
+    // constraint simplification.
+    if (isConcreteInfeasible(*CI, Assumption))
+      return nullptr;
+  } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
+    Sym = SimplifiedSym;
+  }
 
   BasicValueFactory &BVF = getBasicVals();
   QualType T = Sym->getType();
@@ -235,13 +277,6 @@ void RangedConstraintManager::computeAdjustment(SymbolRef &Sym,
 SVal simplifyToSVal(ProgramStateRef State, SymbolRef Sym) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   return SVB.simplifySVal(State, SVB.makeSymbolVal(Sym));
-}
-
-SymbolRef simplify(ProgramStateRef State, SymbolRef Sym) {
-  SVal SimplifiedVal = simplifyToSVal(State, Sym);
-  if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol())
-    return SimplifiedSym;
-  return Sym;
 }
 
 } // end of namespace ento

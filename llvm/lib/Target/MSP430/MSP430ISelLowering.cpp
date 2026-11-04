@@ -27,7 +27,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -35,14 +34,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "msp430-lower"
 
-static cl::opt<bool>MSP430NoLegalImmediate(
-  "msp430-no-legal-immediate", cl::Hidden,
-  cl::desc("Enable non legal immediates (for testing purposes only)"),
-  cl::init(false));
-
 MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
                                            const MSP430Subtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI), CLOpts(STI.getCLOpts()) {
 
   // Set up the register classes.
   addRegisterClass(MVT::i8,  &MSP430::GR8RegClass);
@@ -148,68 +142,6 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY,           MVT::Other, Expand);
   setOperationAction(ISD::JumpTable,        MVT::i16,   Custom);
 
-  if (STI.hasHWMult16()) {
-    const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-    } LibraryCalls[] = {
-        // Integer Multiply - EABI Table 9
-        {RTLIB::MUL_I16, RTLIB::impl___mspabi_mpyi_hw},
-        {RTLIB::MUL_I32, RTLIB::impl___mspabi_mpyl_hw},
-        {RTLIB::MUL_I64, RTLIB::impl___mspabi_mpyll_hw},
-        // TODO The __mspabi_mpysl*_hw functions ARE implemented in libgcc
-        // TODO The __mspabi_mpyul*_hw functions ARE implemented in libgcc
-    };
-    for (const auto &LC : LibraryCalls) {
-      setLibcallImpl(LC.Op, LC.Impl);
-    }
-  } else if (STI.hasHWMult32()) {
-    const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-    } LibraryCalls[] = {
-        // Integer Multiply - EABI Table 9
-        {RTLIB::MUL_I16, RTLIB::impl___mspabi_mpyi_hw},
-        {RTLIB::MUL_I32, RTLIB::impl___mspabi_mpyl_hw32},
-        {RTLIB::MUL_I64, RTLIB::impl___mspabi_mpyll_hw32},
-        // TODO The __mspabi_mpysl*_hw32 functions ARE implemented in libgcc
-        // TODO The __mspabi_mpyul*_hw32 functions ARE implemented in libgcc
-    };
-    for (const auto &LC : LibraryCalls) {
-      setLibcallImpl(LC.Op, LC.Impl);
-    }
-  } else if (STI.hasHWMultF5()) {
-    const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-    } LibraryCalls[] = {
-        // Integer Multiply - EABI Table 9
-        {RTLIB::MUL_I16, RTLIB::impl___mspabi_mpyi_f5hw},
-        {RTLIB::MUL_I32, RTLIB::impl___mspabi_mpyl_f5hw},
-        {RTLIB::MUL_I64, RTLIB::impl___mspabi_mpyll_f5hw},
-        // TODO The __mspabi_mpysl*_f5hw functions ARE implemented in libgcc
-        // TODO The __mspabi_mpyul*_f5hw functions ARE implemented in libgcc
-    };
-    for (const auto &LC : LibraryCalls) {
-      setLibcallImpl(LC.Op, LC.Impl);
-    }
-  } else { // NoHWMult
-    const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-    } LibraryCalls[] = {
-        // Integer Multiply - EABI Table 9
-        {RTLIB::MUL_I16, RTLIB::impl___mspabi_mpyi},
-        {RTLIB::MUL_I32, RTLIB::impl___mspabi_mpyl},
-        {RTLIB::MUL_I64, RTLIB::impl___mspabi_mpyll},
-        // The __mspabi_mpysl* functions are NOT implemented in libgcc
-        // The __mspabi_mpyul* functions are NOT implemented in libgcc
-    };
-    for (const auto &LC : LibraryCalls) {
-      setLibcallImpl(LC.Op, LC.Impl);
-    }
-  }
-
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
   setMaxAtomicSizeInBitsSupported(0);
@@ -246,7 +178,7 @@ bool MSP430TargetLowering::shouldAvoidTransformToShift(EVT VT,
 // Implemented to verify test case assertions in
 // tests/codegen/msp430/shift-amount-threshold-b.ll
 bool MSP430TargetLowering::isLegalICmpImmediate(int64_t Immed) const {
-  if (MSP430NoLegalImmediate)
+  if (CLOpts.no_legal_immediate)
     return Immed >= -32 && Immed < 32;
   return TargetLowering::isLegalICmpImmediate(Immed);
 }
@@ -292,6 +224,7 @@ MSP430TargetLowering::getRegForInlineAsmConstraint(
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "MSP430GenCallingConv.inc"
 
 /// For each argument in a function store the number of pieces it is composed
@@ -747,8 +680,9 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
 
       if (Flags.isByVal()) {
         SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i16);
-        MemOp = DAG.getMemcpy(Chain, dl, PtrOff, Arg, SizeNode,
-                              Flags.getNonZeroByValAlign(),
+        Align Alignment = Flags.getNonZeroByValAlign();
+        MemOp = DAG.getMemcpy(Chain, dl, PtrOff, Arg, SizeNode, Alignment,
+                              Alignment,
                               /*isVolatile*/ false,
                               /*AlwaysInline=*/true,
                               /*CI=*/nullptr, std::nullopt,
@@ -951,7 +885,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     // fold constant into instruction.
     if (const ConstantSDNode * C = dyn_cast<ConstantSDNode>(LHS)) {
       LHS = RHS;
-      RHS = DAG.getConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
+      RHS =
+          DAG.getSignedConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
       TCC = MSP430CC::COND_LO;
       break;
     }
@@ -965,7 +900,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     // fold constant into instruction.
     if (const ConstantSDNode * C = dyn_cast<ConstantSDNode>(LHS)) {
       LHS = RHS;
-      RHS = DAG.getConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
+      RHS =
+          DAG.getSignedConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
       TCC = MSP430CC::COND_HS;
       break;
     }
@@ -979,7 +915,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     // fold constant into instruction.
     if (const ConstantSDNode * C = dyn_cast<ConstantSDNode>(LHS)) {
       LHS = RHS;
-      RHS = DAG.getConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
+      RHS =
+          DAG.getSignedConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
       TCC = MSP430CC::COND_L;
       break;
     }
@@ -993,7 +930,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     // fold constant into instruction.
     if (const ConstantSDNode * C = dyn_cast<ConstantSDNode>(LHS)) {
       LHS = RHS;
-      RHS = DAG.getConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
+      RHS =
+          DAG.getSignedConstant(C->getSExtValue() + 1, dl, C->getValueType(0));
       TCC = MSP430CC::COND_GE;
       break;
     }
@@ -1008,7 +946,7 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
 
 SDValue MSP430TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS   = Op.getOperand(2);
   SDValue RHS   = Op.getOperand(3);
   SDValue Dest  = Op.getOperand(4);
@@ -1035,7 +973,7 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
                (LHS.getOpcode() == ISD::AND ||
                 (LHS.getOpcode() == ISD::TRUNCATE &&
                  LHS.getOperand(0).getOpcode() == ISD::AND));
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   SDValue TargetCC;
   SDValue Flag = EmitCMP(LHS, RHS, TargetCC, CC, dl, DAG);
 
@@ -1097,7 +1035,7 @@ SDValue MSP430TargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue RHS    = Op.getOperand(1);
   SDValue TrueV  = Op.getOperand(2);
   SDValue FalseV = Op.getOperand(3);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDLoc dl   (Op);
 
   SDValue TargetCC;

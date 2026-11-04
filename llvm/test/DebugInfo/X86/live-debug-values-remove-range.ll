@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -stop-after=livedebugvalues -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -stop-after=live-debug-values -experimental-debug-variable-locations=true | FileCheck %s
 ;
 ; In the simple loop below, the location of the variable "toast" is %bar in
 ; the entry block, then set to constant zero at the end of the loop. We cannot
@@ -108,6 +108,6 @@ exit:
 !106 = !DILocation(line: 1, scope: !104)
 !113 = !{!103}
 !203 = !DILocalVariable(name: "teacake", scope: !204, file: !2, line: 1, type: !16)
-!204 = distinct !DISubprogram(name: "toad", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !113, type: !14, isDefinition: true)
+!204 = distinct !DISubprogram(name: "toad", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !213, type: !14, isDefinition: true)
 !206 = !DILocation(line: 1, scope: !204)
 !213 = !{!203}

@@ -30,7 +30,8 @@
 #include "test_macros.h"
 #include "../../../test_compare.h"
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -38,8 +39,8 @@ void test() {
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
     using A2 = other_allocator<int>;
-    using V1 = std::vector<int, A1>;
-    using V2 = std::vector<int, A2>;
+    using V1 = KeyContainer<int, A1>;
+    using V2 = KeyContainer<int, A2>;
     using M1 = std::flat_multiset<int, C, V1>;
     using M2 = std::flat_multiset<int, C, V2>;
     static_assert(std::is_constructible_v<M1, std::sorted_equivalent_t, const V1&, const A1&>);
@@ -52,11 +53,12 @@ void test() {
     static_assert(!std::is_constructible_v<M1, std::sorted_equivalent_t, const V1&, const C&, const A2&>);
     static_assert(!std::is_constructible_v<M2, std::sorted_equivalent_t, const V2&, const C&, const A1&>);
   }
+
   {
     // flat_multiset(sorted_equivalent_t, container_type)
-    using M             = std::flat_multiset<int>;
-    std::vector<int> ks = {1, 2, 2, 4, 10};
-    auto ks2            = ks;
+    using M              = std::flat_multiset<int, std::less<int>, KeyContainer<int>>;
+    KeyContainer<int> ks = {1, 2, 2, 4, 10};
+    auto ks2             = ks;
 
     auto m = M(std::sorted_equivalent, ks);
     assert((m == M{1, 2, 2, 4, 10}));
@@ -71,7 +73,7 @@ void test() {
   {
     // flat_multiset(sorted_equivalent_t, container_type)
     // non-default container, comparator and allocator type
-    using Ks = std::deque<int, min_allocator<int>>;
+    using Ks = KeyContainer<int, min_allocator<int>>;
     using M  = std::flat_multiset<int, std::greater<int>, Ks>;
     Ks ks    = {10, 4, 4, 2, 1};
     auto m   = M(std::sorted_equivalent, ks);
@@ -84,8 +86,8 @@ void test() {
     // flat_multiset(sorted_equivalent_t, container_type)
     // allocator copied into the containers
     using A = test_allocator<int>;
-    using M = std::flat_multiset<int, std::less<int>, std::deque<int, A>>;
-    auto ks = std::deque<int, A>({1, 2, 2, 4, 10}, A(4));
+    using M = std::flat_multiset<int, std::less<int>, KeyContainer<int, A>>;
+    auto ks = KeyContainer<int, A>({1, 2, 2, 4, 10}, A(4));
     auto m  = M(std::sorted_equivalent, std::move(ks));
     assert(ks.empty()); // it was moved-from
     assert((m == M{1, 2, 2, 4, 10}));
@@ -93,9 +95,9 @@ void test() {
   }
   {
     // flat_multiset(sorted_equivalent_t, container_type ,  key_compare)
-    using C             = test_less<int>;
-    using M             = std::flat_multiset<int, C>;
-    std::vector<int> ks = {1, 2, 2, 4, 10};
+    using C              = test_less<int>;
+    using M              = std::flat_multiset<int, C, KeyContainer<int>>;
+    KeyContainer<int> ks = {1, 2, 2, 4, 10};
 
     auto m = M(std::sorted_equivalent, ks, C(4));
     assert((m == M{1, 2, 2, 4, 10}));
@@ -108,11 +110,11 @@ void test() {
   }
   {
     // flat_multiset(sorted_equivalent_t, container_type , key_compare, const Allocator&)
-    using C                = test_less<int>;
-    using A                = test_allocator<int>;
-    using M                = std::flat_multiset<int, C, std::vector<int, A>>;
-    std::vector<int, A> ks = {1, 2, 2, 4, 10};
-    auto m                 = M(std::sorted_equivalent, ks, C(4), A(5));
+    using C                 = test_less<int>;
+    using A                 = test_allocator<int>;
+    using M                 = std::flat_multiset<int, C, KeyContainer<int, A>>;
+    KeyContainer<int, A> ks = {1, 2, 2, 4, 10};
+    auto m                  = M(std::sorted_equivalent, ks, C(4), A(5));
     assert((m == M{1, 2, 2, 4, 10}));
     assert(m.key_comp() == C(4));
     assert(M(m).extract().get_allocator() == A(5));
@@ -126,8 +128,8 @@ void test() {
   {
     // flat_multiset(sorted_equivalent_t, container_type , const Allocator&)
     using A = test_allocator<int>;
-    using M = std::flat_multiset<int, std::less<int>, std::deque<int, A>>;
-    auto ks = std::deque<int, A>({1, 2, 2, 4, 10}, A(4));
+    using M = std::flat_multiset<int, std::less<int>, KeyContainer<int, A>>;
+    auto ks = KeyContainer<int, A>({1, 2, 2, 4, 10}, A(4));
     auto m  = M(std::sorted_equivalent, ks, A(6)); // replaces the allocators
     assert(!ks.empty());                           // it was an lvalue above
     assert((m == M{1, 2, 2, 4, 10}));
@@ -140,8 +142,22 @@ void test() {
   }
 }
 
+constexpr bool test() {
+  test<std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
+}
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

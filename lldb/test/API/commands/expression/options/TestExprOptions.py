@@ -7,7 +7,6 @@ o test_expr_options:
   Test expression command options.
 """
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
@@ -85,3 +84,38 @@ class ExprOptionsTestCase(TestBase):
         val = frame.EvaluateExpression("id == 0", options)
         self.assertTrue(val.IsValid())
         self.assertFalse(val.GetError().Success())
+
+    def test_expr_options_language_options(self):
+        """Test SetBooleanLanguageOption/GetBooleanLanguageOption SBAPIs"""
+
+        error = lldb.SBError()
+        options = lldb.SBExpressionOptions()
+
+        self.assertFalse(options.GetBooleanLanguageOption("foo", error))
+        self.assertTrue(error.Fail())
+        self.assertFalse(options.GetBooleanLanguageOption("bar", error))
+        self.assertTrue(error.Fail())
+
+        self.assertTrue(options.SetBooleanLanguageOption("foo", True).Success())
+        self.assertTrue(options.SetBooleanLanguageOption("bar", True).Success())
+        self.assertTrue(options.GetBooleanLanguageOption("foo", error))
+        self.assertTrue(error.Success())
+        self.assertTrue(options.GetBooleanLanguageOption("bar", error))
+        self.assertTrue(error.Success())
+
+        self.assertTrue(options.SetBooleanLanguageOption("foo", False).Success())
+        self.assertTrue(options.SetBooleanLanguageOption("bar", False).Success())
+        self.assertFalse(options.GetBooleanLanguageOption("foo", error))
+        self.assertTrue(error.Success())
+        self.assertFalse(options.GetBooleanLanguageOption("bar", error))
+        self.assertTrue(error.Success())
+
+        self.assertFalse(options.GetBooleanLanguageOption("", error))
+        self.assertTrue(error.Fail())
+        self.assertTrue(options.SetBooleanLanguageOption("", True).Fail())
+        self.assertFalse(options.GetBooleanLanguageOption("", error))
+        self.assertTrue(error.Fail())
+
+        self.assertTrue(options.SetBooleanLanguageOption(None, True).Fail())
+        self.assertFalse(options.GetBooleanLanguageOption(None, error))
+        self.assertTrue(error.Fail())

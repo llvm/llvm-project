@@ -17,6 +17,6 @@
 
 #error "Cannot overlay pthread_barrierattr_t"
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_TYPES_PTHREAD_BARRIERATTR_T_H

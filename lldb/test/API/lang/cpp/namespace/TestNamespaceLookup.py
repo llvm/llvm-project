@@ -11,6 +11,8 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbplatformutil
 
 class NamespaceLookupTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -40,7 +42,6 @@ class NamespaceLookupTestCase(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     @unittest.expectedFailure  # CU-local objects incorrectly scoped
     def test_scope_lookup_with_run_command_globals(self):
         """Test scope lookup of functions in lldb."""
@@ -97,7 +98,8 @@ class NamespaceLookupTestCase(TestBase):
         # Evaluate ::func() - should call ::func()
         self.expect_expr("::func()", result_type="int", result_value="1")
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
+    @requireExpressionEvaluation
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -256,6 +258,7 @@ class NamespaceLookupTestCase(TestBase):
     # NOTE: this test may fail on older systems that don't emit import
     # entries in DWARF - may need to add checks for compiler versions here.
     @skipIf(compiler="gcc", oslist=["linux"], debug_info=["dwo"])  # Skip to avoid crash
+    @requireExpressionEvaluation
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""
         self.build()
@@ -319,6 +322,7 @@ class NamespaceLookupTestCase(TestBase):
         # the same type.
         self.expect("expr -- func()", startstr="error")
 
+    @requireExpressionEvaluation
     def test_scope_lookup_shadowed_by_using_with_run_command(self):
         """Test scope lookup shadowed by using in lldb."""
         self.build()

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang-rt/runtime/io-stmt.h"
-#include "unit.h"
 #include "flang-rt/runtime/connection.h"
 #include "flang-rt/runtime/emit-encoded.h"
 #include "flang-rt/runtime/format.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang-rt/runtime/utf.h"
 #include <algorithm>
 #include <cstdio>
@@ -219,9 +219,7 @@ template <Direction DIR>
 void InternalListIoStatementState<DIR>::CompleteOperation() {
   if (!this->completedOperation()) {
     if constexpr (DIR == Direction::Output) {
-      if (unit_.furthestPositionInRecord > 0) {
-        unit_.AdvanceRecord(*this);
-      }
+      unit_.AdvanceRecord(*this);
     }
     IoStatementBase::CompleteOperation();
   }
@@ -264,19 +262,17 @@ int ExternalIoStatementBase::EndIoStatement() {
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
   if (destroy_) {
     if (ExternalFileUnit *
-        toClose{ExternalFileUnit::LookUpForClose(unitNumber)}) {
+        toClose{ExternalFileUnit::LookUpForClose(unitNumber, *this)}) {
       toClose->Close(CloseStatus::Delete, *this);
-      toClose->DestroyClosed();
+      toClose->DestroyClosed(*this);
     }
   }
 #else
-  // Fetch the unit pointer before *this disappears.
-  ExternalFileUnit *unitPtr{&unit_};
   // The pseudo file units are dynamically allocated
-  // and are not tracked in the unit map.
-  // They have to be destructed and deallocated here.
-  unitPtr->~ExternalFileUnit();
-  FreeMemory(unitPtr);
+  // and are not tracked in any unit map.
+  // They have to be destroyed and deallocated here.
+  unit_.~ExternalFileUnit();
+  FreeMemory(&unit_);
 #endif
   return result;
 }
@@ -379,7 +375,7 @@ int CloseStatementState::EndIoStatement() {
   CompleteOperation();
   int result{ExternalIoStatementBase::EndIoStatement()};
   unit().CloseUnit(status_, *this);
-  unit().DestroyClosed();
+  unit().DestroyClosed(*this);
   return result;
 }
 
@@ -687,6 +683,14 @@ common::optional<char32_t> IoStatementState::NextInField(
             return common::nullopt;
           }
           break;
+        case '!':
+          // Extension (gfortran, ifx, classic nvfortran): in NAMELIST input,
+          // '!' terminates a value even when not preceded by a separator,
+          // so that "name=value!comment" is accepted.
+          if (edit.IsNamelist()) {
+            return common::nullopt;
+          }
+          break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
             return common::nullopt;
@@ -917,7 +921,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     auto start{fastField.connection().positionInRecord};
     int r{0};
     do {
-      static auto constexpr clamp{(std::numeric_limits<int>::max() - '9') / 10};
+      static auto constexpr clamp{
+          (common::numeric_limits<int>::max() - '9') / 10};
       if (r >= clamp) {
         r = 0;
         break;
@@ -982,7 +987,9 @@ template <Direction DIR>
 ChildIoStatementState<DIR>::ChildIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, child_{child},
-      mutableModes_{child.parent().mutableModes()} {}
+      mutableModes_{child.parent().mutableModes()} {
+  mutableModes_.inNamelist = false;
+}
 
 template <Direction DIR>
 const NonTbpDefinedIoTable *
@@ -1109,20 +1116,20 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
     : ChildIoStatementState<DIR>{child, sourceFile, sourceLine} {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  if constexpr (DIR == Direction::Input) {
-    if (const auto *listInput{child.parent()
-                .get_if<ListDirectedStatementState<Direction::Input>>()}) {
-      this->set_eatComma(listInput->eatComma());
-      this->namelistGroup_ = listInput->namelistGroup();
-      if (auto *childListInput{child.parent()
-                  .get_if<ChildListIoStatementState<Direction::Input>>()}) {
-        // Child list input whose parent is child list input: can advance
-        // if the parent can.
-        this->canAdvance_ = childListInput->CanAdvance();
-      } else {
-        // Child list input of top-level list input: can advance.
-        this->canAdvance_ = true;
-      }
+  if (const auto *listParent{
+          child.parent().get_if<ListDirectedStatementState<DIR>>()}) {
+    if constexpr (DIR == Direction::Input) {
+      this->set_eatComma(listParent->eatComma());
+      this->namelistGroup_ = listParent->namelistGroup();
+    }
+    if (auto *childListParent{
+            child.parent().get_if<ChildListIoStatementState<DIR>>()}) {
+      // Child list I/O whose parent is child list I/O: can advance
+      // if the parent can.
+      this->canAdvance_ = childListParent->CanAdvance();
+    } else {
+      // Child list I/O of top-level list I/O: can advance.
+      this->canAdvance_ = true;
     }
   }
 #else
@@ -1279,6 +1286,12 @@ bool InquireUnitState::Inquire(
         ? "UNDEFINED"
         : mutableModes().editingFlags & decimalComma ? "COMMA"
                                                      : "POINT";
+    break;
+  case HashInquiryKeyword("Leading_Zero"):
+    str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
+        ? "UNDEFINED"
+        : mutableModes().editingFlags & leadingZeroSuppress ? "SUPPRESS"
+                                                            : "PRINT";
     break;
   case HashInquiryKeyword("DELIM"):
     if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
@@ -1471,7 +1484,7 @@ bool InquireUnitState::Inquire(
     } else if (unit().openRecl) {
       result = *unit().openRecl;
     } else {
-      result = std::numeric_limits<std::int32_t>::max();
+      result = common::numeric_limits<std::int32_t>::max();
     }
     return true;
   case HashInquiryKeyword("SIZE"):
@@ -1505,6 +1518,7 @@ bool InquireNoUnitState::Inquire(
   case HashInquiryKeyword("DECIMAL"):
   case HashInquiryKeyword("DELIM"):
   case HashInquiryKeyword("FORM"):
+  case HashInquiryKeyword("Leading_Zero"):
   case HashInquiryKeyword("NAME"):
   case HashInquiryKeyword("PAD"):
   case HashInquiryKeyword("POSITION"):
@@ -1593,6 +1607,7 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("DECIMAL"):
   case HashInquiryKeyword("DELIM"):
   case HashInquiryKeyword("FORM"):
+  case HashInquiryKeyword("Leading_Zero"):
   case HashInquiryKeyword("PAD"):
   case HashInquiryKeyword("POSITION"):
   case HashInquiryKeyword("ROUND"):

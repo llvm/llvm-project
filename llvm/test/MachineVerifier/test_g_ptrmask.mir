@@ -1,11 +1,9 @@
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
-# RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 
 ---
-name:            test_ptr_mask
-tracksRegLiveness: true
-liveins:
-body:             |
+name: test_ptr_mask
+body: |
   bb.0:
 
     %0:_(p0) = G_IMPLICIT_DEF
@@ -50,5 +48,4 @@ body:             |
 
     ; CHECK: Bad machine code: operand types must preserve number of vector elements
     %15:_(<4 x p0>) = G_PTRMASK %14, %8
-
 ...

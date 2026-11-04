@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=r600 -mcpu=redwood -mattr=-promote-alloca < %s | FileCheck %s
+; RUN: llc -mtriple=r600 -mcpu=redwood -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck %s
 ;
 ; CFG flattening should use parallel-and mode to generate branch conditions and
 ; then merge if-regions with the same bodies.

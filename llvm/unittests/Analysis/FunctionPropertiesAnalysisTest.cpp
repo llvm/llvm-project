@@ -18,7 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "gmock/gmock.h"
@@ -27,15 +27,6 @@
 
 using namespace llvm;
 using namespace testing;
-
-namespace llvm {
-LLVM_ABI extern cl::opt<bool> EnableDetailedFunctionProperties;
-LLVM_ABI extern cl::opt<bool> BigBasicBlockInstructionThreshold;
-LLVM_ABI extern cl::opt<bool> MediumBasicBlockInstrutionThreshold;
-LLVM_ABI extern cl::opt<float> ir2vec::OpcWeight;
-LLVM_ABI extern cl::opt<float> ir2vec::TypeWeight;
-LLVM_ABI extern cl::opt<float> ir2vec::ArgWeight;
-} // namespace llvm
 
 namespace {
 
@@ -53,16 +44,7 @@ public:
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
     FAM.registerPass([&] { return LoopAnalysis(); });
     FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-
-    ir2vec::OpcWeight = 1.0;
-    ir2vec::TypeWeight = 1.0;
-    ir2vec::ArgWeight = 1.0;
   }
-
-private:
-  float OriginalOpcWeight = ir2vec::OpcWeight;
-  float OriginalTypeWeight = ir2vec::TypeWeight;
-  float OriginalArgWeight = ir2vec::ArgWeight;
 
 protected:
   std::unique_ptr<DominatorTree> DT;
@@ -71,19 +53,18 @@ protected:
   ModuleAnalysisManager MAM;
   std::unique_ptr<ir2vec::Vocabulary> IR2VecVocab;
 
-  void TearDown() override {
-    // Restore original IR2Vec weights
-    ir2vec::OpcWeight = OriginalOpcWeight;
-    ir2vec::TypeWeight = OriginalTypeWeight;
-    ir2vec::ArgWeight = OriginalArgWeight;
-  }
-
   FunctionPropertiesInfo buildFPI(Function &F) {
     // FunctionPropertiesInfo assumes IR2VecVocabAnalysis has been run to
     // use IR2Vec.
     auto &VocabResult = MAM.getResult<IR2VecVocabAnalysis>(*F.getParent());
     (void)VocabResult;
     return FunctionPropertiesInfo::getFunctionPropertiesInfo(F, FAM);
+  }
+
+  void enableDetailedProperties(LLVMContext &C) {
+    const char *Args[] = {"", "-enable-detailed-function-properties"};
+    ASSERT_TRUE(
+        cl::parseCommandLineOptions(C.getLibraryOptions(), Args, "", &nulls()));
   }
 
   void invalidate(Function &F) {
@@ -171,7 +152,7 @@ define internal i32 @top() {
   EXPECT_EQ(BranchesFeatures.MaxLoopDepth, 0);
   EXPECT_EQ(BranchesFeatures.TopLevelLoopCount, 0);
 
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedBranchesFeatures = buildFPI(*BranchesFunction);
   EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithSingleSuccessor, 2);
   EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithTwoSuccessors, 1);
@@ -208,7 +189,6 @@ define internal i32 @top() {
   EXPECT_TRUE(
       DetailedBranchesFeatures.getFunctionEmbedding().approximatelyEquals(
           createEmbedder(*BranchesFunction)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, DifferentPredecessorSuccessorCounts) {
@@ -225,7 +205,7 @@ finally:
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSingleSuccessor, 0);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoSuccessors, 1);
@@ -261,7 +241,6 @@ finally:
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, InlineSameBBSimple) {
@@ -457,7 +436,7 @@ entry:
   ret void
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @callee()
       to label %cont unwind label %exc
@@ -466,7 +445,7 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -498,7 +477,7 @@ TEST_F(FunctionPropertiesAnalysisTest, InvokeUnreachableHandler) {
                                              R"IR(
 declare void @might_throw()
 
-define internal i32 @callee() personality i32 (...)* @__gxx_personality_v0 {
+define internal i32 @callee() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @might_throw()
       to label %cont unwind label %exc
@@ -507,12 +486,12 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   %X = invoke i32 @callee()
            to label %cont unwind label %Handler
@@ -521,7 +500,7 @@ cont:
   ret i32 %X
 
 Handler:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -554,7 +533,7 @@ TEST_F(FunctionPropertiesAnalysisTest, Rethrow) {
                                              R"IR(
 declare void @might_throw()
 
-define internal i32 @callee() personality i32 (...)* @__gxx_personality_v0 {
+define internal i32 @callee() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @might_throw()
       to label %cont unwind label %exc
@@ -563,12 +542,12 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   %X = invoke i32 @callee()
            to label %cont unwind label %Handler
@@ -577,7 +556,7 @@ cont:
   ret i32 %X
 
 Handler:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -612,18 +591,18 @@ declare void @external_func()
 @exception_type2 = external global i8
 
 
-define internal void @inner() personality i8* null {
+define internal void @inner() personality ptr null {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
   ret void
 lpad:
   %lp = landingpad i32
-      catch i8* @exception_type1
+      catch ptr @exception_type1
   resume i32 %lp
 }
 
-define void @outer() personality i8* null {
+define void @outer() personality ptr null {
   invoke void @inner()
       to label %cont unwind label %lpad
 cont:
@@ -631,7 +610,7 @@ cont:
 lpad:
   %lp = landingpad i32
       cleanup
-      catch i8* @exception_type2
+      catch ptr @exception_type2
   resume i32 %lp
 }
 
@@ -666,18 +645,18 @@ declare void @external_func()
 @exception_type2 = external global i8
 
 
-define internal void @inner() personality i8* null {
+define internal void @inner() personality ptr null {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
   ret void
 lpad:
   %lp = landingpad i32
-      catch i8* @exception_type1
+      catch ptr @exception_type1
   resume i32 %lp
 }
 
-define void @outer(i32 %a) personality i8* null {
+define void @outer(i32 %a) personality ptr null {
 entry:
   %i = icmp slt i32 %a, 0
   br i1 %i, label %if.then, label %cont
@@ -689,7 +668,7 @@ cont:
 lpad:
   %lp = landingpad i32
       cleanup
-      catch i8* @exception_type2
+      catch ptr @exception_type2
   resume i32 %lp
 }
 
@@ -931,16 +910,16 @@ TEST_F(FunctionPropertiesAnalysisTest, DetailedOperandCount) {
 @a = global i64 1
 
 define i64 @f1(i64 %e) {
-	%b = load i64, i64* @a
+	%b = load i64, ptr @a
   %c = add i64 %b, 2
-  %d = call i64 asm "mov $1,$0", "=r,r" (i64 %c)																						
+  %d = call i64 asm "mov $1,$0", "=r,r" (i64 %c)
 	%f = add i64 %d, %e
 	ret i64 %f
 }
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSingleSuccessor, 0);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoSuccessors, 0);
@@ -976,7 +955,6 @@ define i64 @f1(i64 %e) {
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, IntrinsicCount) {
@@ -991,7 +969,7 @@ declare float @llvm.cos.f32(float)
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.IntrinsicCount, 1);
   EXPECT_EQ(DetailedF1Properties.DirectCallCount, 1);
@@ -1003,7 +981,6 @@ declare float @llvm.cos.f32(float)
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, FunctionCallMetrics) {
@@ -1026,7 +1003,7 @@ declare float @f5()
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.IntrinsicCount, 0);
   EXPECT_EQ(DetailedF1Properties.DirectCallCount, 4);
@@ -1038,7 +1015,6 @@ declare float @f5()
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 1);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, CriticalEdge) {
@@ -1064,12 +1040,11 @@ BottomBlock2:
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.CriticalEdgeCount, 1);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, FunctionReturnVectors) {
@@ -1089,14 +1064,13 @@ declare <4 x ptr> @f4()
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorIntCount, 1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorFloatCount, 1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorPointerCount, 1);
   EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
       createEmbedder(*F1)->getFunctionVector()));
-  EnableDetailedFunctionProperties.setValue(false);
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, ReAddEdges) {

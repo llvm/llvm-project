@@ -160,7 +160,7 @@ int check_all_features() {
 //
 int __attribute__((target("simd"))) neon_code() { return 1; }
 
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
 // CHECK-LABEL: define dso_local i32 @sve_code(
 // CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -217,11 +217,25 @@ int test_versions() {
     return code();
 }
 
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define dso_local i32 @test_long(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 577586773744664575
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 577586773744664575
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
+// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP3]] to i32
+// CHECK-NEXT:    ret i32 [[CONV]]
+//
+int test_long(void) {
+  return __builtin_cpu_supports("rng+flagm+flagm2+fp16fml+dotprod+sm4+rdm+lse+fp+simd+aes+bf16+bti+crc+cssc+dit+dotprod+f32mm+f64mm+flagm+fp16fml+fp16+i8mm+mops+sha2+sha3+sm4+sve2");
+}
+
 //.
 // CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
 // CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone vscale_range(1,16) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

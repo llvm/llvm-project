@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class GenericDequeDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def findVariable(self, name):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid())

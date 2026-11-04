@@ -11,14 +11,6 @@ from lldbsuite.test import lldbutil
 class TestFrameVarDILBitFieldExtraction(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def expect_var_path(self, expr, compare_to_framevar=False, value=None, type=None):
-        value_dil = super().expect_var_path(expr, value=value, type=type)
-        if compare_to_framevar:
-            self.runCmd("settings set target.experimental.use-DIL false")
-            value_frv = super().expect_var_path(expr, value=value, type=type)
-            self.runCmd("settings set target.experimental.use-DIL true")
-            self.assertEqual(value_dil.GetValue(), value_frv.GetValue())
-
     def test_bitfield_extraction(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -28,29 +20,81 @@ class TestFrameVarDILBitFieldExtraction(TestBase):
         self.runCmd("settings set target.experimental.use-DIL true")
 
         # Test ranges and type
-        self.expect_var_path("value[0-1]", True, value="3", type="int:2")
-        self.expect_var_path("value[4-7]", True, value="7", type="int:4")
-        self.expect_var_path("value[7-0]", True, value="115", type="int:8")
+        self.expect_var_path("value[0:1]", value="3", type="int:2")
+        self.expect_var_path("value[4:7]", value="7", type="int:4")
+        self.expect_var_path("value[7:0]", value="115", type="int:8")
 
         # Test reference and dereferenced pointer
-        self.expect_var_path("value_ref[0-1]", value="3", type="int:2")
-        self.expect_var_path("(*value_ptr)[0-1]", value="3", type="int:2")
+        self.expect_var_path("value_ref[0:1]", value="3", type="int:2")
+        self.expect_var_path("(*value_ptr)[0:1]", value="3", type="int:2")
+
+        # Test ranges as variable, reference, enum
+        self.expect_var_path("value[idx_0:idx_1]", value="3", type="int:2")
+        self.expect_var_path("value[0:idx_1_ref]", value="3", type="int:2")
+        self.expect_var_path("value[idx_1_ref:0]", value="3", type="int:2")
+        self.expect_var_path("value[0:enum_one]", value="3", type="int:2")
+        self.expect_var_path("value[enum_one:0]", value="3", type="int:2")
+
+        # Test that old range syntax is now a binary subtraction
+        self.expect_var_path("value[6-1]", value="1", type="int:1")
 
         # Test array and pointer
         self.expect(
-            "frame var 'int_arr[0-2]'",
+            "frame var 'int_arr[0:2]'",
             error=True,
-            substrs=["bitfield range 0-2 is not valid"],
+            substrs=["bitfield range 0:2 is not valid"],
         )
         self.expect(
-            "frame var 'value_ptr[0-1]'",
+            "frame var 'value_ptr[0:1]'",
             error=True,
-            substrs=["bitfield range 0-1 is not valid"],
+            substrs=["bitfield range 0:1 is not valid"],
         )
 
         # Test invalid input
         self.expect(
-            "frame var 'value[1-]'",
+            "frame var 'value[1:]'",
             error=True,
-            substrs=["failed to parse integer constant"],
+            substrs=["Unexpected token: <']' (r_square)>"],
+        )
+        self.expect(
+            "frame var 'value[1:2.0]'",
+            error=True,
+            substrs=["bit index is not an integer"],
+        )
+        self.expect(
+            "frame var 'value[2.0:1]'",
+            error=True,
+            substrs=["bit index is not an integer"],
+        )
+
+        # A negative bit index must be rejected instead of wrapping to a huge
+        # uint32_t at the GetSyntheticBitFieldChild call site.
+        self.expect(
+            "frame var 'value[-1:0]'",
+            error=True,
+            substrs=["bitfield range -1:0 is not valid (negative index)"],
+        )
+        self.expect(
+            "frame var 'value[0:-1]'",
+            error=True,
+            substrs=["bitfield range 0:-1 is not valid (negative index)"],
+        )
+
+        # A range wider than 64 bits must be rejected: DataExtractor's
+        # GetMaxU64Bitfield only supports up to 64 bits (it asserts and
+        # otherwise shifts out of bounds).
+        self.expect(
+            "frame var 'value[0:64]'",
+            error=True,
+            substrs=["bitfield range 0:64 is not valid (more than 64 bits)"],
+        )
+
+        # A high index past the base object's storage must be rejected;
+        # otherwise reading the synthetic child shifts out of bounds in
+        # GetMaxU64Bitfield. 'value' is a 32-bit int, so bit 50 is out of range.
+        # The range is normalized (high:low swapped) before the message.
+        self.expect(
+            "frame var 'value[100:50]'",
+            error=True,
+            substrs=["bitfield range 50:100 is not valid"],
         )

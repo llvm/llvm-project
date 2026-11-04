@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -std=c++2a | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -std=c++2a -fexperimental-new-constant-interpreter | FileCheck %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-pch -o %t.pch %s -std=c++2a
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -include-pch %t.pch -x c++ /dev/null -emit-llvm -o - -std=c++2a | FileCheck %s

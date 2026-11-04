@@ -29,49 +29,32 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-indirect-branch-tracking"
 
-cl::opt<bool> IndirectBranchTracking(
-    "x86-indirect-branch-tracking", cl::init(false), cl::Hidden,
-    cl::desc("Enable X86 indirect branch tracking pass."));
-
 STATISTIC(NumEndBranchAdded, "Number of ENDBR instructions added");
 
 namespace {
-class X86IndirectBranchTrackingPass : public MachineFunctionPass {
+class X86IndirectBranchTrackingLegacy : public MachineFunctionPass {
 public:
-  X86IndirectBranchTrackingPass() : MachineFunctionPass(ID) {}
+  static char ID;
+
+  X86IndirectBranchTrackingLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "X86 Indirect Branch Tracking";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
-  static char ID;
-
-  /// Machine instruction info used throughout the class.
-  const X86InstrInfo *TII = nullptr;
-
-  /// Endbr opcode for the current machine function.
-  unsigned int EndbrOpcode = 0;
-
-  /// Adds a new ENDBR instruction to the beginning of the MBB.
-  /// The function will not add it if already exists.
-  /// It will add ENDBR32 or ENDBR64 opcode, depending on the target.
-  /// \returns true if the ENDBR was added and false otherwise.
-  bool addENDBR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
 };
 
-} // end anonymous namespace
+/// Adds a new ENDBR instruction to the beginning of the MBB.
+/// The function will not add it if already exists.
+/// It will add ENDBR32 or ENDBR64 opcode, depending on the target.
+/// \returns true if the ENDBR was added and false otherwise.
+static bool addENDBR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) {
+  MachineFunction &MF = *MBB.getParent();
+  const X86Subtarget &SubTarget = MF.getSubtarget<X86Subtarget>();
+  const X86InstrInfo *TII = SubTarget.getInstrInfo();
+  unsigned EndbrOpcode = SubTarget.is64Bit() ? X86::ENDBR64 : X86::ENDBR32;
 
-char X86IndirectBranchTrackingPass::ID = 0;
-
-FunctionPass *llvm::createX86IndirectBranchTrackingPass() {
-  return new X86IndirectBranchTrackingPass();
-}
-
-bool X86IndirectBranchTrackingPass::addENDBR(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const {
   assert(TII && "Target instruction info was not initialized");
   assert((X86::ENDBR64 == EndbrOpcode || X86::ENDBR32 == EndbrOpcode) &&
          "Unexpected Endbr opcode");
@@ -84,6 +67,17 @@ bool X86IndirectBranchTrackingPass::addENDBR(
     return true;
   }
   return false;
+}
+
+} // end anonymous namespace
+
+char X86IndirectBranchTrackingLegacy::ID = 0;
+
+INITIALIZE_PASS(X86IndirectBranchTrackingLegacy, DEBUG_TYPE,
+                "X86 Indirect Branch Tracking", false, false)
+
+FunctionPass *llvm::createX86IndirectBranchTrackingLegacyPass() {
+  return new X86IndirectBranchTrackingLegacy();
 }
 
 static bool IsCallReturnTwice(llvm::MachineOperand &MOp) {
@@ -113,9 +107,7 @@ static bool needsPrologueENDBR(MachineFunction &MF, const Module *M) {
   }
 }
 
-bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
-  const X86Subtarget &SubTarget = MF.getSubtarget<X86Subtarget>();
-
+static bool runIndirectBranchTracking(MachineFunction &MF) {
   const Module *M = MF.getFunction().getParent();
   // Check that the cf-protection-branch is enabled.
   Metadata *isCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
@@ -129,14 +121,14 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
 #else
   bool isJITwithCET = false;
 #endif
-  if (!isCFProtectionSupported && !IndirectBranchTracking && !isJITwithCET)
+  if (!isCFProtectionSupported && !TM->getCLOpts().indirect_branch_tracking &&
+      !isJITwithCET)
     return false;
+
+  const bool IsSjLj = M->getExceptionModel() == ExceptionHandling::SjLj;
 
   // True if the current MF was changed and false otherwise.
   bool Changed = false;
-
-  TII = SubTarget.getInstrInfo();
-  EndbrOpcode = SubTarget.is64Bit() ? X86::ENDBR64 : X86::ENDBR32;
 
   // If function is reachable indirectly, mark the first BB with ENDBR.
   if (needsPrologueENDBR(MF, M)) {
@@ -160,7 +152,7 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
     // Exception handle may indirectly jump to catch pad, So we should add
     // ENDBR before catch pad instructions. For SjLj exception model, it will
     // create a new BB(new landingpad) indirectly jump to the old landingpad.
-    if (TM->Options.ExceptionModel == ExceptionHandling::SjLj) {
+    if (IsSjLj) {
       for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
         // New Landingpad BB without EHLabel.
         if (MBB.isEHPad()) {
@@ -178,7 +170,7 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
           break;
         }
       }
-    } else if (MBB.isEHPad()){
+    } else if (MBB.isEHPad()) {
       for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
         if (!I->isEHLabel())
           continue;
@@ -188,4 +180,18 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   return Changed;
+}
+
+bool X86IndirectBranchTrackingLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return runIndirectBranchTracking(MF);
+}
+
+PreservedAnalyses
+X86IndirectBranchTrackingPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  return runIndirectBranchTracking(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

@@ -50,7 +50,7 @@
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp=libomp -fopenmp-targets=spirv64-intel -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
-// CHECK-EMIT-LLVM-IR: "-cc1" "-triple" "spirv64-intel"{{.*}}"-emit-llvm-bc"
+// CHECK-EMIT-LLVM-IR: "-cc1" "-triple" "spirv64-intel"{{.*}}"-emit-llvm"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=spirv64-intel \
 // RUN: --sysroot=%S/Inputs/spirv-openmp/ %s 2>&1 | FileCheck --check-prefix=CHECK-GPULIB %s
@@ -65,7 +65,8 @@
 // RUN:        -nogpulib %s 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-LINKER-ARG
 // CHECK-LINKER-ARG: clang-linker-wrapper
-// CHECK-LINKER-ARG-NOT: --device-linker=spirv64
+// CHECK-LINKER-ARG: --device-linker=spirv64-intel=--allow-partial-linkage"
+// CHECK-LINKER-ARG-SAME: --device-linker=spirv64-intel=--create-library"
 // CHECK-LINKER-ARG-NOT: -mllvm
 // CHECK-LINKER-ARG-NOT: --spirv-ext=+SPV_INTEL_function_pointers
 // CHECK-LINKER-ARG: --linker-path

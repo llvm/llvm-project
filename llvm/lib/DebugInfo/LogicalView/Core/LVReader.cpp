@@ -22,10 +22,35 @@ using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "Reader"
 
+// Traverse all the logical elements and print their basic information.
+void LVReader::printCollectedElements(LVScope *Root) {
+  std::function<void(LVScope * Parent)> TraverseScope = [&](LVScope *Parent) {
+    // Print the elements.
+    auto Print = [&](const auto &Set) {
+      if (Set)
+        for (const auto &Entry : *Set)
+          Entry->printCommon(dbgs());
+    };
+
+    for (LVElement *Element : Parent->getChildren())
+      Element->print(dbgs());
+    Print(Parent->getLines());
+    Print(Parent->getRanges());
+    if (const LVScopes *Scopes = Parent->getScopes())
+      for (LVScope *Scope : *Scopes)
+        TraverseScope(Scope);
+  };
+
+  // Start traversing the scopes root.
+  dbgs() << "\n** Collected logical elements **\n";
+  Root->print(dbgs());
+  TraverseScope(Root);
+}
+
 // Detect elements that are inserted more than once at different scopes,
 // causing a crash on the reader destruction, as the element is already
 // deleted from other scope. Helper for CodeView reader.
-bool checkIntegrityScopesTree(LVScope *Root) {
+bool LVReader::checkIntegrityScopesTree(LVScope *Root) {
   using LVDuplicateEntry = std::tuple<LVElement *, LVScope *, LVScope *>;
   using LVDuplicate = std::vector<LVDuplicateEntry>;
   LVDuplicate Duplicate;
@@ -61,6 +86,9 @@ bool checkIntegrityScopesTree(LVScope *Root) {
     Traverse(Parent->getLines());
   };
 
+  // Print collected elements.
+  printCollectedElements(Root);
+
   // Start traversing the scopes root and print any duplicates.
   TraverseScope(Root);
   bool PassIntegrity = true;
@@ -71,21 +99,21 @@ bool checkIntegrityScopesTree(LVScope *Root) {
 
     auto PrintIndex = [](unsigned Index) {
       if (Index)
-        dbgs() << format("%8d: ", Index);
+        dbgs() << formatv("{0,8}: ", Index);
       else
-        dbgs() << format("%8c: ", ' ');
+        dbgs() << formatv("{0,8}: ", ' ');
     };
     auto PrintElement = [&](LVElement *Element, unsigned Index = 0) {
       PrintIndex(Index);
       std::string ElementName(Element->getName());
-      dbgs() << format("%15s ID=0x%08x '%s'\n", Element->kind(),
-                       Element->getID(), ElementName.c_str());
+      dbgs() << formatv("{0,15} ID={1:x8} '{2}'\n", Element->kind(),
+                        Element->getID(), ElementName);
     };
 
     std::string RootName(Root->getName());
     dbgs() << formatv("{0}\n", fmt_repeat('=', 72));
-    dbgs() << format("Root: '%s'\nDuplicated elements: %d\n", RootName.c_str(),
-                     Duplicate.size());
+    dbgs() << formatv("Root: '{0}'\nDuplicated elements: {1}\n", RootName,
+                      Duplicate.size());
     dbgs() << formatv("{0}\n", fmt_repeat('=', 72));
 
     unsigned Index = 0;

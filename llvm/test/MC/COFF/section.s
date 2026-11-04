@@ -221,12 +221,12 @@
 // CHECK:       Section {
 // CHECK-NEXT:    Number:
 // CHECK-NEXT:    Name: data1
-// CHECK:         RawDataSize: 16
+// CHECK:         RawDataSize: 0x10
 
 // CHECK:       Section {
 // CHECK-NEXT:    Number:
 // CHECK-NEXT:    Name: data2
-// CHECK:         RawDataSize: 8
+// CHECK:         RawDataSize: 0x8
 
 .section .data3,"dw"; .quad 1
 
@@ -240,14 +240,14 @@
 .quad 4
 
 // Notice the different section flags here.
-// This shouldn't overwrite the intial section flags.
+// This shouldn't overwrite the initial section flags.
 .pushsection .data4,"dr"; .quad 1
 .popsection
 
 // CHECK:       Section {
 // CHECK-NEXT:    Number:
 // CHECK-NEXT:    Name: .data3
-// CHECK:         RawDataSize: 16
+// CHECK:         RawDataSize: 0x10
 // CHECK:         Characteristics [
 // CHECK-NEXT:      IMAGE_SCN_ALIGN_1BYTES
 // CHECK-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA
@@ -258,7 +258,7 @@
 // CHECK:       Section {
 // CHECK-NEXT:    Number:
 // CHECK-NEXT:    Name: .data4
-// CHECK:         RawDataSize: 16
+// CHECK:         RawDataSize: 0x10
 // CHECK:         Characteristics [
 // CHECK-NEXT:      IMAGE_SCN_ALIGN_1BYTES
 // CHECK-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA
@@ -269,7 +269,7 @@
 // CHECK:       Section {
 // CHECK-NEXT:    Number:
 // CHECK-NEXT:    Name: .data5
-// CHECK:         RawDataSize: 8
+// CHECK:         RawDataSize: 0x8
 // CHECK:         Characteristics [
 // CHECK-NEXT:      IMAGE_SCN_ALIGN_1BYTES
 // CHECK-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA

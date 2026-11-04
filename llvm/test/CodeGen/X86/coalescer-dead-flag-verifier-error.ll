@@ -7,8 +7,8 @@
 define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0_(ptr %r) {
 ; CHECK-LABEL: _ZNK4llvm5APInt21multiplicativeInverseERKS0_:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4
@@ -68,8 +68,8 @@ _ZNK4llvm5APInt13getActiveBitsEv.exit.i.i:        ; preds = %for.body.i.i.i.i.i
 define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0__assert(ptr %r) {
 ; CHECK-LABEL: _ZNK4llvm5APInt21multiplicativeInverseERKS0__assert:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    jmp .LBB1_1
 ; CHECK-NEXT:    .p2align 4

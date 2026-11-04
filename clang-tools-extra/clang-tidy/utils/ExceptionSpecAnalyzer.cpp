@@ -20,7 +20,7 @@ ExceptionSpecAnalyzer::analyze(const FunctionDecl *FuncDecl) {
   const auto [CacheEntry, NotFound] =
       FunctionCache.try_emplace(FuncDecl, State::NotThrowing);
   if (NotFound) {
-    ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
+    const ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
     // Update result with calculated value
     FunctionCache[FuncDecl] = State;
     return State;
@@ -86,26 +86,33 @@ ExceptionSpecAnalyzer::analyzeRecord(const CXXRecordDecl *RecordDecl,
       if (getDefaultableMemberKind(MethodDecl) == Kind)
         return analyze(MethodDecl);
 
+  State Result = State::NotThrowing;
   for (const auto &BaseSpec : RecordDecl->bases()) {
-    State Result = analyzeBase(BaseSpec, Kind);
-    if (Result == State::Throwing || Result == State::Unknown)
-      return Result;
+    const State CurrentState = analyzeBase(BaseSpec, Kind);
+    if (CurrentState == State::Throwing)
+      return CurrentState;
+    if (CurrentState == State::Unknown)
+      Result = CurrentState;
   }
 
   for (const auto &BaseSpec : RecordDecl->vbases()) {
-    State Result = analyzeBase(BaseSpec, Kind);
-    if (Result == State::Throwing || Result == State::Unknown)
-      return Result;
+    const State CurrentState = analyzeBase(BaseSpec, Kind);
+    if (CurrentState == State::Throwing)
+      return CurrentState;
+    if (CurrentState == State::Unknown)
+      Result = CurrentState;
   }
 
   for (const auto *FDecl : RecordDecl->fields())
     if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitField()) {
-      State Result = analyzeFieldDecl(FDecl, Kind);
-      if (Result == State::Throwing || Result == State::Unknown)
-        return Result;
+      const State CurrentState = analyzeFieldDecl(FDecl, Kind);
+      if (CurrentState == State::Throwing)
+        return CurrentState;
+      if (CurrentState == State::Unknown)
+        Result = CurrentState;
     }
 
-  return State::NotThrowing;
+  return Result;
 }
 
 ExceptionSpecAnalyzer::State

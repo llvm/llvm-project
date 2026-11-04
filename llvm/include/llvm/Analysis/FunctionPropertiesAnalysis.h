@@ -21,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+struct AnalysisOptions;
 class BasicBlock;
 class CallBase;
 class DominatorTree;
@@ -35,6 +36,8 @@ class FunctionPropertiesInfo {
 
   ir2vec::Embedding FunctionEmbedding = ir2vec::Embedding(0.0);
   const ir2vec::Vocabulary *IR2VecVocab = nullptr;
+  // Non-null iff the detailed properties are computed.
+  const AnalysisOptions *DetailedOpts = nullptr;
 
 public:
   LLVM_ABI static FunctionPropertiesInfo
@@ -127,9 +130,15 @@ public:
   int64_t CriticalEdgeCount = 0;
   int64_t ControlFlowEdgeCount = 0;
   int64_t UnconditionalBranchCount = 0;
+  int64_t ConditionalBranchCount = 0;
+  int64_t BranchInstructionCount = 0;
+  int64_t BranchSuccessorCount = 0;
+  int64_t SwitchInstructionCount = 0;
+  int64_t SwitchSuccessorCount = 0;
 
   // Call related instructions
   int64_t IntrinsicCount = 0;
+  int64_t NoReturnCallCount = 0;
   int64_t DirectCallCount = 0;
   int64_t IndirectCallCount = 0;
   int64_t CallReturnsIntegerCount = 0;
@@ -168,15 +177,25 @@ public:
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesPrinterPass
-    : public PassInfoMixin<FunctionPropertiesPrinterPass> {
+    : public RequiredPassInfoMixin<FunctionPropertiesPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit FunctionPropertiesPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
-  static bool isRequired() { return true; }
+/// Statistics pass for the FunctionPropertiesAnalysis results.
+class FunctionPropertiesStatisticsPass
+    : public RequiredPassInfoMixin<FunctionPropertiesStatisticsPass> {
+  bool IsPreOptimization;
+
+public:
+  explicit FunctionPropertiesStatisticsPass(bool IsPreOptimization = false)
+      : IsPreOptimization(IsPreOptimization) {}
+
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A

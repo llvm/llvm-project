@@ -11,6 +11,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/RetainSummaryManager.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -122,11 +123,13 @@ public:
 
   bool isAdoptFnName(const std::string &Name) const {
     return isAdoptNS(Name) || Name == "adoptCF" || Name == "adoptCFArc" ||
+           Name == "adoptCFNullable" || Name == "adoptCFNullableArc" ||
            Name == "adoptOSObject" || Name == "adoptOSObjectArc";
   }
 
   bool isAdoptNS(const std::string &Name) const {
-    return Name == "adoptNS" || Name == "adoptNSArc";
+    return Name == "adoptNS" || Name == "adoptNSArc" ||
+           Name == "adoptNSNullable" || Name == "adoptNSNullableArc";
   }
 
   void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {
@@ -355,15 +358,37 @@ public:
   void visitBinaryOperator(const BinaryOperator *BO) const {
     if (!BO->isAssignmentOp())
       return;
-    if (!isa<ObjCIvarRefExpr>(BO->getLHS()))
-      return;
+    auto *LHS = BO->getLHS();
     auto *RHS = BO->getRHS()->IgnoreParenCasts();
-    const Expr *Inner = nullptr;
-    if (isAllocInit(RHS, &Inner)) {
-      CreateOrCopyFnCall.insert(RHS);
-      if (Inner)
-        CreateOrCopyFnCall.insert(Inner);
+    if (isa<ObjCIvarRefExpr>(LHS)) {
+      const Expr *Inner = nullptr;
+      if (isAllocInit(RHS, &Inner)) {
+        CreateOrCopyFnCall.insert(RHS);
+        if (Inner)
+          CreateOrCopyFnCall.insert(Inner);
+      }
+      return;
     }
+    auto *UO = dyn_cast<UnaryOperator>(LHS);
+    if (!UO)
+      return;
+    auto OpCode = UO->getOpcode();
+    if (OpCode != UO_Deref)
+      return;
+    auto *DerefTarget = UO->getSubExpr();
+    if (!DerefTarget)
+      return;
+    DerefTarget = DerefTarget->IgnoreParenCasts();
+    auto *DRE = dyn_cast<DeclRefExpr>(DerefTarget);
+    if (!DRE)
+      return;
+    auto *Decl = DRE->getDecl();
+    if (!Decl)
+      return;
+    if (!isa<ParmVarDecl>(Decl) || !isCreateOrCopy(RHS))
+      return;
+    if (Decl->hasAttr<CFReturnsRetainedAttr>())
+      CreateOrCopyFnCall.insert(RHS);
   }
 
   void visitReturnStmt(const ReturnStmt *RS, const Decl *DeclWithIssue) const {
@@ -421,50 +446,6 @@ public:
       return std::nullopt;
     }
     return std::nullopt;
-  }
-
-  bool isAllocInit(const Expr *E, const Expr **InnerExpr = nullptr) const {
-    auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E);
-    if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
-      if (unsigned ExprCount = POE->getNumSemanticExprs()) {
-        auto *Expr = POE->getSemanticExpr(ExprCount - 1)->IgnoreParenCasts();
-        ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(Expr);
-        if (InnerExpr)
-          *InnerExpr = ObjCMsgExpr;
-      }
-    }
-    if (!ObjCMsgExpr)
-      return false;
-    auto Selector = ObjCMsgExpr->getSelector();
-    auto NameForFirstSlot = Selector.getNameForSlot(0);
-    if (NameForFirstSlot == "alloc" || NameForFirstSlot.starts_with("copy") ||
-        NameForFirstSlot.starts_with("mutableCopy"))
-      return true;
-    if (!NameForFirstSlot.starts_with("init") &&
-        !NameForFirstSlot.starts_with("_init"))
-      return false;
-    if (!ObjCMsgExpr->isInstanceMessage())
-      return false;
-    auto *Receiver = ObjCMsgExpr->getInstanceReceiver();
-    if (!Receiver)
-      return false;
-    Receiver = Receiver->IgnoreParenCasts();
-    if (auto *Inner = dyn_cast<ObjCMessageExpr>(Receiver)) {
-      if (InnerExpr)
-        *InnerExpr = Inner;
-      auto InnerSelector = Inner->getSelector();
-      return InnerSelector.getNameForSlot(0) == "alloc";
-    } else if (auto *CE = dyn_cast<CallExpr>(Receiver)) {
-      if (InnerExpr)
-        *InnerExpr = CE;
-      if (auto *Callee = CE->getDirectCallee()) {
-        if (Callee->getDeclName().isIdentifier()) {
-          auto CalleeName = Callee->getName();
-          return CalleeName.starts_with("alloc");
-        }
-      }
-    }
-    return false;
   }
 
   bool isCreateOrCopy(const Expr *E) const {
@@ -598,10 +579,9 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     Os << "Incorrect use of " << Name
-       << ". The argument is +0 and results in an use-after-free";
+       << "; the argument is +0 and results in an use-after-free";
     if (condition)
       Os << " " << condition;
-    Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
@@ -619,10 +599,9 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     Os << "Incorrect use of " << Name
-       << ". The argument is +1 and results in a memory leak";
+       << "; the argument is +1 and results in a memory leak";
     if (condition)
       Os << " " << condition;
-    Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),

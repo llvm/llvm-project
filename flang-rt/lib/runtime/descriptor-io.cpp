@@ -9,12 +9,12 @@
 #include "descriptor-io.h"
 #include "edit-input.h"
 #include "edit-output.h"
-#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/io-stmt.h"
 #include "flang-rt/runtime/namelist.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/type-info.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang-rt/runtime/work-queue.h"
 #include "flang/Common/optional.h"
 #include "flang/Common/restorer.h"
@@ -99,7 +99,14 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     }
     ExternalFileUnit *actualExternal{io.GetExternalFileUnit()};
     ExternalFileUnit *external{actualExternal};
-    if (!external) {
+    if (external) {
+      // Neither parent nor child I/O may be asynchronous.
+      if (const auto *extBase{io.get_if<ExternalIoStatementBase>()}) {
+        if (extBase->asynchronousID() >= 0) {
+          io.GetIoErrorHandler().SignalError(IostatParentAsynchronous);
+        }
+      }
+    } else {
       // Create a new unit to service defined I/O for an
       // internal I/O parent.
       external = &ExternalFileUnit::NewUnit(handler, true);
@@ -165,9 +172,9 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     external->PopChildIo(child);
     if (!actualExternal) {
       // Close unit created for internal I/O above.
-      auto *closing{external->LookUpForClose(external->unitNumber())};
+      auto *closing{external->LookUpForClose(external->unitNumber(), handler)};
       RUNTIME_CHECK(handler, external == closing);
-      external->DestroyClosed();
+      external->DestroyClosed(handler);
     }
     if (startPos) {
       io.GotChar(io.InquirePos() - *startPos);
@@ -193,6 +200,12 @@ static RT_API_ATTRS bool DefinedUnformattedIo(IoStatementState &io,
   if (!external) { // INQUIRE(IOLENGTH=)
     handler.SignalError(IostatNonExternalDefinedUnformattedIo);
     return false;
+  }
+  // Neither parent nor child I/O may be asynchronous.
+  if (const auto *extBase{io.get_if<ExternalIoStatementBase>()}) {
+    if (extBase->asynchronousID() >= 0) {
+      io.GetIoErrorHandler().SignalError(IostatParentAsynchronous);
+    }
   }
   ChildIo &child{external->PushChildIo(io)};
   int unit{external->unitNumber()};

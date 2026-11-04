@@ -13,7 +13,7 @@
 #ifndef LLVM_CGDATA_CGDATAPATCHITEM_H
 #define LLVM_CGDATA_CGDATAPATCHITEM_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 
@@ -22,10 +22,10 @@ struct CGDataPatchItem {
   // Where to patch.
   uint64_t Pos;
   // Source data.
-  OwningArrayRef<uint64_t> D;
+  llvm::SmallVector<uint64_t, 0> D;
 
   CGDataPatchItem(uint64_t Pos, const uint64_t *D, int N)
-      : Pos(Pos), D(ArrayRef<uint64_t>(D, N)) {}
+      : Pos(Pos), D(D, D + N) {}
 };
 
 } // namespace llvm

@@ -105,7 +105,13 @@ private:
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
   }
   bool InElemental() const {
-    return innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    // IsElementalProcedure() characterizes the whole procedure, including
+    // all of its dummy arguments, so evaluate it at most once per scope.
+    if (!innermostIsElemental_) {
+      innermostIsElemental_ =
+          innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    }
+    return *innermostIsElemental_;
   }
   bool InFunction() const {
     return innermostSymbol_ && IsFunction(*innermostSymbol_);
@@ -184,6 +190,8 @@ private:
   // This symbol is the one attached to the innermost enclosing scope
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
+  // Cached result of InElemental() for innermostSymbol_
+  mutable std::optional<bool> innermostIsElemental_;
   // Cache of calls to Procedure::Characterize(Symbol)
   std::map<SymbolRef, std::optional<Procedure>, SymbolAddressCompare>
       characterizeCache_;
@@ -255,6 +263,16 @@ static bool IsBlockData(const Scope &scope) {
 
 static bool IsBlockData(const Symbol &symbol) {
   return symbol.scope() && IsBlockData(*symbol.scope());
+}
+
+// Was this entity declared with an explicit-shape-bounds-spec (F2023 R818),
+// i.e. a rank-1 integer array as its bounds?  Name resolution marks the
+// resulting shape (a constant bounds array is folded into ordinary
+// per-dimension bounds, so the bounds themselves need not show it); a
+// zero-size base yields a scalar whose bounds were stashed for checking.
+static bool HasRankOneBounds(const ObjectEntityDetails &details) {
+  return details.shape().isFromRankOneBounds() ||
+      !details.droppedBoundsToCheck().empty();
 }
 
 void CheckHelper::Check(const Symbol &symbol) {
@@ -471,6 +489,10 @@ void CheckHelper::Check(const Symbol &symbol) {
     if (IsNamedConstant(symbol)) {
       messages_.Say(
           "A function result may not also be a named constant"_err_en_US);
+    }
+    if (!IsProcedurePointer(symbol) && IsProcedure(symbol)) {
+      messages_.Say(
+          "A function result may not be a procedure unless it is a procedure pointer"_err_en_US);
     }
   }
   if (IsAutomatic(symbol)) {
@@ -763,6 +785,22 @@ void CheckHelper::CheckObjectEntity(
   CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
+  // Validate bounds of a zero-size explicit-shape bounds array (F2023).  The
+  // entity is scalar, so these bounds were dropped from its shape; they were
+  // stashed during name resolution and are checked here, where the scope is
+  // final.
+  for (const Bound &bound : details.droppedBoundsToCheck()) {
+    Check(bound);
+  }
+  // F2023 C816 allows only an explicit-shape-spec-list for a nonallocatable
+  // nonpointer function result; an explicit-shape-bounds-spec (a rank-1
+  // integer array as the bounds, R818) is accepted as an extension there.
+  if (details.isFuncResult() && !IsAllocatableOrPointer(symbol) &&
+      HasRankOneBounds(details)) {
+    Warn(common::LanguageFeature::RankOneBoundsOnFunctionResult,
+        "Function result '%s' should not be declared with a rank-1 integer array as its bounds (F2023 C816)"_port_en_US,
+        symbol.name());
+  }
   if (details.shape().Rank() > common::maxRank) {
     messages_.Say(
         "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
@@ -851,6 +889,15 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Variable '%s' with EVENT_TYPE or LOCK_TYPE potential component '%s' must be a coarray"_err_en_US,
             symbol.name(), component.BuildResultDesignatorName());
+      } else if (IsNotifyType(derived)) { // C1612
+        messages_.Say(
+            "Variable '%s' with NOTIFY_TYPE must be a coarray"_err_en_US,
+            symbol.name());
+      } else if (auto component{FindNotifyPotentialComponent( // C1611
+                     *derived, /*ignoreCoarrays=*/true)}) {
+        messages_.Say(
+            "Variable '%s' with NOTIFY_TYPE potential component '%s' must be a coarray"_err_en_US,
+            symbol.name(), component.BuildResultDesignatorName());
       }
     }
   }
@@ -868,6 +915,10 @@ void CheckHelper::CheckObjectEntity(
       if (IsOrContainsEventOrLockComponent(symbol)) { // C847
         messages_.Say(
             "An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE"_err_en_US);
+      }
+      if (IsOrContainsNotifyComponent(symbol)) { // C1613
+        messages_.Say(
+            "An INTENT(OUT) dummy argument may not be, or contain, NOTIFY_TYPE"_err_en_US);
       }
       if (IsAssumedSizeArray(symbol)) { // C834
         if (type && type->IsPolymorphic()) {
@@ -944,8 +995,12 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "!DIR$ IGNORE_TKR(R) may not apply in an ELEMENTAL procedure"_err_en_US);
       }
-      if (IsPassedViaDescriptor(symbol)) {
-        if (IsAllocatableOrObjectPointer(&symbol)) {
+      // Descriptor based dummy args passed with ignore_tkr(c) are allowed
+      // to have type/kind/rank differences
+      if (IsPassedViaDescriptor(symbol) &&
+          !ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
+        if (IsAllocatableOrObjectPointer(&symbol) &&
+            !ignoreTKR.test(common::IgnoreTKR::Pointer)) {
           if (inExplicitExternalInterface) {
             Warn(common::UsageWarning::IgnoreTKRUsage,
                 "!DIR$ IGNORE_TKR should not apply to an allocatable or pointer"_warn_en_US);
@@ -1144,10 +1199,16 @@ void CheckHelper::CheckObjectEntity(
     }
     auto attr{*details.cudaDataAttr()};
     switch (attr) {
+    case common::CUDADataAttr::Value:
+      break; // Nothing to check for VALUE attribute
     case common::CUDADataAttr::Constant:
       if (subpDetails && !inDeviceSubprogram) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
+            symbol.name());
+      } else if (!isComponent && progUnit.kind() == Scope::Kind::MainProgram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a main program"_err_en_US,
             symbol.name());
       } else if (IsAllocatableOrPointer(symbol) ||
           symbol.attrs().test(Attr::TARGET)) {
@@ -1155,8 +1216,7 @@ void CheckHelper::CheckObjectEntity(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
       } else if (auto shape{evaluate::GetShape(foldingContext_, symbol)};
-                 !shape ||
-                 !evaluate::AsConstantExtents(foldingContext_, *shape)) {
+          !shape || !evaluate::AsConstantExtents(foldingContext_, *shape)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) must have constant array bounds"_err_en_US,
             symbol.name());
@@ -1170,10 +1230,10 @@ void CheckHelper::CheckObjectEntity(
       }
       break;
     case common::CUDADataAttr::Managed:
-      if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
+      if (!IsAutomatic(symbol) && !IsAllocatableOrPointer(symbol) &&
           !details.isDummy() && !evaluate::IsExplicitShape(symbol)) {
         messages_.Say(
-            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument"_err_en_US,
+            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, pointer, automatic, explicit shape, or a dummy argument"_err_en_US,
             symbol.name());
       }
       break;
@@ -1217,8 +1277,17 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say(
           "ATTRIBUTES(TEXTURE) is obsolete and no longer supported"_err_en_US);
       break;
+    case common::CUDADataAttr::UseDevice:
+      break;
     }
-    if (attr != common::CUDADataAttr::Pinned) {
+    // CUDADataAttr::UseDevice is not user-spellable; it is set internally on
+    // construct-scoped symbol copies created for OpenACC `host_data
+    // use_device(...)` operands so that later passes can resolve them to the
+    // device address. The original symbol that actually lives in COMMON or an
+    // equivalence group carries no CUDA attribute, so the CUDA Fortran
+    // restrictions on user-written ATTRIBUTES(...) do not apply to it.
+    if (attr != common::CUDADataAttr::Pinned &&
+        attr != common::CUDADataAttr::UseDevice) {
       if (details.commonBlock()) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(%s) may not be in COMMON"_err_en_US,
@@ -1284,6 +1353,12 @@ void CheckHelper::CheckObjectEntity(
       SayWithDeclaration(symbol,
           "Assumed rank entity of %s type is not supported"_err_en_US,
           typeName);
+    } else if (IsPointer(symbol)) {
+      SayWithDeclaration(
+          symbol, "Pointer to %s type is not supported"_err_en_US, typeName);
+    } else if (IsAllocatable(symbol)) {
+      SayWithDeclaration(symbol,
+          "Allocatable entity of %s type is not supported"_err_en_US, typeName);
     }
   }
 }
@@ -1434,6 +1509,10 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   CheckSymbolType(symbol);
+  // F2018 8.5.17: an entity with the TARGET attribute shall be a variable;
+  // a procedure (EXTERNAL or INTRINSIC) is not a variable.
+  CheckConflicting(symbol, Attr::EXTERNAL, Attr::TARGET);
+  CheckConflicting(symbol, Attr::INTRINSIC, Attr::TARGET);
   const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
@@ -1571,6 +1650,12 @@ void CheckHelper::CheckSubprogram(
       context_.SetError(symbol);
     }
   }
+  // F2023 C1553
+  if (symbol.attrs().test(Attr::SIMPLE) && symbol.attrs().test(Attr::IMPURE)) {
+    messages_.Say(symbol.name(),
+        "A procedure may not have both the SIMPLE and IMPURE attributes"_err_en_US);
+    context_.SetError(symbol);
+  }
   if (const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)}) {
     SubprogramMatchHelper{*this}.Check(symbol, *iface);
   }
@@ -1679,6 +1764,29 @@ void CheckHelper::CheckSubprogram(
       messages_.Say(
           "An ABSTRACT interface may not have the same name as an intrinsic type"_err_en_US);
     }
+    if (IsBindCProcedure(symbol) &&
+        context_.ShouldWarn(common::UsageWarning::BindCArrayDescriptor)) {
+      // A BIND(C) binding name that starts with '_' identifies an
+      // implementation-internal interface (e.g. one of the compiler's own
+      // runtime library wrappers, which choose such names deliberately)
+      // rather than a genuine external C/C++ interoperability interface,
+      // so it is excluded here: those internal wrappers are written to
+      // receive the CFI descriptor this warning is about, and warning on
+      // every one of them would drown out the cases that matter.
+      const std::string *bindName{symbol.GetBindName()};
+      bool isImplementationInternal{
+          bindName && !bindName->empty() && bindName->front() == '_'};
+      if (!isImplementationInternal) {
+        for (const Symbol *dummy : details.dummyArgs()) {
+          if (dummy && (IsAssumedShape(*dummy) || IsAssumedRank(*dummy))) {
+            Warn(common::UsageWarning::BindCArrayDescriptor, dummy->name(),
+                "Dummy argument '%s' of BIND(C) interface '%s' is %s; the C/C++ side must accept a Fortran 2018 CFI descriptor (CFI_cdesc_t), not a bare address, which may not match an external interface written for an older calling convention"_port_en_US,
+                dummy->name(), symbol.name(),
+                IsAssumedRank(*dummy) ? "assumed-rank" : "assumed-shape");
+          }
+        }
+      }
+    }
   }
   CheckExternal(symbol);
   CheckModuleProcedureDef(symbol);
@@ -1712,7 +1820,7 @@ void CheckHelper::CheckSubprogram(
     messages_.Say(symbol.name(),
         "A subroutine may not have LAUNCH_BOUNDS() or CLUSTER_DIMS() unless it has ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)"_err_en_US);
   }
-  if (!IsStmtFunction(symbol)) {
+  if (!IsStmtFunction(symbol) && !details.isInterface() && !details.isDummy()) {
     if (const Scope * outerDevice{FindCUDADeviceContext(&symbol.owner())};
         outerDevice && outerDevice->symbol()) {
       if (auto *msg{messages_.Say(symbol.name(),
@@ -1781,7 +1889,7 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
         if (auto previousChars{Characterize(previous)}) {
           std::string whyNot;
           if (!chars->IsCompatibleWith(*previousChars,
-                  /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
+                  /*ignoreImplicitVsExplicit=*/true, &whyNot)) {
             if (auto *msg{Warn(common::UsageWarning::ExternalInterfaceMismatch,
                     "The external interface '%s' is not compatible with an earlier definition (%s)"_warn_en_US,
                     symbol.name(), whyNot)}) {
@@ -1799,6 +1907,10 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
 
 void CheckHelper::CheckDerivedType(
     const Symbol &derivedType, const DerivedTypeDetails &details) {
+  if (details.isEnumerationType()) {
+    // Enumeration types have no components, parameters, or bindings to check.
+    return;
+  }
   if (details.isForwardReferenced() && !context_.HasError(derivedType)) {
     messages_.Say("The derived type '%s' has not been defined"_err_en_US,
         derivedType.name());
@@ -2590,9 +2702,6 @@ void CheckHelper::CheckPassArg(
   if (!passArg.has<ObjectEntityDetails>()) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " must be a data object"_err_en_US;
-  } else if (passArg.attrs().test(Attr::POINTER)) {
-    msg = "Passed-object dummy argument '%s' of procedure '%s'"
-          " may not have the POINTER attribute"_err_en_US;
   } else if (passArg.attrs().test(Attr::ALLOCATABLE)) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " may not have the ALLOCATABLE attribute"_err_en_US;
@@ -2602,6 +2711,23 @@ void CheckHelper::CheckPassArg(
   } else if (passArg.Rank() > 0) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " must be scalar"_err_en_US;
+  } else if (passArg.attrs().test(Attr::POINTER)) {
+    if (context_.IsEnabled(common::LanguageFeature::PointerPassObject) &&
+        IsIntentIn(passArg)) {
+      if (proc.has<ProcBindingDetails>()) {
+        // Extension: allow a passed object to be an INTENT(IN) POINTER.
+        // Only works for TBPs, needs lowering work for proc ptr components.
+        Warn(common::LanguageFeature::PointerPassObject, name,
+            "Passed-object dummy argument '%s' of procedure '%s' that is an INTENT(IN) POINTER is not standard"_port_en_US,
+            *passName, name);
+      } else {
+        msg =
+            "Passed-object dummy argument '%s' of procedure '%s' used as procedure pointer component interface may not have the POINTER attribute"_err_en_US;
+      }
+    } else {
+      msg =
+          "Passed-object dummy argument '%s' of procedure '%s' may not have the POINTER attribute unless INTENT(IN)"_err_en_US;
+    }
   }
   if (msg) {
     messages_.Say(name, std::move(*msg), passName.value(), name);
@@ -2638,6 +2764,19 @@ void CheckHelper::CheckPassArg(
           passName.value(), name, paramName);
     }
   }
+}
+
+static std::optional<std::size_t> FindOverrideDummyNameMismatch(
+    const Procedure &binding, const Procedure &overridden) {
+  if (binding.dummyArguments.size() != overridden.dummyArguments.size()) {
+    return std::nullopt;
+  }
+  for (std::size_t j{0}; j < binding.dummyArguments.size(); ++j) {
+    if (binding.dummyArguments[j].name != overridden.dummyArguments[j].name) {
+      return j;
+    }
+  }
+  return std::nullopt;
 }
 
 void CheckHelper::CheckProcBinding(
@@ -2710,7 +2849,14 @@ void CheckHelper::CheckProcBinding(
         const auto *bindingChars{Characterize(symbol)};
         const auto *overriddenChars{Characterize(*overridden)};
         if (bindingChars && overriddenChars) {
-          if (isNopass) {
+          if (auto mismatch{FindOverrideDummyNameMismatch(
+                  *bindingChars, *overriddenChars)}) {
+            SayWithDeclaration(*overridden,
+                "Dummy argument '%s' of type-bound procedure '%s' must "
+                "correspond by name to '%s' in the overridden procedure"_err_en_US,
+                bindingChars->dummyArguments[*mismatch].name, symbol.name(),
+                overriddenChars->dummyArguments[*mismatch].name);
+          } else if (isNopass) {
             if (!bindingChars->CanOverride(*overriddenChars, std::nullopt)) {
               SayWithDeclaration(*overridden,
                   "A NOPASS type-bound procedure and its override must have identical interfaces"_err_en_US);
@@ -2758,8 +2904,13 @@ void CheckHelper::CheckProcBinding(
 void CheckHelper::Check(const Scope &scope) {
   scope_ = &scope;
   common::Restorer<const Symbol *> restorer{innermostSymbol_, innermostSymbol_};
+  // InElemental() is cached per procedure: recompute it when entering a scope
+  // with its own symbol, and restore the enclosing procedure's value on exit.
+  common::Restorer<std::optional<bool>> elementalRestorer{
+      innermostIsElemental_, innermostIsElemental_};
   if (const Symbol *symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
+    innermostIsElemental_.reset();
   }
   if (scope.IsParameterizedDerivedTypeInstantiation()) {
     auto restorer{common::ScopedSet(scopeIsUninstantiatedPDT_, false)};
@@ -3488,6 +3639,24 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       context_.SetError(symbol);
     }
   }
+  // F2023 C1807 - a procedure defined in a submodule shall not have a binding
+  // label unless its interface is declared in the ancestor module.
+  const std::string *bindName{symbol.GetBindName()};
+  if (symbol.has<SubprogramDetails>() &&
+      !symbol.get<SubprogramDetails>().isInterface() && bindName &&
+      !bindName->empty() && symbol.owner().IsSubmodule()) {
+    const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)};
+    bool ok{false};
+    if (iface) {
+      const Scope *ifaceModule{FindModuleOrSubmoduleContaining(iface->owner())};
+      ok = ifaceModule && ifaceModule->IsModule();
+    }
+    if (!ok) {
+      messages_.Say(symbol.name(),
+          "A procedure defined in a submodule shall not have a binding label unless its interface is declared in the ancestor module"_err_en_US);
+      context_.SetError(symbol);
+    }
+  }
   if (symbol.has<ObjectEntityDetails>()) {
     whyNot = WhyNotInteroperableObject(symbol);
   } else if (symbol.has<ProcEntityDetails>() ||
@@ -3573,7 +3742,15 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
-    if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+    // An enumeration type is not a derived type (F2023 R1221).
+    if (const DerivedTypeSpec *derivedType{type->AsDerived()};
+        derivedType && !IsEnumerationType(derivedType->typeSymbol())) {
+      if (derivedType->IsVectorType()) {
+        messages_.Say(arg.name(),
+            "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,
+            arg.name());
+        return;
+      }
       CheckAlreadySeenDefinedIo(*derivedType, ioKind, proc, generic);
       bool isPolymorphic{type->IsPolymorphic()};
       if (isPolymorphic != IsExtensibleType(derivedType)) {
@@ -3830,9 +4007,15 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
     if (dyType->IsPolymorphic() && !dyType->IsAssumedType() &&
         !(IsDummy(symbol) && !IsProcedure(relevant))) { // C708
-      messages_.Say(
-          "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
-          symbol.name());
+      if (IsProcedure(symbol)) {
+        messages_.Say(
+            "Polymorphic function%s '%s' must have an explicit interface whose result is ALLOCATABLE or POINTER"_err_en_US,
+            IsPointer(symbol) ? " pointer" : "", symbol.name());
+      } else {
+        messages_.Say(
+            "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
+            symbol.name());
+      }
     }
     if (dyType->HasDeferredTypeParameter()) { // C702
       messages_.Say(

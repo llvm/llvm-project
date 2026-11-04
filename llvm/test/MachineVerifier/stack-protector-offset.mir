@@ -5,7 +5,7 @@
 # RUN: llc -mtriple=aarch64 -run-pass=none -o - %t/valid.mir
 # RUN: not --crash llc -mtriple=aarch64 -run-pass=none -o - %t/lower.mir 2>&1 | FileCheck %t/lower.mir
 # RUN: not --crash llc -mtriple=aarch64 -run-pass=none -o - %t/overlap.mir 2>&1 | FileCheck %t/overlap.mir
-# RUN: not --crash llc -mtriple=amdgcn -run-pass=none -o - %t/higher.mir 2>&1 | FileCheck %t/higher.mir
+# RUN: not --crash llc -mtriple=amdgpu7.00 -run-pass=none -o - %t/higher.mir 2>&1 | FileCheck %t/higher.mir
 
 ;--- valid.mir
 ---
@@ -21,7 +21,7 @@ body:             |
 ...
 
 ;--- lower.mir
-# CHECK: *** Bad machine code: Stack protector is not the top-most object on the stack ***
+# CHECK: Bad machine code: Stack protector is not the top-most object on the stack
 ---
 name:            lower
 frameInfo:
@@ -35,7 +35,7 @@ body:             |
 ...
 
 ;--- overlap.mir
-# CHECK: *** Bad machine code: Stack protector overlaps with another stack object ***
+# CHECK: Bad machine code: Stack protector overlaps with another stack object
 ---
 name:            overlap
 frameInfo:
@@ -49,7 +49,7 @@ body:             |
 ...
 
 ;--- higher.mir
-# CHECK: *** Bad machine code: Stack protector is not the top-most object on the stack ***
+# CHECK: Bad machine code: Stack protector is not the top-most object on the stack
 ---
 name:            higher
 frameInfo:

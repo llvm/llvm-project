@@ -1,5 +1,3 @@
-; REQUIRES: asserts
-
 ; RUN: opt -S -debug-counter=early-cse=1 -passes=early-cse,newgvn,instcombine -earlycse-debug-hash \
 ; RUN:        -debug-counter=newgvn-vn=1-2 \
 ; RUN:        -print-debug-counter < %s 2>&1 | FileCheck %s

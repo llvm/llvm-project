@@ -1,12 +1,12 @@
 ; Test that safestack layout reuses a region w/o fragmentation.
 ; RUN: opt -safe-stack -safe-stack-coloring=1 -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -safe-stack-coloring=1 -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -safe-stack-coloring=1 -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 define void @f() safestack {
 ; CHECK-LABEL: define void @f
 entry:
 ; CHECK:  %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-; CHECK:   getelementptr i8, ptr %[[USP]], i32 -16
+; CHECK:   getelementptr i8, ptr %[[USP]], i64 -16
 
   %x0 = alloca i64, align 8
   %x1 = alloca i8, align 1
@@ -25,9 +25,9 @@ entry:
   call void @llvm.lifetime.end.p0(ptr %x2)
 
 ; Test that i64 allocas share space.
-; CHECK: getelementptr i8, ptr %unsafe_stack_ptr, i32 -8
-; CHECK: getelementptr i8, ptr %unsafe_stack_ptr, i32 -9
-; CHECK: getelementptr i8, ptr %unsafe_stack_ptr, i32 -8
+; CHECK: getelementptr i8, ptr %unsafe_stack_ptr, i64 -8
+; CHECK: getelementptr i8, ptr %unsafe_stack_ptr, i64 -9
+; CHECK: getelementptr i8, ptr %unsafe_stack_ptr, i64 -8
 
   ret void
 }

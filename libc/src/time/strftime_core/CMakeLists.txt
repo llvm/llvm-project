@@ -30,9 +30,10 @@ add_header_library(
     .core_structs
     libc.src.time.time_utils
     libc.src.time.time_constants
-    libc.src.stdio.printf_core.writer
+    libc.src.__support.printf_core.writer
     libc.src.__support.CPP.string_view
     libc.src.__support.integer_to_string
+    libc.src.__support.error_or
 )
 
 add_header_library(
@@ -43,6 +44,7 @@ add_header_library(
     .core_structs
     .parser
     .converter
-    libc.src.stdio.printf_core.writer
+    libc.src.__support.error_or
+    libc.src.__support.printf_core.writer
     libc.hdr.types.struct_tm
 )

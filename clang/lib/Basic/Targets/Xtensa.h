@@ -50,7 +50,7 @@ public:
     WIntType = UnsignedInt;
     UseZeroLengthBitfieldAlignment = true;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
-    resetDataLayout("e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -100,7 +100,7 @@ public:
     return llvm::StringSwitch<bool>(Name).Case("generic", true).Default(false);
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     CPU = Name;
     return isValidCPUName(Name);
   }

@@ -158,7 +158,7 @@ define i32 @knownbits_phi_select_test1(ptr %p1, ptr %p2, i8 %x) {
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[INDVAR1]] to i64
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, ptr [[P2:%.*]], i64 [[EXT]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i8], ptr [[P2:%.*]], i64 [[EXT]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i16, ptr [[GEP1]], align 2
 ; CHECK-NEXT:    [[MASK:%.*]] = and i16 [[LOAD1]], 8192
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[MASK]], 0

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -fcxx-exceptions %s -fexperimental-new-constant-interpreter
 
 // An explicitly-defaulted function may be declared constexpr only if it would
 // have been implicitly declared as constexpr.

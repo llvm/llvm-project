@@ -20,7 +20,7 @@ happens when a location triggers and includes the commands, conditions, ignore
 counts, etc. Stop options are common between all breakpoint types, so for our
 purposes only the Searcher and Resolver are relevant.
 
-### Breakpoint Searcher
+## Breakpoint Searcher
 
 The Searcher's job is to traverse in a structured way the code in the current
 target. It proceeds from the Target, to search all the Modules in the Target,
@@ -36,7 +36,7 @@ based search filter. If neither of these is specified, the breakpoint will have
 a no-op search filter, so all parts of the program are searched and all
 locations accepted.
 
-### Breakpoint Resolver
+## Breakpoint Resolver
 
 The Resolver has two functions:
 
@@ -72,7 +72,7 @@ you add to the breakpoint yourself. Note that the Breakpoint takes care of
 deduplicating equal addresses in AddLocation, so you shouldn't need to worry
 about that anyway.
 
-### Scripted Breakpoint Resolver
+## Scripted Breakpoint Resolver
 
 At present, when adding a ScriptedBreakpoint type, you can only provide a
 custom Resolver, not a custom SearchFilter.
@@ -127,7 +127,7 @@ of Modules and the list of CompileUnits that will make up the SearchFilter. If
 you pass in empty lists, the breakpoint will use the default "search
 everywhere,accept everything" filter.
 
-### Providing Facade Locations:
+## Providing Facade Locations:
 
 The breakpoint resolver interface also allows you to present a separate set
 of locations for the breakpoint than the ones that actually implement the
@@ -169,4 +169,30 @@ The Facade location adds these optional affordances to the Resolver class:
 |-------|-----------|------------|
 |`was_hit`| `frame`:`lldb.SBFrame` `bp_loc`:`lldb.SBBreakpointLocation` | This will get called when one of the "real" locations set by your resolver is hit.  `frame` is the stack frame that hit this location.  `bp_loc` is the real location that was hit.  Return either the facade location that you want to consider hit on this stop, or None if you don't consider any of your facade locations to have been hit. |
 | `get_location_description` | `bp_loc`:`lldb.SBBreakpointLocation` `desc_level`:`lldb.DescriptionLevel` `bp_loc` is the facade location to describe.| Use this to provide a helpful description of each facade location.  ``desc_level`` is the level of description requested.  The Brief description is printed when the location is hit.  Full is printed for `break list` and Verbose for `break list -v`.|
+
+## Override breakpoint resolvers
+
+If a breakpoint resolver can provide a better action for some subset of
+breakpoints that lldb would normally set using its own resolvers, it can
+register itself as an "Override Resolver" using:
+
+```
+SBTarget.AddBreakpointOverrideResolver(classname, description, extra_args)
+```
+
+description is what will show in the command:
+
+```
+(lldb) breakpoint override resolver list 
+```
+
+And extra_args is an SBStructuredData that will get passed to the constructor
+of your breakpoint resolver when we make an instance to check for overrides.
+
+The overrides resolver requires the following to be implemented:
+
+| Name  | Arguments | Description|
+|-------|-----------|------------|
+|`overrides_resolver`| `orig_resolver_data`:`lldb.SBStructuredData` | This will get called when lldb has determined the resolver it would normally use for the breakpoint.  `orig_resolver_data` the serialized form of the breakpoint resolver lldb would have used.  If you return True from the API, then lldb will use this instance of your resolver instead of the one it would have used. |
+
 

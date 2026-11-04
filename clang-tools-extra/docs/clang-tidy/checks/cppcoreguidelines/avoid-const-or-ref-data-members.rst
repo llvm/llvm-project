@@ -44,7 +44,7 @@ Examples:
   };
 
 This check implements `C.12
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-constref>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rc-constref>`_
 from the C++ Core Guidelines.
 
 Further reading:

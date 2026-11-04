@@ -6,7 +6,7 @@
 struct Eg9{
   // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} <col:1, col:8> col:8 implicit struct Eg9
   // CHECK: FieldDecl 0x{{[0-9a-f]+}} <line:10:3, col:16> col:16 referenced a 'unsigned int'
-  // CHECK: -HLSLSV_DispatchThreadIDAttr 0x{{[0-9a-f]+}} <col:20>
+  // CHECK: -HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:20> "SV_DispatchThreadID" 0
   unsigned int a : SV_DispatchThreadID;
 };
 Eg9 e9;

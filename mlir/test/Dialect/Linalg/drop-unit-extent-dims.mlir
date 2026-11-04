@@ -838,8 +838,9 @@ func.func @fold_unit_dim_for_init_memref(%input: memref<1x1000xf32>) -> memref<1
 
 
 // -----
-// Test that nothing changes and no assertions are fired for memrefs with affine
-// maps while still changing the other operations.
+
+// Negative test with a memref with non-identity layout.
+// The output should be identical to the input.
 
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,
@@ -863,24 +864,21 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, strided<[?, 1, 1]>>, %arg1
   return %shape : memref<?x1x?x1x?xf32>
 }
 
-// CHECK-DAG:     #[[MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d2)>
-// CHECK-DAG:     #[[MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
-// CHECK-DAG:     #[[MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-// CHECK:     func @input_stays_same(
-// CHECK-SAME:  %[[ARG0:.*]]: memref<?x1x?xf32, strided<[?, 1, 1]>>,
-// CHECK-SAME:  %[[ARG1:.*]]: f32, %[[ARG2:.*]]: memref<?x1x?x1x?xf32>)
-// CHECK-SAME:  -> memref<?x1x?x1x?xf32> {
-// CHECK:      %[[OUT:.*]] = memref.collapse_shape %[[ARG2]] {{\[}}[0, 1], [2, 3], [4]]
-// CHECK-SAME:   : memref<?x1x?x1x?xf32> into memref<?x?x?xf32>
-// CHECK:      linalg.generic
-// CHECK-SAME:   {indexing_maps = [#[[MAP1]], #[[MAP2]], #[[MAP3]]],
-// CHECK-SAME:   iterator_types = ["parallel", "parallel", "parallel"]}
-// CHECK-SAME:   ins(%[[ARG0]], %[[ARG1]] : memref<?x1x?xf32, strided<[?, 1, 1]>>, f32)
-// CHECK-SAME:   outs(%[[OUT]] : memref<?x?x?xf32>) {
-// CHECK:      ^bb0(%{{.*}}: f32, %[[ARG:.*]]: f32, %{{.*}}: f32):
-// CHECK:       linalg.yield %[[ARG]] : f32
-// CHECK:      }
-// CHECK:      return %[[ARG2]] : memref<?x1x?x1x?xf32>
+// CHECK-DAG: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d4)>
+// CHECK-DAG: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> ()>
+// CHECK-DAG: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d1, d3, d4)>
+// CHECK:   func.func @input_stays_same(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<?x1x?xf32, strided<[?, 1, 1]>>
+// CHECK-SAME:      %[[ARG1:.*]]: f32
+// CHECK-SAME:      %[[ARG2:.*]]: memref<?x1x?x1x?xf32>) -> memref<?x1x?x1x?xf32>
+// CHECK:           linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+// CHECK-SAME:        iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]
+// CHECK-SAME:        ins(%[[ARG0]], %[[ARG1]] : memref<?x1x?xf32, strided<[?, 1, 1]>>, f32)
+// CHECK-SAME:        outs(%[[ARG2]] : memref<?x1x?x1x?xf32>)
+// CHECK:           ^bb0(%[[VAL_0:.*]]: f32, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: f32):
+// CHECK:             linalg.yield %[[VAL_1]] : f32
+// CHECK:           return %[[ARG2]] : memref<?x1x?x1x?xf32>
 
 // -----
 
@@ -1034,6 +1032,49 @@ func.func @drop_unit_pad_dynamic_dims(%arg0: tensor<1x?xf32>) -> tensor<1x?xf32>
 
 // -----
 
+func.func @drop_unit_pad_dims_constant_inside_body(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32>
+{
+  %0 = tensor.pad %arg0 low[0, 2, 2, 0] high[0, 2, 2, 0] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
+      %cst = arith.constant 0.0 : f32
+      tensor.yield %cst : f32
+  } : tensor<1x28x28x1xf32> to tensor<1x32x32x1xf32>
+  return %0 : tensor<1x32x32x1xf32>
+}
+
+// CHECK-LABEL: func @drop_unit_pad_dims_constant_inside_body
+//       CHECK:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape
+//  CHECK-SAME:     {{\[}}[0, 1], [2, 3]{{\]}} : tensor<1x28x28x1xf32> into tensor<28x28xf32>
+//       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[2, 2] high[2, 2]
+//       CHECK:     tensor.yield %[[CST]]
+//       CHECK:   } : tensor<28x28xf32> to tensor<32x32xf32>
+//       CHECK:   tensor.expand_shape %[[PADDED]]
+//  CHECK-SAME:     {{\[}}[0, 1], [2, 3]{{\]}} output_shape [1, 32, 32, 1] : tensor<32x32xf32> into tensor<1x32x32x1xf32>
+
+// -----
+
+// The pattern must not modify the IR when there are no unit dims to drop.
+
+func.func @negative_drop_pad_without_unit_dims_constant_inside_body(%arg0: tensor<2xf32>) -> tensor<3xf32>
+{
+  %0 = tensor.pad %arg0 low[0] high[1] {
+    ^bb0(%arg1: index):
+      %cst = arith.constant 0.0 : f32
+      tensor.yield %cst : f32
+  } : tensor<2xf32> to tensor<3xf32>
+  return %0 : tensor<3xf32>
+}
+
+// CHECK-LABEL: func @negative_drop_pad_without_unit_dims_constant_inside_body
+//   CHECK-NOT:   tensor.collapse_shape
+//       CHECK:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   tensor.pad %{{.*}} low[0] high[1]
+//       CHECK:     tensor.yield %[[CST]]
+//   CHECK-NOT:   tensor.expand_shape
+
+// -----
+
 func.func @do_not_drop_non_constant_padding(%arg0: tensor<1x1x3x1x1xf32>, %pad: f32) -> tensor<1x2x3x1x3xf32>
 {
   %c0 = arith.constant 0 : index
@@ -1135,6 +1176,45 @@ module {
 // CHECK:           %[[VAL_14:.*]] = tensor.expand_shape %[[VAL_7]] {{\[\[}}0, 1], [2, 3]] output_shape {{\[}}%[[VAL_0]], 1, 61, 1] : tensor<?x61xf32> into tensor<?x1x61x1xf32>
 // CHECK:           return %[[VAL_14]] : tensor<?x1x61x1xf32>
 // CHECK:         }
+
+// -----
+
+#map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 + d6)>
+#map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
+#map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+module {
+  func.func @drop_unit_dim_binary_expr(%arg0: tensor<1x61x1x1xf32>, %arg1: tensor<48x61x1x1xf32>, %arg2: tensor<1x48x1x1xf32>) -> tensor<1x48x1x1xf32> {
+    %2 = linalg.generic {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]} ins(%arg0, %arg1 : tensor<1x61x1x1xf32>, tensor<48x61x1x1xf32>) outs(%arg2 : tensor<1x48x1x1xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %3 = arith.mulf %in, %in_0 : f32
+      %4 = arith.addf %out, %3 : f32
+      linalg.yield %4 : f32
+    } -> tensor<1x48x1x1xf32>
+    return %2 : tensor<1x48x1x1xf32>
+  }
+}
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1) -> (d1)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1) -> (d0)>
+// CHECK-LABEL:   func.func @drop_unit_dim_binary_expr
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<1x61x1x1xf32>, %[[ARG1:.*]]: tensor<48x61x1x1xf32>
+// CHECK-SAME:      %[[ARG2:.*]]: tensor<1x48x1x1xf32>) -> tensor<1x48x1x1xf32>
+// CHECK:           %[[COLLAPSE_SHAPE_0:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1, 2, 3]] : tensor<1x61x1x1xf32> into tensor<61xf32>
+// CHECK:           %[[COLLAPSE_SHAPE_1:.*]] = tensor.collapse_shape %[[ARG1]] {{\[\[}}0], [1, 2, 3]] : tensor<48x61x1x1xf32> into tensor<48x61xf32>
+// CHECK:           %[[COLLAPSE_SHAPE_2:.*]] = tensor.collapse_shape %[[ARG2]] {{\[\[}}0, 1, 2, 3]] : tensor<1x48x1x1xf32> into tensor<48xf32>
+// CHECK:           %[[GENERIC_0:.*]] = linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+// CHECK-SAME:        iterator_types = ["parallel", "reduction"]
+// CHECK-SAME:        ins(%[[COLLAPSE_SHAPE_0]], %[[COLLAPSE_SHAPE_1]] : tensor<61xf32>, tensor<48x61xf32>)
+// CHECK-SAME:        outs(%[[COLLAPSE_SHAPE_2]] : tensor<48xf32>)
+// CHECK:           ^bb0(%[[VAL_0:.*]]: f32, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: f32):
+// CHECK:             %[[MULF_0:.*]] = arith.mulf %[[VAL_0]], %[[VAL_1]] : f32
+// CHECK:             %[[ADDF_0:.*]] = arith.addf %[[VAL_2]], %[[MULF_0]] : f32
+// CHECK:             linalg.yield %[[ADDF_0]] : f32
+// CHECK:           } -> tensor<48xf32>
+// CHECK:           %[[EXPAND_SHAPE_0:.*]] = tensor.expand_shape %[[GENERIC_0]] {{\[\[}}0, 1, 2, 3]] output_shape [1, 48, 1, 1]
+// CHECK-SAME:        : tensor<48xf32> into tensor<1x48x1x1xf32>
+// CHECK:           return %[[EXPAND_SHAPE_0]] : tensor<1x48x1x1xf32>
 
 // -----
 

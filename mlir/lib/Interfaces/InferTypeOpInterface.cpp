@@ -58,6 +58,22 @@ mlir::reifyResultShapes(OpBuilder &b, Operation *op,
   return status;
 }
 
+FailureOr<SmallVector<OpFoldResult>>
+mlir::reifyShapeOfResult(OpBuilder &b, Operation *op, int resultIndex) {
+  auto reifiableOp = dyn_cast<ReifyRankedShapedTypeOpInterface>(op);
+  if (!reifiableOp)
+    return failure();
+  return reifiableOp.reifyShapeOfResult(b, resultIndex);
+}
+
+FailureOr<OpFoldResult> mlir::reifyDimOfResult(OpBuilder &b, Operation *op,
+                                               int resultIndex, int dim) {
+  auto reifiableOp = dyn_cast<ReifyRankedShapedTypeOpInterface>(op);
+  if (!reifiableOp)
+    return failure();
+  return reifiableOp.reifyDimOfResult(b, resultIndex, dim);
+}
+
 bool ShapeAdaptor::hasRank() const {
   if (val.isNull())
     return false;
@@ -164,6 +180,7 @@ int64_t ShapeAdaptor::getNumElements() const {
   return num;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ShapeAdaptor::dump() const {
   if (!hasRank()) {
     llvm::errs() << "<<unranked>>\n";
@@ -180,6 +197,7 @@ void ShapeAdaptor::dump() const {
   llvm::errs() << "rank = " << getRank()
                << " dims = " << llvm::interleaved_array(mapped, "x") << "\n";
 }
+#endif
 
 ShapeAdaptor ValueShapeRange::getValueAsShape(int index) {
   Value val = operator[](index);

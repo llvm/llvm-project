@@ -26,9 +26,9 @@
 // WARNINGS-NEXT: (CXXConstructExpr, struct standalone)
 // ANALYZER-NEXT: (CXXConstructExpr, [B1.9], struct standalone)
 // CHECK-NEXT:   9: struct standalone myStandalone;
-// WARNINGS-NEXT: (CXXConstructExpr, struct (unnamed struct at {{.*}}))
-// ANALYZER-NEXT: (CXXConstructExpr, [B1.11], struct (unnamed struct at {{.*}}))
-// CHECK-NEXT:  11: struct (unnamed struct at {{.*}}) myAnon;
+// WARNINGS-NEXT: (CXXConstructExpr, struct (unnamed at {{.*}}))
+// ANALYZER-NEXT: (CXXConstructExpr, [B1.11], struct (unnamed at {{.*}}))
+// CHECK-NEXT:  11: struct (unnamed at {{.*}}) myAnon;
 // WARNINGS-NEXT: (CXXConstructExpr, struct named)
 // ANALYZER-NEXT: (CXXConstructExpr, [B1.13], struct named)
 // CHECK-NEXT:  13: struct named myNamed;
@@ -659,7 +659,7 @@ bail:
 // CHECK-NEXT:    5: [B1.3]{{\[\[}}B1.4]]
 // CHECK-NEXT:    6: [B1.5] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:    7: {{\{}}[B1.6]{{(\})}}
-// CHECK-NEXT:    8: auto = {{\{}}arr[*]{{(\})}};
+// CHECK-NEXT:    8: auto{{.*}} = {{\{}}arr[*]{{(\})}};
 void DecompositionDecl() {
   int arr[2];
 

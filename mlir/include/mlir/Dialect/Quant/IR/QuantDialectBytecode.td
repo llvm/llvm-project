@@ -23,6 +23,12 @@ def DoubleAPFloat:
   WithType   <"double">>>>;
 def DoubleAPFloatList : List<DoubleAPFloat>;
 
+def OptionalSignedVarInt:
+  WithParser <"succeeded(readOptionalSignedVarInt($_reader, $_var))",
+  WithBuilder<"$_args",
+  WithPrinter<"writeOptionalSignedVarInt($_writer, $_getter)",
+  WithType   <"std::optional<int64_t>">>>>;
+
 let cType = "AnyQuantizedType" in {
 
 def AnyQuantizedType: DialectType<(type
@@ -97,6 +103,14 @@ def UniformQuantizedSubChannelType
   }];
 }
 
+def QuantileType : DialectType<(type
+  Type:$storageType,
+  Type:$quantileType,
+  Array<DoubleAPFloatList>:$quantiles,
+  OptionalSignedVarInt:$storageMin,
+  OptionalSignedVarInt:$storageMax
+)>;
+
 /// This enum contains marker codes used to indicate which attribute is
 /// currently being decoded, and how it should be decoded. The order of these
 /// codes should generally be unchanged, as any changes will inevitably break
@@ -106,7 +120,7 @@ def QuantDialectTypes : DialectTypes<"Quant"> {
   let elems = [ReservedOrDead, AnyQuantizedType,
                AnyQuantizedTypeWithExpressedType, CalibratedQuantizedType,
                UniformQuantizedType, UniformQuantizedPerAxisType,
-               UniformQuantizedSubChannelType];
+               UniformQuantizedSubChannelType, QuantileType];
 }
 
 #endif // QUANT_BYTECODE

@@ -19,7 +19,7 @@ end
 !PARSE-TREE: | | Modifier -> OmpAttachModifier -> Value = Always
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 
 subroutine f01(x)
@@ -40,7 +40,7 @@ end
 !PARSE-TREE: | | Modifier -> OmpAttachModifier -> Value = Auto
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 
 subroutine f02(x)
@@ -61,4 +61,4 @@ end
 !PARSE-TREE: | | Modifier -> OmpAttachModifier -> Value = Never
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

@@ -1,12 +1,10 @@
-// RUN: %check_clang_tidy -std=c++23 %s modernize-use-std-print %t -- \
+// RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             { \
 // RUN:               modernize-use-std-print.PrintfLikeFunctions: 'unqualified_printf;::myprintf; mynamespace::myprintf2; any_format_type_printf; fmt::printf', \
 // RUN:               modernize-use-std-print.FprintfLikeFunctions: '::myfprintf; mynamespace::myfprintf2; any_format_type_fprintf; fmt::fprintf' \
 // RUN:             } \
-// RUN:            }" \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:            }"
 #include <cstdio>
 #include <string>
 
@@ -80,7 +78,7 @@ int fprintf_uses_return_value(int i) {
   // CHECK-FIXES-NOT: std::println(stderr, "return value {}", i);
 }
 
-// Ensure that MatchesAnyListedNameMatcher::NameMatcher::match() can cope with a
+// Ensure that MatchesAnyListedRegexNameMatcher::NameMatcher::match() can cope with a
 // NamedDecl that has no name when we're trying to match unqualified_printf.
 void no_name(const std::string &in)
 {

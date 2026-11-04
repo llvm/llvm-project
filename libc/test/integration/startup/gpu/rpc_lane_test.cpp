@@ -23,7 +23,6 @@ static void test_add() {
       [&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
         cnt = reinterpret_cast<uint64_t *>(buffer->data)[0];
       });
-  port.close();
   EXPECT_EQ(cnt, gpu::get_lane_id() + 1);
   EXPECT_EQ(gpu::get_thread_id(), gpu::get_lane_id());
 }

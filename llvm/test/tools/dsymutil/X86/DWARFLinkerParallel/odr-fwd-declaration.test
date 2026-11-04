@@ -35,13 +35,13 @@ void foo() { Sptrptr ptr1 = 0; }
 // CHECK: DW_TAG_member
 // CHECK-NEXT: DW_AT_name{{.*}}"field"
 
-// CHECK: 0x[[TYPEDEF_PTR_S]]: DW_TAG_typedef
-// CHECK-NEXT: DW_AT_type{{.*}}{0x[[PTR_S]]} "S *"
-// CHECK-NEXT: DW_AT_name{{.*}}"Sptr"
-
 // CHECK: 0x[[TYPEDEF_PTR_PTR_S:[a-f0-9]*]]: DW_TAG_typedef
 // CHECK-NEXT: DW_AT_type{{.*}}{0x[[PTR_PTR_S]]} "Sptr *"
 // CHECK-NEXT: DW_AT_name{{.*}}"Sptrptr"
+
+// CHECK: 0x[[TYPEDEF_PTR_S]]: DW_TAG_typedef
+// CHECK-NEXT: DW_AT_type{{.*}}{0x[[PTR_S]]} "S *"
+// CHECK-NEXT: DW_AT_name{{.*}}"Sptr"
 
 // First we confirm that first compile unit properly references type.
 //

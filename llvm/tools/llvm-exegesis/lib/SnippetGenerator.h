@@ -25,7 +25,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Error.h"
 #include <cstdlib>
-#include <memory>
 #include <vector>
 
 namespace llvm {

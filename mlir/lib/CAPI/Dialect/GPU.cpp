@@ -27,6 +27,10 @@ MlirType mlirGPUAsyncTokenTypeGet(MlirContext ctx) {
   return wrap(gpu::AsyncTokenType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirGPUAsyncTokenTypeGetName(void) {
+  return wrap(gpu::AsyncTokenType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // ObjectAttr
 //===---------------------------------------------------------------------===//
@@ -46,6 +50,10 @@ MlirAttribute mlirGPUObjectAttrGet(MlirContext mlirCtx, MlirAttribute target,
   return wrap(gpu::ObjectAttr::get(
       ctx, unwrap(target), static_cast<gpu::CompilationTarget>(format),
       StringAttr::get(ctx, object), objectProps, nullptr));
+}
+
+MlirStringRef mlirGPUObjectAttrGetName(void) {
+  return wrap(gpu::ObjectAttr::name);
 }
 
 MlirAttribute mlirGPUObjectAttrGetWithKernels(MlirContext mlirCtx,

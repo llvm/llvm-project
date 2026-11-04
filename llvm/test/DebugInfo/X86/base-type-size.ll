@@ -11,7 +11,10 @@
 ; CHECK: DW_TAG_base_type
 ; CHECK-NEXT: DW_AT_name      ("DW_ATE_unsigned_1")
 ; CHECK-NEXT: DW_AT_encoding  (DW_ATE_unsigned)
+;; TODO: Should this type use bit_size?
+; CHECK-NOT:  DW_AT_bit_size
 ; CHECK-NEXT: DW_AT_byte_size (0x01)
+; CHECK-NOT:  DW_AT_bit_size
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

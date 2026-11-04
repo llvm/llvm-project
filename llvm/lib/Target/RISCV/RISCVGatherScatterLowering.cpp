@@ -22,6 +22,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
 
@@ -32,11 +34,12 @@ using namespace PatternMatch;
 
 namespace {
 
-class RISCVGatherScatterLowering : public FunctionPass {
-  const RISCVSubtarget *ST = nullptr;
-  const RISCVTargetLowering *TLI = nullptr;
+class RISCVGatherScatterLoweringImpl {
+  const RISCVSubtarget *ST;
+  const RISCVTargetLowering *TLI;
+  function_ref<LoopInfo &()> GetLI;
   LoopInfo *LI = nullptr;
-  const DataLayout *DL = nullptr;
+  const DataLayout *DL;
 
   SmallVector<WeakTrackingVH> MaybeDeadPHIs;
 
@@ -46,21 +49,12 @@ class RISCVGatherScatterLowering : public FunctionPass {
   DenseMap<GetElementPtrInst *, std::pair<Value *, Value *>> StridedAddrs;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  RISCVGatherScatterLoweringImpl(const RISCVSubtarget *ST,
+                                 function_ref<LoopInfo &()> GetLI,
+                                 const DataLayout *DL)
+      : ST(ST), TLI(ST->getTargetLowering()), GetLI(GetLI), DL(DL) {}
 
-  RISCVGatherScatterLowering() : FunctionPass(ID) {}
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<TargetPassConfig>();
-    AU.addRequired<LoopInfoWrapperPass>();
-  }
-
-  StringRef getPassName() const override {
-    return "RISC-V gather/scatter lowering";
-  }
+  bool run(Function &F);
 
 private:
   bool tryCreateStridedLoadStore(IntrinsicInst *II);
@@ -75,13 +69,38 @@ private:
 
 } // end anonymous namespace
 
-char RISCVGatherScatterLowering::ID = 0;
+namespace {
+class RISCVGatherScatterLoweringLegacy : public FunctionPass {
+public:
+  static char ID;
 
-INITIALIZE_PASS(RISCVGatherScatterLowering, DEBUG_TYPE,
-                "RISC-V gather/scatter lowering pass", false, false)
+  RISCVGatherScatterLoweringLegacy() : FunctionPass(ID) {}
 
-FunctionPass *llvm::createRISCVGatherScatterLoweringPass() {
-  return new RISCVGatherScatterLowering();
+  bool runOnFunction(Function &F) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<LoopInfoWrapperPass>();
+  }
+
+  StringRef getPassName() const override {
+    return "RISC-V gather/scatter lowering";
+  }
+};
+} // namespace
+
+char RISCVGatherScatterLoweringLegacy::ID = 0;
+
+INITIALIZE_PASS_BEGIN(RISCVGatherScatterLoweringLegacy, DEBUG_TYPE,
+                      "RISC-V gather/scatter lowering pass", false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(RISCVGatherScatterLoweringLegacy, DEBUG_TYPE,
+                    "RISC-V gather/scatter lowering pass", false, false)
+
+FunctionPass *llvm::createRISCVGatherScatterLoweringLegacyPass() {
+  return new RISCVGatherScatterLoweringLegacy();
 }
 
 // TODO: Should we consider the mask when looking for a stride?
@@ -167,7 +186,7 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   default:
     llvm_unreachable("Unexpected opcode");
   case Instruction::Or:
-    Start = Builder.CreateOr(Start, Splat, "", /*IsDisjoint=*/true);
+    Start = Builder.CreateDisjointOr(Start, Splat);
     break;
   case Instruction::Add:
     Start = Builder.CreateAdd(Start, Splat);
@@ -189,11 +208,9 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
 // start value. Build and update a scalar recurrence as we unwind the recursion.
 // We also update the Stride as we unwind. Our goal is to move all of the
 // arithmetic out of the loop.
-bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
-                                                        Value *&Stride,
-                                                        PHINode *&BasePtr,
-                                                        BinaryOperator *&Inc,
-                                                        IRBuilderBase &Builder) {
+bool RISCVGatherScatterLoweringImpl::matchStridedRecurrence(
+    Value *Index, Loop *L, Value *&Stride, PHINode *&BasePtr,
+    BinaryOperator *&Inc, IRBuilderBase &Builder) {
   // Our base case is a Phi.
   if (auto *Phi = dyn_cast<PHINode>(Index)) {
     // A phi node we want to perform this function on should be from the
@@ -338,8 +355,8 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
 }
 
 std::pair<Value *, Value *>
-RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
-                                                   IRBuilderBase &Builder) {
+RISCVGatherScatterLoweringImpl::determineBaseAndStride(Instruction *Ptr,
+                                                       IRBuilderBase &Builder) {
 
   // A gather/scatter of a splat is a zero strided load/store.
   if (auto *BasePtr = getSplatValue(Ptr)) {
@@ -452,6 +469,9 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
     return P;
   }
 
+  if (!LI)
+    LI = &GetLI();
+
   // Make sure we're in a loop and that has a pre-header and a single latch.
   Loop *L = LI->getLoopFor(GEP->getParent());
   if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
@@ -492,7 +512,8 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   return P;
 }
 
-bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
+bool RISCVGatherScatterLoweringImpl::tryCreateStridedLoadStore(
+    IntrinsicInst *II) {
   VectorType *DataType;
   Value *StoreVal = nullptr, *Ptr, *Mask, *EVL = nullptr;
   Align Alignment;
@@ -547,9 +568,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
   if (!PtrI)
     return false;
 
-  LLVMContext &Ctx = PtrI->getContext();
-  IRBuilder Builder(Ctx, InstSimplifyFolder(*DL));
-  Builder.SetInsertPoint(PtrI);
+  IRBuilder Builder(PtrI->getIterator(), InstSimplifyFolder(*DL));
 
   Value *BasePtr, *Stride;
   std::tie(BasePtr, Stride) = determineBaseAndStride(PtrI, Builder);
@@ -590,21 +609,9 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
   return true;
 }
 
-bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  auto &TPC = getAnalysis<TargetPassConfig>();
-  auto &TM = TPC.getTM<RISCVTargetMachine>();
-  ST = &TM.getSubtarget<RISCVSubtarget>(F);
+bool RISCVGatherScatterLoweringImpl::run(Function &F) {
   if (!ST->hasVInstructions() || !ST->useRVVForFixedLengthVectors())
     return false;
-
-  TLI = ST->getTargetLowering();
-  DL = &F.getDataLayout();
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-
-  StridedAddrs.clear();
 
   SmallVector<IntrinsicInst *, 4> Worklist;
 
@@ -639,4 +646,29 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
   }
 
   return Changed;
+}
+
+bool RISCVGatherScatterLoweringLegacy::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  auto &TM = TPC.getTM<RISCVTargetMachine>();
+  auto *ST = &TM.getSubtarget<RISCVSubtarget>(F);
+  auto GetLI = [&]() -> LoopInfo & {
+    return getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  };
+  return RISCVGatherScatterLoweringImpl(ST, GetLI, &F.getDataLayout()).run(F);
+}
+
+PreservedAnalyses
+RISCVGatherScatterLoweringPass::run(Function &F, FunctionAnalysisManager &FAM) {
+  auto *ST = &TM->getSubtarget<RISCVSubtarget>(F);
+  auto GetLI = [&]() -> LoopInfo & { return FAM.getResult<LoopAnalysis>(F); };
+  bool Changed =
+      RISCVGatherScatterLoweringImpl(ST, GetLI, &F.getDataLayout()).run(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::allInSet<CFGAnalyses>();
 }

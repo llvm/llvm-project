@@ -62,7 +62,7 @@ public:
   /// Last argument is optional, if no value is passed, we don't annotate
   /// any vectorize metadata.
   void annotateLoopLatch(
-      llvm::BranchInst *B, bool IsParallel,
+      llvm::CondBrInst *B, bool IsParallel,
       std::optional<bool> EnableVectorizeMetadata = std::nullopt) const;
 
   /// Add alternative alias based pointers
@@ -126,7 +126,7 @@ public:
   IRInserter(ScopAnnotator &A) : Annotator(&A) {}
 
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
-                    llvm::BasicBlock::iterator InsertPt) const override {
+                    llvm::BasicBlock::iterator InsertPt) const {
     llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     if (Annotator)
       Annotator->annotate(I);

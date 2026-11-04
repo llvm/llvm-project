@@ -87,7 +87,7 @@ class MxPseudoReg<string N, list<Register> SUBREGS = [], list<SubRegIndex> SUBID
     : MxReg<N, 0, SUBREGS, SUBIDX>;
 
 def CCR : MxPseudoReg<"ccr">;
-def SR  : MxPseudoReg<"sr">;
+def SR  : MxPseudoReg<"sr", [CCR], [MxSubRegIndex8Lo]>;
 
 def PC  : MxPseudoReg<"pc">;
 
@@ -133,7 +133,7 @@ def FPDR64 : MxRegClass<[f64], 32, (add FPDR32)>;
 let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<80,128,32>]> in
 def FPDR80 : MxRegClass<[f80], 32, (add FPDR32)>;
 
-let CopyCost = -1 in {
+let CopyCost = -1, isAllocatable = 0 in {
   let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<8,16,16>]> in
   def CCRC : MxRegClass<[i8],  16, (add CCR)>;
   let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<16,16,16>]> in

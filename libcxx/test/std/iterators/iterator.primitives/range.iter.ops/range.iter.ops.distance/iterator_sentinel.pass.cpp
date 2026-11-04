@@ -13,12 +13,13 @@
 //     constexpr iter_difference_t<I> ranges::distance(I first, S last);
 //
 // template<class I, sized_sentinel_for<decay_t<I>> S>
-//   constexpr iter_difference_t<I> ranges::distance(I&& first, S last); // TODO: update when LWG3664 is resolved
+//   constexpr iter_difference_t<decay_t<I>> ranges::distance(I&& first, S last);
 
 #include <array>
 #include <cassert>
 #include <deque>
 #include <iterator>
+#include <ranges>
 #include <vector>
 
 #include "test_iterators.h"
@@ -182,6 +183,57 @@ constexpr void test_stride_counting() {
   assert(std::ranges::distance(view.begin(), view.end()) == n);
 }
 
+template <class It>
+struct EvilSentinel {
+  It p_;
+  friend constexpr bool operator==(EvilSentinel s, It p) { return s.p_ == p; }
+  friend constexpr auto operator-(EvilSentinel s, It p) { return s.p_ - p; }
+  friend constexpr auto operator-(It p, EvilSentinel s) { return p - s.p_; }
+  friend constexpr void operator-(EvilSentinel s, int (&)[3])        = delete;
+  friend constexpr void operator-(EvilSentinel s, int (&&)[3])       = delete;
+  friend constexpr void operator-(EvilSentinel s, const int (&)[3])  = delete;
+  friend constexpr void operator-(EvilSentinel s, const int (&&)[3]) = delete;
+};
+static_assert(std::sized_sentinel_for<EvilSentinel<int*>, int*>);
+static_assert(!std::sized_sentinel_for<EvilSentinel<int*>, const int*>);
+static_assert(std::sized_sentinel_for<EvilSentinel<const int*>, int*>);
+static_assert(std::sized_sentinel_for<EvilSentinel<const int*>, const int*>);
+
+// LWG3664: "LWG3392 broke std::ranges::distance(a, a+3)" tests.
+constexpr void test_lwg3664() {
+  {
+    int a[] = {1, 2, 3};
+    assert(std::ranges::distance(a, a + 3) == 3);
+    assert(std::ranges::distance(a, a) == 0);
+    assert(std::ranges::distance(a + 3, a) == -3);
+  }
+  {
+    int a[] = {1, 2, 3};
+    assert(std::ranges::distance(a, EvilSentinel<int*>{a + 3}) == 3);
+    assert(std::ranges::distance(a, EvilSentinel<int*>{a}) == 0);
+    assert(std::ranges::distance(a + 3, EvilSentinel<int*>{a}) == -3);
+    assert(std::ranges::distance(std::move(a), EvilSentinel<int*>{a + 3}) == 3);
+  }
+  {
+    const int a[] = {1, 2, 3};
+    assert(std::ranges::distance(a, EvilSentinel<const int*>{a + 3}) == 3);
+    assert(std::ranges::distance(a, EvilSentinel<const int*>{a}) == 0);
+    assert(std::ranges::distance(a + 3, EvilSentinel<const int*>{a}) == -3);
+    assert(std::ranges::distance(std::move(a), EvilSentinel<const int*>{a + 3}) == 3);
+    static_assert(!std::is_invocable_v<decltype(std::ranges::distance), const int (&)[3], EvilSentinel<int*>>);
+    static_assert(!std::is_invocable_v<decltype(std::ranges::distance), const int (&&)[3], EvilSentinel<int*>>);
+  }
+}
+
+// LWG4242: "ranges::distance does not work with volatile iterators" tests.
+void test_lwg4242() {
+  int arr[]         = {1, 2, 3};
+  int* volatile ptr = arr;
+  auto dist         = std::distance(ptr, arr + 3);
+  auto r_dist       = std::ranges::distance(ptr, arr + 3);
+  assert(dist == r_dist);
+}
+
 constexpr bool test() {
   {
     int a[] = {1, 2, 3};
@@ -267,8 +319,13 @@ constexpr bool test() {
     auto view = c | std::views::join;
     assert(std::ranges::distance(view.begin(), view.end()) == 30);
   }
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
-    test_deque();
+
+  test_lwg3664();
+
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_deque(); // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+    test_lwg4242();
+  }
 
   return true;
 }

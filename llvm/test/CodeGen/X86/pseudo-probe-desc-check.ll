@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s -o /dev/null 2>&1 | FileCheck %s
-; RUN: llc -mtriple=x86_64-unknown-windows-msvc < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -pseudo-probe-verify-guid-existence-in-desc < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-windows-msvc -pseudo-probe-verify-guid-existence-in-desc < %s -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: warning: Guid:8314849053352128226 Name:inlinee does not exist in pseudo probe desc
 ; CHECK: warning: Guid:6492337042787843907 Name:extract2 does not exist in pseudo probe desc

@@ -16,7 +16,7 @@ clang_tablegen(Opcodes.inc
   TARGET Opcodes)
 
 clang_tablegen(AttrDocTable.inc -gen-clang-attr-doc-table
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../include/
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../include/
   SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/../../include/clang/Basic/Attr.td
   TARGET ClangAttrDocTable)
 
@@ -66,9 +66,11 @@ add_clang_library(clangAST
   ExternalASTMerger.cpp
   ExternalASTSource.cpp
   FormatString.cpp
+  GlobalDecl.cpp
   InferAlloc.cpp
   InheritViz.cpp
   ByteCode/BitcastBuffer.cpp
+  ByteCode/Block.cpp
   ByteCode/ByteCodeEmitter.cpp
   ByteCode/Compiler.cpp
   ByteCode/Context.cpp
@@ -76,14 +78,14 @@ add_clang_library(clangAST
   ByteCode/Disasm.cpp
   ByteCode/EvalEmitter.cpp
   ByteCode/Function.cpp
-  ByteCode/FunctionPointer.cpp
   ByteCode/InterpBuiltin.cpp
   ByteCode/InterpBuiltinBitCast.cpp
+  ByteCode/InterpBuiltinObjectSize.cpp
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp
+  ByteCode/InitMap.cpp
   ByteCode/Interp.cpp
-  ByteCode/InterpBlock.cpp
   ByteCode/InterpFrame.cpp
   ByteCode/InterpStack.cpp
   ByteCode/InterpState.cpp
@@ -95,6 +97,7 @@ add_clang_library(clangAST
   ByteCode/State.cpp
   ByteCode/MemberPointer.cpp
   ByteCode/InterpShared.cpp
+  HLSLResource.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
   JSONNodeDumper.cpp
@@ -134,6 +137,9 @@ add_clang_library(clangAST
   TypePrinter.cpp
   VTableBuilder.cpp
   VTTBuilder.cpp
+
+  PRECOMPILE_HEADERS
+  [["clang/AST/pch.h"]]
 
   LINK_LIBS
   clangBasic

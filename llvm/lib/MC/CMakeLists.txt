@@ -1,5 +1,11 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS MCCLOptions.td)
+llvm_tablegen(MCCLOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(MCCLOptionsTableGen)
+
 add_llvm_component_library(LLVMMC
   ConstantPools.cpp
+  DXContainerInfo.cpp
   DXContainerPSVInfo.cpp
   DXContainerRootSignature.cpp
   ELFObjectWriter.cpp
@@ -15,6 +21,7 @@ add_llvm_component_library(LLVMMC
   MCAsmMacro.cpp
   MCAsmStreamer.cpp
   MCAssembler.cpp
+  MCCLOptions.cpp
   MCCodeEmitter.cpp
   MCCodeView.cpp
   MCContext.cpp
@@ -31,6 +38,8 @@ add_llvm_component_library(LLVMMC
   MCInstrAnalysis.cpp
   MCInstrDesc.cpp
   MCInstrInfo.cpp
+  MCLFI.cpp
+  MCLFIRewriter.cpp
   MCLabel.cpp
   MCLinkerOptimizationHint.cpp
   MCMachOStreamer.cpp
@@ -50,6 +59,7 @@ add_llvm_component_library(LLVMMC
   MCSubtargetInfo.cpp
   MCSymbol.cpp
   MCSymbolELF.cpp
+  MCSymbolGOFF.cpp
   MCSymbolXCOFF.cpp
   MCTargetOptions.cpp
   MCTargetOptionsCommandFlags.cpp
@@ -73,12 +83,16 @@ add_llvm_component_library(LLVMMC
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MC
 
   LINK_COMPONENTS
+  BinaryFormat
+  DebugInfoDWARFLowLevel
+  Option
   Support
   TargetParser
-  BinaryFormat
 
   DEPENDS
+  MCCLOptionsTableGen
   intrinsics_gen
+  llvm_vcsrevision_h
   )
 
 add_subdirectory(MCParser)

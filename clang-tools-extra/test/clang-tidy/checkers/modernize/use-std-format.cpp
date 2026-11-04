@@ -1,13 +1,13 @@
 // RUN: %check_clang_tidy \
 // RUN:   -std=c++20-or-later %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: true}}" \
-// RUN:   -- -isystem %clang_tidy_headers \
+// RUN:   -- \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
 // RUN: %check_clang_tidy \
 // RUN:   -std=c++20-or-later %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: false}}" \
-// RUN:   -- -isystem %clang_tidy_headers \
+// RUN:   -- \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
 #include <string>
@@ -25,6 +25,8 @@ struct iterator {
   T *operator->();
   T &operator*();
 };
+
+enum E { E1 };
 
 std::string StrFormat_simple() {
   return absl::StrFormat("Hello");
@@ -177,4 +179,10 @@ void StrFormat_macros() {
 #define SURROUND_FORMAT(x) "!" x
   auto s15 = absl::StrFormat(SURROUND_FORMAT("Hello %d"), 4443);
   // CHECK-MESSAGES: [[@LINE-1]]:14: warning: unable to use 'std::format' instead of 'StrFormat' because format string contains unreplaceable macro 'SURROUND_FORMAT' [modernize-use-std-format]
+
+  // Ensure that we don't crash if the call is within a macro.
+#define WRAP_IN_MACRO(x) x
+  WRAP_IN_MACRO(absl::StrFormat("Hello %d", E1));
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
+  // CHECK-FIXES: WRAP_IN_MACRO(std::format("Hello {}", E1));
 }

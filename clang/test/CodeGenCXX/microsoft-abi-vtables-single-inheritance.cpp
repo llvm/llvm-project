@@ -44,10 +44,10 @@ void use(B *obj) { obj->f(); }
 
 struct C {
   // CHECK-LABEL: VFTable for 'C' (2 entries)
-  // CHECK-NEXT: 0 | C::~C() [scalar deleting]
+  // CHECK-NEXT: 0 | C::~C() [vector deleting]
   // CHECK-NEXT: 1 | void C::f()
   // CHECK-LABEL: VFTable indices for 'C' (2 entries).
-  // CHECK-NEXT: 0 | C::~C() [scalar deleting]
+  // CHECK-NEXT: 0 | C::~C() [vector deleting]
   // CHECK-NEXT: 1 | void C::f()
 
   virtual ~C();
@@ -60,10 +60,10 @@ void use(C *obj) { obj->f(); }
 struct D {
   // CHECK-LABEL: VFTable for 'D' (2 entries)
   // CHECK-NEXT: 0 | void D::f()
-  // CHECK-NEXT: 1 | D::~D() [scalar deleting]
+  // CHECK-NEXT: 1 | D::~D() [vector deleting]
   // CHECK-LABEL: VFTable indices for 'D' (2 entries)
   // CHECK-NEXT: 0 | void D::f()
-  // CHECK-NEXT: 1 | D::~D() [scalar deleting]
+  // CHECK-NEXT: 1 | D::~D() [vector deleting]
 
   virtual void f();
   virtual ~D();
@@ -77,10 +77,10 @@ struct E : A {
   // CHECK-NEXT: 0 | void A::f()
   // CHECK-NEXT: 1 | void A::g()
   // CHECK-NEXT: 2 | void A::h()
-  // CHECK-NEXT: 3 | E::~E() [scalar deleting]
+  // CHECK-NEXT: 3 | E::~E() [vector deleting]
   // CHECK-NEXT: 4 | void E::i()
   // CHECK-LABEL: VFTable indices for 'E' (2 entries).
-  // CHECK-NEXT: 3 | E::~E() [scalar deleting]
+  // CHECK-NEXT: 3 | E::~E() [vector deleting]
   // CHECK-NEXT: 4 | void E::i()
 
   // ~E would be the key method, but it isn't used, and MS ABI has no key
@@ -98,10 +98,10 @@ struct F : A {
   // CHECK-NEXT: 1 | void A::g()
   // CHECK-NEXT: 2 | void A::h()
   // CHECK-NEXT: 3 | void F::i()
-  // CHECK-NEXT: 4 | F::~F() [scalar deleting]
+  // CHECK-NEXT: 4 | F::~F() [vector deleting]
   // CHECK-LABEL: VFTable indices for 'F' (2 entries).
   // CHECK-NEXT: 3 | void F::i()
-  // CHECK-NEXT: 4 | F::~F() [scalar deleting]
+  // CHECK-NEXT: 4 | F::~F() [vector deleting]
 
   virtual void i();
   virtual ~F();
@@ -115,12 +115,12 @@ struct G : E {
   // CHECK-NEXT: 0 | void G::f()
   // CHECK-NEXT: 1 | void A::g()
   // CHECK-NEXT: 2 | void A::h()
-  // CHECK-NEXT: 3 | G::~G() [scalar deleting]
+  // CHECK-NEXT: 3 | G::~G() [vector deleting]
   // CHECK-NEXT: 4 | void E::i()
   // CHECK-NEXT: 5 | void G::j()
   // CHECK-LABEL: VFTable indices for 'G' (3 entries).
   // CHECK-NEXT: 0 | void G::f()
-  // CHECK-NEXT: 3 | G::~G() [scalar deleting]
+  // CHECK-NEXT: 3 | G::~G() [vector deleting]
   // CHECK-NEXT: 5 | void G::j()
 
   virtual void f();  // overrides A::f()

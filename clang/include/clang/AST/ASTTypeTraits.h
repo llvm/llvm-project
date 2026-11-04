@@ -109,12 +109,6 @@ public:
   /// Hooks for using ASTNodeKind as a key in a DenseMap.
   struct DenseMapInfo {
     // ASTNodeKind() is a good empty key because it is represented as a 0.
-    static inline ASTNodeKind getEmptyKey() { return ASTNodeKind(); }
-    // NKI_NumberOfKinds is not a valid value, so it is good for a
-    // tombstone key.
-    static inline ASTNodeKind getTombstoneKey() {
-      return ASTNodeKind(NKI_NumberOfKinds);
-    }
     static unsigned getHashValue(const ASTNodeKind &Val) { return Val.KindId; }
     static bool isEqual(const ASTNodeKind &LHS, const ASTNodeKind &RHS) {
       return LHS.KindId == RHS.KindId;
@@ -137,6 +131,7 @@ private:
     NKI_TemplateArgumentLoc,
     NKI_LambdaCapture,
     NKI_TemplateName,
+    NKI_NestedNameSpecifier,
     NKI_NestedNameSpecifierLoc,
     NKI_QualType,
 #define TYPELOC(CLASS, PARENT) NKI_##CLASS##TypeLoc,
@@ -145,7 +140,6 @@ private:
     NKI_LastKindWithoutPointerIdentity = NKI_TypeLoc,
     NKI_CXXBaseSpecifier,
     NKI_CXXCtorInitializer,
-    NKI_NestedNameSpecifier,
     NKI_Decl,
 #define DECL(DERIVED, BASE) NKI_##DERIVED##Decl,
 #include "clang/AST/DeclNodes.inc"
@@ -164,6 +158,7 @@ private:
 #include "clang/Basic/AttrList.inc"
     NKI_ObjCProtocolLoc,
     NKI_ConceptReference,
+    NKI_OffsetOfNode,
     NKI_NumberOfKinds
   };
 
@@ -224,6 +219,7 @@ KIND_TO_KIND_ID(Attr)
 KIND_TO_KIND_ID(ObjCProtocolLoc)
 KIND_TO_KIND_ID(CXXBaseSpecifier)
 KIND_TO_KIND_ID(ConceptReference)
+KIND_TO_KIND_ID(OffsetOfNode)
 #define DECL(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Decl)
 #include "clang/AST/DeclNodes.inc"
 #define STMT(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED)
@@ -268,7 +264,7 @@ public:
   /// convertible to \c T.
   ///
   /// For types that have identity via their pointer in the AST
-  /// (like \c Stmt, \c Decl, \c Type and \c NestedNameSpecifier) the returned
+  /// (like \c Stmt, \c Decl and \c Type) the returned
   /// pointer points to the referenced AST node.
   /// For other types (like \c QualType) the value is stored directly
   /// in the \c DynTypedNode, and the returned pointer points at
@@ -312,9 +308,8 @@ public:
   /// @{
   /// Imposes an order on \c DynTypedNode.
   ///
-  /// Supports comparison of nodes that support memoization.
-  /// FIXME: Implement comparison for other node types (currently
-  /// only Stmt, Decl, Type and NestedNameSpecifier return memoization data).
+  /// FIXME: Implement comparison for TemplateName, LambdaCapture,
+  /// TemplateArgument, and TemplateArgumentLoc.
   bool operator<(const DynTypedNode &Other) const {
     if (!NodeKind.isSame(Other.NodeKind))
       return NodeKind < Other.NodeKind;
@@ -342,6 +337,10 @@ public:
                             NNSLB.getOpaqueData());
     }
 
+    if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(NodeKind))
+      return getUnchecked<NestedNameSpecifier>().getAsVoidPointer() <
+             Other.getUnchecked<NestedNameSpecifier>().getAsVoidPointer();
+
     assert(getMemoizationData() && Other.getMemoizationData());
     return getMemoizationData() < Other.getMemoizationData();
   }
@@ -362,6 +361,10 @@ public:
       return getUnchecked<NestedNameSpecifierLoc>() ==
              Other.getUnchecked<NestedNameSpecifierLoc>();
 
+    if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(NodeKind))
+      return getUnchecked<NestedNameSpecifier>() ==
+             Other.getUnchecked<NestedNameSpecifier>();
+
     assert(getMemoizationData() && Other.getMemoizationData());
     return getMemoizationData() == Other.getMemoizationData();
   }
@@ -372,16 +375,6 @@ public:
 
   /// Hooks for using DynTypedNode as a key in a DenseMap.
   struct DenseMapInfo {
-    static inline DynTypedNode getEmptyKey() {
-      DynTypedNode Node;
-      Node.NodeKind = ASTNodeKind::DenseMapInfo::getEmptyKey();
-      return Node;
-    }
-    static inline DynTypedNode getTombstoneKey() {
-      DynTypedNode Node;
-      Node.NodeKind = ASTNodeKind::DenseMapInfo::getTombstoneKey();
-      return Node;
-    }
     static unsigned getHashValue(const DynTypedNode &Val) {
       // FIXME: Add hashing support for the remaining types.
       if (ASTNodeKind::getFromNodeKind<TypeLoc>().isBaseOf(Val.NodeKind)) {
@@ -398,17 +391,16 @@ public:
             NNSL.getOpaqueData());
       }
 
+      if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(
+              Val.NodeKind))
+        return llvm::DenseMapInfo<NestedNameSpecifier>::getHashValue(
+            Val.getUnchecked<NestedNameSpecifier>());
+
       assert(Val.getMemoizationData());
       return llvm::hash_value(Val.getMemoizationData());
     }
     static bool isEqual(const DynTypedNode &LHS, const DynTypedNode &RHS) {
-      auto Empty = ASTNodeKind::DenseMapInfo::getEmptyKey();
-      auto TombStone = ASTNodeKind::DenseMapInfo::getTombstoneKey();
-      return (ASTNodeKind::DenseMapInfo::isEqual(LHS.NodeKind, Empty) &&
-              ASTNodeKind::DenseMapInfo::isEqual(RHS.NodeKind, Empty)) ||
-             (ASTNodeKind::DenseMapInfo::isEqual(LHS.NodeKind, TombStone) &&
-              ASTNodeKind::DenseMapInfo::isEqual(RHS.NodeKind, TombStone)) ||
-             LHS == RHS;
+      return LHS == RHS;
     }
   };
 
@@ -502,15 +494,16 @@ private:
 
   /// Stores the data of the node.
   ///
-  /// Note that we can store \c Decls, \c Stmts, \c Types,
-  /// \c NestedNameSpecifiers and \c CXXCtorInitializer by pointer as they are
-  /// guaranteed to be unique pointers pointing to dedicated storage in the AST.
-  /// \c QualTypes, \c NestedNameSpecifierLocs, \c TypeLocs,
-  /// \c TemplateArguments and \c TemplateArgumentLocs on the other hand do not
-  /// have storage or unique pointers and thus need to be stored by value.
-  llvm::AlignedCharArrayUnion<const void *, TemplateArgument,
-                              TemplateArgumentLoc, NestedNameSpecifierLoc,
-                              QualType, TypeLoc, ObjCProtocolLoc>
+  /// Note that we can store \c Decls, \c Stmts, \c Types and
+  /// \c CXXCtorInitializer by pointer as they are guaranteed to be unique
+  /// pointers pointing to dedicated storage in the AST.
+  /// \c QualTypes, \c NestedNameSpecifiers, \c NestedNameSpecifierLocs,
+  /// \c TypeLocs, \c TemplateArguments and \c TemplateArgumentLocs on the other
+  /// hand do not have storage or unique pointers and thus need to be stored by
+  /// value.
+  llvm::AlignedCharArrayUnion<
+      const void *, TemplateArgument, TemplateArgumentLoc, NestedNameSpecifier,
+      NestedNameSpecifierLoc, QualType, TypeLoc, ObjCProtocolLoc>
       Storage;
 };
 
@@ -588,6 +581,10 @@ struct DynTypedNode::BaseConverter<ObjCProtocolLoc, void>
 template <>
 struct DynTypedNode::BaseConverter<ConceptReference, void>
     : public PtrConverter<ConceptReference> {};
+
+template <>
+struct DynTypedNode::BaseConverter<OffsetOfNode, void>
+    : public PtrConverter<OffsetOfNode> {};
 
 // The only operation we allow on unsupported types is \c get.
 // This allows to conveniently use \c DynTypedNode when having an arbitrary

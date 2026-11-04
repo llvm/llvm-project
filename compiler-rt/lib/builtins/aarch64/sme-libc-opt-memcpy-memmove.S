@@ -12,11 +12,13 @@
 ///
 /// These implementations depend on unaligned access support.
 ///
-/// Routines taken from libc/AOR_v20.02/string/aarch64.
+/// Routines based on Arm Optimized Routines, in string/aarch64.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
+
+#if !defined(__ARM_FEATURE_SVE)
 
 //
 //  __arm_sc_memcpy / __arm_sc_memmove
@@ -246,3 +248,4 @@ END_COMPILERRT_FUNCTION(__arm_sc_memcpy)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 
+#endif // !defined(__ARM_FEATURE_SVE)

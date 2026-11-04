@@ -24,12 +24,14 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <concepts>
 #include <functional>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 struct UnaryPred { bool operator()(int) const; };
 

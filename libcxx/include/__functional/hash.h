@@ -23,7 +23,6 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_unqualified.h>
 #include <__type_traits/underlying_type.h>
-#include <__utility/pair.h>
 #include <__utility/swap.h>
 #include <cstdint>
 #include <cstring>
@@ -35,11 +34,16 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _Size __loadword(const void* __p) {
+inline _Size __loadword(const void* __p) {
   _Size __r;
   std::memcpy(std::addressof(__r), __p, sizeof(__r));
   return __r;
 }
+
+struct _PairT {
+  size_t first;
+  size_t second;
+};
 
 // We use murmur2 when size_t is 32 bits, and cityhash64 when size_t
 // is 64 bits.  This is because cityhash64 uses 64bit x 64bit
@@ -49,8 +53,7 @@ struct __murmur2_or_cityhash;
 
 template <class _Size>
 struct __murmur2_or_cityhash<_Size, 32> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _Size
-  operator()(const void* __key, _Size __len) const {
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _Size operator()(const void* __key, _Size __len) const {
     // murmur2
     const _Size __m             = 0x5bd1e995;
     const _Size __r             = 24;
@@ -85,8 +88,7 @@ struct __murmur2_or_cityhash<_Size, 32> {
 template <class _Size>
 struct __murmur2_or_cityhash<_Size, 64> {
   // cityhash64
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _Size
-  operator()(const void* __key, _Size __len) const {
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _Size operator()(const void* __key, _Size __len) const {
     const char* __s = static_cast<const char*>(__key);
     if (__len <= 32) {
       if (__len <= 16) {
@@ -104,9 +106,9 @@ struct __murmur2_or_cityhash<_Size, 64> {
     _Size __y = std::__loadword<_Size>(__s + __len - 16) + std::__loadword<_Size>(__s + __len - 56);
     _Size __z =
         __hash_len_16(std::__loadword<_Size>(__s + __len - 48) + __len, std::__loadword<_Size>(__s + __len - 24));
-    pair<_Size, _Size> __v = __weak_hash_len_32_with_seeds(__s + __len - 64, __len, __z);
-    pair<_Size, _Size> __w = __weak_hash_len_32_with_seeds(__s + __len - 32, __y + __k1, __x);
-    __x                    = __x * __k1 + std::__loadword<_Size>(__s);
+    _PairT __v = __weak_hash_len_32_with_seeds(__s + __len - 64, __len, __z);
+    _PairT __w = __weak_hash_len_32_with_seeds(__s + __len - 32, __y + __k1, __x);
+    __x        = __x * __k1 + std::__loadword<_Size>(__s);
 
     // Decrease len to the nearest multiple of 64, and operate on 64-byte chunks.
     __len = (__len - 1) & ~static_cast<_Size>(63);
@@ -133,17 +135,17 @@ private:
   static const _Size __k2 = 0x9ae16a3b2f90404fULL;
   static const _Size __k3 = 0xc949d7c7509e6557ULL;
 
-  _LIBCPP_HIDE_FROM_ABI static _Size __rotate(_Size __val, int __shift) {
+  static _Size __rotate(_Size __val, int __shift) {
     return __shift == 0 ? __val : ((__val >> __shift) | (__val << (64 - __shift)));
   }
 
-  _LIBCPP_HIDE_FROM_ABI static _Size __rotate_by_at_least_1(_Size __val, int __shift) {
+  static _Size __rotate_by_at_least_1(_Size __val, int __shift) {
     return (__val >> __shift) | (__val << (64 - __shift));
   }
 
-  _LIBCPP_HIDE_FROM_ABI static _Size __shift_mix(_Size __val) { return __val ^ (__val >> 47); }
+  static _Size __shift_mix(_Size __val) { return __val ^ (__val >> 47); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size __hash_len_16(_Size __u, _Size __v) {
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size __hash_len_16(_Size __u, _Size __v) {
     const _Size __mul = 0x9ddfea08eb382d69ULL;
     _Size __a         = (__u ^ __v) * __mul;
     __a ^= (__a >> 47);
@@ -153,8 +155,7 @@ private:
     return __b;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size
-  __hash_len_0_to_16(const char* __s, _Size __len) {
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size __hash_len_0_to_16(const char* __s, _Size __len) {
     if (__len > 8) {
       const _Size __a = std::__loadword<_Size>(__s);
       const _Size __b = std::__loadword<_Size>(__s + __len - 8);
@@ -180,8 +181,7 @@ private:
     return __k2;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size
-  __hash_len_17_to_32(const char* __s, _Size __len) {
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size __hash_len_17_to_32(const char* __s, _Size __len) {
     const _Size __a = std::__loadword<_Size>(__s) * __k1;
     const _Size __b = std::__loadword<_Size>(__s + 8);
     const _Size __c = std::__loadword<_Size>(__s + __len - 8) * __k2;
@@ -192,7 +192,7 @@ private:
 
   // Return a 16-byte hash for 48 bytes.  Quick and dirty.
   // Callers do best to use "random-looking" values for a and b.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static pair<_Size, _Size>
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _PairT
   __weak_hash_len_32_with_seeds(_Size __w, _Size __x, _Size __y, _Size __z, _Size __a, _Size __b) {
     __a += __w;
     __b             = __rotate(__b + __a + __z, 21);
@@ -200,11 +200,14 @@ private:
     __a += __x;
     __a += __y;
     __b += __rotate(__a, 44);
-    return pair<_Size, _Size>(__a + __z, __b + __c);
+    _PairT __ret;
+    __ret.first  = __a + __z;
+    __ret.second = __b + __c;
+    return __ret;
   }
 
   // Return a 16-byte hash for s[0] ... s[31], a, and b.  Quick and dirty.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static pair<_Size, _Size>
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _PairT
   __weak_hash_len_32_with_seeds(const char* __s, _Size __a, _Size __b) {
     return __weak_hash_len_32_with_seeds(
         std::__loadword<_Size>(__s),
@@ -216,8 +219,7 @@ private:
   }
 
   // Return an 8-byte hash for 33 to 64 bytes.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size
-  __hash_len_33_to_64(const char* __s, size_t __len) {
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size __hash_len_33_to_64(const char* __s, size_t __len) {
     _Size __z = std::__loadword<_Size>(__s + 24);
     _Size __a = std::__loadword<_Size>(__s) + (__len + std::__loadword<_Size>(__s + __len - 16)) * __k0;
     _Size __b = __rotate(__a + __z, 52);
@@ -242,9 +244,11 @@ private:
 };
 
 #if _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 [[__gnu__::__pure__]] _LIBCPP_EXPORTED_FROM_ABI size_t __hash_memory(_LIBCPP_NOESCAPE const void*, size_t) _NOEXCEPT;
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #else
-_LIBCPP_HIDE_FROM_ABI inline size_t __hash_memory(const void* __ptr, size_t __size) _NOEXCEPT {
+inline size_t __hash_memory(const void* __ptr, size_t __size) _NOEXCEPT {
   return __murmur2_or_cityhash<size_t>()(__ptr, __size);
 }
 #endif
@@ -254,7 +258,7 @@ struct __scalar_hash;
 
 template <class _Tp>
 struct __scalar_hash<_Tp, 0> : public __unary_function<_Tp, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
+  size_t operator()(_Tp __v) const _NOEXCEPT {
     union {
       _Tp __t;
       size_t __a;
@@ -267,7 +271,7 @@ struct __scalar_hash<_Tp, 0> : public __unary_function<_Tp, size_t> {
 
 template <class _Tp>
 struct __scalar_hash<_Tp, 1> : public __unary_function<_Tp, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
+  size_t operator()(_Tp __v) const _NOEXCEPT {
     union {
       _Tp __t;
       size_t __a;
@@ -279,7 +283,7 @@ struct __scalar_hash<_Tp, 1> : public __unary_function<_Tp, size_t> {
 
 template <class _Tp>
 struct __scalar_hash<_Tp, 2> : public __unary_function<_Tp, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
+  size_t operator()(_Tp __v) const _NOEXCEPT {
     union {
       _Tp __t;
       struct {
@@ -294,7 +298,7 @@ struct __scalar_hash<_Tp, 2> : public __unary_function<_Tp, size_t> {
 
 template <class _Tp>
 struct __scalar_hash<_Tp, 3> : public __unary_function<_Tp, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
+  size_t operator()(_Tp __v) const _NOEXCEPT {
     union {
       _Tp __t;
       struct {
@@ -310,7 +314,7 @@ struct __scalar_hash<_Tp, 3> : public __unary_function<_Tp, size_t> {
 
 template <class _Tp>
 struct __scalar_hash<_Tp, 4> : public __unary_function<_Tp, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
+  size_t operator()(_Tp __v) const _NOEXCEPT {
     union {
       _Tp __t;
       struct {
@@ -325,12 +329,7 @@ struct __scalar_hash<_Tp, 4> : public __unary_function<_Tp, size_t> {
   }
 };
 
-struct _PairT {
-  size_t first;
-  size_t second;
-};
-
-_LIBCPP_HIDE_FROM_ABI inline size_t __hash_combine(size_t __lhs, size_t __rhs) _NOEXCEPT {
+inline size_t __hash_combine(size_t __lhs, size_t __rhs) _NOEXCEPT {
   typedef __scalar_hash<_PairT> _HashT;
   const _PairT __p = {__lhs, __rhs};
   return _HashT()(__p);
@@ -338,7 +337,7 @@ _LIBCPP_HIDE_FROM_ABI inline size_t __hash_combine(size_t __lhs, size_t __rhs) _
 
 template <class _Tp>
 struct hash<_Tp*> : public __unary_function<_Tp*, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp* __v) const _NOEXCEPT {
+  size_t operator()(_Tp* __v) const _NOEXCEPT {
     union {
       _Tp* __t;
       size_t __a;
@@ -358,7 +357,7 @@ struct __hash_impl {
 template <class _Tp>
 struct __hash_impl<_Tp, __enable_if_t<is_enum<_Tp>::value && __is_unqualified_v<_Tp> > >
     : __unary_function<_Tp, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
+  size_t operator()(_Tp __v) const _NOEXCEPT {
     using type = __underlying_type_t<_Tp>;
     return hash<type>()(static_cast<type>(__v));
   }
@@ -369,7 +368,7 @@ struct __hash_impl<
     _Tp,
     __enable_if_t<is_integral<_Tp>::value && __is_unqualified_v<_Tp> && (sizeof(_Tp) <= sizeof(size_t))> >
     : __unary_function<_Tp, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
+  size_t operator()(_Tp __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
 
 template <class _Tp>
@@ -380,7 +379,7 @@ struct __hash_impl<_Tp,
 template <class _Tp>
 struct __hash_impl<_Tp, __enable_if_t<is_floating_point<_Tp>::value && __is_unqualified_v<_Tp> > >
     : __scalar_hash<_Tp> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
+  size_t operator()(_Tp __v) const _NOEXCEPT {
     // -0.0 and 0.0 should return same hash
     if (__v == 0.0f)
       return 0;
@@ -390,7 +389,7 @@ struct __hash_impl<_Tp, __enable_if_t<is_floating_point<_Tp>::value && __is_unqu
 
 template <>
 struct __hash_impl<long double> : __scalar_hash<long double> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(long double __v) const _NOEXCEPT {
+  size_t operator()(long double __v) const _NOEXCEPT {
     // -0.0 and 0.0 should return same hash
     if (__v == 0.0L)
       return 0;
@@ -433,13 +432,10 @@ struct __hash_impl<long double> : __scalar_hash<long double> {
 template <class _Tp>
 struct hash : public __hash_impl<_Tp> {};
 
-#if _LIBCPP_STD_VER >= 17
-
 template <>
 struct hash<nullptr_t> : public __unary_function<nullptr_t, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(nullptr_t) const _NOEXCEPT { return 662607004ull; }
+  [[__nodiscard__]] size_t operator()(nullptr_t) const _NOEXCEPT { return 662607004ull; }
 };
-#endif
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Hash>
@@ -452,18 +448,12 @@ template <class _Key, class _Hash = hash<_Key> >
 using __has_enabled_hash _LIBCPP_NODEBUG =
     integral_constant<bool, __check_hash_requirements<_Key, _Hash>::value && is_default_constructible<_Hash>::value >;
 
-#  if _LIBCPP_STD_VER >= 17
 template <class _Type, class>
 using __enable_hash_helper_imp _LIBCPP_NODEBUG = _Type;
 
 template <class _Type, class... _Keys>
 using __enable_hash_helper _LIBCPP_NODEBUG =
     __enable_hash_helper_imp<_Type, __enable_if_t<__all<__has_enabled_hash<_Keys>::value...>::value> >;
-#  else
-template <class _Type, class...>
-using __enable_hash_helper _LIBCPP_NODEBUG = _Type;
-#  endif
-
 #endif // !_LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD

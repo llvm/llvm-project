@@ -379,3 +379,66 @@ func.func @scf_for_result_infer_dynamic_init_big_step(%i : index) {
   "test.compare"(%0, %7) {cmp = "LE"} : (index, index) -> ()
   return
 }
+
+func.func @scf_forall_computed_upper_bound(%x: index) {
+  %c6 = arith.constant 6 : index
+  scf.forall (%iv) = (0) to (8) step (3) {
+    // expected-remark @below{{true}}
+    "test.compare"(%iv, %c6) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+// The loop does not run (5 to 2), so %0 is 3. ceildiv(ub - lb, step) is
+// negative and must not be used as the trip count: %0 is not 6.
+func.func @scf_for_result_empty() {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %c6 = arith.constant 6 : index
+  %0 = scf.for %iv = %c5 to %c2 step %c1 iter_args(%arg = %c3) -> index {
+    %1 = arith.subi %arg, %c1 : index
+    scf.yield %1 : index
+  }
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %c6) {cmp = "EQ"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// Unsigned loop from 2^64 - 1 to 5: the loop does not run, so %0 is 3. The
+// signed difference of the bounds must not be used as the trip count: %0 is
+// not 9.
+func.func @scf_for_unsigned_result() {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %c9 = arith.constant 9 : index
+  %lb = arith.constant -1 : index
+  %0 = scf.for unsigned %iv = %lb to %c5 step %c1 iter_args(%arg = %c3) -> index {
+    %1 = arith.addi %arg, %c1 : index
+    scf.yield %1 : index
+  }
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %c9) {cmp = "EQ"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// Unsigned loop: %iv is 1, 2^62 + 1 and 2^63 + 1. Signed bounds do not hold.
+func.func @scf_for_unsigned_induction_var() {
+  %c1 = arith.constant 1 : index
+  %ub = arith.constant -4611686018427387904 : index
+  %step = arith.constant 4611686018427387904 : index
+  scf.for unsigned %iv = %c1 to %ub step %step {
+    // expected-error @below{{could not reify bound}}
+    %0 = "test.reify_bound"(%iv) {type = "UB", constant} : (index) -> (index)
+    "test.some_use"(%0) : (index) -> ()
+  }
+  return
+}

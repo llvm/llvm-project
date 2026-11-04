@@ -132,7 +132,7 @@ attributes #0 = { convergent mustprogress nofree norecurse nosync nounwind willr
 ; TUNIT: attributes #[[ATTR1]] = { convergent }
 ; TUNIT: attributes #[[ATTR2]] = { convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR3]] = { convergent mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR5]] = { nofree willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -140,7 +140,7 @@ attributes #0 = { convergent mustprogress nofree norecurse nosync nounwind willr
 ; CGSCC: attributes #[[ATTR2]] = { convergent }
 ; CGSCC: attributes #[[ATTR3]] = { convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR4]] = { convergent mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR6]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR7]] = { nofree willreturn }
 ;.

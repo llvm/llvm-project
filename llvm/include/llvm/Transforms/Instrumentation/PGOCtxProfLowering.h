@@ -15,14 +15,19 @@
 #include "llvm/IR/PassManager.h"
 namespace llvm {
 class Type;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
-class PGOCtxProfLoweringPass : public PassInfoMixin<PGOCtxProfLoweringPass> {
+class PGOCtxProfLoweringPass
+    : public OptionalPassInfoMixin<PGOCtxProfLoweringPass> {
 public:
   explicit PGOCtxProfLoweringPass() = default;
   // True if contextual instrumentation is enabled.
-  static bool isCtxIRPGOInstrEnabled();
+  LLVM_ABI static bool
+  isCtxIRPGOInstrEnabled(const cl::LibraryOptionsContext &LibraryOptions);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 // Utility pass blocking inlining for any function that may be overridden during
@@ -32,11 +37,12 @@ public:
 // functions by a (GUID, Hash) tuple, but since the ctxprof "use" waits for
 // thinlto to happen before performing any further optimizations, it's
 // unnecessary to collect profiles for non-prevailing copies.
-class NoinlineNonPrevailing : public PassInfoMixin<NoinlineNonPrevailing> {
+class NoinlineNonPrevailing
+    : public OptionalPassInfoMixin<NoinlineNonPrevailing> {
 public:
   explicit NoinlineNonPrevailing() = default;
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

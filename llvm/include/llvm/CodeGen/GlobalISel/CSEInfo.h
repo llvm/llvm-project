@@ -21,6 +21,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class MachineBasicBlock;
@@ -96,22 +97,23 @@ class LLVM_ABI GISelCSEInfo : public GISelChangeObserver {
   void invalidateUniqueMachineInstr(UniqueMachineInstr *UMI);
 
   UniqueMachineInstr *getNodeIfExists(FoldingSetNodeID &ID,
-                                      MachineBasicBlock *MBB, void *&InsertPos);
+                                      MachineBasicBlock *MBB,
+                                      FoldingSetInsertToken &Token);
 
   /// Allocate and construct a new UniqueMachineInstr for MI and return.
   UniqueMachineInstr *getUniqueInstrForMI(const MachineInstr *MI);
 
-  void insertNode(UniqueMachineInstr *UMI, void *InsertPos = nullptr);
+  void insertNode(UniqueMachineInstr *UMI, FoldingSetInsertToken Token = {});
 
   /// Get the MachineInstr(Unique) if it exists already in the CSEMap and the
   /// same MachineBasicBlock.
   MachineInstr *getMachineInstrIfExists(FoldingSetNodeID &ID,
                                         MachineBasicBlock *MBB,
-                                        void *&InsertPos);
+                                        FoldingSetInsertToken &Token);
 
   /// Use this method to allocate a new UniqueMachineInstr for MI and insert it
   /// into the CSEMap. MI should return true for shouldCSE(MI->getOpcode())
-  void insertInstr(MachineInstr *MI, void *InsertPos = nullptr);
+  void insertInstr(MachineInstr *MI, FoldingSetInsertToken Token = {});
 
   bool HandlingRecordedInstrs = false;
 
@@ -164,7 +166,8 @@ public:
   void changedInstr(MachineInstr &MI) override;
 };
 
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class RegisterBank;
 
 // Simple builder class to easily profile properties about MIs.
@@ -218,11 +221,23 @@ public:
   /// If CSEConfig is already set, and the CSE Analysis has been preserved,
   /// it will not use the new CSEOpt(use Recompute to force using the new
   /// CSEOpt).
-  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool ReCompute = false);
+  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt);
   void setMF(MachineFunction &MFunc) { MF = &MFunc; }
   void setComputed(bool Computed) { AlreadyComputed = Computed; }
   void releaseMemory() { Info.releaseMemory(); }
+};
+
+class GISelCSEAnalysis : public AnalysisInfoMixin<GISelCSEAnalysis> {
+  friend AnalysisInfoMixin<GISelCSEAnalysis>;
+  LLVM_ABI static AnalysisKey Key;
+  TargetMachine *TM;
+
+public:
+  using Result = std::unique_ptr<GISelCSEInfo>;
+  GISelCSEAnalysis(TargetMachine *TM) : TM(TM) {};
+
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 /// The actual analysis pass wrapper.

@@ -12,7 +12,8 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SILowerSGPRSpillsPass : public PassInfoMixin<SILowerSGPRSpillsPass> {
+class SILowerSGPRSpillsPass
+    : public RequiredPassInfoMixin<SILowerSGPRSpillsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

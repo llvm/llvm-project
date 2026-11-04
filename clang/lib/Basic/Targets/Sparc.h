@@ -77,10 +77,7 @@ public:
     }
     return false;
   }
-  std::string_view getClobbers() const override {
-    // FIXME: Implement!
-    return "";
-  }
+  std::string_view getClobbers() const override { return "~{y}"; }
 
   // No Sparc V7 for now, the backend doesn't support it anyway.
   enum CPUKind {
@@ -118,7 +115,8 @@ public:
     CK_LEON3_UT699,
     CK_LEON3_GR712RC,
     CK_LEON4,
-    CK_LEON4_GR740
+    CK_LEON4_GR740,
+    CK_LEON5,
   } CPU = CK_GENERIC;
 
   enum CPUGeneration {
@@ -126,7 +124,14 @@ public:
     CG_V9,
   };
 
+  enum CPUFamily {
+    CF_NONE,
+    CF_LEON,
+  };
+
   CPUGeneration getCPUGeneration(CPUKind Kind) const;
+
+  CPUFamily getCPUFamily(CPUKind Kind) const;
 
   CPUKind getCPUKind(StringRef Name) const;
 
@@ -136,7 +141,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     CPU = getCPUKind(Name);
     return CPU != CK_GENERIC;
   }
@@ -151,7 +156,7 @@ class LLVM_LIBRARY_VISIBILITY SparcV8TargetInfo : public SparcTargetInfo {
 public:
   SparcV8TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : SparcTargetInfo(Triple, Opts) {
-    resetDataLayout("E-m:e-p:32:32-i64:64-i128:128-f128:64-n32-S64");
+    resetDataLayout();
     // NetBSD / OpenBSD use long (same as llvm default); everyone else uses int.
     switch (getTriple().getOS()) {
     default:
@@ -166,6 +171,19 @@ public:
       PtrDiffType = SignedLong;
       break;
     }
+
+    // Base long double format on the triple.
+    if (getTriple().getDefaultLongDoubleFormat() ==
+        llvm::LongDoubleFormat::IEEEdouble) {
+      LongDoubleWidth = 64;
+      LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    } else {
+      LongDoubleWidth = 128;
+      LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEquad();
+    }
+
     // Up to 32 bits (V8) or 64 bits (V9) are lock-free atomic, but we're
     // willing to do atomic ops on up to 64 bits.
     MaxAtomicPromoteWidth = 64;
@@ -188,7 +206,7 @@ class LLVM_LIBRARY_VISIBILITY SparcV8elTargetInfo : public SparcV8TargetInfo {
 public:
   SparcV8elTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : SparcV8TargetInfo(Triple, Opts) {
-    resetDataLayout("e-m:e-p:32:32-i64:64-i128:128-f128:64-n32-S64");
+    resetDataLayout();
   }
 };
 
@@ -198,7 +216,7 @@ public:
   SparcV9TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : SparcTargetInfo(Triple, Opts) {
     // FIXME: Support Sparc quad-precision long double?
-    resetDataLayout("E-m:e-i64:64-i128:128-n32:64-S128");
+    resetDataLayout();
     // This is an LP64 platform.
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
 
@@ -227,7 +245,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!SparcTargetInfo::setCPU(Name))
       return false;
     return getCPUGeneration(CPU) == CG_V9;

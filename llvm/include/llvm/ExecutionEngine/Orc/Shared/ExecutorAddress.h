@@ -34,7 +34,7 @@ using ExecutorAddrDiff = uint64_t;
 class ExecutorAddr {
 public:
   /// A wrap/unwrap function that leaves pointers unmodified.
-  using rawPtr = llvm::identity_cxx20;
+  using rawPtr = llvm::identity;
 
 #if __has_feature(ptrauth_calls)
   template <typename T> class PtrauthSignDefault {
@@ -344,13 +344,6 @@ using SPSExecutorAddrRangeSequence = SPSSequence<SPSExecutorAddrRange>;
 
 // Provide DenseMapInfo for ExecutorAddrs.
 template <> struct DenseMapInfo<orc::ExecutorAddr> {
-  static inline orc::ExecutorAddr getEmptyKey() {
-    return orc::ExecutorAddr(DenseMapInfo<uint64_t>::getEmptyKey());
-  }
-  static inline orc::ExecutorAddr getTombstoneKey() {
-    return orc::ExecutorAddr(DenseMapInfo<uint64_t>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const orc::ExecutorAddr &Addr) {
     return DenseMapInfo<uint64_t>::getHashValue(Addr.getValue());
   }

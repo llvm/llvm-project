@@ -1,12 +1,13 @@
-# RUN: llc -o - %s -mtriple=amdgcn -mcpu=fiji -run-pass=si-insert-waitcnts -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+# RUN: llc -o - %s -mtriple=amdgpu8.03 -run-pass=si-insert-waitcnts | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: waitcnt-back-edge-loop
 # GCN: bb.2
-# GCN: S_WAITCNT 3952
+# GCN: S_WAITCNT .Vmcnt_0
 # GCN: $vgpr5 = V_CVT_I32_F32_e32 killed $vgpr5, implicit $mode, implicit $exec
 
 ---
 name: waitcnt-back-edge-loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -61,10 +62,11 @@ body:             |
 
 # GCN-LABEL: name: waitcnt-multiple-back-edges{{$}}
 # GCN: bb.0:
-# GCN: S_WAITCNT 0
+# GCN: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # GCN-NEXT: S_BRANCH %bb.2
 
 name: waitcnt-multiple-back-edges
+tracksRegLiveness: false
 body: |
   bb.0:
     S_BRANCH %bb.2

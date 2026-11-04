@@ -17,11 +17,13 @@ define void @test(ptr) #0 !dbg !3 {
 attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
+!5 = !{null}
+!6 = !DISubroutineType(types: !5)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1)
 !1 = !DIFile(filename: "test.cc", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 1, unit: !0)
+!3 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 1, type: !6, unit: !0)
 !4 = !DILocation(line: 5, scope: !3)
 ; CHECK: ![[PROF]] = !{!"VP", i32 0, i64 3457, i64 9191153033785521275, i64 2059, i64 -1069303473483922844, i64 1398}

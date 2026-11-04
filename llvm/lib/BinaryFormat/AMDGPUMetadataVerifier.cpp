@@ -17,8 +17,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 
-#include <utility>
-
 namespace llvm {
 namespace AMDGPU {
 namespace HSAMD {

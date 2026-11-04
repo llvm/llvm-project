@@ -322,7 +322,7 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
 
   // Now copy the implicit operands from IndirectCall to BL and copy other
   // necessary info.
-  // However, both IndirectCall and BL instructions implictly use SP and
+  // However, both IndirectCall and BL instructions implicitly use SP and
   // implicitly define LR. Blindly copying implicit operands would result in SP
   // and LR operands to be present multiple times. While this may not be too
   // much of an issue, let's avoid that for cleanliness, by removing those

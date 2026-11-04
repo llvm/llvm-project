@@ -12,6 +12,7 @@
 #ifndef __REGISTERS_HPP__
 #define __REGISTERS_HPP__
 
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -19,6 +20,13 @@
 #include "libunwind.h"
 #include "libunwind_ext.h"
 #include "shadow_stack_unwind.h"
+
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#endif
+#if defined(_LIBUNWIND_HAVE_GETAUXVAL) || defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
+#include <sys/auxv.h>
+#endif
 
 namespace libunwind {
 
@@ -63,6 +71,7 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -284,6 +293,7 @@ public:
 
   typedef uint64_t reg_t;
   typedef uint64_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -337,14 +347,24 @@ private:
     uint64_t __r14;
     uint64_t __r15;
     uint64_t __rip;
-    uint64_t __rflags;
-    uint64_t __cs;
-    uint64_t __fs;
-    uint64_t __gs;
+    uint32_t __rflags;
+    uint16_t __cs;
+    uint16_t __ss;
+    uint16_t __ds;
+    uint16_t __es;
+    uint16_t __fs;
+    uint16_t __gs;
+    uint64_t __fs_base;
+    uint64_t __gs_base;
 #if defined(_WIN64)
     uint64_t __padding; // 16-byte align
 #endif
   };
+  static_assert(offsetof(GPRs, __rflags) == 136 &&
+                    offsetof(GPRs, __cs) == 140 &&
+                    offsetof(GPRs, __fs_base) == 152 &&
+                    offsetof(GPRs, __gs_base) == 160,
+                "x86_64 segment state must match the assembly offsets");
   GPRs _registers;
 #if defined(_WIN64)
   v128 _xmm[16];
@@ -368,9 +388,16 @@ inline bool Registers_x86_64::validRegister(int regNum) const {
     return true;
   if (regNum < 0)
     return false;
-  if (regNum > 16)
-    return false;
-  return true;
+  if (regNum <= UNW_X86_64_RIP)
+    return true;
+  // Extended native register state is captured and restored only on FreeBSD.
+#if defined(__FreeBSD__) && !defined(_LIBUNWIND_IS_BAREMETAL)
+  if (regNum >= UNW_X86_64_RFLAGS && regNum <= UNW_X86_64_GS)
+    return true;
+  if (regNum == UNW_X86_64_FS_BASE || regNum == UNW_X86_64_GS_BASE)
+    return true;
+#endif
+  return false;
 }
 
 inline uint64_t Registers_x86_64::getRegister(int regNum) const {
@@ -412,6 +439,24 @@ inline uint64_t Registers_x86_64::getRegister(int regNum) const {
     return _registers.__r14;
   case UNW_X86_64_R15:
     return _registers.__r15;
+  case UNW_X86_64_RFLAGS:
+    return _registers.__rflags;
+  case UNW_X86_64_ES:
+    return _registers.__es;
+  case UNW_X86_64_CS:
+    return _registers.__cs;
+  case UNW_X86_64_SS:
+    return _registers.__ss;
+  case UNW_X86_64_DS:
+    return _registers.__ds;
+  case UNW_X86_64_FS:
+    return _registers.__fs;
+  case UNW_X86_64_GS:
+    return _registers.__gs;
+  case UNW_X86_64_FS_BASE:
+    return _registers.__fs_base;
+  case UNW_X86_64_GS_BASE:
+    return _registers.__gs_base;
   }
   _LIBUNWIND_ABORT("unsupported x86_64 register");
 }
@@ -473,6 +518,33 @@ inline void Registers_x86_64::setRegister(int regNum, uint64_t value) {
   case UNW_X86_64_R15:
     _registers.__r15 = value;
     return;
+  case UNW_X86_64_RFLAGS:
+    _registers.__rflags = static_cast<uint32_t>(value);
+    return;
+  case UNW_X86_64_ES:
+    _registers.__es = static_cast<uint16_t>(value);
+    return;
+  case UNW_X86_64_CS:
+    _registers.__cs = static_cast<uint16_t>(value);
+    return;
+  case UNW_X86_64_SS:
+    _registers.__ss = static_cast<uint16_t>(value);
+    return;
+  case UNW_X86_64_DS:
+    _registers.__ds = static_cast<uint16_t>(value);
+    return;
+  case UNW_X86_64_FS:
+    _registers.__fs = static_cast<uint16_t>(value);
+    return;
+  case UNW_X86_64_GS:
+    _registers.__gs = static_cast<uint16_t>(value);
+    return;
+  case UNW_X86_64_FS_BASE:
+    _registers.__fs_base = value;
+    return;
+  case UNW_X86_64_GS_BASE:
+    _registers.__gs_base = value;
+    return;
   }
   _LIBUNWIND_ABORT("unsupported x86_64 register");
 }
@@ -516,6 +588,24 @@ inline const char *Registers_x86_64::getRegisterName(int regNum) {
     return "r14";
   case UNW_X86_64_R15:
     return "r15";
+  case UNW_X86_64_RFLAGS:
+    return "rflags";
+  case UNW_X86_64_ES:
+    return "es";
+  case UNW_X86_64_CS:
+    return "cs";
+  case UNW_X86_64_SS:
+    return "ss";
+  case UNW_X86_64_DS:
+    return "ds";
+  case UNW_X86_64_FS:
+    return "fs";
+  case UNW_X86_64_GS:
+    return "gs";
+  case UNW_X86_64_FS_BASE:
+    return "fs.base";
+  case UNW_X86_64_GS_BASE:
+    return "gs.base";
   case UNW_X86_64_XMM0:
     return "xmm0";
   case UNW_X86_64_XMM1:
@@ -606,6 +696,7 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -1181,6 +1272,7 @@ public:
 
   typedef uint64_t reg_t;
   typedef uint64_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -1827,7 +1919,9 @@ inline const char *Registers_ppc64::getRegisterName(int regNum) {
 /// Registers_arm64  holds the register state of a thread in a 64-bit arm
 /// process.
 class _LIBUNWIND_HIDDEN Registers_arm64;
-extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
+extern "C" int64_t __libunwind_Registers_arm64_za_disable();
+extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *,
+                                                   unsigned walkedFrames);
 
 #if defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_shstk_get_jump_target() {
@@ -1837,13 +1931,21 @@ extern "C" void *__libunwind_shstk_get_jump_target() {
 
 class _LIBUNWIND_HIDDEN Registers_arm64 {
 public:
-  Registers_arm64();
+  Registers_arm64() = default;
   Registers_arm64(const void *registers);
   Registers_arm64(const Registers_arm64 &);
   Registers_arm64 &operator=(const Registers_arm64 &);
 
   typedef uint64_t reg_t;
   typedef uint64_t __ptrauth_unwind_registers_arm64_link_reg link_reg_t;
+
+  // Use `link_hardened_reg_arg_t` to pass values of `link_reg_t` type as
+  // function arguments. We need to use a const l-value reference to keep
+  // signature of `__ptrauth`-qualified values of `link_reg_t` type on AArch64
+  // PAuth-enabled ABI intact. Passing the raw pointer by value would cause
+  // authentication on the caller side and make the pointer prone to
+  // substitution if spilled to the stack in the callee.
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -1855,7 +1957,14 @@ public:
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
-  void        jumpto() { __libunwind_Registers_arm64_jumpto(this); }
+  void        jumpto(unsigned walkedFrames = 0) {
+    zaDisable();
+    __libunwind_Registers_arm64_jumpto(this, walkedFrames);
+  }
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  _LIBUNWIND_TRACE_NO_INLINE
+  void        returnto(unsigned walkedFrames) { jumpto(walkedFrames); }
+#endif
   static constexpr int lastDwarfRegNum() {
     return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64;
   }
@@ -1867,12 +1976,10 @@ public:
     uint64_t value = _registers.__pc;
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
     // Note the value of the PC was signed to its address in the register state
-    // but everyone else expects it to be sign by the SP, so convert on return.
-    value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
-                                              ptrauth_key_return_address,
-                                              &_registers.__pc,
-                                              ptrauth_key_return_address,
-                                              getSP());
+    // but everyone else expects it to be signed by the SP, so convert on return.
+    value = (uint64_t)ptrauth_auth_and_resign(
+        (void *)_registers.__pc, ptrauth_key_return_address, &_registers.__pc,
+        ptrauth_key_return_address, _registers.__sp);
 #endif
     return value;
   }
@@ -1881,14 +1988,37 @@ public:
     // Note the value which was set should have been signed with the SP.
     // We then resign with the slot we are being stored in to so that both SP
     // and LR can't be spoofed at the same time.
-    value = (uint64_t)ptrauth_auth_and_resign((void *)value,
-                                              ptrauth_key_return_address,
-                                              getSP(),
-                                              ptrauth_key_return_address,
-                                              &_registers.__pc);
+    value = (uint64_t)ptrauth_auth_and_resign(
+        (void *)value, ptrauth_key_return_address, _registers.__sp,
+        ptrauth_key_return_address, &_registers.__pc);
 #endif
     _registers.__pc = value;
   }
+  __attribute__((target("pauth-lr"))) void setIPPAuthLR(uint64_t value,
+                                                        uint64_t signing_pc) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+#if __has_builtin(__builtin_ptrauth_auth_with_pc_and_resign)
+    value = (uint64_t)ptrauth_auth_with_pc_and_resign(
+        (void *)value, ptrauth_key_return_address, _registers.__sp, signing_pc,
+        ptrauth_key_return_address, &_registers.__pc);
+#else
+    register uint64_t x17 __asm("x17") = value;
+    register uint64_t x16 __asm("x16") = _registers.__sp;
+    register uint64_t x15 __asm("x15") = signing_pc;
+    uint64_t resignDisc = (uint64_t)&_registers.__pc;
+    asm("autib171615\n\t"
+        "pacib %0, %3"
+        : "+r"(x17)
+        : "r"(x16), "r"(x15), "r"(resignDisc));
+    value = x17;
+#endif
+#endif
+    _registers.__pc = value;
+  }
+
   uint64_t getFP() const { return _registers.__fp; }
   void setFP(uint64_t value) { _registers.__fp = value; }
 
@@ -1908,25 +2038,62 @@ public:
 private:
   uint64_t lazyGetVG() const;
 
+  void zaDisable() const {
+    if (!_misc_registers.__has_sme)
+      return;
+    if (__libunwind_Registers_arm64_za_disable() != 0)
+      _LIBUNWIND_ABORT("SME ZA disable failed");
+  }
+
+#if defined(__APPLE__)
+  static bool checkHasSME() {
+    int has_sme = 0;
+    size_t size = sizeof(has_sme);
+    if (sysctlbyname("hw.optional.arm.FEAT_SME", &has_sme, &size, NULL, 0))
+      return false;
+    return has_sme != 0;
+  }
+#elif defined(_LIBUNWIND_HAVE_GETAUXVAL)
+  static bool checkHasSME() {
+    constexpr int hwcap2_sme = (1 << 23);
+    unsigned long hwcap2 = getauxval(AT_HWCAP2);
+    return (hwcap2 & hwcap2_sme) != 0;
+  }
+#elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
+  static bool checkHasSME() {
+    constexpr int hwcap2_sme = (1 << 23);
+    unsigned long hwcap2;
+    if (elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2)) != 0)
+      return false;
+    return (hwcap2 & hwcap2_sme) != 0;
+  }
+#else
+  static bool checkHasSME() {
+    // TODO: Support other platforms.
+    return false;
+  }
+#endif
+
   struct GPRs {
-    uint64_t __x[29]; // x0-x28
-    uint64_t __fp;    // Frame pointer x29
-    uint64_t __lr;    // Link register x30
-    uint64_t __sp;    // Stack pointer x31
-    uint64_t __pc;    // Program counter
-    uint64_t __ra_sign_state; // RA sign state register
+    uint64_t __x[29] = {};        // x0-x28
+    uint64_t __fp = 0;            // Frame pointer x29
+    uint64_t __lr = 0;            // Link register x30
+    uint64_t __sp = 0;            // Stack pointer x31
+    uint64_t __pc = 0;            // Program counter
+    uint64_t __ra_sign_state = 0; // RA sign state register
   };
 
   struct Misc {
-    mutable uint64_t __vg = 0; // Vector Granule
+    mutable uint32_t __vg = 0; // Vector Granule
+    bool __has_sme = checkHasSME();
   };
 
-  GPRs _registers;
+  GPRs _registers = {};
   // Currently only the lower double in 128-bit vectore registers
   // is perserved during unwinding.  We could define new register
   // numbers (> 96) which mean whole vector registers, then this
   // struct would need to change to contain whole vector registers.
-  double _vectorHalfRegisters[32];
+  double _vectorHalfRegisters[32] = {};
 
   // Miscellaneous/virtual registers. These are stored below the GPRs and FPRs
   // as they do not correspond to physical registers, so do not need to be
@@ -1969,10 +2136,6 @@ Registers_arm64::operator=(const Registers_arm64 &other) {
   // the pc after the bitwise copy.
   setIP(other.getIP());
   return *this;
-}
-
-inline Registers_arm64::Registers_arm64() {
-  memset(static_cast<void *>(this), 0, sizeof(*this));
 }
 
 inline bool Registers_arm64::validRegister(int regNum) const {
@@ -2229,6 +2392,7 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -2737,6 +2901,7 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -2939,6 +3104,7 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -2983,6 +3149,15 @@ private:
 inline Registers_mips_o32::Registers_mips_o32(const void *registers) {
   static_assert((check_fit<Registers_mips_o32, unw_context_t>::does_fit),
                 "mips_o32 registers do not fit into unw_context_t");
+#ifdef __mips_hard_float
+  // UnwindRegisters{Save,Restore}.S address this area as (4 * 36 + 8 * N)($4).
+  static_assert(offsetof(Registers_mips_o32, _floats) == 4 * 36,
+                "mips_o32 float area offset does not match the .S files");
+  static_assert(sizeof(_floats[0]) == 8,
+                "mips_o32 float slot stride does not match the .S files");
+  static_assert(sizeof(_floats) == 8 * 32,
+                "mips_o32 float area must cover f0-f31");
+#endif
   memcpy(&_registers, static_cast<const uint8_t *>(registers),
          sizeof(_registers));
 }
@@ -3006,9 +3181,11 @@ inline bool Registers_mips_o32::validRegister(int regNum) const {
   if (regNum == UNW_MIPS_LO)
     return true;
 #endif
-#if defined(__mips_hard_float) && __mips_fpr == 32
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float) || __mips_fpr == 32
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
     return true;
+#endif
 #endif
   // FIXME: DSP accumulator registers, MSA registers
   return false;
@@ -3017,7 +3194,15 @@ inline bool Registers_mips_o32::validRegister(int regNum) const {
 inline uint32_t Registers_mips_o32::getRegister(int regNum) const {
   if (regNum >= UNW_MIPS_R0 && regNum <= UNW_MIPS_R31)
     return _registers.__r[regNum - UNW_MIPS_R0];
-#if defined(__mips_hard_float) && __mips_fpr == 32
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float)
+  // Single float has no even/odd pairing.
+  if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31) {
+    uint32_t result;
+    memcpy(&result, &_floats[regNum - UNW_MIPS_F0], sizeof(result));
+    return result;
+  }
+#elif __mips_fpr == 32
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31) {
     uint32_t *p;
 
@@ -3027,6 +3212,7 @@ inline uint32_t Registers_mips_o32::getRegister(int regNum) const {
       p = (uint32_t *)&_floats[(regNum - 1) - UNW_MIPS_F0] + 1;
     return *p;
   }
+#endif
 #endif
 
   switch (regNum) {
@@ -3049,7 +3235,13 @@ inline void Registers_mips_o32::setRegister(int regNum, uint32_t value) {
     _registers.__r[regNum - UNW_MIPS_R0] = value;
     return;
   }
-#if defined(__mips_hard_float) && __mips_fpr == 32
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float)
+  if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31) {
+    memcpy(&_floats[regNum - UNW_MIPS_F0], &value, sizeof(value));
+    return;
+  }
+#elif __mips_fpr == 32
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31) {
     uint32_t *p;
 
@@ -3060,6 +3252,7 @@ inline void Registers_mips_o32::setRegister(int regNum, uint32_t value) {
     *p = value;
     return;
   }
+#endif
 #endif
 
   switch (regNum) {
@@ -3082,35 +3275,49 @@ inline void Registers_mips_o32::setRegister(int regNum, uint32_t value) {
 }
 
 inline bool Registers_mips_o32::validFloatRegister(int regNum) const {
-#if defined(__mips_hard_float) && __mips_fpr == 64
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float) || __mips_fpr == 64
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
     return true;
-#else
-  (void)regNum;
 #endif
+#endif
+  (void)regNum;
   return false;
 }
 
 inline double Registers_mips_o32::getFloatRegister(int regNum) const {
-#if defined(__mips_hard_float) && __mips_fpr == 64
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float)
+  assert(validFloatRegister(regNum));
+  float result;
+  memcpy(&result, &_floats[regNum - UNW_MIPS_F0], sizeof(result));
+  return result;
+#elif __mips_fpr == 64
   assert(validFloatRegister(regNum));
   return _floats[regNum - UNW_MIPS_F0];
-#else
+#endif
+#endif
   (void)regNum;
   _LIBUNWIND_ABORT("mips_o32 float support not implemented");
-#endif
 }
 
 inline void Registers_mips_o32::setFloatRegister(int regNum,
                                                  double value) {
-#if defined(__mips_hard_float) && __mips_fpr == 64
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float)
+  assert(validFloatRegister(regNum));
+  float single = static_cast<float>(value);
+  memcpy(&_floats[regNum - UNW_MIPS_F0], &single, sizeof(single));
+  return;
+#elif __mips_fpr == 64
   assert(validFloatRegister(regNum));
   _floats[regNum - UNW_MIPS_F0] = value;
-#else
+  return;
+#endif
+#endif
   (void)regNum;
   (void)value;
   _LIBUNWIND_ABORT("mips_o32 float support not implemented");
-#endif
 }
 
 inline bool Registers_mips_o32::validVectorRegister(int /* regNum */) const {
@@ -3277,6 +3484,7 @@ public:
 
   typedef uint64_t reg_t;
   typedef uint64_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -3583,6 +3791,7 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -3670,21 +3879,21 @@ inline void Registers_sparc::setRegister(int regNum, uint32_t value) {
 inline bool Registers_sparc::validFloatRegister(int) const { return false; }
 
 inline double Registers_sparc::getFloatRegister(int) const {
-  _LIBUNWIND_ABORT("no Sparc float registers");
+  _LIBUNWIND_ABORT("no sparc float registers");
 }
 
 inline void Registers_sparc::setFloatRegister(int, double) {
-  _LIBUNWIND_ABORT("no Sparc float registers");
+  _LIBUNWIND_ABORT("no sparc float registers");
 }
 
 inline bool Registers_sparc::validVectorRegister(int) const { return false; }
 
 inline v128 Registers_sparc::getVectorRegister(int) const {
-  _LIBUNWIND_ABORT("no Sparc vector registers");
+  _LIBUNWIND_ABORT("no sparc vector registers");
 }
 
 inline void Registers_sparc::setVectorRegister(int, v128) {
-  _LIBUNWIND_ABORT("no Sparc vector registers");
+  _LIBUNWIND_ABORT("no sparc vector registers");
 }
 
 inline const char *Registers_sparc::getRegisterName(int regNum) {
@@ -3772,6 +3981,7 @@ public:
 
   typedef uint64_t reg_t;
   typedef uint64_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool validRegister(int num) const;
   uint64_t getRegister(int num) const;
@@ -3960,6 +4170,7 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -4178,6 +4389,7 @@ public:
 
   typedef ::libunwind::reg_t reg_t;
   typedef ::libunwind::reg_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   reg_t       getRegister(int num) const;
@@ -4478,6 +4690,7 @@ public:
 
   typedef uint64_t reg_t;
   typedef uint64_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -4924,6 +5137,7 @@ public:
 
   typedef uint64_t reg_t;
   typedef uint64_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -5215,6 +5429,7 @@ public:
 
   typedef uint64_t reg_t;
   typedef uint64_t link_reg_t;
+  typedef const link_reg_t &link_hardened_reg_arg_t;
 
   bool validRegister(int num) const;
   uint64_t getRegister(int num) const;

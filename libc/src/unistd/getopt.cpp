@@ -13,6 +13,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/fprintf.h"
+#include "src/stdio/stderr.h"
 
 #include "hdr/types/FILE.h"
 
@@ -21,6 +22,11 @@
 // easily iterated over.
 
 namespace LIBC_NAMESPACE_DECL {
+
+LLVM_LIBC_VARIABLE(char *, optarg) = nullptr;
+LLVM_LIBC_VARIABLE(int, optind) = 1;
+LLVM_LIBC_VARIABLE(int, optopt) = 0;
+LLVM_LIBC_VARIABLE(int, opterr) = 0;
 
 template <typename T> struct RefWrapper {
   RefWrapper() = delete;
@@ -176,23 +182,16 @@ int getopt_r(int argc, char *const argv[], const char *optstring,
 
 namespace impl {
 
-extern "C" {
-char *optarg = nullptr;
-int optind = 1;
-int optopt = 0;
-int opterr = 0;
-}
-
 static unsigned optpos;
 
-static GetoptContext ctx{&impl::optarg, &impl::optind, &impl::optopt,
-                         &optpos,       &impl::opterr, /*errstream=*/nullptr};
+static GetoptContext ctx{&optarg, &optind, &optopt,
+                         &optpos, &opterr, /*errstream=*/nullptr};
 
 #ifndef LIBC_COPT_PUBLIC_PACKAGING
 // This is used exclusively in tests.
-void set_getopt_state(char **optarg, int *optind, int *optopt, unsigned *optpos,
-                      int *opterr, FILE *errstream) {
-  ctx = {optarg, optind, optopt, optpos, opterr, errstream};
+void set_getopt_state(char **optarg_in, int *optind_in, int *optopt_in,
+                      unsigned *optpos_in, int *opterr_in, FILE *errstream) {
+  ctx = {optarg_in, optind_in, optopt_in, optpos_in, opterr_in, errstream};
 }
 #endif
 

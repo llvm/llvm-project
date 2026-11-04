@@ -1,5 +1,5 @@
 add_header_library(
-  darwin_util
+  darwin_aarch64_util
   HDRS
     syscall.h
   DEPENDS

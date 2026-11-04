@@ -74,7 +74,7 @@ public:
   }
   LVSymbol(const LVSymbol &) = delete;
   LVSymbol &operator=(const LVSymbol &) = delete;
-  ~LVSymbol() = default;
+  ~LVSymbol() override = default;
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_SYMBOL;

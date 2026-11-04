@@ -41,6 +41,9 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   }
   if (auto arrayCstAttr =
           llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
+    if (arrayCstAttr.empty())
+      return;
+
     if (arrayCstAttr.isSplat()) {
       setResultRange(getResult(), ConstantIntRanges::constant(
                                       arrayCstAttr.getSplatValue<APInt>()));
@@ -53,7 +56,6 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
       result = (result ? result->rangeUnion(range) : range);
     }
 
-    assert(result && "Zero-sized vectors are not allowed");
     setResultRange(getResult(), *result);
     return;
   }
@@ -329,7 +331,13 @@ void arith::SelectOp::inferResultRangesFromOptional(
       setResultRange(getResult(), trueCase);
     return;
   }
-  setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
+
+  // When one of the ranges is uninitialized, set the whole range to max
+  // otherwise the result will ignore the uninitialized range.
+  if (trueCase.isUninitialized() || falseCase.isUninitialized())
+    setResultRange(getResult(), IntegerValueRange::getMaxRange(getResult()));
+  else
+    setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
 }
 
 //===----------------------------------------------------------------------===//

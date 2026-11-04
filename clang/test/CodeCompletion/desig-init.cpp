@@ -89,3 +89,37 @@ auto TestWithAnon = WithAnon { .inner = 2 };
   // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:%(line-1):33 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC5 %s
   // CHECK-CC5: COMPLETION: inner : [#int#]inner
   // CHECK-CC5: COMPLETION: outer : [#int#]outer
+
+// Field designator that traverses an anonymous struct: the IndirectFieldDecl
+// branch in the lookup callback is required to resolve `anon` here.
+struct WithAnonRecord {
+  struct Inner {
+    int leaf;
+    int other;
+  };
+  struct {
+    Inner anon;
+  };
+};
+auto TestWithAnonRecord = WithAnonRecord { .anon.leaf = 2 };
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:%(line-1):50 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC6 %s
+  // CHECK-CC6: COMPLETION: leaf : [#int#]leaf
+  // CHECK-CC6: COMPLETION: other : [#int#]other
+
+// Array element traversal: `Context.getAsArrayType` strips sugar so the
+// element type is reached cleanly.
+struct WithArrayField {
+  Base bases[2];
+};
+auto TestWithArrayField = WithArrayField { .bases[0].t = 2 };
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:%(line-1):54 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC8 %s
+  // CHECK-CC8: COMPLETION: t : [#int#]t
+
+// Reference-typed field: `getNonReferenceType()` on the resolved field type
+// lets the path continue into the referent's record.
+struct WithRefField {
+  Base &ref;
+};
+auto TestWithRefField = WithRefField { .ref.t = 2 };
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:%(line-1):45 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC7 %s
+  // CHECK-CC7: COMPLETION: t : [#int#]t

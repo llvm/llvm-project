@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalVariableDeclarationCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -14,14 +15,9 @@
 #include <string>
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::google::objc {
-
-namespace {
-
-AST_MATCHER(VarDecl, isLocalVariable) { return Node.isLocalVarDecl(); }
-
-} // namespace
 
 static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
   if (IsConst && (Decl->getStorageClass() != SC_Static)) {
@@ -30,7 +26,7 @@ static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
     return {};
   }
 
-  char FC = Decl->getName()[0];
+  const char FC = Decl->getName()[0];
   if (!llvm::isAlpha(FC) || Decl->getName().size() == 1) {
     // No fix available if first character is not alphabetical character, or it
     // is a single-character variable, since it is difficult to determine the
@@ -38,7 +34,7 @@ static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
     // their own.
     return {};
   }
-  char SC = Decl->getName()[1];
+  const char SC = Decl->getName()[1];
   if ((FC == 'k' || FC == 'g') && !llvm::isAlpha(SC)) {
     // No fix available if the prefix is correct but the second character is
     // not alphabetical, since it is difficult to determine the proper fix in
@@ -46,13 +42,13 @@ static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
     return {};
   }
 
-  auto NewName = (IsConst ? "k" : "g") +
-                 llvm::StringRef(std::string(1, FC)).upper() +
-                 Decl->getName().substr(1).str();
+  const auto NewName = (IsConst ? "k" : "g") +
+                       StringRef(std::string(1, FC)).upper() +
+                       Decl->getName().substr(1).str();
 
   return FixItHint::CreateReplacement(
       CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
-      llvm::StringRef(NewName));
+      StringRef(NewName));
 }
 
 void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
@@ -62,14 +58,14 @@ void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   //
   // Note that hasGlobalStorage() matches static variables declared locally
   // inside a function or method, so we need to exclude those with
-  // isLocalVariable().
+  // isLocalVarDecl().
   Finder->addMatcher(
       varDecl(hasGlobalStorage(), unless(hasType(isConstQualified())),
-              unless(isLocalVariable()), unless(matchesName("::g[A-Z]")))
+              unless(isLocalVarDecl()), unless(matchesName("::g[A-Z]")))
           .bind("global_var"),
       this);
   Finder->addMatcher(varDecl(hasGlobalStorage(), hasType(isConstQualified()),
-                             unless(isLocalVariable()),
+                             unless(isLocalVarDecl()),
                              unless(matchesName("::(k[A-Z])|([A-Z][A-Z0-9])")))
                          .bind("global_const"),
                      this);

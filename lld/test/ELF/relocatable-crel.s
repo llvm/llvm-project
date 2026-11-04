@@ -105,3 +105,25 @@ fb:
 .rept 12
 .long _start
 .endr
+
+#--- c.s
+## The section symbol is demoted to Undefined, so encodeOneCrel emits R_*_NONE with symidx=0.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 -crel c.s -o c.o
+# RUN: ld.lld -r -T c.lds c.o -o out3
+# RUN: llvm-readobj -r out3 | FileCheck %s --check-prefix=DISCARD
+
+# DISCARD:      .crel.data {
+# DISCARD-NEXT:   0x0 R_X86_64_32 foo 0x1
+# DISCARD-NEXT:   0x4 R_X86_64_NONE - 0x0
+# DISCARD-NEXT:   0x8 R_X86_64_32 foo 0x2
+# DISCARD-NEXT: }
+.section .text.discard,"ax"
+.byte 0
+
+.data
+.long foo+1
+.long .text.discard
+.long foo+2
+
+#--- c.lds
+SECTIONS { /DISCARD/ : { *(.text.discard) } }

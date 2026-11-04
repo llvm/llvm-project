@@ -20,7 +20,7 @@
 // particularly important as hwasan_check_* instances are duplicated in every
 // translation unit where HWASan is enabled.
 // This function calls HwasanTagMismatch to step back into the C++ code that
-// completes the stack unwinding and error printing. This function is is not
+// completes the stack unwinding and error printing. This function is not
 // permitted to return.
 
 
@@ -70,7 +70,7 @@
 // clobbering the x17 register in error reports, and that the program will have
 // a runtime dependency on the __hwasan_tag_mismatch_v2 symbol therefore it will
 // fail to start up given an older (i.e. incompatible) runtime.
-.section .text
+TEXT_SECTION
 .file "hwasan_tag_mismatch_aarch64.S"
 .global __hwasan_tag_mismatch
 .type __hwasan_tag_mismatch, %function

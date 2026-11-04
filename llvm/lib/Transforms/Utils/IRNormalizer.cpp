@@ -30,6 +30,19 @@
 
 using namespace llvm;
 
+// Frozen mixer; basic-block names derived from these hashes appear in
+// the normalized IR text and must be deterministic across processes
+// for the normalizer's "compare normalized IR" workflow to work.
+static constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
+  const uint64_t kMul = 0x9ddfea08eb382d69ULL;
+  uint64_t a = (low ^ high) * kMul;
+  a ^= (a >> 47);
+  uint64_t b = (high ^ a) * kMul;
+  b ^= (b >> 47);
+  b *= kMul;
+  return b;
+}
+
 namespace {
 /// IRNormalizer aims to transform LLVM IR into normal form.
 class IRNormalizer {
@@ -138,7 +151,7 @@ void IRNormalizer::nameBasicBlocks(Function &F) const {
     // Hash considering output instruction opcodes.
     for (auto &I : B)
       if (isOutput(&I))
-        Hash = hashing::detail::hash_16_bytes(Hash, I.getOpcode());
+        Hash = hash_16_bytes(Hash, I.getOpcode());
 
     if (Options.RenameAll || B.getName().empty()) {
       // Name basic block. Substring hash to make diffs more readable.
@@ -215,7 +228,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
   uint64_t Hash = MagicHashConstant;
 
   // Consider instruction's opcode in the hash.
-  Hash = hashing::detail::hash_16_bytes(Hash, I->getOpcode());
+  Hash = hash_16_bytes(Hash, I->getOpcode());
 
   SmallPtrSet<const Instruction *, 32> Visited;
   // Get output footprint for I.
@@ -223,7 +236,7 @@ void IRNormalizer::nameAsInitialInstruction(Instruction *I) const {
 
   // Consider output footprint in the hash.
   for (const int &Output : OutputFootprint)
-    Hash = hashing::detail::hash_16_bytes(Hash, Output);
+    Hash = hash_16_bytes(Hash, Output);
 
   // Base instruction name.
   SmallString<256> Name;
@@ -298,7 +311,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
   uint64_t Hash = MagicHashConstant;
 
   // Consider instruction opcode in the hash.
-  Hash = hashing::detail::hash_16_bytes(Hash, I->getOpcode());
+  Hash = hash_16_bytes(Hash, I->getOpcode());
 
   // Operand opcodes for further sorting (commutative).
   SmallVector<int, 4> OperandsOpcodes;
@@ -312,7 +325,7 @@ void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
 
   // Consider operand opcodes in the hash.
   for (const int Code : OperandsOpcodes)
-    Hash = hashing::detail::hash_16_bytes(Hash, Code);
+    Hash = hash_16_bytes(Hash, Code);
 
   // Base instruction name.
   SmallString<512> Name;
@@ -394,29 +407,31 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
   I->setName(Name);
 }
 
-/// Reorders instructions by walking up the tree from each operand of an output
-/// instruction and reducing the def-use distance.
-/// This method assumes that output instructions were collected top-down,
-/// otherwise the def-use chain may be broken.
-/// This method is a wrapper for recursive reorderInstruction().
+/// Reorders the instructions in each basic block. Instructions that access
+/// memory, have side effects or are terminators are visited from first to
+/// last, so they keep their relative order. Each one first pulls in the
+/// operands it needs, so other instructions move down to just before their
+/// first user in the block, or to the end of the block if they have none.
 ///
-/// \see reorderInstruction()
+/// \see reorderDefinition()
 void IRNormalizer::reorderInstructions(Function &F) const {
   for (auto &BB : F) {
     LLVM_DEBUG(dbgs() << "Reordering instructions in basic block: "
                       << BB.getName() << "\n");
     // Find the source nodes of the DAG of instructions in this basic block.
-    // Source nodes are instructions that have side effects, are terminators, or
-    // don't have a parent in the DAG of instructions.
+    // Source nodes are instructions that access memory, have side effects, are
+    // terminators, or don't have a parent in the DAG of instructions.
     //
-    // We must iterate from the first to the last instruction otherwise side
-    // effecting instructions could be reordered.
+    // We must iterate from the first to the last instruction to preserve the
+    // order of memory accesses and other side effects. SSA operand dependencies
+    // alone do not prevent a read from moving past a write to the same memory.
 
     std::stack<Instruction *> TopologicalSort;
     SmallPtrSet<const Instruction *, 32> Visited;
     for (auto &I : BB) {
-      // First process side effecting and terminating instructions.
-      if (!(isOutput(&I) || I.isTerminator()))
+      // First process memory accessing, side effecting and terminating
+      // instructions.
+      if (!(isOutput(&I) || I.mayReadOrWriteMemory() || I.isTerminator()))
         continue;
       LLVM_DEBUG(dbgs() << "\tReordering from source effecting instruction: ";
                  I.dump());
@@ -427,7 +442,7 @@ void IRNormalizer::reorderInstructions(Function &F) const {
       // Process the remaining instructions.
       //
       // TODO: Do more a intelligent sorting of these instructions. For example,
-      // separate between dead instructinos and instructions used in another
+      // separate between dead instructions and instructions used in another
       // block. Use properties of the CFG the order instructions that are used
       // in another block.
       if (Visited.contains(&I))
@@ -441,14 +456,14 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     // Reorder based on the topological sort.
     while (!TopologicalSort.empty()) {
       auto *Instruction = TopologicalSort.top();
-      auto FirstNonPHIOrDbgOrAlloca = BB.getFirstNonPHIOrDbgOrAlloca();
-      if (auto *Call = dyn_cast<CallInst>(&*FirstNonPHIOrDbgOrAlloca)) {
+      auto FirstNonPHIOrAlloca = BB.getFirstNonPHIOrAlloca();
+      if (auto *Call = dyn_cast<CallInst>(&*FirstNonPHIOrAlloca)) {
         if (Call->getIntrinsicID() ==
                 Intrinsic::experimental_convergence_entry ||
             Call->getIntrinsicID() == Intrinsic::experimental_convergence_loop)
-          FirstNonPHIOrDbgOrAlloca++;
+          FirstNonPHIOrAlloca++;
       }
-      Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
+      Instruction->moveBefore(FirstNonPHIOrAlloca);
       TopologicalSort.pop();
     }
   }
@@ -463,11 +478,10 @@ void IRNormalizer::reorderDefinition(
 
   {
     const auto *BasicBlock = Definition->getParent();
-    const auto FirstNonPHIOrDbgOrAlloca =
-        BasicBlock->getFirstNonPHIOrDbgOrAlloca();
-    if (FirstNonPHIOrDbgOrAlloca == BasicBlock->end())
+    const auto FirstNonPHIOrAlloca = BasicBlock->getFirstNonPHIOrAlloca();
+    if (FirstNonPHIOrAlloca == BasicBlock->end())
       return; // TODO: Is this necessary?
-    if (Definition->comesBefore(&*FirstNonPHIOrDbgOrAlloca))
+    if (Definition->comesBefore(&*FirstNonPHIOrAlloca))
       return; // TODO: Do some kind of ordering for these instructions.
   }
 

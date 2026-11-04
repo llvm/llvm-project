@@ -23,7 +23,7 @@ define i1 @pr130408(x86_fp80 %x) {
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i80 [[BITS]], -604444463063240877801473
 ; CHECK-NEXT:    [[OR:%.*]] = or i80 [[MASKED]], 302194561415509874573312
 ; CHECK-NEXT:    [[FP:%.*]] = bitcast i80 [[OR]] to x86_fp80
-; CHECK-NEXT:    [[RES:%.*]] = fcmp uno x86_fp80 [[FP]], 0xK00000000000000000000
+; CHECK-NEXT:    [[RES:%.*]] = fcmp uno x86_fp80 [[FP]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %bits = bitcast x86_fp80 %x to i80
@@ -32,4 +32,38 @@ define i1 @pr130408(x86_fp80 %x) {
   %fp = bitcast i80 %or to x86_fp80
   %res = fcmp uno x86_fp80 %fp, 0xK00000000000000000000
   ret i1 %res
+}
+
+define i1 @direct_bitcast() {
+; CHECK-LABEL: @direct_bitcast(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ogt bfloat bitcast (half 0xH7C00 to bfloat), 0xR7F80 ; rhs is +inf
+  ret i1 %cmp
+}
+
+define i1 @bitcast_first() {
+; CHECK-LABEL: @bitcast_first(
+; CHECK-NEXT:    ret i1 false
+;
+  %lhs = bitcast half 0xH7C00 to bfloat
+  %cmp = fcmp ogt bfloat %lhs, 0xR7F80
+  ret i1 %cmp
+}
+
+define i1 @direct_bitcast_uge() {
+; CHECK-LABEL: @direct_bitcast_uge(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = fcmp uge bfloat bitcast (half 0xH7C00 to bfloat), 0xRff80
+  ret i1 %cmp
+}
+
+@g = external global i8
+define i1 @bitcast_cannot_be_folded() {
+; CHECK-LABEL: @bitcast_cannot_be_folded(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ogt bfloat bitcast (i16 ptrtoint (ptr @g to i16) to bfloat), 0xR7F80 ; rhs is +inf
+  ret i1 %cmp
 }

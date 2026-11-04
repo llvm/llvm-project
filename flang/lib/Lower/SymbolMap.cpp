@@ -12,9 +12,7 @@
 
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
-#include <optional>
 
 #define DEBUG_TYPE "flang-lower-symbol-map"
 
@@ -37,6 +35,19 @@ Fortran::lower::SymbolBox
 Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
   auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
   for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
+       jmap != jend; ++jmap) {
+    auto iter = jmap->find(sym);
+    if (iter != jmap->end())
+      return iter->second;
+  }
+  return SymbolBox::None{};
+}
+
+Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupDeviceSymbol(
+    Fortran::semantics::SymbolRef symRef) {
+  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  for (auto jmap = deviceSymbolMapStack.rbegin(),
+            jend = deviceSymbolMapStack.rend();
        jmap != jend; ++jmap) {
     auto iter = jmap->find(sym);
     if (iter != jmap->end())
@@ -111,6 +122,16 @@ Fortran::lower::SymMap::lookupStorage(Fortran::semantics::SymbolRef symRef) {
 
 void Fortran::lower::SymbolBox::dump() const { llvm::errs() << *this << '\n'; }
 
+void Fortran::lower::ComponentMap::dump() const {
+  llvm::errs() << "ComponentMap:\n";
+  for (const auto &entry : componentMap) {
+    const auto *component = entry.first;
+    llvm::errs() << "  component @" << static_cast<const void *>(component)
+                 << " ->\n    ";
+    llvm::errs() << entry.second << '\n';
+  }
+}
+
 void Fortran::lower::SymMap::dump() const { llvm::errs() << *this << '\n'; }
 
 llvm::raw_ostream &
@@ -140,5 +161,17 @@ Fortran::lower::operator<<(llvm::raw_ostream &os,
     }
     os << " }>\n";
   }
+
+  os << "Component map:\n";
+  for (auto i : llvm::enumerate(symMap.componentMapStack)) {
+    if (!i.value()) {
+      os << " level " << i.index() << "<{}>\n";
+    } else {
+      os << " level " << i.index() << "<{\n";
+      (*i.value())->dump();
+      os << " }>\n";
+    }
+  }
+
   return os;
 }

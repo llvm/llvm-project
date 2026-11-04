@@ -8,7 +8,7 @@
 
 #include "Sparc.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/Host.h"
@@ -79,6 +79,7 @@ const char *sparc::getSparcAsmModeForCPU(StringRef Name,
         .Case("gr712rc", "-Aleon")
         .Case("leon4", "-Aleon")
         .Case("gr740", "-Aleon")
+        .Case("leon5", "-Aleon")
         .Default(DefV8CPU);
   }
 }
@@ -122,7 +123,7 @@ sparc::FloatABI sparc::getSparcFloatABI(const Driver &D,
 
 std::string sparc::getSparcTargetCPU(const Driver &D, const ArgList &Args,
                                      const llvm::Triple &Triple) {
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPUName = A->getValue();
     if (CPUName == "native") {
       std::string CPU = std::string(llvm::sys::getHostCPUName());

@@ -20,7 +20,10 @@
 
 namespace llvm {
   class MSP430Subtarget;
+  struct MSP430Options;
   class MSP430TargetLowering : public TargetLowering {
+    const MSP430Options &CLOpts;
+
   public:
     explicit MSP430TargetLowering(const TargetMachine &TM,
                                   const MSP430Subtarget &STI);
@@ -29,8 +32,8 @@ namespace llvm {
       return MVT::i8;
     }
 
-    MVT::SimpleValueType getCmpLibcallReturnType() const override {
-      return MVT::i16;
+    IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const override {
+      return Type::getInt16Ty(Ctx);
     }
 
     /// LowerOperation - Provide custom lowering hooks for some operations.
@@ -124,10 +127,8 @@ namespace llvm {
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
-    bool getPostIndexedAddressParts(SDNode *N, SDNode *Op,
-                                    SDValue &Base,
-                                    SDValue &Offset,
-                                    ISD::MemIndexedMode &AM,
+    bool getPostIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
+                                    SDValue &Offset, ISD::MemIndexedMode &AM,
                                     SelectionDAG &DAG) const override;
   };
 } // namespace llvm

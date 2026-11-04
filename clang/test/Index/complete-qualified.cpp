@@ -16,5 +16,5 @@ void foo()
 // RUN: c-index-test -code-completion-at=%s:14:8 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: FieldDecl:{ResultType C<Foo, class Bar>}{TypedText c} (35)
 // CHECK-CC1: ClassDecl:{TypedText Foo} (35)
-// CHECK-CC1: CXXMethod:{ResultType Foo &}{TypedText operator=}{LeftParen (}{Placeholder const Foo &}{RightParen )}
-// CHECK-CC1: CXXDestructor:{ResultType void}{TypedText ~Foo}{LeftParen (}{RightParen )} (80)
+// CHECK-CC1: CXXMethod:{ResultType Foo &}{TypedText operator=}{Informative (}{Informative const Foo &}{Informative )} (80)
+// CHECK-CC1: CXXDestructor:{ResultType void}{TypedText ~Foo}{Informative (}{Informative )} (80)

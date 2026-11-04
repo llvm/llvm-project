@@ -16,76 +16,38 @@
 #include <string.h>
 #include <sys/mman.h>
 
-#include <algorithm>
-#include <vector>
-
 namespace scudo {
 
-static void getResidentPages(void *BaseAddress, size_t TotalPages,
-                             size_t *ResidentPages) {
-  std::vector<unsigned char> Pages(TotalPages, 0);
-  ASSERT_EQ(
-      0, mincore(BaseAddress, TotalPages * getPageSizeCached(), Pages.data()))
-      << strerror(errno);
-  *ResidentPages = 0;
-  for (unsigned char Value : Pages) {
-    if (Value & 1) {
-      ++*ResidentPages;
-    }
-  }
+TEST(ScudoCommonTest, IsPowerOfTwo) {
+  EXPECT_FALSE(isPowerOfTwo(0));
+  EXPECT_TRUE(isPowerOfTwo(1));
+  EXPECT_TRUE(isPowerOfTwo(2));
+  EXPECT_TRUE(isPowerOfTwo(4));
+  EXPECT_FALSE(isPowerOfTwo(3));
 }
 
-// Fuchsia needs getResidentPages implementation.
-TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
-  // Make sure to have the size of the map on a page boundary.
-  const uptr PageSize = getPageSizeCached();
-  const size_t NumPages = 1000;
-  const uptr SizeBytes = NumPages * PageSize;
+TEST(ScudoCommonTest, ComputePercentage) {
+  uptr Integral, Fractional;
+  computePercentage(50, 100, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 50U);
+  EXPECT_EQ(Fractional, 0U);
 
-  MemMapT MemMap;
-  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, SizeBytes, "ResidentMemorySize"));
-  ASSERT_NE(MemMap.getBase(), 0U);
+  computePercentage(1, 3, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 33U);
+  EXPECT_EQ(Fractional, 33U);
 
-  void *P = reinterpret_cast<void *>(MemMap.getBase());
-  size_t ResidentPages;
-  getResidentPages(P, NumPages, &ResidentPages);
-  EXPECT_EQ(0U, ResidentPages);
+  computePercentage(2, 3, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 66U);
+  EXPECT_EQ(Fractional, 67U);
 
-  // Make the entire map resident.
-  memset(P, 1, SizeBytes);
-  getResidentPages(P, NumPages, &ResidentPages);
-  EXPECT_EQ(NumPages, ResidentPages);
-
-  // Should release the memory to the kernel immediately.
-  MemMap.releasePagesToOS(MemMap.getBase(), SizeBytes);
-  getResidentPages(P, NumPages, &ResidentPages);
-  EXPECT_EQ(0U, ResidentPages);
-
-  // Make the entire map resident again.
-  memset(P, 1, SizeBytes);
-  getResidentPages(P, NumPages, &ResidentPages);
-  EXPECT_EQ(NumPages, ResidentPages);
-
-  MemMap.unmap();
+  computePercentage(0, 0, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 100U);
+  EXPECT_EQ(Fractional, 0U);
 }
 
-TEST(ScudoCommonTest, Zeros) {
-  const uptr Size = 1ull << 20;
-
-  MemMapT MemMap;
-  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, Size, "Zeros"));
-  ASSERT_NE(MemMap.getBase(), 0U);
-  uptr *P = reinterpret_cast<uptr *>(MemMap.getBase());
-  const ptrdiff_t N = Size / sizeof(uptr);
-  EXPECT_EQ(std::count(P, P + N, 0), N);
-
-  memset(P, 1, Size);
-  EXPECT_EQ(std::count(P, P + N, 0), 0);
-
-  MemMap.releasePagesToOS(MemMap.getBase(), Size);
-  EXPECT_EQ(std::count(P, P + N, 0), N);
-
-  MemMap.unmap();
+TEST(ScudoCommonTest, IsAlignedSlow) {
+  EXPECT_TRUE(isAlignedSlow(64, 16));
+  EXPECT_FALSE(isAlignedSlow(65, 16));
 }
 
 } // namespace scudo

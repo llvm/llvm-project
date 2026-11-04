@@ -525,7 +525,7 @@ entry:
 define ptr @ret_arg_or_unknown(ptr %b) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define ptr @ret_arg_or_unknown
-; CHECK-SAME: (ptr [[B:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr nofree [[B:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RET_ARG:%.*]], label [[RET_UNKNOWN:%.*]]
@@ -550,7 +550,7 @@ ret_unknown:
 define ptr @ret_arg_or_unknown_through_phi(ptr %b) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define ptr @ret_arg_or_unknown_through_phi
-; CHECK-SAME: (ptr [[B:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr nofree [[B:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RET_ARG:%.*]], label [[RET_UNKNOWN:%.*]]

@@ -20,7 +20,7 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<128x32xf16, 3>
   %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_wait %1 numGroups = 1
 
   // CHECK: [[c6:%.+]] = arith.constant 6 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c6]]
@@ -28,7 +28,7 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c2]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
   // CHECK: nvgpu.ldmatrix [[shm]][[[fragRow]], [[fragColPerm]]]
-  %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] {numTiles = 4 : i32, transpose = false}
+  %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] numTiles = 4 transpose = false
       : memref<128x32xf16, 3> -> vector<4x2xf16>
 
   // CHECK: [[c15:%.+]] = arith.constant 15 : index
@@ -40,7 +40,7 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   %2 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shmB[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<32x128xf16, 3>
   %3 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_wait %1 numGroups = 1
 
   // CHECK: [[c15:%.+]] = arith.constant 15 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c15]]
@@ -48,7 +48,7 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c3]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
   // CHECK: nvgpu.ldmatrix [[shmB]][[[fragRow]], [[fragColPerm]]]
-  %matB = nvgpu.ldmatrix %shmB[%fragRow, %fragCol] {numTiles = 4 : i32, transpose = false}
+  %matB = nvgpu.ldmatrix %shmB[%fragRow, %fragCol] numTiles = 4 transpose = false
       : memref<32x128xf16, 3> -> vector<4x2xf16>
 
   return %mat, %matB: vector<4x2xf16>, vector<4x2xf16>
@@ -77,7 +77,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 4
       : memref<128x128xf32> to memref<64x16xf32, 3>
   %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_wait %1 numGroups = 1
 
   // CHECK: [[c6:%.+]] = arith.constant 6 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c6]]
@@ -85,7 +85,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c1]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
   // CHECK: nvgpu.ldmatrix [[shm]][[[fragRow]], [[fragColPerm]]]
-  %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] {numTiles = 4 : i32, transpose = false}
+  %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] numTiles = 4 transpose = false
       : memref<64x16xf32, 3> -> vector<4x1xf32>
 
   // CHECK: [[c6:%.+]] = arith.constant 6 : index
@@ -133,7 +133,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   %2 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shmB[%stRow, %stCol], 4
       : memref<128x128xf32> to memref<16x64xf32, 3>
   %3 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_wait %1 numGroups = 1
 
   // CHECK: [[c15:%.+]] = arith.constant 15 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c15]]
@@ -141,7 +141,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[xorBits:%.+]] = arith.shli [[srcBits]], [[c2]]
   // CHECK: [[fragColPerm:%.+]] = arith.xori [[fragCol]], [[xorBits]]
   // CHECK: nvgpu.ldmatrix [[shmB]][[[fragRow]], [[fragColPerm]]]
-  %matB = nvgpu.ldmatrix %shmB[%fragRow, %fragCol] {numTiles = 4 : i32, transpose = false}
+  %matB = nvgpu.ldmatrix %shmB[%fragRow, %fragCol] numTiles = 4 transpose = false
       : memref<16x64xf32, 3> -> vector<4x1xf32>
 
   // CHECK: [[c15:%.+]] = arith.constant 15 : index
@@ -178,7 +178,7 @@ func.func @small_column_size_f64(%arg0: memref<32x32xf64>,
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 2
       : memref<32x32xf64> to memref<32x4xf64, 3>
   %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_wait %1 numGroups = 1
 
   // CHECK: [[c6:%.+]] = arith.constant 4 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c6]]
@@ -204,10 +204,10 @@ func.func @too_small_column_size_f16(%arg0: memref<128x128xf16>,
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<128x8xf16, 3>
   %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_wait %1 numGroups = 1
 
   // CHECK: nvgpu.ldmatrix [[shm]][[[fragRow]], [[fragCol]]]
-  %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] {numTiles = 1 : i32, transpose = false}
+  %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] numTiles = 1 transpose = false
       : memref<128x8xf16, 3> -> vector<1x2xf16>
 
   return %mat: vector<1x2xf16>
@@ -230,10 +230,10 @@ func.func @abort_if_subview(%arg0: memref<128x128xf16>,
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<128x32xf16, 3>
   %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_wait %1 numGroups = 1
 
   // CHECK: nvgpu.ldmatrix [[shmView]][[[fragRow]], [[fragCol]]]
-  %mat = nvgpu.ldmatrix %shmView[%fragRow, %fragCol] {numTiles = 1 : i32, transpose = false}
+  %mat = nvgpu.ldmatrix %shmView[%fragRow, %fragCol] numTiles = 1 transpose = false
       : memref<64x32xf16, 3> -> vector<1x2xf16>
 
   return %mat: vector<1x2xf16>
@@ -247,4 +247,38 @@ func.func @abort_if_subview(%arg0: memref<128x128xf16>,
 func.func @test_0_d() -> memref<i32, #gpu.address_space<workgroup>> {
   %alloc = memref.alloc() : memref<i32, #gpu.address_space<workgroup>>
   return %alloc : memref<i32, #gpu.address_space<workgroup>>
+}
+
+// -----
+
+// Ensure the case with zero or dynamic dim not crash.
+
+// CHECK-LABEL: func @test_dynamic_and_zero_dim
+func.func @test_dynamic_and_zero_dim(%arg0 : index) {
+  %alloc = memref.alloc() : memref<0xf32, 3>
+  %alloc_1 = memref.alloc(%arg0) : memref<?xf32, 3>
+  return
+}
+
+// -----
+
+// Ensure memrefs with vector element types do not crash (issue #177823).
+
+// CHECK-LABEL: func @test_vector_element_type
+// CHECK: memref.alloc() : memref<16x1xvector<16xf16>, 3>
+func.func @test_vector_element_type() {
+  %alloc = memref.alloc() : memref<16x1xvector<16xf16>, 3>
+  return
+}
+
+
+// -----
+
+
+// CHECK-LABEL: func @test_int_conversion
+module {
+  func.func @test_int_conversion() {
+    %alloc = memref.alloc() alignment = 64 : memref<10xf32, 1 : ui64>
+    return
+  }
 }

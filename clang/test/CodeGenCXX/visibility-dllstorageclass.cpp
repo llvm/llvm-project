@@ -122,8 +122,8 @@ struct __attribute__((type_visibility("protected"))) t {
   virtual void foo();
 };
 void t::foo() {}
-// DEFAULTS-DAG: @_ZTV1t = hidden unnamed_addr constant
-// ALL_KEEP-DAG: @_ZTV1t = protected unnamed_addr constant
+// DEFAULTS-DAG: @_ZTV1t = hidden constant
+// ALL_KEEP-DAG: @_ZTV1t = protected constant
 
 int v __attribute__ ((__visibility__ ("protected"))) = 123;
 // DEFAULTS-DAG: @v = hidden global

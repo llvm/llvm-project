@@ -17,6 +17,6 @@
 
 #include "hdr/stdlib_overlay.h"
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_TYPES_LLDIV_T_H

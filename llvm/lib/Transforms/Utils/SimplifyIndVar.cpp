@@ -16,12 +16,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -43,7 +45,9 @@ STATISTIC(
 STATISTIC(
     NumSimplifiedSRem,
     "Number of IV signed remainder operations converted to unsigned remainder");
-STATISTIC(NumElimCmp     , "Number of IV comparisons eliminated");
+STATISTIC(NumElimCmp, "Number of IV comparisons eliminated");
+STATISTIC(NumInvariantCmp, "Number of IV comparisons made loop invariant");
+STATISTIC(NumSameSign, "Number of IV comparisons with new samesign flags");
 
 namespace {
   /// This is a utility for simplifying induction variables
@@ -101,6 +105,7 @@ namespace {
                              bool IsSigned);
     void replaceRemWithNumerator(BinaryOperator *Rem);
     void replaceRemWithNumeratorOrZero(BinaryOperator *Rem);
+    bool replaceRemWithNumeratorOrZeroUpdateProfiles(SelectInst &SI);
     void replaceSRemWithURem(BinaryOperator *Rem);
     bool eliminateSDiv(BinaryOperator *SDiv);
     bool strengthenBinaryOp(BinaryOperator *BO, Instruction *IVOperand);
@@ -275,25 +280,33 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
-  } else if (makeIVComparisonInvariant(ICmp, IVOperand)) {
-    // fallthrough to end of function
-  } else if (ICmpInst::isSigned(OriginalPred) &&
-             SE->isKnownNonNegative(S) && SE->isKnownNonNegative(X)) {
-    // If we were unable to make anything above, all we can is to canonicalize
-    // the comparison hoping that it will open the doors for other
-    // optimizations. If we find out that we compare two non-negative values,
-    // we turn the instruction's predicate to its unsigned version. Note that
-    // we cannot rely on Pred here unless we check if we have swapped it.
+    ++NumElimCmp;
+    Changed = true;
+    return;
+  }
+
+  if (makeIVComparisonInvariant(ICmp, IVOperand)) {
+    ++NumInvariantCmp;
+    Changed = true;
+    return;
+  }
+
+  if ((ICmpInst::isSigned(OriginalPred) ||
+       (ICmpInst::isUnsigned(OriginalPred) && !ICmp->hasSameSign())) &&
+      SE->haveSameSign(S, X)) {
+    // Set the samesign flag on the compare if legal, and canonicalize to
+    // the unsigned variant (for signed compares) hoping that it will open
+    // the doors for other optimizations.  Note that we cannot rely on Pred
+    // here unless we check if we have swapped it.
     assert(ICmp->getPredicate() == OriginalPred && "Predicate changed?");
-    LLVM_DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp
+    LLVM_DEBUG(dbgs() << "INDVARS: Marking comparison samesign: " << *ICmp
                       << '\n');
     ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
     ICmp->setSameSign();
-  } else
+    NumSameSign++;
+    Changed = true;
     return;
-
-  ++NumElimCmp;
-  Changed = true;
+  }
 }
 
 bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
@@ -346,6 +359,34 @@ void SimplifyIndvar::replaceRemWithNumerator(BinaryOperator *Rem) {
   DeadInsts.emplace_back(Rem);
 }
 
+bool SimplifyIndvar::replaceRemWithNumeratorOrZeroUpdateProfiles(
+    SelectInst &SI) {
+  if (ProfcheckDisableMetadataFixes)
+    return false;
+  // The select instruction condition is guaranteed to evaluate to true exactly
+  // once through the duration of the loop if it is executed on every loop
+  // iteration. So we set the branch weights to be {1, LoopIterations - 1}.
+
+  // Check that the select instruction does execute every iteration.
+  BasicBlock *Latch = L->getLoopLatch();
+  if (L->getExitingBlock() != Latch || !DT->dominates(SI.getParent(), Latch))
+    return false;
+
+  // Early exits also invalidate the assumption that the select instruction is
+  // executed on every iteration, so bail here if we run into any.
+  if (L->getExitingBlock() == nullptr || L->getExitingBlock() != Latch)
+    return false;
+
+  // Construct the branch weights using the trip count.
+  unsigned TripCount = SE->getSmallConstantTripCount(L);
+  if (!TripCount)
+    TripCount = getLoopEstimatedTripCount(L).value_or(0);
+  if (!TripCount)
+    return false;
+  setBranchWeights(SI, {1, TripCount - 1}, /*IsExpected=*/false);
+  return true;
+}
+
 // (i+1) % n  -->  (i+1)==n?0:(i+1)  if i is in [0,n).
 void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   auto *T = Rem->getType();
@@ -360,6 +401,8 @@ void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   ++NumElimRem;
   Changed = true;
   DeadInsts.emplace_back(Rem);
+  if (!replaceRemWithNumeratorOrZeroUpdateProfiles(*Sel))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, DEBUG_TYPE);
 }
 
 /// SimplifyIVUsers helper for eliminating useless remainder operations
@@ -949,7 +992,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
 
     // Go further for the bitcast 'prtoint ptr to i64' or if the cast is done
     // by truncation
-    if ((isa<PtrToIntInst>(UseInst)) || (isa<TruncInst>(UseInst)))
+    if (isa<PtrToIntInst, PtrToAddrInst, TruncInst>(UseInst))
       for (Use &U : UseInst->uses()) {
         Instruction *User = cast<Instruction>(U.getUser());
         if (replaceIVUserWithLoopInvariant(User))
@@ -1025,7 +1068,7 @@ std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
 bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                      LoopInfo *LI, const TargetTransformInfo *TTI,
                      SmallVectorImpl<WeakTrackingVH> &Dead) {
-  SCEVExpander Rewriter(*SE, SE->getDataLayout(), "indvars");
+  SCEVExpander Rewriter(*SE, "indvars");
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
@@ -1811,8 +1854,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     assert(LoopExitingBlock && L->contains(LoopExitingBlock) &&
            "Not a LCSSA Phi?");
     WidePN->addIncoming(WideBO, LoopExitingBlock);
-    Builder.SetInsertPoint(User->getParent(),
-                           User->getParent()->getFirstInsertionPt());
+    Builder.SetInsertPoint(User->getParent()->getFirstInsertionPt());
     auto *TruncPN = Builder.CreateTrunc(WidePN, User->getType());
     User->replaceAllUsesWith(TruncPN);
     DeadInsts.emplace_back(User);
@@ -1875,7 +1917,7 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
                           UsePhi->getIterator());
         WidePhi->addIncoming(DU.WideDef, UsePhi->getIncomingBlock(0));
         BasicBlock *WidePhiBB = WidePhi->getParent();
-        IRBuilder<> Builder(WidePhiBB, WidePhiBB->getFirstInsertionPt());
+        IRBuilder<> Builder(WidePhiBB->getFirstInsertionPt());
         Value *Trunc = Builder.CreateTrunc(WidePhi, DU.NarrowDef->getType(), "",
                                            CanWidenByZExt, CanWidenBySExt);
         UsePhi->replaceAllUsesWith(Trunc);
@@ -2221,22 +2263,17 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
     auto *TI = BB->getTerminator();
     UpdateRangeFromGuards(TI);
 
-    auto *BI = dyn_cast<BranchInst>(TI);
-    if (!BI || !BI->isConditional())
+    auto *BI = dyn_cast<CondBrInst>(TI);
+    if (!BI)
       continue;
 
     auto *TrueSuccessor = BI->getSuccessor(0);
     auto *FalseSuccessor = BI->getSuccessor(1);
 
-    auto DominatesNarrowUser = [this, NarrowUser] (BasicBlockEdge BBE) {
-      return BBE.isSingleEdge() &&
-             DT->dominates(BBE, NarrowUser->getParent());
-    };
-
-    if (DominatesNarrowUser(BasicBlockEdge(BB, TrueSuccessor)))
+    if (DT->dominates(BasicBlockEdge(BB, TrueSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/true);
 
-    if (DominatesNarrowUser(BasicBlockEdge(BB, FalseSuccessor)))
+    if (DT->dominates(BasicBlockEdge(BB, FalseSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/false);
   }
 }

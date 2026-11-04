@@ -30,11 +30,11 @@ static inline uint32_t xorshift32(uint32_t &state) {
 
 static inline void use(uint8_t *ptr, uint32_t size) {
   EXPECT_NE(ptr, nullptr);
-  for (int i = 0; i < size; ++i)
+  for (uint32_t i = 0; i < size; ++i)
     ptr[i] = uint8_t(i + gpu::get_thread_id());
 
   // Try to detect if some other thread manages to clobber our memory.
-  for (int i = 0; i < size; ++i)
+  for (uint32_t i = 0; i < size; ++i)
     EXPECT_EQ(ptr[i], uint8_t(i + gpu::get_thread_id()));
 }
 

@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // <fstream>
 
 // basic_streambuf<charT, traits>* setbuf(char_type* s, streamsize n) override;

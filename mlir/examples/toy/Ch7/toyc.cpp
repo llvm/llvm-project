@@ -21,7 +21,7 @@
 #include "toy/Parser.h"
 #include "toy/Passes.h"
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
   // If we aren't exporting to non-mlir, then we are done.
   bool isOutputingMLIR = emitAction <= Action::DumpMLIRLLVM;
   if (isOutputingMLIR) {
-    module->dump();
+    module->print(llvm::errs());
     return 0;
   }
 

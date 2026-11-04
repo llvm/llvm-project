@@ -4,8 +4,6 @@
 ; RUN: llc -O3 -mtriple=riscv32 -mattr=+xcvbitmanip -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-O3
 
-declare i32 @llvm.riscv.cv.bitmanip.extract(i32, i32)
-
 define i32 @test.cv.extractr(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.cv.extractr:
 ; CHECK:       # %bb.0:
@@ -33,8 +31,6 @@ define i32 @test.cv.extract1023(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.bitmanip.extractu(i32, i32)
-
 define i32 @test.cv.extractur(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.cv.extractur:
 ; CHECK:       # %bb.0:
@@ -52,8 +48,6 @@ define i32 @test.cv.extractu(i32 %a) {
   %1 = call i32 @llvm.riscv.cv.bitmanip.extractu(i32 %a, i32 65)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.bitmanip.insert(i32, i32, i32)
 
 define i32 @test.cv.insert(i32 %c, i32 %a) {
 ; CHECK-LABEL: test.cv.insert:
@@ -73,8 +67,6 @@ define i32 @test.cv.insertr(i32 %c, i32 %b, i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.bitmanip.bclr(i32, i32)
-
 define i32 @test.cv.bclrr(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.cv.bclrr:
 ; CHECK:       # %bb.0:
@@ -92,8 +84,6 @@ define i32 @test.cv.bclr(i32 %a) {
   %1 = call i32 @llvm.riscv.cv.bitmanip.bclr(i32 %a, i32 65)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.bitmanip.bset(i32, i32)
 
 define i32 @test.cv.bsetr(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.cv.bsetr:
@@ -113,8 +103,6 @@ define i32 @test.cv.bset(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.cttz.i32(i32, i1)
-
 define i32 @test.cv.ff1(i32 %a) {
 ; CHECK-LABEL: test.cv.ff1:
 ; CHECK:       # %bb.0:
@@ -124,18 +112,55 @@ define i32 @test.cv.ff1(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.ctlz.i32(i32, i1)
-
 define i32 @test.cv.fl1(i32 %a) {
 ; CHECK-LABEL: test.cv.fl1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.fl1 a0, a0
+; CHECK-NEXT:    xori a0, a0, 31
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 0)
+  %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 1)
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.bitmanip.clb(i32)
+; Verifies that ctlz with defined-on-zero behavior is lowered
+; correctly: a zero-check guard branches around the cv.fl1 + xori 31
+; sequence and returns 32 directly when the input is zero. This
+; relies on ISD::CTLZ being Expand and ISD::CTLZ_ZERO_POISON being
+; Legal for XCVbitmanip; the LegalizeDAG framework synthesises the
+; branch-guarded form automatically.
+define i32 @test.ctlz.zero.defined(i32 %a) {
+; CHECK-O0-LABEL: test.ctlz.zero.defined:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    addi sp, sp, -16
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O0-NEXT:    cv.fl1 a1, a0
+; CHECK-O0-NEXT:    xori a1, a1, 31
+; CHECK-O0-NEXT:    li a2, 32
+; CHECK-O0-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-O0-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-O0-NEXT:    bnez a0, .LBB13_2
+; CHECK-O0-NEXT:  # %bb.1:
+; CHECK-O0-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-O0-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-O0-NEXT:  .LBB13_2:
+; CHECK-O0-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-O0-NEXT:    addi sp, sp, 16
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-O0-NEXT:    ret
+;
+; CHECK-O3-LABEL: test.ctlz.zero.defined:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    beqz a0, .LBB13_2
+; CHECK-O3-NEXT:  # %bb.1: # %cond.false
+; CHECK-O3-NEXT:    cv.fl1 a0, a0
+; CHECK-O3-NEXT:    xori a0, a0, 31
+; CHECK-O3-NEXT:    ret
+; CHECK-O3-NEXT:  .LBB13_2:
+; CHECK-O3-NEXT:    li a0, 32
+; CHECK-O3-NEXT:    ret
+  %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 0)
+  ret i32 %1
+}
 
 define i32 @test.cv.clb(i32 %a) {
 ; CHECK-LABEL: test.cv.clb:
@@ -146,8 +171,6 @@ define i32 @test.cv.clb(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.ctpop(i32)
-
 define i32 @test.cv.cnt(i32 %a) {
 ; CHECK-LABEL: test.cv.cnt:
 ; CHECK:       # %bb.0:
@@ -156,8 +179,6 @@ define i32 @test.cv.cnt(i32 %a) {
   %1 = call i32 @llvm.ctpop(i32 %a)
   ret i32 %1
 }
-
-declare i32 @llvm.fshl.i32(i32, i32, i32)
 
 define i32 @test.llvm.fshl.imm(i32 %a) {
 ; CHECK-LABEL: test.llvm.fshl.imm:
@@ -187,8 +208,6 @@ define i32 @test.llvm.fshl.reg(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-declare i32 @llvm.fshr.i32(i32, i32, i32)
-
 define i32 @test.llvm.fshr.imm(i32 %a) {
 ; CHECK-LABEL: test.llvm.fshr.imm:
 ; CHECK:       # %bb.0:
@@ -208,8 +227,6 @@ define i32 @test.llvm.fshr.reg(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.bitmanip.bitrev(i32, i32, i32)
-
 define i32 @test.cv.bitrev(i32 %a) {
 ; CHECK-LABEL: test.cv.bitrev:
 ; CHECK:       # %bb.0:
@@ -218,8 +235,6 @@ define i32 @test.cv.bitrev(i32 %a) {
   %1 = call i32 @llvm.riscv.cv.bitmanip.bitrev(i32 %a, i32 1, i32 2)
   ret i32 %1
 }
-
-declare i32 @llvm.bitreverse(i32)
 
 define i32 @test.llvm.bitrev(i32 %a) {
 ; CHECK-LABEL: test.llvm.bitrev:

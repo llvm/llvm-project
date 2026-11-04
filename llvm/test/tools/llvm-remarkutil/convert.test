@@ -7,7 +7,7 @@ RUN: llvm-remarkutil bitstream2yaml %t.bitstream -o - | FileCheck %s -strict-whi
 ; ERR: error: Unsupported remark container version (expected: 1, read: 0). Please upgrade/downgrade your toolchain to read this container.
 
 ; CHECK: --- !Analysis
-; CHECK-NEXT: Pass:            prologepilog
+; CHECK-NEXT: Pass:            prolog-epilog
 ; CHECK-NEXT: Name:            StackSize
 ; CHECK-NEXT: Function:        func0
 ; CHECK-NEXT: Args:

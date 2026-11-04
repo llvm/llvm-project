@@ -24,6 +24,7 @@
 #include "../types.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {

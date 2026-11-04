@@ -20,7 +20,7 @@ void CloexecPipeCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void CloexecPipeCheck::check(const MatchFinder::MatchResult &Result) {
-  std::string ReplacementText =
+  const std::string ReplacementText =
       (Twine("pipe2(") + getSpellingArg(Result, 0) + ", O_CLOEXEC)").str();
 
   replaceFunc(Result,

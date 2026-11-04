@@ -113,15 +113,13 @@ public:
   APSInt extend(uint32_t width) const {
     if (IsUnsigned)
       return APSInt(zext(width), IsUnsigned);
-    else
-      return APSInt(sext(width), IsUnsigned);
+    return APSInt(sext(width), IsUnsigned);
   }
 
   APSInt extOrTrunc(uint32_t width) const {
     if (IsUnsigned)
       return APSInt(zextOrTrunc(width), IsUnsigned);
-    else
-      return APSInt(sextOrTrunc(width), IsUnsigned);
+    return APSInt(sextOrTrunc(width), IsUnsigned);
   }
 
   const APSInt &operator%=(const APSInt &RHS) {
@@ -369,14 +367,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APSInt &I) {
 
 /// Provide DenseMapInfo for APSInt, using the DenseMapInfo for APInt.
 template <> struct DenseMapInfo<APSInt, void> {
-  static inline APSInt getEmptyKey() {
-    return APSInt(DenseMapInfo<APInt, void>::getEmptyKey());
-  }
-
-  static inline APSInt getTombstoneKey() {
-    return APSInt(DenseMapInfo<APInt, void>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const APSInt &Key) {
     return DenseMapInfo<APInt, void>::getHashValue(Key);
   }

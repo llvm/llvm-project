@@ -28,7 +28,6 @@ static constexpr StringRef DefaultIncludeTypeRegex =
     "::std::basic_istringstream;::std::basic_stringstream;::std::bitset;"
     "::std::filesystem::path";
 
-AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
 AST_MATCHER(VarDecl, isReferenced) { return Node.isReferenced(); }
 AST_MATCHER(VarDecl, explicitMarkUnused) {
   // Implementations should not emit a warning that a name-independent
@@ -69,13 +68,13 @@ void UnusedLocalNonTrivialVariableCheck::registerMatchers(MatchFinder *Finder) {
               unless(isExceptionVariable()), hasLocalStorage(), isDefinition(),
               unless(hasType(isReferenceType())), unless(hasType(isTrivial())),
               unless(explicitMarkUnused()),
-              hasType(hasUnqualifiedDesugaredType(
-                  anyOf(recordType(hasDeclaration(namedDecl(
-                            matchesAnyListedName(IncludeTypes),
-                            unless(matchesAnyListedName(ExcludeTypes))))),
-                        templateSpecializationType(hasDeclaration(namedDecl(
-                            matchesAnyListedName(IncludeTypes),
-                            unless(matchesAnyListedName(ExcludeTypes)))))))))
+              hasType(hasUnqualifiedDesugaredType(anyOf(
+                  recordType(hasDeclaration(namedDecl(
+                      matchesAnyListedRegexName(IncludeTypes),
+                      unless(matchesAnyListedRegexName(ExcludeTypes))))),
+                  templateSpecializationType(hasDeclaration(namedDecl(
+                      matchesAnyListedRegexName(IncludeTypes),
+                      unless(matchesAnyListedRegexName(ExcludeTypes)))))))))
           .bind("var"),
       this);
 }

@@ -17,6 +17,7 @@
 
 #include "AMDGPUTargetMachine.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 
 namespace llvm {
@@ -42,13 +43,8 @@ public:
 };
 
 namespace {
-static inline const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
-                                               const Constant *CV,
+static inline const MCExpr *lowerAddrSpaceCast(const Constant *CV,
                                                MCContext &OutContext) {
-  // TargetMachine does not support llvm-style cast. Use C++-style cast.
-  // This is safe since TM is always of type AMDGPUTargetMachine or its
-  // derived class.
-  auto &AT = static_cast<const AMDGPUTargetMachine &>(TM);
   auto *CE = dyn_cast<ConstantExpr>(CV);
 
   // Lower null pointers in private and local address space.
@@ -57,9 +53,9 @@ static inline const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
   if (CE && CE->getOpcode() == Instruction::AddrSpaceCast) {
     auto *Op = CE->getOperand(0);
     auto SrcAddr = Op->getType()->getPointerAddressSpace();
-    if (Op->isNullValue() && AT.getNullPointerValue(SrcAddr) == 0) {
+    if (Op->isNullValue() && AMDGPU::getNullPointerValue(SrcAddr) == 0) {
       auto DstAddr = CE->getType()->getPointerAddressSpace();
-      return MCConstantExpr::create(AT.getNullPointerValue(DstAddr),
+      return MCConstantExpr::create(AMDGPU::getNullPointerValue(DstAddr),
                                     OutContext);
     }
   }

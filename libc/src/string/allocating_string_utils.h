@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_utils.h"

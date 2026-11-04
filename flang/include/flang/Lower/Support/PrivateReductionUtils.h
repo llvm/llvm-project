@@ -22,6 +22,7 @@ class Region;
 
 namespace Fortran {
 namespace semantics {
+class DerivedTypeSpec;
 class Symbol;
 } // namespace semantics
 } // namespace Fortran
@@ -58,7 +59,8 @@ void populateByRefInitAndCleanupRegions(
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym = nullptr,
-    bool cannotHaveNonDefaultLowerBounds = false, bool isDoConcurrent = false);
+    bool cannotHaveNonDefaultLowerBounds = false, bool isDoConcurrent = false,
+    bool forceHeapAllocation = false);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
 /// `cannotHaveNonDefaultLowerBounds` should be set if `box` is known to have
@@ -70,6 +72,18 @@ fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value box,
                                 bool cannotHaveNonDefaultLowerBounds = false,
                                 bool useDefaultLowerBounds = false);
+
+/// Generate inline default initialization for a variable of the given type,
+/// storing the result into \p destRef. This handles:
+///   - Trivial types (integer, real, complex, logical): zero-initialized.
+///   - Fixed-length CHARACTER: zero-initialized.
+///   - Derived types with default component values: component-wise stores.
+///   - Derived types without defaults (trivial components only): zero-init.
+void genInlineTypeDefaultInit(
+    AbstractConverter &converter, fir::FirOpBuilder &builder,
+    mlir::Location loc, mlir::Type type, mlir::Value destRef,
+    const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec = nullptr,
+    const Fortran::semantics::Symbol *sym = nullptr);
 
 } // namespace lower
 } // namespace Fortran

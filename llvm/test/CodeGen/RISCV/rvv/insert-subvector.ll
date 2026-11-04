@@ -435,9 +435,9 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_0(<vscale x 4 x i1> %v, <vscale x
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v9, v8
@@ -453,15 +453,15 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
@@ -470,8 +470,6 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
   %vec = call <vscale x 4 x i1> @llvm.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1> %v, <vscale x 1 x i1> %sv, i64 2)
   ret <vscale x 4 x i1> %vec
 }
-
-declare <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64>, <vscale x 8 x i64>, i64)
 
 define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64> %sv1, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64:
@@ -642,25 +640,3 @@ define <vscale x 8 x i32> @insert_splat_to_splat2() {
 
 attributes #0 = { vscale_range(2,1024) }
 
-declare <vscale x 4 x i1> @llvm.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)
-declare <vscale x 32 x i1> @llvm.vector.insert.nxv8i1.nxv32i1(<vscale x 32 x i1>, <vscale x 8 x i1>, i64)
-
-declare <vscale x 16 x i8> @llvm.vector.insert.nxv1i8.nxv16i8(<vscale x 16 x i8>, <vscale x 1 x i8>, i64)
-
-declare <vscale x 32 x half> @llvm.vector.insert.nxv1f16.nxv32f16(<vscale x 32 x half>, <vscale x 1 x half>, i64)
-declare <vscale x 32 x half> @llvm.vector.insert.nxv2f16.nxv32f16(<vscale x 32 x half>, <vscale x 2 x half>, i64)
-
-declare <vscale x 4 x i8> @llvm.vector.insert.nxv1i8.nxv4i8(<vscale x 4 x i8>, <vscale x 1 x i8>, i64 %idx)
-
-declare <vscale x 4 x i32> @llvm.vector.insert.nxv2i32.nxv4i32(<vscale x 4 x i32>, <vscale x 2 x i32>, i64)
-declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v2i32(<vscale x 4 x i32>, <2 x i32>, i64)
-
-declare <vscale x 8 x i32> @llvm.vector.insert.nxv2i32.nxv8i32(<vscale x 8 x i32>, <vscale x 2 x i32>, i64 %idx)
-declare <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32>, <vscale x 4 x i32>, i64 %idx)
-
-declare <vscale x 16 x i32> @llvm.vector.insert.nxv1i32.nxv16i32(<vscale x 16 x i32>, <vscale x 1 x i32>, i64 %idx)
-declare <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32>, <vscale x 2 x i32>, i64 %idx)
-declare <vscale x 16 x i32> @llvm.vector.insert.nxv4i32.nxv16i32(<vscale x 16 x i32>, <vscale x 4 x i32>, i64 %idx)
-declare <vscale x 16 x i32> @llvm.vector.insert.nxv8i32.nxv16i32(<vscale x 16 x i32>, <vscale x 8 x i32>, i64 %idx)
-
-declare <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v3i64(<vscale x 2 x i64>, <3 x i64>, i64 %idx)

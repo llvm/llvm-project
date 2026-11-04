@@ -14,12 +14,14 @@
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_WINDOWS
-#include "asan_allocator.h"
-#include "asan_interceptors.h"
-#include "asan_internal.h"
-#include "asan_stack.h"
-#include "interception/interception.h"
-#include <stddef.h>
+#  include <stddef.h>
+
+#  include "asan_allocator.h"
+#  include "asan_interceptors.h"
+#  include "asan_internal.h"
+#  include "asan_stack.h"
+#  include "interception/interception.h"
+#  include "sanitizer_common/sanitizer_win_defs.h"
 
 // Intentionally not including windows.h here, to avoid the risk of
 // pulling in conflicting declarations of these functions. (With mingw-w64,
@@ -52,6 +54,13 @@ BOOL WINAPI HeapValidate(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
 }
 
 using namespace __asan;
+
+// Marks an allocation as originally zero-size. Must be called on allocations
+// that were changed from size 0 to 1 outside of Allocate() (e.g.
+// SharedReAlloc).
+namespace __asan {
+void asan_mark_zero_allocation(void* ptr);
+}
 
 // MT: Simply defining functions with the same signature in *.obj
 // files overrides the standard functions in the CRT.
@@ -371,7 +380,8 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
   // passing a 0 size into asan_realloc will free the allocation.
   // To avoid this and keep behavior consistent, fudge the size if 0.
   // (asan_malloc already does this)
-  if (dwBytes == 0)
+  bool was_zero_size = (dwBytes == 0);
+  if (was_zero_size)
     dwBytes = 1;
 
   size_t old_size;
@@ -381,6 +391,9 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
   void *ptr = asan_realloc(lpMem, dwBytes, &stack);
   if (ptr == nullptr)
     return nullptr;
+
+  if (was_zero_size)
+    asan_mark_zero_allocation(ptr);
 
   if (dwFlags & HEAP_ZERO_MEMORY) {
     size_t new_size = asan_malloc_usable_size(ptr, pc, bp);

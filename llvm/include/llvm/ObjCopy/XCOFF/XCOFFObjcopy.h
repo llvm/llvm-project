@@ -9,6 +9,8 @@
 #ifndef LLVM_OBJCOPY_XCOFF_XCOFFOBJCOPY_H
 #define LLVM_OBJCOPY_XCOFF_XCOFFOBJCOPY_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Error;
 class raw_ostream;
@@ -25,8 +27,10 @@ namespace xcoff {
 /// Apply the transformations described by \p Config and \p XCOFFConfig
 /// to \p In and writes the result into \p Out.
 /// \returns any Error encountered whilst performing the operation.
-Error executeObjcopyOnBinary(const CommonConfig &Config, const XCOFFConfig &,
-                             object::XCOFFObjectFile &In, raw_ostream &Out);
+LLVM_ABI Error executeObjcopyOnBinary(const CommonConfig &Config,
+                                      const XCOFFConfig &,
+                                      object::XCOFFObjectFile &In,
+                                      raw_ostream &Out);
 
 } // end namespace xcoff
 } // end namespace objcopy

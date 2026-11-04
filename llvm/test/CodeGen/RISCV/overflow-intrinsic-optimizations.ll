@@ -17,4 +17,3 @@ entry:
   ret i1 %7
 }
 
-declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64)
