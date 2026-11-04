@@ -3486,27 +3486,8 @@ void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
   // Emit the de-sugared statement
   OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
 
-  const Stmt *Transformed = S.getTransformedStmt();
-  const Stmt *Finals = S.getFinals();
-
-  // For fuse with a looprange clause, the transformed statement is a
-  // CompoundStmt containing [pre_fusion_loops..., fused_loop,
-  // post_fusion_loops...]. Emit Finals immediately after the fused loop, so
-  // post-fusion loops (and any code after the construct) observe the
-  // finalized loop-exit values.
-  if (const auto *CS = Finals ? dyn_cast<CompoundStmt>(Transformed) : nullptr) {
-    for (auto [Idx, Child] : llvm::enumerate(CS->body())) {
-      EmitStmt(Child);
-      if (Idx == S.getFusedLoopIdx())
-        EmitStmt(Finals);
-    }
-    return;
-  }
-
-  // Non-looprange case: single ForStmt. Emit it and then the finalization
-  // (OpenMP 6.0) that restores loop variables to their loop-exit values.
-  EmitStmt(Transformed);
-  if (Finals)
+  EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
     EmitStmt(Finals);
 }
 

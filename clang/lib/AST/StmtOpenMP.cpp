@@ -699,19 +699,16 @@ OMPSplitDirective *OMPSplitDirective::CreateEmpty(const ASTContext &C,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
-OMPFuseDirective *
-OMPFuseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
-                         SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
-                         unsigned NumGeneratedTopLevelLoops,
-                         Stmt *AssociatedStmt, Stmt *TransformedStmt,
-                         Stmt *PreInits, Stmt *Finals, unsigned FusedLoopIdx) {
+OMPFuseDirective *OMPFuseDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
+    Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
 
   OMPFuseDirective *Dir = createDirective<OMPFuseDirective>(
       C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   Dir->setFinals(Finals);
-  Dir->setFusedLoopIdx(FusedLoopIdx);
   Dir->setNumGeneratedTopLevelLoops(NumGeneratedTopLevelLoops);
   return Dir;
 }
