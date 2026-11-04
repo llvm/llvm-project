@@ -97,15 +97,15 @@ registers:
   - { id: 6, class: fpr64 }
 body:             |
   bb.0.entry:
-    %3:fpr64 = COPY $q3
-    %2:fpr64 = COPY $q2
-    %1:fpr64 = COPY $q1
-    %0:fpr64 = COPY $q0
+    %3:fpr64 = COPY $d3
+    %2:fpr64 = COPY $d2
+    %1:fpr64 = COPY $d1
+    %0:fpr64 = COPY $d0
     %4:fpr64 = contract FMULv2f32 %0, %1, implicit $fpcr
     %5:fpr64 = contract FMULv2f32 %2, %3, implicit $fpcr
     %6:fpr64 = contract FSUBv2f32 killed %4, %5, implicit $fpcr
-    $q0 = COPY %6
-    RET_ReallyLR implicit $q0
+    $d0 = COPY %6
+    RET_ReallyLR implicit $d0
 
 ...
 # ALL-LABEL: name: f1_both_fmul_2s
