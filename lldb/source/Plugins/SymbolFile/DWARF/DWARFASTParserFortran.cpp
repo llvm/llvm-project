@@ -63,14 +63,14 @@ TypeSP DWARFASTParserFortran::UpdateSymbolContextScopeForType(
   return type_sp;
 }
 
-void DWARFASTParserFortran::ParseChildParameters(
-    const DWARFDIE &parent_die,
-    llvm::SmallVectorImpl<CompilerType> &function_param_types,
-    llvm::SmallVectorImpl<llvm::StringRef> &function_param_names) {
-  if (!parent_die)
+void DWARFASTParserFortran::ParseFunctionParameters(
+    const DWARFDIE &function_die,
+    llvm::SmallVectorImpl<CompilerType> &param_types,
+    llvm::SmallVectorImpl<llvm::StringRef> &param_names) {
+  if (!function_die)
     return;
 
-  for (DWARFDIE die : parent_die.children()) {
+  for (DWARFDIE die : function_die.children()) {
     if (die.Tag() != DW_TAG_formal_parameter ||
         die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
       continue;
@@ -80,10 +80,10 @@ void DWARFASTParserFortran::ParseChildParameters(
     if (!type)
       break;
 
-    function_param_names.emplace_back(die.GetName());
-    function_param_types.push_back(type->GetForwardCompilerType());
+    param_names.emplace_back(die.GetName());
+    param_types.push_back(type->GetForwardCompilerType());
   }
-  assert(function_param_names.size() == function_param_types.size());
+  assert(param_names.size() == param_types.size());
 }
 
 lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
@@ -182,11 +182,11 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
       switch (attributes.AttributeAtIndex(i)) {
       case DW_AT_name: {
         const char *type_name_cstr = form_value.AsCString();
-        if (type_name_cstr && type_name_cstr[0] != '\0') {
+        if (type_name_cstr && type_name_cstr[0] != '\0') 
           type_name.SetString(type_name_cstr);
-        } else {
+        else 
           type_name.SetCString("UNKNOWN_FORTRAN_FUNCTION");
-        }
+        
         break;
       }
       case DW_AT_type: {
