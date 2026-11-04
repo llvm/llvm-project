@@ -1,4 +1,15 @@
 add_entrypoint_object(
+  __cxa_thread_atexit_impl
+  SRCS
+    __cxa_thread_atexit_impl.cpp
+  HDRS
+    __cxa_thread_atexit_impl.h
+  DEPENDS
+    libc.src.__support.threads.thread
+    libc.hdr.types.pthread_t
+)
+
+add_entrypoint_object(
   atoi
   SRCS
     atoi.cpp
@@ -87,6 +98,7 @@ set(environ_internal_deps
   libc.src.__support.macros.attributes
   libc.src.__support.macros.config
   libc.src.string.memory_utils.inline_memcpy
+  libc.src.string.memory_utils.inline_strcmp
 )
 set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
 
@@ -550,6 +562,11 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
         ${SCUDO_DEPS}
     )
     add_entrypoint_external(
+      reallocarray
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
       aligned_alloc
       DEPENDS
         ${SCUDO_DEPS}
@@ -578,6 +595,9 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       realloc
+    )
+    add_entrypoint_external(
+      reallocarray
     )
     add_entrypoint_external(
       aligned_alloc

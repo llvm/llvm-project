@@ -67,9 +67,7 @@ public:
 
   // Stack frame accessors.
   const Frame *getCurrentFrame() override;
-  unsigned getCallStackDepth() override {
-    return Current ? (Current->getDepth() + 1) : 1;
-  }
+  unsigned getCallStackDepth() override { return FrameDepth + 1; }
   bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
 
@@ -212,15 +210,23 @@ public:
     return NewFrame;
   }
 
+  /// Set the given frame as the current one.
+  void enterFrame(InterpFrame *F) {
+    Current = F;
+    ++FrameDepth;
+  }
+
   /// Free resources associated with the current frame and set the caller to be
   /// the new current frame.
-  void resetCurrentFrame() {
+  void exitFrame() {
     assert(Current);
+    assert(FrameDepth > 0);
     unsigned CurrentSize = InterpFrame::allocSize(Current->getFunction());
     InterpFrame *Caller = Current->Caller;
     Current->~InterpFrame();
     FrameAlloc.pop(CurrentSize);
     Current = Caller;
+    --FrameDepth;
   }
 
 private:
@@ -262,6 +268,7 @@ public:
   const bool InfiniteSteps = false;
   /// ID identifying this evaluation.
   const unsigned EvalID;
+  unsigned FrameDepth = 0;
 
   unsigned StringID = 0;
 

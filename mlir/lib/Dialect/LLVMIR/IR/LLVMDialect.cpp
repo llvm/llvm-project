@@ -934,7 +934,7 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
-        /*dereferenceable=*/nullptr, isNoundef,
+        /*dereferenceable=*/nullptr, isNoundef, /*range=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
         /*tbaa=*/nullptr);
@@ -3181,9 +3181,9 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
     result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
-                        FunctionEntryCountAttr::get(
-                            builder.getContext(), *functionEntryCount,
-                            ProfileCountType::Real, ArrayRef<uint64_t>{}));
+                        FunctionEntryCountAttr::get(builder.getContext(),
+                                                    *functionEntryCount,
+                                                    ArrayRef<uint64_t>{}));
 #ifndef NDEBUG
   std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
   if (duplicate.has_value()) {
@@ -4666,6 +4666,34 @@ Speculation::Speculatability SDivOp::getSpeculatability() {
   // not speculatable.
   // X / 0 => UB
   // INT_MIN / -1 => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// URemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability URemOp::getSpeculatability() {
+  // urem(x, 0) => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// SRemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability SRemOp::getSpeculatability() {
+  // srem(x, 0) => UB
+  // srem(INT_MIN, -1) => UB
   Value divisor = getRhs();
   if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
       matchPattern(divisor, m_IntRangeWithoutNegOneS()))

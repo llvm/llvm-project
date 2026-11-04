@@ -393,6 +393,15 @@ class ObjcCategoryMerger {
     const Symbol *baseClass = nullptr;
     int64_t baseClassAddend = 0;
 
+    void setBaseClass(const Symbol *sym, int64_t addend) {
+      assert(!baseClass && baseClassName.empty());
+      baseClass = sym;
+      baseClassAddend = addend;
+      StringRef name = sym->getName();
+      name.consume_front(objc::symbol_names::klass);
+      baseClassName = name.str();
+    }
+
     CategoryLayout &catLayout;
 
     // In case we generate new data, mark the new data as belonging to this file
@@ -545,16 +554,16 @@ ObjcCategoryMerger::tryGetSymbolReferenceAtIsecOffset(
 
   Symbol *sym = dyn_cast_if_present<Symbol *>(reloc->referent);
 
-  if (reloc->addend && sym) {
+  if (reloc->getAddend() && sym) {
     assert(isa<Defined>(sym) && "Expected defined for non-zero addend");
     Defined *definedSym = cast<Defined>(sym);
-    uint64_t targetOffset = definedSym->value + reloc->addend;
+    uint64_t targetOffset = definedSym->value + reloc->getAddend();
     if (Defined *targetSym =
             tryFindDefinedOnIsec(definedSym->isec(), targetOffset))
       return {targetSym, targetOffset - targetSym->value};
   }
 
-  return {sym, reloc->addend};
+  return {sym, reloc->getAddend()};
 }
 
 Symbol *
@@ -625,7 +634,7 @@ void ObjcCategoryMerger::tryEraseDefinedAtIsecOffset(
   if (auto *cisec = dyn_cast_or_null<ConcatInputSection>(sym->isec()))
     eraseISec(cisec);
   else if (auto *csisec = dyn_cast_or_null<CStringInputSection>(sym->isec())) {
-    uint32_t totalOffset = sym->value + reloc->addend;
+    uint32_t totalOffset = sym->value + reloc->getAddend();
     StringPiece &piece = csisec->getStringPiece(totalOffset);
     piece.live = false;
   } else {
@@ -815,19 +824,12 @@ bool ObjcCategoryMerger::parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
   if (!extInfo.baseClass) {
     auto [classSym, classAddend] = tryGetSymbolReferenceAtIsecOffset(
         catInfo.catBodyIsec, catLayout.klassOffset);
-    assert(extInfo.baseClassName.empty());
-    extInfo.baseClass = classSym;
-    extInfo.baseClassAddend = classAddend;
-    llvm::StringRef classPrefix(objc::symbol_names::klass);
-    if (classSym->getName().starts_with(classPrefix))
-      extInfo.baseClassName =
-          classSym->getName().substr(classPrefix.size()).str();
-    else
-      extInfo.baseClassName = classSym->getName().str();
+    extInfo.setBaseClass(classSym, classAddend);
   } else {
     [[maybe_unused]] auto [classSym, classAddend] =
         tryGetSymbolReferenceAtIsecOffset(catInfo.catBodyIsec,
                                           catLayout.klassOffset);
+    assert(!extInfo.baseClassName.empty());
     assert((extInfo.baseClass == classSym &&
             extInfo.baseClassAddend == classAddend) &&
            "Trying to parse category info into container with different base "
@@ -1155,7 +1157,7 @@ void ObjcCategoryMerger::createSymbolReference(Defined *refFrom,
                                                int64_t addend) {
   Relocation r = relocTemplate;
   r.offset = offset;
-  r.addend = addend;
+  r.setAddend(addend);
   r.referent = const_cast<Symbol *>(refTo);
   refFrom->isec()->relocs.push_back(r);
 }
@@ -1396,8 +1398,7 @@ bool ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
 
   // Collect all the info from the categories
   ClassExtensionInfo extInfo(catLayout);
-  extInfo.baseClass = baseClass;
-  extInfo.baseClassAddend = baseClassAddend;
+  extInfo.setBaseClass(baseClass, baseClassAddend);
 
   for (auto &catInfo : categories)
     if (!parseCatInfoToExtInfo(catInfo, extInfo))

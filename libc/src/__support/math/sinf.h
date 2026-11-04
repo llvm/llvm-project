@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINF_H
 
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \

@@ -18,6 +18,11 @@
 def IsPIC     : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC  : Predicate<"!TM.isPositionIndependent()">;
 
+def HasAcquireReleaseAtomics :
+    Predicate<"Subtarget->hasAcquireReleaseAtomics()">,
+    AssemblerPredicate<(all_of FeatureAcquireReleaseAtomics),
+                       "acquire-release-atomics">;
+
 def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
 
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
@@ -72,16 +77,12 @@ def HasNontrappingFPToInt :
 
 def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)),
+    AssemblerPredicate<(none_of FeatureNontrappingFPToInt),
                        "nontrapping-fptoint">;
 
 def HasReferenceTypes :
     Predicate<"Subtarget->hasReferenceTypes()">,
     AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
-
-def HasRelaxedAtomics :
-    Predicate<"Subtarget->hasRelaxedAtomics()">,
-    AssemblerPredicate<(all_of FeatureRelaxedAtomics), "relaxed-atomics">;
 
 def HasRelaxedSIMD :
     Predicate<"Subtarget->hasRelaxedSIMD()">,

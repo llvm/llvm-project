@@ -236,16 +236,16 @@ define amdgpu_ps float @v_fma_sss(float inreg %a, float inreg %b, float inreg %c
 ;
 ; GFX11-LABEL: v_fma_sss:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v0, s4
+; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, s3, s2, v0
+; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, s1, s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: v_fma_sss:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, s2, s3, v0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, s0, s1, v0
 ; GFX12-NEXT:    ; return to shader part epilog
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float %b, float %c)
   ret float %fma

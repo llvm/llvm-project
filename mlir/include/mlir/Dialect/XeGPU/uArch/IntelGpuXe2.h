@@ -27,6 +27,31 @@ struct Xe2 : public uArch {
   int getSubgroupSize() const override { return 16; }
   unsigned getGeneralPackedFormatBitSize() const override { return 32; }
 
+  // Restrictions Xe2 places on the 2D memory region accessed by the subgroup 2D
+  // block load / store / prefetch instructions.
+  //
+  // These are the hardware requirements as implemented by the Intel Graphics
+  // Compiler, and may differ from the restrictions documented for the Khronos
+  // extension that the XeVM lowering emits calls to. That extension only states
+  // that behavior is undefined when its restrictions are not met; it does not
+  // require an implementation to reject such cases, so the compiler is free to
+  // support them.
+  //
+  // The base address must be cache-line (64 byte) aligned. The base width must
+  // be at least 32 bytes and a multiple of 4 bytes. The base pitch must be at
+  // least 32 bytes and a multiple of 16 bytes.
+  const BlockIOMemoryRestrictions &
+  getBlockIOMemoryRestrictions() const override {
+    static constexpr BlockIOMemoryRestrictions restrictions = {
+        /*baseAddressAlignmentBytes=*/64,
+        /*minBaseWidthBytes=*/32,
+        /*baseWidthAlignmentBytes=*/4,
+        /*minBasePitchBytes=*/32,
+        /*basePitchAlignmentBytes=*/16,
+    };
+    return restrictions;
+  }
+
   static bool classof(const uArch *u) {
     return u->getKind() >= Kind::Xe2_First && u->getKind() <= Kind::Xe2_Last;
   }
