@@ -352,6 +352,46 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   return {Binary(raw), static_cast<enum ConversionResultFlags>(flags)};
 }
 
+// Converts significand * 10.**exponent exactly with 128-bit integer
+// arithmetic when |exponent| <= 19, so that 10.**|exponent| fits in 64 bits.
+template <int PREC>
+static RT_API_ATTRS bool ConvertSmallToBinary(std::uint64_t significand,
+    int exponent, bool isNegative, enum FortranRounding rounding,
+    ConversionToBinaryResult<PREC> &result) {
+  static_assert(PREC <= 53, "quotient must hold PREC + guard bits");
+  static constexpr std::uint64_t pow10[]{1, 10, 100, 1000, 10000, 100000,
+      1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000,
+      1000000000000, 10000000000000, 100000000000000, 1000000000000000,
+      10000000000000000, 100000000000000000, 1000000000000000000,
+      10000000000000000000u};
+  static_assert(pow10[19] == TenToThe(19));
+  if (exponent < -19 || exponent > 19) {
+    return false;
+  }
+  IntermediateFloat<PREC> f;
+  std::uint64_t n;
+  if (exponent >= 0) {
+    common::uint128_t product{common::uint128_t{significand} * pow10[exponent]};
+    if (product >> 64 != 0) {
+      return false;
+    }
+    n = static_cast<std::uint64_t>(product);
+  } else {
+    // Scale the dividend so that the quotient has 63 or 64 bits, and fold any
+    // remainder into its low bit as a sticky bit.
+    std::uint64_t divisor{pow10[-exponent]};
+    int shift{63 + common::BitsNeededFor(divisor) -
+        common::BitsNeededFor(significand)};
+    common::uint128_t dividend{common::uint128_t{significand} << shift};
+    common::uint128_t quotient{dividend / divisor};
+    n = static_cast<std::uint64_t>(quotient) | (dividend != quotient * divisor);
+    f.AdjustExponent(-shift);
+  }
+  f.SetTo(n);
+  result = f.ToBinary(isNegative, rounding);
+  return true;
+}
+
 template <int PREC, int LOG10RADIX>
 ConversionToBinaryResult<PREC>
 BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
@@ -361,6 +401,13 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   Normalize();
   if (digits_ == 0) { // zero value
     return {Real{SignBit()}};
+  }
+  if constexpr (PREC == 24 || PREC == 53) { // cannot overflow or underflow
+    if (ConversionToBinaryResult<PREC> result; digits_ == 1 &&
+        ConvertSmallToBinary<PREC>(
+            digit_[0], exponent_, isNegative_, rounding_, result)) {
+      return result;
+    }
   }
   // The value is not zero:  x = D. * 10.**E
   // Shift our perspective on the radix (& decimal) point so that
@@ -448,143 +495,10 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   return f.ToBinary(isNegative_, rounding_);
 }
 
-#if defined(__SIZEOF_INT128__)
-// Clinger fast path for IEEE double, round-to-nearest: when the significand is
-// exactly representable (<= 2**53) and 10**|exponent| is exactly representable
-// (|exponent| <= 22), a single correctly-rounded IEEE multiply or divide yields
-// the correctly-rounded result.  Inexactness is determined algebraically so the
-// flag matches the general path.  On success advances p exactly as ParseNumber
-// would and returns true; on failure leaves p unchanged.
-template <int PREC>
-static RT_API_ATTRS bool TryClingerFastPath(const char *&p, const char *end,
-    enum FortranRounding rounding, ConversionToBinaryResult<PREC> &result) {
-  if constexpr (PREC != 53) {
-    return false;
-  } else {
-    if (rounding != RoundNearest) {
-      return false;
-    }
-    static constexpr double pow10[]{1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8,
-        1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20,
-        1e21, 1e22};
-    static constexpr std::uint64_t pow5[]{1u, 5u, 25u, 125u, 625u, 3125u,
-        15625u, 78125u, 390625u, 1953125u, 9765625u, 48828125u, 244140625u,
-        1220703125u, 6103515625u, 30517578125u, 152587890625u, 762939453125u,
-        3814697265625u, 19073486328125u, 95367431640625u, 476837158203125u,
-        2384185791015625u};
-    constexpr std::uint64_t safeLimit{std::uint64_t{1} << 53};
-    const char *q{p};
-    if (end && q >= end) {
-      return false;
-    }
-    for (; q != end && *q == ' '; ++q) {
-    }
-    if (q == end) {
-      return false;
-    }
-    bool isNegative{*q == '-'};
-    if (*q == '-' || *q == '+') {
-      ++q;
-    }
-    std::uint64_t mantissa{0};
-    int fracDigits{0};
-    bool anyDigit{false};
-    for (; q != end && *q >= '0' && *q <= '9'; ++q) {
-      if (mantissa > safeLimit) {
-        return false; // too many significant digits for the exact fast path
-      }
-      mantissa = mantissa * 10 + (*q - '0');
-      anyDigit = true;
-    }
-    if (q != end && *q == '.') {
-      ++q;
-      for (; q != end && *q >= '0' && *q <= '9'; ++q) {
-        if (mantissa > safeLimit) {
-          return false;
-        }
-        mantissa = mantissa * 10 + (*q - '0');
-        ++fracDigits;
-        anyDigit = true;
-      }
-    }
-    if (!anyDigit) {
-      return false;
-    }
-    const char *tail{q}; // position after the significand
-    int exp10{-fracDigits};
-    if (q != end) {
-      char c{*q};
-      if (c == 'e' || c == 'E' || c == 'd' || c == 'D' || c == 'q' ||
-          c == 'Q') {
-        const char *e{q + 1};
-        bool negExpo{e != end && *e == '-'};
-        if (e != end && (*e == '-' || *e == '+')) {
-          ++e;
-        }
-        if (e != end && *e >= '0' && *e <= '9') {
-          int expo{0};
-          for (; e != end && *e >= '0' && *e <= '9'; ++e) {
-            if (expo < 100000) {
-              expo = 10 * expo + (*e - '0');
-            }
-          }
-          tail = e; // exponent consumed
-          exp10 += negExpo ? -expo : expo;
-        }
-      }
-    }
-    if (mantissa == 0) {
-      double zero{isNegative ? -0.0 : 0.0};
-      result = {BinaryFloatingPointNumber<PREC>{zero}, Exact};
-      p = tail;
-      return true;
-    }
-    if (mantissa > safeLimit || exp10 < -22 || exp10 > 22) {
-      return false;
-    }
-    double m{static_cast<double>(mantissa)};
-    double value;
-    bool inexact;
-    if (exp10 == 0) {
-      value = m;
-      inexact = false;
-    } else if (exp10 > 0) {
-      value = m * pow10[exp10];
-      // Exact iff mantissa * 5**exp10 has at most 53 significant bits.
-      unsigned __int128 prod{
-          static_cast<unsigned __int128>(mantissa) * pow5[exp10]};
-      auto lo{static_cast<std::uint64_t>(prod)};
-      auto hi{static_cast<std::uint64_t>(prod >> 64)};
-      int highBit{
-          hi != 0 ? 127 - __builtin_clzll(hi) : 63 - __builtin_clzll(lo)};
-      int lowBit{lo != 0 ? __builtin_ctzll(lo) : 64 + __builtin_ctzll(hi)};
-      inexact = highBit - lowBit + 1 > 53;
-    } else { // exp10 < 0
-      value = m / pow10[-exp10];
-      // Exact iff 5**(-exp10) divides the significand.
-      inexact = mantissa % pow5[-exp10] != 0;
-    }
-    if (isNegative) {
-      value = -value;
-    }
-    result = {
-        BinaryFloatingPointNumber<PREC>{value}, inexact ? Inexact : Exact};
-    p = tail;
-    return true;
-  }
-}
-#endif // __SIZEOF_INT128__
-
 template <int PREC, int LOG10RADIX>
 ConversionToBinaryResult<PREC>
 BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
     const char *&p, const char *limit) {
-#if defined(__SIZEOF_INT128__)
-  if (ConversionToBinaryResult<PREC> fast;
-      TryClingerFastPath<PREC>(p, limit, rounding_, fast)) {
-    return fast;
-  }
-#endif
   bool inexact{false};
   if (ParseNumber(p, inexact, limit)) {
     auto result{ConvertToBinary()};
