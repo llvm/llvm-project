@@ -28,7 +28,6 @@ void populateVectorToXeGPUConversionPatterns(RewritePatternSet &patterns);
 /// 1D transfer_reads a 2D block load can serve gain a leading unit dimension.
 /// Apply these before the conversion patterns.
 void populateVectorToXeGPULegalizationPatterns(RewritePatternSet &patterns);
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_VECTORTOXEGPU_VECTORTOXEGPU_H
