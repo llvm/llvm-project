@@ -976,7 +976,7 @@ Address CIRGenFunction::emitExtVectorElementLValue(LValue lv,
 cir::FuncOp CIRGenModule::getRawFunctionPointer(GlobalDecl gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
   if (fd->hasAttr<WeakRefAttr>())
-    return cast<cir::FuncOp>(getWeakRefReference(fd));
+    return cast_or_null<cir::FuncOp>(getWeakRefReference(fd));
   return getAddrOfFunction(gd);
 }
 
@@ -1197,10 +1197,13 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
          "Should not use decl without marking it used!");
 
   // A weakref variable refers to its alias target. Weakref functions are
-  // handled by emitFunctionDeclPointer.
+  // handled by getRawFunctionPointer.
   if (const auto *vd = dyn_cast<VarDecl>(nd);
       vd && vd->hasAttr<WeakRefAttr>()) {
-    auto aliasee = mlir::cast<cir::GlobalOp>(cgm.getWeakRefReference(vd));
+    auto aliasee =
+        mlir::cast_or_null<cir::GlobalOp>(cgm.getWeakRefReference(vd));
+    if (!aliasee)
+      return LValue();
     mlir::Value v =
         builder.createGetGlobal(getLoc(e->getSourceRange()), aliasee);
     Address addr(v, convertTypeForMem(vd->getType()),
@@ -2466,6 +2469,8 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   }
 
   cir::FuncOp callee = cgm.getRawFunctionPointer(gd);
+  if (!callee)
+    return CIRGenCallee();
 
   if ((cgm.getLangOpts().CUDA || cgm.getLangOpts().HIP) &&
       !cgm.getLangOpts().CUDAIsDevice && fd->hasAttr<CUDAGlobalAttr>()) {
@@ -2697,6 +2702,10 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   }
 
   CIRGenCallee callee = emitCallee(e->getCallee());
+
+  // emitCallee has already diagnosed (errorNYI) why there is no callee.
+  if (callee.isInvalid())
+    return getUndefRValue(e->getType());
 
   if (callee.isBuiltin())
     return emitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), e,

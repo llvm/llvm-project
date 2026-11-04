@@ -1284,8 +1284,10 @@ cir::GlobalOp CIRGenModule::getOrCreateCIRGlobal(
   // Lookup the entry, lazily creating it if necessary.
   cir::GlobalOp entry;
   if (mlir::Operation *v = getGlobalValue(mangledName)) {
-    if (!isa<cir::GlobalOp>(v))
+    if (!isa<cir::GlobalOp>(v)) {
       errorNYI(loc, "getOrCreateCIRGlobal: global with non-GlobalOp type");
+      return nullptr;
+    }
     entry = cast<cir::GlobalOp>(v);
   }
 
@@ -1430,8 +1432,24 @@ mlir::Operation *CIRGenModule::getWeakRefReference(const ValueDecl *vd) {
   assert(aa && "No alias?");
 
   // See if there is already something with the target's name in the module.
-  if (mlir::Operation *entry = getGlobalValue(aa->getAliasee()))
-    return entry;
+  if (mlir::Operation *entry = getGlobalValue(aa->getAliasee())) {
+    // Classic codegen is able to just treat whatever value it gets as the
+    // 'right' type.  This needs to introduce SOME sort of conversion it seems.
+    // For now, reject any cases that don't match.
+    if (const auto *fd = dyn_cast<FunctionDecl>(vd)) {
+      auto fn = dyn_cast<cir::FuncOp>(entry);
+
+      if (fn && fn.getFunctionType() == convertType(fd->getType()))
+        return fn;
+    } else if (auto gv = dyn_cast<cir::GlobalOp>(entry)) {
+      if (gv.getSymType() == getTypes().convertTypeForMem(vd->getType()))
+        return gv;
+    }
+
+    errorNYI(vd->getSourceRange(),
+             "weakref target already declared with a different type");
+    return nullptr;
+  }
 
   mlir::Operation *aliasee;
   if (const auto *fd = dyn_cast<FunctionDecl>(vd)) {
@@ -3016,8 +3034,16 @@ void CIRGenModule::emitTentativeDefinition(const VarDecl *d) {
   // If we already have a definition, not declaration, with the same mangled
   // name, emitting of declaration is not required (and would actually overwrite
   // the emitted definition).
-  if (gv && !mlir::cast<cir::GlobalOp>(gv).isDeclaration())
-    return;
+  if (gv) {
+    auto gvOp = dyn_cast<cir::GlobalOp>(gv);
+    if (!gvOp) {
+      errorNYI(d->getSourceRange(),
+               "emitTentativeDefinition: name already used by a non-global");
+      return;
+    }
+    if (!gvOp.isDeclaration())
+      return;
+  }
 
   // If we have not seen a reference to this variable yet, place it into the
   // deferred declarations table to be emitted if needed later.
