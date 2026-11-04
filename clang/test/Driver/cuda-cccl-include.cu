@@ -7,9 +7,9 @@
 // RUN:   | FileCheck %s --check-prefix=CCCL
 
 // CCCL: "-cc1" "-triple" "nvptx64-nvidia-cuda"
-// CCCL-SAME: "-internal-isystem" "[[CUDA:[^"]*Inputs/CUDA_130/usr/local/cuda]]/include{{[/\\]+}}cccl" {{.*}}"-internal-isystem" "[[CUDA]]/include"
+// CCCL-SAME: "-internal-isystem" "[[CUDA:[^"]*Inputs/CUDA_130/usr/local/cuda]]{{[/\\]+}}include{{[/\\]+}}cccl" {{.*}}"-internal-isystem" "[[CUDA]]{{[/\\]+}}include"
 // CCCL: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
-// CCCL-SAME: "-internal-isystem" "[[CUDA]]/include{{[/\\]+}}cccl" {{.*}}"-internal-isystem" "[[CUDA]]/include"
+// CCCL-SAME: "-internal-isystem" "[[CUDA]]{{[/\\]+}}include{{[/\\]+}}cccl" {{.*}}"-internal-isystem" "[[CUDA]]{{[/\\]+}}include"
 
 // Older CUDA installations have no include/cccl.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=sm_75 \
