@@ -2129,32 +2129,44 @@ bool DSEState::eliminateRedundantStoresViaDominatingConditions() {
   // We maintain a scoped hash table of the active dominating conditions for a
   // given node.
   ScopedHTType ActiveConditions;
-  auto GetDominatingCondition = [&](BasicBlock *BB)
-      -> std::optional<std::tuple<ConditionInfo, Instruction *, BasicBlock *>> {
+  using ConditionData = std::tuple<ConditionInfo, Instruction *, BasicBlock *>;
+  auto GetDominatingCondition =
+      [&](BasicBlock *BB) -> SmallVector<ConditionData, 2> {
     auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
     if (!BI)
-      return std::nullopt;
+      return {};
 
     // In case both blocks are the same, it is not possible to determine
     // if optimization is possible. (We would not want to optimize a store
     // in the FalseBB if condition is true and vice versa.)
     if (BI->getSuccessor(0) == BI->getSuccessor(1))
-      return std::nullopt;
+      return {};
 
     Instruction *ICmpL;
     CmpPredicate Pred;
     Value *StorePtr, *StoreVal;
-    if (!match(BI->getCondition(),
+    Value *Cond = BI->getCondition();
+    if (match(Cond,
+              m_NUWTrunc(m_Instruction(ICmpL, m_Load(m_Value(StorePtr)))))) {
+      Type *Ty = ICmpL->getType();
+      ConditionData TrueCond(ConditionInfo(StorePtr, ConstantInt::get(Ty, 1)),
+                             ICmpL, BI->getSuccessor(0));
+      ConditionData FalseCond(ConditionInfo(StorePtr, ConstantInt::get(Ty, 0)),
+                              ICmpL, BI->getSuccessor(1));
+      return {TrueCond, FalseCond};
+    }
+
+    if (!match(Cond,
                m_c_ICmp(Pred, m_Instruction(ICmpL, m_Load(m_Value(StorePtr))),
                         m_Value(StoreVal))) ||
         !ICmpInst::isEquality(Pred))
-      return std::nullopt;
+      return {};
 
     // Ensure the replacement is allowed when comparing pointers, as
     // the equality compares addresses only, not pointers' provenance.
     if (StoreVal->getType()->isPointerTy() &&
         !canReplacePointersIfEqual(StoreVal, ICmpL, DL))
-      return std::nullopt;
+      return {};
 
     unsigned ImpliedSuccIdx = Pred == ICmpInst::ICMP_EQ ? 0 : 1;
     BasicBlock *ImpliedSucc = BI->getSuccessor(ImpliedSuccIdx);
@@ -2196,13 +2208,12 @@ bool DSEState::eliminateRedundantStoresViaDominatingConditions() {
     }
 
     // See whether this basic block establishes a dominating condition.
-    auto MaybeCondition = GetDominatingCondition(BB);
+    auto Conditions = GetDominatingCondition(BB);
 
     for (DomTreeNode *Child : Node->children()) {
       // RAII scope for the active conditions.
       ScopedHTType::ScopeTy Scope(ActiveConditions);
-      if (MaybeCondition) {
-        const auto &[Cond, LI, ImpliedSucc] = *MaybeCondition;
+      for (const auto &[Cond, LI, ImpliedSucc] : Conditions) {
         if (DT.dominates(BasicBlockEdge(BB, ImpliedSucc), Child->getBlock())) {
           // Found a condition that holds for this child, dominated by the
           // current node via the equality edge. Propagate the condition to
