@@ -12,18 +12,17 @@ define void @test_shl_i512(ptr %result, ptr %input, i32 %shift) {
 ; SDAG-NEXT:    ldp x9, x8, [x1, #48]
 ; SDAG-NEXT:    movi.2d v0, #0000000000000000
 ; SDAG-NEXT:    ldp q1, q2, [x1]
-; SDAG-NEXT:    mov x10, sp
-; SDAG-NEXT:    ldr q3, [x1, #32]
-; SDAG-NEXT:    add x10, x10, #64
 ; SDAG-NEXT:    mvn w14, w2
+; SDAG-NEXT:    ldr q3, [x1, #32]
 ; SDAG-NEXT:    stp x9, x8, [sp, #112]
 ; SDAG-NEXT:    mov w8, w2
-; SDAG-NEXT:    ubfx x9, x8, #6, #3
+; SDAG-NEXT:    add x9, sp, #64
+; SDAG-NEXT:    ubfx x10, x8, #6, #3
 ; SDAG-NEXT:    stp q0, q0, [sp]
 ; SDAG-NEXT:    and x3, x8, #0x3f
 ; SDAG-NEXT:    stp q0, q0, [sp, #32]
 ; SDAG-NEXT:    eor x3, x3, #0x3f
-; SDAG-NEXT:    sub x10, x10, x9, lsl #3
+; SDAG-NEXT:    sub x10, x9, x10, lsl #3
 ; SDAG-NEXT:    stp q2, q3, [sp, #80]
 ; SDAG-NEXT:    str q1, [sp, #64]
 ; SDAG-NEXT:    ldp x9, x11, [x10]
@@ -1106,24 +1105,23 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; SDAG-NEXT:    ldp x8, x9, [x1, #112]
 ; SDAG-NEXT:    movi.2d v0, #0000000000000000
 ; SDAG-NEXT:    ldp q1, q2, [x1]
-; SDAG-NEXT:    mvn w4, w2
+; SDAG-NEXT:    add x10, sp, #128
 ; SDAG-NEXT:    ldp q3, q4, [x1, #32]
-; SDAG-NEXT:    ldr q7, [x1, #96]
+; SDAG-NEXT:    mvn w4, w2
 ; SDAG-NEXT:    ldp q5, q6, [x1, #64]
+; SDAG-NEXT:    ldr q7, [x1, #96]
 ; SDAG-NEXT:    stp x8, x9, [sp, #240]
 ; SDAG-NEXT:    mov w8, w2
-; SDAG-NEXT:    mov x9, sp
+; SDAG-NEXT:    ubfx x9, x8, #6, #4
 ; SDAG-NEXT:    stp q0, q0, [sp]
-; SDAG-NEXT:    ubfx x10, x8, #6, #4
-; SDAG-NEXT:    add x9, x9, #128
 ; SDAG-NEXT:    stp q0, q0, [sp, #32]
-; SDAG-NEXT:    stp q0, q0, [sp, #64]
 ; SDAG-NEXT:    ldp x29, x30, [sp, #336] ; 16-byte Folded Reload
-; SDAG-NEXT:    sub x1, x9, x10, lsl #3
-; SDAG-NEXT:    stp q0, q0, [sp, #96]
+; SDAG-NEXT:    sub x1, x10, x9, lsl #3
+; SDAG-NEXT:    stp q0, q0, [sp, #64]
 ; SDAG-NEXT:    and x10, x8, #0x3f
-; SDAG-NEXT:    stp q2, q3, [sp, #144]
+; SDAG-NEXT:    stp q0, q0, [sp, #96]
 ; SDAG-NEXT:    eor x10, x10, #0x3f
+; SDAG-NEXT:    stp q2, q3, [sp, #144]
 ; SDAG-NEXT:    stp q4, q5, [sp, #176]
 ; SDAG-NEXT:    stp q6, q7, [sp, #208]
 ; SDAG-NEXT:    str q1, [sp, #128]

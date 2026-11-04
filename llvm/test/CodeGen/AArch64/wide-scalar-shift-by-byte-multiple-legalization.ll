@@ -257,16 +257,15 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; ALL-NEXT:    ldr x10, [x1]
 ; ALL-NEXT:    ldr q1, [x0]
 ; ALL-NEXT:    stp x9, x8, [sp, #48]
-; ALL-NEXT:    mov x8, sp
+; ALL-NEXT:    add x8, sp, #32
 ; ALL-NEXT:    and x9, x10, #0x18
-; ALL-NEXT:    add x8, x8, #32
-; ALL-NEXT:    stp q0, q0, [sp]
-; ALL-NEXT:    str q1, [sp, #32]
+; ALL-NEXT:    stp q0, q1, [sp, #16]
 ; ALL-NEXT:    sub x8, x8, x9
 ; ALL-NEXT:    lsl x9, x10, #3
+; ALL-NEXT:    str q0, [sp]
 ; ALL-NEXT:    ldp x10, x11, [x8]
-; ALL-NEXT:    ldp x12, x8, [x8, #16]
 ; ALL-NEXT:    mvn w13, w9
+; ALL-NEXT:    ldp x12, x8, [x8, #16]
 ; ALL-NEXT:    and x9, x9, #0x38
 ; ALL-NEXT:    lsr x14, x10, #1
 ; ALL-NEXT:    lsr x15, x11, #1
@@ -302,12 +301,11 @@ define void @shl_32bytes_dwordOff(ptr %src.ptr, ptr %dwordOff.ptr, ptr %dst) nou
 ; ALL-NEXT:    ldr x10, [x1]
 ; ALL-NEXT:    ldr q1, [x0]
 ; ALL-NEXT:    stp x9, x8, [sp, #48]
-; ALL-NEXT:    mov x8, sp
-; ALL-NEXT:    ubfiz x9, x10, #3, #2
-; ALL-NEXT:    add x8, x8, #32
+; ALL-NEXT:    ubfiz x8, x10, #3, #2
+; ALL-NEXT:    add x9, sp, #32
 ; ALL-NEXT:    stp q0, q1, [sp, #16]
 ; ALL-NEXT:    str q0, [sp]
-; ALL-NEXT:    sub x8, x8, x9
+; ALL-NEXT:    sub x8, x9, x8
 ; ALL-NEXT:    ldp x9, x10, [x8, #16]
 ; ALL-NEXT:    ldr q0, [x8]
 ; ALL-NEXT:    str q0, [x2]
