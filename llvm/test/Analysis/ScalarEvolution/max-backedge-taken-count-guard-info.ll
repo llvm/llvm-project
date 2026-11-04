@@ -1700,7 +1700,7 @@ exit:
   ret void
 }
 
-; TODO: The guard `zext i32 (-1 + %len) to i64 ult 4` implies that
+; The guard `zext i32 (-1 + %len) to i64 ult 4` implies that
 ; `%len` is in [1, 5).
 define void @range_check_idiom_through_zext(i32 %len) {
 ; CHECK-LABEL: 'range_check_idiom_through_zext'
@@ -1710,12 +1710,12 @@ define void @range_check_idiom_through_zext(i32 %len) {
 ; CHECK-NEXT:    %len.wide = zext i32 %len.off to i64
 ; CHECK-NEXT:    --> (zext i32 (-1 + %len) to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %len) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %len) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %len LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,5) S: [1,5) Exits: %len LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @range_check_idiom_through_zext
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %len)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -2
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %len)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
