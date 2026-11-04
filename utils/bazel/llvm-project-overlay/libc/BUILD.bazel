@@ -578,6 +578,7 @@ alias(
         "isnanf80",
         "isnanl",
         "isnanf16",
+        "isnanbf16",
         "issignaling",
         "issignalingbf16",
         "issignalingf",
