@@ -1681,6 +1681,14 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   SmallPriorityWorklist<Loop *, 4> Worklist;
   appendLoopsToWorklist(LI, Worklist);
 
+  // Cache the number of loops in each top-level nest. The gated transforms
+  // never add loops to the worklist, so the counts stay a safe upper bound.
+  const unsigned MaxNestLoops = getScalarOptions(F).unroll_max_nest_loops;
+  DenseMap<const Loop *, unsigned> TopLevelNestSize;
+  if (MaxNestLoops)
+    for (const Loop *TopL : LI)
+      TopLevelNestSize[TopL] = TopL->getLoopsInPreorder().size();
+
   while (!Worklist.empty()) {
     // Because the LoopInfo stores the loops in RPO, we walk the worklist
     // from back to front so that we work forward across the CFG, which
@@ -1697,6 +1705,27 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     std::optional<bool> LocalAllowPeeling = UnrollOpts.AllowPeeling;
     if (PSI && PSI->hasHugeWorkingSetSize())
       LocalAllowPeeling = false;
+
+    // Suppress heuristic runtime/partial unrolling and peeling for loops in a
+    // pathologically large nest, where each such transform forces a whole-nest
+    // SCEV invalidation (quadratic compile time). Explicit unroll pragmas still
+    // win: gatherUnrollingPreferences applies these overrides before
+    // computeUnrollCount re-enables unrolling for pragma-marked loops.
+    std::optional<bool> LocalAllowRuntime = UnrollOpts.AllowRuntime;
+    std::optional<bool> LocalAllowPartial = UnrollOpts.AllowPartial;
+    if (MaxNestLoops) {
+      unsigned NestSize = TopLevelNestSize.lookup(L.getOutermostLoop());
+      if (NestSize > MaxNestLoops) {
+        LocalAllowRuntime = false;
+        LocalAllowPartial = false;
+        LocalAllowPeeling = false;
+        LLVM_DEBUG(dbgs().indent(1)
+                   << "Disabling runtime/partial unroll and peeling: "
+                      "outermost nest has "
+                   << NestSize << " loops (> " << MaxNestLoops << ").\n");
+      }
+    }
+
     std::string LoopName = std::string(L.getName());
     // The API here is quite complex to call and we allow to select some
     // flavors of unrolling during construction time (by setting UnrollOpts).
@@ -1705,8 +1734,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
                         /*PreserveLCSSA*/ true, UnrollOpts.OptLevel,
                         /*OnlyFullUnroll*/ false, UnrollOpts.OnlyWhenForced,
                         UnrollOpts.ForgetSCEV, UnrollOpts.PrepareForLTO,
-                        /*Threshold*/ std::nullopt, UnrollOpts.AllowPartial,
-                        UnrollOpts.AllowRuntime, UnrollOpts.AllowUpperBound,
+                        /*Threshold*/ std::nullopt, LocalAllowPartial,
+                        LocalAllowRuntime, UnrollOpts.AllowUpperBound,
                         LocalAllowPeeling, UnrollOpts.AllowProfileBasedPeeling,
                         UnrollOpts.FullUnrollMaxCount, UI, &AA);
     Changed |= Result != LoopUnrollResult::Unmodified;
