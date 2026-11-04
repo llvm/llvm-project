@@ -197,8 +197,9 @@ define PrimTy @return(ptr %p) nounwind {
 ;
 ; CHECK-MSVC64-I128-LABEL: return:
 ; CHECK-MSVC64-I128:       # %bb.0:
-; CHECK-MSVC64-I128-NEXT:    movq (%rcx), %rax
-; CHECK-MSVC64-I128-NEXT:    movq 8(%rcx), %rdx
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, %rax
+; CHECK-MSVC64-I128-NEXT:    movaps (%rdx), %xmm0
+; CHECK-MSVC64-I128-NEXT:    movaps %xmm0, (%rcx)
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: return:
@@ -210,8 +211,9 @@ define PrimTy @return(ptr %p) nounwind {
 ;
 ; CHECK-MINGW-I128-LABEL: return:
 ; CHECK-MINGW-I128:       # %bb.0:
-; CHECK-MINGW-I128-NEXT:    movq (%rcx), %rax
-; CHECK-MINGW-I128-NEXT:    movq 8(%rcx), %rdx
+; CHECK-MINGW-I128-NEXT:    movq %rcx, %rax
+; CHECK-MINGW-I128-NEXT:    movaps (%rdx), %xmm0
+; CHECK-MINGW-I128-NEXT:    movaps %xmm0, (%rcx)
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: return:
@@ -274,6 +276,8 @@ define PrimTy @first_arg(PrimTy %x) nounwind {
 ; CHECK-MSVC64-I128-LABEL: first_arg:
 ; CHECK-MSVC64-I128:       # %bb.0:
 ; CHECK-MSVC64-I128-NEXT:    movq %rcx, %rax
+; CHECK-MSVC64-I128-NEXT:    movq %r8, 8(%rcx)
+; CHECK-MSVC64-I128-NEXT:    movq %rdx, (%rcx)
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: first_arg:
@@ -286,6 +290,8 @@ define PrimTy @first_arg(PrimTy %x) nounwind {
 ; CHECK-MINGW-I128-LABEL: first_arg:
 ; CHECK-MINGW-I128:       # %bb.0:
 ; CHECK-MINGW-I128-NEXT:    movq %rcx, %rax
+; CHECK-MINGW-I128-NEXT:    movq %r8, 8(%rcx)
+; CHECK-MINGW-I128-NEXT:    movq %rdx, (%rcx)
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: first_arg:
@@ -354,8 +360,11 @@ define PrimTy @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, PrimTy %x) nounw
 ;
 ; CHECK-MSVC64-I128-LABEL: leading_args:
 ; CHECK-MSVC64-I128:       # %bb.0:
-; CHECK-MSVC64-I128-NEXT:    movq 40(%rsp), %rax
-; CHECK-MSVC64-I128-NEXT:    movq 48(%rsp), %rdx
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, %rax
+; CHECK-MSVC64-I128-NEXT:    movq 48(%rsp), %rcx
+; CHECK-MSVC64-I128-NEXT:    movq 56(%rsp), %rdx
+; CHECK-MSVC64-I128-NEXT:    movq %rdx, 8(%rax)
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, (%rax)
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: leading_args:
@@ -368,8 +377,11 @@ define PrimTy @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, PrimTy %x) nounw
 ;
 ; CHECK-MINGW-I128-LABEL: leading_args:
 ; CHECK-MINGW-I128:       # %bb.0:
-; CHECK-MINGW-I128-NEXT:    movq 40(%rsp), %rax
-; CHECK-MINGW-I128-NEXT:    movq 48(%rsp), %rdx
+; CHECK-MINGW-I128-NEXT:    movq %rcx, %rax
+; CHECK-MINGW-I128-NEXT:    movq 48(%rsp), %rcx
+; CHECK-MINGW-I128-NEXT:    movq 56(%rsp), %rdx
+; CHECK-MINGW-I128-NEXT:    movq %rdx, 8(%rax)
+; CHECK-MINGW-I128-NEXT:    movq %rcx, (%rax)
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: leading_args:
@@ -438,8 +450,9 @@ define PrimTy @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, Pr
 ;
 ; CHECK-MSVC64-I128-LABEL: many_leading_args:
 ; CHECK-MSVC64-I128:       # %bb.0:
-; CHECK-MSVC64-I128-NEXT:    movq 64(%rsp), %rax
-; CHECK-MSVC64-I128-NEXT:    movq 72(%rsp), %rdx
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, %rax
+; CHECK-MSVC64-I128-NEXT:    movaps 72(%rsp), %xmm0
+; CHECK-MSVC64-I128-NEXT:    movaps %xmm0, (%rcx)
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: many_leading_args:
@@ -452,8 +465,9 @@ define PrimTy @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, Pr
 ;
 ; CHECK-MINGW-I128-LABEL: many_leading_args:
 ; CHECK-MINGW-I128:       # %bb.0:
-; CHECK-MINGW-I128-NEXT:    movq 64(%rsp), %rax
-; CHECK-MINGW-I128-NEXT:    movq 72(%rsp), %rdx
+; CHECK-MINGW-I128-NEXT:    movq %rcx, %rax
+; CHECK-MINGW-I128-NEXT:    movaps 72(%rsp), %xmm0
+; CHECK-MINGW-I128-NEXT:    movaps %xmm0, (%rcx)
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: many_leading_args:
@@ -520,8 +534,9 @@ define PrimTy @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy 
 ;
 ; CHECK-MSVC64-I128-LABEL: trailing_arg:
 ; CHECK-MSVC64-I128:       # %bb.0:
-; CHECK-MSVC64-I128-NEXT:    movq 48(%rsp), %rax
-; CHECK-MSVC64-I128-NEXT:    movq 56(%rsp), %rdx
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, %rax
+; CHECK-MSVC64-I128-NEXT:    movaps 56(%rsp), %xmm0
+; CHECK-MSVC64-I128-NEXT:    movaps %xmm0, (%rcx)
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: trailing_arg:
@@ -534,8 +549,9 @@ define PrimTy @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy 
 ;
 ; CHECK-MINGW-I128-LABEL: trailing_arg:
 ; CHECK-MINGW-I128:       # %bb.0:
-; CHECK-MINGW-I128-NEXT:    movq 48(%rsp), %rax
-; CHECK-MINGW-I128-NEXT:    movq 56(%rsp), %rdx
+; CHECK-MINGW-I128-NEXT:    movq %rcx, %rax
+; CHECK-MINGW-I128-NEXT:    movaps 56(%rsp), %xmm0
+; CHECK-MINGW-I128-NEXT:    movaps %xmm0, (%rcx)
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: trailing_arg:
@@ -609,9 +625,12 @@ define void @call_first_arg(PrimTy %x) nounwind {
 ;
 ; CHECK-MSVC64-I128-LABEL: call_first_arg:
 ; CHECK-MSVC64-I128:       # %bb.0:
-; CHECK-MSVC64-I128-NEXT:    subq $40, %rsp
+; CHECK-MSVC64-I128-NEXT:    subq $56, %rsp
+; CHECK-MSVC64-I128-NEXT:    movq %rdx, %r8
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, %rdx
+; CHECK-MSVC64-I128-NEXT:    leaq 32(%rsp), %rcx
 ; CHECK-MSVC64-I128-NEXT:    callq first_arg
-; CHECK-MSVC64-I128-NEXT:    addq $40, %rsp
+; CHECK-MSVC64-I128-NEXT:    addq $56, %rsp
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: call_first_arg:
@@ -627,9 +646,12 @@ define void @call_first_arg(PrimTy %x) nounwind {
 ;
 ; CHECK-MINGW-I128-LABEL: call_first_arg:
 ; CHECK-MINGW-I128:       # %bb.0:
-; CHECK-MINGW-I128-NEXT:    subq $40, %rsp
+; CHECK-MINGW-I128-NEXT:    subq $56, %rsp
+; CHECK-MINGW-I128-NEXT:    movq %rdx, %r8
+; CHECK-MINGW-I128-NEXT:    movq %rcx, %rdx
+; CHECK-MINGW-I128-NEXT:    leaq 32(%rsp), %rcx
 ; CHECK-MINGW-I128-NEXT:    callq first_arg
-; CHECK-MINGW-I128-NEXT:    addq $40, %rsp
+; CHECK-MINGW-I128-NEXT:    addq $56, %rsp
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: call_first_arg:
@@ -720,15 +742,16 @@ define void @call_leading_args(PrimTy %x) nounwind {
 ;
 ; CHECK-MSVC64-I128-LABEL: call_leading_args:
 ; CHECK-MSVC64-I128:       # %bb.0:
-; CHECK-MSVC64-I128-NEXT:    subq $56, %rsp
-; CHECK-MSVC64-I128-NEXT:    movq %rdx, 40(%rsp)
-; CHECK-MSVC64-I128-NEXT:    movq %rcx, 32(%rsp)
-; CHECK-MSVC64-I128-NEXT:    xorl %ecx, %ecx
+; CHECK-MSVC64-I128-NEXT:    subq $88, %rsp
+; CHECK-MSVC64-I128-NEXT:    movq %rdx, 48(%rsp)
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, 40(%rsp)
+; CHECK-MSVC64-I128-NEXT:    movq $0, 32(%rsp)
+; CHECK-MSVC64-I128-NEXT:    leaq 64(%rsp), %rcx
 ; CHECK-MSVC64-I128-NEXT:    xorl %edx, %edx
 ; CHECK-MSVC64-I128-NEXT:    xorl %r8d, %r8d
 ; CHECK-MSVC64-I128-NEXT:    xorl %r9d, %r9d
 ; CHECK-MSVC64-I128-NEXT:    callq leading_args
-; CHECK-MSVC64-I128-NEXT:    addq $56, %rsp
+; CHECK-MSVC64-I128-NEXT:    addq $88, %rsp
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: call_leading_args:
@@ -749,15 +772,16 @@ define void @call_leading_args(PrimTy %x) nounwind {
 ;
 ; CHECK-MINGW-I128-LABEL: call_leading_args:
 ; CHECK-MINGW-I128:       # %bb.0:
-; CHECK-MINGW-I128-NEXT:    subq $56, %rsp
-; CHECK-MINGW-I128-NEXT:    movq %rdx, 40(%rsp)
-; CHECK-MINGW-I128-NEXT:    movq %rcx, 32(%rsp)
-; CHECK-MINGW-I128-NEXT:    xorl %ecx, %ecx
+; CHECK-MINGW-I128-NEXT:    subq $88, %rsp
+; CHECK-MINGW-I128-NEXT:    movq %rdx, 48(%rsp)
+; CHECK-MINGW-I128-NEXT:    movq %rcx, 40(%rsp)
+; CHECK-MINGW-I128-NEXT:    movq $0, 32(%rsp)
+; CHECK-MINGW-I128-NEXT:    leaq 64(%rsp), %rcx
 ; CHECK-MINGW-I128-NEXT:    xorl %edx, %edx
 ; CHECK-MINGW-I128-NEXT:    xorl %r8d, %r8d
 ; CHECK-MINGW-I128-NEXT:    xorl %r9d, %r9d
 ; CHECK-MINGW-I128-NEXT:    callq leading_args
-; CHECK-MINGW-I128-NEXT:    addq $56, %rsp
+; CHECK-MINGW-I128-NEXT:    addq $88, %rsp
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: call_leading_args:
@@ -875,17 +899,18 @@ define void @call_many_leading_args(PrimTy %x) nounwind {
 ;
 ; CHECK-MSVC64-I128-LABEL: call_many_leading_args:
 ; CHECK-MSVC64-I128:       # %bb.0:
-; CHECK-MSVC64-I128-NEXT:    subq $72, %rsp
-; CHECK-MSVC64-I128-NEXT:    movq %rdx, 56(%rsp)
-; CHECK-MSVC64-I128-NEXT:    movq %rcx, 48(%rsp)
+; CHECK-MSVC64-I128-NEXT:    subq $104, %rsp
+; CHECK-MSVC64-I128-NEXT:    movq %rdx, 64(%rsp)
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, 56(%rsp)
+; CHECK-MSVC64-I128-NEXT:    movq $0, 48(%rsp)
 ; CHECK-MSVC64-I128-NEXT:    movq $0, 40(%rsp)
 ; CHECK-MSVC64-I128-NEXT:    movq $0, 32(%rsp)
-; CHECK-MSVC64-I128-NEXT:    xorl %ecx, %ecx
+; CHECK-MSVC64-I128-NEXT:    leaq 80(%rsp), %rcx
 ; CHECK-MSVC64-I128-NEXT:    xorl %edx, %edx
 ; CHECK-MSVC64-I128-NEXT:    xorl %r8d, %r8d
 ; CHECK-MSVC64-I128-NEXT:    xorl %r9d, %r9d
 ; CHECK-MSVC64-I128-NEXT:    callq many_leading_args
-; CHECK-MSVC64-I128-NEXT:    addq $72, %rsp
+; CHECK-MSVC64-I128-NEXT:    addq $104, %rsp
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: call_many_leading_args:
@@ -910,17 +935,18 @@ define void @call_many_leading_args(PrimTy %x) nounwind {
 ;
 ; CHECK-MINGW-I128-LABEL: call_many_leading_args:
 ; CHECK-MINGW-I128:       # %bb.0:
-; CHECK-MINGW-I128-NEXT:    subq $72, %rsp
-; CHECK-MINGW-I128-NEXT:    movq %rdx, 56(%rsp)
-; CHECK-MINGW-I128-NEXT:    movq %rcx, 48(%rsp)
+; CHECK-MINGW-I128-NEXT:    subq $104, %rsp
+; CHECK-MINGW-I128-NEXT:    movq %rdx, 64(%rsp)
+; CHECK-MINGW-I128-NEXT:    movq %rcx, 56(%rsp)
+; CHECK-MINGW-I128-NEXT:    movq $0, 48(%rsp)
 ; CHECK-MINGW-I128-NEXT:    movq $0, 40(%rsp)
 ; CHECK-MINGW-I128-NEXT:    movq $0, 32(%rsp)
-; CHECK-MINGW-I128-NEXT:    xorl %ecx, %ecx
+; CHECK-MINGW-I128-NEXT:    leaq 80(%rsp), %rcx
 ; CHECK-MINGW-I128-NEXT:    xorl %edx, %edx
 ; CHECK-MINGW-I128-NEXT:    xorl %r8d, %r8d
 ; CHECK-MINGW-I128-NEXT:    xorl %r9d, %r9d
 ; CHECK-MINGW-I128-NEXT:    callq many_leading_args
-; CHECK-MINGW-I128-NEXT:    addq $72, %rsp
+; CHECK-MINGW-I128-NEXT:    addq $104, %rsp
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: call_many_leading_args:
@@ -1035,15 +1061,16 @@ define void @call_trailing_arg(PrimTy %x) nounwind {
 ;
 ; CHECK-MSVC64-I128-LABEL: call_trailing_arg:
 ; CHECK-MSVC64-I128:       # %bb.0:
-; CHECK-MSVC64-I128-NEXT:    subq $56, %rsp
-; CHECK-MSVC64-I128-NEXT:    movq %rdx, 40(%rsp)
-; CHECK-MSVC64-I128-NEXT:    movq %rcx, 32(%rsp)
-; CHECK-MSVC64-I128-NEXT:    xorl %ecx, %ecx
+; CHECK-MSVC64-I128-NEXT:    subq $88, %rsp
+; CHECK-MSVC64-I128-NEXT:    movq %rdx, 48(%rsp)
+; CHECK-MSVC64-I128-NEXT:    movq %rcx, 40(%rsp)
+; CHECK-MSVC64-I128-NEXT:    movq $0, 32(%rsp)
+; CHECK-MSVC64-I128-NEXT:    leaq 64(%rsp), %rcx
 ; CHECK-MSVC64-I128-NEXT:    xorl %edx, %edx
 ; CHECK-MSVC64-I128-NEXT:    xorl %r8d, %r8d
 ; CHECK-MSVC64-I128-NEXT:    xorl %r9d, %r9d
 ; CHECK-MSVC64-I128-NEXT:    callq trailing_arg
-; CHECK-MSVC64-I128-NEXT:    addq $56, %rsp
+; CHECK-MSVC64-I128-NEXT:    addq $88, %rsp
 ; CHECK-MSVC64-I128-NEXT:    retq
 ;
 ; CHECK-MINGW-F128-LABEL: call_trailing_arg:
@@ -1064,15 +1091,16 @@ define void @call_trailing_arg(PrimTy %x) nounwind {
 ;
 ; CHECK-MINGW-I128-LABEL: call_trailing_arg:
 ; CHECK-MINGW-I128:       # %bb.0:
-; CHECK-MINGW-I128-NEXT:    subq $56, %rsp
-; CHECK-MINGW-I128-NEXT:    movq %rdx, 40(%rsp)
-; CHECK-MINGW-I128-NEXT:    movq %rcx, 32(%rsp)
-; CHECK-MINGW-I128-NEXT:    xorl %ecx, %ecx
+; CHECK-MINGW-I128-NEXT:    subq $88, %rsp
+; CHECK-MINGW-I128-NEXT:    movq %rdx, 48(%rsp)
+; CHECK-MINGW-I128-NEXT:    movq %rcx, 40(%rsp)
+; CHECK-MINGW-I128-NEXT:    movq $0, 32(%rsp)
+; CHECK-MINGW-I128-NEXT:    leaq 64(%rsp), %rcx
 ; CHECK-MINGW-I128-NEXT:    xorl %edx, %edx
 ; CHECK-MINGW-I128-NEXT:    xorl %r8d, %r8d
 ; CHECK-MINGW-I128-NEXT:    xorl %r9d, %r9d
 ; CHECK-MINGW-I128-NEXT:    callq trailing_arg
-; CHECK-MINGW-I128-NEXT:    addq $56, %rsp
+; CHECK-MINGW-I128-NEXT:    addq $88, %rsp
 ; CHECK-MINGW-I128-NEXT:    retq
 ;
 ; CHECK-X86-LABEL: call_trailing_arg:

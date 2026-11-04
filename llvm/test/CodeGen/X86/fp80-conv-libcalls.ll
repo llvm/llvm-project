@@ -92,15 +92,19 @@ define i128 @test_fptosi(x86_fp80 %x) nounwind {
 ;
 ; MSVC-LABEL: test_fptosi:
 ; MSVC:       # %bb.0:
-; MSVC-NEXT:    subq $56, %rsp
-; MSVC-NEXT:    fldt (%rcx)
+; MSVC-NEXT:    pushq %rsi
+; MSVC-NEXT:    subq $64, %rsp
+; MSVC-NEXT:    movq %rcx, %rsi
+; MSVC-NEXT:    fldt (%rdx)
 ; MSVC-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; MSVC-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; MSVC-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; MSVC-NEXT:    callq __fixxfti
-; MSVC-NEXT:    movq %xmm0, %rax
-; MSVC-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; MSVC-NEXT:    movq %xmm0, %rdx
-; MSVC-NEXT:    addq $56, %rsp
+; MSVC-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; MSVC-NEXT:    movaps %xmm0, (%rsi)
+; MSVC-NEXT:    movq %rsi, %rax
+; MSVC-NEXT:    addq $64, %rsp
+; MSVC-NEXT:    popq %rsi
 ; MSVC-NEXT:    retq
   %r = fptosi x86_fp80 %x to i128
   ret i128 %r

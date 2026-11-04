@@ -31,17 +31,25 @@ define i128 @fptoui_f16_to_i128(half %x) nounwind {
 ;
 ; WIN-SSE2-LABEL: fptoui_f16_to_i128:
 ; WIN-SSE2:       # %bb.0:
-; WIN-SSE2-NEXT:    subq $40, %rsp
+; WIN-SSE2-NEXT:    pushq %rsi
+; WIN-SSE2-NEXT:    subq $32, %rsp
+; WIN-SSE2-NEXT:    movaps %xmm1, %xmm0
+; WIN-SSE2-NEXT:    movq %rcx, %rsi
 ; WIN-SSE2-NEXT:    callq __extendhfsf2
 ; WIN-SSE2-NEXT:    cvttss2si %xmm0, %rax
-; WIN-SSE2-NEXT:    xorl %edx, %edx
-; WIN-SSE2-NEXT:    addq $40, %rsp
+; WIN-SSE2-NEXT:    movq %rax, (%rsi)
+; WIN-SSE2-NEXT:    movq $0, 8(%rsi)
+; WIN-SSE2-NEXT:    movq %rsi, %rax
+; WIN-SSE2-NEXT:    addq $32, %rsp
+; WIN-SSE2-NEXT:    popq %rsi
 ; WIN-SSE2-NEXT:    retq
 ;
 ; WIN-FP16-LABEL: fptoui_f16_to_i128:
 ; WIN-FP16:       # %bb.0:
-; WIN-FP16-NEXT:    vcvttsh2si %xmm0, %rax
-; WIN-FP16-NEXT:    xorl %edx, %edx
+; WIN-FP16-NEXT:    movq %rcx, %rax
+; WIN-FP16-NEXT:    vcvttsh2si %xmm1, %rcx
+; WIN-FP16-NEXT:    movq %rcx, (%rax)
+; WIN-FP16-NEXT:    movq $0, 8(%rax)
 ; WIN-FP16-NEXT:    retq
   %r = fptoui half %x to i128
   ret i128 %r
@@ -75,17 +83,25 @@ define i128 @fptoui_f16_to_i128_strict(half %x) nounwind strictfp {
 ;
 ; WIN-SSE2-LABEL: fptoui_f16_to_i128_strict:
 ; WIN-SSE2:       # %bb.0:
-; WIN-SSE2-NEXT:    subq $40, %rsp
+; WIN-SSE2-NEXT:    pushq %rsi
+; WIN-SSE2-NEXT:    subq $32, %rsp
+; WIN-SSE2-NEXT:    movaps %xmm1, %xmm0
+; WIN-SSE2-NEXT:    movq %rcx, %rsi
 ; WIN-SSE2-NEXT:    callq __extendhfsf2
 ; WIN-SSE2-NEXT:    cvttss2si %xmm0, %rax
-; WIN-SSE2-NEXT:    xorl %edx, %edx
-; WIN-SSE2-NEXT:    addq $40, %rsp
+; WIN-SSE2-NEXT:    movq %rax, (%rsi)
+; WIN-SSE2-NEXT:    movq $0, 8(%rsi)
+; WIN-SSE2-NEXT:    movq %rsi, %rax
+; WIN-SSE2-NEXT:    addq $32, %rsp
+; WIN-SSE2-NEXT:    popq %rsi
 ; WIN-SSE2-NEXT:    retq
 ;
 ; WIN-FP16-LABEL: fptoui_f16_to_i128_strict:
 ; WIN-FP16:       # %bb.0:
-; WIN-FP16-NEXT:    vcvttsh2si %xmm0, %rax
-; WIN-FP16-NEXT:    xorl %edx, %edx
+; WIN-FP16-NEXT:    movq %rcx, %rax
+; WIN-FP16-NEXT:    vcvttsh2si %xmm1, %rcx
+; WIN-FP16-NEXT:    movq %rcx, (%rax)
+; WIN-FP16-NEXT:    movq $0, 8(%rax)
 ; WIN-FP16-NEXT:    retq
   %r = call i128 @llvm.experimental.constrained.fptoui.i128.f16(half %x, metadata !"fpexcept.strict") strictfp
   ret i128 %r

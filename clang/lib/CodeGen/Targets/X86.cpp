@@ -3673,7 +3673,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 
     case BuiltinType::Int128:
     case BuiltinType::UInt128:
-    case BuiltinType::Float128:
+    case BuiltinType::Float128: {
       // If it's a parameter type, the normal ABI rule is that arguments larger
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
@@ -3682,32 +3682,32 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
             Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
 
-      // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
-      // Clang matches them for compatibility.
+      // Win64 C returns i128 and f128 via sret. Other calling conventions,
+      // including vectorcall and regcall, return them in XMM registers.
+      auto IsWin64StackCC = [this](unsigned CC) -> bool {
+        switch (CC) {
+        case llvm::CallingConv::Win64:
+          return true;
+        case llvm::CallingConv::C:
+          return getTarget().getTriple().isOSWindowsOrUEFI();
+        default:
+          return false;
+        }
+      };
+
+      if (IsWin64StackCC(CC) &&
+          (BT->getKind() == BuiltinType::Float128 ||
+           getContext().getLangOpts().getClangABICompat() >
+               LangOptions::ClangABI::Ver23))
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
+
       if (BT->getKind() == BuiltinType::Int128 ||
           BT->getKind() == BuiltinType::UInt128)
         return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
             llvm::Type::getInt64Ty(getVMContext()), 2));
-
-      // Mingw64 GCC returns f128 via sret, and Clang matches that for
-      // compatibility. This mirrors the X86 backend's CanLowerReturn logic.
-      if (BT->getKind() == BuiltinType::Float128) {
-        auto IsWin64F128StackCC = [this](unsigned CC) -> bool {
-          switch (CC) {
-          case llvm::CallingConv::Win64:
-            return true;
-          case llvm::CallingConv::C:
-            return getTarget().getTriple().isOSWindowsOrUEFI();
-          default:
-            return false;
-          }
-        };
-
-        if (IsWin64F128StackCC(CC))
-          return getNaturalAlignIndirect(
-              Ty, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/false);
-      }
       break;
+    }
 
     default:
       break;
@@ -3765,6 +3765,17 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() =
         classify(FI.getReturnType(), FreeSSERegs, ClassifyKind::Return, CC);
+
+  const BuiltinType *BT = FI.getReturnType()->getAs<BuiltinType>();
+  bool IsI128OrF128 = BT && (BT->getKind() == BuiltinType::Int128 ||
+                             BT->getKind() == BuiltinType::UInt128 ||
+                             BT->getKind() == BuiltinType::Float128);
+  if (IsI128OrF128 &&
+      getContext().getLangOpts().getClangABICompat() >
+          LangOptions::ClangABI::Ver23 &&
+      FI.getReturnInfo().isIndirect() && FI.isInstanceMethod() &&
+      getCXXABI().isSRetParameterAfterThis())
+    FI.getReturnInfo().setSRetAfterThis(true);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
