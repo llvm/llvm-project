@@ -6,6 +6,8 @@
 --- |
   define void @dead_def() !dbg !4 { ret void }
   define void @dead_artifact() !dbg !7 { ret void }
+  define void @forwarded_merge() !dbg !10 { ret void }
+  define void @copied_merge() !dbg !13 { ret void }
 
   !llvm.module.flags = !{!0}
   !llvm.dbg.cu = !{!1}
@@ -19,6 +21,12 @@
   !7 = distinct !DISubprogram(name: "dead_artifact", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
   !8 = !DILocalVariable(name: "y", scope: !7, file: !2)
   !9 = !DILocation(line: 2, scope: !7)
+  !10 = distinct !DISubprogram(name: "forwarded_merge", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !11 = !DILocalVariable(name: "z", scope: !10, file: !2)
+  !12 = !DILocation(line: 3, scope: !10)
+  !13 = distinct !DISubprogram(name: "copied_merge", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !14 = !DILocalVariable(name: "w", scope: !13, file: !2)
+  !15 = !DILocation(line: 4, scope: !13)
 ...
 
 # CHECK-LABEL: name: dead_def
@@ -55,4 +63,49 @@ body:             |
     %lo:_(i32), %hi:_(i32) = G_UNMERGE_VALUES %vec(<2 x i32>)
     $w0 = COPY %lo(i32)
     RET_ReallyLR implicit $w0
+...
+
+# The unmerge of a merge folds away. The debug use of %wide becomes undef, but
+# %lo is replaced with %a, so its debug use stays valid.
+# CHECK-LABEL: name: forwarded_merge
+# CHECK-NOT:   G_MERGE_VALUES
+# CHECK:       DBG_VALUE $noreg, $noreg
+# CHECK:       DBG_VALUE %a(i64), $noreg
+# CHECK:       $x0 = COPY %a(i64)
+---
+name:            forwarded_merge
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    %a:_(i64) = COPY $x0
+    %b:_(i64) = COPY $x1
+    %wide:_(i128) = G_MERGE_VALUES %a(i64), %b(i64)
+    DBG_VALUE %wide(i128), $noreg, !11, !DIExpression(), debug-location !12
+    %lo:_(i64), %hi:_(i64) = G_UNMERGE_VALUES %wide(i128)
+    DBG_VALUE %lo(i64), $noreg, !11, !DIExpression(), debug-location !12
+    $x0 = COPY %lo(i64)
+    RET_ReallyLR implicit $x0
+...
+
+# Same, but the register class of %lo forces a COPY, which now defines %lo, so
+# its debug use stays valid.
+# CHECK-LABEL: name: copied_merge
+# CHECK-NOT:   G_MERGE_VALUES
+# CHECK:       %lo:gpr64(i64) = COPY %a(i64)
+# CHECK-NEXT:  DBG_VALUE %lo(i64), $noreg
+# CHECK-NEXT:  $x0 = COPY %lo(i64)
+---
+name:            copied_merge
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    %a:_(i64) = COPY $x0
+    %b:_(i64) = COPY $x1
+    %wide:_(i128) = G_MERGE_VALUES %a(i64), %b(i64)
+    %lo:gpr64(i64), %hi:_(i64) = G_UNMERGE_VALUES %wide(i128)
+    DBG_VALUE %lo(i64), $noreg, !14, !DIExpression(), debug-location !15
+    $x0 = COPY %lo(i64)
+    RET_ReallyLR implicit $x0
 ...
