@@ -490,35 +490,35 @@ void OmpStructureChecker::CheckApplyConstruct(
       continue;
     }
 
-      auto [affectedDepth, affectedPerfect]{
-          GetAffectedNestDepthWithReason(*sp, version)};
-      needPerfect = needPerfect || affectedPerfect;
-      auto haveDepth =
-          needPerfect ? sequence.depth().perfect : sequence.depth().semantic;
-      if (affectedDepth && haveDepth) {
-        if (*affectedDepth.value > (*haveDepth.value - (index - 1))) {
-          auto indexValue = ((index - 1) % *max.value) + 1;
-          auto &msg{context_.Say(sp->source,
-              "This construct requires a%s nest of depth %" PRId64
-              ", but the associated nest at index %" PRId64
-              " is a%s nest of depth %" PRId64 ""_err_en_US,
-              perfectTxt, *affectedDepth.value, indexValue, perfectTxt,
-              (*haveDepth.value - (index - 1)))};
-          haveDepth.reason.AttachTo(msg);
-          affectedDepth.reason.AttachTo(msg);
-        }
-      }
-      sequence.updateLoopSequenceWith(index, *sp);
-      auto depth =
-          needPerfect ? sequence.depth().perfect : sequence.depth().semantic;
-      if (!depth) {
+    auto [affectedDepth, affectedPerfect]{
+        GetAffectedNestDepthWithReason(*sp, version)};
+    needPerfect = needPerfect || affectedPerfect;
+    auto haveDepth =
+        needPerfect ? sequence.depth().perfect : sequence.depth().semantic;
+    if (affectedDepth && haveDepth) {
+      if (*affectedDepth.value > (*haveDepth.value - (index - 1))) {
+        auto indexValue = ((index - 1) % *max.value) + 1;
         auto &msg{context_.Say(sp->source,
-            "Cannot apply the transformation at index %" PRId64 ""_err_en_US,
-            directiveList[i].first)};
-        depth.reason.AttachTo(msg);
-      } else {
-        CheckApplyConstruct(*sp, sequence, needPerfect);
+            "This construct requires a%s nest of depth %" PRId64
+            ", but the associated nest at index %" PRId64
+            " is a%s nest of depth %" PRId64 ""_err_en_US,
+            perfectTxt, *affectedDepth.value, indexValue, perfectTxt,
+            (*haveDepth.value - (index - 1)))};
+        haveDepth.reason.AttachTo(msg);
+        affectedDepth.reason.AttachTo(msg);
       }
+    }
+    sequence.updateLoopSequenceWith(index, *sp);
+    auto depth =
+        needPerfect ? sequence.depth().perfect : sequence.depth().semantic;
+    if (!depth) {
+      auto &msg{context_.Say(sp->source,
+          "Cannot apply the transformation at index %" PRId64 ""_err_en_US,
+          directiveList[i].first)};
+      depth.reason.AttachTo(msg);
+    } else {
+      CheckApplyConstruct(*sp, sequence, needPerfect);
+    }
   }
 }
 
