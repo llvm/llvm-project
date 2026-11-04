@@ -1,23 +1,29 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-SSE --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-LD2-DIRECT,LLVM-LD3-DIRECT --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-LD2-MEMORY,LLVM-LD3-MEMORY --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23-sse.ll
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-LD2-DIRECT,LLVM-LD3-DIRECT --input-file=%t-compat23-sse.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -target-feature +avx -fclangir -emit-cir %s -o %t-avx.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-AVX --input-file=%t-avx.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -target-feature +avx -fclangir -emit-llvm %s -o %t-avx-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX --input-file=%t-avx-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX,LLVM-LD2-DIRECT,LLVM-LD3-DIRECT --input-file=%t-avx-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -target-feature +avx -emit-llvm %s -o %t-avx.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX --input-file=%t-avx.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX,LLVM-LD2-DIRECT,LLVM-LD3-MEMORY --input-file=%t-avx.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -target-feature +avx -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23-avx.ll
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX,LLVM-LD2-DIRECT,LLVM-LD3-DIRECT --input-file=%t-compat23-avx.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -target-feature +avx512f -fclangir -emit-cir %s -o %t-avx512.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-AVX512 --input-file=%t-avx512.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -target-feature +avx512f -fclangir -emit-llvm %s -o %t-avx512-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512 --input-file=%t-avx512-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512,LLVM-LD2-DIRECT,LLVM-LD3-DIRECT --input-file=%t-avx512-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -target-feature +avx512f -emit-llvm %s -o %t-avx512.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512 --input-file=%t-avx512.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512,LLVM-LD2-DIRECT,LLVM-LD3-DIRECT --input-file=%t-avx512.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-psabi -target-feature +avx512f -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23-avx512.ll
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512,LLVM-LD2-DIRECT,LLVM-LD3-DIRECT --input-file=%t-compat23-avx512.ll %s
 
 typedef long double ld1 __attribute__((vector_size(16)));
 typedef long double ld2 __attribute__((vector_size(32)));
@@ -154,14 +160,15 @@ ld2 arg_ld2(int n, ...) {
 // CIR: %[[VPTR:.+]] = cir.cast bitcast %[[ALIGNED]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.vector<2 x !cir.long_double<!cir.f80>>>
 // CIR: cir.load align(32) %[[VPTR]] : !cir.ptr<!cir.vector<2 x !cir.long_double<!cir.f80>>>, !cir.vector<2 x !cir.long_double<!cir.f80>>
 
-// LLVM-LABEL: define dso_local <2 x x86_fp80> @arg_ld2(i32 noundef %{{[^,)]+}}, ...)
+// LLVM-LD2-DIRECT-LABEL: define dso_local <2 x x86_fp80> @arg_ld2(i32 noundef %{{[^,)]+}}, ...)
+// LLVM-LD2-MEMORY-LABEL: define dso_local void @arg_ld2(ptr dead_on_unwind noalias writable sret(<2 x x86_fp80>) align 32 %{{[^,)]+}}, i32 noundef %{{[^,)]+}}, ...)
 // LLVM-NOT: icmp
 // LLVM: %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
 // LLVM: load <2 x x86_fp80>, ptr %[[ALIGNED]], align 32
 
-// Two elements take 32 bytes, which pass in memory below AVX.  The vector on
-// its own is still returned directly, but a record holding it is returned
-// through sret.
+// Two elements take 32 bytes, which pass in memory below AVX. The default
+// classifier also returns the vector through sret below AVX; CIR and Clang 23
+// retain the direct vector return. A record holding it uses sret below AVX.
 void take_ld2(ld2 v) {}
 
 // CIR-SSE: cir.func {{.*}}@take_ld2(%arg0: !cir.ptr<!cir.vector<2 x !cir.long_double<!cir.f80>>> {llvm.align = 32 : i64, llvm.byval = !cir.vector<2 x !cir.long_double<!cir.f80>>, llvm.noundef} loc({{[^)]+}}))
@@ -183,12 +190,14 @@ void call_ld2(ld2 v) { take_ld2(v); }
 ld2 ret_ld2(ld2 *p) { return *p; }
 
 // CIR: cir.func {{.*}}@ret_ld2(%arg0: !cir.ptr<!cir.vector<2 x !cir.long_double<!cir.f80>>> {llvm.noundef} loc({{[^)]+}})) -> !cir.vector<2 x !cir.long_double<!cir.f80>>
-// LLVM: define dso_local <2 x x86_fp80> @ret_ld2(ptr noundef %{{[^,)]+}})
+// LLVM-LD2-DIRECT: define dso_local <2 x x86_fp80> @ret_ld2(ptr noundef %{{[^,)]+}})
+// LLVM-LD2-MEMORY: define dso_local void @ret_ld2(ptr dead_on_unwind noalias writable sret(<2 x x86_fp80>) align 32 %{{[^,)]+}}, ptr noundef %{{[^,)]+}})
 
 ld2 call_ret_ld2(ld2 *p) { return ret_ld2(p); }
 
 // CIR: cir.call @ret_ld2(%{{.+}}) : (!cir.ptr<!cir.vector<2 x !cir.long_double<!cir.f80>>> {llvm.noundef}) -> !cir.vector<2 x !cir.long_double<!cir.f80>>
-// LLVM: call <2 x x86_fp80> @ret_ld2(ptr noundef %{{[^,)]+}})
+// LLVM-LD2-DIRECT: call <2 x x86_fp80> @ret_ld2(ptr noundef %{{[^,)]+}})
+// LLVM-LD2-MEMORY: call void @ret_ld2(ptr dead_on_unwind writable sret(<2 x x86_fp80>) align 32 %{{[^,)]+}}, ptr noundef %{{[^,)]+}})
 
 struct S2 { ld2 v; };
 struct S2 take_s2(struct S2 s) { return s; }
@@ -272,8 +281,10 @@ ld3 fwd_ld3(void) { return src_ld3(); }
 
 // CIR: cir.func {{.*}}@fwd_ld3() -> !cir.vector<3 x !cir.long_double<!cir.f80>>
 // CIR: cir.call @src_ld3() : () -> !cir.vector<3 x !cir.long_double<!cir.f80>>
-// LLVM: define dso_local <3 x x86_fp80> @fwd_ld3()
-// LLVM: call <3 x x86_fp80> @src_ld3()
+// LLVM-LD3-DIRECT: define dso_local <3 x x86_fp80> @fwd_ld3()
+// LLVM-LD3-MEMORY: define dso_local void @fwd_ld3(ptr dead_on_unwind noalias writable sret(<3 x x86_fp80>) align 64 %{{[^,)]+}})
+// LLVM-LD3-DIRECT: call <3 x x86_fp80> @src_ld3()
+// LLVM-LD3-MEMORY: call void @src_ld3(ptr dead_on_unwind writable sret(<3 x x86_fp80>) align 64 %{{[^,)]+}})
 
 void pass_ld3(void) { sink_ld3(src_ld3()); }
 

@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,DIRECT --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,DEFAULT --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23.ll
+// RUN: FileCheck --check-prefixes=LLVM,DIRECT --input-file=%t-compat23.ll %s
 
 // CIR-DAG: ![[U64U64:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !u64i}>
 // CIR-DAG: ![[S64U8:rec_anon_struct[0-9]*]] = !cir.struct<{data !s64i, data !u8i}>
@@ -120,8 +122,11 @@ struct LongC1 longc1(struct LongC1 s) { return s; }
 // LLVM: define dso_local { i64, i64 } @longc1(i64 %{{.+}}, i64 %{{.+}})
 
 typedef float f1 __attribute__((ext_vector_type(1)));
+// Default CodeGen passes a single-element float vector and its wrapper in
+// memory. CIR and Clang 23 pass direct.
 struct LongF1 { long l; f1 v; };
 struct LongF1 longf1(struct LongF1 s) { return s; }
 
 // CIR: cir.func {{.*}}@longf1(%arg0: !s64i loc({{[^)]+}}), %arg1: !u64i loc({{[^)]+}})) -> ![[S64U64]] attributes
-// LLVM: define dso_local { i64, i64 } @longf1(i64 %{{.+}}, i64 %{{.+}})
+// DIRECT: define dso_local { i64, i64 } @longf1(i64 %{{.+}}, i64 %{{.+}})
+// DEFAULT: define dso_local void @longf1(ptr dead_on_unwind noalias writable sret(%struct.LongF1) align 8 %{{[^,)]+}}, ptr noundef byval(%struct.LongF1) align 8 %{{[^,)]+}})

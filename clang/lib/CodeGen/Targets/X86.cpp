@@ -3009,7 +3009,8 @@ llvm::Type *X86_64ABIInfo::GetSSETypeAtOffset(llvm::Type *IRType,
   // Keep 16-bit FP vector lanes visible when they fit in one SSE eightbyte.
   // Reinterpreting them as double would make attributes like nofpclass describe
   // carrier bits rather than the source vector elements.
-  if (IROffset == 0 && SourceOffset == 0) {
+  if (!useLegacyClassificationAlgorithm() && IROffset == 0 &&
+      SourceOffset == 0) {
     if (auto *VTy = dyn_cast<llvm::FixedVectorType>(IRType)) {
       llvm::Type *EltTy = VTy->getElementType();
       if (EltTy->is16bitFPTy() && TD.getTypeAllocSize(VTy) <= 8)

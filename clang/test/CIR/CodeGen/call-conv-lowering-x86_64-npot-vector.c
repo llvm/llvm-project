@@ -3,21 +3,29 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclangir -emit-cir %s -o %t-avx.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-AVX --input-file=%t-avx.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR,NOAVX,NOAVX512 --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR,NOAVX,NOAVX512,WIDE-DIRECT-NOAVX,HALF-DOUBLE,WIDE-DIRECT --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,OGCG,NOAVX,NOAVX512 --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG,NOAVX,NOAVX512,HALF-VECTOR,WIDE-MEMORY --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23.ll
+// RUN: FileCheck --check-prefixes=LLVM,OGCG,NOAVX,NOAVX512,WIDE-DIRECT-NOAVX,HALF-DOUBLE,WIDE-DIRECT --input-file=%t-compat23.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclangir -emit-llvm %s -o %t-cir-avx.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR,AVX,NOAVX512 --input-file=%t-cir-avx.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR,AVX,NOAVX512,HALF-DOUBLE,WIDE-DIRECT --input-file=%t-cir-avx.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm %s -o %t-avx.ll
-// RUN: FileCheck --check-prefixes=LLVM,OGCG,AVX,NOAVX512 --input-file=%t-avx.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG,AVX,NOAVX512,HALF-VECTOR,WIDE-DIRECT --input-file=%t-avx.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23-avx.ll
+// RUN: FileCheck --check-prefixes=LLVM,OGCG,AVX,NOAVX512,HALF-DOUBLE,WIDE-DIRECT --input-file=%t-compat23-avx.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclangir -emit-llvm %s -o %t-cir-avx512.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR,AVX,AVX512 --input-file=%t-cir-avx512.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR,AVX,AVX512,HALF-DOUBLE,WIDE-DIRECT --input-file=%t-cir-avx512.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm %s -o %t-avx512.ll
-// RUN: FileCheck --check-prefixes=LLVM,OGCG,AVX,AVX512 --input-file=%t-avx512.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG,AVX,AVX512,HALF-VECTOR,WIDE-DIRECT --input-file=%t-avx512.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23-avx512.ll
+// RUN: FileCheck --check-prefixes=LLVM,OGCG,AVX,AVX512,HALF-DOUBLE,WIDE-DIRECT --input-file=%t-compat23-avx512.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -menable-no-nans -menable-no-infs -fclangir -emit-llvm %s -o %t-cir-finite.ll
-// RUN: FileCheck --check-prefix=FINITE --input-file=%t-cir-finite.ll %s
+// RUN: FileCheck --check-prefixes=FINITE,FINITE-DOUBLE --input-file=%t-cir-finite.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -menable-no-nans -menable-no-infs -emit-llvm %s -o %t-finite.ll
-// RUN: FileCheck --check-prefix=FINITE --input-file=%t-finite.ll %s
+// RUN: FileCheck --check-prefixes=FINITE,FINITE-VECTOR --input-file=%t-finite.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -menable-no-nans -menable-no-infs -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23-finite.ll
+// RUN: FileCheck --check-prefixes=FINITE,FINITE-DOUBLE --input-file=%t-compat23-finite.ll %s
 
 typedef char c3 __attribute__((ext_vector_type(3)));
 typedef char c4 __attribute__((ext_vector_type(4)));
@@ -176,8 +184,12 @@ void take_h3(h3 v) {}
 // LLVM-LABEL: define dso_local void @take_uf(<2 x double> %{{.+}})
 // LLVM-LABEL: define dso_local void @take_uff(double %{{.+}}, double %{{.+}})
 // LLVM-LABEL: define dso_local void @take_ss3s(double %{{.+}}, i16 %{{.+}})
-// LLVM-LABEL: define dso_local void @take_h3(double %{{.+}})
-// FINITE-LABEL: define dso_local void @take_h3(double nofpclass(nan inf) %{{.+}})
+// Default CodeGen preserves the half floats so nofpclass applies to each.
+// CIR and Clang 23 retain the historical double.
+// HALF-DOUBLE-LABEL: define dso_local void @take_h3(double %{{.+}})
+// HALF-VECTOR-LABEL: define dso_local void @take_h3(<3 x half> noundef %{{.+}})
+// FINITE-DOUBLE-LABEL: define dso_local void @take_h3(double nofpclass(nan inf) %{{.+}})
+// FINITE-VECTOR-LABEL: define dso_local void @take_h3(<3 x half> noundef nofpclass(nan inf) %{{.+}})
 
 // Each half of a flattened argument carries the argument's attributes.
 void take_cd(_Complex double c) {}
@@ -205,14 +217,17 @@ i6 pass_i6(i6 v) { return v; }
 // CIR-AVX: cir.func{{.*}} @pass_f5(%arg0: !cir.vector<5 x !cir.float> {llvm.noundef} loc({{.+}})) -> !cir.vector<5 x !cir.float>
 // CIR-AVX: cir.func{{.*}} @pass_i6(%arg0: !cir.vector<6 x !s32i> {llvm.noundef} loc({{.+}})) -> !cir.vector<6 x !s32i>
 // NOAVX-LABEL: define dso_local void @take_d3(ptr noundef byval(<3 x double>) align 32 %{{.+}})
-// NOAVX-LABEL: define dso_local <5 x float> @pass_f5(ptr noundef byval(<5 x float>) align 32 %{{.+}})
-// NOAVX-LABEL: define dso_local <6 x i32> @pass_i6(ptr noundef byval(<6 x i32>) align 32 %{{.+}})
+// WIDE-DIRECT-NOAVX-LABEL: define dso_local <5 x float> @pass_f5(ptr noundef byval(<5 x float>) align 32 %{{.+}})
+// WIDE-MEMORY-LABEL: define dso_local void @pass_f5(ptr dead_on_unwind noalias writable sret(<5 x float>) align 32 %{{.+}}, ptr noundef byval(<5 x float>) align 32 %{{.+}})
+// WIDE-DIRECT-NOAVX-LABEL: define dso_local <6 x i32> @pass_i6(ptr noundef byval(<6 x i32>) align 32 %{{.+}})
+// WIDE-MEMORY-LABEL: define dso_local void @pass_i6(ptr dead_on_unwind noalias writable sret(<6 x i32>) align 32 %{{.+}}, ptr noundef byval(<6 x i32>) align 32 %{{.+}})
 // AVX-LABEL: define dso_local void @take_d3(<3 x double> noundef %{{.+}})
 // AVX-LABEL: define dso_local <5 x float> @pass_f5(<5 x float> noundef %{{.+}})
 // AVX-LABEL: define dso_local <6 x i32> @pass_i6(<6 x i32> noundef %{{.+}})
 // A byval pointer does not carry the vector's nofpclass.
 // FINITE-LABEL: define dso_local void @take_d3(ptr noundef byval(<3 x double>) align 32 %{{.+}})
-// FINITE-LABEL: define dso_local nofpclass(nan inf) <5 x float> @pass_f5(ptr noundef byval(<5 x float>) align 32 %{{.+}})
+// FINITE-DOUBLE-LABEL: define dso_local nofpclass(nan inf) <5 x float> @pass_f5(ptr noundef byval(<5 x float>) align 32 %{{.+}})
+// FINITE-VECTOR-LABEL: define dso_local void @pass_f5(ptr dead_on_unwind noalias writable sret(<5 x float>) align 32 %{{.+}}, ptr noundef byval(<5 x float>) align 32 %{{.+}})
 
 struct SF5 { f5 v; };
 struct SF5 pass_sf5(struct SF5 s) { return s; }
@@ -260,7 +275,8 @@ f5 va_f5(int n, ...) {
 // CIR-LABEL: cir.func{{.*}} @va_f5(
 // CIR: %[[STRIDE:[0-9]+]] = cir.const #cir.int<32> : !s32i
 // CIR-NEXT: cir.ptr_stride %{{[0-9]+}}, %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
-// LLVM-LABEL: define dso_local <5 x float> @va_f5(
+// WIDE-DIRECT-LABEL: define dso_local <5 x float> @va_f5(
+// WIDE-MEMORY-LABEL: define dso_local void @va_f5(ptr dead_on_unwind noalias writable sret(<5 x float>) align 32 %{{[^,)]+}},
 // LLVM: call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
 // LLVMCIR: getelementptr i8, ptr %{{.+}}, i64 32
 // OGCG: getelementptr i8, ptr %{{.+}}, i32 32

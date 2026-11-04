@@ -1,23 +1,25 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-SSE --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-CIR-SSE --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-CIR-SSE,LLVM-DIRECT-RETURN --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-OGCG-SSE --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-OGCG-SSE,LLVM-MEMORY-RETURN --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23-return.ll
+// RUN: FileCheck --check-prefix=LLVM-DIRECT-RETURN --input-file=%t-compat23-return.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclangir -emit-cir %s -o %t-avx.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-AVX --input-file=%t-avx.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclangir -emit-llvm %s -o %t-avx-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX,LLVM-CIR-AVX --input-file=%t-avx-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX,LLVM-CIR-AVX,LLVM-DIRECT-RETURN --input-file=%t-avx-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm %s -o %t-avx.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX,LLVM-OGCG-AVX --input-file=%t-avx.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX,LLVM-OGCG-AVX,LLVM-DIRECT-RETURN --input-file=%t-avx.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclangir -emit-cir %s -o %t-avx512.cir
 // RUN: FileCheck --check-prefix=CIR-AVX512 --input-file=%t-avx512.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclangir -emit-llvm %s -o %t-avx512-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512 --input-file=%t-avx512-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512,LLVM-DIRECT-RETURN --input-file=%t-avx512-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm %s -o %t-avx512.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512 --input-file=%t-avx512.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512,LLVM-DIRECT-RETURN --input-file=%t-avx512.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclang-abi-compat=23 -fclangir -emit-llvm %s -o %t-compat23-cir.ll
 // RUN: FileCheck --check-prefix=LLVM-CIR-PINNED --input-file=%t-compat23-cir.ll %s
@@ -55,11 +57,12 @@ void take_v256(v8f v) { (void)v; }
 // LLVM-AVX: define dso_local void @take_v256(<8 x float> noundef %{{[^,)]+}})
 // LLVM-AVX512: define dso_local void @take_v256(<8 x float> noundef %{{[^,)]+}})
 
-// The register-versus-memory split applies to arguments only.  A 256-bit
-// vector comes back in registers at every level.
+// Without AVX, the clang24 classifier returns a 256-bit vector in memory since it is wider than 128bits.
+// CIR and Clang 23 retain the direct return.
 v8f ret_v256(void) { v8f z = {0}; return z; }
 
-// LLVM: define dso_local <8 x float> @ret_v256()
+// LLVM-DIRECT-RETURN: define dso_local <8 x float> @ret_v256()
+// LLVM-MEMORY-RETURN: define dso_local void @ret_v256(ptr dead_on_unwind noalias writable sret(<8 x float>) align 32 %{{[^,)]+}})
 
 // Below AVX the caller has to build the byval slot, which is the memory copy a
 // vector argument needs on a non-variadic call.
