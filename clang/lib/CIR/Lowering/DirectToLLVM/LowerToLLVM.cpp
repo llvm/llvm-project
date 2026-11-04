@@ -3481,7 +3481,10 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   mlir::Value value = valueConverter.visit(init);
   if (!value) {
     // Drop the speculative replacement; the table still holds the live
-    // root op for the driver to report on.
+    // root op for the driver to report on. Everything created so far
+    // lives inside the new global's region, so erasing it restores the
+    // module exactly: module-level ops must wait for a successful visit
+    // (see the comdat below).
     rewriter.eraseOp(newGlobalOp);
     return mlir::failure();
   }
