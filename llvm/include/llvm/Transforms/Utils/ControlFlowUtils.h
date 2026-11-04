@@ -13,15 +13,36 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CONTROLFLOWUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CONTROLFLOWUTILS_H
 
+#include <optional>
+
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
 class BasicBlock;
+class BlockFrequencyInfo;
 class CallBrInst;
-class LoopInfo;
 class DomTreeUpdater;
+class Function;
+class LoopInfo;
+
+/// True when \p F has a positive function_entry_count, or any terminator
+/// carries branch_weights metadata.
+LLVM_ABI bool functionHasEntryCountOrBranchWeights(const Function &F);
+
+/// Blocks that exist now. Ones added later are not in this set.
+LLVM_ABI void recordBlocksBeforeTransform(
+    const Function &F, SmallPtrSetImpl<const BasicBlock *> &BlocksSeenBefore);
+
+/// Frequency analysis together with the set of blocks that existed when it was
+/// computed. Both pointers are null when the function has no usable profile.
+/// The caller owns both and must keep them alive for this object's lifetime.
+struct ProfileInfo {
+  BlockFrequencyInfo *BFI = nullptr;
+  const SmallPtrSetImpl<const BasicBlock *> *KnownBlocks = nullptr;
+};
 
 /// Given a set of branch descriptors [BB, Succ0, Succ1], create a "hub" such
 /// that the control flow from each BB to a successor is now split into two
@@ -110,7 +131,20 @@ struct ControlFlowHub {
                  BasicBlock *Succ1 = nullptr) {
     assert(BB);
     assert(Succ0 || Succ1);
+    assert(!SplitTargets.contains(BB) &&
+           "block was already registered as a split target");
     Branches.emplace_back(BB, Succ0, Succ1);
+  }
+
+  /// \p BB was just created by splitting a switch or callbr edge.
+  void addSplitTarget(BasicBlock *BB, BasicBlock *Succ) {
+    assert(!SplitTargets.contains(BB) && "split target already added");
+#ifndef NDEBUG
+    for (const BranchDescriptor &D : Branches)
+      assert(D.BB != BB && "block was already registered with addBranch");
+#endif
+    addBranch(BB, Succ);
+    SplitTargets.insert(BB);
   }
 
   /// Return the unified loop exit block and a flag indicating if the CFG was
@@ -118,9 +152,14 @@ struct ControlFlowHub {
   LLVM_ABI std::pair<BasicBlock *, bool>
   finalize(DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
            const StringRef Prefix,
-           std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
+           std::optional<unsigned> MaxControlFlowBooleans = std::nullopt,
+           ProfileInfo Profile = {});
 
   SmallVector<BranchDescriptor> Branches;
+
+private:
+  /// Blocks created by splitting switch/callbr edges.
+  SmallPtrSet<BasicBlock *, 8> SplitTargets;
 };
 
 } // end namespace llvm
