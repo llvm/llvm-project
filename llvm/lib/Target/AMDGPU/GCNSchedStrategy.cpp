@@ -160,9 +160,10 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
 
   if (!KnownExcessRP) {
-    VGPRCriticalLimit = std::min(
-        ST.getMaxNumVGPRs(TargetOccupancy, MFI.getDynamicVGPRBlockSize()),
-        VGPRExcessLimit);
+    // Preserve the combined occupancy budget before clamping to one bank.
+    UnifiedVGPRCriticalLimit =
+        ST.getMaxNumVGPRs(TargetOccupancy, MFI.getDynamicVGPRBlockSize());
+    VGPRCriticalLimit = std::min(UnifiedVGPRCriticalLimit, VGPRExcessLimit);
   } else {
     // This is similar to ST.getMaxNumVGPRs(TargetOccupancy) result except
     // returns a reasonably small number for targets with lots of VGPRs, such
@@ -176,6 +177,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
         AMDGPU::IsaInfo::getAddressableNumVGPRs(ST, DynamicVGPRBlockSize);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
+    UnifiedVGPRCriticalLimit = VGPRBudget;
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
   }
 
@@ -188,6 +190,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
     [[maybe_unused]] unsigned OriginalVGPRCriticalLimit = VGPRCriticalLimit;
     VGPRExcessLimit = (VGPRThresholdPercent * VGPRExcessLimit + 99) / 100;
     VGPRCriticalLimit = (VGPRThresholdPercent * VGPRCriticalLimit + 99) / 100;
+    UnifiedVGPRCriticalLimit =
+        (VGPRThresholdPercent * UnifiedVGPRCriticalLimit + 99) / 100;
     LLVM_DEBUG(dbgs() << "Applied VGPR excess threshold "
                       << VGPRThresholdPercent << "%, VGPRExcessLimit: "
                       << OriginalVGPRExcessLimit << " -> " << VGPRExcessLimit
@@ -197,6 +201,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
     VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
     VGPRCriticalLimit -=
         std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
+    UnifiedVGPRCriticalLimit -=
+        std::min(VGPRLimitBias + ErrorMargin, UnifiedVGPRCriticalLimit);
   }
 
   // Subtract error margin and bias from register limits and avoid overflow.
@@ -207,6 +213,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   AGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, AGPRCriticalLimit);
 
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
+                    << ", UnifiedVGPRCriticalLimit = "
+                    << UnifiedVGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", AGPRCriticalLimit = " << AGPRCriticalLimit
                     << ", AGPRExcessLimit = " << AGPRExcessLimit
@@ -402,10 +410,23 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   // register pressure is 'CRITICAL', increasing SGPR, VGPR, and AGPR
   // pressure all has the same cost, so we pick the most critical type.
 
+  // Unified targets allocate both vector banks from the same occupancy budget.
+  // Keep the bank pressures above for excess checks, and do not align VGPRs
+  // when there are no AGPRs, matching GCNRegPressure::getVGPRNum().
+  bool UnifiedVGPRFile = MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts();
+  unsigned VectorCriticalLimit = VGPRCriticalLimit;
+  if (UnifiedVGPRFile) {
+    if (NewAGPRPressure)
+      NewVGPRPressure = GCNRegPressure::getUnifiedVGPRNum(NewVGPRPressure,
+                                                          NewAGPRPressure, 0);
+    VectorCriticalLimit = UnifiedVGPRCriticalLimit;
+  }
+
   int SGPRDelta = NewSGPRPressure - SGPRCriticalLimit;
-  int VGPRDelta = NewVGPRPressure - VGPRCriticalLimit;
-  int AGPRDelta = AGPRExcessLimit > 0 ? NewAGPRPressure - AGPRCriticalLimit
-                                      : std::numeric_limits<int>::min();
+  int VGPRDelta = NewVGPRPressure - VectorCriticalLimit;
+  int AGPRDelta = !UnifiedVGPRFile && AGPRExcessLimit > 0
+                      ? NewAGPRPressure - AGPRCriticalLimit
+                      : std::numeric_limits<int>::min();
 
   if (SGPRDelta >= 0 || VGPRDelta >= 0 || AGPRDelta >= 0) {
     HasHighPressure = true;
@@ -1195,9 +1216,9 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   // GCNScheduleDAGMILive::schedule().
   LiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
-  RegionsWithHighRP.resize(Regions.size());
-  RegionsWithExcessRP.resize(Regions.size());
-  RegionsWithIGLPInstrs.resize(Regions.size());
+  RegionsWithHighRP.resize(static_cast<unsigned>(Regions.size()));
+  RegionsWithExcessRP.resize(static_cast<unsigned>(Regions.size()));
+  RegionsWithIGLPInstrs.resize(static_cast<unsigned>(Regions.size()));
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
   RegionsWithIGLPInstrs.reset();
@@ -1378,7 +1399,7 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
     return false;
 
-  RegionsWithExcessArchVGPR.resize(DAG.Regions.size());
+  RegionsWithExcessArchVGPR.resize(static_cast<unsigned>(DAG.Regions.size()));
   RegionsWithExcessArchVGPR.reset();
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     GCNRegPressure PressureBefore = DAG.Pressure[Region];
@@ -1536,7 +1557,7 @@ bool PreRARematStage::initGCNSchedStage() {
   // since 0 is a valid index.
   IndexedMap<unsigned, VirtReg2IndexFunctor> DefRegToCandIdx(~0u);
   DefRegToCandIdx.resize(DAG.MRI.getNumVirtRegs());
-  const unsigned NumRegions = DAG.Regions.size();
+  const unsigned NumRegions = static_cast<unsigned>(DAG.Regions.size());
 
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
@@ -1577,7 +1598,7 @@ bool PreRARematStage::initGCNSchedStage() {
 
     Register DefReg = CandReg.getDefReg();
     MarkedRegs.insert(DefReg);
-    DefRegToCandIdx[DefReg] = Candidates.size();
+    DefRegToCandIdx[DefReg] = static_cast<unsigned>(Candidates.size());
     Candidates.emplace_back(RegIdx, NumRegions);
   }
 
@@ -1604,7 +1625,7 @@ bool PreRARematStage::initGCNSchedStage() {
   }
 
   // Finish initializing candidates.
-  SmallVector<unsigned> CandidateOrder;
+  SmallVector<size_t> CandidateOrder;
   for (auto [CandIdx, Cand] : enumerate(Candidates)) {
     Cand.init(FreqInfo, Remater, DAG);
     Cand.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
@@ -1624,12 +1645,12 @@ bool PreRARematStage::initGCNSchedStage() {
 
   // Rematerialize registers in successive rounds until all RP targets are
   // satisifed or until we run out of rematerialization candidates.
-  BitVector RecomputeRP(DAG.Regions.size());
+  BitVector RecomputeRP(static_cast<unsigned>(DAG.Regions.size()));
   for (;;) {
     RecomputeRP.reset();
 
     // Sort candidates in increasing score order.
-    sort(CandidateOrder, [&](unsigned LHSIndex, unsigned RHSIndex) {
+    sort(CandidateOrder, [&](size_t LHSIndex, size_t RHSIndex) {
       return Candidates[LHSIndex] < Candidates[RHSIndex];
     });
 
@@ -1737,7 +1758,7 @@ bool PreRARematStage::initGCNSchedStage() {
     // having been useless for a round, so we can freely drop them without
     // losing any future rematerialization opportunity.
     unsigned NumUsefulCandidates = 0;
-    for (unsigned CandIdx : CandidateOrder) {
+    for (size_t CandIdx : CandidateOrder) {
       ScoredRemat &Candidate = Candidates[CandIdx];
       Candidate.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
       if (!Candidate.hasNullScore())
@@ -1815,7 +1836,8 @@ bool GCNSchedStage::initGCNRegion() {
   if (DAG.RegionBegin->getParent() != CurrentMBB)
     setupNewBlock();
 
-  unsigned NumRegionInstrs = std::distance(DAG.begin(), DAG.end());
+  unsigned NumRegionInstrs =
+      static_cast<unsigned>(std::distance(DAG.begin(), DAG.end()));
   DAG.enterRegion(CurrentMBB, DAG.begin(), DAG.end(), NumRegionInstrs);
 
   // Skip regions with 1 schedulable instruction.
@@ -1970,8 +1992,16 @@ void GCNSchedStage::checkScheduling() {
 
   unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
 
+  bool UnifiedVGPRFile = ST.hasGFX90AInsts();
+  unsigned VectorCriticalLimit =
+      UnifiedVGPRFile ? S.UnifiedVGPRCriticalLimit : S.VGPRCriticalLimit;
+  // Fitting the combined occupancy budget does not rule out spilling in one
+  // bank. Keep the per-bank excess checks before taking this early exit.
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
-      PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
+      PressureAfter.getVGPRNum(UnifiedVGPRFile) <= VectorCriticalLimit &&
+      (!UnifiedVGPRFile ||
+       (PressureAfter.getArchVGPRNum() <= S.VGPRExcessLimit &&
+        PressureAfter.getAGPRNum() <= S.AGPRExcessLimit))) {
     DAG.Pressure[RegionIdx] = PressureAfter;
 
     // Early out if we have achieved the occupancy target.
@@ -2329,6 +2359,7 @@ bool LiveIntervalRPStage::initGCNRegion() {
   if (DoRescheduling && GCNSchedStage::initGCNRegion()) {
     SavedVGPRExcessLimit = S.VGPRExcessLimit;
     SavedVGPRCriticalLimit = S.VGPRCriticalLimit;
+    SavedUnifiedVGPRCriticalLimit = S.UnifiedVGPRCriticalLimit;
     SavedVGPRThresholdPercent = S.VGPRThresholdPercent;
     S.VGPRThresholdPercent = NewVGPRThresholdPercent;
     return true;
@@ -2340,6 +2371,7 @@ bool LiveIntervalRPStage::initGCNRegion() {
 void LiveIntervalRPStage::finalizeGCNRegion() {
   S.VGPRExcessLimit = SavedVGPRExcessLimit;
   S.VGPRCriticalLimit = SavedVGPRCriticalLimit;
+  S.UnifiedVGPRCriticalLimit = SavedUnifiedVGPRCriticalLimit;
   S.VGPRThresholdPercent = SavedVGPRThresholdPercent;
   GCNSchedStage::finalizeGCNRegion();
 }
@@ -2673,7 +2705,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
             : 1;
 
     const TargetRegisterClass *RC = DAG.MRI.getRegClass(DefReg);
-    CopyCost += RC->getCopyCost() * DefFreq;
+    CopyCost += static_cast<unsigned>(RC->getCopyCost() * DefFreq);
   }
 
   // Account for CopyForUse copies in each block that the register is used.
@@ -2683,7 +2715,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
 
     for (Register UseReg : UseRegs) {
       const TargetRegisterClass *RC = DAG.MRI.getRegClass(UseReg);
-      CopyCost += RC->getCopyCost() * UseFreq;
+      CopyCost += static_cast<unsigned>(RC->getCopyCost() * UseFreq);
     }
   }
 
@@ -3083,7 +3115,8 @@ bool PreRARematStage::setObjective() {
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(F);
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(F);
   bool HasVectorRegisterExcess = false;
-  for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
+  for (unsigned I = 0, E = static_cast<unsigned>(DAG.Regions.size()); I != E;
+       ++I) {
     const GCNRegPressure &RP = DAG.Pressure[I];
     GCNRPTarget &Target = RPTargets.emplace_back(MaxSGPRs, MaxVGPRs, MF, RP);
     if (!Target.satisfied())
@@ -3105,7 +3138,7 @@ bool PreRARematStage::setObjective() {
     for (auto [I, Target] : enumerate(RPTargets)) {
       Target.setTarget(MaxSGPRs, MaxVGPRs);
       if (!Target.satisfied())
-        TargetRegions.set(I);
+        TargetRegions.set(static_cast<unsigned>(I));
     }
   }
 
@@ -3171,11 +3204,11 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   MCI.compute(MF);
   MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
 
-  const unsigned NumRegions = DAG.Regions.size();
+  const size_t NumRegions = DAG.Regions.size();
   MinFreq = MBFI.getEntryFreq().getFrequency();
   MaxFreq = 0;
   Regions.reserve(NumRegions);
-  for (unsigned I = 0; I < NumRegions; ++I) {
+  for (size_t I = 0; I < NumRegions; ++I) {
     MachineBasicBlock *MBB = DAG.Regions[I].first->getParent();
     uint64_t BlockFreq = MBFI.getBlockFreq(MBB).getFrequency();
     Regions.push_back(BlockFreq);

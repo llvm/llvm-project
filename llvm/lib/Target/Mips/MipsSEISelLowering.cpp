@@ -1143,7 +1143,7 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
   if ((Ty != MVT::v2i16) && (Ty != MVT::v4i8))
     return SDValue();
 
-  if (!isLegalDSPCondCode(Ty, cast<CondCodeSDNode>(N->getOperand(2))->get()))
+  if (!isLegalDSPCondCode(Ty, N->getOperandCondCode(2)))
     return SDValue();
 
   return DAG.getNode(MipsISD::SETCC_DSP, SDLoc(N), Ty, N->getOperand(0),

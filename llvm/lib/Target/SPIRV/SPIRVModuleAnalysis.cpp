@@ -158,6 +158,7 @@ void SPIRVModuleAnalysisImpl::setBaseInfo(const Module &M) {
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.InstrAuxDataRecords.clear();
+  MAI.DebugValueMIs.clear();
   MAI.Reqs.clear();
   MAI.Reqs.initAvailableCapabilities(*ST);
 
@@ -740,6 +741,10 @@ void SPIRVModuleAnalysisImpl::processOtherInstrs(const Module &M) {
 
     for (MachineBasicBlock &MBB : *MF)
       for (MachineInstr &MI : MBB) {
+        if (MI.isDebugValueLike()) {
+          MAI.DebugValueMIs.push_back(&MI);
+          continue;
+        }
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
@@ -1848,6 +1853,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpTypePipe:
   case SPIRV::OpTypeReserveId:
     Reqs.addCapability(SPIRV::Capability::Pipes);
+    break;
+  case SPIRV::OpTypePipeStorage:
+    Reqs.addCapability(SPIRV::Capability::PipeStorage);
     break;
   case SPIRV::OpTypeDeviceEvent:
   case SPIRV::OpTypeQueue:
