@@ -1705,7 +1705,7 @@ TEST_F(SortIncludesTest, RegroupByDirectoryMixedDelimitersAndCase) {
                     "#include \"A/y.h\"\n"
                     "#include \"a/x.h\"\n"
                     "#include \"a//b.h\"\n"
-                    "#include<z.h>"));
+                    "#include <z.h>"));
 }
 
 } // end namespace
