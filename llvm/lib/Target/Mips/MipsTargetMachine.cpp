@@ -217,7 +217,7 @@ void MipsPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   addPass(createAtomicExpandLegacyPass());
   if (getMipsTargetMachine().getCLOpts().os16)
-    addPass(createMipsOs16Pass());
+    addPass(createMipsOs16LegacyPass());
   addPass(createMips16HardFloatPass());
 }
 // Install an instruction selector pass using
