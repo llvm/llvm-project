@@ -1,17 +1,20 @@
-// RUN: %clangxx -O0 -g %s -o %t && %run %t
-// RUN: %clangxx -O0 -g -D_FILE_OFFSET_BITS=64 %s -o %t && %run %t
+// RUN: rm -rf %t.dir
+// RUN: mkdir -p %t.dir/sub
+// RUN: touch %t.dir/sub/file
+// RUN: ln -s %t.dir/sub/file %t.dir/link
+// RUN: %clangxx -O0 -g %s -o %t && %run %t %t.dir
+// RUN: %clangxx -O0 -g -D_FILE_OFFSET_BITS=64 %s -o %t && %run %t %t.dir
 
 // UNSUPPORTED: android
 
 #include <assert.h>
 #include <ftw.h>
+#include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
-static char g_subdir[256];
+static char g_subdir[PATH_MAX];
 static int ftw_visited;
 static int inner_ftw_visited;
 
@@ -89,22 +92,10 @@ static int nftw64_cb(const char *fpath, const struct stat64 *sb, int typeflag,
 }
 #endif
 
-int main() {
-  char tmpdir[] = "/tmp/sanitizer_ftw_test.XXXXXX";
-  assert(mkdtemp(tmpdir) != nullptr);
-
+int main(int argc, char **argv) {
+  assert(argc > 1);
+  const char *tmpdir = argv[1];
   snprintf(g_subdir, sizeof(g_subdir), "%s/sub", tmpdir);
-  assert(mkdir(g_subdir, 0700) == 0);
-
-  char filepath[256];
-  snprintf(filepath, sizeof(filepath), "%s/sub/file", tmpdir);
-  FILE *f = fopen(filepath, "w");
-  assert(f != nullptr);
-  fclose(f);
-
-  char linkpath[256];
-  snprintf(linkpath, sizeof(linkpath), "%s/link", tmpdir);
-  assert(symlink(filepath, linkpath) == 0);
 
   assert(ftw(tmpdir, ftw_cb, 16) == 0);
   assert(ftw_visited == 4);
@@ -122,9 +113,5 @@ int main() {
   assert(nftw64_visited == 2);
 #endif
 
-  unlink(linkpath);
-  unlink(filepath);
-  rmdir(g_subdir);
-  rmdir(tmpdir);
   return 0;
 }
