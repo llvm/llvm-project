@@ -7065,6 +7065,16 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   if (!GV->isDeclaration())
     return;
 
+  // An inline builtin is emitted into a ".inline" clone and GV stays a
+  // declaration (see CodeGenFunction::GenerateCode), so check the clone too:
+  // a GNU89 extern inline function may be defined more than once.
+  if (D->isInlineBuiltinDeclaration()) {
+    llvm::Function *Clone =
+        getModule().getFunction((GV->getName() + ".inline").str());
+    if (Clone && !Clone->isDeclaration())
+      return;
+  }
+
   // We need to set linkage and visibility on the function before
   // generating code for it because various parts of IR generation
   // want to propagate this information down (e.g. to local static
