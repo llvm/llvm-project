@@ -79,17 +79,18 @@ static bool removeUnusedResources(Module &M) {
         continue;
       SI->eraseFromParent();
       DeadGlobals.insert(GV);
+      Changed = true;
     }
 
     const unsigned ResourceNameOpIndex = 4;
     if (Handle->use_empty()) {
-      Changed = true;
       if (!IsCounter) {
         if (auto *Name = dyn_cast<GlobalVariable>(
                 Handle->getOperand(ResourceNameOpIndex)))
           DeadGlobals.insert(Name);
       }
       Handle->eraseFromParent();
+      Changed = true;
     }
   };
 
@@ -101,10 +102,11 @@ static bool removeUnusedResources(Module &M) {
   for (auto *Handle : Handles) {
     VisitHandle(Handle, false);
   }
-  Changed |= !DeadGlobals.empty();
   for (auto *GV : DeadGlobals) {
-    if (GV->user_empty())
+    if (GV->user_empty()) {
       GV->eraseFromParent();
+      Changed = true;
+    }
   }
 
   return Changed;
