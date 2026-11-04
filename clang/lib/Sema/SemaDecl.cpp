@@ -2473,6 +2473,10 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
 NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
                                      Scope *S, bool ForRedeclaration,
                                      SourceLocation Loc) {
+  // Defer LibBuiltins with target- or header-dependent prototypes to
+  // ActOnFunctionDeclarator on redeclarations so unrelated user functions do
+  // not trigger -Wincompatible-library-redeclaration or linkage conflicts, and
+  // GNU C transparent_union parameters are not overwritten by merging.
   if (ForRedeclaration && Context.BuiltinInfo.isPredefinedLibFunction(ID) &&
       strpbrk(Context.BuiltinInfo.getTypeString(ID), "|ut"))
     return nullptr;
