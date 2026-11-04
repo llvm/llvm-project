@@ -1277,11 +1277,9 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
 /// 3. If \p isForDefinition is true, it is guaranteed that an actual global
 /// with type \p ty will be returned, not conversion of a variable with the same
 /// mangled name but some other type.
-cir::GlobalOp
-CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
-                                   LangAS langAS, mlir::Location loc,
-                                   const VarDecl *d,
-                                   ForDefinition_t isForDefinition) {
+cir::GlobalOp CIRGenModule::getOrCreateCIRGlobal(
+    StringRef mangledName, mlir::Type ty, LangAS langAS, mlir::Location loc,
+    const VarDecl *d, ForDefinition_t isForDefinition) {
 
   // Lookup the entry, lazily creating it if necessary.
   cir::GlobalOp entry;
