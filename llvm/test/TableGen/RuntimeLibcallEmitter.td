@@ -121,6 +121,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  NoFuncArgType = 0,
 // CHECK-NEXT:  BFloat,
 // CHECK-NEXT:  Bool,
+// CHECK-NEXT:  CmpResult,
 // CHECK-NEXT:  Dbl,
 // CHECK-NEXT:  Ellip,
 // CHECK-NEXT:  FP128,
