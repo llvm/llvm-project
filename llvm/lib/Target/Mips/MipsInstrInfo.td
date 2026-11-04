@@ -691,8 +691,10 @@ def SImm32AsmOperandClass
     : SImmAsmOperandClass<32, [SImm32RelaxedAsmOperandClass]>;
 def ConstantUImm26AsmOperandClass
     : ConstantUImmAsmOperandClass<26, [SImm32AsmOperandClass]>;
+def ConstantUImm25AsmOperandClass
+    : ConstantUImmAsmOperandClass<25, [ConstantUImm26AsmOperandClass]>;
 def ConstantUImm20AsmOperandClass
-    : ConstantUImmAsmOperandClass<20, [ConstantUImm26AsmOperandClass]>;
+    : ConstantUImmAsmOperandClass<20, [ConstantUImm25AsmOperandClass]>;
 def ConstantSImm19Lsl2AsmOperandClass : AsmOperandClass {
   let Name = "SImm19Lsl2";
   let RenderMethod = "addImmOperands";
@@ -923,7 +925,7 @@ def uimm_range_2_64 : Operand<i32> {
 }
 
 // Unsigned Operands
-foreach I = {1, 2, 3, 4, 5, 6, 7, 8, 10, 20, 26} in
+foreach I = {1, 2, 3, 4, 5, 6, 7, 8, 10, 20, 25, 26} in
   def uimm # I : Operand<i32> {
     let PrintMethod = "printUImm<" # I # ">";
     let ParserMatchClass =
@@ -2517,6 +2519,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def MTC2 : MTC3OP<"mtc2", COP2Opnd, GPR32Opnd>,
              MFC3OP_FM<0x12, 4, 0>, ISA_MIPS1;
 }
+
+/// Coprocessor 2 Operation
+let AdditionalPredicates = [NotInMicroMips], hasSideEffects = 1 in
+def COP2_OP : InstSE<(outs), (ins uimm25:$imm), "cop2\t$imm", [], FrmOther,
+                     "cop2">, COP2_FM, ISA_MIPS1;
 
 class Barrier<string asmstr> :
   InstSE<(outs), (ins), asmstr, [], FrmOther, asmstr>;

@@ -497,7 +497,7 @@ def : InstRW<[GenericWriteCOP0], (instrs DMTC0)>;
 def GenericCOP2 : ProcResource<1> { let BufferSize = 1; }
 def GenericWriteCOPOther : SchedWriteRes<[GenericCOP2]>;
 
-def : InstRW<[GenericWriteCOPOther], (instrs MFC2, MTC2)>;
+def : InstRW<[GenericWriteCOPOther], (instrs MFC2, MTC2, COP2_OP)>;
 
 def : InstRW<[GenericWriteCOPOther], (instrs DMFC2, DMTC2)>;
 
