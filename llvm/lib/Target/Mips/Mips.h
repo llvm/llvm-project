@@ -63,7 +63,16 @@ public:
 };
 
 ModulePass *createMipsOs16LegacyPass();
-ModulePass *createMips16HardFloatPass();
+
+class Mips16HardFloatPass : public RequiredPassInfoMixin<Mips16HardFloatPass> {
+  MipsTargetMachine &TM;
+
+public:
+  Mips16HardFloatPass(MipsTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createMips16HardFloatLegacyPass();
 
 class MipsSEISelDAGPass : public SelectionDAGISelPass {
 public:
