@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRED: std-at-least-c++20
+// REQUIRES: std-at-least-c++20
 
 // UNSUPPORTED: 32-bit-pointer
 // TODO: Expand tests to accommodate 32-bit pointers
