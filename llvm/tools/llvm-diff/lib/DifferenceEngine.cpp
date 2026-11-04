@@ -110,6 +110,13 @@ public:
   }
 };
 
+/// Returns true if \p L and \p R, which have the same opcode, have different
+/// poison-generating flags.
+static bool hasDifferentFlags(const Instruction *L, const Instruction *R) {
+  return L->getRawSubclassOptionalData() != R->getRawSubclassOptionalData() ||
+         L->getFastMathFlagsOrNone() != R->getFastMathFlagsOrNone();
+}
+
 /// A function-scope difference engine.
 class FunctionDifferenceEngine {
   DifferenceEngine &Engine;
@@ -373,6 +380,12 @@ class FunctionDifferenceEngine {
     // Different opcodes always imply different operations.
     if (L->getOpcode() != R->getOpcode()) {
       if (Complain) Engine.log("different instruction types");
+      return true;
+    }
+
+    if (hasDifferentFlags(L, R)) {
+      if (Complain)
+        Engine.log("different instruction flags");
       return true;
     }
 
