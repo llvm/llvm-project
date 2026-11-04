@@ -1499,9 +1499,9 @@ endif()
 
 # Support for ccache builds. This must be placed after we determined whether PCH
 # is enabled.
-set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
-set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
 if(LLVM_CCACHE_BUILD)
+  set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
+  set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
   if(NOT CMAKE_HOST_WIN32)
     set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
         CACHE STRING "Parameters to pass through to ccache")
