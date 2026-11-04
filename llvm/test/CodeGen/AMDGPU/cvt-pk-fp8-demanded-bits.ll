@@ -14,8 +14,8 @@ declare i32 @llvm.amdgcn.cvt.pk.fp8.f32(float, float, i32, i1 immarg)
 declare i32 @llvm.amdgcn.cvt.pk.bf8.f32(float, float, i32, i1 immarg)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-; Both halves are overwritten, so packing four values needs no initialization
-; of old before the first conversion.
+; The second conversion only reads the half that the first conversion writes,
+; so the old operand of the first conversion needs no initialization.
 define i32 @pack_fp8(float %a, float %b, float %c, float %d) {
 ; GFX950-LABEL: pack_fp8:
 ; GFX950:       ; %bb.0:
@@ -150,64 +150,78 @@ define i32 @pack_fp8_bf8(float %a, float %b, float %c, float %d) {
   ret i32 %lo
 }
 
-; Every user overwrites the preserved half of the shared conversion.
-define <2 x i32> @shared_dead_old(float %a, float %b, float %c, float %d) {
-; GFX950-LABEL: shared_dead_old:
+; Every user overwrites the half that the shared conversion copies from its old
+; operand. Demanded bits are not propagated through values with multiple users,
+; so the old operand is still initialized.
+define <2 x i32> @shared(float %a, float %b, float %c, float %d) {
+; GFX950-LABEL: shared:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cvt_pk_fp8_f32 v1, v0, v1
-; GFX950-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-NEXT:    v_cvt_pk_bf8_f32 v4, v2, v3 op_sel:[0,0,1]
-; GFX950-NEXT:    v_cvt_pk_bf8_f32 v1, v0, v3 op_sel:[0,0,1]
-; GFX950-NEXT:    v_mov_b32_e32 v0, v4
+; GFX950-NEXT:    v_mov_b32_e32 v4, 0
+; GFX950-NEXT:    v_cvt_pk_fp8_f32 v4, v0, v1
+; GFX950-NEXT:    v_mov_b32_e32 v1, v4
+; GFX950-NEXT:    v_cvt_pk_bf8_f32 v1, v2, v3 op_sel:[0,0,1]
+; GFX950-NEXT:    v_cvt_pk_bf8_f32 v4, v0, v3 op_sel:[0,0,1]
+; GFX950-NEXT:    v_mov_b32_e32 v0, v1
+; GFX950-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-FAKE16-LABEL: shared_dead_old:
+; GFX1170-FAKE16-LABEL: shared:
 ; GFX1170-FAKE16:       ; %bb.0:
 ; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v1, v0, v1
-; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v4, v1
-; GFX1170-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v1, v0, v3 op_sel:[0,0,1]
-; GFX1170-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v4, v2, v3 op_sel:[0,0,1]
-; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v4, v0, v1
+; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v1, v4
+; GFX1170-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v4, v0, v3 op_sel:[0,0,1]
+; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v1, v2, v3 op_sel:[0,0,1]
+; GFX1170-FAKE16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v4
 ; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-TRUE16-LABEL: shared_dead_old:
+; GFX1170-TRUE16-LABEL: shared:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v4.l, v0, v1
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v4.h, v2, v3
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v1.h, v0, v3
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1170-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v4.l
-; GFX1170-TRUE16-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1170-TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1170-TRUE16-NEXT:    v_perm_b32 v5, v4, v4, 0x7060302
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v4.h, v0, v3
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v5.l, v0, v1
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v5.h, v2, v3
+; GFX1170-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v5.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_mov_b32 v1, v4
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-FAKE16-LABEL: shared_dead_old:
+; GFX1250-FAKE16-LABEL: shared:
 ; GFX1250-FAKE16:       ; %bb.0:
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v1, v0, v1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v4, v1
-; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v1, v0, v3 op_sel:[0,0,1]
-; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v4, v2, v3 op_sel:[0,0,1]
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v4, v0, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, v4
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v4, v0, v3 op_sel:[0,0,1]
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v1, v2, v3 op_sel:[0,0,1]
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v4
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-TRUE16-LABEL: shared_dead_old:
+; GFX1250-TRUE16-LABEL: shared:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v4.l, v0, v1
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v4.h, v2, v3
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v1.h, v0, v3
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v4.l
-; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-TRUE16-NEXT:    v_perm_b32 v5, v4, v4, 0x7060302
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v4.h, v0, v3
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v5.l, v0, v1
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v5.h, v2, v3
+; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v5.l
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_mov_b32 v1, v4
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
   %lo = call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %a, float %b, i32 0, i1 false)
   %x = call i32 @llvm.amdgcn.cvt.pk.bf8.f32(float %c, float %d, i32 %lo, i1 true)
@@ -366,144 +380,249 @@ define i32 @also_source(float %a, float %b) {
 }
 
 define i32 @mask(float %a, float %b) {
-; GFX950-LABEL: mask:
-; GFX950:       ; %bb.0:
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
-; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-LABEL: mask:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-FAKE16-LABEL: mask:
-; GFX1170-FAKE16:       ; %bb.0:
-; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
-; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-LABEL: mask:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX950-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-TRUE16-LABEL: mask:
-; GFX1170-TRUE16:       ; %bb.0:
-; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v0.l, v0, v1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1170-FAKE16-SDAG-LABEL: mask:
+; GFX1170-FAKE16-SDAG:       ; %bb.0:
+; GFX1170-FAKE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-FAKE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
+; GFX1170-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1170-FAKE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-FAKE16-LABEL: mask:
-; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1170-FAKE16-GISEL-LABEL: mask:
+; GFX1170-FAKE16-GISEL:       ; %bb.0:
+; GFX1170-FAKE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1170-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX1170-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1170-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-TRUE16-LABEL: mask:
-; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v0.l, v0, v1
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1170-TRUE16-SDAG-LABEL: mask:
+; GFX1170-TRUE16-SDAG:       ; %bb.0:
+; GFX1170-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-TRUE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0.l, v0, v1
+; GFX1170-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1170-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-TRUE16-GISEL-LABEL: mask:
+; GFX1170-TRUE16-GISEL:       ; %bb.0:
+; GFX1170-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-TRUE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.l, v0, v1
+; GFX1170-TRUE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1170-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-FAKE16-SDAG-LABEL: mask:
+; GFX1250-FAKE16-SDAG:       ; %bb.0:
+; GFX1250-FAKE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
+; GFX1250-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-FAKE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-GISEL-LABEL: mask:
+; GFX1250-FAKE16-GISEL:       ; %bb.0:
+; GFX1250-FAKE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1250-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX1250-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1250-FAKE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-TRUE16-SDAG-LABEL: mask:
+; GFX1250-TRUE16-SDAG:       ; %bb.0:
+; GFX1250-TRUE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0.l, v0, v1
+; GFX1250-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-TRUE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-TRUE16-GISEL-LABEL: mask:
+; GFX1250-TRUE16-GISEL:       ; %bb.0:
+; GFX1250-TRUE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX1250-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.l, v0, v1
+; GFX1250-TRUE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1250-TRUE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %x = call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %a, float %b, i32 458752, i1 false)
   %y = and i32 %x, 65535
   ret i32 %y
 }
 
 define i32 @trunc(float %a, float %b) {
-; GFX950-LABEL: trunc:
-; GFX950:       ; %bb.0:
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
-; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-LABEL: trunc:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-FAKE16-LABEL: trunc:
-; GFX1170-FAKE16:       ; %bb.0:
-; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
-; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-LABEL: trunc:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX950-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-TRUE16-LABEL: trunc:
-; GFX1170-TRUE16:       ; %bb.0:
-; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v0.l, v0, v1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1170-FAKE16-SDAG-LABEL: trunc:
+; GFX1170-FAKE16-SDAG:       ; %bb.0:
+; GFX1170-FAKE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-FAKE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
+; GFX1170-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1170-FAKE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-FAKE16-LABEL: trunc:
-; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1170-FAKE16-GISEL-LABEL: trunc:
+; GFX1170-FAKE16-GISEL:       ; %bb.0:
+; GFX1170-FAKE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1170-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX1170-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1170-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-TRUE16-LABEL: trunc:
-; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v0.l, v0, v1
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1170-TRUE16-SDAG-LABEL: trunc:
+; GFX1170-TRUE16-SDAG:       ; %bb.0:
+; GFX1170-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-TRUE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0.l, v0, v1
+; GFX1170-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1170-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-TRUE16-GISEL-LABEL: trunc:
+; GFX1170-TRUE16-GISEL:       ; %bb.0:
+; GFX1170-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-TRUE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.l, v0, v1
+; GFX1170-TRUE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1170-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-FAKE16-SDAG-LABEL: trunc:
+; GFX1250-FAKE16-SDAG:       ; %bb.0:
+; GFX1250-FAKE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1
+; GFX1250-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-FAKE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-GISEL-LABEL: trunc:
+; GFX1250-FAKE16-GISEL:       ; %bb.0:
+; GFX1250-FAKE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1250-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX1250-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1250-FAKE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-TRUE16-SDAG-LABEL: trunc:
+; GFX1250-TRUE16-SDAG:       ; %bb.0:
+; GFX1250-TRUE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0.l, v0, v1
+; GFX1250-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-TRUE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-TRUE16-GISEL-LABEL: trunc:
+; GFX1250-TRUE16-GISEL:       ; %bb.0:
+; GFX1250-TRUE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX1250-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.l, v0, v1
+; GFX1250-TRUE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1250-TRUE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %x = call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %a, float %b, i32 458752, i1 false)
   %y = trunc i32 %x to i16
   %z = zext i16 %y to i32
   ret i32 %z
 }
 
-; Different kinds of users all discard the preserved high half.
+; Different kinds of users all discard the high half copied from the old
+; operand. As in @shared, the intermediate has multiple users, so the old
+; operand is still initialized.
 define <2 x i32> @mixed_users(float %a, float %b) {
 ; GFX950-LABEL: mixed_users:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cvt_pk_fp8_f32 v1, v0, v1
-; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v1
-; GFX950-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX950-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX950-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX950-NEXT:    v_and_b32_e32 v1, 0xff, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: mixed_users:
 ; GFX1170-FAKE16:       ; %bb.0:
 ; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v1, v0, v1
-; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v1
-; GFX1170-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX1170-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1170-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff, v2
 ; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-TRUE16-LABEL: mixed_users:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v1.l, v0, v1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v1
-; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX1170-TRUE16-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1170-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.l, v0, v1
+; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff, v2
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: mixed_users:
 ; GFX1250-FAKE16:       ; %bb.0:
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v1, v0, v1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v1
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff, v2
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-TRUE16-LABEL: mixed_users:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v1.l, v0, v1
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v1
-; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v2, 0x70000
+; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.l, v0, v1
+; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff, v2
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
   %x = call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %a, float %b, i32 458752, i1 false)
   %y = and i32 %x, 65535
@@ -514,7 +633,8 @@ define <2 x i32> @mixed_users(float %a, float %b) {
   ret <2 x i32> %w
 }
 
-; An unknown full-width consumer must keep the old high half.
+; An unknown full-width consumer observes the high half copied from the old
+; operand.
 define i32 @full_width(float %a, float %b) {
 ; GFX950-LABEL: full_width:
 ; GFX950:       ; %bb.0:
@@ -569,47 +689,96 @@ define i32 @full_width(float %a, float %b) {
 
 ; The opposite direction preserves the low half, which this mask discards.
 define i32 @high_mask(float %a, float %b) {
-; GFX950-LABEL: high_mask:
-; GFX950:       ; %bb.0:
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1 op_sel:[0,0,1]
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-LABEL: high_mask:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1 op_sel:[0,0,1]
+; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-FAKE16-LABEL: high_mask:
-; GFX1170-FAKE16:       ; %bb.0:
-; GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1 op_sel:[0,0,1]
-; GFX1170-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-LABEL: high_mask:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 7
+; GFX950-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff0000, v2
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-TRUE16-LABEL: high_mask:
-; GFX1170-TRUE16:       ; %bb.0:
-; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v0.h, v0, v1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1170-FAKE16-SDAG-LABEL: high_mask:
+; GFX1170-FAKE16-SDAG:       ; %bb.0:
+; GFX1170-FAKE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-FAKE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1 op_sel:[0,0,1]
+; GFX1170-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX1170-FAKE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-FAKE16-LABEL: high_mask:
-; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1 op_sel:[0,0,1]
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1170-FAKE16-GISEL-LABEL: high_mask:
+; GFX1170-FAKE16-GISEL:       ; %bb.0:
+; GFX1170-FAKE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v2, 7
+; GFX1170-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX1170-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff0000, v2
+; GFX1170-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-TRUE16-LABEL: high_mask:
-; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v0.h, v0, v1
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1170-TRUE16-SDAG-LABEL: high_mask:
+; GFX1170-TRUE16-SDAG:       ; %bb.0:
+; GFX1170-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-TRUE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0.h, v0, v1
+; GFX1170-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX1170-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-TRUE16-GISEL-LABEL: high_mask:
+; GFX1170-TRUE16-GISEL:       ; %bb.0:
+; GFX1170-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v2, 7
+; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v2.h, 0
+; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1170-TRUE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
+; GFX1170-TRUE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff0000, v2
+; GFX1170-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-FAKE16-SDAG-LABEL: high_mask:
+; GFX1250-FAKE16-SDAG:       ; %bb.0:
+; GFX1250-FAKE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v1 op_sel:[0,0,1]
+; GFX1250-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX1250-FAKE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-GISEL-LABEL: high_mask:
+; GFX1250-FAKE16-GISEL:       ; %bb.0:
+; GFX1250-FAKE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v2, 7
+; GFX1250-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX1250-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff0000, v2
+; GFX1250-FAKE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-TRUE16-SDAG-LABEL: high_mask:
+; GFX1250-TRUE16-SDAG:       ; %bb.0:
+; GFX1250-TRUE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-SDAG-NEXT:    v_cvt_pk_fp8_f32 v0.h, v0, v1
+; GFX1250-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX1250-TRUE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-TRUE16-GISEL-LABEL: high_mask:
+; GFX1250-TRUE16-GISEL:       ; %bb.0:
+; GFX1250-TRUE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v2, 7
+; GFX1250-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v2.h, 0
+; GFX1250-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
+; GFX1250-TRUE16-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff0000, v2
+; GFX1250-TRUE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %x = call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %a, float %b, i32 7, i1 true)
   %y = and i32 %x, -65536
   ret i32 %y

@@ -76,17 +76,29 @@ def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
          [{ return matchFDivSqrtToRsqF16(*${root}); }]),
   (apply [{ applyFDivSqrtToRsqF16(*${root}, ${x}.getReg()); }])>;
 
-def packed_f8_conversions : GICombinePatFrag<
-  (outs root:$dst), (ins),
-  !foreach(op, [int_amdgcn_cvt_pk_fp8_f32, int_amdgcn_cvt_pk_bf8_f32,
-                int_amdgcn_cvt_pk_fp8_f32_e5m3],
-           (pattern (op $dst, $src0, $src1, $old, $sel)))>;
+// Packed FP8/BF8 conversions write one half of their result and copy the
+// other half from their old operand.
+defvar CvtPkF8Intrinsics = [int_amdgcn_cvt_pk_fp8_f32,
+                            int_amdgcn_cvt_pk_bf8_f32,
+                            int_amdgcn_cvt_pk_fp8_f32_e5m3];
 
-def packed_f8_unused_old : GICombineRule<
+// A conversion $dst whose old operand $prev is another conversion, with old
+// operand $prev_old.
+def cvt_pk_f8_chain_frags : GICombinePatFrag<
+  (outs root:$dst, $prev), (ins $prev_old),
+  !foldl([]<dag>, CvtPkF8Intrinsics, acc, op,
+         !listconcat(acc, !foreach(prev_op, CvtPkF8Intrinsics,
+           (pattern (op $dst, $src0, $src1, $prev, $sel),
+                    (prev_op $prev, $prev_src0, $prev_src1, $prev_old,
+                             $prev_sel)))))>;
+
+// $dst only reads the half of $prev that it copies. If $prev wrote that half
+// itself, $prev_old is not observed.
+def cvt_pk_f8_demanded_bits : GICombineRule<
   (defs root:$dst),
-  (match (packed_f8_conversions $dst):$root,
-         [{ return matchPackedF8UnusedOld(*${root}); }]),
-  (apply [{ applyPackedF8UnusedOld(*${root}); }])>;
+  (match (cvt_pk_f8_chain_frags $dst, $prev, $prev_old):$root,
+         [{ return matchCvtPkF8DemandedBits(*${root}, ${prev_old}); }]),
+  (apply [{ applyCvtPkF8DemandedBits(${prev_old}); }])>;
 
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
 
@@ -354,11 +366,12 @@ def AMDGPUPreLegalizerCombiner: GICombiner<
 def AMDGPUPostLegalizerCombiner: GICombiner<
   "AMDGPUPostLegalizerCombinerImpl",
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
-   uchar_to_float, packed_f8_unused_old, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
+   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
    sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32,
-   fold_carry_into_addsub_combines, simplify_demanded_bits]> {
+   fold_carry_into_addsub_combines, simplify_demanded_bits,
+   cvt_pk_f8_demanded_bits]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

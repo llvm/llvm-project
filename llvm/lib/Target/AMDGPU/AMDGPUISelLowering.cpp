@@ -4249,77 +4249,38 @@ SDValue AMDGPUTargetLowering::performAssertSZExtCombine(SDNode *N,
   return SDValue();
 }
 
-// Operands: intrinsic ID, src0, src1, old, selector.
-static constexpr unsigned PackedF8OldIdx = 3;
-static constexpr unsigned PackedF8SelectorIdx = 4;
+// Packed FP8/BF8 conversions (llvm.amdgcn.cvt.pk.{fp8,bf8}.f32 and
+// llvm.amdgcn.cvt.pk.fp8.f32.e5m3) write one 16-bit half of their result and
+// copy the other half from their "old" operand.
+// Operands: intrinsic ID, src0, src1, old, word select.
+static constexpr unsigned CvtPkF8OldIdx = 3;
+static constexpr unsigned CvtPkF8WordSelIdx = 4;
 
-static bool isPackedF8Conversion(const SDNode *N) {
-  return N->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-         AMDGPU::isPackedF8ConversionIntrinsic(N->getConstantOperandVal(0));
-}
-
-static APInt getPackedF8PreservedOldBits(const SDNode *N) {
-  return N->getConstantOperandVal(PackedF8SelectorIdx)
+/// Return the bits of the result that are copied from the old operand.
+static APInt getCvtPkF8CopiedBits(const SDNode *N) {
+  return N->getConstantOperandVal(CvtPkF8WordSelIdx)
              ? APInt::getLowBitsSet(32, 16)
              : APInt::getHighBitsSet(32, 16);
-}
-
-static APInt getPackedF8UserDemandedBits(const SDUse &Use) {
-  const SDNode *User = Use.getUser();
-
-  if (isPackedF8Conversion(User) && Use.getOperandNo() == PackedF8OldIdx)
-    return getPackedF8PreservedOldBits(User);
-
-  switch (User->getOpcode()) {
-  case ISD::TRUNCATE:
-    return APInt::getLowBitsSet(32, User->getValueType(0).getSizeInBits());
-  case ISD::AND:
-    if (auto *Mask =
-            dyn_cast<ConstantSDNode>(User->getOperand(1 - Use.getOperandNo())))
-      return Mask->getAPIntValue();
-    break;
-  default:
-    break;
-  }
-
-  return APInt::getAllOnes(32);
-}
-
-static SDValue
-performPackedF8ConversionCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
-  SDValue Old = N->getOperand(PackedF8OldIdx);
-  if (Old.isUndef())
-    return SDValue();
-
-  // Every user must discard the half copied from Old before Old can be
-  // replaced. This preserves shared conversion results.
-  APInt PreservedOldBits = getPackedF8PreservedOldBits(N);
-  APInt UsersDemandedBits(32, 0);
-  for (const SDUse &Use : N->uses()) {
-    UsersDemandedBits |= getPackedF8UserDemandedBits(Use);
-    if (UsersDemandedBits.intersects(PreservedOldBits))
-      return SDValue();
-  }
-
-  SmallVector<SDValue, 5> Ops(N->op_values());
-  Ops[PackedF8OldIdx] = DCI.DAG.getPOISON(MVT::i32);
-  return DCI.DAG.getNode(N->getOpcode(), SDLoc(N), MVT::i32, Ops,
-                         N->getFlags());
 }
 
 SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   SDNode *N, DAGCombinerInfo &DCI) const {
   unsigned IID = N->getConstantOperandVal(0);
-  if (AMDGPU::isPackedF8ConversionIntrinsic(IID))
-    return performPackedF8ConversionCombine(N, DCI);
-
   switch (IID) {
   case Intrinsic::amdgcn_mul_i24:
   case Intrinsic::amdgcn_mul_u24:
   case Intrinsic::amdgcn_mulhi_i24:
   case Intrinsic::amdgcn_mulhi_u24:
     return simplifyMul24(N, DCI);
+  case Intrinsic::amdgcn_cvt_pk_fp8_f32:
+  case Intrinsic::amdgcn_cvt_pk_bf8_f32:
+  case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
+    // Only the half copied into the result is read from the old operand.
+    if (SimplifyDemandedBits(N->getOperand(CvtPkF8OldIdx),
+                             getCvtPkF8CopiedBits(N), DCI))
+      return SDValue(N, 0);
+    return SDValue();
+  }
   case Intrinsic::amdgcn_fract:
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
@@ -5886,22 +5847,28 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op, const APInt &OriginalDemandedBits,
     const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
     unsigned Depth) const {
-  if (isPackedF8Conversion(Op.getNode())) {
-    SDValue Old = Op.getOperand(PackedF8OldIdx);
-    APInt PreservedOldBits = getPackedF8PreservedOldBits(Op.getNode());
-    APInt OldDemandedBits = OriginalDemandedBits & PreservedOldBits;
-    if (OldDemandedBits.isZero() && !Old.isUndef()) {
-      SmallVector<SDValue, 5> Ops(Op->op_values());
-      Ops[PackedF8OldIdx] = TLO.DAG.getPOISON(MVT::i32);
-      return TLO.CombineTo(Op, TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op),
-                                               MVT::i32, Ops, Op->getFlags()));
-    }
-    return false;
-  }
-
   switch (Op.getOpcode()) {
   case ISD::INTRINSIC_WO_CHAIN: {
     switch (Op.getConstantOperandVal(0)) {
+    case Intrinsic::amdgcn_cvt_pk_fp8_f32:
+    case Intrinsic::amdgcn_cvt_pk_bf8_f32:
+    case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
+      // Old is only observed through the half copied into the result.
+      SDValue Old = Op.getOperand(CvtPkF8OldIdx);
+      APInt OldDemandedBits =
+          OriginalDemandedBits & getCvtPkF8CopiedBits(Op.getNode());
+      if (!OldDemandedBits.isZero()) {
+        KnownBits KnownOld;
+        return SimplifyDemandedBits(Old, OldDemandedBits, OriginalDemandedElts,
+                                    KnownOld, TLO, Depth + 1);
+      }
+      if (Old.isUndef())
+        return false;
+      SmallVector<SDValue, 5> Ops(Op->op_values());
+      Ops[CvtPkF8OldIdx] = TLO.DAG.getPOISON(MVT::i32);
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op),
+                                               MVT::i32, Ops, Op->getFlags()));
+    }
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
     case Intrinsic::amdgcn_wwm: {

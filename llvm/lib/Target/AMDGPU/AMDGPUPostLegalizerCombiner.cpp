@@ -13,7 +13,6 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUCombinerHelper.h"
-#include "AMDGPUInstrInfo.h"
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -78,8 +77,9 @@ public:
   void applySelectFCmpToFMinFMaxLegacy(MachineInstr &MI,
                                        const FMinFMaxLegacyInfo &Info) const;
 
-  bool matchPackedF8UnusedOld(MachineInstr &MI) const;
-  void applyPackedF8UnusedOld(MachineInstr &MI) const;
+  bool matchCvtPkF8DemandedBits(MachineInstr &MI,
+                                const MachineOperand &PrevOld) const;
+  void applyCvtPkF8DemandedBits(MachineOperand &PrevOld) const;
 
   bool matchUCharToFloat(MachineInstr &MI) const;
   void applyUCharToFloat(MachineInstr &MI) const;
@@ -282,76 +282,41 @@ void AMDGPUPostLegalizerCombinerImpl::applyFDivSqrtToRsqF16(
   MI.eraseFromParent();
 }
 
-// Operands: result, intrinsic ID, src0, src1, old, selector.
-static constexpr unsigned PackedF8OldIdx = 4;
-static constexpr unsigned PackedF8SelectorIdx = 5;
+// Packed FP8/BF8 conversions write one 16-bit half of their result and copy
+// the other half from their "old" operand.
+// Operands: result, intrinsic ID, src0, src1, old, word select.
+static constexpr unsigned CvtPkF8WordSelIdx = 5;
 
-static bool isPackedF8Conversion(const MachineInstr &MI) {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
-         AMDGPU::isPackedF8ConversionIntrinsic(
-             cast<GIntrinsic>(MI).getIntrinsicID());
-}
-
-static APInt getPackedF8PreservedOldBits(const MachineInstr &MI) {
-  return MI.getOperand(PackedF8SelectorIdx).getImm()
+/// Return the bits of the result that are copied from the old operand.
+static APInt getCvtPkF8CopiedBits(const MachineInstr &MI) {
+  return MI.getOperand(CvtPkF8WordSelIdx).getImm()
              ? APInt::getLowBitsSet(32, 16)
              : APInt::getHighBitsSet(32, 16);
 }
 
-static APInt getPackedF8UserDemandedBits(const MachineOperand &Use,
-                                         const MachineRegisterInfo &MRI) {
-  const MachineInstr &User = *Use.getParent();
-
-  if (isPackedF8Conversion(User) && &Use == &User.getOperand(PackedF8OldIdx))
-    return getPackedF8PreservedOldBits(User);
-
-  switch (User.getOpcode()) {
-  case TargetOpcode::G_TRUNC:
-    return APInt::getLowBitsSet(
-        32, MRI.getType(User.getOperand(0).getReg()).getSizeInBits());
-  case TargetOpcode::G_AND: {
-    unsigned OtherIdx = &Use == &User.getOperand(1) ? 2 : 1;
-    if (std::optional<ValueAndVReg> Mask = getIConstantVRegValWithLookThrough(
-            User.getOperand(OtherIdx).getReg(), MRI))
-      return Mask->Value.zextOrTrunc(32);
-    break;
-  }
-  default:
-    break;
-  }
-
-  return APInt::getAllOnes(32);
+// \p MI only reads the half of the previous conversion that it copies. If the
+// previous conversion wrote that half itself, its old operand \p PrevOld is
+// not observed.
+bool AMDGPUPostLegalizerCombinerImpl::matchCvtPkF8DemandedBits(
+    MachineInstr &MI, const MachineOperand &PrevOld) const {
+  const MachineInstr &Prev = *PrevOld.getParent();
+  if (!MRI.hasOneNonDBGUse(Prev.getOperand(0).getReg()))
+    return false;
+  if (mi_match(PrevOld.getReg(), MRI, m_GImplicitDef()))
+    return false;
+  return !getCvtPkF8CopiedBits(MI).intersects(getCvtPkF8CopiedBits(Prev));
 }
 
-bool AMDGPUPostLegalizerCombinerImpl::matchPackedF8UnusedOld(
-    MachineInstr &MI) const {
-  Register Old = MI.getOperand(PackedF8OldIdx).getReg();
-  if (MRI.getVRegDef(Old)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
-    return false;
-
-  Register Dst = MI.getOperand(0).getReg();
-  if (MRI.use_nodbg_empty(Dst))
-    return false;
-
-  APInt PreservedOldBits = getPackedF8PreservedOldBits(MI);
-  APInt UsersDemandedBits(32, 0);
-  for (const MachineOperand &Use : MRI.use_nodbg_operands(Dst)) {
-    if (!Use.isUndef())
-      UsersDemandedBits |= getPackedF8UserDemandedBits(Use, MRI);
-    if (UsersDemandedBits.intersects(PreservedOldBits))
-      return false;
-  }
-  return true;
-}
-
-void AMDGPUPostLegalizerCombinerImpl::applyPackedF8UnusedOld(
-    MachineInstr &MI) const {
-  B.setInstrAndDebugLoc(MI);
-  Register Old = MI.getOperand(PackedF8OldIdx).getReg();
-  Register Undef = B.buildUndef(MRI.getType(Old)).getReg(0);
-  Observer.changingInstr(MI);
-  MI.getOperand(PackedF8OldIdx).setReg(Undef);
-  Observer.changedInstr(MI);
+void AMDGPUPostLegalizerCombinerImpl::applyCvtPkF8DemandedBits(
+    MachineOperand &PrevOld) const {
+  MachineInstr &Prev = *PrevOld.getParent();
+  B.setInstrAndDebugLoc(Prev);
+  Register Undef = B.buildUndef(MRI.getType(PrevOld.getReg())).getReg(0);
+  // Debug users could observe the half that is no longer defined.
+  MRI.markUsesInDebugValueAsUndef(Prev.getOperand(0).getReg());
+  Observer.changingInstr(Prev);
+  PrevOld.setReg(Undef);
+  Observer.changedInstr(Prev);
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
