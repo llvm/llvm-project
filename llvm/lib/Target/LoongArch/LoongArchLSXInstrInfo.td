@@ -3077,7 +3077,7 @@ multiclass PatVecCondViaFR<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
 
 } // Predicates = [HasExtLSX]
 
-let Predicates = [HasExtLSX, HasNoTuneLA464] in {
+let Predicates = [HasExtLSX, HasFastMOVCF2GR] in {
 // Whole-vector zero tests.
 foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
 defm : PatVecCond<loongarch_vanynonzero, VSETNEZ_V, vt, LSX128>;
@@ -3094,9 +3094,9 @@ defm : PatVecCond<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
 defm : PatVecCond<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
 defm : PatVecCond<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
 defm : PatVecCond<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
-} // Predicates = [HasExtLSX, HasNoTuneLA464]
+} // Predicates = [HasExtLSX, HasFastMOVCF2GR]
 
-let Predicates = [HasExtLSX, HasTuneLA464] in {
+let Predicates = [HasExtLSX, HasSlowMOVCF2GR] in {
 foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
 defm : PatVecCondViaFR<loongarch_vanynonzero, VSETNEZ_V, vt, LSX128>;
 defm : PatVecCondViaFR<loongarch_vallzero, VSETEQZ_V, vt, LSX128>;
@@ -3112,7 +3112,7 @@ defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
 defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
 defm : PatVecCondViaFR<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
 defm : PatVecCondViaFR<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
-} // Predicates = [HasExtLSX, HasTuneLA464]
+} // Predicates = [HasExtLSX, HasSlowMOVCF2GR]
 
 /// Intrinsic pattern
 

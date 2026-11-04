@@ -3413,7 +3413,7 @@ def : Pat<(int_loongarch_lasx_xvstelm_d v4i64:$xd, GPR:$rj, timm:$imm, timm:$idx
 
 } // Predicates = [HasExtLASX]
 
-let Predicates = [HasExtLASX, HasNoTuneLA464] in {
+let Predicates = [HasExtLASX, HasFastMOVCF2GR] in {
 // Whole-vector zero tests, see the LSX counterparts.
 foreach vt = [v32i8, v16i16, v8i32, v4i64] in {
 defm : PatVecCond<loongarch_vanynonzero, XVSETNEZ_V, vt, LASX256>;
@@ -3430,9 +3430,9 @@ defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
 defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
 defm : PatVecCond<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
 defm : PatVecCond<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
-} // Predicates = [HasExtLASX, HasNoTuneLA464]
+} // Predicates = [HasExtLASX, HasFastMOVCF2GR]
 
-let Predicates = [HasExtLASX, HasTuneLA464] in {
+let Predicates = [HasExtLASX, HasSlowMOVCF2GR] in {
 foreach vt = [v32i8, v16i16, v8i32, v4i64] in {
 defm : PatVecCondViaFR<loongarch_vanynonzero, XVSETNEZ_V, vt, LASX256>;
 defm : PatVecCondViaFR<loongarch_vallzero, XVSETEQZ_V, vt, LASX256>;
@@ -3448,4 +3448,4 @@ defm : PatVecCondViaFR<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
 defm : PatVecCondViaFR<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
 defm : PatVecCondViaFR<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
 defm : PatVecCondViaFR<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
-} // Predicates = [HasExtLASX, HasTuneLA464]
+} // Predicates = [HasExtLASX, HasSlowMOVCF2GR]

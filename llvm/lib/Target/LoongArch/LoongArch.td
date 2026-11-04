@@ -154,13 +154,13 @@ def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
 
-def TuneLA464
-    : SubtargetFeature<"tune-la464", "HasTuneLA464", "true",
-                       "Tune for LA464 microarchitecture">;
-def HasTuneLA464
-    : Predicate<"Subtarget->hasTuneLA464()">;
-def HasNoTuneLA464
-    : Predicate<"!Subtarget->hasTuneLA464()">;
+def TuneSlowMOVCF2GR
+    : SubtargetFeature<"slow-movcf2gr", "HasSlowMOVCF2GR", "true",
+                       "MOVCF2GR instruction is slow (compared to MOVCF2FR+MOVFR2GR.{S/D})">;
+def HasSlowMOVCF2GR
+    : Predicate<"Subtarget->hasSlowMOVCF2GR()">;
+def HasFastMOVCF2GR
+    : Predicate<"!Subtarget->hasSlowMOVCF2GR()">;
 
 //===----------------------------------------------------------------------===//
 // Schedule, Registers, instruction descriptions ...
@@ -204,7 +204,7 @@ def : ProcessorModel<"la464", LA464Model, [Feature64Bit,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
                                              FeatureExtLBT],
-                                          [TuneLA464]>;
+                                          [TuneSlowMOVCF2GR]>;
 
 def : ProcessorModel<"la664", LA664Model, [Feature64Bit,
                                              FeatureUAL,
