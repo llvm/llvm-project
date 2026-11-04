@@ -209,10 +209,9 @@ protected:
       ArrayRef<const AbstractSparseLattice *> argumentLattices,
       ArrayRef<AbstractSparseLattice *> resultLattices) = 0;
 
-  /// Given an operation with region control-flow, the lattices of the operands,
-  /// and a region successor, compute the lattice values for block arguments
-  /// that are not accounted for by the branching control flow (ex. the bounds
-  /// of loops).
+  /// Compute lattice values for successor values not supplied by control-flow
+  /// forwarding. Changes to the operation's operand lattices revisit this hook.
+  /// Implementations must register dependencies for any other lattices read.
   virtual void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
       ValueRange nonSuccessorInputs,
@@ -260,6 +259,13 @@ protected:
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
   LogicalResult initializeRecursively(Operation *op);
+
+  /// Infer non-forwarded successor values at `point`. Changes to operand
+  /// lattices cause this inference to run again.
+  void visitNonControlFlowArguments(
+      ProgramPoint *point, Operation *op, const RegionSuccessor &successor,
+      ValueRange nonSuccessorInputs,
+      ArrayRef<AbstractSparseLattice *> nonSuccessorInputLattices);
 
   /// Visit an operation. If this is a call operation or an operation with
   /// region control-flow, then its result lattices are set accordingly.
@@ -324,8 +330,10 @@ public:
   /// Given an operation with possible region control-flow, the lattices of the
   /// operands, and a region successor, compute the lattice values for
   /// non-successor-inputs (ex. loop induction variables) of a given region
-  /// successor. By default, this method marks all lattice elements as having
-  /// reached a pessimistic fixpoint.
+  /// successor. Changes to the operation's operand lattices revisit this hook.
+  /// Implementations must register dependencies for any other lattices read.
+  /// By default, this method marks all lattice elements as having reached a
+  /// pessimistic fixpoint.
   virtual void
   visitNonControlFlowArguments(Operation *op, const RegionSuccessor &successor,
                                ValueRange nonSuccessorInputs,
