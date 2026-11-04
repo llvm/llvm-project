@@ -2785,7 +2785,7 @@ SDValue VETargetLowering::combineSelectCC(SDNode *N,
                                           DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SELECT_CC &&
          "Should be called with a SELECT_CC node");
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+  ISD::CondCode CC = N->getOperandCondCode(4);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   SDValue True = N->getOperand(2);

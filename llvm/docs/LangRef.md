@@ -416,7 +416,7 @@ added in the future:
     - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with `nest`.
 
-    - On RISC-V the callee preserves x5-x31 except x6, x7 and x28 registers.
+    - On RISC-V the callee preserves x8-x31 except the x28 register.
 
     - On LoongArch the callee preserves r4-r31 except r12-r15 and r20-r21 registers.
 
@@ -2297,6 +2297,15 @@ define void @f() "no-sse" { ... }
     on function-pointer identity can break. So, any function annotated with
     `jumptable` must also be `unnamed_addr`.
 
+`likely_module_local`
+:   This attribute indicates that the function is likely not referenced from
+    outside of the current module, even though its linkage does not guarantee
+    that. It is only meaningful on functions with `linkonce_odr` linkage and is
+    ignored otherwise. Optimizations may use it as a profitability hint. It is
+    just a hint; it imposes no requirements on the inliner or other
+    optimizations, and furthermore it must not be relied upon for correctness,
+    as the function may still be referenced from another module.
+
 `memory(...)`
 :   This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (`none`,
@@ -2385,7 +2394,7 @@ define void @f() "no-sse" { ... }
     stops inside an inlined call site, it will appear to be stopped at the
     outermost inlined call site.
 
-`no-jump-tables`
+`"no-jump-tables"`
 :   When this attribute is set to true, the jump tables and lookup tables that
     can be generated from a switch case lowering are disabled.
 
@@ -2497,7 +2506,7 @@ define void @f() "no-sse" { ... }
 :   This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.
 
-`indirect-tls-seg-refs`
+`"indirect-tls-seg-refs"`
 :   This attribute indicates that the code generator should not use
     direct TLS access through segment registers, even if the
     target-specific ABI normally permits it.
@@ -2721,6 +2730,10 @@ fn -> other_fn -> other_fn ; fn is norecurse
 :   This attribute indicates that ThreadSanitizer checks
     (dynamic thread safety analysis) are enabled for this function.
 
+`sanitize_concurrency`
+:   This attribute indicates that ConcurrencySanitizer checks
+    (probabilistic data race detection) are enabled for this function.
+
 `sanitize_hwaddress`
 :   This attribute indicates that HWAddressSanitizer checks
     (dynamic address safety analysis based on tagged pointers) are enabled for
@@ -2874,7 +2887,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     bitcode, if the second value is omitted, both input and output
     modes will assume the same mode.
 
-    If this is attribute is not specified, the default is `ieee|ieee`.
+    If this attribute is not specified, the default is `ieee|ieee`.
 
     If the output mode is `preservesign`, or `positivezero`,
     denormal outputs may be flushed to zero by standard floating-point
@@ -2892,10 +2905,6 @@ fn -> other_fn -> other_fn ; fn is norecurse
     the mode is consistent. User or platform code is expected to set
     the floating point mode appropriately before function entry.
 
-    This may optionally specify a second pair, prefixed with
-    `float:`. This provides an override for the behavior of 32-bit
-    float type (or vectors of 32-bit floats).
-
     If the input mode is `preservesign`, or `positivezero`,
     a floating-point operation must treat any input denormal value as
     zero. In some situations, if an instruction does not respect this
@@ -2904,11 +2913,10 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
     This may optionally specify a second pair, prefixed with
     `float:`. This provides an override for the behavior of 32-bit
-    float type. (or vectors of 32-bit floats). If this is present,
-    this overrides the base handling of the default mode. Not all
+    float type (or vectors of 32-bit floats). Not all
     targets support separately setting the denormal mode per type, and
-    no attempt is made to diagnose unsupported uses. Currently this
-    attribute is respected by the AMDGPU and NVPTX backends.
+    no attempt is made to diagnose unsupported uses. Currently the separate
+    `float:` attribute is respected by the AMDGPU and NVPTX backends.
 
     **Examples:**
 
