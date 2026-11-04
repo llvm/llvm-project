@@ -17579,8 +17579,12 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   collectLoopStmts(AStmt, LoopStmts);
 
   // Collect pre-init statements in outer-to-inner order.
+  // Finals below already skip leftover writes when a loop has no trips, so a
+  // leftover value is whatever PreInits last wrote. Gate inner assignment
+  // inits the same way: otherwise J = 0 always runs, Finals skip, and J stays
+  // at that wrong PreInit value.
   SmallVector<Stmt *> PreInits;
-  SmallVector<SmallVector<Stmt *, 2>, 4> GatedInits(NumLoops);
+  SmallVector<SmallVector<Stmt *, 1>, 4> GatedInits(NumLoops);
   for (auto I : llvm::seq<unsigned>(NumLoops)) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
     assert(LoopHelper.Counters.size() == 1 &&
@@ -17590,7 +17594,7 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
                       PreInits);
       continue;
     }
-    SmallVector<Stmt *, 2> AlwaysInits;
+    SmallVector<Stmt *, 1> AlwaysInits;
     for (Stmt *S : OriginalInits[I]) {
       if (isa<DeclStmt>(S))
         AlwaysInits.push_back(S);
@@ -17721,9 +17725,8 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
                                          TripCount.get(), ZeroTripCount);
   if (!TripCount.isUsable())
     return StmtError();
-
   // Inner assignments run only if every enclosing loop has at least one
-  // iteration.
+  // iteration. Otherwise the gated Finals leave that PreInit as the leftover.
   for (unsigned I = 1; I < NumLoops; ++I) {
     if (GatedInits[I].empty())
       continue;
