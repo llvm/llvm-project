@@ -495,7 +495,8 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
 
 // Handle known sign bit and nan cases for fadd, fsub, and fma.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
-                              const KnownFPClass &KnownRHS, bool IsFMA) {
+                              const KnownFPClass &KnownRHS, RoundingMode Round,
+                              bool IsFMA) {
   KnownFPClass Known;
 
   if (KnownLHS.cannotBeOrderedLessThanZero() &&
@@ -528,9 +529,23 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
         (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosInf)))
       Known.knownNot(fcNan);
 
-    // (fadd x, +0.0) is guaranteed to return +0.0, not -0.0.
-    if (KnownLHS.isKnownNever(fcNegZero) || KnownRHS.isKnownNever(fcNegZero))
-      Known.knownNot(fcNegZero);
+    switch (Round) {
+    case RoundingMode::NearestTiesToEven:
+    case RoundingMode::NearestTiesToAway:
+    case RoundingMode::TowardZero:
+    case RoundingMode::TowardPositive:
+      // Only -0.0 + -0.0 produces -0.0 for these rounding modes.
+      if (KnownLHS.isKnownNever(fcNegZero) || KnownRHS.isKnownNever(fcNegZero))
+        Known.knownNot(fcNegZero);
+      break;
+    case RoundingMode::TowardNegative:
+      // Only +0.0 + +0.0 produces +0.0 when rounding towards negative infinity.
+      if (KnownLHS.isKnownNever(fcPosZero) || KnownRHS.isKnownNever(fcPosZero))
+        Known.knownNot(fcPosZero);
+      break;
+    default:
+      break;
+    }
   }
 
   return Known;
@@ -542,7 +557,8 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
   KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
 
-  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS, /*IsFMA=*/false);
+  KnownFPClass Known = fadd_impl(
+      KnownLHS, KnownRHS, RoundingMode::NearestTiesToEven, /*IsFMA=*/false);
 
   return applyOutputDenormalMode(Known, Mode);
 }
@@ -551,7 +567,8 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
                                      DenormalMode Mode) {
   KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
 
-  KnownFPClass Known = fadd_impl(KnownSrc, KnownSrc, /*IsFMA=*/false);
+  KnownFPClass Known = fadd_impl(
+      KnownSrc, KnownSrc, RoundingMode::NearestTiesToEven, /*IsFMA=*/false);
 
   if (KnownSrc.isKnownNever(fcPosSubnormal))
     Known.knownNot(fcPosSubnormal);
@@ -575,7 +592,8 @@ KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS_,
   // flushed.
   KnownRHS.fneg();
 
-  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS, /*IsFMA=*/false);
+  KnownFPClass Known = fadd_impl(
+      KnownLHS, KnownRHS, RoundingMode::NearestTiesToEven, /*IsFMA=*/false);
 
   return applyOutputDenormalMode(Known, Mode);
 }
@@ -587,6 +605,10 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
 
   KnownFPClass Known;
+
+  // Note: Until we pass the rounding mode into fmul, we shall assume that the
+  // rounding mode is dynamic. For example, subnormal * subnormal may be zero
+  // or subnormal depending on the rounding mode.
 
   // fmul will xor the sign-bit of non-NaN inputs:
   // +X * +Y or -X * -Y => +Q
@@ -676,6 +698,9 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS_,
 
   KnownFPClass Known;
 
+  // Note: Until we pass the rounding mode into fdiv, we shall assume that the
+  // rounding mode is dynamic.
+
   // fdiv will xor the sign-bit of non-NaN inputs:
   // +X / +Y or -X / -Y => +Q
   // +X / -Y or -X / +Y => -Q
@@ -750,6 +775,8 @@ KnownFPClass KnownFPClass::frem(const KnownFPClass &KnownLHS_,
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
   KnownFPClass Known;
 
+  // frem is always exact, so the rounding mode is not needed.
+
   // We are assuming that frem(x, Inf) is already handled elsewhere.
 
   Known.knownNot(fcInf);
@@ -816,7 +843,8 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS_,
   //
   // If the multiply is a -0 due to rounding, the final -0 + 0 will be -0,
   // unlike for a separate fadd.
-  KnownFPClass Known = fadd_impl(Mul, KnownAddend, /*IsFMA=*/true);
+  KnownFPClass Known = fadd_impl(
+      Mul, KnownAddend, RoundingMode::NearestTiesToEven, /*IsFMA=*/true);
 
   // propagateNonSNaN for 3 arguments.
   if (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNever(fcSNan) &&
@@ -879,7 +907,8 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared_,
   KnownFPClass KnownAddend = applyInputDenormalMode(KnownAddend_, Mode);
 
   KnownFPClass Squared = square(KnownSquared, DenormalMode::getIEEE());
-  KnownFPClass Known = fadd_impl(Squared, KnownAddend, /*IsFMA=*/true);
+  KnownFPClass Known = fadd_impl(
+      Squared, KnownAddend, RoundingMode::NearestTiesToEven, /*IsFMA=*/true);
 
   Known.propagateNonSNaN(KnownSquared, KnownAddend);
 
