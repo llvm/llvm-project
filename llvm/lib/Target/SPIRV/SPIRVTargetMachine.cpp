@@ -18,6 +18,7 @@
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
+#include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -167,6 +168,11 @@ SPIRVTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new SPIRVPassConfig(*this, PM);
+}
+
+// CSE can merge same-LLT values with different SPIR-V types.
+CSEConfigBase *SPIRVTargetMachine::createCSEConfig() const {
+  return new CSEConfigBase();
 }
 
 void SPIRVPassConfig::addIRPasses() {
