@@ -476,7 +476,6 @@ void OmpStructureChecker::CheckApplyConstruct(
     bool &needPerfect) {
   llvm::omp::Version version{context_.langOptions().OpenMPVersion};
   std::string_view perfectTxt{needPerfect ? " perfect" : ""};
-  auto assoc{llvm::omp::getDirectiveAssociation(spec.DirId())};
   const auto &directiveList = GetOrderedApplyDirectives(spec);
   auto [max, _]{GetAffectedNestDepthWithReason(spec, version)};
   // the apply directives are applied from innermost to outermost index
