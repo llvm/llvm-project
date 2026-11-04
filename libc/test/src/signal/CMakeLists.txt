@@ -70,6 +70,24 @@ add_libc_test(
 )
 
 add_libc_test(
+  sigpending_test
+  SUITE
+    libc-signal-tests
+  SRCS
+    sigpending_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.src.signal.raise
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigismember
+    libc.src.signal.sigpending
+    libc.src.signal.sigprocmask
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   sigsuspend_test
   SUITE
     libc-signal-tests

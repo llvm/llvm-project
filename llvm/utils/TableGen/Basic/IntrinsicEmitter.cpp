@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/UniqueVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -502,17 +503,6 @@ static MemoryEffects getEffectiveME(const CodeGenIntrinsic &Int) {
   return ME;
 }
 
-static bool compareFnAttributes(const CodeGenIntrinsic *L,
-                                const CodeGenIntrinsic *R) {
-  if (L->FnAttributes != R->FnAttributes) {
-    return std::lexicographical_compare(
-        L->FnAttributes.begin(), L->FnAttributes.end(), R->FnAttributes.begin(),
-        R->FnAttributes.end(), LessRecordByID());
-  }
-
-  return getEffectiveME(*L).toIntValue() < getEffectiveME(*R).toIntValue();
-}
-
 /// Returns true if \p Int has a non-empty set of function attributes.
 static bool hasFnAttributes(const CodeGenIntrinsic &Int) {
   return !Int.FnAttributes.empty() ||
@@ -520,129 +510,234 @@ static bool hasFnAttributes(const CodeGenIntrinsic &Int) {
 }
 
 namespace {
-struct FnAttributeComparator {
-  bool operator()(const CodeGenIntrinsic *L, const CodeGenIntrinsic *R) const {
-    return compareFnAttributes(L, R);
+/// Uniques attribute sets, keyed by \p KeyT, and assigns them dense IDs in
+/// insertion order.
+template <typename KeyT> class AttributeSetTable {
+  UniqueVector<KeyT> Sets;
+
+public:
+  /// Returns the ID of the set \p Attrs.
+  unsigned add(const KeyT &Attrs) { return Sets.insert(Attrs) - 1; }
+
+  unsigned size() const { return static_cast<unsigned>(Sets.size()); }
+
+  /// Emits a switch case returning each set, in ID order. \p Print emits the
+  /// attributes of a non-empty set. If provided, \p WriteComment writes a
+  /// comment for the case of each ID.
+  void emitCases(
+      raw_ostream &OS, function_ref<void(raw_ostream &, const KeyT &)> Print,
+      function_ref<void(raw_ostream &, unsigned)> WriteComment = {}) const {
+    for (const auto &[ID, Attrs] : enumerate(Sets)) {
+      OS << "\n  case " << ID << ':';
+      if (WriteComment) {
+        OS << " // ";
+        WriteComment(OS, ID);
+      }
+
+      if (Attrs.empty()) {
+        OS << "\n    return AttributeSet();";
+        continue;
+      }
+
+      OS << "\n    return AttributeSet::get(C, {\n";
+      Print(OS, Attrs);
+      OS << "    });";
+    }
   }
 };
 
-struct AttributeComparator {
-  bool operator()(const CodeGenIntrinsic *L, const CodeGenIntrinsic *R) const {
-    // This comparator is used to unique just the argument attributes of an
-    // intrinsic without considering any function attributes.
-    return L->ArgumentAttributes < R->ArgumentAttributes;
+/// Uniques sequences of argument attribute entries, assigning them dense IDs in
+/// insertion order, and lays them out in a single table where a sequence that
+/// is a suffix of another shares its storage.
+template <typename EntryT> class AttributeSequenceTable {
+public:
+  using Sequence = SmallVector<EntryT, 0>;
+
+private:
+  SequenceToOffsetTable<Sequence> Table{std::nullopt};
+  UniqueVector<Sequence> Seqs;
+
+public:
+  /// Returns the ID of \p Seq. Must be called before the table is laid out.
+  unsigned add(const Sequence &Seq) {
+    size_t NumSeqs = Seqs.size();
+    unsigned ID = Seqs.insert(Seq) - 1;
+    if (Seqs.size() != NumSeqs && !Seq.empty())
+      Table.add(Seq);
+    return ID;
+  }
+
+  void layout() { Table.layout(); }
+
+  /// Number of sequences.
+  unsigned numSequences() const { return static_cast<unsigned>(Seqs.size()); }
+
+  /// Number of entries in the laid out table.
+  unsigned size() const { return Table.size(); }
+
+  /// Emits the entries of the laid out table.
+  void emitEntries(raw_ostream &OS,
+                   function_ref<void(raw_ostream &, EntryT)> Print) const {
+    Table.emit(OS, Print);
+  }
+
+  /// Emits the start index and length of each sequence, in ID order.
+  void emitInfo(raw_ostream &OS) const {
+    for (const Sequence &Seq : Seqs) {
+      unsigned Start = Seq.empty() ? 0 : Table.get(Seq);
+      OS << formatv("  {{{}, {}},\n", Start, Seq.size());
+    }
   }
 };
-} // End anonymous namespace
+} // namespace
+
+using ArgAttrSet = SmallVector<CodeGenIntrinsic::ArgAttribute, 0>;
+
+namespace {
+/// The function attributes and effective memory effects of an intrinsic.
+struct FnAttrSet {
+  SmallVector<const Record *, 8> Attrs;
+  MemoryEffects ME;
+
+  explicit FnAttrSet(const CodeGenIntrinsic &Int)
+      : Attrs(Int.FnAttributes), ME(getEffectiveME(Int)) {}
+
+  bool operator<(const FnAttrSet &RHS) const {
+    if (Attrs != RHS.Attrs) {
+      return std::lexicographical_compare(Attrs.begin(), Attrs.end(),
+                                          RHS.Attrs.begin(), RHS.Attrs.end(),
+                                          LessRecordByID());
+    }
+
+    return ME.toIntValue() < RHS.ME.toIntValue();
+  }
+
+  bool empty() const { return Attrs.empty() && ME == MemoryEffects::unknown(); }
+};
+} // namespace
+
+static void printArgAttributes(raw_ostream &OS, const ArgAttrSet &Attrs) {
+  assert(is_sorted(Attrs) && "Argument attributes are not sorted");
+  for (const CodeGenIntrinsic::ArgAttribute &Attr : Attrs) {
+    StringRef AttrName = Attr.Attr->getName();
+    if (Attr.Attr->isSubClassOf("IntAttr")) {
+      OS.indent(6) << formatv(
+          "Attribute::get(C, Attribute::{}, uint64_t({})),\n", AttrName,
+          Attr.Value);
+    } else if (Attr.Attr->isSubClassOf("ConstantRangeAttr")) {
+      // This allows implicitTrunc because the range may only fit the
+      // type based on rules implemented in the IR verifier. E.g. the
+      // [-1, 1] range for ucmp/scmp intrinsics requires a minimum i2 type.
+      // Give the verifier a chance to diagnose this instead of asserting
+      // here.
+      OS.indent(6) << formatv(
+          "Attribute::get(C, Attribute::{}, "
+          "ConstantRange(APInt(BitWidth, {}, /*isSigned=*/true, "
+          "/*implicitTrunc=*/true), APInt(BitWidth, {}, "
+          "/*isSigned=*/true, /*implicitTrunc=*/true))),\n",
+          AttrName, (int64_t)Attr.Value, (int64_t)Attr.Value2);
+    } else {
+      OS.indent(6) << formatv("Attribute::get(C, Attribute::{}),\n", AttrName);
+    }
+  }
+}
+
+static void printFnAttributes(raw_ostream &OS, const FnAttrSet &FnAttrs) {
+  for (const Record *Attr : FnAttrs.Attrs) {
+    OS.indent(6) << formatv("Attribute::get(C, Attribute::{}),\n",
+                            Attr->getName());
+  }
+
+  if (FnAttrs.ME != MemoryEffects::unknown()) {
+    OS.indent(6) << formatv("// {}\n", FnAttrs.ME);
+    OS.indent(6) << formatv("Attribute::getWithMemoryEffects(C, "
+                            "MemoryEffects::createFromIntValue({})),\n",
+                            FnAttrs.ME.toIntValue());
+  }
+}
 
 /// EmitAttributes - This emits the Intrinsic::getAttributes method.
 void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
                                       raw_ostream &OS) {
   IfDefEmitter IfDef(OS, "GET_INTRINSIC_ATTRIBUTES");
+
+  // Compute unique argument attribute sets, function attribute sets, and the
+  // argument attribute sequence of each intrinsic.
+  //
+  // For a given intrinsic, its attributes are constructed by populating the
+  // local array `AS` below with its non-empty argument attributes followed by
+  // function attributes if any. Each argument attribute is constructed as:
+  //
+  //   getIntrinsicArgAttributeSet(C, ArgAttrID, FT->getContainedType(ArgNo));
+  //
+  // The sequences for all intrinsics are concatenated into one large table,
+  // and for each intrinsic we remember the starting index and number of
+  // entries of its slice, so that we can build the attribute list for an
+  // intrinsic without using a switch-case.
+  using ArgNoAttrIDPair = std::pair<uint16_t, uint16_t>;
+  AttributeSetTable<ArgAttrSet> ArgAttrSets;
+  AttributeSetTable<FnAttrSet> FnAttrSets;
+  std::vector<StringRef> FnAttrSetNames;
+  AttributeSequenceTable<ArgNoAttrIDPair> ArgAttrSeqs;
+  std::vector<std::pair<unsigned, unsigned>> IntrinsicAttrIDs;
+
+  // Find the max number of attributes to create the local array.
+  unsigned MaxNumAttrs = 0;
+  for (const CodeGenIntrinsic &Int : Ints) {
+    AttributeSequenceTable<ArgNoAttrIDPair>::Sequence Seq;
+    for (const auto &[ArgNo, Attrs] : enumerate(Int.ArgumentAttributes)) {
+      if (Attrs.empty())
+        continue;
+
+      uint16_t ArgAttrID = ArgAttrSets.add(ArgAttrSet(Attrs));
+      Seq.emplace_back((uint16_t)ArgNo, ArgAttrID);
+    }
+
+    unsigned NumAttrs = Seq.size() + hasFnAttributes(Int);
+    MaxNumAttrs = std::max(MaxNumAttrs, NumAttrs);
+    unsigned SeqID = ArgAttrSeqs.add(std::move(Seq));
+    unsigned FnAttrID = ~0U;
+    if (hasFnAttributes(Int)) {
+      FnAttrID = FnAttrSets.add(FnAttrSet(Int));
+      if (FnAttrID == FnAttrSetNames.size())
+        FnAttrSetNames.push_back(Int.Name);
+    }
+
+    IntrinsicAttrIDs.emplace_back(FnAttrID, SeqID);
+  }
+
+  ArgAttrSeqs.layout();
+
+  if (ArgAttrSeqs.size() >= std::numeric_limits<uint16_t>::max())
+    PrintFatalError("Size of ArgAttrIdTable exceeds supported limit");
+
   OS << R"(// Add parameter attributes that are not common to all intrinsics.
 static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
                                                 Type *ArgType) {
   unsigned BitWidth = ArgType->getScalarSizeInBits();
   switch (ID) {
   default: llvm_unreachable("Invalid attribute set number");)";
-  // Compute unique argument attribute sets.
-  std::map<SmallVector<CodeGenIntrinsic::ArgAttribute, 0>, unsigned>
-      UniqArgAttributes;
-  for (const CodeGenIntrinsic &Int : Ints) {
-    for (auto &Attrs : Int.ArgumentAttributes) {
-      if (Attrs.empty())
-        continue;
-
-      unsigned ID = UniqArgAttributes.size();
-      if (!UniqArgAttributes.try_emplace(Attrs, ID).second)
-        continue;
-
-      assert(is_sorted(Attrs) && "Argument attributes are not sorted");
-
-      OS << formatv(R"(
-  case {}:
-    return AttributeSet::get(C, {{
-)",
-                    ID);
-      for (const CodeGenIntrinsic::ArgAttribute &Attr : Attrs) {
-        StringRef AttrName = Attr.Attr->getName();
-        if (Attr.Attr->isSubClassOf("IntAttr")) {
-          OS << formatv(
-              "      Attribute::get(C, Attribute::{}, uint64_t({})),\n",
-              AttrName, Attr.Value);
-        } else if (Attr.Attr->isSubClassOf("ConstantRangeAttr")) {
-          // This allows implicitTrunc because the range may only fit the
-          // type based on rules implemented in the IR verifier. E.g. the
-          // [-1, 1] range for ucmp/scmp intrinsics requires a minimum i2 type.
-          // Give the verifier a chance to diagnose this instead of asserting
-          // here.
-          OS << formatv("      Attribute::get(C, Attribute::{}, "
-                        "ConstantRange(APInt(BitWidth, {}, /*isSigned=*/true, "
-                        "/*implicitTrunc=*/true), APInt(BitWidth, {}, "
-                        "/*isSigned=*/true, /*implicitTrunc=*/true))),\n",
-                        AttrName, (int64_t)Attr.Value, (int64_t)Attr.Value2);
-        } else {
-          OS << formatv("      Attribute::get(C, Attribute::{}),\n", AttrName);
-        }
-      }
-      OS << "    });";
-    }
-  }
+  ArgAttrSets.emitCases(OS, printArgAttributes);
   OS << R"(
   }
 } // getIntrinsicArgAttributeSet
 )";
 
-  // Compute unique function attribute sets. Note that ID 255 will be used for
-  // intrinsics with no function attributes.
-  std::map<const CodeGenIntrinsic *, unsigned, FnAttributeComparator>
-      UniqFnAttributes;
   OS << R"(
 static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
   switch (ID) {
     default: llvm_unreachable("Invalid attribute set number");)";
-
-  for (const CodeGenIntrinsic &Int : Ints) {
-    if (!hasFnAttributes(Int))
-      continue;
-    unsigned ID = UniqFnAttributes.size();
-    if (!UniqFnAttributes.try_emplace(&Int, ID).second)
-      continue;
-    OS << formatv(R"(
-  case {}: // {}
-    return AttributeSet::get(C, {{
-)",
-                  ID, Int.Name);
-    for (const Record *Attr : Int.FnAttributes) {
-      OS << formatv("      Attribute::get(C, Attribute::{}),\n",
-                    Attr->getName());
-    }
-
-    const MemoryEffects ME = getEffectiveME(Int);
-    if (ME != MemoryEffects::unknown()) {
-      OS << formatv("      // {}\n", ME);
-      OS << formatv("      Attribute::getWithMemoryEffects(C, "
-                    "MemoryEffects::createFromIntValue({})),\n",
-                    ME.toIntValue());
-    }
-    OS << "    });";
-  }
+  FnAttrSets.emitCases(
+      OS, printFnAttributes,
+      [&](raw_ostream &OS, unsigned ID) { OS << FnAttrSetNames[ID]; });
   OS << R"(
   }
 } // getIntrinsicFnAttributeSet)";
 
-  // Compute unique argument attributes.
-  std::map<const CodeGenIntrinsic *, unsigned, AttributeComparator>
-      UniqAttributes;
-  for (const CodeGenIntrinsic &Int : Ints) {
-    unsigned ID = UniqAttributes.size();
-    UniqAttributes.try_emplace(&Int, ID);
-  }
-
-  const uint8_t UniqAttributesBitSize = Log2_32_Ceil(UniqAttributes.size());
+  const uint8_t UniqAttributesBitSize =
+      Log2_32_Ceil(ArgAttrSeqs.numSequences());
   // Note, max value is used to indicate no function attributes.
-  const uint8_t UniqFnAttributesBitSize =
-      Log2_32_Ceil(UniqFnAttributes.size() + 1);
+  const uint8_t UniqFnAttributesBitSize = Log2_32_Ceil(FnAttrSets.size() + 1);
   const uint32_t NoFunctionAttrsID =
       maskTrailingOnes<uint32_t>(UniqFnAttributesBitSize);
   uint8_t AttributesMapDataBitSize =
@@ -653,69 +748,20 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     PrintFatalError("Packed ID of IntrinsicsToAttributesMap exceeds 64b!");
 
   // Assign a packed ID for each intrinsic. The lower bits will be its
-  // "argument attribute ID" (index in UniqAttributes) and upper bits will be
-  // its "function attribute ID" (index in UniqFnAttributes).
+  // argument attribute sequence ID and the upper bits its function attribute
+  // set ID.
   OS << formatv("\nstatic constexpr uint{}_t IntrinsicsToAttributesMap[] = {{",
                 AttributesMapDataBitSize);
-  for (const CodeGenIntrinsic &Int : Ints) {
-    uint32_t FnAttrIndex =
-        hasFnAttributes(Int) ? UniqFnAttributes[&Int] : NoFunctionAttrsID;
+  for (const auto &[Int, IDs] : zip_equal(Ints, IntrinsicAttrIDs)) {
+    auto [FnAttrID, SeqID] = IDs;
+    uint32_t FnAttrIndex = FnAttrID == ~0U ? NoFunctionAttrsID : FnAttrID;
     OS << formatv("\n    {} << {} | {}, // {}", FnAttrIndex,
-                  UniqAttributesBitSize, UniqAttributes[&Int], Int.Name);
+                  UniqAttributesBitSize, SeqID, Int.Name);
   }
 
   OS << R"(
 }; // IntrinsicsToAttributesMap
 )";
-
-  // For a given intrinsic, its attributes are constructed by populating the
-  // local array `AS` below with its non-empty argument attributes followed by
-  // function attributes if any. Each argument attribute is constructed as:
-  //
-  //   getIntrinsicArgAttributeSet(C, ArgAttrID, FT->getContainedType(ArgNo));
-  //
-  // Create a table that records, for each argument attributes, the list of
-  // <ArgNo, ArgAttrID> pairs that are needed to construct its argument
-  // attributes. These tables for all intrinsics will be concatenated into one
-  // large table and then for each intrinsic, we remember the Staring index and
-  // number of size of its slice of entries (i.e., number of arguments with
-  // non-empty attributes), so that we can build the attribute list for an
-  // intrinsic without using a switch-case.
-
-  using ArgNoAttrIDPair = std::pair<uint16_t, uint16_t>;
-
-  // Emit the table of concatenated <ArgNo, AttrId> using SequenceToOffsetTable
-  // so that entries can be reused if possible. Individual sequences in this
-  // table do not have any terminator.
-  using ArgAttrIDSubTable = SmallVector<ArgNoAttrIDPair>;
-  SequenceToOffsetTable<ArgAttrIDSubTable> ArgAttrIdSequenceTable(std::nullopt);
-  SmallVector<ArgAttrIDSubTable> ArgAttrIdSubTables(
-      UniqAttributes.size()); // Indexed by UniqueID.
-
-  // Find the max number of attributes to create the local array.
-  unsigned MaxNumAttrs = 0;
-  for (const auto [IntPtr, UniqueID] : UniqAttributes) {
-    const CodeGenIntrinsic &Int = *IntPtr;
-    ArgAttrIDSubTable SubTable;
-
-    for (const auto &[ArgNo, Attrs] : enumerate(Int.ArgumentAttributes)) {
-      if (Attrs.empty())
-        continue;
-
-      uint16_t ArgAttrID = UniqArgAttributes.find(Attrs)->second;
-      SubTable.emplace_back((uint16_t)ArgNo, ArgAttrID);
-    }
-    ArgAttrIdSubTables[UniqueID] = SubTable;
-    if (!SubTable.empty())
-      ArgAttrIdSequenceTable.add(SubTable);
-    unsigned NumAttrs = SubTable.size() + hasFnAttributes(Int);
-    MaxNumAttrs = std::max(MaxNumAttrs, NumAttrs);
-  }
-
-  ArgAttrIdSequenceTable.layout();
-
-  if (ArgAttrIdSequenceTable.size() >= std::numeric_limits<uint16_t>::max())
-    PrintFatalError("Size of ArgAttrIdTable exceeds supported limit");
 
   // Emit the 2 tables (flattened ArgNo, ArgAttrID) and ArgAttributesInfoTable.
   OS << formatv(R"(
@@ -728,9 +774,9 @@ struct ArgNoAttrIDPair {{
 // Number of entries: {}
 static constexpr ArgNoAttrIDPair ArgAttrIdTable[] = {{
 )",
-                ArgAttrIdSequenceTable.size());
+                ArgAttrSeqs.size());
 
-  ArgAttrIdSequenceTable.emit(OS, [](raw_ostream &OS, ArgNoAttrIDPair Elem) {
+  ArgAttrSeqs.emitEntries(OS, [](raw_ostream &OS, ArgNoAttrIDPair Elem) {
     OS << formatv("{{{}, {}}", Elem.first, Elem.second);
   });
 
@@ -746,20 +792,17 @@ struct ArgAttributesInfo {{
 // Number of entries: {}
 static constexpr ArgAttributesInfo ArgAttributesInfoTable[] = {{
 )",
-                ArgAttrIdSubTables.size());
+                ArgAttrSeqs.numSequences());
 
-  for (const auto &SubTable : ArgAttrIdSubTables) {
-    unsigned NumAttrs = SubTable.size();
-    unsigned StartIndex = NumAttrs ? ArgAttrIdSequenceTable.get(SubTable) : 0;
-    OS << formatv("  {{{}, {}},\n", StartIndex, NumAttrs);
-  }
+  ArgAttrSeqs.emitInfo(OS);
   OS << "}; // ArgAttributesInfoTable\n";
 
   // Now emit the Intrinsic::getAttributes function. This will first map
-  // from intrinsic ID -> unique arg/function attr ID (using the
-  // IntrinsicsToAttributesMap) table. Then it will use the unique arg ID to
-  // construct all the argument attributes (using the ArgAttributesInfoTable and
-  // ArgAttrIdTable) and then add on the function attributes if any.
+  // from intrinsic ID -> argument attribute sequence ID and function attribute
+  // set ID (using the IntrinsicsToAttributesMap table). Then it will use the
+  // sequence ID to construct all the argument attributes (using the
+  // ArgAttributesInfoTable and ArgAttrIdTable) and then add on the function
+  // attributes if any.
   OS << formatv(R"(
 
 template <typename IDTy>

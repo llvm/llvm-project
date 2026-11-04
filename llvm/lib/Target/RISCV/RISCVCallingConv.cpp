@@ -183,16 +183,7 @@ ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVSubtarget &STI) {
 }
 
 ArrayRef<MCPhysReg> RISCV::getArgFPRs(const RISCVSubtarget &STI) {
-  static const RISCVABI::ABI SoftFPABIs[] = {
-      RISCVABI::ABI_ILP32,
-      RISCVABI::ABI_ILP32E,
-      RISCVABI::ABI_LP64,
-      RISCVABI::ABI_LP64E,
-  };
-
-  RISCVABI::ABI ABI = STI.getTargetABI();
-
-  if (llvm::is_contained(SoftFPABIs, ABI) || !STI.hasStdExtF())
+  if (STI.isSoftFPABI() || !STI.hasStdExtF())
     return {};
 
   if (STI.hasStdExtQ())

@@ -20,6 +20,7 @@
 ############ Test merging multiple categories into the base class ############
 # RUN: %lld -no_objc_relative_method_lists -arch arm64 -o a64_file2_merge_into_class.exe -objc_category_merging a64_file1.o a64_file2.o
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_merge_into_class.exe | FileCheck %s --check-prefixes=MERGE_CATS_CLS
+# RUN: llvm-nm a64_file2_merge_into_class.exe | FileCheck %s --check-prefixes=CLS_LIST_NAMES --implicit-check-not='_(Category02|Category03)'
 
 
 MERGE_CATS:     __OBJC_$_CATEGORY_MyBaseClass(Category02|Category03)
@@ -313,6 +314,11 @@ MERGE_CATS_CLS-NEXT:                     ivars 0x0
 MERGE_CATS_CLS-NEXT:            weakIvarLayout 0x0
 MERGE_CATS_CLS-NEXT:            baseProperties 0x0
 MERGE_CATS_CLS:        __OBJC_$_CATEGORY_MyBaseClass_$_Category04
+
+CLS_LIST_NAMES-DAG: __OBJC_$_CATEGORY_CLASS_METHODS_MyBaseClass(Category02|Category03)
+CLS_LIST_NAMES-DAG: __OBJC_$_INSTANCE_METHODS_MyBaseClass(Category02|Category03)
+CLS_LIST_NAMES-DAG: __OBJC_$_PROP_LIST_MyBaseClass(Category02|Category03)
+CLS_LIST_NAMES-DAG: __OBJC_CATEGORY_PROTOCOLS_$_MyBaseClass(Category02|Category03)
 
 
 #--- a64_file1.s
