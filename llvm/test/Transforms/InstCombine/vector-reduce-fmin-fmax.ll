@@ -154,7 +154,9 @@ define float @ret_vector_reduce_fmin__psignbit_no_snan(<4 x float> nofpclass(sna
 define i1 @is_qnan__vector_reduce_fmax__no_qnan(<4 x float> nofpclass(qnan) %arg) {
 ; CHECK-LABEL: define i1 @is_qnan__vector_reduce_fmax__no_qnan(
 ; CHECK-SAME: <4 x float> nofpclass(qnan) [[ARG:%.*]]) {
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[ARG]])
+; CHECK-NEXT:    [[IS_QNAN:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CALL]], /* (qnan) */ i32 2)
+; CHECK-NEXT:    ret i1 [[IS_QNAN]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
   %is.qnan = call i1 @llvm.is.fpclass.f32(float %call, i32 2)
@@ -164,7 +166,9 @@ define i1 @is_qnan__vector_reduce_fmax__no_qnan(<4 x float> nofpclass(qnan) %arg
 define i1 @is_qnan__vector_reduce_fmin__no_qnan(<4 x float> nofpclass(qnan) %arg) {
 ; CHECK-LABEL: define i1 @is_qnan__vector_reduce_fmin__no_qnan(
 ; CHECK-SAME: <4 x float> nofpclass(qnan) [[ARG:%.*]]) {
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[ARG]])
+; CHECK-NEXT:    [[IS_QNAN:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CALL]], /* (qnan) */ i32 2)
+; CHECK-NEXT:    ret i1 [[IS_QNAN]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
   %is.qnan = call i1 @llvm.is.fpclass.f32(float %call, i32 2)
