@@ -170,17 +170,6 @@ extern cl::opt<bool> EnableMemProfContextDisambiguation;
 extern cl::opt<bool> EnableProfcheckInPipeline;
 } // namespace llvm
 
-PipelineTuningOptions::PipelineTuningOptions() {
-  LoopInterleaving = true;
-  LoopVectorization = true;
-  SLPVectorization = false;
-  LoopUnrolling = true;
-  LoopFusion = false;
-  CallGraphProfile = true;
-  UnifiedLTO = false;
-  InlinerThreshold = -1;
-}
-
 PipelineTuningOptions PipelineTuningOptions::resolve(
     const cl::LibraryOptionsContext &LibraryOptions) const {
   const PassesOptions &Opts = LibraryOptions.get<PassesOptions>();

@@ -47,31 +47,29 @@ class LibraryOptionsContext;
 /// LLVMContext.
 class PipelineTuningOptions {
 public:
-  LLVM_ABI PipelineTuningOptions();
-
   /// Return a copy whose unset members are set from \p LibraryOptions.
   [[nodiscard]] LLVM_ABI PipelineTuningOptions
   resolve(const cl::LibraryOptionsContext &LibraryOptions) const;
 
   /// Tuning option to set loop interleaving on/off, set based on opt level.
-  bool LoopInterleaving;
+  bool LoopInterleaving = true;
 
   /// Tuning option to enable/disable loop vectorization, set based on opt
   /// level.
-  bool LoopVectorization;
+  bool LoopVectorization = true;
 
   /// Tuning option to enable/disable slp loop vectorization, set based on opt
   /// level.
-  bool SLPVectorization;
+  bool SLPVectorization = false;
 
-  /// Tuning option to enable/disable loop unrolling. Its default value is true.
-  bool LoopUnrolling;
+  /// Tuning option to enable/disable loop unrolling.
+  bool LoopUnrolling = true;
 
   /// Tuning option to enable/disable loop interchange.
   std::optional<bool> LoopInterchange;
 
-  /// Tuning option to enable/disable loop fusion. Its default value is false.
-  bool LoopFusion;
+  /// Tuning option to enable/disable loop fusion.
+  bool LoopFusion = false;
 
   /// Tuning option to forget all SCEV loops in LoopUnroll.
   std::optional<bool> ForgetAllSCEVInLoopUnroll;
@@ -84,18 +82,17 @@ public:
   /// the number of access is too large.
   std::optional<unsigned> LicmMssaNoAccForPromotionCap;
 
-  /// Tuning option to enable/disable call graph profile. Its default value is
-  /// that of the flag: `-enable-npm-call-graph-profile`.
-  bool CallGraphProfile;
+  /// Tuning option to enable/disable call graph profile.
+  bool CallGraphProfile = true;
 
   // Add LTO pipeline tuning option to enable the unified LTO pipeline.
-  bool UnifiedLTO;
+  bool UnifiedLTO = false;
 
   /// Tuning option to enable/disable function merging.
   std::optional<bool> MergeFunctions;
 
   /// Tuning option to override the default inliner threshold.
-  int InlinerThreshold;
+  int InlinerThreshold = -1;
 
   /// Tuning option to cap how many times the inliner pipeline reruns on an SCC
   /// after devirtualizing a call.
