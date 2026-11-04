@@ -1,44 +1,73 @@
 ; RUN: split-file %s %t
 ; RUN: llvm-diff %t/a.ll %t/a.ll
-; RUN: not llvm-diff %t/a.ll %t/b.ll 2>&1 | FileCheck %s --implicit-check-not=same
+; RUN: not llvm-diff %t/a.ll %t/b.ll 2>&1 | FileCheck %s --strict-whitespace --implicit-check-not=same
 
 ; CHECK-LABEL: in function changed_tag:
-; CHECK: > {{.*}}load i32
-; CHECK-NEXT: !tbaa !{!{"float"
-; CHECK: < {{.*}}load i32
-; CHECK-NEXT: !tbaa !{!{"int"
+; CHECK-NEXT: {{^}}  in block %0 / %0:
+; CHECK-NEXT: {{^}}    >   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !tbaa !{!{"float", {{.*}}i64 0}{{$}}
+; CHECK-NEXT: {{^}}    >   ret i32 %v{{$}}
+; CHECK-NEXT: {{^}}    <   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !tbaa !{!{"int", {{.*}}i64 0}{{$}}
+; CHECK-NEXT: {{^}}    <   ret i32 %v{{$}}
+
 ; CHECK-LABEL: in function missing_tag:
-; CHECK: > {{.*}}load i32
-; CHECK-NOT: !tbaa
-; CHECK: < {{.*}}load i32
-; CHECK-NEXT: !tbaa !{!{"int"
+; CHECK-NEXT: {{^}}  in block %0 / %0:
+; CHECK-NEXT: {{^}}    >   %v = load i32, ptr %p, align 4{{$}}
+; CHECK-NEXT: {{^}}    >   ret i32 %v{{$}}
+; CHECK-NEXT: {{^}}    <   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !tbaa !{!{"int", {{.*}}i64 0}{{$}}
+; CHECK-NEXT: {{^}}    <   ret i32 %v{{$}}
+
 ; CHECK-LABEL: in function changed_offset:
-; CHECK: > {{.*}}load i32
-; CHECK-NEXT: !tbaa {{.*}}i64 4}{{$}}
-; CHECK: < {{.*}}load i32
-; CHECK-NEXT: !tbaa {{.*}}i64 0}{{$}}
+; CHECK-NEXT: {{^}}  in block %0 / %0:
+; CHECK-NEXT: {{^}}    >   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !tbaa !{!{"S", {{.*}}i64 4}{{$}}
+; CHECK-NEXT: {{^}}    >   ret i32 %v{{$}}
+; CHECK-NEXT: {{^}}    <   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !tbaa !{!{"S", {{.*}}i64 0}{{$}}
+; CHECK-NEXT: {{^}}    <   ret i32 %v{{$}}
+
 ; CHECK-LABEL: in function changed_scope:
-; CHECK: > {{.*}}load i32
-; CHECK-NEXT: !alias.scope {{.*}}"different"
-; CHECK: < {{.*}}load i32
-; CHECK-NEXT: !alias.scope {{.*}}"scope"
+; CHECK-NEXT: {{^}}  in block %0 / %0:
+; CHECK-NEXT: {{^}}    >   %v = load i32, ptr %p, align 4, !alias.scope !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !alias.scope !{!{..., !{..., "domain"}, "different"}}{{$}}
+; CHECK-NEXT: {{^}}    >   ret i32 %v{{$}}
+; CHECK-NEXT: {{^}}    <   %v = load i32, ptr %p, align 4, !alias.scope !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !alias.scope !{!{..., !{..., "domain"}, "scope"}}{{$}}
+; CHECK-NEXT: {{^}}    <   ret i32 %v{{$}}
+
 ; CHECK-LABEL: in function changed_noalias:
-; CHECK: > {{.*}}load i32
-; CHECK-NEXT: !noalias {{.*}}"scope"
-; CHECK: < {{.*}}load i32
-; CHECK-NEXT: !noalias {{.*}}"other"
+; CHECK-NEXT: {{^}}  in block %0 / %0:
+; CHECK-NEXT: {{^}}    >   %v = load i32, ptr %p, align 4, !noalias !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !noalias !{!{..., !{..., "domain"}, "scope"}}{{$}}
+; CHECK-NEXT: {{^}}    >   ret i32 %v{{$}}
+; CHECK-NEXT: {{^}}    <   %v = load i32, ptr %p, align 4, !noalias !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !noalias !{!{..., !{..., "domain"}, "other"}}{{$}}
+; CHECK-NEXT: {{^}}    <   ret i32 %v{{$}}
+
 ; CHECK-LABEL: in function same_tag_other_difference:
-; CHECK-NOT: !tbaa !{
+; CHECK-NEXT: {{^}}  in block %0 / %0:
+; CHECK-NEXT: {{^}}    >   %v = load i32, ptr %q, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}    >   ret i32 %v{{$}}
+; CHECK-NEXT: {{^}}    <   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}    <   ret i32 %v{{$}}
+
 ; CHECK-LABEL: in function different_opcode:
-; CHECK-NOT: !tbaa !{
+; CHECK-NEXT: {{^}}  in block %0 / %0:
+; CHECK-NEXT: {{^}}    >   store i32 0, ptr %p, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}    >   ret i32 0{{$}}
+; CHECK-NEXT: {{^}}    <   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}    <   ret i32 %v{{$}}
+
 ; CHECK-LABEL: in function same_tag_changed_noalias:
-; CHECK-NOT: !tbaa !{
-; CHECK: > {{.*}}load i32
-; CHECK-NEXT: !noalias !{
-; CHECK-NOT: !tbaa !{
-; CHECK: < {{.*}}load i32
-; CHECK-NEXT: !noalias !{
-; CHECK-NOT: !tbaa !{
+; CHECK-NEXT: {{^}}  in block %0 / %0:
+; CHECK-NEXT: {{^}}    >   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}, !noalias !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !noalias !{!{..., !{..., "domain"}, "scope"}}{{$}}
+; CHECK-NEXT: {{^}}    >   ret i32 %v{{$}}
+; CHECK-NEXT: {{^}}    <   %v = load i32, ptr %p, align 4, !tbaa !{{[0-9]+}}, !noalias !{{[0-9]+}}{{$}}
+; CHECK-NEXT: {{^}}        !noalias !{!{..., !{..., "domain"}, "other"}}{{$}}
+; CHECK-NEXT: {{^}}    <   ret i32 %v{{$}}
 
 ;--- a.ll
 define i32 @same_tag(ptr %p) {
@@ -78,9 +107,7 @@ define i32 @changed_noalias(ptr %p) {
 
 define i32 @same_tag_other_difference(ptr %p, ptr %q) {
   %v = load i32, ptr %p, !tbaa !0
-  %w = load i32, ptr %q, !tbaa !0
-  %s = add i32 %v, %w
-  ret i32 %s
+  ret i32 %v
 }
 
 define i32 @different_opcode(ptr %p) {
@@ -142,10 +169,8 @@ define i32 @changed_noalias(ptr %p) {
 }
 
 define i32 @same_tag_other_difference(ptr %p, ptr %q) {
-  %v = load i32, ptr %p, !tbaa !0
-  %w = load i32, ptr %p, !tbaa !0
-  %s = add i32 %v, %w
-  ret i32 %s
+  %v = load i32, ptr %q, !tbaa !0
+  ret i32 %v
 }
 
 define i32 @different_opcode(ptr %p) {
