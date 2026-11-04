@@ -104,8 +104,7 @@ class X { virtual ~X(); };
 constexpr bool b = requires (X &x) { static_cast<int(*)[(typeid(x), 0)]>(nullptr); };
 // expected-warning@-1 {{left operand of comma operator has no effect}}
 // expected-warning@-2 {{variable length arrays in C++ are a Clang extension}}
-// expected-note@-3{{function parameter 'x' with unknown value cannot be used in a constant expression}}
-// expected-note@-4{{declared here}}
+// expected-note@-3{{typeid applied to object 'x' whose dynamic type is not constant}}
 
 namespace access_checks {
 namespace in_requires_expression {
