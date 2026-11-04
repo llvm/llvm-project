@@ -1,6 +1,7 @@
 # -*- Python -*-
 
 import os
+import platform
 
 import lit.formats
 
@@ -19,3 +20,23 @@ config.test_exec_root = config.flang_rt_binary_test_dir
 
 # testFormat: The test format to use to interpret tests.
 config.test_format = lit.formats.GoogleTest(config.llvm_build_mode, "Tests")
+
+
+def find_shlibpath_var():
+    if platform.system() in ["Linux", "FreeBSD", "NetBSD", "OpenBSD", "SunOS"]:
+        yield "LD_LIBRARY_PATH"
+    elif platform.system() == "Darwin":
+        yield "DYLD_LIBRARY_PATH"
+    elif platform.system() == "Windows" or sys.platform == "cygwin":
+        yield "PATH"
+    elif platform.system() == "AIX":
+        yield "LIBPATH"
+
+
+for shlibpath_var in find_shlibpath_var():
+    config.environment[shlibpath_var] = os.path.pathsep.join(
+        (
+            config.flang_rt_output_resource_lib_dir,
+            config.environment.get(shlibpath_var, ""),
+        )
+    )
