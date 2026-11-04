@@ -23065,7 +23065,8 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     // This isn't really target-specific, but ISD::TRUNCATE legality isn't keyed
     // on both input and result type, so we might generate worse code.
     // On AArch64 we know it's fine for v2i64->v4i16 and v4i32->v8i8.
-    if (N00VT == N10.getValueType() &&
+    // This pattern only works in little endian.
+    if (DAG.getDataLayout().isLittleEndian() && N00VT == N10.getValueType() &&
         (N00VT == MVT::v2i64 || N00VT == MVT::v4i32) &&
         N00VT.getScalarSizeInBits() == 4 * VT.getScalarSizeInBits()) {
       MVT MidVT = (N00VT == MVT::v2i64 ? MVT::v4i32 : MVT::v8i16);
