@@ -9,14 +9,14 @@ define void @interleave_store_factor_2(ptr noalias %src, ptr noalias %dst) {
 ; CHECK:  Cost of 1 for VF 2: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP4]]>, ir<1>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%gep.dst.0> = getelementptr inbounds ir<%dst>, ir<%idx.0>
 ; CHECK:  Cost for VF 2: 7 (Estimated cost per lane: 3.5)
+; CHECK:  Cost of 0 for VF 4: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
+; CHECK:  Cost of 4 for VF 4: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
-; CHECK:  Cost of 1 for VF 4: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP4]]>, ir<1>
-; CHECK:  Cost of 0 for VF 4: CLONE ir<%gep.dst.0> = getelementptr inbounds ir<%dst>, ir<%idx.0>
-; CHECK:  Cost for VF 4: 23 (Estimated cost per lane: 5.75)
+; CHECK:  Cost for VF 4: 35 (Estimated cost per lane: 8.75)
+; CHECK:  Cost of 0 for VF 8: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
+; CHECK:  Cost of 8 for VF 8: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
-; CHECK:  Cost of 1 for VF 8: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP4]]>, ir<1>
-; CHECK:  Cost of 0 for VF 8: CLONE ir<%gep.dst.0> = getelementptr inbounds ir<%dst>, ir<%idx.0>
-; CHECK:  Cost for VF 8: 46 (Estimated cost per lane: 5.75)
+; CHECK:  Cost for VF 8: 70 (Estimated cost per lane: 8.75)
 ;
 entry:
   br label %loop
@@ -47,14 +47,14 @@ define void @interleave_store_factor_2_reverse(ptr noalias %src, ptr noalias %ds
 ; CHECK:  Cost of 1 for VF 2: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP6]]>, ir<1>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%gep.dst.0> = getelementptr inbounds ir<%dst>, ir<%idx.0>
 ; CHECK:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
+; CHECK:  Cost of 0 for VF 4: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
+; CHECK:  Cost of 4 for VF 4: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP6]]>
-; CHECK:  Cost of 1 for VF 4: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP6]]>, ir<1>
-; CHECK:  Cost of 0 for VF 4: CLONE ir<%gep.dst.0> = getelementptr inbounds ir<%dst>, ir<%idx.0>
-; CHECK:  Cost for VF 4: 27 (Estimated cost per lane: 6.75)
+; CHECK:  Cost for VF 4: 37 (Estimated cost per lane: 9.25)
+; CHECK:  Cost of 0 for VF 8: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
+; CHECK:  Cost of 8 for VF 8: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP6]]>
-; CHECK:  Cost of 1 for VF 8: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP6]]>, ir<1>
-; CHECK:  Cost of 0 for VF 8: CLONE ir<%gep.dst.0> = getelementptr inbounds ir<%dst>, ir<%idx.0>
-; CHECK:  Cost for VF 8: 53 (Estimated cost per lane: 6.63)
+; CHECK:  Cost for VF 8: 73 (Estimated cost per lane: 9.12)
 ;
 entry:
   br label %loop
