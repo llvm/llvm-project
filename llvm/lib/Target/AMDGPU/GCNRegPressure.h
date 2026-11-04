@@ -632,8 +632,7 @@ public:
 /// down the instruction stream. It still uses LIS for liveness queries.
 class GCNManualDownwardRPTracker : public GCNDownwardRPTrackerBase {
 public:
-  GCNManualDownwardRPTracker(LiveIntervals &LIS,
-                             const MachineRegisterInfo &MRI)
+  GCNManualDownwardRPTracker(LiveIntervals &LIS, const MachineRegisterInfo &MRI)
       : GCNDownwardRPTrackerBase(LIS, MRI) {}
 
   using GCNRPTracker::reset;
