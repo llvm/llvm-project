@@ -2558,8 +2558,13 @@ bool llvm::collectCompressedPtrs(
 
       Type *AccessTy = getLoadStoreType(UserI);
 
+      // Disallow scalable types.
+      TypeSize AccessSize = DL.getTypeSizeInBits(AccessTy);
+      if (AccessSize.isScalable())
+        return false;
+
       // Disallow loads/stores of irregular types (like i4).
-      if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+      if (DL.getTypeAllocSizeInBits(AccessTy) != AccessSize)
         return false;
 
       Value *Ptr = getLoadStorePointerOperand(UserI);
