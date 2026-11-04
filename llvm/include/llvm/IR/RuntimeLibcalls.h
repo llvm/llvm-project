@@ -197,6 +197,11 @@ public:
                                                bool &ShouldSignExtI32Return,
                                                const Triple &T);
 
+  /// Determine whether bool parameters and returns need zeroext on \p T.
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
+
   /// Get the C-type function signature of the Libcall if provided,
   /// and convert it to IR FunctionType and Attributes.
   /// If the C-type function signature is not provided, return nullptr.

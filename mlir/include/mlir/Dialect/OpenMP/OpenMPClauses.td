@@ -1593,7 +1593,7 @@ class OpenMP_ReductionClauseSkip<
   ];
 
   let arguments = !con((ins
-    OptionalAttr<ReductionModifierAttr>:$reduction_mod,
+    OptionalAttr<ReductionModifierArrayAttr>:$reduction_mods,
     Variadic<OpenMP_PointerLikeType>:$reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$reduction_syms
@@ -1604,16 +1604,36 @@ class OpenMP_ReductionClauseSkip<
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
+
+    /// Returns the modifier for a reduction variable, defaulting to defaultmod.
+    ReductionModifier getReductionModifier(unsigned index) {
+      auto mods = getReductionModsAttr();
+      return mods ? ::llvm::cast<ReductionModifierAttr>(mods[index]).getValue()
+                  : ReductionModifier::defaultmod;
+    }
+
+    bool hasReductionModifier(ReductionModifier modifier) {
+      for (unsigned i = 0, e = getNumReductionVars(); i != e; ++i)
+        if (getReductionModifier(i) == modifier)
+          return true;
+      return false;
+    }
   }];
 
   // Description varies depending on the operation.
   let description = [{
-    Reductions can be performed by specifying the reduction modifer
-    (`default`, `inscan` or `task`) in `reduction_mod`, reduction accumulator
+    Reductions can be performed by specifying per-variable reduction modifiers
+    (`defaultmod`, `inscan` or `task`) in `reduction_mods`, reduction accumulator
     variables in `reduction_vars`, symbols referring to reduction declarations
     in the `reduction_syms` attribute, and whether the reduction variable
     should be passed into the reduction region by value or by reference in
-    `reduction_byref`. Each reduction is identified by the accumulator it uses
+    `reduction_byref`. The modifier array, when present, has one entry per
+    reduction variable;
+    when absent, all modifiers are `defaultmod`. The assembly syntax places
+    each non-default modifier before its reduction item, for example
+    `reduction(task @add %x -> %px, @mul %y -> %py : !llvm.ptr, !llvm.ptr)`.
+    Default modifiers are omitted.
+    Each reduction is identified by the accumulator it uses
     and accumulators must not be repeated in the same reduction. A private
     variable corresponding to the accumulator is used in place of the
     accumulator inside the body of the operation. The reduction declaration
