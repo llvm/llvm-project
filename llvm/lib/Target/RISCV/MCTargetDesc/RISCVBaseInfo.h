@@ -756,16 +756,30 @@ inline bool isSoftFP(ABI TargetABI) {
 // floating point values in FP registers. Double and quad precision FP values
 // are passed in integer registers.
 inline bool isSingleFP(ABI TargetABI) {
-  return TargetABI == ABI_ILP32F || TargetABI == ABI_IL32PC64F ||
-         TargetABI == ABI_LP64F || TargetABI == ABI_L64PC128F;
+  switch (TargetABI) {
+  case ABI_ILP32F:
+  case ABI_IL32PC64F:
+  case ABI_LP64F:
+  case ABI_L64PC128F:
+    return true;
+  default:
+    return false;
+  }
 }
 
 // Returns true for the ABIs that pass half, bfloat, single, or double precision
 // floating point values in FP registers. Quad precision FP values are passed
 // in integer registers.
 inline bool isDoubleFP(ABI TargetABI) {
-  return TargetABI == ABI_ILP32D || TargetABI == ABI_IL32PC64D ||
-         TargetABI == ABI_LP64D || TargetABI == ABI_L64PC128D;
+  switch (TargetABI) {
+  case ABI_ILP32D:
+  case ABI_IL32PC64D:
+  case ABI_LP64D:
+  case ABI_L64PC128D:
+    return true;
+  default:
+    return false;
+  }
 }
 
 // Returns true for the ABIs that only use the reduced 16 register integer file.
