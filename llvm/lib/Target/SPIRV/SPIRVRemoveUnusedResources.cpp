@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// \file Pass for removing unused global variables used to store resource
-// handles
+// \file Pass for removing unused resources and their associated
+// global variables
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,53 +40,73 @@ static bool isResourceHandleCreation(Intrinsic::ID ID) {
          ID == Intrinsic::spv_resource_counterhandlefromimplicitbinding;
 }
 
-// Remove unused resource handle intrinsics, private global variables that only
-// provide storage for these handles, and corresponding stores of handle to
-// global variable
+static bool isCounterHandle(Intrinsic::ID ID) {
+  return ID == Intrinsic::spv_resource_counterhandlefrombinding ||
+         ID == Intrinsic::spv_resource_counterhandlefromimplicitbinding;
+}
+
 static bool removeUnusedResources(Module &M) {
   if (DisableSPIRVRemoveUnusedResources)
     return false;
 
   SmallVector<IntrinsicInst *> Handles;
+  SmallVector<IntrinsicInst *> CounterHandles;
   SmallSetVector<GlobalVariable *, 4> DeadGlobals;
+
   for (Function &F : M) {
     for (Instruction &I : instructions(F)) {
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (!isResourceHandleCreation(II->getIntrinsicID()))
           continue;
-        Handles.push_back(II);
 
-        for (User *U : II->users()) {
-          auto *SI = dyn_cast<StoreInst>(U);
-          if (!SI || SI->isVolatile() || SI->getValueOperand() != II)
-            continue;
-          auto *GV = dyn_cast<GlobalVariable>(SI->getPointerOperand());
-          if (!GV || !GV->hasLocalLinkage() || !GV->hasOneUser())
-            continue;
-          assert(*GV->user_begin() == SI);
-          DeadGlobals.insert(GV);
-        }
+        if (isCounterHandle(II->getIntrinsicID()))
+          CounterHandles.push_back(II);
+        else
+          Handles.push_back(II);
       }
     }
   }
 
-  bool Changed = !DeadGlobals.empty();
-  for (GlobalVariable *GV : DeadGlobals) {
-    cast<StoreInst>(*GV->user_begin())->eraseFromParent();
-    GV->eraseFromParent();
+  bool Changed = false;
+
+  auto VisitHandle = [&](Instruction *Handle, bool IsCounter) {
+    for (User *U : make_early_inc_range(Handle->users())) {
+      auto *SI = dyn_cast<StoreInst>(U);
+      if (!SI || SI->isVolatile() || SI->getValueOperand() != Handle)
+        continue;
+      auto *GV = dyn_cast<GlobalVariable>(SI->getPointerOperand());
+      if (!GV || !GV->hasLocalLinkage() || !GV->hasOneUser())
+        continue;
+      SI->eraseFromParent();
+      DeadGlobals.insert(GV);
+    }
+
+    const unsigned ResourceNameOpIndex = 4;
+    if (Handle->use_empty()) {
+      Changed = true;
+      if (!IsCounter) {
+        if (auto *Name = dyn_cast<GlobalVariable>(
+                Handle->getOperand(ResourceNameOpIndex)))
+          DeadGlobals.insert(Name);
+      }
+      Handle->eraseFromParent();
+    }
+  };
+
+  // Visit implicit counters first since they may use other handles
+  // that are otherwise dead
+  for (auto *Counter : CounterHandles) {
+    VisitHandle(Counter, true);
+  }
+  for (auto *Handle : Handles) {
+    VisitHandle(Handle, false);
+  }
+  Changed |= !DeadGlobals.empty();
+  for (auto *GV : DeadGlobals) {
+    if (GV->user_empty())
+      GV->eraseFromParent();
   }
 
-  // Use reverse order so, in case of hidden counters that live in a buffer, the
-  // counter handle is removed before the corresponding buffer handle. However,
-  // our traversal doesn't go in RPOT order, so may encounter insts before their
-  // users. Could either do RPOT or repeat below loop until fixed point. Ignore
-  // for now
-  for (IntrinsicInst *II : reverse(Handles)) {
-    if (II->use_empty()) {
-      II->eraseFromParent();
-      Changed = true;
-    }
-  }
   return Changed;
 }
 
