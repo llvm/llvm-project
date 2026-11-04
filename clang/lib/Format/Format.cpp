@@ -224,6 +224,7 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("AfterExportBlock", Wrapping.AfterExportBlock);
     IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
     IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
+    IO.mapOptional("AfterGotoLabel", Wrapping.AfterGotoLabel);
     IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
     IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
     IO.mapOptional("AfterRequiresExpression", Wrapping.AfterRequiresExpression);
@@ -1745,6 +1746,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*AfterControlStatement=*/FormatStyle::BWACS_Never,
                             /*AfterEnum=*/false,
                             /*AfterFunction=*/false,
+                            /*AfterGotoLabel=*/true,
                             /*AfterNamespace=*/false,
                             /*AfterObjCDeclaration=*/false,
                             /*AfterRequiresExpression=*/false,
@@ -1821,6 +1823,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterControlStatement=*/FormatStyle::BWACS_Always,
         /*AfterEnum=*/true,
         /*AfterFunction=*/true,
+        /*AfterGotoLabel=*/true,
         /*AfterNamespace=*/true,
         /*AfterObjCDeclaration=*/true,
         /*AfterRequiresExpression=*/true,
@@ -1925,6 +1928,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*AfterControlStatement=*/FormatStyle::BWACS_Never,
                              /*AfterEnum=*/false,
                              /*AfterFunction=*/false,
+                             /*AfterGotoLabel=*/true,
                              /*AfterNamespace=*/false,
                              /*AfterObjCDeclaration=*/false,
                              /*AfterRequiresExpression=*/false,
