@@ -1159,76 +1159,37 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 // match.
 static std::optional<UnsafeLibcFunctionFamily>
 getPredefinedUnsafeLibcFuncFamily(const FunctionDecl &Node) {
-  static const llvm::StringMap<UnsafeLibcFunctionFamily> PredefinedNames = {
-      // numeric conversion:
-      {"atof", UnsafeLibcFunctionFamily::NumericConversion},
-      {"atoi", UnsafeLibcFunctionFamily::NumericConversion},
-      {"atol", UnsafeLibcFunctionFamily::NumericConversion},
-      {"atoll", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtol", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtoll", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtoul", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtoull", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtof", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtod", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtold", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtoimax", UnsafeLibcFunctionFamily::NumericConversion},
-      {"strtoumax", UnsafeLibcFunctionFamily::NumericConversion},
-      // "strfromf",  "strfromd", "strfroml", // C23?
-      // string manipulation:
-      {"strcpy", UnsafeLibcFunctionFamily::StringManipulation},
-      {"strncpy", UnsafeLibcFunctionFamily::StringManipulation},
-      {"strlcpy", UnsafeLibcFunctionFamily::StringManipulation},
-      {"strcat", UnsafeLibcFunctionFamily::StringManipulation},
-      {"strncat", UnsafeLibcFunctionFamily::StringManipulation},
-      {"strlcat", UnsafeLibcFunctionFamily::StringManipulation},
-      {"strxfrm", UnsafeLibcFunctionFamily::StringManipulation},
-      {"strdup", UnsafeLibcFunctionFamily::StringManipulation},
-      {"strndup", UnsafeLibcFunctionFamily::StringManipulation},
-      // string examination:
-      {"strlen", UnsafeLibcFunctionFamily::StringExamination},
-      {"strnlen", UnsafeLibcFunctionFamily::StringExamination},
-      {"strcmp", UnsafeLibcFunctionFamily::StringExamination},
-      {"strncmp", UnsafeLibcFunctionFamily::StringExamination},
-      {"stricmp", UnsafeLibcFunctionFamily::StringExamination},
-      {"strcasecmp", UnsafeLibcFunctionFamily::StringExamination},
-      {"strcoll", UnsafeLibcFunctionFamily::StringExamination},
-      {"strchr", UnsafeLibcFunctionFamily::StringExamination},
-      {"strrchr", UnsafeLibcFunctionFamily::StringExamination},
-      {"strspn", UnsafeLibcFunctionFamily::StringExamination},
-      {"strcspn", UnsafeLibcFunctionFamily::StringExamination},
-      {"strpbrk", UnsafeLibcFunctionFamily::StringExamination},
-      {"strstr", UnsafeLibcFunctionFamily::StringExamination},
-      {"strtok", UnsafeLibcFunctionFamily::StringExamination},
-      // "mem-" functions
-      {"memchr", UnsafeLibcFunctionFamily::Memory},
-      {"wmemchr", UnsafeLibcFunctionFamily::Memory},
-      {"memcmp", UnsafeLibcFunctionFamily::Memory},
-      {"wmemcmp", UnsafeLibcFunctionFamily::Memory},
-      {"memcpy", UnsafeLibcFunctionFamily::Memory},
-      {"memccpy", UnsafeLibcFunctionFamily::Memory},
-      {"mempcpy", UnsafeLibcFunctionFamily::Memory},
-      {"wmemcpy", UnsafeLibcFunctionFamily::Memory},
-      {"memmove", UnsafeLibcFunctionFamily::Memory},
-      {"wmemmove", UnsafeLibcFunctionFamily::Memory},
-      {"wmemset", UnsafeLibcFunctionFamily::Memory},
-      {"bcopy", UnsafeLibcFunctionFamily::Memory},
-      {"bzero", UnsafeLibcFunctionFamily::Memory},
-      // IO:
-      {"fread", UnsafeLibcFunctionFamily::IO},
-      {"fwrite", UnsafeLibcFunctionFamily::IO},
-      {"fgets", UnsafeLibcFunctionFamily::IO},
-      {"fgetws", UnsafeLibcFunctionFamily::IO},
-      {"gets", UnsafeLibcFunctionFamily::IO},
-      {"fputs", UnsafeLibcFunctionFamily::IO},
-      {"fputws", UnsafeLibcFunctionFamily::IO},
-      {"puts", UnsafeLibcFunctionFamily::IO},
-      // others
-      {"strerror_s", UnsafeLibcFunctionFamily::Other},
-      {"strerror_r", UnsafeLibcFunctionFamily::Other},
-      {"bsearch", UnsafeLibcFunctionFamily::Other},
-      {"qsort", UnsafeLibcFunctionFamily::Other},
-  };
+  static const llvm::StringMap<UnsafeLibcFunctionFamily> PredefinedNames = [] {
+    using F = UnsafeLibcFunctionFamily;
+    llvm::StringMap<F> M;
+    auto Add = [&](F Family, std::initializer_list<StringRef> Names) {
+      for (StringRef N : Names)
+        M[N] = Family;
+    };
+    // numeric conversion:
+    Add(F::NumericConversion,
+        {"atof", "atoi", "atol", "atoll", "strtol", "strtoll", "strtoul",
+         "strtoull", "strtof", "strtod", "strtold", "strtoimax", "strtoumax"});
+    // string manipulation:
+    Add(F::StringManipulation,
+        {"strcpy", "strncpy", "strlcpy", "strcat", "strncat", "strlcat",
+         "strxfrm", "strdup", "strndup"});
+    // string examination:
+    Add(F::StringExamination,
+        {"strlen", "strnlen", "strcmp", "strncmp", "stricmp", "strcasecmp",
+         "strcoll", "strchr", "strrchr", "strspn", "strcspn", "strpbrk",
+         "strstr", "strtok"});
+    // "mem-" functions
+    Add(F::Memory, {"memchr", "wmemchr", "memcmp", "wmemcmp", "memcpy",
+                    "memccpy", "mempcpy", "wmemcpy", "memmove", "wmemmove",
+                    "wmemset", "bcopy", "bzero"});
+    // IO:
+    Add(F::IO, {"fread", "fwrite", "fgets", "fgetws", "gets", "fputs", "fputws",
+                "puts"});
+    // others
+    Add(F::Other, {"strerror_s", "strerror_r", "bsearch", "qsort"});
+    return M;
+  }();
 
   auto *II = Node.getIdentifier();
 

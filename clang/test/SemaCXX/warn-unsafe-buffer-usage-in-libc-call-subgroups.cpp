@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
-// RUN:            -verify=expected,exam %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage-in-libc-call \
+// RUN:            -verify=num,manip,exam,mem,io,printf,scanf,other %s
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
 // RUN:            -Wno-unsafe-buffer-usage-in-libc-call-string-examination \
-// RUN:            -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call-memory \
+// RUN:            -verify=num,manip,mem,io,printf,scanf,other %s
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage-in-libc-call-memory \
 // RUN:            -verify=mem %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
 // RUN:            -Wno-unsafe-buffer-usage-in-libc-call \
 // RUN:            -Wunsafe-buffer-usage-in-libc-call-memory -verify=mem %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
 // RUN:            -Wno-unsafe-buffer-usage-in-libc-call -verify=none %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage-in-libc-call \
 // RUN:            %s 2>&1 | FileCheck %s
 
 // none-no-diagnostics
@@ -32,25 +32,25 @@ void qsort(void *, size_t, size_t, int (*)(const void *, const void *));
 
 void calls(char *p, const char *q, const wchar_t *w, size_t n, FILE *f,
            int *x) {
-  atoi(q);          // expected-warning{{function 'atoi' is unsafe}}
-  strcpy(p, q);     // expected-warning{{function 'strcpy' is unsafe}}
-  strlen(q);        // exam-warning{{function 'strlen' is unsafe}}
-  wcslen(w);        // exam-warning{{function 'wcslen' is unsafe}}
-  memcpy(p, q, n);  // expected-warning{{function 'memcpy' is unsafe}} mem-warning{{function 'memcpy' is unsafe}}
-  memset(p, 0, n);  // expected-warning{{function 'memset' is unsafe}} mem-warning{{function 'memset' is unsafe}}
-  bzero(p, n);      // expected-warning{{function 'bzero' is unsafe}} mem-warning{{function 'bzero' is unsafe}}
-  fgets(p, 4, f);   // expected-warning{{function 'fgets' is unsafe}}
-  sprintf(p, "%d", 1); // expected-warning{{function 'sprintf' is unsafe}} \
-                          expected-note{{change to 'snprintf' for explicit bounds checking}}
-  sscanf(q, "%d", x);  // expected-warning{{function 'sscanf' is unsafe}}
-  qsort(p, n, 1, nullptr); // expected-warning{{function 'qsort' is unsafe}}
+  atoi(q);         // num-warning{{function 'atoi' is unsafe}}
+  strcpy(p, q);    // manip-warning{{function 'strcpy' is unsafe}}
+  strlen(q);       // exam-warning{{function 'strlen' is unsafe}}
+  wcslen(w);       // exam-warning{{function 'wcslen' is unsafe}}
+  memcpy(p, q, n); // mem-warning{{function 'memcpy' is unsafe}}
+  memset(p, 0, n); // mem-warning{{function 'memset' is unsafe}}
+  bzero(p, n);     // mem-warning{{function 'bzero' is unsafe}}
+  fgets(p, 4, f);  // io-warning{{function 'fgets' is unsafe}}
+  sprintf(p, "%d", 1); // printf-warning{{function 'sprintf' is unsafe}} \
+                          printf-note{{change to 'snprintf' for explicit bounds checking}}
+  sscanf(q, "%d", x);      // scanf-warning{{function 'sscanf' is unsafe}}
+  qsort(p, n, 1, nullptr); // other-warning{{function 'qsort' is unsafe}}
 }
 
 void pragma(char *p, const char *q, size_t n) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage-in-libc-call-string-examination"
   strlen(q);
-  memcpy(p, q, n); // expected-warning{{function 'memcpy' is unsafe}} mem-warning{{function 'memcpy' is unsafe}}
+  memcpy(p, q, n); // mem-warning{{function 'memcpy' is unsafe}}
 #pragma clang diagnostic pop
   strlen(q); // exam-warning{{function 'strlen' is unsafe}}
 }
