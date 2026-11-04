@@ -403,7 +403,7 @@ def _import_numpy():
 
 @register_attribute_builder("F64ElementsAttr")
 def _f64ElementsAttr(x, context):
-    np = _import_numpy()
+    import numpy as np
     return DenseElementsAttr.get(
         np.array(x, dtype=np.float64),
         type=F64Type.get(context=context),
@@ -413,7 +413,7 @@ def _f64ElementsAttr(x, context):
 
 @register_attribute_builder("I32ElementsAttr")
 def _i32ElementsAttr(x, context):
-    np = _import_numpy()
+    import numpy as np
     return DenseElementsAttr.get(
         np.array(x, dtype=np.int32),
         type=IntegerType.get_signless(32, context=context),
@@ -423,7 +423,7 @@ def _i32ElementsAttr(x, context):
 
 @register_attribute_builder("I64ElementsAttr")
 def _i64ElementsAttr(x, context):
-    np = _import_numpy()
+    import numpy as np
     return DenseElementsAttr.get(
         np.array(x, dtype=np.int64),
         type=IntegerType.get_signless(64, context=context),
@@ -433,7 +433,7 @@ def _i64ElementsAttr(x, context):
 
 @register_attribute_builder("IndexElementsAttr")
 def _indexElementsAttr(x, context):
-    np = _import_numpy()
+    import numpy as np
     return DenseElementsAttr.get(
         np.array(x, dtype=np.int64),
         type=IndexType.get(context=context),
